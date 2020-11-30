@@ -6,7 +6,7 @@
 
 // TODO(ctiller): merge this implementation with the implementation in zircon_handle?
 
-use super::{Handle, HandleInfo, MessageBuf, MessageBufEtc};
+use super::{Handle, HandleDisposition, HandleInfo, MessageBuf, MessageBufEtc};
 use fuchsia_zircon_status as zx_status;
 use std::{
     pin::Pin,
@@ -27,6 +27,15 @@ impl Channel {
     /// Writes a message into the channel.
     pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>) -> Result<(), zx_status::Status> {
         self.channel.write(bytes, handles)
+    }
+
+    /// Writes a message into the channel.
+    pub fn write_etc<'a>(
+        &self,
+        bytes: &[u8],
+        handles: &mut Vec<HandleDisposition<'a>>,
+    ) -> Result<(), zx_status::Status> {
+        self.channel.write_etc(bytes, handles)
     }
 
     /// Consumes self and returns the underlying Channel (named thusly for compatibility with
@@ -148,7 +157,7 @@ impl<'a> futures::Future for RecvEtcMsg<'a> {
 #[cfg(test)]
 mod test {
     use super::super::Channel;
-    use super::super::{Handle, ObjectType, Rights};
+    use super::super::{Handle, HandleDisposition, HandleOp, ObjectType, Rights, Status};
     use super::Channel as AsyncChannel;
     use super::{MessageBuf, MessageBufEtc};
     use futures::executor::block_on;
@@ -182,7 +191,7 @@ mod test {
     }
 
     #[test]
-    fn async_channel_write_read_etc() {
+    fn async_channel_write_etc_read_etc() {
         block_on(async move {
             let (a, b) = Channel::create().unwrap();
             let (a, b) =
@@ -193,21 +202,30 @@ mod test {
 
             let mut rx = b.recv_etc_msg(&mut buf);
             assert_eq!(Pin::new(&mut rx).poll(&mut cx), std::task::Poll::Pending);
-            a.write(&[1, 2, 3], &mut vec![]).unwrap();
+            a.write_etc(&[1, 2, 3], &mut vec![]).unwrap();
             rx.await.unwrap();
             assert_eq!(buf.bytes(), &[1, 2, 3]);
 
             let mut rx = a.recv_etc_msg(&mut buf);
             assert!(Pin::new(&mut rx).poll(&mut cx).is_pending());
             let (c, _) = Channel::create().unwrap();
-            b.write(&[1, 2, 3], &mut vec![c.into()]).unwrap();
+            b.write_etc(
+                &[1, 2, 3],
+                &mut vec![HandleDisposition {
+                    handle_op: HandleOp::Move(c.into()),
+                    object_type: ObjectType::CHANNEL,
+                    rights: Rights::TRANSFER | Rights::WRITE,
+                    result: Status::OK,
+                }],
+            )
+            .unwrap();
             rx.await.unwrap();
             assert_eq!(buf.bytes(), &[1, 2, 3]);
             assert_eq!(buf.n_handle_infos(), 1);
             let hi = &buf.handle_infos[0];
             assert_ne!(hi.handle, Handle::invalid());
             assert_eq!(hi.object_type, ObjectType::CHANNEL);
-            assert_eq!(hi.rights, Rights::TRANSFER | Rights::WRITE | Rights::READ);
+            assert_eq!(hi.rights, Rights::TRANSFER | Rights::WRITE);
         })
     }
 }

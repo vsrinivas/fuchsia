@@ -21,6 +21,7 @@ use std::{
     sync::atomic::{AtomicU64, AtomicUsize, Ordering},
     task::{Context, Poll, Waker},
 };
+use zx_status::Status;
 
 /// Invalid handle value
 const INVALID_HANDLE: u32 = 0xffff_ffff;
@@ -95,9 +96,9 @@ pub trait AsHandleRef {
             return Err(zx_status::Status::BAD_HANDLE);
         }
         let (koid_left, rights, side) = with_handle(self.raw_handle(), |h, side| match h {
-            HdlRef::Channel(hdl) => (hdl.koid_left, hdl.rights, side),
-            HdlRef::StreamSocket(hdl) => (hdl.koid_left, hdl.rights, side),
-            HdlRef::DatagramSocket(hdl) => (hdl.koid_left, hdl.rights, side),
+            HdlRef::Channel(hdl) => (hdl.koid_left, hdl_rights(hdl, side), side),
+            HdlRef::StreamSocket(hdl) => (hdl.koid_left, hdl_rights(hdl, side), side),
+            HdlRef::DatagramSocket(hdl) => (hdl.koid_left, hdl_rights(hdl, side), side),
         });
         let koids = match side {
             Side::Left => (koid_left, koid_left + 1),
@@ -247,14 +248,21 @@ impl Handle {
     /// [zx_handle_replace](https://fuchsia.dev/fuchsia-src/reference/syscalls/handle_replace.md)
     /// syscall.
     pub fn replace(self, target_rights: Rights) -> Result<Handle, zx_status::Status> {
+        if target_rights == Rights::SAME_RIGHTS {
+            return Ok(self);
+        }
         if self.is_invalid() {
             return Err(zx_status::Status::BAD_HANDLE);
         }
         let (shard, slot, ty, side) = unpack_handle(self.raw_handle());
         let result = match ty {
-            HdlType::Channel => table_replace(&CHANNELS, shard, slot, target_rights),
-            HdlType::StreamSocket => table_replace(&STREAM_SOCKETS, shard, slot, target_rights),
-            HdlType::DatagramSocket => table_replace(&DATAGRAM_SOCKETS, shard, slot, target_rights),
+            HdlType::Channel => table_replace(&CHANNELS, shard, slot, side, target_rights),
+            HdlType::StreamSocket => {
+                table_replace(&STREAM_SOCKETS, shard, slot, side, target_rights)
+            }
+            HdlType::DatagramSocket => {
+                table_replace(&DATAGRAM_SOCKETS, shard, slot, side, target_rights)
+            }
         };
         let (new_shard, new_slot) = match result {
             Ok(val) => val,
@@ -355,6 +363,24 @@ impl Channel {
         })
     }
 
+    /// Read a message from a channel.
+    pub fn read_etc(&self, buf: &mut MessageBufEtc) -> Result<(), zx_status::Status> {
+        let (bytes, handles) = buf.split_mut();
+        self.read_etc_split(bytes, handles)
+    }
+
+    /// Read a message from a channel into a separate byte vector and handle vector.
+    pub fn read_etc_split(
+        &self,
+        bytes: &mut Vec<u8>,
+        handles: &mut Vec<HandleInfo>,
+    ) -> Result<(), zx_status::Status> {
+        match self.poll_read_etc(&mut Context::from_waker(noop_waker_ref()), bytes, handles) {
+            Poll::Ready(r) => r,
+            Poll::Pending => Err(zx_status::Status::SHOULD_WAIT),
+        }
+    }
+
     fn poll_read_etc(
         &self,
         cx: &mut Context<'_>,
@@ -366,11 +392,11 @@ impl Channel {
         handle_infos.clear();
         handle_infos.extend(handles.into_iter().map(|handle| {
             let h_raw = handle.raw_handle();
-            let (_, _, ty, _) = unpack_handle(h_raw);
+            let (_, _, ty, side) = unpack_handle(h_raw);
             let rights = with_handle(h_raw, |href, _| match href {
-                HdlRef::Channel(h) => h.rights,
-                HdlRef::StreamSocket(h) => h.rights,
-                HdlRef::DatagramSocket(h) => h.rights,
+                HdlRef::Channel(h) => hdl_rights(h, side),
+                HdlRef::StreamSocket(h) => hdl_rights(h, side),
+                HdlRef::DatagramSocket(h) => hdl_rights(h, side),
             });
             HandleInfo { handle, object_type: ty.object_type(), rights }
         }));
@@ -383,6 +409,45 @@ impl Channel {
         let mut handles_vec = Vec::with_capacity(handles.len());
         for i in 0..handles.len() {
             handles_vec.push(std::mem::replace(&mut handles[i], Handle::invalid()));
+        }
+        with_handle(self.0, |h, side| {
+            if let HdlRef::Channel(obj) = h {
+                if !obj.liveness.is_open() {
+                    return Err(zx_status::Status::PEER_CLOSED);
+                }
+                obj.q
+                    .side_mut(side)
+                    .push_back(ChannelMessage { bytes: bytes_vec, handles: handles_vec });
+                obj.wakers.side_mut(side).take().map(|w| w.wake());
+                Ok(())
+            } else {
+                unreachable!();
+            }
+        })
+    }
+
+    /// Write a message to a channel.
+    pub fn write_etc<'a>(
+        &self,
+        bytes: &[u8],
+        handles: &mut [HandleDisposition<'a>],
+    ) -> Result<(), zx_status::Status> {
+        let bytes_vec = bytes.to_vec();
+        let mut handles_vec = Vec::with_capacity(handles.len());
+        for hd in handles {
+            let op: HandleOp<'a> =
+                std::mem::replace(&mut hd.handle_op, HandleOp::Move(Handle::invalid()));
+            if let HandleOp::Move(handle) = op {
+                let (_, _, ty, _) = unpack_handle(handle.raw_handle());
+                if ty.object_type() != handle.object_type()
+                    && handle.object_type() != ObjectType::NONE
+                {
+                    return Err(zx_status::Status::INVALID_ARGS);
+                }
+                handles_vec.push(handle.replace(hd.rights)?);
+            } else {
+                panic!("unimplemented HandleOp");
+            }
         }
         with_handle(self.0, |h, side| {
             if let HdlRef::Channel(obj) = h {
@@ -787,6 +852,29 @@ impl Rights {
     }
 }
 
+/// Handle operation.
+pub enum HandleOp<'a> {
+    /// Move the handle.
+    Move(Handle),
+    /// Duplicate the handle.
+    Duplicate(HandleRef<'a>),
+}
+
+/// Operation to perform on handles during write.
+/// Based on zx_handle_disposition_t, but does not match the same layout.
+pub struct HandleDisposition<'a> {
+    /// Handle operation.
+    pub handle_op: HandleOp<'a>,
+    /// Object type to check, or NONE to avoid the check.
+    pub object_type: ObjectType,
+    /// Rights to send, or SAME_RIGHTS.
+    /// Rights are checked against existing handle rights to ensure there is no
+    /// increase in rights.
+    pub rights: Rights,
+    /// Result of attempting to write this handle disposition.
+    pub result: Status,
+}
+
 /// HandleInfo represents a handle with additional metadata.
 #[derive(Debug)]
 pub struct HandleInfo {
@@ -891,7 +979,8 @@ struct Hdl<T> {
     wakers: Wakers,
     liveness: Liveness,
     koid_left: u64,
-    rights: Rights,
+    rights_left: Rights,
+    rights_right: Rights,
 }
 
 enum HdlRef<'a> {
@@ -959,7 +1048,8 @@ impl<T> HandleTable<T> {
             wakers: Default::default(),
             liveness: Liveness::Open,
             koid_left: NEXT_KOID.fetch_add(2, Ordering::Relaxed),
-            rights: rights,
+            rights_left: rights,
+            rights_right: rights,
         })
     }
 
@@ -1015,22 +1105,27 @@ fn table_replace<T>(
     tbl: &HandleTable<T>,
     shard: usize,
     slot: usize,
+    side: Side,
     target_rights: Rights,
 ) -> Result<(usize, usize), zx_status::Status> {
     let mut tbl_shard = tbl.shards[shard].lock().unwrap();
-    match tbl_shard.get(slot) {
-        None => {
-            return Err(zx_status::Status::BAD_HANDLE);
-        }
+    match tbl_shard.get_mut(slot) {
+        None => Err(zx_status::Status::BAD_HANDLE),
         Some(h) => {
-            if !h.rights.contains(target_rights) {
+            let rights = match side {
+                Side::Left => &mut h.rights_left,
+                Side::Right => &mut h.rights_right,
+            };
+            if !rights.contains(target_rights) {
                 return Err(zx_status::Status::INVALID_ARGS);
             }
+            *rights = target_rights;
+            // zx_handle_replace results in a new handle id. However, because emulated handles
+            // embed the (shard, slot) location in the handle id, doing the same here would
+            // break the other end of the handle pair.
+            Ok((shard, slot))
         }
-    };
-    let mut h = tbl_shard.remove(slot);
-    h.rights = target_rights;
-    Ok(tbl.insert_hdl(h))
+    }
 }
 
 fn close_in_table<T>(tbl: &HandleTable<T>, shard: usize, slot: usize, side: Side) {
@@ -1046,6 +1141,13 @@ fn close_in_table<T>(tbl: &HandleTable<T>, shard: usize, slot: usize, side: Side
     };
     drop(tbl);
     drop(removed);
+}
+
+fn hdl_rights<T>(hdl: &Hdl<T>, side: Side) -> Rights {
+    match side {
+        Side::Left => hdl.rights_left,
+        Side::Right => hdl.rights_right,
+    }
 }
 
 /// Close the handle: no action if hdl==INVALID_HANDLE
@@ -1086,6 +1188,81 @@ mod test {
         drop(d);
         assert_eq!(incoming.bytes(), &[4, 5, 6]);
         assert_eq!(incoming.n_handles(), 0);
+    }
+
+    #[test]
+    fn channel_write_etc_read_etc() {
+        let (a, b) = Channel::create().unwrap();
+        let (c, d) = Channel::create().unwrap();
+        let mut incoming = MessageBufEtc::new();
+
+        assert_eq!(b.read_etc(&mut incoming).err().unwrap(), Status::SHOULD_WAIT);
+        d.write(&[4, 5, 6], &mut vec![]).unwrap();
+        let mut hds = vec![
+            HandleDisposition {
+                handle_op: HandleOp::Move(c.into()),
+                object_type: ObjectType::CHANNEL,
+                rights: Rights::SAME_RIGHTS,
+                result: Status::OK,
+            },
+            HandleDisposition {
+                handle_op: HandleOp::Move(d.into()),
+                object_type: ObjectType::CHANNEL,
+                rights: Rights::TRANSFER | Rights::READ,
+                result: Status::OK,
+            },
+        ];
+        a.write_etc(&[1, 2, 3], &mut hds).unwrap();
+
+        b.read_etc(&mut incoming).unwrap();
+        assert_eq!(incoming.bytes(), &[1, 2, 3]);
+        assert_eq!(incoming.n_handle_infos(), 2);
+
+        let mut c_handle_info = incoming.take_handle_info(0).unwrap();
+        assert_eq!(c_handle_info.object_type, ObjectType::CHANNEL);
+        assert_eq!(c_handle_info.rights, Rights::TRANSFER | Rights::READ | Rights::WRITE);
+        let mut d_handle_info = incoming.take_handle_info(1).unwrap();
+        assert_eq!(d_handle_info.object_type, ObjectType::CHANNEL);
+        assert_eq!(d_handle_info.rights, Rights::TRANSFER | Rights::READ);
+        let c: Channel = std::mem::replace(&mut c_handle_info.handle, Handle::invalid()).into();
+        let d: Channel = std::mem::replace(&mut d_handle_info.handle, Handle::invalid()).into();
+        c.read_etc(&mut incoming).unwrap();
+        drop(d);
+        assert_eq!(incoming.bytes(), &[4, 5, 6]);
+        assert_eq!(incoming.n_handle_infos(), 0);
+    }
+
+    #[test]
+    fn mixed_channel_write_read_etc() {
+        let (a, b) = Channel::create().unwrap();
+        let (c, _) = Channel::create().unwrap();
+        a.write(&[1, 2, 3], &mut [c.into()]).unwrap();
+        let mut buf = MessageBufEtc::new();
+        b.read_etc(&mut buf).unwrap();
+        assert_eq!(buf.bytes(), &[1, 2, 3]);
+        assert_eq!(buf.n_handle_infos(), 1);
+        let hi = &buf.handle_infos[0];
+        assert_eq!(hi.object_type, ObjectType::CHANNEL);
+        assert_eq!(hi.rights, Rights::TRANSFER | Rights::READ | Rights::WRITE);
+        assert_ne!(hi.handle, Handle::invalid());
+    }
+
+    #[test]
+    fn mixed_channel_write_etc_read() {
+        let (a, b) = Channel::create().unwrap();
+        let (c, _) = Channel::create().unwrap();
+        let hd = HandleDisposition {
+            handle_op: HandleOp::Move(c.into()),
+            object_type: ObjectType::NONE,
+            rights: Rights::SAME_RIGHTS,
+            result: Status::OK,
+        };
+        a.write_etc(&[1, 2, 3], &mut [hd]).unwrap();
+        let mut buf = MessageBuf::new();
+        b.read(&mut buf).unwrap();
+        assert_eq!(buf.bytes(), &[1, 2, 3]);
+        assert_eq!(buf.n_handles(), 1);
+        assert_ne!(buf.handles[0], Handle::invalid());
     }
 
     #[test]
@@ -1226,22 +1403,24 @@ mod test {
 
     #[test]
     fn handle_replace_success() {
-        let (c1, _) = Channel::create().unwrap();
-        let orig_basic_info = c1.basic_info().unwrap();
-        assert_eq!(orig_basic_info.rights, Rights::TRANSFER | Rights::WRITE | Rights::READ);
-        let orig_raw = c1.raw_handle();
+        let (c1, c2) = Channel::create().unwrap();
+        let c1_basic_info = c1.basic_info().unwrap();
+        let c2_basic_info = c2.basic_info().unwrap();
+        assert_eq!(c1_basic_info.rights, Rights::TRANSFER | Rights::WRITE | Rights::READ);
 
         let new_handle = c1.into_handle().replace(Rights::TRANSFER | Rights::WRITE).unwrap();
-        assert_ne!(new_handle.raw_handle(), orig_raw);
-        let replaced_handle = unsafe { Handle::from_raw(orig_raw) };
-        assert!(replaced_handle.is_dangling());
-        std::mem::forget(replaced_handle);
 
-        let new_basic_info = new_handle.basic_info().unwrap();
-        assert_eq!(new_basic_info.koid, orig_basic_info.koid);
-        assert_eq!(new_basic_info.related_koid, orig_basic_info.related_koid);
-        assert_eq!(new_basic_info.object_type, ObjectType::CHANNEL);
-        assert_eq!(new_basic_info.rights, Rights::TRANSFER | Rights::WRITE);
+        let new_c1_basic_info = new_handle.basic_info().unwrap();
+        assert_eq!(new_c1_basic_info.koid, c1_basic_info.koid);
+        assert_eq!(new_c1_basic_info.related_koid, c1_basic_info.related_koid);
+        assert_eq!(new_c1_basic_info.object_type, ObjectType::CHANNEL);
+        assert_eq!(new_c1_basic_info.rights, Rights::TRANSFER | Rights::WRITE);
+
+        let new_c2_basic_info = c2.basic_info().unwrap();
+        assert_eq!(new_c2_basic_info.koid, c2_basic_info.koid);
+        assert_eq!(new_c2_basic_info.related_koid, c2_basic_info.related_koid);
+        assert_eq!(new_c2_basic_info.object_type, c2_basic_info.object_type);
+        assert_eq!(new_c2_basic_info.rights, c2_basic_info.rights);
     }
 
     #[test]
@@ -1275,5 +1454,19 @@ mod test {
             c1.into_handle().replace(Rights::DUPLICATE).unwrap_err(),
             zx_status::Status::INVALID_ARGS
         );
+    }
+
+    #[test]
+    fn handle_replace_same_rights() {
+        let (c1, _) = Channel::create().unwrap();
+        let orig_basic_info = c1.basic_info().unwrap();
+        assert_eq!(orig_basic_info.rights, Rights::TRANSFER | Rights::WRITE | Rights::READ);
+        let orig_raw = c1.raw_handle();
+
+        let new_handle = c1.into_handle().replace(Rights::SAME_RIGHTS).unwrap();
+        assert_eq!(new_handle.raw_handle(), orig_raw);
+
+        let new_basic_info = new_handle.basic_info().unwrap();
+        assert_eq!(new_basic_info.rights, Rights::TRANSFER | Rights::WRITE | Rights::READ);
     }
 }
