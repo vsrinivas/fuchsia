@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
     fidl::endpoints::{create_endpoints, create_proxy, Proxy, ServiceMarker},
     fidl_fuchsia_io as io, fidl_fuchsia_io_test as io_test, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -12,27 +11,32 @@ use {
     io_conformance::io1_request_logger_factory::Io1RequestLoggerFactory,
 };
 
-pub async fn connect_to_harness() -> Result<io_test::Io1HarnessProxy, Error> {
+pub async fn connect_to_harness() -> io_test::Io1HarnessProxy {
     // Connect to the realm to get acccess to the outgoing directory for the harness.
-    let (client, server) = zx::Channel::create()?;
-    fuchsia_component::client::connect_channel_to_service::<fsys::RealmMarker>(server)?;
+    let (client, server) = zx::Channel::create().expect("Cannot create channel");
+    fuchsia_component::client::connect_channel_to_service::<fsys::RealmMarker>(server)
+        .expect("Cannot connect to Realm service");
     let mut realm = fsys::RealmSynchronousProxy::new(client);
     // fs_test is the name of the child component defined in the manifest.
     let mut child_ref = fsys::ChildRef { name: "fs_test".to_string(), collection: None };
-    let (client, server) = zx::Channel::create()?;
+    let (client, server) = zx::Channel::create().expect("Cannot create channel");
     realm
         .bind_child(
             &mut child_ref,
             fidl::endpoints::ServerEnd::<io::DirectoryMarker>::new(server),
             zx::Time::INFINITE,
-        )?
-        .map_err(|e| format_err!("Failed to bind to child: {:#?}", e))?;
+        )
+        .expect("FIDL error when binding to child in Realm")
+        .expect("Cannot bind to test harness child in Realm");
 
-    let exposed_dir = io::DirectoryProxy::new(fidl::AsyncChannel::from_channel(client)?);
-    let proxy = fuchsia_component::client::connect_to_protocol_at_dir_root::<
-        io_test::Io1HarnessMarker,
-    >(&exposed_dir)?;
-    Ok(proxy)
+    let exposed_dir = io::DirectoryProxy::new(
+        fidl::AsyncChannel::from_channel(client).expect("Cannot create async channel"),
+    );
+
+    fuchsia_component::client::connect_to_protocol_at_dir_root::<io_test::Io1HarnessMarker>(
+        &exposed_dir,
+    )
+    .expect("Cannot connect to test harness protocol")
 }
 
 /// Helper function to open the desired node in the root folder. Only use this
@@ -44,7 +48,7 @@ async fn open_node<T: ServiceMarker>(
     path: &str,
 ) -> T::Proxy {
     let flags = flags | io::OPEN_FLAG_DESCRIBE;
-    let (node_proxy, node_server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
+    let (node_proxy, node_server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy");
     dir.open(flags, mode, path, node_server).expect("Cannot open node");
 
     // Listening to make sure open call succeeded.
@@ -55,6 +59,16 @@ async fn open_node<T: ServiceMarker>(
         assert_eq!(Status::from_raw(s), Status::OK);
     }
     T::Proxy::from_channel(node_proxy.into_channel().expect("Cannot convert node proxy to channel"))
+}
+
+/// Creates and returns a directory with the given structure from the test harness.
+fn get_directory_from_harness(
+    harness: &io_test::Io1HarnessProxy,
+    root: io_test::Directory,
+) -> io::DirectoryProxy {
+    let (client, server) = create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy");
+    harness.get_directory(root, server).expect("Cannot get directory from test harness");
+    return client;
 }
 
 /// Constant representing the aggregate of all io.fidl rights.
@@ -130,15 +144,15 @@ fn file(name: &str, flags: u32, contents: Vec<u8>) -> io_test::DirectoryEntry {
 // remote mount point, the server forwards the request to the remote correctly.
 #[fasync::run_singlethreaded(test)]
 async fn open_remote_directory_test() {
-    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await;
 
-    let config = harness.get_config().await.expect("Could not get config from harness.");
+    let config = harness.get_config().await.expect("Could not get config from harness");
     if config.no_remote_dir.unwrap_or_default() {
         return;
     }
 
     let (remote_dir_client, remote_dir_server) =
-        create_endpoints::<io::DirectoryMarker>().expect("Cannot create endpoints.");
+        create_endpoints::<io::DirectoryMarker>().expect("Cannot create endpoints");
 
     let remote_name = "remote_directory";
 
@@ -148,10 +162,10 @@ async fn open_remote_directory_test() {
     let remote_dir_server =
         logger.get_logged_directory(remote_name.to_string(), remote_dir_server).await;
     let root = root_directory(io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE, vec![]);
-    harness.get_directory(root, remote_dir_server).expect("Cannot get empty remote directory.");
+    harness.get_directory(root, remote_dir_server).expect("Cannot get empty remote directory");
 
     let (test_dir_proxy, test_dir_server) =
-        create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
+        create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy");
     harness
         .get_directory_with_remote_directory(
             remote_dir_client,
@@ -159,13 +173,13 @@ async fn open_remote_directory_test() {
             io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE,
             test_dir_server,
         )
-        .expect("Cannot get test harness directory.");
+        .expect("Cannot get test harness directory");
 
     let (_remote_dir_proxy, remote_dir_server) =
-        create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
+        create_proxy::<io::NodeMarker>().expect("Cannot create proxy");
     test_dir_proxy
         .open(io::OPEN_RIGHT_READABLE, io::MODE_TYPE_DIRECTORY, remote_name, remote_dir_server)
-        .expect("Cannot open remote directory.");
+        .expect("Cannot open remote directory");
 
     // Wait on an open call to the interposed remote directory.
     let open_request_string = rx.next().await.expect("Local tx/rx channel was closed");
@@ -177,7 +191,7 @@ async fn open_remote_directory_test() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_read_with_sufficient_rights() {
-    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await;
 
     let filename = "testing.txt";
 
@@ -187,23 +201,18 @@ async fn file_read_with_sufficient_rights() {
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
         let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
-        let (test_dir_proxy, test_dir_server) =
-            create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
-        harness
-            .get_directory(root, test_dir_server)
-            .expect("Cannot get remote directory with file.");
+        let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir_proxy, file_flags, io::MODE_TYPE_FILE, filename)
-                .await;
-        let (status, _data) = file.read(0).await.expect("Read failed.");
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, filename).await;
+        let (status, _data) = file.read(0).await.expect("Read failed");
         assert_eq!(Status::from_raw(status), Status::OK);
     }
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn file_read_with_insufficient_rights() {
-    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await;
 
     let filename = "testing.txt";
 
@@ -213,23 +222,18 @@ async fn file_read_with_insufficient_rights() {
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
         let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
-        let (test_dir_proxy, test_dir_server) =
-            create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
-        harness
-            .get_directory(root, test_dir_server)
-            .expect("Cannot get remote directory with file.");
+        let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir_proxy, file_flags, io::MODE_TYPE_FILE, filename)
-                .await;
-        let (status, _data) = file.read(0).await.expect("Read failed.");
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, filename).await;
+        let (status, _data) = file.read(0).await.expect("Read failed");
         assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
     }
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn file_read_at_with_sufficient_rights() {
-    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await;
 
     let filename = "testing.txt";
 
@@ -239,23 +243,18 @@ async fn file_read_at_with_sufficient_rights() {
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
         let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
-        let (test_dir_proxy, test_dir_server) =
-            create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
-        harness
-            .get_directory(root, test_dir_server)
-            .expect("Cannot get remote directory with file.");
+        let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir_proxy, file_flags, io::MODE_TYPE_FILE, filename)
-                .await;
-        let (status, _data) = file.read_at(0, 0).await.expect("Read at failed.");
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, filename).await;
+        let (status, _data) = file.read_at(0, 0).await.expect("Read at failed");
         assert_eq!(Status::from_raw(status), Status::OK);
     }
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn file_read_at_with_insufficient_rights() {
-    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await;
 
     let filename = "testing.txt";
 
@@ -265,23 +264,18 @@ async fn file_read_at_with_insufficient_rights() {
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
         let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
-        let (test_dir_proxy, test_dir_server) =
-            create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
-        harness
-            .get_directory(root, test_dir_server)
-            .expect("Cannot get remote directory with file.");
+        let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir_proxy, file_flags, io::MODE_TYPE_FILE, filename)
-                .await;
-        let (status, _data) = file.read_at(0, 0).await.expect("Read at failed.");
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, filename).await;
+        let (status, _data) = file.read_at(0, 0).await.expect("Read at failed");
         assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
     }
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn file_write_with_sufficient_rights() {
-    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await;
 
     let filename = "testing.txt";
 
@@ -291,15 +285,10 @@ async fn file_write_with_sufficient_rights() {
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
         let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
-        let (test_dir_proxy, test_dir_server) =
-            create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
-        harness
-            .get_directory(root, test_dir_server)
-            .expect("Cannot get remote directory with file.");
+        let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir_proxy, file_flags, io::MODE_TYPE_FILE, filename)
-                .await;
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, filename).await;
         let (status, _actual) = file.write("".as_bytes()).await.expect("Failed to write file");
         assert_eq!(Status::from_raw(status), Status::OK);
     }
@@ -307,7 +296,7 @@ async fn file_write_with_sufficient_rights() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_write_with_insufficient_rights() {
-    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await;
 
     let filename = "testing.txt";
 
@@ -317,15 +306,10 @@ async fn file_write_with_insufficient_rights() {
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
         let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
-        let (test_dir_proxy, test_dir_server) =
-            create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
-        harness
-            .get_directory(root, test_dir_server)
-            .expect("Cannot get remote directory with file.");
+        let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir_proxy, file_flags, io::MODE_TYPE_FILE, filename)
-                .await;
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, filename).await;
         let (status, _actual) = file.write("".as_bytes()).await.expect("Failed to write file");
         assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
     }
@@ -333,7 +317,7 @@ async fn file_write_with_insufficient_rights() {
 
 #[fasync::run_singlethreaded(test)]
 async fn file_read_in_subdirectory() {
-    let harness = connect_to_harness().await.expect("Could not setup harness connection.");
+    let harness = connect_to_harness().await;
 
     let constant_flags = [io::OPEN_RIGHT_READABLE];
     let variable_flags = [io::OPEN_RIGHT_WRITABLE];
@@ -348,20 +332,16 @@ async fn file_read_in_subdirectory() {
                 vec![file("testing.txt", file_flags, Vec::new())],
             )],
         );
-        let (test_dir_proxy, test_dir_server) =
-            create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
-        harness
-            .get_directory(root, test_dir_server)
-            .expect("Cannot get remote directory with file.");
+        let test_dir = get_directory_from_harness(&harness, root);
 
         let file = open_node::<io::FileMarker>(
-            &test_dir_proxy,
+            &test_dir,
             file_flags,
             io::MODE_TYPE_FILE,
             "subdir/testing.txt",
         )
         .await;
-        let (status, _data) = file.read(0).await.expect("Read failed.");
+        let (status, _data) = file.read(0).await.expect("Read failed");
         assert_eq!(Status::from_raw(status), Status::OK);
     }
 }
