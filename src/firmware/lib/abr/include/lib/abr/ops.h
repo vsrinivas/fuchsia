@@ -3,8 +3,8 @@
  * found in the LICENSE file.
  */
 
-#ifndef LIB_ABR_OPS_H_
-#define LIB_ABR_OPS_H_
+#ifndef SRC_FIRMWARE_LIB_ABR_INCLUDE_LIB_ABR_OPS_H_
+#define SRC_FIRMWARE_LIB_ABR_INCLUDE_LIB_ABR_OPS_H_
 
 #include "sysdeps.h"
 
@@ -39,4 +39,4 @@ typedef struct AbrOps {
 }
 #endif
 
-#endif /* LIB_ABR_OPS_H_ */
+#endif  // SRC_FIRMWARE_LIB_ABR_INCLUDE_LIB_ABR_OPS_H_

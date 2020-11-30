@@ -3,8 +3,8 @@
  * found in the LICENSE file.
  */
 
-#ifndef LIB_ABR_DATA_H_
-#define LIB_ABR_DATA_H_
+#ifndef SRC_FIRMWARE_LIB_ABR_INCLUDE_LIB_ABR_DATA_H_
+#define SRC_FIRMWARE_LIB_ABR_INCLUDE_LIB_ABR_DATA_H_
 
 #include "sysdeps.h"
 
@@ -80,4 +80,4 @@ typedef struct AbrData {
 }
 #endif
 
-#endif /* LIB_ABR_DATA_H_ */
+#endif  // SRC_FIRMWARE_LIB_ABR_INCLUDE_LIB_ABR_DATA_H_

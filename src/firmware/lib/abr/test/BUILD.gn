@@ -1,0 +1,20 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/testing/bootfs_test.gni")
+
+group("test") {
+  testonly = true
+  deps = [ ":firmware_abr_test($host_toolchain)" ]
+}
+
+test("firmware_abr_test") {
+  sources = [ "libabr_test.cc" ]
+  deps = [
+    "//src/firmware/lib/abr:in_tree",
+    "//zircon/public/lib/zxtest",
+    "//zircon/third_party/ulib/cksum",
+  ]
+}

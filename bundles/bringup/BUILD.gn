@@ -53,7 +53,6 @@ group("tests") {
     "//src/zircon/tests/vdso:vdso-bootfs-test",
     "//src/zircon/tests/vdso:vdso-variant-bootfs-test",
     "//src/zircon/tests/vmo:vmo-bootfs-test",
-    "//zircon/system/ulib/abr/test:libabr-test-bootfs-test",
     "//zircon/system/ulib/c/test:cdebugdata-test-bootfs-test",
     "//zircon/system/ulib/c/test/sanitizer:sanitizer-utils-bootfs-test",
     "//zircon/system/ulib/chromeos-disk-setup/test:chromeos-disk-setup-bootfs-test",
