@@ -34,17 +34,6 @@ group("tools") {
   ]
 }
 
-# Tools that are used by the infrastructure for testing, data collection, etc.
-# TODO(fxbug.dev/63540): delete this. Use build_infra and test_infra directly.
-group("infratools") {
-  testonly = true
-
-  public_deps = [
-    ":build_infra",
-    ":test_infra",
-  ]
-}
-
 # Tools that are used by the infrastructure for building.
 group("build_infra") {
   testonly = true

@@ -8,17 +8,13 @@
 
 group("bringup") {
   testonly = true
-  deps = [
-    "//bundles:infratools",
-    "//bundles/bringup:tests",
-  ]
+  deps = [ "//bundles/bringup:tests" ]
 }
 
 group("core") {
   testonly = true
   deps = [
     "//build:tests",
-    "//bundles:infratools",
     "//bundles:tools",
     "//bundles/fidl:tests",
     "//examples",
@@ -50,10 +46,8 @@ group("core") {
 group("terminal") {
   testonly = true
   deps = [
-    "//bundles:infratools",
-
-    # FIXME(51983): Re-organize these deps to include all packages required for
-    # running tests.
+    # TODO(fxbug.dev/51983): Re-organize these deps to include all packages
+    # required for running tests.
     "//garnet/bin/run_test_component",
     "//src/tests/end_to_end/screen_is_not_black:config",
   ]
@@ -62,7 +56,6 @@ group("terminal") {
 group("workstation") {
   testonly = true
   deps = [
-    "//bundles:infratools",
     "//garnet/bin/setui_client:setui_client",
     "//src/tests/end_to_end/screen_is_not_black:config",
   ]
