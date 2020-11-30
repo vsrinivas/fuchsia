@@ -16,13 +16,7 @@ use {
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::{error, info, trace},
-    std::{
-        cmp::Ordering,
-        collections::HashMap,
-        convert::TryInto,
-        sync::Arc,
-        time::{Duration, SystemTime},
-    },
+    std::{cmp::Ordering, collections::HashMap, convert::TryInto, sync::Arc},
     wlan_metrics_registry::{
         ActiveScanRequestedForNetworkSelectionMetricDimensionActiveScanSsidsRequested as ActiveScanSsidsRequested,
         SavedNetworkInScanResultMetricDimensionBssCount,
@@ -34,7 +28,7 @@ use {
     },
 };
 
-const RECENT_FAILURE_WINDOW: Duration = Duration::from_secs(60 * 5); // 5 minutes
+const RECENT_FAILURE_WINDOW: zx::Duration = zx::Duration::from_seconds(60 * 5); // 5 minutes
 const STALE_SCAN_AGE: zx::Duration = zx::Duration::from_seconds(10); // TODO(61992) Tweak duration
 
 pub struct NetworkSelector {
@@ -198,7 +192,7 @@ async fn load_saved_networks(
         let recent_failure_count = saved_network
             .perf_stats
             .failure_list
-            .get_recent(SystemTime::now() - RECENT_FAILURE_WINDOW)
+            .get_recent(zx::Time::get_monotonic() - RECENT_FAILURE_WINDOW)
             .len()
             .try_into()
             .unwrap_or_else(|e| {

@@ -554,10 +554,11 @@ mod tests {
         fidl_fuchsia_cobalt::CobaltEvent,
         fidl_fuchsia_stash as fidl_stash, fuchsia_async as fasync,
         fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
+        fuchsia_zircon as zx,
         futures::{task::Poll, TryStreamExt},
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
-        std::{io::Write, mem, time::SystemTime},
+        std::{io::Write, mem},
         tempfile::TempDir,
         test_case::test_case,
         wlan_common::assert_variant,
@@ -940,7 +941,7 @@ mod tests {
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
         let network_id = NetworkIdentifier::new("foo", SecurityType::None);
         let credential = Credential::None;
-        let before_recording = SystemTime::now();
+        let before_recording = zx::Time::get_monotonic();
 
         // Verify that recording connect result does not save the network.
         saved_networks
@@ -991,7 +992,7 @@ mod tests {
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
         let network_id = NetworkIdentifier::new("foo", SecurityType::None);
         let credential = Credential::None;
-        let before_recording = SystemTime::now();
+        let before_recording = zx::Time::get_monotonic();
 
         // Verify that recording connect result does not save the network.
         saved_networks

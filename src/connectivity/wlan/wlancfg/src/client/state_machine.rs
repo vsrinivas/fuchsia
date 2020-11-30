@@ -552,7 +552,6 @@ mod tests {
         fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_zircon,
         futures::{stream::StreamFuture, task::Poll, Future},
         rand::{distributions::Alphanumeric, thread_rng, Rng},
-        std::time::SystemTime,
         wlan_common::assert_variant,
     };
 
@@ -934,7 +933,7 @@ mod tests {
             saved_networks_manager.store(config_net_id.clone(), next_credential.clone()),
         )
         .expect("Failed to save network");
-        let before_recording = SystemTime::now();
+        let before_recording = zx::Time::get_monotonic();
 
         let connect_request = ConnectRequest {
             network: next_network_identifier,
@@ -1049,7 +1048,7 @@ mod tests {
             saved_networks_manager.store(config_net_id.clone(), next_credential.clone()),
         )
         .expect("Failed to save network");
-        let before_recording = SystemTime::now();
+        let before_recording = zx::Time::get_monotonic();
 
         let connect_request = ConnectRequest {
             network: next_network_identifier,

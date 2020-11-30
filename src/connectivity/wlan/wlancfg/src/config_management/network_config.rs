@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_policy as fidl_policy,
+    fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_zircon as zx,
     serde::{Deserialize, Serialize},
     std::{
         collections::VecDeque,
         convert::TryFrom,
         fmt::{self, Debug},
-        time::SystemTime,
     },
 };
 
@@ -62,7 +61,7 @@ pub enum FailureReason {
 pub struct ConnectFailure {
     // TODO(fxbug.dev/53858) Add BSSID of the AP we failed to connect to
     /// For determining whether this connection failure is still relevant
-    pub time: SystemTime,
+    pub time: zx::Time,
     /// The reason that connection failed
     pub reason: FailureReason,
 }
@@ -84,12 +83,12 @@ impl ConnectFailureList {
         if self.0.len() == self.0.capacity() {
             self.0.pop_front();
         }
-        self.0.push_back(ConnectFailure { time: SystemTime::now(), reason });
+        self.0.push_back(ConnectFailure { time: zx::Time::get_monotonic(), reason });
     }
 
     /// This function will be used when Network Denial reasons are used to select a network.
-    /// Returns a list of the denials that happened at or after given system time.
-    pub fn get_recent(&self, earliest_time: SystemTime) -> Vec<ConnectFailure> {
+    /// Returns a list of the denials that happened at or after the given monotonic time.
+    pub fn get_recent(&self, earliest_time: zx::Time) -> Vec<ConnectFailure> {
         self.0.iter().skip_while(|denial| denial.time < earliest_time).cloned().collect()
     }
 }
@@ -415,11 +414,7 @@ impl From<NetworkConfigError> for fidl_policy::NetworkConfigChangeError {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        std::{thread, time::Duration},
-        wlan_common::assert_variant,
-    };
+    use {super::*, wlan_common::assert_variant};
 
     #[test]
     fn new_network_config_none_credential() {
@@ -610,22 +605,23 @@ mod tests {
         let mut failure_list = ConnectFailureList::new();
 
         // Get time before adding so we can get back everything we added.
-        let curr_time = SystemTime::now();
+        let curr_time = zx::Time::get_monotonic();
         assert!(failure_list.get_recent(curr_time).is_empty());
         failure_list.add(FailureReason::GeneralFailure);
 
         let result_list = failure_list.get_recent(curr_time);
         assert_eq!(1, result_list.len());
         assert_eq!(FailureReason::GeneralFailure, result_list[0].reason);
-        // Should not get any results if we request for more recent denials more recent than added.
-        assert!(failure_list.get_recent(SystemTime::now() + Duration::new(0, 1)).is_empty());
+        // Should not get any results if we request denials older than the specified time.
+        let later_time = zx::Time::get_monotonic();
+        assert!(failure_list.get_recent(later_time).is_empty());
     }
 
     #[test]
     fn failure_list_add_when_full() {
         let mut failure_list = ConnectFailureList::new();
 
-        let curr_time = SystemTime::now();
+        let curr_time = zx::Time::get_monotonic();
         assert!(failure_list.get_recent(curr_time).is_empty());
         let failure_list_capacity = failure_list.0.capacity();
         assert!(failure_list_capacity >= NUM_DENY_REASONS);
@@ -642,14 +638,16 @@ mod tests {
     #[test]
     fn get_part_of_failure_list() {
         let mut failure_list = ConnectFailureList::new();
-        failure_list.add(FailureReason::GeneralFailure);
+        // curr_time is before or at the part of the list we want and after the one we don't want
+        let curr_time = zx::Time::get_monotonic();
+        // Inject a failure into the list that is older than the specified time.
+        let old_time = curr_time - zx::Duration::from_seconds(1);
+        failure_list
+            .0
+            .push_back(ConnectFailure { reason: FailureReason::GeneralFailure, time: old_time });
 
         // Choose half capacity to get so that we know the previous one is still in list
         let half_capacity = failure_list.0.capacity() / 2;
-        // Ensure we get a time after the deny entry we don't want
-        thread::sleep(Duration::new(0, 1));
-        // curr_time is before the part of the list we want and after the one we don't want
-        let curr_time = SystemTime::now();
         for _ in 0..half_capacity {
             failure_list.add(FailureReason::GeneralFailure);
         }
