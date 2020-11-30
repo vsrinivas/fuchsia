@@ -6,7 +6,7 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Overview"
+- title: "Audio overview"
   path: /docs/concepts/drivers/driver_interfaces/audio_overview.md
 - title: "Audio drivers architecture"
   path: /docs/concepts/drivers/driver_interfaces/audio_architecture.md
@@ -18,3 +18,5 @@ toc:
   path: /docs/concepts/drivers/driver_interfaces/audio_codec.md
 - title: "Legacy Audio streaming"
   path: /docs/concepts/drivers/driver_interfaces/audio_streaming_original.md
+- title: "SDMMC driver architecture"
+  path: /docs/concepts/drivers/driver_interfaces/sdmmc.md
