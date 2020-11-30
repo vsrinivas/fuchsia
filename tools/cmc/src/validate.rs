@@ -10,7 +10,7 @@ use {
     serde_json::Value,
     serde_json5,
     std::{
-        collections::{HashMap, HashSet},
+        collections::{HashMap, HashSet, VecDeque},
         fmt,
         fs::File,
         hash::Hash,
@@ -44,10 +44,22 @@ pub fn validate<P: AsRef<Path>>(
 /// Read in and parse .cml file. Returns a cml::Document if the file is valid, or an Error if not.
 pub fn parse_cml(file: &Path, includepath: Option<&PathBuf>) -> Result<cml::Document, Error> {
     let mut document: cml::Document = read_cml(file)?;
-    // Merge includes
+
     if let Some(include_path) = includepath {
-        for include in document.includes() {
-            let mut include_document = read_cml(&include_path.join(include))?;
+        // Recursively merge includes
+        let mut includes_to_merge = VecDeque::from(document.includes());
+        let mut seen_includes = HashSet::new();
+        while let Some(include_to_merge) = includes_to_merge.pop_front() {
+            // Check for cycles
+            if !seen_includes.insert(include_to_merge.clone()) {
+                return Err(Error::parse(
+                    format!("Includes cycle at {}", include_to_merge),
+                    None,
+                    Some(&file),
+                ));
+            }
+            let mut include_document = read_cml(&include_path.join(include_to_merge))?;
+            includes_to_merge.extend(include_document.includes());
             document.merge_from(&mut include_document);
         }
     }

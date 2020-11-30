@@ -52,7 +52,7 @@ pub fn compile(
     if let Some(depfile_path) = depfile {
         write_depfile(
             &depfile_path,
-            &Some(output.to_path_buf()),
+            Some(&output.to_path_buf()),
             &document.includes(),
             &includepath,
         )?;
@@ -2792,6 +2792,75 @@ mod tests {
     }
 
     #[test]
+    fn test_recursive_include() {
+        let tmp_dir = TempDir::new().unwrap();
+        let foo_path = tmp_dir.path().join("foo.cml");
+        fs::File::create(&foo_path)
+            .unwrap()
+            .write_all(format!("{}", json!({ "include": [ "bar.cml" ] })).as_bytes())
+            .unwrap();
+        let bar_path = tmp_dir.path().join("bar.cml");
+        fs::File::create(&bar_path)
+            .unwrap()
+            .write_all(format!("{}", json!({ "use": [ { "runner": "elf" } ] })).as_bytes())
+            .unwrap();
+        let in_path = tmp_dir.path().join("test.cml");
+        let out_path = tmp_dir.path().join("test.cm");
+        compile_test(
+            in_path,
+            out_path,
+            Some(tmp_dir.into_path()),
+            json!({
+                "include": [ "foo.cml" ],
+                "program": { "binary": "bin/test" },
+            }),
+            fsys::ComponentDecl {
+                program: Some(fdata::Dictionary {
+                    entries: Some(vec![fdata::DictionaryEntry {
+                        key: "binary".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str("bin/test".to_string()))),
+                    }]),
+                    ..fdata::Dictionary::empty()
+                }),
+                uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
+                    source_name: Some("elf".to_string()),
+                    ..fsys::UseRunnerDecl::empty()
+                })]),
+                ..default_component_decl()
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_cyclic_include() {
+        let tmp_dir = TempDir::new().unwrap();
+        let foo_path = tmp_dir.path().join("foo.cml");
+        fs::File::create(&foo_path)
+            .unwrap()
+            .write_all(format!("{}", json!({ "include": [ "bar.cml" ] })).as_bytes())
+            .unwrap();
+        let bar_path = tmp_dir.path().join("bar.cml");
+        fs::File::create(&bar_path)
+            .unwrap()
+            .write_all(format!("{}", json!({ "include": [ "foo.cml" ] })).as_bytes())
+            .unwrap();
+        let in_path = tmp_dir.path().join("test.cml");
+        let out_path = tmp_dir.path().join("test.cm");
+        let result = compile_test(
+            in_path,
+            out_path,
+            Some(tmp_dir.into_path()),
+            json!({
+                "include": [ "foo.cml" ],
+                "program": { "binary": "bin/test" },
+            }),
+            default_component_decl(),
+        );
+        assert_matches!(result, Err(Error::Parse { err, .. }) if err.contains("Includes cycle"));
+    }
+
+    #[test]
     fn test_conflicting_includes() {
         let tmp_dir = TempDir::new().unwrap();
         let foo_path = tmp_dir.path().join("foo.cml");
@@ -2821,20 +2890,7 @@ mod tests {
                 "include": [ "foo.cml", "bar.cml" ],
                 "program": { "binary": "bin/test" },
             }),
-            fsys::ComponentDecl {
-                program: Some(fdata::Dictionary {
-                    entries: Some(vec![fdata::DictionaryEntry {
-                        key: "binary".to_string(),
-                        value: Some(Box::new(fdata::DictionaryValue::Str("bin/test".to_string()))),
-                    }]),
-                    ..fdata::Dictionary::empty()
-                }),
-                uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
-                    source_name: Some("elf".to_string()),
-                    ..fsys::UseRunnerDecl::empty()
-                })]),
-                ..default_component_decl()
-            },
+            default_component_decl(),
         );
         // Including both foo.cml and bar.cml should fail to validate because of an incoming
         // namespace collission

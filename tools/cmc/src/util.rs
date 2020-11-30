@@ -40,7 +40,7 @@ pub fn json_or_json5_from_file(file: &PathBuf) -> Result<Value, Error> {
 /// If there is no output, deletes the potentially stale depfile.
 pub fn write_depfile(
     depfile: &PathBuf,
-    output: &Option<PathBuf>,
+    output: Option<&PathBuf>,
     includes: &Vec<String>,
     includepath: &PathBuf,
 ) -> Result<(), Error> {
@@ -81,7 +81,7 @@ mod tests {
         let depfile = tmp_path.join("foo.d");
         let output = tmp_path.join("foo.cml");
         let includes = vec!["bar.cml".to_string(), "qux.cml".to_string()];
-        write_depfile(&depfile, &Some(output), &includes, &tmp_path.to_path_buf()).unwrap();
+        write_depfile(&depfile, Some(&output), &includes, &tmp_path.to_path_buf()).unwrap();
 
         let mut depfile_contents = String::new();
         File::open(&depfile).unwrap().read_to_string(&mut depfile_contents).unwrap();

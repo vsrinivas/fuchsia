@@ -644,6 +644,8 @@ macro_rules! merge_from_field {
 
 impl Document {
     pub fn merge_from(&mut self, other: &mut Document) {
+        merge_from_field!(self, other, include);
+        // Note: intentionally don't merge `program`.
         merge_from_field!(self, other, r#use);
         merge_from_field!(self, other, expose);
         merge_from_field!(self, other, offer);
@@ -652,9 +654,6 @@ impl Document {
         merge_from_field!(self, other, collections);
         merge_from_field!(self, other, facets);
         merge_from_field!(self, other, environments);
-        // Note: intentionally don't merge `program`.
-        // Note: intentionally don't merge `include`, unless we want to support
-        // transitive includes in the future.
     }
 
     pub fn includes(&self) -> Vec<String> {
