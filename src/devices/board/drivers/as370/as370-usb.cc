@@ -9,7 +9,6 @@
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/cdc.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -19,6 +18,7 @@
 #include <usb/dwc2/metadata.h>
 
 #include "as370.h"
+#include "src/devices/board/drivers/as370/as370-bind.h"
 
 namespace board_as370 {
 

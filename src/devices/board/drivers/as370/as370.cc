@@ -7,7 +7,6 @@
 #include <zircon/status.h>
 #include <zircon/threads.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>

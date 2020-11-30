@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -13,6 +12,7 @@
 #include <soc/as370/as370-hw.h>
 
 #include "as370.h"
+#include "src/devices/board/drivers/as370/as370-bind.h"
 
 namespace board_as370 {
 

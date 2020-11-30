@@ -4,7 +4,6 @@
 
 #include <limits.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -19,6 +18,7 @@
 #include <soc/as370/as370-i2c.h>
 
 #include "as370.h"
+#include "src/devices/board/drivers/as370/as370-bind.h"
 
 namespace board_as370 {
 

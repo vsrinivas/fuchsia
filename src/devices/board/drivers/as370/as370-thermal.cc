@@ -4,7 +4,6 @@
 
 #include <fuchsia/hardware/thermal/llcpp/fidl.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -13,6 +12,7 @@
 #include <soc/as370/as370-thermal.h>
 
 #include "as370.h"
+#include "src/devices/board/drivers/as370/as370-bind.h"
 
 namespace board_as370 {
 
