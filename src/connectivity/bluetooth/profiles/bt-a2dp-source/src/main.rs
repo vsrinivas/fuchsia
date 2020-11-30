@@ -273,13 +273,17 @@ async fn main() -> Result<(), Error> {
         info!("Failed to attach peers to inspect: {:?}", e);
     }
 
+    let peers_connected_stream = peers.connected_stream();
+    let _controller_pool_connected_task = fasync::Task::spawn(
+        peers_connected_stream.map(move |p| controller_pool.peer_connected(p)).collect::<()>(),
+    );
+
     lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");
 
     handle_profile_events(
         peers,
         connect_requests,
         results_requests,
-        controller_pool,
         profile_svc,
         signaling_channel_mode,
     )
@@ -290,7 +294,6 @@ async fn handle_profile_events(
     peers: ConnectedPeers,
     mut connect_requests: bredr::ConnectionReceiverRequestStream,
     mut results_requests: bredr::SearchResultsRequestStream,
-    controller_pool: Arc<ControllerPool>,
     profile: bredr::ProfileProxy,
     signaling_channel_mode: bredr::ChannelMode,
 ) -> Result<(), Error> {
@@ -312,10 +315,9 @@ async fn handle_profile_events(
                         continue;
                     }
                 };
-                match peers.lock().await.connected(peer_id, channel, false) {
-                    Err(e) => info!("Error connecting peer {}: {:?}", peer_id, e),
-                    Ok(weak) => controller_pool.peer_connected(peer_id.clone(), weak),
-                };
+                if let Err(e) = peers.lock().await.connected(peer_id, channel, false) {
+                    info!("Error connecting peer {}: {:?}", peer_id, e);
+                }
             },
             results_request = results_requests.try_next() => {
                 let result = match results_request? {
@@ -335,7 +337,7 @@ async fn handle_profile_events(
                 };
                 peers.lock().await.found(peer_id, desc);
 
-                fasync::Task::local(connect_after_timeout(peer_id, profile.clone(), peers.clone(), controller_pool.clone(), signaling_channel_mode)).detach();
+                fasync::Task::local(connect_after_timeout(peer_id, profile.clone(), peers.clone(),  signaling_channel_mode)).detach();
             },
             complete => break,
         }
@@ -350,7 +352,6 @@ async fn connect_after_timeout(
     id: PeerId,
     profile: bredr::ProfileProxy,
     peers: Arc<Mutex<ConnectedPeers>>,
-    controller_pool: Arc<ControllerPool>,
     channel_mode: bredr::ChannelMode,
 ) {
     info!("Waiting {:?} to connect to discovered peer {}", INITIATOR_DELAY, id);
@@ -390,10 +391,9 @@ async fn connect_after_timeout(
             return;
         }
     };
-    match peers.lock().await.connected(id, channel, true) {
-        Err(e) => info!("Error connecting peer {}: {:?}", id, e),
-        Ok(weak) => controller_pool.peer_connected(id, weak),
-    };
+    if let Err(e) = peers.lock().await.connected(id, channel, true) {
+        info!("Error connecting peer {}: {:?}", id, e);
+    }
 }
 
 #[cfg(test)]
@@ -414,7 +414,6 @@ mod tests {
         let (_connect_proxy, connect_stream) =
             create_proxy_and_stream::<bredr::ConnectionReceiverMarker>()
                 .expect("ConnectionReceiver proxy should be created");
-        let controller = Arc::new(ControllerPool::new());
 
         let peers = ConnectedPeers::new(
             stream::Streams::new(),
@@ -427,7 +426,6 @@ mod tests {
             peers,
             connect_stream,
             results_stream,
-            controller,
             profile_proxy,
             bredr::ChannelMode::Basic,
         );

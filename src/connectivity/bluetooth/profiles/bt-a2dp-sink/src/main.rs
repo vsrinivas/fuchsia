@@ -213,7 +213,6 @@ impl StreamsBuilder {
 async fn connect_after_timeout(
     peer_id: PeerId,
     peers: Arc<Mutex<ConnectedPeers>>,
-    controller_pool: Arc<ControllerPool>,
     profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
 ) {
@@ -261,13 +260,7 @@ async fn connect_after_timeout(
         Ok(chan) => chan,
     };
 
-    handle_connection(
-        &peer_id,
-        channel,
-        /* initiate = */ true,
-        &mut peers.lock(),
-        &controller_pool,
-    );
+    handle_connection(&peer_id, channel, /* initiate = */ true, &mut peers.lock());
 }
 
 /// Handles incoming peer connections
@@ -276,13 +269,9 @@ fn handle_connection(
     channel: Channel,
     initiate: bool,
     peers: &mut ConnectedPeers,
-    controller_pool: &ControllerPool,
 ) {
     info!("Connection from {}: {:?}!", peer_id, channel);
-    if let Ok(peer) = peers.connected(peer_id.clone(), channel, initiate) {
-        // Add the controller to the peers
-        controller_pool.peer_connected(peer_id.clone(), peer);
-    }
+    let _ = peers.connected(peer_id.clone(), channel, initiate);
 }
 
 /// Handles found services. Stores the found information and then spawns a task which will
@@ -291,7 +280,6 @@ fn handle_services_found(
     peer_id: &PeerId,
     attributes: &[bredr::Attribute],
     peers: Arc<Mutex<ConnectedPeers>>,
-    controller_pool: Arc<ControllerPool>,
     profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
 ) {
@@ -314,7 +302,6 @@ fn handle_services_found(
     fasync::Task::local(connect_after_timeout(
         peer_id.clone(),
         peers.clone(),
-        controller_pool.clone(),
         profile_svc,
         channel_mode,
     ))
@@ -401,6 +388,11 @@ async fn main() -> Result<(), Error> {
         info!("Failed to attach to inspect: {:?}", e);
     }
 
+    let peers_connected_stream = peers.connected_stream();
+    let _controller_pool_connected_task = fasync::Task::spawn(
+        peers_connected_stream.map(move |p| controller_pool.peer_connected(p)).collect::<()>(),
+    );
+
     let peers = Arc::new(Mutex::new(peers));
 
     let service_defs = vec![make_profile_service_definition()];
@@ -439,7 +431,6 @@ async fn main() -> Result<(), Error> {
 
     handle_profile_events(
         peers,
-        controller_pool,
         profile_svc,
         signaling_channel_mode,
         connect_requests,
@@ -450,7 +441,6 @@ async fn main() -> Result<(), Error> {
 
 async fn handle_profile_events(
     peers: Arc<Mutex<ConnectedPeers>>,
-    controller_pool: Arc<ControllerPool>,
     profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
     mut connect_requests: bredr::ConnectionReceiverRequestStream,
@@ -468,8 +458,7 @@ async fn handle_profile_events(
                     &peer_id.into(),
                     channel.try_into()?,
                     /* initiate = */ false,
-                    &mut peers.lock(),
-                    &controller_pool);
+                    &mut peers.lock());
             }
             results_request = results_requests.try_next() => {
                 let result = match results_request? {
@@ -482,7 +471,6 @@ async fn handle_profile_events(
                     &peer_id.into(),
                     &attributes,
                     peers.clone(),
-                    controller_pool.clone(),
                     profile_svc.clone(),
                     channel_mode.clone());
                 responder.send()?;
@@ -517,13 +505,9 @@ mod tests {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
     }
 
-    fn setup_connected_peer_test() -> (
-        fasync::Executor,
-        Arc<Mutex<ConnectedPeers>>,
-        bredr::ProfileProxy,
-        ProfileRequestStream,
-        Arc<ControllerPool>,
-    ) {
+    fn setup_connected_peer_test(
+    ) -> (fasync::Executor, Arc<Mutex<ConnectedPeers>>, bredr::ProfileProxy, ProfileRequestStream)
+    {
         let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
         let (proxy, stream) = create_proxy_and_stream::<bredr::ProfileMarker>()
             .expect("Profile proxy should be created");
@@ -535,15 +519,12 @@ mod tests {
             Some(cobalt_sender),
         )));
 
-        let controller_pool = Arc::new(ControllerPool::new());
-
-        (exec, peers, proxy, stream, controller_pool)
+        (exec, peers, proxy, stream)
     }
 
     #[test]
     fn test_responds_to_search_results() {
-        let (mut exec, peers, profile_proxy, _profile_stream, controller_pool) =
-            setup_connected_peer_test();
+        let (mut exec, peers, profile_proxy, _profile_stream) = setup_connected_peer_test();
         let (results_proxy, results_stream) = create_proxy_and_stream::<SearchResultsMarker>()
             .expect("SearchResults proxy should be created");
         let (_connect_proxy, connect_stream) =
@@ -552,7 +533,6 @@ mod tests {
 
         let handler_fut = handle_profile_events(
             peers,
-            controller_pool,
             profile_proxy,
             bredr::ChannelMode::Basic,
             connect_stream,
@@ -595,8 +575,7 @@ mod tests {
     /// Tests that A2DP sink assumes the initiator role when a peer is found, but
     /// not connected, and the timeout completes.
     fn wait_to_initiate_success_with_no_connected_peer() {
-        let (mut exec, peers, proxy, mut prof_stream, controller_pool) =
-            setup_connected_peer_test();
+        let (mut exec, peers, proxy, mut prof_stream) = setup_connected_peer_test();
         // Initialize context to a fixed point in time.
         exec.set_fake_time(fasync::Time::from_nanos(1000000000));
         let peer_id = PeerId(1);
@@ -617,7 +596,6 @@ mod tests {
             &peer_id,
             &attributes,
             peers.clone(),
-            controller_pool,
             proxy.clone(),
             bredr::ChannelMode::Basic,
         );
@@ -657,8 +635,7 @@ mod tests {
     /// Tests that A2DP sink does not assume the initiator role when a peer connects
     /// before `INITIATOR_DELAY` timeout completes.
     fn wait_to_initiate_returns_early_with_connected_peer() {
-        let (mut exec, peers, proxy, mut prof_stream, controller_pool) =
-            setup_connected_peer_test();
+        let (mut exec, peers, proxy, mut prof_stream) = setup_connected_peer_test();
         // Initialize context to a fixed point in time.
         exec.set_fake_time(fasync::Time::from_nanos(1000000000));
         let peer_id = PeerId(1);
@@ -679,7 +656,6 @@ mod tests {
             &peer_id,
             &attributes,
             peers.clone(),
-            controller_pool.clone(),
             proxy.clone(),
             bredr::ChannelMode::Basic,
         );
@@ -698,13 +674,7 @@ mod tests {
         let (_remote, transport) = Channel::create();
         {
             let mut peers_lock = peers.lock();
-            handle_connection(
-                &peer_id,
-                transport,
-                /* initiate = */ false,
-                &mut peers_lock,
-                &controller_pool,
-            );
+            handle_connection(&peer_id, transport, /* initiate = */ false, &mut peers_lock);
         }
 
         run_to_stalled(&mut exec);

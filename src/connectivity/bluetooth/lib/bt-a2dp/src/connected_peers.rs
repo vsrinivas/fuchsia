@@ -14,8 +14,13 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
+    futures::{
+        channel::mpsc,
+        stream::{Stream, StreamExt},
+        task::{Context, Poll},
+    },
     log::{info, warn},
-    std::{collections::HashMap, sync::Arc},
+    std::{collections::HashMap, pin::Pin, sync::Arc},
 };
 
 use crate::{codec::CodecNegotiation, peer::Peer, stream::Streams};
@@ -37,6 +42,8 @@ pub struct ConnectedPeers {
     cobalt_sender: Option<CobaltSender>,
     /// The 'peers' node of the inspect tree. All connected peers own a child node of this node.
     inspect: inspect::Node,
+    /// Listeners for new connected peers
+    connected_peer_senders: Vec<mpsc::Sender<DetachableWeak<PeerId, Peer>>>,
 }
 
 impl ConnectedPeers {
@@ -54,6 +61,7 @@ impl ConnectedPeers {
             profile,
             inspect: inspect::Node::default(),
             cobalt_sender,
+            connected_peer_senders: Vec::new(),
         }
     }
 
@@ -154,7 +162,29 @@ impl ConnectedPeers {
             peer.detach();
         })
         .detach();
-        self.get_weak(&id).ok_or(format_err!("Peer missing"))
+
+        let peer = self.get_weak(&id).ok_or(format_err!("Peer missing"))?;
+        self.notify_connected(&peer);
+        Ok(peer)
+    }
+
+    /// Notify the listeners that a new peer has been connected to.
+    fn notify_connected(&mut self, peer: &DetachableWeak<PeerId, Peer>) {
+        let mut i = 0;
+        while i != self.connected_peer_senders.len() {
+            if let Err(_) = self.connected_peer_senders[i].try_send(peer.clone()) {
+                let _ = self.connected_peer_senders.swap_remove(i);
+            } else {
+                i += 1;
+            }
+        }
+    }
+
+    /// Get a stream that produces peers that have been connected.
+    pub fn connected_stream(&mut self) -> PeerConnections {
+        let (sender, receiver) = mpsc::channel(0);
+        self.connected_peer_senders.push(sender);
+        PeerConnections { stream: receiver }
     }
 }
 
@@ -162,6 +192,20 @@ impl Inspect for &mut ConnectedPeers {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
         self.inspect = parent.create_child(name);
         Ok(())
+    }
+}
+
+/// Provides a stream of peers that have been connected to. This stream produces an item whenever
+/// an A2DP peer has been connected.  It will produce None when no more peers will be connected.
+pub struct PeerConnections {
+    stream: mpsc::Receiver<DetachableWeak<PeerId, Peer>>,
+}
+
+impl Stream for PeerConnections {
+    type Item = DetachableWeak<PeerId, Peer>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.stream.poll_next_unpin(cx)
     }
 }
 
@@ -252,6 +296,40 @@ mod tests {
         let peer = peer.upgrade().expect("peer should be connected");
 
         exercise_avdtp(&mut exec, remote, &peer);
+    }
+
+    #[test]
+    fn connect_notifies_streams() {
+        let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
+
+        let (remote, channel) = Channel::create();
+
+        let mut peer_stream = peers.connected_stream();
+        let mut peer_stream_two = peers.connected_stream();
+
+        let peer = peers.connected(id, channel, false).expect("peer should connect");
+        let peer = peer.upgrade().expect("peer should be connected");
+
+        // Peers should have been notified of the new peer
+        let weak = exec.run_singlethreaded(peer_stream.next()).expect("peer stream to produce");
+        assert_eq!(weak.key(), &id);
+        let weak = exec.run_singlethreaded(peer_stream_two.next()).expect("peer stream to produce");
+        assert_eq!(weak.key(), &id);
+
+        exercise_avdtp(&mut exec, remote, &peer);
+
+        // If you drop one stream, the other one should still produce.
+        drop(peer_stream);
+
+        let id2 = PeerId(2);
+        let (remote2, channel2) = Channel::create();
+        let peer2 = peers.connected(id2, channel2, false).expect("peer should connect");
+        let peer2 = peer2.upgrade().expect("peer two should be connected");
+
+        let weak = exec.run_singlethreaded(peer_stream_two.next()).expect("peer stream to produce");
+        assert_eq!(weak.key(), &id2);
+
+        exercise_avdtp(&mut exec, remote2, &peer2);
     }
 
     // Arbitrarily chosen ID for the SBC stream endpoint.

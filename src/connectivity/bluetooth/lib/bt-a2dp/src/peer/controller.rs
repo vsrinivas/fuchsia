@@ -334,7 +334,8 @@ impl ControllerPoolInner {
 
     /// Inserts a weak reference to the A2DP peer and notifies the control handle of
     /// the connection.
-    fn peer_connected(&mut self, peer_id: PeerId, peer: DetachableWeak<PeerId, Peer>) {
+    fn peer_connected(&mut self, peer: DetachableWeak<PeerId, Peer>) {
+        let peer_id = peer.key().clone();
         self.peers.insert(peer_id, peer);
         if let Some(handle) = self.control_handle.as_ref() {
             if let Err(e) = handle.send_on_peer_connected(&mut peer_id.into()) {
@@ -384,8 +385,8 @@ impl ControllerPool {
 
     /// Stores the weak reference to the A2DP peer and notifies the control handle of the connection.
     /// This should be called once for every connected remote peer.
-    pub fn peer_connected(&self, peer_id: PeerId, peer: DetachableWeak<PeerId, Peer>) {
-        self.inner.lock().peer_connected(peer_id, peer);
+    pub fn peer_connected(&self, peer: DetachableWeak<PeerId, Peer>) {
+        self.inner.lock().peer_connected(peer);
     }
 }
 
@@ -475,7 +476,7 @@ mod tests {
         peer_map.insert(fake_peer_id, peer);
         let weak_peer = peer_map.get(&fake_peer_id).expect("just inserted");
 
-        controller_pool.peer_connected(fake_peer_id, weak_peer);
+        controller_pool.peer_connected(weak_peer);
         assert!(controller_pool.control_handle().is_some());
         assert!(controller_pool.get_peer(&fake_peer_id).is_some());
 
