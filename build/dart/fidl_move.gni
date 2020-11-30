@@ -8,6 +8,7 @@
 dart_package_label = {
   fidl = "//sdk/dart/fidl/"
   fuchsia = "//sdk/dart/fuchsia/"
+  fuchsia_vfs = "//topaz/public/dart/fuchsia_vfs/"
   zircon = "//sdk/dart/zircon/"
 }
 

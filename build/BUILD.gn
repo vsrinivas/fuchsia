@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/fidl_move.gni")
+
 # The tests listed in this target will be built by the default build.
 group("tests") {
   testonly = true
@@ -1684,7 +1686,8 @@ group("deprecated_package_underscore") {
     "//topaz/public/dart/fuchsia_modular_testing:fuchsia_modular_testing_package_integration_tests_pkg",
     "//topaz/public/dart/fuchsia_services:fuchsia_services_foo_test_server_pkg",
     "//topaz/public/dart/fuchsia_services:fuchsia_services_package_integration_tests_pkg",
-    "//topaz/public/dart/fuchsia_vfs:fuchsia_vfs_package_unittests_pkg",
+    get_label_info(dart_package_label.fuchsia_vfs, "dir") +
+        ":fuchsia_vfs_package_unittests_pkg",
     "//topaz/public/dart/fuchsia_webview_flutter/examples/webview_mod:webview_mod_pkg",
     "//topaz/shell/story_shell_labs:story_shell_labs_pkg",
     "//topaz/tests/dart_fidl_benchmarks:dart_fidl_benchmarks_pkg",
