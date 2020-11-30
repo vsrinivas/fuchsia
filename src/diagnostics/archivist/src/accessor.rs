@@ -137,11 +137,7 @@ impl ArchiveAccessor {
             }
             DataType::Logs => {
                 let stats = Arc::new(ConnectionStats::for_logs(accessor_stats));
-                let (manager, redactor) = {
-                    let repo = diagnostics_repo.read();
-                    (repo.log_manager(), repo.log_redactor())
-                };
-                let logs = redactor.redact_stream(manager.cursor(mode).await);
+                let logs = DataRepo::logs(&diagnostics_repo, mode).await;
                 BatchIterator::new_serving_arrays(logs, requests, mode, stats)?.run().await
             }
         }

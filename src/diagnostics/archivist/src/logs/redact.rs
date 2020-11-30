@@ -8,7 +8,7 @@ use serde::Serialize;
 use std::{borrow::Cow, sync::Arc};
 
 mod serialize;
-use serialize::{Redacted, RedactedItem};
+pub use serialize::{Redacted, RedactedItem};
 
 pub const UNREDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
     Email: alice@website.tld, \

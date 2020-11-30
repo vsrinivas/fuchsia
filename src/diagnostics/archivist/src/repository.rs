@@ -7,13 +7,20 @@ use {
         events::types::ComponentIdentifier,
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
         lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
-        logs::{redact::Redactor, LogManager},
+        logs::{
+            redact::{RedactedItem, Redactor},
+            LogManager, Message,
+        },
     },
     anyhow::{format_err, Error},
     diagnostics_hierarchy::trie,
-    fidl_fuchsia_diagnostics::{self, Selector},
+    fidl_fuchsia_diagnostics::{self, Selector, StreamMode},
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
-    fuchsia_zircon as zx, io_util, selectors,
+    fuchsia_zircon as zx,
+    futures::prelude::*,
+    io_util,
+    parking_lot::RwLock,
+    selectors,
     std::convert::TryInto,
     std::sync::Arc,
 };
@@ -50,12 +57,15 @@ impl DataRepo {
         }
     }
 
-    pub fn log_manager(&self) -> LogManager {
-        self.log_manager.clone()
-    }
-
-    pub fn log_redactor(&self) -> Arc<Redactor> {
-        self.log_redactor.clone()
+    pub async fn logs(
+        repo: &Arc<RwLock<Self>>,
+        mode: StreamMode,
+    ) -> impl Stream<Item = RedactedItem<Message>> {
+        let (redactor, manager) = {
+            let repo = repo.read();
+            (repo.log_redactor.clone(), repo.log_manager.clone())
+        };
+        redactor.redact_stream(manager.cursor(mode).await)
     }
 
     pub fn remove(&mut self, component_id: &ComponentIdentifier) {
