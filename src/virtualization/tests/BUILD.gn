@@ -10,11 +10,8 @@ import("//src/virtualization/buildtools/romfs_image.gni")
 
 # Packages required to run the guest integration tests.
 guest_packages = [
-  "//garnet/packages/prod:guest_runner",
-  "//src/virtualization/bin/guest_manager",
-  "//src/virtualization/packages/debian_guest",
-  "//src/virtualization/packages/termina_guest",
-  "//src/virtualization/packages/zircon_guest",
+  "//src/virtualization/bin",
+  "//src/virtualization/packages",
 ]
 
 # TODO(fxbug.dev/50820): Fix on ASan and switch back to [ nuc_env ].

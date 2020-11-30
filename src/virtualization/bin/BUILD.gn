@@ -3,13 +3,12 @@
 # found in the LICENSE file.
 
 group("bin") {
-  testonly = true
-
   deps = [
     "guest",
     "guest_manager",
     "guest_runner",
     "vmm",
+    "vmm/device:packages",
   ]
 }
 

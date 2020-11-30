@@ -3,6 +3,5 @@
 # found in the LICENSE file.
 
 group("third_party") {
-  testonly = true
   deps = [ "fdt" ]
 }

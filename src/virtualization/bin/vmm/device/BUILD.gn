@@ -5,6 +5,20 @@
 import("//build/package.gni")
 import("//src/graphics/lib/magma/include/virtio/virtmagma_debug.gni")
 
+group("packages") {
+  deps = [
+    ":virtio_balloon",
+    ":virtio_block",
+    ":virtio_console",
+    ":virtio_gpu",
+    ":virtio_input",
+    ":virtio_magma",
+    ":virtio_net",
+    ":virtio_rng",
+    ":virtio_wl",
+  ]
+}
+
 source_set("device") {
   sources = [
     "block.h",
@@ -65,7 +79,7 @@ package("virtio_balloon") {
   deps = [ ":virtio_balloon_bin" ]
   meta = [
     {
-      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_balloon.cmx")
+      path = "../meta/virtio_balloon.cmx"
       dest = "virtio_balloon.cmx"
     },
   ]
@@ -115,7 +129,7 @@ package("virtio_block") {
   deps = [ ":virtio_block_bin" ]
   meta = [
     {
-      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_block.cmx")
+      path = "../meta/virtio_block.cmx"
       dest = "virtio_block.cmx"
     },
   ]
@@ -138,7 +152,7 @@ package("virtio_console") {
   deps = [ ":virtio_console_bin" ]
   meta = [
     {
-      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_console.cmx")
+      path = "../meta/virtio_console.cmx"
       dest = "virtio_console.cmx"
     },
   ]
@@ -161,7 +175,7 @@ package("virtio_input") {
   deps = [ ":virtio_input_bin" ]
   meta = [
     {
-      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_input.cmx")
+      path = "../meta/virtio_input.cmx"
       dest = "virtio_input.cmx"
     },
   ]
@@ -203,7 +217,7 @@ package("virtio_gpu") {
   deps = [ ":virtio_gpu_bin" ]
   meta = [
     {
-      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_gpu.cmx")
+      path = "../meta/virtio_gpu.cmx"
       dest = "virtio_gpu.cmx"
     },
   ]
@@ -269,7 +283,7 @@ package("virtio_magma") {
   ]
   meta = [
     {
-      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_magma.cmx")
+      path = "../meta/virtio_magma.cmx"
       dest = "virtio_magma.cmx"
     },
   ]
@@ -287,7 +301,7 @@ package("virtio_magma_mock_system") {
 
   meta = [
     {
-      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_magma.cmx")
+      path = "../meta/virtio_magma.cmx"
       dest = "virtio_magma_mock_system.cmx"
     },
   ]
@@ -322,7 +336,7 @@ package("virtio_net") {
   deps = [ ":virtio_net_bin" ]
   meta = [
     {
-      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_net.cmx")
+      path = "../meta/virtio_net.cmx"
       dest = "virtio_net.cmx"
     },
   ]
@@ -345,7 +359,7 @@ package("virtio_rng") {
   deps = [ ":virtio_rng_bin" ]
   meta = [
     {
-      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_rng.cmx")
+      path = "../meta/virtio_rng.cmx"
       dest = "virtio_rng.cmx"
     },
   ]
@@ -377,7 +391,7 @@ package("virtio_wl") {
 
   meta = [
     {
-      path = rebase_path("//src/virtualization/bin/vmm/meta/virtio_wl.cmx")
+      path = "../meta/virtio_wl.cmx"
       dest = "virtio_wl.cmx"
     },
   ]

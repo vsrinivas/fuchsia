@@ -9,8 +9,6 @@ group("virtualization") {
     "bin",
     "lib",
     "packages",
-    "tests",
-    "third_party",
   ]
 }
 
