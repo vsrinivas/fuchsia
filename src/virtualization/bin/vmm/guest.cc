@@ -62,7 +62,7 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
     return status;
   }
 
-  zx::resource root_resource;
+  zx::resource mmio_resource;
   for (const fuchsia::virtualization::MemorySpec& spec : memory) {
     zx::vmo vmo;
     switch (spec.policy) {
@@ -75,14 +75,14 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
         break;
       case fuchsia::virtualization::MemoryPolicy::HOST_CACHED:
       case fuchsia::virtualization::MemoryPolicy::HOST_DEVICE:
-        if (!root_resource) {
-          status = get_root_resource(&root_resource);
+        if (!mmio_resource) {
+          status = get_mmio_resource(&mmio_resource);
           if (status != ZX_OK) {
             FX_LOGS(ERROR) << "Failed to get root resource " << status;
             return status;
           }
         }
-        status = zx::vmo::create_physical(root_resource, spec.base, spec.size, &vmo);
+        status = zx::vmo::create_physical(mmio_resource, spec.base, spec.size, &vmo);
         if (status != ZX_OK) {
           FX_LOGS(ERROR) << "Failed to create physical VMO " << status;
           return status;

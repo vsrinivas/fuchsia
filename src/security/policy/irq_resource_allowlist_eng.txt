@@ -1,5 +1,5 @@
 # Components
+fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cmx
 # Component Tests
 fuchsia-pkg://fuchsia.com/component-manager-tests#meta/component_manager_boot_env_tests.cmx
 fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/irq_resource_allowed.cmx
-

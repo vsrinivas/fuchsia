@@ -13,8 +13,9 @@
             "deprecated-ambient-replace-as-executable"
         ],
         "services": [
-            "fuchsia.boot.RootResource",
             "fuchsia.kernel.HypervisorResource",
+            "fuchsia.kernel.IrqResource",
+            "fuchsia.kernel.MmioResource",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sysinfo.SysInfo",
