@@ -130,6 +130,44 @@ bool GetKeyFromTeeDevice(const char* device_path, uint8_t* key_info, size_t key_
   return true;
 }
 
+// Rotates an existing hardware derived key from a tee device at |device_path|.
+//
+// Arguments:
+//    device_path: The path to the tee device. If device_path is nullptr, we would let tee client
+//                 api select the correct path to connect.
+//    key_info: The key information that identifies the key to be rotated.
+//    key_info_size: The size of |key_info|.
+//
+// Returns TEEC_SUCCESS if the operation succeeds, TEEC_ERROR_* otherwise.
+static TEEC_Result RotateKeyFromTeeDevice(const char* device_path, uint8_t* key_info,
+                                          size_t key_info_size) {
+  ScopedTeecContext scoped_teec_context;
+  TEEC_Result result = scoped_teec_context.initialize(device_path);
+  if (result != TEEC_SUCCESS) {
+    fprintf(stderr, "Failed to initialize TEE context: %X\n", result);
+    return result;
+  }
+
+  std::unique_ptr<ScopedTeecSession> session_ptr = scoped_teec_context.openSession();
+  if (!session_ptr.get()) {
+    fprintf(stderr, "Failed to open TEE Session to Keysafe!\n");
+    return TEEC_ERROR_GENERIC;
+  }
+
+  TEEC_Operation op{};
+  op.paramTypes = TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_NONE, TEEC_NONE, TEEC_NONE);
+  op.params[0].tmpref.buffer = key_info;
+  op.params[0].tmpref.size = key_info_size;
+
+  result = session_ptr->invokeCommand(TA_KEYSAFE_CMD_ROTATE_HARDWARE_DERIVED_KEY, &op);
+  if (result != TEEC_SUCCESS) {
+    fprintf(stderr, "Failed to rotate TEE key: result=0x%x\n", result);
+    return result;
+  }
+
+  return TEEC_SUCCESS;
+}
+
 // The structure to pass as cookie to fdio_watch_directory callback function.
 struct WatchTeeArgs {
   // The callback function called when a hardware key is successfully derived.
@@ -205,4 +243,21 @@ zx_status_t GetHardwareDerivedKeyFromService(GetHardwareDerivedKeyCallback callb
 
   return callback(std::move(key_buffer), key_size);
 }
+
+zx_status_t RotateHardwareDerivedKeyFromService(uint8_t key_info[kExpectedKeyInfoSize]) {
+  TEEC_Result result = RotateKeyFromTeeDevice(nullptr, key_info, kExpectedKeyInfoSize);
+
+  if (result == TEEC_ERROR_NOT_SUPPORTED) {
+    fprintf(stderr, "Hardware key rotation not supported by TEE!\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  if (result != TEEC_SUCCESS) {
+    fprintf(stderr, "Failed to rotate hardware key from TEE!\n");
+    return ZX_ERR_IO;
+  }
+
+  return ZX_OK;
+}
+
 }  // namespace kms_stateless

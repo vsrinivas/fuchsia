@@ -31,6 +31,13 @@ zx_status_t GetHardwareDerivedKey(GetHardwareDerivedKeyCallback callback,
 // This should be used from components.
 zx_status_t GetHardwareDerivedKeyFromService(GetHardwareDerivedKeyCallback callback,
                                              uint8_t key_info[kExpectedKeyInfoSize]);
+
+// Rotate an existing hardware derived key identified by `key_info` using the service
+// fuchsia.tee.Device.
+//
+// This should be used from components.
+zx_status_t RotateHardwareDerivedKeyFromService(uint8_t key_info[kExpectedKeyInfoSize]);
+
 }  // namespace kms_stateless
 
 #endif  // KMS_STATELESS_KMS_STATELESS_H_
