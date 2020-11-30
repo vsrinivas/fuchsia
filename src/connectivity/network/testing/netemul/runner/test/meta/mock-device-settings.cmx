@@ -14,6 +14,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/mock_device_settings_bin_test"
     },

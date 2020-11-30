@@ -8,6 +8,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/sampler_integration_tests"
     },

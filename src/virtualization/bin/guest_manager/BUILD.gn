@@ -89,6 +89,9 @@ test_package("guest_manager_tests") {
     {
       name = "guest_manager_unittests"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

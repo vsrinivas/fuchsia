@@ -41,6 +41,7 @@ TEST_F(NamespaceTest, SomeServices) {
   files.erase(std::remove(files.begin(), files.end(), fuchsia::debugdata::DebugData::Name_),
               files.end());
 
-  EXPECT_THAT(files, ::testing::UnorderedElementsAre(".", "fuchsia.sys.Environment",
-                                                     "fuchsia.process.Resolver"));
+  EXPECT_THAT(
+      files, ::testing::UnorderedElementsAre(".", "fuchsia.sys.Environment",
+                                             "fuchsia.process.Resolver", "fuchsia.logger.LogSink"));
 }

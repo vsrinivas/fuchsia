@@ -109,6 +109,9 @@ unittest_package("session_manager_tests") {
       name = "session_manager_lib_lib_test"
       dest = "session_manager_tests"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

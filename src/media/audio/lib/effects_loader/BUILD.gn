@@ -69,6 +69,9 @@ unittest_package("audio_effects_loader_unittests") {
     {
       name = "audio_effects_loader_unittests"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

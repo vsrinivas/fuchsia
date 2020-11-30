@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/fuchsia_vfs_pseudo_fs_test"
     }

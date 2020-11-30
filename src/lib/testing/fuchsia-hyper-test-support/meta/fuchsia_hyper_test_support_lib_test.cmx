@@ -7,6 +7,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/fuchsia_hyper_test_support_lib_test"
     },

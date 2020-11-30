@@ -1,6 +1,7 @@
 // Integration test component that runs a Trigger service. When triggered, the
 // component is started but takes no action.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/trigger",
     },

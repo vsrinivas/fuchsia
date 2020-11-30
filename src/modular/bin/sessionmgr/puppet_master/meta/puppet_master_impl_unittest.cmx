@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/puppet_master_impl_unittest"
     },

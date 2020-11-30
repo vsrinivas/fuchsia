@@ -48,14 +48,13 @@ def main(argv):
         binary_path = 'bin/'
 
     content = {
+        'include': ['sdk/lib/diagnostics/syslog/client.shard.cmx'],
         'program': {
             'binary': binary_path + args.name
         },
-        'sandbox':
-            {
-                'features': ['isolated-temp',],
-                'services': ['fuchsia.logger.LogSink',],
-            },
+        'sandbox': {
+            'features': ['isolated-temp',],
+        },
     }
 
     # Our Vulkan test programs needs specific features and
@@ -66,7 +65,7 @@ def main(argv):
             'isolated-cache-storage',
             'vulkan',
         ]
-        content['sandbox']['services'] += [
+        content['sandbox']['services'] = [
             'fuchsia.sysmem.Allocator',
             'fuchsia.tracing.provider.Registry',
             'fuchsia.vulkan.loader.Loader',

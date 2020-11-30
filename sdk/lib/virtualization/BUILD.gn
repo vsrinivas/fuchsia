@@ -41,6 +41,9 @@ test_package("virtualization_lib_tests") {
     {
       name = "virtualization_lib_unittests"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

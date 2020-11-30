@@ -33,6 +33,7 @@ def main(argv):
     output = open(args.output, 'w')
 
     content = {
+        'include': ['sdk/lib/diagnostics/syslog/client.shard.cmx'],
         'facets':
             {
                 'fuchsia.test': {
@@ -49,7 +50,6 @@ def main(argv):
                 'services':
                     [
                         "fuchsia.exception.Handler",
-                        "fuchsia.logger.LogSink",
                         "fuchsia.process.Launcher",
                     ] + args.additional_services,
             },

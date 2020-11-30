@@ -8,6 +8,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/fuchsia-pkg-testing-tests"
     },

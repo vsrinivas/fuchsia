@@ -73,10 +73,10 @@ template("isolated_devmgr_component") {
         args = devmgr_args
         binary = "bin/isolated_devmgr"
       }
+      include = [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ]
       sandbox = {
         services = [
           "fuchsia.exception.Handler",
-          "fuchsia.logger.LogSink",
           "fuchsia.process.Launcher",
         ]
       }

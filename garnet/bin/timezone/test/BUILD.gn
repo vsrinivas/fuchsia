@@ -42,6 +42,9 @@ test_package("timezone_tests") {
     {
       name = "deprecated_timezone_unit_tests"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

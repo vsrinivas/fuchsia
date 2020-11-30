@@ -5,6 +5,7 @@
 // Intentionally broken, component manifest for the `echo_server` example
 // program, to demonstrate failed routing due to a non-startable component.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         // Wrong binary name.
         binary: "bin/routing_failed_echo_server_oops",

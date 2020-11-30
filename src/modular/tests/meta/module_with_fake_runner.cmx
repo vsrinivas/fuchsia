@@ -12,6 +12,9 @@
             "suggestion_headline": "Module with fake runner"
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/module_with_fake_runner"
     },

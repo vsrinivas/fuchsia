@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/dns_resolver",
     },
@@ -16,10 +17,7 @@
     use: [
         { runner: "elf" },
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.posix.socket.Provider",
-            ],
+            protocol: [ "fuchsia.posix.socket.Provider" ],
         },
     ],
     expose: [

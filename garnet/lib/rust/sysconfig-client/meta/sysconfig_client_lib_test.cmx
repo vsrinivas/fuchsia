@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/sysconfig_client_lib_test"
     },

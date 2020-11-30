@@ -1,6 +1,7 @@
 // Integration test component that runs a Trigger service. When triggered, the
 // component echoes a string using the Echo service and prints it.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/trigger",
         args: [

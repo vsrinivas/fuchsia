@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/wayland_scanner_back_end_test"
     }

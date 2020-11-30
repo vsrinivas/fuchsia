@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/specialize_ip_macro_test_lib_test"
     }

@@ -6,6 +6,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/fuchsia_async_lib_test"
     },

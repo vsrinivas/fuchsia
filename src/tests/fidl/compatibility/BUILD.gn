@@ -206,6 +206,7 @@ foreach(test, fidl_compatibility_tests) {
     outputs = [ generate_output ]
     output_conversion = "json"
     contents = {
+      include = [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ]
       program = {
         binary = "bin/fidl_compatibility_test"
         args =

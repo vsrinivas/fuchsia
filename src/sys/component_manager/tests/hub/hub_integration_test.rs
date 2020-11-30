@@ -189,6 +189,7 @@ impl TestRunner {
 #[fasync::run_singlethreaded(test)]
 async fn advanced_routing() {
     let echo_service_name = "fidl.examples.routing.echo.Echo";
+    let log_sink_service_name = "fuchsia.logger.LogSink";
     let hub_report_service_name = "fuchsia.test.hub.HubReport";
 
     let (test_runner, _) = TestRunner::start(
@@ -231,7 +232,7 @@ async fn advanced_routing() {
     test_runner
         .verify_directory_listing_externally(
             svc_dir.as_str(),
-            vec![echo_service_name, hub_report_service_name],
+            vec![echo_service_name, log_sink_service_name, hub_report_service_name],
         )
         .await;
 

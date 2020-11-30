@@ -1,5 +1,6 @@
 // [START example_snippet]
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/hello_world_integration_test",
     },

@@ -38,4 +38,9 @@ executable("app_test") {
 fuchsia_unittest_package("sysmgr-tests") {
   manifest = "meta/app_test.cmx"
   deps = [ ":app_test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

@@ -135,6 +135,9 @@ fuchsia_test_package("netemul-sandbox-test") {
   ]
   test_specs = {
     environments = [ emu_env ]
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 

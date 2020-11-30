@@ -65,10 +65,13 @@ template("fuzzer_test_component") {
     if (!defined(features)) {
       features = []
     }
+    if (!defined(include)) {
+      include = []
+    }
+    include += [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ]
     if (!defined(services)) {
       services = []
     }
-    services += [ "fuchsia.logger.LogSink" ]
     features += [ "isolated-persistent-storage" ]
     metadata = {
       fuzz_spec = [

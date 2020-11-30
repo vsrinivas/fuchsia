@@ -10,6 +10,8 @@
 // For information on manifest format and features,
 // see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+
     // The binary to run for this component.
     program: {
         binary: "bin/my-component-v2-cpp",

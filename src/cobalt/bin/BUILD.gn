@@ -49,6 +49,9 @@ test_package("cobalt_tests") {
     {
       name = "cobalt_app_unittests"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
 
     {
@@ -62,6 +65,9 @@ test_package("cobalt_tests") {
     {
       name = "cobalt_utils_unittests"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
 
     {

@@ -91,14 +91,12 @@ template("fuchsia_unittest_component") {
     generated_target = "${target_name}_generated_manifest"
     generated_file(generated_target) {
       contents = {
+        include = [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ]
         program = {
           binary = invoker.executable_path
           if (defined(invoker.executable_args)) {
             args = invoker.executable_args
           }
-        }
-        sandbox = {
-          services = [ "fuchsia.logger.LogSink" ]
         }
       }
       outputs = [ "$target_out_dir/${generated_target}.cmx" ]

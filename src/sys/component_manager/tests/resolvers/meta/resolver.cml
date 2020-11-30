@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+
     // The binary to run for this component.
     program: {
         binary: "bin/component_manager_test_resolvers_resolver",

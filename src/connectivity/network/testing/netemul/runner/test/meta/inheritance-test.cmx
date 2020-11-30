@@ -42,6 +42,9 @@
             "timeout": 120
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/inheritance_test"
     },

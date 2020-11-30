@@ -70,6 +70,9 @@
             "timeout": 120
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/easy_netstack_cfg_test"
     },

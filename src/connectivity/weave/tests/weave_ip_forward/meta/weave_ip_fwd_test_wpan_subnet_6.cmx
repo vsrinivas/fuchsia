@@ -185,6 +185,9 @@
             "timeout": 120
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/weave-ip-forward_test"
     },

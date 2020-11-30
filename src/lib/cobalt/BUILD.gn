@@ -34,10 +34,16 @@ test_package("cobalt_lib_tests") {
     {
       name = "cobalt_lib_unittests"
       environments = basic_envs
+      log_settings = {
+        max_severity = "FATAL"
+      }
     },
     {
       name = "fuchsia_cobalt_lib_test"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

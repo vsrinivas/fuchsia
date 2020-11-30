@@ -97,6 +97,9 @@ unittest_package("chunked-compression-unittests-package") {
   tests = [
     {
       name = "chunked-compression-unittests"
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

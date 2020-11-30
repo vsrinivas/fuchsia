@@ -90,4 +90,9 @@ fuchsia_component("activity-test-component") {
 
 fuchsia_test_package("activity-test") {
   test_components = [ ":activity-test-component" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

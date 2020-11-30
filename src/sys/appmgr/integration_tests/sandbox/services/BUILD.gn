@@ -7,11 +7,7 @@ import("//src/sys/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
 group("services") {
   testonly = true
-  deps = [
-    ":multiple_components",
-    ":no_services",
-    ":some_services",
-  ]
+  deps = [ ":some_services" ]
 }
 
 sandbox_test_package("some_services") {
@@ -21,39 +17,6 @@ sandbox_test_package("some_services") {
     "//sdk/fidl/fuchsia.debugdata",
     "//sdk/fidl/fuchsia.process",
     "//sdk/fidl/fuchsia.sys",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
-    "//third_party/googletest:gmock",
-  ]
-
-  # TODO(fxbug.dev/46761): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
-  environments = basic_envs
-}
-
-sandbox_test_package("no_services") {
-  sources = [ "no_services.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.debugdata",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
-    "//third_party/googletest:gmock",
-  ]
-
-  # TODO(fxbug.dev/46761): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
-  environments = basic_envs
-}
-
-sandbox_test_package("multiple_components") {
-  sources = [ "multiple_components.cc" ]
-
-  deps = [
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
     "//third_party/googletest:gmock",

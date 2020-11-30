@@ -15,6 +15,9 @@ test_package("netdev-client-tests") {
     {
       name = "cpp-test"
       environments = [ emu_env ]
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

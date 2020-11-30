@@ -10,6 +10,7 @@ template("isolated_devmgr_unittest_v2_component") {
     manifest = "$target_out_dir/${generated_target}.cml"
     generated_file(generated_target) {
       contents = {
+        include = [ "sdk/lib/diagnostics/syslog/client.shard.cml" ]
         program = {
           binary = invoker.executable_path
         }

@@ -114,6 +114,9 @@ test_package("sshd-host-tests") {
     {
       name = "sshd-host-test"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

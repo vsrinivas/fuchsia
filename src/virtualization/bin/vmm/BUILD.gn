@@ -243,10 +243,16 @@ test_package("vmm_tests") {
     {
       name = "device_unittests"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
     {
       name = "vmm_unittests"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

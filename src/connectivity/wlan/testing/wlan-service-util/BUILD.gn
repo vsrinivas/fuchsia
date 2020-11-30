@@ -40,6 +40,9 @@ unittest_package("wlan-service-util-tests") {
     {
       name = "wlan_service_util_lib_test"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

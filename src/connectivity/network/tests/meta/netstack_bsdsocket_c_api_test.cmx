@@ -7,6 +7,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/netstack_bsdsocket_c_api_test"
     },

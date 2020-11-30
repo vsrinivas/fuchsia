@@ -7,6 +7,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/use_h264_multi_decoder_secure_output_test"
     },

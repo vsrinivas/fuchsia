@@ -57,22 +57,24 @@ template("fuzzer_component") {
     forward_variables_from(invoker,
                            [
                              "features",
+                             "include",
                              "services",
                            ])
     if (!defined(features)) {
       features = []
     }
-    if (!defined(services)) {
-      services = []
-    }
-    services += [
-      "fuchsia.logger.LogSink",
-      "fuchsia.process.Launcher",
-    ]
     features += [
       "isolated-persistent-storage",
       "isolated-temp",
     ]
+    if (!defined(include)) {
+      include = []
+    }
+    include += [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ]
+    if (!defined(services)) {
+      services = []
+    }
+    services += [ "fuchsia.process.Launcher" ]
     metadata = {
       fuzz_spec = [
         {

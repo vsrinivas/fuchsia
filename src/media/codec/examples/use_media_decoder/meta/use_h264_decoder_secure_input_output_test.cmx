@@ -10,6 +10,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/disabled/use_h264_decoder_secure_input_output_test"
     },

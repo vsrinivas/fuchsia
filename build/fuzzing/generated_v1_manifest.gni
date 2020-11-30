@@ -45,6 +45,7 @@ template("generated_v1_manifest") {
     visibility = [ ":*" ]
     testonly = true
     contents = {
+      forward_variables_from(invoker, [ "include" ])
       program = {
         binary = invoker.binary
         forward_variables_from(invoker, [ "args" ])

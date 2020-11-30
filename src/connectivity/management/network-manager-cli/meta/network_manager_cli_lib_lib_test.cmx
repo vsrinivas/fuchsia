@@ -6,6 +6,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/network_manager_cli_lib_lib_test"
     },

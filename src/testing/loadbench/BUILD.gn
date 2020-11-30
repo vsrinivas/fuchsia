@@ -114,6 +114,9 @@ test_package("loadbench_tests") {
   tests = [
     {
       name = "loadbench_unittests"
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

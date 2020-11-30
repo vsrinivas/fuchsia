@@ -182,6 +182,10 @@ executable("linux_runner_unittests") {
 
   # TODO(fxbug.dev/46750): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  # TODO(fxbug.dev/42493): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 test_package("linux_runner_tests") {

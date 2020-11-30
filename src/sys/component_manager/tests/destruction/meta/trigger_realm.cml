@@ -1,5 +1,6 @@
 // Integration test realm that hosts two trigger components.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/trigger",
     },

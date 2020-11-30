@@ -112,6 +112,9 @@ test_package("system-updater-tests") {
       name = "system_updater_bin_test"
       dest = "system-updater-bin-test"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

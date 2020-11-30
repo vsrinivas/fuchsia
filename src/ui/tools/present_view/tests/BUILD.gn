@@ -26,6 +26,9 @@ test_package("present_view_tests") {
     {
       name = "present_view_unittests"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

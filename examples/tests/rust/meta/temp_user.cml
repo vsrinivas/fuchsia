@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/temp_user_bin_test",
     },

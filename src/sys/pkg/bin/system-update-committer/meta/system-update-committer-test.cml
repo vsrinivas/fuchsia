@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/system_update_committer_lib_test",
     },

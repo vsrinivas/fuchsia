@@ -1,5 +1,6 @@
 // Test example which doesn't expose suite protocol.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/no_suite_service",
     },

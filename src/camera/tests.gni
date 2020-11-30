@@ -31,11 +31,17 @@ camera_tests = {
       name = "gdc-test"
       manifest = "//src/camera/drivers/hw_accel/gdc/test/meta/gdc-test.cmx"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
     {
       name = "ge2d-test"
       manifest = "//src/camera/drivers/hw_accel/ge2d/test/meta/ge2d-test.cmx"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
     {
       name = "controller-test"

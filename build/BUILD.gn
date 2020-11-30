@@ -1490,8 +1490,6 @@ group("deprecated_package_underscore") {
     "//src/sys/appmgr/integration_tests/sandbox/features/storage:isolated_persistent_storage",
     "//src/sys/appmgr/integration_tests/sandbox/features/storage:no_persistent_storage",
     "//src/sys/appmgr/integration_tests/sandbox/features/system-temp:no_system_temp",
-    "//src/sys/appmgr/integration_tests/sandbox/services:multiple_components",
-    "//src/sys/appmgr/integration_tests/sandbox/services:no_services",
     "//src/sys/appmgr/integration_tests/sandbox/services:some_services",
     "//src/sys/appmgr/integration_tests/util:persistent_storage_test_util",
     "//src/sys/component_index:component_index",

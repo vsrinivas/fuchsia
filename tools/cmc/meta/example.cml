@@ -1,5 +1,6 @@
 // This is a v2 component manifest.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/example",
         lifecycle: { stop_event: "notify" },

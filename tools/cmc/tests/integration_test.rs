@@ -92,6 +92,12 @@ fn main() {
                 ]),
                 ..UseEventStreamDecl::empty()
             }),
+            UseDecl::Protocol(UseProtocolDecl {
+                source: Some(Ref::Parent(ParentRef {})),
+                source_name: Some("fuchsia.logger.LogSink".to_string()),
+                target_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
+                ..UseProtocolDecl::empty()
+            }),
         ];
         let exposes = vec![
             ExposeDecl::Service(ExposeServiceDecl {

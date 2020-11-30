@@ -100,6 +100,9 @@ test_package("system-update-checker-tests") {
       name = "system_update_checker_bin_test"
       dest = "system-update-checker-bin-test"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
   binaries = [

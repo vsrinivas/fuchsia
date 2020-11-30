@@ -58,6 +58,9 @@ unittest_package("ppp-packet-tests") {
       name = "ppp_packet_test_bin"
       dest = "ppp-packet-tests"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }

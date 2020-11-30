@@ -176,6 +176,11 @@ group("tests") {
 fuchsia_unittest_package("mdns-tests") {
   deps = [ ":mdns_test" ]
   manifest = "meta/mdns_test.cmx"
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 fuzzer("packet_reader_fuzzer") {

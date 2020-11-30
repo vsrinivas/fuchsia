@@ -321,6 +321,7 @@ template("unittest_package") {
                                  "dest",
                                  "disabled",
                                  "environments",
+                                 "log_settings",
                                ])
         manifest = test_manifest
       },
@@ -338,16 +339,12 @@ template("unittest_package") {
       # Note that given current approach, cyclomatic complexity is exponential
       # in the number of possibly empty lists which need to be included in the
       # generated CMX.
-      if (test_args == []) {
-        contents = {
-          program = {
-            binary = "test/${test_dest}"
-          }
-        }
-      } else {
-        contents = {
-          program = {
-            binary = "test/${test_dest}"
+      contents = {
+        # Tests typically write to syslog, so give them syslog capabilities
+        include = [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ]
+        program = {
+          binary = "test/${test_dest}"
+          if (test_args != []) {
             args = test_args
           }
         }

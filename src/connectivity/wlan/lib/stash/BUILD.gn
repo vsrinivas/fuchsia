@@ -55,6 +55,9 @@ test_package("wlan-stash-tests") {
     {
       name = "wlan_stash_lib_test"
       environments = basic_envs
+      log_settings = {
+        max_severity = "ERROR"
+      }
     },
   ]
 }
