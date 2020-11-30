@@ -17,6 +17,7 @@ use {
     futures::lock::Mutex,
     log::{error, info, trace},
     std::{cmp::Ordering, collections::HashMap, convert::TryInto, sync::Arc},
+    wlan_common::channel::Channel,
     wlan_metrics_registry::{
         ActiveScanRequestedForNetworkSelectionMetricDimensionActiveScanSsidsRequested as ActiveScanSsidsRequested,
         SavedNetworkInScanResultMetricDimensionBssCount,
@@ -30,6 +31,10 @@ use {
 
 const RECENT_FAILURE_WINDOW: zx::Duration = zx::Duration::from_seconds(60 * 5); // 5 minutes
 const STALE_SCAN_AGE: zx::Duration = zx::Duration::from_seconds(10); // TODO(61992) Tweak duration
+/// Above this RSSI, we'll give 5G networks a preference
+const RSSI_CUTOFF_5G_PREFERENCE: i8 = -50;
+/// The score boost for 5G networks that we are giving preference to.
+const RSSI_5G_PREFERENCE_BOOST: i8 = 15;
 
 pub struct NetworkSelector {
     saved_network_manager: Arc<SavedNetworksManager>,
@@ -54,6 +59,19 @@ struct InternalBss<'a> {
     network_id: types::NetworkIdentifier,
     network_info: InternalSavedNetworkData,
     bss_info: &'a types::Bss,
+}
+
+impl InternalBss<'_> {
+    fn score(&self) -> i8 {
+        let rssi = self.bss_info.rssi;
+        let channel = Channel::from_fidl(self.bss_info.channel);
+
+        // If the network is 5G and has a strong enough RSSI, give it a bonus
+        if channel.is_5ghz() && rssi > RSSI_CUTOFF_5G_PREFERENCE {
+            return rssi.saturating_add(RSSI_5G_PREFERENCE_BOOST);
+        }
+        return rssi;
+    }
 }
 
 impl NetworkSelector {
@@ -294,8 +312,8 @@ fn select_best_bss<'a>(
                 return Ordering::Greater;
             }
 
-            // Both networks have failures, sort by RSSI
-            bss_a.bss_info.rssi.partial_cmp(&bss_b.bss_info.rssi).unwrap()
+            // Both networks have failures, compare their scores
+            bss_a.score().partial_cmp(&bss_b.score()).unwrap()
         })
         .map(|bss| {
             (
@@ -392,6 +410,7 @@ mod tests {
         pin_utils::pin_mut,
         rand::Rng,
         std::sync::Arc,
+        test_case::test_case,
         wlan_common::assert_variant,
     };
 
@@ -721,8 +740,45 @@ mod tests {
         assert_eq!(result, expected_result);
     }
 
+    #[test_case(types::Bss {
+            rssi: -8,
+            channel: generate_channel(1),
+            ..generate_random_bss()
+        },
+        -8; "2.4GHz BSS score is RSSI")]
+    #[test_case(types::Bss {
+            rssi: -49,
+            channel: generate_channel(36),
+            ..generate_random_bss()
+        },
+        -34; "5GHz score is (RSSI + mod), when above threshold")]
+    #[test_case(types::Bss {
+            rssi: -51,
+            channel: generate_channel(36),
+            ..generate_random_bss()
+        },
+        -51; "5GHz score is RSSI, when below threshold")]
+    fn scoring_test(bss: types::Bss, expected_score: i8) {
+        let mut rng = rand::thread_rng();
+
+        let internal_bss = InternalBss {
+            network_id: types::NetworkIdentifier {
+                ssid: "test".as_bytes().to_vec(),
+                type_: types::SecurityType::Wpa3,
+            },
+            network_info: InternalSavedNetworkData {
+                credential: Credential::None,
+                has_ever_connected: rng.gen::<bool>(),
+                recent_failure_count: rng.gen_range(0, 20),
+            },
+            bss_info: &bss,
+        };
+
+        assert_eq!(internal_bss.score(), expected_score)
+    }
+
     #[test]
-    fn select_best_bss_sorts_by_rssi() {
+    fn select_best_bss_sorts_by_score() {
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: "foo".as_bytes().to_vec(),
@@ -740,7 +796,7 @@ mod tests {
         let bss_info1 = types::Bss {
             compatible: true,
             rssi: -14,
-            observed_in_passive_scan: true,
+            channel: generate_channel(36),
             ..generate_random_bss()
         };
         networks.push(InternalBss {
@@ -756,7 +812,7 @@ mod tests {
         let bss_info2 = types::Bss {
             compatible: true,
             rssi: -10,
-            observed_in_passive_scan: true,
+            channel: generate_channel(1),
             ..generate_random_bss()
         };
         networks.push(InternalBss {
@@ -771,8 +827,8 @@ mod tests {
 
         let bss_info3 = types::Bss {
             compatible: true,
-            rssi: -12,
-            observed_in_passive_scan: false,
+            rssi: -8,
+            channel: generate_channel(1),
             ..generate_random_bss()
         };
         networks.push(InternalBss {
@@ -785,29 +841,34 @@ mod tests {
             bss_info: &bss_info3,
         });
 
-        // stronger network returned
+        // there's a network on 5G, it should get a boost and be selected
         assert_eq!(
             select_best_bss(&networks, &vec![]).unwrap(),
             (
                 test_id_1.clone(),
                 credential_1.clone(),
-                types::NetworkSelectionMetadata { observed_in_passive_scan: true }
+                types::NetworkSelectionMetadata {
+                    observed_in_passive_scan: networks[0].bss_info.observed_in_passive_scan
+                }
             )
         );
 
-        // make the test_id_2 network stronger
-        let mut modified_network = networks[2].clone();
-        let modified_bss_info = types::Bss { rssi: -5, ..*modified_network.bss_info };
+        // make the 5GHz network into a 2.4GHz network
+        let mut modified_network = networks[0].clone();
+        let modified_bss_info =
+            types::Bss { channel: generate_channel(6), ..*modified_network.bss_info };
         modified_network.bss_info = &modified_bss_info;
-        networks[2] = modified_network;
+        networks[0] = modified_network;
 
-        // stronger network returned
+        // all networks are 2.4GHz, strongest RSSI network returned
         assert_eq!(
             select_best_bss(&networks, &vec![]).unwrap(),
             (
                 test_id_2.clone(),
                 credential_2.clone(),
-                types::NetworkSelectionMetadata { observed_in_passive_scan: false }
+                types::NetworkSelectionMetadata {
+                    observed_in_passive_scan: networks[2].bss_info.observed_in_passive_scan
+                }
             )
         );
     }
@@ -839,7 +900,7 @@ mod tests {
             bss_info: &bss_info1,
         });
 
-        let bss_info2 = types::Bss { compatible: true, rssi: -15, ..generate_random_bss() };
+        let bss_info2 = types::Bss { compatible: true, rssi: -100, ..generate_random_bss() };
         networks.push(InternalBss {
             network_id: test_id_2.clone(),
             network_info: InternalSavedNetworkData {
@@ -913,7 +974,12 @@ mod tests {
 
         let mut networks = vec![];
 
-        let bss_info1 = types::Bss { compatible: true, rssi: -14, ..generate_random_bss() };
+        let bss_info1 = types::Bss {
+            compatible: true,
+            rssi: -14,
+            channel: generate_channel(1),
+            ..generate_random_bss()
+        };
         networks.push(InternalBss {
             network_id: test_id_1.clone(),
             network_info: InternalSavedNetworkData {
@@ -924,7 +990,12 @@ mod tests {
             bss_info: &bss_info1,
         });
 
-        let bss_info2 = types::Bss { compatible: false, rssi: -10, ..generate_random_bss() };
+        let bss_info2 = types::Bss {
+            compatible: false,
+            rssi: -10,
+            channel: generate_channel(1),
+            ..generate_random_bss()
+        };
         networks.push(InternalBss {
             network_id: test_id_1.clone(),
             network_info: InternalSavedNetworkData {
@@ -935,7 +1006,12 @@ mod tests {
             bss_info: &bss_info2,
         });
 
-        let bss_info3 = types::Bss { compatible: true, rssi: -12, ..generate_random_bss() };
+        let bss_info3 = types::Bss {
+            compatible: true,
+            rssi: -12,
+            channel: generate_channel(1),
+            ..generate_random_bss()
+        };
         networks.push(InternalBss {
             network_id: test_id_2.clone(),
             network_info: InternalSavedNetworkData {
@@ -993,7 +1069,7 @@ mod tests {
 
         let mut networks = vec![];
 
-        let bss_info1 = types::Bss { compatible: true, rssi: -14, ..generate_random_bss() };
+        let bss_info1 = types::Bss { compatible: true, rssi: -100, ..generate_random_bss() };
         networks.push(InternalBss {
             network_id: test_id_1.clone(),
             network_info: InternalSavedNetworkData {
@@ -1362,6 +1438,23 @@ mod tests {
                 recent_failure_count: 0,
             },
         )
+    }
+
+    fn generate_channel(channel: u8) -> fidl_common::WlanChan {
+        let mut rng = rand::thread_rng();
+        fidl_common::WlanChan {
+            primary: channel,
+            cbw: match rng.gen_range(0, 5) {
+                0 => fidl_common::Cbw::Cbw20,
+                1 => fidl_common::Cbw::Cbw40,
+                2 => fidl_common::Cbw::Cbw40Below,
+                3 => fidl_common::Cbw::Cbw80,
+                4 => fidl_common::Cbw::Cbw160,
+                5 => fidl_common::Cbw::Cbw80P80,
+                _ => panic!(),
+            },
+            secondary80: rng.gen::<u8>(),
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
