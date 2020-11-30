@@ -50,6 +50,7 @@ executable("svchost") {
     }
   }
   sources = [
+    "args.cc",
     "svchost.cc",
     "sysmem.cc",
   ]
@@ -76,6 +77,7 @@ executable("svchost") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_llcpp",
     "//sdk/lib/fdio",
+    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fs",

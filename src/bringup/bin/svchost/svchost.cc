@@ -29,6 +29,7 @@
 #include <lib/profile/profile.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zx/job.h>
+#include <lib/zx/status.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -42,7 +43,57 @@
 #include <fbl/string_printf.h>
 #include <fs/remote_dir.h>
 
+#include "src/bringup/bin/svchost/args.h"
 #include "sysmem.h"
+
+namespace {
+zx::status<zx::job> GetRootJob(const zx::channel& svc_root) {
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    fprintf(stderr, "svchost: error: Failed to create channel pair: %d (%s).\n", status,
+            zx_status_get_string(status));
+    return zx::error(status);
+  }
+  status = fdio_service_connect_at(svc_root.get(), llcpp::fuchsia::kernel::RootJob::Name,
+                                   remote.release());
+  if (status != ZX_OK) {
+    fprintf(stderr, "svchost: unable to connect to fuchsia.kernel.RootJob\n");
+    return zx::error(status);
+  }
+
+  llcpp::fuchsia::kernel::RootJob::SyncClient job_client(std::move(local));
+  auto job_result = job_client.Get();
+  if (!job_result.ok()) {
+    fprintf(stderr, "svchost: unable to get root job\n");
+    return zx::error(job_result.status());
+  }
+  return zx::ok(std::move(job_result->job));
+}
+zx::status<zx::resource> GetRootResource(const zx::channel& svc_root) {
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    fprintf(stderr, "svchost: error: Failed to create channel pair: %d (%s).\n", status,
+            zx_status_get_string(status));
+    return zx::error(status);
+  }
+  status = fdio_service_connect_at(svc_root.get(), llcpp::fuchsia::boot::RootResource::Name,
+                                   remote.release());
+  if (status != ZX_OK) {
+    fprintf(stderr, "svchost: unable to connect to fuchsia.boot.RootResource\n");
+    return zx::error(status);
+  }
+
+  llcpp::fuchsia::boot::RootResource::SyncClient client(std::move(local));
+  auto result = client.Get();
+  if (!result.ok()) {
+    fprintf(stderr, "svchost: unable to get root resource\n");
+    return zx::error(result.status());
+  }
+  return zx::ok(std::move(result->resource));
+}
+}  // namespace
 
 // An instance of a zx_service_provider_t.
 //
@@ -146,9 +197,6 @@ static zx_status_t provider_load(zx_service_provider_instance_t* instance,
 
   return ZX_OK;
 }
-
-static zx_handle_t root_job;
-static zx_handle_t root_resource;
 
 // We shouldn't need to access these non-Zircon services from svchost, but
 // currently some tests assume they can reach these services from the test
@@ -291,21 +339,60 @@ void publish_services(const fbl::RefPtr<fs::PseudoDir>& dir, const char* const* 
 }
 
 int main(int argc, char** argv) {
-  bool require_system = false;
-  if (argc > 1) {
-    require_system = strcmp(argv[1], "--require-system") == 0 ? true : false;
-  }
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
   svc::Outgoing outgoing(dispatcher);
 
-  root_job = zx_take_startup_handle(PA_HND(PA_USER0, 1));
-  root_resource = zx_take_startup_handle(PA_HND(PA_USER0, 2));
   zx::channel devmgr_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 3)));
   zx::channel virtcon_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 5)));
   zx::channel devcoordinator_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 7)));
 
-  zx_status_t status = outgoing.ServeFromStartupInfo();
+  // Parse boot arguments.
+  llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
+  {
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+      fprintf(stderr, "svchost: error: Failed to create channel pair: %d (%s).\n", status,
+              zx_status_get_string(status));
+      return 1;
+    }
+    status = fdio_service_connect_at(devcoordinator_svc.get(),
+                                     llcpp::fuchsia::boot::Arguments::Name, remote.release());
+    if (status != ZX_OK) {
+      fprintf(stderr, "svchost: unable to connect to fuchsia.boot.Arguments");
+      return 1;
+    }
+    boot_args = llcpp::fuchsia::boot::Arguments::SyncClient(std::move(local));
+  }
+  svchost::Arguments args;
+  zx_status_t status = svchost::ParseArgs(boot_args, &args);
+  if (status != ZX_OK) {
+    fprintf(stderr, "svchost: unable to read args: %s", zx_status_get_string(status));
+    return 1;
+  }
+
+  // Get the root job.
+  zx::job root_job;
+  {
+    auto res = GetRootJob(devcoordinator_svc);
+    if (!res.is_ok()) {
+      return 1;
+    }
+    root_job = std::move(res.value());
+  }
+
+  // Get the root resource.
+  zx::resource root_resource;
+  {
+    auto res = GetRootResource(devcoordinator_svc);
+    if (!res.is_ok()) {
+      return 1;
+    }
+    root_resource = std::move(res.value());
+  }
+
+  status = outgoing.ServeFromStartupInfo();
   if (status != ZX_OK) {
     fprintf(stderr, "svchost: error: Failed to serve outgoing directory: %d (%s).\n", status,
             zx_status_get_string(status));
@@ -313,7 +400,7 @@ int main(int argc, char** argv) {
   }
 
   zx_handle_t profile_root_job_copy;
-  status = zx_handle_duplicate(root_job, ZX_RIGHT_SAME_RIGHTS, &profile_root_job_copy);
+  status = zx_handle_duplicate(root_job.get(), ZX_RIGHT_SAME_RIGHTS, &profile_root_job_copy);
   if (status != ZX_OK) {
     fprintf(stderr, "svchost: failed to duplicate root job: %d (%s).\n", status,
             zx_status_get_string(status));
@@ -323,11 +410,11 @@ int main(int argc, char** argv) {
   zx_service_provider_instance_t service_providers[] = {
       {.provider = sysmem2_get_service_provider(), .ctx = nullptr},
       {.provider = kernel_debug_get_service_provider(),
-       .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(root_resource))},
+       .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(root_resource.get()))},
       {.provider = profile_get_service_provider(),
        .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(profile_root_job_copy))},
       {.provider = ktrace_get_service_provider(),
-       .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(root_resource))},
+       .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(root_resource.release()))},
   };
 
   for (size_t i = 0; i < std::size(service_providers); ++i) {
@@ -342,7 +429,7 @@ int main(int argc, char** argv) {
   // if full system is not required drop simple logger service.
   zx_service_provider_instance_t logger_service{.provider = logger_get_service_provider(),
                                                 .ctx = nullptr};
-  if (!require_system) {
+  if (!args.require_system) {
     status = provider_load(&logger_service, dispatcher, outgoing.svc_dir());
     if (status != ZX_OK) {
       fprintf(stderr, "svchost: error: Failed to publish logger: %d (%s).\n", status,
@@ -365,8 +452,9 @@ int main(int argc, char** argv) {
   }
 
   thrd_t thread;
-  status = start_crashsvc(zx::job(root_job),
-                          require_system ? devcoordinator_svc.get() : ZX_HANDLE_INVALID, &thread);
+  status =
+      start_crashsvc(std::move(root_job),
+                     args.require_system ? devcoordinator_svc.get() : ZX_HANDLE_INVALID, &thread);
   if (status != ZX_OK) {
     // The system can still function without crashsvc, log the error but
     // keep going.
