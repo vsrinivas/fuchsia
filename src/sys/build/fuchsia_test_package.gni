@@ -65,6 +65,7 @@ template("fuchsia_test_package") {
       "`test_components` must be specified when calling fuchsia_test_package($target_name)")
 
   package_name = target_name
+  package_label = get_label_info(":$target_name", "label_with_toolchain")
   if (defined(invoker.package_name)) {
     package_name = invoker.package_name
   }
@@ -82,6 +83,7 @@ template("fuchsia_test_package") {
     test_spec(test_target) {
       forward_variables_from(test_specs, "*")
       target = ":$target_name"
+      package_label = package_label
       package_url =
           "fuchsia-pkg://fuchsia.com/$package_name#meta/$manifest_name"
     }

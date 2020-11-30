@@ -32,6 +32,10 @@ _max_severity_allowed_val = [
 #     via a fuchsia package URL. See //docs/the-book/package_url.md for more
 #     details.
 #
+#   package_label (optional)
+#     [string] In the case of a fuchsia test, this describes the GN label
+#     (with toolchain) of the fuchsia package.
+#
 #   deps (optional)
 #     [list of labels]: List of labels that the test depends on.
 #
@@ -287,6 +291,7 @@ template("test_spec") {
                              [
                                "path",
                                "package_url",
+                               "package_label",
                                "parallel",
                              ])
       label = get_label_info(invoker.target, "label_with_toolchain")
