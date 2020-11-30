@@ -6,7 +6,7 @@ group("cts") {
   deps = [
     "//sdk/cts/build/scripts:tests",
     "//sdk/cts/examples/hello_world:tests",
-    "//sdk/cts/tools:tests",
+    "//sdk/cts/tests/tools:tests",
   ]
   testonly = true
 }

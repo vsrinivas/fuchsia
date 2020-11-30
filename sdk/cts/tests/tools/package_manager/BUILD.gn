@@ -46,15 +46,17 @@ if (is_host) {
 
     outputs = [ "$target_gen_dir/pm_deps/package.tar" ]
 
-    deps = [ "//sdk/cts/tools/package_manager/components:cts-package-manager-sample-component($default_toolchain)" ]
+    deps = [
+      "components:cts-package-manager-sample-component($default_toolchain)",
+    ]
 
     args = [
       "--package_json_path",
       rebase_path(
-          "$_shared_out_dir/obj/sdk/cts/tools/package_manager/components/cts-package-manager-sample-component/package_manifest.json"),
+          "$_shared_out_dir/obj/sdk/cts/tests/tools/package_manager/components/cts-package-manager-sample-component/package_manifest.json"),
       "--meta_far_path",
       rebase_path(
-          "$_shared_out_dir/obj/sdk/cts/tools/package_manager/components/cts-package-manager-sample-component/meta.far"),
+          "$_shared_out_dir/obj/sdk/cts/tests/tools/package_manager/components/cts-package-manager-sample-component/meta.far"),
       "--output_dir",
       rebase_path("${target_gen_dir}/pm_deps"),
     ]
