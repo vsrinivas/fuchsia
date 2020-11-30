@@ -6,7 +6,7 @@ use crate::server::Facade;
 use crate::wpan::{facade::WpanFacade, types::WpanMethod};
 use anyhow::Error;
 use async_trait::async_trait;
-use serde_json::{to_value, Value};
+use serde_json::{from_value, to_value, Value};
 
 #[async_trait(?Send)]
 impl Facade for WpanFacade {
@@ -27,6 +27,16 @@ impl Facade for WpanFacade {
             WpanMethod::GetThreadRouterId => to_value(self.get_thread_router_id().await?),
             WpanMethod::GetWeaveNodeId => to_value(self.get_weave_node_id().await?),
             WpanMethod::InitializeProxies => to_value(self.initialize_proxies().await?),
+            WpanMethod::ReplaceMacAddressFilterSettings => to_value(
+                self.replace_mac_address_filter_settings(match from_value(_args.clone()) {
+                    Ok(settings) => settings,
+                    _ => bail!(
+                        "Invalid json argument to ReplaceMacAddressFilterSettings! - {}",
+                        _args
+                    ),
+                })
+                .await?,
+            ),
         }?)
     }
 }
