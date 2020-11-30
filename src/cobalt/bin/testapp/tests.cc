@@ -456,9 +456,7 @@ bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, SystemClockI
   return SendAndCheckSuccess("TestLogElapsedTimeWithAggregation", logger);
 }
 
-// update_duration_new using INTEGER metric.
-//
-// For each of the two event_codes, log one observation with an integer value.
+// INTEGER metrics for update_duration_new, streaming_time_new and application_memory_new.
 bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
                     fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                     const size_t backfill_days, uint32_t project_id) {
@@ -466,14 +464,34 @@ bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
   FX_LOGS(INFO) << "TestLogInteger";
 
   // All SumAndCount data is aggregated into a single observation.
-  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs;
-  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs;
-  expected_num_obs[{cobalt_registry::kUpdateDurationNewMetricId,
-                    cobalt_registry::kUpdateDurationNewUpdateDurationTimingStatsReportId}] = 1;
-  expect_no_obs[{cobalt_registry::kUpdateDurationNewMetricId,
-                 cobalt_registry::kUpdateDurationNewUpdateDurationTimingStatsReportId}] = 0;
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs = {
+      {{cobalt_registry::kUpdateDurationNewMetricId,
+        cobalt_registry::kUpdateDurationNewUpdateDurationTimingStatsReportId}, 1},
+      {{cobalt_registry::kStreamingTimeNewMetricId,
+        cobalt_registry::kStreamingTimeNewStreamingTimePerDeviceTotalReportId}, 1},
+      {{cobalt_registry::kApplicationMemoryNewMetricId,
+        cobalt_registry::kApplicationMemoryNewApplicationMemoryHistogramsReportId}, 1},
+      {{cobalt_registry::kApplicationMemoryNewMetricId,
+        cobalt_registry::kApplicationMemoryNewApplicationMemoryHistogramsLinearConstantWidthReportId}, 1},
+      {{cobalt_registry::kApplicationMemoryNewMetricId,
+        cobalt_registry::kApplicationMemoryNewApplicationMemoryStatsReportId}, 1},
+  };
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs = {
+      {{cobalt_registry::kUpdateDurationNewMetricId,
+        cobalt_registry::kUpdateDurationNewUpdateDurationTimingStatsReportId}, 0},
+      {{cobalt_registry::kStreamingTimeNewMetricId,
+        cobalt_registry::kStreamingTimeNewStreamingTimePerDeviceTotalReportId}, 0},
+      {{cobalt_registry::kApplicationMemoryNewMetricId,
+        cobalt_registry::kApplicationMemoryNewApplicationMemoryHistogramsReportId}, 0},
+      {{cobalt_registry::kApplicationMemoryNewMetricId,
+        cobalt_registry::kApplicationMemoryNewApplicationMemoryHistogramsLinearConstantWidthReportId}, 0},
+      {{cobalt_registry::kApplicationMemoryNewMetricId,
+        cobalt_registry::kApplicationMemoryNewApplicationMemoryStatsReportId}, 0},
+  };
 
   uint32_t day_index = CurrentDayIndex(clock);
+
+  // For each of the two event_codes, log one observation with an integer value.
   for (uint32_t errorNameIndex : kUpdateDurationNewErrorNameIndices) {
     for (uint32_t stageIndex : kUpdateDurationNewStageIndices) {
       for (int64_t value : kUpdateDurationNewValues) {
@@ -483,6 +501,31 @@ bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
           FX_LOGS(INFO) << "TestLogInteger : FAIL";
           return false;
         }
+      }
+    }
+  }
+
+  for (uint32_t index : kStreamingTimeNewIndices) {
+    // Log a duration depending on the index.
+    if (index != 0) {
+      int64_t duration = index * 100;
+      if (!logger->LogInteger(cobalt_registry::kStreamingTimeNewMetricId, {index},
+                              duration)) {
+        FX_LOGS(INFO) << "Failed to log streaming time for index " << index << ".";
+        FX_LOGS(INFO) << "TestLogInteger : FAIL";
+        return false;
+      }
+    }
+  }
+
+  for (uint32_t index : kApplicationMemoryNewIndices) {
+    for (int64_t value : kApplicationMemoryNewValues) {
+      if (!logger->LogInteger(cobalt_registry::kApplicationMemoryNewMetricId, {index},
+                              value)) {
+        FX_LOGS(INFO) << "LogInteger(" << cobalt_registry::kApplicationMemoryNewMetricId << ", "
+                      << index << ", " << value << ")";
+        FX_LOGS(INFO) << "TestLogInteger: FAIL";
+        return false;
       }
     }
   }
@@ -505,9 +548,8 @@ bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
   return SendAndCheckSuccess("TestLogInteger", logger);
 }
 
-// features_active_new using OCCURRENCE metric.
-//
-// For each of the four event_codes, log one event with the occurrence counts.
+// OCCURRENCE metrics for features_active_new, file_system_cache_misses_new, and
+// connection_attempts_new.
 bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
                        fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                        const size_t backfill_days, uint32_t project_id) {
@@ -515,19 +557,63 @@ bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
   FX_LOGS(INFO) << "TestLogOccurrence";
 
   // All occurrence count data is aggregated into a single observation.
-  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs;
-  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs;
-  expected_num_obs[{cobalt_registry::kFeaturesActiveNewMetricId,
-                    cobalt_registry::kFeaturesActiveNewFeaturesActiveUniqueDevicesReportId}] = 1;
-  expect_no_obs[{cobalt_registry::kFeaturesActiveNewMetricId,
-                 cobalt_registry::kFeaturesActiveNewFeaturesActiveUniqueDevicesReportId}] = 0;
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs = {
+      {{cobalt_registry::kFeaturesActiveNewMetricId,
+        cobalt_registry::kFeaturesActiveNewFeaturesActiveUniqueDevicesReportId}, 1},
+      {{cobalt_registry::kFileSystemCacheMissesNewMetricId,
+        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissCountsReportId}, 1},
+      {{cobalt_registry::kFileSystemCacheMissesNewMetricId,
+        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissHistogramsReportId}, 1},
+      {{cobalt_registry::kFileSystemCacheMissesNewMetricId,
+        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissStatsReportId}, 1},
+      {{cobalt_registry::kConnectionAttemptsNewMetricId,
+        cobalt_registry::kConnectionAttemptsNewConnectionAttemptsPerDeviceCountReportId}, 1},
+  };
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs {
+      {{cobalt_registry::kFeaturesActiveNewMetricId,
+        cobalt_registry::kFeaturesActiveNewFeaturesActiveUniqueDevicesReportId}, 0},
+      {{cobalt_registry::kFileSystemCacheMissesNewMetricId,
+        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissCountsReportId}, 0},
+      {{cobalt_registry::kFileSystemCacheMissesNewMetricId,
+        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissHistogramsReportId}, 0},
+      {{cobalt_registry::kFileSystemCacheMissesNewMetricId,
+        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissStatsReportId}, 0},
+      {{cobalt_registry::kConnectionAttemptsNewMetricId,
+        cobalt_registry::kConnectionAttemptsNewConnectionAttemptsPerDeviceCountReportId}, 0},
+  };
 
   uint32_t day_index = CurrentDayIndex(clock);
+
+  // For each of the four event_codes, log one event with the occurrence counts.
   for (uint32_t skillIndex : kFeaturesActiveNewSkillIndices) {
     for (uint64_t count : kFeaturesActiveNewCounts) {
       if (!logger->LogOccurrence(cobalt_registry::kFeaturesActiveNewMetricId, {skillIndex}, count)) {
         FX_LOGS(INFO) << "LogOccurrence(" << cobalt_registry::kFeaturesActiveNewMetricId << ", {"
                       << skillIndex << "}, " << count << ")";
+        FX_LOGS(INFO) << "TestLogOccurrence : FAIL";
+        return false;
+      }
+    }
+  }
+
+  for (uint32_t index : kFileSystemCacheMissesNewIndices) {
+    if (!logger->LogOccurrence(cobalt_registry::kFileSystemCacheMissesNewMetricId, {index},
+                               kFileSystemCacheMissesNewCountMax - index)) {
+      FX_LOGS(INFO) << "LogOccurrence(" << cobalt_registry::kFileSystemCacheMissesNewMetricId << ", {"
+                    << index << "}, " << kFileSystemCacheMissesNewCountMax - index
+                    << ")";
+      FX_LOGS(INFO) << "TestLogOccurrence: FAIL";
+      return false;
+    }
+  }
+
+  for (uint32_t index : kConnectionAttemptsNewIndices) {
+    if (index != 0) {
+      // Log a count depending on the index.
+      int64_t count = index * 5;
+      if (!logger->LogOccurrence(cobalt_registry::kConnectionAttemptsNewMetricId, {index},
+                                 count)) {
+        FX_LOGS(INFO) << "Failed to log occurrence for index " << index << ".";
         FX_LOGS(INFO) << "TestLogOccurrence : FAIL";
         return false;
       }

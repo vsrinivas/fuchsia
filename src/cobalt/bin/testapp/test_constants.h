@@ -68,9 +68,23 @@ const uint32_t kUpdateDurationNewErrorNameIndices[] = {0, 1, 2};
 const uint32_t kUpdateDurationNewStageIndices[] = {0, 1, 2};
 const int64_t kUpdateDurationNewValues[] = {-1, 0, 1, 10, 702};
 
+// streaming_time_new metric constants.
+const int32_t kStreamingTimeNewIndices[] = {0, 1, 2};
+
+// application_memory_new metric constants
+const int32_t kApplicationMemoryNewIndices[] = {0, 1, 2};
+const int64_t kApplicationMemoryNewValues[] = {0, 1000, 4000, 16000, 128000, 512000};
+
 // features_active_new metric constants.
 const uint32_t kFeaturesActiveNewSkillIndices[] = {0, 1, 2, 3};
 const int64_t kFeaturesActiveNewCounts[] = {1, 2, 10, 42};
+
+// file_system_cache_misses_new metric constants.
+const uint32_t kFileSystemCacheMissesNewIndices[] = {0, 1};
+const int64_t kFileSystemCacheMissesNewCountMax = 2;
+
+// connection_attempts_new metric constants.
+const int32_t kConnectionAttemptsNewIndices[] = {0, 1};
 
 // power_usage_new metric constants.
 const uint32_t kPowerUsageNewIndices[] = {0, 1};
