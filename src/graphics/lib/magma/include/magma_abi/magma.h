@@ -318,7 +318,10 @@ magma_handle_t magma_get_notification_channel_handle(
     magma_connection_t connection);
 
 ///
-/// \brief Reads a notification from the channel into the given buffer.
+/// \brief Reads a notification from the channel into the given buffer.  Message sizes may vary
+///        depending on the MSD.  If the buffer provided is too small for the message,
+///        MAGMA_STATUS_INVALID_ARGS will be returned and the size of message will be returned in
+///        the buffer_size_out parameter.
 /// \param connection An open connection.
 /// \param buffer Buffer into which to read notification data.
 /// \param buffer_size Size of the given buffer.

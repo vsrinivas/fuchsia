@@ -779,16 +779,20 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     zx_status_t status = notification_channel_.read(
         0, buffer, nullptr, magma::to_uint32(buffer_size), 0, &buffer_actual_size, nullptr);
     *buffer_size_out = buffer_actual_size;
-    if (status == ZX_ERR_SHOULD_WAIT) {
-      *buffer_size_out = 0;
-      return MAGMA_STATUS_OK;
-    } else if (status == ZX_OK) {
-      return MAGMA_STATUS_OK;
-    } else if (status == ZX_ERR_PEER_CLOSED) {
-      return DRET_MSG(MAGMA_STATUS_CONNECTION_LOST, "notification channel, closed");
-    } else {
-      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
-                      "failed to wait on notification channel status %u", status);
+    switch (status) {
+      case ZX_ERR_SHOULD_WAIT:
+        *buffer_size_out = 0;
+        return MAGMA_STATUS_OK;
+      case ZX_OK:
+        return MAGMA_STATUS_OK;
+      case ZX_ERR_PEER_CLOSED:
+        return DRET_MSG(MAGMA_STATUS_CONNECTION_LOST, "notification channel, closed");
+      case ZX_ERR_BUFFER_TOO_SMALL:
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "buffer_size %zd buffer_actual_size %u",
+                        buffer_size, buffer_actual_size);
+      default:
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "notification channel read failed, status %d",
+                        status);
     }
   }
 

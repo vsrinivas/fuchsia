@@ -280,6 +280,15 @@ class TestPlatformConnection {
       handle->release();
     }
 
+    {
+      uint8_t buffer_too_small;
+      uint64_t out_data_size;
+      magma_status_t status = client_connection_->ReadNotificationChannel(
+          &buffer_too_small, sizeof(buffer_too_small), &out_data_size);
+      EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, status);
+      EXPECT_EQ(sizeof(uint32_t), out_data_size);
+    }
+
     uint32_t out_data;
     uint64_t out_data_size;
     magma_status_t status =
