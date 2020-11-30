@@ -27,7 +27,7 @@ use {
         FutureExt, StreamExt,
     },
     log::{error, info, warn},
-    std::{collections::HashSet, sync::Arc, unimplemented},
+    std::{sync::Arc, unimplemented},
     void::Void,
 };
 
@@ -387,23 +387,26 @@ impl IfaceManagerService {
         }
     }
 
-    fn has_idle_client(&self) -> bool {
+    fn idle_clients(&self) -> Vec<u16> {
+        let mut idle_clients = Vec::new();
+
         for client in self.clients.iter() {
             if client.config.is_none() {
-                return true;
+                idle_clients.push(client.iface_id);
+                continue;
             }
 
             match client.client_state_machine.as_ref() {
                 Some(state_machine) => {
                     if !state_machine.is_alive() {
-                        return true;
+                        idle_clients.push(client.iface_id);
                     }
                 }
-                None => return true,
+                None => idle_clients.push(client.iface_id),
             }
         }
 
-        false
+        idle_clients
     }
 
     /// Checks the specified interface to see if there is an active state machine for it.  If there
@@ -692,7 +695,7 @@ async fn initiate_network_selection(
         >,
     >,
 ) {
-    if iface_manager.has_idle_client()
+    if !iface_manager.idle_clients().is_empty()
         && iface_manager.saved_networks.known_network_count().await > 0
         && network_selection_futures.is_empty()
     {
@@ -712,14 +715,15 @@ async fn handle_network_selection_results(
         client_types::NetworkSelectionMetadata,
     )>,
     iface_manager: &mut IfaceManagerService,
-    disconnected_clients: &mut HashSet<u16>,
     reconnect_monitor_interval: &mut i64,
     connectivity_monitor_timer: &mut fasync::Interval,
 ) {
     if let Some((network_id, credential, network_metadata)) = network_selection_result {
         *reconnect_monitor_interval = 1;
 
-        if iface_manager.has_idle_client() {
+        let mut idle_clients = iface_manager.idle_clients();
+
+        if !idle_clients.is_empty() {
             let connect_req = client_fsm::ConnectRequest {
                 network: network_id,
                 credential: credential,
@@ -728,7 +732,7 @@ async fn handle_network_selection_results(
 
             // Any client interfaces that have recently presented as idle will be
             // reconnected.
-            for iface_id in disconnected_clients.drain() {
+            for iface_id in idle_clients.drain(..) {
                 if let Err(e) =
                     iface_manager.attempt_client_reconnect(iface_id, connect_req.clone()).await
                 {
@@ -751,7 +755,6 @@ async fn handle_terminated_state_machine(
     iface_manager: &mut IfaceManagerService,
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     selector: Arc<NetworkSelector>,
-    disconnected_clients: &mut HashSet<u16>,
     network_selection_futures: &mut FuturesUnordered<
         BoxFuture<
             'static,
@@ -775,7 +778,6 @@ async fn handle_terminated_state_machine(
         }
         fidl_fuchsia_wlan_device::MacRole::Client => {
             iface_manager.record_idle_client(terminated_fsm.iface_id);
-            disconnected_clients.insert(terminated_fsm.iface_id);
             initiate_network_selection(
                 &iface_manager,
                 iface_manager_client.clone(),
@@ -803,7 +805,6 @@ pub(crate) async fn serve_iface_manager_requests(
     let mut operation_futures = FuturesUnordered::new();
 
     // Scans will be initiated to perform network selection if clients become disconnected.
-    let mut disconnected_clients = HashSet::<u16>::new();
     let mut network_selection_futures = FuturesUnordered::new();
 
     // Create a timer to periodically check to ensure that all client interfaces are connected.
@@ -820,7 +821,6 @@ pub(crate) async fn serve_iface_manager_requests(
                     &mut iface_manager,
                     iface_manager_client.clone(),
                     network_selector.clone(),
-                    &mut disconnected_clients,
                     &mut network_selection_futures,
                 ).await;
             },
@@ -837,7 +837,6 @@ pub(crate) async fn serve_iface_manager_requests(
                 handle_network_selection_results(
                     network_selection_result,
                     &mut iface_manager,
-                    &mut disconnected_clients,
                     &mut reconnect_monitor_interval,
                     &mut connectivity_monitor_timer
                 ).await;
@@ -864,7 +863,7 @@ pub(crate) async fn serve_iface_manager_requests(
                         }
                     }
                     IfaceManagerRequest::HasIdleIface(HasIdleIfaceRequest { responder }) => {
-                        if responder.send(iface_manager.has_idle_client()).is_err() {
+                        if responder.send(!iface_manager.idle_clients().is_empty()).is_err() {
                             error!("could not respond to  HasIdleIfaceRequest");
                         }
                     }
@@ -1983,7 +1982,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
         let test_values = test_setup(&mut exec);
         let (iface_manager, _) = create_iface_manager_with_client(&test_values, false);
-        assert!(iface_manager.has_idle_client());
+        assert!(!iface_manager.idle_clients().is_empty());
     }
 
     /// Tests the case where an iface is configured and alive and has_idle_client is called.
@@ -1992,7 +1991,7 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
         let test_values = test_setup(&mut exec);
         let (iface_manager, _) = create_iface_manager_with_client(&test_values, true);
-        assert!(!iface_manager.has_idle_client());
+        assert!(iface_manager.idle_clients().is_empty());
     }
 
     /// Tests the case where an iface is configured and dead and has_idle_client is called.
@@ -2009,7 +2008,7 @@ mod tests {
             expected_connect_request: None,
         }));
 
-        assert!(iface_manager.has_idle_client());
+        assert!(!iface_manager.idle_clients().is_empty());
     }
 
     /// Tests the case where not ifaces are present and has_idle_client is called.
@@ -2019,7 +2018,7 @@ mod tests {
         let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
         let _ = iface_manager.clients.pop();
-        assert!(!iface_manager.has_idle_client());
+        assert!(iface_manager.idle_clients().is_empty());
     }
 
     /// Tests the case where starting client connections succeeds.
@@ -3796,9 +3795,6 @@ mod tests {
         let test_values = test_setup(&mut exec);
         let (mut iface_manager, _stream) = create_iface_manager_with_client(&test_values, true);
 
-        // Scans will be initiated to perform network selection if clients become disconnected.
-        let mut disconnected_clients = HashSet::<u16>::new();
-
         // Create a timer to periodically check to ensure that all client interfaces are connected.
         let mut reconnect_monitor_interval: i64 = 1;
         let mut connectivity_monitor_timer =
@@ -3814,7 +3810,6 @@ mod tests {
                 let fut = handle_network_selection_results(
                     None,
                     &mut iface_manager,
-                    &mut disconnected_clients,
                     &mut reconnect_monitor_interval,
                     &mut connectivity_monitor_timer,
                 );
@@ -3894,8 +3889,6 @@ mod tests {
         }));
 
         // Setup for a reconnection attempt.
-        let mut disconnected_clients = HashSet::new();
-        disconnected_clients.insert(TEST_CLIENT_IFACE_ID);
         let mut reconnect_monitor_interval = 1;
         let mut connectivity_monitor_timer =
             fasync::Interval::new(zx::Duration::from_seconds(reconnect_monitor_interval));
@@ -3909,7 +3902,6 @@ mod tests {
             let fut = handle_network_selection_results(
                 network,
                 &mut iface_manager,
-                &mut disconnected_clients,
                 &mut reconnect_monitor_interval,
                 &mut connectivity_monitor_timer,
             );
@@ -3939,6 +3931,108 @@ mod tests {
         // The reconnect attempt should have seen an idle client interface and created a new client
         // state machine future for it.
         assert!(!iface_manager.fsm_futures.is_empty());
+
+        // There should not be any idle clients.
+        assert!(iface_manager.idle_clients().is_empty());
+    }
+
+    #[test]
+    fn test_idle_client_remains_after_failed_reconnection() {
+        let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+
+        // Create a configured ClientIfaceContainer.
+        let mut test_values = test_setup(&mut exec);
+
+        // Insert a saved network.
+        let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
+        let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join(rand_string());
+        let tmp_path = temp_dir.path().join(rand_string());
+        let (saved_networks, mut stash_server) =
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+        test_values.saved_networks = Arc::new(saved_networks);
+
+        // Update the saved networks with knowledge of the test SSID and credentials.
+        {
+            let save_network_fut =
+                test_values.saved_networks.store(network_id.clone(), credential.clone());
+            pin_mut!(save_network_fut);
+            assert_variant!(exec.run_until_stalled(&mut save_network_fut), Poll::Pending);
+
+            process_stash_write(&mut exec, &mut stash_server);
+        }
+
+        // Create a network selector.
+        let selector = Arc::new(NetworkSelector::new(
+            test_values.saved_networks.clone(),
+            create_mock_cobalt_sender(),
+        ));
+
+        // Inject a scan result into the network selector.
+        {
+            let scan_results = vec![client_types::ScanResult {
+                id: fidl_fuchsia_wlan_policy::NetworkIdentifier::from(network_id),
+                entries: vec![client_types::Bss {
+                    bssid: [20, 30, 40, 50, 60, 70],
+                    rssi: -15,
+                    frequency: 2400,
+                    timestamp_nanos: 0,
+                    compatible: true,
+                    observed_in_passive_scan: false,
+                    snr_db: 20,
+                    channel: fidl_fuchsia_wlan_common::WlanChan {
+                        primary: 8,
+                        cbw: fidl_fuchsia_wlan_common::Cbw::Cbw20,
+                        secondary80: 0,
+                    },
+                }],
+                compatibility: client_types::Compatibility::Supported,
+            }];
+            let mut network_selector_updater = selector.generate_scan_result_updater();
+            let update_fut = network_selector_updater.update_scan_results(&scan_results);
+            pin_mut!(update_fut);
+            assert_variant!(exec.run_until_stalled(&mut update_fut), Poll::Ready(()));
+        }
+
+        // Create an interface manager with an unconfigured client interface.
+        let (mut iface_manager, _sme_stream) =
+            create_iface_manager_with_client(&test_values, false);
+        iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
+            disconnect_ok: true,
+            is_alive: false,
+            expected_connect_request: None,
+        }));
+
+        // Setup for a reconnection attempt.
+        let mut reconnect_monitor_interval = 1;
+        let mut connectivity_monitor_timer =
+            fasync::Interval::new(zx::Duration::from_seconds(reconnect_monitor_interval));
+        let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
+        let network =
+            exec.run_singlethreaded(selector.find_best_bss(iface_manager_client, &vec![]));
+        assert!(network.is_some());
+
+        {
+            // Run reconnection attempt
+            let fut = handle_network_selection_results(
+                network,
+                &mut iface_manager,
+                &mut reconnect_monitor_interval,
+                &mut connectivity_monitor_timer,
+            );
+
+            pin_mut!(fut);
+
+            // Drop the device service stream so that the SME request fails.
+            drop(test_values.device_service_stream);
+
+            // The future should then complete.
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        }
+
+        // There should still be an idle client
+        assert!(!iface_manager.idle_clients().is_empty());
     }
 
     #[test]
@@ -3983,7 +4077,6 @@ mod tests {
 
         // Create remaining boilerplate to call handle_terminated_state_machine.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
-        let mut disconnected_clients = HashSet::new();
         let mut network_selection_futures = FuturesUnordered::new();
 
         let metadata = StateMachineMetadata {
@@ -3997,7 +4090,6 @@ mod tests {
                 &mut iface_manager,
                 iface_manager_client,
                 selector,
-                &mut disconnected_clients,
                 &mut network_selection_futures,
             );
             pin_mut!(fut);
@@ -4005,8 +4097,8 @@ mod tests {
             assert_eq!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
         }
 
-        // Verify that a disconnected client has been recorded.
-        assert!(disconnected_clients.contains(&TEST_CLIENT_IFACE_ID));
+        // Verify that there is a disconnected client.
+        assert!(iface_manager.idle_clients().contains(&TEST_CLIENT_IFACE_ID));
 
         // Verify that a scan has been kicked off.
         assert!(!network_selection_futures.is_empty());
@@ -4027,7 +4119,6 @@ mod tests {
 
         // Create remaining boilerplate to call handle_terminated_state_machine.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
-        let mut disconnected_clients = HashSet::new();
         let mut network_selection_futures = FuturesUnordered::new();
 
         let metadata = StateMachineMetadata {
@@ -4041,7 +4132,6 @@ mod tests {
                 &mut iface_manager,
                 iface_manager_client,
                 selector,
-                &mut disconnected_clients,
                 &mut network_selection_futures,
             );
             pin_mut!(fut);
