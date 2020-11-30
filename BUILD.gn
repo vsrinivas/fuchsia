@@ -686,10 +686,11 @@ build_api_module("tests") {
   testonly = true
   data_keys = [ "tests" ]
   deps = [
+    # Pull in tests from host_labels.
     "//:host",
-    "//build:tests",
+
+    # Pull in tests from *_package_labels.
     "//build/images:packages",
-    "//sdk",
   ]
 }
 
