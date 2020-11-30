@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "test/account_common_lib_test"
-    },
-    "sandbox": {
-        "services": []
     }
 }

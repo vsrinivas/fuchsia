@@ -1,9 +1,5 @@
 {
     "program": {
         "binary": "test/identity_key_manager_lib_test"
-    },
-    "sandbox": {
-        "features": [],
-        "services": []
     }
 }

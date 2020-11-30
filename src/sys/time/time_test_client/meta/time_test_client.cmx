@@ -6,7 +6,6 @@
         "binary": "bin/time_test_client"
     },
     "sandbox": {
-        "features": [],
         "services": [
             "fuchsia.time.Utc"
         ]

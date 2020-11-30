@@ -12,8 +12,6 @@
         "binary": "bin/optee_smoke_test"
     },
     "sandbox": {
-        "dev": [],
-        "features": [],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",

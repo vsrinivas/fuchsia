@@ -1,6 +1,5 @@
 {
     "program": {
         "binary": "test/memory_metrics_unittests"
-    },
-    "sandbox": {}
+    }
 }

@@ -7,7 +7,6 @@
             "class/dotmatrix-display",
             "class/serial",
             "class/serial-impl"
-        ],
-        "services": []
+        ]
     }
 }

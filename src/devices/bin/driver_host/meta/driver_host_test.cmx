@@ -8,7 +8,6 @@
             "driver",
             "lib"
         ],
-        "features": [],
         "services": [
             "fuchsia.exception.Handler",
             "fuchsia.process.Launcher",

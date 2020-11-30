@@ -6,7 +6,6 @@
         "binary": "bin/test-sysmgr-bin"
     },
     "sandbox": {
-        "features": [],
         "services": [
             "fuchsia.process.Launcher"
         ]

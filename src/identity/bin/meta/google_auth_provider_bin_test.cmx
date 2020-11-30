@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "test/google_auth_provider_bin_test"
-    },
-    "sandbox": {
-        "services": []
     }
 }

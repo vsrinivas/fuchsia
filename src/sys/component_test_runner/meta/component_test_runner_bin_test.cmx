@@ -1,6 +1,5 @@
 {
     "program": {
         "binary": "test/component_test_runner_bin_test"
-    },
-    "sandbox": {}
+    }
 }

@@ -1,8 +1,5 @@
 {
     "program": {
         "binary": "bin/rolldice"
-    },
-    "sandbox": {
-        "services": []
     }
 }

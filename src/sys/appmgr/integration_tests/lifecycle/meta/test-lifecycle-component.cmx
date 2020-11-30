@@ -4,8 +4,5 @@
     ],
     "program": {
         "binary": "bin/test-lifecycle-component"
-    },
-    "sandbox": {
-        "features": []
     }
 }

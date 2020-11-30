@@ -1,9 +1,5 @@
 {
     "program": {
         "binary": "test/inspect_example_rs_bin_test"
-    },
-    "sandbox": {
-        "features": [],
-        "services": []
     }
 }
