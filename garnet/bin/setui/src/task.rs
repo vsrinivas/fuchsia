@@ -495,7 +495,7 @@ mod tests {
             assert!(active_categories.contains(&category) && active_categories.len() == 1);
             let stats = summary.get_statistics(&category).expect("should be found");
             assert!(
-                stats.get_oldest_active_start_time().expect("should be found") > before_timestamp
+                stats.get_oldest_active_start_time().expect("should be found") >= before_timestamp
             );
         }
 
