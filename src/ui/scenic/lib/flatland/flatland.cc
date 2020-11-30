@@ -53,7 +53,9 @@ Flatland::Flatland(
       session_id_(session_id),
       destroy_instance_function_(std::move(destroy_instance_function)),
       present2_helper_([this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
-        binding_.events().OnFramePresented(std::move(info));
+        if (binding_.is_bound()) {
+          binding_.events().OnFramePresented(std::move(info));
+        }
       }),
       flatland_presenter_(flatland_presenter),
       link_system_(link_system),
@@ -967,7 +969,9 @@ void Flatland::ReleaseImage(ContentId image_id) {
 
 void Flatland::OnPresentTokensReturned(uint32_t num_present_tokens) {
   present_tokens_remaining_ += num_present_tokens;
-  binding_.events().OnPresentTokensReturned(num_present_tokens);
+  if (binding_.is_bound()) {
+    binding_.events().OnPresentTokensReturned(num_present_tokens);
+  }
 }
 
 void Flatland::OnFramePresented(const std::map<scheduling::PresentId, zx::time>& latched_times,

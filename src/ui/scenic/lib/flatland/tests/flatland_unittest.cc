@@ -3369,6 +3369,7 @@ TEST_F(FlatlandTest, DeregisterBufferCollectionWaitsForReleaseFence) {
   // not happened.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id))
       .Times(0);
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseImage(_)).Times(0);
   flatland.DeregisterBufferCollection(kBufferCollectionId);
   PRESENT(flatland, true);
 
@@ -3376,6 +3377,7 @@ TEST_F(FlatlandTest, DeregisterBufferCollectionWaitsForReleaseFence) {
   // to a Transform, the deregestration call should still not happen.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id))
       .Times(0);
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseImage(_)).Times(0);
   flatland.ReleaseImage(kImageId);
   PRESENT(flatland, true);
 
@@ -3384,6 +3386,7 @@ TEST_F(FlatlandTest, DeregisterBufferCollectionWaitsForReleaseFence) {
   // fences are what trigger the importer calls.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id))
       .Times(0);
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseImage(_)).Times(0);
   flatland.SetContentOnTransform(0, kTransformId);
 
   PresentArgs args;
@@ -3393,6 +3396,7 @@ TEST_F(FlatlandTest, DeregisterBufferCollectionWaitsForReleaseFence) {
   // Signal the release fences, which triggers the deregistration call.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id))
       .Times(1);
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseImage(_)).Times(1);
   ApplySessionUpdatesAndSignalFences();
   RunLoopUntilIdle();
 }
@@ -3670,6 +3674,7 @@ TEST_F(FlatlandTest, ReleasedImageRemainsUntilCleared) {
   EXPECT_EQ(image_kv->second.collection_id, global_collection_id);
 
   // Clearing the Transform of its Image removes all references from the UberStruct.
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseImage(_)).Times(1);
   flatland.SetContentOnTransform(0, kTransformId);
   PRESENT(flatland, true);
 
@@ -3818,6 +3823,7 @@ TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
 
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id1))
       .Times(1);
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseImage(_)).Times(1);
   PRESENT(flatland, true);
 
   // The buffer collection and Image ID should be available for re-use.
