@@ -9,15 +9,15 @@
 
 GuestServices::GuestServices(fuchsia::virtualization::LaunchInfo launch_info)
     : launch_info_(std::move(launch_info)) {
-  services_.AddService<fuchsia::virtualization::vmm::LaunchInfoProvider>(
-      [this](fidl::InterfaceRequest<fuchsia::virtualization::vmm::LaunchInfoProvider> request) {
+  services_.AddService<fuchsia::virtualization::LaunchInfoProvider>(
+      [this](fidl::InterfaceRequest<fuchsia::virtualization::LaunchInfoProvider> request) {
         binding_.Bind(std::move(request));
       });
 }
 
 fuchsia::sys::ServiceListPtr GuestServices::ServeDirectory() {
   auto services = fuchsia::sys::ServiceList::New();
-  services->names.push_back(fuchsia::virtualization::vmm::LaunchInfoProvider::Name_);
+  services->names.push_back(fuchsia::virtualization::LaunchInfoProvider::Name_);
   services->provider = services_.AddBinding();
   return services;
 }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/virtualization/vmm/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
@@ -41,7 +41,7 @@ class RunnerImpl : public fuchsia::sys::Runner {
     // This must list every service the VMM depends on. We don't provide any
     // implementations here since host_directory takes care of that for us.
     auto service_list = fuchsia::sys::ServiceList::New();
-    service_list->names.emplace_back(fuchsia::virtualization::vmm::LaunchInfoProvider::Name_);
+    service_list->names.emplace_back(fuchsia::virtualization::LaunchInfoProvider::Name_);
 
     // Pass-through some arguments directly to the VMM package.
     launch_info.url = "fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cmx";

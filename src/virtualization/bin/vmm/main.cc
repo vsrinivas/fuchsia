@@ -6,7 +6,6 @@
 #include <fcntl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <fuchsia/virtualization/vmm/cpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -101,7 +100,7 @@ int main(int argc, char** argv) {
       sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   fuchsia::virtualization::LaunchInfo launch_info;
-  fuchsia::virtualization::vmm::LaunchInfoProviderSyncPtr launch_info_provider;
+  fuchsia::virtualization::LaunchInfoProviderSyncPtr launch_info_provider;
   context->svc()->Connect(launch_info_provider.NewRequest());
   zx_status_t status = launch_info_provider->GetLaunchInfo(&launch_info);
   // NOTE: This isn't an error yet since only the guest_manager exposes the

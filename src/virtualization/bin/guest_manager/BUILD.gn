@@ -33,7 +33,6 @@ source_set("lib") {
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualization",
-    "//sdk/fidl/fuchsia.virtualization.vmm",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/bitmap",

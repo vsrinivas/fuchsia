@@ -5,11 +5,13 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_WL_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_WL_H_
 
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/zx/vmar.h>
-#include <virtio/virtio_ids.h>
-#include <virtio/wl.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <virtio/virtio_ids.h>
+#include <virtio/wl.h>
 
 #include "src/virtualization/bin/vmm/virtio_device.h"
 

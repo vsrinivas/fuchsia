@@ -6,23 +6,23 @@
 #define SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_GUEST_SERVICES_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/virtualization/vmm/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/svc/cpp/service_provider_bridge.h>
 
 #include "src/virtualization/bin/guest_manager/guest_vsock_endpoint.h"
 
-class GuestServices : public fuchsia::virtualization::vmm::LaunchInfoProvider {
+class GuestServices : public fuchsia::virtualization::LaunchInfoProvider {
  public:
   GuestServices(fuchsia::virtualization::LaunchInfo launch_info);
 
   fuchsia::sys::ServiceListPtr ServeDirectory();
 
  private:
-  // |fuchsia::virtualization::vmm::LaunchInfoProvider|
+  // |fuchsia::virtualization::LaunchInfoProvider|
   void GetLaunchInfo(GetLaunchInfoCallback callback) override;
 
   component::ServiceProviderBridge services_;
-  fidl::Binding<fuchsia::virtualization::vmm::LaunchInfoProvider> binding_{this};
+  fidl::Binding<fuchsia::virtualization::LaunchInfoProvider> binding_{this};
   fuchsia::virtualization::LaunchInfo launch_info_;
 };
 

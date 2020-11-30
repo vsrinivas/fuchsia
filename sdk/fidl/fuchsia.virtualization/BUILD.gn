@@ -15,6 +15,7 @@ fidl("fuchsia.virtualization") {
     "balloon_controller.fidl",
     "guest.fidl",
     "guest_config.fidl",
+    "launch_info.fidl",
     "manager.fidl",
     "realm.fidl",
     "vsock.fidl",
@@ -23,6 +24,5 @@ fidl("fuchsia.virtualization") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet",
     "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.sys",
   ]
 }

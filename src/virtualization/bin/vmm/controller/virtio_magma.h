@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_MAGMA_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_MAGMA_H_
 
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/zx/vmar.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>

@@ -12,7 +12,6 @@ executable("bin") {
   deps = [
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualization",
-    "//sdk/fidl/fuchsia.virtualization.vmm",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
