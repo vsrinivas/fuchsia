@@ -163,12 +163,15 @@ void pmm_checker_init_from_cmdline() {
     static constexpr char kActionFlag[] = "kernel.pmm-checker.action";
     PmmChecker::Action action = PmmChecker::DefaultAction;
     const char* const action_string = gCmdline.GetString(kActionFlag);
-    if (auto opt_action = PmmChecker::ActionFromString(action_string)) {
-      action = opt_action.value();
-    } else {
-      printf("PMM: value from %s is invalid (\"%s\"), using \"%s\" instead\n", kActionFlag,
-             action_string, PmmChecker::ActionToString(action));
+    if (action_string != nullptr) {
+      if (auto opt_action = PmmChecker::ActionFromString(action_string)) {
+        action = opt_action.value();
+      } else {
+        printf("PMM: value from %s is invalid (\"%s\"), using \"%s\" instead\n", kActionFlag,
+               action_string, PmmChecker::ActionToString(action));
+      }
     }
+
     pmm_node.EnableFreePageFilling(fill_size, action);
   }
 }
