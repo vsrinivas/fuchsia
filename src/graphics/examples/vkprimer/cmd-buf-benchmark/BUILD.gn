@@ -3,39 +3,57 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//src/graphics/examples/vkprimer/common/common.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
+import("//src/sys/build/components.gni")
 
-test_package("cmd-buf-benchmark") {
-  tests = [
-    {
-      name = "cmd-buf-benchmark"
-      environments = magma_hardware_envs
-    },
+group("cmd-buf-benchmark") {
+  deps = [ ":cmd-buf-benchmark-test-package" ]
+  testonly = true
+}
+
+resource("shaders") {
+  sources = [
+    "../common/shaders/frag.spv",
+    "../common/shaders/vert.spv",
   ]
-  deps = [ ":bin" ]
+  outputs = [ "data/shaders/{{source_file_part}}" ]
+}
 
-  resources = [
-    {
-      path = "../common/shaders/vert.spv"
-      dest = "shaders/vert.spv"
-    },
-    {
-      path = "../common/shaders/frag.spv"
-      dest = "shaders/frag.spv"
-    },
+resource("layers") {
+  sources = []
+  foreach(resource, vulkan_validation_layers.resources) {
+    sources += [ resource.path ]
+  }
+  foreach(resource, image_pipe_swapchain_fb.resources) {
+    sources += [ resource.path ]
+  }
+  outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
+}
+
+fuchsia_component("cmd-buf-benchmark-component") {
+  testonly = true
+  component_name = "cmd-buf-benchmark"
+  manifest = "meta/cmd-buf-benchmark.cmx"
+  deps = [
+    ":bin",
+    ":layers",
+    ":shaders",
+    "//third_party/Vulkan-Loader:libvulkan",
   ]
 
   if (is_fuchsia) {
-    public_deps = vulkan_validation_layers.public_deps +
-                  image_pipe_swapchain_fb.public_deps
-    loadable_modules = vulkan_validation_layers.loadable_modules +
-                       image_pipe_swapchain_fb.loadable_modules
-    resources +=
-        vulkan_validation_layers.resources + image_pipe_swapchain_fb.resources
+    deps += vulkan_validation_layers.public_deps +
+            image_pipe_swapchain_fb.public_deps
+  }
+}
+
+fuchsia_test_package("cmd-buf-benchmark-test-package") {
+  test_components = [ ":cmd-buf-benchmark-component" ]
+  test_specs = {
+    environments = magma_hardware_envs
   }
 }
 
@@ -119,6 +137,6 @@ copy("spirv_copy") {
 #
 # Linux / Mac Build
 #
-group("cmd-buf-benchmark_glfw") {
+group("cmd-buf-benchmark-glfw") {
   deps = [ ":bin($host_toolchain)" ]
 }
