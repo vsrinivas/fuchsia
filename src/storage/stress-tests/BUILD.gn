@@ -31,8 +31,8 @@ fuchsia_component("fvm-crash") {
 }
 
 # This test package is designed to run on infra bots.
-# Infra bots have a time limit of 23 hours. Each test runs
-# for 22 hours, leaving an hour for the build process.
+# Infra bots have a time limit of 23 hours. There are 4 tests
+# in this package, each running for exactly 5.5 hours.
 fuchsia_test_package("storage-stress-tests") {
   test_components = [
     ":fvm-crash",

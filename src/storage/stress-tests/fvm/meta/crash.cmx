@@ -9,7 +9,7 @@
             "--rebind-probability",
             "0.1",
             "--time-limit-secs",
-            "3600"
+            "19800"
         ],
         "binary": "bin/fvm_stressor"
     },

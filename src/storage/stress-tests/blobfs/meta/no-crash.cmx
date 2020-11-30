@@ -5,7 +5,7 @@
     "program": {
         "args": [
             "--time-limit-secs",
-            "3600"
+            "19800"
         ],
         "binary": "bin/blobfs_stressor"
     },
