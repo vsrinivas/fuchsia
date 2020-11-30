@@ -49,6 +49,10 @@ test("fs-management") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
   ]
+  data_deps = [
+    "//src/storage/bin/minfs",
+    "//src/storage/blobfs",
+  ]
 }
 
 isolated_devmgr_component("fs-management-devmgr") {
@@ -75,8 +79,6 @@ fuchsia_component("fs-management-test") {
   deps = [
     ":fs-management",
     ":fs-management-devmgr",
-    "//src/storage/bin/minfs",
-    "//src/storage/blobfs",
   ]
 }
 

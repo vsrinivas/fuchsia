@@ -35,6 +35,14 @@ if (is_linux) {
     "netls",
     "netruncmd",
   ]
+
+  # Recompute the value of host_out_dir when is_host is true. That is because host_toolchain
+  # always include a variant suffix in this case (e.g. 'host_x64-asan'), while host_out_dir
+  # will always correspond to the base host toolchain output directory.
+  if (is_host) {
+    host_out_dir = get_label_info("//anything($host_toolchain)", "root_out_dir")
+  }
+
   host_test_data("copy_netsvc_tools") {
     visibility = [ ":*" ]
     sources = []

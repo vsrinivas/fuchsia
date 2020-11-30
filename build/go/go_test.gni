@@ -38,80 +38,64 @@ import("//build/testing/host_test.gni")
 #     See https://golang.org/pkg/time/#ParseDuration for duration format.
 #     Type: string.
 template("go_test") {
-  # go_build() redirects out of the variant, so root_out_dir et al are not
-  # what it actually uses.  Just redirect this target itself first, so the
-  # actual go_build instantiation below will not also redirect and the code
-  # below matches its output.
-  if (toolchain_variant.name != "") {
-    group(target_name) {
-      forward_variables_from(invoker, [ "visibility" ])
-      testonly = true
-      public_deps = [ ":$target_name(${toolchain_variant.base})" ]
-    }
-    not_needed(invoker, "*")
-  } else {
-    _output_name = target_name
-    if (defined(invoker.output_name)) {
-      _output_name = invoker.output_name
-    }
-    _output_path = "${root_out_dir}/${_output_name}"
+  _output_name = target_name
+  if (defined(invoker.output_name)) {
+    _output_name = invoker.output_name
+  }
 
-    _is_host = is_linux || is_mac
+  _is_host = is_linux || is_mac
 
-    assert(
-        _is_host || (!defined(invoker.args) && !defined(invoker.environments) &&
-                         !defined(invoker.timeout)),
-        "args, environments, and timeout are only supported for host tests. For Fuchsia tests set them in go_fuchsia_unittest_package()")
+  assert(
+      _is_host || (!defined(invoker.args) && !defined(invoker.environments) &&
+                       !defined(invoker.timeout)),
+      "args, environments, and timeout are only supported for host tests. For Fuchsia tests set them in go_fuchsia_unittest_package()")
 
-    _go_build_target_name = target_name
+  _go_build_target_name = target_name
 
-    if (_is_host) {
-      _go_build_target_name = "${target_name}_go_build"
-      host_test(target_name) {
-        binary_path = _output_path
+  if (_is_host) {
+    _go_build_target_name = "${target_name}_go_build"
+    host_test(target_name) {
+      binary_path = "$root_out_dir/$_output_name"
 
-        timeout = "5m"
-        if (defined(invoker.timeout)) {
-          timeout = invoker.timeout
-        }
-        args = [
-          "-test.timeout",
-          timeout,
-          "-test.v",  # Emit detailed test case information.
-        ]
-        if (defined(invoker.args)) {
-          args += invoker.args
-        }
-
-        deps = [ ":${_go_build_target_name}" ]
-        if (defined(invoker.deps)) {
-          deps += invoker.deps
-        }
-        if (defined(invoker.non_go_deps)) {
-          deps += invoker.non_go_deps
-        }
-        forward_variables_from(invoker,
-                               [
-                                 "data_deps",
-                                 "environments",
-                                 "public_deps",
-                                 "visibility",
-                               ])
+      timeout = "5m"
+      if (defined(invoker.timeout)) {
+        timeout = invoker.timeout
       }
-    }
+      args = [
+        "-test.timeout",
+        timeout,
+        "-test.v",  # Emit detailed test case information.
+      ]
+      if (defined(invoker.args)) {
+        args += invoker.args
+      }
 
-    go_build(_go_build_target_name) {
-      test = true
-      output_name = _output_name
+      deps = [ ":${_go_build_target_name}" ]
+      if (defined(invoker.deps)) {
+        deps += invoker.deps
+      }
+      if (defined(invoker.non_go_deps)) {
+        deps += invoker.non_go_deps
+      }
       forward_variables_from(invoker,
-                             "*",
                              [
-                               "args",
+                               "data_deps",
                                "environments",
-                               "timeout",
+                               "public_deps",
+                               "visibility",
                              ])
     }
-    _outputs = get_target_outputs(":$_go_build_target_name")
-    assert(_outputs[0] == _output_path, _outputs[0] + " != " + _output_path)
+  }
+
+  go_build(_go_build_target_name) {
+    test = true
+    output_name = _output_name
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "args",
+                             "environments",
+                             "timeout",
+                           ])
   }
 }

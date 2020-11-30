@@ -53,6 +53,16 @@ test("fs-test-utils") {
     "//zircon/system/ulib/unittest",
   ]
 
+  data_deps = [
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/fvm",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
+    "//src/storage/bin/minfs",
+    "//src/storage/blobfs",
+  ]
+
   # TODO(fxbug.dev/46861): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
@@ -67,16 +77,7 @@ isolated_devmgr_unittest_package("fs-test-utils-test") {
 
   features = [ "isolated-temp" ]
 
-  deps = [
-    ":fs-test-utils",
-    "//src/devices/block/drivers/core",
-    "//src/devices/block/drivers/fvm",
-    "//src/devices/block/drivers/ramdisk",
-    "//src/devices/misc/drivers/test",
-    "//src/devices/tests/sysdev",
-    "//src/storage/bin/minfs",
-    "//src/storage/blobfs",
-  ]
+  deps = [ ":fs-test-utils" ]
 }
 
 group("tests") {

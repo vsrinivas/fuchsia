@@ -32,6 +32,16 @@ test("fs-test-support") {
     "//zircon/system/ulib/ramdevice-client",
   ]
   include_dirs = [ "../include" ]
+
+  data_deps = [
+    "//src/devices/block/drivers/core",
+    "//src/devices/block/drivers/fvm",
+    "//src/devices/block/drivers/ramdisk",
+    "//src/devices/misc/drivers/test",
+    "//src/devices/tests/sysdev",
+    "//src/storage/bin/minfs",
+    "//src/storage/blobfs",
+  ]
 }
 
 isolated_devmgr_unittest_package("fs-test-support-test") {
@@ -45,14 +55,5 @@ isolated_devmgr_unittest_package("fs-test-support-test") {
 
   features = [ "isolated-temp" ]
 
-  deps = [
-    ":fs-test-support",
-    "//src/devices/block/drivers/core",
-    "//src/devices/block/drivers/fvm",
-    "//src/devices/block/drivers/ramdisk",
-    "//src/devices/misc/drivers/test",
-    "//src/devices/tests/sysdev",
-    "//src/storage/bin/minfs",
-    "//src/storage/blobfs",
-  ]
+  deps = [ ":fs-test-support" ]
 }

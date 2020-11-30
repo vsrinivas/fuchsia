@@ -85,6 +85,8 @@ rustc_test("test-bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
   ]
 
+  data_deps = [ ":lib" ]
+
   source_root = "tests/integration.rs"
   sources = [ "tests/integration.rs" ]
 }
@@ -92,10 +94,7 @@ rustc_test("test-bin") {
 fuchsia_component("sampler-v1") {
   component_name = "sampler"
   manifest = "meta/sampler.cmx"
-  deps = [
-    ":lib",
-    "//src/diagnostics/launcher:bin",
-  ]
+  deps = [ "//src/diagnostics/launcher:bin" ]
 }
 
 fuchsia_component("sampler-integration-test") {

@@ -201,6 +201,9 @@ template("rustc_test") {
     }
 
     data_deps = []
+    if (defined(invoker.data_deps)) {
+      data_deps = invoker.data_deps
+    }
     if (is_fuchsia) {
       # Dynamic linking applies to not only to libstd but to libtest as well,
       # which means we must depend on it as a data_dep to get it in our

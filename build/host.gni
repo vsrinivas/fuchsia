@@ -73,7 +73,8 @@ template("install_host_tools") {
       } else {
         toolchain = host_toolchain
       }
-      deps = [ ":$target_name($toolchain)" ]
+      public_deps = [ ":$target_name($toolchain)" ]
+
       forward_variables_from(invoker,
                              [
                                "testonly",
