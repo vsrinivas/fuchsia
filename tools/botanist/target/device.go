@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"sync/atomic"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
@@ -76,11 +77,12 @@ var _ ConfiguredTarget = (*DeviceTarget)(nil)
 
 // DeviceTarget represents a target device.
 type DeviceTarget struct {
-	config  DeviceConfig
-	opts    Options
-	signers []ssh.Signer
-	serial  io.ReadWriteCloser
-	tftp    tftp.Client
+	config   DeviceConfig
+	opts     Options
+	signers  []ssh.Signer
+	serial   io.ReadWriteCloser
+	tftp     tftp.Client
+	stopping uint32
 }
 
 // NewDeviceTarget returns a new device target with a given configuration.
@@ -165,15 +167,12 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 	}
 	go func() {
 		defer l.Close()
-		for {
+		for atomic.LoadUint32(&t.stopping) == 0 {
 			data, err := l.Listen()
 			if err != nil {
 				continue
 			}
 			fmt.Print(data)
-			if ctx.Err() != nil {
-				return
-			}
 		}
 	}()
 
@@ -220,7 +219,8 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 
 // Stop stops the device.
 func (t *DeviceTarget) Stop(context.Context) error {
-	return ErrUnimplemented
+	atomic.StoreUint32(&t.stopping, 1)
+	return nil
 }
 
 // Wait waits for the device target to stop.
