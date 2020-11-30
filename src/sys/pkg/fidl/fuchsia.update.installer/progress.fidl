@@ -182,12 +182,14 @@ table CompleteData {
 
 /// Data associated with [`State.fail_prepare`].
 table FailPrepareData {
+    1: PrepareFailureReason reason;
 };
 
 /// Data associated with [`State.fail_fetch`].
 table FailFetchData {
     1: UpdateInfo info;
     2: InstallationProgress progress;
+    3: FetchFailureReason reason;
 };
 
 /// Data associated with [`State.fail_stage`].
@@ -213,4 +215,23 @@ table InstallationProgress {
     /// than or equal to [`UpdateInfo.download_size`] and only present if that
     /// field is also present.
     2: uint64 bytes_downloaded;
+};
+
+/// The set of values provided when an installation attempt fails on [`State.prepare`].
+enum PrepareFailureReason {
+    /// The prepare failed because of some other reason.
+    INTERNAL = 0;
+
+    /// The prepare failed because the system does not have enough space to fetch
+    /// the update package.
+    OUT_OF_SPACE = 1;
+};
+
+/// The set of values provided when an installation attempt fails on [`State.fetch`].
+enum FetchFailureReason {
+    /// The fetch failed because of some other reason.
+    INTERNAL = 0;
+
+    /// The fetch failed because the system does not have enough space to fetch a package.
+    OUT_OF_SPACE = 1;
 };
