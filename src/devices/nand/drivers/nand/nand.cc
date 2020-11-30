@@ -42,11 +42,11 @@ zx_status_t NandDevice::ReadPage(void* data, void* oob, uint32_t nand_page,
     status = raw_nand_.ReadPageHwecc(nand_page, data, nand_info_.page_size, nullptr, oob,
                                      nand_info_.oob_size, nullptr, corrected_bits);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Retrying Read@%u", __func__, nand_page);
+      zxlogf(WARNING, "%s: Retrying Read@%u", __func__, nand_page);
     }
   }
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Read error %d, exhausted all retries", __func__, status);
+    zxlogf(WARNING, "%s: Read error %d, exhausted all retries", __func__, status);
   }
   if (retry > 1) {
     zxlogf(INFO, "%s: Successfuly read@%u on retry %zd", __func__, nand_page, retry - 1);
