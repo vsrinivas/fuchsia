@@ -1,0 +1,65 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx_build/public/gn/migrated_targets.gni")
+
+# Used by both the zx_library target directly and unit tests.
+source_set("relocation_h") {
+  visibility = [ ":*" ]
+  public = [ "relocation.h" ]
+  public_deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+  ]
+}
+
+# Public library.
+zx_library("static-pie") {
+  sdk = "source"
+  sdk_headers = [ "lib/static-pie/static-pie.h" ]
+  sdk_migrated = true
+
+  host = true
+  kernel = true
+  static = true
+
+  sources = [ "relocation.cc" ]
+
+  deps = [ ":relocation_h" ]
+  if (is_kernel) {
+    deps += [
+      "$zx/kernel/lib/ktl",
+      "$zx/kernel/lib/libc",
+    ]
+  }
+}
+
+# Fuchsia build only.
+if (zx != "/") {
+  import("//build/test.gni")
+  import("//src/sys/build/components.gni")
+
+  test("static_pie_test") {
+    sources = [ "relocation_test.cc" ]
+    deps = [
+      ":relocation_h",
+      ":static-pie",
+      "//src/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gtest",
+    ]
+  }
+
+  fuchsia_unittest_package("static-pie-test") {
+    executable_path = "test/static_pie_test"
+    deps = [ ":static_pie_test" ]
+  }
+
+  group("tests") {
+    testonly = true
+    deps = [
+      ":static-pie-test",
+      ":static_pie_test($host_toolchain)",
+    ]
+  }
+}

@@ -45,6 +45,7 @@ group("tests") {
     "memfs/test:tests",
     "mmio-ptr/test:tests",
     "nand-redundant-storage:tests",
+    "static-pie:tests",
     "storage/buffer:tests",
     "storage/operation:tests",
     "sysconfig-client:tests",
