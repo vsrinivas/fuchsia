@@ -49,9 +49,9 @@ fn run_cmc() -> Result<(), Error> {
             }
             format::format(&file, pretty, cml, output)?;
         }
-        opts::Commands::Compile { file, output } => {
+        opts::Commands::Compile { file, output, depfile, includepath } => {
             // FIXME: Don't just unwrap it.
-            compile::compile(&file, &output.unwrap())?
+            compile::compile(&file, &output.unwrap(), depfile, includepath)?
         }
     }
     if let Some(stamp_path) = opt.stamp {

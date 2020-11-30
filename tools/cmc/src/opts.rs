@@ -128,6 +128,16 @@ pub enum Commands {
         #[structopt(short = "o", long = "output", parse(from_os_str))]
         /// file to write the formatted results to, will print to stdout if not provided
         output: Option<PathBuf>,
+
+        #[structopt(short = "d", long = "depfile", parse(from_os_str))]
+        /// depfile for includes
+        ///
+        /// If specified, include paths will be listed here, delimited by newlines.
+        depfile: Option<PathBuf>,
+
+        #[structopt(short = "i", long = "includepath", parse(from_os_str))]
+        /// base path for resolving includes
+        includepath: PathBuf,
     },
 }
 

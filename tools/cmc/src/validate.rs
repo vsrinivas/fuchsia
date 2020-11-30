@@ -16,7 +16,7 @@ use {
         hash::Hash,
         io::Read,
         iter,
-        path::Path,
+        path::{Path, PathBuf},
     },
     valico::json_schema,
 };
@@ -42,12 +42,16 @@ pub fn validate<P: AsRef<Path>>(
 }
 
 /// Read in and parse .cml file. Returns a cml::Document if the file is valid, or an Error if not.
-pub fn parse_cml(buffer: &str, file: &Path) -> Result<cml::Document, Error> {
-    let document: cml::Document = serde_json5::from_str(buffer).map_err(|e| {
-        let serde_json5::Error::Message { location, msg } = e;
-        let location = location.map(|l| Location { line: l.line, column: l.column });
-        Error::parse(msg, location, Some(file))
-    })?;
+pub fn parse_cml(file: &Path, includepath: Option<&PathBuf>) -> Result<cml::Document, Error> {
+    let mut document: cml::Document = read_cml(file)?;
+    // Merge includes
+    if let Some(include_path) = includepath {
+        for include in document.includes() {
+            let mut include_document = read_cml(&include_path.join(include))?;
+            document.merge_from(&mut include_document);
+        }
+    }
+
     let mut ctx = ValidationContext {
         document: &document,
         all_children: HashMap::new(),
@@ -62,12 +66,32 @@ pub fn parse_cml(buffer: &str, file: &Path) -> Result<cml::Document, Error> {
         all_event_names: HashSet::new(),
         all_capability_names: HashSet::new(),
     };
+
+    // Validate
     let mut res = ctx.validate();
     if let Err(Error::Validate { filename, .. }) = &mut res {
         *filename = Some(file.to_string_lossy().into_owned());
     }
     res?;
+
     Ok(document)
+}
+
+fn read_cml(file: &Path) -> Result<cml::Document, Error> {
+    let mut buffer = String::new();
+    File::open(&file)
+        .map_err(|e| {
+            Error::parse(format!("Couldn't read include {:?}: {}", file, e), None, Some(file))
+        })?
+        .read_to_string(&mut buffer)
+        .map_err(|e| {
+            Error::parse(format!("Couldn't read include {:?}: {}", file, e), None, Some(file))
+        })?;
+    serde_json5::from_str(&buffer).map_err(|e| {
+        let serde_json5::Error::Message { location, msg } = e;
+        let location = location.map(|l| Location { line: l.line, column: l.column });
+        Error::parse(msg, location, Some(file))
+    })
 }
 
 /// Read in and parse a single manifest file, and return an Error if the given file is not valid.
@@ -82,13 +106,13 @@ fn validate_file<P: AsRef<Path>>(
 ) -> Result<(), Error> {
     const BAD_EXTENSION: &str = "Input file does not have a component manifest extension \
                                  (.cml or .cmx)";
-    let mut buffer = String::new();
-    File::open(&file)?.read_to_string(&mut buffer)?;
 
     // Validate based on file extension.
     let ext = file.extension().and_then(|e| e.to_str());
     match ext {
         Some("cmx") => {
+            let mut buffer = String::new();
+            File::open(&file)?.read_to_string(&mut buffer)?;
             let v = serde_json::from_str(&buffer)?;
             validate_json(&v, CMX_SCHEMA)?;
             // Validate against any extra schemas provided.
@@ -107,7 +131,7 @@ fn validate_file<P: AsRef<Path>>(
             }
         }
         Some("cml") => {
-            parse_cml(&buffer, file)?;
+            parse_cml(file, None)?;
         }
         _ => {
             return Err(Error::invalid_args(BAD_EXTENSION));
@@ -1222,6 +1246,32 @@ mod tests {
     }
 
     test_validate_cml! {
+        // include
+        test_cml_empty_include(
+            json!(
+                {
+                    "include": [],
+                }
+            ),
+            Ok(())
+        ),
+        test_cml_some_include(
+            json!(
+                {
+                    "include": [ "some.cml" ],
+                }
+            ),
+            Ok(())
+        ),
+        test_cml_couple_of_include(
+            json!(
+                {
+                    "include": [ "some1.cml", "some2.cml" ],
+                }
+            ),
+            Ok(())
+        ),
+
         // program
         test_cml_empty_json(
             json!({}),

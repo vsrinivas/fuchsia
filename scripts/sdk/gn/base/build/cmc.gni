@@ -121,11 +121,17 @@ template("cmc_compile") {
     output_file = "$target_out_dir/$output_name.cm"
     outputs = [ output_file ]
 
+    depfile = "$target_out_dir/$target_name.d"
+
     args = [
       "compile",
+      rebase_path(manifest, root_build_dir),
       "--output",
       rebase_path(output_file, root_build_dir),
-      rebase_path(manifest, root_build_dir),
+      "--includepath",
+      rebase_path("//", root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
     ]
   }
 }

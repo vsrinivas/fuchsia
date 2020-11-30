@@ -618,6 +618,7 @@ impl Right {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Document {
+    pub include: Option<Vec<String>>,
     pub program: Option<Map<String, Value>>,
     pub r#use: Option<Vec<Use>>,
     pub expose: Option<Vec<Expose>>,
@@ -629,7 +630,37 @@ pub struct Document {
     pub environments: Option<Vec<Environment>>,
 }
 
+macro_rules! merge_from_field {
+    ($self:ident, $other:ident, $field_name:ident) => {
+        if let Some(ref mut ours) = $self.$field_name {
+            if let Some(theirs) = &mut $other.$field_name {
+                ours.append(theirs);
+            }
+        } else if let Some(theirs) = $other.$field_name.take() {
+            $self.$field_name.replace(theirs);
+        }
+    };
+}
+
 impl Document {
+    pub fn merge_from(&mut self, other: &mut Document) {
+        merge_from_field!(self, other, r#use);
+        merge_from_field!(self, other, expose);
+        merge_from_field!(self, other, offer);
+        merge_from_field!(self, other, capabilities);
+        merge_from_field!(self, other, children);
+        merge_from_field!(self, other, collections);
+        merge_from_field!(self, other, facets);
+        merge_from_field!(self, other, environments);
+        // Note: intentionally don't merge `program`.
+        // Note: intentionally don't merge `include`, unless we want to support
+        // transitive includes in the future.
+    }
+
+    pub fn includes(&self) -> Vec<String> {
+        self.include.clone().unwrap_or_default()
+    }
+
     pub fn all_event_names(&self) -> Result<Vec<Name>, Error> {
         let mut all_events: Vec<Name> = vec![];
         if let Some(uses) = self.r#use.as_ref() {
@@ -1302,9 +1333,10 @@ mod tests {
     use cm_json::{self, Error as JsonError};
     use error::Error;
     use matches::assert_matches;
-    use serde_json;
+    use serde_json::{self, json};
     use serde_json5;
     use std::path::Path;
+    use std::str::FromStr;
 
     // Exercise reference parsing tests on `OfferFromRef` because it contains every reference
     // subtype.
@@ -1649,5 +1681,28 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    fn document(contents: serde_json::Value) -> Document {
+        serde_json5::from_str::<Document>(&contents.to_string()).unwrap()
+    }
+
+    #[test]
+    fn test_includes() {
+        assert_eq!(document(json!({})).includes(), Vec::<String>::new());
+        assert_eq!(document(json!({ "include": []})).includes(), Vec::<String>::new());
+        assert_eq!(
+            document(json!({ "include": [ "foo.cml", "bar.cml" ]})).includes(),
+            vec!["foo.cml", "bar.cml"]
+        );
+    }
+
+    #[test]
+    fn test_merge_from() {
+        let mut some = document(json!({ "program": { "binary": "bin/hello_world" } }));
+        assert_eq!(some.r#use.is_none(), true);
+        let mut other = document(json!({ "use": [{ "runner": "elf" }] }));
+        some.merge_from(&mut other);
+        assert_eq!(some.r#use.unwrap()[0].runner, Some(Name::from_str("elf").unwrap()));
     }
 }

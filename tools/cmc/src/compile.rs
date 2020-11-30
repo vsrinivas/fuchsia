@@ -6,6 +6,7 @@ use crate::cml::{self, CapabilityClause};
 use crate::error::Error;
 use crate::one_or_many::OneOrMany;
 use crate::translate;
+use crate::util::write_depfile;
 use crate::validate;
 use cm_types as cm;
 use fidl::encoding::encode_persistent;
@@ -14,12 +15,17 @@ use fidl_fuchsia_io2 as fio2;
 use fidl_fuchsia_sys2 as fsys;
 use serde_json::{self, value::Value, Map};
 use std::collections::HashSet;
-use std::fs::{self, File};
-use std::io::{Read, Write};
+use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
 
 /// Read in a CML file and produce the equivalent CM.
-pub fn compile(file: &PathBuf, output: &PathBuf) -> Result<(), Error> {
+pub fn compile(
+    file: &PathBuf,
+    output: &PathBuf,
+    depfile: Option<PathBuf>,
+    includepath: PathBuf,
+) -> Result<(), Error> {
     match file.extension().and_then(|e| e.to_str()) {
         Some("cml") => Ok(()),
         _ => Err(Error::invalid_args(format!(
@@ -35,19 +41,27 @@ pub fn compile(file: &PathBuf, output: &PathBuf) -> Result<(), Error> {
         ))),
     }?;
 
-    let mut buffer = String::new();
-    File::open(&file.as_path())?.read_to_string(&mut buffer)?;
-    let document = validate::parse_cml(&buffer, file.as_path())?;
-    let mut out_data = compile_cml(document)?;
+    let document = validate::parse_cml(file.as_path(), Some(&includepath))?;
+    let mut out_data = compile_cml(&document)?;
 
     let mut out_file =
         fs::OpenOptions::new().create(true).truncate(true).write(true).open(output)?;
     out_file.write(&encode_persistent(&mut out_data)?)?;
 
+    // Write includes to depfile
+    if let Some(depfile_path) = depfile {
+        write_depfile(
+            &depfile_path,
+            &Some(output.to_path_buf()),
+            &document.includes(),
+            &includepath,
+        )?;
+    }
+
     Ok(())
 }
 
-fn compile_cml(document: cml::Document) -> Result<fsys::ComponentDecl, Error> {
+fn compile_cml(document: &cml::Document) -> Result<fsys::ComponentDecl, Error> {
     let all_capability_names = document.all_capability_names();
     Ok(fsys::ComponentDecl {
         program: document.program.as_ref().map(translate_program).transpose()?,
@@ -939,8 +953,8 @@ mod tests {
     use fidl::encoding::decode_persistent;
     use matches::assert_matches;
     use serde_json::json;
-    use std::io;
-    use std::io::Write;
+    use std::fs::File;
+    use std::io::{self, Read, Write};
     use tempfile::TempDir;
 
     macro_rules! test_compile {
@@ -957,44 +971,43 @@ mod tests {
                 $(#[$m])*
                 #[test]
                 fn $test_name() {
-                    compile_test($input, $result);
+                    let tmp_dir = TempDir::new().unwrap();
+                    let tmp_in_path = tmp_dir.path().join("test.cml");
+                    let tmp_out_path = tmp_dir.path().join("test.cm");
+                    compile_test(tmp_in_path, tmp_out_path, None, $input, $result).expect("compilation failed");
                 }
             )+
         }
     }
 
-    fn compile_test(input: serde_json::value::Value, expected_output: fsys::ComponentDecl) {
-        let tmp_dir = TempDir::new().unwrap();
-        let tmp_in_path = tmp_dir.path().join("test.cml");
-        let tmp_out_path = tmp_dir.path().join("test.cm");
-
-        File::create(&tmp_in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
-
-        compile(&tmp_in_path, &tmp_out_path.clone()).expect("compilation failed");
+    fn compile_test(
+        in_path: PathBuf,
+        out_path: PathBuf,
+        include_path: Option<PathBuf>,
+        input: serde_json::value::Value,
+        expected_output: fsys::ComponentDecl,
+    ) -> Result<(), Error> {
+        File::create(&in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
+        compile(&in_path, &out_path.clone(), None, include_path.unwrap_or(PathBuf::new()))?;
         let mut buffer = Vec::new();
-        fs::File::open(&tmp_out_path).unwrap().read_to_end(&mut buffer).unwrap();
+        fs::File::open(&out_path).unwrap().read_to_end(&mut buffer).unwrap();
         let output: fsys::ComponentDecl = decode_persistent(&buffer).unwrap();
         assert_eq!(output, expected_output);
+        Ok(())
     }
 
     fn default_component_decl() -> fsys::ComponentDecl {
-        fsys::ComponentDecl {
-            program: None,
-            uses: None,
-            exposes: None,
-            offers: None,
-            capabilities: None,
-            children: None,
-            collections: None,
-            environments: None,
-            facets: None,
-            ..fsys::ComponentDecl::empty()
-        }
+        fsys::ComponentDecl::empty()
     }
 
     test_compile! {
         test_compile_empty => {
             input = json!({}),
+            output = default_component_decl(),
+        },
+
+        test_compile_empty_includes => {
+            input = json!({ "include": [] }),
             output = default_component_decl(),
         },
 
@@ -1024,6 +1037,7 @@ mod tests {
                 ..default_component_decl()
             },
         },
+
         test_compile_program_with_lifecycle => {
             input = json!({
                 "program": {
@@ -2710,10 +2724,10 @@ mod tests {
         });
         File::create(&tmp_in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
         {
-            let result = compile(&tmp_in_path, &tmp_out_path.clone());
+            let result = compile(&tmp_in_path, &tmp_out_path.clone(), None, PathBuf::new());
             assert_matches!(
                 result,
-                Err(Error::Parse { err, ..  }) if &err == "invalid value: string \"parent\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\""
+                Err(Error::Parse { err, .. }) if &err == "invalid value: string \"parent\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\""
             );
         }
         // Compilation failed so output should not exist.
@@ -2721,5 +2735,109 @@ mod tests {
             let result = fs::File::open(&tmp_out_path);
             assert_eq!(result.unwrap_err().kind(), io::ErrorKind::NotFound);
         }
+    }
+
+    #[test]
+    fn test_missing_include() {
+        let tmp_dir = TempDir::new().unwrap();
+        let in_path = tmp_dir.path().join("test.cml");
+        let out_path = tmp_dir.path().join("test.cm");
+        let result = compile_test(
+            in_path,
+            out_path,
+            Some(tmp_dir.into_path()),
+            json!({ "include": [ "doesnt_exist.cml" ] }),
+            default_component_decl(),
+        );
+        assert_matches!(
+            result,
+            Err(Error::Parse { err, .. }) if err.starts_with("Couldn't read include ") && err.contains("doesnt_exist.cml")
+        );
+    }
+
+    #[test]
+    fn test_good_include() {
+        let tmp_dir = TempDir::new().unwrap();
+        let foo_path = tmp_dir.path().join("foo.cml");
+        fs::File::create(&foo_path)
+            .unwrap()
+            .write_all(format!("{}", json!({ "use": [ { "runner": "elf" } ] })).as_bytes())
+            .unwrap();
+        let in_path = tmp_dir.path().join("test.cml");
+        let out_path = tmp_dir.path().join("test.cm");
+        compile_test(
+            in_path,
+            out_path,
+            Some(tmp_dir.into_path()),
+            json!({
+                "include": [ "foo.cml" ],
+                "program": { "binary": "bin/test" },
+            }),
+            fsys::ComponentDecl {
+                program: Some(fdata::Dictionary {
+                    entries: Some(vec![fdata::DictionaryEntry {
+                        key: "binary".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str("bin/test".to_string()))),
+                    }]),
+                    ..fdata::Dictionary::empty()
+                }),
+                uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
+                    source_name: Some("elf".to_string()),
+                    ..fsys::UseRunnerDecl::empty()
+                })]),
+                ..default_component_decl()
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_conflicting_includes() {
+        let tmp_dir = TempDir::new().unwrap();
+        let foo_path = tmp_dir.path().join("foo.cml");
+        fs::File::create(&foo_path)
+            .unwrap()
+            .write_all(
+                format!("{}", json!({ "use": [ { "protocol": "foo", "path": "/svc/foo" } ] }))
+                    .as_bytes(),
+            )
+            .unwrap();
+        let bar_path = tmp_dir.path().join("bar.cml");
+        // Try to mount protocol "bar" under the same path "/svc/foo".
+        fs::File::create(&bar_path)
+            .unwrap()
+            .write_all(
+                format!("{}", json!({ "use": [ { "protocol": "bar", "path": "/svc/foo" } ] }))
+                    .as_bytes(),
+            )
+            .unwrap();
+        let in_path = tmp_dir.path().join("test.cml");
+        let out_path = tmp_dir.path().join("test.cm");
+        let result = compile_test(
+            in_path,
+            out_path,
+            Some(tmp_dir.into_path()),
+            json!({
+                "include": [ "foo.cml", "bar.cml" ],
+                "program": { "binary": "bin/test" },
+            }),
+            fsys::ComponentDecl {
+                program: Some(fdata::Dictionary {
+                    entries: Some(vec![fdata::DictionaryEntry {
+                        key: "binary".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str("bin/test".to_string()))),
+                    }]),
+                    ..fdata::Dictionary::empty()
+                }),
+                uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
+                    source_name: Some("elf".to_string()),
+                    ..fsys::UseRunnerDecl::empty()
+                })]),
+                ..default_component_decl()
+            },
+        );
+        // Including both foo.cml and bar.cml should fail to validate because of an incoming
+        // namespace collission
+        assert_matches!(result, Err(Error::Validate { .. }));
     }
 }

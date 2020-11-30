@@ -6,7 +6,6 @@ import("//tools/cmc/build/cmc.gni")
 import("//tools/cmc/build/expect_includes.gni")
 
 # Compiles a cml file into a cm file.
-# Any "include"s are merged into the cml and produce an intermediate file.
 #
 # Parameters
 #
@@ -77,14 +76,19 @@ template("cm") {
     ]
 
     compiled_output = "${target_out_dir}/${output_name}"
-    inputs = get_target_outputs(":${target_name}_include")
+    inputs = [ invoker.manifest ]
     outputs = [ compiled_output ]
+    depfile = "${target_out_dir}/${target_name}.d"
 
     args = [
       "compile",
       rebase_path(inputs[0], root_build_dir),
       "--output",
       rebase_path(compiled_output, root_build_dir),
+      "--includepath",
+      rebase_path("//", root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
     ]
   }
 }

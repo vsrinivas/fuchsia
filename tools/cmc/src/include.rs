@@ -5,7 +5,7 @@
 use {
     crate::error::Error,
     crate::merge::merge_json,
-    crate::util::json_or_json5_from_file,
+    crate::util::{json_or_json5_from_file, write_depfile},
     serde_json::Value,
     std::{
         fs,
@@ -28,7 +28,6 @@ pub fn merge_includes(
     let includes = extract_includes(&mut v);
 
     // Merge contents of includes
-    // TODO(shayba): also merge includes recursively
     for include in &includes {
         let path = includepath.join(include);
         let includev: Value = json_or_json5_from_file(&path).map_err(|e| {
@@ -56,26 +55,7 @@ pub fn merge_includes(
 
     // Write includes to depfile
     if let Some(depfile_path) = depfile {
-        if output.is_none() || includes.is_empty() {
-            // A non-existent depfile is the same as an empty depfile
-            if depfile_path.exists() {
-                // Delete stale depfile
-                fs::remove_file(depfile_path)?;
-            }
-        } else if let Some(output_path) = output {
-            let depfile_contents = format!("{}:", output_path.display())
-                + &includes
-                    .iter()
-                    .map(|i| format!(" {}", includepath.join(i).display()))
-                    .collect::<String>()
-                + "\n";
-            fs::OpenOptions::new()
-                .create(true)
-                .truncate(true)
-                .write(true)
-                .open(depfile_path)?
-                .write_all(depfile_contents.as_bytes())?;
-        }
+        write_depfile(&depfile_path, &output, &includes, &includepath)?;
     }
 
     Ok(())
