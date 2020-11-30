@@ -97,8 +97,7 @@ class MsdIntelConnection {
     void SendBufferIds(const std::vector<uint64_t>& buffer_ids) {
       std::lock_guard<std::mutex> lock(mutex_);
       if (callback_ && token_) {
-        msd_notification_t notification = {};
-        notification.type = MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND;
+        msd_notification_t notification = {.type = MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND};
         const uint32_t max = MSD_CHANNEL_SEND_MAX_SIZE / sizeof(uint64_t);
 
         uint32_t dst_index = 0;
@@ -117,8 +116,7 @@ class MsdIntelConnection {
     void SendContextKilled() {
       std::lock_guard<std::mutex> lock(mutex_);
       if (callback_ && token_) {
-        msd_notification_t notification = {};
-        notification.type = MSD_CONNECTION_NOTIFICATION_CONTEXT_KILLED;
+        msd_notification_t notification = {.type = MSD_CONNECTION_NOTIFICATION_CONTEXT_KILLED};
         callback_(token_, &notification);
       }
     }

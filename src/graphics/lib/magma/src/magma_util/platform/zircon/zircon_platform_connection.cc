@@ -115,7 +115,7 @@ bool ZirconPlatformConnection::AsyncTaskHandler(async_dispatcher_t* dispatcher, 
       // Should be handled in MagmaSystemConnection.
       break;
   }
-  return DRETF(false, "Unhandled notification type: %d", task->notification.type);
+  return DRETF(false, "Unhandled notification type: %lu", task->notification.type);
 }
 
 void ZirconPlatformConnection::EnableFlowControl(EnableFlowControlCompleter::Sync& _completer) {

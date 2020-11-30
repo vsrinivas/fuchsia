@@ -10,7 +10,8 @@
 #include "magma_common_defs.h"
 
 #define MSD_DRIVER_CONFIG_TEST_NO_DEVICE_THREAD 1
-#define MSD_CHANNEL_SEND_MAX_SIZE 64
+// Designed so that msd_notification_t fits in a page
+#define MSD_CHANNEL_SEND_MAX_SIZE (4096 - sizeof(uint64_t) - sizeof(uint32_t))
 
 #if defined(__cplusplus)
 extern "C" {
@@ -57,7 +58,7 @@ enum MSD_CONNECTION_NOTIFICATION_TYPE {
 };
 
 struct msd_notification_t {
-  uint32_t type;
+  uint64_t type;
   union {
     struct {
       uint8_t data[MSD_CHANNEL_SEND_MAX_SIZE];

@@ -20,6 +20,27 @@
 
 namespace magma {
 
+static_assert(sizeof(msd_notification_t) == 4096, "msd_notification_t is not a page");
+
+inline void CopyNotification(const msd_notification_t* src, msd_notification_t* dst) {
+  dst->type = src->type;
+  switch (dst->type) {
+    case MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND:
+      memcpy(dst->u.channel_send.data, src->u.channel_send.data, src->u.channel_send.size);
+      dst->u.channel_send.size = src->u.channel_send.size;
+      break;
+    case MSD_CONNECTION_NOTIFICATION_PERFORMANCE_COUNTERS_READ_COMPLETED:
+      memcpy(&dst->u.perf_counter_result, &src->u.perf_counter_result,
+             sizeof(src->u.perf_counter_result));
+      break;
+    case MSD_CONNECTION_NOTIFICATION_CONTEXT_KILLED:
+      break;
+    default:
+      DMESSAGE("Unhandled notification type: %lu", dst->type);
+      DASSERT(false);
+  }
+}
+
 class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Interface,
                                  public PlatformConnection {
  public:
@@ -41,8 +62,7 @@ class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Int
       this->handler = AsyncTaskHandlerStatic;
       this->deadline = async_now(connection->async_loop()->dispatcher());
       this->connection = connection;
-      // Copy the notification struct
-      this->notification = *notification;
+      CopyNotification(notification, &this->notification);
     }
 
     ZirconPlatformConnection* connection;

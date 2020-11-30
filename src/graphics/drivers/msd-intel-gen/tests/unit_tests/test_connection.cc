@@ -24,6 +24,11 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     ASSERT_TRUE(connection);
 
     connection->SetNotificationCallback(NotificationCallbackStatic, this);
+
+    // +2 so we force multiple notification messages
+    for (uint32_t i = 0; i < MSD_CHANNEL_SEND_MAX_SIZE / sizeof(uint64_t) + 2; i++) {
+      test_buffer_ids_.push_back(i);
+    }
     connection->SendNotification(test_buffer_ids_);
   }
 
@@ -32,32 +37,22 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
   }
   void NotificationCallback(msd_notification_t* notification) {
     EXPECT_EQ(MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND, notification->type);
+    constexpr uint32_t kMaxUint64PerSend = MSD_CHANNEL_SEND_MAX_SIZE / sizeof(uint64_t);
     switch (callback_count_++) {
       case 0:
-        EXPECT_EQ(64u, notification->u.channel_send.size);
-        EXPECT_EQ(test_buffer_ids_[0],
-                  reinterpret_cast<uint64_t*>(notification->u.channel_send.data)[0]);
-        EXPECT_EQ(test_buffer_ids_[1],
-                  reinterpret_cast<uint64_t*>(notification->u.channel_send.data)[1]);
-        EXPECT_EQ(test_buffer_ids_[2],
-                  reinterpret_cast<uint64_t*>(notification->u.channel_send.data)[2]);
-        EXPECT_EQ(test_buffer_ids_[3],
-                  reinterpret_cast<uint64_t*>(notification->u.channel_send.data)[3]);
-        EXPECT_EQ(test_buffer_ids_[4],
-                  reinterpret_cast<uint64_t*>(notification->u.channel_send.data)[4]);
-        EXPECT_EQ(test_buffer_ids_[5],
-                  reinterpret_cast<uint64_t*>(notification->u.channel_send.data)[5]);
-        EXPECT_EQ(test_buffer_ids_[6],
-                  reinterpret_cast<uint64_t*>(notification->u.channel_send.data)[6]);
-        EXPECT_EQ(test_buffer_ids_[7],
-                  reinterpret_cast<uint64_t*>(notification->u.channel_send.data)[7]);
+        EXPECT_EQ(kMaxUint64PerSend, notification->u.channel_send.size / sizeof(uint64_t));
+        for (uint32_t i = 0; i < notification->u.channel_send.size / sizeof(uint64_t); i++) {
+          EXPECT_EQ(test_buffer_ids_[i],
+                    reinterpret_cast<uint64_t*>(notification->u.channel_send.data)[i]);
+        }
         break;
       case 1:
-        EXPECT_EQ(16u, notification->u.channel_send.size);
-        EXPECT_EQ(test_buffer_ids_[8],
-                  reinterpret_cast<uint64_t*>(notification->u.channel_send.data)[0]);
-        EXPECT_EQ(test_buffer_ids_[9],
-                  reinterpret_cast<uint64_t*>(notification->u.channel_send.data)[1]);
+        EXPECT_EQ(test_buffer_ids_.size() - kMaxUint64PerSend,
+                  notification->u.channel_send.size / sizeof(uint64_t));
+        for (uint32_t i = 0; i < notification->u.channel_send.size / sizeof(uint64_t); i++) {
+          EXPECT_EQ(test_buffer_ids_[kMaxUint64PerSend + i],
+                    reinterpret_cast<uint64_t*>(notification->u.channel_send.data)[i]);
+        }
         break;
       default:
         EXPECT_TRUE(false);
@@ -169,7 +164,7 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
 
  private:
   MockBusMapper mock_bus_mapper_;
-  std::vector<uint64_t> test_buffer_ids_{10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
+  std::vector<uint64_t> test_buffer_ids_;
   uint32_t callback_count_ = 0;
 };
 
