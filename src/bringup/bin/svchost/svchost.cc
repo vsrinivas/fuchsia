@@ -15,7 +15,6 @@
 #include <fuchsia/posix/socket/llcpp/fidl.h>
 #include <fuchsia/process/llcpp/fidl.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>
-#include <fuchsia/virtualconsole/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
@@ -445,11 +444,6 @@ int main(int argc, char** argv) {
   publish_services(outgoing.svc_dir(), devcoordinator_services,
                    zx::unowned_channel(devcoordinator_svc));
   publish_services(outgoing.svc_dir(), devmgr_services, zx::unowned_channel(devmgr_proxy_channel));
-
-  if (virtcon_proxy_channel.is_valid()) {
-    publish_service(outgoing.svc_dir(), llcpp::fuchsia::virtualconsole::SessionManager::Name,
-                    zx::unowned_channel(virtcon_proxy_channel));
-  }
 
   thrd_t thread;
   status =
