@@ -1150,6 +1150,59 @@ See also:
 *   [Listing the contents of a package](#listing-the-contents-of-a-package).
 *   [Additional packaged resources](#additional-packaged-resources).
 
+### Renaming files
+
+The legacy `package()` template allowed developers to rename certain files that
+are included in their package. For example, below we see an executable being
+built and then renamed before it's packaged so that it's packaged under the path
+`bin/foo-bin`.
+
+```gn
+executable("bin") {
+  ...
+}
+
+package("foo-pkg") {
+  deps = [ ":bin" ]
+  binaries = [
+    {
+      name = "bin"
+      dest = "foo-bin"
+    }
+  ]
+  meta = [
+    {
+      path = "meta/foo-bin.cmx"
+      dest = "foo.cmx"
+    }
+  ]
+}
+```
+
+The new templates allow targets that produce files, such as `executable()`
+above, to decide which files they produce and where they're placed. This is
+important because some targets produce multiple files, or might produce
+different files based on the build configuration (for instance if building
+for a different target architecture). In order to control the paths of
+packaged files, developers should work with the templates for the targets
+that produce those files. For instance:
+
+```gn
+executable("bin") {
+  output_name = "foo-bin"
+  ...
+}
+
+fuchsia_component("foo-cmp") {
+  deps = [ ":bin" ]
+  manifest = "meta/foo-bin.cmx"
+}
+
+fuchsia_package("foo-pkg") {
+  deps = [ ":foo-cmp" ]
+}
+```
+
 ### Unsupported features
 
 Note that some features of `package()` are unsupported moving forward. If your
