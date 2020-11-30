@@ -94,10 +94,10 @@ function fx-mkzedboot {
 
   if [[ "${type}" == "efi" ]]; then
     fx-info "Writing zedboot for EFI"
-    dd if="${image}" of="${usb_device}" seek=${esp_offset}
+    dd if="${image}" of="${usb_device}" seek=${esp_offset} conv=notrunc
   else
     fx-info "Writing zedboot for Cros"
-    dd if="${image}" of="${usb_device}" seek=${vboot_offset}
+    dd if="${image}" of="${usb_device}" seek=${vboot_offset} conv=notrunc
   fi
   fx-info "done"
 
