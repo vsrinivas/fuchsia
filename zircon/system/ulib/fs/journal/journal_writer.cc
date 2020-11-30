@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
@@ -306,12 +307,17 @@ zx_status_t JournalWriter::WriteOperations(
 }
 
 fit::result<void, zx_status_t> JournalWriter::Flush() {
+  // In case of success or failure, we want to clear pending_work_items_ because there might be
+  // cleanup that needs to run buried in the destructors of the callbacks.
+  auto clean_up = fit::defer([this] { pending_work_items_.clear(); });
+
   if (!IsWritebackEnabled()) {
     FX_LOGS(INFO) << "JournalWriter::Flush: Not issuing writeback because writeback is disabled";
     return fit::error(ZX_ERR_BAD_STATE);
   }
   if (zx_status_t status = transaction_handler_->Flush(); status != ZX_OK) {
     FX_LOGS(WARNING) << "JournalWriter::Flush: " << zx_status_get_string(status);
+    DisableWriteback();
     return fit::error(status);
   }
   pending_flush_ = false;
@@ -326,7 +332,6 @@ fit::result<void, zx_status_t> JournalWriter::Flush() {
       FX_LOGS(WARNING) << "Flush: Failed to write metadata to final location: "
                        << zx_status_get_string(status);
       // WriteOperations will mark things so that all subsequent writes will fail.
-      pending_work_items_.clear();
       return fit::error(status);
     }
     // Before we can write the info block, we need another flush to ensure the writes to final
@@ -337,7 +342,6 @@ fit::result<void, zx_status_t> JournalWriter::Flush() {
       work.complete_callback();
     }
   }
-  pending_work_items_.clear();
   return fit::ok();
 }
 

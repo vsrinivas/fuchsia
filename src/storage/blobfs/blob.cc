@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/status.h>
@@ -694,13 +695,17 @@ zx_status_t Blob::Commit() {
   fs::Ticker ticker(blobfs_->Metrics()->Collecting());  // Tracking enqueue time.
 
   // Enqueue the blob's final data work. Metadata must be enqueued separately.
-  zx_status_t data_status;
+  zx_status_t data_status = ZX_ERR_IO;
   sync_completion_t data_written;
-  auto write_all_data = streamer.Flush().then([&](const fit::result<void, zx_status_t>& result) {
-    data_status = result.is_ok() ? ZX_OK : result.error();
-    sync_completion_signal(&data_written);
-    return result;
-  });
+  // Issue the signal when the callback is destroyed rather than in the callback because the
+  // callback won't get called in some error paths.
+  auto data_written_finished = fit::defer([&] { sync_completion_signal(&data_written); });
+  auto write_all_data = streamer.Flush().then(
+      [&data_status, data_written_finished = std::move(data_written_finished)](
+          const fit::result<void, zx_status_t>& result) {
+        data_status = result.is_ok() ? ZX_OK : result.error();
+        return result;
+      });
 
   // Discard things we don't need any more.  This has to be after the Flush call above to ensure
   // all data has been copied from these buffers.
