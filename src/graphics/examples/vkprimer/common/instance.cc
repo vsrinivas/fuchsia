@@ -5,6 +5,7 @@
 #include "src/graphics/examples/vkprimer/common/instance.h"
 
 #include <iostream>
+#include <memory>
 #include <vector>
 
 #include "src/graphics/examples/vkprimer/common/utils.h"
@@ -41,7 +42,7 @@ std::vector<const char *> GetExtensionsGLFW(bool enable_validation) {
   return extensions;
 }
 #else
-std::vector<const char *> GetExtensionsPrivate(bool enable_validation) {
+std::vector<const char *> GetExtensionsPrivate(bool validation_layers_enabled) {
   std::vector<const char *> required_props = s_required_props;
   std::vector<const char *> extensions;
   std::vector<std::string> missing_props;
@@ -52,7 +53,7 @@ std::vector<const char *> GetExtensionsPrivate(bool enable_validation) {
   const char *kMagmaLayer = nullptr;
 #endif
 
-  if (enable_validation) {
+  if (validation_layers_enabled) {
     required_props.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
   }
 
@@ -106,73 +107,95 @@ DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessa
 
 namespace vkp {
 
-Instance::~Instance() { initialized_ = false; }
+Instance::Instance(const vk::InstanceCreateInfo &instance_info, bool validation_layers_enabled,
+                   vk::Optional<const vk::AllocationCallbacks> allocator)
+    : instance_info_(instance_info),
+      validation_layers_enabled_(validation_layers_enabled),
+      allocator_(allocator) {}
 
-#if USE_GLFW
-bool Instance::Init(bool enable_validation, GLFWwindow *window) {
-  window_ = window;
-#else
+Instance::~Instance() {
+  if (initialized_) {
+    debug_messenger_.reset();
+    initialized_ = false;
+  }
+}
+
 bool Instance::Init() {
-#endif
   RTN_IF_MSG(false, (initialized_ == true), "Already initialized.\n");
-
-  // Application Info
-  vk::ApplicationInfo app_info;
-  const uint32_t kMajor = 1;
-  const uint32_t kMinor = 1;
-  app_info.apiVersion = VK_MAKE_VERSION(kMajor, kMinor, 0);
-  app_info.pApplicationName = "VkPrimer";
-  fprintf(stdout, "\nVulkan Instance API Version: %d.%d\n\n", kMajor, kMinor);
-
-  // Instance Create Info
-  vk::InstanceCreateInfo instance_info;
-  instance_info.pApplicationInfo = &app_info;
 
   // Extensions
   extensions_ = GetExtensions();
 
-  instance_info.enabledExtensionCount = static_cast<uint32_t>(extensions_.size());
-  instance_info.ppEnabledExtensionNames = extensions_.data();
+  // Require api version 1.1 if it hasn't been set.
+  vk::ApplicationInfo app_info;
+  app_info.apiVersion = VK_MAKE_VERSION(1, 1, 0);
+  if (instance_info_.pApplicationInfo == nullptr) {
+    instance_info_.pApplicationInfo = &app_info;
+  } else if (instance_info_.pApplicationInfo->apiVersion == 0) {
+    RTN_MSG(false,
+            "Must set vk::ApplicationInfo::apiVersion when customizing vk::ApplicationInfo.\n");
+  }
 
 // Layers
 #ifdef __Fuchsia__
   layers_.emplace_back("VK_LAYER_FUCHSIA_imagepipe_swapchain_fb");
 #endif
 
-  if (enable_validation_) {
+  if (validation_layers_enabled_) {
     layers_.emplace_back("VK_LAYER_KHRONOS_validation");
+    extensions_.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
   }
 
-  instance_info.enabledLayerCount = static_cast<uint32_t>(layers_.size());
-  instance_info.ppEnabledLayerNames = layers_.data();
+  if (instance_info_.ppEnabledLayerNames && instance_info_.enabledLayerCount) {
+    // Tack on custom layers.
+    std::copy(instance_info_.ppEnabledLayerNames,
+              instance_info_.ppEnabledLayerNames + instance_info_.enabledLayerCount,
+              std::back_inserter(layers_));
+  }
+  instance_info_.enabledLayerCount = static_cast<uint32_t>(layers_.size());
+  instance_info_.ppEnabledLayerNames = layers_.data();
+
+  if (instance_info_.ppEnabledExtensionNames && instance_info_.enabledExtensionCount) {
+    // Tack on custom extensions.
+    std::copy(instance_info_.ppEnabledExtensionNames,
+              instance_info_.ppEnabledExtensionNames + instance_info_.enabledExtensionCount,
+              std::back_inserter(extensions_));
+  }
+  instance_info_.enabledExtensionCount = static_cast<uint32_t>(extensions_.size());
+  instance_info_.ppEnabledExtensionNames = extensions_.data();
+
   PrintProps(extensions_, "Enabled Instance Extensions");
   PrintProps(layers_, "Enabled Layers");
 
-  auto [r_instance, instance] = vk::createInstanceUnique(instance_info);
+  auto [r_instance, instance] = vk::createInstanceUnique(instance_info_);
   RTN_IF_VKH_ERR(false, r_instance, "Failed to create instance\n");
   instance_ = std::move(instance);
+  if (validation_layers_enabled_) {
+    ConfigureDebugMessenger(instance_.get());
+  }
   initialized_ = true;
   return true;
 }
 
 std::vector<const char *> Instance::GetExtensions() {
 #if USE_GLFW
-  extensions_ = GetExtensionsGLFW(enable_validation_);
+  extensions_ = GetExtensionsGLFW(validation_layers_enabled_);
 #else
-  extensions_ = GetExtensionsPrivate(enable_validation_);
+  extensions_ = GetExtensionsPrivate(validation_layers_enabled_);
 #endif
 
   return extensions_;
 }
 
-bool Instance::ConfigureDebugMessenger() {
+bool Instance::ConfigureDebugMessenger(const vk::Instance &instance) {
   dispatch_loader_ = vk::DispatchLoaderDynamic();
-  dispatch_loader_.init(instance_.get(), vkGetInstanceProcAddr);
+  dispatch_loader_.init(instance, vkGetInstanceProcAddr);
 
   vk::DebugUtilsMessengerCreateInfoEXT info;
   info.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
                          vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
                          vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+
 #if VERBOSE_LOGGING
   info.messageSeverity |= vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose;
 #endif
@@ -183,13 +206,48 @@ bool Instance::ConfigureDebugMessenger() {
   info.pfnUserCallback = DebugCallback;
 
   auto [r_messenger, messenger] =
-      instance_->createDebugUtilsMessengerEXTUnique(info, nullptr, dispatch_loader_);
+      instance.createDebugUtilsMessengerEXTUnique(info, nullptr, dispatch_loader_);
   RTN_IF_VKH_ERR(false, r_messenger, "Failed to create debug messenger.\n");
   debug_messenger_ = std::move(messenger);
-  initialized_ = true;
   return true;
 }
 
 const vk::Instance &Instance::get() const { return instance_.get(); }
+
+Instance::Builder::Builder() : allocator_(nullptr) {}
+
+Instance::Builder &Instance::Builder::set_allocator(
+    const vk::Optional<const vk::AllocationCallbacks> &v) {
+  allocator_ = v;
+  return *this;
+}
+
+Instance::Builder &Instance::Builder::set_instance_info(const vk::InstanceCreateInfo &v) {
+  instance_info_ = v;
+  return *this;
+}
+
+Instance::Builder &Instance::Builder::set_validation_layers_enabled(bool v) {
+  validation_layers_enabled_ = v;
+  return *this;
+}
+
+std::unique_ptr<Instance> Instance::Builder::Unique() const {
+  auto instance =
+      std::make_unique<Instance>(instance_info_, validation_layers_enabled_, allocator_);
+  if (!instance->Init()) {
+    RTN_MSG(nullptr, "Failed to initialize Instance.\n")
+  }
+  return instance;
+}
+
+std::shared_ptr<Instance> Instance::Builder::Shared() const {
+  auto instance =
+      std::make_shared<Instance>(instance_info_, validation_layers_enabled_, allocator_);
+  if (!instance->Init()) {
+    RTN_MSG(nullptr, "Failed to initialize Instance.\n")
+  }
+  return instance;
+}
 
 }  // namespace vkp

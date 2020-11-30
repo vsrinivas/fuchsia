@@ -38,6 +38,65 @@ uint32_t GetCounterValue(const hwcpipe::GpuMeasurements* gpu, hwcpipe::GpuCounte
 static bool DrawAllFrames(const vkp::Device& vkp_device,
                           const vkp::CommandBuffers& vkp_command_buffers);
 
+static void InitCommandBuffers(const vk::Image* image_for_foreign_transition, uint32_t queue_family,
+                               std::unique_ptr<vkp::CommandBuffers>& vkp_command_buffers) {
+  vk::ClearValue clear_color;
+  clear_color.color = std::array<float, 4>({0.5f, 0.0f, 0.5f, 1.0f});
+  vk::RenderPassBeginInfo render_pass_info;
+  render_pass_info.renderPass = vkp_command_buffers->render_pass();
+  render_pass_info.renderArea = vk::Rect2D(0 /* offset */, vkp_command_buffers->extent());
+  render_pass_info.clearValueCount = 1;
+  render_pass_info.pClearValues = &clear_color;
+
+  const vk::CommandBufferBeginInfo begin_info(vk::CommandBufferUsageFlagBits::eSimultaneousUse,
+                                              nullptr /* pInheritanceInfo */);
+  const std::vector<vk::UniqueCommandBuffer>& command_buffers =
+      vkp_command_buffers->command_buffers();
+  for (size_t i = 0; i < command_buffers.size(); ++i) {
+    const vk::CommandBuffer& command_buffer = command_buffers[i].get();
+    ASSERT_TRUE(command_buffer.begin(&begin_info) == vk::Result::eSuccess);
+    render_pass_info.framebuffer = vkp_command_buffers->framebuffers()[i].get();
+
+    // Record commands to render pass.
+    command_buffer.beginRenderPass(&render_pass_info, vk::SubpassContents::eInline);
+    command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
+                                vkp_command_buffers->graphics_pipeline());
+    command_buffer.draw(3 /* vertexCount */, 1 /* instanceCount */, 0 /* firstVertex */,
+                        0 /* firstInstance */);
+    command_buffer.endRenderPass();
+
+    if (image_for_foreign_transition) {
+      vk::ImageMemoryBarrier barrier;
+      barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
+          .setOldLayout(vk::ImageLayout::eTransferSrcOptimal)
+          .setNewLayout(vk::ImageLayout::eTransferSrcOptimal)
+          .setSrcQueueFamilyIndex(queue_family)
+          .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_EXTERNAL)
+          .setSubresourceRange(vk::ImageSubresourceRange()
+                                   .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                                   .setLevelCount(1)
+                                   .setLayerCount(1))
+          .setImage(*image_for_foreign_transition);
+
+      command_buffer.pipelineBarrier(
+          vk::PipelineStageFlagBits::eAllGraphics, vk::PipelineStageFlagBits::eAllGraphics,
+          vk::DependencyFlags{}, 0 /* memoryBarrierCount */, nullptr /* memoryBarriers */,
+          0 /* bufferMemoryBarrierCount */, nullptr /* bufferMemoryBarriers */,
+          1 /* imageMemoryBarrierCount */, &barrier);
+
+      // This barrier should transition it back
+      vk::ImageMemoryBarrier barrier2(barrier);
+      command_buffer.pipelineBarrier(
+          vk::PipelineStageFlagBits::eAllGraphics, vk::PipelineStageFlagBits::eAllGraphics,
+          vk::DependencyFlags{}, 0 /* memoryBarrierCount */, nullptr /* memoryBarriers */,
+          0 /* bufferMemoryBarrierCount */, nullptr /* bufferMemoryBarriers */,
+          1 /* imageMemoryBarrierCount */, &barrier2);
+    }
+
+    command_buffer.end();
+  }
+}
+
 // Test that transfering an image to a foreign queue and back doesn't prevent transaction
 // elimination from working.
 TEST(TransactionElimination, ForeignQueue) {
@@ -86,8 +145,9 @@ TEST(TransactionElimination, ForeignQueue) {
   auto vkp_command_buffers = std::make_unique<vkp::CommandBuffers>(
       vkp_device, vkp_command_pool, vkp_framebuffer->framebuffers(), extent, vkp_render_pass->get(),
       vkp_pipeline->get());
-  vkp_command_buffers->set_image_for_foreign_transition(*vkp_offscreen_image_view->image());
-  ASSERT_TRUE(vkp_command_buffers->Init());
+  ASSERT_TRUE(vkp_command_buffers->Alloc());
+  InitCommandBuffers(&(vkp_offscreen_image_view->image().get()), vkp_device->queue_family_index(),
+                     vkp_command_buffers);
 
   hwcpipe::HWCPipe pipe;
   pipe.set_enabled_gpu_counters(pipe.gpu_profiler()->supported_counters());
@@ -107,7 +167,9 @@ TEST(TransactionElimination, ForeignQueue) {
   auto vkp_command_buffers2 = std::make_unique<vkp::CommandBuffers>(
       vkp_device, vkp_command_pool, vkp_framebuffer->framebuffers(), extent,
       vkp_render_pass2->get(), vkp_pipeline->get());
-  ASSERT_TRUE(vkp_command_buffers2->Init());
+  ASSERT_TRUE(vkp_command_buffers2->Alloc());
+  InitCommandBuffers({} /* image_for_foreign_transition */, {} /* queue_family */,
+                     vkp_command_buffers2);
 
   ASSERT_TRUE(DrawAllFrames(*vkp_device, *vkp_command_buffers2));
   vkp_device->get().waitIdle();

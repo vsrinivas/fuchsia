@@ -58,10 +58,8 @@ int main(int argc, char* argv[]) {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   GLFWwindow* window = glfwCreateWindow(1024, 768, "VkPrimer", nullptr, nullptr);
   RTN_IF_MSG(1, !window, "glfwCreateWindow failed.\n");
-  RTN_IF_MSG(1, !instance->Init(window), "Instance Initialization Failed.\n");
-#else
-  RTN_IF_MSG(1, !vkp_instance->Init(), "Instance Initialization Failed.\n");
 #endif
+  RTN_IF_MSG(1, !vkp_instance->Init(), "Instance Initialization Failed.\n");
 
 // SURFACE
 #if USE_GLFW
