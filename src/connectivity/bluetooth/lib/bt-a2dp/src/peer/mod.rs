@@ -390,9 +390,11 @@ impl PeerInner {
     fn set_remote_endpoints(&mut self, endpoints: &[StreamEndpoint]) {
         self.remote_inspect = self.inspect.create_child("remote_endpoints");
         for endpoint in endpoints {
-            let id_str = endpoint.local_id().to_string();
-            let caps_str = endpoint.capabilities().debug();
-            self.remote_inspect.record_string(id_str, caps_str);
+            self.remote_inspect.record_child(inspect::unique_name("remote_"), |node| {
+                node.record_string("endpoint_id", endpoint.local_id().debug());
+                node.record_string("capabilities", endpoint.capabilities().debug());
+                node.record_string("type", endpoint.information().endpoint_type().debug());
+            });
         }
         self.remote_endpoints = Some(endpoints.iter().map(StreamEndpoint::as_new).collect());
     }

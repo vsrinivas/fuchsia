@@ -86,7 +86,7 @@ pub struct StreamEndpoint {
 impl fmt::Debug for StreamEndpoint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("StreamEndpoint")
-            .field("id", &self.id.to_string())
+            .field("id", &self.id.0)
             .field("endpoint_type", &self.endpoint_type)
             .field("media_type", &self.media_type)
             .field("state", &self.state)

@@ -55,6 +55,7 @@ impl Inspect for &mut Stream {
         let endpoint_state_prop = self.inspect.create_string("endpoint_state", "");
         let callback =
             move |stream: &StreamEndpoint| endpoint_state_prop.set(&format!("{:?}", stream));
+        callback(self.endpoint_mut());
         self.endpoint_mut().set_update_callback(Some(Box::new(callback)));
         Ok(())
     }
@@ -277,7 +278,7 @@ impl Inspect for &mut Streams {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
         self.inspect_node = parent.create_child(name);
         for stream in self.streams.values_mut() {
-            stream.iattach(parent, inspect::unique_name("stream_"))?;
+            stream.iattach(&self.inspect_node, inspect::unique_name("stream_"))?;
         }
         Ok(())
     }
