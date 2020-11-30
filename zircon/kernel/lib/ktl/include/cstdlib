@@ -6,12 +6,22 @@
 
 #pragma once
 
-// This is used by libc++'s <new> just for std::abort.
+// This is used by libc++'s <new> just for std::abort, ::posix_memalign, and
+// ::free.
 
-#include <__config>
 #include <stdlib.h>
 
+#include <__config>
+
 #define _LIBCPP_UNREACHABLE() __builtin_unreachable()
+
+// This is used by the __libcpp_aligned_alloc inline.  Since it always fails
+// that inline will trivially always return nullptr.
+inline int posix_memalign(void** ptr, size_t align, size_t size) { return 1; }
+
+// This is used by the __libcpp_aligned_free inline, which won't really ever be
+// called.  The kernel does have a real free declared elsewhere.
+void free(void* ptr);
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
