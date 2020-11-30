@@ -1,10 +1,12 @@
 {
     select: {
         disconnects: "INSPECT:wlanstack.cmx:root/client_stats/disconnect/*:@time",
+        scan_failures: "INSPECT:wlanstack.cmx:root/client_stats/scan_failures/*:@time",
     },
     eval: {
         last_24_hours: "Fn([time], time > Now() - Hours(24))",
         n_disconnects_today: "Count(Filter(last_24_hours, disconnects))",
+        n_scan_failures_today: "Count(Filter(last_24_hours, scan_failures))",
     },
     act: {
         too_many_disconnects: {
@@ -12,6 +14,87 @@
             trigger: "n_disconnects_today >= 5",
             repeat: "Hours(24)",
             signature: "five-disconnects-today",
+        },
+        too_many_scan_failures: {
+            type: "Snapshot",
+            trigger: "n_scan_failures_today >= 4",
+            repeat: "Hours(24)",
+            signature: "four-scan-failures-today",
+        },
+    },
+    test: {
+        too_many_disconnects: {
+            yes: [
+                "too_many_disconnects",
+            ],
+            no: [
+                "too_many_scan_failures",
+            ],
+            now: "Hours(48)",
+            values: {
+                // A day's worth of nanoseconds is 8.64e13, these numbers are within the last day.
+                disconnects: [
+                    9e13,
+                    10e13,
+                    11e13,
+                    12e13,
+                    13e13,
+                ],
+                scan_failures: [],
+            },
+        },
+        not_enough_recent_disconnects: {
+            yes: [],
+            no: [
+                "too_many_disconnects",
+                "too_many_scan_failures",
+            ],
+            now: "Hours(48)",
+            values: {
+                disconnects: [
+                    8e13,
+                    10e13,
+                    11e13,
+                    12e13,
+                    13e13,
+                ],
+                scan_failures: [],
+            },
+        },
+        too_many_scan_failures: {
+            yes: [
+                "too_many_scan_failures",
+            ],
+            no: [
+                "too_many_disconnects",
+            ],
+            now: "Hours(48)",
+            values: {
+                disconnects: [],
+                scan_failures: [
+                    9e13,
+                    10e13,
+                    11e13,
+                    12e13,
+                ],
+            },
+        },
+        not_enough_recent_scan_failures: {
+            yes: [],
+            no: [
+                "too_many_disconnects",
+                "too_many_scan_failures",
+            ],
+            now: "Hours(48)",
+            values: {
+                disconnects: [],
+                scan_failures: [
+                    8e13,
+                    10e13,
+                    11e13,
+                    12e13,
+                ],
+            },
         },
     },
 }
