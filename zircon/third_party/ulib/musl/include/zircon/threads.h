@@ -11,11 +11,9 @@
 
 __BEGIN_CDECLS
 
-// Get the zx_handle_t corresponding to the thrd_t. This handle is
-// still owned by the C11 thread, and will not persist after the
-// thread exits and is joined or detached. Callers must duplicate the
-// handle, therefore, if they wish the thread handle to outlive the
-// execution of the C11 thread.
+// Get the zx_handle_t corresponding to the thrd_t. This handle is still owned by the C11 thread,
+// and will not persist after the thread exits. Callers must duplicate the handle, therefore, if
+// they wish the thread handle to outlive the execution of the C11 thread.
 zx_handle_t thrd_get_zx_handle(thrd_t t);
 
 // Converts a threads.h-style status value to an |zx_status_t|.
