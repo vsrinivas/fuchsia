@@ -336,25 +336,29 @@ protocol File {
     /// Reads `count` bytes at the seek offset.
     /// The seek offset is moved forward by the number of bytes read.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_READABLE`.
+    /// This method requires following rights: `OPEN_RIGHT_READABLE`, otherwise returns
+    /// `ZX_ERR_BAD_HANDLE`.
     Read(uint64 count) -> (zx.status s, vector<uint8>:MAX_BUF data);
 
     /// Reads `count` bytes at the provided offset.
     /// Does not affect the seek offset.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_READABLE`.
+    /// This method requires following rights: `OPEN_RIGHT_READABLE`, otherwise returns
+    /// `ZX_ERR_BAD_HANDLE`.
     ReadAt(uint64 count, uint64 offset) -> (zx.status s, vector<uint8>:MAX_BUF data);
 
     /// Writes data at the seek offset.
     /// The seek offset is moved forward by the number of bytes written.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`.
+    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// `ZX_ERR_BAD_HANDLE`.
     Write(vector<uint8>:MAX_BUF data) -> (zx.status s, uint64 actual);
 
     /// Writes data to the provided offset.
     /// Does not affect the seek offset.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`.
+    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// `ZX_ERR_BAD_HANDLE`.
     WriteAt(vector<uint8>:MAX_BUF data, uint64 offset) -> (zx.status s, uint64 actual);
 
     /// Moves the offset at which the next invocation of `Read()` or `Write()` will
@@ -365,7 +369,8 @@ protocol File {
 
     /// Shrinks the file size to 'length' bytes.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`.
+    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// `ZX_ERR_BAD_HANDLE`.
     Truncate(uint64 length) -> (zx.status s);
 
     /// Acquires the `Directory.Open` rights and flags used to access this file.
