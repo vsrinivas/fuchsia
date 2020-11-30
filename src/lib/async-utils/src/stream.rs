@@ -276,7 +276,17 @@ mod test {
     //!   * Progress is always eventually made - the Stream cannot be stalled
     //!   * All inserted elements will eventually be yielded
     //!   * Elements are never duplicated
-    use super::*;
+    use {
+        super::*,
+        fuchsia_async as fasync,
+        futures::{
+            channel::mpsc,
+            future::ready,
+            stream::{empty, iter, once, Empty},
+        },
+        proptest::prelude::*,
+        std::{collections::HashSet, fmt::Debug},
+    };
 
     #[fasync::run_until_stalled(test)]
     async fn empty_stream_returns_epitaph_only() {
