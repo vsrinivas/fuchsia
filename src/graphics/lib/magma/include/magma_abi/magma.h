@@ -90,7 +90,8 @@ magma_status_t magma_release_buffer_handle(
     magma_handle_t buffer_handle);
 
 ///
-/// \brief Returns a unique id for the given buffer.
+/// \brief Returns a unique id for the given buffer. For performance reasons it's recommended to
+///        cache the id rather than call this repeatedly.
 /// \param buffer A valid buffer.
 ///
 uint64_t magma_get_buffer_id(

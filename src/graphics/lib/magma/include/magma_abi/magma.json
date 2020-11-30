@@ -145,7 +145,7 @@
         "ordinal": 12,
         "name": "magma_get_buffer_id",
         "type": "uint64_t",
-        "description": "Returns a unique id for the given buffer.",
+        "description": "Returns a unique id for the given buffer. For performance reasons it's recommended to cache the id rather than call this repeatedly.",
         "arguments": [
           {
             "name": "buffer",
