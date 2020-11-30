@@ -23,24 +23,28 @@ namespace fidlcat {
 class ZxChannelCallArgs {
  public:
   static const uint8_t* wr_bytes(const zx_channel_call_args_t* from) {
-    return reinterpret_cast<const uint8_t*>(from->wr_bytes);
+    return (from == nullptr) ? nullptr : reinterpret_cast<const uint8_t*>(from->wr_bytes);
   }
   static const zx_handle_t* wr_handles(const zx_channel_call_args_t* from) {
-    return from->wr_handles;
+    return (from == nullptr) ? nullptr : from->wr_handles;
   }
   static const uint8_t* rd_bytes(const zx_channel_call_args_t* from) {
-    return reinterpret_cast<const uint8_t*>(from->rd_bytes);
+    return (from == nullptr) ? nullptr : reinterpret_cast<const uint8_t*>(from->rd_bytes);
   }
   static const zx_handle_t* rd_handles(const zx_channel_call_args_t* from) {
-    return from->rd_handles;
+    return (from == nullptr) ? nullptr : from->rd_handles;
   }
-  static uint32_t wr_num_bytes(const zx_channel_call_args_t* from) { return from->wr_num_bytes; }
+  static uint32_t wr_num_bytes(const zx_channel_call_args_t* from) {
+    return (from == nullptr) ? 0 : from->wr_num_bytes;
+  }
   static uint32_t wr_num_handles(const zx_channel_call_args_t* from) {
-    return from->wr_num_handles;
+    return (from == nullptr) ? 0 : from->wr_num_handles;
   }
-  static uint32_t rd_num_bytes(const zx_channel_call_args_t* from) { return from->rd_num_bytes; }
+  static uint32_t rd_num_bytes(const zx_channel_call_args_t* from) {
+    return (from == nullptr) ? 0 : from->rd_num_bytes;
+  }
   static uint32_t rd_num_handles(const zx_channel_call_args_t* from) {
-    return from->rd_num_handles;
+    return (from == nullptr) ? 0 : from->rd_num_handles;
   }
 };
 

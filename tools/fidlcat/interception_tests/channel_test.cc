@@ -619,4 +619,34 @@ CALL_DISPLAY_TEST_WITH_PROCESS_INFO(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "        0000: 01234567, 89abcdef\n");
 
+#define CALL_DISPLAY_TEST_CONTENT_NULL_ARGS(errno, expected)                                 \
+  PerformDisplayTest(                                                                        \
+      "$plt(zx_channel_call)",                                                               \
+      ZxChannelCall(errno, #errno, kHandle, 0, ZX_TIME_INFINITE, nullptr, nullptr, nullptr), \
+      expected);
+
+#define CALL_DISPLAY_TEST_NULL_ARGS(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {              \
+    CALL_DISPLAY_TEST_CONTENT_NULL_ARGS(errno, expected);  \
+  }                                                        \
+  TEST_F(InterceptionWorkflowTestArm, name) {              \
+    CALL_DISPLAY_TEST_CONTENT_NULL_ARGS(errno, expected);  \
+  }
+
+CALL_DISPLAY_TEST_NULL_ARGS(ZxChannelCallNullArgs, ZX_OK,
+                            "\n"
+                            "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_call("
+                            "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                            "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
+                            "deadline: \x1B[32mzx.time\x1B[0m = \x1B[34mZX_TIME_INFINITE\x1B[0m, "
+                            "rd_num_bytes: \x1B[32muint32\x1B[0m = \x1B[31mnull\x1B[0m, "
+                            "rd_num_handles: \x1B[32muint32\x1B[0m = \x1B[31mnull\x1B[0m)\n"
+                            "  not enough data for message\n"
+                            "  \x1B[31mCan't decode message: num_bytes=0 num_handles=0\x1B[0m\n"
+                            "    data=\x1B[0m\n"
+                            "  -> \x1B[32mZX_OK\x1B[0m\n"
+                            "    not enough data for message\n"
+                            "    \x1B[31mCan't decode message: num_bytes=0 num_handles=0\x1B[0m\n"
+                            "      data=\x1B[0m\n");
+
 }  // namespace fidlcat
