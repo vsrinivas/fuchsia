@@ -31,14 +31,9 @@ ZBI_CONTAINER_HEADER(kZbiContainerHeader, PHYS_LOAD_END - kZbiItemHeader)
   .int ZBI_ITEM_NO_CRC32                // crc32
 .end_object
 
-#ifdef __x86_64__
-#define kEntryBias 0x100000
-#else
-#define kEntryBias 0
-#endif
-
-// zbi_kernel_t
-.object kZbiKernelHeader, rodata, nosection=nosection
-  .quad _start - kZbiContainerHeader + kEntryBias
-  .quad PHYS_RESERVE_MEMORY_SIZE
-.end_object
+// The zbi-header.ld linker script fragment synthesizes the zbi_kernel_t
+// contents and places them directly after .boot.header so it appears here.
+// This cannot be done in assembly without generating relocations that would
+// make the linker try to generate dynamic fixups under -pie.
+.label kZbiKernelHeader, type=object
+.size kZbiKernelHeader, 16

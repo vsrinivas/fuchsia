@@ -22,6 +22,14 @@ SECTIONS {
   . = PHYS_LOAD_ADDRESS;
   PROVIDE_HIDDEN(__code_start = .);
 
+  /*
+   * The contents of this section differ for different kinds of "phys" target
+   * environments, but it's always the thing that has to appear first in the
+   * load image (in place of where e.g. ELF headers would be found in a normal
+   * executable's load image).  For ZBI executables, it's the ZBI headers to
+   * make the load image itself a ZBI file and it's immediately followed by
+   * more ZBI format headers synthesized in zbi-header.ld (which see).
+   */
   .boot.header : {
     KEEP(*(.boot.header))
   } :load

@@ -26,6 +26,7 @@ import("$zx/kernel/phys/phys_executable.gni")
 template("zbi_executable") {
   phys_executable(target_name) {
     deps = []
+    ldflags = []
     forward_variables_from(invoker,
                            "*",
                            [
@@ -34,6 +35,10 @@ template("zbi_executable") {
                            ])
     forward_variables_from(invoker, [ "visibility" ])
 
+    # zbi-header.S needs this linker script.  Note it must go before the main
+    # phys.ld (at least for BFD ld); phys_executable will append it to ldflags.
+    ldflags += [ "-Wl,-T," +
+                 rebase_path("$zx/kernel/phys/zbi-header.ld", root_build_dir) ]
     deps += [ "$zx/kernel/phys:zbi_executable.deps" ]
 
     if (!defined(output_dir)) {
