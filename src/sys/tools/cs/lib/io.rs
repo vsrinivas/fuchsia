@@ -40,14 +40,13 @@ static DIR_OPEN_TIMEOUT: zx::Duration = zx::Duration::from_seconds(1);
 
 impl Directory {
     // Create a Directory object from a path in the namespace
-    pub fn from_namespace(path: PathBuf) -> Directory {
+    pub fn from_namespace(path: PathBuf) -> Result<Directory, Error> {
         let path_str = path.into_os_string().into_string().unwrap();
         let proxy = io_util::directory::open_in_namespace(
             &path_str,
             OPEN_RIGHT_WRITABLE | OPEN_RIGHT_READABLE,
-        )
-        .unwrap();
-        Directory { proxy }
+        )?;
+        Ok(Directory { proxy })
     }
 
     // Open a file that already exists in the directory with the given |filename|.

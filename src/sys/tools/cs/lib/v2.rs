@@ -30,7 +30,7 @@ async fn get_capabilities(capability_dir: Directory) -> Vec<String> {
 
 fn explore(name: String, hub_path: PathBuf) -> BoxFuture<'static, V2Component> {
     async move {
-        let hub_dir = Directory::from_namespace(hub_path.clone());
+        let hub_dir = Directory::from_namespace(hub_path.clone()).unwrap();
 
         let url = hub_dir.read_file("url").await.unwrap();
         let id = hub_dir.read_file("id").await.unwrap().parse::<u32>().unwrap();
@@ -56,7 +56,7 @@ fn explore(name: String, hub_path: PathBuf) -> BoxFuture<'static, V2Component> {
         // If this component is appmgr, use it to explore the v1 component world
         let appmgr_root_v1_realm = if name == "appmgr" {
             let v1_hub_path = hub_path.join("exec/out/hub");
-            let v1_hub_dir = Directory::from_namespace(v1_hub_path);
+            let v1_hub_dir = Directory::from_namespace(v1_hub_path).unwrap();
             Some(V1Realm::create(v1_hub_dir).await)
         } else {
             None
@@ -264,7 +264,7 @@ mod tests {
         fs::create_dir(root.join("svc")).unwrap();
         File::create(root.join("svc").join("fuchsia.bar")).unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf());
+        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let capabilities = get_capabilities(root_dir).await;
         assert_eq!(
             capabilities,
@@ -291,7 +291,7 @@ mod tests {
         fs::create_dir(exec.join("out")).unwrap();
         fs::create_dir(exec.join("runtime")).unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
         let execution = Execution::new(exec_dir).await;
 
         assert!(execution.elf_runtime.is_none());
@@ -316,7 +316,7 @@ mod tests {
         fs::create_dir(exec.join("expose")).unwrap();
         fs::create_dir(exec.join("in")).unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
         let execution = Execution::new(exec_dir).await;
 
         assert!(execution.elf_runtime.is_none());
@@ -355,7 +355,7 @@ mod tests {
             .write_all("67890".as_bytes())
             .unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
         let execution = Execution::new(exec_dir).await;
 
         assert_eq!(execution.elf_runtime.unwrap(), ElfRuntime { job_id: 12345, process_id: 67890 });
@@ -385,7 +385,7 @@ mod tests {
             )
             .unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
         let execution = Execution::new(exec_dir).await;
 
         assert_eq!(
@@ -409,7 +409,7 @@ mod tests {
         fs::create_dir(exec.join("expose")).unwrap();
         fs::create_dir(exec.join("in")).unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
         let execution = Execution::new(exec_dir).await;
 
         assert_eq!(execution.merkle_root, None);
@@ -434,7 +434,7 @@ mod tests {
         fs::create_dir(exec.join("in/pkg")).unwrap();
         fs::create_dir(exec.join("in/pkg/meta")).unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
         let execution = Execution::new(exec_dir).await;
 
         assert_eq!(execution.merkle_root, None);
@@ -457,7 +457,7 @@ mod tests {
         fs::create_dir(exec.join("in")).unwrap();
         fs::create_dir(exec.join("in/pkg")).unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
         let execution = Execution::new(exec_dir).await;
 
         assert_eq!(execution.incoming_capabilities, vec!["pkg".to_string()]);
@@ -482,7 +482,7 @@ mod tests {
         fs::create_dir(exec.join("out")).unwrap();
         fs::create_dir(exec.join("out/fidl.examples.routing.echo.Echo")).unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
         let execution = Execution::new(exec_dir).await;
 
         assert_eq!(
@@ -510,7 +510,7 @@ mod tests {
         fs::create_dir(exec.join("in")).unwrap();
         fs::create_dir(exec.join("out")).unwrap();
 
-        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let exec_dir = Directory::from_namespace(exec.to_path_buf()).unwrap();
         let execution = Execution::new(exec_dir).await;
 
         assert_eq!(execution.exposed_capabilities, vec!["pkgfs".to_string()]);
@@ -709,7 +709,7 @@ mod tests {
 
         let v2_component = V2Component::explore(root.to_path_buf()).await;
 
-        let v1_hub_dir = Directory::from_namespace(appmgr.join("exec/out/hub"));
+        let v1_hub_dir = Directory::from_namespace(appmgr.join("exec/out/hub")).unwrap();
         assert!(v2_component.appmgr_root_v1_realm.is_none());
 
         assert_eq!(

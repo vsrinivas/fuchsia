@@ -277,7 +277,7 @@ mod tests {
         fs::create_dir(root.join("svc")).unwrap();
         File::create(root.join("svc/fuchsia.bar")).unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf());
+        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let capabilities = get_capabilities(root_dir).await;
         assert_eq!(
             capabilities,
@@ -306,7 +306,7 @@ mod tests {
             .write_all("fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx".as_bytes())
             .unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf());
+        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let v1_component = V1Component::create(root_dir).await;
 
         assert_eq!(v1_component.job_id, 12345);
@@ -334,7 +334,7 @@ mod tests {
             .write_all("fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx".as_bytes())
             .unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf());
+        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let v1_component = V1Component::create(root_dir).await;
 
         assert_eq!(v1_component.process_id, None);
@@ -367,7 +367,7 @@ mod tests {
         File::create(root.join("process-id")).unwrap().write_all("67890".as_bytes()).unwrap();
         File::create(root.join("url")).unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf());
+        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let v1_component = V1Component::create(root_dir).await;
 
         assert_eq!(
@@ -400,7 +400,7 @@ mod tests {
         File::create(root.join("process-id")).unwrap().write_all("67890".as_bytes()).unwrap();
         File::create(root.join("url")).unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf());
+        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let v1_component = V1Component::create(root_dir).await;
 
         assert_eq!(v1_component.incoming_capabilities, vec!["fuchsia.logger.logSink".to_string()]);
@@ -448,10 +448,10 @@ mod tests {
         File::create(root.join("process-id")).unwrap().write_all("67890".as_bytes()).unwrap();
         File::create(root.join("url")).unwrap();
 
-        let root_dir = Directory::from_namespace(root.to_path_buf());
+        let root_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
         let v1_component = V1Component::create(root_dir).await;
 
-        let child_dir = Directory::from_namespace(child_dir_name);
+        let child_dir = Directory::from_namespace(child_dir_name).unwrap();
         assert_eq!(v1_component.child_components, vec![V1Component::create(child_dir).await]);
     }
 }
