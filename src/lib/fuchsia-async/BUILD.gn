@@ -60,7 +60,11 @@ rustc_library("fuchsia-async") {
       "//third_party/rust_crates:slab",
     ]
     if (current_toolchain != unknown_wasm32_toolchain) {
-      deps += [ "//third_party/rust_crates:smol" ]
+      deps += [
+        "//third_party/rust_crates:async-std",
+        "//third_party/rust_crates:smol",
+      ]
+      sources += [ "src/net/portable/udp.rs" ]
     }
     sources += [
       "src/handle/emulated/channel.rs",
