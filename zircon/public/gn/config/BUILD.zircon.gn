@@ -608,6 +608,11 @@ config("default_warnings") {
       # TODO(https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90036): Re-enable
       # once the bug is fixed.
       "-Wno-format-overflow",
+
+      # TODO(fxbug.dev/64272): Disable "-Wmissing-field-initializers" which
+      # warns when designated initializers are used on some (but not all)
+      # fields in C++, contrary to its documentation (and Clang).
+      "-Wno-missing-field-initializers",
     ]
   } else {
     cflags += [
