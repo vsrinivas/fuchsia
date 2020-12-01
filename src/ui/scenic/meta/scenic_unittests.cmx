@@ -4,29 +4,21 @@
             "injected-services": {
                 "fuchsia.testing.FakeClock": "fuchsia-pkg://fuchsia.com/fake_clock#meta/fake_clock.cmx",
                 "fuchsia.testing.FakeClockControl": "fuchsia-pkg://fuchsia.com/fake_clock#meta/fake_clock.cmx"
-            },
-            "system-services": [
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.vulkan.loader.Loader"
-            ]
+            }
         }
     },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
         "binary": "test/scenic_unittests"
     },
     "sandbox": {
-        "features": [
-            "vulkan"
-        ],
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.sysmem.Allocator",
             "fuchsia.testing.FakeClock",
-            "fuchsia.testing.FakeClockControl",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.testing.FakeClockControl"
         ]
     }
 }

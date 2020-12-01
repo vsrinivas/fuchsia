@@ -3,15 +3,12 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.ui.input.ImeService": "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"
-            },
-            "system-services": [
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.vulkan.loader.Loader"
-            ]
+            }
         }
     },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
         "binary": "test/gfx_pixeltests"
@@ -19,15 +16,11 @@
     "sandbox": {
         "features": [
             "config-data",
-            "isolated-temp",
-            "vulkan"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader",
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.sys.Loader"
         ]
     }
 }
