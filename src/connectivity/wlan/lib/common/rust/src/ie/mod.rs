@@ -11,6 +11,7 @@ pub mod wsc;
 mod constants;
 mod fields;
 mod id;
+mod merger;
 mod parse;
 mod rates_writer;
 mod reader;
@@ -19,8 +20,8 @@ mod write;
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 pub use {
-    constants::*, fake_ies::*, fields::*, id::*, intersect::*, parse::*, rates_writer::*,
-    reader::Reader, write::*,
+    constants::*, fake_ies::*, fields::*, id::*, intersect::*, merger::*, parse::*,
+    rates_writer::*, reader::Reader, write::*,
 };
 
 #[repr(C, packed)]

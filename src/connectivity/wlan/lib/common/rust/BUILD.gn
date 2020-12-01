@@ -53,6 +53,7 @@ rustc_library("wlan-common") {
     "src/ie/fields.rs",
     "src/ie/id.rs",
     "src/ie/intersect.rs",
+    "src/ie/merger.rs",
     "src/ie/mod.rs",
     "src/ie/parse.rs",
     "src/ie/rates_writer.rs",

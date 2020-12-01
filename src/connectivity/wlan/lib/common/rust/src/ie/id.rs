@@ -27,4 +27,5 @@ impl Id {
     pub const VHT_CAPABILITIES: Self = Self(191);
     pub const VHT_OPERATION: Self = Self(192);
     pub const VENDOR_SPECIFIC: Self = Self(221);
+    pub const EXTENSION: Self = Self(255);
 }
