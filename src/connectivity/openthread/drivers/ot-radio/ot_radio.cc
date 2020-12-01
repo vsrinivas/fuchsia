@@ -24,8 +24,8 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddktl/fidl.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -38,15 +38,6 @@
 
 namespace ot {
 namespace lowpan_spinel_fidl = ::llcpp::fuchsia::lowpan::spinel;
-
-enum {
-  FRAGMENT_PDEV,
-  FRAGMENT_SPI,
-  FRAGMENT_INT_GPIO,
-  FRAGMENT_RESET_GPIO,
-  FRAGMENT_BOOTLOADER_GPIO,
-  FRAGMENT_COUNT,
-};
 
 OtRadioDevice::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio)
     : ot_radio_obj_(ot_radio) {}
@@ -183,36 +174,24 @@ bool OtRadioDevice::RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t cha
 }
 
 zx_status_t OtRadioDevice::Init() {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent());
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "Could not get composite protocol");
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
-
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, std::size(fragments), &actual);
-  if (actual != std::size(fragments)) {
-    zxlogf(ERROR, "could not get fragments");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  spi_ = ddk::SpiProtocolClient(fragments[FRAGMENT_SPI]);
+  spi_ = ddk::SpiProtocolClient(composite, "spi");
   if (!spi_.is_valid()) {
     zxlogf(ERROR, "ot-radio %s: failed to acquire spi", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  status =
-      device_get_protocol(fragments[FRAGMENT_INT_GPIO], ZX_PROTOCOL_GPIO, &gpio_[OT_RADIO_INT_PIN]);
-  if (status != ZX_OK) {
+  gpio_[OT_RADIO_INT_PIN] = ddk::GpioProtocolClient(composite, "gpio-int");
+  if (!gpio_[OT_RADIO_INT_PIN].is_valid()) {
     zxlogf(ERROR, "ot-radio %s: failed to acquire interrupt gpio", __func__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  status = gpio_[OT_RADIO_INT_PIN].ConfigIn(GPIO_NO_PULL);
+  zx_status_t status = gpio_[OT_RADIO_INT_PIN].ConfigIn(GPIO_NO_PULL);
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "ot-radio %s: failed to configure interrupt gpio", __func__);
@@ -226,11 +205,10 @@ zx_status_t OtRadioDevice::Init() {
     return status;
   }
 
-  status = device_get_protocol(fragments[FRAGMENT_RESET_GPIO], ZX_PROTOCOL_GPIO,
-                               &gpio_[OT_RADIO_RESET_PIN]);
-  if (status != ZX_OK) {
+  gpio_[OT_RADIO_RESET_PIN] = ddk::GpioProtocolClient(composite, "gpio-reset");
+  if (!gpio_[OT_RADIO_RESET_PIN].is_valid()) {
     zxlogf(ERROR, "ot-radio %s: failed to acquire reset gpio", __func__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
   status = gpio_[OT_RADIO_RESET_PIN].ConfigOut(1);
@@ -240,11 +218,10 @@ zx_status_t OtRadioDevice::Init() {
     return status;
   }
 
-  status = device_get_protocol(fragments[FRAGMENT_BOOTLOADER_GPIO], ZX_PROTOCOL_GPIO,
-                               &gpio_[OT_RADIO_BOOTLOADER_PIN]);
-  if (status != ZX_OK) {
+  gpio_[OT_RADIO_BOOTLOADER_PIN] = ddk::GpioProtocolClient(composite, "gpio-bootloader");
+  if (!gpio_[OT_RADIO_BOOTLOADER_PIN].is_valid()) {
     zxlogf(ERROR, "ot-radio %s: failed to acquire radio bootloader pin", __func__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
   status = gpio_[OT_RADIO_BOOTLOADER_PIN].ConfigOut(1);
@@ -255,8 +232,16 @@ zx_status_t OtRadioDevice::Init() {
     return status;
   }
 
+  zx_device_t* pdev_fragment = nullptr;
+  bool found = composite.GetFragment("ddk.protocol.platform.device.PDev", &pdev_fragment);
+  if (!found) {
+    zxlogf(ERROR, "ot-radio %s: failed to acquire pdev fragment", __func__);
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  size_t actual;
   uint32_t device_id;
-  status = device_get_metadata(fragments[FRAGMENT_PDEV], DEVICE_METADATA_PRIVATE, &device_id,
+  status = device_get_metadata(pdev_fragment, DEVICE_METADATA_PRIVATE, &device_id,
                                sizeof(device_id), &actual);
   if (status != ZX_OK || sizeof(device_id) != actual) {
     zxlogf(ERROR, "ot-radio: failed to read metadata");

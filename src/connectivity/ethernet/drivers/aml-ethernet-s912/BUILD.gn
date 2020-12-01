@@ -32,7 +32,6 @@ driver_module("aml-ethernet-s912") {
     "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/bus/lib/device-protocol-pdev",
-    "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/amlogic",

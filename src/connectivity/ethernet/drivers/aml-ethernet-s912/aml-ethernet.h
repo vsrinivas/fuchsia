@@ -36,15 +36,6 @@ class AmlEthernet : public DeviceType,
   zx_status_t EthBoardResetPhy();
 
  private:
-  // Fragment Indexes.
-  enum {
-    FRAGMENT_PDEV,
-    FRAGMENT_I2C,
-    FRAGMENT_INTR_GPIO,
-    FRAGMENT_RESET_GPIO,
-    FRAGMENT_COUNT,
-  };
-
   // GPIO Indexes.
   enum {
     PHY_RESET,
@@ -61,7 +52,6 @@ class AmlEthernet : public DeviceType,
   zx_status_t InitPdev();
   zx_status_t Bind();
 
-  bool has_reset_ = true;
   ddk::PDev pdev_;
   ddk::I2cChannel i2c_;
   ddk::GpioProtocolClient gpios_[GPIO_COUNT];

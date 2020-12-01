@@ -5,7 +5,6 @@
 #include "aml-ethernet.h"
 
 #include <lib/device-protocol/i2c.h>
-#include <lib/device-protocol/platform-device.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/compiler.h>
@@ -16,9 +15,8 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddk/protocol/ethernet.h>
-#include <ddk/protocol/platform/device.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -35,7 +33,7 @@ namespace eth {
 #define MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE 0x03
 
 zx_status_t AmlEthernet::EthBoardResetPhy() {
-  if (has_reset_) {
+  if (gpios_[PHY_RESET].is_valid()) {
     gpios_[PHY_RESET].Write(0);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
     gpios_[PHY_RESET].Write(1);
@@ -45,63 +43,35 @@ zx_status_t AmlEthernet::EthBoardResetPhy() {
 }
 
 zx_status_t AmlEthernet::InitPdev() {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent());
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "Could not get composite protocol");
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, std::size(fragments), &actual);
-  if (actual == std::size(fragments)) {
-    has_reset_ = true;
-  } else {
-    if (actual == (std::size(fragments) - 1)) {
-      has_reset_ = false;
-    } else {
-      zxlogf(ERROR, "could not get fragments");
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-  }
-
-  pdev_protocol_t pdev;
-  status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
-  if (status != ZX_OK) {
+  pdev_ = ddk::PDev(composite);
+  if (!pdev_.is_valid()) {
     zxlogf(ERROR, "Could not get PDEV protocol");
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
-  pdev_ = &pdev;
 
-  i2c_protocol_t i2c;
-  status = device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &i2c);
-  if (status != ZX_OK) {
+  i2c_ = ddk::I2cChannel(composite, "i2c");
+  if (!i2c_.is_valid()) {
     zxlogf(ERROR, "Could not get I2C protocol");
-    return status;
-  }
-  i2c_ = &i2c;
-
-  gpio_protocol_t gpio;
-  if (has_reset_) {
-    status = device_get_protocol(fragments[FRAGMENT_RESET_GPIO], ZX_PROTOCOL_GPIO, &gpio);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Could not get GPIO protocol");
-      return status;
-    }
-    gpios_[PHY_RESET] = &gpio;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  status = device_get_protocol(fragments[FRAGMENT_INTR_GPIO], ZX_PROTOCOL_GPIO, &gpio);
-  if (status != ZX_OK) {
+  // Reset is optional.
+  gpios_[PHY_RESET] = ddk::GpioProtocolClient(composite, "gpio-reset");
+
+  gpios_[PHY_INTR] = ddk::GpioProtocolClient(composite, "gpio-int");
+  if (!gpios_[PHY_INTR].is_valid()) {
     zxlogf(ERROR, "Could not get GPIO protocol");
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
-  gpios_[PHY_INTR] = &gpio;
 
   // Map amlogic peripheral control registers.
-  status = pdev_.MapMmio(MMIO_PERIPH, &periph_mmio_);
+  zx_status_t status = pdev_.MapMmio(MMIO_PERIPH, &periph_mmio_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-dwmac: could not map periph mmio: %d", status);
     return status;
@@ -119,7 +89,7 @@ zx_status_t AmlEthernet::InitPdev() {
 
 zx_status_t AmlEthernet::Bind() {
   // Set reset line to output if implemented
-  if (has_reset_) {
+  if (gpios_[PHY_RESET].is_valid()) {
     gpios_[PHY_RESET].ConfigOut(0);
   }
 

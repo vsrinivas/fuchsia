@@ -4,7 +4,6 @@
 
 #include "dwmac.h"
 
-#include <lib/device-protocol/platform-device.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/operation/ethernet.h>
 #include <lib/zircon-internal/align.h>
@@ -17,9 +16,8 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddk/protocol/ethernet/mac.h>
-#include <ddk/protocol/platform/device.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -34,12 +32,6 @@
 namespace eth {
 
 namespace {
-
-enum {
-  FRAGMENT_PDEV,
-  FRAGMENT_ETH_BOARD,
-  FRAGMENT_COUNT,
-};
 
 // MMIO Indexes.
 constexpr uint32_t kEthMacMmio = 0;
@@ -162,39 +154,27 @@ zx_status_t DWMacDevice::InitPdev() {
 }
 
 zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
-  composite_protocol_t composite;
-  pdev_protocol_t pdev;
-  eth_board_protocol_t eth_board;
-
-  auto status = device_get_protocol(device, ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(device);
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "%s could not get ZX_PROTOCOL_COMPOSITE", __func__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
-  if (actual != 2) {
-    zxlogf(ERROR, "%s could not get fragments", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
-  if (status != ZX_OK) {
+  ddk::PDev pdev(composite);
+  if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s could not get ZX_PROTOCOL_PDEV", __func__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  status = device_get_protocol(fragments[FRAGMENT_ETH_BOARD], ZX_PROTOCOL_ETH_BOARD, &eth_board);
-  if (status != ZX_OK) {
+  ddk::EthBoardProtocolClient eth_board(composite, "eth-board");
+  if (!eth_board.is_valid()) {
     zxlogf(ERROR, "%s could not get ZX_PROTOCOL_ETH_BOARD", __func__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  auto mac_device = std::make_unique<DWMacDevice>(device, &pdev, &eth_board);
+  auto mac_device = std::make_unique<DWMacDevice>(device, pdev, eth_board);
 
-  status = mac_device->InitPdev();
+  zx_status_t status = mac_device->InitPdev();
   if (status != ZX_OK) {
     return status;
   }
@@ -202,8 +182,11 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
   // Reset the phy.
   mac_device->eth_board_.ResetPhy();
 
+  zx_device_t* pdev_fragment;
+  composite.GetFragment("ddk.protocol.platform.device.PDev", &pdev_fragment);
+
   // Get and cache the mac address.
-  mac_device->GetMAC(fragments[FRAGMENT_PDEV]);
+  mac_device->GetMAC(pdev_fragment);
 
   // Reset the dma peripheral.
   mac_device->mmio_->SetBits32(DMAMAC_SRST, DW_MAC_DMA_BUSMODE);
@@ -233,7 +216,8 @@ zx_status_t DWMacDevice::Create(void* ctx, zx_device_t* device) {
 
   // Populate board specific information
   eth_dev_metadata_t phy_info;
-  status = device_get_metadata(fragments[FRAGMENT_PDEV], DEVICE_METADATA_ETH_PHY_DEVICE, &phy_info,
+  size_t actual;
+  status = device_get_metadata(pdev_fragment, DEVICE_METADATA_ETH_PHY_DEVICE, &phy_info,
                                sizeof(eth_dev_metadata_t), &actual);
   if (status != ZX_OK || actual != sizeof(eth_dev_metadata_t)) {
     zxlogf(ERROR, "dwmac: Could not get PHY metadata %d", status);
@@ -376,8 +360,7 @@ zx_status_t DWMacDevice::EthMacRegisterCallbacks(const eth_mac_callbacks_t* cbs)
   return ZX_OK;
 }
 
-DWMacDevice::DWMacDevice(zx_device_t* device, pdev_protocol_t* pdev,
-                         eth_board_protocol_t* eth_board)
+DWMacDevice::DWMacDevice(zx_device_t* device, ddk::PDev pdev, ddk::EthBoardProtocolClient eth_board)
     : ddk::Device<DWMacDevice, ddk::Unbindable>(device), pdev_(pdev), eth_board_(eth_board) {}
 
 void DWMacDevice::ReleaseBuffers() {

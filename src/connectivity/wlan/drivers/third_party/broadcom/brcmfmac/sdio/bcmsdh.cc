@@ -29,10 +29,10 @@
 
 #include <ddk/device.h>
 #include <ddk/metadata.h>
-#include <ddk/protocol/composite.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/sdio.h>
 #include <ddk/trace/event.h>
+#include <ddktl/protocol/composite.h>
+#include <ddktl/protocol/gpio.h>
+#include <ddktl/protocol/sdio.h>
 #include <wifi/wifi-config.h>
 
 #ifndef _ALL_SOURCE
@@ -780,7 +780,6 @@ static const struct sdio_device_id brcmf_sdmmc_ids[] = {
 
 zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus) {
   zx_status_t err;
-  zx_status_t status;
 
   std::unique_ptr<struct brcmf_bus> bus_if;
   struct sdio_func* func1 = NULL;
@@ -789,56 +788,43 @@ zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out
 
   BRCMF_DBG(SDIO, "Enter");
 
-  composite_protocol_t composite_proto = {};
-  status = device_get_protocol(drvr->zxdev, ZX_PROTOCOL_COMPOSITE, &composite_proto);
-  if (status != ZX_OK) {
-    return status;
+  ddk::CompositeProtocolClient composite(drvr->zxdev);
+  if (!composite.is_valid()) {
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  uint32_t fragment_count = composite_get_fragment_count(&composite_proto);
-  if (fragment_count < 2) {
-    BRCMF_ERR("Not enough fragments (need atleast 2, have %u)", fragment_count);
-    return ZX_ERR_INTERNAL;
-  }
   // One for SDIO, one or two GPIOs.
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t actual;
-  composite_get_fragments(&composite_proto, fragments, countof(fragments), &actual);
-  if (actual < 2) {
-    BRCMF_ERR("Not enough fragments (need atleast 2, have %zu)", actual);
-    return ZX_ERR_INTERNAL;
-  }
-
   sdio_protocol_t sdio_proto_fn1;
   sdio_protocol_t sdio_proto_fn2;
   gpio_protocol_t gpio_protos[GPIO_COUNT];
   bool has_debug_gpio = false;
 
-  status = device_get_protocol(fragments[FRAGMENT_SDIO_FN1], ZX_PROTOCOL_SDIO, &sdio_proto_fn1);
-  if (status != ZX_OK) {
-    BRCMF_ERR("ZX_PROTOCOL_SDIO not found, err=%d", status);
-    return status;
+  ddk::SdioProtocolClient sdio_fn1(composite, "sdio-function-1");
+  if (!sdio_fn1.is_valid()) {
+    BRCMF_ERR("sdio function 1 fragment not found");
+    return ZX_ERR_NO_RESOURCES;
   }
-  status = device_get_protocol(fragments[FRAGMENT_SDIO_FN2], ZX_PROTOCOL_SDIO, &sdio_proto_fn2);
-  if (status != ZX_OK) {
-    BRCMF_ERR("ZX_PROTOCOL_SDIO not found, err=%d", status);
-    return status;
+  sdio_fn1.GetProto(&sdio_proto_fn1);
+
+  ddk::SdioProtocolClient sdio_fn2(composite, "sdio-function-2");
+  if (!sdio_fn2.is_valid()) {
+    BRCMF_ERR("sdio function 2 fragment not found");
+    return ZX_ERR_NO_RESOURCES;
   }
-  status = device_get_protocol(fragments[FRAGMENT_OOB_GPIO], ZX_PROTOCOL_GPIO,
-                               &gpio_protos[WIFI_OOB_IRQ_GPIO_INDEX]);
-  if (status != ZX_OK) {
-    BRCMF_ERR("ZX_PROTOCOL_GPIO not found, err=%d", status);
-    return status;
+  sdio_fn2.GetProto(&sdio_proto_fn2);
+
+  ddk::GpioProtocolClient gpio(composite, "gpio-oob");
+  if (!gpio.is_valid()) {
+    BRCMF_ERR("ZX_PROTOCOL_GPIO not found");
+    return ZX_ERR_NO_RESOURCES;
   }
+  gpio.GetProto(&gpio_protos[WIFI_OOB_IRQ_GPIO_INDEX]);
+
   // Debug GPIO is optional
-  if (fragment_count > 3) {
-    status = device_get_protocol(fragments[FRAGMENT_DEBUG_GPIO], ZX_PROTOCOL_GPIO,
-                                 &gpio_protos[DEBUG_GPIO_INDEX]);
-    if (status != ZX_OK) {
-      BRCMF_ERR("ZX_PROTOCOL_GPIO not found, err=%d", status);
-      return status;
-    }
+  gpio = ddk::GpioProtocolClient(composite, "gpio-debug");
+  if (gpio.is_valid()) {
     has_debug_gpio = true;
+    gpio.GetProto(&gpio_protos[DEBUG_GPIO_INDEX]);
   }
 
   sdio_hw_info_t devinfo;

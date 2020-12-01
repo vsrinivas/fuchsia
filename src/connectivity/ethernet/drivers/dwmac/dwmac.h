@@ -96,7 +96,7 @@ class DWMacDevice : public ddk::Device<DWMacDevice, ddk::Unbindable>,
                     public ddk::EthernetImplProtocol<DWMacDevice, ddk::base_protocol>,
                     public ddk::EthMacProtocol<DWMacDevice> {
  public:
-  DWMacDevice(zx_device_t* device, pdev_protocol_t* pdev, eth_board_protocol_t* eth_board);
+  DWMacDevice(zx_device_t* device, ddk::PDev pdev, ddk::EthBoardProtocolClient eth_board);
 
   static zx_status_t Create(void* ctx, zx_device_t* device);
 

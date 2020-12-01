@@ -38,7 +38,6 @@ driver_module("dwmac") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.test",
     "//src/devices/bus/lib/device-protocol-pdev",
-    "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
