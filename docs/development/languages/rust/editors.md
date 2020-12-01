@@ -18,7 +18,9 @@ not expecting, causing `rust-analyzer` to not work correctly.
 
 ### Currently supported version {#supported-rust-analyzer-version}
 
-Currently, use [the **latest version** of `rust-analyzer`][rust-analyzer-latest].
+Currently, use [**version 0.2.392** of `rust-analyzer`][rust-analyzer-0_2_392]. See
+[Downgrading rust-analyzer](#downgrading-rust-analyzer) for how to downgrade if you're already at
+latest. The [latest version][rust-analyzer-latest] is highly unstable.
 
 ## Visual Studio Code {#visual-studio-code}
 
@@ -121,6 +123,7 @@ $ git rebase
 $ fx gen
 ```
 
+#### Downgrading {#downgrading-rust-analyzer}
 If not, you may need to [manually downgrade rust-analyzer][vscode-downgrade] to the
 [currently-supported version](#supported-rust-analyzer-version) if it's not the latest, or to a
 previous version you were using if the currently supported version is listed as "latest".
@@ -244,6 +247,7 @@ See instructions on [the Intellij Rust site](https://intellij-rust.github.io/).
 Finally, follow [these steps][cargo-toml-gen] to generate a `Cargo.toml` file for use by Intellij.
 Note that cargo-based workflows are more likely to break than rust-analyzer based ones.
 
+[rust-analyzer-0_2_392]: https://github.com/rust-analyzer/rust-analyzer/releases/tag/2020-11-23
 [rust-analyzer-latest]: https://github.com/rust-analyzer/rust-analyzer/releases
 [vscode-download]: https://code.visualstudio.com/Download
 [vscode-update]:  https://vscode-docs.readthedocs.io/en/stable/supporting/howtoupdate/
