@@ -69,22 +69,22 @@ pub enum ModelError {
     },
     #[error("Resolver error: {}", err)]
     ResolverError {
-        #[source]
+        #[from]
         err: ResolverError,
     },
     #[error("Routing error: {}", err)]
     RoutingError {
-        #[source]
+        #[from]
         err: RoutingError,
     },
     #[error("Runner error: {}", err)]
     RunnerError {
-        #[source]
+        #[from]
         err: RunnerError,
     },
     #[error("storage error: {}", err)]
     StorageError {
-        #[source]
+        #[from]
         err: StorageError,
     },
     #[error("failed to add entry {} to {}", entry_name, moniker)]
@@ -109,17 +109,17 @@ pub enum ModelError {
     },
     #[error("rights error")]
     RightsError {
-        #[source]
+        #[from]
         err: RightsError,
     },
     #[error("events error")]
     EventsError {
-        #[source]
+        #[from]
         err: EventsError,
     },
     #[error("policy error")]
     PolicyError {
-        #[source]
+        #[from]
         err: PolicyError,
     },
 }
@@ -201,41 +201,5 @@ impl ModelError {
 
     pub fn stream_creation_error(err: impl Into<Error>) -> ModelError {
         ModelError::StreamCreationError { err: err.into().into() }
-    }
-}
-
-impl From<RightsError> for ModelError {
-    fn from(err: RightsError) -> Self {
-        ModelError::RightsError { err }
-    }
-}
-
-impl From<ResolverError> for ModelError {
-    fn from(err: ResolverError) -> Self {
-        ModelError::ResolverError { err }
-    }
-}
-
-impl From<RoutingError> for ModelError {
-    fn from(err: RoutingError) -> Self {
-        ModelError::RoutingError { err }
-    }
-}
-
-impl From<RunnerError> for ModelError {
-    fn from(err: RunnerError) -> Self {
-        ModelError::RunnerError { err }
-    }
-}
-
-impl From<StorageError> for ModelError {
-    fn from(err: StorageError) -> Self {
-        ModelError::StorageError { err }
-    }
-}
-
-impl From<EventsError> for ModelError {
-    fn from(err: EventsError) -> Self {
-        ModelError::EventsError { err }
     }
 }
