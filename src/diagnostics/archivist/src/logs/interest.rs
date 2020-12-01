@@ -78,7 +78,7 @@ impl InterestDispatcher {
                             if name == &component.name {
                                 interest = Some(Interest {
                                     min_severity: s.interest.min_severity,
-                                    ..Interest::empty()
+                                    ..Interest::EMPTY
                                 });
                             }
                         }
@@ -91,7 +91,7 @@ impl InterestDispatcher {
             self.notify_listeners_for_component(component, |l| {
                 let _ = l.send_on_register_interest(Interest {
                     min_severity: i.min_severity,
-                    ..Interest::empty()
+                    ..Interest::EMPTY
                 });
             });
         }
@@ -116,7 +116,7 @@ impl InterestDispatcher {
                                 |l| {
                                     let _ = l.send_on_register_interest(Interest {
                                         min_severity: s.interest.min_severity,
-                                        ..Interest::empty()
+                                        ..Interest::EMPTY
                                     });
                                 },
                             );
@@ -160,7 +160,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
 
     async fn interest_listeners() {
-        let mut source_id = SourceIdentity::empty();
+        let mut source_id = SourceIdentity::EMPTY;
         source_id.component_name = Some("foo.cmx".to_string());
 
         let source_arc = Arc::new(source_id);
@@ -190,7 +190,7 @@ mod tests {
                 dispatcher.notify_listeners_for_component(c.clone(), |listener| {
                     let _ = listener.send_on_register_interest(Interest {
                         min_severity: None,
-                        ..Interest::empty()
+                        ..Interest::EMPTY
                     });
                 });
 

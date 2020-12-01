@@ -158,7 +158,7 @@ impl TargetDelegate {
                 .map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)
                 .await?;
 
-            return Ok(Notification { volume: Some(volume), ..Notification::empty() });
+            return Ok(Notification { volume: Some(volume), ..Notification::EMPTY });
         }
         let target_handler =
             self.target_handler().ok_or(TargetAvcError::RejectedNoAvailablePlayers)?;
@@ -189,7 +189,7 @@ impl TargetDelegate {
                 .map_err(|_| TargetAvcError::RejectedAddressedPlayerChanged)
                 .await?;
 
-            return Ok(Notification { volume: Some(volume), ..Notification::empty() });
+            return Ok(Notification { volume: Some(volume), ..Notification::EMPTY });
         }
         let target_handler =
             self.target_handler().ok_or(TargetAvcError::RejectedAddressedPlayerChanged)?;
@@ -325,14 +325,14 @@ mod tests {
         pin_utils::pin_mut!(select_next_some_fut);
         match exec.run_until_stalled(&mut select_next_some_fut) {
             Poll::Ready(Ok(TargetHandlerRequest::GetMediaAttributes { responder })) => {
-                assert!(responder.send(&mut Ok(MediaAttributes::empty())).is_ok());
+                assert!(responder.send(&mut Ok(MediaAttributes::EMPTY)).is_ok());
             }
             _ => assert!(false, "unexpected stream state"),
         };
 
         match exec.run_until_stalled(&mut get_media_attr_fut) {
             Poll::Ready(attributes) => {
-                assert_eq!(attributes, Ok(MediaAttributes::empty()));
+                assert_eq!(attributes, Ok(MediaAttributes::EMPTY));
             }
             _ => assert!(false, "unexpected state"),
         }
@@ -397,7 +397,7 @@ mod tests {
                 assert!(responder
                     .send(&mut Ok(PlayerApplicationSettings {
                         shuffle_mode: Some(ShuffleMode::Off),
-                        ..PlayerApplicationSettings::empty()
+                        ..PlayerApplicationSettings::EMPTY
                     }))
                     .is_ok());
             }
@@ -410,7 +410,7 @@ mod tests {
                     attributes,
                     Ok(PlayerApplicationSettings {
                         shuffle_mode: Some(ShuffleMode::Off),
-                        ..PlayerApplicationSettings::empty()
+                        ..PlayerApplicationSettings::EMPTY
                     })
                 );
             }
@@ -431,7 +431,7 @@ mod tests {
         // Current media doesn't support Equalizer.
         let attributes = PlayerApplicationSettings {
             equalizer: Some(Equalizer::Off),
-            ..PlayerApplicationSettings::empty()
+            ..PlayerApplicationSettings::EMPTY
         };
         let set_pas_fut = target_delegate.send_set_player_application_settings_command(attributes);
         pin_utils::pin_mut!(set_pas_fut);
@@ -444,7 +444,7 @@ mod tests {
                 responder,
                 ..
             })) => {
-                assert!(responder.send(&mut Ok(PlayerApplicationSettings::empty())).is_ok());
+                assert!(responder.send(&mut Ok(PlayerApplicationSettings::EMPTY)).is_ok());
             }
             _ => assert!(false, "unexpected stream state"),
         };
@@ -453,7 +453,7 @@ mod tests {
         // unsupported application setting.
         match exec.run_until_stalled(&mut set_pas_fut) {
             Poll::Ready(attr) => {
-                assert_eq!(attr, Ok(PlayerApplicationSettings::empty()));
+                assert_eq!(attr, Ok(PlayerApplicationSettings::EMPTY));
             }
             _ => assert!(false, "unexpected state"),
         }
@@ -480,7 +480,7 @@ mod tests {
                 assert!(responder
                     .send(&mut Ok(vec![MediaPlayerItem {
                         player_id: Some(1),
-                        ..MediaPlayerItem::empty()
+                        ..MediaPlayerItem::EMPTY
                     }]))
                     .is_ok());
             }

@@ -75,7 +75,7 @@ pub(crate) async fn run_socket_link(
                 node_id: Some(node.node_id().into()),
                 connection_label,
                 key: None,
-                ..StreamSocketGreeting::empty()
+                ..StreamSocketGreeting::EMPTY
             };
             framer
                 .write(

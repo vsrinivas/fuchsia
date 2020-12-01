@@ -388,7 +388,7 @@ mod tests {
             extras: PositionExtras {
                 accuracy_meters: None,
                 altitude_meters: None,
-                ..PositionExtras::empty()
+                ..PositionExtras::EMPTY
             },
         };
 
@@ -398,7 +398,7 @@ mod tests {
             extras: PositionExtras {
                 accuracy_meters: Some(1.0),
                 altitude_meters: None,
-                ..PositionExtras::empty()
+                ..PositionExtras::EMPTY
             },
         };
 

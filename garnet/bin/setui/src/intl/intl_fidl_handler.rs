@@ -101,7 +101,7 @@ mod tests {
 
     #[test]
     fn test_request_from_settings_empty() {
-        let request = SettingRequest::from(IntlSettings::empty());
+        let request = SettingRequest::from(IntlSettings::EMPTY);
 
         assert_eq!(
             request,
@@ -123,7 +123,7 @@ mod tests {
             temperature_unit: Some(fidl_fuchsia_intl::TemperatureUnit::Celsius),
             time_zone_id: Some(fidl_fuchsia_intl::TimeZoneId { id: TIME_ZONE_ID.to_string() }),
             hour_cycle: Some(fidl_fuchsia_settings::HourCycle::H12),
-            ..IntlSettings::empty()
+            ..IntlSettings::EMPTY
         };
 
         let request = SettingRequest::from(intl_settings);

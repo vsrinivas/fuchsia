@@ -597,18 +597,18 @@ mod tests {
                         rssi: Some(0),
                         frequency: Some(0),
                         timestamp_nanos: Some(0),
-                        ..fidl_policy::Bss::empty()
+                        ..fidl_policy::Bss::EMPTY
                     },
                     fidl_policy::Bss {
                         bssid: Some([7, 8, 9, 10, 11, 12]),
                         rssi: Some(13),
                         frequency: Some(0),
                         timestamp_nanos: Some(0),
-                        ..fidl_policy::Bss::empty()
+                        ..fidl_policy::Bss::EMPTY
                     },
                 ]),
                 compatibility: Some(fidl_policy::Compatibility::Supported),
-                ..fidl_policy::ScanResult::empty()
+                ..fidl_policy::ScanResult::EMPTY
             },
             fidl_policy::ScanResult {
                 id: Some(fidl_policy::NetworkIdentifier {
@@ -620,10 +620,10 @@ mod tests {
                     rssi: Some(7),
                     frequency: Some(0),
                     timestamp_nanos: Some(0),
-                    ..fidl_policy::Bss::empty()
+                    ..fidl_policy::Bss::EMPTY
                 }]),
                 compatibility: Some(fidl_policy::Compatibility::Supported),
-                ..fidl_policy::ScanResult::empty()
+                ..fidl_policy::ScanResult::EMPTY
             },
         ];
 
@@ -769,18 +769,18 @@ mod tests {
                         rssi: Some(0),
                         frequency: Some(0),
                         timestamp_nanos: Some(0),
-                        ..fidl_policy::Bss::empty()
+                        ..fidl_policy::Bss::EMPTY
                     },
                     fidl_policy::Bss {
                         bssid: Some([7, 8, 9, 10, 11, 12]),
                         rssi: Some(13),
                         frequency: Some(0),
                         timestamp_nanos: Some(0),
-                        ..fidl_policy::Bss::empty()
+                        ..fidl_policy::Bss::EMPTY
                     },
                 ]),
                 compatibility: Some(fidl_policy::Compatibility::Supported),
-                ..fidl_policy::ScanResult::empty()
+                ..fidl_policy::ScanResult::EMPTY
             },
             fidl_policy::ScanResult {
                 id: Some(fidl_policy::NetworkIdentifier {
@@ -792,10 +792,10 @@ mod tests {
                     rssi: Some(0),
                     frequency: Some(0),
                     timestamp_nanos: Some(0),
-                    ..fidl_policy::Bss::empty()
+                    ..fidl_policy::Bss::EMPTY
                 }]),
                 compatibility: Some(fidl_policy::Compatibility::Supported),
-                ..fidl_policy::ScanResult::empty()
+                ..fidl_policy::ScanResult::EMPTY
             },
             fidl_policy::ScanResult {
                 id: Some(fidl_policy::NetworkIdentifier {
@@ -807,10 +807,10 @@ mod tests {
                     rssi: Some(7),
                     frequency: Some(0),
                     timestamp_nanos: Some(0),
-                    ..fidl_policy::Bss::empty()
+                    ..fidl_policy::Bss::EMPTY
                 }]),
                 compatibility: Some(fidl_policy::Compatibility::Supported),
-                ..fidl_policy::ScanResult::empty()
+                ..fidl_policy::ScanResult::EMPTY
             },
             fidl_policy::ScanResult {
                 id: Some(fidl_policy::NetworkIdentifier {
@@ -822,10 +822,10 @@ mod tests {
                     rssi: Some(7),
                     frequency: Some(0),
                     timestamp_nanos: Some(0),
-                    ..fidl_policy::Bss::empty()
+                    ..fidl_policy::Bss::EMPTY
                 }]),
                 compatibility: Some(fidl_policy::Compatibility::Supported),
-                ..fidl_policy::ScanResult::empty()
+                ..fidl_policy::ScanResult::EMPTY
             },
         ];
 

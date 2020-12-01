@@ -53,7 +53,7 @@ async fn serve(mut stream: ComponentResolverRequestStream) -> Result<(), anyhow:
             Ok(result) => responder.send(Status::OK.into_raw(), result),
             Err(err) => {
                 error!("failed to resolve component URL {}: {}", &component_url, &err);
-                responder.send(err.as_zx_status(), fsys::Component::empty())
+                responder.send(err.as_zx_status(), fsys::Component::EMPTY)
             }
         }
         .context("failed sending response")?;
@@ -87,9 +87,9 @@ async fn resolve_component(
         package: Some(fsys::Package {
             package_url: Some(package_url.root_url().to_string()),
             package_dir: Some(package_dir),
-            ..fsys::Package::empty()
+            ..fsys::Package::EMPTY
         }),
-        ..fsys::Component::empty()
+        ..fsys::Component::EMPTY
     })
 }
 
@@ -288,7 +288,7 @@ mod tests {
     }
 
     fn build_fake_pkgfs() -> Arc<MockDir> {
-        let cm_bytes = encode_persistent(&mut fsys::ComponentDecl::empty())
+        let cm_bytes = encode_persistent(&mut fsys::ComponentDecl::EMPTY.clone())
             .expect("failed to encode ComponentDecl FIDL");
         Arc::new(
             MockDir::new().add_entry(

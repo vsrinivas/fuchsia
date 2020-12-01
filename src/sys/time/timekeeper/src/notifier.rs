@@ -67,7 +67,7 @@ impl NotifyInner {
         if let Err(why) = responder.send(ftime::UtcState {
             timestamp: Some(update_time),
             source: Some(self.source),
-            ..ftime::UtcState::empty()
+            ..ftime::UtcState::EMPTY
         }) {
             warn!("failed to notify a client of an update: {:?}", why);
         }

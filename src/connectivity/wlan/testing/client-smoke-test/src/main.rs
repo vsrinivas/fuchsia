@@ -327,7 +327,7 @@ async fn download_and_measure(http_svc: &http::LoaderProxy) -> Result<Measuremen
         headers: None,
         body: None,
         deadline: None,
-        ..http::Request::empty()
+        ..http::Request::EMPTY
     };
     let start_time = zx::Time::get_monotonic();
     let http::Response {

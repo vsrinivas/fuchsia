@@ -81,7 +81,7 @@ async fn set_interfaces(
     env: NestedEnvironment,
     interfaces: Option<fidl_fuchsia_settings::ConfigurationInterfaces>,
 ) {
-    let mut setup_settings = fidl_fuchsia_settings::SetupSettings::empty();
+    let mut setup_settings = fidl_fuchsia_settings::SetupSettings::EMPTY;
     setup_settings.enabled_configuration_interfaces = interfaces;
     let setup_service = env.connect_to_service::<SetupMarker>().unwrap();
     setup_service.set(setup_settings).await.ok();

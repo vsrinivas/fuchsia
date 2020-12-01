@@ -355,13 +355,13 @@ mod tests {
                         input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor {
                             keys: None,
                             keys3: None,
-                            ..fidl_fuchsia_input_report::KeyboardInputDescriptor::empty()
+                            ..fidl_fuchsia_input_report::KeyboardInputDescriptor::EMPTY
                         }),
                         output: None,
-                        ..fidl_fuchsia_input_report::KeyboardDescriptor::empty()
+                        ..fidl_fuchsia_input_report::KeyboardDescriptor::EMPTY
                     }),
                     consumer_control: None,
-                    ..fidl_fuchsia_input_report::DeviceDescriptor::empty()
+                    ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
                 });
             }
             _ => {}

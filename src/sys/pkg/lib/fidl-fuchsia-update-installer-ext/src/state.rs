@@ -471,62 +471,62 @@ pub enum RequiredStateField {
 impl From<State> for fidl::State {
     fn from(state: State) -> Self {
         match state {
-            State::Prepare => fidl::State::Prepare(fidl::PrepareData::empty()),
+            State::Prepare => fidl::State::Prepare(fidl::PrepareData::EMPTY),
             State::Fetch(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::Fetch(fidl::FetchData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
-                    ..fidl::FetchData::empty()
+                    ..fidl::FetchData::EMPTY
                 })
             }
             State::Stage(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::Stage(fidl::StageData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
-                    ..fidl::StageData::empty()
+                    ..fidl::StageData::EMPTY
                 })
             }
             State::WaitToReboot(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::WaitToReboot(fidl::WaitToRebootData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
-                    ..fidl::WaitToRebootData::empty()
+                    ..fidl::WaitToRebootData::EMPTY
                 })
             }
             State::Reboot(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::Reboot(fidl::RebootData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
-                    ..fidl::RebootData::empty()
+                    ..fidl::RebootData::EMPTY
                 })
             }
             State::DeferReboot(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::DeferReboot(fidl::DeferRebootData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
-                    ..fidl::DeferRebootData::empty()
+                    ..fidl::DeferRebootData::EMPTY
                 })
             }
             State::Complete(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::Complete(fidl::CompleteData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
-                    ..fidl::CompleteData::empty()
+                    ..fidl::CompleteData::EMPTY
                 })
             }
-            State::FailPrepare => fidl::State::FailPrepare(fidl::FailPrepareData::empty()),
+            State::FailPrepare => fidl::State::FailPrepare(fidl::FailPrepareData::EMPTY),
             State::FailFetch(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::FailFetch(fidl::FailFetchData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
-                    ..fidl::FailFetchData::empty()
+                    ..fidl::FailFetchData::EMPTY
                 })
             }
             State::FailStage(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::FailStage(fidl::FailStageData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
-                    ..fidl::FailStageData::empty()
+                    ..fidl::FailStageData::EMPTY
                 })
             }
         }
@@ -605,7 +605,7 @@ impl From<UpdateInfo> for fidl::UpdateInfo {
     fn from(info: UpdateInfo) -> Self {
         fidl::UpdateInfo {
             download_size: none_or_some_nonzero(info.download_size),
-            ..fidl::UpdateInfo::empty()
+            ..fidl::UpdateInfo::EMPTY
         }
     }
 }
@@ -642,7 +642,7 @@ impl From<Progress> for fidl::InstallationProgress {
         fidl::InstallationProgress {
             fraction_completed: Some(progress.fraction_completed),
             bytes_downloaded: none_or_some_nonzero(progress.bytes_downloaded),
-            ..fidl::InstallationProgress::empty()
+            ..fidl::InstallationProgress::EMPTY
         }
     }
 }
@@ -930,7 +930,7 @@ mod tests {
     #[test]
     fn progress_fraction_completed_required() {
         assert_eq!(
-            Progress::try_from(fidl::InstallationProgress::empty()),
+            Progress::try_from(fidl::InstallationProgress::EMPTY),
             Err(DecodeProgressError::MissingField(RequiredProgressField::FractionCompleted)),
         );
     }

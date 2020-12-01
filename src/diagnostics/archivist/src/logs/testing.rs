@@ -46,16 +46,16 @@ pub fn create_capability_requested_event(
             event_type: Some(fsys::EventType::CapabilityRequested),
             moniker: Some(target_moniker),
             component_url: Some(target_url),
-            ..fsys::EventHeader::empty()
+            ..fsys::EventHeader::EMPTY
         }),
         event_result: Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(
             fsys::CapabilityRequestedPayload {
                 name: Some(LogSinkMarker::NAME.into()),
                 capability: Some(capability),
-                ..fsys::CapabilityRequestedPayload::empty()
+                ..fsys::CapabilityRequestedPayload::EMPTY
             },
         ))),
-        ..fsys::Event::empty()
+        ..fsys::Event::EMPTY
     }
 }
 
@@ -141,7 +141,7 @@ impl TestHarness {
         };
         let mut lm2 = copy_log_message(&lm1);
         let mut lm3 = copy_log_message(&lm1);
-        let mut stream = self.create_stream(Arc::new(SourceIdentity::empty()));
+        let mut stream = self.create_stream(Arc::new(SourceIdentity::EMPTY));
         stream.write_packet(&mut p);
 
         p.metadata.severity = LogLevelFilter::Info.into_primitive().into();

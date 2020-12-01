@@ -245,7 +245,7 @@ async fn main() -> Result<(), Error> {
         Some(ConnectionOptions {
             bondable_mode: Some(true),
             service_filter: None,
-            ..ConnectionOptions::empty()
+            ..ConnectionOptions::EMPTY
         })
     } else {
         None
@@ -260,13 +260,13 @@ async fn main() -> Result<(), Error> {
             service_data: optionalize(service_data),
             manufacturer_data: optionalize(manufacturer_data),
             uris: optionalize(uris),
-            ..AdvertisingData::empty()
+            ..AdvertisingData::EMPTY
         }),
         scan_response: None,
         mode_hint,
         connectable: None,
         connection_options: conn_opts,
-        ..AdvertisingParameters::empty()
+        ..AdvertisingParameters::EMPTY
     };
 
     let peripheral = connect_to_service::<PeripheralMarker>()
@@ -423,7 +423,7 @@ mod tests {
                         connectable: Some(true),
                         rssi: None,
                         advertising_data: None,
-                        ..Peer::empty()
+                        ..Peer::EMPTY
                     };
                     control_handle.send_on_peer_connected(peer, conn)?;
                     let mock = MockPeripheral {
@@ -451,9 +451,9 @@ mod tests {
             connection_options: Some(ConnectionOptions {
                 bondable_mode: Some(true),
                 service_filter: None,
-                ..ConnectionOptions::empty()
+                ..ConnectionOptions::EMPTY
             }),
-            ..AdvertisingParameters::empty()
+            ..AdvertisingParameters::EMPTY
         };
         let listen_task = listen(&proxy, input_parameters, &[]);
         let emulate_task = async {
@@ -485,9 +485,9 @@ mod tests {
             connection_options: Some(ConnectionOptions {
                 bondable_mode: Some(true),
                 service_filter: None,
-                ..ConnectionOptions::empty()
+                ..ConnectionOptions::EMPTY
             }),
-            ..AdvertisingParameters::empty()
+            ..AdvertisingParameters::EMPTY
         };
 
         drop(server);

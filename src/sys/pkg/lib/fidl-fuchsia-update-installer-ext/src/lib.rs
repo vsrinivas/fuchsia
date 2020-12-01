@@ -255,14 +255,14 @@ mod tests {
                 fidl_fuchsia_update_installer::FetchData {
                     info: Some(fidl_fuchsia_update_installer::UpdateInfo {
                         download_size: None,
-                        ..fidl_fuchsia_update_installer::UpdateInfo::empty()
+                        ..fidl_fuchsia_update_installer::UpdateInfo::EMPTY
                     }),
                     progress: Some(InstallationProgress {
                         fraction_completed: Some(2.0),
                         bytes_downloaded: None,
-                        ..InstallationProgress::empty()
+                        ..InstallationProgress::EMPTY
                     }),
-                    ..fidl_fuchsia_update_installer::FetchData::empty()
+                    ..fidl_fuchsia_update_installer::FetchData::EMPTY
                 },
             ))
             .await;
@@ -454,14 +454,14 @@ mod tests {
                             fidl_fuchsia_update_installer::FetchData {
                                 info: Some(fidl_fuchsia_update_installer::UpdateInfo {
                                     download_size: None,
-                                    ..fidl_fuchsia_update_installer::UpdateInfo::empty()
+                                    ..fidl_fuchsia_update_installer::UpdateInfo::EMPTY
                                 }),
                                 progress: Some(InstallationProgress {
                                     fraction_completed: Some(2.0),
                                     bytes_downloaded: None,
-                                    ..InstallationProgress::empty()
+                                    ..InstallationProgress::EMPTY
                                 }),
-                                ..fidl_fuchsia_update_installer::FetchData::empty()
+                                ..fidl_fuchsia_update_installer::FetchData::EMPTY
                             },
                         ))
                         .await;
@@ -526,14 +526,14 @@ mod tests {
                             fidl_fuchsia_update_installer::FetchData {
                                 info: Some(fidl_fuchsia_update_installer::UpdateInfo {
                                     download_size: None,
-                                    ..fidl_fuchsia_update_installer::UpdateInfo::empty()
+                                    ..fidl_fuchsia_update_installer::UpdateInfo::EMPTY
                                 }),
                                 progress: Some(InstallationProgress {
                                     fraction_completed: Some(0.0),
                                     bytes_downloaded: None,
-                                    ..InstallationProgress::empty()
+                                    ..InstallationProgress::EMPTY
                                 }),
-                                ..fidl_fuchsia_update_installer::FetchData::empty()
+                                ..fidl_fuchsia_update_installer::FetchData::EMPTY
                             },
                         ))
                         .await;

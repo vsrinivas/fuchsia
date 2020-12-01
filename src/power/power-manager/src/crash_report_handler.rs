@@ -137,10 +137,10 @@ impl CrashReportHandler {
             specific_report: Some(fidl_feedback::SpecificCrashReport::Generic(
                 fidl_feedback::GenericCrashReport {
                     crash_signature: Some(signature),
-                    ..fidl_feedback::GenericCrashReport::empty()
+                    ..fidl_feedback::GenericCrashReport::EMPTY
                 },
             )),
-            ..fidl_feedback::CrashReport::empty()
+            ..fidl_feedback::CrashReport::EMPTY
         };
 
         let result = proxy.file(report).await.map_err(|e| format_err!("IPC error: {}", e))?;
@@ -201,10 +201,10 @@ mod tests {
                     specific_report: Some(fidl_feedback::SpecificCrashReport::Generic(
                         fidl_feedback::GenericCrashReport {
                             crash_signature: Some(crash_report_signature.to_string()),
-                            ..fidl_feedback::GenericCrashReport::empty()
+                            ..fidl_feedback::GenericCrashReport::EMPTY
                         },
                     )),
-                    ..fidl_feedback::CrashReport::empty()
+                    ..fidl_feedback::CrashReport::EMPTY
                 }
             );
         } else {
@@ -273,10 +273,10 @@ mod tests {
                         specific_report: Some(fidl_feedback::SpecificCrashReport::Generic(
                             fidl_feedback::GenericCrashReport {
                                 crash_signature: Some("TestCrash1".to_string()),
-                                ..fidl_feedback::GenericCrashReport::empty()
+                                ..fidl_feedback::GenericCrashReport::EMPTY
                             },
                         )),
-                        ..fidl_feedback::CrashReport::empty()
+                        ..fidl_feedback::CrashReport::EMPTY
                     }
                 );
             } else {
@@ -296,10 +296,10 @@ mod tests {
                         specific_report: Some(fidl_feedback::SpecificCrashReport::Generic(
                             fidl_feedback::GenericCrashReport {
                                 crash_signature: Some("TestCrash2".to_string()),
-                                ..fidl_feedback::GenericCrashReport::empty()
+                                ..fidl_feedback::GenericCrashReport::EMPTY
                             },
                         )),
-                        ..fidl_feedback::CrashReport::empty()
+                        ..fidl_feedback::CrashReport::EMPTY
                     }
                 );
             } else {

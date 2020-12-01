@@ -27,7 +27,7 @@ impl From<SettingResponse> for PrivacySettings {
         if let SettingResponse::Privacy(info) = response {
             return PrivacySettings {
                 user_data_sharing_consent: info.user_data_sharing_consent,
-                ..PrivacySettings::empty()
+                ..PrivacySettings::EMPTY
             };
         }
 
@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn test_request_from_settings_empty() {
-        let request = SettingRequest::from(PrivacySettings::empty());
+        let request = SettingRequest::from(PrivacySettings::EMPTY);
 
         assert_eq!(request, SettingRequest::SetUserDataSharingConsent(None));
     }
@@ -115,7 +115,7 @@ mod tests {
     fn test_request_from_settings() {
         const USER_DATA_SHARING_CONSENT: bool = true;
 
-        let mut privacy_settings = PrivacySettings::empty();
+        let mut privacy_settings = PrivacySettings::EMPTY;
         privacy_settings.user_data_sharing_consent = Some(USER_DATA_SHARING_CONSENT);
 
         let request = SettingRequest::from(privacy_settings);

@@ -205,7 +205,7 @@ fn overnet_pipe() -> Result<fidl::AsyncSocket> {
     let local_socket = fidl::AsyncSocket::from_socket(local_socket)?;
     hoist::connect_as_mesh_controller()?.attach_socket_link(
         remote_socket,
-        fidl_fuchsia_overnet_protocol::SocketLinkOptions::empty(),
+        fidl_fuchsia_overnet_protocol::SocketLinkOptions::EMPTY,
     )?;
 
     Ok(local_socket)

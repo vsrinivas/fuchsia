@@ -67,7 +67,7 @@ impl TryInto<CidrAddress> for Ipv4AddrPrefix {
         Ok(CidrAddress {
             address: Some(fidl_fuchsia_net::IpAddress::Ipv4(ipv4_address)),
             prefix_length: Some(prefix_length),
-            ..CidrAddress::empty()
+            ..CidrAddress::EMPTY
         })
     }
 }
@@ -438,7 +438,7 @@ mod tests {
         let expected = fidl_fuchsia_router_config::CidrAddress {
             address: Some(fidl_fuchsia_net::IpAddress::Ipv4(Ipv4Address { addr: addr.octets() })),
             prefix_length: Some(16),
-            ..fidl_fuchsia_router_config::CidrAddress::empty()
+            ..fidl_fuchsia_router_config::CidrAddress::EMPTY
         };
         let actual: fidl_fuchsia_router_config::CidrAddress = ipv4addr.try_into().unwrap();
         assert_eq!(actual, expected);

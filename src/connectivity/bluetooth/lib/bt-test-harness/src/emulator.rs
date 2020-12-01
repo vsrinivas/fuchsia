@@ -138,7 +138,7 @@ pub fn default_le_peer(addr: &Address) -> LowEnergyPeerParameters {
             ],
         }),
         scan_response: None,
-        ..LowEnergyPeerParameters::empty()
+        ..LowEnergyPeerParameters::EMPTY
     }
 }
 
@@ -150,7 +150,7 @@ pub fn default_bredr_peer(addr: &Address) -> BredrPeerParameters {
         connectable: Some(true),
         device_class: Some(DeviceClass { value: MAJOR_DEVICE_CLASS_TOY }),
         service_definition: None,
-        ..BredrPeerParameters::empty()
+        ..BredrPeerParameters::EMPTY
     }
 }
 

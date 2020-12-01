@@ -166,7 +166,7 @@ impl Archivist {
             })
             .add_fidl_service(move |stream| {
                 debug!("fuchsia.logger.LogSink connection");
-                let source = Arc::new(SourceIdentity::empty());
+                let source = Arc::new(SourceIdentity::EMPTY);
                 fasync::Task::spawn(log_manager_2.clone().handle_log_sink(
                     stream,
                     source,

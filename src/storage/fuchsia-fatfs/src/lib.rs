@@ -89,7 +89,7 @@ impl FatFs {
     }
 
     fn get_info(&self, query: FilesystemInfoQuery) -> Result<FilesystemInfo, Status> {
-        let mut result = FilesystemInfo::empty();
+        let mut result = FilesystemInfo::EMPTY;
         let fs_lock = self.inner.lock().unwrap();
         if query.contains(FilesystemInfoQuery::TotalBytes)
             || query.contains(FilesystemInfoQuery::UsedBytes)
@@ -403,7 +403,7 @@ mod tests {
                 fs_type: Some(FsType::Fatfs),
                 name: Some("fatfs".to_string()),
                 device_path: None,
-                ..FilesystemInfo::empty()
+                ..FilesystemInfo::EMPTY
             }
         );
     }
@@ -432,7 +432,7 @@ mod tests {
                 fs_type: None,
                 name: None,
                 device_path: None,
-                ..FilesystemInfo::empty()
+                ..FilesystemInfo::EMPTY
             }
         );
     }

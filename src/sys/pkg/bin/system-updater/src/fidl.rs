@@ -179,7 +179,7 @@ fn into_update_result(attempt: Option<&UpdateAttempt>) -> UpdateResult {
             url: None,
             options: None,
             state: None,
-            ..UpdateResult::empty()
+            ..UpdateResult::EMPTY
         },
         Some(attempt) => attempt.into(),
     }

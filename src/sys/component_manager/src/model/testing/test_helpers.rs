@@ -155,7 +155,7 @@ pub async fn get_live_child<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm> 
 /// Returns an empty component decl for an executable component.
 pub fn default_component_decl() -> ComponentDecl {
     ComponentDecl {
-        program: Some(fdata::Dictionary { entries: Some(vec![]), ..fdata::Dictionary::empty() }),
+        program: Some(fdata::Dictionary { entries: Some(vec![]), ..fdata::Dictionary::EMPTY }),
         ..Default::default()
     }
 }
@@ -169,7 +169,7 @@ pub const TEST_RUNNER_NAME: &str = "test_runner";
 /// runner.
 pub fn component_decl_with_test_runner() -> ComponentDecl {
     ComponentDecl {
-        program: Some(fdata::Dictionary { entries: Some(vec![]), ..fdata::Dictionary::empty() }),
+        program: Some(fdata::Dictionary { entries: Some(vec![]), ..fdata::Dictionary::EMPTY }),
         uses: vec![cm_rust::UseDecl::Runner(cm_rust::UseRunnerDecl {
             source_name: TEST_RUNNER_NAME.into(),
         })],

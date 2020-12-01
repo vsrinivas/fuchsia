@@ -35,7 +35,7 @@ fidl_hanging_get_responder!(
 impl From<SettingResponse> for LightSensorData {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::LightSensor(data) = response {
-            let mut sensor_data = fidl_fuchsia_settings::LightSensorData::empty();
+            let mut sensor_data = fidl_fuchsia_settings::LightSensorData::EMPTY;
             sensor_data.illuminance_lux = Some(data.illuminance);
             sensor_data.color = Some(data.color);
             sensor_data
@@ -48,7 +48,7 @@ impl From<SettingResponse> for LightSensorData {
 impl From<SettingResponse> for DisplaySettings {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::Brightness(info) = response {
-            let mut display_settings = fidl_fuchsia_settings::DisplaySettings::empty();
+            let mut display_settings = fidl_fuchsia_settings::DisplaySettings::EMPTY;
 
             display_settings.auto_brightness = Some(info.auto_brightness);
             display_settings.low_light_mode = match info.low_light_mode {
@@ -66,16 +66,16 @@ impl From<SettingResponse> for DisplaySettings {
             display_settings.theme = match info.theme_mode {
                 ThemeMode::Unknown => None,
                 ThemeMode::Default => {
-                    Some(Theme { theme_type: Some(FidlThemeType::Default), ..Theme::empty() })
+                    Some(Theme { theme_type: Some(FidlThemeType::Default), ..Theme::EMPTY })
                 }
                 ThemeMode::Light => {
-                    Some(Theme { theme_type: Some(FidlThemeType::Light), ..Theme::empty() })
+                    Some(Theme { theme_type: Some(FidlThemeType::Light), ..Theme::EMPTY })
                 }
                 ThemeMode::Dark => {
-                    Some(Theme { theme_type: Some(FidlThemeType::Dark), ..Theme::empty() })
+                    Some(Theme { theme_type: Some(FidlThemeType::Dark), ..Theme::EMPTY })
                 }
                 ThemeMode::Auto => {
-                    Some(Theme { theme_type: Some(FidlThemeType::Auto), ..Theme::empty() })
+                    Some(Theme { theme_type: Some(FidlThemeType::Auto), ..Theme::EMPTY })
                 }
             };
 

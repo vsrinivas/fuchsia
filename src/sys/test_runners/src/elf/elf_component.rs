@@ -374,7 +374,7 @@ mod tests {
             ns.push(fcrunner::ComponentNamespaceEntry {
                 path: Some(path.to_string()),
                 directory: Some(handle),
-                ..fcrunner::ComponentNamespaceEntry::empty()
+                ..fcrunner::ComponentNamespaceEntry::EMPTY
             });
         }
         ComponentNamespace::try_from(ns)
@@ -443,7 +443,7 @@ mod tests {
             ns: None,
             outgoing_dir: None,
             runtime_dir: None,
-            ..fcrunner::ComponentStartInfo::empty()
+            ..fcrunner::ComponentStartInfo::EMPTY
         };
         let (client_controller, server_controller) = endpoints::create_proxy().unwrap();
         let get_test_server = || DummyServer {};

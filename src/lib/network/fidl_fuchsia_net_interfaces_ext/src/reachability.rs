@@ -158,24 +158,24 @@ mod tests {
             addresses: Some(vec![
                 fnet_interfaces::Address {
                     addr: Some(IPV4_GLOBAL),
-                    ..fnet_interfaces::Address::empty()
+                    ..fnet_interfaces::Address::EMPTY
                 },
                 fnet_interfaces::Address {
                     addr: Some(IPV4_LINK_LOCAL),
-                    ..fnet_interfaces::Address::empty()
+                    ..fnet_interfaces::Address::EMPTY
                 },
                 fnet_interfaces::Address {
                     addr: Some(IPV6_GLOBAL),
-                    ..fnet_interfaces::Address::empty()
+                    ..fnet_interfaces::Address::EMPTY
                 },
                 fnet_interfaces::Address {
                     addr: Some(IPV6_LINK_LOCAL),
-                    ..fnet_interfaces::Address::empty()
+                    ..fnet_interfaces::Address::EMPTY
                 },
             ]),
             has_default_ipv4_route: Some(true),
             has_default_ipv6_route: Some(true),
-            ..fnet_interfaces::Properties::empty()
+            ..fnet_interfaces::Properties::EMPTY
         }
     }
 
@@ -207,7 +207,7 @@ mod tests {
         assert!(!is_globally_routable(&fnet_interfaces::Properties {
             addresses: Some(vec![fnet_interfaces::Address {
                 addr: Some(IPV4_GLOBAL),
-                ..fnet_interfaces::Address::empty()
+                ..fnet_interfaces::Address::EMPTY
             }]),
             has_default_ipv4_route: Some(false),
             ..valid_interface(ID)
@@ -215,7 +215,7 @@ mod tests {
         assert!(!is_globally_routable(&fnet_interfaces::Properties {
             addresses: Some(vec![fnet_interfaces::Address {
                 addr: Some(IPV6_GLOBAL),
-                ..fnet_interfaces::Address::empty()
+                ..fnet_interfaces::Address::EMPTY
             }]),
             has_default_ipv6_route: Some(false),
             ..valid_interface(ID)
@@ -223,7 +223,7 @@ mod tests {
         assert!(!is_globally_routable(&fnet_interfaces::Properties {
             addresses: Some(vec![fnet_interfaces::Address {
                 addr: Some(IPV6_LINK_LOCAL),
-                ..fnet_interfaces::Address::empty()
+                ..fnet_interfaces::Address::EMPTY
             }]),
             has_default_ipv6_route: Some(true),
             ..valid_interface(ID)
@@ -231,7 +231,7 @@ mod tests {
         assert!(!is_globally_routable(&fnet_interfaces::Properties {
             addresses: Some(vec![fnet_interfaces::Address {
                 addr: Some(IPV4_LINK_LOCAL),
-                ..fnet_interfaces::Address::empty()
+                ..fnet_interfaces::Address::EMPTY
             }]),
             has_default_ipv4_route: Some(true),
             ..valid_interface(ID)
@@ -242,7 +242,7 @@ mod tests {
         assert!(is_globally_routable(&fnet_interfaces::Properties {
             addresses: Some(vec![fnet_interfaces::Address {
                 addr: Some(IPV4_GLOBAL),
-                ..fnet_interfaces::Address::empty()
+                ..fnet_interfaces::Address::EMPTY
             }]),
             has_default_ipv4_route: Some(true),
             has_default_ipv6_route: Some(false),
@@ -251,7 +251,7 @@ mod tests {
         assert!(is_globally_routable(&fnet_interfaces::Properties {
             addresses: Some(vec![fnet_interfaces::Address {
                 addr: Some(IPV6_GLOBAL),
-                ..fnet_interfaces::Address::empty()
+                ..fnet_interfaces::Address::EMPTY
             }]),
             has_default_ipv4_route: Some(false),
             has_default_ipv6_route: Some(true),
@@ -286,7 +286,7 @@ mod tests {
                 fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
                     id: Some(2),
                     online: Some(false),
-                    ..fnet_interfaces::Properties::empty()
+                    ..fnet_interfaces::Properties::EMPTY
                 }),
                 Some(false),
             ),
@@ -294,7 +294,7 @@ mod tests {
                 fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
                     id: Some(1),
                     online: Some(true),
-                    ..fnet_interfaces::Properties::empty()
+                    ..fnet_interfaces::Properties::EMPTY
                 }),
                 Some(true),
             ),
@@ -302,7 +302,7 @@ mod tests {
                 fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
                     id: Some(3),
                     online: Some(true),
-                    ..fnet_interfaces::Properties::empty()
+                    ..fnet_interfaces::Properties::EMPTY
                 }),
                 None,
             ),

@@ -210,7 +210,7 @@ where
                         buffer: Some(buffer),
                         buffer_id: Some(typeface.asset_id.into()),
                         font_index: Some(typeface.font_index),
-                        ..fonts::TypefaceResponse::empty()
+                        ..fonts::TypefaceResponse::EMPTY
                     })
                 })
                 .unwrap_or_else(|_| fonts::TypefaceResponse::new_empty()),
@@ -234,7 +234,7 @@ where
             |FontFamilyMatch { family, overrides: _ }| fonts::FontFamilyInfo {
                 name: Some(fonts::FamilyName { name: family.name.clone() }),
                 styles: Some(family.faces.get_styles().collect()),
-                ..fonts::FontFamilyInfo::empty()
+                ..fonts::FontFamilyInfo::EMPTY
             },
         )
     }
@@ -250,7 +250,7 @@ where
                     buffer: Some(buffer),
                     buffer_id: Some(id.into()),
                     font_index: None,
-                    ..fonts::TypefaceResponse::empty()
+                    ..fonts::TypefaceResponse::EMPTY
                 };
                 Ok(response)
             }
@@ -275,7 +275,7 @@ where
         let faces = family.extract_faces().map_into().collect();
         let response = fonts_exp::TypefaceInfoResponse {
             results: Some(faces),
-            ..fonts_exp::TypefaceInfoResponse::empty()
+            ..fonts_exp::TypefaceInfoResponse::EMPTY
         };
         Ok(response)
     }
@@ -407,7 +407,7 @@ where
                             let chunk = results.drain(..split_at).collect_vec();
                             let response = fonts_exp::TypefaceInfoResponse {
                                 results: Some(chunk),
-                                ..fonts_exp::TypefaceInfoResponse::empty()
+                                ..fonts_exp::TypefaceInfoResponse::EMPTY
                             };
                             responder.send(response)?;
                         }

@@ -84,7 +84,7 @@ impl TracingFacade {
 
         let trace_controller = app::client::connect_to_service::<ControllerMarker>()?;
         let (write_socket, read_socket) = zx::Socket::create(zx::SocketOpts::STREAM)?;
-        let mut config = TraceConfig::empty();
+        let mut config = TraceConfig::EMPTY;
         match request.categories {
             Some(cats) => {
                 config.categories = Some(cats);
@@ -117,7 +117,7 @@ impl TracingFacade {
             .controller
             .as_ref()
             .ok_or_else(|| format_err!("No trace session has been initialized"))?;
-        let options = StartOptions::empty();
+        let options = StartOptions::EMPTY;
         let response = trace_controller.start_tracing(options).await?;
         match response {
             Ok(_) => Ok(to_value(())?),
@@ -142,7 +142,7 @@ impl TracingFacade {
             .controller
             .as_ref()
             .ok_or_else(|| format_err!("No trace session has been initialized"))?;
-        let options = StopOptions::empty();
+        let options = StopOptions::EMPTY;
         trace_controller.stop_tracing(options).await?;
         Ok(to_value(())?)
     }
@@ -168,14 +168,14 @@ impl TracingFacade {
         let result = match request.results_destination {
             ResultsDestination::Ignore => {
                 let options =
-                    TerminateOptions { write_results: Some(false), ..TerminateOptions::empty() };
+                    TerminateOptions { write_results: Some(false), ..TerminateOptions::EMPTY };
                 controller.terminate_tracing(options).await?;
 
                 TerminateResponse { data: None }
             }
             ResultsDestination::WriteAndReturn => {
                 let options =
-                    TerminateOptions { write_results: Some(true), ..TerminateOptions::empty() };
+                    TerminateOptions { write_results: Some(true), ..TerminateOptions::EMPTY };
                 let terminate_fut = controller.terminate_tracing(options).map_err(Error::from);
                 let data_socket = self.status.write().data_socket.take();
                 let drain_fut = drain_socket(data_socket);

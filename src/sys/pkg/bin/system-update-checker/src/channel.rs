@@ -79,7 +79,7 @@ impl<S: ServiceConnect> CurrentChannelNotifier<S> {
                 // The realm field allows the omaha_client to pass the Omaha app_id to Cobalt.
                 // Here we have no need to populate the realm field.
                 current_realm: None,
-                ..SoftwareDistributionInfo::empty()
+                ..SoftwareDistributionInfo::EMPTY
             };
 
             fx_log_info!("calling cobalt.SetSoftwareDistributionInfo(\"{:?}\")", distribution_info);

@@ -21,10 +21,9 @@ fidl_hanging_get_responder!(InputMarker, InputDeviceSettings, InputWatchResponde
 impl From<SettingResponse> for InputDeviceSettings {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::Input(info) = response {
-            let mut input_settings = InputDeviceSettings::empty();
+            let mut input_settings = InputDeviceSettings::EMPTY;
 
-            let microphone =
-                Microphone { muted: Some(info.microphone.muted), ..Microphone::empty() };
+            let microphone = Microphone { muted: Some(info.microphone.muted), ..Microphone::EMPTY };
 
             input_settings.microphone = Some(microphone);
             input_settings

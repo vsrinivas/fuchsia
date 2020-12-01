@@ -260,7 +260,7 @@ mod tests {
                     .send(BoardInfo {
                         name: Some("fake_name".to_string()),
                         revision: Some("fake_revision".to_string()),
-                        ..BoardInfo::empty()
+                        ..BoardInfo::EMPTY
                     })
                     .unwrap();
             }
@@ -334,7 +334,7 @@ mod tests {
                         serial_number: Some("fake_serial".to_string()),
                         is_retail_demo: Some(false),
                         retail_sku: Some("fake_sku".to_string()),
-                        ..DeviceInfo::empty()
+                        ..DeviceInfo::EMPTY
                     })
                     .unwrap();
             }
@@ -366,7 +366,7 @@ mod tests {
                         language: Some("fake_language".to_string()),
                         regulatory_domain: Some(RegulatoryDomain {
                             country_code: Some("fake_regulatory_domain".to_string()),
-                            ..RegulatoryDomain::empty()
+                            ..RegulatoryDomain::EMPTY
                         }),
                         locale_list: Some(vec![]),
                         name: Some("fake_name".to_string()),
@@ -381,7 +381,7 @@ mod tests {
                         microphone: Some("fake_microphone".to_string()),
                         model: Some("fake_model".to_string()),
                         nand_storage: Some("fake_nand_storage".to_string()),
-                        ..ProductInfo::empty()
+                        ..ProductInfo::EMPTY
                     })
                     .unwrap();
             }

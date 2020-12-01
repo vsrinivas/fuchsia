@@ -45,7 +45,7 @@ impl UpdateFacade {
             initiator: service_initiated
                 .map(|b| if b { Initiator::Service } else { Initiator::User }),
             allow_attaching_to_existing_update_check: Some(true),
-            ..CheckOptions::empty()
+            ..CheckOptions::EMPTY
         };
         let check_started = self.manager()?.check_now(options, None).await?;
         Ok(check_started.into())

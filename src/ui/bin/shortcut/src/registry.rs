@@ -223,7 +223,7 @@ mod tests {
             use_priority: None,
             trigger: None,
             key3: None,
-            ..ui_shortcut::Shortcut::empty()
+            ..ui_shortcut::Shortcut::EMPTY
         };
         let shortcut = Shortcut::new(fidl_shortcut);
         let keys_required_hash = Some([input::Key::A, input::Key::B].iter().cloned().collect());

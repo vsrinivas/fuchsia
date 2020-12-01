@@ -109,7 +109,7 @@ async fn retrieve_and_validate_results(
     loop {
         let (batch_consumer, batch_server) = create_proxy().unwrap();
 
-        let mut stream_parameters = fidl_fuchsia_diagnostics::StreamParameters::empty();
+        let mut stream_parameters = fidl_fuchsia_diagnostics::StreamParameters::EMPTY;
         stream_parameters.stream_mode = Some(fidl_fuchsia_diagnostics::StreamMode::Snapshot);
         stream_parameters.data_type = Some(fidl_fuchsia_diagnostics::DataType::Inspect);
         stream_parameters.format = Some(fidl_fuchsia_diagnostics::Format::Json);

@@ -108,7 +108,7 @@ impl From<&Metrics> for RouteMetrics {
                 .round_trip_time
                 .and_then(|rtt| rtt.as_micros().try_into().ok()),
             intermediate_hops: Some(metrics.intermediate_hops.iter().map(Into::into).collect()),
-            ..Self::empty()
+            ..Self::EMPTY
         }
     }
 }

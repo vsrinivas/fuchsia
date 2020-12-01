@@ -114,7 +114,7 @@ async fn test_spinel_lowpan_driver() {
                             net_type: Some(NET_TYPE_THREAD_1_X.to_string()),
                             channel: Some(11),
                             panid: Some(0x1234),
-                            ..Identity::empty()
+                            ..Identity::EMPTY
                         },
                         credential: Some(Box::new(Credential::MasterKey(vec![
                             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
@@ -162,13 +162,13 @@ async fn test_spinel_lowpan_driver() {
             );
 
             traceln!("app_task: Performing energy scan...");
-            let energy_scan_stream = driver
-                .start_energy_scan(&fidl_fuchsia_lowpan_device::EnergyScanParameters::empty());
+            let energy_scan_stream =
+                driver.start_energy_scan(&fidl_fuchsia_lowpan_device::EnergyScanParameters::EMPTY);
             assert_eq!(energy_scan_stream.try_collect::<Vec<_>>().await.unwrap().len(), 3);
 
             traceln!("app_task: Performing network scan...");
             let network_scan_stream = driver
-                .start_network_scan(&fidl_fuchsia_lowpan_device::NetworkScanParameters::empty());
+                .start_network_scan(&fidl_fuchsia_lowpan_device::NetworkScanParameters::EMPTY);
             assert_eq!(network_scan_stream.try_collect::<Vec<_>>().await.unwrap().len(), 3);
 
             traceln!("app_task: Testing debug logging...");

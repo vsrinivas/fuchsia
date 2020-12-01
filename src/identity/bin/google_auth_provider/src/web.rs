@@ -81,7 +81,7 @@ impl StandaloneWebFrame for DefaultStandaloneWebFrame {
                     referrer_url: None,
                     was_user_activated: None,
                     headers: None,
-                    ..LoadUrlParams::empty()
+                    ..LoadUrlParams::EMPTY
                 },
             )
             .await
@@ -262,7 +262,7 @@ mod test {
             can_go_forward: None,
             can_go_back: None,
             is_main_document_loaded: None,
-            ..NavigationState::empty()
+            ..NavigationState::EMPTY
         }
     }
 
@@ -277,7 +277,7 @@ mod test {
             can_go_forward: None,
             can_go_back: None,
             is_main_document_loaded,
-            ..NavigationState::empty()
+            ..NavigationState::EMPTY
         }
     }
 

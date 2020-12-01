@@ -47,49 +47,49 @@ impl From<State> for Option<update::State> {
         let update = Some(UpdateInfo {
             version_available: state.version_available,
             download_size: None,
-            ..UpdateInfo::empty()
+            ..UpdateInfo::EMPTY
         });
         let installation_progress = Some(InstallationProgress {
             fraction_completed: state.install_progress,
-            ..InstallationProgress::empty()
+            ..InstallationProgress::EMPTY
         });
         match state.manager_state {
             state_machine::State::Idle => None,
             state_machine::State::CheckingForUpdates => {
-                Some(update::State::CheckingForUpdates(CheckingForUpdatesData::empty()))
+                Some(update::State::CheckingForUpdates(CheckingForUpdatesData::EMPTY))
             }
             state_machine::State::ErrorCheckingForUpdate => {
-                Some(update::State::ErrorCheckingForUpdate(ErrorCheckingForUpdateData::empty()))
+                Some(update::State::ErrorCheckingForUpdate(ErrorCheckingForUpdateData::EMPTY))
             }
             state_machine::State::NoUpdateAvailable => {
-                Some(update::State::NoUpdateAvailable(NoUpdateAvailableData::empty()))
+                Some(update::State::NoUpdateAvailable(NoUpdateAvailableData::EMPTY))
             }
             state_machine::State::InstallationDeferredByPolicy => {
                 Some(update::State::InstallationDeferredByPolicy(InstallationDeferredData {
                     update,
                     deferral_reason: None,
-                    ..InstallationDeferredData::empty()
+                    ..InstallationDeferredData::EMPTY
                 }))
             }
             state_machine::State::InstallingUpdate => {
                 Some(update::State::InstallingUpdate(InstallingData {
                     update,
                     installation_progress,
-                    ..InstallingData::empty()
+                    ..InstallingData::EMPTY
                 }))
             }
             state_machine::State::WaitingForReboot => {
                 Some(update::State::WaitingForReboot(InstallingData {
                     update,
                     installation_progress,
-                    ..InstallingData::empty()
+                    ..InstallingData::EMPTY
                 }))
             }
             state_machine::State::InstallationError => {
                 Some(update::State::InstallationError(InstallationErrorData {
                     update,
                     installation_progress,
-                    ..InstallationErrorData::empty()
+                    ..InstallationErrorData::EMPTY
                 }))
             }
         }
@@ -863,7 +863,7 @@ mod tests {
         let options = update::CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: Some(false),
-            ..update::CheckOptions::empty()
+            ..update::CheckOptions::EMPTY
         };
         let result = proxy.check_now(options, None).await.unwrap();
         assert_matches!(result, Ok(()));
@@ -877,7 +877,7 @@ mod tests {
         let options = update::CheckOptions {
             initiator: None,
             allow_attaching_to_existing_update_check: None,
-            ..update::CheckOptions::empty()
+            ..update::CheckOptions::EMPTY
         };
         let result = proxy.check_now(options, Some(client_end)).await.unwrap();
         assert_matches!(result, Err(CheckNotStartedReason::InvalidOptions));
@@ -896,7 +896,7 @@ mod tests {
         let options = update::CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: None,
-            ..update::CheckOptions::empty()
+            ..update::CheckOptions::EMPTY
         };
         let result = proxy.check_now(options, None).await.unwrap();
         assert_matches!(result, Err(CheckNotStartedReason::AlreadyInProgress));
@@ -914,7 +914,7 @@ mod tests {
         let options = update::CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: None,
-            ..update::CheckOptions::empty()
+            ..update::CheckOptions::EMPTY
         };
         let result = proxy.check_now(options, None).await.unwrap();
         assert_matches!(result, Err(CheckNotStartedReason::Throttled));
@@ -928,13 +928,13 @@ mod tests {
         let options = update::CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: Some(true),
-            ..update::CheckOptions::empty()
+            ..update::CheckOptions::EMPTY
         };
         let result = proxy.check_now(options, Some(client_end)).await.unwrap();
         assert_matches!(result, Ok(()));
         let expected_states = [
-            update::State::CheckingForUpdates(CheckingForUpdatesData::empty()),
-            update::State::ErrorCheckingForUpdate(ErrorCheckingForUpdateData::empty()),
+            update::State::CheckingForUpdates(CheckingForUpdatesData::EMPTY),
+            update::State::ErrorCheckingForUpdate(ErrorCheckingForUpdateData::EMPTY),
         ];
         let mut expected_states = expected_states.iter();
         while let Some(event) = stream.try_next().await.unwrap() {
@@ -957,7 +957,7 @@ mod tests {
         let options = update::CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: Some(true),
-            ..update::CheckOptions::empty()
+            ..update::CheckOptions::EMPTY
         };
         let result = proxy.check_now(options, Some(client_end)).await.unwrap();
         assert_matches!(result, Ok(()));
@@ -976,7 +976,7 @@ mod tests {
         let options = update::CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: Some(true),
-            ..update::CheckOptions::empty()
+            ..update::CheckOptions::EMPTY
         };
         let result = proxy.check_now(options, Some(client_end)).await.unwrap();
         assert_matches!(result, Ok(()));

@@ -523,7 +523,7 @@ mod tests {
         let mut data = DataTable {
             num: Some(42),
             string: Some(DATA_FILE_CONTENTS.to_string()),
-            ..DataTable::empty()
+            ..DataTable::EMPTY
         };
 
         // Binary encoded FIDL message, with header and padding.
@@ -573,7 +573,7 @@ mod tests {
             num: Some(42),
             string: Some(DATA_FILE_CONTENTS.to_string()),
             new_field: None,
-            ..DataTable::empty()
+            ..DataTable::EMPTY
         };
         assert_eq!(&contents, &data);
     }

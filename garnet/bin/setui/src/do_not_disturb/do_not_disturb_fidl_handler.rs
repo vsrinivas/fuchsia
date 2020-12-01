@@ -21,7 +21,7 @@ fidl_hanging_get_responder!(DoNotDisturbMarker, DoNotDisturbSettings, DoNotDistu
 impl From<SettingResponse> for DoNotDisturbSettings {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::DoNotDisturb(info) = response {
-            let mut dnd_settings = fidl_fuchsia_settings::DoNotDisturbSettings::empty();
+            let mut dnd_settings = fidl_fuchsia_settings::DoNotDisturbSettings::EMPTY;
             dnd_settings.user_initiated_do_not_disturb = info.user_dnd;
             dnd_settings.night_mode_initiated_do_not_disturb = info.night_mode_dnd;
             dnd_settings

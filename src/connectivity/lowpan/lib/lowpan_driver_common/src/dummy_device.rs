@@ -59,7 +59,7 @@ impl Driver for DummyDevice {
             spectrum_center_frequency: Some(2450000000),
             spectrum_bandwidth: Some(2000000),
             masked_by_regulatory_domain: Some(false),
-            ..ChannelInfo::empty()
+            ..ChannelInfo::EMPTY
         };
         Ok(vec![channel_info])
     }
@@ -187,7 +187,7 @@ impl Driver for DummyDevice {
                     channel_index: Some(11),
                     max_rssi: Some(-20),
                     min_rssi: Some(-90),
-                    ..EnergyScanResult::empty()
+                    ..EnergyScanResult::EMPTY
                 }])
                 .into_stream(),
             )
@@ -198,13 +198,13 @@ impl Driver for DummyDevice {
                         channel_index: Some(12),
                         max_rssi: Some(-30),
                         min_rssi: Some(-90),
-                        ..EnergyScanResult::empty()
+                        ..EnergyScanResult::EMPTY
                     },
                     EnergyScanResult {
                         channel_index: Some(13),
                         max_rssi: Some(-25),
                         min_rssi: Some(-90),
-                        ..EnergyScanResult::empty()
+                        ..EnergyScanResult::EMPTY
                     },
                 ])
                 .into_stream(),
@@ -215,13 +215,13 @@ impl Driver for DummyDevice {
                         channel_index: Some(14),
                         max_rssi: Some(-45),
                         min_rssi: Some(-90),
-                        ..EnergyScanResult::empty()
+                        ..EnergyScanResult::EMPTY
                     },
                     EnergyScanResult {
                         channel_index: Some(15),
                         max_rssi: Some(-40),
                         min_rssi: Some(-50),
-                        ..EnergyScanResult::empty()
+                        ..EnergyScanResult::EMPTY
                     },
                 ])
                 .into_stream(),
@@ -245,7 +245,7 @@ impl Driver for DummyDevice {
                         net_type: Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()),
                         channel: Some(11),
                         panid: Some(0x1234),
-                        ..Identity::empty()
+                        ..Identity::EMPTY
                     },
                     rssi: -40,
                     lqi: 0,
@@ -264,7 +264,7 @@ impl Driver for DummyDevice {
                             net_type: Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()),
                             channel: Some(11),
                             panid: Some(0x1234),
-                            ..Identity::empty()
+                            ..Identity::EMPTY
                         },
                         rssi: -60,
                         lqi: 0,
@@ -278,7 +278,7 @@ impl Driver for DummyDevice {
                             net_type: Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()),
                             channel: Some(12),
                             panid: Some(0x5678),
-                            ..Identity::empty()
+                            ..Identity::EMPTY
                         },
                         rssi: -26,
                         lqi: 0,
@@ -315,7 +315,7 @@ impl Driver for DummyDevice {
         let initial = Ok(DeviceState {
             connectivity_state: Some(ConnectivityState::Ready),
             role: None,
-            ..DeviceState::empty()
+            ..DeviceState::EMPTY
         });
 
         ready(initial).into_stream().chain(pending()).boxed()
@@ -330,7 +330,7 @@ impl Driver for DummyDevice {
             net_type: None,
             channel: None,
             panid: Some(1234),
-            ..Identity::empty()
+            ..Identity::EMPTY
         });
 
         ready(initial).into_stream().chain(pending()).boxed()
@@ -409,9 +409,9 @@ impl Driver for DummyDevice {
             items: Some(vec![MacAddressFilterItem {
                 mac_address: Some(vec![0xFF, 0xAA, 0xBB, 0xCC, 0x11, 0x22, 0x33, 0xFF]),
                 rssi: Some(8),
-                ..MacAddressFilterItem::empty()
+                ..MacAddressFilterItem::EMPTY
             }]),
-            ..MacAddressFilterSettings::empty()
+            ..MacAddressFilterSettings::EMPTY
         })
     }
 }

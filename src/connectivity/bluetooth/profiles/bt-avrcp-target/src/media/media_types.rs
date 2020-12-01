@@ -301,7 +301,7 @@ impl From<fidl_avrcp::PlayerApplicationSettings> for ValidPlayerApplicationSetti
 
 impl From<ValidPlayerApplicationSettings> for fidl_avrcp::PlayerApplicationSettings {
     fn from(src: ValidPlayerApplicationSettings) -> fidl_avrcp::PlayerApplicationSettings {
-        let mut setting = fidl_avrcp::PlayerApplicationSettings::empty();
+        let mut setting = fidl_avrcp::PlayerApplicationSettings::EMPTY;
         if let Some(eq) = src.equalizer {
             setting.equalizer = Some(eq.into());
         }
@@ -498,7 +498,7 @@ impl From<fidl_avrcp::Notification> for Notification {
 
 impl From<Notification> for fidl_avrcp::Notification {
     fn from(src: Notification) -> fidl_avrcp::Notification {
-        let mut res = fidl_avrcp::Notification::empty();
+        let mut res = fidl_avrcp::Notification::EMPTY;
 
         res.status = src.status.map(|s| s.into());
         res.track_id = src.track_id;

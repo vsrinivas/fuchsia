@@ -176,7 +176,7 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
                 &mut peer_id.into(),
                 &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters {
                     psm: Some(bredr::PSM_AVCTP),
-                    ..bredr::L2capParameters::empty()
+                    ..bredr::L2capParameters::EMPTY
                 }),
             )
             .await

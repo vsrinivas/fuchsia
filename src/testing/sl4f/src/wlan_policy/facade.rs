@@ -211,7 +211,7 @@ impl WlanPolicyFacade {
         let config = fidl_policy::NetworkConfig {
             id: Some(fidl_policy::NetworkIdentifier { ssid: target_ssid, type_ }),
             credential: Some(credential),
-            ..fidl_policy::NetworkConfig::empty()
+            ..fidl_policy::NetworkConfig::EMPTY
         };
         controller
             .remove_network(config)
@@ -332,7 +332,7 @@ impl WlanPolicyFacade {
             .save_network(fidl_policy::NetworkConfig {
                 id: Some(network_id),
                 credential: Some(credential),
-                ..fidl_policy::NetworkConfig::empty()
+                ..fidl_policy::NetworkConfig::EMPTY
             })
             .await?
             .map_err(|e| format_err!("{:?}", e))

@@ -146,7 +146,7 @@ async fn main() -> Result<(), anyhow::Error> {
                             100,
                         )),
                         reorder: None,
-                        ..fidl_fuchsia_netemul_network::NetworkConfig::empty()
+                        ..fidl_fuchsia_netemul_network::NetworkConfig::EMPTY
                     })
                     .await?;
                 let () = fuchsia_zircon::ok(status)?;

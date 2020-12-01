@@ -401,7 +401,7 @@ mod tests {
             pressure: None,
             contact_width: None,
             contact_height: None,
-            ..fidl_fuchsia_input_report::ContactInputReport::empty()
+            ..fidl_fuchsia_input_report::ContactInputReport::EMPTY
         };
         let reports = vec![create_touch_input_report(vec![contact], event_time_i64)];
 
@@ -442,7 +442,7 @@ mod tests {
             pressure: None,
             contact_width: None,
             contact_height: None,
-            ..fidl_fuchsia_input_report::ContactInputReport::empty()
+            ..fidl_fuchsia_input_report::ContactInputReport::EMPTY
         };
         let reports = vec![
             create_touch_input_report(vec![contact], event_time_i64),
@@ -500,7 +500,7 @@ mod tests {
             pressure: None,
             contact_width: None,
             contact_height: None,
-            ..fidl_fuchsia_input_report::ContactInputReport::empty()
+            ..fidl_fuchsia_input_report::ContactInputReport::EMPTY
         };
         let second_contact = fidl_fuchsia_input_report::ContactInputReport {
             contact_id: Some(TOUCH_ID),
@@ -509,7 +509,7 @@ mod tests {
             pressure: None,
             contact_width: None,
             contact_height: None,
-            ..fidl_fuchsia_input_report::ContactInputReport::empty()
+            ..fidl_fuchsia_input_report::ContactInputReport::EMPTY
         };
 
         let reports = vec![

@@ -10,15 +10,15 @@ pub async fn command(
     is_local_reset_allowed: Option<bool>,
 ) -> Result<String, Error> {
     let mut output = String::new();
-    let mut settings = FactoryResetSettings::empty();
+    let mut settings = FactoryResetSettings::EMPTY;
 
     settings.is_local_reset_allowed = is_local_reset_allowed;
 
-    if settings != FactoryResetSettings::empty() {
+    if settings != FactoryResetSettings::EMPTY {
         if let Err(err) = proxy.set(settings).await? {
             output.push_str(&format!("{:?}", err))
         } else {
-            let mut settings = FactoryResetSettings::empty();
+            let mut settings = FactoryResetSettings::EMPTY;
             settings.is_local_reset_allowed = is_local_reset_allowed;
             output.push_str(&format!("Successfully set factory_reset to {:?}", settings));
         }

@@ -185,7 +185,7 @@ impl KeyboardService {
             phase: Some(ui_input2::KeyEventPhase::Pressed),
             physical_key: None,
             semantic_key: None,
-            ..ui_input2::KeyEvent::empty()
+            ..ui_input2::KeyEvent::EMPTY
         };
 
         self.ime_service.dispatch_key(event)

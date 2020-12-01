@@ -43,7 +43,7 @@ pub async fn handle_request_stream(
                 let buffer_data = vmo.and_then(|vmo| vmo.get_size().ok().map(|size| (vmo, size)));
                 let content = TreeContent {
                     buffer: buffer_data.map(|data| Buffer { vmo: data.0, size: data.1 }),
-                    ..TreeContent::empty()
+                    ..TreeContent::EMPTY
                 };
                 responder.send(content)?;
             }

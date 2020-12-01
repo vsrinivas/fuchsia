@@ -13,7 +13,7 @@ pub async fn command(
     hour_cycle: Option<fidl_fuchsia_settings::HourCycle>,
     clear_locales: bool,
 ) -> Result<String, Error> {
-    let mut settings = IntlSettings::empty();
+    let mut settings = IntlSettings::EMPTY;
     if clear_locales {
         settings.locales = Some(vec![]);
     } else if locales.len() > 0 {
@@ -26,7 +26,7 @@ pub async fn command(
     settings.time_zone_id = time_zone;
     settings.hour_cycle = hour_cycle;
 
-    if settings == IntlSettings::empty() {
+    if settings == IntlSettings::EMPTY {
         // No values set, perform a watch instead.
         let setting_value = proxy.watch().await?;
         Ok(format!("{:#?}", setting_value))

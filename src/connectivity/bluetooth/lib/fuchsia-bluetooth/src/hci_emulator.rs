@@ -47,7 +47,7 @@ impl Emulator {
             extended_advertising: None,
             acl_buffer_settings: None,
             le_acl_buffer_settings: None,
-            ..EmulatorSettings::empty()
+            ..EmulatorSettings::EMPTY
         }
     }
 
@@ -212,7 +212,7 @@ mod tests {
             extended_advertising: None,
             acl_buffer_settings: None,
             le_acl_buffer_settings: None,
-            ..EmulatorSettings::empty()
+            ..EmulatorSettings::EMPTY
         }
     }
 

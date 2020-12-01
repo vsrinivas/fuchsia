@@ -130,7 +130,7 @@ mod test {
             packet_count_for_client_max: Some(2),
             single_buffer_mode_allowed: Some(false),
             is_physically_contiguous_required: Some(false),
-            ..StreamBufferConstraints::empty()
+            ..StreamBufferConstraints::EMPTY
         };
 
         let err = ValidStreamBufferConstraints::try_from(invalid_version_ordinal);
@@ -159,7 +159,7 @@ mod test {
             packet_count_for_client_max: Some(2),
             single_buffer_mode_allowed: Some(false),
             is_physically_contiguous_required: Some(false),
-            ..StreamBufferConstraints::empty()
+            ..StreamBufferConstraints::EMPTY
         };
 
         let err = ValidStreamBufferConstraints::try_from(invalid_single_buffer);
@@ -180,7 +180,7 @@ mod test {
             packet_count_for_client_max: Some(2),
             single_buffer_mode_allowed: Some(false),
             is_physically_contiguous_required: Some(true),
-            ..StreamBufferConstraints::empty()
+            ..StreamBufferConstraints::EMPTY
         };
 
         let err = ValidStreamBufferConstraints::try_from(invalid_continuous);

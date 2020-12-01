@@ -197,7 +197,7 @@ fn get_config() -> Result<EchoSocketConfig, Error> {
     debug!("Sending ICMP echo requests every {} milliseconds...", interval);
 
     info!("PING {} ({}) {}({}) bytes of data.", remote, remote, packet_size, packet_size + 28);
-    Ok(EchoSocketConfig { local, remote: Some(remote.into()), ..EchoSocketConfig::empty() })
+    Ok(EchoSocketConfig { local, remote: Some(remote.into()), ..EchoSocketConfig::EMPTY })
 }
 
 /// Open an ICMP echo socket.

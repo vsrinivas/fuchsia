@@ -70,7 +70,7 @@ impl From<ConfigurationInterfaceFlags> for fidl_fuchsia_settings::ConfigurationI
 
 impl From<SetupInfo> for SetupSettings {
     fn from(info: SetupInfo) -> Self {
-        let mut settings = SetupSettings::empty();
+        let mut settings = SetupSettings::EMPTY;
         let interfaces =
             fidl_fuchsia_settings::ConfigurationInterfaces::from(info.configuration_interfaces);
 

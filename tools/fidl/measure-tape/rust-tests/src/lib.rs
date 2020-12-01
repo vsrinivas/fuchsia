@@ -55,14 +55,13 @@ fn struct_with_opt_string_has_string() {
 
 #[test]
 fn table_empty() {
-    let value = fmt::TopLevelUnion::Table(fmt::Table::empty());
+    let value = fmt::TopLevelUnion::Table(fmt::Table::EMPTY);
     assert_eq!(Size { num_bytes: 24 + 16, num_handles: 0 }, measure(&value))
 }
 
 #[test]
 fn table_only_max_ordinal_is_set() {
-    let value =
-        fmt::TopLevelUnion::Table(fmt::Table { primitive: Some(42), ..fmt::Table::empty() });
+    let value = fmt::TopLevelUnion::Table(fmt::Table { primitive: Some(42), ..fmt::Table::EMPTY });
     assert_eq!(Size { num_bytes: 24 + 16 + (5 * 16) + 8, num_handles: 0 }, measure(&value))
 }
 
@@ -70,7 +69,7 @@ fn table_only_max_ordinal_is_set() {
 fn table_string_is_set() {
     let value = fmt::TopLevelUnion::Table(fmt::Table {
         string: Some(HELLO_WORLD_EN.to_string()),
-        ..fmt::Table::empty()
+        ..fmt::Table::EMPTY
     });
     assert_eq!(Size { num_bytes: 24 + 16 + (3 * 16) + 16 + 16, num_handles: 0 }, measure(&value))
 }
@@ -93,7 +92,7 @@ fn array_of_three_strings() {
 
 #[test]
 fn array_of_two_tables_both_empty() {
-    let value = fmt::TopLevelUnion::ArrayOfTwoTables([fmt::Table::empty(), fmt::Table::empty()]);
+    let value = fmt::TopLevelUnion::ArrayOfTwoTables([fmt::Table::EMPTY, fmt::Table::EMPTY]);
     assert_eq!(Size { num_bytes: 24 + (2 * 16), num_handles: 0 }, measure(&value))
 }
 
@@ -101,8 +100,8 @@ fn array_of_two_tables_both_empty() {
 fn array_of_two_tables_mixed() {
     let handle = Event::create().unwrap().into_handle();
     let value = fmt::TopLevelUnion::ArrayOfTwoTables([
-        fmt::Table { primitive: Some(27), ..fmt::Table::empty() },
-        fmt::Table { handle: Some(handle), ..fmt::Table::empty() },
+        fmt::Table { primitive: Some(27), ..fmt::Table::EMPTY },
+        fmt::Table { handle: Some(handle), ..fmt::Table::EMPTY },
     ]);
     assert_eq!(
         Size { num_bytes: 24 + (2 * 16) + (5 * 16) + 8 + (4 * 16) + 8, num_handles: 1 },
@@ -215,7 +214,7 @@ fn vector_of_handles_three_handles() {
 
 #[test]
 fn vector_of_tables_two_empty_tables() {
-    let value = fmt::TopLevelUnion::VectorOfTables(vec![fmt::Table::empty(), fmt::Table::empty()]);
+    let value = fmt::TopLevelUnion::VectorOfTables(vec![fmt::Table::EMPTY, fmt::Table::EMPTY]);
     assert_eq!(Size { num_bytes: 24 + 16 + (2 * 16), num_handles: 0 }, measure(&value))
 }
 
@@ -223,8 +222,8 @@ fn vector_of_tables_two_empty_tables() {
 fn vector_of_tables_mixed() {
     let handle = Event::create().unwrap().into_handle();
     let value = fmt::TopLevelUnion::VectorOfTables(vec![
-        fmt::Table { primitive: Some(42), ..fmt::Table::empty() },
-        fmt::Table { handle: Some(handle), ..fmt::Table::empty() },
+        fmt::Table { primitive: Some(42), ..fmt::Table::EMPTY },
+        fmt::Table { handle: Some(handle), ..fmt::Table::EMPTY },
     ]);
     assert_eq!(
         Size { num_bytes: 24 + 16 + (2 * 16) + (5 * 16) + 8 + (4 * 16) + 8, num_handles: 1 },

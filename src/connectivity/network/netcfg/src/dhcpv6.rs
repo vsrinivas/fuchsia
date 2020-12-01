@@ -36,11 +36,11 @@ pub(super) fn start_client(
         models: Some(fnet_dhcpv6::OperationalModels {
             stateless: Some(fnet_dhcpv6::Stateless {
                 options_to_request: Some(vec![fnet_dhcpv6::RequestableOptionCode::DnsServers]),
-                ..fnet_dhcpv6::Stateless::empty()
+                ..fnet_dhcpv6::Stateless::EMPTY
             }),
-            ..fnet_dhcpv6::OperationalModels::empty()
+            ..fnet_dhcpv6::OperationalModels::EMPTY
         }),
-        ..fnet_dhcpv6::NewClientParams::empty()
+        ..fnet_dhcpv6::NewClientParams::EMPTY
     };
     let (client, server) = fidl::endpoints::create_proxy::<fnet_dhcpv6::ClientMarker>()
         .context("error creating DHCPv6 client fidl endpoints")

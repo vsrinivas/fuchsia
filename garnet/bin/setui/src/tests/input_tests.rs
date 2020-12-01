@@ -56,8 +56,8 @@ struct FakeServices {
 
 // Set the software mic mute state to muted = [mic_muted].
 async fn set_mic_mute(proxy: &InputProxy, mic_muted: bool) {
-    let mut input_settings = InputDeviceSettings::empty();
-    let mut microphone = FidlMicrophone::empty();
+    let mut input_settings = InputDeviceSettings::EMPTY;
+    let mut microphone = FidlMicrophone::EMPTY;
 
     microphone.muted = Some(mic_muted);
     input_settings.microphone = Some(microphone);

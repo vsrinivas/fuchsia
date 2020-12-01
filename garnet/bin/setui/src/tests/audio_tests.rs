@@ -55,9 +55,9 @@ const CHANGED_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     user_volume: Some(Volume {
         level: Some(CHANGED_VOLUME_LEVEL),
         muted: Some(CHANGED_VOLUME_MUTED),
-        ..Volume::empty()
+        ..Volume::EMPTY
     }),
-    ..AudioStreamSettings::empty()
+    ..AudioStreamSettings::EMPTY
 };
 
 const CHANGED_MEDIA_STREAM_SETTINGS_2: AudioStreamSettings = AudioStreamSettings {
@@ -66,9 +66,9 @@ const CHANGED_MEDIA_STREAM_SETTINGS_2: AudioStreamSettings = AudioStreamSettings
     user_volume: Some(Volume {
         level: Some(CHANGED_VOLUME_LEVEL_2),
         muted: Some(CHANGED_VOLUME_MUTED),
-        ..Volume::empty()
+        ..Volume::EMPTY
     }),
-    ..AudioStreamSettings::empty()
+    ..AudioStreamSettings::EMPTY
 };
 
 /// Creates an environment that will fail on a get request.
@@ -98,7 +98,7 @@ fn get_default_stream(stream_type: AudioStreamType) -> AudioStream {
 }
 
 async fn set_volume(proxy: &AudioProxy, streams: Vec<AudioStreamSettings>) {
-    let mut audio_settings = AudioSettings::empty();
+    let mut audio_settings = AudioSettings::EMPTY;
     audio_settings.streams = Some(streams);
     proxy.set(audio_settings).await.expect("set completed").expect("set successful");
 }
@@ -277,8 +277,8 @@ async fn test_volume_overwritten() {
     const CHANGED_BACKGROUND_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
         stream: Some(fidl_fuchsia_media::AudioRenderUsage::Background),
         source: Some(AudioStreamSettingSource::User),
-        user_volume: Some(Volume { level: Some(0.3), muted: Some(true), ..Volume::empty() }),
-        ..AudioStreamSettings::empty()
+        user_volume: Some(Volume { level: Some(0.3), muted: Some(true), ..Volume::EMPTY }),
+        ..AudioStreamSettings::EMPTY
     };
 
     set_volume(&audio_proxy, vec![CHANGED_BACKGROUND_STREAM_SETTINGS]).await;
@@ -312,9 +312,9 @@ async fn test_volume_rounding() {
             user_volume: Some(Volume {
                 level: Some(0.7015),
                 muted: Some(CHANGED_VOLUME_MUTED),
-                ..Volume::empty()
+                ..Volume::EMPTY
             }),
-            ..AudioStreamSettings::empty()
+            ..AudioStreamSettings::EMPTY
         }],
     )
     .await;

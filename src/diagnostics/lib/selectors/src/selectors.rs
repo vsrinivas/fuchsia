@@ -299,7 +299,7 @@ pub fn parse_component_selector(
     let tokenized_component_selector =
         tokenize_string(unparsed_component_selector, PATH_NODE_DELIMITER)?;
 
-    let mut component_selector: ComponentSelector = ComponentSelector::empty();
+    let mut component_selector: ComponentSelector = ComponentSelector::EMPTY;
 
     // Convert every token of the component hierarchy into a PathSelectionNode.
     let path_node_vector = tokenized_component_selector
@@ -366,12 +366,12 @@ pub fn parse_selector(unparsed_selector: &str) -> Result<Selector, Error> {
                 inspect_node_selector,
                 Some(property_selector),
             )?),
-            ..Selector::empty()
+            ..Selector::EMPTY
         }),
         [component_selector, inspect_node_selector] => Ok(Selector {
             component_selector: Some(parse_component_selector(component_selector)?),
             tree_selector: Some(parse_tree_selector(inspect_node_selector, None)?),
-            ..Selector::empty()
+            ..Selector::EMPTY
         }),
         _ => Err(format_err!(
             "Selector format requires at least 2 subselectors delimited by a `:`.",
@@ -1158,7 +1158,7 @@ mod tests {
     #[test]
     fn component_selector_validator_test() {
         fn create_component_selector(component_moniker: &Vec<&str>) -> ComponentSelector {
-            let mut component_selector = ComponentSelector::empty();
+            let mut component_selector = ComponentSelector::EMPTY;
             component_selector.moniker_segments = Some(
                 component_moniker
                     .into_iter()

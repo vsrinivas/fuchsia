@@ -54,7 +54,7 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
                         let mut cases_iter = vec![ftest::Case {
                             name: Some("EchoTest".to_string()),
                             enabled: Some(true),
-                            ..ftest::Case::empty()
+                            ..ftest::Case::EMPTY
                         }]
                         .into_iter();
                         while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
@@ -76,10 +76,8 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
                 let (log_end, _logger) =
                     fuchsia_zircon::Socket::create(fuchsia_zircon::SocketOpts::empty())
                         .expect("cannot create socket.");
-                let mut result = ftest::Result_ {
-                    status: Some(ftest::Status::Passed),
-                    ..ftest::Result_::empty()
-                };
+                let mut result =
+                    ftest::Result_ { status: Some(ftest::Status::Passed), ..ftest::Result_::EMPTY };
 
                 let (case_listener_proxy, case_listener) =
                     fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()

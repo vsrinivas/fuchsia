@@ -52,7 +52,7 @@ async fn test_accessibility_set_all() {
         color: Some(TEST_COLOR),
         relative_size: Some(1.0),
         char_edge_style: Some(EdgeStyle::Raised),
-        ..CaptionFontStyle::empty()
+        ..CaptionFontStyle::EMPTY
     };
     const CHANGED_CAPTION_SETTINGS: CaptionsSettings = CaptionsSettings {
         for_media: Some(true),
@@ -60,12 +60,12 @@ async fn test_accessibility_set_all() {
         font_style: Some(CHANGED_FONT_STYLE),
         window_color: Some(TEST_COLOR),
         background_color: Some(TEST_COLOR),
-        ..CaptionsSettings::empty()
+        ..CaptionsSettings::EMPTY
     };
 
-    let initial_settings = AccessibilitySettings::empty();
+    let initial_settings = AccessibilitySettings::EMPTY;
 
-    let mut expected_settings = AccessibilitySettings::empty();
+    let mut expected_settings = AccessibilitySettings::EMPTY;
     expected_settings.audio_description = Some(true);
     expected_settings.screen_reader = Some(true);
     expected_settings.color_inversion = Some(true);
@@ -118,7 +118,7 @@ async fn test_accessibility_set_captions() {
         color: None,
         relative_size: Some(1.0),
         char_edge_style: None,
-        ..CaptionFontStyle::empty()
+        ..CaptionFontStyle::EMPTY
     };
     const EXPECTED_CAPTIONS_SETTINGS: CaptionsSettings = CaptionsSettings {
         for_media: Some(true),
@@ -126,10 +126,10 @@ async fn test_accessibility_set_captions() {
         font_style: Some(CHANGED_FONT_STYLE),
         window_color: Some(ColorRgba { red: 238.0, green: 23.0, blue: 128.0, alpha: 255.0 }),
         background_color: None,
-        ..CaptionsSettings::empty()
+        ..CaptionsSettings::EMPTY
     };
 
-    let mut expected_settings = AccessibilitySettings::empty();
+    let mut expected_settings = AccessibilitySettings::EMPTY;
     expected_settings.captions_settings = Some(EXPECTED_CAPTIONS_SETTINGS);
 
     let expected_info = AccessibilityInfo {
@@ -150,14 +150,14 @@ async fn test_accessibility_set_captions() {
     let accessibility_proxy = create_test_accessibility_env(factory).await;
 
     // Set for_media and window_color in the top-level CaptionsSettings.
-    let mut first_set = AccessibilitySettings::empty();
+    let mut first_set = AccessibilitySettings::EMPTY;
     first_set.captions_settings = Some(CaptionsSettings {
         for_media: Some(false),
         for_tts: None,
         font_style: None,
         window_color: EXPECTED_CAPTIONS_SETTINGS.window_color,
         background_color: None,
-        ..CaptionsSettings::empty()
+        ..CaptionsSettings::EMPTY
     });
     accessibility_proxy
         .set(first_set.clone())
@@ -166,14 +166,14 @@ async fn test_accessibility_set_captions() {
         .expect("set successful");
 
     // Set FontStyle and overwrite for_media.
-    let mut second_set = AccessibilitySettings::empty();
+    let mut second_set = AccessibilitySettings::EMPTY;
     second_set.captions_settings = Some(CaptionsSettings {
         for_media: EXPECTED_CAPTIONS_SETTINGS.for_media,
         for_tts: None,
         font_style: EXPECTED_CAPTIONS_SETTINGS.font_style,
         window_color: None,
         background_color: None,
-        ..CaptionsSettings::empty()
+        ..CaptionsSettings::EMPTY
     });
     accessibility_proxy
         .set(second_set.clone())

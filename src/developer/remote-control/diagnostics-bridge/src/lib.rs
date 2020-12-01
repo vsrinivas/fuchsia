@@ -197,7 +197,7 @@ where
                                     let response = vec![ArchiveIteratorEntry {
                                         data: Some(serde_json::to_string(&truncated_logs)?),
                                         truncated_chars: Some(truncated_chars),
-                                        ..ArchiveIteratorEntry::empty()
+                                        ..ArchiveIteratorEntry::EMPTY
                                     }];
                                     responder.send(&mut Ok(response))?;
                                 }
@@ -357,7 +357,7 @@ mod test {
         BridgeStreamParameters {
             data_type: Some(DataType::Logs),
             stream_mode: Some(StreamMode::SnapshotThenSubscribe),
-            ..BridgeStreamParameters::empty()
+            ..BridgeStreamParameters::EMPTY
         }
     }
 
@@ -392,7 +392,7 @@ mod test {
                 BridgeStreamParameters {
                     data_type: None,
                     stream_mode: Some(StreamMode::SnapshotThenSubscribe),
-                    ..BridgeStreamParameters::empty()
+                    ..BridgeStreamParameters::EMPTY
                 },
                 server,
             )
@@ -413,7 +413,7 @@ mod test {
                 BridgeStreamParameters {
                     data_type: Some(DataType::Logs),
                     stream_mode: None,
-                    ..BridgeStreamParameters::empty()
+                    ..BridgeStreamParameters::EMPTY
                 },
                 server,
             )
@@ -434,7 +434,7 @@ mod test {
                 BridgeStreamParameters {
                     data_type: Some(DataType::Inspect),
                     stream_mode: Some(StreamMode::SnapshotThenSubscribe),
-                    ..BridgeStreamParameters::empty()
+                    ..BridgeStreamParameters::EMPTY
                 },
                 server,
             )
@@ -455,7 +455,7 @@ mod test {
                 BridgeStreamParameters {
                     data_type: Some(DataType::Logs),
                     stream_mode: Some(StreamMode::Snapshot),
-                    ..BridgeStreamParameters::empty()
+                    ..BridgeStreamParameters::EMPTY
                 },
                 server,
             )

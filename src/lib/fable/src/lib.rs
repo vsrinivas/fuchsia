@@ -34,7 +34,7 @@ macro_rules! fable {
     ($fidl_type:path { $($rest:tt)* }) => {
         {
             use $fidl_type as FidlType;
-            let mut _table = FidlType::empty();
+            let mut _table = FidlType::EMPTY;
             fable!(@internal _table $($rest)*);
             _table
         }
@@ -65,7 +65,7 @@ mod tests {
 
     #[test]
     fn test_combinations() {
-        let mut expected = Profile::empty();
+        let mut expected = Profile::EMPTY;
         expected.locales = Some(vec![LocaleId { id: "en-US".to_string() }]);
         expected.temperature_unit = Some(TemperatureUnit::Fahrenheit);
         expected.calendars = Some(vec![CalendarId { id: "gregory".to_string() }]);

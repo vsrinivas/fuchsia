@@ -411,9 +411,9 @@ impl DerefMut for Message {
 }
 
 lazy_static! {
-    pub static ref EMPTY_IDENTITY: SourceIdentity = SourceIdentity::empty();
+    pub static ref EMPTY_IDENTITY: SourceIdentity = SourceIdentity::EMPTY;
     pub static ref TEST_IDENTITY: Arc<SourceIdentity> = {
-        let mut identity = SourceIdentity::empty();
+        let mut identity = SourceIdentity::EMPTY;
         identity.realm_path = Some(vec!["fake-test-env".to_string()]);
         identity.component_name = Some("test-component.cm".to_string());
         identity.component_url =

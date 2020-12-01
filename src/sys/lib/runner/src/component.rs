@@ -646,7 +646,7 @@ mod tests {
                 ns.push(fcrunner::ComponentNamespaceEntry {
                     path: Some(pkg_path),
                     directory: Some(pkg_handle),
-                    ..fcrunner::ComponentNamespaceEntry::empty()
+                    ..fcrunner::ComponentNamespaceEntry::EMPTY
                 });
             }
 
@@ -656,7 +656,7 @@ mod tests {
                 ns.push(fcrunner::ComponentNamespaceEntry {
                     path: Some(path.to_string()),
                     directory: Some(client),
-                    ..fcrunner::ComponentNamespaceEntry::empty()
+                    ..fcrunner::ComponentNamespaceEntry::EMPTY
                 });
             }
             ComponentNamespace::try_from(ns)

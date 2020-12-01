@@ -3231,7 +3231,7 @@ async fn use_resolver_from_parent_environment() {
                             resolved_url: Some("test://b".into()),
                             decl: Some(default_component_decl().native_into_fidl()),
                             package: None,
-                            ..fsys::Component::empty()
+                            ..fsys::Component::EMPTY
                         },
                     )
                     .expect("failed to send resolve response");
@@ -3314,7 +3314,7 @@ async fn use_resolver_from_grandparent_environment() {
                             resolved_url: Some("test://c".into()),
                             decl: Some(default_component_decl().native_into_fidl()),
                             package: None,
-                            ..fsys::Component::empty()
+                            ..fsys::Component::EMPTY
                         },
                     )
                     .expect("failed to send resolve response");
@@ -3388,7 +3388,7 @@ async fn resolver_is_not_available() {
                             resolved_url: Some("test://b".into()),
                             decl: Some(default_component_decl().native_into_fidl()),
                             package: None,
-                            ..fsys::Component::empty()
+                            ..fsys::Component::EMPTY
                         },
                     )
                     .expect("failed to send resolve response");
@@ -3462,13 +3462,13 @@ async fn resolver_component_decl_is_validated() {
                                 exposes: Some(vec![fsys::ExposeDecl::Protocol(
                                     fsys::ExposeProtocolDecl {
                                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                                        ..fsys::ExposeProtocolDecl::empty()
+                                        ..fsys::ExposeProtocolDecl::EMPTY
                                     },
                                 )]),
-                                ..fsys::ComponentDecl::empty()
+                                ..fsys::ComponentDecl::EMPTY
                             }),
                             package: None,
-                            ..fsys::Component::empty()
+                            ..fsys::Component::EMPTY
                         },
                     )
                     .expect("failed to send resolve response");

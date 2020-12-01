@@ -720,7 +720,7 @@ where
             if let SocketState::BoundConnect { shutdown_read, .. } = state.info.state {
                 if shutdown_read {
                     // Return empty data to signal EOF.
-                    return Ok((None, Vec::new(), psocket::RecvControlData::empty(), 0));
+                    return Ok((None, Vec::new(), psocket::RecvControlData::EMPTY, 0));
                 }
             }
             return Err(Errno::Eagain);
@@ -746,7 +746,7 @@ where
         Ok((
             addr,
             data,
-            psocket::RecvControlData::empty(),
+            psocket::RecvControlData::EMPTY,
             truncated.try_into().unwrap_or(std::u32::MAX),
         ))
     }
@@ -1164,7 +1164,7 @@ mod tests {
                 .send_msg(
                     None,
                     &body,
-                    psocket::SendControlData::empty(),
+                    psocket::SendControlData::EMPTY,
                     psocket::SendMsgFlags::empty()
                 )
                 .await
@@ -1313,7 +1313,7 @@ mod tests {
                 .send_msg(
                     Some(&mut A::create(A::REMOTE_ADDR, 200)),
                     &body,
-                    psocket::SendControlData::empty(),
+                    psocket::SendControlData::EMPTY,
                     psocket::SendMsgFlags::empty()
                 )
                 .await
@@ -1358,7 +1358,7 @@ mod tests {
                     .send_msg(
                         Some(&mut A::create(A::LOCAL_ADDR, 200)),
                         &body,
-                        psocket::SendControlData::empty(),
+                        psocket::SendControlData::EMPTY,
                         psocket::SendMsgFlags::empty()
                     )
                     .await
@@ -1381,7 +1381,7 @@ mod tests {
                     .send_msg(
                         Some(&mut A::create(A::LOCAL_ADDR, 200)),
                         &body,
-                        psocket::SendControlData::empty(),
+                        psocket::SendControlData::EMPTY,
                         psocket::SendMsgFlags::empty()
                     )
                     .await
@@ -1422,7 +1422,7 @@ mod tests {
                 .send_msg(
                     Some(&mut A::create(A::LOCAL_ADDR, 200)),
                     &body,
-                    psocket::SendControlData::empty(),
+                    psocket::SendControlData::EMPTY,
                     psocket::SendMsgFlags::empty()
                 )
                 .await
@@ -1695,7 +1695,7 @@ mod tests {
                 .send_msg(
                     None,
                     &body,
-                    psocket::SendControlData::empty(),
+                    psocket::SendControlData::EMPTY,
                     psocket::SendMsgFlags::empty()
                 )
                 .await
@@ -1705,7 +1705,7 @@ mod tests {
         );
         let mut invalid_addr = A::create(A::REMOTE_ADDR, 0);
         assert_eq!(
-            socket.send_msg(Some(&mut invalid_addr), &body, psocket::SendControlData::empty(), psocket::SendMsgFlags::empty()).await.unwrap().expect_err(
+            socket.send_msg(Some(&mut invalid_addr), &body, psocket::SendControlData::EMPTY, psocket::SendMsgFlags::empty()).await.unwrap().expect_err(
                 "writing to an invalid address (port 0) should fail with EINVAL instead of EPIPE"
             ),
             Errno::Einval,

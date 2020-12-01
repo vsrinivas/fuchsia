@@ -44,7 +44,7 @@ impl SetUiFacade {
             Err(e) => bail!("Failed to connect to Setup service {:?}.", e),
         };
 
-        let mut settings = SetupSettings::empty();
+        let mut settings = SetupSettings::EMPTY;
 
         match network_type {
             NetworkType::Ethernet => {
@@ -149,7 +149,7 @@ impl SetUiFacade {
         let settings = DisplaySettings {
             auto_brightness: Some(false),
             brightness_value: Some(brightness),
-            ..DisplaySettings::empty()
+            ..DisplaySettings::EMPTY
         };
         match display_proxy.set(settings).await? {
             Ok(_) => Ok(to_value(SetUiResult::Success)?),
@@ -177,17 +177,13 @@ impl SetUiFacade {
         let stream_settings = AudioStreamSettings {
             stream: Some(AudioRenderUsage::Media),
             source: Some(AudioStreamSettingSource::User),
-            user_volume: Some(Volume {
-                level: Some(volume),
-                muted: Some(false),
-                ..Volume::empty()
-            }),
-            ..AudioStreamSettings::empty()
+            user_volume: Some(Volume { level: Some(volume), muted: Some(false), ..Volume::EMPTY }),
+            ..AudioStreamSettings::EMPTY
         };
         let settings = fsettings::AudioSettings {
             streams: Some(vec![stream_settings]),
             input: None,
-            ..fsettings::AudioSettings::empty()
+            ..fsettings::AudioSettings::EMPTY
         };
 
         match audio_proxy.set(settings).await? {
@@ -255,7 +251,7 @@ mod tests {
                         DisplaySettings {
                             auto_brightness: Some(false),
                             brightness_value: Some(brightness),
-                            ..DisplaySettings::empty()
+                            ..DisplaySettings::EMPTY
                         }
                     );
                     responder.send(&mut Ok(())).unwrap();
@@ -296,9 +292,9 @@ mod tests {
                             user_volume: Some(Volume {
                                 level: Some(volume),
                                 muted: Some(false),
-                                ..Volume::empty()
+                                ..Volume::EMPTY
                             }),
-                            ..AudioStreamSettings::empty()
+                            ..AudioStreamSettings::EMPTY
                         }
                     );
                     responder.send(&mut Ok(())).unwrap();

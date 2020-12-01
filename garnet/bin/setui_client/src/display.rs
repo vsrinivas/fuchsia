@@ -19,7 +19,7 @@ pub async fn command(
     let mut output = String::new();
 
     if let Some(auto_brightness_value) = auto_brightness {
-        let mut settings = DisplaySettings::empty();
+        let mut settings = DisplaySettings::EMPTY;
         settings.auto_brightness = Some(auto_brightness_value);
 
         let mutate_result = proxy.set(settings).await?;
@@ -31,7 +31,7 @@ pub async fn command(
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
     } else if let Some(brightness_value) = brightness {
-        let mut settings = DisplaySettings::empty();
+        let mut settings = DisplaySettings::EMPTY;
         settings.brightness_value = Some(brightness_value);
 
         let mutate_result = proxy.set(settings).await?;
@@ -45,7 +45,7 @@ pub async fn command(
         let data = proxy.watch_light_sensor2(0.0).await?;
         output.push_str(&format!("{:?}", data));
     } else if let Some(mode) = low_light_mode {
-        let mut settings = DisplaySettings::empty();
+        let mut settings = DisplaySettings::EMPTY;
         settings.low_light_mode = Some(mode);
 
         let mutate_result = proxy.set(settings).await?;
@@ -54,8 +54,8 @@ pub async fn command(
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
     } else if let Some(Theme { theme_type: Some(theme_type), .. }) = theme {
-        let mut settings = DisplaySettings::empty();
-        settings.theme = Some(Theme { theme_type: Some(theme_type), ..Theme::empty() });
+        let mut settings = DisplaySettings::EMPTY;
+        settings.theme = Some(Theme { theme_type: Some(theme_type), ..Theme::EMPTY });
 
         let mutate_result = proxy.set(settings).await?;
         match mutate_result {
@@ -63,7 +63,7 @@ pub async fn command(
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
     } else if let Some(screen_enabled) = screen_enabled {
-        let mut settings = DisplaySettings::empty();
+        let mut settings = DisplaySettings::EMPTY;
         settings.screen_enabled = Some(screen_enabled);
 
         let mutate_result = proxy.set(settings).await?;

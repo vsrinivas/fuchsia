@@ -329,7 +329,7 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn create_player_status() -> fidl_media::PlayerStatus {
-        let mut player_status = fidl_media::PlayerStatus::empty();
+        let mut player_status = fidl_media::PlayerStatus::EMPTY;
 
         let mut timeline_fn = fidl_media_types::TimelineFunction::new_empty();
         // Playback started at beginning of media.
@@ -396,7 +396,7 @@ pub(crate) mod tests {
         let mut media_state = MediaState::new(session_proxy);
 
         // 1. Only metadata
-        let mut info = fidl_media::SessionInfoDelta::empty();
+        let mut info = fidl_media::SessionInfoDelta::EMPTY;
         info.metadata = Some(create_metadata());
         info.player_status = None;
         media_state.update_session_info(info);
@@ -410,7 +410,7 @@ pub(crate) mod tests {
 
         // 2. Only PlayerStatus
         exec.set_fake_time(fasync::Time::from_nanos(654321000));
-        let mut info = fidl_media::SessionInfoDelta::empty();
+        let mut info = fidl_media::SessionInfoDelta::EMPTY;
         info.metadata = None;
         info.player_status = Some(create_player_status());
         media_state.update_session_info(info);
@@ -434,7 +434,7 @@ pub(crate) mod tests {
         let info = fidl_media::SessionInfoDelta {
             metadata: Some(create_metadata()),
             player_status: Some(create_player_status()),
-            ..fidl_media::SessionInfoDelta::empty()
+            ..fidl_media::SessionInfoDelta::EMPTY
         };
         media_state.update_session_info(info);
 
@@ -460,7 +460,7 @@ pub(crate) mod tests {
         assert_eq!(media_state.session_info().media_info, expected_media_info);
 
         // 4. Neither, values from (3) should stay the same.
-        let info = fidl_media::SessionInfoDelta::empty();
+        let info = fidl_media::SessionInfoDelta::EMPTY;
         media_state.update_session_info(info);
 
         assert_eq!(media_state.session_info().play_status, expected_play_status);
@@ -497,7 +497,7 @@ pub(crate) mod tests {
         let info = fidl_media::SessionInfoDelta {
             metadata: Some(create_metadata()),
             player_status: Some(create_player_status()),
-            ..fidl_media::SessionInfoDelta::empty()
+            ..fidl_media::SessionInfoDelta::EMPTY
         };
         media_state.update_session_info(info);
 
@@ -558,7 +558,7 @@ pub(crate) mod tests {
         let info = fidl_media::SessionInfoDelta {
             metadata: Some(create_metadata()),
             player_status: Some(create_player_status()),
-            ..fidl_media::SessionInfoDelta::empty()
+            ..fidl_media::SessionInfoDelta::EMPTY
         };
         media_state.update_session_info(info);
 

@@ -59,7 +59,7 @@ impl MediaTaskBuilder for SinkTaskBuilder {
 
             let registration = sessions2::PlayerRegistration {
                 domain: Some(s.domain),
-                ..sessions2::PlayerRegistration::empty()
+                ..sessions2::PlayerRegistration::EMPTY
             };
 
             let session_id = s
@@ -502,7 +502,7 @@ mod tests {
                 max_lead_time: Some(500),
                 error: None,
                 presentation_timeline: None,
-                ..AudioConsumerStatus::empty()
+                ..AudioConsumerStatus::EMPTY
             },
         );
 

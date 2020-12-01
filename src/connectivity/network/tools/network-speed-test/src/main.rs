@@ -97,7 +97,7 @@ fn create_request<T: Into<String>>(url_string: T) -> http::Request {
         headers: None,
         body: None,
         deadline: None,
-        ..http::Request::empty()
+        ..http::Request::EMPTY
     }
 }
 

@@ -303,8 +303,8 @@ pub fn connect(a: &Arc<Overnet>, b: &Arc<Overnet>) -> Result<(), Error> {
     let a = a.clone().connect_as_mesh_controller()?;
     let b = b.clone().connect_as_mesh_controller()?;
     let (sa, sb) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
-    a.attach_socket_link(sa, fidl_fuchsia_overnet_protocol::SocketLinkOptions::empty())?;
-    b.attach_socket_link(sb, fidl_fuchsia_overnet_protocol::SocketLinkOptions::empty())?;
+    a.attach_socket_link(sa, fidl_fuchsia_overnet_protocol::SocketLinkOptions::EMPTY)?;
+    b.attach_socket_link(sb, fidl_fuchsia_overnet_protocol::SocketLinkOptions::EMPTY)?;
     Ok(())
 }
 
@@ -414,7 +414,7 @@ pub async fn connect_with_interspersed_log_messages(
         Box::new(mutator),
         Box::new(|| fidl_fuchsia_overnet_protocol::SocketLinkOptions {
             bytes_per_second: Some(1000),
-            ..fidl_fuchsia_overnet_protocol::SocketLinkOptions::empty()
+            ..fidl_fuchsia_overnet_protocol::SocketLinkOptions::EMPTY
         }),
     )
     .await

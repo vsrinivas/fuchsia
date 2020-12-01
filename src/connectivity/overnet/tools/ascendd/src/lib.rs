@@ -74,7 +74,7 @@ async fn process_incoming(
             std::process::id()
         )),
         key: None,
-        ..StreamSocketGreeting::empty()
+        ..StreamSocketGreeting::EMPTY
     };
     let mut bytes = Vec::new();
     let mut handles = Vec::new();
@@ -85,7 +85,7 @@ async fn process_incoming(
     let (frame_type, mut frame) = rx_frames.read().await?;
     ensure!(frame_type == Some(FrameType::Overnet), "Expect only overnet frames");
 
-    let mut greeting = StreamSocketGreeting::empty();
+    let mut greeting = StreamSocketGreeting::EMPTY;
     // WARNING: Since we are decoding without a transaction header, we have to
     // provide a context manually. This could cause problems in future FIDL wire
     // format migrations, which are driven by header flags.
@@ -122,7 +122,7 @@ async fn process_incoming(
                     fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
                         path: Some(sockpath.clone()),
                         connection_label: None,
-                        ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::empty()
+                        ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
                     },
                 ))
             }),

@@ -100,10 +100,10 @@ pub mod tests {
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
                     timestamp: Some(zx::Time::get_monotonic().into_nanos()),
-                    ..fsys::EventHeader::empty()
+                    ..fsys::EventHeader::EMPTY
                 }),
 
-                ..fsys::Event::empty()
+                ..fsys::Event::EMPTY
             })
             .expect("send started event ok");
 
@@ -115,15 +115,15 @@ pub mod tests {
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
                     timestamp: Some(zx::Time::get_monotonic().into_nanos()),
-                    ..fsys::EventHeader::empty()
+                    ..fsys::EventHeader::EMPTY
                 }),
                 event_result: Some(fsys::EventResult::Payload(fsys::EventPayload::Running(
                     fsys::RunningPayload {
                         started_timestamp: Some(0),
-                        ..fsys::RunningPayload::empty()
+                        ..fsys::RunningPayload::EMPTY
                     },
                 ))),
-                ..fsys::Event::empty()
+                ..fsys::Event::EMPTY
             })
             .expect("send running event ok");
 
@@ -136,16 +136,16 @@ pub mod tests {
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
                     timestamp: Some(zx::Time::get_monotonic().into_nanos()),
-                    ..fsys::EventHeader::empty()
+                    ..fsys::EventHeader::EMPTY
                 }),
                 event_result: Some(fsys::EventResult::Payload(
                     fsys::EventPayload::CapabilityReady(fsys::CapabilityReadyPayload {
                         name: Some("diagnostics".to_string()),
                         node: Some(node),
-                        ..fsys::CapabilityReadyPayload::empty()
+                        ..fsys::CapabilityReadyPayload::EMPTY
                     }),
                 )),
-                ..fsys::Event::empty()
+                ..fsys::Event::EMPTY
             })
             .expect("send diagnostics ready event ok");
 
@@ -157,10 +157,10 @@ pub mod tests {
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
                     timestamp: Some(zx::Time::get_monotonic().into_nanos()),
-                    ..fsys::EventHeader::empty()
+                    ..fsys::EventHeader::EMPTY
                 }),
 
-                ..fsys::Event::empty()
+                ..fsys::Event::EMPTY
             })
             .expect("send stopped event ok");
 

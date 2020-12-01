@@ -131,9 +131,9 @@ impl TestSandbox {
                     klogs_enabled: None,
                     filter_options: None,
                     syslog_output: Some(true),
-                    ..netemul_environment::LoggerOptions::empty()
+                    ..netemul_environment::LoggerOptions::EMPTY
                 }),
-                ..netemul_environment::EnvironmentOptions::empty()
+                ..netemul_environment::EnvironmentOptions::EMPTY
             },
         )?;
         Ok(TestEnvironment { environment, name, _sandbox: self })
@@ -181,7 +181,7 @@ impl TestSandbox {
                     latency: None,
                     packet_loss: None,
                     reorder: None,
-                    ..netemul_network::NetworkConfig::empty()
+                    ..netemul_network::NetworkConfig::EMPTY
                 },
             )
             .await
@@ -586,7 +586,7 @@ impl<'a> TestEndpoint<'a> {
                             name: None,
                             topopath: None,
                             metric: None,
-                            ..net_stack::InterfaceConfig::empty()
+                            ..net_stack::InterfaceConfig::EMPTY
                         },
                         &mut net_stack::DeviceDefinition::Ethernet(
                             net_stack::EthernetDeviceDefinition {

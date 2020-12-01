@@ -108,7 +108,7 @@ mod tests {
             ns: None,
             outgoing_dir: None,
             runtime_dir: None,
-            ..fcrunner::ComponentStartInfo::empty()
+            ..fcrunner::ComponentStartInfo::EMPTY
         };
         assert_eq!(
             Ok("some_url".to_string()),
@@ -127,13 +127,13 @@ mod tests {
                     value: binary_name
                         .and_then(|s| Some(Box::new(fdata::DictionaryValue::Str(s.to_string())))),
                 }]),
-                ..fdata::Dictionary::empty()
+                ..fdata::Dictionary::EMPTY
             }),
             ns: None,
             outgoing_dir: None,
             runtime_dir: None,
             resolved_url: None,
-            ..fcrunner::ComponentStartInfo::empty()
+            ..fcrunner::ComponentStartInfo::EMPTY
         };
         assert_eq!(
             Ok("bin/myexecutable".to_string()),
@@ -156,13 +156,13 @@ mod tests {
                     key: "args".to_string(),
                     value: Some(Box::new(fdata::DictionaryValue::StrVec(args))),
                 }]),
-                ..fdata::Dictionary::empty()
+                ..fdata::Dictionary::EMPTY
             }),
             ns: None,
             outgoing_dir: None,
             runtime_dir: None,
             resolved_url: None,
-            ..fcrunner::ComponentStartInfo::empty()
+            ..fcrunner::ComponentStartInfo::EMPTY
         }
     }
 
@@ -175,13 +175,13 @@ mod tests {
             get_program_args(&fcrunner::ComponentStartInfo {
                 program: Some(fdata::Dictionary {
                     entries: Some(vec![]),
-                    ..fdata::Dictionary::empty()
+                    ..fdata::Dictionary::EMPTY
                 }),
                 ns: None,
                 outgoing_dir: None,
                 runtime_dir: None,
                 resolved_url: None,
-                ..fcrunner::ComponentStartInfo::empty()
+                ..fcrunner::ComponentStartInfo::EMPTY
             })
             .unwrap()
         );

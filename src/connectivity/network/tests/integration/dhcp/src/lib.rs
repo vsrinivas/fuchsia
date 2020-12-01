@@ -32,7 +32,7 @@ const DEFAULT_SERVER_PARAMETER_ADDRESSPOOL: fidl_fuchsia_net_dhcp::Parameter =
         mask: Some(fidl_ip_v4!(255.255.255.128)),
         pool_range_start: Some(fidl_ip_v4!(192.168.0.2)),
         pool_range_stop: Some(fidl_ip_v4!(192.168.0.5)),
-        ..fidl_fuchsia_net_dhcp::AddressPool::empty()
+        ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
     });
 const ALT_SERVER_PARAMETER_ADDRESSPOOL: fidl_fuchsia_net_dhcp::Parameter =
     fidl_fuchsia_net_dhcp::Parameter::AddressPool(fidl_fuchsia_net_dhcp::AddressPool {
@@ -41,7 +41,7 @@ const ALT_SERVER_PARAMETER_ADDRESSPOOL: fidl_fuchsia_net_dhcp::Parameter =
         mask: Some(fidl_ip_v4!(255.255.255.0)),
         pool_range_start: Some(fidl_ip_v4!(192.168.1.2)),
         pool_range_stop: Some(fidl_ip_v4!(192.168.1.5)),
-        ..fidl_fuchsia_net_dhcp::AddressPool::empty()
+        ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
     });
 const DEFAULT_SERVER_ENDPOINT: DhcpTestEndpoint<'_> = DhcpTestEndpoint {
     name: "server-ep",
@@ -124,7 +124,7 @@ async fn client_acquires_addr(
     let (watcher, watcher_server) =
         ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
     let () = client_interface_state
-        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::empty(), watcher_server)
+        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, watcher_server)
         .context("failed to initialize interface watcher")?;
     for interface in interfaces.iter() {
         let mut properties =

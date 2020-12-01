@@ -187,7 +187,7 @@ fn construct_network_config(
     Ok(wlan_policy::NetworkConfig {
         id: Some(network_id),
         credential: Some(credential),
-        ..wlan_policy::NetworkConfig::empty()
+        ..wlan_policy::NetworkConfig::EMPTY
     })
 }
 
@@ -694,12 +694,12 @@ mod tests {
             id: Some(create_network_id(ssid)),
             state: Some(state),
             status: None,
-            ..wlan_policy::NetworkState::empty()
+            ..wlan_policy::NetworkState::EMPTY
         };
         wlan_policy::ClientStateSummary {
             state: Some(wlan_policy::WlanClientState::ConnectionsEnabled),
             networks: Some(vec![network_state]),
-            ..wlan_policy::ClientStateSummary::empty()
+            ..wlan_policy::ClientStateSummary::EMPTY
         }
     }
 
@@ -714,7 +714,7 @@ mod tests {
             band: None,
             frequency: None,
             clients: None,
-            ..wlan_policy::AccessPointState::empty()
+            ..wlan_policy::AccessPointState::EMPTY
         }
     }
 
@@ -822,7 +822,7 @@ mod tests {
         wlan_policy::NetworkConfig {
             id: Some(create_network_id(ssid)),
             credential: None,
-            ..wlan_policy::NetworkConfig::empty()
+            ..wlan_policy::NetworkConfig::EMPTY
         }
     }
 
@@ -849,7 +849,7 @@ mod tests {
             id: Some(create_network_id(ssid)),
             entries: None,
             compatibility: None,
-            ..wlan_policy::ScanResult::empty()
+            ..wlan_policy::ScanResult::EMPTY
         }
     }
 
@@ -1139,7 +1139,7 @@ mod tests {
                 type_: wlan_policy::SecurityType::None,
             }),
             credential: Some(wlan_policy::Credential::None(wlan_policy::Empty {})),
-            ..wlan_policy::NetworkConfig::empty()
+            ..wlan_policy::NetworkConfig::EMPTY
         };
         let result_cfg =
             construct_network_config(open_config).expect("unable to construct network config");
@@ -1192,7 +1192,7 @@ mod tests {
                 type_: wlan_policy::SecurityType::Wpa2,
             }),
             credential: Some(wlan_policy::Credential::Psk([17; 32].to_vec())),
-            ..wlan_policy::NetworkConfig::empty()
+            ..wlan_policy::NetworkConfig::EMPTY
         };
         let result_cfg =
             construct_network_config(wpa_config).expect("unable to construct network config");
@@ -1219,7 +1219,7 @@ mod tests {
             credential: Some(wlan_policy::Credential::Password(
                 "some_password_here".as_bytes().to_vec(),
             )),
-            ..wlan_policy::NetworkConfig::empty()
+            ..wlan_policy::NetworkConfig::EMPTY
         };
         let result_cfg =
             construct_network_config(wpa_config).expect("unable to construct network config");

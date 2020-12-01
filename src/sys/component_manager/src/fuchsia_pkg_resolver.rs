@@ -84,13 +84,13 @@ impl FuchsiaPkgResolver {
         let package = fsys::Package {
             package_url: Some(package_url),
             package_dir: Some(package_dir),
-            ..fsys::Package::empty()
+            ..fsys::Package::EMPTY
         };
         Ok(fsys::Component {
             resolved_url: Some(component_url.to_string()),
             decl: Some(component_decl),
             package: Some(package),
-            ..fsys::Component::empty()
+            ..fsys::Component::EMPTY
         })
     }
 }
@@ -170,13 +170,13 @@ mod tests {
                                         fsys::UseDecl::Runner(
                                             fsys::UseRunnerDecl {
                                                 source_name: Some("elf".to_string()),
-                                                ..fsys::UseRunnerDecl::empty()
+                                                ..fsys::UseRunnerDecl::EMPTY
                                             }
                                         ),
                                         fsys::UseDecl::Runner (
                                             fsys::UseRunnerDecl {
                                                 source_name: Some("web".to_string()),
-                                                ..fsys::UseRunnerDecl::empty()
+                                                ..fsys::UseRunnerDecl::EMPTY
                                             }
                                         )
                                     ]),
@@ -187,7 +187,7 @@ mod tests {
                                     collections: None,
                                     environments: None,
                                     facets: None,
-                                    ..fsys::ComponentDecl::empty()
+                                    ..fsys::ComponentDecl::EMPTY
                                 }).unwrap()
                             ),
                         }
@@ -228,20 +228,20 @@ mod tests {
                 key: "binary".to_string(),
                 value: Some(Box::new(fdata::DictionaryValue::Str("bin/hello_world".to_string()))),
             }]),
-            ..fdata::Dictionary::empty()
+            ..fdata::Dictionary::EMPTY
         };
         let expected_decl = fsys::ComponentDecl {
             program: Some(program),
             uses: Some(vec![
                 fsys::UseDecl::Runner(fsys::UseRunnerDecl {
                     source_name: Some("elf".to_string()),
-                    ..fsys::UseRunnerDecl::empty()
+                    ..fsys::UseRunnerDecl::EMPTY
                 }),
                 fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
                     source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                     source_name: Some("fuchsia.logger.LogSink".to_string()),
                     target_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
-                    ..fsys::UseProtocolDecl::empty()
+                    ..fsys::UseProtocolDecl::EMPTY
                 }),
             ]),
             exposes: None,
@@ -251,7 +251,7 @@ mod tests {
             children: None,
             collections: None,
             environments: None,
-            ..fsys::ComponentDecl::empty()
+            ..fsys::ComponentDecl::EMPTY
         };
         assert_eq!(decl.unwrap(), expected_decl);
 

@@ -127,7 +127,7 @@ impl Input2Service {
                         modifiers,
                         semantic_key: None,
                         physical_key: None,
-                        ..ui_input2::KeyEvent::empty()
+                        ..ui_input2::KeyEvent::EMPTY
                     };
                     let handled = handle(registry, event, matched_modifiers).await.unwrap_or_else(
                         |e: anyhow::Error| {

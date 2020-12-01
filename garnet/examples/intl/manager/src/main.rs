@@ -171,7 +171,7 @@ impl Server {
                                 time_zones: None,
                                 calendars: None,
                                 temperature_unit: None,
-                                ..Profile::empty()
+                                ..Profile::EMPTY
                             })
                             .context("Error sending response")?;
                         fx_log_verbose!("Sent empty profile");
@@ -259,7 +259,7 @@ impl From<&Opts> for Profile {
             // TODO(fmil): Implement these too.
             calendars: None,
             temperature_unit: None,
-            ..Profile::empty()
+            ..Profile::EMPTY
         }
     }
 }
@@ -319,7 +319,7 @@ mod test {
 
     lazy_static! {
         static ref PROFILE_EMPTY: Profile =
-            Profile { locales: None, calendars: None, time_zones: None, temperature_unit: None, ..Profile::empty() };
+            Profile { locales: None, calendars: None, time_zones: None, temperature_unit: None, ..Profile::EMPTY };
         static ref PROFILE_A: Profile = Profile {
             locales: Some(vec![
                 LocaleId { id: "en-US".to_string() },
@@ -328,7 +328,7 @@ mod test {
             calendars: Some(vec![CalendarId { id: "gregorian".to_string() }]),
             time_zones: Some(vec![TimeZoneId { id: "America/New_York".to_string() }]),
             temperature_unit: Some(TemperatureUnit::Celsius),
-            ..Profile::empty()
+            ..Profile::EMPTY
         };
         static ref PROFILE_B: Profile = Profile {
             locales: Some(vec![
@@ -338,7 +338,7 @@ mod test {
             calendars: Some(vec![CalendarId { id: "gregorian".to_string() }]),
             time_zones: Some(vec![TimeZoneId { id: "Europe/Athens".to_string() }]),
             temperature_unit: Some(TemperatureUnit::Celsius),
-            ..Profile::empty()
+            ..Profile::EMPTY
         };
         // This profile corresponds to the flag settings in the manifest at `COMPONENT_URL`.
         static ref INITIAL_PROFILE: Profile = Profile {
@@ -349,7 +349,7 @@ mod test {
             calendars: None,
             time_zones: Some(vec![TimeZoneId { id: "und-u-tz-uslax".to_string() }]),
             temperature_unit: None,
-            ..Profile::empty()
+            ..Profile::EMPTY
         };
     }
 

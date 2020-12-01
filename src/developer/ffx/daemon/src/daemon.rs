@@ -527,7 +527,7 @@ mod test {
                             .send(&mut Ok(rcs::IdentifyHostResponse {
                                 nodename,
                                 addresses: Some(result),
-                                ..rcs::IdentifyHostResponse::empty()
+                                ..rcs::IdentifyHostResponse::EMPTY
                             }))
                             .context("sending testing response")
                             .unwrap();

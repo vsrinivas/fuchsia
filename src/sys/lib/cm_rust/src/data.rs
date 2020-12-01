@@ -58,6 +58,6 @@ pub fn clone_option_boxed_value(v: &Option<Box<fsys::Value>>) -> Option<Box<fsys
 pub fn clone_option_dictionary(v: &Option<fdata::Dictionary>) -> Option<fdata::Dictionary> {
     v.as_ref().map(|dict| fdata::Dictionary {
         entries: dict.entries.as_ref().map(|entries| entries.clone()),
-        ..fdata::Dictionary::empty()
+        ..fdata::Dictionary::EMPTY
     })
 }

@@ -217,9 +217,9 @@ mod tests {
             address: Some(NDP_SOURCE_SOCKADDR),
             source: Some(DnsServerSource::Dhcpv6(Dhcpv6DnsServerSource {
                 source_interface: Some(DHCPV6_SERVER1_INTERFACE_ID),
-                ..Dhcpv6DnsServerSource::empty()
+                ..Dhcpv6DnsServerSource::EMPTY
             })),
-            ..DnsServer_::empty()
+            ..DnsServer_::EMPTY
         };
         let mut dhcpv6 = HashMap::new();
         dhcpv6.insert(DHCPV6_SERVER1_INTERFACE_ID, vec![dhcpv6_with_ndp_address(), DHCPV6_SERVER1]);
@@ -247,9 +247,9 @@ mod tests {
             address: Some(DHCPV6_SOURCE_SOCKADDR1),
             source: Some(DnsServerSource::Ndp(NdpDnsServerSource {
                 source_interface: Some(NDP_SERVER_INTERFACE_ID),
-                ..NdpDnsServerSource::empty()
+                ..NdpDnsServerSource::EMPTY
             })),
-            ..DnsServer_::empty()
+            ..DnsServer_::EMPTY
         };
 
         let mut dhcpv6 = HashMap::new();

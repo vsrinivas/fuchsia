@@ -91,7 +91,7 @@ async fn test_setup_with_reboot() {
     let expected_interfaces = fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet;
 
     // Ensure setting interface propagates  change correctly
-    let mut setup_settings = fidl_fuchsia_settings::SetupSettings::empty();
+    let mut setup_settings = fidl_fuchsia_settings::SetupSettings::EMPTY;
     setup_settings.enabled_configuration_interfaces = Some(expected_interfaces);
     setup_service.set(setup_settings).await.expect("set completed").expect("set successful");
 
@@ -143,7 +143,7 @@ async fn test_setup_no_reboot() {
     let expected_interfaces = fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet;
 
     // Ensure setting interface propagates  change correctly
-    let mut setup_settings = fidl_fuchsia_settings::SetupSettings::empty();
+    let mut setup_settings = fidl_fuchsia_settings::SetupSettings::EMPTY;
     setup_settings.enabled_configuration_interfaces = Some(expected_interfaces);
     setup_service
         .set2(setup_settings, false)

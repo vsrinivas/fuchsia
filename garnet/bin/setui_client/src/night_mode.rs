@@ -12,7 +12,7 @@ pub async fn command(
     night_mode_enabled: Option<bool>,
 ) -> Result<String, Error> {
     if let Some(night_mode_enabled_value) = night_mode_enabled {
-        let mut settings = NightModeSettings::empty();
+        let mut settings = NightModeSettings::EMPTY;
         settings.night_mode_enabled = Some(night_mode_enabled_value);
 
         let mutate_result = proxy.set(settings).await?;

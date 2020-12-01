@@ -436,7 +436,7 @@ impl From<LeBondData> for sys::LeData {
             local_ltk: src.local_ltk,
             irk: src.irk,
             csrk: src.csrk,
-            ..sys::LeData::empty()
+            ..sys::LeData::EMPTY
         }
     }
 }
@@ -448,7 +448,7 @@ impl From<BredrBondData> for sys::BredrData {
             role_preference: src.role_preference,
             services: Some(src.services.into_iter().map(|uuid| uuid.into()).collect()),
             link_key: src.link_key,
-            ..sys::BredrData::empty()
+            ..sys::BredrData::EMPTY
         }
     }
 }
@@ -607,7 +607,7 @@ impl From<BondingData> for sys::BondingData {
             name: bd.name,
             le,
             bredr,
-            ..sys::BondingData::empty()
+            ..sys::BondingData::EMPTY
         }
     }
 }
@@ -622,7 +622,7 @@ pub struct HostData {
 
 impl From<HostData> for sys::HostData {
     fn from(src: HostData) -> sys::HostData {
-        sys::HostData { irk: src.irk, ..sys::HostData::empty() }
+        sys::HostData { irk: src.irk, ..sys::HostData::EMPTY }
     }
 }
 
@@ -654,7 +654,7 @@ impl From<Identity> for sys::Identity {
         sys::Identity {
             host: Some(src.host.into()),
             bonds: Some(src.bonds.into_iter().map(|i| i.into()).collect()),
-            ..sys::Identity::empty()
+            ..sys::Identity::EMPTY
         }
     }
 }
@@ -880,15 +880,15 @@ mod tests {
         use super::*;
 
         fn empty_data() -> sys::BondingData {
-            sys::BondingData::empty()
+            sys::BondingData::EMPTY
         }
 
         fn empty_bredr_data() -> sys::BredrData {
-            sys::BredrData::empty()
+            sys::BredrData::EMPTY
         }
 
         fn empty_le_data() -> sys::LeData {
-            sys::LeData::empty()
+            sys::LeData::EMPTY
         }
 
         fn default_ltk() -> sys::Ltk {

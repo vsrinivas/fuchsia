@@ -89,7 +89,7 @@ impl TryFrom<&config::IpFilter> for netconfig::FilterRule {
                 dst_address,
                 dst_ports,
                 protocol: ipfilter.protocol.clone().map(|proto| proto.into()),
-                ..netconfig::FlowSelector::empty()
+                ..netconfig::FlowSelector::EMPTY
             },
         })
     }
@@ -112,7 +112,7 @@ fn to_filter_rule(rule: netfilter::Rule) -> error::Result<netconfig::FilterRule>
             src_ports: to_port_range(rule.src_port_range),
             dst_ports: to_port_range(rule.dst_port_range),
             protocol: to_protocol(rule.proto),
-            ..netconfig::FlowSelector::empty()
+            ..netconfig::FlowSelector::EMPTY
         },
     })
 }
@@ -136,7 +136,7 @@ fn to_cidr_address(
         Some(s) => Some(netconfig::CidrAddress {
             address: Some(s.addr),
             prefix_length: Some(s.prefix_len),
-            ..netconfig::CidrAddress::empty()
+            ..netconfig::CidrAddress::EMPTY
         }),
         None => None,
     }
@@ -700,17 +700,17 @@ mod tests {
                 src_address: Some(netconfig::CidrAddress {
                     address: Some(Ipv4(Ipv4Address { addr: [169, 254, 0, 1] })),
                     prefix_length: Some(32),
-                    ..netconfig::CidrAddress::empty()
+                    ..netconfig::CidrAddress::EMPTY
                 }),
                 src_ports: Some([netconfig::PortRange { from: 1024, to: 1024 }].to_vec()),
                 dst_address: Some(netconfig::CidrAddress {
                     address: Some(Ipv4(Ipv4Address { addr: [169, 254, 0, 1] })),
                     prefix_length: Some(32),
-                    ..netconfig::CidrAddress::empty()
+                    ..netconfig::CidrAddress::EMPTY
                 }),
                 dst_ports: Some([netconfig::PortRange { from: 80, to: 80 }].to_vec()),
                 protocol: Some(netconfig::Protocol::Tcp),
-                ..netconfig::FlowSelector::empty()
+                ..netconfig::FlowSelector::EMPTY
             },
         };
         let actual = to_filter_rule(test_netfilter_rule);
@@ -759,17 +759,17 @@ mod tests {
                 src_address: Some(netconfig::CidrAddress {
                     address: Some(Ipv4(Ipv4Address { addr: [169, 254, 0, 1] })),
                     prefix_length: Some(32),
-                    ..netconfig::CidrAddress::empty()
+                    ..netconfig::CidrAddress::EMPTY
                 }),
                 src_ports: Some([netconfig::PortRange { from: 1024, to: 1024 }].to_vec()),
                 dst_address: Some(netconfig::CidrAddress {
                     address: Some(Ipv4(Ipv4Address { addr: [169, 254, 0, 1] })),
                     prefix_length: Some(32),
-                    ..netconfig::CidrAddress::empty()
+                    ..netconfig::CidrAddress::EMPTY
                 }),
                 dst_ports: Some([netconfig::PortRange { from: 80, to: 80 }].to_vec()),
                 protocol: Some(netconfig::Protocol::Tcp),
-                ..netconfig::FlowSelector::empty()
+                ..netconfig::FlowSelector::EMPTY
             },
         };
         let actual = from_filter_rule(&filter_rule, 1u32).unwrap();
@@ -907,7 +907,7 @@ mod tests {
                     Some(netconfig::CidrAddress {
                         address: Some(unspecified_v4.into()),
                         prefix_length: Some(unspecified_prefix),
-                        ..netconfig::CidrAddress::empty()
+                        ..netconfig::CidrAddress::EMPTY
                     })
                 );
                 assert_eq!(
@@ -944,11 +944,11 @@ mod tests {
                 dst_address: Some(netconfig::CidrAddress {
                     address: Some(unspecified_v4.into()),
                     prefix_length: Some(unspecified_prefix),
-                    ..netconfig::CidrAddress::empty()
+                    ..netconfig::CidrAddress::EMPTY
                 }),
                 dst_ports: Some(vec![netconfig::PortRange { from: ssh_port, to: ssh_port }]),
                 protocol: Some(netconfig::Protocol::Tcp),
-                ..netconfig::FlowSelector::empty()
+                ..netconfig::FlowSelector::EMPTY
             },
         };
         let wlan_nicid = 31337;

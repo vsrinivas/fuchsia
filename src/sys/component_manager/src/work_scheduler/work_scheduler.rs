@@ -409,7 +409,7 @@ mod time_tests {
             let now_once = fsys::WorkRequest {
                 start: Some(fsys::Start::MonotonicTime(0)),
                 period: None,
-                ..fsys::WorkRequest::empty()
+                ..fsys::WorkRequest::EMPTY
             };
             assert_eq!(
                 Ok(()),
@@ -431,7 +431,7 @@ mod time_tests {
             let now_once = fsys::WorkRequest {
                 start: Some(fsys::Start::MonotonicTime(0)),
                 period: None,
-                ..fsys::WorkRequest::empty()
+                ..fsys::WorkRequest::EMPTY
             };
             assert_eq!(
                 Ok(()),
@@ -463,7 +463,7 @@ mod time_tests {
             let every_moment = fsys::WorkRequest {
                 start: Some(fsys::Start::MonotonicTime(0)),
                 period: Some(1),
-                ..fsys::WorkRequest::empty()
+                ..fsys::WorkRequest::EMPTY
             };
             assert_eq!(
                 Ok(()),
@@ -499,7 +499,7 @@ mod time_tests {
             let at_nine = fsys::WorkRequest {
                 start: Some(fsys::Start::MonotonicTime(9)),
                 period: None,
-                ..fsys::WorkRequest::empty()
+                ..fsys::WorkRequest::EMPTY
             };
             assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_NINE", &at_nine).await);
         }));
@@ -513,7 +513,7 @@ mod time_tests {
             let at_four = fsys::WorkRequest {
                 start: Some(fsys::Start::MonotonicTime(4)),
                 period: None,
-                ..fsys::WorkRequest::empty()
+                ..fsys::WorkRequest::EMPTY
             };
             assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_FOUR", &at_four).await);
         }));
@@ -538,7 +538,7 @@ mod time_tests {
             let at_ten = fsys::WorkRequest {
                 start: Some(fsys::Start::MonotonicTime(10)),
                 period: None,
-                ..fsys::WorkRequest::empty()
+                ..fsys::WorkRequest::EMPTY
             };
             assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_TEN", &at_ten).await);
         }));
@@ -571,13 +571,13 @@ mod time_tests {
             let at_four = fsys::WorkRequest {
                 start: Some(fsys::Start::MonotonicTime(4)),
                 period: None,
-                ..fsys::WorkRequest::empty()
+                ..fsys::WorkRequest::EMPTY
             };
             assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_FOUR", &at_four).await);
             let at_nine = fsys::WorkRequest {
                 start: Some(fsys::Start::MonotonicTime(9)),
                 period: None,
-                ..fsys::WorkRequest::empty()
+                ..fsys::WorkRequest::EMPTY
             };
             assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_NINE", &at_nine).await);
         }));
@@ -614,13 +614,13 @@ mod time_tests {
             let at_four = fsys::WorkRequest {
                 start: Some(fsys::Start::MonotonicTime(4)),
                 period: None,
-                ..fsys::WorkRequest::empty()
+                ..fsys::WorkRequest::EMPTY
             };
             assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_FOUR", &at_four).await);
             let at_nine_periodic = fsys::WorkRequest {
                 start: Some(fsys::Start::MonotonicTime(9)),
                 period: Some(5),
-                ..fsys::WorkRequest::empty()
+                ..fsys::WorkRequest::EMPTY
             };
             assert_eq!(
                 Ok(()),
@@ -684,7 +684,7 @@ mod time_tests {
             let root_0 = fsys::WorkRequest {
                 start: Some(fsys::Start::MonotonicTime(0)),
                 period: None,
-                ..fsys::WorkRequest::empty()
+                ..fsys::WorkRequest::EMPTY
             };
             assert_eq!(
                 Ok(()),
@@ -695,7 +695,7 @@ mod time_tests {
             let root_1 = fsys::WorkRequest {
                 start: Some(fsys::Start::MonotonicTime(1)),
                 period: None,
-                ..fsys::WorkRequest::empty()
+                ..fsys::WorkRequest::EMPTY
             };
             assert_eq!(
                 Ok(()),
@@ -706,7 +706,7 @@ mod time_tests {
             let child_2 = fsys::WorkRequest {
                 start: Some(fsys::Start::MonotonicTime(2)),
                 period: None,
-                ..fsys::WorkRequest::empty()
+                ..fsys::WorkRequest::EMPTY
             };
             assert_eq!(
                 Ok(()),
@@ -717,7 +717,7 @@ mod time_tests {
             let child_5 = fsys::WorkRequest {
                 start: Some(fsys::Start::MonotonicTime(5)),
                 period: None,
-                ..fsys::WorkRequest::empty()
+                ..fsys::WorkRequest::EMPTY
             };
             assert_eq!(
                 Ok(()),

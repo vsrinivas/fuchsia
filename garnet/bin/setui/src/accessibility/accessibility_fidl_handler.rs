@@ -28,7 +28,7 @@ fidl_hanging_get_responder!(
 impl From<SettingResponse> for AccessibilitySettings {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::Accessibility(info) = response {
-            let mut accessibility_settings = AccessibilitySettings::empty();
+            let mut accessibility_settings = AccessibilitySettings::EMPTY;
 
             accessibility_settings.audio_description = info.audio_description;
             accessibility_settings.screen_reader = info.screen_reader;
@@ -135,7 +135,7 @@ mod tests {
 
     #[test]
     fn test_request_try_from_settings_request_empty() {
-        let request = SettingRequest::from(AccessibilitySettings::empty());
+        let request = SettingRequest::from(AccessibilitySettings::EMPTY);
 
         const EXPECTED_ACCESSIBILITY_INFO: AccessibilityInfo = AccessibilityInfo {
             audio_description: None,
@@ -177,7 +177,7 @@ mod tests {
             captions_settings: Some(EXPECTED_CAPTION_SETTINGS),
         };
 
-        let mut accessibility_settings = AccessibilitySettings::empty();
+        let mut accessibility_settings = AccessibilitySettings::EMPTY;
         accessibility_settings.audio_description = Some(true);
         accessibility_settings.screen_reader = Some(true);
         accessibility_settings.color_inversion = Some(true);

@@ -54,7 +54,7 @@ async fn test_set() {
     }
 
     // Update the value.
-    let mut factory_reset_settings = FactoryResetSettings::empty();
+    let mut factory_reset_settings = FactoryResetSettings::EMPTY;
     factory_reset_settings.is_local_reset_allowed = Some(CHANGED_RESET);
     factory_reset_proxy
         .set(factory_reset_settings)

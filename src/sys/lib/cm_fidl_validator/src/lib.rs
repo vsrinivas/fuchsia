@@ -1905,7 +1905,7 @@ mod tests {
             children: None,
             collections: None,
             environments: None,
-            ..ComponentDecl::empty()
+            ..ComponentDecl::EMPTY
         }
     }
 
@@ -2049,7 +2049,7 @@ mod tests {
                             url: Some(format!("fuchsia-pkg://fuchsia.com/pkg#meta/{}.cm", name)),
                             startup: Some(StartupMode::Lazy),
                             environment: None,
-                            ..ChildDecl::empty()
+                            ..ChildDecl::EMPTY
                         }
                     }).collect();
                     decl.offers = Some(offers);
@@ -2107,7 +2107,7 @@ mod tests {
                             url: Some(format!("fuchsia-pkg://fuchsia.com/pkg#meta/{}.cm", name)),
                             startup: Some(StartupMode::Lazy),
                             environment: None,
-                            ..ChildDecl::empty()
+                            ..ChildDecl::EMPTY
                         }
                     }).collect();
                     decl.offers = Some(offers);
@@ -2201,7 +2201,7 @@ mod tests {
                         target_path: Some("/foo/bar".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        ..UseDirectoryDecl::empty()
+                        ..UseDirectoryDecl::EMPTY
                     }),
                     UseDecl::Directory(UseDirectoryDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -2209,7 +2209,7 @@ mod tests {
                         target_path: Some("/foo/bar/baz".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        ..UseDirectoryDecl::empty()
+                        ..UseDirectoryDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -2235,13 +2235,13 @@ mod tests {
                         target_path: Some("/foo/bar".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        ..UseDirectoryDecl::empty()
+                        ..UseDirectoryDecl::EMPTY
                     }),
                     UseDecl::Protocol(UseProtocolDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("crow".to_string()),
                         target_path: Some("/foo/bar/fuchsia.2".to_string()),
-                        ..UseProtocolDecl::empty()
+                        ..UseProtocolDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -2267,13 +2267,13 @@ mod tests {
                         target_path: Some("/foo/bar".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        ..UseDirectoryDecl::empty()
+                        ..UseDirectoryDecl::EMPTY
                     }),
                     UseDecl::Service(UseServiceDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("space".to_string()),
                         target_path: Some("/foo/bar/baz/fuchsia.logger.Log".to_string()),
-                        ..UseServiceDecl::empty()
+                        ..UseServiceDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -2301,13 +2301,13 @@ mod tests {
                         source: None,
                         source_name: None,
                         target_path: None,
-                        ..UseServiceDecl::empty()
+                        ..UseServiceDecl::EMPTY
                     }),
                     UseDecl::Protocol(UseProtocolDecl {
                         source: None,
                         source_name: None,
                         target_path: None,
-                        ..UseProtocolDecl::empty()
+                        ..UseProtocolDecl::EMPTY
                     }),
                     UseDecl::Directory(UseDirectoryDecl {
                         source: None,
@@ -2315,33 +2315,33 @@ mod tests {
                         target_path: None,
                         rights: None,
                         subdir: None,
-                        ..UseDirectoryDecl::empty()
+                        ..UseDirectoryDecl::EMPTY
                     }),
                     UseDecl::Storage(UseStorageDecl {
                         source_name: None,
                         target_path: None,
-                        ..UseStorageDecl::empty()
+                        ..UseStorageDecl::EMPTY
                     }),
                     UseDecl::Storage(UseStorageDecl {
                         source_name: Some("cache".to_string()),
                         target_path: None,
-                        ..UseStorageDecl::empty()
+                        ..UseStorageDecl::EMPTY
                     }),
                     UseDecl::Runner(UseRunnerDecl {
                         source_name: None,
-                        ..UseRunnerDecl::empty()
+                        ..UseRunnerDecl::EMPTY
                     }),
                     UseDecl::Event(UseEventDecl {
                         source: None,
                         source_name: None,
                         target_name: None,
                         filter: None,
-                        ..UseEventDecl::empty()
+                        ..UseEventDecl::EMPTY
                     }),
                     UseDecl::EventStream(UseEventStreamDecl {
                         target_path: None,
                         events: None,
-                        ..UseEventStreamDecl::empty()
+                        ..UseEventStreamDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -2376,7 +2376,7 @@ mod tests {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_name: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
-                        ..UseServiceDecl::empty()
+                        ..UseServiceDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -2395,7 +2395,7 @@ mod tests {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_name: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
-                        ..UseProtocolDecl::empty()
+                        ..UseProtocolDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -2416,29 +2416,29 @@ mod tests {
                         target_path: Some("/".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: Some("/foo".to_string()),
-                        ..UseDirectoryDecl::empty()
+                        ..UseDirectoryDecl::EMPTY
                     }),
                     UseDecl::Storage(UseStorageDecl {
                         source_name: Some("/cache".to_string()),
                         target_path: Some("/".to_string()),
-                        ..UseStorageDecl::empty()
+                        ..UseStorageDecl::EMPTY
                     }),
                     UseDecl::Storage(UseStorageDecl {
                         source_name: Some("temp".to_string()),
                         target_path: Some("tmp".to_string()),
-                        ..UseStorageDecl::empty()
+                        ..UseStorageDecl::EMPTY
                     }),
                     UseDecl::Event(UseEventDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_name: Some("/foo".to_string()),
                         target_name: Some("/foo".to_string()),
-                        filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::empty() }),
-                        ..UseEventDecl::empty()
+                        filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                        ..UseEventDecl::EMPTY
                     }),
                     UseDecl::EventStream(UseEventStreamDecl {
                         target_path: Some("/bar".to_string()),
                         events: Some(vec!["/a".to_string(), "/b".to_string()]),
-                        ..UseEventStreamDecl::empty()
+                        ..UseEventStreamDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -2470,7 +2470,7 @@ mod tests {
                             })),
                             source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.StorageAdmin".to_string()),
-                            ..UseProtocolDecl::empty()
+                            ..UseProtocolDecl::EMPTY
                         })
                     ]),
                     ..new_component_decl()
@@ -2487,12 +2487,12 @@ mod tests {
                     UseDecl::EventStream(UseEventStreamDecl {
                         target_path: Some("/bar".to_string()),
                         events: None,
-                        ..UseEventStreamDecl::empty()
+                        ..UseEventStreamDecl::EMPTY
                     }),
                     UseDecl::EventStream(UseEventStreamDecl {
                         target_path: Some("/barbar".to_string()),
                         events: Some(vec![]),
-                        ..UseEventStreamDecl::empty()
+                        ..UseEventStreamDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -2508,11 +2508,11 @@ mod tests {
                 decl.uses = Some(vec![
                     UseDecl::Runner(UseRunnerDecl {
                         source_name: Some("elf".to_string()),
-                        ..UseRunnerDecl::empty()
+                        ..UseRunnerDecl::EMPTY
                     }),
                     UseDecl::Runner(UseRunnerDecl {
                         source_name: Some("elf".to_string()),
-                        ..UseRunnerDecl::empty()
+                        ..UseRunnerDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -2529,13 +2529,13 @@ mod tests {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some(format!("{}", "a".repeat(101))),
                         target_path: Some(format!("/s/{}", "b".repeat(1024))),
-                        ..UseServiceDecl::empty()
+                        ..UseServiceDecl::EMPTY
                     }),
                     UseDecl::Protocol(UseProtocolDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some(format!("{}", "a".repeat(101))),
                         target_path: Some(format!("/p/{}", "c".repeat(1024))),
-                        ..UseProtocolDecl::empty()
+                        ..UseProtocolDecl::EMPTY
                     }),
                     UseDecl::Directory(UseDirectoryDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -2543,23 +2543,23 @@ mod tests {
                         target_path: Some(format!("/d/{}", "d".repeat(1024))),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        ..UseDirectoryDecl::empty()
+                        ..UseDirectoryDecl::EMPTY
                     }),
                     UseDecl::Storage(UseStorageDecl {
                         source_name: Some("cache".to_string()),
                         target_path: Some(format!("/{}", "e".repeat(1024))),
-                        ..UseStorageDecl::empty()
+                        ..UseStorageDecl::EMPTY
                     }),
                     UseDecl::Runner(UseRunnerDecl {
                         source_name: Some(format!("{}", "a".repeat(101))),
-                        ..UseRunnerDecl::empty()
+                        ..UseRunnerDecl::EMPTY
                     }),
                     UseDecl::Event(UseEventDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some(format!("{}", "a".repeat(101))),
                         target_name: Some(format!("{}", "a".repeat(101))),
                         filter: None,
-                        ..UseEventDecl::empty()
+                        ..UseEventDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -2585,13 +2585,13 @@ mod tests {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("foo".to_string()),
                         target_path: Some("/bar".to_string()),
-                        ..UseServiceDecl::empty()
+                        ..UseServiceDecl::EMPTY
                     }),
                     UseDecl::Protocol(UseProtocolDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         source_name: Some("space".to_string()),
                         target_path: Some("/bar".to_string()),
-                        ..UseProtocolDecl::empty()
+                        ..UseProtocolDecl::EMPTY
                     }),
                     UseDecl::Directory(UseDirectoryDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -2599,7 +2599,7 @@ mod tests {
                         target_path: Some("/bar".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        ..UseDirectoryDecl::empty()
+                        ..UseDirectoryDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -2620,14 +2620,14 @@ mod tests {
                         source_name: None,
                         target_name: None,
                         target: None,
-                        ..ExposeServiceDecl::empty()
+                        ..ExposeServiceDecl::EMPTY
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: None,
                         source_name: None,
                         target_name: None,
                         target: None,
-                        ..ExposeProtocolDecl::empty()
+                        ..ExposeProtocolDecl::EMPTY
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: None,
@@ -2636,21 +2636,21 @@ mod tests {
                         target: None,
                         rights: None,
                         subdir: None,
-                        ..ExposeDirectoryDecl::empty()
+                        ..ExposeDirectoryDecl::EMPTY
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: None,
                         source_name: None,
                         target: None,
                         target_name: None,
-                        ..ExposeRunnerDecl::empty()
+                        ..ExposeRunnerDecl::EMPTY
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
                         source: None,
                         source_name: None,
                         target: None,
                         target_name: None,
-                        ..ExposeResolverDecl::empty()
+                        ..ExposeResolverDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -2690,7 +2690,7 @@ mod tests {
                         source_name: Some("logger".to_string()),
                         target_name: Some("logger".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
-                        ..ExposeServiceDecl::empty()
+                        ..ExposeServiceDecl::EMPTY
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2700,7 +2700,7 @@ mod tests {
                         source_name: Some("legacy_logger".to_string()),
                         target_name: Some("legacy_logger".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
-                        ..ExposeProtocolDecl::empty()
+                        ..ExposeProtocolDecl::EMPTY
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2712,7 +2712,7 @@ mod tests {
                         target: Some(Ref::Parent(ParentRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        ..ExposeDirectoryDecl::empty()
+                        ..ExposeDirectoryDecl::EMPTY
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2722,7 +2722,7 @@ mod tests {
                         source_name: Some("elf".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("elf".to_string()),
-                        ..ExposeRunnerDecl::empty()
+                        ..ExposeRunnerDecl::EMPTY
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2732,7 +2732,7 @@ mod tests {
                         source_name: Some("pkg".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("pkg".to_string()),
-                        ..ExposeResolverDecl::empty()
+                        ..ExposeResolverDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -2757,7 +2757,7 @@ mod tests {
                         source_name: Some("foo/".to_string()),
                         target_name: Some("/".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
-                        ..ExposeServiceDecl::empty()
+                        ..ExposeServiceDecl::EMPTY
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2767,7 +2767,7 @@ mod tests {
                         source_name: Some("foo/".to_string()),
                         target_name: Some("/".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
-                        ..ExposeProtocolDecl::empty()
+                        ..ExposeProtocolDecl::EMPTY
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2779,7 +2779,7 @@ mod tests {
                         target: Some(Ref::Parent(ParentRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: Some("/foo".to_string()),
-                        ..ExposeDirectoryDecl::empty()
+                        ..ExposeDirectoryDecl::EMPTY
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2789,7 +2789,7 @@ mod tests {
                         source_name: Some("/path".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("elf!".to_string()),
-                        ..ExposeRunnerDecl::empty()
+                        ..ExposeRunnerDecl::EMPTY
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2799,7 +2799,7 @@ mod tests {
                         source_name: Some("/path".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("pkg!".to_string()),
-                        ..ExposeResolverDecl::empty()
+                        ..ExposeResolverDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -2831,7 +2831,7 @@ mod tests {
                     url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
                     startup: Some(StartupMode::Lazy),
                     environment: None,
-                    ..ChildDecl::empty()
+                    ..ChildDecl::EMPTY
                 }]);
                 decl.exposes = Some(vec![
                     ExposeDecl::Service(ExposeServiceDecl {
@@ -2839,14 +2839,14 @@ mod tests {
                         source_name: Some("a".to_string()),
                         target_name: Some("b".to_string()),
                         target: None,
-                        ..ExposeServiceDecl::empty()
+                        ..ExposeServiceDecl::EMPTY
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: Some(Ref::Parent(ParentRef {})),
                         source_name: Some("c".to_string()),
                         target_name: Some("d".to_string()),
                         target: Some(Ref::Self_(SelfRef {})),
-                        ..ExposeProtocolDecl::empty()
+                        ..ExposeProtocolDecl::EMPTY
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Collection(CollectionRef {name: "z".to_string()})),
@@ -2855,7 +2855,7 @@ mod tests {
                         target: Some(Ref::Collection(CollectionRef {name: "z".to_string()})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        ..ExposeDirectoryDecl::empty()
+                        ..ExposeDirectoryDecl::EMPTY
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Parent(ParentRef {})),
@@ -2864,21 +2864,21 @@ mod tests {
                         target: Some(Ref::Framework(FrameworkRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        ..ExposeDirectoryDecl::empty()
+                        ..ExposeDirectoryDecl::EMPTY
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Parent(ParentRef {})),
                         source_name: Some("i".to_string()),
                         target: Some(Ref::Framework(FrameworkRef {})),
                         target_name: Some("j".to_string()),
-                        ..ExposeRunnerDecl::empty()
+                        ..ExposeRunnerDecl::EMPTY
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
                         source: Some(Ref::Parent(ParentRef {})),
                         source_name: Some("k".to_string()),
                         target: Some(Ref::Framework(FrameworkRef {})),
                         target_name: Some("l".to_string()),
-                        ..ExposeResolverDecl::empty()
+                        ..ExposeResolverDecl::EMPTY
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2890,7 +2890,7 @@ mod tests {
                         target: Some(Ref::Framework(FrameworkRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        ..ExposeDirectoryDecl::empty()
+                        ..ExposeDirectoryDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -2923,7 +2923,7 @@ mod tests {
                         source_name: Some(format!("{}", "a".repeat(1025))),
                         target_name: Some(format!("{}", "b".repeat(1025))),
                         target: Some(Ref::Parent(ParentRef {})),
-                        ..ExposeServiceDecl::empty()
+                        ..ExposeServiceDecl::EMPTY
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2933,7 +2933,7 @@ mod tests {
                         source_name: Some(format!("{}", "a".repeat(101))),
                         target_name: Some(format!("{}", "b".repeat(101))),
                         target: Some(Ref::Parent(ParentRef {})),
-                        ..ExposeProtocolDecl::empty()
+                        ..ExposeProtocolDecl::EMPTY
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2945,7 +2945,7 @@ mod tests {
                         target: Some(Ref::Parent(ParentRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        ..ExposeDirectoryDecl::empty()
+                        ..ExposeDirectoryDecl::EMPTY
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2955,7 +2955,7 @@ mod tests {
                         source_name: Some("a".repeat(101)),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("b".repeat(101)),
-                        ..ExposeRunnerDecl::empty()
+                        ..ExposeRunnerDecl::EMPTY
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2965,7 +2965,7 @@ mod tests {
                         source_name: Some("a".repeat(101)),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("b".repeat(101)),
-                        ..ExposeResolverDecl::empty()
+                        ..ExposeResolverDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -3000,7 +3000,7 @@ mod tests {
                         source_name: Some("fuchsia.logger.Log".to_string()),
                         target_name: Some("fuchsia.logger.Log".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
-                        ..ExposeServiceDecl::empty()
+                        ..ExposeServiceDecl::EMPTY
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3010,7 +3010,7 @@ mod tests {
                         source_name: Some("fuchsia.logger.LegacyLog".to_string()),
                         target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
-                        ..ExposeProtocolDecl::empty()
+                        ..ExposeProtocolDecl::EMPTY
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3022,7 +3022,7 @@ mod tests {
                         target: Some(Ref::Parent(ParentRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
-                        ..ExposeDirectoryDecl::empty()
+                        ..ExposeDirectoryDecl::EMPTY
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3032,7 +3032,7 @@ mod tests {
                         source_name: Some("elf".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("elf".to_string()),
-                        ..ExposeRunnerDecl::empty()
+                        ..ExposeRunnerDecl::EMPTY
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3042,7 +3042,7 @@ mod tests {
                         source_name: Some("pkg".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("pkg".to_string()),
-                        ..ExposeResolverDecl::empty()
+                        ..ExposeResolverDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -3066,7 +3066,7 @@ mod tests {
                             source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
                             target_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
                             target: Some(Ref::Parent(ParentRef {})),
-                            ..ExposeProtocolDecl::empty()
+                            ..ExposeProtocolDecl::EMPTY
                         }),
                     ]),
                     ..new_component_decl()
@@ -3085,28 +3085,28 @@ mod tests {
                         source_name: Some("netstack".to_string()),
                         target_name: Some("fuchsia.net.Stack".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
-                        ..ExposeServiceDecl::empty()
+                        ..ExposeServiceDecl::EMPTY
                     }),
                     ExposeDecl::Service(ExposeServiceDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("netstack2".to_string()),
                         target_name: Some("fuchsia.net.Stack".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
-                        ..ExposeServiceDecl::empty()
+                        ..ExposeServiceDecl::EMPTY
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("fonts".to_string()),
                         target_name: Some("fuchsia.fonts.Provider".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
-                        ..ExposeProtocolDecl::empty()
+                        ..ExposeProtocolDecl::EMPTY
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("fonts2".to_string()),
                         target_name: Some("fuchsia.fonts.Provider".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
-                        ..ExposeProtocolDecl::empty()
+                        ..ExposeProtocolDecl::EMPTY
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -3115,7 +3115,7 @@ mod tests {
                         target: Some(Ref::Parent(ParentRef {})),
                         rights: None,
                         subdir: None,
-                        ..ExposeDirectoryDecl::empty()
+                        ..ExposeDirectoryDecl::EMPTY
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -3124,80 +3124,80 @@ mod tests {
                         target: Some(Ref::Parent(ParentRef {})),
                         rights: None,
                         subdir: None,
-                        ..ExposeDirectoryDecl::empty()
+                        ..ExposeDirectoryDecl::EMPTY
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("source_elf".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("elf".to_string()),
-                        ..ExposeRunnerDecl::empty()
+                        ..ExposeRunnerDecl::EMPTY
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("source_elf".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("elf".to_string()),
-                        ..ExposeRunnerDecl::empty()
+                        ..ExposeRunnerDecl::EMPTY
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("source_pkg".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("pkg".to_string()),
-                        ..ExposeResolverDecl::empty()
+                        ..ExposeResolverDecl::EMPTY
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("source_pkg".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("pkg".to_string()),
-                        ..ExposeResolverDecl::empty()
+                        ..ExposeResolverDecl::EMPTY
                     }),
                 ]);
                 decl.capabilities = Some(vec![
                     CapabilityDecl::Service(ServiceDecl {
                         name: Some("netstack".to_string()),
                         source_path: Some("/path".to_string()),
-                        ..ServiceDecl::empty()
+                        ..ServiceDecl::EMPTY
                     }),
                     CapabilityDecl::Service(ServiceDecl {
                         name: Some("netstack2".to_string()),
                         source_path: Some("/path".to_string()),
-                        ..ServiceDecl::empty()
+                        ..ServiceDecl::EMPTY
                     }),
                     CapabilityDecl::Protocol(ProtocolDecl {
                         name: Some("fonts".to_string()),
                         source_path: Some("/path".to_string()),
-                        ..ProtocolDecl::empty()
+                        ..ProtocolDecl::EMPTY
                     }),
                     CapabilityDecl::Protocol(ProtocolDecl {
                         name: Some("fonts2".to_string()),
                         source_path: Some("/path".to_string()),
-                        ..ProtocolDecl::empty()
+                        ..ProtocolDecl::EMPTY
                     }),
                     CapabilityDecl::Directory(DirectoryDecl {
                         name: Some("assets".to_string()),
                         source_path: Some("/path".to_string()),
                         rights: Some(fio2::Operations::Connect),
-                        ..DirectoryDecl::empty()
+                        ..DirectoryDecl::EMPTY
                     }),
                     CapabilityDecl::Directory(DirectoryDecl {
                         name: Some("assets2".to_string()),
                         source_path: Some("/path".to_string()),
                         rights: Some(fio2::Operations::Connect),
-                        ..DirectoryDecl::empty()
+                        ..DirectoryDecl::EMPTY
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("source_elf".to_string()),
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/path".to_string()),
-                        ..RunnerDecl::empty()
+                        ..RunnerDecl::EMPTY
                     }),
                     CapabilityDecl::Resolver(ResolverDecl {
                         name: Some("source_pkg".to_string()),
                         source_path: Some("/path".to_string()),
-                        ..ResolverDecl::empty()
+                        ..ResolverDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -3223,14 +3223,14 @@ mod tests {
                         source_name: Some("fuchsia.netstack.Netstack".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("foo".to_string()),
-                        ..ExposeServiceDecl::empty()
+                        ..ExposeServiceDecl::EMPTY
                     }),
                     ExposeDecl::Protocol(ExposeProtocolDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("fuchsia.netstack.Netstack".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("bar".to_string()),
-                        ..ExposeProtocolDecl::empty()
+                        ..ExposeProtocolDecl::EMPTY
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -3239,21 +3239,21 @@ mod tests {
                         target_name: Some("assets".to_string()),
                         rights: None,
                         subdir: None,
-                        ..ExposeDirectoryDecl::empty()
+                        ..ExposeDirectoryDecl::EMPTY
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("source_elf".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("elf".to_string()),
-                        ..ExposeRunnerDecl::empty()
+                        ..ExposeRunnerDecl::EMPTY
                     }),
                     ExposeDecl::Resolver(ExposeResolverDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_name: Some("source_pkg".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("pkg".to_string()),
-                        ..ExposeResolverDecl::empty()
+                        ..ExposeResolverDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -3277,7 +3277,7 @@ mod tests {
                         source_name: None,
                         target: None,
                         target_name: None,
-                        ..OfferServiceDecl::empty()
+                        ..OfferServiceDecl::EMPTY
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: None,
@@ -3285,7 +3285,7 @@ mod tests {
                         target: None,
                         target_name: None,
                         dependency_type: None,
-                        ..OfferProtocolDecl::empty()
+                        ..OfferProtocolDecl::EMPTY
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: None,
@@ -3295,21 +3295,21 @@ mod tests {
                         rights: None,
                         subdir: None,
                         dependency_type: None,
-                        ..OfferDirectoryDecl::empty()
+                        ..OfferDirectoryDecl::EMPTY
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         source_name: None,
                         source: None,
                         target: None,
                         target_name: None,
-                        ..OfferStorageDecl::empty()
+                        ..OfferStorageDecl::EMPTY
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: None,
                         source_name: None,
                         target: None,
                         target_name: None,
-                        ..OfferRunnerDecl::empty()
+                        ..OfferRunnerDecl::EMPTY
                     }),
                     OfferDecl::Event(OfferEventDecl {
                         source: None,
@@ -3317,7 +3317,7 @@ mod tests {
                         target: None,
                         target_name: None,
                         filter: None,
-                        ..OfferEventDecl::empty()
+                        ..OfferEventDecl::EMPTY
                     })
                 ]);
                 decl
@@ -3367,7 +3367,7 @@ mod tests {
                            }
                         )),
                         target_name: Some(format!("{}", "b".repeat(101))),
-                        ..OfferServiceDecl::empty()
+                        ..OfferServiceDecl::EMPTY
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Parent(ParentRef {})),
@@ -3378,7 +3378,7 @@ mod tests {
                            }
                         )),
                         target_name: Some(format!("{}", "b".repeat(101))),
-                        ..OfferServiceDecl::empty()
+                        ..OfferServiceDecl::EMPTY
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3394,7 +3394,7 @@ mod tests {
                         )),
                         target_name: Some(format!("{}", "b".repeat(101))),
                         dependency_type: Some(DependencyType::Strong),
-                        ..OfferProtocolDecl::empty()
+                        ..OfferProtocolDecl::EMPTY
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Parent(ParentRef {})),
@@ -3406,7 +3406,7 @@ mod tests {
                         )),
                         target_name: Some(format!("{}", "b".repeat(101))),
                         dependency_type: Some(DependencyType::WeakForMigration),
-                        ..OfferProtocolDecl::empty()
+                        ..OfferProtocolDecl::EMPTY
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3424,7 +3424,7 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                         dependency_type: Some(DependencyType::Strong),
-                        ..OfferDirectoryDecl::empty()
+                        ..OfferDirectoryDecl::EMPTY
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Parent(ParentRef {})),
@@ -3438,7 +3438,7 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                         dependency_type: Some(DependencyType::WeakForMigration),
-                        ..OfferDirectoryDecl::empty()
+                        ..OfferDirectoryDecl::EMPTY
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         source_name: Some("data".to_string()),
@@ -3450,7 +3450,7 @@ mod tests {
                             }
                         )),
                         target_name: Some("data".to_string()),
-                        ..OfferStorageDecl::empty()
+                        ..OfferStorageDecl::EMPTY
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         source_name: Some("data".to_string()),
@@ -3459,7 +3459,7 @@ mod tests {
                             CollectionRef { name: "b".repeat(101) }
                         )),
                         target_name: Some("data".to_string()),
-                        ..OfferStorageDecl::empty()
+                        ..OfferStorageDecl::EMPTY
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3473,7 +3473,7 @@ mod tests {
                            }
                         )),
                         target_name: Some("d".repeat(101)),
-                        ..OfferRunnerDecl::empty()
+                        ..OfferRunnerDecl::EMPTY
                     }),
                     OfferDecl::Resolver(OfferResolverDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3487,7 +3487,7 @@ mod tests {
                             }
                         )),
                         target_name: Some("d".repeat(101)),
-                        ..OfferResolverDecl::empty()
+                        ..OfferResolverDecl::EMPTY
                     }),
                     OfferDecl::Event(OfferEventDecl {
                         source: Some(Ref::Parent(ParentRef {})),
@@ -3497,8 +3497,8 @@ mod tests {
                             collection: None
                         })),
                         target_name: Some(format!("{}", "a".repeat(101))),
-                        filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::empty() }),
-                        ..OfferEventDecl::empty()
+                        filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                        ..OfferEventDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -3554,7 +3554,7 @@ mod tests {
                             }
                         )),
                         target_name: Some("fuchsia.logger.Log".to_string()),
-                        ..OfferServiceDecl::empty()
+                        ..OfferServiceDecl::EMPTY
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3570,7 +3570,7 @@ mod tests {
                         )),
                         target_name: Some("fuchsia.logger.Log".to_string()),
                         dependency_type: Some(DependencyType::Strong),
-                        ..OfferProtocolDecl::empty()
+                        ..OfferProtocolDecl::EMPTY
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3588,7 +3588,7 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                         dependency_type: Some(DependencyType::WeakForMigration),
-                        ..OfferDirectoryDecl::empty()
+                        ..OfferDirectoryDecl::EMPTY
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         source_name: Some("data".to_string()),
@@ -3600,7 +3600,7 @@ mod tests {
                             }
                         )),
                         target_name: Some("data".to_string()),
-                        ..OfferStorageDecl::empty()
+                        ..OfferStorageDecl::EMPTY
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3615,7 +3615,7 @@ mod tests {
                             }
                         )),
                         target_name: Some("elf".to_string()),
-                        ..OfferRunnerDecl::empty()
+                        ..OfferRunnerDecl::EMPTY
                     }),
                     OfferDecl::Resolver(OfferResolverDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3630,20 +3630,20 @@ mod tests {
                             }
                         )),
                         target_name: Some("pkg".to_string()),
-                        ..OfferResolverDecl::empty()
+                        ..OfferResolverDecl::EMPTY
                     }),
                 ]);
                 decl.capabilities = Some(vec![
                     CapabilityDecl::Protocol(ProtocolDecl {
                         name: Some("fuchsia.logger.Log".to_string()),
                         source_path: Some("/svc/logger".to_string()),
-                        ..ProtocolDecl::empty()
+                        ..ProtocolDecl::EMPTY
                     }),
                     CapabilityDecl::Directory(DirectoryDecl {
                         name: Some("assets".to_string()),
                         source_path: Some("/data/assets".to_string()),
                         rights: Some(fio2::Operations::Connect),
-                        ..DirectoryDecl::empty()
+                        ..DirectoryDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -3677,7 +3677,7 @@ mod tests {
                             collection: None,
                         })),
                         target_name: Some("/".to_string()),
-                        ..OfferServiceDecl::empty()
+                        ..OfferServiceDecl::EMPTY
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3691,7 +3691,7 @@ mod tests {
                         })),
                         target_name: Some("/".to_string()),
                         dependency_type: Some(DependencyType::Strong),
-                        ..OfferProtocolDecl::empty()
+                        ..OfferProtocolDecl::EMPTY
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3707,7 +3707,7 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                         subdir: Some("/foo".to_string()),
                         dependency_type: Some(DependencyType::Strong),
-                        ..OfferDirectoryDecl::empty()
+                        ..OfferDirectoryDecl::EMPTY
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3720,7 +3720,7 @@ mod tests {
                             collection: None,
                         })),
                         target_name: Some("elf!".to_string()),
-                        ..OfferRunnerDecl::empty()
+                        ..OfferRunnerDecl::EMPTY
                     }),
                     OfferDecl::Resolver(OfferResolverDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3733,7 +3733,7 @@ mod tests {
                             collection: None,
                         })),
                         target_name: Some("pkg!".to_string()),
-                        ..OfferResolverDecl::empty()
+                        ..OfferResolverDecl::EMPTY
                     }),
                     OfferDecl::Event(OfferEventDecl {
                         source: Some(Ref::Parent(ParentRef {})),
@@ -3743,8 +3743,8 @@ mod tests {
                             collection: None,
                         })),
                         target_name: Some("/path".to_string()),
-                        filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::empty() }),
-                        ..OfferEventDecl::empty()
+                        filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                        ..OfferEventDecl::EMPTY
                     })
                 ]);
                 decl
@@ -3793,7 +3793,7 @@ mod tests {
                            }
                         )),
                         target_name: Some("logger".to_string()),
-                        ..OfferServiceDecl::empty()
+                        ..OfferServiceDecl::EMPTY
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3809,7 +3809,7 @@ mod tests {
                         )),
                         target_name: Some("legacy_logger".to_string()),
                         dependency_type: Some(DependencyType::WeakForMigration),
-                        ..OfferProtocolDecl::empty()
+                        ..OfferProtocolDecl::EMPTY
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3827,7 +3827,7 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                         dependency_type: Some(DependencyType::Strong),
-                        ..OfferDirectoryDecl::empty()
+                        ..OfferDirectoryDecl::EMPTY
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3842,7 +3842,7 @@ mod tests {
                            }
                         )),
                         target_name: Some("web".to_string()),
-                        ..OfferRunnerDecl::empty()
+                        ..OfferRunnerDecl::EMPTY
                     }),
                     OfferDecl::Resolver(OfferResolverDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3857,7 +3857,7 @@ mod tests {
                            }
                         )),
                         target_name: Some("pkg".to_string()),
-                        ..OfferResolverDecl::empty()
+                        ..OfferResolverDecl::EMPTY
                     }),
                 ]);
                 decl.children = Some(vec![ChildDecl{
@@ -3865,7 +3865,7 @@ mod tests {
                     url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
                     startup: Some(StartupMode::Lazy),
                     environment: None,
-                    ..ChildDecl::empty()
+                    ..ChildDecl::EMPTY
                 }]);
                 decl
             },
@@ -3890,7 +3890,7 @@ mod tests {
                             }
                         )),
                         target_name: Some("data".to_string()),
-                        ..OfferStorageDecl::empty()
+                        ..OfferStorageDecl::EMPTY
                     })
                 ]),
                 capabilities: Some(vec![
@@ -3902,7 +3902,7 @@ mod tests {
                             collection: None,
                         })),
                         subdir: None,
-                        ..StorageDecl::empty()
+                        ..StorageDecl::EMPTY
                     }),
                 ]),
                 children: Some(vec![
@@ -3911,7 +3911,7 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(StartupMode::Lazy),
                         environment: None,
-                        ..ChildDecl::empty()
+                        ..ChildDecl::EMPTY
                     },
                 ]),
                 ..new_component_decl()
@@ -3937,7 +3937,7 @@ mod tests {
                            }
                         )),
                         target_name: Some("fuchsia.logger.Log".to_string()),
-                        ..OfferServiceDecl::empty()
+                        ..OfferServiceDecl::EMPTY
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3953,7 +3953,7 @@ mod tests {
                         )),
                         target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                         dependency_type: Some(DependencyType::Strong),
-                        ..OfferProtocolDecl::empty()
+                        ..OfferProtocolDecl::EMPTY
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -3968,7 +3968,7 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                         dependency_type: Some(DependencyType::WeakForMigration),
-                        ..OfferDirectoryDecl::empty()
+                        ..OfferDirectoryDecl::EMPTY
                     }),
                 ]);
                 decl.capabilities = Some(vec![
@@ -3980,7 +3980,7 @@ mod tests {
                             collection: None,
                         })),
                         subdir: None,
-                        ..StorageDecl::empty()
+                        ..StorageDecl::EMPTY
                     }),
                 ]);
                 decl.children = Some(vec![
@@ -3989,7 +3989,7 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(StartupMode::Lazy),
                         environment: None,
-                        ..ChildDecl::empty()
+                        ..ChildDecl::EMPTY
                     },
                 ]);
                 decl.collections = Some(vec![
@@ -3997,7 +3997,7 @@ mod tests {
                         name: Some("modular".to_string()),
                         durability: Some(Durability::Persistent),
                         environment: None,
-                        ..CollectionDecl::empty()
+                        ..CollectionDecl::EMPTY
                     },
                 ]);
                 decl
@@ -4026,7 +4026,7 @@ mod tests {
                             )),
                             target_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
                             dependency_type: Some(DependencyType::Strong),
-                            ..OfferProtocolDecl::empty()
+                            ..OfferProtocolDecl::EMPTY
                         }),
                     ]),
                     ..new_component_decl()
@@ -4051,7 +4051,7 @@ mod tests {
                            }
                         )),
                         target_name: Some("fuchsia.logger.Log".to_string()),
-                        ..OfferServiceDecl::empty()
+                        ..OfferServiceDecl::EMPTY
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4063,7 +4063,7 @@ mod tests {
                            }
                         )),
                         target_name: Some("fuchsia.logger.Log".to_string()),
-                        ..OfferServiceDecl::empty()
+                        ..OfferServiceDecl::EMPTY
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4076,7 +4076,7 @@ mod tests {
                         )),
                         target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                         dependency_type: Some(DependencyType::Strong),
-                        ..OfferProtocolDecl::empty()
+                        ..OfferProtocolDecl::EMPTY
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4089,7 +4089,7 @@ mod tests {
                         )),
                         target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                         dependency_type: Some(DependencyType::Strong),
-                        ..OfferProtocolDecl::empty()
+                        ..OfferProtocolDecl::EMPTY
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4101,7 +4101,7 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                         dependency_type: Some(DependencyType::Strong),
-                        ..OfferDirectoryDecl::empty()
+                        ..OfferDirectoryDecl::EMPTY
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4113,7 +4113,7 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                         dependency_type: Some(DependencyType::WeakForMigration),
-                        ..OfferDirectoryDecl::empty()
+                        ..OfferDirectoryDecl::EMPTY
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4122,7 +4122,7 @@ mod tests {
                            CollectionRef { name: "modular".to_string() }
                         )),
                         target_name: Some("duplicated".to_string()),
-                        ..OfferRunnerDecl::empty()
+                        ..OfferRunnerDecl::EMPTY
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4131,7 +4131,7 @@ mod tests {
                            CollectionRef { name: "modular".to_string() }
                         )),
                         target_name: Some("duplicated".to_string()),
-                        ..OfferRunnerDecl::empty()
+                        ..OfferRunnerDecl::EMPTY
                     }),
                     OfferDecl::Resolver(OfferResolverDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4140,7 +4140,7 @@ mod tests {
                            CollectionRef { name: "modular".to_string() }
                         )),
                         target_name: Some("duplicated".to_string()),
-                        ..OfferResolverDecl::empty()
+                        ..OfferResolverDecl::EMPTY
                     }),
                     OfferDecl::Event(OfferEventDecl {
                         source: Some(Ref::Parent(ParentRef {})),
@@ -4151,7 +4151,7 @@ mod tests {
                         })),
                         target_name: Some("started".to_string()),
                         filter: None,
-                        ..OfferEventDecl::empty()
+                        ..OfferEventDecl::EMPTY
                     }),
                     OfferDecl::Event(OfferEventDecl {
                         source: Some(Ref::Parent(ParentRef {})),
@@ -4162,7 +4162,7 @@ mod tests {
                         })),
                         target_name: Some("started".to_string()),
                         filter: None,
-                        ..OfferEventDecl::empty()
+                        ..OfferEventDecl::EMPTY
                     }),
                 ]);
                 decl.children = Some(vec![
@@ -4171,7 +4171,7 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(StartupMode::Eager),
                         environment: None,
-                        ..ChildDecl::empty()
+                        ..ChildDecl::EMPTY
                     },
                 ]);
                 decl.collections = Some(vec![
@@ -4179,7 +4179,7 @@ mod tests {
                         name: Some("modular".to_string()),
                         durability: Some(Durability::Persistent),
                         environment: None,
-                        ..CollectionDecl::empty()
+                        ..CollectionDecl::EMPTY
                     },
                 ]);
                 decl
@@ -4207,7 +4207,7 @@ mod tests {
                            }
                         )),
                         target_name: Some("fuchsia.logger.Log".to_string()),
-                        ..OfferServiceDecl::empty()
+                        ..OfferServiceDecl::EMPTY
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4216,7 +4216,7 @@ mod tests {
                            CollectionRef { name: "modular".to_string(), }
                         )),
                         target_name: Some("fuchsia.logger.Log".to_string()),
-                        ..OfferServiceDecl::empty()
+                        ..OfferServiceDecl::EMPTY
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4229,7 +4229,7 @@ mod tests {
                         )),
                         target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                         dependency_type: Some(DependencyType::WeakForMigration),
-                        ..OfferProtocolDecl::empty()
+                        ..OfferProtocolDecl::EMPTY
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4239,7 +4239,7 @@ mod tests {
                         )),
                         target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                         dependency_type: Some(DependencyType::Strong),
-                        ..OfferProtocolDecl::empty()
+                        ..OfferProtocolDecl::EMPTY
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4254,7 +4254,7 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                         dependency_type: Some(DependencyType::Strong),
-                        ..OfferDirectoryDecl::empty()
+                        ..OfferDirectoryDecl::EMPTY
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4266,7 +4266,7 @@ mod tests {
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                         dependency_type: Some(DependencyType::WeakForMigration),
-                        ..OfferDirectoryDecl::empty()
+                        ..OfferDirectoryDecl::EMPTY
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         source_name: Some("data".to_string()),
@@ -4278,7 +4278,7 @@ mod tests {
                             }
                         )),
                         target_name: Some("data".to_string()),
-                        ..OfferStorageDecl::empty()
+                        ..OfferStorageDecl::EMPTY
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         source_name: Some("data".to_string()),
@@ -4287,7 +4287,7 @@ mod tests {
                             CollectionRef { name: "modular".to_string(), }
                         )),
                         target_name: Some("data".to_string()),
-                        ..OfferStorageDecl::empty()
+                        ..OfferStorageDecl::EMPTY
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4299,7 +4299,7 @@ mod tests {
                             }
                         )),
                         target_name: Some("elf".to_string()),
-                        ..OfferRunnerDecl::empty()
+                        ..OfferRunnerDecl::EMPTY
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4308,7 +4308,7 @@ mod tests {
                            CollectionRef { name: "modular".to_string(), }
                         )),
                         target_name: Some("elf".to_string()),
-                        ..OfferRunnerDecl::empty()
+                        ..OfferRunnerDecl::EMPTY
                     }),
                     OfferDecl::Resolver(OfferResolverDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4320,7 +4320,7 @@ mod tests {
                             }
                         )),
                         target_name: Some("pkg".to_string()),
-                        ..OfferResolverDecl::empty()
+                        ..OfferResolverDecl::EMPTY
                     }),
                     OfferDecl::Resolver(OfferResolverDecl {
                         source: Some(Ref::Parent(ParentRef{})),
@@ -4329,7 +4329,7 @@ mod tests {
                            CollectionRef { name: "modular".to_string(), }
                         )),
                         target_name: Some("pkg".to_string()),
-                        ..OfferResolverDecl::empty()
+                        ..OfferResolverDecl::EMPTY
                     }),
                     OfferDecl::Event(OfferEventDecl {
                         source_name: Some("started".to_string()),
@@ -4342,7 +4342,7 @@ mod tests {
                             }
                         )),
                         filter: None,
-                        ..OfferEventDecl::empty()
+                        ..OfferEventDecl::EMPTY
                     }),
                     OfferDecl::Event(OfferEventDecl {
                         source_name: Some("started".to_string()),
@@ -4352,7 +4352,7 @@ mod tests {
                            CollectionRef { name: "modular".to_string(), }
                         )),
                         filter: None,
-                        ..OfferEventDecl::empty()
+                        ..OfferEventDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -4394,8 +4394,8 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some(format!("started_{}", i)),
-                            filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::empty() }),
-                            ..OfferEventDecl::empty()
+                            filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                            ..OfferEventDecl::EMPTY
                         })
                     })
                     .collect());
@@ -4405,7 +4405,7 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(StartupMode::Eager),
                         environment: None,
-                        ..ChildDecl::empty()
+                        ..ChildDecl::EMPTY
                     },
                 ]);
                 decl.collections = Some(vec![
@@ -4413,7 +4413,7 @@ mod tests {
                         name: Some("modular".to_string()),
                         durability: Some(Durability::Persistent),
                         environment: None,
-                        ..CollectionDecl::empty()
+                        ..CollectionDecl::EMPTY
                     },
                 ]);
                 decl
@@ -4445,7 +4445,7 @@ mod tests {
                         )),
                         target_name: Some(format!("thing_{}", from)),
                         dependency_type: Some(DependencyType::Strong),
-                        ..OfferProtocolDecl::empty()
+                        ..OfferProtocolDecl::EMPTY
                     })).collect();
                 let children = ["a", "b", "c", "d"].iter().map(|name| {
                     ChildDecl {
@@ -4453,7 +4453,7 @@ mod tests {
                         url: Some(format!("fuchsia-pkg://fuchsia.com/pkg#meta/{}.cm", name)),
                         startup: Some(StartupMode::Lazy),
                         environment: None,
-                        ..ChildDecl::empty()
+                        ..ChildDecl::EMPTY
                     }
                 }).collect();
                 decl.offers = Some(offers);
@@ -4475,7 +4475,7 @@ mod tests {
                     runners: None,
                     resolvers: None,
                     stop_timeout_ms: None,
-                    ..EnvironmentDecl::empty()
+                    ..EnvironmentDecl::EMPTY
                 }]);
                 decl
             },
@@ -4493,7 +4493,7 @@ mod tests {
                     runners: None,
                     resolvers: None,
                     stop_timeout_ms: None,
-                    ..EnvironmentDecl::empty()
+                    ..EnvironmentDecl::EMPTY
                 }]);
                 decl
             },
@@ -4508,7 +4508,7 @@ mod tests {
                     runners: None,
                     resolvers: None,
                     stop_timeout_ms: None,
-                    ..EnvironmentDecl::empty()
+                    ..EnvironmentDecl::EMPTY
                 }]);
                 decl
             },
@@ -4525,7 +4525,7 @@ mod tests {
                             source_name: Some("a".repeat(101)),
                             source: Some(Ref::Parent(ParentRef{})),
                             target_name: Some("a".repeat(101)),
-                            ..RunnerRegistration::empty()
+                            ..RunnerRegistration::EMPTY
                         },
                     ]),
                     resolvers: Some(vec![
@@ -4533,11 +4533,11 @@ mod tests {
                             resolver: Some("a".repeat(101)),
                             source: Some(Ref::Parent(ParentRef{})),
                             scheme: Some("a".repeat(101)),
-                            ..ResolverRegistration::empty()
+                            ..ResolverRegistration::EMPTY
                         },
                     ]),
                     stop_timeout_ms: Some(1234),
-                    ..EnvironmentDecl::empty()
+                    ..EnvironmentDecl::EMPTY
                 }]);
                 decl
             },
@@ -4560,7 +4560,7 @@ mod tests {
                             source_name: None,
                             source: None,
                             target_name: None,
-                            ..RunnerRegistration::empty()
+                            ..RunnerRegistration::EMPTY
                         },
                     ]),
                     resolvers: Some(vec![
@@ -4568,11 +4568,11 @@ mod tests {
                             resolver: None,
                             source: None,
                             scheme: None,
-                            ..ResolverRegistration::empty()
+                            ..ResolverRegistration::EMPTY
                         },
                     ]),
                     stop_timeout_ms: Some(1234),
-                    ..EnvironmentDecl::empty()
+                    ..EnvironmentDecl::EMPTY
                 }]);
                 decl
             },
@@ -4596,7 +4596,7 @@ mod tests {
                             source_name: Some("^a".to_string()),
                             source: Some(Ref::Framework(fsys::FrameworkRef{})),
                             target_name: Some("%a".to_string()),
-                            ..RunnerRegistration::empty()
+                            ..RunnerRegistration::EMPTY
                         },
                     ]),
                     resolvers: Some(vec![
@@ -4604,11 +4604,11 @@ mod tests {
                             resolver: Some("^a".to_string()),
                             source: Some(Ref::Framework(fsys::FrameworkRef{})),
                             scheme: Some("9scheme".to_string()),
-                            ..ResolverRegistration::empty()
+                            ..ResolverRegistration::EMPTY
                         },
                     ]),
                     stop_timeout_ms: Some(1234),
-                    ..EnvironmentDecl::empty()
+                    ..EnvironmentDecl::EMPTY
                 }]);
                 decl
             },
@@ -4632,12 +4632,12 @@ mod tests {
                             source_name: Some("dart".to_string()),
                             source: Some(Ref::Self_(SelfRef{})),
                             target_name: Some("dart".to_string()),
-                            ..RunnerRegistration::empty()
+                            ..RunnerRegistration::EMPTY
                         },
                     ]),
                     resolvers: None,
                     stop_timeout_ms: Some(1234),
-                    ..EnvironmentDecl::empty()
+                    ..EnvironmentDecl::EMPTY
                 }]);
                 decl
             },
@@ -4656,13 +4656,13 @@ mod tests {
                             source_name: Some("dart".to_string()),
                             source: Some(Ref::Parent(ParentRef{})),
                             target_name: Some("dart".to_string()),
-                            ..RunnerRegistration::empty()
+                            ..RunnerRegistration::EMPTY
                         },
                         RunnerRegistration {
                             source_name: Some("other-dart".to_string()),
                             source: Some(Ref::Parent(ParentRef{})),
                             target_name: Some("dart".to_string()),
-                            ..RunnerRegistration::empty()
+                            ..RunnerRegistration::EMPTY
                         },
                     ]),
                     resolvers: Some(vec![
@@ -4670,17 +4670,17 @@ mod tests {
                             resolver: Some("pkg_resolver".to_string()),
                             source: Some(Ref::Parent(ParentRef{})),
                             scheme: Some("fuchsia-pkg".to_string()),
-                            ..ResolverRegistration::empty()
+                            ..ResolverRegistration::EMPTY
                         },
                         ResolverRegistration {
                             resolver: Some("base_resolver".to_string()),
                             source: Some(Ref::Parent(ParentRef{})),
                             scheme: Some("fuchsia-pkg".to_string()),
-                            ..ResolverRegistration::empty()
+                            ..ResolverRegistration::EMPTY
                         },
                     ]),
                     stop_timeout_ms: Some(1234),
-                    ..EnvironmentDecl::empty()
+                    ..EnvironmentDecl::EMPTY
                 }]);
                 decl
             },
@@ -4703,7 +4703,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("elf".to_string()),
-                            ..RunnerRegistration::empty()
+                            ..RunnerRegistration::EMPTY
                         },
                     ]),
                     resolvers: Some(vec![
@@ -4714,11 +4714,11 @@ mod tests {
                                 collection: None,
                             })),
                             scheme: Some("fuchsia-pkg".to_string()),
-                            ..ResolverRegistration::empty()
+                            ..ResolverRegistration::EMPTY
                         },
                     ]),
                     stop_timeout_ms: Some(1234),
-                    ..EnvironmentDecl::empty()
+                    ..EnvironmentDecl::EMPTY
                 }]);
                 decl
             },
@@ -4741,19 +4741,19 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("elf".to_string()),
-                            ..RunnerRegistration::empty()
+                            ..RunnerRegistration::EMPTY
                         },
                     ]),
                     resolvers: None,
                     stop_timeout_ms: Some(1234),
-                    ..EnvironmentDecl::empty()
+                    ..EnvironmentDecl::EMPTY
                 }]);
                 decl.children = Some(vec![ChildDecl {
                     name: Some("child".to_string()),
                     startup: Some(StartupMode::Lazy),
                     url: Some("fuchsia-pkg://child".to_string()),
                     environment: Some("env".to_string()),
-                    ..ChildDecl::empty()
+                    ..ChildDecl::EMPTY
                 }]);
                 decl
             },
@@ -4778,18 +4778,18 @@ mod tests {
                                 collection: None,
                             })),
                             scheme: Some("fuchsia-pkg".to_string()),
-                            ..ResolverRegistration::empty()
+                            ..ResolverRegistration::EMPTY
                         },
                     ]),
                     stop_timeout_ms: Some(1234),
-                    ..EnvironmentDecl::empty()
+                    ..EnvironmentDecl::EMPTY
                 }]);
                 decl.children = Some(vec![ChildDecl {
                     name: Some("child".to_string()),
                     startup: Some(StartupMode::Lazy),
                     url: Some("fuchsia-pkg://child".to_string()),
                     environment: Some("env".to_string()),
-                    ..ChildDecl::empty()
+                    ..ChildDecl::EMPTY
                 }]);
                 decl
             },
@@ -4814,11 +4814,11 @@ mod tests {
                                 collection: None,
                             })),
                             scheme: Some("fuchsia-pkg".to_string()),
-                            ..ResolverRegistration::empty()
+                            ..ResolverRegistration::EMPTY
                         },
                     ]),
                     stop_timeout_ms: Some(1234),
-                    ..EnvironmentDecl::empty()
+                    ..EnvironmentDecl::EMPTY
                 }]);
                 decl.children = Some(vec![
                     ChildDecl {
@@ -4826,14 +4826,14 @@ mod tests {
                         startup: Some(StartupMode::Lazy),
                         url: Some("fuchsia-pkg://child-a".to_string()),
                         environment: None,
-                        ..ChildDecl::empty()
+                        ..ChildDecl::EMPTY
                     },
                     ChildDecl {
                         name: Some("b".to_string()),
                         startup: Some(StartupMode::Lazy),
                         url: Some("fuchsia-pkg://child-b".to_string()),
                         environment: Some("env".to_string()),
-                        ..ChildDecl::empty()
+                        ..ChildDecl::EMPTY
                     },
                 ]);
                 decl.offers = Some(vec![OfferDecl::Service(OfferServiceDecl {
@@ -4849,7 +4849,7 @@ mod tests {
                        }
                     )),
                     target_name: Some("thing".to_string()),
-                    ..OfferServiceDecl::empty()
+                    ..OfferServiceDecl::EMPTY
                 })]);
                 decl
             },
@@ -4869,7 +4869,7 @@ mod tests {
                     url: None,
                     startup: None,
                     environment: None,
-                    ..ChildDecl::empty()
+                    ..ChildDecl::EMPTY
                 }]);
                 decl
             },
@@ -4887,7 +4887,7 @@ mod tests {
                     url: Some("bad-scheme&://blah".to_string()),
                     startup: Some(StartupMode::Lazy),
                     environment: None,
-                    ..ChildDecl::empty()
+                    ..ChildDecl::EMPTY
                 }]);
                 decl
             },
@@ -4904,7 +4904,7 @@ mod tests {
                     url: Some(format!("fuchsia-pkg://{}", "a".repeat(4083))),
                     startup: Some(StartupMode::Lazy),
                     environment: Some("a".repeat(1025)),
-                    ..ChildDecl::empty()
+                    ..ChildDecl::EMPTY
                 }]);
                 decl
             },
@@ -4923,7 +4923,7 @@ mod tests {
                     url: Some("fuchsia-pkg://foo".to_string()),
                     startup: Some(StartupMode::Lazy),
                     environment: Some("test_env".to_string()),
-                    ..ChildDecl::empty()
+                    ..ChildDecl::EMPTY
                 }]);
                 decl
             },
@@ -4940,7 +4940,7 @@ mod tests {
                     name: None,
                     durability: None,
                     environment: None,
-                    ..CollectionDecl::empty()
+                    ..CollectionDecl::EMPTY
                 }]);
                 decl
             },
@@ -4956,7 +4956,7 @@ mod tests {
                     name: Some("^bad".to_string()),
                     durability: Some(Durability::Persistent),
                     environment: None,
-                    ..CollectionDecl::empty()
+                    ..CollectionDecl::EMPTY
                 }]);
                 decl
             },
@@ -4971,7 +4971,7 @@ mod tests {
                     name: Some("a".repeat(1025)),
                     durability: Some(Durability::Transient),
                     environment: None,
-                    ..CollectionDecl::empty()
+                    ..CollectionDecl::EMPTY
                 }]);
                 decl
             },
@@ -4986,7 +4986,7 @@ mod tests {
                     name: Some("foo".to_string()),
                     durability: Some(Durability::Transient),
                     environment: Some("test_env".to_string()),
-                    ..CollectionDecl::empty()
+                    ..CollectionDecl::EMPTY
                 }]);
                 decl
             },
@@ -5003,36 +5003,36 @@ mod tests {
                     CapabilityDecl::Service(ServiceDecl {
                         name: None,
                         source_path: None,
-                        ..ServiceDecl::empty()
+                        ..ServiceDecl::EMPTY
                     }),
                     CapabilityDecl::Protocol(ProtocolDecl {
                         name: None,
                         source_path: None,
-                        ..ProtocolDecl::empty()
+                        ..ProtocolDecl::EMPTY
                     }),
                     CapabilityDecl::Directory(DirectoryDecl {
                         name: None,
                         source_path: None,
                         rights: None,
-                        ..DirectoryDecl::empty()
+                        ..DirectoryDecl::EMPTY
                     }),
                     CapabilityDecl::Storage(StorageDecl {
                         name: None,
                         source: None,
                         backing_dir: None,
                         subdir: None,
-                        ..StorageDecl::empty()
+                        ..StorageDecl::EMPTY
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: None,
                         source: None,
                         source_path: None,
-                        ..RunnerDecl::empty()
+                        ..RunnerDecl::EMPTY
                     }),
                     CapabilityDecl::Resolver(ResolverDecl {
                         name: None,
                         source_path: None,
-                        ..ResolverDecl::empty()
+                        ..ResolverDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -5062,18 +5062,18 @@ mod tests {
                     CapabilityDecl::Service(ServiceDecl {
                         name: Some("^bad".to_string()),
                         source_path: Some("&bad".to_string()),
-                        ..ServiceDecl::empty()
+                        ..ServiceDecl::EMPTY
                     }),
                     CapabilityDecl::Protocol(ProtocolDecl {
                         name: Some("^bad".to_string()),
                         source_path: Some("&bad".to_string()),
-                        ..ProtocolDecl::empty()
+                        ..ProtocolDecl::EMPTY
                     }),
                     CapabilityDecl::Directory(DirectoryDecl {
                         name: Some("^bad".to_string()),
                         source_path: Some("&bad".to_string()),
                         rights: Some(fio2::Operations::Connect),
-                        ..DirectoryDecl::empty()
+                        ..DirectoryDecl::EMPTY
                     }),
                     CapabilityDecl::Storage(StorageDecl {
                         name: Some("^bad".to_string()),
@@ -5082,7 +5082,7 @@ mod tests {
                         })),
                         backing_dir: Some("&bad".to_string()),
                         subdir: None,
-                        ..StorageDecl::empty()
+                        ..StorageDecl::EMPTY
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("^bad".to_string()),
@@ -5090,12 +5090,12 @@ mod tests {
                             name: "/bad".to_string()
                         })),
                         source_path: Some("&bad".to_string()),
-                        ..RunnerDecl::empty()
+                        ..RunnerDecl::EMPTY
                     }),
                     CapabilityDecl::Resolver(ResolverDecl {
                         name: Some("^bad".to_string()),
                         source_path: Some("&bad".to_string()),
-                        ..ResolverDecl::empty()
+                        ..ResolverDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -5128,7 +5128,7 @@ mod tests {
                         })),
                         backing_dir: Some("foo".to_string()),
                         subdir: None,
-                        ..StorageDecl::empty()
+                        ..StorageDecl::EMPTY
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("bar".to_string()),
@@ -5136,12 +5136,12 @@ mod tests {
                             name: "invalid".to_string(),
                         })),
                         source_path: Some("/foo".to_string()),
-                        ..RunnerDecl::empty()
+                        ..RunnerDecl::EMPTY
                     }),
                     CapabilityDecl::Resolver(ResolverDecl {
                         name: Some("baz".to_string()),
                         source_path: Some("/foo".to_string()),
-                        ..ResolverDecl::empty()
+                        ..ResolverDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -5158,18 +5158,18 @@ mod tests {
                     CapabilityDecl::Service(ServiceDecl {
                         name: Some("a".repeat(101)),
                         source_path: Some(format!("/{}", "c".repeat(1024))),
-                        ..ServiceDecl::empty()
+                        ..ServiceDecl::EMPTY
                     }),
                     CapabilityDecl::Protocol(ProtocolDecl {
                         name: Some("a".repeat(101)),
                         source_path: Some(format!("/{}", "c".repeat(1024))),
-                        ..ProtocolDecl::empty()
+                        ..ProtocolDecl::EMPTY
                     }),
                     CapabilityDecl::Directory(DirectoryDecl {
                         name: Some("a".repeat(101)),
                         source_path: Some(format!("/{}", "c".repeat(1024))),
                         rights: Some(fio2::Operations::Connect),
-                        ..DirectoryDecl::empty()
+                        ..DirectoryDecl::EMPTY
                     }),
                     CapabilityDecl::Storage(StorageDecl {
                         name: Some("a".repeat(101)),
@@ -5179,7 +5179,7 @@ mod tests {
                         })),
                         backing_dir: Some(format!("{}", "c".repeat(101))),
                         subdir: None,
-                        ..StorageDecl::empty()
+                        ..StorageDecl::EMPTY
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("a".repeat(101)),
@@ -5188,12 +5188,12 @@ mod tests {
                             collection: None,
                         })),
                         source_path: Some(format!("/{}", "c".repeat(1024))),
-                        ..RunnerDecl::empty()
+                        ..RunnerDecl::EMPTY
                     }),
                     CapabilityDecl::Resolver(ResolverDecl {
                         name: Some("a".repeat(101)),
                         source_path: Some(format!("/{}", "b".repeat(1024))),
-                        ..ResolverDecl::empty()
+                        ..ResolverDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -5222,70 +5222,70 @@ mod tests {
                     CapabilityDecl::Service(ServiceDecl {
                         name: Some("service".to_string()),
                         source_path: Some("/service".to_string()),
-                        ..ServiceDecl::empty()
+                        ..ServiceDecl::EMPTY
                     }),
                     CapabilityDecl::Service(ServiceDecl {
                         name: Some("service".to_string()),
                         source_path: Some("/service".to_string()),
-                        ..ServiceDecl::empty()
+                        ..ServiceDecl::EMPTY
                     }),
                     CapabilityDecl::Protocol(ProtocolDecl {
                         name: Some("protocol".to_string()),
                         source_path: Some("/protocol".to_string()),
-                        ..ProtocolDecl::empty()
+                        ..ProtocolDecl::EMPTY
                     }),
                     CapabilityDecl::Protocol(ProtocolDecl {
                         name: Some("protocol".to_string()),
                         source_path: Some("/protocol".to_string()),
-                        ..ProtocolDecl::empty()
+                        ..ProtocolDecl::EMPTY
                     }),
                     CapabilityDecl::Directory(DirectoryDecl {
                         name: Some("directory".to_string()),
                         source_path: Some("/directory".to_string()),
                         rights: Some(fio2::Operations::Connect),
-                        ..DirectoryDecl::empty()
+                        ..DirectoryDecl::EMPTY
                     }),
                     CapabilityDecl::Directory(DirectoryDecl {
                         name: Some("directory".to_string()),
                         source_path: Some("/directory".to_string()),
                         rights: Some(fio2::Operations::Connect),
-                        ..DirectoryDecl::empty()
+                        ..DirectoryDecl::EMPTY
                     }),
                     CapabilityDecl::Storage(StorageDecl {
                         name: Some("storage".to_string()),
                         source: Some(Ref::Self_(SelfRef{})),
                         backing_dir: Some("directory".to_string()),
                         subdir: None,
-                        ..StorageDecl::empty()
+                        ..StorageDecl::EMPTY
                     }),
                     CapabilityDecl::Storage(StorageDecl {
                         name: Some("storage".to_string()),
                         source: Some(Ref::Self_(SelfRef{})),
                         backing_dir: Some("directory".to_string()),
                         subdir: None,
-                        ..StorageDecl::empty()
+                        ..StorageDecl::EMPTY
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("runner".to_string()),
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/runner".to_string()),
-                        ..RunnerDecl::empty()
+                        ..RunnerDecl::EMPTY
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("runner".to_string()),
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/runner".to_string()),
-                        ..RunnerDecl::empty()
+                        ..RunnerDecl::EMPTY
                     }),
                     CapabilityDecl::Resolver(ResolverDecl {
                         name: Some("resolver".to_string()),
                         source_path: Some("/resolver".to_string()),
-                        ..ResolverDecl::empty()
+                        ..ResolverDecl::EMPTY
                     }),
                     CapabilityDecl::Resolver(ResolverDecl {
                         name: Some("resolver".to_string()),
                         source_path: Some("/resolver".to_string()),
-                        ..ResolverDecl::empty()
+                        ..ResolverDecl::EMPTY
                     }),
                 ]);
                 decl
@@ -5308,14 +5308,14 @@ mod tests {
                     source_name: Some("a".to_string()),
                     target: Some(Ref::Child(ChildRef { name: "child".to_string(), collection: None })),
                     target_name: Some("a".to_string()),
-                    ..OfferResolverDecl::empty()
+                    ..OfferResolverDecl::EMPTY
                 })]);
                 decl.children = Some(vec![ChildDecl {
                     name: Some("child".to_string()),
                     url: Some("test:///child".to_string()),
                     startup: Some(StartupMode::Eager),
                     environment: None,
-                    ..ChildDecl::empty()
+                    ..ChildDecl::EMPTY
                 }]);
                 decl
             },
@@ -5331,7 +5331,7 @@ mod tests {
                     source_name: Some("a".to_string()),
                     target: Some(Ref::Parent(ParentRef {})),
                     target_name: Some("a".to_string()),
-                    ..ExposeResolverDecl::empty()
+                    ..ExposeResolverDecl::EMPTY
                 })]);
                 decl
             },
@@ -5347,13 +5347,13 @@ mod tests {
                 CapabilityDecl::Protocol(ProtocolDecl {
                     name: Some("foo_svc".into()),
                     source_path: Some("/svc/foo".into()),
-                    ..ProtocolDecl::empty()
+                    ..ProtocolDecl::EMPTY
                 }),
                 CapabilityDecl::Directory(DirectoryDecl {
                     name: Some("foo_dir".into()),
                     source_path: Some("/foo".into()),
                     rights: Some(fio2::Operations::Connect),
-                    ..DirectoryDecl::empty()
+                    ..DirectoryDecl::EMPTY
                 }),
             ],
             result = Ok(()),
@@ -5363,13 +5363,13 @@ mod tests {
                 CapabilityDecl::Protocol(ProtocolDecl {
                     name: None,
                     source_path: None,
-                    ..ProtocolDecl::empty()
+                    ..ProtocolDecl::EMPTY
                 }),
                 CapabilityDecl::Directory(DirectoryDecl {
                     name: None,
                     source_path: None,
                     rights: None,
-                    ..DirectoryDecl::empty()
+                    ..DirectoryDecl::EMPTY
                 }),
             ],
             result = Err(ErrorList::new(vec![
@@ -5391,7 +5391,7 @@ mod tests {
                 source_name: Some(format!("thing")),
                 target_name: Some(format!("thing")),
                 dependency_type: Some(DependencyType::Strong),
-                ..OfferProtocolDecl::empty()
+                ..OfferProtocolDecl::EMPTY
             },
         },
         test_validate_offers_directory_dependency_cycle => {
@@ -5404,7 +5404,7 @@ mod tests {
                 rights: Some(fio2::Operations::Connect),
                 subdir: None,
                 dependency_type: Some(DependencyType::Strong),
-                ..OfferDirectoryDecl::empty()
+                ..OfferDirectoryDecl::EMPTY
             },
         },
         test_validate_offers_service_dependency_cycle => {
@@ -5414,7 +5414,7 @@ mod tests {
                 target: None,  // Filled by macro
                 source_name: Some(format!("thing")),
                 target_name: Some(format!("thing")),
-                ..OfferServiceDecl::empty()
+                ..OfferServiceDecl::EMPTY
             },
         },
         test_validate_offers_runner_dependency_cycle => {
@@ -5424,7 +5424,7 @@ mod tests {
                 target: None,  // Filled by macro
                 source_name: Some(format!("thing")),
                 target_name: Some(format!("thing")),
-                ..OfferRunnerDecl::empty()
+                ..OfferRunnerDecl::EMPTY
             },
         },
         test_validate_offers_resolver_dependency_cycle => {
@@ -5434,7 +5434,7 @@ mod tests {
                 target: None,  // Filled by macro
                 source_name: Some(format!("thing")),
                 target_name: Some(format!("thing")),
-                ..OfferResolverDecl::empty()
+                ..OfferResolverDecl::EMPTY
             },
         },
     }
@@ -5447,7 +5447,7 @@ mod tests {
                 source_name: Some(format!("thing")),
                 target_name: Some(format!("thing")),
                 dependency_type: None, // Filled by macro
-                ..OfferProtocolDecl::empty()
+                ..OfferProtocolDecl::EMPTY
             },
         },
         test_validate_offers_directory_weak_dependency_cycle => {
@@ -5460,7 +5460,7 @@ mod tests {
                 rights: Some(fio2::Operations::Connect),
                 subdir: None,
                 dependency_type: None,  // Filled by macro
-                ..OfferDirectoryDecl::empty()
+                ..OfferDirectoryDecl::EMPTY
             },
         },
     }

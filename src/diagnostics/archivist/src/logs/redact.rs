@@ -105,7 +105,7 @@ mod test {
             Severity::Info,
             0, // size
             0, // dropped_logs
-            &SourceIdentity::empty(),
+            &SourceIdentity::EMPTY,
             LogsHierarchy::new(
                 "root",
                 vec![LogsProperty::String(LogsField::Msg, contents.to_string())],

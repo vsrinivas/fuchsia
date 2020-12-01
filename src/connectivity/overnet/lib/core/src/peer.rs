@@ -47,7 +47,7 @@ struct Config {}
 
 impl Config {
     fn negotiate(_request: ConfigRequest) -> (Self, ConfigResponse) {
-        (Config {}, ConfigResponse::empty())
+        (Config {}, ConfigResponse::EMPTY)
     }
 
     fn from_response(_response: ConfigResponse) -> Self {
@@ -479,7 +479,7 @@ impl Peer {
                     service_name: service.to_string(),
                     stream_ref,
                     rights,
-                    options: ConnectToServiceOptions::empty(),
+                    options: ConnectToServiceOptions::EMPTY,
                 }))
                 .await?;
             Ok(())
@@ -537,7 +537,7 @@ impl Peer {
                 stats.rtt.as_micros().try_into().unwrap_or(std::u64::MAX),
             ),
             congestion_window_bytes: Some(stats.cwnd as u64),
-            ..PeerConnectionDiagnosticInfo::empty()
+            ..PeerConnectionDiagnosticInfo::EMPTY
         }
     }
 }
@@ -563,7 +563,7 @@ async fn client_handshake(
         conn_stream_writer
             .send(
                 FrameType::Data,
-                &encode_fidl(&mut ConfigRequest::empty())?,
+                &encode_fidl(&mut ConfigRequest::EMPTY.clone())?,
                 false,
                 &conn_stats.config,
             )
@@ -704,7 +704,7 @@ async fn client_conn_stream(
                         FrameType::Data,
                         &encode_fidl(&mut PeerMessage::UpdateNodeDescription(PeerDescription {
                             services,
-                            ..PeerDescription::empty()
+                            ..PeerDescription::EMPTY
                         }))?,
                         false,
                         &svc_conn_stats.update_node_description,
@@ -861,7 +861,7 @@ async fn server_conn_stream(
                                 app_channel,
                                 ConnectionInfo {
                                     peer: Some(node_id.into()),
-                                    ..ConnectionInfo::empty()
+                                    ..ConnectionInfo::EMPTY
                                 },
                             )
                             .map_err(RunnerError::ServiceError)

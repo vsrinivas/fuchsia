@@ -213,7 +213,7 @@ impl Store {
                         phase: event.phase,
                         physical_key: event.physical_key,
                         semantic_key: event.semantic_key.as_ref().map(clone_semantic_key),
-                        ..ui_input2::KeyEvent::empty()
+                        ..ui_input2::KeyEvent::EMPTY
                     };
                     let subscriber = subscriber.lock().await;
                     let handled = subscriber

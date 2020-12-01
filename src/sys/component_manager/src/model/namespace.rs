@@ -298,7 +298,7 @@ impl IncomingNamespace {
         ns.push(fcrunner::ComponentNamespaceEntry {
             path: Some(PKG_PATH.to_str().unwrap().to_string()),
             directory: Some(cloned_dir),
-            ..fcrunner::ComponentNamespaceEntry::empty()
+            ..fcrunner::ComponentNamespaceEntry::EMPTY
         });
         Ok(())
     }
@@ -389,7 +389,7 @@ impl IncomingNamespace {
         ns.push(fcrunner::ComponentNamespaceEntry {
             path: Some(target_path.clone()),
             directory: Some(client_end),
-            ..fcrunner::ComponentNamespaceEntry::empty()
+            ..fcrunner::ComponentNamespaceEntry::EMPTY
         });
         Ok(())
     }
@@ -545,7 +545,7 @@ impl IncomingNamespace {
             ns.push(fcrunner::ComponentNamespaceEntry {
                 path: Some(target_dir_path.as_str().to_string()),
                 directory: Some(ClientEnd::new(client_end.into_channel())), // coerce to ClientEnd<Dir>
-                ..fcrunner::ComponentNamespaceEntry::empty()
+                ..fcrunner::ComponentNamespaceEntry::EMPTY
             });
         }
         Ok(())
@@ -660,7 +660,7 @@ pub mod test {
         let ns_entries = vec![fcrunner::ComponentNamespaceEntry {
             path: Some("/".to_string()),
             directory: Some(dir_client),
-            ..fcrunner::ComponentNamespaceEntry::empty()
+            ..fcrunner::ComponentNamespaceEntry::EMPTY
         }];
 
         verify_logger_connects_in_namespace(
@@ -698,7 +698,7 @@ pub mod test {
         let ns_entries = vec![fcrunner::ComponentNamespaceEntry {
             path: Some("/".to_string()),
             directory: Some(dir_client),
-            ..fcrunner::ComponentNamespaceEntry::empty()
+            ..fcrunner::ComponentNamespaceEntry::EMPTY
         }];
 
         verify_logger_connects_in_namespace(
@@ -745,12 +745,12 @@ pub mod test {
             fcrunner::ComponentNamespaceEntry {
                 path: Some("/svc".to_string()),
                 directory: Some(dir_client),
-                ..fcrunner::ComponentNamespaceEntry::empty()
+                ..fcrunner::ComponentNamespaceEntry::EMPTY
             },
             fcrunner::ComponentNamespaceEntry {
                 path: Some("/sv".to_string()),
                 directory: Some(extra_dir_client),
-                ..fcrunner::ComponentNamespaceEntry::empty()
+                ..fcrunner::ComponentNamespaceEntry::EMPTY
             },
         ];
 
@@ -806,7 +806,7 @@ pub mod test {
         let ns_entries = vec![fcrunner::ComponentNamespaceEntry {
             path: Some("/not-the-svc-dir".to_string()),
             directory: Some(dir_client),
-            ..fcrunner::ComponentNamespaceEntry::empty()
+            ..fcrunner::ComponentNamespaceEntry::EMPTY
         }];
 
         verify_logger_connects_in_namespace(

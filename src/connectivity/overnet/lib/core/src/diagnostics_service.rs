@@ -117,7 +117,7 @@ async fn handle_diagnostic_requests(
                                 .and_then(|p| p.file_name().map(|s| s.to_owned()))
                                 .and_then(|p| p.to_str().map(str::to_string)),
                             hostname: hostname(),
-                            ..fidl_fuchsia_overnet_protocol::NodeDescription::empty()
+                            ..fidl_fuchsia_overnet_protocol::NodeDescription::EMPTY
                         }),
                     )
                     .await,
@@ -133,7 +133,7 @@ async fn handle_diagnostic_requests(
                         get_router()?.peer_diagnostics(),
                     )
                     .await,
-                    ..ProbeResult::empty()
+                    ..ProbeResult::EMPTY
                 });
                 if let Err(e) = res {
                     log::warn!("Failed handling probe: {:?}", e);

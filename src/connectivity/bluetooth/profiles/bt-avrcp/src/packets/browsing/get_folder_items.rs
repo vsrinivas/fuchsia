@@ -479,7 +479,7 @@ mod tests {
             player_id: Some(player_id),
             playback_status: Some(fidl_avrcp::PlaybackStatus::Stopped),
             displayable_name: Some("hi".to_string()),
-            ..fidl_avrcp::MediaPlayerItem::empty()
+            ..fidl_avrcp::MediaPlayerItem::EMPTY
         };
         let item: MediaPlayerItem = item_fidl.into();
         assert_eq!(item.player_id, player_id);

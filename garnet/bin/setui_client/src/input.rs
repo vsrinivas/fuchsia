@@ -9,15 +9,15 @@ use {
 
 pub async fn command(proxy: InputProxy, mic_muted: Option<bool>) -> Result<String, Error> {
     let mut output = String::new();
-    let mut input_settings = InputDeviceSettings::empty();
-    let mut microphone = Microphone::empty();
+    let mut input_settings = InputDeviceSettings::EMPTY;
+    let mut microphone = Microphone::EMPTY;
 
     if mic_muted.is_some() {
         microphone.muted = mic_muted;
         input_settings.microphone = Some(microphone);
     }
 
-    if input_settings == InputDeviceSettings::empty() {
+    if input_settings == InputDeviceSettings::EMPTY {
         let setting_value = proxy.watch().await?;
         output.push_str(&format!("{:#?}", setting_value));
     } else {

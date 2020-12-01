@@ -377,7 +377,7 @@ mod tests {
         assert!(launcher
             .launch(LaunchConfiguration {
                 session_url: Some(session_url.to_string()),
-                ..LaunchConfiguration::empty()
+                ..LaunchConfiguration::EMPTY
             })
             .await
             .is_ok());
@@ -412,7 +412,7 @@ mod tests {
         assert!(launcher
             .launch(LaunchConfiguration {
                 session_url: Some(session_url.to_string()),
-                ..LaunchConfiguration::empty()
+                ..LaunchConfiguration::EMPTY
             })
             .await
             .expect("could not call Launch")

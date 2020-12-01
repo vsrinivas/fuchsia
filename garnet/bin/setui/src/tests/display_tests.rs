@@ -82,7 +82,7 @@ async fn test_manual_brightness_with_storage_controller() {
 
     assert_eq!(settings.brightness_value, Some(STARTING_BRIGHTNESS));
 
-    let mut display_settings = DisplaySettings::empty();
+    let mut display_settings = DisplaySettings::EMPTY;
     display_settings.brightness_value = Some(CHANGED_BRIGHTNESS);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
@@ -101,7 +101,7 @@ async fn test_manual_brightness_with_brightness_controller() {
 
     assert_eq!(settings.brightness_value, Some(STARTING_BRIGHTNESS));
 
-    let mut display_settings = DisplaySettings::empty();
+    let mut display_settings = DisplaySettings::EMPTY;
     display_settings.brightness_value = Some(CHANGED_BRIGHTNESS);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
@@ -119,7 +119,7 @@ async fn test_manual_brightness_with_brightness_controller() {
 async fn test_auto_brightness_with_storage_controller() {
     let display_proxy = setup_display_env().await;
 
-    let mut display_settings = DisplaySettings::empty();
+    let mut display_settings = DisplaySettings::EMPTY;
     display_settings.auto_brightness = Some(true);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
@@ -134,7 +134,7 @@ async fn test_auto_brightness_with_storage_controller() {
 async fn test_auto_brightness_with_brightness_controller() {
     let (display_proxy, brightness_service_handle) = setup_brightness_display_env().await;
 
-    let mut display_settings = DisplaySettings::empty();
+    let mut display_settings = DisplaySettings::EMPTY;
     display_settings.auto_brightness = Some(true);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
@@ -153,7 +153,7 @@ async fn test_light_mode_with_storage_controller() {
     let display_proxy = setup_display_env().await;
 
     // Test that if display is enabled, it is reflected.
-    let mut display_settings = DisplaySettings::empty();
+    let mut display_settings = DisplaySettings::EMPTY;
     display_settings.low_light_mode = Some(FidlLowLightMode::Enable);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
@@ -162,7 +162,7 @@ async fn test_light_mode_with_storage_controller() {
     assert_eq!(settings.low_light_mode, Some(FidlLowLightMode::Enable));
 
     // Test that if display is disabled, it is reflected.
-    let mut display_settings = DisplaySettings::empty();
+    let mut display_settings = DisplaySettings::EMPTY;
     display_settings.low_light_mode = Some(FidlLowLightMode::Disable);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
@@ -171,7 +171,7 @@ async fn test_light_mode_with_storage_controller() {
     assert_eq!(settings.low_light_mode, Some(FidlLowLightMode::Disable));
 
     // Test that if display is disabled immediately, it is reflected.
-    let mut display_settings = DisplaySettings::empty();
+    let mut display_settings = DisplaySettings::EMPTY;
     display_settings.low_light_mode = Some(FidlLowLightMode::DisableImmediately);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
@@ -187,7 +187,7 @@ async fn test_light_mode_with_brightness_controller() {
     let (display_proxy, _) = setup_brightness_display_env().await;
 
     // Test that if display is enabled, it is reflected.
-    let mut display_settings = DisplaySettings::empty();
+    let mut display_settings = DisplaySettings::EMPTY;
     display_settings.low_light_mode = Some(FidlLowLightMode::Enable);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
@@ -196,7 +196,7 @@ async fn test_light_mode_with_brightness_controller() {
     assert_eq!(settings.low_light_mode, Some(FidlLowLightMode::Enable));
 
     // Test that if display is disabled, it is reflected.
-    let mut display_settings = DisplaySettings::empty();
+    let mut display_settings = DisplaySettings::EMPTY;
     display_settings.low_light_mode = Some(FidlLowLightMode::Disable);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
@@ -205,7 +205,7 @@ async fn test_light_mode_with_brightness_controller() {
     assert_eq!(settings.low_light_mode, Some(FidlLowLightMode::Disable));
 
     // Test that if display is disabled immediately, it is reflected.
-    let mut display_settings = DisplaySettings::empty();
+    let mut display_settings = DisplaySettings::EMPTY;
     display_settings.low_light_mode = Some(FidlLowLightMode::DisableImmediately);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
@@ -220,16 +220,16 @@ async fn test_theme_mode_auto() {
     let display_proxy = setup_display_env().await;
 
     // Test that if theme is is set to auto, it is reflected.
-    let mut display_settings = DisplaySettings::empty();
+    let mut display_settings = DisplaySettings::EMPTY;
     display_settings.theme =
-        Some(FidlTheme { theme_type: Some(FidlThemeType::Auto), ..FidlTheme::empty() });
+        Some(FidlTheme { theme_type: Some(FidlThemeType::Auto), ..FidlTheme::EMPTY });
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
     let settings = display_proxy.watch().await.expect("watch completed");
 
     assert_eq!(
         settings.theme,
-        Some(FidlTheme { theme_type: Some(FidlThemeType::Auto), ..FidlTheme::empty() })
+        Some(FidlTheme { theme_type: Some(FidlThemeType::Auto), ..FidlTheme::EMPTY })
     );
 }
 
@@ -260,11 +260,11 @@ async fn test_screen_enabled_with_brightness_controller() {
 
 async fn test_screen_enabled(display_proxy: DisplayProxy) {
     // Test that if screen is turned off, it is reflected.
-    let mut display_settings = DisplaySettings::empty();
+    let mut display_settings = DisplaySettings::EMPTY;
     display_settings.auto_brightness = Some(false);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
-    let mut display_settings = DisplaySettings::empty();
+    let mut display_settings = DisplaySettings::EMPTY;
     display_settings.screen_enabled = Some(false);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
@@ -273,7 +273,7 @@ async fn test_screen_enabled(display_proxy: DisplayProxy) {
     assert_eq!(settings.screen_enabled, Some(false));
 
     // Test that if display is turned back on, the display and manual brightness are on.
-    let mut display_settings = DisplaySettings::empty();
+    let mut display_settings = DisplaySettings::EMPTY;
     display_settings.screen_enabled = Some(true);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
@@ -283,7 +283,7 @@ async fn test_screen_enabled(display_proxy: DisplayProxy) {
     assert_eq!(settings.auto_brightness, Some(false));
 
     // Test that if auto brightness is turned on, the display and auto brightness are on.
-    let mut display_settings = DisplaySettings::empty();
+    let mut display_settings = DisplaySettings::EMPTY;
     display_settings.auto_brightness = Some(true);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 

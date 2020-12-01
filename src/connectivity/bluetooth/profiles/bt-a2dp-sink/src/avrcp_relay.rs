@@ -334,7 +334,7 @@ mod tests {
                     total_number_of_tracks: Some("10".to_string()),
                     genre: Some("Alternative".to_string()),
                     playing_time: Some("237000".to_string()),
-                    ..avrcp::MediaAttributes::empty()
+                    ..avrcp::MediaAttributes::EMPTY
                 }))
             }
             x => panic!("Expected a GetMediaAttributes request, got {:?}", x),
@@ -351,7 +351,7 @@ mod tests {
                     song_length: Some(237000),
                     song_position: Some(1000),
                     playback_status: Some(avrcp::PlaybackStatus::Playing),
-                    ..avrcp::PlayStatus::empty()
+                    ..avrcp::PlayStatus::EMPTY
                 }))
             }
             x => panic!("Expected a GetPlayStatus request, got {:?}", x),
@@ -592,7 +592,7 @@ mod tests {
                     total_number_of_tracks: Some("11".to_string()),
                     genre: Some("Alternative".to_string()),
                     playing_time: Some("189000".to_string()),
-                    ..avrcp::MediaAttributes::empty()
+                    ..avrcp::MediaAttributes::EMPTY
                 }))?;
             }
             x => panic!("Expected a GetMediaAttributes request, got {:?}", x),
@@ -605,7 +605,7 @@ mod tests {
                     song_length: Some(189000),
                     song_position: Some(1000),
                     playback_status: Some(avrcp::PlaybackStatus::Paused),
-                    ..avrcp::PlayStatus::empty()
+                    ..avrcp::PlayStatus::EMPTY
                 }))?;
             }
             x => panic!("Expected a GetPlayStatus request, got {:?}", x),

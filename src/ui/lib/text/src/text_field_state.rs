@@ -98,7 +98,7 @@ impl Into<txt::TextFieldState> for TextFieldState {
             composition,
             composition_highlight,
             dead_key_highlight,
-            ..txt::TextFieldState::empty()
+            ..txt::TextFieldState::EMPTY
         }
     }
 }

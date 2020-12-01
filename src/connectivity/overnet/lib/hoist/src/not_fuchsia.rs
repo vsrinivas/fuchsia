@@ -106,7 +106,7 @@ async fn run_ascendd_connection(
                 node_id: Some(fidl_fuchsia_overnet_protocol::NodeId { id: node.node_id().0 }),
                 connection_label: connection_label.clone(),
                 key: None,
-                ..StreamSocketGreeting::empty()
+                ..StreamSocketGreeting::EMPTY
             };
             let mut bytes = Vec::new();
             let mut handles = Vec::new();
@@ -118,7 +118,7 @@ async fn run_ascendd_connection(
             let (frame_type, mut frame) = deframer.read().await?;
             ensure!(frame_type == Some(FrameType::Overnet), "Expect Overnet frame as first frame");
 
-            let mut greeting = StreamSocketGreeting::empty();
+            let mut greeting = StreamSocketGreeting::EMPTY;
             // WARNING: Since we are decoding without a transaction header, we have to
             // provide a context manually. This could cause problems in future FIDL wire
             // format migrations, which are driven by header flags.
@@ -157,7 +157,7 @@ async fn run_ascendd_connection(
                             fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
                                 path: Some(ascendd_path.clone()),
                                 connection_label: connection_label.clone(),
-                                ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::empty()
+                                ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
                             },
                         ))
                     }),

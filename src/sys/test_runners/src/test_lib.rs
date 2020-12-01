@@ -105,7 +105,7 @@ impl Clone for ListenerEvent {
             ListenerEvent::StartTest(name) => ListenerEvent::start_test(name),
             ListenerEvent::FinishTest(name, test_result) => ListenerEvent::finish_test(
                 name,
-                TestResult { status: test_result.status.clone(), ..TestResult::empty() },
+                TestResult { status: test_result.status.clone(), ..TestResult::EMPTY },
             ),
             ListenerEvent::FinishAllTests => ListenerEvent::finish_all_test(),
         }
@@ -148,7 +148,7 @@ pub async fn collect_listener_event(
 pub fn names_to_invocation(names: Vec<&str>) -> Vec<Invocation> {
     names
         .iter()
-        .map(|s| Invocation { name: Some(s.to_string()), tag: None, ..Invocation::empty() })
+        .map(|s| Invocation { name: Some(s.to_string()), tag: None, ..Invocation::EMPTY })
         .collect()
 }
 
@@ -216,7 +216,7 @@ mod tests {
             ListenerEvent::start_test("a"),
             ListenerEvent::finish_test(
                 "a",
-                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
+                TestResult { status: Some(Status::Passed), ..TestResult::EMPTY },
             ),
             ListenerEvent::finish_all_test(),
         ];
@@ -236,16 +236,16 @@ mod tests {
             ListenerEvent::start_test("a"),
             ListenerEvent::finish_test(
                 "a",
-                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
+                TestResult { status: Some(Status::Passed), ..TestResult::EMPTY },
             ),
             ListenerEvent::start_test("c"),
             ListenerEvent::finish_test(
                 "b",
-                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
+                TestResult { status: Some(Status::Passed), ..TestResult::EMPTY },
             ),
             ListenerEvent::finish_test(
                 "c",
-                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
+                TestResult { status: Some(Status::Passed), ..TestResult::EMPTY },
             ),
             ListenerEvent::finish_all_test(),
         ];
@@ -254,17 +254,17 @@ mod tests {
             ListenerEvent::start_test("a"),
             ListenerEvent::finish_test(
                 "a",
-                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
+                TestResult { status: Some(Status::Passed), ..TestResult::EMPTY },
             ),
             ListenerEvent::start_test("b"),
             ListenerEvent::finish_test(
                 "b",
-                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
+                TestResult { status: Some(Status::Passed), ..TestResult::EMPTY },
             ),
             ListenerEvent::start_test("c"),
             ListenerEvent::finish_test(
                 "c",
-                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
+                TestResult { status: Some(Status::Passed), ..TestResult::EMPTY },
             ),
             ListenerEvent::finish_all_test(),
         ];

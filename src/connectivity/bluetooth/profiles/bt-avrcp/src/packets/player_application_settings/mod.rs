@@ -235,7 +235,7 @@ impl From<&fidl_avrcp::PlayerApplicationSettings> for PlayerApplicationSettings 
 
 impl From<PlayerApplicationSettings> for fidl_avrcp::PlayerApplicationSettings {
     fn from(src: PlayerApplicationSettings) -> fidl_avrcp::PlayerApplicationSettings {
-        let mut setting = fidl_avrcp::PlayerApplicationSettings::empty();
+        let mut setting = fidl_avrcp::PlayerApplicationSettings::EMPTY;
         if let Some(eq) = src.equalizer {
             setting.equalizer = Some(eq.into());
         }

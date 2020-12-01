@@ -223,7 +223,7 @@ mod tests {
                     .revoke_refresh_token(OauthRefreshToken {
                         content: Some("HOOLI_CREDENTIAL".to_string()),
                         account_id: None,
-                        ..OauthRefreshToken::empty()
+                        ..OauthRefreshToken::EMPTY
                     })
                     .await
                     .unwrap(),
@@ -243,11 +243,11 @@ mod tests {
                             refresh_token: Some(OauthRefreshToken {
                                 content: Some("PIED_PIPER_CREDENTIAL".to_string()),
                                 account_id: None,
-                                ..OauthRefreshToken::empty()
+                                ..OauthRefreshToken::EMPTY
                             }),
                             client_id: None,
                             scopes: Some(vec![]),
-                            ..OauthAccessTokenFromOauthRefreshTokenRequest::empty()
+                            ..OauthAccessTokenFromOauthRefreshTokenRequest::EMPTY
                         }
                     )
                     .await
@@ -314,7 +314,7 @@ mod tests {
                     .create_refresh_token(OauthRefreshTokenRequest {
                         account_id: None,
                         ui_context: None,
-                        ..OauthRefreshTokenRequest::empty()
+                        ..OauthRefreshTokenRequest::EMPTY
                     })
                     .await
                     .unwrap(),
@@ -333,7 +333,7 @@ mod tests {
                     .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
                         refresh_token: None,
                         audiences: None,
-                        ..OpenIdTokenFromOauthRefreshTokenRequest::empty()
+                        ..OpenIdTokenFromOauthRefreshTokenRequest::EMPTY
                     })
                     .await
                     .unwrap(),
@@ -352,7 +352,7 @@ mod tests {
                     .revoke_id_token(OpenIdToken {
                         content: None,
                         expiry_time: None,
-                        ..OpenIdToken::empty()
+                        ..OpenIdToken::EMPTY
                     })
                     .await
                     .unwrap(),

@@ -156,7 +156,7 @@ async fn list_existing_entries(
 ) -> Result<HashMap<(u64, fidl_fuchsia_net::IpAddress), fidl_fuchsia_net_neighbor::Entry>> {
     use async_utils::fold::*;
     try_fold_while(
-        get_entry_iterator(env, fidl_fuchsia_net_neighbor::EntryIteratorOptions::empty())?,
+        get_entry_iterator(env, fidl_fuchsia_net_neighbor::EntryIteratorOptions::EMPTY)?,
         HashMap::new(),
         |mut map, item| {
             futures::future::ready(match item {
@@ -821,7 +821,7 @@ async fn neigh_unreachability_config_errors() -> Result {
         controller
             .update_unreachability_config(
                 alice.ep.id() + 100,
-                fidl_fuchsia_net_neighbor::UnreachabilityConfig::empty(),
+                fidl_fuchsia_net_neighbor::UnreachabilityConfig::EMPTY,
             )
             .await
             .context("update_unreachability_config FIDL error")?
@@ -832,14 +832,14 @@ async fn neigh_unreachability_config_errors() -> Result {
         controller
             .update_unreachability_config(
                 alice.loopback_id,
-                fidl_fuchsia_net_neighbor::UnreachabilityConfig::empty(),
+                fidl_fuchsia_net_neighbor::UnreachabilityConfig::EMPTY,
             )
             .await
             .context("update_unreachability_config FIDL error")?
             .map_err(fuchsia_zircon::Status::from_raw),
         Err(fuchsia_zircon::Status::NOT_SUPPORTED)
     );
-    let mut invalid_config = fidl_fuchsia_net_neighbor::UnreachabilityConfig::empty();
+    let mut invalid_config = fidl_fuchsia_net_neighbor::UnreachabilityConfig::EMPTY;
     invalid_config.base_reachable_time = Some(-1);
     assert_eq!(
         controller
@@ -912,7 +912,7 @@ async fn neigh_unreachability_config() -> Result {
             .context("get_unreachability_config failed")?;
 
         // Update config with some non-defaults
-        let mut updates = fidl_fuchsia_net_neighbor::UnreachabilityConfig::empty();
+        let mut updates = fidl_fuchsia_net_neighbor::UnreachabilityConfig::EMPTY;
         let updated_base_reachable_time =
             Some(fidl_fuchsia_net_neighbor::DEFAULT_BASE_REACHABLE_TIME * 2);
         let updated_retransmit_timer =

@@ -186,7 +186,7 @@ impl From<&LIF> for netconfig::Lif {
             port_ids: Some(ps),
             vlan: Some(lif.vlan),
             properties: p,
-            ..netconfig::Lif::empty()
+            ..netconfig::Lif::EMPTY
         }
     }
 }
@@ -332,7 +332,7 @@ impl LIFProperties {
             connection_parameters: None,
             connection_type: Some(netconfig::WanConnection::Direct),
             connection_v6_mode: Some(netconfig::WanIpV6ConnectionMode::Passthrough),
-            ..netconfig::WanProperties::empty()
+            ..netconfig::WanProperties::EMPTY
         })
     }
 
@@ -354,7 +354,7 @@ impl LIFProperties {
             dhcp_config: None,
             enable_dhcp_server,
             enable_dns_forwarder: Some(false),
-            ..netconfig::LanProperties::empty()
+            ..netconfig::LanProperties::EMPTY
         })
     }
 
@@ -1020,7 +1020,7 @@ mod tests {
                     enable: None,
                     enable_dhcp_server: None,
                     enable_dns_forwarder: None,
-                    ..netconfig::LanProperties::empty()
+                    ..netconfig::LanProperties::EMPTY
                 }),
                 Ok(LIFProperties::default()),
                 "lan all default",
@@ -1034,7 +1034,7 @@ mod tests {
                     enable: Some(true),
                     enable_dhcp_server: Some(true),
                     enable_dns_forwarder: Some(true),
-                    ..netconfig::LanProperties::empty()
+                    ..netconfig::LanProperties::EMPTY
                 }),
                 Ok(LIFProperties { enabled: true, ..Default::default() }),
                 "enable dhcp server, but no ip v4 address",
@@ -1047,14 +1047,14 @@ mod tests {
                             addr: [1, 2, 3, 4],
                         })),
                         prefix_length: Some(24),
-                        ..netconfig::CidrAddress::empty()
+                        ..netconfig::CidrAddress::EMPTY
                     }),
                     address_v6: None,
                     dhcp_config: None,
                     enable: Some(true),
                     enable_dhcp_server: Some(true),
                     enable_dns_forwarder: Some(true),
-                    ..netconfig::LanProperties::empty()
+                    ..netconfig::LanProperties::EMPTY
                 }),
                 Ok(LIFProperties {
                     address_v4: Some(LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 }),
@@ -1072,20 +1072,20 @@ mod tests {
                             addr: [1, 2, 3, 4],
                         })),
                         prefix_length: Some(24),
-                        ..netconfig::CidrAddress::empty()
+                        ..netconfig::CidrAddress::EMPTY
                     }),
                     address_v6: Some(netconfig::CidrAddress {
                         address: Some(fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                             addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
                         })),
                         prefix_length: Some(64),
-                        ..netconfig::CidrAddress::empty()
+                        ..netconfig::CidrAddress::EMPTY
                     }),
                     dhcp_config: None,
                     enable: None,
                     enable_dhcp_server: Some(true),
                     enable_dns_forwarder: None,
-                    ..netconfig::LanProperties::empty()
+                    ..netconfig::LanProperties::EMPTY
                 }),
                 Ok(LIFProperties {
                     address_v4: Some(LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 }),
@@ -1106,20 +1106,20 @@ mod tests {
                             addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
                         })),
                         prefix_length: Some(64),
-                        ..netconfig::CidrAddress::empty()
+                        ..netconfig::CidrAddress::EMPTY
                     }),
                     address_v6: Some(netconfig::CidrAddress {
                         address: Some(fnet::IpAddress::Ipv4(fnet::Ipv4Address {
                             addr: [1, 2, 3, 4],
                         })),
                         prefix_length: Some(24),
-                        ..netconfig::CidrAddress::empty()
+                        ..netconfig::CidrAddress::EMPTY
                     }),
                     dhcp_config: None,
                     enable: None,
                     enable_dhcp_server: Some(true),
                     enable_dns_forwarder: None,
-                    ..netconfig::LanProperties::empty()
+                    ..netconfig::LanProperties::EMPTY
                 }),
                 Err(error::NetworkManager::Lif(error::Lif::InvalidParameter)),
                 "dhcp server, ipv4 and ipv6 reversed, should not pass.",
@@ -1140,7 +1140,7 @@ mod tests {
                     metric: None,
                     mtu: None,
                     enable: None,
-                    ..netconfig::WanProperties::empty()
+                    ..netconfig::WanProperties::EMPTY
                 }),
                 Ok(LIFProperties::default()),
                 "wan all default",
@@ -1153,7 +1153,7 @@ mod tests {
                             addr: [1, 2, 3, 4],
                         })),
                         prefix_length: Some(24),
-                        ..netconfig::CidrAddress::empty()
+                        ..netconfig::CidrAddress::EMPTY
                     }),
                     address_v6: None,
                     address_method: None,
@@ -1167,7 +1167,7 @@ mod tests {
                     metric: None,
                     mtu: None,
                     enable: None,
-                    ..netconfig::WanProperties::empty()
+                    ..netconfig::WanProperties::EMPTY
                 }),
                 Ok(LIFProperties {
                     address_v4: Some(LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 }),
@@ -1184,7 +1184,7 @@ mod tests {
                             addr: [1, 2, 3, 4],
                         })),
                         prefix_length: Some(24),
-                        ..netconfig::CidrAddress::empty()
+                        ..netconfig::CidrAddress::EMPTY
                     }),
                     address_method: None,
                     clone_mac: None,
@@ -1197,7 +1197,7 @@ mod tests {
                     metric: None,
                     mtu: None,
                     enable: None,
-                    ..netconfig::WanProperties::empty()
+                    ..netconfig::WanProperties::EMPTY
                 }),
                 Err(error::NetworkManager::Lif(error::Lif::InvalidParameter)),
                 "wan ip v4 in wrong place",
@@ -1211,7 +1211,7 @@ mod tests {
                             addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
                         })),
                         prefix_length: Some(64),
-                        ..netconfig::CidrAddress::empty()
+                        ..netconfig::CidrAddress::EMPTY
                     }),
                     address_method: None,
                     clone_mac: None,
@@ -1224,7 +1224,7 @@ mod tests {
                     metric: None,
                     mtu: None,
                     enable: None,
-                    ..netconfig::WanProperties::empty()
+                    ..netconfig::WanProperties::EMPTY
                 }),
                 Ok(LIFProperties {
                     address_v6: vec![LifIpAddr {
@@ -1243,14 +1243,14 @@ mod tests {
                             addr: [1, 2, 3, 4],
                         })),
                         prefix_length: Some(24),
-                        ..netconfig::CidrAddress::empty()
+                        ..netconfig::CidrAddress::EMPTY
                     }),
                     address_v6: Some(netconfig::CidrAddress {
                         address: Some(fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                             addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
                         })),
                         prefix_length: Some(64),
-                        ..netconfig::CidrAddress::empty()
+                        ..netconfig::CidrAddress::EMPTY
                     }),
                     address_method: Some(netconfig::WanAddressMethod::Manual),
                     clone_mac: None,
@@ -1263,7 +1263,7 @@ mod tests {
                     metric: None,
                     mtu: None,
                     enable: None,
-                    ..netconfig::WanProperties::empty()
+                    ..netconfig::WanProperties::EMPTY
                 }),
                 Ok(LIFProperties {
                     address_v4: Some(LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 }),
@@ -1283,14 +1283,14 @@ mod tests {
                             addr: [1, 2, 3, 4],
                         })),
                         prefix_length: Some(24),
-                        ..netconfig::CidrAddress::empty()
+                        ..netconfig::CidrAddress::EMPTY
                     }),
                     address_v6: Some(netconfig::CidrAddress {
                         address: Some(fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                             addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
                         })),
                         prefix_length: Some(64),
-                        ..netconfig::CidrAddress::empty()
+                        ..netconfig::CidrAddress::EMPTY
                     }),
                     address_method: Some(netconfig::WanAddressMethod::Automatic),
                     clone_mac: None,
@@ -1303,7 +1303,7 @@ mod tests {
                     metric: None,
                     mtu: None,
                     enable: None,
-                    ..netconfig::WanProperties::empty()
+                    ..netconfig::WanProperties::EMPTY
                 }),
                 Err(error::NetworkManager::Lif(error::Lif::InvalidParameter)),
                 "wan invalid address method",
@@ -1317,7 +1317,7 @@ mod tests {
                             addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
                         })),
                         prefix_length: Some(64),
-                        ..netconfig::CidrAddress::empty()
+                        ..netconfig::CidrAddress::EMPTY
                     }),
                     address_method: Some(netconfig::WanAddressMethod::Automatic),
                     clone_mac: None,
@@ -1330,7 +1330,7 @@ mod tests {
                     metric: None,
                     mtu: None,
                     enable: None,
-                    ..netconfig::WanProperties::empty()
+                    ..netconfig::WanProperties::EMPTY
                 }),
                 Ok(LIFProperties {
                     dhcp: Dhcp::Client,

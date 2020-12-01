@@ -88,7 +88,7 @@ impl Into<MacAddressFilterItem> for MacAddressFilterItemDto {
         MacAddressFilterItem {
             mac_address: self.mac_address,
             rssi: self.rssi,
-            ..MacAddressFilterItem::empty()
+            ..MacAddressFilterItem::EMPTY
         }
     }
 }
@@ -104,7 +104,7 @@ impl Into<MacAddressFilterSettings> for MacAddressFilterSettingsDto {
                 Some(items) => Some(items.into_iter().map(|x| x.into()).collect()),
                 None => None,
             },
-            ..MacAddressFilterSettings::empty()
+            ..MacAddressFilterSettings::EMPTY
         }
     }
 }

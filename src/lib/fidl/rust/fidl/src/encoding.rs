@@ -2798,7 +2798,32 @@ macro_rules! fidl_table {
         )*],
     ) => {
         impl $name {
-            /// Generates an empty table, with every field set to `None`.
+            // Note: this value is implemented as a constant since this
+            // is currently the only way that the Rust compiler can directly
+            // construct members when using the FRU syntax. For example in:
+            //
+            // SomeTable { some_member: some_value, ..SomeTable::empty() }
+            //
+            // Using a constant (::EMPTY) will only create members that do not
+            // have a value explicitly specified, whereas using a function
+            // (::EMPTY()) will fully instantiate an instance of the struct and
+            // overwrite the members that do not have a value specified. The
+            // latter makes it impossible to construct a const value because
+            // overwiting heap allocated values (even if they are optional and
+            // are None) will call their destructor which is not const.
+            //
+            // Workarounds, like implementing ::EMPTY in terms of empty() or
+            // the other way around do not work either
+            // https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=697cddc6b8c34464ffaeb15584f2618e
+            /// An empty table with every field set to `None`.
+            #[allow(deprecated)]
+            pub const EMPTY: Self = Self {
+                $(
+                    $member_name: None,
+                )*
+                __non_exhaustive: (),
+            };
+
             #[inline]
             pub const fn empty() -> Self {
                 #[allow(deprecated)]
@@ -2977,7 +3002,7 @@ macro_rules! fidl_table {
         impl $crate::encoding::Decodable for $name {
             #[inline(always)]
             fn new_empty() -> Self {
-                Self::empty()
+                Self::EMPTY
             }
             unsafe fn unsafe_decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
                 self.unsafe_decode_impl(decoder, offset)
@@ -4968,9 +4993,9 @@ mod test {
 
     #[test]
     fn empty_table() {
-        let mut table: MyTable = MyTable::empty();
+        let mut table: MyTable = MyTable::EMPTY;
         assert_eq!(None, table.num);
-        table = MyTable { num: Some(32), ..MyTable::empty() };
+        table = MyTable { num: Some(32), ..MyTable::EMPTY };
         assert_eq!(Some(32), table.num);
         assert_eq!(None, table.string);
     }
@@ -4978,7 +5003,7 @@ mod test {
     #[test]
     fn table_encode_prefix_decode_full() {
         for ctx in CONTEXTS {
-            let mut table_prefix_in = TablePrefix { num: Some(5), ..TablePrefix::empty() };
+            let mut table_prefix_in = TablePrefix { num: Some(5), ..TablePrefix::EMPTY };
             let mut table_out: MyTable = Decodable::new_empty();
 
             let buf = &mut Vec::new();
@@ -5005,7 +5030,7 @@ mod test {
                 num_none: None,
                 string: None,
                 handle: None,
-                ..MyTable::empty()
+                ..MyTable::EMPTY
             };
             let mut table_prefix_out: TablePrefix = Decodable::new_empty();
 
@@ -5033,7 +5058,7 @@ mod test {
                 num_none: None,
                 string: Some("foo".to_string()),
                 handle: None,
-                ..MyTable::empty()
+                ..MyTable::EMPTY
             };
             let mut table_prefix_out: TablePrefix = Decodable::new_empty();
 
@@ -5122,7 +5147,7 @@ mod test {
         for ctx in CONTEXTS {
             encode_assert_bytes(
                 ctx,
-                SimpleTable { x: Some(42), y: Some(67), ..SimpleTable::empty() },
+                SimpleTable { x: Some(42), y: Some(67), ..SimpleTable::EMPTY },
                 simple_table_with_xy,
             );
         }
@@ -5148,7 +5173,7 @@ mod test {
         for ctx in CONTEXTS {
             encode_assert_bytes(
                 ctx,
-                SimpleTable { x: None, y: Some(67), ..SimpleTable::empty() },
+                SimpleTable { x: None, y: Some(67), ..SimpleTable::EMPTY },
                 simple_table_with_y,
             );
         }
@@ -5175,7 +5200,7 @@ mod test {
                     foo: Some("hello".to_string()),
                     bar: Some(27),
                     baz: None,
-                    ..TableWithStringAndVector::empty()
+                    ..TableWithStringAndVector::EMPTY
                 },
                 table_with_string_and_vector_hello_27,
             );
@@ -5190,7 +5215,7 @@ mod test {
         ];
 
         for ctx in CONTEXTS {
-            encode_assert_bytes(ctx, SimpleTable::empty(), empty_table);
+            encode_assert_bytes(ctx, SimpleTable::EMPTY, empty_table);
         }
     }
 
@@ -5220,7 +5245,7 @@ mod test {
     fn encode_decode_table_with_gaps() {
         for ctx in CONTEXTS {
             let mut table =
-                TableWithGaps { second: Some(1), fourth: Some(2), ..TableWithGaps::empty() };
+                TableWithGaps { second: Some(1), fourth: Some(2), ..TableWithGaps::EMPTY };
             let table_out = encode_decode(ctx, &mut table);
             assert_eq!(table_out.second, Some(1));
             assert_eq!(table_out.fourth, Some(2));
@@ -5231,7 +5256,7 @@ mod test {
     fn encode_empty_envelopes_for_reserved_table_fields() {
         for ctx in CONTEXTS {
             let mut table =
-                TableWithGaps { second: Some(1), fourth: Some(2), ..TableWithGaps::empty() };
+                TableWithGaps { second: Some(1), fourth: Some(2), ..TableWithGaps::EMPTY };
             let buf = &mut Vec::new();
             Encoder::encode_with_context(ctx, buf, &mut Vec::new(), &mut table).unwrap();
 
@@ -5280,7 +5305,7 @@ mod test {
             // the sender is newer than us), so it is ignored. Fields #3 and #4
             // are assumed to be None because the tail is omitted.
             let mut table =
-                TableWithoutGaps { first: Some(1), second: Some(2), ..TableWithoutGaps::empty() };
+                TableWithoutGaps { first: Some(1), second: Some(2), ..TableWithoutGaps::EMPTY };
             let buf = &mut Vec::new();
             Encoder::encode_with_context(ctx, buf, &mut Vec::new(), &mut table).unwrap();
 
@@ -5699,7 +5724,7 @@ mod zx_test {
                 num_none: None,
                 string: Some("foo".to_string()),
                 handle: Some(handle.into_handle()),
-                ..MyTable::empty()
+                ..MyTable::EMPTY
             };
             let table_out = encode_decode(ctx, &mut starting_table);
             assert_eq!(table_out.num, Some(5));

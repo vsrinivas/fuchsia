@@ -31,9 +31,9 @@ async fn main() -> Result<(), Error> {
             })),
             source: Some(fnetname::DnsServerSource::Dhcpv6(fnetname::Dhcpv6DnsServerSource {
                 source_interface: Some(2),
-                ..fnetname::Dhcpv6DnsServerSource::empty()
+                ..fnetname::Dhcpv6DnsServerSource::EMPTY
             })),
-            ..fnetname::DnsServer_::empty()
+            ..fnetname::DnsServer_::EMPTY
         },
         fnetname::DnsServer_ {
             address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
@@ -43,9 +43,9 @@ async fn main() -> Result<(), Error> {
             })),
             source: Some(fnetname::DnsServerSource::Dhcpv6(fnetname::Dhcpv6DnsServerSource {
                 source_interface: Some(2),
-                ..fnetname::Dhcpv6DnsServerSource::empty()
+                ..fnetname::Dhcpv6DnsServerSource::EMPTY
             })),
-            ..fnetname::DnsServer_::empty()
+            ..fnetname::DnsServer_::EMPTY
         },
         fnetname::DnsServer_ {
             address: Some(fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
@@ -55,9 +55,9 @@ async fn main() -> Result<(), Error> {
             })),
             source: Some(fnetname::DnsServerSource::Dhcpv6(fnetname::Dhcpv6DnsServerSource {
                 source_interface: Some(2),
-                ..fnetname::Dhcpv6DnsServerSource::empty()
+                ..fnetname::Dhcpv6DnsServerSource::EMPTY
             })),
-            ..fnetname::DnsServer_::empty()
+            ..fnetname::DnsServer_::EMPTY
         },
     ];
 

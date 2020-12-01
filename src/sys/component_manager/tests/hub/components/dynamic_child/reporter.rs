@@ -35,7 +35,7 @@ async fn main() {
         url: Some(String::from("fuchsia-pkg://fuchsia.com/hub_integration_test#meta/simple.cm")),
         startup: Some(fsys::StartupMode::Lazy),
         environment: None,
-        ..fsys::ChildDecl::empty()
+        ..fsys::ChildDecl::EMPTY
     };
     realm
         .create_child(&mut collection_ref, child_decl)

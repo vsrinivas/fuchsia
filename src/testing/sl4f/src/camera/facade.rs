@@ -240,7 +240,7 @@ mod tests {
             product_id: Some(TEST_UINT16),
             product_name: Some(TEST_STR.to_string()),
             type_: Some(DeviceType::Virtual),
-            ..DeviceInfo::empty()
+            ..DeviceInfo::EMPTY
         };
 
         let (facade, fut) =
@@ -256,7 +256,7 @@ mod tests {
                         product_id: Some(TEST_UINT16),
                         product_name: Some(TEST_STR.to_string()),
                         type_: Some(DeviceType::Virtual),
-                        ..DeviceInfo::empty()
+                        ..DeviceInfo::EMPTY
                     },
                 }
             );

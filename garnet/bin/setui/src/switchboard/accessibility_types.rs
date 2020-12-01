@@ -124,7 +124,7 @@ impl From<fidl_fuchsia_settings::CaptionsSettings> for CaptionsSettings {
 
 impl From<CaptionsSettings> for fidl_fuchsia_settings::CaptionsSettings {
     fn from(src: CaptionsSettings) -> Self {
-        let mut settings = fidl_fuchsia_settings::CaptionsSettings::empty();
+        let mut settings = fidl_fuchsia_settings::CaptionsSettings::EMPTY;
         settings.for_media = src.for_media;
         settings.for_tts = src.for_tts;
         settings.font_style = src.font_style.map(CaptionFontStyle::into);
@@ -166,7 +166,7 @@ impl From<fidl_fuchsia_settings::CaptionFontStyle> for CaptionFontStyle {
 
 impl From<CaptionFontStyle> for fidl_fuchsia_settings::CaptionFontStyle {
     fn from(src: CaptionFontStyle) -> Self {
-        let mut style = fidl_fuchsia_settings::CaptionFontStyle::empty();
+        let mut style = fidl_fuchsia_settings::CaptionFontStyle::EMPTY;
         style.family = src.family.map(CaptionFontFamily::into);
         style.color = src.color.map(ColorRgba::into);
         style.relative_size = src.relative_size;

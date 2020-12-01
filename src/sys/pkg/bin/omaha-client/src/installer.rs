@@ -263,14 +263,14 @@ mod tests {
                         .on_state(&mut State::Stage(fidl_fuchsia_update_installer::StageData {
                             info: Some(UpdateInfo {
                                 download_size: Some(1000),
-                                ..UpdateInfo::empty()
+                                ..UpdateInfo::EMPTY
                             }),
                             progress: Some(InstallationProgress {
                                 fraction_completed: Some(0.5),
                                 bytes_downloaded: Some(500),
-                                ..InstallationProgress::empty()
+                                ..InstallationProgress::EMPTY
                             }),
-                            ..fidl_fuchsia_update_installer::StageData::empty()
+                            ..fidl_fuchsia_update_installer::StageData::EMPTY
                         }))
                         .await
                         .unwrap();
@@ -279,14 +279,14 @@ mod tests {
                             fidl_fuchsia_update_installer::WaitToRebootData {
                                 info: Some(UpdateInfo {
                                     download_size: Some(1000),
-                                    ..UpdateInfo::empty()
+                                    ..UpdateInfo::EMPTY
                                 }),
                                 progress: Some(InstallationProgress {
                                     fraction_completed: Some(1.0),
                                     bytes_downloaded: Some(1000),
-                                    ..InstallationProgress::empty()
+                                    ..InstallationProgress::EMPTY
                                 }),
-                                ..fidl_fuchsia_update_installer::WaitToRebootData::empty()
+                                ..fidl_fuchsia_update_installer::WaitToRebootData::EMPTY
                             },
                         ))
                         .await
@@ -338,7 +338,7 @@ mod tests {
                     let monitor = monitor.into_proxy().unwrap();
                     let () = monitor
                         .on_state(&mut State::FailPrepare(
-                            fidl_fuchsia_update_installer::FailPrepareData::empty(),
+                            fidl_fuchsia_update_installer::FailPrepareData::EMPTY,
                         ))
                         .await
                         .unwrap();
@@ -372,19 +372,19 @@ mod tests {
                     let monitor = monitor.into_proxy().unwrap();
                     let () = monitor
                         .on_state(&mut State::Prepare(
-                            fidl_fuchsia_update_installer::PrepareData::empty(),
+                            fidl_fuchsia_update_installer::PrepareData::EMPTY,
                         ))
                         .await
                         .unwrap();
                     let () = monitor
                         .on_state(&mut State::Fetch(fidl_fuchsia_update_installer::FetchData {
-                            info: Some(UpdateInfo { download_size: None, ..UpdateInfo::empty() }),
+                            info: Some(UpdateInfo { download_size: None, ..UpdateInfo::EMPTY }),
                             progress: Some(InstallationProgress {
                                 fraction_completed: Some(0.0),
                                 bytes_downloaded: None,
-                                ..InstallationProgress::empty()
+                                ..InstallationProgress::EMPTY
                             }),
-                            ..fidl_fuchsia_update_installer::FetchData::empty()
+                            ..fidl_fuchsia_update_installer::FetchData::EMPTY
                         }))
                         .await
                         .unwrap();

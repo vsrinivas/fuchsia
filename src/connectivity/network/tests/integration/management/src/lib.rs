@@ -287,7 +287,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
         let (watcher, watcher_server) =
             ::fidl::endpoints::create_proxy::<net_interfaces::WatcherMarker>()?;
         let () = interface_state
-            .get_watcher(net_interfaces::WatcherOptions::empty(), watcher_server)
+            .get_watcher(net_interfaces::WatcherOptions::EMPTY, watcher_server)
             .context("failed to initialize interface watcher")?;
         let mut if_map = HashMap::new();
         let (wlan_ap_id, wlan_ap_name) = fidl_fuchsia_net_interfaces_ext::wait_interface(
@@ -331,7 +331,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
                 dhcp::Parameter::Lease(dhcp::LeaseLength {
                     default: Some(DHCP_LEASE_TIME),
                     max: Some(DHCP_LEASE_TIME),
-                    ..dhcp::LeaseLength::empty()
+                    ..dhcp::LeaseLength::EMPTY
                 }),
             ),
             (
@@ -346,7 +346,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
                     mask: Some(NETWORK_MASK),
                     pool_range_start: Some(DHCP_POOL_START_ADDR),
                     pool_range_stop: Some(DHCP_POOL_END_ADDR),
-                    ..dhcp::AddressPool::empty()
+                    ..dhcp::AddressPool::EMPTY
                 }),
             ),
         ];

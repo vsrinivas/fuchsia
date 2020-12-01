@@ -61,24 +61,24 @@ mod tests {
 
     #[test]
     fn test_from_into_ext() {
-        let a = fname::StaticDnsServerSource::empty();
+        let a = fname::StaticDnsServerSource::EMPTY;
         assert_eq!(fname::DnsServerSource::StaticSource(a.clone()), a.into_ext());
 
         let a = fname::DhcpDnsServerSource {
             source_interface: Some(1),
-            ..fname::DhcpDnsServerSource::empty()
+            ..fname::DhcpDnsServerSource::EMPTY
         };
         assert_eq!(fname::DnsServerSource::Dhcp(a.clone()), a.into_ext());
 
         let a = fname::NdpDnsServerSource {
             source_interface: Some(1),
-            ..fname::NdpDnsServerSource::empty()
+            ..fname::NdpDnsServerSource::EMPTY
         };
         assert_eq!(fname::DnsServerSource::Ndp(a.clone()), a.into_ext());
 
         let a = fname::Dhcpv6DnsServerSource {
             source_interface: Some(1),
-            ..fname::Dhcpv6DnsServerSource::empty()
+            ..fname::Dhcpv6DnsServerSource::EMPTY
         };
         assert_eq!(fname::DnsServerSource::Dhcpv6(a.clone()), a.into_ext());
     }

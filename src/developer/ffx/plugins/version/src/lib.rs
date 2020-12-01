@@ -88,7 +88,7 @@ mod test {
             commit_hash: Some(FAKE_DAEMON_HASH.to_string()),
             commit_timestamp: Some(TIMESTAMP),
             build_version: Some(FAKE_DAEMON_BUILD_VERSION.to_string()),
-            ..VersionInfo::empty()
+            ..VersionInfo::EMPTY
         }
     }
 
@@ -97,7 +97,7 @@ mod test {
             commit_hash: Some(FAKE_FRONTEND_HASH.to_string()),
             commit_timestamp: Some(TIMESTAMP),
             build_version: Some(FAKE_FRONTEND_BUILD_VERSION.to_string()),
-            ..VersionInfo::empty()
+            ..VersionInfo::EMPTY
         }
     }
 
@@ -160,7 +160,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_success() -> Result<()> {
-        let proxy = setup_fake_daemon_server(false, VersionInfo::empty());
+        let proxy = setup_fake_daemon_server(false, VersionInfo::EMPTY);
         let output =
             run_version_test(frontend_info(), proxy, VersionCommand { verbose: false }).await;
         assert_eq!(output, format!("{}\n", FAKE_FRONTEND_BUILD_VERSION));
@@ -169,9 +169,9 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_empty_version_info_not_verbose() -> Result<()> {
-        let proxy = setup_fake_daemon_server(false, VersionInfo::empty());
+        let proxy = setup_fake_daemon_server(false, VersionInfo::EMPTY);
         let output =
-            run_version_test(VersionInfo::empty(), proxy, VersionCommand { verbose: false }).await;
+            run_version_test(VersionInfo::EMPTY, proxy, VersionCommand { verbose: false }).await;
         assert_eq!(output, "(unknown build version)\n");
         Ok(())
     }
@@ -220,9 +220,9 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_frontend_empty_and_daemon_returns_none() -> Result<()> {
-        let proxy = setup_fake_daemon_server(true, VersionInfo::empty());
+        let proxy = setup_fake_daemon_server(true, VersionInfo::EMPTY);
         let output =
-            run_version_test(VersionInfo::empty(), proxy, VersionCommand { verbose: true }).await;
+            run_version_test(VersionInfo::EMPTY, proxy, VersionCommand { verbose: true }).await;
 
         assert_lines(
             output,

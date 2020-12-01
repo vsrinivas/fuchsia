@@ -12,7 +12,7 @@ pub async fn command(
     proxy: AccessibilityProxy,
     options: AccessibilityOptions,
 ) -> Result<String, Error> {
-    let mut settings = AccessibilitySettings::empty();
+    let mut settings = AccessibilitySettings::EMPTY;
     settings.audio_description = options.audio_description;
     settings.screen_reader = options.screen_reader;
     settings.color_inversion = options.color_inversion;
@@ -23,13 +23,13 @@ pub async fn command(
         let CaptionCommands::CaptionOptions(input) = caption_settings_enum;
 
         let style = input.style;
-        let mut font_style = CaptionFontStyle::empty();
+        let mut font_style = CaptionFontStyle::EMPTY;
         font_style.family = style.font_family;
         font_style.color = style.font_color;
         font_style.relative_size = style.relative_size;
         font_style.char_edge_style = style.char_edge_style;
 
-        let mut captions_settings = CaptionsSettings::empty();
+        let mut captions_settings = CaptionsSettings::EMPTY;
         captions_settings.for_media = input.for_media;
         captions_settings.for_tts = input.for_tts;
         captions_settings.window_color = input.window_color;
@@ -39,7 +39,7 @@ pub async fn command(
         settings.captions_settings = Some(captions_settings);
     }
 
-    if settings == AccessibilitySettings::empty() {
+    if settings == AccessibilitySettings::EMPTY {
         // No values set, perform a get instead.
         let setting_value = proxy.watch().await?;
         Ok(format!("{:#?}", setting_value))

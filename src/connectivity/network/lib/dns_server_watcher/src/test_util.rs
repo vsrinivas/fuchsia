@@ -20,7 +20,7 @@ pub(crate) mod constants {
     pub(crate) const UNSPECIFIED_SOURCE_SERVER: fname::DnsServer_ = fname::DnsServer_ {
         address: Some(UNSPECIFIED_SOURCE_SOCKADDR),
         source: None,
-        ..fname::DnsServer_::empty()
+        ..fname::DnsServer_::EMPTY
     };
 
     pub(crate) const STATIC_SOURCE_SOCKADDR: fnet::SocketAddress =
@@ -31,8 +31,8 @@ pub(crate) mod constants {
 
     pub(crate) const STATIC_SERVER: fname::DnsServer_ = fname::DnsServer_ {
         address: Some(STATIC_SOURCE_SOCKADDR),
-        source: Some(fname::DnsServerSource::StaticSource(fname::StaticDnsServerSource::empty())),
-        ..fname::DnsServer_::empty()
+        source: Some(fname::DnsServerSource::StaticSource(fname::StaticDnsServerSource::EMPTY)),
+        ..fname::DnsServer_::EMPTY
     };
 
     pub(crate) const DHCP_SOURCE_SOCKADDR: fnet::SocketAddress =
@@ -45,9 +45,9 @@ pub(crate) mod constants {
         address: Some(DHCP_SOURCE_SOCKADDR),
         source: Some(fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
             source_interface: Some(1),
-            ..fname::DhcpDnsServerSource::empty()
+            ..fname::DhcpDnsServerSource::EMPTY
         })),
-        ..fname::DnsServer_::empty()
+        ..fname::DnsServer_::EMPTY
     };
 
     pub(crate) const NDP_SOURCE_SOCKADDR: fnet::SocketAddress =
@@ -68,9 +68,9 @@ pub(crate) mod constants {
         address: Some(NDP_SOURCE_SOCKADDR),
         source: Some(fname::DnsServerSource::Ndp(fname::NdpDnsServerSource {
             source_interface: Some(NDP_SERVER_INTERFACE_ID),
-            ..fname::NdpDnsServerSource::empty()
+            ..fname::NdpDnsServerSource::EMPTY
         })),
-        ..fname::DnsServer_::empty()
+        ..fname::DnsServer_::EMPTY
     };
 
     pub(crate) const DHCPV6_SOURCE_SOCKADDR1: fnet::SocketAddress =
@@ -91,9 +91,9 @@ pub(crate) mod constants {
         address: Some(DHCPV6_SOURCE_SOCKADDR1),
         source: Some(fname::DnsServerSource::Dhcpv6(fname::Dhcpv6DnsServerSource {
             source_interface: Some(DHCPV6_SERVER1_INTERFACE_ID),
-            ..fname::Dhcpv6DnsServerSource::empty()
+            ..fname::Dhcpv6DnsServerSource::EMPTY
         })),
-        ..fname::DnsServer_::empty()
+        ..fname::DnsServer_::EMPTY
     };
 
     pub(crate) const DHCPV6_SOURCE_SOCKADDR2: fnet::SocketAddress =
@@ -114,8 +114,8 @@ pub(crate) mod constants {
         address: Some(DHCPV6_SOURCE_SOCKADDR2),
         source: Some(fname::DnsServerSource::Dhcpv6(fname::Dhcpv6DnsServerSource {
             source_interface: Some(DHCPV6_SERVER2_INTERFACE_ID),
-            ..fname::Dhcpv6DnsServerSource::empty()
+            ..fname::Dhcpv6DnsServerSource::EMPTY
         })),
-        ..fname::DnsServer_::empty()
+        ..fname::DnsServer_::EMPTY
     };
 }

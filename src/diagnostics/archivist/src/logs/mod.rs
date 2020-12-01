@@ -126,7 +126,7 @@ impl LogManager {
     pub async fn drain_internal_log_sink(self, socket: zx::Socket, name: &str) {
         let forwarder = self.inner.lock().await.legacy_forwarder.clone();
         // TODO(fxbug.dev/50105): Figure out how to properly populate SourceIdentity
-        let mut source = SourceIdentity::empty();
+        let mut source = SourceIdentity::EMPTY;
         source.component_name = Some(name.to_owned());
         let source = Arc::new(source);
         let log_stream = LogMessageSocket::new(socket, source, forwarder)
@@ -271,7 +271,7 @@ impl LogManager {
 
         // ack successful connections with 'empty' interest
         // for async clients
-        let _ = control_handle.send_on_register_interest(Interest::empty());
+        let _ = control_handle.send_on_register_interest(Interest::EMPTY);
     }
 
     /// Handle the components v2 EventStream for attributed logs of v2
@@ -321,7 +321,7 @@ impl LogManager {
             .and_then(|header| header.component_url.clone())
             .ok_or(EventError::MissingField("component_url"))?;
 
-        let mut source = SourceIdentity::empty();
+        let mut source = SourceIdentity::EMPTY;
         source.component_url = Some(component_url.clone());
         source.component_name = Some(target_moniker.clone());
         Ok(Arc::new(source))
@@ -529,7 +529,7 @@ mod tests {
         fifth_message.severity = fifth_packet.metadata.severity;
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
+        let mut stream = harness.create_stream(Arc::new(SourceIdentity::EMPTY));
         stream.write_packets(vec![
             first_packet,
             second_packet,
@@ -664,7 +664,7 @@ mod tests {
             component_url: Some("http://foo.com".into()),
             instance_id: None,
             realm_path: None,
-            ..SourceIdentity::empty()
+            ..SourceIdentity::EMPTY
         });
 
         let log_reader2 = harness.create_default_reader(SourceIdentity {
@@ -672,7 +672,7 @@ mod tests {
             component_url: Some("http://bar.com".into()),
             instance_id: None,
             realm_path: None,
-            ..SourceIdentity::empty()
+            ..SourceIdentity::EMPTY
         });
 
         attributed_inspect_two_streams_different_identities_by_reader(
@@ -705,7 +705,7 @@ mod tests {
             component_url: Some("http://bar.com".into()),
             instance_id: None,
             realm_path: None,
-            ..SourceIdentity::empty()
+            ..SourceIdentity::EMPTY
         });
         attributed_inspect_two_streams_different_identities_by_reader(
             harness,
@@ -820,7 +820,7 @@ mod tests {
             component_url: Some("http://foo.com".into()),
             instance_id: None,
             realm_path: None,
-            ..SourceIdentity::empty()
+            ..SourceIdentity::EMPTY
         });
         attributed_inspect_two_streams_same_identity_by_reader(
             harness,
@@ -851,7 +851,7 @@ mod tests {
             component_url: Some("http://foo.com".into()),
             instance_id: None,
             realm_path: None,
-            ..SourceIdentity::empty()
+            ..SourceIdentity::EMPTY
         });
         attributed_inspect_two_streams_same_identity_by_reader(harness, log_reader1, log_reader2)
             .await;
@@ -882,7 +882,7 @@ mod tests {
         };
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
+        let mut stream = harness.create_stream(Arc::new(SourceIdentity::EMPTY));
         stream.write_packets(vec![p, p2]);
         drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -914,7 +914,7 @@ mod tests {
         };
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
+        let mut stream = harness.create_stream(Arc::new(SourceIdentity::EMPTY));
         stream.write_packets(vec![p, p2]);
         drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -953,7 +953,7 @@ mod tests {
         };
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
+        let mut stream = harness.create_stream(Arc::new(SourceIdentity::EMPTY));
         stream.write_packets(vec![p, p2, p3, p4, p5]);
         drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -988,7 +988,7 @@ mod tests {
         };
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
+        let mut stream = harness.create_stream(Arc::new(SourceIdentity::EMPTY));
         stream.write_packets(vec![p, p2, p3]);
         drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -1037,7 +1037,7 @@ mod tests {
         };
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
+        let mut stream = harness.create_stream(Arc::new(SourceIdentity::EMPTY));
         stream.write_packets(vec![p, p2]);
         drop(stream);
         harness.filter_test(vec![lm1, lm2], Some(options)).await;
@@ -1118,7 +1118,7 @@ mod tests {
             },
         ];
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_structured_stream(Arc::new(SourceIdentity::empty()));
+        let mut stream = harness.create_structured_stream(Arc::new(SourceIdentity::EMPTY));
         stream.write_packets(logs);
         drop(stream);
         harness.filter_test(expected_logs, None).await;

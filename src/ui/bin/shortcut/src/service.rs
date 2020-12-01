@@ -256,7 +256,7 @@ mod tests {
             use_priority: None,
             trigger: None,
             key3: None,
-            ..ui_shortcut::Shortcut::empty()
+            ..ui_shortcut::Shortcut::EMPTY
         };
         let normalized_shortcut = ui_shortcut::Shortcut {
             keys_required: None,
@@ -266,7 +266,7 @@ mod tests {
             use_priority: Some(false),
             trigger: Some(ui_shortcut::Trigger::KeyPressed),
             key3: None,
-            ..ui_shortcut::Shortcut::empty()
+            ..ui_shortcut::Shortcut::EMPTY
         };
         let registry_service = RegistryService::new();
         registry_service.normalize_shortcut(&mut shortcut);
@@ -280,7 +280,7 @@ mod tests {
             type_: None,
             key: Some(input::Key::A),
             modifiers: None,
-            ..ui_input3::KeyEvent::empty()
+            ..ui_input3::KeyEvent::EMPTY
         })
         .unwrap();
         assert_eq!(event.key, input::Key::A);
@@ -293,7 +293,7 @@ mod tests {
             type_: None,
             key: None,
             modifiers: None,
-            ..ui_input3::KeyEvent::empty()
+            ..ui_input3::KeyEvent::EMPTY
         });
         assert!(event.is_err());
     }
@@ -305,7 +305,7 @@ mod tests {
             type_: Some(ui_input3::KeyEventType::Pressed),
             key: Some(input::Key::B),
             modifiers: None,
-            ..ui_input3::KeyEvent::empty()
+            ..ui_input3::KeyEvent::EMPTY
         })
         .unwrap();
         assert_eq!(event.pressed, Some(true));
@@ -318,7 +318,7 @@ mod tests {
             type_: Some(ui_input3::KeyEventType::Released),
             key: Some(input::Key::B),
             modifiers: None,
-            ..ui_input3::KeyEvent::empty()
+            ..ui_input3::KeyEvent::EMPTY
         })
         .unwrap();
         assert_eq!(event.pressed, Some(false));
@@ -331,7 +331,7 @@ mod tests {
             type_: None,
             key: Some(input::Key::B),
             modifiers: None,
-            ..ui_input3::KeyEvent::empty()
+            ..ui_input3::KeyEvent::EMPTY
         })
         .unwrap();
         assert_eq!(event.pressed, None);
@@ -344,7 +344,7 @@ mod tests {
             type_: Some(ui_input3::KeyEventType::Sync),
             key: Some(input::Key::B),
             modifiers: None,
-            ..ui_input3::KeyEvent::empty()
+            ..ui_input3::KeyEvent::EMPTY
         })
         .unwrap();
         assert_eq!(event.pressed, None);
@@ -357,7 +357,7 @@ mod tests {
             type_: Some(ui_input3::KeyEventType::Cancel),
             key: Some(input::Key::B),
             modifiers: None,
-            ..ui_input3::KeyEvent::empty()
+            ..ui_input3::KeyEvent::EMPTY
         })
         .unwrap();
         assert_eq!(event.pressed, None);
@@ -374,7 +374,7 @@ mod tests {
                 type_: Some(ui_input3::KeyEventType::Sync),
                 key: Some(input::Key::A),
                 modifiers: None,
-                ..ui_input3::KeyEvent::empty()
+                ..ui_input3::KeyEvent::EMPTY
             })?)
             .await?;
         assert!(was_handled);
@@ -386,7 +386,7 @@ mod tests {
                 type_: Some(ui_input3::KeyEventType::Cancel),
                 key: Some(input::Key::A),
                 modifiers: None,
-                ..ui_input3::KeyEvent::empty()
+                ..ui_input3::KeyEvent::EMPTY
             })?)
             .await?;
         assert!(was_handled);

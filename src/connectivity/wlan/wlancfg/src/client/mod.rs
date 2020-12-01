@@ -1193,7 +1193,7 @@ mod tests {
         let network_config = fidl_policy::NetworkConfig {
             id: Some(network_id.clone()),
             credential: Some(fidl_policy::Credential::None(fidl_policy::Empty)),
-            ..fidl_policy::NetworkConfig::empty()
+            ..fidl_policy::NetworkConfig::EMPTY
         };
         let mut save_fut = controller.save_network(network_config);
 
@@ -1278,7 +1278,7 @@ mod tests {
         let network_config = fidl_policy::NetworkConfig {
             id: Some(network_id.clone()),
             credential: Some(fidl_policy::Credential::None(fidl_policy::Empty)),
-            ..fidl_policy::NetworkConfig::empty()
+            ..fidl_policy::NetworkConfig::EMPTY
         };
         let mut save_fut = controller.save_network(network_config);
 
@@ -1361,7 +1361,7 @@ mod tests {
         let network_config = fidl_policy::NetworkConfig {
             id: Some(fidl_policy::NetworkIdentifier::from(network_id.clone())),
             credential: Some(fidl_policy::Credential::Password(b"other-password".to_vec())),
-            ..fidl_policy::NetworkConfig::empty()
+            ..fidl_policy::NetworkConfig::EMPTY
         };
         let mut save_fut = controller.save_network(network_config);
 
@@ -1437,7 +1437,7 @@ mod tests {
         let network_config = fidl_policy::NetworkConfig {
             id: Some(bad_network_id.clone()),
             credential: Some(fidl_policy::Credential::Password(b"bar".to_vec())),
-            ..fidl_policy::NetworkConfig::empty()
+            ..fidl_policy::NetworkConfig::EMPTY
         };
         // Attempt to save the config
         let mut save_fut = controller.save_network(network_config);
@@ -1516,7 +1516,7 @@ mod tests {
         let network_config = fidl_policy::NetworkConfig {
             id: Some(fidl_policy::NetworkIdentifier::from(network_id.clone())),
             credential: Some(fidl_policy::Credential::from(credential.clone())),
-            ..fidl_policy::NetworkConfig::empty()
+            ..fidl_policy::NetworkConfig::EMPTY
         };
         let mut remove_fut = controller.remove_network(network_config.clone());
 
@@ -1555,7 +1555,7 @@ mod tests {
         let expected_configs = vec![fidl_policy::NetworkConfig {
             id: Some(expected_id),
             credential: Some(expected_credential),
-            ..fidl_policy::NetworkConfig::empty()
+            ..fidl_policy::NetworkConfig::EMPTY
         }];
 
         let expected_num_sends = 1;
@@ -1589,7 +1589,7 @@ mod tests {
             let network_config = fidl_policy::NetworkConfig {
                 id: Some(net_id),
                 credential: Some(credential),
-                ..fidl_policy::NetworkConfig::empty()
+                ..fidl_policy::NetworkConfig::EMPTY
             };
             expected_configs.push(network_config);
         }

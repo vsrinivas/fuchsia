@@ -92,7 +92,7 @@ fn build_common_service_definition() -> ServiceDefinition {
             major_version: 1,
             minor_version: 6,
         }]),
-        ..ServiceDefinition::empty()
+        ..ServiceDefinition::EMPTY
     }
 }
 
@@ -265,7 +265,7 @@ pub fn connect_and_advertise(
             &mut service_defs.into_iter(),
             ChannelParameters {
                 channel_mode: Some(ChannelMode::EnhancedRetransmission),
-                ..ChannelParameters::empty()
+                ..ChannelParameters::EMPTY
             },
             connection_client,
         )

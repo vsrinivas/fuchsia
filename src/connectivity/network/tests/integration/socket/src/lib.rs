@@ -194,7 +194,7 @@ async fn install_ip_device(
                 name: None,
                 topopath: None,
                 metric: None,
-                ..fidl_fuchsia_net_stack::InterfaceConfig::empty()
+                ..fidl_fuchsia_net_stack::InterfaceConfig::EMPTY
             },
             &mut fidl_fuchsia_net_stack::DeviceDefinition::Ip(device),
         )
@@ -251,7 +251,7 @@ fn base_ip_device_config() -> fidl_fuchsia_net_tun::BaseConfig {
         ]),
         report_metadata: None,
         min_tx_buffer_length: None,
-        ..fidl_fuchsia_net_tun::BaseConfig::empty()
+        ..fidl_fuchsia_net_tun::BaseConfig::EMPTY
     }
 }
 
@@ -279,7 +279,7 @@ async fn test_ip_endpoints_socket() -> Result {
                 fallible_transmit_right: None,
                 mac_left: None,
                 mac_right: None,
-                ..fidl_fuchsia_net_tun::DevicePairConfig::empty()
+                ..fidl_fuchsia_net_tun::DevicePairConfig::EMPTY
             },
             req,
         )
@@ -294,14 +294,14 @@ async fn test_ip_endpoints_socket() -> Result {
             left: Some(fidl_fuchsia_net_tun::Protocols {
                 network_device: Some(client_req),
                 mac_addressing: None,
-                ..fidl_fuchsia_net_tun::Protocols::empty()
+                ..fidl_fuchsia_net_tun::Protocols::EMPTY
             }),
             right: Some(fidl_fuchsia_net_tun::Protocols {
                 network_device: Some(server_req),
                 mac_addressing: None,
-                ..fidl_fuchsia_net_tun::Protocols::empty()
+                ..fidl_fuchsia_net_tun::Protocols::EMPTY
             }),
-            ..fidl_fuchsia_net_tun::DevicePairEnds::empty()
+            ..fidl_fuchsia_net_tun::DevicePairEnds::EMPTY
         })
         .context("connect protocols failed")?;
 
@@ -354,7 +354,7 @@ async fn test_ip_endpoint_packets() -> Result {
                 online: Some(true),
                 blocking: Some(true),
                 mac: None,
-                ..fidl_fuchsia_net_tun::DeviceConfig::empty()
+                ..fidl_fuchsia_net_tun::DeviceConfig::EMPTY
             },
             req,
         )
@@ -366,7 +366,7 @@ async fn test_ip_endpoint_packets() -> Result {
         .connect_protocols(fidl_fuchsia_net_tun::Protocols {
             network_device: Some(device_req),
             mac_addressing: None,
-            ..fidl_fuchsia_net_tun::Protocols::empty()
+            ..fidl_fuchsia_net_tun::Protocols::EMPTY
         })
         .context("connect protocols failed")?;
 
@@ -492,7 +492,7 @@ async fn test_ip_endpoint_packets() -> Result {
             frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv4),
             data: Some(packet.clone()),
             meta: None,
-            ..fidl_fuchsia_net_tun::Frame::empty()
+            ..fidl_fuchsia_net_tun::Frame::EMPTY
         })
         .await
         .context("write_frame failed")?
@@ -532,7 +532,7 @@ async fn test_ip_endpoint_packets() -> Result {
                 frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv6),
                 data: Some(packet),
                 meta: None,
-                ..fidl_fuchsia_net_tun::Frame::empty()
+                ..fidl_fuchsia_net_tun::Frame::EMPTY
             },
             &mut read_frame,
         )
@@ -563,7 +563,7 @@ async fn test_ip_endpoint_packets() -> Result {
             frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv6),
             data: Some(packet.clone()),
             meta: None,
-            ..fidl_fuchsia_net_tun::Frame::empty()
+            ..fidl_fuchsia_net_tun::Frame::EMPTY
         })
         .await
         .context("write_frame failed")?
@@ -603,7 +603,7 @@ async fn test_ip_endpoint_packets() -> Result {
                 frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv4),
                 data: Some(packet),
                 meta: None,
-                ..fidl_fuchsia_net_tun::Frame::empty()
+                ..fidl_fuchsia_net_tun::Frame::EMPTY
             },
             &mut read_frame,
         )

@@ -80,7 +80,7 @@ async fn main() -> Result<(), Error> {
     let (rx_socket, tx_socket) = futures::AsyncReadExt::split(local_socket);
     hoist::connect_as_mesh_controller()?.attach_socket_link(
         remote_socket,
-        fidl_fuchsia_overnet_protocol::SocketLinkOptions::empty(),
+        fidl_fuchsia_overnet_protocol::SocketLinkOptions::EMPTY,
     )?;
     try_join(copy_socket_to_stdout(rx_socket), copy_stdin_to_socket(tx_socket)).await?;
 
@@ -115,7 +115,7 @@ mod test {
                             .send(&mut Ok(IdentifyHostResponse {
                                 nodename: Some("".to_string()),
                                 addresses: Some(vec![]),
-                                ..IdentifyHostResponse::empty()
+                                ..IdentifyHostResponse::EMPTY
                             }))
                             .unwrap();
                     }

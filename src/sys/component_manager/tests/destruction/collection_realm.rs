@@ -34,7 +34,7 @@ async fn main() {
             ),
             startup: Some(fsys::StartupMode::Lazy),
             environment: None,
-            ..fsys::ChildDecl::empty()
+            ..fsys::ChildDecl::EMPTY
         };
         realm
             .create_child(&mut collection_ref, child_decl)

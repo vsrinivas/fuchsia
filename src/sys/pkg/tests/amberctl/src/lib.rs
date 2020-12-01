@@ -83,7 +83,7 @@ impl MockUpdateManager {
                         fidl_fuchsia_update::CheckOptions {
                             initiator: Some(fidl_fuchsia_update::Initiator::User),
                             allow_attaching_to_existing_update_check: Some(false),
-                            ..fidl_fuchsia_update::CheckOptions::empty()
+                            ..fidl_fuchsia_update::CheckOptions::EMPTY
                         }
                     );
                     assert_eq!(monitor, None);

@@ -60,14 +60,14 @@ impl AvrcpVolume {
             user_volume: Some(settings::Volume {
                 level: Some(self.0 as f32 / 127.0),
                 muted: Some(false),
-                ..settings::Volume::empty()
+                ..settings::Volume::EMPTY
             }),
-            ..settings::AudioStreamSettings::empty()
+            ..settings::AudioStreamSettings::EMPTY
         };
         settings::AudioSettings {
             streams: Some(vec![settings]),
             input: None,
-            ..settings::AudioSettings::empty()
+            ..settings::AudioSettings::EMPTY
         }
     }
 }

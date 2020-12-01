@@ -407,7 +407,7 @@ impl ScopedInstance {
             url: Some(url),
             startup: Some(StartupMode::Lazy),
             environment: None,
-            ..ChildDecl::empty()
+            ..ChildDecl::EMPTY
         };
         realm
             .create_child(&mut collection_ref, child_decl)

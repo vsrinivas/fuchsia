@@ -359,7 +359,7 @@ mod tests {
                                 type_: SensorType::LightIlluminance,
                             },
                         ]),
-                        ..SensorInputDescriptor::empty()
+                        ..SensorInputDescriptor::EMPTY
                     }),
                     feature: Some(SensorFeatureDescriptor {
                         report_interval: Some(Axis {
@@ -388,9 +388,9 @@ mod tests {
                             },
                             type_: SensorType::LightIlluminance,
                         }]),
-                        ..SensorFeatureDescriptor::empty()
+                        ..SensorFeatureDescriptor::EMPTY
                     }),
-                    ..SensorDescriptor::empty()
+                    ..SensorDescriptor::EMPTY
                 }),
                 touch: Some(TouchDescriptor {
                     input: Some(TouchInputDescriptor {
@@ -410,7 +410,7 @@ mod tests {
                                 }),
                                 contact_width: None,
                                 contact_height: None,
-                                ..ContactInputDescriptor::empty()
+                                ..ContactInputDescriptor::EMPTY
                             },
                             ContactInputDescriptor {
                                 position_x: Some(Axis {
@@ -427,19 +427,19 @@ mod tests {
                                 }),
                                 contact_width: None,
                                 contact_height: None,
-                                ..ContactInputDescriptor::empty()
+                                ..ContactInputDescriptor::EMPTY
                             },
                         ]),
                         max_contacts: Some(2),
                         touch_type: Some(TouchType::Touchpad),
                         buttons: Some(vec![1, 2, 3]),
-                        ..TouchInputDescriptor::empty()
+                        ..TouchInputDescriptor::EMPTY
                     }),
-                    ..TouchDescriptor::empty()
+                    ..TouchDescriptor::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..DeviceDescriptor::empty()
+                ..DeviceDescriptor::EMPTY
             })
             .build();
 
@@ -606,7 +606,7 @@ mod tests {
                     mouse: None,
                     sensor: Some(SensorInputReport {
                         values: Some(vec![1, 2, 3, 4, 5]),
-                        ..SensorInputReport::empty()
+                        ..SensorInputReport::EMPTY
                     }),
                     touch: Some(TouchInputReport {
                         contacts: Some(vec![
@@ -617,7 +617,7 @@ mod tests {
                                 pressure: Some(10),
                                 contact_width: None,
                                 contact_height: None,
-                                ..ContactInputReport::empty()
+                                ..ContactInputReport::EMPTY
                             },
                             ContactInputReport {
                                 contact_id: Some(2),
@@ -626,7 +626,7 @@ mod tests {
                                 pressure: Some(5),
                                 contact_width: None,
                                 contact_height: None,
-                                ..ContactInputReport::empty()
+                                ..ContactInputReport::EMPTY
                             },
                             ContactInputReport {
                                 contact_id: Some(3),
@@ -635,29 +635,29 @@ mod tests {
                                 pressure: Some(1),
                                 contact_width: None,
                                 contact_height: None,
-                                ..ContactInputReport::empty()
+                                ..ContactInputReport::EMPTY
                             },
                         ]),
                         pressed_buttons: Some(vec![4, 5, 6]),
-                        ..TouchInputReport::empty()
+                        ..TouchInputReport::EMPTY
                     }),
                     keyboard: None,
                     consumer_control: None,
                     trace_id: Some(1),
-                    ..InputReport::empty()
+                    ..InputReport::EMPTY
                 },
                 InputReport {
                     event_time: Some(1000),
                     mouse: None,
                     sensor: Some(SensorInputReport {
                         values: Some(vec![6, 7, 8, 9, 10]),
-                        ..SensorInputReport::empty()
+                        ..SensorInputReport::EMPTY
                     }),
                     touch: None,
                     keyboard: None,
                     consumer_control: None,
                     trace_id: Some(2),
-                    ..InputReport::empty()
+                    ..InputReport::EMPTY
                 },
                 InputReport {
                     event_time: Some(2000),
@@ -672,7 +672,7 @@ mod tests {
                                 pressure: Some(5),
                                 contact_width: None,
                                 contact_height: None,
-                                ..ContactInputReport::empty()
+                                ..ContactInputReport::EMPTY
                             },
                             ContactInputReport {
                                 contact_id: Some(3),
@@ -681,16 +681,16 @@ mod tests {
                                 pressure: Some(5),
                                 contact_width: None,
                                 contact_height: None,
-                                ..ContactInputReport::empty()
+                                ..ContactInputReport::EMPTY
                             },
                         ]),
                         pressed_buttons: Some(vec![1, 2, 3]),
-                        ..TouchInputReport::empty()
+                        ..TouchInputReport::EMPTY
                     }),
                     keyboard: None,
                     consumer_control: None,
                     trace_id: Some(3),
-                    ..InputReport::empty()
+                    ..InputReport::EMPTY
                 },
             ])
             .build();
@@ -788,9 +788,9 @@ mod tests {
                     sensitivity: Some(vec![1, 2, 3]),
                     threshold_high: None,
                     threshold_low: Some(vec![4, 5]),
-                    ..SensorFeatureReport::empty()
+                    ..SensorFeatureReport::EMPTY
                 }),
-                ..FeatureReport::empty()
+                ..FeatureReport::EMPTY
             })
             .build();
         let test = async move {
@@ -822,9 +822,9 @@ mod tests {
                     sensitivity: Some(vec![6]),
                     threshold_high: Some(vec![7, 8]),
                     threshold_low: Some(vec![10, 11, 12]),
-                    ..SensorFeatureReport::empty()
+                    ..SensorFeatureReport::EMPTY
                 }),
-                ..FeatureReport::empty()
+                ..FeatureReport::EMPTY
             })
             .build();
         let test = async move {
@@ -838,9 +838,9 @@ mod tests {
                             sensitivity: Some(vec![6]),
                             threshold_high: Some(vec![7, 8]),
                             threshold_low: Some(vec![10, 11, 12]),
-                            ..SensorFeatureReport::empty()
+                            ..SensorFeatureReport::EMPTY
                         }),
-                        ..FeatureReport::empty()
+                        ..FeatureReport::EMPTY
                     },
                 )
                 .await;

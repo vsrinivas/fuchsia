@@ -89,6 +89,6 @@ fn create_delta_with_domain(domain: &str) -> SessionInfoDelta {
         metadata: None,
         media_images: None,
         player_capabilities: None,
-        ..SessionInfoDelta::empty()
+        ..SessionInfoDelta::EMPTY
     };
 }

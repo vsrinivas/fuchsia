@@ -13,16 +13,16 @@ pub async fn command(
     night_mode_dnd: Option<bool>,
 ) -> Result<String, Error> {
     let mut output = String::new();
-    let mut settings = DoNotDisturbSettings::empty();
+    let mut settings = DoNotDisturbSettings::EMPTY;
 
     settings.user_initiated_do_not_disturb = user_dnd;
     settings.night_mode_initiated_do_not_disturb = night_mode_dnd;
 
-    if settings != DoNotDisturbSettings::empty() {
+    if settings != DoNotDisturbSettings::EMPTY {
         let mutate_result = proxy.set(settings).await?;
         match mutate_result {
             Ok(_) => {
-                let mut settings_clone = DoNotDisturbSettings::empty();
+                let mut settings_clone = DoNotDisturbSettings::EMPTY;
                 settings_clone.user_initiated_do_not_disturb = user_dnd;
                 settings_clone.night_mode_initiated_do_not_disturb = night_mode_dnd;
                 output.push_str(&format!(

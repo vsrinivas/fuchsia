@@ -78,7 +78,7 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                     // TODO(fxbug.dev/33880): Remote directories are supported by the vfs, just
                     // haven't been implemented in this harness yet.
                     no_remote_dir: Some(true),
-                    ..Io1Config::empty()
+                    ..Io1Config::EMPTY
                 };
                 responder.send(config)?;
                 continue;

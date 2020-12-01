@@ -90,7 +90,7 @@ async fn test_media_buttons_proxied() {
         mic_mute: Some(true),
         pause: None,
         camera_disable: None,
-        ..MediaButtonsEvent::empty()
+        ..MediaButtonsEvent::EMPTY
     });
 
     // Track the events to make sure they came in.

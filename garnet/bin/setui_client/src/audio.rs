@@ -16,24 +16,24 @@ pub async fn command(
     input_muted: Option<bool>,
 ) -> Result<String, Error> {
     let mut output = String::new();
-    let mut audio_settings = AudioSettings::empty();
-    let mut stream_settings = AudioStreamSettings::empty();
-    let mut volume = Volume::empty();
-    let mut input = AudioInput::empty();
+    let mut audio_settings = AudioSettings::EMPTY;
+    let mut stream_settings = AudioStreamSettings::EMPTY;
+    let mut volume = Volume::EMPTY;
+    let mut input = AudioInput::EMPTY;
 
     volume.level = level;
     volume.muted = volume_muted;
     stream_settings.stream = stream;
     stream_settings.source = source;
-    if volume != Volume::empty() {
+    if volume != Volume::EMPTY {
         stream_settings.user_volume = Some(volume);
     }
     input.muted = input_muted;
 
-    if stream_settings != AudioStreamSettings::empty() {
+    if stream_settings != AudioStreamSettings::EMPTY {
         audio_settings.streams = Some(vec![stream_settings]);
     }
-    if input != AudioInput::empty() {
+    if input != AudioInput::EMPTY {
         audio_settings.input = Some(input);
     }
 

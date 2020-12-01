@@ -23,7 +23,7 @@ use tracing::warn;
 pub const KERNEL_URL: &str = "fuchsia-boot://kernel";
 lazy_static! {
     pub static ref KERNEL_IDENTITY: SourceIdentity = {
-        let mut identity = SourceIdentity::empty();
+        let mut identity = SourceIdentity::EMPTY;
         identity.component_name = Some("klog".to_string());
         identity.component_url = Some(KERNEL_URL.to_string());
         identity

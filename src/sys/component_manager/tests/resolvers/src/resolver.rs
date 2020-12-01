@@ -37,9 +37,9 @@ async fn serve_resolver(mut stream: ComponentResolverRequestStream) -> Result<()
                         package: Some(fsys::Package {
                             package_url: Some("fuchsia-pkg://fuchsia.com/component-manager-test-resolver".to_string()),
                             package_dir: Some(client),
-                            ..fsys::Package::empty()
+                            ..fsys::Package::EMPTY
                         }),
-                        ..fsys::Component::empty()
+                        ..fsys::Component::EMPTY
                     }).with_context(|| format!("failed to send response to resolve request for component URL {}", component_url))?;
                 } else {
                     responder
@@ -49,7 +49,7 @@ async fn serve_resolver(mut stream: ComponentResolverRequestStream) -> Result<()
                                 resolved_url: None,
                                 decl: None,
                                 package: None,
-                                ..fsys::Component::empty()
+                                ..fsys::Component::EMPTY
                             },
                         )
                         .with_context(|| {
@@ -66,7 +66,7 @@ async fn serve_resolver(mut stream: ComponentResolverRequestStream) -> Result<()
 }
 
 fn build_decl() -> fsys::ComponentDecl {
-    let mut component_decl = fsys::ComponentDecl::empty();
+    let mut component_decl = fsys::ComponentDecl::EMPTY;
     component_decl.program = Some(fdata::Dictionary {
         entries: Some(vec![fdata::DictionaryEntry {
             key: "binary".to_string(),
@@ -74,23 +74,23 @@ fn build_decl() -> fsys::ComponentDecl {
                 "bin/component_manager_test_resolvers_component".to_string(),
             ))),
         }]),
-        ..fdata::Dictionary::empty()
+        ..fdata::Dictionary::EMPTY
     });
     component_decl.capabilities = Some(vec![fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
         name: Some("fidl.test.components.Trigger".to_string()),
         source_path: Some("/svc/fidl.test.components.Trigger".to_string()),
-        ..fsys::ProtocolDecl::empty()
+        ..fsys::ProtocolDecl::EMPTY
     })]);
     component_decl.uses = Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
         source_name: Some("elf".to_string()),
-        ..fsys::UseRunnerDecl::empty()
+        ..fsys::UseRunnerDecl::EMPTY
     })]);
     component_decl.exposes = Some(vec![fsys::ExposeDecl::Protocol(fsys::ExposeProtocolDecl {
         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
         target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
         source_name: Some("fidl.test.components.Trigger".to_string()),
         target_name: Some("fidl.test.components.Trigger".to_string()),
-        ..fsys::ExposeProtocolDecl::empty()
+        ..fsys::ExposeProtocolDecl::EMPTY
     })]);
     component_decl
 }

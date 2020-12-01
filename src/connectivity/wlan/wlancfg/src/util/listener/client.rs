@@ -21,7 +21,7 @@ impl Into<fidl_policy::NetworkState> for ClientNetworkState {
             id: Some(self.id),
             state: Some(self.state),
             status: self.status,
-            ..fidl_policy::NetworkState::empty()
+            ..fidl_policy::NetworkState::EMPTY
         }
     }
 }
@@ -37,7 +37,7 @@ impl Into<fidl_policy::ClientStateSummary> for ClientStateUpdate {
         fidl_policy::ClientStateSummary {
             state: self.state,
             networks: Some(self.networks.iter().map(|n| n.clone().into()).collect()),
-            ..fidl_policy::ClientStateSummary::empty()
+            ..fidl_policy::ClientStateSummary::EMPTY
         }
     }
 }
@@ -305,9 +305,9 @@ mod tests {
                     }),
                     state: Some(fidl_policy::ConnectionState::Connected),
                     status: None,
-                    ..fidl_policy::NetworkState::empty()
+                    ..fidl_policy::NetworkState::EMPTY
                 }]),
-                ..fidl_policy::ClientStateSummary::empty()
+                ..fidl_policy::ClientStateSummary::EMPTY
             }
         );
 
@@ -345,7 +345,7 @@ mod tests {
                         }),
                         state: Some(fidl_policy::ConnectionState::Connecting),
                         status: None,
-                        ..fidl_policy::NetworkState::empty()
+                        ..fidl_policy::NetworkState::EMPTY
                     },
                     fidl_policy::NetworkState {
                         id: Some(fidl_policy::NetworkIdentifier {
@@ -354,10 +354,10 @@ mod tests {
                         }),
                         state: Some(fidl_policy::ConnectionState::Disconnected),
                         status: Some(fidl_policy::DisconnectStatus::ConnectionStopped),
-                        ..fidl_policy::NetworkState::empty()
+                        ..fidl_policy::NetworkState::EMPTY
                     },
                 ]),
-                ..fidl_policy::ClientStateSummary::empty()
+                ..fidl_policy::ClientStateSummary::EMPTY
             }
         );
     }

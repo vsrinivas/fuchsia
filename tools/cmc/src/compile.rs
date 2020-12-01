@@ -89,7 +89,7 @@ fn compile_cml(document: &cml::Document) -> Result<fsys::ComponentDecl, Error> {
         collections: document.collections.as_ref().map(translate_collections).transpose()?,
         environments: document.environments.as_ref().map(translate_environments).transpose()?,
         facets: document.facets.clone().map(fsys_object_from_map).transpose()?,
-        ..fsys::ComponentDecl::empty()
+        ..fsys::ComponentDecl::EMPTY
     })
 }
 
@@ -139,7 +139,7 @@ fn dictionary_from_map(in_obj: Map<String, Value>) -> Result<fdata::Dictionary, 
         let value = value_to_dictionary_value(v)?;
         entries.push(fdata::DictionaryEntry { key, value });
     }
-    Ok(fdata::Dictionary { entries: Some(entries), ..fdata::Dictionary::empty() })
+    Ok(fdata::Dictionary { entries: Some(entries), ..fdata::Dictionary::EMPTY })
 }
 
 // Converts a serde_json::Value into a fuchsia DictionaryValue. Used by `dictionary_from_map`.
@@ -190,7 +190,7 @@ pub fn translate_program(program: &Map<String, Value>) -> Result<fdata::Dictiona
         }
     }
 
-    Ok(fdata::Dictionary { entries: Some(entries), ..fdata::Dictionary::empty() })
+    Ok(fdata::Dictionary { entries: Some(entries), ..fdata::Dictionary::EMPTY })
 }
 
 /// `use` rules consume a single capability from one source (parent|framework).
@@ -204,7 +204,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                 source: Some(source),
                 source_name: Some(n.clone().into()),
                 target_path: Some(target_path.into()),
-                ..fsys::UseServiceDecl::empty()
+                ..fsys::UseServiceDecl::EMPTY
             }));
         } else if let Some(n) = use_.protocol() {
             let source = extract_use_source(use_)?;
@@ -217,7 +217,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                     source: Some(clone_fsys_ref(&source)?),
                     source_name: Some(source_name.clone().into()),
                     target_path: Some(target_path.into()),
-                    ..fsys::UseProtocolDecl::empty()
+                    ..fsys::UseProtocolDecl::EMPTY
                 }));
             }
         } else if let Some(n) = use_.directory() {
@@ -231,19 +231,19 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                 target_path: Some(target_path.into()),
                 rights: Some(rights),
                 subdir: subdir.map(|s| s.into()),
-                ..fsys::UseDirectoryDecl::empty()
+                ..fsys::UseDirectoryDecl::EMPTY
             }));
         } else if let Some(s) = use_.storage() {
             let target_path = one_target_use_path(use_, use_)?;
             out_uses.push(fsys::UseDecl::Storage(fsys::UseStorageDecl {
                 source_name: Some(s.to_string()),
                 target_path: Some(target_path.into()),
-                ..fsys::UseStorageDecl::empty()
+                ..fsys::UseStorageDecl::EMPTY
             }));
         } else if let Some(n) = use_.runner() {
             out_uses.push(fsys::UseDecl::Runner(fsys::UseRunnerDecl {
                 source_name: Some(n.clone().into()),
-                ..fsys::UseRunnerDecl::empty()
+                ..fsys::UseRunnerDecl::EMPTY
             }))
         } else if let Some(n) = use_.event() {
             let source = extract_use_event_source(use_)?;
@@ -270,7 +270,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
                         Some(dict) => Some(dictionary_from_map(dict)?),
                         None => None,
                     },
-                    ..fsys::UseEventDecl::empty()
+                    ..fsys::UseEventDecl::EMPTY
                 }));
             }
         } else if let Some(p) = use_.event_stream() {
@@ -278,7 +278,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
             out_uses.push(fsys::UseDecl::EventStream(fsys::UseEventStreamDecl {
                 target_path: Some(target_path.into()),
                 events: Some(p.to_vec().into_iter().map(|name| name.clone().into()).collect()),
-                ..fsys::UseEventStreamDecl::empty()
+                ..fsys::UseEventStreamDecl::EMPTY
             }));
         } else {
             return Err(Error::internal(format!("no capability in use declaration")));
@@ -305,7 +305,7 @@ fn translate_expose(
                     source_name: Some(n.clone().into()),
                     target_name: Some(target_name.clone().into()),
                     target: Some(clone_fsys_ref(&target)?),
-                    ..fsys::ExposeServiceDecl::empty()
+                    ..fsys::ExposeServiceDecl::EMPTY
                 }))
             }
         } else if let Some(n) = expose.protocol() {
@@ -320,7 +320,7 @@ fn translate_expose(
                     source_name: Some(source_name.clone().into()),
                     target_name: Some(target_name.into()),
                     target: Some(clone_fsys_ref(&target)?),
-                    ..fsys::ExposeProtocolDecl::empty()
+                    ..fsys::ExposeProtocolDecl::EMPTY
                 }))
             }
         } else if let Some(n) = expose.directory() {
@@ -335,7 +335,7 @@ fn translate_expose(
                 target: Some(clone_fsys_ref(&target)?),
                 rights,
                 subdir: subdir.map(|s| s.into()),
-                ..fsys::ExposeDirectoryDecl::empty()
+                ..fsys::ExposeDirectoryDecl::EMPTY
             }))
         } else if let Some(n) = expose.runner() {
             let source = extract_single_expose_source(expose, None)?;
@@ -345,7 +345,7 @@ fn translate_expose(
                 source_name: Some(n.clone().into()),
                 target: Some(clone_fsys_ref(&target)?),
                 target_name: Some(target_name.into()),
-                ..fsys::ExposeRunnerDecl::empty()
+                ..fsys::ExposeRunnerDecl::EMPTY
             }))
         } else if let Some(n) = expose.resolver() {
             let source = extract_single_expose_source(expose, None)?;
@@ -355,7 +355,7 @@ fn translate_expose(
                 source_name: Some(n.clone().into()),
                 target: Some(clone_fsys_ref(&target)?),
                 target_name: Some(target_name.into()),
-                ..fsys::ExposeResolverDecl::empty()
+                ..fsys::ExposeResolverDecl::EMPTY
             }))
         } else {
             return Err(Error::internal(format!("expose: must specify a known capability")));
@@ -383,7 +383,7 @@ fn translate_offer(
                         source: Some(clone_fsys_ref(&source)?),
                         target: Some(clone_fsys_ref(&target)?),
                         target_name: Some(target_name.clone().into()),
-                        ..fsys::OfferServiceDecl::empty()
+                        ..fsys::OfferServiceDecl::EMPTY
                     }));
                 }
             }
@@ -413,7 +413,7 @@ fn translate_offer(
                     dependency_type: Some(
                         offer.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
                     ),
-                    ..fsys::OfferProtocolDecl::empty()
+                    ..fsys::OfferProtocolDecl::EMPTY
                 }));
             }
         } else if let Some(n) = offer.directory() {
@@ -430,7 +430,7 @@ fn translate_offer(
                     dependency_type: Some(
                         offer.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
                     ),
-                    ..fsys::OfferDirectoryDecl::empty()
+                    ..fsys::OfferDirectoryDecl::EMPTY
                 }));
             }
         } else if let Some(s) = offer.storage() {
@@ -442,7 +442,7 @@ fn translate_offer(
                     source: Some(clone_fsys_ref(&source)?),
                     target: Some(clone_fsys_ref(&target)?),
                     target_name: Some(target_name.into()),
-                    ..fsys::OfferStorageDecl::empty()
+                    ..fsys::OfferStorageDecl::EMPTY
                 }));
             }
         } else if let Some(n) = offer.runner() {
@@ -454,7 +454,7 @@ fn translate_offer(
                     source_name: Some(n.clone().into()),
                     target: Some(clone_fsys_ref(&target)?),
                     target_name: Some(target_name.into()),
-                    ..fsys::OfferRunnerDecl::empty()
+                    ..fsys::OfferRunnerDecl::EMPTY
                 }));
             }
         } else if let Some(n) = offer.resolver() {
@@ -466,7 +466,7 @@ fn translate_offer(
                     source_name: Some(n.clone().into()),
                     target: Some(clone_fsys_ref(&target)?),
                     target_name: Some(target_name.into()),
-                    ..fsys::OfferResolverDecl::empty()
+                    ..fsys::OfferResolverDecl::EMPTY
                 }));
             }
         } else if let Some(p) = offer.event() {
@@ -494,7 +494,7 @@ fn translate_offer(
                         Some(dict) => Some(dictionary_from_map(dict)?),
                         None => None,
                     },
-                    ..fsys::OfferEventDecl::empty()
+                    ..fsys::OfferEventDecl::EMPTY
                 }));
             }
         } else {
@@ -512,7 +512,7 @@ fn translate_children(children_in: &Vec<cml::Child>) -> Result<Vec<fsys::ChildDe
             url: Some(child.url.clone().into()),
             startup: Some(child.startup.clone().into()),
             environment: extract_environment_ref(child.environment.as_ref()).map(|e| e.into()),
-            ..fsys::ChildDecl::empty()
+            ..fsys::ChildDecl::EMPTY
         });
     }
     Ok(out_children)
@@ -527,7 +527,7 @@ fn translate_collections(
             name: Some(collection.name.clone().into()),
             durability: Some(collection.durability.clone().into()),
             environment: extract_environment_ref(collection.environment.as_ref()).map(|e| e.into()),
-            ..fsys::CollectionDecl::empty()
+            ..fsys::CollectionDecl::EMPTY
         });
     }
     Ok(out_collections)
@@ -567,7 +567,7 @@ fn translate_environments(
                     })
                     .transpose()?,
                 stop_timeout_ms: env.stop_timeout_ms.map(|s| s.0),
-                ..fsys::EnvironmentDecl::empty()
+                ..fsys::EnvironmentDecl::EMPTY
             })
         })
         .collect()
@@ -580,7 +580,7 @@ fn translate_runner_registration(
         source_name: Some(reg.runner.clone().into()),
         source: Some(extract_single_offer_source(reg, None)?),
         target_name: Some(reg.r#as.as_ref().unwrap_or(&reg.runner).clone().into()),
-        ..fsys::RunnerRegistration::empty()
+        ..fsys::RunnerRegistration::EMPTY
     })
 }
 
@@ -597,7 +597,7 @@ fn translate_resolver_registration(
                 .map_err(|e| Error::internal(format!("invalid URL scheme: {}", e)))?
                 .into(),
         ),
-        ..fsys::ResolverRegistration::empty()
+        ..fsys::ResolverRegistration::EMPTY
     })
 }
 
@@ -997,7 +997,7 @@ mod tests {
     }
 
     fn default_component_decl() -> fsys::ComponentDecl {
-        fsys::ComponentDecl::empty()
+        fsys::ComponentDecl::EMPTY
     }
 
     test_compile! {
@@ -1026,12 +1026,12 @@ mod tests {
                         key: "binary".to_string(),
                         value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
                     }]),
-                    ..fdata::Dictionary::empty()
+                    ..fdata::Dictionary::EMPTY
                 }),
                 uses: Some(vec![fsys::UseDecl::Runner (
                     fsys::UseRunnerDecl {
                         source_name: Some("elf".to_string()),
-                        ..fsys::UseRunnerDecl::empty()
+                        ..fsys::UseRunnerDecl::EMPTY
                     }
                 )]),
                 ..default_component_decl()
@@ -1062,12 +1062,12 @@ mod tests {
                             value: Some(Box::new(fdata::DictionaryValue::Str("notify".to_string()))),
                         },
                     ]),
-                    ..fdata::Dictionary::empty()
+                    ..fdata::Dictionary::EMPTY
                 }),
                 uses: Some(vec![fsys::UseDecl::Runner (
                     fsys::UseRunnerDecl {
                         source_name: Some("elf".to_string()),
-                        ..fsys::UseRunnerDecl::empty()
+                        ..fsys::UseRunnerDecl::EMPTY
                     }
                 )]),
                 ..default_component_decl()
@@ -1118,7 +1118,7 @@ mod tests {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("CoolFonts".to_string()),
                             target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
-                            ..fsys::UseServiceDecl::empty()
+                            ..fsys::UseServiceDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Service (
@@ -1126,7 +1126,7 @@ mod tests {
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                             source_name: Some("fuchsia.sys2.Realm".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
-                            ..fsys::UseServiceDecl::empty()
+                            ..fsys::UseServiceDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Protocol (
@@ -1134,7 +1134,7 @@ mod tests {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("LegacyCoolFonts".to_string()),
                             target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
-                            ..fsys::UseProtocolDecl::empty()
+                            ..fsys::UseProtocolDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Protocol (
@@ -1142,7 +1142,7 @@ mod tests {
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                             source_name: Some("fuchsia.sys2.LegacyRealm".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.LegacyRealm".to_string()),
-                            ..fsys::UseProtocolDecl::empty()
+                            ..fsys::UseProtocolDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Protocol (
@@ -1150,7 +1150,7 @@ mod tests {
                             source: Some(fsys::Ref::Capability(fsys::CapabilityRef { name: "data-storage".to_string() })),
                             source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.StorageAdmin".to_string()),
-                            ..fsys::UseProtocolDecl::empty()
+                            ..fsys::UseProtocolDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Directory (
@@ -1160,7 +1160,7 @@ mod tests {
                             target_path: Some("/data/assets".to_string()),
                             rights: Some(fio2::Operations::ReadBytes),
                             subdir: None,
-                            ..fsys::UseDirectoryDecl::empty()
+                            ..fsys::UseDirectoryDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Directory (
@@ -1170,33 +1170,33 @@ mod tests {
                             target_path: Some("/data/config".to_string()),
                             rights: Some(fio2::Operations::ReadBytes),
                             subdir: Some("fonts".to_string()),
-                            ..fsys::UseDirectoryDecl::empty()
+                            ..fsys::UseDirectoryDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Storage (
                         fsys::UseStorageDecl {
                             source_name: Some("hippos".to_string()),
                             target_path: Some("/hippos".to_string()),
-                            ..fsys::UseStorageDecl::empty()
+                            ..fsys::UseStorageDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Storage (
                         fsys::UseStorageDecl {
                             source_name: Some("cache".to_string()),
                             target_path: Some("/tmp".to_string()),
-                            ..fsys::UseStorageDecl::empty()
+                            ..fsys::UseStorageDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Runner (
                         fsys::UseRunnerDecl {
                             source_name: Some("elf".to_string()),
-                            ..fsys::UseRunnerDecl::empty()
+                            ..fsys::UseRunnerDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Runner (
                         fsys::UseRunnerDecl {
                             source_name: Some("web".to_string()),
-                            ..fsys::UseRunnerDecl::empty()
+                            ..fsys::UseRunnerDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Event (
@@ -1205,7 +1205,7 @@ mod tests {
                             source_name: Some("destroyed".to_string()),
                             target_name: Some("destroyed".to_string()),
                             filter: None,
-                            ..fsys::UseEventDecl::empty()
+                            ..fsys::UseEventDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Event (
@@ -1214,7 +1214,7 @@ mod tests {
                             source_name: Some("started".to_string()),
                             target_name: Some("started".to_string()),
                             filter: None,
-                            ..fsys::UseEventDecl::empty()
+                            ..fsys::UseEventDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Event (
@@ -1223,7 +1223,7 @@ mod tests {
                             source_name: Some("stopped".to_string()),
                             target_name: Some("stopped".to_string()),
                             filter: None,
-                            ..fsys::UseEventDecl::empty()
+                            ..fsys::UseEventDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Event (
@@ -1238,9 +1238,9 @@ mod tests {
                                         value: Some(Box::new(fdata::DictionaryValue::Str("diagnostics".to_string()))),
                                     },
                                 ]),
-                                ..fdata::Dictionary::empty()
+                                ..fdata::Dictionary::EMPTY
                             }),
-                            ..fsys::UseEventDecl::empty()
+                            ..fsys::UseEventDecl::EMPTY
                         }
                     ),
                 ]),
@@ -1250,7 +1250,7 @@ mod tests {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         backing_dir: Some("minfs".to_string()),
                         subdir: None,
-                        ..fsys::StorageDecl::empty()
+                        ..fsys::StorageDecl::EMPTY
                     }),
                 ]),
                 ..default_component_decl()
@@ -1333,7 +1333,7 @@ mod tests {
                             source_name: Some("fuchsia.logger.Log".to_string()),
                             target_name: Some("fuchsia.logger.Log2".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            ..fsys::ExposeServiceDecl::empty()
+                            ..fsys::ExposeServiceDecl::EMPTY
                         }
                     ),
                     fsys::ExposeDecl::Service (
@@ -1345,7 +1345,7 @@ mod tests {
                             source_name: Some("my.service.Service".to_string()),
                             target_name: Some("my.service.Service".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            ..fsys::ExposeServiceDecl::empty()
+                            ..fsys::ExposeServiceDecl::EMPTY
                         }
                     ),
                     fsys::ExposeDecl::Service (
@@ -1354,7 +1354,7 @@ mod tests {
                             source_name: Some("my.service.Service".to_string()),
                             target_name: Some("my.service.Service".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            ..fsys::ExposeServiceDecl::empty()
+                            ..fsys::ExposeServiceDecl::EMPTY
                         }
                     ),
                     fsys::ExposeDecl::Protocol (
@@ -1366,7 +1366,7 @@ mod tests {
                             source_name: Some("fuchsia.logger.Log".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             target_name: Some("fuchsia.logger.LegacyLog".to_string()),
-                            ..fsys::ExposeProtocolDecl::empty()
+                            ..fsys::ExposeProtocolDecl::EMPTY
                         }
                     ),
                     fsys::ExposeDecl::Protocol (
@@ -1375,7 +1375,7 @@ mod tests {
                             source_name: Some("A".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             target_name: Some("A".to_string()),
-                            ..fsys::ExposeProtocolDecl::empty()
+                            ..fsys::ExposeProtocolDecl::EMPTY
                         }
                     ),
                     fsys::ExposeDecl::Protocol (
@@ -1384,7 +1384,7 @@ mod tests {
                             source_name: Some("B".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             target_name: Some("B".to_string()),
-                            ..fsys::ExposeProtocolDecl::empty()
+                            ..fsys::ExposeProtocolDecl::EMPTY
                         }
                     ),
                     fsys::ExposeDecl::Protocol (
@@ -1395,7 +1395,7 @@ mod tests {
                             source_name: Some("C".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             target_name: Some("C".to_string()),
-                            ..fsys::ExposeProtocolDecl::empty()
+                            ..fsys::ExposeProtocolDecl::EMPTY
                         }
                     ),
                     fsys::ExposeDecl::Directory (
@@ -1410,7 +1410,7 @@ mod tests {
                                 fio2::Operations::GetAttributes
                             ),
                             subdir: None,
-                            ..fsys::ExposeDirectoryDecl::empty()
+                            ..fsys::ExposeDirectoryDecl::EMPTY
                         }
                     ),
                     fsys::ExposeDecl::Directory (
@@ -1421,7 +1421,7 @@ mod tests {
                             target_name: Some("hub".to_string()),
                             rights: None,
                             subdir: None,
-                            ..fsys::ExposeDirectoryDecl::empty()
+                            ..fsys::ExposeDirectoryDecl::EMPTY
                         }
                     ),
                     fsys::ExposeDecl::Runner (
@@ -1430,7 +1430,7 @@ mod tests {
                             source_name: Some("web".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             target_name: Some("web".to_string()),
-                            ..fsys::ExposeRunnerDecl::empty()
+                            ..fsys::ExposeRunnerDecl::EMPTY
                         }
                     ),
                     fsys::ExposeDecl::Runner (
@@ -1442,7 +1442,7 @@ mod tests {
                             source_name: Some("web".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             target_name: Some("web-rename".to_string()),
-                            ..fsys::ExposeRunnerDecl::empty()
+                            ..fsys::ExposeRunnerDecl::EMPTY
                         }
                     ),
                     fsys::ExposeDecl::Resolver (
@@ -1454,7 +1454,7 @@ mod tests {
                             source_name: Some("my_resolver".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             target_name: Some("pkg_resolver".to_string()),
-                            ..fsys::ExposeResolverDecl::empty()
+                            ..fsys::ExposeResolverDecl::EMPTY
                         }
                     ),
                 ]),
@@ -1464,21 +1464,21 @@ mod tests {
                         fsys::ServiceDecl {
                             name: Some("my.service.Service".to_string()),
                             source_path: Some("/svc/my.service.Service".to_string()),
-                            ..fsys::ServiceDecl::empty()
+                            ..fsys::ServiceDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Protocol (
                         fsys::ProtocolDecl {
                             name: Some("A".to_string()),
                             source_path: Some("/svc/A".to_string()),
-                            ..fsys::ProtocolDecl::empty()
+                            ..fsys::ProtocolDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Protocol (
                         fsys::ProtocolDecl {
                             name: Some("B".to_string()),
                             source_path: Some("/svc/B".to_string()),
-                            ..fsys::ProtocolDecl::empty()
+                            ..fsys::ProtocolDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Directory (
@@ -1489,7 +1489,7 @@ mod tests {
                                 fio2::Operations::Traverse | fio2::Operations::ReadBytes |
                                 fio2::Operations::GetAttributes
                             ),
-                            ..fsys::DirectoryDecl::empty()
+                            ..fsys::DirectoryDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Runner (
@@ -1497,7 +1497,7 @@ mod tests {
                             name: Some("web".to_string()),
                             source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                             source_path: Some("/svc/fuchsia.component.ComponentRunner".to_string()),
-                            ..fsys::RunnerDecl::empty()
+                            ..fsys::RunnerDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Storage(fsys::StorageDecl {
@@ -1505,7 +1505,7 @@ mod tests {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                         backing_dir: Some("minfs".to_string()),
                         subdir: None,
-                        ..fsys::StorageDecl::empty()
+                        ..fsys::StorageDecl::EMPTY
                     }),
                 ]),
                 children: Some(vec![
@@ -1514,7 +1514,7 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
-                        ..fsys::ChildDecl::empty()
+                        ..fsys::ChildDecl::EMPTY
                     }
                 ]),
                 ..default_component_decl()
@@ -1674,7 +1674,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("fuchsia.logger.Log".to_string()),
-                            ..fsys::OfferServiceDecl::empty()
+                            ..fsys::OfferServiceDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Service (
@@ -1688,7 +1688,7 @@ mod tests {
                                 name: "modular".to_string(),
                             })),
                             target_name: Some("fuchsia.logger.Log2".to_string()),
-                            ..fsys::OfferServiceDecl::empty()
+                            ..fsys::OfferServiceDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Service (
@@ -1703,7 +1703,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("my.service.Service".to_string()),
-                            ..fsys::OfferServiceDecl::empty()
+                            ..fsys::OfferServiceDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Service (
@@ -1715,7 +1715,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("my.service.Service".to_string()),
-                            ..fsys::OfferServiceDecl::empty()
+                            ..fsys::OfferServiceDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Protocol (
@@ -1731,7 +1731,7 @@ mod tests {
                             })),
                             target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                             dependency_type: Some(fsys::DependencyType::WeakForMigration),
-                            ..fsys::OfferProtocolDecl::empty()
+                            ..fsys::OfferProtocolDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Protocol (
@@ -1746,7 +1746,7 @@ mod tests {
                             })),
                             target_name: Some("fuchsia.logger.LegacySysLog".to_string()),
                             dependency_type: Some(fsys::DependencyType::Strong),
-                            ..fsys::OfferProtocolDecl::empty()
+                            ..fsys::OfferProtocolDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Protocol (
@@ -1758,7 +1758,7 @@ mod tests {
                             })),
                             target_name: Some("fuchsia.setui.SetUiService".to_string()),
                             dependency_type: Some(fsys::DependencyType::Strong),
-                            ..fsys::OfferProtocolDecl::empty()
+                            ..fsys::OfferProtocolDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Protocol (
@@ -1770,7 +1770,7 @@ mod tests {
                             })),
                             target_name: Some("fuchsia.test.service.Name".to_string()),
                             dependency_type: Some(fsys::DependencyType::Strong),
-                            ..fsys::OfferProtocolDecl::empty()
+                            ..fsys::OfferProtocolDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Protocol (
@@ -1784,7 +1784,7 @@ mod tests {
                             })),
                             target_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
                             dependency_type: Some(fsys::DependencyType::Strong),
-                            ..fsys::OfferProtocolDecl::empty()
+                            ..fsys::OfferProtocolDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Directory (
@@ -1799,7 +1799,7 @@ mod tests {
                             rights: None,
                             subdir: None,
                             dependency_type: Some(fsys::DependencyType::WeakForMigration),
-                            ..fsys::OfferDirectoryDecl::empty()
+                            ..fsys::OfferDirectoryDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Directory (
@@ -1813,7 +1813,7 @@ mod tests {
                             rights: None,
                             subdir: Some("index/file".to_string()),
                             dependency_type: Some(fsys::DependencyType::Strong),
-                            ..fsys::OfferDirectoryDecl::empty()
+                            ..fsys::OfferDirectoryDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Directory (
@@ -1827,7 +1827,7 @@ mod tests {
                             rights: None,
                             subdir: None,
                             dependency_type: Some(fsys::DependencyType::Strong),
-                            ..fsys::OfferDirectoryDecl::empty()
+                            ..fsys::OfferDirectoryDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Storage (
@@ -1839,7 +1839,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("data".to_string()),
-                            ..fsys::OfferStorageDecl::empty()
+                            ..fsys::OfferStorageDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Storage (
@@ -1850,7 +1850,7 @@ mod tests {
                                 name: "modular".to_string(),
                             })),
                             target_name: Some("data".to_string()),
-                            ..fsys::OfferStorageDecl::empty()
+                            ..fsys::OfferStorageDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Runner (
@@ -1861,7 +1861,7 @@ mod tests {
                                 name: "modular".to_string(),
                             })),
                             target_name: Some("web".to_string()),
-                            ..fsys::OfferRunnerDecl::empty()
+                            ..fsys::OfferRunnerDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Runner (
@@ -1872,7 +1872,7 @@ mod tests {
                                 name: "modular".to_string(),
                             })),
                             target_name: Some("elf-renamed".to_string()),
-                            ..fsys::OfferRunnerDecl::empty()
+                            ..fsys::OfferRunnerDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Event (
@@ -1885,7 +1885,7 @@ mod tests {
                             })),
                             target_name: Some("destroyed_net".to_string()),
                             filter: None,
-                            ..fsys::OfferEventDecl::empty()
+                            ..fsys::OfferEventDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Event (
@@ -1897,7 +1897,7 @@ mod tests {
                             })),
                             target_name: Some("stopped".to_string()),
                             filter: None,
-                            ..fsys::OfferEventDecl::empty()
+                            ..fsys::OfferEventDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Event (
@@ -1909,7 +1909,7 @@ mod tests {
                             })),
                             target_name: Some("started".to_string()),
                             filter: None,
-                            ..fsys::OfferEventDecl::empty()
+                            ..fsys::OfferEventDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Event (
@@ -1930,9 +1930,9 @@ mod tests {
                                         ))),
                                     },
                                 ]),
-                                ..fdata::Dictionary::empty()
+                                ..fdata::Dictionary::EMPTY
                             }),
-                            ..fsys::OfferEventDecl::empty()
+                            ..fsys::OfferEventDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Resolver (
@@ -1943,7 +1943,7 @@ mod tests {
                                 name: "modular".to_string(),
                             })),
                             target_name: Some("pkg_resolver".to_string()),
-                            ..fsys::OfferResolverDecl::empty()
+                            ..fsys::OfferResolverDecl::EMPTY
                         }
                     ),
                 ]),
@@ -1952,7 +1952,7 @@ mod tests {
                         fsys::ServiceDecl {
                             name: Some("my.service.Service".to_string()),
                             source_path: Some("/svc/my.service.Service".to_string()),
-                            ..fsys::ServiceDecl::empty()
+                            ..fsys::ServiceDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Storage (
@@ -1964,7 +1964,7 @@ mod tests {
                             })),
                             backing_dir: Some("minfs".to_string()),
                             subdir: None,
-                            ..fsys::StorageDecl::empty()
+                            ..fsys::StorageDecl::EMPTY
                         }
                     )
                 ]),
@@ -1974,14 +1974,14 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
-                        ..fsys::ChildDecl::empty()
+                        ..fsys::ChildDecl::EMPTY
                     },
                     fsys::ChildDecl {
                         name: Some("netstack".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
-                        ..fsys::ChildDecl::empty()
+                        ..fsys::ChildDecl::EMPTY
                     },
                 ]),
                 collections: Some(vec![
@@ -1989,7 +1989,7 @@ mod tests {
                         name: Some("modular".to_string()),
                         durability: Some(fsys::Durability::Persistent),
                         environment: None,
-                        ..fsys::CollectionDecl::empty()
+                        ..fsys::CollectionDecl::EMPTY
                     }
                 ]),
                 ..default_component_decl()
@@ -2029,21 +2029,21 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
-                        ..fsys::ChildDecl::empty()
+                        ..fsys::ChildDecl::EMPTY
                     },
                     fsys::ChildDecl {
                         name: Some("gmail".to_string()),
                         url: Some("https://www.google.com/gmail".to_string()),
                         startup: Some(fsys::StartupMode::Eager),
                         environment: None,
-                        ..fsys::ChildDecl::empty()
+                        ..fsys::ChildDecl::EMPTY
                     },
                     fsys::ChildDecl {
                         name: Some("echo".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: Some("myenv".to_string()),
-                        ..fsys::ChildDecl::empty()
+                        ..fsys::ChildDecl::EMPTY
                     }
                 ]),
                 environments: Some(vec![
@@ -2053,7 +2053,7 @@ mod tests {
                         runners: None,
                         resolvers: None,
                         stop_timeout_ms: None,
-                        ..fsys::EnvironmentDecl::empty()
+                        ..fsys::EnvironmentDecl::EMPTY
                     }
                 ]),
                 ..default_component_decl()
@@ -2086,13 +2086,13 @@ mod tests {
                         name: Some("modular".to_string()),
                         durability: Some(fsys::Durability::Persistent),
                         environment: None,
-                        ..fsys::CollectionDecl::empty()
+                        ..fsys::CollectionDecl::EMPTY
                     },
                     fsys::CollectionDecl {
                         name: Some("tests".to_string()),
                         durability: Some(fsys::Durability::Transient),
                         environment: Some("myenv".to_string()),
-                        ..fsys::CollectionDecl::empty()
+                        ..fsys::CollectionDecl::EMPTY
                     }
                 ]),
                 environments: Some(vec![
@@ -2102,7 +2102,7 @@ mod tests {
                         runners: None,
                         resolvers: None,
                         stop_timeout_ms: None,
-                        ..fsys::EnvironmentDecl::empty()
+                        ..fsys::EnvironmentDecl::EMPTY
                     }
                 ]),
                 ..default_component_decl()
@@ -2167,42 +2167,42 @@ mod tests {
                         fsys::ServiceDecl {
                             name: Some("myservice".to_string()),
                             source_path: Some("/service".to_string()),
-                            ..fsys::ServiceDecl::empty()
+                            ..fsys::ServiceDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Service (
                         fsys::ServiceDecl {
                             name: Some("myservice2".to_string()),
                             source_path: Some("/svc/myservice2".to_string()),
-                            ..fsys::ServiceDecl::empty()
+                            ..fsys::ServiceDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Protocol (
                         fsys::ProtocolDecl {
                             name: Some("myprotocol".to_string()),
                             source_path: Some("/protocol".to_string()),
-                            ..fsys::ProtocolDecl::empty()
+                            ..fsys::ProtocolDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Protocol (
                         fsys::ProtocolDecl {
                             name: Some("myprotocol2".to_string()),
                             source_path: Some("/svc/myprotocol2".to_string()),
-                            ..fsys::ProtocolDecl::empty()
+                            ..fsys::ProtocolDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Protocol (
                         fsys::ProtocolDecl {
                             name: Some("myprotocol3".to_string()),
                             source_path: Some("/svc/myprotocol3".to_string()),
-                            ..fsys::ProtocolDecl::empty()
+                            ..fsys::ProtocolDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Protocol (
                         fsys::ProtocolDecl {
                             name: Some("myprotocol4".to_string()),
                             source_path: Some("/svc/myprotocol4".to_string()),
-                            ..fsys::ProtocolDecl::empty()
+                            ..fsys::ProtocolDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Directory (
@@ -2210,7 +2210,7 @@ mod tests {
                             name: Some("mydirectory".to_string()),
                             source_path: Some("/directory".to_string()),
                             rights: Some(fio2::Operations::Connect),
-                            ..fsys::DirectoryDecl::empty()
+                            ..fsys::DirectoryDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Storage (
@@ -2222,7 +2222,7 @@ mod tests {
                             })),
                             backing_dir: Some("storage".to_string()),
                             subdir: None,
-                            ..fsys::StorageDecl::empty()
+                            ..fsys::StorageDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Storage (
@@ -2234,7 +2234,7 @@ mod tests {
                             })),
                             backing_dir: Some("storage2".to_string()),
                             subdir: None,
-                            ..fsys::StorageDecl::empty()
+                            ..fsys::StorageDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Runner (
@@ -2242,14 +2242,14 @@ mod tests {
                             name: Some("myrunner".to_string()),
                             source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                             source_path: Some("/runner".to_string()),
-                            ..fsys::RunnerDecl::empty()
+                            ..fsys::RunnerDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Resolver (
                         fsys::ResolverDecl {
                             name: Some("myresolver".to_string()),
                             source_path: Some("/resolver".to_string()),
-                            ..fsys::ResolverDecl::empty()
+                            ..fsys::ResolverDecl::EMPTY
                         }
                     )
                 ]),
@@ -2259,7 +2259,7 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/minfs/stable#meta/minfs.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
-                        ..fsys::ChildDecl::empty()
+                        ..fsys::ChildDecl::EMPTY
                     }
                 ]),
                 ..default_component_decl()
@@ -2336,7 +2336,7 @@ mod tests {
                         runners: None,
                         resolvers: None,
                         stop_timeout_ms: None,
-                        ..fsys::EnvironmentDecl::empty()
+                        ..fsys::EnvironmentDecl::EMPTY
                     },
                     fsys::EnvironmentDecl {
                         name: Some("myenv2".to_string()),
@@ -2344,7 +2344,7 @@ mod tests {
                         runners: None,
                         resolvers: None,
                         stop_timeout_ms: None,
-                        ..fsys::EnvironmentDecl::empty()
+                        ..fsys::EnvironmentDecl::EMPTY
                     },
                     fsys::EnvironmentDecl {
                         name: Some("myenv3".to_string()),
@@ -2352,7 +2352,7 @@ mod tests {
                         runners: None,
                         resolvers: None,
                         stop_timeout_ms: Some(8000),
-                        ..fsys::EnvironmentDecl::empty()
+                        ..fsys::EnvironmentDecl::EMPTY
                     },
                 ]),
                 ..default_component_decl()
@@ -2390,7 +2390,7 @@ mod tests {
                                 source_name: Some("dart".to_string()),
                                 source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                                 target_name: Some("dart".to_string()),
-                                ..fsys::RunnerRegistration::empty()
+                                ..fsys::RunnerRegistration::EMPTY
                             }
                         ]),
                         resolvers: Some(vec![
@@ -2398,11 +2398,11 @@ mod tests {
                                 resolver: Some("pkg_resolver".to_string()),
                                 source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                                 scheme: Some("fuchsia-pkg".to_string()),
-                                ..fsys::ResolverRegistration::empty()
+                                ..fsys::ResolverRegistration::EMPTY
                             }
                         ]),
                         stop_timeout_ms: None,
-                        ..fsys::EnvironmentDecl::empty()
+                        ..fsys::EnvironmentDecl::EMPTY
                     },
                 ]),
                 ..default_component_decl()
@@ -2434,12 +2434,12 @@ mod tests {
                                 source_name: Some("dart".to_string()),
                                 source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                                 target_name: Some("my-dart".to_string()),
-                                ..fsys::RunnerRegistration::empty()
+                                ..fsys::RunnerRegistration::EMPTY
                             }
                         ]),
                         resolvers: None,
                         stop_timeout_ms: None,
-                        ..fsys::EnvironmentDecl::empty()
+                        ..fsys::EnvironmentDecl::EMPTY
                     },
                 ]),
                 ..default_component_decl()
@@ -2518,7 +2518,7 @@ mod tests {
                         key: "binary".to_string(),
                         value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
                     }]),
-                    ..fdata::Dictionary::empty()
+                    ..fdata::Dictionary::EMPTY
                 }),
                 uses: Some(vec![
                     fsys::UseDecl::Service (
@@ -2526,7 +2526,7 @@ mod tests {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("CoolFonts".to_string()),
                             target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
-                            ..fsys::UseServiceDecl::empty()
+                            ..fsys::UseServiceDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Protocol (
@@ -2534,7 +2534,7 @@ mod tests {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("LegacyCoolFonts".to_string()),
                             target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
-                            ..fsys::UseProtocolDecl::empty()
+                            ..fsys::UseProtocolDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Protocol (
@@ -2542,7 +2542,7 @@ mod tests {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("ReallyGoodFonts".to_string()),
                             target_path: Some("/svc/ReallyGoodFonts".to_string()),
-                            ..fsys::UseProtocolDecl::empty()
+                            ..fsys::UseProtocolDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Protocol (
@@ -2550,13 +2550,13 @@ mod tests {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("IWouldNeverUseTheseFonts".to_string()),
                             target_path: Some("/svc/IWouldNeverUseTheseFonts".to_string()),
-                            ..fsys::UseProtocolDecl::empty()
+                            ..fsys::UseProtocolDecl::EMPTY
                         }
                     ),
                     fsys::UseDecl::Runner (
                         fsys::UseRunnerDecl {
                             source_name: Some("elf".to_string()),
-                            ..fsys::UseRunnerDecl::empty()
+                            ..fsys::UseRunnerDecl::EMPTY
                         }
                     ),
                 ]),
@@ -2573,7 +2573,7 @@ mod tests {
                                 fio2::Operations::GetAttributes
                             ),
                             subdir: None,
-                            ..fsys::ExposeDirectoryDecl::empty()
+                            ..fsys::ExposeDirectoryDecl::EMPTY
                         }
                     ),
                 ]),
@@ -2590,7 +2590,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("fuchsia.logger.Log".to_string()),
-                            ..fsys::OfferServiceDecl::empty()
+                            ..fsys::OfferServiceDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Service (
@@ -2604,7 +2604,7 @@ mod tests {
                                 name: "modular".to_string(),
                             })),
                             target_name: Some("fuchsia.logger.Log".to_string()),
-                            ..fsys::OfferServiceDecl::empty()
+                            ..fsys::OfferServiceDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Protocol (
@@ -2620,7 +2620,7 @@ mod tests {
                             })),
                             target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                             dependency_type: Some(fsys::DependencyType::WeakForMigration),
-                            ..fsys::OfferProtocolDecl::empty()
+                            ..fsys::OfferProtocolDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Protocol (
@@ -2635,7 +2635,7 @@ mod tests {
                             })),
                             target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                             dependency_type: Some(fsys::DependencyType::WeakForMigration),
-                            ..fsys::OfferProtocolDecl::empty()
+                            ..fsys::OfferProtocolDecl::EMPTY
                         }
                     ),
                 ]),
@@ -2648,7 +2648,7 @@ mod tests {
                                 fio2::Operations::Traverse | fio2::Operations::ReadBytes |
                                 fio2::Operations::GetAttributes
                             ),
-                            ..fsys::DirectoryDecl::empty()
+                            ..fsys::DirectoryDecl::EMPTY
                         }
                     ),
                     fsys::CapabilityDecl::Runner (
@@ -2656,7 +2656,7 @@ mod tests {
                             name: Some("myrunner".to_string()),
                             source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                             source_path: Some("/runner".to_string()),
-                            ..fsys::RunnerDecl::empty()
+                            ..fsys::RunnerDecl::EMPTY
                         }
                     ),
                 ]),
@@ -2666,14 +2666,14 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
-                        ..fsys::ChildDecl::empty()
+                        ..fsys::ChildDecl::EMPTY
                     },
                     fsys::ChildDecl {
                         name: Some("netstack".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
-                        ..fsys::ChildDecl::empty()
+                        ..fsys::ChildDecl::EMPTY
                     },
                 ]),
                 collections: Some(vec![
@@ -2681,7 +2681,7 @@ mod tests {
                         name: Some("modular".to_string()),
                         durability: Some(fsys::Durability::Persistent),
                         environment: None,
-                        ..fsys::CollectionDecl::empty()
+                        ..fsys::CollectionDecl::EMPTY
                     }
                 ]),
                 environments: Some(vec![
@@ -2691,7 +2691,7 @@ mod tests {
                         runners: None,
                         resolvers: None,
                         stop_timeout_ms: None,
-                        ..fsys::EnvironmentDecl::empty()
+                        ..fsys::EnvironmentDecl::EMPTY
                     }
                 ]),
                 facets: Some(fsys::Object {
@@ -2706,7 +2706,7 @@ mod tests {
                         },
                     ],
                 }),
-                ..fsys::ComponentDecl::empty()
+                ..fsys::ComponentDecl::EMPTY
             },
         },
     }
@@ -2779,11 +2779,11 @@ mod tests {
                         key: "binary".to_string(),
                         value: Some(Box::new(fdata::DictionaryValue::Str("bin/test".to_string()))),
                     }]),
-                    ..fdata::Dictionary::empty()
+                    ..fdata::Dictionary::EMPTY
                 }),
                 uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
                     source_name: Some("elf".to_string()),
-                    ..fsys::UseRunnerDecl::empty()
+                    ..fsys::UseRunnerDecl::EMPTY
                 })]),
                 ..default_component_decl()
             },
@@ -2820,11 +2820,11 @@ mod tests {
                         key: "binary".to_string(),
                         value: Some(Box::new(fdata::DictionaryValue::Str("bin/test".to_string()))),
                     }]),
-                    ..fdata::Dictionary::empty()
+                    ..fdata::Dictionary::EMPTY
                 }),
                 uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {
                     source_name: Some("elf".to_string()),
-                    ..fsys::UseRunnerDecl::empty()
+                    ..fsys::UseRunnerDecl::EMPTY
                 })]),
                 ..default_component_decl()
             },

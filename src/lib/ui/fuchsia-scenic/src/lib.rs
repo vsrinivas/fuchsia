@@ -95,7 +95,7 @@ impl Session {
             requested_prediction_span: Some(requested_prediction_span),
             acquire_fences: Some(self.acquire_fences.drain(..).collect()),
             release_fences: Some(self.release_fences.drain(..).collect()),
-            ..Present2Args::empty()
+            ..Present2Args::EMPTY
         };
         self.session.present2(args)
     }

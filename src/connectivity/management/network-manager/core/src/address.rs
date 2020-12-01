@@ -50,12 +50,12 @@ impl From<&LifIpAddr> for netconfig::CidrAddress {
             IpAddr::V4(a) => netconfig::CidrAddress {
                 address: Some(fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: a.octets() })),
                 prefix_length: Some(addr.prefix),
-                ..netconfig::CidrAddress::empty()
+                ..netconfig::CidrAddress::EMPTY
             },
             IpAddr::V6(a) => netconfig::CidrAddress {
                 address: Some(fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: a.octets() })),
                 prefix_length: Some(addr.prefix),
-                ..netconfig::CidrAddress::empty()
+                ..netconfig::CidrAddress::EMPTY
             },
         }
     }

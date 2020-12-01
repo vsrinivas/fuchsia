@@ -150,7 +150,7 @@ impl ElementaryStream for VideoFrameStream {
             oob_bytes: None,
             pass_through_parameters: None,
             timebase: self.timebase,
-            ..FormatDetails::empty()
+            ..FormatDetails::EMPTY
         }
     }
 
@@ -234,7 +234,7 @@ mod test {
                 EncoderSettings::H264(H264EncoderSettings {
                     bit_rate: Some(200000),
                     frame_rate: Some(60),
-                    ..H264EncoderSettings::empty()
+                    ..H264EncoderSettings::EMPTY
                 })
             }),
             /*frames_per_second=*/ 60,

@@ -387,7 +387,7 @@ async fn test_start_succeeds() {
                 mask: Some(fidl_ip_v4!(255.255.255.128)),
                 pool_range_start: Some(fidl_ip_v4!(192.168.0.2)),
                 pool_range_stop: Some(fidl_ip_v4!(192.168.0.5)),
-                ..fidl_fuchsia_net_dhcp::AddressPool::empty()
+                ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
             }),
         ],
         vec![Command { args: vec!["start"], expected_stdout: "", expected_stderr: "" }],

@@ -296,7 +296,7 @@ async fn same_log_sink_simultaneously_via_connector() {
         for socket in sockets {
             let (client, server) = zx::Channel::create().unwrap();
             let log_request = ServerEnd::<LogSinkMarker>::new(server);
-            let source_identity = SourceIdentity::empty();
+            let source_identity = SourceIdentity::EMPTY;
             listener
                 .on_new_connection(&mut LogConnection { log_request, source_identity })
                 .unwrap();

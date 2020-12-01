@@ -108,7 +108,7 @@ impl SyncManager {
                 code: Some(status.into()),
                 message: Some(name),
                 arguments: None,
-                ..nsync::Event::empty()
+                ..nsync::Event::EMPTY
             })
             .await
             .map_err(|e| e.into())

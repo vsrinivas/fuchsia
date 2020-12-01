@@ -61,11 +61,11 @@ impl TunNetworkInterface {
                                 supported_flags: fhwnet::TxFlags::empty(),
                             },
                         ]),
-                        ..ftun::BaseConfig::empty()
+                        ..ftun::BaseConfig::EMPTY
                     }),
                     online: Some(true),
                     blocking: Some(true),
-                    ..ftun::DeviceConfig::empty()
+                    ..ftun::DeviceConfig::EMPTY
                 },
                 req,
             )
@@ -76,7 +76,7 @@ impl TunNetworkInterface {
         tun_dev
             .connect_protocols(ftun::Protocols {
                 network_device: Some(device_req),
-                ..ftun::Protocols::empty()
+                ..ftun::Protocols::EMPTY
             })
             .context("connect protocols failed")?;
 
@@ -84,7 +84,7 @@ impl TunNetworkInterface {
 
         let id = stack
             .add_interface(
-                fnetstack::InterfaceConfig { name, ..fnetstack::InterfaceConfig::empty() },
+                fnetstack::InterfaceConfig { name, ..fnetstack::InterfaceConfig::EMPTY },
                 &mut fnetstack::DeviceDefinition::Ip(device),
             )
             .await
@@ -122,7 +122,7 @@ impl NetworkInterface for TunNetworkInterface {
                 frame_type: Some(fhwnet::FrameType::Ipv6),
                 data: Some(packet.to_vec()),
                 meta: None,
-                ..fidl_fuchsia_net_tun::Frame::empty()
+                ..fidl_fuchsia_net_tun::Frame::EMPTY
             })
             .await?
             .map_err(fuchsia_zircon::Status::from_raw)?)

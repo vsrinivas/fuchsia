@@ -284,7 +284,7 @@ impl SoftPcmOutput {
                     clock_domain:             Some(self.clock_domain),
                     manufacturer:             Some(self.manufacturer.to_string()),
                     product:                  Some(self.product.to_string()),
-                    ..StreamProperties::empty()
+                    ..StreamProperties::EMPTY
                 };
                 responder.send(prop)?;
             }
@@ -292,7 +292,7 @@ impl SoftPcmOutput {
                 let pcm_formats = self.supported_formats.clone();
                 let formats_vector = vec![SupportedFormats {
                     pcm_supported_formats: Some(pcm_formats),
-                    ..SupportedFormats::empty()
+                    ..SupportedFormats::EMPTY
                 }];
                 responder.send(&mut formats_vector.into_iter())?;
             }
@@ -312,7 +312,7 @@ impl SoftPcmOutput {
                     muted: Some(false),
                     agc_enabled: Some(false),
                     gain_db: Some(0.0f32),
-                    ..GainState::empty()
+                    ..GainState::EMPTY
                 };
                 responder.send(gain_state)?;
                 self.gain_state_replied = true
@@ -327,7 +327,7 @@ impl SoftPcmOutput {
                 let plug_state = PlugState {
                     plugged: Some(true),
                     plug_state_time: Some(time.into_nanos() as i64),
-                    ..PlugState::empty()
+                    ..PlugState::EMPTY
                 };
                 responder.send(plug_state)?;
                 self.plug_state_replied = true;
@@ -360,7 +360,7 @@ impl SoftPcmOutput {
                     external_delay: Some(0),
                     fifo_depth: Some(0),
                     needs_cache_flush_or_invalidate: Some(false),
-                    ..RingBufferProperties::empty()
+                    ..RingBufferProperties::EMPTY
                 };
                 responder.send(prop)?;
             }
@@ -557,7 +557,7 @@ mod tests {
                 valid_bits_per_sample:   16u8,
                 frame_rate:              44100,
             }),
-            ..Format::empty()
+            ..Format::EMPTY
         };
 
         stream_config.create_ring_buffer(format, server).expect("ring buffer error");
@@ -657,7 +657,7 @@ mod tests {
                 valid_bits_per_sample:   16u8,
                 frame_rate:              44100,
             }),
-            ..Format::empty()
+            ..Format::EMPTY
         };
 
         let result = stream_config.create_ring_buffer(format, server);

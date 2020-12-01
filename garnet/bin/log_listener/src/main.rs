@@ -621,7 +621,7 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
 
                     options.selectors.push(LogInterestSelector {
                         selector,
-                        interest: Interest { min_severity, ..Interest::empty() },
+                        interest: Interest { min_severity, ..Interest::EMPTY },
                     });
                 }
 
@@ -1585,7 +1585,7 @@ mod tests {
             let mut expected = LogListenerOptions::default();
             expected.selectors.push(LogInterestSelector {
                 selector: selectors::parse_component_selector(&"foo.cmx".to_string()).unwrap(),
-                interest: Interest { min_severity: Some(Severity::Debug), ..Interest::empty() },
+                interest: Interest { min_severity: Some(Severity::Debug), ..Interest::EMPTY },
             });
             parse_flag_test_helper(&args, Some(&expected));
         }
@@ -1598,11 +1598,11 @@ mod tests {
             let mut expected = LogListenerOptions::default();
             expected.selectors.push(LogInterestSelector {
                 selector: selectors::parse_component_selector(&"foo.cmx".to_string()).unwrap(),
-                interest: Interest { min_severity: Some(Severity::Debug), ..Interest::empty() },
+                interest: Interest { min_severity: Some(Severity::Debug), ..Interest::EMPTY },
             });
             expected.selectors.push(LogInterestSelector {
                 selector: selectors::parse_component_selector(&"bar.cml".to_string()).unwrap(),
-                interest: Interest { min_severity: Some(Severity::Warn), ..Interest::empty() },
+                interest: Interest { min_severity: Some(Severity::Warn), ..Interest::EMPTY },
             });
             parse_flag_test_helper(&args, Some(&expected));
         }
@@ -1615,7 +1615,7 @@ mod tests {
             let mut expected = LogListenerOptions::default();
             expected.selectors.push(LogInterestSelector {
                 selector: selectors::parse_component_selector(&"foo.cmx".to_string()).unwrap(),
-                interest: Interest { min_severity: None, ..Interest::empty() },
+                interest: Interest { min_severity: None, ..Interest::EMPTY },
             });
             parse_flag_test_helper(&args, Some(&expected));
         }

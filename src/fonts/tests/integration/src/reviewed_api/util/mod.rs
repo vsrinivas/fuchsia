@@ -61,11 +61,11 @@ pub async fn get_typeface_info(
                         .collect()
                 }),
                 fallback_family: None,
-                ..fonts::TypefaceQuery::empty()
+                ..fonts::TypefaceQuery::EMPTY
             }),
             flags: Some(fonts::TypefaceRequestFlags::empty()),
             cache_miss_policy: None,
-            ..fonts::TypefaceRequest::empty()
+            ..fonts::TypefaceRequest::EMPTY
         })
         .await?;
 

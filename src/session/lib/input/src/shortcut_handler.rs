@@ -141,7 +141,7 @@ fn create_key_event(
         type_: Some(event_type),
         key: Some(*key),
         modifiers,
-        ..KeyEvent::empty()
+        ..KeyEvent::EMPTY
     }
 }
 
@@ -162,7 +162,7 @@ fn create_key2_event(
         modifiers: modifiers,
         semantic_key: None,
         physical_key: Some(*key),
-        ..fidl_ui_input2::KeyEvent::empty()
+        ..fidl_ui_input2::KeyEvent::EMPTY
     }
 }
 

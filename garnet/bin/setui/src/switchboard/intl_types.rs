@@ -41,7 +41,7 @@ impl From<fidl_fuchsia_settings::IntlSettings> for IntlInfo {
 
 impl Into<fidl_fuchsia_settings::IntlSettings> for IntlInfo {
     fn into(self) -> IntlSettings {
-        let mut intl_settings = IntlSettings::empty();
+        let mut intl_settings = IntlSettings::EMPTY;
 
         intl_settings.locales = self
             .locales

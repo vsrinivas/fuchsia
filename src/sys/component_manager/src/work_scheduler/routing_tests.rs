@@ -65,7 +65,7 @@ async fn call_work_scheduler_svc_from_namespace(
     let req = fsys::WorkRequest {
         start: Some(fsys::Start::MonotonicTime(0)),
         period: None,
-        ..fsys::WorkRequest::empty()
+        ..fsys::WorkRequest::EMPTY
     };
     let res = work_scheduler_proxy.schedule_work("hippos", req).await;
 

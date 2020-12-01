@@ -304,15 +304,15 @@ mod tests {
                                 scroll_v: None,
                                 scroll_h: None,
                                 buttons: None,
-                                ..fidl_fuchsia_input_report::MouseInputDescriptor::empty()
+                                ..fidl_fuchsia_input_report::MouseInputDescriptor::EMPTY
                             }),
-                            ..fidl_fuchsia_input_report::MouseDescriptor::empty()
+                            ..fidl_fuchsia_input_report::MouseDescriptor::EMPTY
                         }),
                         sensor: None,
                         touch: None,
                         keyboard: None,
                         consumer_control: None,
-                        ..fidl_fuchsia_input_report::DeviceDescriptor::empty()
+                        ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
                     });
                 }
                 _ => {
@@ -337,7 +337,7 @@ mod tests {
                         touch: None,
                         keyboard: None,
                         consumer_control: None,
-                        ..fidl_fuchsia_input_report::DeviceDescriptor::empty()
+                        ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
                     });
                 }
                 _ => {
@@ -365,13 +365,13 @@ mod tests {
                                 max_contacts: None,
                                 touch_type: None,
                                 buttons: None,
-                                ..fidl_fuchsia_input_report::TouchInputDescriptor::empty()
+                                ..fidl_fuchsia_input_report::TouchInputDescriptor::EMPTY
                             }),
-                            ..fidl_fuchsia_input_report::TouchDescriptor::empty()
+                            ..fidl_fuchsia_input_report::TouchDescriptor::EMPTY
                         }),
                         keyboard: None,
                         consumer_control: None,
-                        ..fidl_fuchsia_input_report::DeviceDescriptor::empty()
+                        ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
                     });
                 }
                 _ => {
@@ -396,7 +396,7 @@ mod tests {
                         touch: None,
                         keyboard: None,
                         consumer_control: None,
-                        ..fidl_fuchsia_input_report::DeviceDescriptor::empty()
+                        ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
                     });
                 }
                 _ => {
@@ -423,13 +423,13 @@ mod tests {
                             input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor {
                                 keys: None,
                                 keys3: None,
-                                ..fidl_fuchsia_input_report::KeyboardInputDescriptor::empty()
+                                ..fidl_fuchsia_input_report::KeyboardInputDescriptor::EMPTY
                             }),
                             output: None,
-                            ..fidl_fuchsia_input_report::KeyboardDescriptor::empty()
+                            ..fidl_fuchsia_input_report::KeyboardDescriptor::EMPTY
                         }),
                         consumer_control: None,
-                        ..fidl_fuchsia_input_report::DeviceDescriptor::empty()
+                        ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
                     });
                 }
                 _ => {
@@ -454,7 +454,7 @@ mod tests {
                         touch: None,
                         keyboard: None,
                         consumer_control: None,
-                        ..fidl_fuchsia_input_report::DeviceDescriptor::empty()
+                        ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
                     });
                 }
                 _ => {
@@ -482,9 +482,9 @@ mod tests {
                                 scroll_v: None,
                                 scroll_h: None,
                                 buttons: None,
-                                ..fidl_fuchsia_input_report::MouseInputDescriptor::empty()
+                                ..fidl_fuchsia_input_report::MouseInputDescriptor::EMPTY
                             }),
-                            ..fidl_fuchsia_input_report::MouseDescriptor::empty()
+                            ..fidl_fuchsia_input_report::MouseDescriptor::EMPTY
                         }),
                         sensor: None,
                         touch: Some(fidl_fuchsia_input_report::TouchDescriptor {
@@ -493,21 +493,21 @@ mod tests {
                                 max_contacts: None,
                                 touch_type: None,
                                 buttons: None,
-                                ..fidl_fuchsia_input_report::TouchInputDescriptor::empty()
+                                ..fidl_fuchsia_input_report::TouchInputDescriptor::EMPTY
                             }),
-                            ..fidl_fuchsia_input_report::TouchDescriptor::empty()
+                            ..fidl_fuchsia_input_report::TouchDescriptor::EMPTY
                         }),
                         keyboard: Some(fidl_fuchsia_input_report::KeyboardDescriptor {
                             input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor {
                                 keys: None,
                                 keys3: None,
-                                ..fidl_fuchsia_input_report::KeyboardInputDescriptor::empty()
+                                ..fidl_fuchsia_input_report::KeyboardInputDescriptor::EMPTY
                             }),
                             output: None,
-                            ..fidl_fuchsia_input_report::KeyboardDescriptor::empty()
+                            ..fidl_fuchsia_input_report::KeyboardDescriptor::EMPTY
                         }),
                         consumer_control: None,
-                        ..fidl_fuchsia_input_report::DeviceDescriptor::empty()
+                        ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
                     });
                 }
                 _ => {

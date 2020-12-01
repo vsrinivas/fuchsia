@@ -27,7 +27,7 @@ async fn can_launch_and_connect_to_test_service() {
         .launch_suite(
             "fuchsia-pkg://fuchsia.com/component_manager_for_test_integration_test\
                    #meta/passing-test-example.cm",
-            LaunchOptions::empty(),
+            LaunchOptions::EMPTY,
             suite_server_end,
             controller_server_end,
         )

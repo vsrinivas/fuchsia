@@ -50,7 +50,7 @@ impl OauthOpenIdConnect {
         Ok(OpenIdToken {
             content: Some(format!("{}:idt_{}", refresh_token_content, generate_random_string())),
             expiry_time: Some(get_token_expiry_time_nanos()),
-            ..OpenIdToken::empty()
+            ..OpenIdToken::EMPTY
         })
     }
 
@@ -72,7 +72,7 @@ impl OauthOpenIdConnect {
             name: Some(USER_PROFILE_INFO_DISPLAY_NAME.to_string()),
             email: Some(USER_PROFILE_INFO_EMAIL.to_string()),
             picture: Some(USER_PROFILE_INFO_IMAGE_URL.to_string()),
-            ..OpenIdUserInfo::empty()
+            ..OpenIdUserInfo::EMPTY
         })
     }
 }
@@ -104,12 +104,12 @@ mod test {
             let refresh_token = OauthRefreshToken {
                 content: Some(refresh_token_content.clone()),
                 account_id: Some("account_id".to_string()),
-                ..OauthRefreshToken::empty()
+                ..OauthRefreshToken::EMPTY
             };
             let request = OpenIdTokenFromOauthRefreshTokenRequest {
                 refresh_token: Some(refresh_token),
                 audiences: None,
-                ..OpenIdTokenFromOauthRefreshTokenRequest::empty()
+                ..OpenIdTokenFromOauthRefreshTokenRequest::EMPTY
             };
             let id_token = proxy.get_id_token_from_refresh_token(request).await?.unwrap();
             assert!(id_token.content.unwrap().contains(&refresh_token_content));
@@ -134,9 +134,9 @@ mod test {
                     access_token: Some(OauthAccessToken {
                         content: Some(access_token_content),
                         expiry_time: None,
-                        ..OauthAccessToken::empty()
+                        ..OauthAccessToken::EMPTY
                     }),
-                    ..OpenIdUserInfoFromOauthAccessTokenRequest::empty()
+                    ..OpenIdUserInfoFromOauthAccessTokenRequest::EMPTY
                 })
                 .await?
                 .unwrap();

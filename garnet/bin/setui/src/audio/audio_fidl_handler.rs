@@ -36,10 +36,10 @@ impl From<SettingResponse> for AudioSettings {
                 streams.push(AudioStreamSettings::from(stream.clone()));
             }
 
-            let mut audio_input = AudioInput::empty();
+            let mut audio_input = AudioInput::EMPTY;
             audio_input.muted = Some(info.input.mic_mute);
 
-            let mut audio_settings = AudioSettings::empty();
+            let mut audio_settings = AudioSettings::EMPTY;
             audio_settings.streams = Some(streams);
             audio_settings.input = Some(audio_input);
             audio_settings
@@ -57,9 +57,9 @@ impl From<AudioStream> for AudioStreamSettings {
             user_volume: Some(Volume {
                 level: Some(stream.user_volume_level),
                 muted: Some(stream.user_volume_muted),
-                ..Volume::empty()
+                ..Volume::EMPTY
             }),
-            ..AudioStreamSettings::empty()
+            ..AudioStreamSettings::EMPTY
         }
     }
 }

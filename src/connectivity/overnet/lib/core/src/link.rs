@@ -434,7 +434,7 @@ impl LinkRouting {
                 .flatten()
                 .map(|d| d.as_micros().try_into().unwrap_or(std::u64::MAX)),
             config: (self.config)(),
-            ..LinkDiagnosticInfo::empty()
+            ..LinkDiagnosticInfo::EMPTY
         }
     }
 

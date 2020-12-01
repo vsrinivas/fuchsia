@@ -170,7 +170,7 @@ fn common(item: TokenStream, run_executor: TokenStream, test: bool) -> TokenStre
 /// ```
 /// #[fuchsia_async::run_until_stalled]
 /// async fn this_will_fail_and_not_block() -> Result<(), anyhow::Error> {
-///     let () = future::empty().await;
+///     let () = future::EMPTY.await;
 ///     Ok(())
 /// }
 /// ```

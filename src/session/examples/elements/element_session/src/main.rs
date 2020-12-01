@@ -254,7 +254,7 @@ mod tests {
         };
         let annotations = fidl_fuchsia_session::Annotations {
             custom_annotations: Some(vec![annotation]),
-            ..fidl_fuchsia_session::Annotations::empty()
+            ..fidl_fuchsia_session::Annotations::EMPTY
         };
 
         // Cannot implement a Copy of an Annotation so just make another variable with idenitical
@@ -265,7 +265,7 @@ mod tests {
         };
         let annotations_2 = fidl_fuchsia_session::Annotations {
             custom_annotations: Some(vec![annotation_2]),
-            ..fidl_fuchsia_session::Annotations::empty()
+            ..fidl_fuchsia_session::Annotations::EMPTY
         };
         let _ = element_controller_proxy.set_annotations(annotations).await.unwrap();
 
@@ -307,7 +307,7 @@ mod tests {
         };
         let annotations = fidl_fuchsia_session::Annotations {
             custom_annotations: Some(vec![annotation]),
-            ..fidl_fuchsia_session::Annotations::empty()
+            ..fidl_fuchsia_session::Annotations::EMPTY
         };
 
         let annotation_2 = fidl_fuchsia_session::Annotation {
@@ -316,7 +316,7 @@ mod tests {
         };
         let annotations_2 = fidl_fuchsia_session::Annotations {
             custom_annotations: Some(vec![annotation_2]),
-            ..fidl_fuchsia_session::Annotations::empty()
+            ..fidl_fuchsia_session::Annotations::EMPTY
         };
 
         let _ = element_controller_proxy.set_annotations(annotations).await.unwrap();
@@ -333,7 +333,7 @@ mod tests {
         };
         let annotations_3 = fidl_fuchsia_session::Annotations {
             custom_annotations: Some(vec![annotation_3]),
-            ..fidl_fuchsia_session::Annotations::empty()
+            ..fidl_fuchsia_session::Annotations::EMPTY
         };
 
         let annotation_4 = fidl_fuchsia_session::Annotation {
@@ -342,7 +342,7 @@ mod tests {
         };
         let annotations_4 = fidl_fuchsia_session::Annotations {
             custom_annotations: Some(vec![annotation_4]),
-            ..fidl_fuchsia_session::Annotations::empty()
+            ..fidl_fuchsia_session::Annotations::EMPTY
         };
 
         let _ = element_controller_proxy.set_annotations(annotations_3).await.unwrap();
@@ -387,7 +387,7 @@ mod tests {
         };
         let annotations = fidl_fuchsia_session::Annotations {
             custom_annotations: Some(vec![annotation]),
-            ..fidl_fuchsia_session::Annotations::empty()
+            ..fidl_fuchsia_session::Annotations::EMPTY
         };
 
         let _ = element_controller_proxy.set_annotations(annotations).await.unwrap();
@@ -398,7 +398,7 @@ mod tests {
         };
         let annotations_2 = fidl_fuchsia_session::Annotations {
             custom_annotations: Some(vec![annotation_2]),
-            ..fidl_fuchsia_session::Annotations::empty()
+            ..fidl_fuchsia_session::Annotations::EMPTY
         };
 
         // Check that there are Annotations.
@@ -412,7 +412,7 @@ mod tests {
         let annotation_3 = fidl_fuchsia_session::Annotation { key: "key".to_string(), value: None };
         let annotations_3 = fidl_fuchsia_session::Annotations {
             custom_annotations: Some(vec![annotation_3]),
-            ..fidl_fuchsia_session::Annotations::empty()
+            ..fidl_fuchsia_session::Annotations::EMPTY
         };
         let _ = element_controller_proxy.set_annotations(annotations_3).await.unwrap();
 

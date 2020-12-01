@@ -491,7 +491,7 @@ mod test {
         let mut buffer: [u8; 1024] = [0; 1024];
         let read_len = tx.read(&mut buffer).expect("socket read failed");
         let src_id: SourceIdentity = {
-            let mut identity = SourceIdentity::empty();
+            let mut identity = SourceIdentity::EMPTY;
             identity.realm_path = Some(vec!["fake-test-env".to_string()]);
             identity.component_name = Some("test-component.cm".to_string());
             identity.component_url =

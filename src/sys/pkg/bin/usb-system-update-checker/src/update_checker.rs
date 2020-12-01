@@ -112,7 +112,7 @@ impl UsbUpdateChecker<'_> {
             initiator: Some(Initiator::User),
             allow_attach_to_existing_attempt: Some(false),
             should_write_recovery: Some(true),
-            ..Options::empty()
+            ..Options::EMPTY
         };
 
         let (controller, controller_remote) =

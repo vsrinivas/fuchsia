@@ -255,11 +255,11 @@ async fn test_install_update_succeeds() {
     let mut env = TestEnvBuilder::new()
         .update_version(SystemVersion::Semantic(SemanticVersion::from([1])))
         .system_version(SystemVersion::Semantic(SemanticVersion::from([0, 1])))
-        .state(State::Prepare(PrepareData::empty()))
-        .state(State::Fetch(FetchData::empty()))
-        .state(State::Stage(StageData::empty()))
-        .state(State::WaitToReboot(WaitToRebootData::empty()))
-        .state(State::DeferReboot(DeferRebootData::empty()))
+        .state(State::Prepare(PrepareData::EMPTY))
+        .state(State::Fetch(FetchData::EMPTY))
+        .state(State::Stage(StageData::EMPTY))
+        .state(State::WaitToReboot(WaitToRebootData::EMPTY))
+        .state(State::DeferReboot(DeferRebootData::EMPTY))
         .build()
         .await;
 
@@ -338,11 +338,11 @@ async fn test_version_comparison_update_newer_installed() {
     let env = TestEnvBuilder::new()
         .system_version(semantic_version(0, 2020_01_01, 2, 4))
         .update_version(semantic_version(0, 2021_01_01, 1, 1))
-        .state(State::Prepare(PrepareData::empty()))
-        .state(State::Fetch(FetchData::empty()))
-        .state(State::Stage(StageData::empty()))
-        .state(State::WaitToReboot(WaitToRebootData::empty()))
-        .state(State::DeferReboot(DeferRebootData::empty()))
+        .state(State::Prepare(PrepareData::EMPTY))
+        .state(State::Fetch(FetchData::EMPTY))
+        .state(State::Stage(StageData::EMPTY))
+        .state(State::WaitToReboot(WaitToRebootData::EMPTY))
+        .state(State::DeferReboot(DeferRebootData::EMPTY))
         .build()
         .await;
 
@@ -423,8 +423,8 @@ async fn test_install_update_fails() {
     let mut env = TestEnvBuilder::new()
         .system_version(semantic_version(0, 1970_01_01, 0, 0))
         .update_version(semantic_version(0, 2020_01_01, 1, 1))
-        .state(State::Prepare(PrepareData::empty()))
-        .state(State::FailPrepare(FailPrepareData::empty()))
+        .state(State::Prepare(PrepareData::EMPTY))
+        .state(State::FailPrepare(FailPrepareData::EMPTY))
         .build()
         .await;
 

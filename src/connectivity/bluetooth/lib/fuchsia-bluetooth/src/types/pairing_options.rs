@@ -103,7 +103,7 @@ impl From<&PairingOptions> for sys::PairingOptions {
             le_security_level,
             bondable_mode,
             transport,
-            ..sys::PairingOptions::empty()
+            ..sys::PairingOptions::EMPTY
         }
     }
 }
@@ -148,7 +148,7 @@ impl From<PairingOptions> for control::PairingOptions {
             le_security_level,
             non_bondable,
             transport,
-            ..control::PairingOptions::empty()
+            ..control::PairingOptions::EMPTY
         }
     }
 }

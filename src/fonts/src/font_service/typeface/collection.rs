@@ -89,7 +89,7 @@ impl Collection {
             width: Some(f.width),
             slant: Some(f.slant),
             weight: Some(f.weight),
-            ..Style2::empty()
+            ..Style2::EMPTY
         })
     }
 }

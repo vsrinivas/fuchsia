@@ -67,7 +67,7 @@ fn main() {
     }
 
     // [START tables_init]
-    let user = fex::User { age: Some(20), ..fex::User::empty() };
+    let user = fex::User { age: Some(20), ..fex::User::EMPTY };
     println!("{:?}", user);
     assert!(user.age.is_some());
     // [END tables_init]

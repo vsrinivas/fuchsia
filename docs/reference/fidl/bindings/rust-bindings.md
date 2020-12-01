@@ -333,10 +333,9 @@ pub struct User {
 }
 ```
 
-With the following methods:
+And the following associated constants:
 
-* `empty() -> User`: Returns a new `User`, with each member initialized to
-  `None`.
+* `const EMPTY: User`: A `User` with each member initialized to `None`.
 
 The generated `User` `struct` follows the [`#[derive]` rules](#derives).
 

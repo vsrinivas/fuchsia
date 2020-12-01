@@ -184,7 +184,7 @@ impl ProfileRegistrar {
 
         let mut connect_params = bredr::ConnectParameters::L2cap(bredr::L2capParameters {
             psm: Some(bredr::PSM_RFCOMM),
-            ..bredr::L2capParameters::empty()
+            ..bredr::L2capParameters::EMPTY
         });
         let l2cap_channel =
             match self.profile_upstream.connect(&mut peer_id.into(), &mut connect_params).await {

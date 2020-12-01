@@ -117,7 +117,7 @@ async fn test_processing_unit_consumes_request() {
     let proxy = create_processor(vec![processing_unit]).await;
 
     let result = proxy
-        .set(PrivacySettings { user_data_sharing_consent: None, ..PrivacySettings::empty() })
+        .set(PrivacySettings { user_data_sharing_consent: None, ..PrivacySettings::EMPTY })
         .await
         .expect("set request failed");
     assert_eq!(result, expected_result)
@@ -148,7 +148,7 @@ async fn test_multiple_processing_unit_consumes_request() {
     let proxy = create_processor(vec![processing_unit, processing_unit_panics]).await;
 
     let result = proxy
-        .set(PrivacySettings { user_data_sharing_consent: None, ..PrivacySettings::empty() })
+        .set(PrivacySettings { user_data_sharing_consent: None, ..PrivacySettings::EMPTY })
         .await
         .expect("set request failed");
     assert_eq!(result, expected_result)
@@ -178,7 +178,7 @@ async fn test_processing_unit_passes_request() {
     let proxy = create_processor(vec![processing_unit_pass, processing_unit_consume]).await;
 
     let result = proxy
-        .set(PrivacySettings { user_data_sharing_consent: None, ..PrivacySettings::empty() })
+        .set(PrivacySettings { user_data_sharing_consent: None, ..PrivacySettings::EMPTY })
         .await
         .expect("set request failed");
     assert_eq!(result, expected_result)
@@ -209,7 +209,7 @@ async fn test_error_ends_processing() {
     let proxy = create_processor(vec![processing_unit_expected, processing_unit_panics]).await;
 
     let result = proxy
-        .set(PrivacySettings { user_data_sharing_consent: None, ..PrivacySettings::empty() })
+        .set(PrivacySettings { user_data_sharing_consent: None, ..PrivacySettings::EMPTY })
         .await
         .expect("set request failed");
     assert_eq!(result, expected_result)
@@ -253,13 +253,13 @@ fn test_exit_sender_ends_processing() {
 
     // First set finishes successfully.
     let set_future =
-        proxy.set(PrivacySettings { user_data_sharing_consent: None, ..PrivacySettings::empty() });
+        proxy.set(PrivacySettings { user_data_sharing_consent: None, ..PrivacySettings::EMPTY });
     pin_mut!(set_future);
     matches!(executor.run_until_stalled(&mut set_future), Poll::Ready(Result::Ok(_)));
 
     // Second set is stalled since the processing loop ended.
     let set_future =
-        proxy.set(PrivacySettings { user_data_sharing_consent: None, ..PrivacySettings::empty() });
+        proxy.set(PrivacySettings { user_data_sharing_consent: None, ..PrivacySettings::EMPTY });
     pin_mut!(set_future);
     matches!(executor.run_until_stalled(&mut set_future), Poll::Pending);
 }

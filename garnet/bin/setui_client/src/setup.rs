@@ -14,7 +14,7 @@ pub async fn command(
     let mut output = String::new();
 
     if let Some(configuration_interfaces) = configuration_interfaces {
-        let mut settings = SetupSettings::empty();
+        let mut settings = SetupSettings::EMPTY;
         settings.enabled_configuration_interfaces = Some(configuration_interfaces);
 
         let set_result = proxy.set(settings).await?;

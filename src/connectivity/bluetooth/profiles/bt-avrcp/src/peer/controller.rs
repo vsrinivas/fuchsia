@@ -69,7 +69,7 @@ impl Controller {
     /// Sends GetElementAttributes command to the peer.
     /// Returns all the media attributes received as a response or an error.
     pub async fn get_media_attributes(&self) -> Result<fidl_avrcp::MediaAttributes, Error> {
-        let mut media_attributes = fidl_avrcp::MediaAttributes::empty();
+        let mut media_attributes = fidl_avrcp::MediaAttributes::EMPTY;
         let cmd = GetElementAttributesCommand::all_attributes();
         trace!("get_media_attributes send command {:#?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
@@ -101,7 +101,7 @@ impl Controller {
         let response =
             GetPlayStatusResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
         trace!("get_play_status received response {:?}", response);
-        let mut play_status = fidl_avrcp::PlayStatus::empty();
+        let mut play_status = fidl_avrcp::PlayStatus::EMPTY;
         play_status.song_length = if response.song_length != SONG_LENGTH_NOT_SUPPORTED {
             Some(response.song_length)
         } else {

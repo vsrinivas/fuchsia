@@ -105,7 +105,7 @@ pub trait SuiteServer: Sized + Sync + Send {
                                 tests.iter().map(|TestCaseInfo { name, enabled }| ftest::Case {
                                     name: Some(name.clone()),
                                     enabled: Some(*enabled),
-                                    ..ftest::Case::empty()
+                                    ..ftest::Case::EMPTY
                                 });
                             while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
                                 stream.try_next().await?

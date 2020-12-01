@@ -15,7 +15,7 @@ fidl_hanging_get_responder!(DeviceMarker, DeviceSettings, DeviceWatchResponder);
 impl From<SettingResponse> for DeviceSettings {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::Device(info) = response {
-            let mut device_settings = fidl_fuchsia_settings::DeviceSettings::empty();
+            let mut device_settings = fidl_fuchsia_settings::DeviceSettings::EMPTY;
             device_settings.build_tag = Some(info.build_tag);
             device_settings
         } else {

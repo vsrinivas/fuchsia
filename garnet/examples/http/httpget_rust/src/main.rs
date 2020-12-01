@@ -53,7 +53,7 @@ async fn http_get(url: String) -> Result<(), Error> {
         headers: None,
         body: None,
         deadline: None,
-        ..http::Request::empty()
+        ..http::Request::EMPTY
     };
 
     let resp = loader_proxy.fetch(req).await?;

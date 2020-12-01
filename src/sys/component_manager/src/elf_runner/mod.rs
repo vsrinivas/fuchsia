@@ -910,7 +910,7 @@ mod tests {
         let ns = vec![fcrunner::ComponentNamespaceEntry {
             path: Some(pkg_path),
             directory: Some(pkg_handle),
-            ..fcrunner::ComponentNamespaceEntry::empty()
+            ..fcrunner::ComponentNamespaceEntry::EMPTY
         }];
 
         fcrunner::ComponentStartInfo {
@@ -933,12 +933,12 @@ mod tests {
                         ))),
                     },
                 ]),
-                ..fdata::Dictionary::empty()
+                ..fdata::Dictionary::EMPTY
             }),
             ns: Some(ns),
             outgoing_dir: None,
             runtime_dir,
-            ..fcrunner::ComponentStartInfo::empty()
+            ..fcrunner::ComponentStartInfo::EMPTY
         }
     }
 
@@ -960,7 +960,7 @@ mod tests {
         let ns = vec![fcrunner::ComponentNamespaceEntry {
             path: Some(pkg_path),
             directory: Some(pkg_handle),
-            ..fcrunner::ComponentNamespaceEntry::empty()
+            ..fcrunner::ComponentNamespaceEntry::EMPTY
         }];
 
         fcrunner::ComponentStartInfo {
@@ -987,12 +987,12 @@ mod tests {
                         value: Some(Box::new(fdata::DictionaryValue::Str("notify".to_string()))),
                     },
                 ]),
-                ..fdata::Dictionary::empty()
+                ..fdata::Dictionary::EMPTY
             }),
             ns: Some(ns),
             outgoing_dir: None,
             runtime_dir,
-            ..fcrunner::ComponentStartInfo::empty()
+            ..fcrunner::ComponentStartInfo::EMPTY
         }
     }
 

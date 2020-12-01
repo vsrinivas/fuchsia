@@ -409,17 +409,17 @@ mod tests {
         let now_once = fsys::WorkRequest {
             start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME)),
             period: None,
-            ..fsys::WorkRequest::empty()
+            ..fsys::WorkRequest::EMPTY
         };
         let each_second = fsys::WorkRequest {
             start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME + SECOND)),
             period: Some(SECOND),
-            ..fsys::WorkRequest::empty()
+            ..fsys::WorkRequest::EMPTY
         };
         let in_an_hour = fsys::WorkRequest {
             start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME + (SECOND * 60 * 60))),
             period: None,
-            ..fsys::WorkRequest::empty()
+            ..fsys::WorkRequest::EMPTY
         };
 
         // Schedule different 2 out of 3 requests on each component instance.
@@ -517,17 +517,17 @@ mod tests {
         let now_once = fsys::WorkRequest {
             start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME)),
             period: None,
-            ..fsys::WorkRequest::empty()
+            ..fsys::WorkRequest::EMPTY
         };
         let each_second = fsys::WorkRequest {
             start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME + SECOND)),
             period: Some(SECOND),
-            ..fsys::WorkRequest::empty()
+            ..fsys::WorkRequest::EMPTY
         };
         let in_an_hour = fsys::WorkRequest {
             start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME + (SECOND * 60 * 60))),
             period: None,
-            ..fsys::WorkRequest::empty()
+            ..fsys::WorkRequest::EMPTY
         };
 
         assert_eq!(Ok(()), work_scheduler.schedule_work_item(a, "EACH_SECOND", &each_second));

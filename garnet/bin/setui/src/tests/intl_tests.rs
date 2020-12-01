@@ -116,7 +116,7 @@ async fn test_intl_e2e() {
         temperature_unit: Some(fidl_fuchsia_intl::TemperatureUnit::Celsius),
         time_zone_id: Some(fidl_fuchsia_intl::TimeZoneId { id: "GMT".to_string() }),
         hour_cycle: Some(fidl_fuchsia_settings::HourCycle::H24),
-        ..fidl_fuchsia_settings::IntlSettings::empty()
+        ..fidl_fuchsia_settings::IntlSettings::EMPTY
     };
     intl_service.set(intl_settings.clone()).await.expect("set completed").expect("set successful");
 
@@ -152,7 +152,7 @@ async fn test_intl_e2e_set_twice() {
     assert_eq!(settings.hour_cycle, Some(fidl_fuchsia_settings::HourCycle::H12));
 
     // Set new values.
-    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
+    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::EMPTY;
     let updated_timezone = "GMT";
     intl_settings.time_zone_id =
         Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() });
@@ -160,7 +160,7 @@ async fn test_intl_e2e_set_twice() {
     intl_service.set(intl_settings).await.expect("set completed").expect("set successful");
 
     // Try to set to a new value: this second set should succeed too.
-    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
+    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::EMPTY;
     let updated_timezone = "PST";
     intl_settings.time_zone_id =
         Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() });
@@ -194,14 +194,14 @@ async fn test_intl_e2e_idempotent_set() {
     assert_eq!(settings.hour_cycle, Some(fidl_fuchsia_settings::HourCycle::H12));
 
     // Set new values.
-    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
+    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::EMPTY;
     let updated_timezone = "GMT";
     intl_settings.time_zone_id =
         Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() });
     intl_service.set(intl_settings).await.expect("set completed").expect("set successful");
 
     // Try to set again to the same value: this second set should succeed.
-    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
+    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::EMPTY;
     intl_settings.time_zone_id =
         Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() });
     intl_service.set(intl_settings).await.expect("set completed").expect("repeated set successful");
@@ -220,13 +220,13 @@ async fn test_intl_invalid_timezone() {
     let intl_service = create_test_intl_env(factory).await;
 
     // Set a real value.
-    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
+    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::EMPTY;
     intl_settings.time_zone_id =
         Some(fidl_fuchsia_intl::TimeZoneId { id: INITIAL_TIME_ZONE.to_string() });
     intl_service.set(intl_settings).await.expect("set completed").expect("set successful");
 
     // Set with an invalid timezone value.
-    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
+    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::EMPTY;
     let updated_timezone = "not_a_real_time_zone";
     intl_settings.time_zone_id =
         Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() });

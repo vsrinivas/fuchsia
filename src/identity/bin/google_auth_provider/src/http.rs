@@ -80,7 +80,7 @@ impl<'a> HttpRequestBuilder<'a> {
             headers: self.headers,
             body: url_body,
             deadline: None,
-            ..fidl_fuchsia_net_http::Request::empty()
+            ..fidl_fuchsia_net_http::Request::EMPTY
         }))
     }
 }
@@ -179,7 +179,7 @@ mod test {
                 headers: None,
                 body: None,
                 deadline: None,
-                ..fidl_fuchsia_net_http::Request::empty()
+                ..fidl_fuchsia_net_http::Request::EMPTY
             }
         );
     }
@@ -233,7 +233,7 @@ mod test {
             status_line: None,
             headers: None,
             redirect: None,
-            ..fidl_fuchsia_net_http::Response::empty()
+            ..fidl_fuchsia_net_http::Response::EMPTY
         };
         let (url_loader_proxy, mut url_loader_stream) =
             create_proxy_and_stream::<fidl_fuchsia_net_http::LoaderMarker>()

@@ -26,7 +26,7 @@ async fn main() -> Result<(), Error> {
             fsys::WorkRequest {
                 start: Some(fsys::Start::MonotonicTime(0)),
                 period: None,
-                ..fsys::WorkRequest::empty()
+                ..fsys::WorkRequest::EMPTY
             },
         )
         .await

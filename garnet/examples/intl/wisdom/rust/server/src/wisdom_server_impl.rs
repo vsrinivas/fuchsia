@@ -138,7 +138,7 @@ mod tests {
                     }]),
                     temperature_unit: Some(fintl::TemperatureUnit::Celsius),
                     time_zones: Some(vec![]),
-                    ..fintl::Profile::empty()
+                    ..fintl::Profile::EMPTY
                 },
                 timestamp_ms: 0,
                 result: vec![
@@ -163,7 +163,7 @@ mod tests {
                     time_zones: Some(vec![fintl::TimeZoneId {
                         id: "America/Los_Angeles".to_string(),
                     }]),
-                    ..fintl::Profile::empty()
+                    ..fintl::Profile::EMPTY
                 },
                 timestamp_ms: 100000000, // About a day after the Unix Epoch
                 result: vec![
@@ -187,7 +187,7 @@ mod tests {
                     time_zones: Some(vec![fintl::TimeZoneId {
                         id: "America/New_York".to_string(),
                     }]),
-                    ..fintl::Profile::empty()
+                    ..fintl::Profile::EMPTY
                 },
                 timestamp_ms: 100000000, // About a day after the Unix Epoch
                 result: vec![
@@ -210,7 +210,7 @@ mod tests {
                     time_zones: Some(vec![fintl::TimeZoneId {
                         id: "America/New_York".to_string(),
                     }]),
-                    ..fintl::Profile::empty()
+                    ..fintl::Profile::EMPTY
                 },
                 timestamp_ms: 100000000, // About a day after the Unix Epoch
                 result: vec![

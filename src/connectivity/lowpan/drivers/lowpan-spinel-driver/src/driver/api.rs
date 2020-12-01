@@ -319,7 +319,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
                 id: Some(x.to_string()),
                 index: Some(u16::from(x)),
                 masked_by_regulatory_domain: Some(false),
-                ..ChannelInfo::empty()
+                ..ChannelInfo::EMPTY
             })
             .collect())
     }
@@ -550,7 +550,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
                         Some(Ok(Some(vec![fidl_fuchsia_lowpan_device::EnergyScanResult {
                             channel_index: Some(result.channel as u16),
                             max_rssi: Some(result.rssi as i32),
-                            ..fidl_fuchsia_lowpan_device::EnergyScanResult::empty()
+                            ..fidl_fuchsia_lowpan_device::EnergyScanResult::EMPTY
                         }])))
                     }
                     Err(err) => Some(Err(err)),
@@ -654,7 +654,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
                                 channel: Some(result.channel as u16),
                                 panid: Some(result.mac.panid),
                                 xpanid: Some(result.net.xpanid),
-                                ..Identity::empty()
+                                ..Identity::EMPTY
                             },
                             rssi: result.rssi as i32,
                             lqi: result.mac.lqi,
@@ -815,7 +815,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
     async fn get_mac_address_filter_settings(&self) -> ZxResult<MacAddressFilterSettings> {
         Ok(MacAddressFilterSettings {
             mode: Some(MacAddressFilterMode::Disabled),
-            ..MacAddressFilterSettings::empty()
+            ..MacAddressFilterSettings::EMPTY
         })
     }
 }
@@ -826,7 +826,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         DeviceState {
             connectivity_state: Some(driver_state.connectivity_state),
             role: Some(driver_state.role),
-            ..DeviceState::empty()
+            ..DeviceState::EMPTY
         }
     }
 

@@ -116,7 +116,7 @@ impl web::WebFrameSupplier for WebFrameSupplier {
         context_provider.create(
             CreateContextParams {
                 service_directory: Some(service_directory),
-                ..CreateContextParams::empty()
+                ..CreateContextParams::EMPTY
             },
             context_server_end,
         )?;

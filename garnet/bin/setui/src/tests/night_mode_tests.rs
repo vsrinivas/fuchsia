@@ -36,7 +36,7 @@ async fn test_night_mode() {
     let settings = night_mode_service.watch().await.expect("watch completed");
     assert_eq!(settings.night_mode_enabled, initial_value.night_mode_enabled);
     // Ensure setting interface propagates correctly
-    let mut night_mode_settings = fidl_fuchsia_settings::NightModeSettings::empty();
+    let mut night_mode_settings = fidl_fuchsia_settings::NightModeSettings::EMPTY;
     night_mode_settings.night_mode_enabled = Some(true);
     night_mode_service
         .set(night_mode_settings)

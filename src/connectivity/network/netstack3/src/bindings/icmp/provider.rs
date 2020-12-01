@@ -276,7 +276,7 @@ mod test {
         let config = EchoSocketConfig {
             local: Src::local_fidl(),
             remote: Dst::remote_fidl(),
-            ..EchoSocketConfig::empty()
+            ..EchoSocketConfig::EMPTY
         };
 
         let (socket_client, socket_server) =

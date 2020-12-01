@@ -51,14 +51,14 @@ mod tests {
                     id: Some(1),
                     pid: Some(10),
                     name: Some("provider_a".to_string()),
-                    ..ProviderInfo::empty()
+                    ..ProviderInfo::EMPTY
                 };
 
                 let b = ProviderInfo {
                     id: Some(2),
                     pid: Some(20),
                     name: Some("provider_b".to_string()),
-                    ..ProviderInfo::empty()
+                    ..ProviderInfo::EMPTY
                 };
 
                 responder.send(&mut vec![a, b].into_iter()).unwrap();

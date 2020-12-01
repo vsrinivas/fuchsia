@@ -48,7 +48,7 @@ impl From<SerializableMemoryStats> for MemoryStats {
             mmu_overhead_bytes: memory_stats.mmu_overhead_bytes,
             ipc_bytes: memory_stats.ipc_bytes,
             other_bytes: memory_stats.other_bytes,
-            ..MemoryStats::empty()
+            ..MemoryStats::EMPTY
         }
     }
 }
@@ -112,7 +112,7 @@ impl From<SerializablePerCpuStats> for PerCpuStats {
             syscalls: per_cpu_stats.syscalls,
             reschedule_ipis: per_cpu_stats.reschedule_ipis,
             generic_ipis: per_cpu_stats.generic_ipis,
-            ..PerCpuStats::empty()
+            ..PerCpuStats::EMPTY
         }
     }
 }

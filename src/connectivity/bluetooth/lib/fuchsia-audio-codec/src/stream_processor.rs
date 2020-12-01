@@ -276,7 +276,7 @@ impl StreamProcessorInner {
             buffer_lifetime_ordinal: Some(1),
             buffer_constraints_version_ordinal: Some(1),
             sysmem_token: None,
-            ..StreamBufferPartialSettings::empty()
+            ..StreamBufferPartialSettings::EMPTY
         }
     }
 
@@ -488,13 +488,13 @@ impl StreamProcessor {
             oob_bytes: None,
             pass_through_parameters: None,
             timebase: None,
-            ..FormatDetails::empty()
+            ..FormatDetails::EMPTY
         };
 
         let encoder_params = CreateEncoderParams {
             input_details: Some(format_details),
             require_hw: Some(false),
-            ..CreateEncoderParams::empty()
+            ..CreateEncoderParams::EMPTY
         };
 
         let codec_svc = fuchsia_component::client::connect_to_service::<CodecFactoryMarker>()
@@ -525,13 +525,13 @@ impl StreamProcessor {
             domain: None,
             pass_through_parameters: None,
             timebase: None,
-            ..FormatDetails::empty()
+            ..FormatDetails::EMPTY
         };
 
         let decoder_params = CreateDecoderParams {
             input_details: Some(format_details),
             permit_lack_of_split_header_handling: Some(true),
-            ..CreateDecoderParams::empty()
+            ..CreateDecoderParams::EMPTY
         };
 
         let codec_svc = fuchsia_component::client::connect_to_service::<CodecFactoryMarker>()
@@ -615,7 +615,7 @@ impl StreamProcessor {
             header: Some(PacketHeader {
                 buffer_lifetime_ordinal: Some(1),
                 packet_index: Some(idx.0),
-                ..PacketHeader::empty()
+                ..PacketHeader::EMPTY
             }),
             buffer_index: Some(idx.0),
             stream_lifetime_ordinal: Some(1),
@@ -623,7 +623,7 @@ impl StreamProcessor {
             valid_length_bytes: Some(size as u32),
             start_access_unit: Some(true),
             known_end_access_unit: Some(true),
-            ..Packet::empty()
+            ..Packet::EMPTY
         };
         write.processor.queue_input_packet(packet).map_err(fidl_error_to_io_error)?;
         // pick another buffer for the input cursor

@@ -62,7 +62,7 @@ fn make_profile_service_definition() -> bredr::ServiceDefinition {
             major_version: 1,
             minor_version: 2,
         }]),
-        ..bredr::ServiceDefinition::empty()
+        ..bredr::ServiceDefinition::EMPTY
     }
 }
 
@@ -244,7 +244,7 @@ async fn main() -> Result<(), Error> {
             &mut service_defs.into_iter(),
             bredr::ChannelParameters {
                 channel_mode: Some(signaling_channel_mode),
-                ..bredr::ChannelParameters::empty()
+                ..bredr::ChannelParameters::EMPTY
             },
             connect_client,
         )
@@ -367,9 +367,9 @@ async fn connect_after_timeout(
                 psm: Some(bredr::PSM_AVDTP),
                 parameters: Some(bredr::ChannelParameters {
                     channel_mode: Some(channel_mode),
-                    ..bredr::ChannelParameters::empty()
+                    ..bredr::ChannelParameters::EMPTY
                 }),
-                ..bredr::L2capParameters::empty()
+                ..bredr::L2capParameters::EMPTY
             }),
         )
         .await

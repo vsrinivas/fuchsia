@@ -30,7 +30,7 @@ impl BusConnection {
             code: Some(code),
             message: None,
             arguments: None,
-            ..Event::empty()
+            ..Event::EMPTY
         })?;
         Ok(())
     }
@@ -39,7 +39,7 @@ impl BusConnection {
         let _ = self
             .bus
             .wait_for_event(
-                Event { code: Some(code), message: None, arguments: None, ..Event::empty() },
+                Event { code: Some(code), message: None, arguments: None, ..Event::EMPTY },
                 0,
             )
             .await?;

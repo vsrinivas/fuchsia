@@ -19,7 +19,7 @@ fidl_hanging_get_responder!(FactoryResetMarker, FactoryResetSettings, FactoryRes
 impl From<SettingResponse> for FactoryResetSettings {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::FactoryReset(info) = response {
-            let mut factory_reset_settings = FactoryResetSettings::empty();
+            let mut factory_reset_settings = FactoryResetSettings::EMPTY;
             factory_reset_settings.is_local_reset_allowed = Some(info.is_local_reset_allowed);
             factory_reset_settings
         } else {
@@ -80,7 +80,7 @@ mod tests {
     fn to_request_maps_correctly() {
         let result = to_request(FactoryResetSettings {
             is_local_reset_allowed: Some(true),
-            ..FactoryResetSettings::empty()
+            ..FactoryResetSettings::EMPTY
         });
         matches::assert_matches!(result, Some(SettingRequest::SetLocalResetAllowed(true)));
     }

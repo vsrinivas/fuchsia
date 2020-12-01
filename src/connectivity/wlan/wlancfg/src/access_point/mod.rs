@@ -522,7 +522,7 @@ mod tests {
         let network_config = fidl_policy::NetworkConfig {
             id: Some(network_id),
             credential: None,
-            ..fidl_policy::NetworkConfig::empty()
+            ..fidl_policy::NetworkConfig::EMPTY
         };
         let connectivity_mode = fidl_policy::ConnectivityMode::LocalOnly;
         let operating_band = fidl_policy::OperatingBand::Any;
@@ -573,7 +573,7 @@ mod tests {
         let network_config = fidl_policy::NetworkConfig {
             id: Some(network_id),
             credential: None,
-            ..fidl_policy::NetworkConfig::empty()
+            ..fidl_policy::NetworkConfig::EMPTY
         };
         let connectivity_mode = fidl_policy::ConnectivityMode::LocalOnly;
         let operating_band = fidl_policy::OperatingBand::Any;
@@ -623,7 +623,7 @@ mod tests {
         let network_config = fidl_policy::NetworkConfig {
             id: None,
             credential: None,
-            ..fidl_policy::NetworkConfig::empty()
+            ..fidl_policy::NetworkConfig::EMPTY
         };
         let start_fut =
             controller.start_access_point(network_config, connectivity_mode, operating_band);
@@ -662,7 +662,7 @@ mod tests {
         let network_config = fidl_policy::NetworkConfig {
             id: Some(network_id),
             credential: Some(credential),
-            ..fidl_policy::NetworkConfig::empty()
+            ..fidl_policy::NetworkConfig::EMPTY
         };
         let stop_fut = controller.stop_access_point(network_config);
         pin_mut!(stop_fut);
@@ -711,7 +711,7 @@ mod tests {
         let network_config = fidl_policy::NetworkConfig {
             id: Some(network_id),
             credential: Some(credential),
-            ..fidl_policy::NetworkConfig::empty()
+            ..fidl_policy::NetworkConfig::EMPTY
         };
         let stop_fut = controller.stop_access_point(network_config);
         pin_mut!(stop_fut);
@@ -875,7 +875,7 @@ mod tests {
         let network_config = fidl_policy::NetworkConfig {
             id: Some(network_id),
             credential: None,
-            ..fidl_policy::NetworkConfig::empty()
+            ..fidl_policy::NetworkConfig::EMPTY
         };
         let connectivity_mode = fidl_policy::ConnectivityMode::LocalOnly;
         let operating_band = fidl_policy::OperatingBand::Any;

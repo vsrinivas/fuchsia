@@ -183,7 +183,7 @@ async fn send_greeting(
         node_id: Some(node_id.into()),
         connection_label: Some(format!("fuchsia serial")),
         key: Some(key),
-        ..StreamSocketGreeting::empty()
+        ..StreamSocketGreeting::EMPTY
     };
     fragment_writer.write(FrameType::OvernetHello, encode_fidl(&mut greeting)?).await?;
     Ok(key)

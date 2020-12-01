@@ -88,9 +88,9 @@ mod tests {
                             address: Some(fidl_socket_addr_v6!([fe01::1:2]:546)),
                             models: Some(OperationalModels {
                                 stateless: None,
-                                ..OperationalModels::empty()
+                                ..OperationalModels::EMPTY
                             }),
-                            ..NewClientParams::empty()
+                            ..NewClientParams::EMPTY
                         },
                         server_end,
                     )

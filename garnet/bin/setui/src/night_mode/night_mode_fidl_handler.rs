@@ -18,7 +18,7 @@ fidl_hanging_get_responder!(NightModeMarker, NightModeSettings, NightModeWatchRe
 impl From<SettingResponse> for NightModeSettings {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::NightMode(info) = response {
-            let mut night_mode_settings = NightModeSettings::empty();
+            let mut night_mode_settings = NightModeSettings::EMPTY;
             night_mode_settings.night_mode_enabled = info.night_mode_enabled;
             return night_mode_settings;
         }
@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn test_request_from_settings_empty() {
-        let request = SettingRequest::from(NightModeSettings::empty());
+        let request = SettingRequest::from(NightModeSettings::EMPTY);
         let night_mode_info = NightModeInfo::empty();
         assert_eq!(request, SettingRequest::SetNightModeInfo(night_mode_info));
     }
@@ -83,7 +83,7 @@ mod tests {
     fn test_request_from_settings() {
         const NIGHT_MODE_ENABLED: bool = true;
 
-        let mut night_mode_settings = NightModeSettings::empty();
+        let mut night_mode_settings = NightModeSettings::EMPTY;
         night_mode_settings.night_mode_enabled = Some(NIGHT_MODE_ENABLED);
         let request = SettingRequest::from(night_mode_settings);
 

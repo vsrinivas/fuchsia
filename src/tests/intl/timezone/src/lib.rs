@@ -9,8 +9,8 @@ use crossbeam::channel;
 use fidl_fuchsia_intl as fintl;
 use fidl_fuchsia_settings as fsettings;
 use fidl_fuchsia_sys::{ComponentControllerEvent, LauncherProxy};
-use fidl_test_placeholders as fecho;
 use fidl_fuchsia_ui_app::ViewProviderMarker;
+use fidl_test_placeholders as fecho;
 use fuchsia_async as fasync;
 use fuchsia_async::DurationExt;
 use fuchsia_component::client;
@@ -62,7 +62,7 @@ impl ScopedTimezone {
             locales: None,
             temperature_unit: None,
             hour_cycle: None,
-            ..fsettings::IntlSettings::empty()
+            ..fsettings::IntlSettings::EMPTY
         };
         let _result = self.client.set(settings).await.context("setting timezone").unwrap();
         Ok(())
@@ -86,7 +86,7 @@ impl Drop for ScopedTimezone {
                     locales: None,
                     temperature_unit: None,
                     hour_cycle: None,
-                    ..fsettings::IntlSettings::empty()
+                    ..fsettings::IntlSettings::EMPTY
                 };
                 let _result = client.set(settings).await.context("restoring timezone");
                 tx.send(()).unwrap();

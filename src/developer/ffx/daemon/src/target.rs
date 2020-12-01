@@ -652,7 +652,7 @@ impl ToFidlTarget for Target {
             // TODO(awdavies): Gather more information here when possible.
             target_type: Some(bridge::TargetType::Unknown),
             target_state: Some(bridge::TargetState::Unknown),
-            ..bridge::Target::empty()
+            ..bridge::Target::EMPTY
         }
     }
 }
@@ -1091,7 +1091,7 @@ mod test {
                                 .send(&mut Ok(rcs::IdentifyHostResponse {
                                     nodename,
                                     addresses: Some(result),
-                                    ..rcs::IdentifyHostResponse::empty()
+                                    ..rcs::IdentifyHostResponse::EMPTY
                                 }))
                                 .context("sending testing response")
                                 .unwrap();

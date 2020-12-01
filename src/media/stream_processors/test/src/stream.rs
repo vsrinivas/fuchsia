@@ -176,7 +176,7 @@ impl<'a: 'b, 'b> Stream<'a> {
                 self.stream_processor.recycle_output_packet(PacketHeader {
                     buffer_lifetime_ordinal: Some(output_packet.header.buffer_lifetime_ordinal),
                     packet_index: Some(output_packet.header.packet_index),
-                    ..PacketHeader::empty()
+                    ..PacketHeader::EMPTY
                 })?;
 
                 if self.options.stop_after_first_output {

@@ -76,7 +76,7 @@ async fn test_service_driver_interaction() -> Result<(), Error> {
                 device: Some(server),
                 device_extra: Some(server_extra),
                 device_test: Some(server_test),
-                ..Protocols::empty()
+                ..Protocols::EMPTY
             },
         )
         .err_into::<Error>()

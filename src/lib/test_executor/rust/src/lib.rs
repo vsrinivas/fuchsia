@@ -64,7 +64,7 @@ impl From<TestRunOptions> for fidl_fuchsia_test::RunOptions {
     #[allow(unreachable_patterns)]
     fn from(test_run_options: TestRunOptions) -> Self {
         // Note: This will *not* break if new members are added to the FIDL table.
-        let mut run_options = fidl_fuchsia_test::RunOptions::empty();
+        let mut run_options = fidl_fuchsia_test::RunOptions::EMPTY;
         run_options.parallel = test_run_options.parallel;
         run_options.arguments = test_run_options.arguments;
         match test_run_options.disabled_tests {
@@ -364,12 +364,7 @@ impl SuiteInstance {
 
         debug!("Launching test component `{}`", test_url);
         harness
-            .launch_suite(
-                &test_url,
-                LaunchOptions::empty(),
-                suite_server_end,
-                controller_server_end,
-            )
+            .launch_suite(&test_url, LaunchOptions::EMPTY, suite_server_end, controller_server_end)
             .await
             .context("launch_test call failed")?
             .map_err(|e: fidl_fuchsia_test_manager::LaunchError| {
@@ -410,7 +405,7 @@ impl SuiteInstance {
                     invocations.push(Invocation {
                         name: Some(case_name),
                         tag: None,
-                        ..Invocation::empty()
+                        ..Invocation::EMPTY
                     });
                 }
             }

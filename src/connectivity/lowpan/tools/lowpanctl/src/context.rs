@@ -46,7 +46,7 @@ impl LowpanCtlContext {
                     device: Some(server),
                     device_extra: None,
                     device_test: None,
-                    ..Protocols::empty()
+                    ..Protocols::EMPTY
                 },
             )
             .map(|x| match x {
@@ -95,7 +95,7 @@ impl LowpanCtlContext {
                     device: Some(server),
                     device_extra: Some(server_extra),
                     device_test: Some(server_test),
-                    ..Protocols::empty()
+                    ..Protocols::EMPTY
                 },
             )
             .map(|x| match x {

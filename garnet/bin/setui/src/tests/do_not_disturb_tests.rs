@@ -59,7 +59,7 @@ async fn set_dnd(
     user_dnd: Option<bool>,
     night_mode_dnd: Option<bool>,
 ) {
-    let mut dnd_settings = DoNotDisturbSettings::empty();
+    let mut dnd_settings = DoNotDisturbSettings::EMPTY;
     if let Some(u) = user_dnd {
         dnd_settings.user_initiated_do_not_disturb = Some(u);
     }

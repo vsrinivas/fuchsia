@@ -232,7 +232,7 @@ impl WatchSender<Arc<TimeSample>> for WatchSampleResponder {
             utc: data.utc.clone(),
             monotonic: data.monotonic.clone(),
             standard_deviation: data.standard_deviation.clone(),
-            ..TimeSample::empty()
+            ..TimeSample::EMPTY
         };
         self.0.send(time_sample).unwrap_or_else(|e| warn!("Error sending response: {:?}", e));
     }
@@ -427,7 +427,7 @@ mod test {
                 monotonic: Some(23),
                 utc: Some(24),
                 standard_deviation: None,
-                ..TimeSample::empty()
+                ..TimeSample::EMPTY
             })))
             .await;
         assert_eq!(
@@ -436,7 +436,7 @@ mod test {
                 monotonic: Some(23),
                 utc: Some(24),
                 standard_deviation: None,
-                ..TimeSample::empty()
+                ..TimeSample::EMPTY
             }
         );
 
@@ -447,7 +447,7 @@ mod test {
                 monotonic: Some(25),
                 utc: Some(26),
                 standard_deviation: None,
-                ..TimeSample::empty()
+                ..TimeSample::EMPTY
             })))
             .await;
         assert_eq!(
@@ -456,7 +456,7 @@ mod test {
                 monotonic: Some(25),
                 utc: Some(26),
                 standard_deviation: None,
-                ..TimeSample::empty()
+                ..TimeSample::EMPTY
             }
         );
 
@@ -478,7 +478,7 @@ mod test {
                 monotonic: Some(23),
                 utc: Some(24),
                 standard_deviation: None,
-                ..TimeSample::empty()
+                ..TimeSample::EMPTY
             })))
             .await;
         assert_eq!(
@@ -487,7 +487,7 @@ mod test {
                 monotonic: Some(23),
                 utc: Some(24),
                 standard_deviation: None,
-                ..TimeSample::empty()
+                ..TimeSample::EMPTY
             }
         );
         assert_eq!(
@@ -496,7 +496,7 @@ mod test {
                 monotonic: Some(23),
                 utc: Some(24),
                 standard_deviation: None,
-                ..TimeSample::empty()
+                ..TimeSample::EMPTY
             }
         );
 
@@ -508,7 +508,7 @@ mod test {
                 monotonic: Some(25),
                 utc: Some(26),
                 standard_deviation: None,
-                ..TimeSample::empty()
+                ..TimeSample::EMPTY
             })))
             .await;
         assert_eq!(
@@ -517,7 +517,7 @@ mod test {
                 monotonic: Some(25),
                 utc: Some(26),
                 standard_deviation: None,
-                ..TimeSample::empty()
+                ..TimeSample::EMPTY
             }
         );
         assert_eq!(
@@ -526,7 +526,7 @@ mod test {
                 monotonic: Some(25),
                 utc: Some(26),
                 standard_deviation: None,
-                ..TimeSample::empty()
+                ..TimeSample::EMPTY
             }
         );
 
@@ -538,7 +538,7 @@ mod test {
                 monotonic: Some(25),
                 utc: Some(26),
                 standard_deviation: None,
-                ..TimeSample::empty()
+                ..TimeSample::EMPTY
             }
         );
     }
@@ -588,10 +588,10 @@ mod test {
         let proxy = harness.new_proxy();
         let proxy_2 = harness.new_proxy();
 
-        proxy.update_device_properties(Properties::empty()).unwrap();
-        proxy_2.update_device_properties(Properties::empty()).unwrap();
+        proxy.update_device_properties(Properties::EMPTY).unwrap();
+        proxy_2.update_device_properties(Properties::EMPTY).unwrap();
         // Sleep here to allow the executor to run the tasks servicing these requests.
         fasync::Timer::new(fasync::Time::after(zx::Duration::from_nanos(1000))).await;
-        harness.assert_device_properties(&vec![Properties::empty(), Properties::empty()]).await;
+        harness.assert_device_properties(&vec![Properties::EMPTY, Properties::EMPTY]).await;
     }
 }

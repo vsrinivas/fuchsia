@@ -292,7 +292,7 @@ pub fn create_network_config<S: ToString>(
         None => Credential::None(Empty),
         Some(p) => Credential::Password(p.to_string().as_bytes().to_vec()),
     };
-    NetworkConfig { id: Some(network_id), credential: Some(credential), ..NetworkConfig::empty() }
+    NetworkConfig { id: Some(network_id), credential: Some(credential), ..NetworkConfig::EMPTY }
 }
 
 pub fn create_open_network_config(ssid: &[u8]) -> NetworkConfig {

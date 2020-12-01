@@ -92,7 +92,7 @@ macro_rules! fidl_into_struct {
                 use $from_path as from_ident;
                 from_ident {
                     $( $field: self.$field.native_into_fidl(), )+
-                    ..from_ident::empty()
+                    ..from_ident::EMPTY
                 }
             }
         }
@@ -287,7 +287,7 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
                             source_name: es.source_name.native_into_fidl(),
                             target: s.target.clone().native_into_fidl(),
                             target_name: s.target_name.clone().native_into_fidl(),
-                            ..fsys::ExposeServiceDecl::empty()
+                            ..fsys::ExposeServiceDecl::EMPTY
                         }))
                     }
                 }
@@ -315,7 +315,7 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
                             source_name: os.source_name.native_into_fidl(),
                             target: s.target.clone().native_into_fidl(),
                             target_name: s.target_name.clone().native_into_fidl(),
-                            ..fsys::OfferServiceDecl::empty()
+                            ..fsys::OfferServiceDecl::EMPTY
                         }))
                     }
                 }
@@ -345,7 +345,7 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
             collections: self.collections.native_into_fidl(),
             facets: self.facets.native_into_fidl(),
             environments: self.environments.native_into_fidl(),
-            ..fsys::ComponentDecl::empty()
+            ..fsys::ComponentDecl::EMPTY
         }
     }
 }
@@ -1022,7 +1022,7 @@ fn to_fidl_dict(dict: HashMap<String, DictionaryValue>) -> fdata::Dictionary {
                 .map(|(key, value)| fdata::DictionaryEntry { key, value: value.native_into_fidl() })
                 .collect(),
         ),
-        ..fdata::Dictionary::empty()
+        ..fdata::Dictionary::EMPTY
     }
 }
 
@@ -1650,7 +1650,7 @@ mod tests {
                 collections: None,
                 facets: None,
                 environments: None,
-                ..fsys::ComponentDecl::empty()
+                ..fsys::ComponentDecl::EMPTY
             },
             result = ComponentDecl {
                 program: None,
@@ -1675,19 +1675,19 @@ mod tests {
                        key: "binary".to_string(),
                        value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
                    },
-               ]), ..fdata::Dictionary::empty()}),
+               ]), ..fdata::Dictionary::EMPTY}),
                uses: Some(vec![
                    fsys::UseDecl::Service(fsys::UseServiceDecl {
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        source_name: Some("netstack".to_string()),
                        target_path: Some("/svc/mynetstack".to_string()),
-                       ..fsys::UseServiceDecl::empty()
+                       ..fsys::UseServiceDecl::EMPTY
                    }),
                    fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        source_name: Some("legacy_netstack".to_string()),
                        target_path: Some("/svc/legacy_mynetstack".to_string()),
-                       ..fsys::UseProtocolDecl::empty()
+                       ..fsys::UseProtocolDecl::EMPTY
                    }),
                    fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
                        source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
@@ -1695,21 +1695,21 @@ mod tests {
                        target_path: Some("/data".to_string()),
                        rights: Some(fio2::Operations::Connect),
                        subdir: Some("foo/bar".to_string()),
-                       ..fsys::UseDirectoryDecl::empty()
+                       ..fsys::UseDirectoryDecl::EMPTY
                    }),
                    fsys::UseDecl::Storage(fsys::UseStorageDecl {
                        source_name: Some("cache".to_string()),
                        target_path: Some("/cache".to_string()),
-                       ..fsys::UseStorageDecl::empty()
+                       ..fsys::UseStorageDecl::EMPTY
                    }),
                    fsys::UseDecl::Storage(fsys::UseStorageDecl {
                        source_name: Some("temp".to_string()),
                        target_path: Some("/temp".to_string()),
-                       ..fsys::UseStorageDecl::empty()
+                       ..fsys::UseStorageDecl::EMPTY
                    }),
                    fsys::UseDecl::Runner(fsys::UseRunnerDecl {
                        source_name: Some("myrunner".to_string()),
-                       ..fsys::UseRunnerDecl::empty()
+                       ..fsys::UseRunnerDecl::EMPTY
                    }),
                    fsys::UseDecl::Event(fsys::UseEventDecl {
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -1722,9 +1722,9 @@ mod tests {
                                   value: Some(Box::new(fdata::DictionaryValue::Str("/diagnostics".to_string()))),
                               },
                            ]),
-                           ..fdata::Dictionary::empty()
+                           ..fdata::Dictionary::EMPTY
                        }),
-                       ..fsys::UseEventDecl::empty()
+                       ..fsys::UseEventDecl::EMPTY
                    }),
                ]),
                exposes: Some(vec![
@@ -1736,7 +1736,7 @@ mod tests {
                        source_name: Some("legacy_netstack".to_string()),
                        target_name: Some("legacy_mynetstack".to_string()),
                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       ..fsys::ExposeProtocolDecl::empty()
+                       ..fsys::ExposeProtocolDecl::EMPTY
                    }),
                    fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
                        source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -1748,7 +1748,7 @@ mod tests {
                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        rights: Some(fio2::Operations::Connect),
                        subdir: Some("foo/bar".to_string()),
-                       ..fsys::ExposeDirectoryDecl::empty()
+                       ..fsys::ExposeDirectoryDecl::EMPTY
                    }),
                    fsys::ExposeDecl::Runner(fsys::ExposeRunnerDecl {
                        source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -1758,7 +1758,7 @@ mod tests {
                        source_name: Some("elf".to_string()),
                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        target_name: Some("elf".to_string()),
-                       ..fsys::ExposeRunnerDecl::empty()
+                       ..fsys::ExposeRunnerDecl::EMPTY
                    }),
                    fsys::ExposeDecl::Resolver(fsys::ExposeResolverDecl{
                        source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -1768,7 +1768,7 @@ mod tests {
                        source_name: Some("pkg".to_string()),
                        target: Some(fsys::Ref::Parent(fsys::ParentRef{})),
                        target_name: Some("pkg".to_string()),
-                       ..fsys::ExposeResolverDecl::empty()
+                       ..fsys::ExposeResolverDecl::EMPTY
                    }),
                    fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
                        source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -1778,7 +1778,7 @@ mod tests {
                        source_name: Some("netstack1".to_string()),
                        target_name: Some("mynetstack".to_string()),
                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       ..fsys::ExposeServiceDecl::empty()
+                       ..fsys::ExposeServiceDecl::EMPTY
                    }),
                    fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
                        source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -1788,7 +1788,7 @@ mod tests {
                        source_name: Some("netstack2".to_string()),
                        target_name: Some("mynetstack".to_string()),
                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                       ..fsys::ExposeServiceDecl::empty()
+                       ..fsys::ExposeServiceDecl::EMPTY
                    }),
                ]),
                offers: Some(vec![
@@ -1803,7 +1803,7 @@ mod tests {
                        )),
                        target_name: Some("legacy_mynetstack".to_string()),
                        dependency_type: Some(fsys::DependencyType::WeakForMigration),
-                       ..fsys::OfferProtocolDecl::empty()
+                       ..fsys::OfferProtocolDecl::EMPTY
                    }),
                    fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -1815,7 +1815,7 @@ mod tests {
                        rights: Some(fio2::Operations::Connect),
                        subdir: None,
                        dependency_type: Some(fsys::DependencyType::Strong),
-                       ..fsys::OfferDirectoryDecl::empty()
+                       ..fsys::OfferDirectoryDecl::EMPTY
                    }),
                    fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                        source_name: Some("cache".to_string()),
@@ -1824,7 +1824,7 @@ mod tests {
                            fsys::CollectionRef { name: "modular".to_string() }
                        )),
                        target_name: Some("cache".to_string()),
-                       ..fsys::OfferStorageDecl::empty()
+                       ..fsys::OfferStorageDecl::EMPTY
                    }),
                    fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -1836,7 +1836,7 @@ mod tests {
                           }
                        )),
                        target_name: Some("elf2".to_string()),
-                       ..fsys::OfferRunnerDecl::empty()
+                       ..fsys::OfferRunnerDecl::EMPTY
                    }),
                    fsys::OfferDecl::Resolver(fsys::OfferResolverDecl{
                        source: Some(fsys::Ref::Parent(fsys::ParentRef{})),
@@ -1848,7 +1848,7 @@ mod tests {
                           }
                        )),
                        target_name: Some("pkg".to_string()),
-                       ..fsys::OfferResolverDecl::empty()
+                       ..fsys::OfferResolverDecl::EMPTY
                    }),
                    fsys::OfferDecl::Event(fsys::OfferEventDecl {
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -1867,9 +1867,9 @@ mod tests {
                                   value: Some(Box::new(fdata::DictionaryValue::Str("/a".to_string()))),
                               },
                            ]),
-                           ..fdata::Dictionary::empty()
+                           ..fdata::Dictionary::EMPTY
                        }),
-                       ..fsys::OfferEventDecl::empty()
+                       ..fsys::OfferEventDecl::EMPTY
                    }),
                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -1881,7 +1881,7 @@ mod tests {
                           }
                        )),
                        target_name: Some("mynetstack".to_string()),
-                       ..fsys::OfferServiceDecl::empty()
+                       ..fsys::OfferServiceDecl::EMPTY
                    }),
                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -1893,43 +1893,43 @@ mod tests {
                           }
                        )),
                        target_name: Some("mynetstack".to_string()),
-                       ..fsys::OfferServiceDecl::empty()
+                       ..fsys::OfferServiceDecl::EMPTY
                    }),
                ]),
                capabilities: Some(vec![
                    fsys::CapabilityDecl::Service(fsys::ServiceDecl {
                        name: Some("netstack".to_string()),
                        source_path: Some("/netstack".to_string()),
-                       ..fsys::ServiceDecl::empty()
+                       ..fsys::ServiceDecl::EMPTY
                    }),
                    fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
                        name: Some("netstack2".to_string()),
                        source_path: Some("/netstack2".to_string()),
-                       ..fsys::ProtocolDecl::empty()
+                       ..fsys::ProtocolDecl::EMPTY
                    }),
                    fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
                        name: Some("data".to_string()),
                        source_path: Some("/data".to_string()),
                        rights: Some(fio2::Operations::Connect),
-                       ..fsys::DirectoryDecl::empty()
+                       ..fsys::DirectoryDecl::EMPTY
                    }),
                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
                        name: Some("cache".to_string()),
                        backing_dir: Some("data".to_string()),
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                        subdir: Some("cache".to_string()),
-                       ..fsys::StorageDecl::empty()
+                       ..fsys::StorageDecl::EMPTY
                    }),
                    fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
                        name: Some("elf".to_string()),
                        source_path: Some("/elf".to_string()),
                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                       ..fsys::RunnerDecl::empty()
+                       ..fsys::RunnerDecl::EMPTY
                    }),
                    fsys::CapabilityDecl::Resolver(fsys::ResolverDecl {
                        name: Some("pkg".to_string()),
                        source_path: Some("/pkg_resolver".to_string()),
-                       ..fsys::ResolverDecl::empty()
+                       ..fsys::ResolverDecl::EMPTY
                    }),
                ]),
                children: Some(vec![
@@ -1939,14 +1939,14 @@ mod tests {
                                   .to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
-                        ..fsys::ChildDecl::empty()
+                        ..fsys::ChildDecl::EMPTY
                     },
                     fsys::ChildDecl {
                         name: Some("gtest".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/gtest#meta/gtest.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
                         environment: None,
-                        ..fsys::ChildDecl::empty()
+                        ..fsys::ChildDecl::EMPTY
                     },
                     fsys::ChildDecl {
                         name: Some("echo".to_string()),
@@ -1954,7 +1954,7 @@ mod tests {
                                   .to_string()),
                         startup: Some(fsys::StartupMode::Eager),
                         environment: Some("test_env".to_string()),
-                        ..fsys::ChildDecl::empty()
+                        ..fsys::ChildDecl::EMPTY
                     },
                ]),
                collections: Some(vec![
@@ -1962,13 +1962,13 @@ mod tests {
                         name: Some("modular".to_string()),
                         durability: Some(fsys::Durability::Persistent),
                         environment: None,
-                        ..fsys::CollectionDecl::empty()
+                        ..fsys::CollectionDecl::EMPTY
                     },
                     fsys::CollectionDecl {
                         name: Some("tests".to_string()),
                         durability: Some(fsys::Durability::Transient),
                         environment: Some("test_env".to_string()),
-                        ..fsys::CollectionDecl::empty()
+                        ..fsys::CollectionDecl::EMPTY
                     },
                ]),
                facets: Some(fsys::Object{entries: vec![
@@ -1989,7 +1989,7 @@ mod tests {
                                    collection: None,
                                })),
                                target_name: Some("gtest-runner".to_string()),
-                               ..fsys::RunnerRegistration::empty()
+                               ..fsys::RunnerRegistration::EMPTY
                            }
                        ]),
                        resolvers: Some(vec![
@@ -1997,14 +1997,14 @@ mod tests {
                                resolver: Some("pkg_resolver".to_string()),
                                source: Some(fsys::Ref::Parent(fsys::ParentRef{})),
                                scheme: Some("fuchsia-pkg".to_string()),
-                               ..fsys::ResolverRegistration::empty()
+                               ..fsys::ResolverRegistration::EMPTY
                            }
                        ]),
                        stop_timeout_ms: Some(4567),
-                       ..fsys::EnvironmentDecl::empty()
+                       ..fsys::EnvironmentDecl::EMPTY
                    }
                ]),
-                ..fsys::ComponentDecl::empty()
+                ..fsys::ComponentDecl::EMPTY
             },
             result = {
                 ComponentDecl {
@@ -2017,7 +2017,7 @@ mod tests {
                             key: "binary".to_string(),
                             value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
                         },
-                    ]), ..fdata::Dictionary::empty()}),
+                    ]), ..fdata::Dictionary::EMPTY}),
                     uses: vec![
                         UseDecl::Service(UseServiceDecl {
                             source: UseSource::Parent,
@@ -2367,7 +2367,7 @@ mod tests {
                         collection: None,
                     })),
                     subdir: None,
-                    ..fsys::StorageDecl::empty()
+                    ..fsys::StorageDecl::EMPTY
                 },
             ],
             input_type = fsys::StorageDecl,

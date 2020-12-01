@@ -85,7 +85,7 @@ impl Default for DriverState {
             connectivity_state: ConnectivityState::Inactive,
             caps: Default::default(),
             role: Role::Detached,
-            identity: Identity::empty(),
+            identity: Identity::EMPTY,
             address_table: Default::default(),
             link_local_addr: std::net::Ipv6Addr::UNSPECIFIED,
             mesh_local_addr: std::net::Ipv6Addr::UNSPECIFIED,

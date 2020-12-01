@@ -234,7 +234,7 @@ impl ArchiveReader {
         let (iterator, server_end) = fidl::endpoints::create_proxy::<BatchIteratorMarker>()
             .context("failed to create iterator proxy")?;
 
-        let mut stream_parameters = StreamParameters::empty();
+        let mut stream_parameters = StreamParameters::EMPTY;
         stream_parameters.stream_mode = Some(mode);
         stream_parameters.data_type = Some(data_type);
         stream_parameters.format = Some(Format::Json);

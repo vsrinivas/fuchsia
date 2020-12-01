@@ -50,7 +50,7 @@ pub fn spp_service_definition() -> bredr::ServiceDefinition {
             major_version: 1,
             minor_version: 2,
         }]),
-        ..bredr::ServiceDefinition::empty()
+        ..bredr::ServiceDefinition::EMPTY
     }
 }
 

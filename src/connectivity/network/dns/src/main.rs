@@ -356,7 +356,7 @@ async fn handle_lookup_ip2<T: ResolverLookup>(
     } else {
         addrs
     };
-    Ok(fnet::LookupResult { addresses: Some(addrs), ..fnet::LookupResult::empty() })
+    Ok(fnet::LookupResult { addresses: Some(addrs), ..fnet::LookupResult::EMPTY })
 }
 
 async fn sort_preferred_addresses(
@@ -1537,7 +1537,7 @@ mod tests {
                             let inner = fidl_fuchsia_net_routes::Destination {
                                 address: Some(*dst),
                                 source_address: *src,
-                                ..fidl_fuchsia_net_routes::Destination::empty()
+                                ..fidl_fuchsia_net_routes::Destination::EMPTY
                             };
                             // Send both Direct and Gateway resolved routes to show we
                             // don't care about that part.
@@ -1589,7 +1589,7 @@ mod tests {
                         fidl_fuchsia_net_routes::Destination {
                             address: Some(destination),
                             source_address: Some(destination),
-                            ..fidl_fuchsia_net_routes::Destination::empty()
+                            ..fidl_fuchsia_net_routes::Destination::EMPTY
                         },
                     ))
                 } else {
@@ -1605,8 +1605,8 @@ mod tests {
                     let lookup_ip = |hostname, options| async move {
                         proxy.lookup_ip2(hostname, options).await.expect("FIDL error")
                     };
-                    let empty_options = fidl_fuchsia_net::LookupIpOptions2::empty();
-                    let empty_result = fidl_fuchsia_net::LookupResult::empty();
+                    let empty_options = fidl_fuchsia_net::LookupIpOptions2::EMPTY;
+                    let empty_result = fidl_fuchsia_net::LookupResult::EMPTY;
 
                     // All arguments unset.
                     assert_eq!(

@@ -45,9 +45,9 @@ mod tests {
                     klogs_enabled: Some(false),
                     filter_options: None,
                     syslog_output: Some(true),
-                    ..LoggerOptions::empty()
+                    ..LoggerOptions::EMPTY
                 }),
-                ..EnvironmentOptions::empty()
+                ..EnvironmentOptions::EMPTY
             },
         )?;
 
@@ -70,7 +70,7 @@ mod tests {
             latency: None,
             packet_loss: None,
             reorder: None,
-            ..NetworkConfig::empty()
+            ..NetworkConfig::EMPTY
         };
         let (status, network) = netmgr.create_network(name, config).await?;
         match status {

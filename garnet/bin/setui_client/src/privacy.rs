@@ -12,7 +12,7 @@ pub async fn command(
     user_data_sharing_consent: Option<bool>,
 ) -> Result<String, Error> {
     if let Some(user_data_sharing_consent_value) = user_data_sharing_consent {
-        let mut settings = PrivacySettings::empty();
+        let mut settings = PrivacySettings::EMPTY;
         settings.user_data_sharing_consent = Some(user_data_sharing_consent_value);
 
         let mutate_result = proxy.set(settings).await?;

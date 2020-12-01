@@ -267,7 +267,7 @@ func onTable(value gidlir.Record, decl *gidlmixer.TableDecl) string {
 		tableFields = append(tableFields, fmt.Sprintf("%s: Some(%s)", fieldName, fieldValueStr))
 	}
 	tableName := declName(decl)
-	tableFields = append(tableFields, fmt.Sprintf("..%s::empty()", tableName))
+	tableFields = append(tableFields, fmt.Sprintf("..%s::EMPTY", tableName))
 	valueStr := fmt.Sprintf("%s { %s }", tableName, strings.Join(tableFields, ", "))
 	return wrapNullable(decl, valueStr)
 }

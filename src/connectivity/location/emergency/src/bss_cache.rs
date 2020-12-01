@@ -250,10 +250,10 @@ mod tests {
                         rssi: None,
                         frequency: None,
                         timestamp_nanos: None,
-                        ..WlanPolicyBss::empty()
+                        ..WlanPolicyBss::EMPTY
                     }]),
                     compatibility: None,
-                    ..ScanResult::empty()
+                    ..ScanResult::EMPTY
                 }]))
                 .await;
             assert_eq!(result, Ok(()));
@@ -274,10 +274,10 @@ mod tests {
                         rssi: Some(-1),
                         frequency: Some(2412),
                         timestamp_nanos: Some(1),
-                        ..WlanPolicyBss::empty()
+                        ..WlanPolicyBss::EMPTY
                     }]),
                     compatibility: Some(Supported),
-                    ..ScanResult::empty()
+                    ..ScanResult::EMPTY
                 }]))
                 .await;
             assert_eq!(result, Ok(()));
@@ -299,18 +299,18 @@ mod tests {
                             rssi: None,
                             frequency: None,
                             timestamp_nanos: None,
-                            ..WlanPolicyBss::empty()
+                            ..WlanPolicyBss::EMPTY
                         },
                         WlanPolicyBss {
                             bssid: Some([1, 1, 1, 1, 1, 1]),
                             rssi: None,
                             frequency: None,
                             timestamp_nanos: None,
-                            ..WlanPolicyBss::empty()
+                            ..WlanPolicyBss::EMPTY
                         },
                     ]),
                     compatibility: None,
-                    ..ScanResult::empty()
+                    ..ScanResult::EMPTY
                 }]))
                 .await;
             assert_eq!(result, Ok(()));
@@ -332,18 +332,18 @@ mod tests {
                             rssi: Some(-1),
                             frequency: Some(2412),
                             timestamp_nanos: Some(1),
-                            ..WlanPolicyBss::empty()
+                            ..WlanPolicyBss::EMPTY
                         },
                         WlanPolicyBss {
                             bssid: Some([0, 1, 2, 3, 4, 5]),
                             rssi: Some(-2),
                             frequency: Some(2432),
                             timestamp_nanos: Some(2),
-                            ..WlanPolicyBss::empty()
+                            ..WlanPolicyBss::EMPTY
                         },
                     ]),
                     compatibility: None,
-                    ..ScanResult::empty()
+                    ..ScanResult::EMPTY
                 }]))
                 .await;
             assert_eq!(result, Ok(()));
@@ -365,10 +365,10 @@ mod tests {
                             rssi: None,
                             frequency: None,
                             timestamp_nanos: None,
-                            ..WlanPolicyBss::empty()
+                            ..WlanPolicyBss::EMPTY
                         }]),
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     },
                     ScanResult {
                         id: None,
@@ -377,10 +377,10 @@ mod tests {
                             rssi: None,
                             frequency: None,
                             timestamp_nanos: None,
-                            ..WlanPolicyBss::empty()
+                            ..WlanPolicyBss::EMPTY
                         }]),
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     },
                 ]))
                 .await;
@@ -403,10 +403,10 @@ mod tests {
                             rssi: Some(-1),
                             frequency: Some(2412),
                             timestamp_nanos: Some(1),
-                            ..WlanPolicyBss::empty()
+                            ..WlanPolicyBss::EMPTY
                         }]),
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     },
                     ScanResult {
                         id: None,
@@ -415,10 +415,10 @@ mod tests {
                             rssi: Some(-2),
                             frequency: Some(2432),
                             timestamp_nanos: Some(2),
-                            ..WlanPolicyBss::empty()
+                            ..WlanPolicyBss::EMPTY
                         }]),
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     },
                 ]))
                 .await;
@@ -441,14 +441,14 @@ mod tests {
                     rssi: None,
                     frequency: None,
                     timestamp_nanos: None,
-                    ..WlanPolicyBss::empty()
+                    ..WlanPolicyBss::EMPTY
                 })
                 .collect();
             let scan_results = vec![ScanResult {
                 id: None,
                 entries: Some(bsses),
                 compatibility: None,
-                ..ScanResult::empty()
+                ..ScanResult::EMPTY
             }];
             let _ = cache.update(FakeScanResultIterator::new_single_step(scan_results)).await;
             assert_eq!(cache.iter().count(), MAX_BSSES);
@@ -462,7 +462,7 @@ mod tests {
                 rssi: None,
                 frequency: None,
                 timestamp_nanos: None,
-                ..WlanPolicyBss::empty()
+                ..WlanPolicyBss::EMPTY
             });
             let good_bsses = (0..MAX_BSSES).map(|i| WlanPolicyBss {
                 bssid: Some(
@@ -472,14 +472,14 @@ mod tests {
                 rssi: None,
                 frequency: None,
                 timestamp_nanos: None,
-                ..WlanPolicyBss::empty()
+                ..WlanPolicyBss::EMPTY
             });
             let bsses: Vec<_> = bad_bss.chain(good_bsses).collect();
             let scan_results = vec![ScanResult {
                 id: None,
                 entries: Some(bsses),
                 compatibility: None,
-                ..ScanResult::empty()
+                ..ScanResult::EMPTY
             }];
             let _ = cache.update(FakeScanResultIterator::new_single_step(scan_results)).await;
             assert_eq!(cache.iter().count(), MAX_BSSES);
@@ -494,14 +494,14 @@ mod tests {
                     rssi: None,
                     frequency: None,
                     timestamp_nanos: None,
-                    ..WlanPolicyBss::empty()
+                    ..WlanPolicyBss::EMPTY
                 },
                 WlanPolicyBss {
                     bssid: Some([0, 0, 0, 0, 0, 0]),
                     rssi: None,
                     frequency: None,
                     timestamp_nanos: None,
-                    ..WlanPolicyBss::empty()
+                    ..WlanPolicyBss::EMPTY
                 },
             ];
             let unique_bsses = (1..MAX_BSSES).map(|i| WlanPolicyBss {
@@ -512,14 +512,14 @@ mod tests {
                 rssi: None,
                 frequency: None,
                 timestamp_nanos: None,
-                ..WlanPolicyBss::empty()
+                ..WlanPolicyBss::EMPTY
             });
             let bsses: Vec<_> = duplicate_bsses.into_iter().chain(unique_bsses).collect();
             let scan_results = vec![ScanResult {
                 id: None,
                 entries: Some(bsses),
                 compatibility: None,
-                ..ScanResult::empty()
+                ..ScanResult::EMPTY
             }];
             let _ = cache.update(FakeScanResultIterator::new_single_step(scan_results)).await;
             assert_eq!(cache.iter().count(), MAX_BSSES);
@@ -569,7 +569,7 @@ mod tests {
                         id: None,
                         entries: None,
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     }]))
                     .await,
                 Err(UpdateError::NoBsses)
@@ -584,7 +584,7 @@ mod tests {
                         id: None,
                         entries: Some(Vec::new()),
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     }]))
                     .await,
                 Err(UpdateError::NoBsses)
@@ -602,10 +602,10 @@ mod tests {
                             rssi: Some(-1),
                             frequency: Some(2414),
                             timestamp_nanos: Some(1),
-                            ..WlanPolicyBss::empty()
+                            ..WlanPolicyBss::EMPTY
                         }]),
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     }]))
                     .await,
                 Err(UpdateError::NoBssIds),
@@ -634,10 +634,10 @@ mod tests {
                         rssi: None,
                         frequency: None,
                         timestamp_nanos: None,
-                        ..WlanPolicyBss::empty()
+                        ..WlanPolicyBss::EMPTY
                     }]),
                     compatibility: None,
-                    ..ScanResult::empty()
+                    ..ScanResult::EMPTY
                 }]))
                 .await;
             let _ = cache
@@ -648,10 +648,10 @@ mod tests {
                         rssi: None,
                         frequency: None,
                         timestamp_nanos: None,
-                        ..WlanPolicyBss::empty()
+                        ..WlanPolicyBss::EMPTY
                     }]),
                     compatibility: None,
-                    ..ScanResult::empty()
+                    ..ScanResult::EMPTY
                 }]))
                 .await;
 
@@ -679,10 +679,10 @@ mod tests {
                         rssi: None,
                         frequency: None,
                         timestamp_nanos: None,
-                        ..WlanPolicyBss::empty()
+                        ..WlanPolicyBss::EMPTY
                     }]),
                     compatibility: None,
-                    ..ScanResult::empty()
+                    ..ScanResult::EMPTY
                 }]))
                 .await;
 
@@ -697,10 +697,10 @@ mod tests {
                         rssi: Some(-1),
                         frequency: Some(2412),
                         timestamp_nanos: Some(1),
-                        ..WlanPolicyBss::empty()
+                        ..WlanPolicyBss::EMPTY
                     }]),
                     compatibility: Some(Supported),
-                    ..ScanResult::empty()
+                    ..ScanResult::EMPTY
                 }]))
                 .await;
 
@@ -727,10 +727,10 @@ mod tests {
                             rssi: None,
                             frequency: None,
                             timestamp_nanos: None,
-                            ..WlanPolicyBss::empty()
+                            ..WlanPolicyBss::EMPTY
                         }]),
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     }],
                     vec![ScanResult {
                         id: None,
@@ -739,10 +739,10 @@ mod tests {
                             rssi: None,
                             frequency: None,
                             timestamp_nanos: None,
-                            ..WlanPolicyBss::empty()
+                            ..WlanPolicyBss::EMPTY
                         }]),
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     }],
                 ]))
                 .await;
@@ -759,7 +759,7 @@ mod tests {
                         id: None,
                         entries: None,
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     }],
                     vec![ScanResult {
                         id: None,
@@ -768,10 +768,10 @@ mod tests {
                             rssi: None,
                             frequency: None,
                             timestamp_nanos: None,
-                            ..WlanPolicyBss::empty()
+                            ..WlanPolicyBss::EMPTY
                         }]),
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     }],
                 ]))
                 .await;
@@ -791,11 +791,11 @@ mod tests {
                             rssi: None,
                             frequency: None,
                             timestamp_nanos: None,
-                            ..WlanPolicyBss::empty()
+                            ..WlanPolicyBss::EMPTY
                         }]),
 
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     }],
                     vec![ScanResult {
                         id: None,
@@ -804,10 +804,10 @@ mod tests {
                             rssi: None,
                             frequency: None,
                             timestamp_nanos: None,
-                            ..WlanPolicyBss::empty()
+                            ..WlanPolicyBss::EMPTY
                         }]),
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     }],
                 ]))
                 .await;
@@ -890,10 +890,10 @@ mod tests {
                             rssi: None,
                             frequency: None,
                             timestamp_nanos: None,
-                            ..WlanPolicyBss::empty()
+                            ..WlanPolicyBss::EMPTY
                         }]),
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     }]))
                 })
                 .collect::<Vec<_>>()
@@ -1016,13 +1016,13 @@ mod test_doubles {
                         id: None,
                         entries: None,
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     },
                     ScanResult {
                         id: None,
                         entries: None,
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     },
                 ]);
                 assert_eq!(2, iter.get_next().await.unwrap().unwrap().len());
@@ -1040,7 +1040,7 @@ mod test_doubles {
                     id: None,
                     entries: None,
                     compatibility: None,
-                    ..ScanResult::empty()
+                    ..ScanResult::EMPTY
                 }]);
                 let _ = iter.get_next().await.unwrap().unwrap();
                 assert_eq!(Vec::<ScanResult>::new(), iter.get_next().await.unwrap().unwrap());
@@ -1053,13 +1053,13 @@ mod test_doubles {
                         id: None,
                         entries: None,
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     }],
                     vec![ScanResult {
                         id: None,
                         entries: None,
                         compatibility: None,
-                        ..ScanResult::empty()
+                        ..ScanResult::EMPTY
                     }],
                 ]);
                 assert_eq!(1, iter.get_next().await.unwrap().unwrap().len());

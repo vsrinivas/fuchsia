@@ -25,7 +25,7 @@ impl FeedbackDataProviderFacade {
             connect_to_service::<DataProviderMarker>().context("connect to DataProvider")?;
         let params = GetSnapshotParameters {
             collection_timeout_per_data: Some(2.minutes().into_nanos()),
-            ..GetSnapshotParameters::empty()
+            ..GetSnapshotParameters::EMPTY
         };
         let snapshot = data_provider.get_snapshot(params).await.context("get snapshot")?;
         match snapshot.archive {

@@ -48,9 +48,9 @@ const INITIAL_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     user_volume: Some(Volume {
         level: Some(INITIAL_VOLUME_LEVEL),
         muted: Some(false),
-        ..Volume::empty()
+        ..Volume::EMPTY
     }),
-    ..AudioStreamSettings::empty()
+    ..AudioStreamSettings::EMPTY
 };
 
 const INITIAL_COMMUNICATION_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
@@ -59,9 +59,9 @@ const INITIAL_COMMUNICATION_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSe
     user_volume: Some(Volume {
         level: Some(INITIAL_VOLUME_LEVEL),
         muted: Some(false),
-        ..Volume::empty()
+        ..Volume::EMPTY
     }),
-    ..AudioStreamSettings::empty()
+    ..AudioStreamSettings::EMPTY
 };
 
 const INITIAL_SYSTEM_AGENT_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
@@ -70,9 +70,9 @@ const INITIAL_SYSTEM_AGENT_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSet
     user_volume: Some(Volume {
         level: Some(INITIAL_VOLUME_LEVEL),
         muted: Some(false),
-        ..Volume::empty()
+        ..Volume::EMPTY
     }),
-    ..AudioStreamSettings::empty()
+    ..AudioStreamSettings::EMPTY
 };
 
 const INITIAL_INTERRUPTION_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
@@ -81,9 +81,9 @@ const INITIAL_INTERRUPTION_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSet
     user_volume: Some(Volume {
         level: Some(INITIAL_VOLUME_LEVEL),
         muted: Some(false),
-        ..Volume::empty()
+        ..Volume::EMPTY
     }),
-    ..AudioStreamSettings::empty()
+    ..AudioStreamSettings::EMPTY
 };
 
 const CHANGED_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
@@ -92,9 +92,9 @@ const CHANGED_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     user_volume: Some(Volume {
         level: Some(CHANGED_VOLUME_LEVEL_2),
         muted: Some(CHANGED_VOLUME_MUTED),
-        ..Volume::empty()
+        ..Volume::EMPTY
     }),
-    ..AudioStreamSettings::empty()
+    ..AudioStreamSettings::EMPTY
 };
 
 const CHANGED_MEDIA_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
@@ -103,9 +103,9 @@ const CHANGED_MEDIA_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettin
     user_volume: Some(Volume {
         level: Some(MAX_VOLUME_LEVEL),
         muted: Some(CHANGED_VOLUME_UNMUTED),
-        ..Volume::empty()
+        ..Volume::EMPTY
     }),
-    ..AudioStreamSettings::empty()
+    ..AudioStreamSettings::EMPTY
 };
 
 const CHANGED_INTERRUPTION_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
@@ -114,9 +114,9 @@ const CHANGED_INTERRUPTION_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSet
     user_volume: Some(Volume {
         level: Some(CHANGED_VOLUME_LEVEL_2),
         muted: Some(CHANGED_VOLUME_MUTED),
-        ..Volume::empty()
+        ..Volume::EMPTY
     }),
-    ..AudioStreamSettings::empty()
+    ..AudioStreamSettings::EMPTY
 };
 
 const CHANGED_INTERRUPTION_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
@@ -125,9 +125,9 @@ const CHANGED_INTERRUPTION_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStrea
     user_volume: Some(Volume {
         level: Some(MAX_VOLUME_LEVEL),
         muted: Some(CHANGED_VOLUME_UNMUTED),
-        ..Volume::empty()
+        ..Volume::EMPTY
     }),
-    ..AudioStreamSettings::empty()
+    ..AudioStreamSettings::EMPTY
 };
 
 const CHANGED_COMMUNICATION_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
@@ -136,9 +136,9 @@ const CHANGED_COMMUNICATION_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStre
     user_volume: Some(Volume {
         level: Some(MAX_VOLUME_LEVEL),
         muted: Some(CHANGED_VOLUME_UNMUTED),
-        ..Volume::empty()
+        ..Volume::EMPTY
     }),
-    ..AudioStreamSettings::empty()
+    ..AudioStreamSettings::EMPTY
 };
 
 const CHANGED_SYSTEM_AGENT_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
@@ -147,9 +147,9 @@ const CHANGED_SYSTEM_AGENT_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStrea
     user_volume: Some(Volume {
         level: Some(MAX_VOLUME_LEVEL),
         muted: Some(CHANGED_VOLUME_UNMUTED),
-        ..Volume::empty()
+        ..Volume::EMPTY
     }),
-    ..AudioStreamSettings::empty()
+    ..AudioStreamSettings::EMPTY
 };
 
 impl From<AudioStreamSettings> for AudioStream {
@@ -261,7 +261,7 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 
 /// Helper function to set volume streams on the proxy.
 async fn set_volume(proxy: &AudioProxy, streams: Vec<AudioStreamSettings>) {
-    let mut audio_settings = AudioSettings::empty();
+    let mut audio_settings = AudioSettings::EMPTY;
     audio_settings.streams = Some(streams);
     proxy.set(audio_settings).await.expect("set completed").expect("set successful");
 }

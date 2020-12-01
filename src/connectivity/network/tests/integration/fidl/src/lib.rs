@@ -164,7 +164,7 @@ async fn test_no_duplicate_interface_names() -> Result {
                 name: Some(IFNAME.to_string()),
                 topopath: None,
                 metric: None,
-                ..fidl_fuchsia_net_stack::InterfaceConfig::empty()
+                ..fidl_fuchsia_net_stack::InterfaceConfig::EMPTY
             },
             &mut fidl_fuchsia_net_stack::DeviceDefinition::Ethernet(
                 fidl_fuchsia_net_stack::EthernetDeviceDefinition { network_device, mac },
@@ -538,7 +538,7 @@ async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) -
     let (watcher, watcher_server) =
         ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
     let () = interface_state
-        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::empty(), watcher_server)
+        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, watcher_server)
         .context("failed to initialize interface watcher")?;
     let mut if_map = HashMap::new();
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
@@ -593,7 +593,7 @@ async fn test_down_close_race<E: netemul::Endpoint>(name: &str) -> Result {
     let (watcher, watcher_server) =
         ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
     let () = interface_state
-        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::empty(), watcher_server)
+        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, watcher_server)
         .context("failed to initialize interface watcher")?;
     let mut if_map = HashMap::new();
 
@@ -673,7 +673,7 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
     let (watcher, watcher_server) =
         ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
     let () = interface_state
-        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::empty(), watcher_server)
+        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, watcher_server)
         .context("failed to initialize interface watcher")?;
     let mut if_map = HashMap::new();
     for _ in 0..10u64 {
@@ -789,7 +789,7 @@ async fn test_interfaces_watcher_race() -> Result {
         let (watcher, server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
         let () = interface_state
-            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::empty(), server)
+            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, server)
             .context("failed to initialize interface watcher")?;
 
         let ep = sandbox
@@ -912,7 +912,7 @@ async fn test_interfaces_watcher() -> Result {
         let (watcher, server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
         let () = interface_state
-            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::empty(), server)
+            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, server)
             .context("failed to initialize interface watcher")?;
 
         let event = watcher.watch().await.context("failed to watch")?;
@@ -988,7 +988,7 @@ async fn test_interfaces_watcher() -> Result {
         addresses: Some(vec![]),
         has_default_ipv4_route: Some(false),
         has_default_ipv6_route: Some(false),
-        ..fidl_fuchsia_net_interfaces::Properties::empty()
+        ..fidl_fuchsia_net_interfaces::Properties::EMPTY
     });
     async fn try_next<S>(stream: &mut S) -> Result<fidl_fuchsia_net_interfaces::Event>
     where
@@ -1173,7 +1173,7 @@ async fn test_interfaces_watcher() -> Result {
         fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
             id: Some(id),
             has_default_ipv4_route: Some(true),
-            ..fidl_fuchsia_net_interfaces::Properties::empty()
+            ..fidl_fuchsia_net_interfaces::Properties::EMPTY
         });
     assert_eq!(try_next(&mut blocking_stream).await?, want);
     assert_eq!(try_next(&mut stream).await?, want);
@@ -1189,7 +1189,7 @@ async fn test_interfaces_watcher() -> Result {
         fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
             id: Some(id),
             has_default_ipv4_route: Some(false),
-            ..fidl_fuchsia_net_interfaces::Properties::empty()
+            ..fidl_fuchsia_net_interfaces::Properties::EMPTY
         });
     assert_eq!(try_next(&mut blocking_stream).await?, want);
     assert_eq!(try_next(&mut stream).await?, want);

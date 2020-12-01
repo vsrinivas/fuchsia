@@ -1337,9 +1337,9 @@ mod test_data {
                 keyboard: None,
                 consumer_control: Some(ConsumerControlInputReport {
                     pressed_buttons: Some([VolumeUp].to_vec()),
-                    ..ConsumerControlInputReport::empty()
+                    ..ConsumerControlInputReport::EMPTY
                 }),
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(66434561666),
@@ -1350,9 +1350,9 @@ mod test_data {
                 keyboard: None,
                 consumer_control: Some(ConsumerControlInputReport {
                     pressed_buttons: Some([].to_vec()),
-                    ..ConsumerControlInputReport::empty()
+                    ..ConsumerControlInputReport::EMPTY
                 }),
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(358153537000),
@@ -1363,9 +1363,9 @@ mod test_data {
                 keyboard: None,
                 consumer_control: Some(ConsumerControlInputReport {
                     pressed_buttons: Some([VolumeDown].to_vec()),
-                    ..ConsumerControlInputReport::empty()
+                    ..ConsumerControlInputReport::EMPTY
                 }),
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(358376260958),
@@ -1376,9 +1376,9 @@ mod test_data {
                 keyboard: None,
                 consumer_control: Some(ConsumerControlInputReport {
                     pressed_buttons: Some([].to_vec()),
-                    ..ConsumerControlInputReport::empty()
+                    ..ConsumerControlInputReport::EMPTY
                 }),
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
         ]
     }
@@ -1397,10 +1397,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![LeftShift]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85446650713601),
@@ -1411,10 +1411,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![LeftShift, H]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85446738712880),
@@ -1425,10 +1425,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![LeftShift]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85446794702907),
@@ -1439,10 +1439,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85446970709193),
@@ -1453,10 +1453,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![E]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85447090710657),
@@ -1467,10 +1467,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85447330708990),
@@ -1481,10 +1481,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![L]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85447394712460),
@@ -1495,10 +1495,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85447508813465),
@@ -1509,10 +1509,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![L]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85447618712982),
@@ -1523,10 +1523,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85447810705156),
@@ -1537,10 +1537,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![O]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85447898703263),
@@ -1551,10 +1551,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85450082706011),
@@ -1565,10 +1565,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![Space]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85450156060503),
@@ -1579,10 +1579,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85450418710803),
@@ -1593,10 +1593,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![LeftShift]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85450594712232),
@@ -1607,10 +1607,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![LeftShift, W]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85450746707982),
@@ -1621,10 +1621,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![W]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85450794706822),
@@ -1635,10 +1635,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85450962706591),
@@ -1649,10 +1649,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![O]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85451050703903),
@@ -1663,10 +1663,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85451282710803),
@@ -1677,10 +1677,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![R]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85451411293149),
@@ -1691,10 +1691,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85451842714565),
@@ -1705,10 +1705,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![L]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85451962704075),
@@ -1719,10 +1719,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85452906710709),
@@ -1733,10 +1733,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![D]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85453034711602),
@@ -1747,10 +1747,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85454778708461),
@@ -1761,10 +1761,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![Enter]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(85454858706151),
@@ -1775,10 +1775,10 @@ mod test_data {
                 keyboard: Some(KeyboardInputReport {
                     pressed_keys: Some(vec![]),
                     pressed_keys3: None,
-                    ..KeyboardInputReport::empty()
+                    ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
         ]
     }
@@ -1800,14 +1800,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2129715875833),
@@ -1822,14 +1822,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2129741874822),
@@ -1844,14 +1844,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2129767876545),
@@ -1866,14 +1866,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2129793872236),
@@ -1888,14 +1888,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2129818875839),
@@ -1910,14 +1910,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2129844873276),
@@ -1932,14 +1932,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2129870884557),
@@ -1954,14 +1954,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2129896870474),
@@ -1976,14 +1976,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2129922876931),
@@ -1998,14 +1998,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2129948875990),
@@ -2020,14 +2020,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2129973877732),
@@ -2042,14 +2042,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2129998870634),
@@ -2064,14 +2064,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2130023872212),
@@ -2086,14 +2086,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2130048871365),
@@ -2108,14 +2108,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2130071873308),
@@ -2130,14 +2130,14 @@ mod test_data {
                         pressure: None,
                         contact_width: None,
                         contact_height: None,
-                        ..ContactInputReport::empty()
+                        ..ContactInputReport::EMPTY
                     }]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(2130110871653),
@@ -2147,11 +2147,11 @@ mod test_data {
                 touch: Some(TouchInputReport {
                     contacts: Some(vec![]),
                     pressed_buttons: Some(vec![]),
-                    ..TouchInputReport::empty()
+                    ..TouchInputReport::EMPTY
                 }),
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
         ]
     }
@@ -2169,14 +2169,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(1),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101122479286),
@@ -2188,14 +2188,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(3),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101130223338),
@@ -2207,14 +2207,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(4),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101139198674),
@@ -2226,14 +2226,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(5),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101154621806),
@@ -2245,14 +2245,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(6),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101162221969),
@@ -2264,14 +2264,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(7),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101170222632),
@@ -2283,14 +2283,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(8),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101178218319),
@@ -2302,14 +2302,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(9),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101195538881),
@@ -2321,14 +2321,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(10),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101202218423),
@@ -2340,14 +2340,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(11),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101210236557),
@@ -2359,14 +2359,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(12),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101218244736),
@@ -2378,14 +2378,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(13),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101226633284),
@@ -2397,14 +2397,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(14),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101235789939),
@@ -2416,14 +2416,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(15),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101242227234),
@@ -2435,14 +2435,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(16),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101250552651),
@@ -2454,14 +2454,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(17),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101258523666),
@@ -2473,14 +2473,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(18),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101266879375),
@@ -2492,14 +2492,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(19),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101279470078),
@@ -2511,14 +2511,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(20),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101282237222),
@@ -2530,14 +2530,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(21),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101290229686),
@@ -2549,14 +2549,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(22),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101298227434),
@@ -2568,14 +2568,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(23),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101306236833),
@@ -2587,14 +2587,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(24),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101314225440),
@@ -2606,14 +2606,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(25),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101322221224),
@@ -2625,14 +2625,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(26),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101330220567),
@@ -2644,14 +2644,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(27),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101338229995),
@@ -2663,14 +2663,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(28),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101346226157),
@@ -2682,14 +2682,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(29),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101354223947),
@@ -2701,14 +2701,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(30),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101362223006),
@@ -2720,14 +2720,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(31),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101370218719),
@@ -2739,14 +2739,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(32),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101378220583),
@@ -2758,14 +2758,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(33),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101386213038),
@@ -2777,14 +2777,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(34),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101394217453),
@@ -2796,14 +2796,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(35),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101402219904),
@@ -2815,14 +2815,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(36),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101410221107),
@@ -2834,14 +2834,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(37),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101418222560),
@@ -2853,14 +2853,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(38),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101434218357),
@@ -2872,14 +2872,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(39),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101442218953),
@@ -2891,14 +2891,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(40),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101450217289),
@@ -2910,14 +2910,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(41),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101458214227),
@@ -2929,14 +2929,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(42),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101466225708),
@@ -2948,14 +2948,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(43),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101474215177),
@@ -2967,14 +2967,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(44),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101482221526),
@@ -2986,14 +2986,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(45),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101490219532),
@@ -3005,14 +3005,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(46),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101498222281),
@@ -3024,14 +3024,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(47),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101506214971),
@@ -3043,14 +3043,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(48),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101514219490),
@@ -3062,14 +3062,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(49),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101522217217),
@@ -3081,14 +3081,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(50),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101530217381),
@@ -3100,14 +3100,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(51),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101538212289),
@@ -3119,14 +3119,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(52),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(101554216328),
@@ -3138,14 +3138,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(53),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103242211673),
@@ -3157,14 +3157,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(54),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103330219916),
@@ -3176,14 +3176,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(55),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103338210706),
@@ -3195,14 +3195,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(56),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103346224236),
@@ -3214,14 +3214,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(57),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103354212884),
@@ -3233,14 +3233,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(58),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103362215662),
@@ -3252,14 +3252,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(59),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103370214381),
@@ -3271,14 +3271,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(60),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103378214091),
@@ -3290,14 +3290,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(61),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103386209918),
@@ -3309,14 +3309,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(62),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103394217896),
@@ -3328,14 +3328,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(63),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103402213295),
@@ -3347,14 +3347,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(64),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103410215085),
@@ -3366,14 +3366,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(65),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103418219723),
@@ -3385,14 +3385,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(66),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103426211988),
@@ -3404,14 +3404,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(67),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103434211330),
@@ -3423,14 +3423,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(68),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103442219232),
@@ -3442,14 +3442,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(69),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103450211768),
@@ -3461,14 +3461,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(70),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103458211814),
@@ -3480,14 +3480,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(71),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103466216581),
@@ -3499,14 +3499,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(72),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103474215898),
@@ -3518,14 +3518,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(73),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103482215147),
@@ -3537,14 +3537,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(74),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103490216112),
@@ -3556,14 +3556,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(75),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103498215973),
@@ -3575,14 +3575,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(76),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103506213277),
@@ -3594,14 +3594,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(77),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103514218088),
@@ -3613,14 +3613,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(78),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103522217065),
@@ -3632,14 +3632,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(79),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103530210262),
@@ -3651,14 +3651,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(80),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103578218194),
@@ -3670,14 +3670,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(81),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103586213104),
@@ -3689,14 +3689,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(82),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103594216835),
@@ -3708,14 +3708,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(83),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103602487409),
@@ -3727,14 +3727,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(84),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103610212817),
@@ -3746,14 +3746,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(85),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103618214151),
@@ -3765,14 +3765,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(86),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103626214410),
@@ -3784,14 +3784,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(87),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103634212067),
@@ -3803,14 +3803,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(88),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103642212545),
@@ -3822,14 +3822,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(89),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103650212962),
@@ -3841,14 +3841,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(90),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103658212822),
@@ -3860,14 +3860,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(91),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103666210198),
@@ -3879,14 +3879,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(92),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103674217073),
@@ -3898,14 +3898,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(93),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103682212701),
@@ -3917,14 +3917,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(94),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103690210927),
@@ -3936,14 +3936,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(95),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103698216512),
@@ -3955,14 +3955,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(96),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103706213176),
@@ -3974,14 +3974,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(97),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103714212778),
@@ -3993,14 +3993,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(98),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103722213889),
@@ -4012,14 +4012,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(99),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103730210581),
@@ -4031,14 +4031,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(100),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103738214789),
@@ -4050,14 +4050,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(101),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103746216817),
@@ -4069,14 +4069,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(102),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103754216490),
@@ -4088,14 +4088,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(103),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103762214303),
@@ -4107,14 +4107,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(104),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103770212491),
@@ -4126,14 +4126,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(105),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103778217308),
@@ -4145,14 +4145,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(106),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103786212710),
@@ -4164,14 +4164,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(107),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103794217315),
@@ -4183,14 +4183,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(108),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103802211383),
@@ -4202,14 +4202,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(109),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103810216190),
@@ -4221,14 +4221,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(110),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103834222367),
@@ -4240,14 +4240,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(111),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103954219855),
@@ -4259,14 +4259,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(112),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103962217418),
@@ -4278,14 +4278,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(113),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103970214839),
@@ -4297,14 +4297,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(114),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103978214040),
@@ -4316,14 +4316,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(115),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103986213448),
@@ -4335,14 +4335,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(116),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(103994211708),
@@ -4354,14 +4354,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(117),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104002212585),
@@ -4373,14 +4373,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(118),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104010210902),
@@ -4392,14 +4392,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(119),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104018211093),
@@ -4411,14 +4411,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(120),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104026216997),
@@ -4430,14 +4430,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(121),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104034211539),
@@ -4449,14 +4449,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(122),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104042222246),
@@ -4468,14 +4468,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(123),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104050216094),
@@ -4487,14 +4487,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(124),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104058215037),
@@ -4506,14 +4506,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(125),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104066221081),
@@ -4525,14 +4525,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(126),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104074216757),
@@ -4544,14 +4544,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(127),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104082216368),
@@ -4563,14 +4563,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(128),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104090217281),
@@ -4582,14 +4582,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(129),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104098212452),
@@ -4601,14 +4601,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(130),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104106216109),
@@ -4620,14 +4620,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(131),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104114266027),
@@ -4639,14 +4639,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(132),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104122212879),
@@ -4658,14 +4658,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(133),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104130216506),
@@ -4677,14 +4677,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(134),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104138217516),
@@ -4696,14 +4696,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(135),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104146210328),
@@ -4715,14 +4715,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(136),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104154216601),
@@ -4734,14 +4734,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(137),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104162216056),
@@ -4753,14 +4753,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(138),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104170215445),
@@ -4772,14 +4772,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(139),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104178211471),
@@ -4791,14 +4791,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(140),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104186213147),
@@ -4810,14 +4810,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(141),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104194212256),
@@ -4829,14 +4829,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(142),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104202213946),
@@ -4848,14 +4848,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(143),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104210212892),
@@ -4867,14 +4867,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(144),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104218214234),
@@ -4886,14 +4886,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(145),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104226215241),
@@ -4905,14 +4905,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(146),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104234215524),
@@ -4924,14 +4924,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(147),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104282215440),
@@ -4943,14 +4943,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(148),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104290210105),
@@ -4962,14 +4962,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(149),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104298226745),
@@ -4981,14 +4981,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(150),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104306215865),
@@ -5000,14 +5000,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(151),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104314217045),
@@ -5019,14 +5019,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(152),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104322334192),
@@ -5038,14 +5038,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(153),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104330216276),
@@ -5057,14 +5057,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(154),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104338214799),
@@ -5076,14 +5076,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(155),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104346215946),
@@ -5095,14 +5095,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(156),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104354214863),
@@ -5114,14 +5114,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(157),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104362215296),
@@ -5133,14 +5133,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(158),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104370214666),
@@ -5152,14 +5152,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(159),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104378215593),
@@ -5171,14 +5171,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(160),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104386215460),
@@ -5190,14 +5190,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(161),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104394217072),
@@ -5209,14 +5209,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(162),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104402213289),
@@ -5228,14 +5228,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(163),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104410215719),
@@ -5247,14 +5247,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(164),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104418216898),
@@ -5266,14 +5266,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(165),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104426215292),
@@ -5285,14 +5285,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(166),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104434215345),
@@ -5304,14 +5304,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(167),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104442217176),
@@ -5323,14 +5323,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(168),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104450214083),
@@ -5342,14 +5342,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(169),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104458213546),
@@ -5361,14 +5361,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(170),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104466216290),
@@ -5380,14 +5380,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(171),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104474215684),
@@ -5399,14 +5399,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(172),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104482216348),
@@ -5418,14 +5418,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(173),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104490211575),
@@ -5437,14 +5437,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(174),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104498215305),
@@ -5456,14 +5456,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(175),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104506212563),
@@ -5475,14 +5475,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(176),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104514213178),
@@ -5494,14 +5494,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(177),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104522213190),
@@ -5513,14 +5513,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(178),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104530216023),
@@ -5532,14 +5532,14 @@ mod test_data {
                     pressed_buttons: Some(vec![1]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(179),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(104866221719),
@@ -5551,14 +5551,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(180),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(105266217002),
@@ -5570,14 +5570,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(181),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(105274246358),
@@ -5589,14 +5589,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(182),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(105282216030),
@@ -5608,14 +5608,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(183),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
             InputReport {
                 event_time: Some(105290214427),
@@ -5627,14 +5627,14 @@ mod test_data {
                     pressed_buttons: Some(vec![]),
                     position_x: None,
                     position_y: None,
-                    ..MouseInputReport::empty()
+                    ..MouseInputReport::EMPTY
                 }),
                 trace_id: Some(184),
                 sensor: None,
                 touch: None,
                 keyboard: None,
                 consumer_control: None,
-                ..InputReport::empty()
+                ..InputReport::EMPTY
             },
         ]
     }

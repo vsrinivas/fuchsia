@@ -50,7 +50,7 @@ impl BusConnection {
             code: Some(code),
             message: None,
             arguments: None,
-            ..Event::empty()
+            ..Event::EMPTY
         })?;
         Ok(())
     }

@@ -142,7 +142,7 @@ mod tests {
         let view_ref_dup = fuchsia_scenic::duplicate_view_ref(&view_ref)?;
         let focus_chain = fidl_ui_focus::FocusChain {
             focus_chain: Some(vec![view_ref]),
-            ..fidl_ui_focus::FocusChain::empty()
+            ..fidl_ui_focus::FocusChain::EMPTY
         };
 
         let (_, view_ref, got_focus_chain) = join!(

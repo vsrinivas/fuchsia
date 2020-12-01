@@ -127,7 +127,7 @@ mod test {
                 .revoke_refresh_token(OauthRefreshToken {
                     content: None,
                     account_id: None,
-                    ..OauthRefreshToken::empty()
+                    ..OauthRefreshToken::EMPTY
                 })
                 .await
                 .unwrap()
@@ -140,7 +140,7 @@ mod test {
                 .revoke_refresh_token(OauthRefreshToken {
                     content: None,
                     account_id: None,
-                    ..OauthRefreshToken::empty()
+                    ..OauthRefreshToken::EMPTY
                 })
                 .await
                 .is_err());
@@ -174,7 +174,7 @@ mod test {
                     }) => responder.send(&mut Ok(OpenIdToken {
                         content: None,
                         expiry_time: None,
-                        ..OpenIdToken::empty()
+                        ..OpenIdToken::EMPTY
                     }))?,
                     _ => panic!("Got unexpected request"),
                 };
@@ -198,7 +198,7 @@ mod test {
                 .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
                     refresh_token: None,
                     audiences: None,
-                    ..OpenIdTokenFromOauthRefreshTokenRequest::empty()
+                    ..OpenIdTokenFromOauthRefreshTokenRequest::EMPTY
                 })
                 .await
                 .unwrap()
@@ -211,7 +211,7 @@ mod test {
                 .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
                     refresh_token: None,
                     audiences: None,
-                    ..OpenIdTokenFromOauthRefreshTokenRequest::empty()
+                    ..OpenIdTokenFromOauthRefreshTokenRequest::EMPTY
                 })
                 .await
                 .is_err());

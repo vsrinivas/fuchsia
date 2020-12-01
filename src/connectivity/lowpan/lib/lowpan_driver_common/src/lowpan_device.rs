@@ -701,7 +701,7 @@ mod tests {
         let client_future = async move {
             let (client_ep, server_ep) =
                 create_endpoints::<EnergyScanResultStreamMarker>().unwrap();
-            let params = EnergyScanParameters::empty();
+            let params = EnergyScanParameters::EMPTY;
 
             assert_matches!(proxy.start_energy_scan(params, server_ep), Ok(()));
 
@@ -739,7 +739,7 @@ mod tests {
 
         let client_future = async move {
             let (client_ep, server_ep) = create_endpoints::<BeaconInfoStreamMarker>().unwrap();
-            let params = NetworkScanParameters::empty();
+            let params = NetworkScanParameters::EMPTY;
 
             assert_matches!(proxy.start_network_scan(params, server_ep), Ok(()));
 

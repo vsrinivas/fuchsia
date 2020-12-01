@@ -20,11 +20,11 @@ async fn test_font_provider_launch() -> Result<()> {
             languages: None,
             code_points: Some(vec!['0' as u32]),
             fallback_family: None,
-            ..fonts::TypefaceQuery::empty()
+            ..fonts::TypefaceQuery::EMPTY
         }),
         flags: None,
         cache_miss_policy: None,
-        ..fonts::TypefaceRequest::empty()
+        ..fonts::TypefaceRequest::EMPTY
     };
 
     // Note that an _empty_ response is not an error, and will be returned if the product

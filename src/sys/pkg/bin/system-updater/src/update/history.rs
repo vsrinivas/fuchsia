@@ -114,7 +114,7 @@ impl From<&UpdateAttempt> for fidl_fuchsia_update_installer::UpdateResult {
             url: Some(fidl_fuchsia_pkg::PackageUrl { url: attempt.update_url().to_string() }),
             options: Some(attempt.options().into()),
             state: Some(attempt.state().clone().into()),
-            ..Self::empty()
+            ..Self::EMPTY
         }
     }
 }

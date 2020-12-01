@@ -360,7 +360,7 @@ mod tests {
         let invalid_options = fidl_fuchsia_update::CheckOptions {
             initiator: None,
             allow_attaching_to_existing_update_check: None,
-            ..fidl_fuchsia_update::CheckOptions::empty()
+            ..fidl_fuchsia_update::CheckOptions::EMPTY
         };
 
         let res = proxy.check_now(invalid_options, Some(client_end)).await.unwrap();

@@ -305,7 +305,7 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
     pin_mut!(get_all_player_application_settings_fut);
     expected_commands += 1;
 
-    let mut settings = fidl_avrcp::PlayerApplicationSettings::empty();
+    let mut settings = fidl_avrcp::PlayerApplicationSettings::EMPTY;
     settings.scan_mode = Some(fidl_avrcp::ScanMode::GroupScan);
     settings.shuffle_mode = Some(fidl_avrcp::ShuffleMode::Off);
     let set_player_application_settings_fut =

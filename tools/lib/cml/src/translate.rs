@@ -22,7 +22,7 @@ pub fn translate_capabilities(
             out_capabilities.push(fsys::CapabilityDecl::Service(fsys::ServiceDecl {
                 name: Some(n.clone().into()),
                 source_path: Some(source_path.into()),
-                ..fsys::ServiceDecl::empty()
+                ..fsys::ServiceDecl::EMPTY
             }));
         } else if let Some(protocol) = &capability.protocol {
             for n in protocol.to_vec() {
@@ -33,7 +33,7 @@ pub fn translate_capabilities(
                 out_capabilities.push(fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
                     name: Some(n.clone().into()),
                     source_path: Some(source_path.into()),
-                    ..fsys::ProtocolDecl::empty()
+                    ..fsys::ProtocolDecl::EMPTY
                 }));
             }
         } else if let Some(n) = &capability.directory {
@@ -44,7 +44,7 @@ pub fn translate_capabilities(
                 name: Some(n.clone().into()),
                 source_path: Some(source_path.into()),
                 rights: Some(rights),
-                ..fsys::DirectoryDecl::empty()
+                ..fsys::DirectoryDecl::EMPTY
             }));
         } else if let Some(n) = &capability.storage {
             let backing_dir = capability
@@ -61,7 +61,7 @@ pub fn translate_capabilities(
                     None,
                 )?),
                 subdir: capability.subdir.clone().map(Into::into),
-                ..fsys::StorageDecl::empty()
+                ..fsys::StorageDecl::EMPTY
             }));
         } else if let Some(n) = &capability.runner {
             out_capabilities.push(fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
@@ -71,13 +71,13 @@ pub fn translate_capabilities(
                     capability.from.as_ref().unwrap().into(),
                     None,
                 )?),
-                ..fsys::RunnerDecl::empty()
+                ..fsys::RunnerDecl::EMPTY
             }));
         } else if let Some(n) = &capability.resolver {
             out_capabilities.push(fsys::CapabilityDecl::Resolver(fsys::ResolverDecl {
                 name: Some(n.clone().into()),
                 source_path: Some(capability.path.clone().expect("missing path").into()),
-                ..fsys::ResolverDecl::empty()
+                ..fsys::ResolverDecl::EMPTY
             }));
         } else {
             return Err(Error::internal(format!("no capability in use declaration")));

@@ -121,7 +121,7 @@ impl CrashReportHandlerBuilder {
             )?;
             let product_config = fidl_feedback::CrashReportingProduct {
                 name: Some(CRASH_PRODUCT_NAME.to_string()),
-                ..fidl_feedback::CrashReportingProduct::empty()
+                ..fidl_feedback::CrashReportingProduct::EMPTY
             };
             config_proxy.upsert(&CRASH_PROGRAM_NAME.to_string(), product_config)?;
         }
@@ -199,10 +199,10 @@ impl CrashReportHandler {
             specific_report: Some(fidl_feedback::SpecificCrashReport::Generic(
                 fidl_feedback::GenericCrashReport {
                     crash_signature: Some(payload.signature),
-                    ..fidl_feedback::GenericCrashReport::empty()
+                    ..fidl_feedback::GenericCrashReport::EMPTY
                 },
             )),
-            ..fidl_feedback::CrashReport::empty()
+            ..fidl_feedback::CrashReport::EMPTY
         };
 
         let result = proxy.file(report).await.map_err(|e| format_err!("IPC error: {}", e))?;
@@ -246,10 +246,10 @@ mod tests {
                     specific_report: Some(fidl_feedback::SpecificCrashReport::Generic(
                         fidl_feedback::GenericCrashReport {
                             crash_signature: Some(crash_report_signature.to_string()),
-                            ..fidl_feedback::GenericCrashReport::empty()
+                            ..fidl_feedback::GenericCrashReport::EMPTY
                         },
                     )),
-                    ..fidl_feedback::CrashReport::empty()
+                    ..fidl_feedback::CrashReport::EMPTY
                 }
             );
         } else {
@@ -315,10 +315,10 @@ mod tests {
                         specific_report: Some(fidl_feedback::SpecificCrashReport::Generic(
                             fidl_feedback::GenericCrashReport {
                                 crash_signature: Some("TestCrash1".to_string()),
-                                ..fidl_feedback::GenericCrashReport::empty()
+                                ..fidl_feedback::GenericCrashReport::EMPTY
                             },
                         )),
-                        ..fidl_feedback::CrashReport::empty()
+                        ..fidl_feedback::CrashReport::EMPTY
                     }
                 );
             } else {
@@ -338,10 +338,10 @@ mod tests {
                         specific_report: Some(fidl_feedback::SpecificCrashReport::Generic(
                             fidl_feedback::GenericCrashReport {
                                 crash_signature: Some("TestCrash2".to_string()),
-                                ..fidl_feedback::GenericCrashReport::empty()
+                                ..fidl_feedback::GenericCrashReport::EMPTY
                             },
                         )),
-                        ..fidl_feedback::CrashReport::empty()
+                        ..fidl_feedback::CrashReport::EMPTY
                     }
                 );
             } else {

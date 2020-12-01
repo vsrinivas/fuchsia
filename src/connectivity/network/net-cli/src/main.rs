@@ -642,7 +642,7 @@ async fn do_neigh(cmd: opts::NeighEnum) -> Result<(), Error> {
                     max_unicast_probes,
                     max_anycast_delay_time,
                     max_reachability_confirmations,
-                    ..neighbor::UnreachabilityConfig::empty()
+                    ..neighbor::UnreachabilityConfig::EMPTY
                 };
                 let controller = connect_to_service::<neighbor::ControllerMarker>()
                     .context("failed to connect to neighbor controller")?;
@@ -704,7 +704,7 @@ async fn print_neigh_entries(watch_for_changes: bool) -> Result<(), Error> {
     let it = it_client.into_proxy().context("error creating proxy to entry iterator")?;
 
     let () = view
-        .open_entry_iterator(it_server, neighbor::EntryIteratorOptions::empty())
+        .open_entry_iterator(it_server, neighbor::EntryIteratorOptions::EMPTY)
         .context("error opening a connection to the entry iterator")?;
 
     neigh_entry_stream(it, watch_for_changes)
@@ -1220,11 +1220,11 @@ mod tests {
                 neighbor: Some(net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 0, 1] })),
                 state: Some(neighbor::EntryState::Reachable(neighbor::ReachableState {
                     expires_at: Some(expires_at),
-                    ..neighbor::ReachableState::empty()
+                    ..neighbor::ReachableState::EMPTY
                 })),
                 mac: Some(net::MacAddress { octets: [1, 2, 3, 4, 5, 6] }),
                 updated_at: Some(updated_at),
-                ..neighbor::Entry::empty()
+                ..neighbor::Entry::EMPTY
             }
         }
 
@@ -1281,11 +1281,11 @@ mod tests {
                 neighbor: Some(net::IpAddress::Ipv4(net::Ipv4Address { addr: ip })),
                 state: Some(neighbor::EntryState::Reachable(neighbor::ReachableState {
                     expires_at: Some(expires_at),
-                    ..neighbor::ReachableState::empty()
+                    ..neighbor::ReachableState::EMPTY
                 })),
                 mac: Some(net::MacAddress { octets: mac }),
                 updated_at: Some(updated_at),
-                ..neighbor::Entry::empty()
+                ..neighbor::Entry::EMPTY
             }
         }
 
@@ -1451,7 +1451,7 @@ mod tests {
                 .expect("request should be of type GetUnreachabilityConfig");
             assert_eq!(got_interface, WANT_INTERFACE);
             let () = responder
-                .send(&mut Ok(neighbor::UnreachabilityConfig::empty()))
+                .send(&mut Ok(neighbor::UnreachabilityConfig::EMPTY))
                 .expect("responder.send should succeed");
             Ok(())
         };
@@ -1463,16 +1463,13 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_neigh_config_update() {
         const WANT_INTERFACE: u64 = 1;
-        const WANT_CONFIG: neighbor::UnreachabilityConfig = neighbor::UnreachabilityConfig::empty();
+        const WANT_CONFIG: neighbor::UnreachabilityConfig = neighbor::UnreachabilityConfig::EMPTY;
 
         let (controller, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<neighbor::ControllerMarker>()
                 .expect("creating a request stream and proxy for testing should succeed");
-        let neigh = update_neigh_config(
-            WANT_INTERFACE,
-            neighbor::UnreachabilityConfig::empty(),
-            controller,
-        );
+        let neigh =
+            update_neigh_config(WANT_INTERFACE, neighbor::UnreachabilityConfig::EMPTY, controller);
         let neigh_succeeds = async {
             let (got_interface, got_config, responder) = requests
                 .try_next()

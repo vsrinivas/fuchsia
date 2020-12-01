@@ -134,7 +134,7 @@ impl TestEnv {
         let options = CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: Some(false),
-            ..CheckOptions::empty()
+            ..CheckOptions::EMPTY
         };
         let (client_end, stream) =
             fidl::endpoints::create_request_stream::<MonitorMarker>().unwrap();
@@ -163,12 +163,12 @@ fn update_info(download_size: Option<u64>) -> Option<UpdateInfo> {
             "beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead".to_string(),
         ),
         download_size,
-        ..UpdateInfo::empty()
+        ..UpdateInfo::EMPTY
     })
 }
 
 fn progress(fraction_completed: Option<f32>) -> Option<InstallationProgress> {
-    Some(InstallationProgress { fraction_completed, ..InstallationProgress::empty() })
+    Some(InstallationProgress { fraction_completed, ..InstallationProgress::EMPTY })
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -195,7 +195,7 @@ async fn test_update_manager_check_now_error_checking_for_update() {
             fidl_fuchsia_update::CheckOptions {
                 initiator: Some(fidl_fuchsia_update::Initiator::User),
                 allow_attaching_to_existing_update_check: Some(true),
-                ..fidl_fuchsia_update::CheckOptions::empty()
+                ..fidl_fuchsia_update::CheckOptions::EMPTY
             },
             Some(client_end),
         )
@@ -211,8 +211,8 @@ async fn test_update_manager_check_now_error_checking_for_update() {
             .collect::<Vec<State>>()
             .await,
         vec![
-            State::CheckingForUpdates(fidl_fuchsia_update::CheckingForUpdatesData::empty()),
-            State::ErrorCheckingForUpdate(fidl_fuchsia_update::ErrorCheckingForUpdateData::empty()),
+            State::CheckingForUpdates(fidl_fuchsia_update::CheckingForUpdatesData::EMPTY),
+            State::ErrorCheckingForUpdate(fidl_fuchsia_update::ErrorCheckingForUpdateData::EMPTY),
         ]
     );
 }
@@ -246,11 +246,11 @@ async fn test_update_manager_progress() {
     expect_states(
         &mut stream,
         &[
-            State::CheckingForUpdates(CheckingForUpdatesData::empty()),
+            State::CheckingForUpdates(CheckingForUpdatesData::EMPTY),
             State::InstallingUpdate(InstallingData {
                 update: update_info(None),
                 installation_progress: None,
-                ..InstallingData::empty()
+                ..InstallingData::EMPTY
             }),
         ],
     )
@@ -261,7 +261,7 @@ async fn test_update_manager_progress() {
         &[State::InstallingUpdate(InstallingData {
             update: update_info(None),
             installation_progress: progress(None),
-            ..InstallingData::empty()
+            ..InstallingData::EMPTY
         })],
     )
     .await;
@@ -281,7 +281,7 @@ async fn test_update_manager_progress() {
         &[State::InstallingUpdate(InstallingData {
             update: update_info(Some(1000)),
             installation_progress: progress(Some(0.0)),
-            ..InstallingData::empty()
+            ..InstallingData::EMPTY
         })],
     )
     .await;
@@ -303,7 +303,7 @@ async fn test_update_manager_progress() {
         &[State::InstallingUpdate(InstallingData {
             update: update_info(Some(1000)),
             installation_progress: progress(Some(0.5)),
-            ..InstallingData::empty()
+            ..InstallingData::EMPTY
         })],
     )
     .await;
@@ -318,7 +318,7 @@ async fn test_update_manager_progress() {
         &[State::WaitingForReboot(InstallingData {
             update: update_info(Some(1000)),
             installation_progress: progress(Some(1.0)),
-            ..InstallingData::empty()
+            ..InstallingData::EMPTY
         })],
     )
     .await;

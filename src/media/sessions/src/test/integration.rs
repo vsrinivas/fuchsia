@@ -159,7 +159,7 @@ impl TestService {
             watcher
                 .on_state_changed(
                     &mut Usage::RenderUsage(usage),
-                    &mut UsageState::Muted(UsageStateMuted::empty()),
+                    &mut UsageState::Muted(UsageStateMuted::EMPTY),
                 )
                 .await
                 .expect("Sending interruption start to service under test");
@@ -173,7 +173,7 @@ impl TestService {
             watcher
                 .on_state_changed(
                     &mut Usage::RenderUsage(usage),
-                    &mut UsageState::Unadjusted(UsageStateUnadjusted::empty()),
+                    &mut UsageState::Unadjusted(UsageStateUnadjusted::EMPTY),
                 )
                 .await
                 .expect("Sending interruption stop to service under test");
@@ -341,7 +341,7 @@ async fn can_receive_deltas() -> Result<()> {
         .emit_delta(PlayerInfoDelta {
             player_capabilities: Some(PlayerCapabilities {
                 flags: Some(PlayerCapabilityFlags::Play),
-                ..PlayerCapabilities::empty()
+                ..PlayerCapabilities::EMPTY
             }),
             ..Decodable::new_empty()
         })
@@ -352,7 +352,7 @@ async fn can_receive_deltas() -> Result<()> {
         delta.player_capabilities,
         Some(PlayerCapabilities {
             flags: Some(PlayerCapabilityFlags::Play),
-            ..PlayerCapabilities::empty()
+            ..PlayerCapabilities::EMPTY
         })
     );
 
@@ -360,7 +360,7 @@ async fn can_receive_deltas() -> Result<()> {
         .emit_delta(PlayerInfoDelta {
             player_capabilities: Some(PlayerCapabilities {
                 flags: Some(PlayerCapabilityFlags::Pause),
-                ..PlayerCapabilities::empty()
+                ..PlayerCapabilities::EMPTY
             }),
             ..Decodable::new_empty()
         })
@@ -371,7 +371,7 @@ async fn can_receive_deltas() -> Result<()> {
         delta.player_capabilities,
         Some(PlayerCapabilities {
             flags: Some(PlayerCapabilityFlags::Pause),
-            ..PlayerCapabilities::empty()
+            ..PlayerCapabilities::EMPTY
         })
     );
 
@@ -596,7 +596,7 @@ async fn player_capabilities() -> Result<()> {
 
     let expected_player_capabilities = || PlayerCapabilities {
         flags: Some(PlayerCapabilityFlags::Pause | PlayerCapabilityFlags::SkipForward),
-        ..PlayerCapabilities::empty()
+        ..PlayerCapabilities::EMPTY
     };
 
     player
@@ -633,7 +633,7 @@ async fn media_images() -> Result<()> {
                     width: 10,
                     height: 10,
                 }]),
-                ..MediaImage::empty()
+                ..MediaImage::EMPTY
             },
             MediaImage {
                 image_type: Some(MediaImageType::Artwork),
@@ -642,7 +642,7 @@ async fn media_images() -> Result<()> {
                     width: 10,
                     height: 10,
                 }]),
-                ..MediaImage::empty()
+                ..MediaImage::EMPTY
             },
         ]
     };

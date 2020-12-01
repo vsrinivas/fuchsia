@@ -76,7 +76,7 @@ async fn launch_session(session_url: &str, launcher: LauncherProxy) -> Result<()
     let result = launcher
         .launch(LaunchConfiguration {
             session_url: Some(session_url.to_string()),
-            ..LaunchConfiguration::empty()
+            ..LaunchConfiguration::EMPTY
         })
         .await?;
     result.map_err(|err: fidl_fuchsia_session::LaunchError| format_err!("{:?}", err))?;

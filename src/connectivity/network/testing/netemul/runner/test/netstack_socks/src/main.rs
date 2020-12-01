@@ -107,9 +107,9 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
             klogs_enabled: Some(false),
             filter_options: None,
             syslog_output: None,
-            ..LoggerOptions::empty()
+            ..LoggerOptions::EMPTY
         }),
-        ..EnvironmentOptions::empty()
+        ..EnvironmentOptions::EMPTY
     };
     // launch the child env
     env.create_child_environment(child_env_server, env_options)?;
@@ -187,7 +187,7 @@ async fn create_network() -> Result<NetworkProxy, Error> {
     let (netm, netm_server_end) = fidl::endpoints::create_proxy::<NetworkManagerMarker>()?;
     netctx.get_network_manager(netm_server_end)?;
     let config =
-        NetworkConfig { latency: None, packet_loss: None, reorder: None, ..NetworkConfig::empty() };
+        NetworkConfig { latency: None, packet_loss: None, reorder: None, ..NetworkConfig::EMPTY };
     let (_, network) = netm.create_network(NETWORK_NAME, config).await?;
     let network = network.ok_or_else(|| format_err!("can't create network"))?.into_proxy()?;
     Ok(network)

@@ -135,7 +135,7 @@ impl Keymap {
                         entries,
                         modifiers,
                         optional_modifiers,
-                        ..ui_input::SemanticKeyMap::empty()
+                        ..ui_input::SemanticKeyMap::EMPTY
                     }
                 })
                 .collect(),
@@ -144,7 +144,7 @@ impl Keymap {
         Ok(ui_input::KeyboardLayout {
             key_map: None,
             semantic_key_map,
-            ..ui_input::KeyboardLayout::empty()
+            ..ui_input::KeyboardLayout::EMPTY
         })
     }
 }

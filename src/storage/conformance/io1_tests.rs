@@ -119,7 +119,7 @@ fn root_directory(flags: u32, entries: Vec<io_test::DirectoryEntry>) -> io_test:
         name: None,
         flags: Some(flags),
         entries: Some(entries),
-        ..io_test::Directory::empty()
+        ..io_test::Directory::EMPTY
     }
 }
 
@@ -138,7 +138,7 @@ fn file(name: &str, flags: u32, contents: Vec<u8>) -> io_test::DirectoryEntry {
         name: Some(name.to_string()),
         flags: Some(flags),
         contents: Some(contents),
-        ..io_test::File::empty()
+        ..io_test::File::EMPTY
     })
 }
 

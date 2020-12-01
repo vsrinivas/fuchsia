@@ -24,7 +24,7 @@ fn build_info_impl(raw_version_info: String, raw_build_version: String) -> Versi
     if split.len() != 2 {
         return VersionInfo {
             build_version: Some(raw_build_version.trim().to_string()),
-            ..VersionInfo::empty()
+            ..VersionInfo::EMPTY
         };
     }
 
@@ -37,7 +37,7 @@ fn build_info_impl(raw_version_info: String, raw_build_version: String) -> Versi
         commit_hash: hash_opt,
         commit_timestamp: timestamp,
         build_version: Some(raw_build_version.trim().to_string()),
-        ..VersionInfo::empty()
+        ..VersionInfo::EMPTY
     };
 }
 
@@ -60,7 +60,7 @@ mod test {
                 commit_hash: Some(HASH.to_string()),
                 commit_timestamp: Some(TIMESTAMP),
                 build_version: Some(FAKE_BUILD_VERSION.to_string()),
-                ..VersionInfo::empty()
+                ..VersionInfo::EMPTY
             }
         );
     }
@@ -76,7 +76,7 @@ mod test {
                 commit_hash: Some(HASH.to_string()),
                 commit_timestamp: Some(TIMESTAMP),
                 build_version: Some(FAKE_BUILD_VERSION.to_string()),
-                ..VersionInfo::empty()
+                ..VersionInfo::EMPTY
             }
         );
     }
@@ -91,7 +91,7 @@ mod test {
                 commit_hash: None,
                 commit_timestamp: None,
                 build_version: Some(FAKE_BUILD_VERSION.to_string()),
-                ..VersionInfo::empty()
+                ..VersionInfo::EMPTY
             }
         );
     }
@@ -106,7 +106,7 @@ mod test {
                 commit_hash: None,
                 commit_timestamp: None,
                 build_version: Some(FAKE_BUILD_VERSION.to_string()),
-                ..VersionInfo::empty()
+                ..VersionInfo::EMPTY
             }
         );
     }
@@ -121,7 +121,7 @@ mod test {
                 commit_hash: None,
                 commit_timestamp: Some(TIMESTAMP),
                 build_version: Some(FAKE_BUILD_VERSION.to_string()),
-                ..VersionInfo::empty()
+                ..VersionInfo::EMPTY
             }
         );
     }
@@ -136,7 +136,7 @@ mod test {
                 commit_hash: None,
                 commit_timestamp: None,
                 build_version: Some(FAKE_BUILD_VERSION.to_string()),
-                ..VersionInfo::empty()
+                ..VersionInfo::EMPTY
             }
         );
     }

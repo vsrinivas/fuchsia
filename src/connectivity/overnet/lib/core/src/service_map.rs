@@ -27,7 +27,7 @@ impl From<ListablePeer> for fidl_fuchsia_overnet::Peer {
             is_self: p.is_self,
             description: fidl_fuchsia_overnet_protocol::PeerDescription {
                 services: Some(p.services),
-                ..fidl_fuchsia_overnet_protocol::PeerDescription::empty()
+                ..fidl_fuchsia_overnet_protocol::PeerDescription::EMPTY
             },
         }
     }

@@ -42,7 +42,7 @@ async fn test_resolve_loopback_route() -> Result {
                 mac: None,
                 interface_id: Some(1),
                 source_address: Some(source),
-                ..fidl_fuchsia_net_routes::Destination::empty()
+                ..fidl_fuchsia_net_routes::Destination::EMPTY
             }),
         );
         Result::Ok(())
@@ -182,7 +182,7 @@ async fn test_resolve_route() -> Result {
             mac: Some(gateway_mac),
             interface_id: Some(interface_id),
             source_address: Some(source_address),
-            ..fidl_fuchsia_net_routes::Destination::empty()
+            ..fidl_fuchsia_net_routes::Destination::EMPTY
         };
 
         // Start asking for a route for something that is directly accessible on the

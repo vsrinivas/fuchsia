@@ -28,45 +28,45 @@ fn main() {
                     value: Some(Box::new(fdata::DictionaryValue::Str("notify".to_string()))),
                 },
             ]),
-            ..fdata::Dictionary::empty()
+            ..fdata::Dictionary::EMPTY
         };
         let uses = vec![
             UseDecl::Runner(UseRunnerDecl {
                 source_name: Some("elf".to_string()),
-                ..UseRunnerDecl::empty()
+                ..UseRunnerDecl::EMPTY
             }),
             UseDecl::Service(UseServiceDecl {
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("fuchsia.fonts.Provider".to_string()),
                 target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
-                ..UseServiceDecl::empty()
+                ..UseServiceDecl::EMPTY
             }),
             UseDecl::Protocol(UseProtocolDecl {
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("fuchsia.fonts.LegacyProvider".to_string()),
                 target_path: Some("/svc/fuchsia.fonts.OldProvider".to_string()),
-                ..UseProtocolDecl::empty()
+                ..UseProtocolDecl::EMPTY
             }),
             UseDecl::Event(UseEventDecl {
                 source: Some(Ref::Framework(FrameworkRef {})),
                 source_name: Some("started".to_string()),
                 target_name: Some("began".to_string()),
                 filter: None,
-                ..UseEventDecl::empty()
+                ..UseEventDecl::EMPTY
             }),
             UseDecl::Event(UseEventDecl {
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("destroyed".to_string()),
                 target_name: Some("destroyed".to_string()),
                 filter: None,
-                ..UseEventDecl::empty()
+                ..UseEventDecl::EMPTY
             }),
             UseDecl::Event(UseEventDecl {
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("stopped".to_string()),
                 target_name: Some("stopped".to_string()),
                 filter: None,
-                ..UseEventDecl::empty()
+                ..UseEventDecl::EMPTY
             }),
             UseDecl::Event(UseEventDecl {
                 source: Some(Ref::Parent(ParentRef {})),
@@ -79,9 +79,9 @@ fn main() {
                             "diagnostics".to_string(),
                         ))),
                     }]),
-                    ..fdata::Dictionary::empty()
+                    ..fdata::Dictionary::EMPTY
                 }),
-                ..UseEventDecl::empty()
+                ..UseEventDecl::EMPTY
             }),
             UseDecl::EventStream(UseEventStreamDecl {
                 target_path: Some("/svc/my_stream".to_string()),
@@ -90,13 +90,13 @@ fn main() {
                     "destroyed".to_string(),
                     "diagnostics_ready".to_string(),
                 ]),
-                ..UseEventStreamDecl::empty()
+                ..UseEventStreamDecl::EMPTY
             }),
             UseDecl::Protocol(UseProtocolDecl {
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("fuchsia.logger.LogSink".to_string()),
                 target_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
-                ..UseProtocolDecl::empty()
+                ..UseProtocolDecl::EMPTY
             }),
         ];
         let exposes = vec![
@@ -105,14 +105,14 @@ fn main() {
                 source_name: Some("fuchsia.logger.Log".to_string()),
                 target_name: Some("fuchsia.logger.Log".to_string()),
                 target: Some(Ref::Parent(ParentRef {})),
-                ..ExposeServiceDecl::empty()
+                ..ExposeServiceDecl::EMPTY
             }),
             ExposeDecl::Protocol(ExposeProtocolDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
                 source_name: Some("fuchsia.logger.LegacyLog".to_string()),
                 target_name: Some("fuchsia.logger.OldLog".to_string()),
                 target: Some(Ref::Parent(ParentRef {})),
-                ..ExposeProtocolDecl::empty()
+                ..ExposeProtocolDecl::EMPTY
             }),
             ExposeDecl::Directory(ExposeDirectoryDecl {
                 source: Some(Ref::Self_(SelfRef {})),
@@ -121,7 +121,7 @@ fn main() {
                 target: Some(Ref::Parent(ParentRef {})),
                 rights: None,
                 subdir: Some("blob".to_string()),
-                ..ExposeDirectoryDecl::empty()
+                ..ExposeDirectoryDecl::EMPTY
             }),
         ];
         let offers = vec![
@@ -130,7 +130,7 @@ fn main() {
                 source_name: Some("fuchsia.logger.Log".to_string()),
                 target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
                 target_name: Some("fuchsia.logger.Log".to_string()),
-                ..OfferServiceDecl::empty()
+                ..OfferServiceDecl::EMPTY
             }),
             OfferDecl::Protocol(OfferProtocolDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
@@ -138,7 +138,7 @@ fn main() {
                 target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
                 target_name: Some("fuchsia.logger.OldLog".to_string()),
                 dependency_type: Some(DependencyType::Strong),
-                ..OfferProtocolDecl::empty()
+                ..OfferProtocolDecl::EMPTY
             }),
             OfferDecl::Event(OfferEventDecl {
                 source: Some(Ref::Parent(ParentRef {})),
@@ -146,19 +146,19 @@ fn main() {
                 target: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
                 target_name: Some("stopped-logger".to_string()),
                 filter: None,
-                ..OfferEventDecl::empty()
+                ..OfferEventDecl::EMPTY
             }),
         ];
         let capabilities = vec![
             CapabilityDecl::Service(ServiceDecl {
                 name: Some("fuchsia.logger.Log".to_string()),
                 source_path: Some("/svc/fuchsia.logger.Log".to_string()),
-                ..ServiceDecl::empty()
+                ..ServiceDecl::EMPTY
             }),
             CapabilityDecl::Protocol(ProtocolDecl {
                 name: Some("fuchsia.logger.Log2".to_string()),
                 source_path: Some("/svc/fuchsia.logger.Log2".to_string()),
-                ..ProtocolDecl::empty()
+                ..ProtocolDecl::EMPTY
             }),
             CapabilityDecl::Directory(DirectoryDecl {
                 name: Some("blobfs".to_string()),
@@ -173,25 +173,25 @@ fn main() {
                         | fio2::Operations::Traverse
                         | fio2::Operations::ModifyDirectory,
                 ),
-                ..DirectoryDecl::empty()
+                ..DirectoryDecl::EMPTY
             }),
             CapabilityDecl::Storage(StorageDecl {
                 name: Some("minfs".to_string()),
                 source: Some(Ref::Parent(ParentRef {})),
                 backing_dir: Some("data".to_string()),
                 subdir: None,
-                ..StorageDecl::empty()
+                ..StorageDecl::EMPTY
             }),
             CapabilityDecl::Runner(RunnerDecl {
                 name: Some("dart_runner".to_string()),
                 source: Some(Ref::Self_(SelfRef {})),
                 source_path: Some("/svc/fuchsia.sys2.Runner".to_string()),
-                ..RunnerDecl::empty()
+                ..RunnerDecl::EMPTY
             }),
             CapabilityDecl::Resolver(ResolverDecl {
                 name: Some("pkg_resolver".to_string()),
                 source_path: Some("/svc/fuchsia.pkg.Resolver".to_string()),
-                ..ResolverDecl::empty()
+                ..ResolverDecl::EMPTY
             }),
         ];
         let children = vec![ChildDecl {
@@ -199,13 +199,13 @@ fn main() {
             url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
             startup: Some(StartupMode::Lazy),
             environment: Some("env_one".to_string()),
-            ..ChildDecl::empty()
+            ..ChildDecl::EMPTY
         }];
         let collections = vec![CollectionDecl {
             name: Some("modular".to_string()),
             durability: Some(Durability::Persistent),
             environment: None,
-            ..CollectionDecl::empty()
+            ..CollectionDecl::EMPTY
         }];
         let facets = Object {
             entries: vec![
@@ -223,7 +223,7 @@ fn main() {
                 stop_timeout_ms: Some(1337),
                 runners: None,
                 resolvers: None,
-                ..EnvironmentDecl::empty()
+                ..EnvironmentDecl::EMPTY
             },
             EnvironmentDecl {
                 name: Some("env_two".to_string()),
@@ -231,7 +231,7 @@ fn main() {
                 stop_timeout_ms: None,
                 runners: None,
                 resolvers: None,
-                ..EnvironmentDecl::empty()
+                ..EnvironmentDecl::EMPTY
             },
         ];
         ComponentDecl {
@@ -244,7 +244,7 @@ fn main() {
             collections: Some(collections),
             facets: Some(facets),
             environments: Some(envs),
-            ..ComponentDecl::empty()
+            ..ComponentDecl::EMPTY
         }
     };
     assert_eq!(cm_decl, expected_decl);
