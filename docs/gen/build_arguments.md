@@ -1066,6 +1066,15 @@ Directory into which all fonts are checked out from CIPD
 
 From //src/fonts/build/font_args.gni:12
 
+### format_minfs_on_corruption
+If format_minfs_on_corruption is true (the default), fshost formats minfs partition on finding
+it corrupted.  Set to false to keep the devices in a corrupted state which might be of help to
+debug issues.
+
+**Current value (from the default):** `true`
+
+From //src/storage/fshost/BUILD.gn:28
+
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
 a specific spot within their buildroots. The target name for the specific
@@ -1645,12 +1654,6 @@ product image.
 **Current value (from the default):** `true`
 
 From //src/modular/build/modular_config/modular_config.gni:12
-
-### linux_guest_extras_path
-
-**Current value (from the default):** `""`
-
-From //src/virtualization/packages/linux_guest/BUILD.gn:12
 
 ### linux_runner_extras_tests
 If `true`, adds additional testonly content to extras.img, which will be
