@@ -1,0 +1,37 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+# Define the configurations for Lapis.
+#
+# Parameters
+#
+#   name
+#     Type: string
+#     Optional: defaults to target_name
+#
+#   configs
+#     Type: list of files
+#     Required: json configurations for lapis.
+#
+template("lapis_configuration") {
+  assert(defined(invoker.configs), "Must define lapis configurations.")
+
+  name = target_name
+  if (defined(invoker.name)) {
+    name = invoker.name
+  }
+
+  config_data("${name}_config_data") {
+    for_pkg = "sampler"
+    sources = invoker.configs
+    outputs = [ "metrics/{{source_file_part}}" ]
+  }
+
+  resource("${name}_resources") {
+    sources = invoker.configs
+    outputs = [ "config/metrics/{{source_file_part}}" ]
+  }
+}

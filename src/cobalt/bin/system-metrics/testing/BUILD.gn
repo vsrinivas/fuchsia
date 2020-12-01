@@ -8,8 +8,6 @@ source_set("fake_fetchers") {
   sources = [
     "fake_archive.cc",
     "fake_archive.h",
-    "fake_archivist_stats_fetcher.cc",
-    "fake_archivist_stats_fetcher.h",
     "fake_cpu_stats_fetcher.cc",
     "fake_cpu_stats_fetcher.h",
     "fake_log_stats_fetcher.cc",
