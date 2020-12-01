@@ -13,6 +13,7 @@
 #include "src/media/audio/audio_core/base_renderer.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
+#include "src/media/audio/audio_core/pin_executable_memory.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
@@ -209,6 +210,9 @@ void AudioOutput::SetupMixTask(const DeviceConfig::OutputDeviceProfile& profile,
   pipeline_ =
       CreateOutputPipeline(profile.pipeline_config(), profile.volume_curve(), max_block_size_frames,
                            device_reference_clock_to_fractional_frame, reference_clock());
+
+  // In case the pipeline needs shared libraries, ensure those are paged in.
+  PinExecutableMemory::Singleton().Pin();
 }
 
 void AudioOutput::Cleanup() {

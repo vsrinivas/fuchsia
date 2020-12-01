@@ -9,6 +9,7 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/base_capturer.h"
+#include "src/media/audio/audio_core/pin_executable_memory.h"
 #include "src/media/audio/audio_core/plug_detector.h"
 #include "src/media/audio/audio_core/process_config_loader.h"
 #include "src/media/audio/audio_core/profile_provider.h"
@@ -29,6 +30,9 @@ static int StartAudioCore() {
   syslog::SetLogSettings({.min_log_level = FX_LOG_INFO}, {"audio_core"});
 
   FX_LOGS(INFO) << "AudioCore starting up";
+
+  // Page in and pin our executable.
+  PinExecutableMemory::Singleton();
 
   // Initialize our telemetry reporter (which optimizes to nothing if ENABLE_REPORTER is set to 0).
   auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
