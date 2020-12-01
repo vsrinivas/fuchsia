@@ -133,6 +133,18 @@ _all_named_envs += [
   },
 ]
 
+vim3_env = {
+  dimensions = {
+    device_type = "Vim3"
+  }
+}
+_all_named_envs += [
+  {
+    name = "vim3"
+    env = vim3_env
+  },
+]
+
 ### END Individual test environments
 
 ### Aliases ###
