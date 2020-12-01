@@ -51,15 +51,26 @@ bool ReadSpirvFromDisk(const ShaderVariantArgs& args, const std::string& base_pa
 
     // File was empty.
     if (binary_size == 0) {
+      FX_LOGS(WARNING) << "Empty SPIR-V file: " << hash_name << " (base: " << base_path
+                       << ", args: " << args << ")";
       return false;
     }
 
     size_t num_elements = binary_size / sizeof(uint32_t);
     out_spirv->resize(num_elements);
     size_t num_read = fread(out_spirv->data(), sizeof(uint32_t), num_elements, fp);
-    return num_read == num_elements;
+
+    if (num_read != num_elements) {
+      FX_LOGS(WARNING) << "Read unexpected number of bytes from SPIR-V file: " << hash_name
+                       << " (expected: " << num_elements << ", read: " << num_read
+                       << ", base: " << base_path << ", args: " << args << ")";
+      return false;
+    }
+    return true;
   }
 
+  FX_LOGS(WARNING) << "Could not open SPIR-V file: " << hash_name << " (base: " << base_path
+                   << ", args: " << args << ")";
   return false;
 }
 

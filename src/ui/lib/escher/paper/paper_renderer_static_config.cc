@@ -7,19 +7,17 @@
 namespace escher {
 // List of all the shader paths used by PaperRenderer.
 const std::vector<std::string> kPaperRendererShaderPaths = {
-    "shaders/model_renderer/main.frag",
     "shaders/model_renderer/main.vert",
-    "shaders/model_renderer/default_position.vert",
-    "shaders/model_renderer/shadow_map_generation.frag",
-    "shaders/model_renderer/shadow_map_lighting.frag",
-    "shaders/model_renderer/wobble_position.vert",
     "shaders/paper/common/use.glsl",
     "shaders/paper/frag/main_ambient_light.frag",
     "shaders/paper/frag/main_point_light.frag",
-    "shaders/paper/vert/compute_model_space_position.vert",
-    "shaders/paper/vert/compute_world_space_position.vert",
     "shaders/paper/vert/main_shadow_volume_extrude.vert",
-    "shaders/paper/vert/vertex_attributes.vert"};
+    // TODO(jjosh): file bug to move these out of here, but still ensure they're built
+    // for the Escher shader tests.  Suitable existing bug exists?
+    "shaders/test/main.frag",
+    "shaders/test/shadow_map_generation.frag",
+    "shaders/test/shadow_map_lighting.frag",
+};
 
 const std::vector<std::string> kPaperRendererShaderSpirvPaths = {};
 
@@ -36,12 +34,13 @@ const ShaderProgramData kAmbientLightProgramData = {
 
 const ShaderProgramData kNoLightingProgramData = {
     .source_files = {{ShaderStage::kVertex, "shaders/model_renderer/main.vert"},
-                     {ShaderStage::kFragment, "shaders/model_renderer/main.frag"}},
+                     {ShaderStage::kFragment, "shaders/paper/frag/main_ambient_light.frag"}},
     .args = ShaderVariantArgs({
         {"USE_ATTRIBUTE_UV", "1"},
         {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
         // TODO(fxbug.dev/7244): currently required by main.vert.
         {"NO_SHADOW_LIGHTING_PASS", "1"},
+        {"DISABLE_AMBIENT_LIGHT", "1"},
     }),
 };
 
@@ -57,7 +56,7 @@ const ShaderProgramData kPointLightProgramData = {
 };
 
 const ShaderProgramData kShadowVolumeGeometryProgramData = {
-    .source_files = {{ShaderStage::kVertex, "shaders/model_renderer/main.vert"},
+    .source_files = {{ShaderStage::kVertex, "shaders/paper/vert/main_shadow_volume_extrude.vert"},
                      {ShaderStage::kFragment, ""}},
     .args = ShaderVariantArgs({
         {"USE_ATTRIBUTE_BLEND_WEIGHT_1", "1"},
@@ -68,13 +67,14 @@ const ShaderProgramData kShadowVolumeGeometryProgramData = {
 };
 
 const ShaderProgramData kShadowVolumeGeometryDebugProgramData = {
-    .source_files = {{ShaderStage::kVertex, "shaders/model_renderer/main.vert"},
-                     {ShaderStage::kFragment, "shaders/model_renderer/main.frag"}},
+    .source_files = {{ShaderStage::kVertex, "shaders/paper/vert/main_shadow_volume_extrude.vert"},
+                     {ShaderStage::kFragment, "shaders/paper/frag/main_ambient_light.frag"}},
     .args = ShaderVariantArgs({
         {"USE_ATTRIBUTE_BLEND_WEIGHT_1", "1"},
-        {"USE_PAPER_SHADER_POINT_LIGHT", "1"},
+        {"USE_PAPER_SHADER_POINT_LIGHT", "1"},  // for vertex shader, ignored by fragment shader
         {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
         {"SHADOW_VOLUME_EXTRUSION", "1"},
+        {"DISABLE_AMBIENT_LIGHT", "1"},
     }),
 };
 }  // namespace escher

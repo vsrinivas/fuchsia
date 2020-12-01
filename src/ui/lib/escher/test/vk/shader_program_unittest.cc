@@ -75,13 +75,11 @@ class ShaderProgramTest : public ::testing::Test, public VulkanTester {
     // TODO(fxbug.dev/7272): remove PaperRenderer shader dependency.
     auto factory = escher->shader_program_factory();
     bool success = factory->filesystem()->InitializeWithRealFiles({
-        "shaders/model_renderer/default_position.vert",
-        "shaders/model_renderer/main.frag",
         "shaders/model_renderer/main.vert",
-        "shaders/model_renderer/shadow_map_generation.frag",
-        "shaders/model_renderer/shadow_map_lighting.frag",
-        "shaders/model_renderer/wobble_position.vert",
         "shaders/paper/common/use.glsl",
+        "shaders/test/main.frag",
+        "shaders/test/shadow_map_generation.frag",
+        "shaders/test/shadow_map_lighting.frag",
     });
     EXPECT_TRUE(success);
 
@@ -256,7 +254,7 @@ VK_TEST_F(ShaderProgramTest, CachedVariants) {
                               {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
                               {"NO_SHADOW_LIGHTING_PASS", "1"}});
   const char* kMainVert = "shaders/model_renderer/main.vert";
-  const char* kMainFrag = "shaders/model_renderer/main.frag";
+  const char* kMainFrag = "shaders/test/main.frag";
 
   auto program1 = escher->GetGraphicsProgram(kMainVert, kMainFrag, variant1);
   auto program2 = escher->GetGraphicsProgram(kMainVert, kMainFrag, variant1);

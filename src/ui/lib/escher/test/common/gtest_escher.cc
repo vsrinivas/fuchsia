@@ -14,6 +14,7 @@ namespace escher {
 namespace test {
 namespace {
 
+
 #if !ESCHER_USE_RUNTIME_GLSL
 static void LoadShadersFromDisk(HackFilesystemPtr fs) {
   // NOTE: this and ../shaders/shaders.gni must be kept in sync.
@@ -23,20 +24,23 @@ static void LoadShadersFromDisk(HackFilesystemPtr fs) {
       "shaders/shaders_flatland_flat_main_vert14695981039346656037.spirv",
 
       // Paper renderer.
-      "shaders/shaders_model_renderer_main_frag12890958529260787213.spirv",
-      "shaders/shaders_model_renderer_main_frag15276133142244279294.spirv",
-      "shaders/shaders_model_renderer_main_frag4304586084079301274.spirv",
-      "shaders/shaders_model_renderer_main_vert12890958529260787213.spirv",
       "shaders/shaders_model_renderer_main_vert15064700897732225279.spirv",
-      "shaders/shaders_model_renderer_main_vert15276133142244279294.spirv",
       "shaders/shaders_model_renderer_main_vert4304586084079301274.spirv",
-      "shaders/shaders_model_renderer_main_vert817427562299648481.spirv",
+      "shaders/shaders_model_renderer_main_vert7456302057085141907.spirv",
       "shaders/shaders_paper_frag_main_ambient_light_frag4304586084079301274.spirv",
+      "shaders/shaders_paper_frag_main_ambient_light_frag7456302057085141907.spirv",
+      "shaders/shaders_paper_frag_main_ambient_light_frag9217636760892358205.spirv",
       "shaders/shaders_paper_frag_main_point_light_frag15064700897732225279.spirv",
-      "shaders/shaders_paper_frag_main_point_light_frag817427562299648481.spirv",
+      "shaders/shaders_paper_vert_main_shadow_volume_extrude_vert15276133142244279294.spirv",
+      "shaders/shaders_paper_vert_main_shadow_volume_extrude_vert9217636760892358205.spirv",
 
       // Pose buffer latching compute shader, from pose_buffer_latching_shader.cc.
       "shaders/shaders_compute_pose_buffer_latching_comp14695981039346656037.spirv",
+
+      // Test-only
+      "shaders/shaders_model_renderer_main_vert12890958529260787213.spirv",
+      "shaders/shaders_test_main_frag12890958529260787213.spirv",
+      "shaders/shaders_test_main_frag4304586084079301274.spirv",
   };
   FX_CHECK(fs->InitializeWithRealFiles(paths));
 }
