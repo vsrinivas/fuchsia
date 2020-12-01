@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "src/cobalt/bin/system-metrics/activity_listener.h"
+#include "src/cobalt/bin/system-metrics/archivist_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/log_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
@@ -82,20 +83,24 @@ class SystemMetricsDaemon {
   SystemMetricsDaemon(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
                       const MetricSpecs& granular_error_stats_specs,
                       fuchsia::cobalt::Logger_Sync* logger,
+                      fuchsia::cobalt::Logger_Sync* component_diagnostics_logger,
                       fuchsia::cobalt::Logger_Sync* granular_error_stats_logger,
                       std::unique_ptr<cobalt::SteadyClock> clock,
                       std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher,
                       std::unique_ptr<cobalt::LogStatsFetcher> log_stats_fetcher,
                       std::unique_ptr<cobalt::ActivityListener> activity_listener,
+                      std::unique_ptr<cobalt::ArchivistStatsFetcher> archivist_stats_fetcher,
                       std::string activation_file_prefix);
 
   void InitializeLogger();
+  void InitializeDiagnosticsLogger();
   void InitializeGranularErrorStatsLogger();
 
   void InitializeRootResourceHandle();
 
   // If the peer has closed the FIDL connection, automatically reconnect.
   zx_status_t ReinitializeIfPeerClosed(zx_status_t zx_status);
+  zx_status_t ReinitializeDiagnosticsIfPeerClosed(zx_status_t zx_status);
   zx_status_t ReinitializeGranularErrorStatsIfPeerClosed(zx_status_t zx_status);
 
   // Calls LogFuchsiaUpPing,
@@ -128,6 +133,10 @@ class SystemMetricsDaemon {
   // Calls LogLogStats and then uses the |dispatcher| passed to the
   // constructor to schedule the next round.
   void RepeatedlyLogLogStats();
+
+  // Calls LogArchivistStats and then uses the |dispatcher| passed to the
+  // constructor to schedule the next round.
+  void RepeatedlyLogArchivistStats();
 
   // Create linear bucket config with the bucket_floor, number of buckets and step size.
   std::unique_ptr<cobalt::config::IntegerBucketConfig> InitializeLinearBucketConfig(
@@ -177,6 +186,11 @@ class SystemMetricsDaemon {
   // Fetches and logs the number of error log messages across all components.
   void LogLogStats();
 
+  // Fetches and logs archivist stats.
+  //
+  // Returns the amount of time before this method needs to be invoked again.
+  std::chrono::seconds LogArchivistStats();
+
   // Helper function to store the fetched CPU data and store until flush.
   void StoreCpuData(double cpu_percentage);  // histogram, flush every 10 min
 
@@ -193,6 +207,9 @@ class SystemMetricsDaemon {
   fuchsia::cobalt::LoggerFactorySyncPtr factory_;
   fuchsia::cobalt::LoggerSyncPtr logger_fidl_proxy_;
   fuchsia::cobalt::Logger_Sync* logger_;
+  fuchsia::cobalt::LoggerFactorySyncPtr component_diagnostics_factory_;
+  fuchsia::cobalt::LoggerSyncPtr component_diagnostics_logger_fidl_proxy_;
+  fuchsia::cobalt::Logger_Sync* component_diagnostics_logger_;
   fuchsia::cobalt::LoggerSyncPtr granular_error_stats_logger_fidl_proxy_;
   fuchsia::cobalt::Logger_Sync* granular_error_stats_logger_;
   std::chrono::steady_clock::time_point start_time_;
@@ -200,6 +217,7 @@ class SystemMetricsDaemon {
   std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher_;
   std::unique_ptr<cobalt::LogStatsFetcher> log_stats_fetcher_;
   std::unique_ptr<cobalt::ActivityListener> activity_listener_;
+  std::unique_ptr<cobalt::ArchivistStatsFetcher> archivist_stats_fetcher_;
   fuchsia::ui::activity::State current_state_ = fuchsia::ui::activity::State::UNKNOWN;
   fidl::InterfacePtr<fuchsia::ui::activity::Provider> activity_provider_;
   std::string activation_file_prefix_;

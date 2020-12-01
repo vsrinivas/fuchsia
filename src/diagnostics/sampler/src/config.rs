@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{Context as _, Error},
+    log::{error, warn},
     serde::Deserialize,
     serde_json5,
     std::fs,
@@ -71,20 +72,13 @@ pub struct SamplerConfig {
 
 impl SamplerConfig {
     /// Parse the ProjectConfigurations for every project from config data.
-    pub fn from_directory(
-        minimum_sample_rate_sec: i64,
-        dir: impl AsRef<Path>,
-    ) -> Result<Self, Error> {
+    pub fn from_directory(minimum_sample_rate_sec: i64, dir: impl AsRef<Path>) -> Self {
         let suffix = std::ffi::OsStr::new("json");
         let readdir = dir.as_ref().read_dir();
         let mut project_configs: Vec<ProjectConfig> = Vec::new();
         match readdir {
-            Err(e) => {
-                return Err(format_err!(
-                    "Failed to read directory {}, Error: {:?}",
-                    dir.as_ref().to_string_lossy(),
-                    e
-                ));
+            Err(_) => {
+                error!("Failed to read directory {}", dir.as_ref().to_string_lossy());
             }
             Ok(mut readdir) => {
                 while let Some(Ok(entry)) = readdir.next() {
@@ -95,18 +89,18 @@ impl SamplerConfig {
                                 project_configs.push(project_config);
                             }
                             Err(e) => {
-                                return Err(format_err!(
+                                warn!(
                                     "Failed to parse {}: {}",
                                     path.to_string_lossy(),
                                     e.to_string()
-                                ));
+                                );
                             }
                         }
                     }
                 }
             }
         }
-        Ok(Self { minimum_sample_rate_sec, project_configs })
+        Self { minimum_sample_rate_sec, project_configs }
     }
 }
 
@@ -153,8 +147,7 @@ mod tests {
         .unwrap();
 
         let config = SamplerConfig::from_directory(10, &config_path);
-        assert!(config.is_ok());
-        assert_eq!(config.unwrap().project_configs.len(), 2);
+        assert_eq!(config.project_configs.len(), 2);
     }
 
     #[test]
@@ -189,6 +182,6 @@ mod tests {
         .unwrap();
 
         let config = SamplerConfig::from_directory(10, &config_path);
-        assert!(config.is_err());
+        assert_eq!(config.project_configs.len(), 1);
     }
 }

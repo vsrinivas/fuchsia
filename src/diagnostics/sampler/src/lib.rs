@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {anyhow::Error, argh::FromArgs, log::warn};
 
-pub mod config;
+mod config;
 mod executor;
 
 /// The name of the subcommand and the logs-tag.
@@ -19,18 +19,13 @@ pub struct Args {
 }
 
 pub async fn main(opt: Args) -> Result<(), Error> {
-    match config::SamplerConfig::from_directory(opt.minimum_sample_rate_sec, "/config/data/metrics")
-    {
-        Ok(sampler_config) => {
-            let sampler_executor = executor::SamplerExecutor::new(sampler_config).await?;
+    let sampler_executor = executor::SamplerExecutor::new(config::SamplerConfig::from_directory(
+        opt.minimum_sample_rate_sec,
+        "/config/data/metrics",
+    ))
+    .await?;
 
-            sampler_executor.execute().await;
-            warn!("Diagnostics sampler is unexpectedly exiting.");
-            Ok(())
-        }
-        Err(e) => {
-            warn!("Failed to parse lapis configurations from /config/data/metric: {:?}", e);
-            Ok(())
-        }
-    }
+    sampler_executor.execute().await;
+    warn!("Diagnostics sampler is unexpectedly exiting.");
+    Ok(())
 }
