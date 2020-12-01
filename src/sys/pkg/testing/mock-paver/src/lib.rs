@@ -476,6 +476,21 @@ impl MockPaverService {
         proxy
     }
 
+    /// Spawns a new task to serve the paver protocol.
+    pub fn spawn_paver_service(self: &Arc<Self>) -> paver::PaverProxy {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<paver::PaverMarker>().unwrap();
+
+        fasync::Task::spawn(
+            Arc::clone(self)
+                .run_paver_service(stream)
+                .unwrap_or_else(|e| panic!("error running paver service: {:#}", anyhow!(e))),
+        )
+        .detach();
+
+        proxy
+    }
+
     fn push_event(self: &Arc<Self>, event: PaverEvent) {
         (*self.event_hook)(&event);
         self.events.lock().push(event);

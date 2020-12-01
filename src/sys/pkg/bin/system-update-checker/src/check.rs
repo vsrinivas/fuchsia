@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 use crate::errors::{self, Error};
+use anyhow::{anyhow, Context as _};
+use fidl_fuchsia_paver::{Asset, BootManagerMarker, DataSinkMarker, PaverMarker, PaverProxy};
 use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface, UpdatePolicy};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_hash::Hash;
+use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon as zx;
-use std::io;
+use std::{cmp::min, convert::TryInto as _, io};
 use update_package::UpdatePackage;
 
 const UPDATE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";
@@ -31,8 +34,15 @@ pub async fn check_for_system_update(
     let mut file_system = RealFileSystem;
     let package_resolver =
         connect_to_service::<PackageResolverMarker>().map_err(Error::ConnectPackageResolver)?;
-    check_for_system_update_impl(&mut file_system, &package_resolver, last_known_update_merkle)
-        .await
+    let paver = connect_to_service::<PaverMarker>().map_err(Error::ConnectPaver)?;
+
+    check_for_system_update_impl(
+        &mut file_system,
+        &package_resolver,
+        &paver,
+        last_known_update_merkle,
+    )
+    .await
 }
 
 // For mocking
@@ -55,6 +65,7 @@ impl FileSystem for RealFileSystem {
 async fn check_for_system_update_impl(
     file_system: &mut impl FileSystem,
     package_resolver: &impl PackageResolverProxyInterface,
+    paver: &PaverProxy,
     last_known_update_merkle: Option<&Hash>,
 ) -> Result<SystemUpdateStatus, crate::errors::Error> {
     let update_pkg = latest_update_package(package_resolver).await?;
@@ -62,28 +73,36 @@ async fn check_for_system_update_impl(
     let current_system_image = current_system_image_merkle(file_system)?;
     let latest_system_image = latest_system_image_merkle(&update_pkg).await?;
 
+    let update_available = Ok(SystemUpdateStatus::UpdateAvailable {
+        current_system_image,
+        latest_system_image,
+        latest_update_package: latest_update_merkle,
+    });
+
     if let Some(last_known_update_merkle) = last_known_update_merkle {
         if *last_known_update_merkle != latest_update_merkle {
-            return Ok(SystemUpdateStatus::UpdateAvailable {
-                current_system_image,
-                latest_system_image,
-                latest_update_package: latest_update_merkle,
-            });
+            return update_available;
         }
     }
 
-    if current_system_image == latest_system_image {
-        Ok(SystemUpdateStatus::UpToDate {
-            system_image: current_system_image,
-            update_package: latest_update_merkle,
-        })
-    } else {
-        Ok(SystemUpdateStatus::UpdateAvailable {
-            current_system_image,
-            latest_system_image,
-            latest_update_package: latest_update_merkle,
-        })
+    if current_system_image != latest_system_image {
+        return update_available;
     }
+
+    match is_vbmeta_up_to_date(&update_pkg, paver).await {
+        Ok(true) => {}
+        Ok(false) => {
+            return update_available;
+        }
+        Err(err) => {
+            fx_log_warn!("Failed to check if vbmeta is up to date: {:#}", anyhow!(err));
+        }
+    }
+
+    Ok(SystemUpdateStatus::UpToDate {
+        system_image: current_system_image,
+        update_package: latest_update_merkle,
+    })
 }
 
 fn current_system_image_merkle(
@@ -136,9 +155,58 @@ async fn latest_system_image_merkle(
     Ok(hash.to_owned())
 }
 
+async fn is_vbmeta_up_to_date(
+    update_package: &UpdatePackage,
+    paver: &PaverProxy,
+) -> Result<bool, anyhow::Error> {
+    let latest_vbmeta =
+        update_package.open_image(&update_package::Image::new("fuchsia.vbmeta")).await?;
+
+    let (boot_manager, server_end) = fidl::endpoints::create_proxy::<BootManagerMarker>()?;
+    let () = paver.find_boot_manager(server_end).context("connect to fuchsia.paver.BootManager")?;
+    let configuration = boot_manager.query_current_configuration().await?.map_err(|status| {
+        anyhow!("query_current_configuration responded with {}", zx::Status::from_raw(status))
+    })?;
+
+    let (data_sink, server_end) = fidl::endpoints::create_proxy::<DataSinkMarker>()?;
+    let () = paver.find_data_sink(server_end).context("connect to fuchsia.paver.DataSink")?;
+    let current_vbmeta = data_sink
+        .read_asset(configuration, Asset::VerifiedBootMetadata)
+        .await?
+        .map_err(|status| anyhow!("read_asset responded with {}", zx::Status::from_raw(status)))?;
+
+    compare_buffer(latest_vbmeta, current_vbmeta)
+}
+
+// Compare two buffers and return true if they are equal.
+// If they have different sizes, only compare up to the smaller size and ignoring the rest.
+// This is because when reading asset from paver, we might get extra data after the image.
+fn compare_buffer(
+    a: fidl_fuchsia_mem::Buffer,
+    b: fidl_fuchsia_mem::Buffer,
+) -> Result<bool, anyhow::Error> {
+    let a_size = a.size.try_into()?;
+    let b_size = b.size.try_into()?;
+    let size = min(a_size, b_size);
+    let max_buffer_size = 32 * 1024;
+    let step_size = min(size, max_buffer_size);
+    let mut a_buf = vec![0u8; step_size];
+    let mut b_buf = vec![0u8; step_size];
+    for offset in (0..size).step_by(step_size) {
+        let current_step_size = min(step_size, size - offset);
+        a.vmo.read(&mut a_buf[..current_step_size], offset as u64)?;
+        b.vmo.read(&mut b_buf[..current_step_size], offset as u64)?;
+        if a_buf[..current_step_size] != b_buf[..current_step_size] {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
 #[cfg(test)]
 pub mod test_check_for_system_update_impl {
     use super::*;
+    use fidl_fuchsia_paver::Configuration;
     use fidl_fuchsia_pkg::{
         PackageResolverGetHashResult, PackageResolverResolveResult, PackageUrl,
     };
@@ -146,9 +214,8 @@ pub mod test_check_for_system_update_impl {
     use lazy_static::lazy_static;
     use maplit::hashmap;
     use matches::assert_matches;
-    use std::collections::hash_map::HashMap;
-    use std::fs;
-    use std::io::Write;
+    use mock_paver::MockPaverServiceBuilder;
+    use std::{collections::hash_map::HashMap, fs, io::Write, sync::Arc};
 
     const ACTIVE_SYSTEM_IMAGE_MERKLE: &str =
         "0000000000000000000000000000000000000000000000000000000000000000";
@@ -235,6 +302,13 @@ pub mod test_check_for_system_update_impl {
             .expect("write to package file");
             PackageResolverProxyTempDir { temp_dir }
         }
+
+        fn new_with_vbmeta(vbmeta: impl AsRef<[u8]>) -> PackageResolverProxyTempDir {
+            let PackageResolverProxyTempDir { temp_dir } =
+                Self::new_with_latest_system_image(ACTIVE_SYSTEM_IMAGE_MERKLE);
+            fs::write(temp_dir.path().join("fuchsia.vbmeta"), vbmeta).expect("write vbmeta");
+            PackageResolverProxyTempDir { temp_dir }
+        }
     }
     impl PackageResolverProxyInterface for PackageResolverProxyTempDir {
         type ResolveResponseFut = future::Ready<Result<PackageResolverResolveResult, fidl::Error>>;
@@ -269,8 +343,11 @@ pub mod test_check_for_system_update_impl {
     async fn test_missing_system_meta_file() {
         let mut file_system = FakeFileSystem { contents: hashmap![] };
         let package_resolver = PackageResolverProxyTempDir::new_with_default_meta();
+        let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let paver = mock_paver.spawn_paver_service();
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
+        let result =
+            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
 
         assert_matches!(result, Err(Error::ReadSystemMeta(_)));
     }
@@ -283,8 +360,11 @@ pub mod test_check_for_system_update_impl {
             ],
         };
         let package_resolver = PackageResolverProxyTempDir::new_with_default_meta();
+        let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let paver = mock_paver.spawn_paver_service();
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
+        let result =
+            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
 
         assert_matches!(result, Err(Error::ParseSystemMeta(_)));
     }
@@ -313,8 +393,11 @@ pub mod test_check_for_system_update_impl {
 
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyFidlError;
+        let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let paver = mock_paver.spawn_paver_service();
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
+        let result =
+            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
 
         assert_matches!(result, Err(Error::UpdatePackage(errors::UpdatePackage::ResolveFidl(_))));
     }
@@ -343,8 +426,11 @@ pub mod test_check_for_system_update_impl {
 
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyZxError;
+        let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let paver = mock_paver.spawn_paver_service();
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
+        let result =
+            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
 
         assert_matches!(result, Err(Error::UpdatePackage(errors::UpdatePackage::Resolve(_))));
     }
@@ -373,8 +459,11 @@ pub mod test_check_for_system_update_impl {
 
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyDirectoryCloser;
+        let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let paver = mock_paver.spawn_paver_service();
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
+        let result =
+            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
 
         assert_matches!(result, Err(Error::UpdatePackage(errors::UpdatePackage::Hash(_))));
     }
@@ -383,8 +472,11 @@ pub mod test_check_for_system_update_impl {
     async fn test_update_package_missing_packages_json() {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyTempDir::new_with_default_meta();
+        let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let paver = mock_paver.spawn_paver_service();
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
+        let result =
+            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
 
         assert_matches!(
             result,
@@ -396,8 +488,11 @@ pub mod test_check_for_system_update_impl {
     async fn test_update_package_empty_packages_json() {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyTempDir::new_with_empty_packages_json();
+        let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let paver = mock_paver.spawn_paver_service();
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
+        let result =
+            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
 
         assert_matches!(
             result,
@@ -410,8 +505,11 @@ pub mod test_check_for_system_update_impl {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver =
             PackageResolverProxyTempDir::new_with_latest_system_image("bad-merkle");
+        let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let paver = mock_paver.spawn_paver_service();
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
+        let result =
+            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
         assert_matches!(
             result,
             Err(Error::UpdatePackage(errors::UpdatePackage::ExtractPackagesManifest(_)))
@@ -421,15 +519,65 @@ pub mod test_check_for_system_update_impl {
     #[fasync::run_singlethreaded(test)]
     async fn test_up_to_date() {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
-        let package_resolver =
-            PackageResolverProxyTempDir::new_with_latest_system_image(ACTIVE_SYSTEM_IMAGE_MERKLE);
+        let package_resolver = PackageResolverProxyTempDir::new_with_vbmeta([1]);
+        let mock_paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .active_config(Configuration::A)
+                .insert_hook(mock_paver::hooks::read_asset(|configuration, asset| {
+                    assert_eq!(configuration, Configuration::A);
+                    match asset {
+                        // TODO(fxbug.dev/63078): return up to date zbi.
+                        Asset::Kernel => panic!("not expecting to read kernel"),
+                        Asset::VerifiedBootMetadata => Ok(vec![1]),
+                    }
+                }))
+                .build(),
+        );
+        let paver = mock_paver.spawn_paver_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
             &package_resolver,
+            &paver,
             Some(&UPDATE_PACKAGE_MERKLE),
         )
         .await;
+
+        assert_matches!(
+            result,
+            Ok(SystemUpdateStatus::UpToDate { system_image, update_package: _ })
+                if system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                .parse()
+                .expect("active system image string literal")
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_up_to_date_with_missing_vbmeta() {
+        let mut file_system = FakeFileSystem::new_with_valid_system_meta();
+        let package_resolver = PackageResolverProxyTempDir::new_with_vbmeta([1]);
+        let mock_paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .active_config(Configuration::A)
+                .insert_hook(mock_paver::hooks::read_asset(|configuration, asset| {
+                    assert_eq!(configuration, Configuration::A);
+                    match asset {
+                        Asset::Kernel => Err(zx::Status::NOT_FOUND),
+                        Asset::VerifiedBootMetadata => Err(zx::Status::NOT_FOUND),
+                    }
+                }))
+                .build(),
+        );
+        let paver = mock_paver.spawn_paver_service();
+
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            Some(&UPDATE_PACKAGE_MERKLE),
+        )
+        .await;
+
         assert_matches!(
             result,
             Ok(SystemUpdateStatus::UpToDate { system_image, update_package: _ })
@@ -444,8 +592,11 @@ pub mod test_check_for_system_update_impl {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver =
             PackageResolverProxyTempDir::new_with_latest_system_image(NEW_SYSTEM_IMAGE_MERKLE);
+        let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let paver = mock_paver.spawn_paver_service();
 
-        let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
+        let result =
+            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
 
         assert_matches!(
             result,
@@ -465,11 +616,14 @@ pub mod test_check_for_system_update_impl {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver =
             PackageResolverProxyTempDir::new_with_latest_system_image(ACTIVE_SYSTEM_IMAGE_MERKLE);
+        let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let paver = mock_paver.spawn_paver_service();
 
         let previous_update_package = Hash::from([0x44; 32]);
         let result = check_for_system_update_impl(
             &mut file_system,
             &package_resolver,
+            &paver,
             Some(&previous_update_package),
         )
         .await;
@@ -486,6 +640,107 @@ pub mod test_check_for_system_update_impl {
                     .expect("new system image string literal") &&
                 latest_update_package == *UPDATE_PACKAGE_MERKLE
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_vbmeta_only_update_available() {
+        let mut file_system = FakeFileSystem::new_with_valid_system_meta();
+        let package_resolver = PackageResolverProxyTempDir::new_with_vbmeta([1]);
+        let mock_paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .active_config(Configuration::A)
+                .insert_hook(mock_paver::hooks::read_asset(|configuration, asset| {
+                    assert_eq!(configuration, Configuration::A);
+                    match asset {
+                        Asset::Kernel => panic!("not expecting to read kernel"),
+                        Asset::VerifiedBootMetadata => Ok(vec![0]),
+                    }
+                }))
+                .build(),
+        );
+        let paver = mock_paver.spawn_paver_service();
+
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            Some(&UPDATE_PACKAGE_MERKLE),
+        )
+        .await;
+
+        assert_matches!(
+            result,
+            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image, latest_update_package })
+            if
+                current_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                    .parse()
+                    .expect("active system image string literal") &&
+                latest_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                    .parse()
+                    .expect("new system image string literal") &&
+                latest_update_package == *UPDATE_PACKAGE_MERKLE
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_compare_buffer {
+    use {super::*, fidl_fuchsia_mem::Buffer, fuchsia_zircon::Vmo, matches::assert_matches};
+
+    fn buffer(data: &[u8]) -> Buffer {
+        let size = data.len() as u64;
+        let vmo = Vmo::create(size).unwrap();
+        vmo.write(data, 0).unwrap();
+        Buffer { vmo, size }
+    }
+
+    #[test]
+    fn equal() {
+        let a = [1; 100];
+        assert_matches!(compare_buffer(buffer(&a), buffer(&a)), Ok(true));
+    }
+
+    #[test]
+    fn equal_different_size() {
+        let a = [1; 100];
+        let b = [1; 200];
+        assert_matches!(compare_buffer(buffer(&a), buffer(&b)), Ok(true));
+    }
+
+    #[test]
+    fn equal_large_buffer() {
+        let a = [1; 100000];
+        let b = [1; 100001];
+        assert_matches!(compare_buffer(buffer(&a), buffer(&b)), Ok(true));
+    }
+
+    #[test]
+    fn not_equal() {
+        let a = [1; 100];
+        let b = [0; 100];
+        assert_matches!(compare_buffer(buffer(&a), buffer(&b)), Ok(false));
+    }
+
+    #[test]
+    fn not_equal_different_size() {
+        let a = [1; 100];
+        let b = [0; 200];
+        assert_matches!(compare_buffer(buffer(&a), buffer(&b)), Ok(false));
+    }
+
+    #[test]
+    fn not_equal_large_buffer() {
+        let a = [1; 100000];
+        let mut b = [1; 100001];
+        b[99999] = 0;
+        assert_matches!(compare_buffer(buffer(&a), buffer(&b)), Ok(false));
+    }
+
+    #[test]
+    fn vmo_read_error() {
+        let a = Buffer { vmo: Vmo::create(100).unwrap(), size: 10000 };
+        let b = Buffer { vmo: Vmo::create(10000).unwrap(), size: 10000 };
+        assert_matches!(compare_buffer(a, b), Err(_));
     }
 }
 

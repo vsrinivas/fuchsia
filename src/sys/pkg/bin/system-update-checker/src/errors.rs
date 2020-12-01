@@ -17,6 +17,9 @@ pub enum Error {
     #[error("connecting to PackageResolver")]
     ConnectPackageResolver(#[source] anyhow::Error),
 
+    #[error("connecting to Paver")]
+    ConnectPaver(#[source] anyhow::Error),
+
     #[error("system-updater component exited with failure")]
     SystemUpdaterFailed,
 

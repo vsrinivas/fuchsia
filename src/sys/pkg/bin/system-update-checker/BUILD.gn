@@ -17,6 +17,8 @@ rustc_binary("bin") {
     "//garnet/lib/rust/sysconfig-client",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
@@ -48,6 +50,7 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
+    "//src/sys/pkg/testing/mock-paver",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
