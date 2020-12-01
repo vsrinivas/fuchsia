@@ -4,6 +4,7 @@
 
 #include "src/storage/blobfs/blob-loader.h"
 
+#include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/status.h>
@@ -35,40 +36,59 @@ namespace blobfs {
 namespace {
 
 // TODO(jfsulliv): Rationalize this with the size limits for chunk-compression headers.
-constexpr size_t kScratchBufferSize = 4 * kBlobfsBlockSize;
+constexpr size_t kChunkedHeaderSize = 4 * kBlobfsBlockSize;
 
 }  // namespace
 
 BlobLoader::BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
                        NodeFinder* node_finder, pager::UserPager* pager, BlobfsMetrics* metrics,
-                       fzl::OwnedVmoMapper scratch_vmo)
+                       fzl::OwnedVmoMapper read_mapper, zx::vmo sandbox_vmo,
+                       std::unique_ptr<ExternalDecompressorClient> decompressor_client)
     : txn_manager_(txn_manager),
       block_iter_provider_(block_iter_provider),
       node_finder_(node_finder),
       pager_(pager),
       metrics_(metrics),
-      scratch_vmo_(std::move(scratch_vmo)) {}
+      read_mapper_(std::move(read_mapper)),
+      sandbox_vmo_(std::move(sandbox_vmo)),
+      decompressor_client_(std::move(decompressor_client)) {}
 
 zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
                                           BlockIteratorProvider* block_iter_provider,
                                           NodeFinder* node_finder, pager::UserPager* pager,
-                                          BlobfsMetrics* metrics) {
-  fzl::OwnedVmoMapper scratch_vmo;
-  zx_status_t status = scratch_vmo.CreateAndMap(kScratchBufferSize, "blobfs-loader");
+                                          BlobfsMetrics* metrics, bool sandbox_decompression) {
+  fzl::OwnedVmoMapper read_mapper;
+  zx_status_t status = read_mapper.CreateAndMap(pager::kTransferBufferSize, "blobfs-loader");
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to map scratch vmo: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "blobfs: Failed to map read vmo: " << zx_status_get_string(status);
     return zx::error(status);
   }
+  zx::vmo sandbox_vmo;
+  std::unique_ptr<ExternalDecompressorClient> decompressor_client = nullptr;
+  if (sandbox_decompression) {
+    status = zx::vmo::create(pager::kDecompressionBufferSize, 0, &sandbox_vmo);
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+    const char* name = "blobfs-sandbox";
+    sandbox_vmo.set_property(ZX_PROP_NAME, name, strlen(name));
+    zx::status<std::unique_ptr<ExternalDecompressorClient>> client_or =
+        ExternalDecompressorClient::Create(sandbox_vmo, read_mapper.vmo());
+    if (!client_or.is_ok()) {
+      return client_or.take_error();
+    } else {
+      decompressor_client = std::move(client_or.value());
+    }
+  }
   return zx::ok(BlobLoader(txn_manager, block_iter_provider, node_finder, pager, metrics,
-                           std::move(scratch_vmo)));
+                           std::move(read_mapper), std::move(sandbox_vmo),
+                           std::move(decompressor_client)));
 }
-
-void BlobLoader::Reset() { scratch_vmo_.Reset(); }
 
 zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
                                  const BlobCorruptionNotifier* corruption_notifier,
                                  fzl::OwnedVmoMapper* data_out, fzl::OwnedVmoMapper* merkle_out) {
-  ZX_DEBUG_ASSERT(scratch_vmo_.vmo().is_valid());
+  ZX_DEBUG_ASSERT(read_mapper_.vmo().is_valid());
   const InodePtr inode = node_finder_->GetNode(node_index);
   // LoadBlob should only be called for Inodes. If this doesn't hold, one of two things happened:
   //   - Programmer error
@@ -133,7 +153,7 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
                                       std::unique_ptr<pager::PageWatcher>* page_watcher_out,
                                       fzl::OwnedVmoMapper* data_out,
                                       fzl::OwnedVmoMapper* merkle_out) {
-  ZX_DEBUG_ASSERT(scratch_vmo_.vmo().is_valid());
+  ZX_DEBUG_ASSERT(read_mapper_.vmo().is_valid());
   const InodePtr inode = node_finder_->GetNode(node_index);
   // LoadBlobPaged should only be called for Inodes. If this doesn't hold, one of two things
   // happened:
@@ -281,32 +301,35 @@ zx_status_t BlobLoader::InitForDecompression(
   // the decompressor. Read these from disk.
 
   uint32_t data_block_count = blob_layout.DataBlockCount();
-  // We don't know exactly how long the header is, so fill up as much of the scratch VMO as we can.
-  // (The header should never be bigger than the size of the scratch VMO.)
-  ZX_DEBUG_ASSERT(scratch_vmo_.size() % GetBlockSize() == 0);
-  uint32_t scratch_block_count = static_cast<uint32_t>(scratch_vmo_.size()) / GetBlockSize();
-  uint32_t blocks_to_read = std::min(scratch_block_count, data_block_count);
+  // We don't know exactly how long the header is, so we generally overshoot.
+  // (The header should never be bigger than the size of the kChunkedHeaderSize.)
+  ZX_DEBUG_ASSERT(kChunkedHeaderSize % GetBlockSize() == 0);
+  uint32_t header_block_count = static_cast<uint32_t>(kChunkedHeaderSize) / GetBlockSize();
+  uint32_t blocks_to_read = std::min(header_block_count, data_block_count);
   if (blocks_to_read == 0) {
     FX_LOGS(ERROR) << "No data blocks; corrupted inode?";
     return ZX_ERR_BAD_STATE;
   }
 
+  auto decommit_used = fbl::MakeAutoCall([this, length = blocks_to_read * GetBlockSize()]() {
+    read_mapper_.vmo().op_range(ZX_VMO_OP_DECOMMIT, 0, length, nullptr, 0);
+  });
   auto bytes_read =
-      LoadBlocks(node_index, blob_layout.DataBlockOffset(), blocks_to_read, scratch_vmo_);
+      LoadBlocks(node_index, blob_layout.DataBlockOffset(), blocks_to_read, read_mapper_);
   if (bytes_read.is_error()) {
     FX_LOGS(ERROR) << "Failed to load compression header: " << bytes_read.status_string();
     return bytes_read.error_value();
   }
 
   zx_status_t status;
-  // If we read all of the blob's data into the scratch VMO then the scratch VMO may contain part of
+  // If we read all of the blob's data into the read VMO then the read VMO may contain part of
   // the Merkle tree that should be removed.
   if (blocks_to_read == data_block_count) {
-    ZeroMerkleTreeWithinDataVmo(scratch_vmo_, blob_layout);
+    ZeroMerkleTreeWithinDataVmo(read_mapper_, blob_layout);
   }
 
   if ((status = SeekableChunkedDecompressor::CreateDecompressor(
-           scratch_vmo_.start(), /*max_seek_table_size=*/
+           read_mapper_.start(), /*max_seek_table_size=*/
            std::min(uint64_t{blocks_to_read} * GetBlockSize(), blob_layout.DataSizeUpperBound()),
            /*max_compressed_size=*/blob_layout.DataSizeUpperBound(), decompressor_out)) != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to init decompressor: " << zx_status_get_string(status);
@@ -361,42 +384,53 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& 
   TRACE_DURATION("blobfs", "BlobLoader::LoadAndDecompressData", "compressed_size",
                  blob_layout.DataSizeUpperBound(), "blob_size", inode.blob_size);
 
-  // Create and attach a transfer VMO for fetching the compressed contents from the block FIFO.
-  fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
-  FormatBlobCompressedVmoName(node_index, &vmo_name);
-  fzl::OwnedVmoMapper compressed_mapper;
-  zx_status_t status =
-      compressed_mapper.CreateAndMap(blob_layout.DataBlockAlignedSize(), vmo_name.c_str());
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to initialized compressed vmo; error: " << status;
-    return status;
-  }
-
+  auto decommit_used = fbl::MakeAutoCall([this, length = blob_layout.DataSizeUpperBound()]() {
+    read_mapper_.vmo().op_range(ZX_VMO_OP_DECOMMIT, 0, fbl::round_up(length, kBlobfsBlockSize),
+                                nullptr, 0);
+  });
   fs::Ticker read_ticker(metrics_->Collecting());
   auto bytes_read = LoadBlocks(node_index, blob_layout.DataBlockOffset(),
-                               blob_layout.DataBlockCount(), compressed_mapper);
+                               blob_layout.DataBlockCount(), read_mapper_);
   if (bytes_read.is_error()) {
     return bytes_read.error_value();
   }
   metrics_->unpaged_read_metrics().IncrementDiskRead(algorithm, bytes_read.value(),
                                                      read_ticker.End());
 
-  ZeroMerkleTreeWithinDataVmo(compressed_mapper, blob_layout);
+  ZeroMerkleTreeWithinDataVmo(read_mapper_, blob_layout);
 
   fs::Ticker ticker(metrics_->Collecting());
 
   // Decompress into the target buffer.
   size_t target_size = inode.blob_size;
-  const void* compressed_buffer = compressed_mapper.start();
-  std::unique_ptr<Decompressor> decompressor;
-  status = Decompressor::Create(algorithm, &decompressor);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create decompressor, status=" << status;
-    return status;
+  zx_status_t status;
+  if (decompressor_client_) {
+    ZX_DEBUG_ASSERT(sandbox_vmo_.is_valid());
+    auto decommit_sandbox = fit::defer([this, length = target_size]() {
+      sandbox_vmo_.op_range(ZX_VMO_OP_DECOMMIT, 0, fbl::round_up(length, ZX_PAGE_SIZE), nullptr, 0);
+    });
+    ExternalDecompressor decompressor(decompressor_client_.get(), algorithm);
+    status = decompressor.Decompress(target_size, blob_layout.DataSizeUpperBound());
+    if (status == ZX_OK) {
+      // Consider breaking this up into chunked reads and decommits to limit
+      // memory usage.
+      zx_status_t read_status = sandbox_vmo_.read(vmo.start(), 0, target_size);
+      if (read_status != ZX_OK) {
+        FX_LOGS(ERROR) << "Failed to transfer data out of the sandbox vmo: "
+                       << zx_status_get_string(read_status);
+        return read_status;
+      }
+    }
+  } else {
+    std::unique_ptr<Decompressor> decompressor;
+    status = Decompressor::Create(algorithm, &decompressor);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to create decompressor: " << zx_status_get_string(status);
+      return status;
+    }
+    status = decompressor->Decompress(vmo.start(), &target_size, read_mapper_.start(),
+                                      blob_layout.DataSizeUpperBound());
   }
-
-  status = decompressor->Decompress(vmo.start(), &target_size, compressed_buffer,
-                                    blob_layout.DataSizeUpperBound());
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to decompress data: " << zx_status_get_string(status);
     return status;
@@ -406,7 +440,8 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& 
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
-  metrics_->unpaged_read_metrics().IncrementDecompression(algorithm, inode.blob_size, ticker.End());
+  metrics_->unpaged_read_metrics().IncrementDecompression(algorithm, inode.blob_size, ticker.End(),
+                                                          decompressor_client_ != nullptr);
 
   return ZX_OK;
 }

@@ -2,19 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/compression-settings.h>
-#include <gtest/gtest.h>
+#include "src/storage/blobfs/compression/external-decompressor.h"
+
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/cpp/executor.h>
+#include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/inspect/cpp/hierarchy.h>
+#include <lib/inspect/service/cpp/reader.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <cstdlib>
 
+#include <blobfs/compression-settings.h>
+#include <gtest/gtest.h>
+
 #include "src/storage/blobfs/compression/chunked.h"
 #include "src/storage/blobfs/compression/zstd-plain.h"
-#include "src/storage/blobfs/compression/external-decompressor.h"
-
+#include "src/storage/blobfs/test/blob_utils.h"
+#include "src/storage/blobfs/test/integration/fdio_test.h"
 
 namespace blobfs {
 namespace {
@@ -115,6 +125,23 @@ TEST_F(ExternalDecompressorTest, FullDecompression) {
   ASSERT_EQ(0, memcmp(input_data_, decompressed_mapper_.start(), kDataSize));
 }
 
+// Get a full range mapping for a SeekableDecompressor.
+zx::status<std::vector<CompressionMapping>> GetMappings(SeekableDecompressor* decompressor,
+                                                        size_t length) {
+  std::vector<CompressionMapping> mappings;
+  size_t current = 0;
+  while (current < length) {
+    zx::status<CompressionMapping> mapping_or =
+        decompressor->MappingForDecompressedRange(current, 1);
+    if (!mapping_or.is_ok()) {
+      return mapping_or.take_error();
+    }
+    current += mapping_or.value().decompressed_length;
+    mappings.push_back(mapping_or.value());
+  }
+  return zx::ok(std::move(mappings));
+}
+
 // Simple success case for chunked decompression, but done on each chunk just
 // to verify success.
 TEST_F(ExternalDecompressorTest, ChunkedPartialDecompression) {
@@ -131,179 +158,165 @@ TEST_F(ExternalDecompressorTest, ChunkedPartialDecompression) {
                 compressed_mapper_.start(), compressed_size, compressed_size, &local_decompressor));
 
   ExternalSeekableDecompressor decompressor(client_.get(), local_decompressor.get());
-  ASSERT_EQ(ZX_OK, decompressor.DecompressRange(0, kDataSize, compressed_size));
 
-  ASSERT_EQ(0, memcmp(input_data_, decompressed_mapper_.start(), kDataSize));
-
+  auto mappings_or = GetMappings(local_decompressor.get(), kDataSize);
+  ASSERT_TRUE(mappings_or.is_ok());
+  std::vector<CompressionMapping> mappings = mappings_or.value();
   // Ensure that we're testing multiple chunks and not one large chunk.
-  zx::status<CompressionMapping> mapping_or = local_decompressor->MappingForDecompressedRange(0, 1);
-  ASSERT_TRUE(mapping_or.is_ok());
-  CompressionMapping mapping = mapping_or.value();
-  ASSERT_GT(kDataSize, mapping.decompressed_length);
-}
-
-// Failure case for chunked decompression due to incorrect size.
-TEST_F(ExternalDecompressorTest, PartialDecompressionWithBadSize) {
-  size_t compressed_size;
-  std::unique_ptr<ChunkedCompressor> compressor = nullptr;
-  ASSERT_EQ(ZX_OK, ChunkedCompressor::Create({CompressionAlgorithm::CHUNKED, kCompressionLevel},
-                                             kDataSize, &compressed_size, &compressor));
-  ASSERT_EQ(ZX_OK, compressor->SetOutput(compressed_mapper_.start(), kMapSize));
-  CompressData(std::move(compressor), input_data_, &compressed_size);
-
-  std::unique_ptr<SeekableDecompressor> local_decompressor;
-  ASSERT_EQ(ZX_OK,
-            SeekableChunkedDecompressor::CreateDecompressor(
-                compressed_mapper_.start(), compressed_size, compressed_size, &local_decompressor));
-
-  zx::status<CompressionMapping> mapping_or = local_decompressor->MappingForDecompressedRange(0, 1);
-  ASSERT_TRUE(mapping_or.is_ok());
-  CompressionMapping mapping = mapping_or.value();
-
-  ExternalSeekableDecompressor decompressor(client_.get(), local_decompressor.get());
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
-            decompressor.DecompressRange(0, mapping.decompressed_length - 1, compressed_size));
-}
-
-// Failure case for chunked decompression due to incorrect alignment.
-TEST_F(ExternalDecompressorTest, PartialDecompressionWithBadAlignment) {
-  size_t compressed_size;
-  std::unique_ptr<ChunkedCompressor> compressor = nullptr;
-  ASSERT_EQ(ZX_OK, ChunkedCompressor::Create({CompressionAlgorithm::CHUNKED, kCompressionLevel},
-                                             kDataSize, &compressed_size, &compressor));
-  ASSERT_EQ(ZX_OK, compressor->SetOutput(compressed_mapper_.start(), kMapSize));
-  CompressData(std::move(compressor), input_data_, &compressed_size);
-
-  std::unique_ptr<SeekableDecompressor> local_decompressor;
-  ASSERT_EQ(ZX_OK,
-            SeekableChunkedDecompressor::CreateDecompressor(
-                compressed_mapper_.start(), compressed_size, compressed_size, &local_decompressor));
-
-  zx::status<CompressionMapping> mapping_or = local_decompressor->MappingForDecompressedRange(0, 1);
-  ASSERT_TRUE(mapping_or.is_ok());
-  CompressionMapping mapping = mapping_or.value();
-
-  ExternalSeekableDecompressor decompressor(client_.get(), local_decompressor.get());
-  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY,
-            decompressor.DecompressRange(1, mapping.decompressed_length - 1, compressed_size));
-}
-
-// Failure case for chunked decompression due to compression buffer being too small.
-TEST_F(ExternalDecompressorTest, PartialDecompressionWithSmallBuffer) {
-  size_t compressed_size;
-  std::unique_ptr<ChunkedCompressor> compressor = nullptr;
-  ASSERT_EQ(ZX_OK, ChunkedCompressor::Create({CompressionAlgorithm::CHUNKED, kCompressionLevel},
-                                             kDataSize, &compressed_size, &compressor));
-  ASSERT_EQ(ZX_OK, compressor->SetOutput(compressed_mapper_.start(), kMapSize));
-  CompressData(std::move(compressor), input_data_, &compressed_size);
-
-  std::unique_ptr<SeekableDecompressor> local_decompressor;
-  ASSERT_EQ(ZX_OK,
-            SeekableChunkedDecompressor::CreateDecompressor(
-                compressed_mapper_.start(), compressed_size, compressed_size, &local_decompressor));
-
-  zx::status<CompressionMapping> mapping_or = local_decompressor->MappingForDecompressedRange(0, 1);
-  ASSERT_TRUE(mapping_or.is_ok());
-  CompressionMapping mapping = mapping_or.value();
-
-  // Ensure that the chunk is larger than 1 byte so that we can fall short.
-  ASSERT_LT(1ul, mapping.compressed_length);
-
-  ExternalSeekableDecompressor decompressor(client_.get(), local_decompressor.get());
-  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY,
-            decompressor.DecompressRange(0, mapping.decompressed_length, 1));
-}
-
-// Get a full range mapping for a range of frames starting at some index.
-zx::status<CompressionMapping> MappingForFrames(size_t starting_frame, size_t num_frames,
-                                                SeekableDecompressor* decompressor) {
-  size_t current = 0;
-  CompressionMapping mapping = {0, 0, 0, 0};
-  for (size_t i = 0; i < starting_frame; i++) {
-    zx::status<CompressionMapping> mapping_or =
-        decompressor->MappingForDecompressedRange(current, 1);
-    if (!mapping_or.is_ok()) {
-      return  zx::error(mapping_or.status_value());
-    }
-    current += mapping_or.value().decompressed_length;
-    mapping = mapping_or.value();
+  ASSERT_GT(mappings.size(), 1ul);
+  for (CompressionMapping mapping : mappings) {
+    ASSERT_EQ(ZX_OK,
+              decompressor.DecompressRange(mapping.compressed_offset, mapping.compressed_length,
+                                           mapping.decompressed_length));
+    ASSERT_EQ(0, memcmp(static_cast<uint8_t*>(input_data_) + mapping.decompressed_offset,
+                        decompressed_mapper_.start(), mapping.decompressed_length));
   }
-  for (size_t i = 1; i < num_frames; i++) {
-    zx::status<CompressionMapping> mapping_or =
-        decompressor->MappingForDecompressedRange(current, 1);
-    if (!mapping_or.is_ok()) {
-      return  zx::error(mapping_or.status_value());
-    }
-    current += mapping_or.value().decompressed_length;
-    mapping.decompressed_length += mapping_or.value().decompressed_length;
-    mapping.compressed_length += mapping_or.value().compressed_length;
+}
+
+fit::result<inspect::Hierarchy> TakeSnapshot(fuchsia::inspect::TreePtr tree,
+                                             async::Executor* executor) {
+  std::condition_variable cv;
+  std::mutex m;
+  bool done = false;
+  fit::result<inspect::Hierarchy> hierarchy_or_error;
+
+  auto promise =
+      inspect::ReadFromTree(std::move(tree)).then([&](fit::result<inspect::Hierarchy>& result) {
+        {
+          std::unique_lock<std::mutex> lock(m);
+          hierarchy_or_error = std::move(result);
+          done = true;
+        }
+        cv.notify_all();
+      });
+
+  executor->schedule_task(std::move(promise));
+
+  std::unique_lock<std::mutex> lock(m);
+  cv.wait(lock, [&done]() { return done; });
+
+  return hierarchy_or_error;
+}
+
+void GetRemoteDecompressions(async::Executor* executor, zx_handle_t diagnostics_dir,
+                             const std::string& node_name, uint64_t* value) {
+  ASSERT_NE(executor, nullptr);
+  ASSERT_NE(value, nullptr);
+
+  fuchsia::inspect::TreePtr tree;
+  async_dispatcher_t* dispatcher = executor->dispatcher();
+  ASSERT_EQ(fdio_service_connect_at(diagnostics_dir, "fuchsia.inspect.Tree",
+                                    tree.NewRequest(dispatcher).TakeChannel().release()),
+            ZX_OK);
+
+  fit::result<inspect::Hierarchy> hierarchy_or_error = TakeSnapshot(std::move(tree), executor);
+  ASSERT_TRUE(hierarchy_or_error.is_ok());
+  inspect::Hierarchy hierarchy = std::move(hierarchy_or_error.value());
+
+  const inspect::Hierarchy* direct_parent = &hierarchy;
+  direct_parent = direct_parent->GetByPath({node_name});
+  ASSERT_NE(direct_parent, nullptr);
+
+  const inspect::UintPropertyValue* node =
+      direct_parent->node().get_property<inspect::UintPropertyValue>("remote_decompressions");
+  ASSERT_NE(node, nullptr);
+
+  *value = node->value();
+}
+
+class ExternalDecompressorE2ePagedTest : public FdioTest {
+ public:
+  ExternalDecompressorE2ePagedTest() {
+    MountOptions options;
+    // Chunked files will be paged in.
+    options.pager_backed_cache_policy = CachePolicy::EvictImmediately;
+    options.compression_settings = {CompressionAlgorithm::CHUNKED, 14};
+    options.sandbox_decompression = true;
+    set_mount_options(options);
   }
-  return zx::ok(mapping);
+};
+
+TEST_F(ExternalDecompressorE2ePagedTest, VerifyRemoteDecompression) {
+  async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  loop.StartThread("metrics-thread");
+  async::Executor executor(loop.dispatcher());
+
+  // Create a new blob on the mounted filesystem.
+  std::unique_ptr<BlobInfo> info;
+  ASSERT_NO_FATAL_FAILURE(
+      GenerateRealisticBlob(".", kDataSize, BlobLayoutFormat::kPaddedMerkleTreeAtStart, &info));
+  {
+    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd.is_valid());
+    ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
+    ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0)
+        << "Failed to write Data";
+  }
+
+  uint64_t before_decompressions;
+  ASSERT_NO_FATAL_FAILURE(GetRemoteDecompressions(&executor, diagnostics_dir(), "paged_read_stats",
+                                                  &before_decompressions));
+
+  {
+    fbl::unique_fd fd(openat(root_fd(), info->path, O_RDONLY));
+    ASSERT_TRUE(fd.is_valid());
+    ASSERT_NO_FATAL_FAILURE(VerifyContents(fd.get(), info->data.get(), info->size_data));
+  }
+
+  uint64_t after_decompressions;
+  ASSERT_NO_FATAL_FAILURE(GetRemoteDecompressions(&executor, diagnostics_dir(), "paged_read_stats",
+                                                  &after_decompressions));
+  ASSERT_GT(after_decompressions, before_decompressions);
+
+  loop.Quit();
+  loop.JoinThreads();
 }
 
-// Failure case for 2 frames where the second is not correctly sized, then the success with the
-// correct sizes.
-TEST_F(ExternalDecompressorTest, PartialDecompressionMultipleFrames) {
-  size_t compressed_size;
-  std::unique_ptr<ChunkedCompressor> compressor = nullptr;
-  ASSERT_EQ(ZX_OK, ChunkedCompressor::Create({CompressionAlgorithm::CHUNKED, kCompressionLevel},
-                                             kDataSize, &compressed_size, &compressor));
-  ASSERT_EQ(ZX_OK, compressor->SetOutput(compressed_mapper_.start(), kMapSize));
-  CompressData(std::move(compressor), input_data_, &compressed_size);
+class ExternalDecompressorE2eUnpagedTest : public FdioTest {
+ public:
+  ExternalDecompressorE2eUnpagedTest() {
+    MountOptions options;
+    // ZSTD files will be done all at once.
+    options.compression_settings = {CompressionAlgorithm::ZSTD, 14};
+    options.sandbox_decompression = true;
+    set_mount_options(options);
+  }
+};
 
-  std::unique_ptr<SeekableDecompressor> local_decompressor;
-  ASSERT_EQ(ZX_OK,
-            SeekableChunkedDecompressor::CreateDecompressor(
-                compressed_mapper_.start(), compressed_size, compressed_size, &local_decompressor));
+TEST_F(ExternalDecompressorE2eUnpagedTest, VerifyRemoteDecompression) {
+  async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  loop.StartThread("metrics-thread");
+  async::Executor executor(loop.dispatcher());
 
-  zx::status<CompressionMapping> mapping_or = MappingForFrames(0, 2, local_decompressor.get());
-  // This may fail if the archive is only a single frame.
-  ASSERT_TRUE(mapping_or.is_ok());
-  CompressionMapping mapping = mapping_or.value();
+  // Create a new blob on the mounted filesystem.
+  std::unique_ptr<BlobInfo> info;
+  ASSERT_NO_FATAL_FAILURE(
+      GenerateRealisticBlob(".", kDataSize, BlobLayoutFormat::kPaddedMerkleTreeAtStart, &info));
+  {
+    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd.is_valid());
+    ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
+    ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0)
+        << "Failed to write Data";
+  }
 
-  ExternalSeekableDecompressor decompressor(client_.get(), local_decompressor.get());
-  // Fail for partial 2nd frame.
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, decompressor.DecompressRange(
-      mapping.decompressed_offset, mapping.decompressed_length - 1, compressed_size));
+  uint64_t before_decompressions;
+  ASSERT_NO_FATAL_FAILURE(GetRemoteDecompressions(&executor, diagnostics_dir(),
+                                                  "unpaged_read_stats", &before_decompressions));
 
-  // Fail for falling short on the compressed buffer length.
-  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, decompressor.DecompressRange(
-      mapping.decompressed_offset, mapping.decompressed_length, mapping.compressed_length - 1));
+  {
+    fbl::unique_fd fd(openat(root_fd(), info->path, O_RDONLY));
+    ASSERT_TRUE(fd.is_valid());
+    ASSERT_NO_FATAL_FAILURE(VerifyContents(fd.get(), info->data.get(), info->size_data));
+  }
 
-  // Success with two full frames.
-  ASSERT_EQ(ZX_OK, decompressor.DecompressRange(
-      mapping.decompressed_offset, mapping.decompressed_length, compressed_size));
-  ASSERT_EQ(0, memcmp(input_data_, decompressed_mapper_.start(), mapping.decompressed_length));
-}
+  uint64_t after_decompressions;
+  ASSERT_NO_FATAL_FAILURE(GetRemoteDecompressions(&executor, diagnostics_dir(),
+                                                  "unpaged_read_stats", &after_decompressions));
+  ASSERT_GT(after_decompressions, before_decompressions);
 
-// Decompressing onle the second frame, since most test use the first frame.
-TEST_F(ExternalDecompressorTest, PartialDecompressionSecondFrame) {
-  size_t compressed_size;
-  std::unique_ptr<ChunkedCompressor> compressor = nullptr;
-  ASSERT_EQ(ZX_OK, ChunkedCompressor::Create({CompressionAlgorithm::CHUNKED, kCompressionLevel},
-                                             kDataSize, &compressed_size, &compressor));
-  ASSERT_EQ(ZX_OK, compressor->SetOutput(compressed_mapper_.start(), kMapSize));
-  CompressData(std::move(compressor), input_data_, &compressed_size);
-
-  std::unique_ptr<SeekableDecompressor> local_decompressor;
-  ASSERT_EQ(ZX_OK,
-            SeekableChunkedDecompressor::CreateDecompressor(
-                compressed_mapper_.start(), compressed_size, compressed_size, &local_decompressor));
-
-  zx::status<CompressionMapping> mapping_or = MappingForFrames(1, 1, local_decompressor.get());
-  // This may fail if the archive is only a single frame.
-  ASSERT_TRUE(mapping_or.is_ok());
-  CompressionMapping mapping = mapping_or.value();
-
-  ExternalSeekableDecompressor decompressor(client_.get(), local_decompressor.get());
-
-  ASSERT_EQ(ZX_OK, decompressor.DecompressRange(
-      mapping.decompressed_offset, mapping.decompressed_length,
-      mapping.compressed_offset + mapping.compressed_length));
-  ASSERT_EQ(
-      0, memcmp(static_cast<uint8_t*>(input_data_) + mapping.decompressed_offset,
-                static_cast<uint8_t*>(decompressed_mapper_.start()) + mapping.decompressed_offset,
-                mapping.decompressed_length));
+  loop.Quit();
+  loop.JoinThreads();
 }
 
 }  // namespace

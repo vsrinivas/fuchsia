@@ -147,9 +147,9 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     FX_LOGS(ERROR) << "Could not initialize compressed pager transfer buffer";
     return status_or_compressed_buffer.status_value();
   }
-  auto status_or_pager =
-      pager::UserPager::Create(std::move(status_or_buffer).value(),
-                               std::move(status_or_compressed_buffer).value(), fs_ptr->Metrics());
+  auto status_or_pager = pager::UserPager::Create(std::move(status_or_buffer).value(),
+                                                  std::move(status_or_compressed_buffer).value(),
+                                                  fs_ptr->Metrics(), options.sandbox_decompression);
   if (!status_or_pager.is_ok()) {
     FX_LOGS(ERROR) << "Could not initialize user pager";
     return status_or_pager.status_value();
@@ -265,7 +265,8 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     return status;
   }
   zx::status<BlobLoader> loader =
-      BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->pager_.get(), fs->Metrics());
+      BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->pager_.get(), fs->Metrics(),
+                         options.sandbox_decompression);
   if (!loader.is_ok()) {
     FX_LOGS(ERROR) << "Failed to initialize loader: " << loader.status_string();
     return loader.status_value();
@@ -738,10 +739,6 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
     vnode->CloneWatcherTeardown();
   });
-
-  // Reset |loader_| now, since it has internally allocated buffers attached to the FIFO it needs to
-  // detach.
-  loader_.Reset();
 
   // Write the clean bit.
   if (writability_ == Writability::Writable) {

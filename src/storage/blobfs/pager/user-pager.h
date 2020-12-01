@@ -17,6 +17,7 @@
 
 #include <memory>
 
+#include "src/storage/blobfs/compression/external-decompressor.h"
 #include "src/storage/blobfs/metrics.h"
 #include "src/storage/blobfs/pager/transfer-buffer.h"
 #include "src/storage/blobfs/pager/user-pager-info.h"
@@ -97,7 +98,7 @@ class UserPager {
   // |buffer| is used to retrieve and buffer data from the underlying storage.
   [[nodiscard]] static zx::status<std::unique_ptr<UserPager>> Create(
       std::unique_ptr<TransferBuffer> compressed_buffer, std::unique_ptr<TransferBuffer> buffer,
-      BlobfsMetrics* metrics);
+      BlobfsMetrics* metrics, bool sandbox_decompression);
 
   // Returns the pager handle.
   const zx::pager& Pager() const { return pager_; }
@@ -179,6 +180,12 @@ class UserPager {
   // A persistent mapping for |compressed_transfer_buffer_|.
   fzl::VmoMapper compressed_mapper_;
 
+  // This is the buffer that can be written to by the other end of the
+  // |decompressor_client_| connection. The contents are not to be trusted and
+  // may be changed at any time, so they need to be copied out prior to
+  // verification.
+  zx::vmo sandbox_buffer_;
+
   // Scratch buffer for decompression.
   // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, this needs to be unmapped before
   // calling |zx_pager_supply_pages|.
@@ -194,6 +201,9 @@ class UserPager {
 
   // Records all metrics for this instance of blobfs.
   BlobfsMetrics* metrics_ = nullptr;
+
+  // Maintains a connection to the external decompressor.
+  std::unique_ptr<ExternalDecompressorClient> decompressor_client_ = nullptr;
 };
 
 }  // namespace pager

@@ -30,7 +30,7 @@ UserPager::UserPager(BlobfsMetrics* metrics) : metrics_(metrics) {}
 
 zx::status<std::unique_ptr<UserPager>> UserPager::Create(
     std::unique_ptr<TransferBuffer> buffer, std::unique_ptr<TransferBuffer> compressed_buffer,
-    BlobfsMetrics* metrics) {
+    BlobfsMetrics* metrics, bool sandbox_decompression) {
   ZX_DEBUG_ASSERT(metrics != nullptr && buffer != nullptr && buffer->vmo().is_valid() &&
                   compressed_buffer != nullptr && compressed_buffer->vmo().is_valid());
 
@@ -52,6 +52,22 @@ zx::status<std::unique_ptr<UserPager>> UserPager::Create(
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create decompression buffer: " << zx_status_get_string(status);
     return zx::error(status);
+  }
+
+  if (sandbox_decompression) {
+    status = zx::vmo::create(kDecompressionBufferSize, 0, &pager->sandbox_buffer_);
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "blobfs: Failed to create sandbox buffer: %s\n"
+                     << zx_status_get_string(status);
+      return zx::error(status);
+    }
+
+    auto client_or = ExternalDecompressorClient::Create(pager->sandbox_buffer_,
+                                                        pager->compressed_transfer_buffer_->vmo());
+    if (!client_or.is_ok()) {
+      return zx::error(client_or.status_value());
+    }
+    pager->decompressor_client_ = std::move(client_or.value());
   }
 
   // Create the pager object.
@@ -341,25 +357,51 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   }
   auto unmap_decompression = fbl::MakeAutoCall([&]() { decompressed_mapper.Unmap(); });
 
-  // Decompress the data
   fs::Ticker ticker(metrics_->Collecting());
   size_t decompressed_size = mapping.decompressed_length;
-  uint8_t* src = static_cast<uint8_t*>(compressed_mapper_.start()) + offset_of_compressed_data;
-  zx_status_t status =
-      info.decompressor->DecompressRange(decompressed_mapper.start(), &decompressed_size, src,
-                                         mapping.compressed_length, mapping.decompressed_offset);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "TransferChunked: Failed to decompress: " << zx_status_get_string(status);
-    return ToPagerErrorStatus(status);
+  zx_status_t decompress_status;
+  if (decompressor_client_) {
+    ZX_DEBUG_ASSERT(sandbox_buffer_.is_valid());
+    auto decommit_sandbox = fbl::MakeAutoCall([this, length = mapping.decompressed_length]() {
+      // Decommit pages in the sandbox buffer that might have been populated. All blobs share
+      // the same sandbox buffer - this prevents data leaks between different blobs.
+      sandbox_buffer_.op_range(ZX_VMO_OP_DECOMMIT, 0, fbl::round_up(length, kBlobfsBlockSize),
+                               nullptr, 0);
+    });
+    ExternalSeekableDecompressor decompressor(decompressor_client_.get(), info.decompressor.get());
+    decompress_status = decompressor.DecompressRange(
+        offset_of_compressed_data, mapping.compressed_length, mapping.decompressed_length);
+    if (decompress_status == ZX_OK) {
+      zx_status_t read_status =
+          sandbox_buffer_.read(decompressed_mapper.start(), 0, mapping.decompressed_length);
+      if (read_status != ZX_OK) {
+        FX_LOGS(ERROR) << "TransferChunked: Failed to copy from sandbox buffer: "
+                       << zx_status_get_string(read_status);
+        return ToPagerErrorStatus(read_status);
+      }
+    }
+  } else {
+    // Decompress the data
+    uint8_t* src = static_cast<uint8_t*>(compressed_mapper_.start()) + offset_of_compressed_data;
+    decompress_status =
+        info.decompressor->DecompressRange(decompressed_mapper.start(), &decompressed_size, src,
+                                           mapping.compressed_length, mapping.decompressed_offset);
+  }
+  if (decompress_status != ZX_OK) {
+    FX_LOGS(ERROR) << "TransferChunked: Failed to decompress: "
+                   << zx_status_get_string(decompress_status);
+    return ToPagerErrorStatus(decompress_status);
   }
   metrics_->paged_read_metrics().IncrementDecompression(CompressionAlgorithm::CHUNKED,
-                                                        decompressed_size, ticker.End());
+                                                        decompressed_size, ticker.End(),
+                                                        decompressor_client_ != nullptr);
 
   // Verify the decompressed pages.
   const uint64_t rounded_length =
       fbl::round_up<uint64_t, uint64_t>(mapping.decompressed_length, PAGE_SIZE);
-  status = info.verifier->VerifyPartial(decompressed_mapper.start(), mapping.decompressed_length,
-                                        mapping.decompressed_offset, rounded_length);
+  zx_status_t status =
+      info.verifier->VerifyPartial(decompressed_mapper.start(), mapping.decompressed_length,
+                                   mapping.decompressed_offset, rounded_length);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "TransferChunked: Failed to verify data: " << zx_status_get_string(status);
     return ToPagerErrorStatus(status);

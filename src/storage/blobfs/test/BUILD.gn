@@ -130,15 +130,27 @@ test("blobfs-host") {
 }
 
 test("external_decompressor_integration") {
-  sources = [ "integration/external-decompressor_test.cc" ]
+  sources = [
+    "integration/external-decompressor_test.cc",
+    "integration/fdio_test.cc",
+    "integration/fdio_test.h",
+  ]
   deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs:blobfs",
     "//src/storage/blobfs:fuchsia.blobfs.internal",
     "//src/storage/blobfs:private_headers",
+    "//src/storage/blobfs/test:test-utils",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/id_allocator",
   ]
 }
 

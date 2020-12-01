@@ -40,6 +40,8 @@ typedef struct mount_options {
   } outgoing_directory;
   // If true, bind to the namespace rather than using a remote-mount.
   bool bind_to_namespace;
+  // If true, puts decompression in a sandboxed process.
+  bool sandbox_decompression;
 } mount_options_t;
 
 __EXPORT

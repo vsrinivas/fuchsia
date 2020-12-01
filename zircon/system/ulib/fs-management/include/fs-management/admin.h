@@ -38,6 +38,8 @@ typedef struct init_options {
   // If true, run fsck after every transaction (if supported). This is for testing/debugging
   // purposes.
   bool fsck_after_every_transaction;
+  // If true, decompression is run in a sandbox component.
+  bool sandbox_decompression;
   // Provide a launch callback function pointer for configuring how the underlying filesystem
   // process is launched.
   LaunchCallback callback;

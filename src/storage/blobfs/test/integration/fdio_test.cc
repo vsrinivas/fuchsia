@@ -29,7 +29,7 @@ void FdioTest::SetUp() {
   ASSERT_EQ(zx::channel::create(0, &diagnostics_dir_client_, &diagnostics_dir_server), ZX_OK);
 
   std::unique_ptr<Runner> runner;
-  ASSERT_EQ(Runner::Create(loop_.get(), std::move(device), MountOptions(),
+  ASSERT_EQ(Runner::Create(loop_.get(), std::move(device), mount_options_,
                            std::move(vmex_resource_), std::move(diagnostics_dir_server), &runner),
             ZX_OK);
   ASSERT_EQ(runner->ServeRoot(std::move(root_server), layout_), ZX_OK);

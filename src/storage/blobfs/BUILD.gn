@@ -44,6 +44,10 @@ source_set("private_headers") {
     "iterator/extent-iterator.h",
     "iterator/vector-extent-iterator.h",
   ]
+  deps = [
+    "//src/lib/chunked-compression",
+    "//src/storage/lib/watchdog",
+  ]
   if (is_fuchsia) {
     sources += [
       "allocator/allocator.h",
@@ -57,11 +61,12 @@ source_set("private_headers") {
       "read-metrics.h",
       "verification-metrics.h",
     ]
+    deps += [
+      ":fuchsia.blobfs.internal",
+      ":fuchsia.blobfs.internal_llcpp",
+      "//zircon/system/ulib/async:async-cpp",
+    ]
   }
-  deps = [
-    "//src/lib/chunked-compression",
-    "//src/storage/lib/watchdog",
-  ]
 }
 
 zx_library("blobfs") {
@@ -171,6 +176,8 @@ zx_library("blobfs") {
       "verification-metrics.cc",
     ]
     public_deps += [
+      ":fuchsia.blobfs.internal",
+      ":fuchsia.blobfs.internal_llcpp",
       "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_llcpp",
       "//zircon/system/ulib/block-client",
       "//zircon/system/ulib/fs/metrics:metrics-cobalt",
@@ -178,8 +185,6 @@ zx_library("blobfs") {
       "//zircon/system/ulib/fs/metrics:metrics-inspect",
     ]
     deps += [
-      ":fuchsia.blobfs.internal",
-      ":fuchsia.blobfs.internal_llcpp",
       "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
       "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_llcpp",
       "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",

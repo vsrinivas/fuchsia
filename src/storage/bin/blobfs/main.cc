@@ -182,6 +182,7 @@ int usage() {
       "         -b|--blob_layout_format [padded|compact]\n"
       "                                    The format blobfs should use to store blobs.  Only\n"
       "                                    valid for mkfs.\n"
+      "         -s|--sandbox_decompression Run blob decompression in a sandboxed component.\n"
       "         -h|--help                  Display this message\n"
       "\n"
       "On Fuchsia, blobfs takes the block device argument by handle.\n"
@@ -209,6 +210,7 @@ zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
         {"compression_level", required_argument, nullptr, 'l'},
         {"eviction_policy", required_argument, nullptr, 'e'},
         {"blob_layout_format", required_argument, nullptr, 'b'},
+        {"sandbox_decompression", no_argument, nullptr, 's'},
         {"help", no_argument, nullptr, 'h'},
         {nullptr, 0, nullptr, 0},
     };
@@ -262,6 +264,10 @@ zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
           return zx::error(usage());
         }
         options.mkfs_options.blob_layout_format = format.value();
+        break;
+      }
+      case 's': {
+        options.mount_options.sandbox_decompression = true;
         break;
       }
       case 'h':

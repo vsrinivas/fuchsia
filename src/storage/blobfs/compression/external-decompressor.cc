@@ -230,9 +230,9 @@ ExternalSeekableDecompressor::ExternalSeekableDecompressor(ExternalDecompressorC
                                                            SeekableDecompressor* decompressor)
     : client_(client), decompressor_(decompressor) {}
 
-zx_status_t ExternalSeekableDecompressor::DecompressRange(size_t uncompressed_offset,
-                                                          size_t uncompressed_size,
-                                                          size_t max_compressed_size) {
+zx_status_t ExternalSeekableDecompressor::DecompressRange(size_t compressed_offset,
+                                                          size_t compressed_size,
+                                                          size_t uncompressed_size) {
   auto algorithm_or = ExternalDecompressorClient::CompressionAlgorithmLocalToFidlForPartial(
       decompressor_->algorithm());
   if (!algorithm_or.is_ok()) {
@@ -240,45 +240,11 @@ zx_status_t ExternalSeekableDecompressor::DecompressRange(size_t uncompressed_of
   }
   llcpp::fuchsia::blobfs::internal::CompressionAlgorithm fidl_algorithm = algorithm_or.value();
 
-  size_t cumulative_uncompressed_size = 0;
-  while (cumulative_uncompressed_size < uncompressed_size) {
-    zx::status<CompressionMapping> mapping_or = decompressor_->MappingForDecompressedRange(
-        uncompressed_offset + cumulative_uncompressed_size, 1);
-    if (mapping_or.is_error()) {
-      return mapping_or.status_value();
-    }
-    CompressionMapping mapping = mapping_or.value();
-
-    // Ensure forward progess
-    if (mapping.decompressed_length == 0 ||
-        // Ensure uncompressed contiguity.
-        uncompressed_offset + cumulative_uncompressed_size != mapping.decompressed_offset ||
-        // Don't go past the end of the compressed buffer.
-        mapping.compressed_offset + mapping.compressed_length > max_compressed_size) {
-      // Most likely that the seek table is corrupted or manipulated.
-      return ZX_ERR_IO_DATA_INTEGRITY;
-    }
-    // Don't got past the end of the uncompressed buffer.
-    if (cumulative_uncompressed_size + mapping.decompressed_length > uncompressed_size) {
-      // This needs to be done in entire chunks.
-      return ZX_ERR_INVALID_ARGS;
-    }
-
-    // This has a bunch of stopping and starting, it would be better to pipeline
-    // these to keep the server busy, but this repeated path will probably never
-    // get exercised.
-    zx_status_t status = client_->SendMessage({
-        {mapping.decompressed_offset, mapping.decompressed_length},
-        {mapping.compressed_offset, mapping.compressed_length},
-        fidl_algorithm,
-    });
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    cumulative_uncompressed_size += mapping.decompressed_length;
-  }
-  return ZX_OK;
+  return client_->SendMessage({
+      {0, uncompressed_size},
+      {compressed_offset, compressed_size},
+      fidl_algorithm,
+  });
 }
 
 }  // namespace blobfs

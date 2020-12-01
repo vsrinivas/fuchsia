@@ -98,6 +98,7 @@ void PrintReadMetrics(ReadMetrics& metrics) {
                 << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms) | Decompressed "
                 << snapshot.decompress_bytes / mb << " MB (spent "
                 << TicksToMs(zx::ticks(snapshot.decompress_ticks)) << " ms)";
+  FX_LOGS(INFO) << "    Remote decompressions: " << metrics.remote_decompressions();
 }
 
 void BlobfsMetrics::Dump() {

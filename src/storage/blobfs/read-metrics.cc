@@ -13,7 +13,9 @@ ReadMetrics::ReadMetrics(inspect::Node* read_metrics_node)
       lz4_metrics_(read_metrics_node->CreateChild("lz4")),
       zstd_metrics_(read_metrics_node->CreateChild("zstd")),
       zstd_seekable_metrics_(read_metrics_node->CreateChild("zstd_seekable")),
-      chunked_metrics_(read_metrics_node->CreateChild("chunked")) {}
+      chunked_metrics_(read_metrics_node->CreateChild("chunked")),
+      remote_decompressions_node_(
+          read_metrics_node->CreateUint("remote_decompressions", remote_decompressions_)) {}
 
 ReadMetrics::PerCompressionMetrics::PerCompressionMetrics(inspect::Node node)
     : parent_node(std::move(node)),
@@ -47,12 +49,16 @@ void ReadMetrics::IncrementDiskRead(CompressionAlgorithm algorithm, uint64_t rea
 }
 
 void ReadMetrics::IncrementDecompression(CompressionAlgorithm algorithm, uint64_t decompressed_size,
-                                         fs::Duration decompress_duration) {
+                                         fs::Duration decompress_duration, bool remote) {
   auto metrics = GetMetrics(algorithm);
   metrics->decompress_ticks += decompress_duration;
   metrics->decompress_bytes += decompressed_size;
   metrics->decompress_ticks_node.Add(decompress_duration.get());
   metrics->decompress_bytes_node.Add(decompressed_size);
+  if (remote) {
+    remote_decompressions_++;
+    remote_decompressions_node_.Add(1);
+  }
 }
 
 ReadMetrics::PerCompressionSnapshot ReadMetrics::GetSnapshot(CompressionAlgorithm algorithm) {

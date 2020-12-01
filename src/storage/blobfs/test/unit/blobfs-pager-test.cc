@@ -293,7 +293,7 @@ class BlobfsPagerTest : public testing::Test {
     buffer_ = buffer.get();
     compressed_buffer_ = compressed_buffer.get();
     auto status_or_pager =
-        UserPager::Create(std::move(buffer), std::move(compressed_buffer), &metrics_);
+        UserPager::Create(std::move(buffer), std::move(compressed_buffer), &metrics_, false);
     ASSERT_TRUE(status_or_pager.is_ok());
     pager_ = std::move(status_or_pager).value();
     factory_ = std::make_unique<MockBlobFactory>(pager_.get(), &metrics_);

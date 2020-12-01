@@ -19,6 +19,7 @@
 #include <fbl/macros.h>
 #include <storage/buffer/owned_vmoid.h>
 
+#include "src/storage/blobfs/compression/external-decompressor.h"
 #include "src/storage/blobfs/compression/seekable-decompressor.h"
 #include "src/storage/blobfs/iterator/block-iterator-provider.h"
 #include "src/storage/blobfs/metrics.h"
@@ -41,11 +42,7 @@ class BlobLoader {
   static zx::status<BlobLoader> Create(TransactionManager* txn_manager,
                                        BlockIteratorProvider* block_iter_provider,
                                        NodeFinder* node_finder, pager::UserPager* pager,
-                                       BlobfsMetrics* metrics);
-
-  // Resets the BlobLoader, freeing any owned resources. |LoadBlob*| must not be invoked after
-  // |Reset()| is called.
-  void Reset();
+                                       BlobfsMetrics* metrics, bool sandbox_decompression);
 
   // Loads the merkle tree and data for the blob with index |node_index|.
   //
@@ -81,7 +78,8 @@ class BlobLoader {
  private:
   BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
              NodeFinder* node_finder, pager::UserPager* pager, BlobfsMetrics* metrics,
-             fzl::OwnedVmoMapper scratch_vmo);
+             fzl::OwnedVmoMapper read_mapper, zx::vmo sandbox_vmo,
+             std::unique_ptr<ExternalDecompressorClient> decompressor_client);
 
   // Loads the merkle tree from disk and initializes a VMO mapping and BlobVerifier with the
   // contents. (Small blobs may have no stored tree, in which case |vmo_out| is not mapped but
@@ -125,7 +123,9 @@ class BlobLoader {
   NodeFinder* node_finder_ = nullptr;
   pager::UserPager* pager_ = nullptr;
   BlobfsMetrics* metrics_ = nullptr;
-  fzl::OwnedVmoMapper scratch_vmo_;
+  fzl::OwnedVmoMapper read_mapper_;
+  zx::vmo sandbox_vmo_;
+  std::unique_ptr<ExternalDecompressorClient> decompressor_client_ = nullptr;
 };
 
 }  // namespace blobfs

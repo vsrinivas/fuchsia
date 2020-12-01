@@ -5,12 +5,13 @@
 #ifndef SRC_STORAGE_BLOBFS_COMPRESSION_EXTERNAL_DECOMPRESSOR_H_
 #define SRC_STORAGE_BLOBFS_COMPRESSION_EXTERNAL_DECOMPRESSOR_H_
 
-#include <blobfs/compression-settings.h>
 #include <fuchsia/blobfs/internal/cpp/fidl.h>
 #include <fuchsia/blobfs/internal/llcpp/fidl.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
+
+#include <blobfs/compression-settings.h>
 
 #include "src/storage/blobfs/compression/seekable-decompressor.h"
 
@@ -48,7 +49,7 @@ class ExternalDecompressorClient {
 
   // Convert to fidl compatible enum from local for partial decompresion.
   static zx::status<llcpp::fuchsia::blobfs::internal::CompressionAlgorithm>
-      CompressionAlgorithmLocalToFidlForPartial(CompressionAlgorithm algorithm);
+  CompressionAlgorithmLocalToFidlForPartial(CompressionAlgorithm algorithm);
 
  private:
   ExternalDecompressorClient() = default;
@@ -104,12 +105,12 @@ class ExternalSeekableDecompressor {
                                SeekableDecompressor* decompressor);
   DISALLOW_COPY_ASSIGN_AND_MOVE(ExternalSeekableDecompressor);
 
-  // Decompresses one or more areas by sending one request per area to the
-  // provided client, using the SeekableDecompressor provided to determine
-  // areas' information. The range specified must be an entire completable
-  // range or set of ranges.
-  zx_status_t DecompressRange(size_t uncompressed_offset, size_t uncompressed_size,
-                              size_t max_compressed_size);
+  // Decompresses exactly one area by sending a request to the provided client.
+  // The range specified must be an entire completeable chunk.
+  // `compressed_offset` is the offset into the `compressed_vmo_` to start
+  // decompressing from.
+  zx_status_t DecompressRange(size_t compressed_offset, size_t compressed_size,
+                              size_t uncompressed_size);
 
  private:
   // Client used for communication with the decompressor.

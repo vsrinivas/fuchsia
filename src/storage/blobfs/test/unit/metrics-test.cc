@@ -69,12 +69,13 @@ TEST(ReadMetricsTest, ChunkedDecompression) {
 
   for (int i = 0; i < kNumOperations; i++) {
     read_metrics.IncrementDecompression(CompressionAlgorithm::CHUNKED, kDecompressBytes,
-                                        zx::ticks(kDecompressDuration));
+                                        zx::ticks(kDecompressDuration), i % 2 == 1);
   }
 
   stats = read_metrics.GetSnapshot(CompressionAlgorithm::CHUNKED);
   EXPECT_EQ(stats.decompress_bytes, kDecompressBytes * kNumOperations);
   EXPECT_EQ(stats.decompress_ticks, kDecompressDuration * kNumOperations);
+  EXPECT_EQ(read_metrics.remote_decompressions(), kNumOperations / 2ul);
 }
 
 TEST(VerificationMetricsTest, MerkleVerifyMultithreaded) {

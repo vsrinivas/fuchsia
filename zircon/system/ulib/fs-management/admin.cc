@@ -70,6 +70,9 @@ zx::status<> InitNativeFs(const char* binary, zx::channel device, const init_opt
   if (options.fsck_after_every_transaction) {
     argv.push_back("--fsck_after_every_transaction");
   }
+  if (options.sandbox_decompression) {
+    argv.push_back("--sandbox_decompression");
+  }
   argv.push_back("mount");
   argv.push_back(nullptr);
   int argc = static_cast<int>(argv.size() - 1);
@@ -151,6 +154,7 @@ const init_options_t default_init_options = {
     .write_compression_level = -1,
     .cache_eviction_policy = nullptr,
     .fsck_after_every_transaction = false,
+    .sandbox_decompression = false,
     .callback = launch_stdio_async,
 };
 

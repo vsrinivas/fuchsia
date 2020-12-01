@@ -37,7 +37,7 @@ class ReadMetrics {
   // Increments aggregate information about decompressing blobs from storage
   // since mounting.
   void IncrementDecompression(CompressionAlgorithm algorithm, uint64_t decompressed_size,
-                              fs::Duration decompress_duration);
+                              fs::Duration decompress_duration, bool remote);
 
   struct PerCompressionSnapshot {
     // Metrics for reads from disk
@@ -51,6 +51,8 @@ class ReadMetrics {
 
   // Returns a snapshot of metrics recorded by this class.
   PerCompressionSnapshot GetSnapshot(CompressionAlgorithm algorithm);
+
+  uint64_t remote_decompressions() const { return remote_decompressions_; }
 
  private:
   struct PerCompressionMetrics {
@@ -79,6 +81,9 @@ class ReadMetrics {
   PerCompressionMetrics zstd_metrics_;
   PerCompressionMetrics zstd_seekable_metrics_;
   PerCompressionMetrics chunked_metrics_;
+
+  uint64_t remote_decompressions_ = 0;
+  inspect::UintProperty remote_decompressions_node_;
 };
 
 }  // namespace blobfs

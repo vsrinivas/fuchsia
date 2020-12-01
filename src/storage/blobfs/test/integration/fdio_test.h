@@ -36,6 +36,8 @@ class FdioTest : public testing::Test {
   // different layout.
   void set_layout(ServeLayout layout) { layout_ = layout; }
 
+  void set_mount_options(MountOptions options) { mount_options_ = options; }
+
   // The vmex resource defaults to empty. It only needs to be set if a test requires it.
   void set_vmex_resource(zx::resource resource) { vmex_resource_ = std::move(resource); }
 
@@ -45,6 +47,7 @@ class FdioTest : public testing::Test {
  private:
   block_client::FakeBlockDevice* block_device_ = nullptr;  // Owned by the runner_.
 
+  MountOptions mount_options_;
   ServeLayout layout_ = ServeLayout::kDataRootOnly;
   zx::resource vmex_resource_;
   fbl::unique_fd root_fd_;

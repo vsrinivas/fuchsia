@@ -56,6 +56,7 @@ struct MountOptions {
   // Optional overriden cache policy for pager-backed blobs.
   std::optional<CachePolicy> pager_backed_cache_policy = std::nullopt;
   CompressionSettings compression_settings{};
+  bool sandbox_decompression = false;
 #ifndef NDEBUG
   bool fsck_at_end_of_every_transaction = false;
 #endif

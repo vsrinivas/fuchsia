@@ -100,6 +100,7 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
       .write_compression_level = -1,
       .cache_eviction_policy = options->cache_eviction_policy,
       .fsck_after_every_transaction = options->fsck_after_every_transaction,
+      .sandbox_decompression = options->sandbox_decompression,
       .callback = cb,
   };
 
@@ -145,6 +146,7 @@ const mount_options_t default_mount_options = {
     .admin = true,
     .outgoing_directory = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID},
     .bind_to_namespace = false,
+    .sandbox_decompression = false,
 };
 
 const mkfs_options_t default_mkfs_options = {
