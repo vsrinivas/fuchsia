@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 
@@ -84,19 +85,29 @@ func TestRunChecks(t *testing.T) {
 			IsTestingFailureMode: true,
 		},
 	}
+	startTime := time.Now()
 
 	got, err := RunChecks(checks, nil, outputsDir)
 	if err != nil {
 		t.Error("RunChecks() failed with:", err)
 	}
-	if diff := cmp.Diff(want, got, cmpopts.EquateEmpty()); diff != "" {
-		t.Errorf("RunChecks() returned unexpected tests (-want +got):\n%s", diff)
-	}
-	for _, td := range want {
+	for i, td := range got {
+		if td.StartTime.Sub(startTime) < 0 {
+			t.Errorf("start time should be later than %v, got %v", startTime, td.StartTime)
+		}
+		// Since the start time and duration are based on the current time, we should
+		// set those values to the default values so that we don't check them when
+		// comparing the actual and expected test details.
+		var defaultTime time.Time
+		got[i].StartTime = defaultTime
+		got[i].DurationMillis = 0
 		if td.OutputFile != "" {
 			if _, err := os.Stat(filepath.Join(outputsDir, td.OutputFile)); err != nil {
 				t.Errorf("failed to stat OutputFile %s: %v", td.OutputFile, err)
 			}
 		}
+	}
+	if diff := cmp.Diff(want, got, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("RunChecks() returned unexpected tests (-want +got):\n%s", diff)
 	}
 }

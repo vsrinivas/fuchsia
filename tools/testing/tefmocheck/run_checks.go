@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
@@ -42,12 +43,14 @@ func RunChecks(checks []FailureModeCheck, to *TestingOutputs, outputsDir string)
 			IsTestingFailureMode: true,
 			// Specify an empty slice so it gets serialized to an empty JSON
 			// array instead of null.
-			Cases: []testparser.TestCaseResult{},
+			Cases:     []testparser.TestCaseResult{},
+			StartTime: time.Now(),
 		}
 		if anyFailed {
 			testDetails.Result = runtests.TestSuccess
 		} else if anyFailed = check.Check(to); anyFailed {
 			testDetails.Result = runtests.TestFailure
+			testDetails.DurationMillis = time.Now().Sub(testDetails.StartTime).Milliseconds()
 			if len(outputsDir) > 0 {
 				testDetails.OutputFile = debugPathForCheck(check)
 				outputFileAbsPath := filepath.Join(outputsDir, testDetails.OutputFile)
@@ -63,6 +66,7 @@ func RunChecks(checks []FailureModeCheck, to *TestingOutputs, outputsDir string)
 			}
 		} else {
 			testDetails.Result = runtests.TestSuccess
+			testDetails.DurationMillis = time.Now().Sub(testDetails.StartTime).Milliseconds()
 		}
 		checkTests = append(checkTests, testDetails)
 	}
