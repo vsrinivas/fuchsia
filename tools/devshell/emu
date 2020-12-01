@@ -232,6 +232,24 @@ if [[ -z "${FVM_TOOL}" ]] ; then
   FVM_TOOL="${FUCHSIA_BUILD_DIR}/$(fx-command-run list-build-artifacts --name fvm --expect-one tools)"
 fi
 
+# TODO(fxbug.dev/62631): femu.sh relies on "-a auto", which makes use of
+# HOST_CPU, which is an fx internal variable. In that case, fall back to
+# defining it so that things work as expected.
+if [[ -z "${HOST_CPU}" ]]; then
+  case "$(uname -m)" in
+    x86_64)
+      readonly HOST_CPU="x64"
+      ;;
+    aarch64)
+      readonly HOST_CPU="arm64"
+      ;;
+    *)
+      echo >&2 "Unknown architecture: $(uname -m)."
+      exit 1
+      ;;
+  esac
+fi
+
 if [[ "$ARCH" != "$HOST_CPU" ]]; then
   ACCEL=off
 fi

@@ -28,13 +28,6 @@ function run_femu_wrapper() {
 # Verifies that the correct emulator command is run by femu, do not activate the network interface
 TEST_femu_standalone() {
 
-  # Create fake ZIP file download so femu.sh doesn't try to download it, and
-  # later on provide a mocked emulator script so it doesn't try to unzip it.
-  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}.zip"
-
-  # Need to configure a DISPLAY so that we can get past the graphics error checks
-  export DISPLAY="fakedisplay"
-
   # Run command.
   BT_EXPECT run_femu_wrapper
 
@@ -71,15 +64,6 @@ TEST_femu_standalone() {
 
 # Verifies that the --experiment-arm64 option selects arm64 support
 TEST_femu_arm64() {
-
-  # Create fake ZIP file download so femu.sh doesn't try to download it, and
-  # later on provide a mocked emulator script so it doesn't try to unzip it.
-  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}.zip"
-
-  # Need to configure a DISPLAY so that we can get past the graphics error checks
-  export DISPLAY="fakedisplay"
-
-  # Run command.
   BT_EXPECT run_femu_wrapper \
     --experiment-arm64 \
     --image qemu-arm64 \
@@ -104,6 +88,37 @@ TEST_femu_arm64() {
   gn-test-check-mock-partial -gpu swiftshader_indirect
 }
 
+# Verifies that if /dev/kvm is available, that KVM support is configured automatically
+TEST_femu_kvm_on() {
+  # Run command, the DEV_KVM_FAKE file is created by default in BT_INIT_TEMP_DIR
+  BT_EXPECT run_femu_wrapper
+
+  # Verify that the correct KVM arguments are passed to the emulator binary
+  # shellcheck disable=SC1090
+  source "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}/emulator.mock_state"
+  gn-test-check-mock-partial -fuchsia
+  if is-mac; then
+      gn-test-check-mock-partial -enable-hvf -cpu Haswell
+  else
+      gn-test-check-mock-partial -enable-kvm -cpu host,migratable=no,+invtsc
+  fi
+}
+
+# Verifies that if we manually override kvm, that appropriate emulation is configured
+TEST_femu_kvm_off() {
+  # Run command, but temporarily remove the DEV_KVM_FAKE file to force KVM to not be available,
+  # and then specify no acceleration to check we get the right emulation.
+  rm "${DEV_KVM_FAKE}"
+  BT_EXPECT run_femu_wrapper -a off
+  touch "${DEV_KVM_FAKE}"
+
+  # Verify that the correct CPU emulation arguments are passed to the emulator binary
+  # shellcheck disable=SC1090
+  source "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}/emulator.mock_state"
+  gn-test-check-mock-partial -fuchsia
+  gn-test-check-mock-partial -cpu Haswell,+smap,-check,-fsgsbase
+}
+
 # Verifies that the correct emulator command is run by femu, along with the image setup.
 # This tests the -N option for networking.
 TEST_femu_networking() {
@@ -112,13 +127,6 @@ TEST_femu_networking() {
   cat >"${PATH_DIR_FOR_TEST}/ip.mock_side_effects" <<INPUT
 echo "qemu: tap persist user 238107"
 INPUT
-
-  # Create fake ZIP file download so femu.sh doesn't try to download it, and
-  # later on provide a mocked emulator script so it doesn't try to unzip it.
-  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}.zip"
-
-  # Need to configure a DISPLAY so that we can get past the graphics error checks
-  export DISPLAY="fakedisplay"
 
   # OSX may not have the tun/tap driver installed, and you cannot bypass the
   # network checks, so need to work around this for the test. Linux does not
@@ -192,15 +200,10 @@ TEST_femu_grpcwebproxy() {
   cat >"${PATH_DIR_FOR_TEST}/fakekill.mock_side_effects" <<INPUT
 echo "$@"
 INPUT
-  sed -i "s/ kill / fakekill /g" "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devshell/emu"
+  sed -i'.bak' "s/ kill / fakekill /g" "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devshell/emu"
 
-  # Create fake ZIP file download so femu.sh doesn't try to download it, and
-  # later on provide a mocked emulator script so it doesn't try to unzip it.
-  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}.zip"
+  # Create fake ZIP file download so femu.sh doesn't try to download it
   touch "${FUCHSIA_WORK_DIR}/emulator/grpcwebproxy-${PLATFORM}-${AEMU_LABEL}.zip"
-
-  # Need to configure a DISPLAY so that we can get past the graphics error checks
-  export DISPLAY="fakedisplay"
 
   if is-mac; then
     # grpcwebproxy does not work on OSX, so check there is an error message
@@ -310,16 +313,8 @@ Invalid argument names are not flagged as errors, and are passed on to emulator"
 }
 
 TEST_femu_with_props() {
-
- BT_EXPECT "${FCONFIG_CMD}" set emu-bucket "test-bucket"
- BT_EXPECT "${FCONFIG_CMD}" set emu-image "test-image"
-
-  # Create fake ZIP file download so femu.sh doesn't try to download it, and
-  # later on provide a mocked emulator script so it doesn't try to unzip it.
-  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}.zip"
-
-  # Need to configure a DISPLAY so that we can get past the graphics error checks
-  export DISPLAY="fakedisplay"
+  BT_EXPECT "${FCONFIG_CMD}" set emu-bucket "test-bucket"
+  BT_EXPECT "${FCONFIG_CMD}" set emu-image "test-image"
 
   # Run command.
   BT_EXPECT run_femu_wrapper
@@ -385,13 +380,25 @@ BT_SET_UP() {
   MOCKED_ZBI="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/zbi"
   FCONFIG_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fconfig.sh"
 
+  # Specify the name of a fake /dev/kvm device that we control, modify fx emu to use this
+  DEV_KVM_FAKE="${BT_TEMP_DIR}/dev-kvm-fake"
+  touch "${DEV_KVM_FAKE}"
+  # Need to create .bak file for this to work on OSX and Linux, and use # to avoid conflicts with test filenames containing /
+  sed -i'.bak' "s#/dev/kvm#${DEV_KVM_FAKE}#g" "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devshell/emu"
+
   PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
   export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
-
 
   # Create a small disk image to avoid downloading, and test if it is doubled in size as expected
   mkdir -p "${FUCHSIA_WORK_DIR}/image"
   dd if=/dev/zero of="${FUCHSIA_WORK_DIR}/image/storage-full.blk" bs=1024 count=1  > /dev/null 2>/dev/null
+
+  # Create fake ZIP file download so femu.sh doesn't try to download it, and
+  # later on provide a mocked emulator script so it doesn't try to unzip it.
+  touch "${FUCHSIA_WORK_DIR}/emulator/aemu-${PLATFORM}-${AEMU_LABEL}.zip"
+
+  # Need to configure a DISPLAY so that we can get past the graphics error checks
+  export DISPLAY="fakedisplay"
 }
 
 BT_INIT_TEMP_DIR() {
