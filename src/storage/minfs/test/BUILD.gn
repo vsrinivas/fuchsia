@@ -6,6 +6,8 @@ import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 import("//src/sys/build/components.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("minfs-unit") {
@@ -73,6 +75,9 @@ source_set("integration-fixtures") {
   ]
 }
 
+# These tests use zxtest and don't use new fs_test fixture. These tests need to
+# be migrated to gtest/fs_test framework. Try not to add new tests here and
+# instead add to minfs-integration.
 test("minfs-integration") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
@@ -107,6 +112,26 @@ test("minfs-integration") {
     "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/memfs",
+  ]
+}
+
+test("minfs-dirty-cache-integration") {
+  testonly = true
+  sources = [ "integration/dirty_cache_test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.fs",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/isolated_devmgr/v2_component:client",
+    "//src/storage/fs_test",
+    "//src/storage/minfs",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fs-management",
   ]
 }
 
@@ -220,6 +245,12 @@ isolated_devmgr_unittest_component("minfs-integration-test") {
   ]
 }
 
+fuchsia_component("minfs-dirty-cache-integration-test") {
+  testonly = true
+  manifest = "meta/integration_test.cml"
+  deps = [ ":minfs-dirty-cache-integration" ]
+}
+
 isolated_devmgr_unittest_component("minfs-power-test") {
   executable_path = "test/minfs-power"
 
@@ -267,6 +298,7 @@ fuchsia_test_package("minfs-tests") {
 
   test_components = [
     ":minfs-integration-test",
+    ":minfs-dirty-cache-integration-test",
     ":minfs-power-test",
     ":minfs-unit-test",
     ":minfs-micro-benchmark-test",

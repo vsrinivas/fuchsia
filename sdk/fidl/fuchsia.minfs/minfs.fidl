@@ -26,6 +26,10 @@ struct Metrics {
     /// Minfs looks up Vnodes by ino internally (using "VnodeGet").
     /// The following fields track this information.
     uint64 vnodes_opened_cache_hit;
+
+    /// The number of bytes in dirty cache for which we have not issued writes yet.
+    /// The number is filesystem block aligned.
+    uint64 dirty_bytes;
 };
 
 struct MountState {
@@ -44,6 +48,9 @@ struct MountState {
 
     /// True if the journaling is enabled.
     bool use_journal;
+
+    /// True is dirty cache is enabled for minfs.
+    bool dirty_cache_enabled;
 };
 
 /// Describes a contiguous run of allocated blocks.

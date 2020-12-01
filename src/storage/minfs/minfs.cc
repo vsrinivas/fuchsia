@@ -1231,12 +1231,13 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
       .verbose = options.verbose,
       .repair_filesystem = options.repair_filesystem,
       .use_journal = true,
+      .dirty_cache_enabled = Minfs::DirtyCacheEnabled(),
   };
 #endif  // defined(__Fuchsia__)
 
   *out = std::move(fs);
   return ZX_OK;
-}
+}  // namespace minfs
 
 #ifdef __Fuchsia__
 zx_status_t ReplayJournal(Bcache* bc, const Superblock& info, fs::JournalSuperblock* out) {
