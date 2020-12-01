@@ -51,6 +51,14 @@ class MemRangeTable {
   iterator begin();
   iterator end();
 
+  // Return the number of memory ranges in the table, or an error if the input
+  // ZBI is invalid.
+  //
+  // O(n) in the number of entries in the ZBI, but more efficient than
+  // iterating over every entry, which would be O(n + m) where "m" is the
+  // number of ranges.
+  fitx::result<zbitl::View<ByteView>::Error, size_t> size() const;
+
   // Return any error encountered during ZBI iteration.
   //
   // Must always be called prior to object destruction.

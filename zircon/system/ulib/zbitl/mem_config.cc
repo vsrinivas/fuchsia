@@ -96,9 +96,8 @@ size_t MemRangeElementCount(uint32_t type, ByteView payload) {
       return payload.size() / sizeof(e820entry_t);
     case ZBI_TYPE_MEM_CONFIG:
       return payload.size() / sizeof(zbi_mem_range_t);
-    case ZBI_TYPE_EFI_MEMORY_MAP: {
+    case ZBI_TYPE_EFI_MEMORY_MAP:
       return GetEfiEntryCount(payload);
-    }
     default:
       return 0;
   }
@@ -185,6 +184,21 @@ MemRangeTable::iterator MemRangeTable::begin() {
 
   // Otherwise, begin iteration.
   return MemRangeTable::iterator(this);
+}
+
+fitx::result<zbitl::View<ByteView>::Error, size_t> MemRangeTable::size() const {
+  // We create a new view to avoid setting or clearing any pending error in `view_`.
+  zbitl::View view(view_.storage());
+
+  size_t count = 0;
+  for (const auto& item : view) {
+    count += MemRangeElementCount(item.header->type, item.payload);
+  }
+
+  if (auto status = view.take_error(); status.is_error()) {
+    return status.take_error();
+  }
+  return fitx::ok(count);
 }
 
 bool MemRangeTable::iterator::operator==(const iterator& other) const {
