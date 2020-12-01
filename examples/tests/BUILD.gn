@@ -20,6 +20,7 @@ source_set("test_suite_lib") {
   public_deps = [
     ":measure_tape_for_case",
     "//sdk/fidl/fuchsia.test",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -27,120 +28,62 @@ source_set("test_suite_lib") {
 }
 
 executable("passing-test-example") {
-  deps = [
-    ":test_suite_lib",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
+  deps = [ ":test_suite_lib" ]
   sources = [ "passing_test_example.cc" ]
 }
 
 executable("no-onfinished-after-test-example") {
-  deps = [
-    ":test_suite_lib",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
+  deps = [ ":test_suite_lib" ]
   sources = [ "no_onfinished_after_test_example.cc" ]
 }
 
 executable("disabled-test-example") {
-  deps = [
-    ":test_suite_lib",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
+  deps = [ ":test_suite_lib" ]
   sources = [ "disabled_test_example.cc" ]
 }
 
 executable("failing-test-example") {
-  deps = [
-    ":test_suite_lib",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
+  deps = [ ":test_suite_lib" ]
   sources = [ "failing_test_example.cc" ]
 }
 
 executable("incomplete-test-example") {
-  deps = [
-    ":test_suite_lib",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-  ]
+  deps = [ ":test_suite_lib" ]
   sources = [ "incomplete_test_example.cc" ]
 }
 
 executable("invalid-test-example") {
-  deps = [
-    ":test_suite_lib",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-  ]
+  deps = [ ":test_suite_lib" ]
   sources = [ "invalid_test_example.cc" ]
 }
 
 executable("no-test-example") {
-  deps = [
-    ":test_suite_lib",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
+  deps = [ ":test_suite_lib" ]
   sources = [ "no_test_example.cc" ]
 }
 
 executable("huge-test-example") {
-  deps = [
-    ":test_suite_lib",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
+  deps = [ ":test_suite_lib" ]
   sources = [ "huge_test_example.cc" ]
 }
 
 executable("get-tests-hangs-example") {
-  deps = [
-    ":test_suite_lib",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
+  deps = [ ":test_suite_lib" ]
   sources = [ "get_tests_hangs_example.cc" ]
 }
 
 executable("get-tests-closes-channel-example") {
-  deps = [
-    ":test_suite_lib",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
+  deps = [ ":test_suite_lib" ]
   sources = [ "get_tests_closes_channel_example.cc" ]
 }
 
 executable("run-hangs-example") {
-  deps = [
-    ":test_suite_lib",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
+  deps = [ ":test_suite_lib" ]
   sources = [ "run_hangs_example.cc" ]
 }
 
 executable("run-closes-channel-example") {
-  deps = [
-    ":test_suite_lib",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
+  deps = [ ":test_suite_lib" ]
   sources = [ "run_closes_channel_example.cc" ]
 }
 
