@@ -1095,11 +1095,17 @@ func (ns *Netstack) addEndpoint(
 	ifs.mu.dhcp.running = func() bool { return false }
 	ifs.mu.dhcp.cancel = func() {}
 
+	ns.mu.Lock()
+	ifs.nicid = ns.mu.countNIC + 1
+	ns.mu.countNIC++
+	ns.mu.Unlock()
+	name := nameFn(ifs.nicid)
+
 	// LinkEndpoint chains:
 	// Put sniffer as close as the NIC.
 	// A wrapper LinkEndpoint should encapsulate the underlying
 	// one, and manifest itself to 3rd party netstack.
-	ep = sniffer.New(ep)
+	ep = sniffer.NewWithPrefix(ep, fmt.Sprintf("[%s(id=%d)] ", name, ifs.nicid))
 
 	if doFilter {
 		ifs.filterEndpoint = filter.NewEndpoint(ns.filter, ep)
@@ -1109,12 +1115,6 @@ func (ns *Netstack) addEndpoint(
 	ep = ifs.bridgeable
 	ifs.endpoint = ep
 
-	ns.mu.Lock()
-	ifs.nicid = ns.mu.countNIC + 1
-	ns.mu.countNIC++
-	ns.mu.Unlock()
-
-	name := nameFn(ifs.nicid)
 	if err := ns.stack.CreateNICWithOptions(ifs.nicid, ep, stack.NICOptions{Name: name, Context: ifs, Disabled: true}); err != nil {
 		return nil, fmt.Errorf("NIC %s: could not create NIC: %w", name, WrapTcpIpError(err))
 	}
