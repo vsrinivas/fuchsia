@@ -66,9 +66,6 @@ template("fuchsia_package") {
   if (defined(invoker.package_name)) {
     package_name = invoker.package_name
   }
-  assert(string_replace(package_name, "_", "-") == package_name,
-         "fuchsia_package($target_name): must not have underscores in " +
-             "`package_name`")
 
   # Generate the "meta/package" file
   meta_package_target = "${target_name}_meta_package"
