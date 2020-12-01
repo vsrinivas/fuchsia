@@ -739,12 +739,12 @@ TEST_F(SandboxTest, TimeoutFires) {
    "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
    "timeout" : 1,
    "environment" : {
-      "test" : [ { "arguments": ["-w", "10000"] } ]
+      "test" : [ { "arguments": ["-e", "100"] } ]
    }
 }
 )");
-  // expect that we'll fail due to the timeout of 1s < 10s of wait in the dummy
-  // proc:
+  // Expect that we'll fail due to the timeout of 1s while dummy-proc is locked waiting on the
+  // event.
   RunSandbox(SandboxResult::Status::TIMEOUT);
 }
 
@@ -772,7 +772,7 @@ TEST_F(SandboxTest, BadServiceCausesFailure) {
       },
       "test": [{
           "url" : "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
-          "arguments" : ["-w", "5000", "-s", "fuchsia.dummy.service"]
+          "arguments" : ["-e", "100", "-s", "fuchsia.dummy.service"]
       }]
    }
 }
@@ -792,7 +792,7 @@ TEST_F(SandboxTest, ServiceExittingCausesFailure) {
       },
       "test": [{
           "url" : "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
-          "arguments" : ["-w", "5000", "-s", "fuchsia.dummy.service"]
+          "arguments" : ["-e", "100", "-s", "fuchsia.dummy.service"]
       }]
    }
 }
@@ -803,13 +803,14 @@ TEST_F(SandboxTest, ServiceExittingCausesFailure) {
 TEST_F(SandboxTest, DestructorRunsCleanly) {
   // This test verifies that if the sandbox is destroyed while tests are
   // running inside it, it'll shutdown cleanly.
-  // Dummy proc is launched with a large wait value in -w to ensure that we destroy the sandbox
-  // while it is still running.
+  //
+  // Dummy proc is launched with an event wait that will never be fulfilled to ensure that we
+  // destroy the sandbox while it is still running.
   SetCmx(R"(
 {
    "default_url": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/dummy-proc.cmx",
    "environment" : {
-      "test" : [ { "arguments": ["-w", "90000"] } ]
+      "test" : [ { "arguments": ["-e", "100"] } ]
    }
 }
 )");
