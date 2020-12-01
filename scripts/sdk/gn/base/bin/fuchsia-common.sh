@@ -155,7 +155,11 @@ function get-device-ip-by-name {
     # There should typically only be one device that matches the nodename
     # but we add a device-limit to speed up resolution by exiting when the first
     # candidate is found.
-    "$(get-fuchsia-sdk-tools-dir)/device-finder" resolve -device-limit 1 -ipv4=false "${1}"
+    if ! device_ip="$("$(get-fuchsia-sdk-tools-dir)/device-finder" resolve -device-limit 1 -ipv4=false "${1}")"; then
+      return $?
+    else
+      echo "${device_ip}"
+    fi
   else
     #shellcheck disable=SC2119
     get-device-ip

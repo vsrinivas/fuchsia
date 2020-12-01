@@ -24,6 +24,11 @@ set_up_device_finder() {
   cat >"${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"EOF"
 while (("$#")); do
   case "$1" in
+  resolve)
+    if [[ "$*" =~ "unknown-device" ]]; then
+      exit 2
+    fi
+    ;;
   --local)
     # Emit a different address than the default so the device and the host can
     # have different IP addresses.
@@ -284,9 +289,24 @@ TEST_fpave_in_zedboot() {
   gn-test-check-mock-args "${expected_args[@]}"
 }
 
+TEST_fpave_name_not_resolved() {
+  set_up_ssh
+  set_up_device_finder
+  set_up_gsutil
+  set_up_sdk_stubs
+
+  BT_EXPECT "${FCONFIG_CMD}" set device-name "unknown-device"
+
+  BT_EXPECT "${FPAVE_CMD}" "--image" "image1" 2>"${BT_TEMP_DIR}/TEST_fpave_name_not_resolved_stderr.log"
+
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/TEST_fpave_name_not_resolved_stderr.log" \
+      "WARNING: Device not detected.  Make sure the device is connected and at the 'Zedboot' screen."
+}
+
 # shellcheck disable=SC2034
 # Test initialization.
 BT_FILE_DEPS=(
+  scripts/sdk/gn/base/bin/fconfig.sh
   scripts/sdk/gn/base/bin/fpave.sh
   scripts/sdk/gn/base/bin/fconfig.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
