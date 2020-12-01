@@ -1,0 +1,10 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.pci;
+
+fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PCI_CLASS == fuchsia.pci.BIND_PCI_CLASS.GENERIC_SYSTEM_PERIPHERAL;
+fuchsia.BIND_PCI_SUBCLASS == 0x05;
+fuchsia.BIND_PCI_INTERFACE == 0x01;

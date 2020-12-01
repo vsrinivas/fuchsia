@@ -1,0 +1,31 @@
+[
+    {
+        "name": "Match",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_CLASS": "fuchsia.pci.BIND_PCI_CLASS.GENERIC_SYSTEM_PERIPHERAL",
+            "fuchsia.BIND_PCI_SUBCLASS": "0x05",
+            "fuchsia.BIND_PCI_INTERFACE": "0x01"
+        }
+    },
+    {
+        "name": "Bad PCI class",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_CLASS": "fuchsia.pci.BIND_PCI_CLASS.UNASSIGNED",
+            "fuchsia.BIND_PCI_SUBCLASS": "0x05",
+            "fuchsia.BIND_PCI_INTERFACE": "0x01"
+        }
+    },
+    {
+        "name": "No PCI subclass",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_CLASS": "fuchsia.pci.BIND_PCI_CLASS.GENERIC_SYSTEM_PERIPHERAL",
+            "fuchsia.BIND_PCI_INTERFACE": "0x01"
+        }
+    }
+]

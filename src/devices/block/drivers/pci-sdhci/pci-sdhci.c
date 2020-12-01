@@ -11,11 +11,12 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/sdhci.h>
+
+#include "src/devices/block/drivers/pci-sdhci/pci-sdhci-bind.h"
 
 #define HOST_CONTROL1_OFFSET 0x28
 #define SDHCI_EMMC_HW_RESET (1 << 12)
@@ -171,10 +172,4 @@ static zx_driver_ops_t pci_sdhci_driver_ops = {
     .bind = pci_sdhci_bind,
 };
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(pci_sdhci, pci_sdhci_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x08),
-    BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, 0x05),
-    BI_MATCH_IF(EQ, BIND_PCI_INTERFACE, 0x01),
-ZIRCON_DRIVER_END(pci_sdhci)
+ZIRCON_DRIVER(pci_sdhci, pci_sdhci_driver_ops, "zircon", "0.1")

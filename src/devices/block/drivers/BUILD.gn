@@ -17,6 +17,7 @@ group("tests") {
     "mbr:tests",
     "msm8x53-sdhci:tests",
     "mtk-sdmmc:tests",
+    "pci-sdhci:tests",
     "ramdisk:tests",
     "sdhci:tests",
     "sdmmc:tests",
