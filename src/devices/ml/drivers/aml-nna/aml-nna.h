@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_ML_DRIVERS_AML_NNA_AML_NNA_H_
 #define SRC_DEVICES_ML_DRIVERS_AML_NNA_AML_NNA_H_
 
+#include <fuchsia/hardware/registers/llcpp/fidl.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
@@ -16,7 +17,9 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <ddktl/protocol/registers.h>
 #include <hw/reg.h>
+#include <soc/aml-common/aml-registers.h>
 
 namespace aml_nna {
 
@@ -47,19 +50,19 @@ class AmlNnaDevice : public AmlNnaDeviceType, public ddk::EmptyProtocol<ZX_PROTO
   };
 
   explicit AmlNnaDevice(zx_device_t* parent, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffer power_mmio,
-                        ddk::MmioBuffer memory_pd_mmio, ddk::MmioBuffer reset_mmio,
-                        pdev_protocol_t proto, NnaBlock nna_block)
+                        ddk::MmioBuffer memory_pd_mmio, zx::channel reset, ddk::PDev pdev,
+                        NnaBlock nna_block)
       : AmlNnaDeviceType(parent),
-        pdev_(parent),
+        pdev_(std::move(pdev)),
         hiu_mmio_(std::move(hiu_mmio)),
         power_mmio_(std::move(power_mmio)),
         memory_pd_mmio_(std::move(memory_pd_mmio)),
-        reset_mmio_(std::move(reset_mmio)),
+        reset_(std::move(reset)),
         nna_block_(nna_block) {
-    memcpy(&parent_pdev_, &proto, sizeof(proto));
+    pdev_.GetProto(&parent_pdev_);
   }
   static zx_status_t Create(void* ctx, zx_device_t* parent);
-  void Init();
+  zx_status_t Init();
 
   // Methods required by the ddk.
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
@@ -71,7 +74,7 @@ class AmlNnaDevice : public AmlNnaDeviceType, public ddk::EmptyProtocol<ZX_PROTO
   ddk::MmioBuffer hiu_mmio_;
   ddk::MmioBuffer power_mmio_;
   ddk::MmioBuffer memory_pd_mmio_;
-  ddk::MmioBuffer reset_mmio_;
+  ::llcpp::fuchsia::hardware::registers::Device::SyncClient reset_;
 
   pdev_protocol_t parent_pdev_;
 

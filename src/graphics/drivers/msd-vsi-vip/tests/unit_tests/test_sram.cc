@@ -11,12 +11,12 @@ TEST(Sram, AxiSramSize) {
   ASSERT_TRUE(platform_device);
 
   uint32_t mmio_count = platform_device->GetMmioCount();
-  ASSERT_GE(mmio_count, 5u);
-  if (mmio_count < 6) {
+  ASSERT_GE(mmio_count, 4u);
+  if (mmio_count < 5) {
     // Some devices do not have an AXI SRAM.
     GTEST_SKIP();
   }
-  const uint32_t kAxiSramMmioIndex = 5;
+  const uint32_t kAxiSramMmioIndex = 4;
   auto buffer = platform_device->GetMmioBuffer(kAxiSramMmioIndex);
   ASSERT_TRUE(buffer);
 

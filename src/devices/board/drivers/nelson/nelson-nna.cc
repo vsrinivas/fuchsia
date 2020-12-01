@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <hw/reg.h>
+#include <soc/aml-common/aml-registers.h>
 #include <soc/aml-s905d3/s905d3-hw.h>
 
 #include "nelson.h"
@@ -31,11 +33,6 @@ static const pbus_mmio_t nna_mmios[] = {
     {
         .base = S905D3_MEMORY_PD_BASE,
         .length = S905D3_MEMORY_PD_LENGTH,
-    },
-    // Reset
-    {
-        .base = S905D3_RESET_BASE,
-        .length = S905D3_RESET_LENGTH,
     },
 };
 
@@ -68,8 +65,27 @@ static pbus_dev_t nna_dev = []() {
   return dev;
 }();
 
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+
+static const zx_bind_inst_t reset_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
+    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_NNA_RESET_LEVEL2),
+};
+
+static const device_fragment_part_t reset_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(reset_match), reset_match},
+};
+
+static const device_fragment_t fragments[] = {
+    {"register-reset", countof(reset_fragment), reset_fragment},
+};
+
 zx_status_t Nelson::NnaInit() {
-  zx_status_t status = pbus_.DeviceAdd(&nna_dev);
+  zx_status_t status =
+      pbus_.CompositeDeviceAdd(&nna_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Nelson::NnaInit: pbus_device_add() failed for nna: %d", status);
     return status;

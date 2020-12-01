@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+#include <soc/aml-common/aml-registers.h>
 #include <soc/aml-t931/t931-hw.h>
 
 #include "sherlock.h"
@@ -31,11 +33,6 @@ static pbus_mmio_t sherlock_nna_mmios[] = {
     {
         .base = T931_MEMORY_PD_BASE,
         .length = T931_MEMORY_PD_LENGTH,
-    },
-    // Reset
-    {
-        .base = T931_RESET_BASE,
-        .length = T931_RESET_LENGTH,
     },
     // AXI SRAM
     {
@@ -85,8 +82,27 @@ static pbus_dev_t nna_dev = []() {
   return dev;
 }();
 
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+
+static const zx_bind_inst_t reset_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
+    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_NNA_RESET_LEVEL2),
+};
+
+static const device_fragment_part_t reset_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(reset_match), reset_match},
+};
+
+static const device_fragment_t fragments[] = {
+    {"register-reset", countof(reset_fragment), reset_fragment},
+};
+
 zx_status_t Sherlock::NnaInit() {
-  zx_status_t status = pbus_.DeviceAdd(&nna_dev);
+  zx_status_t status =
+      pbus_.CompositeDeviceAdd(&nna_dev, fragments, countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Sherlock::NnaInit: pbus_device_add() failed for nna: %d", status);
     return status;

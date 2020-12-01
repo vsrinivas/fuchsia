@@ -7,7 +7,7 @@
     },
     "sandbox": {
         "dev": [
-            "sys"
+            "aml-nna"
         ],
         "features": [
             "vulkan"

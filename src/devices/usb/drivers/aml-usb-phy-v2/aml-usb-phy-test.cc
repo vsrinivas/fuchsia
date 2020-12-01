@@ -326,17 +326,17 @@ class AmlUsbPhyTest : public zxtest::Test {
     ddk_.SetProtocols(std::move(protocols));
 
     registers()->ExpectWrite<uint32_t>(aml_registers::RESET1_LEVEL_OFFSET,
-                                       aml_registers::RESET1_LEVEL_MASK,
-                                       aml_registers::RESET1_LEVEL_MASK);
+                                       aml_registers::USB_RESET1_LEVEL_MASK,
+                                       aml_registers::USB_RESET1_LEVEL_MASK);
     registers()->ExpectWrite<uint32_t>(aml_registers::RESET1_REGISTER_OFFSET,
-                                       aml_registers::RESET1_REGISTER_UNKNOWN_1_MASK,
-                                       aml_registers::RESET1_REGISTER_UNKNOWN_1_MASK);
+                                       aml_registers::USB_RESET1_REGISTER_UNKNOWN_1_MASK,
+                                       aml_registers::USB_RESET1_REGISTER_UNKNOWN_1_MASK);
     registers()->ExpectWrite<uint32_t>(aml_registers::RESET1_REGISTER_OFFSET,
-                                       aml_registers::RESET1_REGISTER_UNKNOWN_2_MASK,
-                                       aml_registers::RESET1_REGISTER_UNKNOWN_2_MASK);
+                                       aml_registers::USB_RESET1_REGISTER_UNKNOWN_2_MASK,
+                                       aml_registers::USB_RESET1_REGISTER_UNKNOWN_2_MASK);
     registers()->ExpectWrite<uint32_t>(aml_registers::RESET1_REGISTER_OFFSET,
-                                       aml_registers::RESET1_REGISTER_UNKNOWN_2_MASK,
-                                       aml_registers::RESET1_REGISTER_UNKNOWN_2_MASK);
+                                       aml_registers::USB_RESET1_REGISTER_UNKNOWN_2_MASK,
+                                       aml_registers::USB_RESET1_REGISTER_UNKNOWN_2_MASK);
     ASSERT_OK(AmlUsbPhy::Create(nullptr, parent()));
   }
 

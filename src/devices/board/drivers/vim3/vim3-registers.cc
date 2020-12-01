@@ -17,23 +17,42 @@ namespace vim3 {
 namespace {
 
 enum MmioMetadataIdx {
+  RESET_MMIO,
+
   MMIO_COUNT,
 };
 
 }  // namespace
 
 zx_status_t Vim3::RegistersInit() {
-  static const pbus_mmio_t registers_mmios[] = {};
+  static const pbus_mmio_t registers_mmios[] = {
+      {
+          .base = A311D_RESET_BASE,
+          .length = A311D_RESET_LENGTH,
+      },
+  };
 
   fidl::BufferThenHeapAllocator<2048> allocator;
   fidl::VectorView<registers::MmioMetadataEntry> mmio_entries;
   mmio_entries.set_data(allocator.make<registers::MmioMetadataEntry[]>(MMIO_COUNT));
   mmio_entries.set_count(MMIO_COUNT);
 
+  mmio_entries[RESET_MMIO] = registers::BuildMetadata(allocator, RESET_MMIO);
+
   fidl::VectorView<registers::RegistersMetadataEntry> register_entries;
   register_entries.set_data(
       allocator.make<registers::RegistersMetadataEntry[]>(aml_registers::REGISTER_ID_COUNT));
   register_entries.set_count(aml_registers::REGISTER_ID_COUNT);
+
+  register_entries[aml_registers::REGISTER_NNA_RESET_LEVEL2] =
+      registers::BuildMetadata(allocator, aml_registers::REGISTER_NNA_RESET_LEVEL2, RESET_MMIO,
+                               std::vector<registers::MaskEntryBuilder<uint32_t>>{
+                                   {
+                                       .mask = aml_registers::NNA_RESET2_LEVEL_MASK,
+                                       .mmio_offset = A311D_RESET2_LEVEL,
+                                       .reg_count = 1,
+                                   },
+                               });
 
   auto metadata =
       registers::BuildMetadata(allocator, std::move(mmio_entries), std::move(register_entries));

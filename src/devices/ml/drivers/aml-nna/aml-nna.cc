@@ -31,7 +31,6 @@ constexpr uint32_t kClockAxiEnableShift = 24;
 constexpr uint32_t kHiu = 1;
 constexpr uint32_t kPowerDomain = 2;
 constexpr uint32_t kMemoryDomain = 3;
-constexpr uint32_t kReset = 4;
 // constexpr uint32_t kSram = 5;
 }  // namespace
 
@@ -50,7 +49,7 @@ zx_status_t AmlNnaDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) 
   }
 }
 
-void AmlNnaDevice::Init() {
+zx_status_t AmlNnaDevice::Init() {
   power_mmio_.ClearBits32(nna_block_.domain_power_sleep_bits, nna_block_.domain_power_sleep_offset);
 
   memory_pd_mmio_.Write32(0, nna_block_.hhi_mem_pd_reg0_offset);
@@ -58,12 +57,23 @@ void AmlNnaDevice::Init() {
   memory_pd_mmio_.Write32(0, nna_block_.hhi_mem_pd_reg1_offset);
 
   // set bit[12]=0
-  reset_mmio_.ClearBits32(1 << 12, nna_block_.reset_level2_offset);
+  auto clear_result = reset_.WriteRegister32(nna_block_.reset_level2_offset,
+                                             aml_registers::NNA_RESET2_LEVEL_MASK, 0);
+  if ((clear_result.status() != ZX_OK) || clear_result->result.is_err()) {
+    zxlogf(ERROR, "%s: Clear Reset Write failed\n", __func__);
+    return ZX_ERR_INTERNAL;
+  }
 
   power_mmio_.ClearBits32(nna_block_.domain_power_iso_bits, nna_block_.domain_power_iso_offset);
 
   // set bit[12]=1
-  reset_mmio_.SetBits32(1 << 12, nna_block_.reset_level2_offset);
+  auto set_result =
+      reset_.WriteRegister32(nna_block_.reset_level2_offset, aml_registers::NNA_RESET2_LEVEL_MASK,
+                             aml_registers::NNA_RESET2_LEVEL_MASK);
+  if ((set_result.status() != ZX_OK) || set_result->result.is_err()) {
+    zxlogf(ERROR, "%s: Set Reset Write failed\n", __func__);
+    return ZX_ERR_INTERNAL;
+  }
 
   // Setup Clocks.
   // Set clocks to 800 MHz (FCLK_DIV2P5 = 3, Divisor = 1)
@@ -71,54 +81,62 @@ void AmlNnaDevice::Init() {
   hiu_mmio_.SetBits32(((1 << kClockCoreEnableShift) | 3 << 9), nna_block_.clock_control_offset);
   // VIPNANOQ Axi clock
   hiu_mmio_.SetBits32(((1 << kClockAxiEnableShift) | 3 << 25), nna_block_.clock_control_offset);
+
+  return ZX_OK;
 }
 
 // static
 zx_status_t AmlNnaDevice::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status;
 
-  pdev_protocol_t proto;
-
-  status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &proto);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not get PDEV protocol, err: %d\n", __func__, status);
-    return status;
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
+    zxlogf(ERROR, "Could not get composite protocol");
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
-  ddk::PDev pdev(parent);
+  ddk::PDev pdev(composite);
+  if (!pdev.is_valid()) {
+    zxlogf(ERROR, "Could not get platform device protocol");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  ddk::RegistersProtocolClient reset(composite, "register-reset");
+  if (!reset.is_valid()) {
+    zxlogf(ERROR, "Could not get reset_register fragment");
+    return ZX_ERR_NO_RESOURCES;
+  }
+  zx::channel client_end, server_end;
+  if ((status = zx::channel::create(0, &client_end, &server_end)) != ZX_OK) {
+    zxlogf(ERROR, "Could not create channel %d\n", status);
+    return status;
+  }
+  reset.Connect(std::move(server_end));
 
   std::optional<ddk::MmioBuffer> hiu_mmio;
   status = pdev.MapMmio(kHiu, &hiu_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
+    zxlogf(ERROR, "pdev_.MapMmio failed %d\n", status);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> power_mmio;
   status = pdev.MapMmio(kPowerDomain, &power_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
+    zxlogf(ERROR, "pdev_.MapMmio failed %d\n", status);
     return status;
   }
 
   std::optional<ddk::MmioBuffer> memory_pd_mmio;
   status = pdev.MapMmio(kMemoryDomain, &memory_pd_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
-    return status;
-  }
-
-  std::optional<ddk::MmioBuffer> reset_mmio;
-  status = pdev.MapMmio(kReset, &reset_mmio);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
+    zxlogf(ERROR, "pdev_.MapMmio failed %d\n", status);
     return status;
   }
 
   pdev_device_info_t info;
   status = pdev.GetDeviceInfo(&info);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: pdev_.GetDeviceInfo failed %d\n", __func__, status);
+    zxlogf(ERROR, "pdev_.GetDeviceInfo failed %d\n", status);
     return status;
   }
 
@@ -138,14 +156,17 @@ zx_status_t AmlNnaDevice::Create(void* ctx, zx_device_t* parent) {
 
   fbl::AllocChecker ac;
 
-  auto device = std::unique_ptr<AmlNnaDevice>(
-      new (&ac) AmlNnaDevice(parent, std::move(*hiu_mmio), std::move(*power_mmio),
-                             std::move(*memory_pd_mmio), std::move(*reset_mmio), proto, nna_block));
+  auto device = std::unique_ptr<AmlNnaDevice>(new (&ac) AmlNnaDevice(
+      parent, std::move(*hiu_mmio), std::move(*power_mmio), std::move(*memory_pd_mmio),
+      std::move(client_end), std::move(pdev), nna_block));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  device->Init();
+  if ((status = device->Init()) != ZX_OK) {
+    zxlogf(ERROR, "Could not init device %d.", status);
+    return status;
+  }
 
   zx_device_prop_t props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_PDEV},
@@ -156,10 +177,10 @@ zx_status_t AmlNnaDevice::Create(void* ctx, zx_device_t* parent) {
 
   status = device->DdkAdd(ddk::DeviceAddArgs("aml-nna").set_props(props));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml_nna: Could not create aml nna device: %d\n", status);
+    zxlogf(ERROR, "Could not create aml nna device: %d\n", status);
     return status;
   }
-  zxlogf(INFO, "aml_nna: Added aml_nna device\n");
+  zxlogf(INFO, "Added aml_nna device\n");
 
   // intentionally leaked as it is now held by DevMgr.
   __UNUSED auto ptr = device.release();
@@ -180,7 +201,8 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace aml_nna
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_nna, aml_nna::driver_ops, "zircon", "0.1", 5)
+ZIRCON_DRIVER_BEGIN(aml_nna, aml_nna::driver_ops, "zircon", "0.1", 6)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_NNA),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),

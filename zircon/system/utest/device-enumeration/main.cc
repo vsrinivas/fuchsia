@@ -208,7 +208,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "aml_sd/aml-sd-emmc",
       "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
       "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
-      "sys/platform/05:06:1c/aml-nna",
+      "aml-nna",
       "sys/platform/00:00:29",  // registers device
   };
 
@@ -353,7 +353,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-016/block",
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-017/block",
       "tcs3400-light/tcs-3400/hid-device-000",
-      "sys/platform/05:05:1c/aml-nna",
+      "aml-nna",
       "sys/platform/05:05:22/clocks",
       "aml-thermal-pll/thermal",
       "class/thermal/000",
@@ -475,7 +475,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sherlock-sd-emmc/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
       "wifi/brcmfmac-wlanphy",
       "sys/platform/05:04:15/aml-mipi",
-      "sys/platform/05:04:1c/aml-nna",
+      "aml-nna",
       "sys/platform/05:04:1d",  // pwm
       "gdc",
       "ge2d",

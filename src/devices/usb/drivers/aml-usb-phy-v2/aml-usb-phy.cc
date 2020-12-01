@@ -87,8 +87,8 @@ zx_status_t AmlUsbPhy::InitPhy() {
   // first reset USB
   // The bits being manipulated here are not documented.
   auto level_result = reset_register_.WriteRegister32(aml_registers::RESET1_LEVEL_OFFSET,
-                                                      aml_registers::RESET1_LEVEL_MASK,
-                                                      aml_registers::RESET1_LEVEL_MASK);
+                                                      aml_registers::USB_RESET1_LEVEL_MASK,
+                                                      aml_registers::USB_RESET1_LEVEL_MASK);
   if ((level_result.status() != ZX_OK) || level_result->result.is_err()) {
     zxlogf(ERROR, "%s: Reset Level Write failed\n", __func__);
     return ZX_ERR_INTERNAL;
@@ -96,8 +96,8 @@ zx_status_t AmlUsbPhy::InitPhy() {
 
   // amlogic_new_usbphy_reset_v2()
   auto register_result1 = reset_register_.WriteRegister32(
-      aml_registers::RESET1_REGISTER_OFFSET, aml_registers::RESET1_REGISTER_UNKNOWN_1_MASK,
-      aml_registers::RESET1_REGISTER_UNKNOWN_1_MASK);
+      aml_registers::RESET1_REGISTER_OFFSET, aml_registers::USB_RESET1_REGISTER_UNKNOWN_1_MASK,
+      aml_registers::USB_RESET1_REGISTER_UNKNOWN_1_MASK);
   if ((register_result1.status() != ZX_OK) || register_result1->result.is_err()) {
     zxlogf(ERROR, "%s: Reset Register Write on 1 << 2 failed\n", __func__);
     return ZX_ERR_INTERNAL;
@@ -121,8 +121,8 @@ zx_status_t AmlUsbPhy::InitPhy() {
     // amlogic_new_usbphy_reset_phycfg_v2()
     // The bit being manipulated here is not documented.
     auto register_result2 = reset_register_.WriteRegister32(
-        aml_registers::RESET1_REGISTER_OFFSET, aml_registers::RESET1_REGISTER_UNKNOWN_2_MASK,
-        aml_registers::RESET1_REGISTER_UNKNOWN_2_MASK);
+        aml_registers::RESET1_REGISTER_OFFSET, aml_registers::USB_RESET1_REGISTER_UNKNOWN_2_MASK,
+        aml_registers::USB_RESET1_REGISTER_UNKNOWN_2_MASK);
     if ((register_result2.status() != ZX_OK) || register_result2->result.is_err()) {
       zxlogf(ERROR, "%s: Reset Register Write on 1 << 16 failed\n", __func__);
       return ZX_ERR_INTERNAL;

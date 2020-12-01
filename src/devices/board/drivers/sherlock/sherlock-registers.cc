@@ -57,18 +57,27 @@ zx_status_t Sherlock::RegistersInit() {
       registers::BuildMetadata(allocator, aml_registers::REGISTER_USB_PHY_V2_RESET, RESET_MMIO,
                                std::vector<registers::MaskEntryBuilder<uint32_t>>{
                                    {
-                                       .mask = aml_registers::RESET1_REGISTER_UNKNOWN_1_MASK |
-                                               aml_registers::RESET1_REGISTER_UNKNOWN_2_MASK,
+                                       .mask = aml_registers::USB_RESET1_REGISTER_UNKNOWN_1_MASK |
+                                               aml_registers::USB_RESET1_REGISTER_UNKNOWN_2_MASK,
                                        .mmio_offset = T931_RESET1_REGISTER,
                                        .reg_count = 1,
                                    },
                                    {
-                                       .mask = aml_registers::RESET1_LEVEL_MASK,
+                                       .mask = aml_registers::USB_RESET1_LEVEL_MASK,
                                        .mmio_offset = T931_RESET1_LEVEL,
                                        .reg_count = 1,
                                    },
                                });
 
+  register_entries[aml_registers::REGISTER_NNA_RESET_LEVEL2] =
+      registers::BuildMetadata(allocator, aml_registers::REGISTER_NNA_RESET_LEVEL2, RESET_MMIO,
+                               std::vector<registers::MaskEntryBuilder<uint32_t>>{
+                                   {
+                                       .mask = aml_registers::NNA_RESET2_LEVEL_MASK,
+                                       .mmio_offset = T931_RESET2_LEVEL,
+                                       .reg_count = 1,
+                                   },
+                               });
 #ifdef FACTORY_BUILD
   mmio_entries[USB_FACTORY_MMIO] = registers::BuildMetadata(allocator, USB_FACTORY_MMIO);
 

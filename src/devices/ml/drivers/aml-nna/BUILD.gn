@@ -16,8 +16,11 @@ driver_module("aml-nna") {
   sources = [ "aml-nna.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.registers",
+    "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/lib/amlogic",
     "//src/devices/lib/driver:driver",
     "//src/devices/lib/mmio",
     "//zircon/public/lib/fbl",
@@ -37,9 +40,14 @@ test("aml-nna-test") {
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
+    "//sdk/banjo/ddk.protocol.registers",
+    "//sdk/banjo/ddk.protocol.registers:ddk.protocol.registers_mock",
+    "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
+    "//src/devices/registers/testing/mock-registers",
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",
