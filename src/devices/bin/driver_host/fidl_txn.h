@@ -79,7 +79,7 @@ class FidlTxn {
   zx_status_t Reply(const fidl_outgoing_msg_t* msg) {
     auto hdr = static_cast<fidl_message_header_t*>(msg->bytes);
     hdr->txid = txid_;
-    return channel_->write(0, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles);
+    return channel_->write_etc(0, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles);
   }
 
   static zx_status_t FidlReply(fidl_txn_t* reply, const fidl_outgoing_msg_t* msg) {

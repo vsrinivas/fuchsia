@@ -415,10 +415,12 @@ getuid
 zx_bti_create
 zx_cache_flush
 zx_channel_call
+zx_channel_call_etc
 zx_channel_create
 zx_channel_read
 zx_channel_read_etc
 zx_channel_write
+zx_channel_write_etc
 zx_clock_get_monotonic
 zx_cprng_draw
 zx_deadline_after

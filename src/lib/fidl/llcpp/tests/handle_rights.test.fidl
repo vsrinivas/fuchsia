@@ -1,0 +1,35 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library llcpptest.handlerights.test;
+
+using zx;
+
+protocol HandleRights {
+    // 4098 is zx.rights.TRANSFER and zx.rights.SIGNAL
+    // TODO(fxbug.dev/43948) Replace with named constants once it is supported.
+    SyncGetHandleWithTooFewRights() -> (zx.handle:<EVENT, 4098> h);
+
+    // 4098 is zx.rights.TRANSFER and zx.rights.SIGNAL
+    // TODO(fxbug.dev/43948) Replace with named constants once it is supported.
+    AsyncGetHandleWithTooFewRights() -> (zx.handle:<EVENT, 4098> h);
+
+    // 4098 is zx.rights.TRANSFER and zx.rights.SIGNAL
+    // TODO(fxbug.dev/43948) Replace with named constants once it is supported.
+    SyncGetHandleWithTooManyRights() -> (zx.handle:<EVENT, 4098> h);
+
+    // 4098 is zx.rights.TRANSFER and zx.rights.SIGNAL
+    // TODO(fxbug.dev/43948) Replace with named constants once it is supported.
+    AsyncGetHandleWithTooManyRights() -> (zx.handle:<EVENT, 4098> h);
+
+    SyncGetHandleWithWrongType() -> (zx.handle:CHANNEL h);
+
+    AsyncGetHandleWithWrongType() -> (zx.handle:CHANNEL h);
+
+    // 4098 is zx.rights.TRANSFER and zx.rights.SIGNAL
+    // TODO(fxbug.dev/43948) Replace with named constants once it is supported.
+    SendEventWithTransferAndSignal(zx.handle:<EVENT, 4098> h);
+
+    SendChannel(zx.handle:CHANNEL h);
+};

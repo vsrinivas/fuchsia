@@ -119,7 +119,8 @@ class Parent final {
       GetChildResponse& Message() {
         return *reinterpret_cast<GetChildResponse*>(message_.bytes());
       }
-      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+      zx_handle_disposition_t
+          handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       ::fidl::OutgoingMessage message_;
     };
 
@@ -410,7 +411,8 @@ class Parent final {
       GetChildRequestResponse& Message() {
         return *reinterpret_cast<GetChildRequestResponse*>(message_.bytes());
       }
-      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+      zx_handle_disposition_t
+          handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       ::fidl::OutgoingMessage message_;
     };
 
@@ -703,7 +705,8 @@ class Parent final {
       TakeChildRequest& Message() {
         return *reinterpret_cast<TakeChildRequest*>(message_.bytes());
       }
-      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+      zx_handle_disposition_t
+          handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       ::fidl::OutgoingMessage message_;
     };
 
@@ -859,7 +862,8 @@ class Parent final {
       TakeChildRequestRequest& Message() {
         return *reinterpret_cast<TakeChildRequestRequest*>(message_.bytes());
       }
-      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+      zx_handle_disposition_t
+          handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       ::fidl::OutgoingMessage message_;
     };
 

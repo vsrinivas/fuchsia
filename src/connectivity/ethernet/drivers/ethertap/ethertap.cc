@@ -346,7 +346,7 @@ static zx_status_t tap_device_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* 
 zx_status_t TapDevice::Reply(zx_txid_t txid, const fidl_outgoing_msg_t* msg) {
   auto header = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   header->txid = txid;
-  return channel_.write(0, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles);
+  return channel_.write_etc(0, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles);
 }
 
 int TapDevice::Thread() {

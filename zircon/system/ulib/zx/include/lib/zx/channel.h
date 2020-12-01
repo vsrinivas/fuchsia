@@ -49,7 +49,7 @@ class channel final : public object<channel> {
   }
 
   zx_status_t write_etc(uint32_t flags, const void* bytes, uint32_t num_bytes,
-                        zx_handle_disposition_t* handles, uint32_t num_handles) {
+                        zx_handle_disposition_t* handles, uint32_t num_handles) const {
     return zx_channel_write_etc(get(), flags, bytes, num_bytes, handles, num_handles);
   }
 

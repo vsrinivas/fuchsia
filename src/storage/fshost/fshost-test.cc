@@ -85,7 +85,9 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   // make a new "vfs" "client" that doesn't really point anywhere.
   zx::channel vfs_client, vfs_server;
   ASSERT_OK(zx::channel::create(0, &vfs_client, &vfs_server));
-  zx_handle_t vfs_client_value = vfs_client.get();
+  zx_info_handle_basic_t vfs_client_info;
+  ASSERT_OK(vfs_client.get_info(ZX_INFO_HANDLE_BASIC, &vfs_client_info, sizeof(vfs_client_info),
+                                nullptr, nullptr));
 
   // register the filesystem through the fidl interface
   auto resp = ::llcpp::fuchsia::fshost::Registry::Call::RegisterFilesystem(
@@ -96,7 +98,11 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   // confirm that the filesystem was registered
   fbl::RefPtr<fs::Vnode> node;
   ASSERT_OK(dir->Lookup("0", &node));
-  EXPECT_EQ(node->GetRemote(), vfs_client_value);
+  zx_info_handle_basic_t vfs_remote_info;
+  zx_handle_t remote = node->GetRemote();
+  ASSERT_OK(zx_object_get_info(remote, ZX_INFO_HANDLE_BASIC, &vfs_remote_info,
+                               sizeof(vfs_remote_info), nullptr, nullptr));
+  EXPECT_EQ(vfs_remote_info.koid, vfs_client_info.koid);
 }
 
 // Test that the manager responds to external signals for unmounting.

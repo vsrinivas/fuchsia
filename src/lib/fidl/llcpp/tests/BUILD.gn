@@ -75,6 +75,12 @@ fidl("llcpptest.flexible.test") {
   sources = [ "flexible.test.fidl" ]
 }
 
+fidl("llcpptest.handlerights.test") {
+  experimental_flags = [ "enable_handle_rights" ]
+  sources = [ "handle_rights.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
+}
+
 fidl("llcpptest.protocol.test") {
   sources = [ "protocol.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
@@ -98,8 +104,10 @@ executable("fidl_llcpp_type_tests_bin") {
     "bits_test.cc",
     "enum_test.cc",
     "flexible_test.cc",
+    "handle_rights_test.cc",
     "handle_test.cc",
     "linearized_and_encoded_test.cc",
+    "outgoing_to_incoming_message_test.cc",
     "protocol_test.cc",
     "server_end_test.cc",
     "table_test.cc",
@@ -114,11 +122,13 @@ executable("fidl_llcpp_type_tests_bin") {
     ":fidl.llcpp.linearized.test_llcpp",
     ":fidl.llcpp.types.test_llcpp",
     ":llcpptest.flexible.test_llcpp",
+    ":llcpptest.handlerights.test_llcpp",
     ":llcpptest.handles.test_llcpp",
     ":llcpptest.protocol.test_llcpp",
     ":llcpptest.transitional.test_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-llcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

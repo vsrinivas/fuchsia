@@ -115,7 +115,8 @@ class DriverHostTest : public gtest::TestLoopFixture {
                                         fbl::MakeRefCounted<fs::Service>(std::move(connector))));
   }
 
-  StartDriverResult StartDriver(fidl::VectorView<fdf::NodeSymbol> symbols = {}) {
+  StartDriverResult StartDriver(fidl::VectorView<fdf::NodeSymbol> symbols = {},
+                                fidl::tracking_ptr<zx::channel> node = nullptr) {
     zx_status_t epitaph = ZX_OK;
     TestTransaction transaction(&epitaph);
 
@@ -162,6 +163,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
       Completer completer(&transaction);
       driver_host()->Start(
           fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
+              .set_node(std::move(node))
               .set_symbols(std::make_unique<fidl::VectorView<fdf::NodeSymbol>>(std::move(symbols)))
               .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
                   fidl::unowned_vec(ns_entries)))
@@ -338,6 +340,20 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
         std::move(driver_server_end), completer);
   }
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
+}
+
+TEST_F(DriverHostTest, InvalidHandleRights) {
+  bool connected = false;
+  AddEntry([&connected](zx::channel request) {
+    connected = true;
+    return ZX_OK;
+  });
+  zx::channel client, server;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &client, &server));
+  ASSERT_EQ(ZX_OK, client.replace(ZX_RIGHT_TRANSFER, &client));
+  // This should fail when node rights are not ZX_DEFAULT_CHANNEL_RIGHTS.
+  StartDriver({}, fidl::unowned_ptr(&client));
+  EXPECT_FALSE(connected);
 }
 
 // Start a driver with an invalid binary.

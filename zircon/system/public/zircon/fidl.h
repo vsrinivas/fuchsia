@@ -390,7 +390,7 @@ typedef struct fidl_outgoing_msg {
   // The handles of the message.
   //
   // See |num_handles| for the number of handles in the message.
-  zx_handle_t* handles;
+  zx_handle_disposition_t* handles;
 
   // The number of bytes in |bytes|.
   uint32_t num_bytes;

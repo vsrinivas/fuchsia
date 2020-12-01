@@ -83,7 +83,7 @@ struct {{ .Name }} {
 
    private:
     {{- if gt .MaxHandles 0 }}
-      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+      zx_handle_disposition_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
     {{- end }}
     ::fidl::OutgoingMessage message_;
   };

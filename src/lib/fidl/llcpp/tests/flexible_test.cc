@@ -51,7 +51,7 @@ class RewriteTransaction : public fidl::Transaction {
               sizeof(test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandlesResponse));
 
     char real_msg_bytes[ZX_CHANNEL_MAX_MSG_BYTES] = {};
-    zx_handle_t real_msg_handles[ZX_CHANNEL_MAX_MSG_HANDLES] = {};
+    zx_handle_disposition_t real_msg_handles[ZX_CHANNEL_MAX_MSG_HANDLES] = {};
     reinterpret_cast<fidl_message_header_t*>(&real_msg_bytes[0])->txid = txid_;
     fidl_outgoing_msg_t real_msg = {
         .bytes = &real_msg_bytes[0],
@@ -95,7 +95,7 @@ class RewriteTransaction : public fidl::Transaction {
         constexpr uint32_t kUnknownBytes = 16;
         constexpr uint32_t kUnknownHandles = ZX_CHANNEL_MAX_MSG_HANDLES;
         for (uint32_t i = 0; i < kUnknownHandles; i++) {
-          ZX_ASSERT(zx_event_create(0, &real_msg_handles[i]) == ZX_OK);
+          ZX_ASSERT(zx_event_create(0, &real_msg_handles[i].handle) == ZX_OK);
         }
         real_response->envelopes.count = 4;
         const auto envelope_header_offset =
@@ -147,7 +147,7 @@ class RewriteTransaction : public fidl::Transaction {
           constexpr uint32_t kUnknownBytes = 16;
           constexpr uint32_t kUnknownHandles = ZX_CHANNEL_MAX_MSG_HANDLES;
           for (uint32_t i = 0; i < kUnknownHandles; i++) {
-            ZX_ASSERT(zx_event_create(0, &real_msg_handles[i]) == ZX_OK);
+            ZX_ASSERT(zx_event_create(0, &real_msg_handles[i].handle) == ZX_OK);
           }
           real_response->envelope = fidl_envelope_t{
               .num_bytes = kUnknownBytes,
@@ -165,8 +165,8 @@ class RewriteTransaction : public fidl::Transaction {
           ZX_ASSERT_MSG(false, "Cannot reach here");
       }
     }
-    zx_status_t status = channel_->write(0, real_msg.bytes, real_msg.num_bytes, real_msg.handles,
-                                         real_msg.num_handles);
+    zx_status_t status = channel_->write_etc(0, real_msg.bytes, real_msg.num_bytes,
+                                             real_msg.handles, real_msg.num_handles);
     ZX_ASSERT(status == ZX_OK);
     return ZX_OK;
   }

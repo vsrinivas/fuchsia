@@ -24,9 +24,9 @@ static zx_status_t ldsvc_LoadObject(void* ctx, const char* object_name_data,
   size_t len = strlen("object name");
   EXPECT_EQ(len, object_name_size, "");
   EXPECT_EQ(0, memcmp(object_name_data, "object name", len), "");
-  zx_handle_t event = ZX_HANDLE_INVALID;
-  EXPECT_EQ(ZX_OK, zx_event_create(0, &event), "");
-  return fuchsia_ldsvc_LoaderLoadObject_reply(txn, 42, event);
+  zx_handle_t vmo = ZX_HANDLE_INVALID;
+  EXPECT_EQ(ZX_OK, zx_vmo_create(32, 0, &vmo), "");
+  return fuchsia_ldsvc_LoaderLoadObject_reply(txn, 42, vmo);
 }
 
 static zx_status_t ldsvc_Config(void* ctx, const char* config_data, size_t config_size,
@@ -64,8 +64,8 @@ static zx_status_t ldsvc_server_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t
   hdr->txid = conn->txid;
   conn->txid = 0;
   ++conn->reply_count;
-  return zx_channel_write(conn->channel, 0, msg->bytes, msg->num_bytes, msg->handles,
-                          msg->num_handles);
+  return zx_channel_write_etc(conn->channel, 0, msg->bytes, msg->num_bytes, msg->handles,
+                              msg->num_handles);
 }
 
 static void ldsvc_server(zx_handle_t channel_handle) {

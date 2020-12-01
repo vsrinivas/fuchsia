@@ -667,7 +667,8 @@ struct StructWithNullableRequest {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+    zx_handle_disposition_t
+        handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
     ::fidl::OutgoingMessage message_;
   };
 
@@ -795,7 +796,8 @@ struct StructWithNullableProtocol {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+    zx_handle_disposition_t
+        handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
     ::fidl::OutgoingMessage message_;
   };
 
@@ -922,7 +924,8 @@ struct StructWithNullableHandle {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+    zx_handle_disposition_t
+        handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
     ::fidl::OutgoingMessage message_;
   };
 

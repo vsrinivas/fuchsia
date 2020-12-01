@@ -31,7 +31,8 @@ class OutgoingMessage final : public ::fidl::Result {
   // destination to linearize and encode the message. At this point, the data within |bytes_| and
   // |handles_| is undefined.
   OutgoingMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_t byte_actual,
-                  zx_handle_t* handles, uint32_t handle_capacity, uint32_t handle_actual);
+                  zx_handle_disposition_t* handles, uint32_t handle_capacity,
+                  uint32_t handle_actual);
   explicit OutgoingMessage(const fidl_outgoing_msg_t* msg)
       : ::fidl::Result(ZX_OK, nullptr),
         message_(*msg),
@@ -47,12 +48,13 @@ class OutgoingMessage final : public ::fidl::Result {
   ~OutgoingMessage();
 
   uint8_t* bytes() const { return reinterpret_cast<uint8_t*>(message_.bytes); }
-  zx_handle_t* handles() const { return message_.handles; }
+  zx_handle_disposition_t* handles() const { return message_.handles; }
   uint32_t byte_actual() const { return message_.num_bytes; }
   uint32_t handle_actual() const { return message_.num_handles; }
   uint32_t byte_capacity() const { return byte_capacity_; }
   uint32_t handle_capacity() const { return handle_capacity_; }
   fidl_outgoing_msg_t* message() { return &message_; }
+  const fidl_outgoing_msg_t* message() const { return &message_; }
 
   // Release the handles to prevent them to be closed by CloseHandles. This method is only useful
   // when interfacing with low-level channel operations which consume the handles.
@@ -198,6 +200,14 @@ using UnownedEncodedMessage = typename FidlType::UnownedEncodedMessage;
 template <typename FidlType>
 using DecodedMessage = typename FidlType::DecodedMessage;
 
+// Convert an outgoing message to an incoming message.
+//
+// In doing so, it will make syscalls to fetch rights and type information
+// of any provided handles. The caller is responsible for ensuring that
+// outputted handle rights and object types are checked appropriately.
+zx_status_t OutgoingToIncomingMessage(const fidl_outgoing_msg_t* input,
+                                      zx_handle_info_t* handle_buf, uint32_t handle_buf_count,
+                                      fidl_incoming_msg_t* output);
 }  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_MESSAGE_H_

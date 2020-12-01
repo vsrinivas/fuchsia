@@ -136,7 +136,7 @@ TEST(LlcppTypesTests, RoundTripTest) {
                      encoded2.GetOutgoingMessage().byte_actual()),
               0);
     EXPECT_EQ(encoded2.GetOutgoingMessage().handle_actual(), 1);
-    EXPECT_EQ(encoded2.GetOutgoingMessage().handles()[0], unsafe_handle_backup);
+    EXPECT_EQ(encoded2.GetOutgoingMessage().handles()[0].handle, unsafe_handle_backup);
 
     HelperExpectPeerValid(channel_1);
   }

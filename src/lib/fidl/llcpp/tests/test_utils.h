@@ -65,9 +65,12 @@ bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes,
   bool bytes_match =
       ComparePayload(encoded.GetOutgoingMessage().bytes(),
                      encoded.GetOutgoingMessage().byte_actual(), bytes.data(), bytes.size());
-  bool handles_match =
-      ComparePayload(encoded.GetOutgoingMessage().handles(),
-                     encoded.GetOutgoingMessage().handle_actual(), handles.data(), handles.size());
+  std::vector<zx_handle_t> outgoing_msg_handles;
+  for (size_t i = 0; i < encoded.GetOutgoingMessage().handle_actual(); i++) {
+    outgoing_msg_handles.push_back(encoded.GetOutgoingMessage().handles()[i].handle);
+  }
+  bool handles_match = ComparePayload(outgoing_msg_handles.data(), outgoing_msg_handles.size(),
+                                      handles.data(), handles.size());
   return bytes_match && handles_match;
 }
 

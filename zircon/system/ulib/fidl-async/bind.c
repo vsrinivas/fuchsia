@@ -35,8 +35,8 @@ static zx_status_t fidl_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   hdr->txid = conn->txid;
   conn->txid = 0u;
   fidl_trace(WillCChannelWrite, NULL /* type */, msg->bytes, msg->num_bytes, msg->num_handles);
-  const zx_status_t status = zx_channel_write(conn->channel, 0, msg->bytes, msg->num_bytes,
-                                              msg->handles, msg->num_handles);
+  const zx_status_t status = zx_channel_write_etc(conn->channel, 0, msg->bytes, msg->num_bytes,
+                                                  msg->handles, msg->num_handles);
   fidl_trace(DidCChannelWrite);
   return status;
 }

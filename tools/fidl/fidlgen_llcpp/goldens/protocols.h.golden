@@ -2331,7 +2331,8 @@ class ChannelProtocol final {
       MutateSocketResponse& Message() {
         return *reinterpret_cast<MutateSocketResponse*>(message_.bytes());
       }
-      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+      zx_handle_disposition_t
+          handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       ::fidl::OutgoingMessage message_;
     };
 
@@ -2485,7 +2486,8 @@ class ChannelProtocol final {
       MutateSocketRequest& Message() {
         return *reinterpret_cast<MutateSocketRequest*>(message_.bytes());
       }
-      zx_handle_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+      zx_handle_disposition_t
+          handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
       ::fidl::OutgoingMessage message_;
     };
 

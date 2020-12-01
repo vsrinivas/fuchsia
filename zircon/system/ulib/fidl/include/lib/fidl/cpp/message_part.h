@@ -108,6 +108,8 @@ class MessagePart {
 
 using BytePart = MessagePart<uint8_t>;
 using HandlePart = MessagePart<zx_handle_t>;
+using HandleDispositionPart = MessagePart<zx_handle_disposition_t>;
+using HandleInfoPart = MessagePart<zx_handle_info_t>;
 
 }  // namespace fidl
 

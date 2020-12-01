@@ -1169,7 +1169,6 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
     if (method_info.response) {
       response_hcount = GetMaxHandlesFor(named_protocol.transport, method_info.response->typeshape);
     }
-    size_t max_hcount = std::max(request_hcount, response_hcount);
 
     bool has_padding = method_info.request->typeshape.HasPadding();
     bool encode_request = (count > 0) || (request_hcount > 0) || has_padding;
@@ -1186,15 +1185,22 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
     file_ << kIndent << "memset(_wr_bytes, 0, sizeof(_wr_bytes));\n";
     EmitTxnHeader(&file_, "_request", method_info.ordinal_name);
     EmitLinearizeMessage(&file_, "_request", "_wr_bytes", request);
-    const char* handles_value = "NULL";
-    if (max_hcount > 0) {
-      file_ << kIndent << "zx_handle_t _handles[" << max_hcount << "];\n";
-      handles_value = "_handles";
+    const char* handle_infos_value = "NULL";
+    const char* handle_dispositions_value = "NULL";
+    if (request_hcount > 0) {
+      file_ << kIndent << "zx_handle_disposition_t _handle_dispositions[" << request_hcount
+            << "];\n";
+      handle_dispositions_value = "_handle_dispositions";
+    }
+    if (response_hcount > 0) {
+      file_ << kIndent << "zx_handle_info_t _handle_infos[" << response_hcount << "];\n";
+      handle_infos_value = "_handle_infos";
     }
     if (encode_request) {
       file_ << kIndent << "uint32_t _wr_num_handles = 0u;\n";
-      file_ << kIndent << "zx_status_t _status = fidl_encode(&" << method_info.request->coded_name
-            << ", _wr_bytes, _wr_num_bytes, " << handles_value << ", " << request_hcount
+      file_ << kIndent << "zx_status_t _status = fidl_encode_etc(&"
+            << method_info.request->coded_name << ", _wr_bytes, _wr_num_bytes, "
+            << handle_dispositions_value << ", " << request_hcount
             << ", &_wr_num_handles, NULL);\n";
       file_ << kIndent << "if (_status != ZX_OK)\n";
       file_ << kIndent << kIndent << "return _status;\n";
@@ -1205,11 +1211,13 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
       switch (named_protocol.transport) {
         case Transport::Channel:
           if (encode_request) {
-            file_ << kIndent << "return zx_channel_write(_channel, 0u, _wr_bytes, _wr_num_bytes, "
-                  << handles_value << ", _wr_num_handles);\n";
+            file_ << kIndent
+                  << "return zx_channel_write_etc(_channel, 0u, _wr_bytes, _wr_num_bytes, "
+                  << handle_dispositions_value << ", _wr_num_handles);\n";
           } else {
             file_ << kIndent
-                  << "return zx_channel_write(_channel, 0u, _wr_bytes, _wr_num_bytes, NULL, 0);\n";
+                  << "return zx_channel_write_etc(_channel, 0u, _wr_bytes, _wr_num_bytes, NULL, "
+                     "0);\n";
           }
           break;
       }
@@ -1227,11 +1235,11 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
               << method_info.response->c_name << "*)_rd_bytes;\n";
       switch (named_protocol.transport) {
         case Transport::Channel:
-          file_ << kIndent << "zx_channel_call_args_t _args = {\n";
+          file_ << kIndent << "zx_channel_call_etc_args_t _args = {\n";
           file_ << kIndent << kIndent << ".wr_bytes = _wr_bytes,\n";
-          file_ << kIndent << kIndent << ".wr_handles = " << handles_value << ",\n";
+          file_ << kIndent << kIndent << ".wr_handles = " << handle_dispositions_value << ",\n";
           file_ << kIndent << kIndent << ".rd_bytes = _rd_bytes,\n";
-          file_ << kIndent << kIndent << ".rd_handles = " << handles_value << ",\n";
+          file_ << kIndent << kIndent << ".rd_handles = " << handle_infos_value << ",\n";
           file_ << kIndent << kIndent << ".wr_num_bytes = _wr_num_bytes,\n";
           if (encode_request) {
             file_ << kIndent << kIndent << ".wr_num_handles = _wr_num_handles,\n";
@@ -1249,7 +1257,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
           } else {
             file_ << kIndent << "zx_status_t ";
           }
-          file_ << "_status = zx_channel_call(_channel, 0u, ZX_TIME_INFINITE, &_args, "
+          file_ << "_status = zx_channel_call_etc(_channel, 0u, ZX_TIME_INFINITE, &_args, "
                    "&_actual_num_bytes, &_actual_num_handles);\n";
           break;
       }
@@ -1288,7 +1296,8 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
           file_ << ")";
         file_ << " {\n";
         if (response_hcount > 0) {
-          file_ << kIndent << kIndent << "zx_handle_close_many(_handles, _actual_num_handles);\n";
+          file_ << kIndent << kIndent
+                << "FidlHandleInfoCloseMany(_handle_infos, _actual_num_handles);\n";
         }
         file_ << kIndent << kIndent << "return ZX_ERR_BUFFER_TOO_SMALL;\n";
         file_ << kIndent << "}\n";
@@ -1298,8 +1307,8 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
         // TODO(fxbug.dev/7499): Validate the response ordinal. C++ bindings also need to do that.
         switch (named_protocol.transport) {
           case Transport::Channel:
-            file_ << kIndent << "_status = fidl_decode(&" << method_info.response->coded_name
-                  << ", _rd_bytes, _actual_num_bytes, " << handles_value
+            file_ << kIndent << "_status = fidl_decode_etc(&" << method_info.response->coded_name
+                  << ", _rd_bytes, _actual_num_bytes, " << handle_infos_value
                   << ", _actual_num_handles, NULL);\n";
             break;
         }
@@ -1549,7 +1558,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
     EmitLinearizeMessage(&file_, "_response", "_wr_bytes", response);
     const char* handle_value = "NULL";
     if (hcount > 0) {
-      file_ << kIndent << "zx_handle_t _handles[" << hcount << "];\n";
+      file_ << kIndent << "zx_handle_disposition_t _handles[" << hcount << "];\n";
       handle_value = "_handles";
     }
     file_ << kIndent << "fidl_outgoing_msg_t _msg = {\n";
