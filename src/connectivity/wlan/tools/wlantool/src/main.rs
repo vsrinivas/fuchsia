@@ -564,6 +564,7 @@ fn print_scan_result(bss: &fidl_sme::BssInfo) {
             fidl_sme::Protection::Open => "Open",
             fidl_sme::Protection::Wep => "WEP",
             fidl_sme::Protection::Wpa1 => "WPA1",
+            fidl_sme::Protection::Wpa2Legacy => "WPA2 PSK TKIP",
             fidl_sme::Protection::Wpa1Wpa2Personal => "WPA1/2 PSK",
             fidl_sme::Protection::Wpa2Personal => "WPA2 PSK",
             fidl_sme::Protection::Wpa2Wpa3Personal => "WPA2/3 PSK",

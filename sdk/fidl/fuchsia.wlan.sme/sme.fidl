@@ -13,12 +13,13 @@ enum Protection {
     OPEN = 1;
     WEP = 2;
     WPA1 = 3;
-    WPA1_WPA2_PERSONAL = 4;
-    WPA2_PERSONAL = 5;
-    WPA2_WPA3_PERSONAL = 6;
-    WPA3_PERSONAL = 7;
-    WPA2_ENTERPRISE = 8;
-    WPA3_ENTERPRISE = 9;
+    WPA2_LEGACY = 4;
+    WPA1_WPA2_PERSONAL = 5;
+    WPA2_PERSONAL = 6;
+    WPA2_WPA3_PERSONAL = 7;
+    WPA3_PERSONAL = 8;
+    WPA2_ENTERPRISE = 9;
+    WPA3_ENTERPRISE = 10;
 };
 
 struct BssInfo {

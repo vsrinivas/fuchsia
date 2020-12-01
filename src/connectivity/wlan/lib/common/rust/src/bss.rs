@@ -23,15 +23,16 @@ pub enum Protection {
     Open = 1,
     Wep = 2,
     Wpa1 = 3,
-    Wpa1Wpa2Personal = 4,
-    Wpa2Personal = 5,
-    Wpa2Wpa3Personal = 6,
-    Wpa3Personal = 7,
-    Wpa2Enterprise = 8,
+    Wpa2Legacy = 4,
+    Wpa1Wpa2Personal = 5,
+    Wpa2Personal = 6,
+    Wpa2Wpa3Personal = 7,
+    Wpa3Personal = 8,
+    Wpa2Enterprise = 9,
     /// WPA3 Enterprise 192-bit mode. WPA3 spec specifies an optional 192-bit mode but says nothing
     /// about a non 192-bit version. Thus, colloquially, it's likely that the term WPA3 Enterprise
     /// will be used to refer to WPA3 Enterprise 192-bit mode.
-    Wpa3Enterprise = 9,
+    Wpa3Enterprise = 10,
 }
 
 impl From<Protection> for fidl_sme::Protection {
@@ -41,6 +42,7 @@ impl From<Protection> for fidl_sme::Protection {
             Protection::Open => fidl_sme::Protection::Open,
             Protection::Wep => fidl_sme::Protection::Wep,
             Protection::Wpa1 => fidl_sme::Protection::Wpa1,
+            Protection::Wpa2Legacy => fidl_sme::Protection::Wpa2Legacy,
             Protection::Wpa1Wpa2Personal => fidl_sme::Protection::Wpa1Wpa2Personal,
             Protection::Wpa2Personal => fidl_sme::Protection::Wpa2Personal,
             Protection::Wpa2Wpa3Personal => fidl_sme::Protection::Wpa2Wpa3Personal,
@@ -58,6 +60,7 @@ impl fmt::Display for Protection {
             Protection::Open => write!(f, "{}", "Open"),
             Protection::Wep => write!(f, "{}", "Wep"),
             Protection::Wpa1 => write!(f, "{}", "Wpa1"),
+            Protection::Wpa2Legacy => write!(f, "{}", "Wpa2Legacy"),
             Protection::Wpa1Wpa2Personal => write!(f, "{}", "Wpa1Wpa2Personal"),
             Protection::Wpa2Personal => write!(f, "{}", "Wpa2Personal"),
             Protection::Wpa2Wpa3Personal => write!(f, "{}", "Wpa2Wpa3Personal"),
@@ -131,7 +134,9 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
         let rsne = match self.rsne.as_ref() {
             Some(rsne) => match ie::rsn::rsne::from_bytes(rsne) {
                 Ok((_, rsne)) => rsne,
-                Err(_e) => return Protection::Unknown,
+                Err(_e) => {
+                    return Protection::Unknown;
+                }
             },
             None if !CapabilityInfo(self.cap).privacy() => return Protection::Open,
             None if self.find_wpa_ie().is_some() => {
@@ -164,6 +169,8 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
             }
         } else if supports_wpa_1 {
             return Protection::Wpa1;
+        } else if suite_filter::WPA2_LEGACY.is_satisfied(&rsne) {
+            return Protection::Wpa2Legacy;
         } else if suite_filter::WPA3_ENTERPRISE_192_BIT.is_satisfied(&rsne) {
             if mfp_cap && mfp_req {
                 return Protection::Wpa3Enterprise;
@@ -314,7 +321,7 @@ mod tests {
         super::*,
         crate::fake_bss,
         crate::test_utils::fake_frames::{
-            fake_unknown_rsne, fake_wpa1_ie_body, fake_wpa2_legacy_rsne, invalid_wpa2_wpa3_rsne,
+            fake_unknown_rsne, fake_wpa1_ie_body, invalid_wpa2_wpa3_rsne,
             invalid_wpa3_enterprise_192_bit_rsne, invalid_wpa3_rsne,
         },
         fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
@@ -326,6 +333,7 @@ mod tests {
         assert_eq!(Protection::Wep, fake_bss!(Wep).protection());
         assert_eq!(Protection::Wpa1, fake_bss!(Wpa1).protection());
         assert_eq!(Protection::Wpa1, fake_bss!(Wpa1Enhanced).protection());
+        assert_eq!(Protection::Wpa2Legacy, fake_bss!(Wpa2Legacy).protection());
         assert_eq!(Protection::Wpa1Wpa2Personal, fake_bss!(Wpa1Wpa2).protection());
         assert_eq!(Protection::Wpa1Wpa2Personal, fake_bss!(Wpa2Mixed).protection());
         assert_eq!(Protection::Wpa2Personal, fake_bss!(Wpa2).protection());
@@ -348,9 +356,6 @@ mod tests {
         assert_eq!(Protection::Unknown, bss.protection());
 
         bss.rsne = Some(invalid_wpa3_enterprise_192_bit_rsne());
-        assert_eq!(Protection::Unknown, bss.protection());
-
-        bss.rsne = Some(fake_wpa2_legacy_rsne());
         assert_eq!(Protection::Unknown, bss.protection());
     }
 

@@ -76,7 +76,8 @@ impl ClientConfig {
                     _ => false,
                 }
             }
-            Protection::Wpa1Wpa2Personal
+            Protection::Wpa2Legacy
+            | Protection::Wpa1Wpa2Personal
             | Protection::Wpa2Personal
             | Protection::Wpa2Wpa3Personal => match bss.rsne.as_ref() {
                 Some(rsne) if privacy => match rsne::from_bytes(&rsne[..]) {
@@ -127,12 +128,12 @@ mod tests {
         // Compatible:
         let cfg = ClientConfig::default();
         assert!(cfg.is_bss_compatible(&fake_bss!(Open)));
+        assert!(cfg.is_bss_compatible(&fake_bss!(Wpa2Legacy)));
         assert!(cfg.is_bss_compatible(&fake_bss!(Wpa2)));
         assert!(cfg.is_bss_compatible(&fake_bss!(Wpa2Wpa3)));
 
         // Not compatible:
         assert!(!cfg.is_bss_compatible(&fake_bss!(Wpa1)));
-        assert!(!cfg.is_bss_compatible(&fake_bss!(Wpa2Legacy)));
         assert!(!cfg.is_bss_compatible(&fake_bss!(Wpa2NoPrivacy)));
         assert!(!cfg.is_bss_compatible(&fake_bss!(Wpa3)));
         assert!(!cfg.is_bss_compatible(&fake_bss!(Eap)));

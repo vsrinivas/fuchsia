@@ -48,6 +48,7 @@ pub(super) fn convert_protection(
         Protection::Open => Open,
         Protection::Wep => Wep,
         Protection::Wpa1 => Wpa1,
+        Protection::Wpa2Legacy => Wpa2Legacy,
         Protection::Wpa1Wpa2Personal => Wpa1Wpa2Personal,
         Protection::Wpa2Personal => Wpa2Personal,
         Protection::Wpa2Wpa3Personal => Wpa2Wpa3Personal,

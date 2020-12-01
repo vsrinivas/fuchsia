@@ -708,7 +708,8 @@ fn get_protection(
                 )
             })
         }
-        wlan_common::bss::Protection::Wpa1Wpa2Personal
+        wlan_common::bss::Protection::Wpa2Legacy
+        | wlan_common::bss::Protection::Wpa1Wpa2Personal
         | wlan_common::bss::Protection::Wpa2Personal
         | wlan_common::bss::Protection::Wpa2Wpa3Personal => {
             get_wpa2_rsna(device_info, credential, bss).with_context(|| {

@@ -205,16 +205,28 @@ impl Rsne {
 
     /// Constructs Supplicant's RSNE with:
     /// Group Data Cipher: same as A-RSNE (CCMP-128 or TKIP)
-    /// Pairwise Cipher: CCMP-128
+    /// Pairwise Cipher: best from A-RSNE (prefer CCMP-128 over TKIP)
     /// AKM: PSK
     pub fn derive_wpa2_s_rsne(&self) -> Result<Self, Error> {
         if !self.is_wpa2_rsn_compatible() {
             return Err(Error::CannotDeriveWpa2Rsne);
         }
 
+        // CCMP-128 is better than TKIP
+        let pairwise_cipher_suites =
+            vec![match self.pairwise_cipher_suites.iter().max_by_key(|cipher_suite| {
+                match **cipher_suite {
+                    CIPHER_CCMP_128 => 1,
+                    _ => 0,
+                }
+            }) {
+                Some(cipher_suite) => cipher_suite.clone(),
+                None => return Err(Error::NoPairwiseCipherSuite),
+            }];
+
         Ok(Rsne {
             group_data_cipher_suite: self.group_data_cipher_suite.clone(),
-            pairwise_cipher_suites: vec![CIPHER_CCMP_128],
+            pairwise_cipher_suites,
             akm_suites: vec![AKM_PSK],
             rsn_capabilities: self.rsn_capabilities.clone(),
             ..Default::default()
@@ -438,7 +450,7 @@ impl Rsne {
 
     /// Supported Ciphers and AKMs:
     /// Group Data Ciphers: CCMP-128, TKIP
-    /// Pairwise Cipher: CCMP-128
+    /// Pairwise Cipher: CCMP-128, TKIP
     /// AKM: PSK, SAE
     pub fn is_wpa2_rsn_compatible(&self) -> bool {
         let group_data_supported = self.group_data_cipher_suite.as_ref().map_or(false, |c| {
@@ -448,10 +460,10 @@ impl Rsne {
                 && (c.suite_type == cipher::CCMP_128 || c.suite_type == cipher::TKIP)
         });
 
-        let pairwise_supported = self
-            .pairwise_cipher_suites
-            .iter()
-            .any(|c| c.has_known_usage() && c.suite_type == cipher::CCMP_128);
+        let pairwise_supported = self.pairwise_cipher_suites.iter().any(|c| {
+            c.has_known_usage()
+                && (c.suite_type == cipher::CCMP_128 || c.suite_type == cipher::TKIP)
+        });
         let akm_supported =
             self.akm_suites.iter().any(|a| a.has_known_algorithm() && a.suite_type == akm::PSK);
         let caps_supported =
@@ -786,7 +798,31 @@ mod tests {
     }
 
     #[test]
-    fn test_tkip_group_data_cipher() {
+    fn test_ccmp_128_group_data_cipher_ccmp_128_pairwise_cipher() {
+        let a_rsne = Rsne {
+            group_data_cipher_suite: Some(CIPHER_CCMP_128),
+            pairwise_cipher_suites: vec![CIPHER_CCMP_128],
+            akm_suites: vec![AKM_PSK],
+            ..Default::default()
+        };
+        assert_eq!(a_rsne.is_wpa2_rsn_compatible(), true);
+
+        let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
+        let expected_rsne_bytes = vec![
+            0x30, // element id, 48 expressed as hexadecimal value
+            0x12, // length in octets, 18 expressed as hexadecimal value
+            0x01, 0x00, // Version 1
+            0x00, 0x0F, 0xac, 0x04, // CCMP-128 as group data cipher suite
+            0x01, 0x00, // pairwise cipher suite count
+            0x00, 0x0F, 0xAC, 0x04, // CCMP-128 as pairwise cipher suite
+            0x01, 0x00, // authentication count
+            0x00, 0x0F, 0xAC, 0x02, // PSK authentication
+        ];
+        assert_eq!(s_rsne.into_bytes(), expected_rsne_bytes);
+    }
+
+    #[test]
+    fn test_tkip_group_data_cipher_ccmp_128_pairwise_cipher() {
         let a_rsne = Rsne {
             group_data_cipher_suite: Some(CIPHER_TKIP),
             pairwise_cipher_suites: vec![CIPHER_CCMP_128],
@@ -796,9 +832,108 @@ mod tests {
         assert_eq!(a_rsne.is_wpa2_rsn_compatible(), true);
 
         let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
-        let expected_rsne_bytes =
-            vec![48, 18, 1, 0, 0, 15, 172, 2, 1, 0, 0, 15, 172, 4, 1, 0, 0, 15, 172, 2];
+        let expected_rsne_bytes = vec![
+            0x30, // element id, 48 expressed as hexadecimal value
+            0x12, // length in octets, 18 expressed as hexadecimal value
+            0x01, 0x00, // Version 1
+            0x00, 0x0F, 0xac, 0x02, // TKIP as group data cipher suite
+            0x01, 0x00, // pairwise cipher suite count
+            0x00, 0x0F, 0xAC, 0x04, // CCMP-128 as pairwise cipher suite
+            0x01, 0x00, // authentication count
+            0x00, 0x0F, 0xAC, 0x02, // PSK authentication
+        ];
         assert_eq!(s_rsne.into_bytes(), expected_rsne_bytes);
+    }
+
+    #[test]
+    fn test_tkip_group_data_cipher_tkip_pairwise_cipher() {
+        let a_rsne = Rsne {
+            group_data_cipher_suite: Some(CIPHER_TKIP),
+            pairwise_cipher_suites: vec![CIPHER_TKIP],
+            akm_suites: vec![AKM_PSK],
+            ..Default::default()
+        };
+        assert_eq!(a_rsne.is_wpa2_rsn_compatible(), true);
+
+        let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
+        let expected_rsne_bytes = vec![
+            0x30, // element id, 48 expressed as hexadecimal value
+            0x12, // length in octets, 18 expressed as hexadecimal value
+            0x01, 0x00, // Version 1
+            0x00, 0x0F, 0xac, 0x02, // TKIP as group data cipher suite
+            0x01, 0x00, // pairwise cipher suite count
+            0x00, 0x0F, 0xAC, 0x02, // TKIP as pairwise cipher suite
+            0x01, 0x00, // authentication count
+            0x00, 0x0F, 0xAC, 0x02, // PSK authentication
+        ];
+        assert_eq!(s_rsne.into_bytes(), expected_rsne_bytes);
+    }
+
+    #[test]
+    fn test_tkip_group_data_cipher_prefer_ccmp_128_pairwise_cipher() {
+        let a_rsne = Rsne {
+            group_data_cipher_suite: Some(CIPHER_TKIP),
+            pairwise_cipher_suites: vec![CIPHER_CCMP_128, CIPHER_TKIP],
+            akm_suites: vec![AKM_PSK],
+            ..Default::default()
+        };
+        assert_eq!(a_rsne.is_wpa2_rsn_compatible(), true);
+
+        let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
+        let expected_rsne_bytes = vec![
+            0x30, // element id, 48 expressed as hexadecimal value
+            0x12, // length in octets, 18 expressed as hexadecimal value
+            0x01, 0x00, // Version 1
+            0x00, 0x0F, 0xac, 0x02, // TKIP as group data cipher suite
+            0x01, 0x00, // pairwise cipher suite count
+            0x00, 0x0F, 0xAC, 0x04, // CCMP-128 as pairwise cipher suite
+            0x01, 0x00, // authentication count
+            0x00, 0x0F, 0xAC, 0x02, // PSK authentication
+        ];
+        assert_eq!(s_rsne.into_bytes(), expected_rsne_bytes);
+    }
+
+    #[test]
+    fn test_ccmp_128_group_data_cipher_prefer_ccmp_128_pairwise_cipher() {
+        let a_rsne = Rsne {
+            group_data_cipher_suite: Some(CIPHER_CCMP_128),
+            pairwise_cipher_suites: vec![CIPHER_CCMP_128, CIPHER_TKIP],
+            akm_suites: vec![AKM_PSK],
+            ..Default::default()
+        };
+        assert_eq!(a_rsne.is_wpa2_rsn_compatible(), true);
+
+        let s_rsne = a_rsne.derive_wpa2_s_rsne().expect("could not derive WPA2 Supplicant RSNE");
+        let expected_rsne_bytes = vec![
+            0x30, // element id, 48 expressed as hexadecimal value
+            0x12, // length in octets, 18 expressed as hexadecimal value
+            0x01, 0x00, // Version 1
+            0x00, 0x0F, 0xac, 0x04, // CCMP-128 as group data cipher suite
+            0x01, 0x00, // pairwise cipher suite count
+            0x00, 0x0F, 0xAC, 0x04, // CCMP-128 as pairwise cipher suite
+            0x01, 0x00, // authentication count
+            0x00, 0x0F, 0xAC, 0x02, // PSK authentication
+        ];
+        assert_eq!(s_rsne.into_bytes(), expected_rsne_bytes);
+    }
+
+    #[test]
+    fn test_compatible_pairwise_cipher() {
+        let rsne = Rsne {
+            group_data_cipher_suite: Some(CIPHER_CCMP_128),
+            pairwise_cipher_suites: vec![CIPHER_CCMP_128],
+            akm_suites: vec![AKM_PSK],
+            ..Default::default()
+        };
+        assert!(rsne.is_wpa2_rsn_compatible());
+
+        let rsne = Rsne {
+            group_data_cipher_suite: Some(CIPHER_CCMP_128),
+            pairwise_cipher_suites: vec![CIPHER_TKIP],
+            akm_suites: vec![AKM_PSK],
+            ..Default::default()
+        };
+        assert!(rsne.is_wpa2_rsn_compatible());
     }
 
     #[test]
@@ -835,17 +970,6 @@ mod tests {
         let mut a_rsne = Rsne::wpa2_psk_ccmp_rsne();
         a_rsne.pairwise_cipher_suites = vec![CIPHER_BIP_CMAC_256];
         assert!(!s_rsne.is_valid_subset_of(&a_rsne).expect("expect Ok result"));
-    }
-
-    #[test]
-    fn test_tkip_pairwise_cipher() {
-        let rsne = Rsne {
-            group_data_cipher_suite: Some(CIPHER_CCMP_128),
-            pairwise_cipher_suites: vec![CIPHER_TKIP],
-            akm_suites: vec![AKM_PSK],
-            ..Default::default()
-        };
-        assert_eq!(rsne.is_wpa2_rsn_compatible(), false);
     }
 
     #[test]
