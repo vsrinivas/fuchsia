@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fostr/zx_types.h>
 #include <lib/syslog/cpp/macros.h>
 
 namespace modular {
@@ -23,7 +24,7 @@ AsyncHolderBase::~AsyncHolderBase() {
 }
 
 void AsyncHolderBase::Teardown(zx::duration timeout, fit::function<void()> done) {
-  fit::callback<void(bool)> cont = [this, down = down_,
+  fit::callback<void(bool)> cont = [this, down = down_, timeout = timeout,
                                     done = std::move(done)](const bool from_timeout) mutable {
     if (*down) {  // |down| shared_ptr prevents using |this| after destruct
       return;
@@ -32,7 +33,7 @@ void AsyncHolderBase::Teardown(zx::duration timeout, fit::function<void()> done)
     *down = true;
 
     if (from_timeout) {
-      FX_LOGS(WARNING) << "Teardown() timed out for " << name_;
+      FX_LOGS(ERROR) << "Teardown() timed out for " << name_ << " (" << timeout << " seconds)";
     }
 
     ImplReset();
