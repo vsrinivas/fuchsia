@@ -10,7 +10,7 @@
 namespace modular {
 
 // Standard timeout for dispatcher teardown.
-constexpr auto kBasicTimeout = zx::sec(1);
+constexpr auto kBasicTimeout = zx::sec(3);
 
 // Timeouts for teardown of composite objects need to be larger than the basic
 // timeout, because they run through the teardown of their parts, at least
