@@ -53,3 +53,10 @@ Troubleshooting:
   * Make sure your audio system works - try using the `tones` test package.
   * Turn up the volume on the source device
   * Turn up the volume on the Fuchsia device (try using the `vol` command)
+
+## Logging
+The logging level for Audio Sink can be increased at compile-time using the kernel command-line argument `a2dp-sink`.
+
+  ```
+  a2dp-sink=trace
+  ```

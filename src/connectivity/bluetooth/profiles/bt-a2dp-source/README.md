@@ -61,3 +61,9 @@ Troubleshooting:
   * Connecting from the headphones / speaker to the Fuchsia device currently does not work (bug 2783),
     you have to connect through bt-cli or another connection method for now.
 
+## Logging
+The logging level for Audio Source can be increased at compile-time using the kernel command-line argument `a2dp-source`.
+
+  ```
+  a2dp-source=trace
+  ```

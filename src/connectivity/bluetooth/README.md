@@ -134,7 +134,7 @@ See the [Integration Test README](tests/integration/README.md)
 
 ### Controlling Log Verbosity
 
-#### Drivers
+#### Logging in Drivers
 
 The most reliable way to enable higher log verbosity is with kernel command line parameters. These can be configured through the `fx set` command:
 
@@ -142,7 +142,31 @@ The most reliable way to enable higher log verbosity is with kernel command line
   fx set workstation.x64 --args="kernel_cmdline_files=[\"//local/kernel_cmdline.txt\"]"
   ```
 
-Add the commands to `$FUCHSIA_DIR/local/kernel_cmdline.txt`, e.g. to enable full logging for the USB transport, Intel HCI, and host drivers:
+Add the commands to `$FUCHSIA_DIR/local/kernel_cmdline.txt`.
+Using `fx set` writes these values into the image, so they will survive a restart.
+For more detail on driver logging, see [Zircon driver logging](/docs/concepts/drivers/driver-development.md#logging)
+
+The following flag registers driver_host as a trace provider and is a prerequisite to
+all following flags.
+
+  ```
+  driver.tracing.enable=1
+  ```
+
+The following are flags that can be set for the HCI driver for each chipset we support.
+
+  ```
+  driver.bt_hci_broadcom.log
+  driver.bt_hci_mediatek.log
+  driver.bt_hci_atheros.log
+  driver.bt_hci_intel.log
+  driver.bt_hci_passthrough.log
+  driver.bt_hci_emulator.log
+  ```
+
+Specifying a flag for different chipset from what you're running has no effect.
+
+e.g. To enable full logging for the USB transport, Intel HCI, and host drivers:
 
   ```
   $ cat $FUCHSIA_DIR/local/kernel_cmdline.txt
@@ -151,11 +175,14 @@ Add the commands to `$FUCHSIA_DIR/local/kernel_cmdline.txt`, e.g. to enable full
   driver.bt_transport_usb.log=trace
   ```
 
-(HCI drivers other than Intel can also be set. Other hci drivers include `bt_hci_atheros`, `bt_hci_passthrough`, and `bt_hci_emulator`)
+#### Profile Level Logging
+Each Bluetooth profile has logging that can be turned on and can be useful during debugging.
+They're fully documented in the [profile-specific README's here](/src/connectivity/bluetooth/profiles/README.md) but there are a couple of examples below.
 
-Using `fx set` writes these values into the image, so they will survive a restart.
-
-For more detail on driver logging, see [Zircon driver logging](/docs/concepts/drivers/driver-development#logging)
+  ```
+  a2dp-sink=trace
+  a2dp-source=trace
+  ```
 
 #### bin/bt-gap
 
