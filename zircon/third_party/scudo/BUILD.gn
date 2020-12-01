@@ -259,8 +259,8 @@ source_set("unittests") {
   }
 
   deps = [
-    ":gwp_asan-unittests",
     ":scudo.testonly",
+    #":gwp_asan-unittests", # TODO(mcgrathr,kostyak): when ported to zxtest
   ]
 
   # The public API tests both assume Scudo's behavior rather than purely kosher
@@ -297,13 +297,12 @@ source_set("gwp_asan-unittests") {
 
   gwp_asan_test_sources = [
     "alignment.cpp",
-
-    # "backtrace.cpp", # TODO(kostyak): enable when we have backtrace support
+    "backtrace.cpp",
     "basic.cpp",
     "compression.cpp",
     "crash_handler_api.cpp",
-
-    # "enable_disable.cpp", # TODO(kostyak): currently fork() based, see if it can apply to Fuchsia
+    "driver.cpp",
+    "enable_disable.cpp",
     "harness.cpp",
     "harness.h",
     "iterate.cpp",
