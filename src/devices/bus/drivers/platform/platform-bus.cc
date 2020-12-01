@@ -5,7 +5,7 @@
 #include "src/devices/bus/drivers/platform/platform-bus.h"
 
 #include <assert.h>
-#include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -379,7 +379,12 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
 
 zx_status_t PlatformBus::GetBootItem(uint32_t type, uint32_t extra, zx::vmo* vmo,
                                      uint32_t* length) {
-  return fuchsia_boot_ItemsGet(items_svc_.get(), type, extra, vmo->reset_and_get_address(), length);
+  auto result = llcpp::fuchsia::boot::Items::Call::Get(zx::unowned(items_svc_), type, extra);
+  if (result.ok()) {
+    *vmo = std::move(result->payload);
+    *length = result->length;
+  }
+  return result.status();
 }
 
 zx_status_t PlatformBus::GetBootItem(uint32_t type, uint32_t extra, fbl::Array<uint8_t>* out) {
