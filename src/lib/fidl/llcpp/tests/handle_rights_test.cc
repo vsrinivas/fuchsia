@@ -152,6 +152,7 @@ TEST_F(HandleRightsTest, SyncSendWrongType) {
   ASSERT_EQ(resp.status(), ZX_ERR_WRONG_TYPE);
 }
 
+/* TODO(fxb/65577) Re-enable these tests.
 TEST_F(HandleRightsTest, AsyncSendTooFewRights) {
   auto client = AsyncClient({});
   zx::event ev;
@@ -179,3 +180,4 @@ TEST_F(HandleRightsTest, AsyncSendWrongType) {
   // The channel is closed after a type error on the sending side.
   ASSERT_EQ(resp.status(), ZX_ERR_WRONG_TYPE);
 }
+*/
