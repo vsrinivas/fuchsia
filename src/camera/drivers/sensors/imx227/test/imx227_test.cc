@@ -53,10 +53,8 @@ class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
 
   uint32_t CompositeGetFragmentCount() { return 0; }
 
-  void CompositeGetFragments(zx_device_t** comp_list, size_t comp_count, size_t* comp_actual) {}
-
-  void CompositeGetFragmentsNew(composite_device_fragment_t* comp_list, size_t comp_count,
-                                size_t* comp_actual) {}
+  void CompositeGetFragments(composite_device_fragment_t* comp_list, size_t comp_count,
+                             size_t* comp_actual) {}
 
   bool CompositeGetFragment(const char* name, zx_device_t** out) { return false; }
 

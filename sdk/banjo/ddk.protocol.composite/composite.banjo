@@ -14,7 +14,6 @@ protocol Composite {
     /// Returns a list of all of the fragments of this device, in the order
     /// in which they were provided to device_add_composite().  The returned
     /// devices must not be used after the composite device is unbound.
-    GetFragments() -> (vector<ddk.driver.ZxDevice?> fragment);
-    GetFragmentsNew() -> (vector<ddk.driver.CompositeDeviceFragment> fragment);
+    GetFragments() -> (vector<ddk.driver.CompositeDeviceFragment> fragment);
     GetFragment(string:32 name) -> (bool found, ddk.driver.ZxDevice? fragment);
 };

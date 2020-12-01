@@ -504,7 +504,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   uint32_t count = composite_get_fragment_count(&composite);
   size_t actual;
   composite_device_fragment_t fragments[count];
-  composite_get_fragments_new(&composite, fragments, count, &actual);
+  composite_get_fragments(&composite, fragments, count, &actual);
   if (count != actual) {
     zxlogf(ERROR, "%s: got the wrong number of fragments (%u, %zu)", DRIVER_NAME, count, actual);
     return ZX_ERR_BAD_STATE;

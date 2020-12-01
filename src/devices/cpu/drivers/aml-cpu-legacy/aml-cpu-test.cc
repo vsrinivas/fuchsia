@@ -60,20 +60,8 @@ class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
   // In typical usage of fake_ddk, kFakeParent is the only device that exists, and all faked
   // protocols are bound to it. Hence, the list of fragments is a repeated list of the parent
   // device.
-  void CompositeGetFragments(zx_device_t** comp_list, size_t comp_count, size_t* comp_actual) {
-    size_t comp_cur;
-
-    for (comp_cur = 0; comp_cur < comp_count; comp_cur++) {
-      comp_list[comp_cur] = parent_;
-    }
-
-    if (comp_actual != nullptr) {
-      *comp_actual = comp_cur;
-    }
-  }
-
-  void CompositeGetFragmentsNew(composite_device_fragment_t* comp_list, size_t comp_count,
-                                size_t* comp_actual) {
+  void CompositeGetFragments(composite_device_fragment_t* comp_list, size_t comp_count,
+                             size_t* comp_actual) {
     size_t comp_cur;
 
     for (comp_cur = 0; comp_cur < comp_count; comp_cur++) {

@@ -236,7 +236,7 @@ zx_status_t AmlLight::Init() {
   }
 
   composite_device_fragment_t fragments[fragment_count];
-  composite.GetFragmentsNew(fragments, fragment_count, &actual);
+  composite.GetFragments(fragments, fragment_count, &actual);
   if (actual != fragment_count) {
     return ZX_ERR_INTERNAL;
   }

@@ -160,7 +160,7 @@ zx_status_t MtkThermal::Init() {
 
   composite_device_fragment_t fragments[fragment_count];
   size_t actual;
-  composite_.GetFragmentsNew(fragments, fragment_count, &actual);
+  composite_.GetFragments(fragments, fragment_count, &actual);
   if (fragment_count != actual) {
     return ZX_ERR_INTERNAL;
   }

@@ -167,7 +167,7 @@ zx_status_t GpioLight::Init() {
 
   composite_device_fragment_t fragments[fragment_count];
   size_t actual;
-  composite.GetFragmentsNew(fragments, fragment_count, &actual);
+  composite.GetFragments(fragments, fragment_count, &actual);
   if (actual != fragment_count) {
     return ZX_ERR_INTERNAL;
   }

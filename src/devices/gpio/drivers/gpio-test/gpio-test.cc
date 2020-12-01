@@ -112,7 +112,7 @@ zx_status_t GpioTest::Init() {
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_device_t* fragments[gpio_count_];
+  composite_device_fragment_t fragments[gpio_count_];
   size_t actual;
   composite.GetFragments(fragments, gpio_count_, &actual);
   if (actual != gpio_count_) {
@@ -120,7 +120,7 @@ zx_status_t GpioTest::Init() {
   }
 
   for (uint32_t i = 0; i < gpio_count_; i++) {
-    auto status = device_get_protocol(fragments[i], ZX_PROTOCOL_GPIO, &gpios_[i]);
+    auto status = device_get_protocol(fragments[i].device, ZX_PROTOCOL_GPIO, &gpios_[i]);
     if (status != ZX_OK) {
       return status;
     }

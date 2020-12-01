@@ -529,7 +529,7 @@ static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_INTERNAL;
   }
   composite_device_fragment_t fragments[fragment_count];
-  composite.GetFragmentsNew(fragments, fragment_count, &actual);
+  composite.GetFragments(fragments, fragment_count, &actual);
   if (actual != fragment_count) {
     zxlogf(ERROR, "%s Fragment count did not match", __func__);
     return ZX_ERR_INTERNAL;

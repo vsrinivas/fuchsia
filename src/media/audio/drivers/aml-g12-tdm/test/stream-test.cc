@@ -1328,7 +1328,6 @@ struct AmlG12TdmTest : public zxtest::Test {
     static composite_protocol_ops_t composite_protocol = {
         .get_fragment_count = GetFragmentCount,
         .get_fragments = GetFragments,
-        .get_fragments_new = GetFragmentsNew,
         .get_fragment = GetFragment,
     };
     static constexpr size_t kNumBindProtocols = 2;
@@ -1344,14 +1343,8 @@ struct AmlG12TdmTest : public zxtest::Test {
     return true;
   }
   static uint32_t GetFragmentCount(void*) { return 2; }
-  static void GetFragments(void*, zx_device_t** out_fragment_list, size_t fragment_count,
-                           size_t* out_fragment_actual) {
-    out_fragment_list[0] = fake_ddk::kFakeParent;  // FRAGMENT_PDEV
-    out_fragment_list[1] = fake_ddk::kFakeParent;  // FRAGMENT_ENABLE_GPIO
-    *out_fragment_actual = 2;
-  }
-  static void GetFragmentsNew(void*, composite_device_fragment_t* out_fragment_list,
-                              size_t fragment_count, size_t* out_fragment_actual) {
+  static void GetFragments(void*, composite_device_fragment_t* out_fragment_list,
+                           size_t fragment_count, size_t* out_fragment_actual) {
     out_fragment_list[0].device = fake_ddk::kFakeParent;  // FRAGMENT_PDEV
     out_fragment_list[1].device = fake_ddk::kFakeParent;  // FRAGMENT_ENABLE_GPIO
     *out_fragment_actual = 2;
