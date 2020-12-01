@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::core::util::types::*,
     serde::{Deserialize, Serialize},
     serde_json::value::Value,
     std::collections::HashMap,
@@ -82,29 +81,6 @@ pub struct ServicePackageDefinition {
     pub services: Option<HashMap<String, Value>>,
     // FIXME: Other json structs are built such that unused fields are present but commented out.
     // This one omits the completely.
-}
-
-/* builtins.json */
-
-/// JSON structure of the manually configured builtins.json file used in the initial
-/// version of component-graph in order to augment service mappings.
-///
-/// Path: <local_path_to_builtins>/builtins.json
-#[derive(Deserialize)]
-pub struct BuiltinsJson {
-    pub packages: Vec<BuiltinPackageDefinition>,
-    pub services: ServiceMapping,
-}
-
-/// JSON structure of the builtin packages included in builtins.json.
-/// Aims to define a similar structure as the cmx files read in via the
-/// FAR reader for packages from the package server.
-///
-/// Path: //builtins.json -> packages[]
-#[derive(Deserialize)]
-pub struct BuiltinPackageDefinition {
-    pub url: String,
-    pub manifest: Option<Manifest>,
 }
 
 /// JSON structure that contains the sandbox definition defined for builtin packages.

@@ -17,6 +17,8 @@ if (is_host) {
       "//src/security/scrutiny/lib/framework",
       "//src/security/scrutiny/lib/utils",
       "//src/sys/lib/cm_fidl_validator",
+      "//src/sys/lib/cm_fidl_validator",
+      "//src/sys/lib/cm_rust",
       "//src/sys/pkg/lib/fuchsia-archive",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-trait",
@@ -75,8 +77,6 @@ if (is_host) {
       "src/toolkit/controller/zbi.rs",
       "src/toolkit/mod.rs",
     ]
-
-    inputs = [ "src/core/package/builtins.json" ]
   }
 }
 

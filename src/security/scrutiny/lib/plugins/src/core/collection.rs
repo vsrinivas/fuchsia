@@ -3,15 +3,13 @@
 // found in the LICENSE file.
 
 use {
+    core::slice::Iter,
     scrutiny::prelude::*,
     scrutiny_utils::zbi::ZbiSection,
     serde::{Deserialize, Serialize},
     std::collections::HashMap,
     uuid::Uuid,
-    core::slice::Iter,
 };
-
-
 
 /// Defines a component. Each component has a unique id which is used to link
 /// it in the Route table. Each component also has a url and a version. This
@@ -132,6 +130,106 @@ impl DataCollection for ComponentInstances {
     }
 }
 
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Capability {
+    Service(ServiceCapability),
+    Protocol(ProtocolCapability),
+    Directory(DirectoryCapability),
+    Storage(StorageCapability),
+    Runner(RunnerCapability),
+    Resolver(ResolverCapability),
+    Event(EventCapability),
+    EventStream(EventStreamCapability),
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ServiceCapability {
+    pub source_name: String,
+}
+
+impl ServiceCapability {
+    pub fn new(source_name: String) -> Self {
+        Self { source_name }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ProtocolCapability {
+    pub source_name: String,
+}
+
+impl ProtocolCapability {
+    pub fn new(source_name: String) -> Self {
+        Self { source_name }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct DirectoryCapability {
+    pub source_name: String,
+}
+
+impl DirectoryCapability {
+    pub fn new(source_name: String) -> Self {
+        Self { source_name }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct StorageCapability {
+    pub source_name: String,
+}
+
+impl StorageCapability {
+    pub fn new(source_name: String) -> Self {
+        Self { source_name }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RunnerCapability {
+    pub source_name: String,
+}
+
+impl RunnerCapability {
+    pub fn new(source_name: String) -> Self {
+        Self { source_name }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ResolverCapability {
+    pub source_name: String,
+}
+
+impl ResolverCapability {
+    pub fn new(source_name: String) -> Self {
+        Self { source_name }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EventCapability {
+    pub source_name: String,
+}
+
+impl EventCapability {
+    pub fn new(source_name: String) -> Self {
+        Self { source_name }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EventStreamCapability {
+    pub source_name: String,
+}
+
+impl EventStreamCapability {
+    pub fn new(source_name: String) -> Self {
+        Self { source_name }
+    }
+}
+
 /// Defines the manifest data in terms of the component framework version it
 /// represents.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
@@ -139,6 +237,7 @@ pub enum ManifestData {
     Version1(String),
     Version2(String),
 }
+
 /// Defines a component manifest. The `component_id` maps 1:1 to
 /// `component.id` indexes. This is stored in a different table as most queries
 /// don't need the raw manifest.
@@ -146,7 +245,7 @@ pub enum ManifestData {
 pub struct Manifest {
     pub component_id: i32,
     pub manifest: ManifestData,
-    pub uses: Vec<String>,
+    pub uses: Vec<Capability>,
 }
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]

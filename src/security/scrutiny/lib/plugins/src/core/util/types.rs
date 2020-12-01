@@ -11,7 +11,6 @@ pub type ServiceMapping = HashMap<String, String>;
 ///  Packages can either be builtin (infered) or from a FAR package.
 pub enum PackageType {
     Package,
-    Builtin,
 }
 
 /// Defines the interior properties of a package that we care about for

@@ -29,8 +29,6 @@ pub trait PackageReader: Send + Sync {
     fn read_package_definition(&self, pkg_name: &str, merkle: &str) -> Result<PackageDefinition>;
     /// Reads the service package defined by the merkle hash.
     fn read_service_package_definition(&self, merkle: &str) -> Result<ServicePackageDefinition>;
-    /// Reads the preset builtins definition file as a json blob.
-    fn read_builtins(&self) -> Result<BuiltinsJson>;
 }
 
 pub struct PackageServerReader {
@@ -118,11 +116,6 @@ impl PackageReader for PackageServerReader {
         let mut cfg_pkg_str = str::from_utf8(&cfg_pkg_b)?;
 
         Ok(serde_json::from_str(&mut cfg_pkg_str)?)
-    }
-
-    fn read_builtins(&self) -> Result<BuiltinsJson> {
-        const BUILTINS_JSON: &str = include_str!("builtins.json");
-        Ok(serde_json::from_str(BUILTINS_JSON)?)
     }
 }
 

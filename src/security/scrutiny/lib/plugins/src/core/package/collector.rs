@@ -5,16 +5,16 @@
 use {
     crate::core::{
         collection::{
-            Component, Components, Manifest, ManifestData, Manifests, Package, Packages, Route,
-            Routes, Zbi,
+            Capability, Component, Components, Manifest, ManifestData, Manifests, Package,
+            Packages, ProtocolCapability, Route, Routes, Zbi,
         },
         package::{artifact::ArtifactGetter, getter::PackageGetter, reader::*},
-        util,
         util::types::*,
     },
     anyhow::{anyhow, Result},
     cm_fidl_validator,
     fidl::encoding::decode_persistent,
+    fidl_fuchsia_sys2 as fsys,
     lazy_static::lazy_static,
     log::{debug, error, info, warn},
     regex::Regex,
@@ -90,37 +90,8 @@ impl PackageDataCollector {
         Ok(pkgs)
     }
 
-    /// Currently Scrutiny is unable to connect V1 and V2 components. To temporarily
-    /// address this in the graph a builtin.json is used to inform Scrutiny about
-    /// components it cannot see.
-    // TODO(benwright) - Remove this once CV2 components are fully parsed.
-    fn get_builtins(&self) -> Result<(Vec<PackageDefinition>, ServiceMapping)> {
-        let builtins = self.package_reader.read_builtins()?;
-
-        let mut packages = Vec::new();
-        for package in builtins.packages {
-            let mut pkg_def = PackageDefinition {
-                url: util::to_package_url(&package.url)?,
-                typ: PackageType::Builtin,
-                merkle: String::from("0"),
-                contents: HashMap::new(),
-                cms: HashMap::new(),
-            };
-
-            pkg_def.cms.insert(String::from(""), ComponentManifest::from(package.manifest));
-            packages.push(pkg_def);
-        }
-
-        Ok((packages, builtins.services))
-    }
-
-    /// Combine service name->url mappings from builtins and those defined in config-data.
-    /// This consumes the builtins ServiceMapping as part of building the combined map.
-    fn merge_services(
-        &self,
-        served: &Vec<PackageDefinition>,
-        builtins: ServiceMapping,
-    ) -> Result<ServiceMapping> {
+    /// Combine service name->url mappings defined in config-data.
+    fn merge_services(&self, served: &Vec<PackageDefinition>) -> Result<ServiceMapping> {
         let mut combined = ServiceMapping::new();
 
         // Find and add all services as defined in config-data
@@ -176,18 +147,6 @@ impl PackageDataCollector {
                 break;
             }
         }
-        // Add all builtin services
-        for (service_name, service_url) in builtins {
-            if combined.contains_key(&service_name) {
-                debug!(
-                    "Service mapping collision on {} between {} and {}",
-                    service_name, combined[&service_name], service_url
-                );
-            }
-
-            combined.insert(service_name, service_url);
-        }
-
         Ok(combined)
     }
 
@@ -235,7 +194,6 @@ impl PackageDataCollector {
     /// by this collector.
     fn build_model(
         served_pkgs: Vec<PackageDefinition>,
-        _builtin_pkgs: Vec<PackageDefinition>,
         mut service_map: ServiceMapping,
     ) -> Result<PackageDataResponse> {
         let mut components: HashMap<String, Component> = HashMap::new();
@@ -277,12 +235,50 @@ impl PackageDataCollector {
 
                     let cf2_manifest = {
                         if let ComponentManifest::Version2(decl_bytes) = &cm {
-                            let uses = Vec::new();
+                            let mut cap_uses = Vec::new();
                             let base64_bytes = base64::encode(&decl_bytes);
 
                             if let Ok(cm_decl) = decode_persistent(&decl_bytes) {
                                 if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
                                     warn!("Invalid cm {} {}", url, err);
+                                } else {
+                                    if let Some(uses) = cm_decl.uses {
+                                        for use_ in uses {
+                                            match &use_ {
+                                                fsys::UseDecl::Protocol(protocol) => {
+                                                    if let Some(source_name) = &protocol.source_name
+                                                    {
+                                                        cap_uses.push(Capability::Protocol(
+                                                            ProtocolCapability::new(
+                                                                source_name.clone(),
+                                                            ),
+                                                        ));
+                                                    }
+                                                }
+                                                _ => {}
+                                            }
+                                        }
+                                    }
+                                    if let Some(exposes) = cm_decl.exposes {
+                                        for expose in exposes {
+                                            match &expose {
+                                                fsys::ExposeDecl::Protocol(protocol) => {
+                                                    if let Some(source_name) = &protocol.source_name
+                                                    {
+                                                        if let Some(fsys::Ref::Self_(_)) =
+                                                            &protocol.source
+                                                        {
+                                                            service_map.insert(
+                                                                source_name.clone(),
+                                                                url.clone(),
+                                                            );
+                                                        }
+                                                    }
+                                                }
+                                                _ => {}
+                                            }
+                                        }
+                                    }
                                 }
                             } else {
                                 warn!("cm failed to be decoded {}", url);
@@ -290,7 +286,7 @@ impl PackageDataCollector {
                             Manifest {
                                 component_id: idx,
                                 manifest: ManifestData::Version2(base64_bytes),
-                                uses,
+                                uses: cap_uses,
                             }
                         } else {
                             Manifest {
@@ -317,7 +313,14 @@ impl PackageDataCollector {
                                 manifest: ManifestData::Version1(serde_json::to_string(&sandbox)?),
                                 uses: {
                                     match sandbox.services.as_ref() {
-                                        Some(svcs) => svcs.clone(),
+                                        Some(svcs) => svcs
+                                            .into_iter()
+                                            .map(|e| {
+                                                Capability::Protocol(ProtocolCapability::new(
+                                                    e.clone(),
+                                                ))
+                                            })
+                                            .collect(),
                                         None => Vec::new(),
                                     }
                                 },
@@ -340,27 +343,85 @@ impl PackageDataCollector {
             for (file_name, file_data) in zbi.bootfs.iter() {
                 if file_name.ends_with(".cm") {
                     info!("Extracting bootfs manifest: {}", file_name);
+                    let url = format!("fuchsia-boot:///#{}", file_name);
                     let base64_bytes = base64::encode(&file_data);
                     if let Ok(cm_decl) = decode_persistent(&file_data) {
                         if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
-                            warn!("Invalid bootfs cm {} {}", file_name, err);
-                            continue;
+                            warn!("Invalid cm {} {}", file_name, err);
+                        } else {
+                            let mut cap_uses = Vec::new();
+                            if let Some(uses) = cm_decl.uses {
+                                for use_ in uses {
+                                    match &use_ {
+                                        fsys::UseDecl::Protocol(protocol) => {
+                                            if let Some(source_name) = &protocol.source_name {
+                                                cap_uses.push(Capability::Protocol(
+                                                    ProtocolCapability::new(source_name.clone()),
+                                                ));
+                                            }
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                            if let Some(exposes) = cm_decl.exposes {
+                                for expose in exposes {
+                                    match &expose {
+                                        fsys::ExposeDecl::Protocol(protocol) => {
+                                            if let Some(source_name) = &protocol.source_name {
+                                                if let Some(fsys::Ref::Self_(_)) = &protocol.source
+                                                {
+                                                    service_map
+                                                        .insert(source_name.clone(), url.clone());
+                                                }
+                                            }
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                            // The root.cm is special semantically as it offers from its parent
+                            // which is outside of the component model. So in this case offers
+                            // should also be captured.
+                            if file_name == "meta/root.cm" {
+                                if let Some(offers) = cm_decl.offers {
+                                    for offer in offers {
+                                        match &offer {
+                                            fsys::OfferDecl::Protocol(protocol) => {
+                                                if let Some(source_name) = &protocol.source_name {
+                                                    if let Some(fsys::Ref::Parent(_)) =
+                                                        &protocol.source
+                                                    {
+                                                        service_map.insert(
+                                                            source_name.clone(),
+                                                            url.clone(),
+                                                        );
+                                                    }
+                                                }
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Add the components directly from the ZBI.
+                            idx += 1;
+                            components.insert(
+                                url.clone(),
+                                Component {
+                                    id: idx,
+                                    url: url.clone(),
+                                    version: 2,
+                                    inferred: false,
+                                },
+                            );
+                            manifests.push(Manifest {
+                                component_id: idx,
+                                manifest: ManifestData::Version2(base64_bytes),
+                                uses: cap_uses,
+                            });
                         }
-                        // Add the components directly from the ZBI.
-                        idx += 1;
-                        let url = format!("fuchsia-boot:///#{}", file_name);
-                        components.insert(
-                            url.clone(),
-                            Component { id: idx, url: url.clone(), version: 2, inferred: false },
-                        );
-                        manifests.push(Manifest {
-                            component_id: idx,
-                            manifest: ManifestData::Version2(base64_bytes),
-                            uses: Vec::new(),
-                        });
-                    } else {
-                        warn!("Bootfs cm failed to be decoded {}", file_name);
-                        continue;
                     }
                 }
             }
@@ -387,34 +448,37 @@ impl PackageDataCollector {
         // those instead. Can be changed relatively effortlessly if the model make sense otherwise.
         let mut route_idx = 0;
         for mani in &manifests {
-            for service_name in &mani.uses {
-                let target_id = {
-                    if service_map.contains_key(service_name) {
-                        // FIXME: Options do not impl Try so we cannot ? but there must be some better way to get at a value...
-                        components.get(service_map.get(service_name).unwrap()).unwrap().id
-                    } else {
-                        // Even the service map didn't know about this service. We should create an inferred component
-                        // that provides this service.
-                        debug!("Expected a service provider for service {} but it does not exist. Creating inferred node.", service_name);
-                        idx += 1;
-                        let url = format!("fuchsia-pkg://inferred#meta/{}.cmx", service_name);
-                        components.insert(
-                            url.clone(),
-                            Component { id: idx, url: url.clone(), version: 1, inferred: true },
-                        );
-                        // Add the inferred node to the service map to be found by future consumers of the service
-                        service_map.insert(String::from(service_name), url);
-                        idx
-                    }
-                };
-                route_idx += 1;
-                routes.push(Route {
-                    id: route_idx,
-                    src_id: mani.component_id,
-                    dst_id: target_id,
-                    service_name: service_name.to_string(),
-                    protocol_id: 0, // FIXME:
-                });
+            for capability in &mani.uses {
+                if let Capability::Protocol(cap) = capability {
+                    let service_name = &cap.source_name;
+                    let target_id = {
+                        if service_map.contains_key(service_name) {
+                            // FIXME: Options do not impl Try so we cannot ? but there must be some better way to get at a value...
+                            components.get(service_map.get(service_name).unwrap()).unwrap().id
+                        } else {
+                            // Even the service map didn't know about this service. We should create an inferred component
+                            // that provides this service.
+                            debug!("Expected a service provider for service {} but it does not exist. Creating inferred node.", service_name);
+                            idx += 1;
+                            let url = format!("fuchsia-pkg://inferred#meta/{}.cmx", service_name);
+                            components.insert(
+                                url.clone(),
+                                Component { id: idx, url: url.clone(), version: 1, inferred: true },
+                            );
+                            // Add the inferred node to the service map to be found by future consumers of the service
+                            service_map.insert(String::from(service_name), url);
+                            idx
+                        }
+                    };
+                    route_idx += 1;
+                    routes.push(Route {
+                        id: route_idx,
+                        src_id: mani.component_id,
+                        dst_id: target_id,
+                        service_name: service_name.to_string(),
+                        protocol_id: 0, // FIXME:
+                    });
+                }
             }
         }
 
@@ -435,19 +499,15 @@ impl DataCollector for PackageDataCollector {
     fn collect(&self, model: Arc<DataModel>) -> Result<()> {
         let served_packages = self.get_packages()?;
 
-        let (builtin_packages, builtin_services) = self.get_builtins()?;
-
-        let services = self.merge_services(&served_packages, builtin_services)?;
+        let services = self.merge_services(&served_packages)?;
 
         info!(
-            "Done collecting. Found {} services, {} served packages, and {} builtin packages.",
+            "Done collecting. Found {} services, {} served packages.",
             services.keys().len(),
             served_packages.len(),
-            builtin_packages.len()
         );
 
-        let response =
-            PackageDataCollector::build_model(served_packages, builtin_packages, services)?;
+        let response = PackageDataCollector::build_model(served_packages, services)?;
 
         let mut model_comps = vec![];
         for (_, val) in response.components.into_iter() {
@@ -481,7 +541,6 @@ mod tests {
         targets: RwLock<Vec<TargetsJson>>,
         package_defs: RwLock<Vec<PackageDefinition>>,
         service_package_defs: RwLock<Vec<ServicePackageDefinition>>,
-        builtins: RwLock<Vec<BuiltinsJson>>,
     }
 
     impl MockPackageReader {
@@ -490,7 +549,6 @@ mod tests {
                 targets: RwLock::new(Vec::new()),
                 package_defs: RwLock::new(Vec::new()),
                 service_package_defs: RwLock::new(Vec::new()),
-                builtins: RwLock::new(Vec::new()),
             }
         }
 
@@ -505,10 +563,6 @@ mod tests {
         // Adds values to the FIFO queue for service_package_defs
         fn append_service_pkg_def(&self, svc_pkg_def: ServicePackageDefinition) {
             self.service_package_defs.write().unwrap().push(svc_pkg_def);
-        }
-        // Adds values to the FIFO queue for builtins
-        fn append_builtin(&self, builtin: BuiltinsJson) {
-            self.builtins.write().unwrap().push(builtin);
         }
     }
 
@@ -547,16 +601,6 @@ mod tests {
                     return Err(anyhow!(
                         "No more service_package_defs left to return. Maybe append more?"
                     ));
-                }
-                Ok(borrow.remove(0))
-            }
-        }
-
-        fn read_builtins(&self) -> Result<BuiltinsJson> {
-            let mut borrow = self.builtins.write().unwrap();
-            {
-                if borrow.len() == 0 {
-                    return Err(anyhow!("No more builtins left to return. Maybe append more?"));
                 }
                 Ok(borrow.remove(0))
             }
@@ -657,9 +701,8 @@ mod tests {
             contents,
         );
         let served = vec![pkg];
-        let builtins = HashMap::new();
 
-        let result = collector.merge_services(&served, builtins).unwrap();
+        let result = collector.merge_services(&served).unwrap();
         assert_eq!(0, result.len());
     }
 
@@ -674,9 +717,8 @@ mod tests {
         contents.insert(String::from("not/valid/config"), String::from("test_merkle"));
         let pkg = create_test_package_with_contents(String::from(CONFIG_DATA_PKG_URL), contents);
         let served = vec![pkg];
-        let builtins = HashMap::new();
 
-        let result = collector.merge_services(&served, builtins).unwrap();
+        let result = collector.merge_services(&served).unwrap();
         assert_eq!(0, result.len());
     }
 
@@ -700,46 +742,12 @@ mod tests {
         contents.insert(String::from("data/sysmgr/bar.config"), String::from("test_merkle_2"));
         let pkg = create_test_package_with_contents(String::from(CONFIG_DATA_PKG_URL), contents);
         let served = vec![pkg];
-        let builtins = HashMap::new();
 
-        let result = collector.merge_services(&served, builtins).unwrap();
+        let result = collector.merge_services(&served).unwrap();
         assert_eq!(1, result.len());
         assert!(result.contains_key("fuchsia.test.foo.bar"));
         assert_eq!(
             "fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx",
-            result.get("fuchsia.test.foo.bar").unwrap()
-        );
-    }
-
-    #[test]
-    fn test_merge_services_prioritizes_builtins_defined_duplicate_service() {
-        let mock_reader = MockPackageReader::new();
-        // We will need 1 service package definition
-        mock_reader.append_service_pkg_def(create_svc_pkg_def(vec![(
-            String::from("fuchsia.test.foo.bar"),
-            String::from("fuchsia-pkg://fuchsia.com/foo#meta/served.cmx"),
-        )]));
-
-        let collector = PackageDataCollector { package_reader: Box::new(mock_reader) };
-
-        let mut contents = HashMap::new();
-        contents.insert(String::from("data/sysmgr/foo.config"), String::from("test_merkle"));
-        let pkg = create_test_package_with_contents(String::from(CONFIG_DATA_PKG_URL), contents);
-        let served = vec![pkg];
-
-        // We need 1 builtin service package definition that matches the service name
-        // created above, but with a different component
-        let mut builtins = HashMap::new();
-        builtins.insert(
-            String::from("fuchsia.test.foo.bar"),
-            String::from("fuchsia-pkg://fuchsia.com/foo#meta/builtin.cmx"),
-        );
-
-        let result = collector.merge_services(&served, builtins).unwrap();
-        assert_eq!(1, result.len());
-        assert!(result.contains_key("fuchsia.test.foo.bar"));
-        assert_eq!(
-            "fuchsia-pkg://fuchsia.com/foo#meta/builtin.cmx",
             result.get("fuchsia.test.foo.bar").unwrap()
         );
     }
@@ -765,15 +773,8 @@ mod tests {
         let pkg = create_test_package_with_contents(String::from(CONFIG_DATA_PKG_URL), contents);
         let served = vec![pkg];
 
-        // Create 1 builtin service that is unique to those above
-        let mut builtins = HashMap::new();
-        builtins.insert(
-            String::from("fuchsia.test.foo.service3"),
-            String::from("fuchsia-pkg://fuchsia.com/foo#meta/builtin.cmx"),
-        );
-
-        let result = collector.merge_services(&served, builtins).unwrap();
-        assert_eq!(3, result.len());
+        let result = collector.merge_services(&served).unwrap();
+        assert_eq!(2, result.len());
     }
 
     #[test]
@@ -801,9 +802,7 @@ mod tests {
         let pkg = create_test_package_with_contents(String::from(CONFIG_DATA_PKG_URL), contents);
         let served = vec![pkg];
 
-        let builtins = HashMap::new();
-
-        let result = collector.merge_services(&served, builtins).unwrap();
+        let result = collector.merge_services(&served).unwrap();
         assert_eq!(2, result.len());
         assert_eq!(
             "fuchsia-pkg://fuchsia.com/foo#meta/served2.cmx",
@@ -821,10 +820,9 @@ mod tests {
         let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
         let served = vec![pkg];
 
-        let builtins = Vec::new();
         let services = HashMap::new();
 
-        let response = PackageDataCollector::build_model(served, builtins, services).unwrap();
+        let response = PackageDataCollector::build_model(served, services).unwrap();
 
         assert_eq!(2, response.components.len());
         assert_eq!(1, response.manifests.len());
@@ -842,7 +840,6 @@ mod tests {
         let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
         let served = vec![pkg];
 
-        let builtins = Vec::new();
         // We know about the desired service in the service mapping, but the component doesn't exist
         let mut services = HashMap::new();
         services.insert(
@@ -850,7 +847,7 @@ mod tests {
             String::from("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx"),
         );
 
-        let response = PackageDataCollector::build_model(served, builtins, services).unwrap();
+        let response = PackageDataCollector::build_model(served, services).unwrap();
 
         assert_eq!(2, response.components.len());
         assert_eq!(1, response.manifests.len());
@@ -872,10 +869,9 @@ mod tests {
         let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
         let served = vec![pkg];
 
-        let builtins = Vec::new();
         let services = HashMap::new();
 
-        let response = PackageDataCollector::build_model(served, builtins, services).unwrap();
+        let response = PackageDataCollector::build_model(served, services).unwrap();
 
         assert_eq!(0, response.components.len());
         assert_eq!(0, response.manifests.len());
@@ -891,10 +887,9 @@ mod tests {
         let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
         let served = vec![pkg];
 
-        let builtins = Vec::new();
         let services = HashMap::new();
 
-        let response = PackageDataCollector::build_model(served, builtins, services).unwrap();
+        let response = PackageDataCollector::build_model(served, services).unwrap();
 
         assert_eq!(1, response.components.len());
         assert_eq!(response.components["fuchsia-pkg://fuchsia.com/foo#meta/foo.cm"].version, 2);
@@ -917,10 +912,9 @@ mod tests {
             create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/aries"), cms2);
         let served = vec![pkg, pkg2];
 
-        let builtins = Vec::new();
         let services = HashMap::new();
 
-        let response = PackageDataCollector::build_model(served, builtins, services).unwrap();
+        let response = PackageDataCollector::build_model(served, services).unwrap();
 
         assert_eq!(3, response.components.len());
         assert_eq!(2, response.manifests.len());
@@ -943,7 +937,6 @@ mod tests {
             create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/aries"), cms2);
         let served = vec![pkg, pkg2];
 
-        let builtins = Vec::new();
         // Map the service the first package requires to the second package
         let mut services = HashMap::new();
         services.insert(
@@ -951,7 +944,7 @@ mod tests {
             String::from("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx"),
         );
 
-        let response = PackageDataCollector::build_model(served, builtins, services).unwrap();
+        let response = PackageDataCollector::build_model(served, services).unwrap();
 
         assert_eq!(2, response.components.len());
         assert_eq!(2, response.manifests.len());
@@ -995,7 +988,9 @@ mod tests {
             manis.push(crate::core::collection::Manifest {
                 component_id: 1,
                 manifest: ManifestData::Version1(String::from("test.component.manifest")),
-                uses: vec![String::from("test.service")],
+                uses: vec![Capability::Protocol(ProtocolCapability::new(String::from(
+                    "test.service",
+                )))],
             });
             manis.push(crate::core::collection::Manifest {
                 component_id: 2,
@@ -1015,7 +1010,6 @@ mod tests {
             model.set(Routes { entries: routes }).unwrap();
         }
 
-        mock_reader.append_builtin(BuiltinsJson { packages: Vec::new(), services: HashMap::new() });
         let mut targets = HashMap::new();
         targets.insert(
             String::from("123"),
@@ -1050,10 +1044,9 @@ mod tests {
             contents,
         );
         let served = vec![pkg];
-        let builtins = vec![];
         let services = HashMap::new();
 
-        let response = PackageDataCollector::build_model(served, builtins, services).unwrap();
+        let response = PackageDataCollector::build_model(served, services).unwrap();
         assert_eq!(None, response.zbi);
     }
 
@@ -1061,7 +1054,6 @@ mod tests {
     fn test_packages_sorted() {
         let mock_reader = MockPackageReader::new();
         let (_, model) = create_model();
-        mock_reader.append_builtin(BuiltinsJson { packages: Vec::new(), services: HashMap::new() });
 
         let mut targets = HashMap::new();
         targets.insert(
