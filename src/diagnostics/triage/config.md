@@ -17,7 +17,7 @@ Each config file specifies four kinds of configuration: Selectors and Evals
 
 *   Selectors load values for use by Evals and Actions.
 *   Evals calculate values for use by Evals and Actions.
-*   Actions are determine how to act uopn certain specified values.
+*   Actions determine how to act upon certain specified values.
 *   Tests include sample data to verify that specified Actions trigger
     correctly.
 
