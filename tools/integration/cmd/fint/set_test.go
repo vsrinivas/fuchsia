@@ -42,12 +42,6 @@ func TestRunGen(t *testing.T) {
 	}{
 		{
 			name: "default",
-		},
-		{
-			name: "metrics collection enabled",
-			staticSpec: &fintpb.Static{
-				CollectMetrics: true,
-			},
 			expectedOptions: []string{
 				fmt.Sprintf("--tracelog=%s", filepath.Join(contextSpec.BuildDir, fuchsiaGNTrace)),
 			},
@@ -165,8 +159,12 @@ func TestGenArgs(t *testing.T) {
 		checkoutFiles []string
 	}{
 		{
-			name:         "minimal specs",
-			expectedArgs: []string{`target_cpu="x64"`, `is_debug=true`},
+			name: "minimal specs",
+			expectedArgs: []string{
+				`target_cpu="x64"`,
+				`is_debug=true`,
+				fmt.Sprintf(`zircon_tracelog="%s"`, filepath.Join(buildDir, zirconGNTrace)),
+			},
 		},
 		{
 			name: "arm64 release",
@@ -317,15 +315,6 @@ func TestGenArgs(t *testing.T) {
 				SdkId: "789",
 			},
 			expectedArgs: []string{`sdk_id="789"`, `build_sdk_archives=true`},
-		},
-		{
-			name: "metrics collection enabled",
-			staticSpec: &fintpb.Static{
-				CollectMetrics: true,
-			},
-			expectedArgs: []string{
-				fmt.Sprintf(`zircon_tracelog="%s"`, filepath.Join(buildDir, zirconGNTrace)),
-			},
 		},
 		{
 			name: "sorts imports first",

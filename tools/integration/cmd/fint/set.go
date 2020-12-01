@@ -145,6 +145,7 @@ func runGen(
 		gnPath, "gen",
 		contextSpec.BuildDir,
 		"--check=system",
+		fmt.Sprintf("--tracelog=%s", filepath.Join(contextSpec.BuildDir, fuchsiaGNTrace)),
 		"--fail-on-unused-args",
 	}
 
@@ -153,10 +154,6 @@ func runGen(
 	}
 	if staticSpec.GenerateIde {
 		genCmd = append(genCmd, "--ide=json")
-	}
-	if staticSpec.CollectMetrics {
-		tracelogPath := filepath.Join(contextSpec.BuildDir, fuchsiaGNTrace)
-		genCmd = append(genCmd, fmt.Sprintf("--tracelog=%s", tracelogPath))
 	}
 
 	genCmd = append(genCmd, fmt.Sprintf("--args=%s", strings.Join(args, " ")))
@@ -289,9 +286,7 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context, platform st
 		}
 	}
 
-	if staticSpec.CollectMetrics {
-		vars["zircon_tracelog"] = filepath.Join(contextSpec.BuildDir, zirconGNTrace)
-	}
+	vars["zircon_tracelog"] = filepath.Join(contextSpec.BuildDir, zirconGNTrace)
 
 	var normalArgs []string
 	var importArgs []string
