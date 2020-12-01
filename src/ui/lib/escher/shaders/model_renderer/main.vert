@@ -18,14 +18,6 @@ out gl_PerVertex {
 #define USE_ATTRIBUTE_POSITION 1
 #include "shaders/paper/common/use.glsl"
 
-// Defines ComputeVertexPosition(), which returns the model-space position of
-// the vertex.
-#ifdef WOBBLE_VERTEX_POSITION
-#include "shaders/model_renderer/wobble_position.vert"
-#else
-#include "shaders/model_renderer/default_position.vert"
-#endif
-
 // Take the specified world-space vertex position and:
 // - Transform it into screen-space homogeneous coordinates by multipying it by
 //   the view-projection matrix.  Then write it into the special gl_Position
@@ -57,9 +49,8 @@ void ClipWorldSpaceAndOutputScreenSpaceCoords(vec4 world_pos) {
 layout(location = 0) out vec2 fragUV;
 layout(location = 1) out vec4 shadowPos;
 void main() {
-  vec4 pos = ComputeVertexPosition();
-  ClipWorldSpaceAndOutputScreenSpaceCoords(model_transform * pos);
-  shadowPos = light_transform * pos;
+  ClipWorldSpaceAndOutputScreenSpaceCoords(model_transform * vec4(inPosition, 1));
+  shadowPos = light_transform * vec4(inPosition, 1);
   fragUV = inUV;
 }
 #endif
@@ -67,8 +58,7 @@ void main() {
 #ifdef NO_SHADOW_LIGHTING_PASS
 layout(location = 0) out vec2 fragUV;
 void main() {
-  vec4 pos = ComputeVertexPosition();
-  ClipWorldSpaceAndOutputScreenSpaceCoords(model_transform * pos);
+  ClipWorldSpaceAndOutputScreenSpaceCoords(model_transform * vec4(inPosition, 1));
   fragUV = inUV;
 }
 #endif
@@ -77,57 +67,28 @@ void main() {
 #error Not implemented.
 void main() {
   ClipWorldSpaceAndOutputScreenSpaceCoords(
-    model_transform * ComputeVertexPosition());
+    model_transform * vec4(inPosition, 1));
 }
 #endif
 
 #ifdef SHADOW_VOLUME_POINT_LIGHTING
 layout(location = 0) out vec2 fragUV;
-
-#ifdef USE_PAPER_SHADER_POINT_LIGHT_FALLOFF
-layout(location = 1) out vec4 irradiance;
-#endif // USE_PAPER_SHADER_POINT_LIGHT_FALLOFF
+layout(location = 1) out vec4 fragLightIntensity;
 
 void main() {
-  vec4 world_pos = model_transform * ComputeVertexPosition();
+  vec4 world_pos = model_transform * vec4(inPosition, 1);
   gl_Position = vp_matrix[PaperShaderPushConstants.eye_index] * world_pos;
   fragUV = inUV;
 
-#ifdef USE_PAPER_SHADER_POINT_LIGHT_FALLOFF
-  // Irradiance.  Compute an attenuation factor based on the distance to the
-  // light, and apply it to the incoming light color/intensity.  The attenuation
-  // is based on the inverse square law, with a falloff adjustment to prevent
-  // it from dropping off too rapidly.
+  // Distance-based attenuation of point light intensity.  The attenuation is based on the
+  // inverse square law, with a falloff adjustment to prevent it from dropping off too rapidly.
   vec3 light_position =
       point_lights[PaperShaderPushConstants.light_index].position.xyz;
   float falloff = point_lights[PaperShaderPushConstants.light_index].falloff.x;
   vec3 adjusted_light = falloff * (light_position - world_pos.xyz);
   float attenuation = 1.f / (1.f + dot(adjusted_light, adjusted_light));
-  irradiance = attenuation *
+  fragLightIntensity = attenuation *
       point_lights[PaperShaderPushConstants.light_index].color;
-#endif  // USE_PAPER_SHADER_POINT_LIGHT_FALLOFF
 }
 #endif  // SHADOW_VOLUME_POINT_LIGHTING
 
-#ifdef SHADOW_VOLUME_EXTRUSION
-void main() {
-  #ifdef NUM_CLIP_PLANES
-  #error Vertex clip planes are incompatible with shadow-volume extrusion.
-  #endif
-
-  vec4 world_pos = model_transform * ComputeVertexPosition();
-  vec4 light_position =
-      point_lights[PaperShaderPushConstants.light_index].position;
-  // TODO(fxbug.dev/7251): optimize length of extrusion vec so that it doesn't
-  // extend far below the floor of the stage.  This can improve performance
-  // by reducing the number of stencil-buffer pixels that are touched.  On the
-  // other hand, ensure that it extends far enough: there will be artifacts when
-  // the shadow volume does not extend far enough (especially likely at glancing
-  // shadow angles).
-  const float kShadowVolumeExtrusionLength = 500.f;
-  vec4 extrusion_vec =
-      kShadowVolumeExtrusionLength * normalize(world_pos - light_position);
-  gl_Position = vp_matrix[PaperShaderPushConstants.eye_index] *
-      (world_pos + inBlendWeight.x * extrusion_vec);
-}
-#endif

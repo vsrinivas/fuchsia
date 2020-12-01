@@ -3,12 +3,10 @@
 
 // A simple ambient-only lighting pass.
 
-#ifndef USE_ATTRIBUTE_UV
-#error UV coordinates are required for texture-mapping.
-#endif
-
 layout(location = 0) out vec4 outColor;
+#ifdef USE_ATTRIBUTE_UV
 layout(location = 0) in vec2 inUV;
+#endif
 
 #define USE_PAPER_SHADER_SCENE_DATA 1
 #define USE_PAPER_SHADER_MESH_INSTANCE 1
@@ -16,7 +14,12 @@ layout(location = 0) in vec2 inUV;
 #include "shaders/paper/common/use.glsl"
 
 void main() {
-  outColor = model_color *
-             vec4(ambient_light_color, 1) *
-             texture(material_tex, inUV);
+  outColor = model_color
+#ifndef DISABLE_AMBIENT_LIGHT
+      * vec4(ambient_light_color, 1)
+#endif
+#ifdef USE_ATTRIBUTE_UV
+      * texture(material_tex, inUV);
+#endif
+  ;
 }

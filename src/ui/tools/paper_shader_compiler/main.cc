@@ -109,14 +109,14 @@ int main(int argc, const char** argv) {
   // Test shaders from escher/test/vk/shader_program_unittest.cc
   const escher::ShaderProgramData test_variant1 = {
       .source_files = {{escher::ShaderStage::kVertex, "shaders/model_renderer/main.vert"},
-                       {escher::ShaderStage::kFragment, "shaders/model_renderer/main.frag"}},
+                       {escher::ShaderStage::kFragment, "shaders/test/main.frag"}},
       .args = escher::ShaderVariantArgs({{"USE_ATTRIBUTE_UV", "1"},
                                          {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
                                          {"NO_SHADOW_LIGHTING_PASS", "1"}}),
   };
   const escher::ShaderProgramData test_variant2 = {
       .source_files = {{escher::ShaderStage::kVertex, "shaders/model_renderer/main.vert"},
-                       {escher::ShaderStage::kFragment, "shaders/model_renderer/main.frag"}},
+                       {escher::ShaderStage::kFragment, "shaders/test/main.frag"}},
       .args = escher::ShaderVariantArgs({{"USE_ATTRIBUTE_UV", "0"},
                                          {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
                                          {"NO_SHADOW_LIGHTING_PASS", "1"}}),

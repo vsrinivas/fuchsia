@@ -9,10 +9,7 @@
 
 layout(location = 0) out vec4 outColor;
 layout(location = 0) in vec2 inUV;
-
-#ifdef USE_PAPER_SHADER_POINT_LIGHT_FALLOFF
-layout(location = 1) in vec4 inIrradiance;
-#endif
+layout(location = 1) in vec4 inLightIntensity;
 
 #define USE_PAPER_SHADER_POINT_LIGHT 1
 #define USE_PAPER_SHADER_MESH_INSTANCE 1
@@ -20,15 +17,7 @@ layout(location = 1) in vec4 inIrradiance;
 #include "shaders/paper/common/use.glsl"
 
 void main() {
-  #ifndef USE_PAPER_SHADER_POINT_LIGHT_FALLOFF
-    // If there is no light falloff, use the light's color/intensity as the
-    // irradiance (if there is falloff, we interpolate a value computed by the
-    // vertex shader).
-    vec4 inIrradiance =
-        point_lights[PaperShaderPushConstants.light_index].color;
-  #endif
-
-  outColor = inIrradiance *
+  outColor = inLightIntensity *
              model_color *
              texture(material_tex, inUV);
 }

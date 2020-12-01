@@ -19,6 +19,7 @@
 #include "src/ui/lib/escher/util/bit_ops.h"
 #include "src/ui/lib/escher/vk/image.h"
 #include "src/ui/lib/escher/vk/shader_module.h"
+#include "src/ui/lib/escher/vk/shader_variant_args.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
 
 namespace escher {
@@ -411,6 +412,21 @@ std::ostream& operator<<(std::ostream& str, const RenderPassInfo& rpi) {
     str << "\n\tdepth_stencil_attachment: " << rpi.depth_stencil_attachment_info;
   }
   return str << "\n]";
+}
+
+std::ostream& operator<<(std::ostream& str, const ShaderVariantArgs& args) {
+  bool first = true;
+  for (auto& pair : args.definitions()) {
+    if (first) {
+      first = false;
+      str << "[";
+    } else {
+      str << ", ";
+    }
+    str << pair.first << "=" << pair.second;
+  }
+  str << "]";
+  return str;
 }
 
 }  // namespace escher

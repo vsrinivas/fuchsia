@@ -8,19 +8,16 @@ _shader_files = [
   "flatland/flat_main.vert",
 
   # Paper renderer.
-  "model_renderer/default_position.vert",
-  "model_renderer/main.frag",
   "model_renderer/main.vert",
-  "model_renderer/shadow_map_generation.frag",
-  "model_renderer/shadow_map_lighting.frag",
-  "model_renderer/wobble_position.vert",
   "paper/common/use.glsl",
   "paper/frag/main_ambient_light.frag",
   "paper/frag/main_point_light.frag",
-  "paper/vert/compute_model_space_position.vert",
-  "paper/vert/compute_world_space_position.vert",
   "paper/vert/main_shadow_volume_extrude.vert",
-  "paper/vert/vertex_attributes.vert",
+
+  # Only used by Escher tests.
+  "test/main.frag",
+  "test/shadow_map_generation.frag",
+  "test/shadow_map_lighting.frag",
 
   # Compute shaders.
   "compute/pose_buffer_latching.comp",
@@ -32,20 +29,23 @@ _shader_files_spirv = [
   "shaders_flatland_flat_main_vert14695981039346656037.spirv",
 
   # Paper renderer.
-  "shaders_model_renderer_main_frag12890958529260787213.spirv",
-  "shaders_model_renderer_main_frag15276133142244279294.spirv",
-  "shaders_model_renderer_main_frag4304586084079301274.spirv",
-  "shaders_model_renderer_main_vert12890958529260787213.spirv",
   "shaders_model_renderer_main_vert15064700897732225279.spirv",
-  "shaders_model_renderer_main_vert15276133142244279294.spirv",
   "shaders_model_renderer_main_vert4304586084079301274.spirv",
-  "shaders_model_renderer_main_vert817427562299648481.spirv",
+  "shaders_model_renderer_main_vert7456302057085141907.spirv",
   "shaders_paper_frag_main_ambient_light_frag4304586084079301274.spirv",
+  "shaders_paper_frag_main_ambient_light_frag7456302057085141907.spirv",
+  "shaders_paper_frag_main_ambient_light_frag9217636760892358205.spirv",
   "shaders_paper_frag_main_point_light_frag15064700897732225279.spirv",
-  "shaders_paper_frag_main_point_light_frag817427562299648481.spirv",
+  "shaders_paper_vert_main_shadow_volume_extrude_vert15276133142244279294.spirv",
+  "shaders_paper_vert_main_shadow_volume_extrude_vert9217636760892358205.spirv",
 
   # Pose buffer latching compute shader, from pose_buffer_latching_shader.cc.
   "shaders_compute_pose_buffer_latching_comp14695981039346656037.spirv",
+
+  # Tests
+  "shaders_model_renderer_main_vert12890958529260787213.spirv",
+  "shaders_test_main_frag12890958529260787213.spirv",
+  "shaders_test_main_frag4304586084079301274.spirv",
 ]
 
 _test_shader_files_spirv = [

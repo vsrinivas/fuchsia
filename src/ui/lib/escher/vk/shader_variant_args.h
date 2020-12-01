@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "src/ui/lib/escher/util/hashable.h"
+#include "src/ui/lib/escher/util/debug_print.h"
 #include "src/ui/lib/escher/vk/shader_stage.h"
 
 namespace escher {
@@ -53,6 +54,8 @@ class ShaderVariantArgs : public Hashable {
 
   std::vector<std::pair<std::string, std::string>> definitions_;
 };
+
+ESCHER_DEBUG_PRINTABLE(ShaderVariantArgs);
 
 // Inline function definitions.
 

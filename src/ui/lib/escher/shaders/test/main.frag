@@ -12,14 +12,14 @@ layout(location = 0) out vec4 outColor;
 #ifdef NO_SHADOW_LIGHTING_PASS
 #error SHADOW_MAP_GENERATION_PASS conflicts with NO_SHADOW_LIGHTING_PASS
 #endif
-#include "shaders/model_renderer/shadow_map_generation.frag"
+#include "shaders/test/shadow_map_generation.frag"
 #endif  // SHADOW_MAP_GENERATION_PASS
 
 #ifdef SHADOW_MAP_LIGHTING_PASS
 #ifdef NO_SHADOW_LIGHTING_PASS
 #error SHADOW_MAP_LIGHTING_PASS conflicts with NO_SHADOW_LIGHTING_PASS
 #endif
-#include "shaders/model_renderer/shadow_map_lighting.frag"
+#include "shaders/test/shadow_map_lighting.frag"
 #endif  // SHADOW_MAP_LIGHTING_PASS
 
 #ifdef NO_SHADOW_LIGHTING_PASS
