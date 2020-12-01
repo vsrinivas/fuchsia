@@ -88,6 +88,9 @@ void HidMouse::ReceiveRelEvent(virtio_input_event_t* event) {
     case VIRTIO_INPUT_EV_REL_Y:
       report_.rel_y = static_cast<int16_t>(event->value);
       break;
+    case VIRTIO_INPUT_EV_REL_HWHEEL:
+      // TODO(65215): Support horizontal wheel scrolling.
+      break;
     case VIRTIO_INPUT_EV_REL_WHEEL:
       report_.rel_wheel = static_cast<int16_t>(event->value);
       break;
