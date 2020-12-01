@@ -64,7 +64,7 @@ void lk_main() {
   // set which holds a per-line buffer.
   // NOTE: botanist depends on this string being printed to serial. If this changes,
   // that code must be changed as well. See fxbug.dev/59963#c20.
-  dprintf(SPEW, "printing enabled\n");
+  dprintf(ALWAYS, "printing enabled\n");
 
   // deal with any static constructors
   call_constructors();
