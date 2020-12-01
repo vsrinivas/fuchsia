@@ -21,6 +21,11 @@ declare_args() {
   #
   # Pass the empty string for no limit.
   minfs_maximum_runtime_bytes = ""
+
+  # If format_minfs_on_corruption is true (the default), fshost formats minfs partition on finding
+  # it corrupted.  Set to false to keep the devices in a corrupted state which might be of help to
+  # debug issues.
+  format_minfs_on_corruption = true
 }
 
 group("tests") {
@@ -405,6 +410,9 @@ template("fshost_config") {
     }
     if (minfs_maximum_runtime_bytes != "") {
       contents += [ "minfs-max-bytes=$minfs_maximum_runtime_bytes" ]
+    }
+    if (!format_minfs_on_corruption) {
+      contents += [ "-format-minfs-on-corruption" ]
     }
     output_conversion = "list lines"
     outputs = [ "config/fshost" ]

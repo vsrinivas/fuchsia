@@ -538,7 +538,7 @@ TEST(AddDeviceTestCase, AddNoGUIDMinfsDevice) {
 
 // Tests adding minfs with a valid type GUID and invalid metadata. Observe that
 // the filesystem reformats itself.
-TEST(AddDeviceTestCase, AddInvalidMinfsDevice) {
+TEST(AddDeviceTestCase, AddInvalidMinfsDeviceWithFormatOnCorruptionEnabled) {
   class MinfsDeviceWithInvalidMetadata : public MinfsDevice {
    public:
     zx_status_t CheckFilesystem() final {
@@ -546,7 +546,9 @@ TEST(AddDeviceTestCase, AddInvalidMinfsDevice) {
       return ZX_ERR_BAD_STATE;
     }
   };
-  BlockDeviceManager manager(TestOptions());
+  auto options = TestOptions();
+  EXPECT_TRUE(options.is_set(BlockDeviceManager::Options::kFormatMinfsOnCorruption));
+  BlockDeviceManager manager(options);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
   EXPECT_OK(manager.AddDevice(fvm_device));
   ZxcryptDevice zxcrypt_device;
@@ -556,6 +558,28 @@ TEST(AddDeviceTestCase, AddInvalidMinfsDevice) {
   EXPECT_TRUE(device.checked());
   EXPECT_TRUE(device.formatted());
   EXPECT_TRUE(device.mounted());
+}
+
+// Tests adding minfs with a valid type GUID and invalid metadata. Observe that
+// the filesystem does not reformats itself and adding device fails.
+TEST(AddDeviceTestCase, AddInvalidMinfsDeviceWithFormatOnCorruptionDisabled) {
+  class MinfsDeviceWithInvalidMetadata : public MinfsDevice {
+   public:
+    zx_status_t CheckFilesystem() final {
+      MinfsDevice::CheckFilesystem();
+      return ZX_ERR_BAD_STATE;
+    }
+  };
+  auto options = TestOptions();
+  EXPECT_EQ(options.options.erase(BlockDeviceManager::Options::kFormatMinfsOnCorruption), 1);
+  EXPECT_FALSE(options.is_set(BlockDeviceManager::Options::kFormatMinfsOnCorruption));
+  BlockDeviceManager manager(options);
+  MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
+  EXPECT_OK(manager.AddDevice(fvm_device));
+  ZxcryptDevice zxcrypt_device;
+  EXPECT_OK(manager.AddDevice(zxcrypt_device));
+  MinfsDeviceWithInvalidMetadata device;
+  EXPECT_EQ(ZX_ERR_BAD_STATE, manager.AddDevice(device));
 }
 
 // Tests adding zxcrypt with a valid type GUID and invalid format. Observe that

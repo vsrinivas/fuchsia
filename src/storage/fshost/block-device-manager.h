@@ -56,6 +56,8 @@ class BlockDeviceManager {
     static constexpr char kAttachZxcryptToNonRamdisk[] =
         "zxcrypt-non-ramdisk";  // Attach and unseal zxcrypt to minfs partitions not in a ram-disk
                                 // (but don't mount).
+    static constexpr char kFormatMinfsOnCorruption[] =
+        "format-minfs-on-corruption";  // Formats minfs if it is found to be corrupted.
 
     bool is_set(std::string_view option) const { return options.find(option) != options.end(); }
 

@@ -136,13 +136,18 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
 class MinfsMatcher : public BlockDeviceManager::Matcher {
  public:
   using PartitionNames = std::set<std::string, std::less<>>;
-  enum class Variant {
+  enum class ZxcryptVariant {
     // A regular minfs partition backed by zxcrypt.
     kNormal,
     // A minfs partition not backed by zxcrypt.
     kNoZxcrypt,
     // Only attach and unseal the zxcrypt partition; doesn't mount minfs.
     kZxcryptOnly
+  };
+
+  struct Variant {
+    ZxcryptVariant zxcrypt = ZxcryptVariant::kNormal;
+    bool format_minfs_on_corruption = true;
   };
 
   static constexpr std::string_view kZxcryptSuffix = "/zxcrypt/unsealed/block";
@@ -155,11 +160,16 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
         variant_(variant) {}
 
   static Variant GetVariantFromOptions(const BlockDeviceManager::Options& options) {
+    Variant variant;
     if (options.is_set(BlockDeviceManager::Options::kNoZxcrypt)) {
-      return Variant::kNoZxcrypt;
+      variant.zxcrypt = ZxcryptVariant::kNoZxcrypt;
     } else {
-      return Variant::kNormal;
+      variant.zxcrypt = ZxcryptVariant::kNormal;
     }
+
+    variant.format_minfs_on_corruption =
+        options.is_set(BlockDeviceManager::Options::kFormatMinfsOnCorruption);
+    return variant;
   }
 
   disk_format_t Match(const BlockDeviceInterface& device) override {
@@ -167,16 +177,17 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
       if (map_.IsChild(device) &&
           partition_names_.find(device.partition_name()) != partition_names_.end() &&
           !memcmp(&device.GetTypeGuid(), &type_guid_, sizeof(type_guid_))) {
-        switch (variant_) {
-          case Variant::kNormal:
+        switch (variant_.zxcrypt) {
+          case ZxcryptVariant::kNormal:
             return map_.ramdisk_required() ? DISK_FORMAT_MINFS : DISK_FORMAT_ZXCRYPT;
-          case Variant::kNoZxcrypt:
+          case ZxcryptVariant::kNoZxcrypt:
             return DISK_FORMAT_MINFS;
-          case Variant::kZxcryptOnly:
+          case ZxcryptVariant::kZxcryptOnly:
             return DISK_FORMAT_ZXCRYPT;
         }
       }
-    } else if (variant_ == Variant::kNormal && device.topological_path() == expected_inner_path_ &&
+    } else if (variant_.zxcrypt == ZxcryptVariant::kNormal &&
+               device.topological_path() == expected_inner_path_ &&
                !memcmp(&device.GetTypeGuid(), &type_guid_, sizeof(type_guid_))) {
       return DISK_FORMAT_MINFS;
     }
@@ -209,7 +220,7 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
       }
       reformat_ = false;
     }
-    zx_status_t status = device.Add();
+    zx_status_t status = device.Add(variant_.format_minfs_on_corruption);
     if (status != ZX_OK) {
       return status;
     }
@@ -321,7 +332,8 @@ BlockDeviceManager::Options BlockDeviceManager::DefaultOptions() {
                       {Options::kBootpart, {}},
                       {Options::kFvm, {}},
                       {Options::kGpt, {}},
-                      {Options::kMinfs, {}}}};
+                      {Options::kMinfs, {}},
+                      {Options::kFormatMinfsOnCorruption, {}}}};
 }
 
 BlockDeviceManager::BlockDeviceManager(const Options& options) {
@@ -377,10 +389,11 @@ BlockDeviceManager::BlockDeviceManager(const Options& options) {
       non_ramdisk_fvm =
           std::make_unique<PartitionMapMatcher>(DISK_FORMAT_FVM, /*allow_multiple=*/false, "/fvm",
                                                 /*ramdisk_required=*/false);
+
       if (options.is_set(Options::kAttachZxcryptToNonRamdisk)) {
-        matchers_.push_back(
-            std::make_unique<MinfsMatcher>(*non_ramdisk_fvm, GetMinfsPartitionNames(),
-                                           minfs_type_guid, MinfsMatcher::Variant::kZxcryptOnly));
+        matchers_.push_back(std::make_unique<MinfsMatcher>(
+            *non_ramdisk_fvm, GetMinfsPartitionNames(), minfs_type_guid,
+            MinfsMatcher::Variant{.zxcrypt = MinfsMatcher::ZxcryptVariant::kZxcryptOnly}));
       }
     }
     matchers_.push_back(std::move(fvm));

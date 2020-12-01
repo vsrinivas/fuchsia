@@ -315,7 +315,8 @@ TEST(BlockDeviceManager, ReadOptions) {
          << std::endl
          // Empty value.
          << BlockDeviceManager::Options::kBlobfsMaxBytes << "=" << std::endl
-         << "-" << BlockDeviceManager::Options::kBlobfs;
+         << "-" << BlockDeviceManager::Options::kBlobfs << std::endl
+         << "-" << BlockDeviceManager::Options::kFormatMinfsOnCorruption;
 
   const auto options = BlockDeviceManager::ReadOptions(stream);
   auto expected_options = BlockDeviceManager::DefaultOptions();
@@ -323,6 +324,7 @@ TEST(BlockDeviceManager, ReadOptions) {
   expected_options.options[BlockDeviceManager::Options::kMinfsMaxBytes] = "12345";
   expected_options.options[BlockDeviceManager::Options::kBlobfsMaxBytes] = std::string();
   expected_options.options.erase(BlockDeviceManager::Options::kBlobfs);
+  expected_options.options.erase(BlockDeviceManager::Options::kFormatMinfsOnCorruption);
 
   EXPECT_EQ(expected_options.options, options.options);
 }

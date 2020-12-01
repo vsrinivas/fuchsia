@@ -32,7 +32,7 @@ class BlockDeviceInterface {
  public:
   virtual ~BlockDeviceInterface() = default;
 
-  zx_status_t Add();
+  zx_status_t Add(bool format_on_corruption = true);
 
   // Returns the format that the content appears to be.  Avoid using this unless
   // there is no other way to determine the format of the device.

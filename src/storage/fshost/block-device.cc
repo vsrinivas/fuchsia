@@ -488,7 +488,7 @@ zx_status_t BlockDevice::MountFilesystem() {
   }
 }
 
-zx_status_t BlockDeviceInterface::Add() {
+zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
   switch (GetFormat()) {
     case DISK_FORMAT_BOOTPART: {
       return AttachDriver(kBootpartDriverPath);
@@ -537,13 +537,21 @@ zx_status_t BlockDeviceInterface::Add() {
     }
     case DISK_FORMAT_MINFS: {
       FX_LOGS(INFO) << "mounting minfs";
-      if (CheckFilesystem() != ZX_OK) {
+      if (zx_status_t status = CheckFilesystem(); status != ZX_OK) {
+        if (!format_on_corruption) {
+          FX_LOGS(INFO) << "formatting minfs on this target is disabled";
+          return status;
+        }
         if (zx_status_t status = FormatFilesystem(); status != ZX_OK) {
           return status;
         }
       }
       if (zx_status_t status = MountFilesystem(); status != ZX_OK) {
         FX_LOGS(ERROR) << "failed to mount filesystem: " << zx_status_get_string(status);
+        if (!format_on_corruption) {
+          FX_LOGS(ERROR) << "formatting minfs on this target is disabled";
+          return status;
+        }
         if ((status = FormatFilesystem()) != ZX_OK) {
           return status;
         }
