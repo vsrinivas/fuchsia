@@ -120,7 +120,7 @@ template("cmc_check_includes") {
     deps += [ ":" + expected_includes_label ]
     inputs =
         [ invoker.manifest ] + get_target_outputs(":" + expected_includes_label)
-    outputs = [ "${target_out_dir}/${target_name}.stamp" ]
+    outputs = [ "${target_out_dir}/${target_name}.gn_stamp" ]
 
     args = [
       "--stamp",

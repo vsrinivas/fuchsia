@@ -286,7 +286,7 @@ template("sdk_static_library") {
       runtime_deps_file,
     ]
 
-    stamp_file = "$target_gen_dir/$target_name.stamp"
+    stamp_file = "$target_gen_dir/$target_name.gn_stamp"
 
     outputs = [ stamp_file ]
 
