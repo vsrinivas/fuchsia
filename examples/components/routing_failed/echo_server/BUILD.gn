@@ -3,8 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
-rustc_binary("echo_server") {
+rustc_binary("bin") {
   edition = "2018"
   name = "routing_failed_echo_server"
   deps = [
@@ -17,4 +18,21 @@ rustc_binary("echo_server") {
   ]
 
   sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("echo-server") {
+  deps = [ ":bin" ]
+  manifest = "meta/echo_server.cml"
+}
+
+fuchsia_component("echo-server-bad") {
+  deps = [ ":bin" ]
+  manifest = "meta/echo_server_bad.cml"
+}
+
+group("echo_server") {
+  deps = [
+    ":echo-server",
+    ":echo-server-bad",
+  ]
 }

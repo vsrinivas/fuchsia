@@ -2,37 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
-package("components-routing-failed-example") {
+fuchsia_component("echo-realm") {
+  manifest = "meta/echo_realm.cml"
+}
+
+fuchsia_package("components-routing-failed-example") {
   deps = [
-    "//examples/components/routing_failed/echo_client",
-    "//examples/components/routing_failed/echo_server",
-  ]
-  binaries = [
-    {
-      name = "routing_failed_echo_server"
-    },
-    {
-      name = "routing_failed_echo_client"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/echo_server.cml")
-      dest = "echo_server.cm"
-    },
-    {
-      path = rebase_path("meta/echo_server_bad.cml")
-      dest = "echo_server_bad.cm"
-    },
-    {
-      path = rebase_path("meta/echo_client.cml")
-      dest = "echo_client.cm"
-    },
-    {
-      path = rebase_path("meta/echo_realm.cml")
-      dest = "echo_realm.cm"
-    },
+    ":echo-realm",
+    "echo_client",
+    "echo_server",
   ]
 }
