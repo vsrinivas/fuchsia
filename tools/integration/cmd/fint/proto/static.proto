@@ -67,32 +67,29 @@ message Static {
   // Values of select_variant GN argument.
   repeated string variants = 12;
 
-  // Whether to collect build metrics.
-  bool collect_metrics = 13;
-
   // Whether to include archives in the build.
-  bool include_archives = 14;
+  bool include_archives = 13;
 
   // Whether to skip the ninja build if we're running in CQ and none of the
   // changed files affect the build.
-  bool skip_if_unaffected = 15;
+  bool skip_if_unaffected = 14;
 
   // The path within the checkout of a file containing historical test duration
   // data specific to the current build config.
-  string test_durations_file = 16;
+  string test_durations_file = 15;
 
   // If `test_durations_file` doesn't exist within the checkout, use this file
   // instead. It's not specific to the current build config, but it can be
   // assumed to always exist.
-  string default_test_durations_file = 17;
+  string default_test_durations_file = 16;
 
   // Whether to use goma for running ninja. Will be ignored (and goma will not
   // be used) when building with some experimental toolchain versions.
-  bool use_goma = 18;
+  bool use_goma = 17;
 
   // Whether to generate a listing of the commands run during the build.
-  bool generate_compdb = 19;
+  bool generate_compdb = 18;
 
   // Whether to generate an IDE project.json file containing target information.
-  bool generate_ide = 20;
+  bool generate_ide = 19;
 }
