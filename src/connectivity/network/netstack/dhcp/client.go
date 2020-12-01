@@ -576,7 +576,7 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 					PrefixLen: prefixLen,
 				}
 
-				_ = syslog.DebugTf(tag, "got %s from %s: Address=%s, server=%s, leaseLength=%s, renewTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr, info.Server, cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime)
+				_ = syslog.InfoTf(tag, "got %s from %s: Address=%s, server=%s, leaseLength=%s, renewTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr, info.Server, cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime)
 
 				break retransmitDiscover
 			}
@@ -649,7 +649,7 @@ retransmitRequest:
 
 				// Now that we've successfully acquired the address, update the client state.
 				info.Addr = requestedAddr
-				_ = syslog.DebugTf(tag, "got %s from %s with leaseLength=%s", typ, fromAddr.Addr, cfg.LeaseLength)
+				_ = syslog.InfoTf(tag, "got %s from %s with leaseLength=%s", typ, fromAddr.Addr, cfg.LeaseLength)
 				return cfg, nil
 			case dhcpNAK:
 				if msg := opts.message(); len(msg) != 0 {
@@ -657,6 +657,7 @@ retransmitRequest:
 					return Config{}, fmt.Errorf("%s: %x", typ, msg)
 				}
 				c.stats.RecvNaks.Increment()
+				_ = syslog.InfoTf(tag, "got %s from %s", typ, fromAddr.Addr)
 				// We lost the lease.
 				return Config{
 					Declined: true,
