@@ -10,6 +10,12 @@ import("$zx/public/gn/toolchain/environment_redirect.gni")
 _is_phys = toolchain.environment == "kernel.phys" ||
            toolchain.environment == "kernel.phys32"
 
+# These both work together and must be presented in this order (for BFD ld).
+_phys_linker_scripts = [
+  "$zx/kernel/phys/phys-end.ld",
+  "$zx/kernel/phys/phys.ld",
+]
+
 # Build an executable for the phys environment.
 #
 # This defines one public target whose output is the raw binary image.
@@ -20,10 +26,6 @@ _is_phys = toolchain.environment == "kernel.phys" ||
 # via the "main.h" API.
 #
 # Parameters
-#
-#   * linker_sciprt
-#     - Required: Custom linker script.
-#     - Type: file
 #
 #   * output_extension
 #     - Optional: See executable(), but defaults to "bin".
@@ -57,7 +59,6 @@ template("phys_executable") {
       forward_variables_from(invoker,
                              "*",
                              [
-                               "linker_script",
                                "metadata",
                                "output_dir",
                                "output_extension",
@@ -65,9 +66,10 @@ template("phys_executable") {
                                "tags",
                              ])
       deps += [ "$zx/kernel/phys:phys_executable.deps" ]
-      inputs += [ invoker.linker_script ]
-      ldflags +=
-          [ "-Wl,-T," + rebase_path(invoker.linker_script, root_build_dir) ]
+      inputs += _phys_linker_scripts
+      foreach(ldscript, _phys_linker_scripts) {
+        ldflags += [ "-Wl,-T," + rebase_path(ldscript, root_build_dir) ]
+      }
     }
 
     # This is the main target of the template, a raw binary load image file.

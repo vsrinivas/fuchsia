@@ -62,118 +62,122 @@ if (current_toolchain == default_toolchain) {
       optimize = "speed"
     }
   }
-} else if (toolchain.environment == "kernel.phys") {
-  # All the code gets built here in the phys environment.
+} else {
+  if (toolchain.environment == "kernel.phys") {
+    # All the code gets built here in the phys environment.
 
-  source_set("phys") {
-    sources = [ "start.S" ]
-    include_dirs = [ "$zx/.." ]
-    deps = [ "$zx/kernel/lib/arch" ]
-  }
-} else if (toolchain.environment == "kernel.phys32") {
-  # ... or here in the other phys environment.
+    source_set("phys") {
+      sources = [ "start.S" ]
+      include_dirs = [ "$zx/.." ]
+      deps = [ "$zx/kernel/lib/arch" ]
+    }
 
-  # phys32 code is 32-bit (i686) and loaded at a fixed address.
-  config("x86-32") {
-    cflags = [
-      "-m32",
-      "-mcx16",
-      "-fno-pic",
-      "-fno-pie",
-    ]
-    ldflags = cflags + [ "-Wl,-m,elf_i386" ]
+    config("zbi_executable.config") {
+      configs = [ ":load-1mb" ]
+    }
+  } else if (toolchain.environment == "kernel.phys32") {
+    # ... or here in the other phys environment.
 
-    if (is_gcc) {
-      cflags += [ "-mpreferred-stack-boundary=4" ]  # log2, i.e. 16
+    # phys32 code is 32-bit (i686) and loaded at a fixed address.
+    config("x86-32") {
+      cflags = [
+        "-m32",
+        "-mcx16",
+        "-fno-pic",
+        "-fno-pie",
+      ]
+      ldflags = cflags + [ "-Wl,-m,elf_i386" ]
 
-      # BFD ld doesn't handle phys.ld for the fixed-address case right.
-      ldflags += [ "-fuse-ld=gold" ]
-    } else {
-      cflags += [
-        "-mstack-alignment=16",  # Same as GCC's -mpreferred-stack-boundary=4.
-        "-fsanitize=safe-stack",  # Enable all available paranoia for phys.
+      if (is_gcc) {
+        cflags += [ "-mpreferred-stack-boundary=4" ]  # log2, i.e. 16
+      } else {
+        cflags += [
+          "-mstack-alignment=16",  # Same as GCC's -mpreferred-stack-boundary=4.
+          "-fsanitize=safe-stack",  # Enable all available paranoia for phys.
+        ]
+
+        # Clang defaults to PIE but lld has a switch to reverse that.  GNU
+        # linkers have no such switch, but GCC doesn't pass -pie by default.
+        ldflags += [ "-Wl,--no-pie" ]
+      }
+
+      asmflags = cflags
+    }
+
+    # This is used by phys_executable(), but we put nothing here so that
+    # each target has explicit deps for multiboot for zero-page.
+    source_set("phys") {
+    }
+
+    # This is common to multiboot and zero-page.
+    source_set("phys32") {
+      sources = [
+        "gdt32.cc",
+        "start32.S",
+      ]
+      include_dirs = [ "$zx/.." ]
+      deps = [
+        ":phys32-header",
+        "$zx/kernel/lib/arch",
+        "$zx/kernel/lib/ktl",
       ]
 
-      # Clang defaults to PIE but lld has a switch to reverse that.  GNU
-      # linkers have no such switch, but GCC doesn't pass -pie by default.
-      ldflags += [ "-Wl,--no-pie" ]
+      # Links use -nostdlib to avoid getting -lc et al.  But the "builtins"
+      # library (equivalent to the original libgcc) is needed for e.g. 64-bit
+      # division functions.  Note that though the normal x86-64 build is not
+      # usable for kernel due to lack of -mno-red-zone, the normal x86-32
+      # build is fine for phys32 both because x86-32 has no red zone to worry
+      # about and because the phys32 environment doesn't actually need to
+      # worry about interrupts at all; it's also OK if it happened to use SSE
+      # (though that won't come up in reality) because phys32 doesn't have
+      # that constraint either.  Note also that the need to use this library
+      # is the only reason the phys32 environment doesn't use -mregparm=3;
+      # that's a better calling convention, but the compiler-emitted library
+      # calls would expect that and the toolchain-supplied library is not
+      # compiled for it.
+      if (clang_tool_dir == "") {
+        clang_inputs = []
+        clang_exec = "clang++"
+      } else {
+        clang_inputs = [ "${clang_tool_dir}/clang++" ]
+        clang_exec = rebase_path(clang_inputs[0], root_build_dir)
+      }
+      libs = rebase_path(exec_script("/usr/bin/env",
+                                     [
+                                       clang_exec,
+                                       "-no-canonical-prefixes",
+                                       "--target=${toolchain.target_tuple}",
+                                       "-m32",
+                                       "-print-libgcc-file-name",
+                                     ],
+                                     "trim list lines",
+                                     clang_inputs),
+                         ".",
+                         root_build_dir)
     }
 
-    asmflags = cflags
-  }
+    source_set("multiboot") {
+      sources = [
+        "multiboot-header.S",
+        "multiboot-start.S",
+      ]
+      deps = [
+        ":phys32",
+        "$zx/kernel/lib/arch",
+      ]
 
-  # This is used by phys_executable(), but we put nothing here so that
-  # each target has explicit deps for multiboot for zero-page.
-  source_set("phys") {
-  }
-
-  # This is common to multiboot and zero-page.
-  source_set("phys32") {
-    sources = [
-      "gdt32.cc",
-      "start32.S",
-    ]
-    include_dirs = [ "$zx/.." ]
-    deps = [
-      ":phys32-header",
-      "$zx/kernel/lib/arch",
-      "$zx/kernel/lib/ktl",
-    ]
-
-    # Links use -nostdlib to avoid getting -lc et al.  But the "builtins"
-    # library (equivalent to the original libgcc) is needed for e.g. 64-bit
-    # division functions.  Note that though the normal x86-64 build is not
-    # usable for kernel due to lack of -mno-red-zone, the normal x86-32
-    # build is fine for phys32 both because x86-32 has no red zone to worry
-    # about and because the phys32 environment doesn't actually need to
-    # worry about interrupts at all; it's also OK if it happened to use SSE
-    # (though that won't come up in reality) because phys32 doesn't have
-    # that constraint either.  Note also that the need to use this library
-    # is the only reason the phys32 environment doesn't use -mregparm=3;
-    # that's a better calling convention, but the compiler-emitted library
-    # calls would expect that and the toolchain-supplied library is not
-    # compiled for it.
-    if (clang_tool_dir == "") {
-      clang_inputs = []
-      clang_exec = "clang++"
-    } else {
-      clang_inputs = [ "${clang_tool_dir}/clang++" ]
-      clang_exec = rebase_path(clang_inputs[0], root_build_dir)
+      public_configs = [ ":load-1mb" ]
     }
-    libs = rebase_path(exec_script("/usr/bin/env",
-                                   [
-                                     clang_exec,
-                                     "-no-canonical-prefixes",
-                                     "--target=${toolchain.target_tuple}",
-                                     "-m32",
-                                     "-print-libgcc-file-name",
-                                   ],
-                                   "trim list lines",
-                                   clang_inputs),
-                       ".",
-                       root_build_dir)
+
+    # TODO(mcgrathr): Linux zero-page support parallel to multiboot
   }
 
-  source_set("multiboot") {
-    sources = [
-      "multiboot-header.S",
-      "multiboot-start.S",
-    ]
-    deps = [
-      ":phys32",
-      "$zx/kernel/lib/arch",
-    ]
-
-    # The executable() target needs the ldflags to set PHYS_LOAD_ADDRESS.
-    public_configs = [ ":multiboot.config" ]
-  }
-
-  config("multiboot.config") {
+  # This is where code is actually loaded both for the Multiboot spec and for
+  # the original/legacy x86 ZBI booting spec.
+  config("load-1mb") {
     visibility = [ ":*" ]
     ldflags = [ "-Wl,-defsym,PHYS_LOAD_ADDRESS=0x100000" ]
   }
-
-  # TODO(mcgrathr): Linux zero-page support parallel to multiboot
 }
 
 # This is evaluated differently in different environments, so outside the if.

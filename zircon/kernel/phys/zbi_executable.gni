@@ -29,13 +29,11 @@ template("zbi_executable") {
     forward_variables_from(invoker,
                            "*",
                            [
-                             "linker_script",
                              "metadata",
                              "visibility",
                            ])
     forward_variables_from(invoker, [ "visibility" ])
 
-    linker_script = "$zx/kernel/phys/phys.ld"
     deps += [ "$zx/kernel/phys:zbi_executable.deps" ]
 
     if (!defined(output_dir)) {

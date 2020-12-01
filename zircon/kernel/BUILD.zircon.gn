@@ -175,10 +175,15 @@ if (current_toolchain == default_toolchain) {
       # achieve this with our GCC.  At the moment we compile with
       # `-fno-omit-frame-pointer`, which is good because we link with
       # `--gc-sections`, which means `.eh_frame` gets discarded so GCC-built
-      # kernels don't have any unwind info (except for assembly)!  Assembler
-      # code has its own way of requesting `.debug_frame` vs `.eh_frame` with
-      # the `.cfi_sections` directive.
+      # kernels don't have any unwind info (except for assembly)!
       "-fno-unwind-tables",
+    ]
+
+    # Always feed assembler code the `.cfi_sections` directive to
+    # populate only `.debug_frame` and not `.eh_frame`.
+    asmflags = [
+      "-include",
+      rebase_path("debug-frame.S"),
     ]
 
     cflags_cc = [

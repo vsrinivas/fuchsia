@@ -40,8 +40,4 @@
   .cfi_escape DW_CFA_val_expression, \reg, 1, DW_OP_lit0
 .endm
 
-// We want .debug_frame not .eh_frame.
-// WARNING: This is a subtle side-effect of including this file. Heads up!
-.cfi_sections .debug_frame
-
 #endif  // ZIRCON_KERNEL_INCLUDE_ASM_H_

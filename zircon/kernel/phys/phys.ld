@@ -14,12 +14,11 @@ SECTIONS {
    * It's all a single contiguous segment that is both writable and
    * executable, since no MMU protections are enabled.
    *
-   * This layout is also used for fixed-position x86-32 boot shims,
-   * which set PHYS_LOAD_ADDRESS via -defsym.
+   * This layout is also used for fixed-position x86-32 boot shims.
+   * The legacy x86-64 ZBI boot protocol is also fixed-position.
+   * PHYS_LOAD_ADDRESS is always set via -defsym, either to the
+   * fixed position or to 0 for the relocatable case.
    */
-
-   PHYS_LOAD_ADDRESS = DEFINED(PHYS_LOAD_ADDRESS) ? PHYS_LOAD_ADDRESS : 0;
-
   . = PHYS_LOAD_ADDRESS;
   PROVIDE_HIDDEN(__code_start = .);
 
@@ -36,6 +35,20 @@ SECTIONS {
     *(.note.gnu.build-id)
     PROVIDE_HIDDEN(__stop_note_gnu_build_id = .);
   } :load :note
+
+  /*
+   * Code compiled for kernels should generate .debug_frame, not .eh_frame.
+   * We don't want to clutter the runtime image with this data, since it's
+   * not used at runtime.  However, GCC currently generates .eh_frame even
+   * given -fno-unwind-tables.  Also, the 32-bit x86 build can use outcalls
+   * to libclang_rt.builtins (libgcc) functions, which will have been
+   * compiled with .eh_frame generation.  So just discard all that data here.
+   * Unfortunately this may let us overlook some regression where other code
+   * is emitting .eh_frame rather than .debug_frame in the future.
+   */
+  /DISCARD/ : {
+    *(.eh_frame)
+  }
 
   .rodata : {
     *(.rodata*)
@@ -58,37 +71,16 @@ SECTIONS {
   }
   ASSERT(SIZEOF(.init_array) == 0, "no static constructors allowed")
 
-  /*
-   * TODO(mcgrathr): Clean things up so automatic orphans placement works
-   * and this explicit handling is not required for every section.
-   */
-  BootCpuid : {
-    PROVIDE_HIDDEN(__start_BootCpuid = .);
-    *(BootCpuid)
-    PROVIDE_HIDDEN(__stop_BootCpuid = .);
-  }
-
   .data : {
     *(.data*)
-
-    /*
-     * For ZBI format, the file size must be aligned to 8 bytes.  Just aligning
-     * doesn't do anything to the ultimate binary-format load image size when
-     * there isn't any subsequent data.  So align and write a useless word.
-     */
-    . = ALIGN(8);
-    QUAD(0xdeadd00dfeedface);
   }
 
   /*
-   * This represents the end of the load image, as distinct from the end
-   * of data in memory.  That is, it's not aligned to the .bss alignment.
-   * That alignment padding isn't included in the file.  It only matters
-   * that the memory reserved for .bss at runtime includes the padding.
-   * But the load headers for boot headers need to identify the size of
-   * the load image on disk precisely, so they use this instead of _edata.
+   * Any writable orphan sections will be placed here.  The separate clause
+   * `SECTIONS ... INSERT BEFORE .bss` in phys-end.ld will attach after the
+   * orphans and before .bss.  Note that the linker invocation must use the
+   * switches `-T phys-end.ld -T phys.ld`, *in that order* for BFD ld to work.
    */
-  PROVIDE_HIDDEN(PHYS_LOAD_END = .);
 
   .bss : {
     /*

@@ -13,3 +13,13 @@ source_set("phys") {
   include_dirs = [ "$zx/.." ]
   deps = [ "$zx/kernel/lib/arch" ]
 }
+
+config("zbi_executable.config") {
+  # ZBI executables can be loaded anywhere, so they are linked at 0.
+  ldflags = [ "-Wl,-defsym,PHYS_LOAD_ADDRESS=0" ]
+}
+
+config("qemu.config") {
+  # Direct QEMU phys executables are the same.
+  configs = [ ":zbi_executable.config" ]
+}

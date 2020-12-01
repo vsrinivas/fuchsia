@@ -64,14 +64,12 @@ template("phys_qemu_test") {
     forward_variables_from(invoker,
                            "*",
                            [
-                             "linker_script",
                              "output_dir",
                              "output_extension",
                              "output_name",
                              "tags",
                              "testonly",
                            ])
-    linker_script = "../phys.ld"
     deps += qemu_deps + [ ":qemu-test-main" ]
   }
 

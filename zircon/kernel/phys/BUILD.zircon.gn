@@ -132,6 +132,8 @@ if (current_toolchain == default_toolchain) {
       "$zx/system/ulib/uart",
       "$zx/system/ulib/zbitl",
     ]
+    public_configs =
+        [ "$zx/kernel/arch/$zircon_cpu/phys:zbi_executable.config" ]
   }
 
   # Things in other directories include main.h by source-absolute path.
@@ -148,5 +150,6 @@ if (current_toolchain == default_toolchain) {
   # are run directly as QEMU kernels.
   source_set("qemu-header") {
     sources = [ "qemu-header.S" ]
+    public_configs = [ "$zx/kernel/arch/$zircon_cpu/phys:qemu.config" ]
   }
 }
