@@ -147,7 +147,7 @@ class MessageDecoder {
   size_t GetRemainingHandles() const { return end_handle_pos_ - handle_pos_; }
 
   // Used by numeric types to retrieve a numeric value. If there is not enough
-  // data, returns false and value is not modified.
+  // data, returns false and value is set to its zero-initialized value.
   template <typename T>
   bool GetValueAt(uint64_t offset, T* value);
 
@@ -239,7 +239,7 @@ class MessageDecoder {
 };
 
 // Used by numeric types to retrieve a numeric value. If there is not enough
-// data, returns false and value is not modified.
+// data, returns false and value is set to its zero-initialized-value.
 template <typename T>
 bool MessageDecoder::GetValueAt(uint64_t offset, T* value) {
   if (offset + sizeof(T) > num_bytes_) {
@@ -248,6 +248,7 @@ bool MessageDecoder::GetValueAt(uint64_t offset, T* value) {
                  << ": Not enough data to decode (needs " << sizeof(T) << ", remains "
                  << (num_bytes_ - offset) << ")\n";
     }
+    *value = {};
     return false;
   }
   *value = internal::MemoryFrom<T>(start_byte_pos_ + offset);
