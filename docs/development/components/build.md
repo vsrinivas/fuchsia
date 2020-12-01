@@ -1112,6 +1112,44 @@ fuchsia_unittest_package("timekeeper-unittests") {
     path is, then try your best guess and expect a helpful error message if
     your guess was not correct.
 
+### Test specifications
+
+Both template families support test specifications, such as restricting to specific
+[test environments][test-environments] or
+[restricting log severity][restrict-log-severity].
+
+The syntax is slightly different. Where before you might specify:
+
+```gn
+test_package("foo-tests") {
+  ...
+  tests = [
+    {
+      name = "foo_test"
+      log_settings = {
+        max_severity = "ERROR"
+      }
+    }
+  ]
+}
+```
+
+You would now specify:
+
+```gn
+fuchsia_test_package("foo-tests") {
+  ...
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+```
+
+With the new templates, the `test_specs` apply to all tests in the package.
+See [test packages](#test-packages) for more examples.
+
 ### Legacy features
 
 The following special attributes are supported by the legacy `package()` template:
@@ -1120,7 +1158,6 @@ The following special attributes are supported by the legacy `package()` templat
 *   `drivers`
 *   `libraries`
 *   `loadable_modules`
-*   `tests`
 
 These are used with special syntax, which determines how the files that certain
 targets produce are packaged.
@@ -1247,8 +1284,10 @@ templates. These unsupported features include:
 [gn-get-target-outputs]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#func_get_target_outputs
 [package-name]: /docs/concepts/packages/package_url.md#package-name
 [pm]: /src/sys/pkg/bin/pm/README.md
+[restrict-log-severity]: /docs/concepts/testing/test_component.md#restricting_log_severity
 [rustc-binary]: /build/rust/rustc_binary.gni
 [rustc-test]: /build/rust/rustc_test.gni
 [source-code-layout]: /docs/concepts/source_code/layout.md
 [source-expansion-placeholders]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#placeholders
+[test-environments]: /docs/concepts/testing/environments.md
 [working-with-packages]: /docs/development/idk/documentation/packages.md
