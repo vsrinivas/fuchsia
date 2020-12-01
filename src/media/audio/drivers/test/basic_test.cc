@@ -15,22 +15,10 @@
 
 namespace media::audio::drivers::test {
 
-void BasicTest::SetUp() {
-  TestBase::SetUp();
-
-  // If previous test in this group found no device, we don't need to search again - skip this test.
-  if (no_devices_found()) {
-    GTEST_SKIP();
-  }
-
-  EnumerateDevices();
-}
-
 // Stream channel requests
 //
-// Request the stream properties including the driver's unique ID which must be unique between input
-// and output.
-// TODO(mpuryear): ensure that this differs between input and output.
+// Request stream properties including unique ID (which must be unique between input and output).
+// TODO(mpuryear): actually ensure that this differs between input and output.
 void BasicTest::RequestStreamProperties() {
   stream_config()->GetProperties([this](fuchsia::hardware::audio::StreamProperties prop) {
     stream_props_ = std::move(prop);
@@ -93,10 +81,10 @@ void BasicTest::RequestStreamProperties() {
 
 // Request that the driver return its gain capabilities and current state.
 void BasicTest::RequestGain() {
-  ASSERT_FALSE(issued_set_gain_);  // Must request gain capabilities before seeting gain.
-  // Since we reconnect to the audio stream every time we run this test and we are guaranteed by the
-  // audio driver interface definition that the driver will reply to the first watch request, we
-  // can get the gain state by issuing a watch FIDL call.
+  ASSERT_FALSE(issued_set_gain_);  // Must request gain capabilities before setting gain.
+
+  // We reconnect the stream every time we run a test, and by driver interface definition the driver
+  // must reply to the first watch request, so we get gain state by issuing a watch FIDL call.
   stream_config()->WatchGainState([this](fuchsia::hardware::audio::GainState gain_state) {
     AUDIO_LOG(DEBUG) << "Received gain " << gain_state.gain_db();
 
@@ -127,9 +115,8 @@ void BasicTest::RequestGain() {
   RunLoopUntil([this]() { return received_get_gain_; });
 }
 
-// Determine an appropriate gain state to request, then call other method to request to the
-// driver. This method assumes that the driver has already successfully responded to a GetGain
-// request.
+// Determine an appropriate gain state to request, then call other method to request that driver set
+// gain. This method assumes that the driver already successfully responded to a GetGain request.
 void BasicTest::RequestSetGain() {
   ASSERT_TRUE(received_get_gain_);
 
@@ -155,9 +142,9 @@ void BasicTest::RequestSetGain() {
 
 // Request that driver retrieve the current plug detection state.
 void BasicTest::RequestPlugDetect() {
-  // Since we reconnect to the audio stream every time we run this test and we are guaranteed by the
-  // audio driver interface definition that the driver will reply to the first watch request, we
-  // can get the plug state by issuing a watch FIDL call.
+  // Since we reconnect to the audio stream every time we run this test and we are guaranteed by
+  // the audio driver interface definition that the driver will reply to the first watch request,
+  // we can get the plug state by issuing a watch FIDL call.
   stream_config()->WatchPlugState([this](fuchsia::hardware::audio::PlugState state) {
     plug_state_ = std::move(state);
 
@@ -171,44 +158,57 @@ void BasicTest::RequestPlugDetect() {
   RunLoopUntil([this]() { return received_plug_detect_; });
 }
 
-//
-// Test cases that target each of the various Stream channel commands
-//
-// Verify a valid unique_id, manufacturer, product and gain capabilites is successfully received.
-TEST_P(BasicTest, StreamProperties) { RequestStreamProperties(); }
+#define DEFINE_BASIC_TEST_CLASS(CLASS_NAME, CODE)                               \
+  class CLASS_NAME : public BasicTest {                                         \
+   public:                                                                      \
+    explicit CLASS_NAME(const DeviceEntry& dev_entry) : BasicTest(dev_entry) {} \
+    void TestBody() override { CODE }                                           \
+  }
 
-// Verify a valid get gain response is successfully received.
-TEST_P(BasicTest, GetGain) {
+// Test cases that target each of the various Stream channel commands
+
+// Verify a valid unique_id, manufacturer, product and gain capabilites is successfully received.
+DEFINE_BASIC_TEST_CLASS(StreamProperties, { RequestStreamProperties(); });
+
+// Verify valid get gain and set gain responses are successfully received.
+DEFINE_BASIC_TEST_CLASS(GetGain, {
   RequestStreamProperties();
   RequestGain();
-}
-
-// Verify a valid set gain response is successfully received. GetGain is required first: it returns
-// not only current gain but also gain capabilities (gain min/max/step, can_mute, can_agc).
-TEST_P(BasicTest, SetGain) {
+});
+DEFINE_BASIC_TEST_CLASS(SetGain, {
   RequestStreamProperties();
   RequestGain();
   RequestSetGain();
-}
+});
 
-// Verify a valid get formats response is successfully received.
-TEST_P(BasicTest, GetFormats) {
+// Verify valid get formats and plug detect responses are successfully received.
+DEFINE_BASIC_TEST_CLASS(GetFormats, {
   RequestStreamProperties();
   RequestFormats();
-}
-
-// Verify a valid plug detect response is successfully received.
-TEST_P(BasicTest, PlugDetect) {
+});
+DEFINE_BASIC_TEST_CLASS(PlugDetect, {
   RequestStreamProperties();
   RequestPlugDetect();
-}
-
-// A driver's plug detect updates are not testable without a way to trigger the
+});
+// Someday: a driver's plug detect updates are not testable without a way to trigger the
 // driver's internal hardware-detect mechanism, so that it emits unsolicited PLUG/UNPLUG events.
-//
 
-INSTANTIATE_TEST_SUITE_P(AudioDriverTests, BasicTest,
-                         testing::Values(DeviceType::Input, DeviceType::Output),
-                         TestBase::DeviceTypeToString);
+// Register separate test case instances for each enumerated device
+//
+// See googletest/docs/advanced.md for details
+#define REGISTER_BASIC_TEST(CLASS_NAME, DEVICE)                                                \
+  {                                                                                            \
+    testing::RegisterTest("BasicTest", TestNameForEntry(#CLASS_NAME, DEVICE).c_str(), nullptr, \
+                          DevNameForEntry(DEVICE).c_str(), __FILE__, __LINE__,                 \
+                          [=]() -> BasicTest* { return new CLASS_NAME(DEVICE); });             \
+  }
+
+void RegisterBasicTestsForDevice(const DeviceEntry& device_entry) {
+  REGISTER_BASIC_TEST(StreamProperties, device_entry);
+  REGISTER_BASIC_TEST(GetGain, device_entry);
+  REGISTER_BASIC_TEST(SetGain, device_entry);
+  REGISTER_BASIC_TEST(GetFormats, device_entry);
+  REGISTER_BASIC_TEST(PlugDetect, device_entry);
+}
 
 }  // namespace media::audio::drivers::test

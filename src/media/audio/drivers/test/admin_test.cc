@@ -11,47 +11,10 @@
 #include <algorithm>
 #include <cstring>
 
+#include "lib/zx/time.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio::drivers::test {
-
-// static
-bool AdminTest::device_access_denied_[2] = {false, false};
-
-// Whenever the test group starts, try anew to get admin access (needed for "--gtest_repeat")
-void AdminTest::SetUpTestSuite() {
-  AdminTest::device_access_denied_[DeviceType::Input] = false;
-  AdminTest::device_access_denied_[DeviceType::Output] = false;
-}
-
-// If earlier in this test group we failed to get admin access, exit immediately.
-// If the admin flag is specified, then fail; otherwise, skip the test case.
-void AdminTest::SetUp() {
-  TestBase::SetUp();
-
-  // If previous test in this group found no device, we don't need to search again - skip this test.
-  if (no_devices_found()) {
-    GTEST_SKIP();
-  }
-
-  if (device_access_denied()) {
-    if (test_admin_functions_) {
-      FAIL();
-    } else {
-      GTEST_SKIP();
-    }
-    __UNREACHABLE;
-  }
-
-  EnumerateDevices();
-}
-
-void AdminTest::TearDown() {
-  // All pending position notifications should have returned by now, no need to wait for them.
-  ring_buffer_.Unbind();
-
-  TestBase::TearDown();
-}
 
 // For the channelization and sample_format that we've set, determine the size of each frame.
 // This method assumes that SetFormat has already been sent to the driver.
@@ -64,41 +27,33 @@ void AdminTest::CalculateFrameSize() {
 }
 
 void AdminTest::SelectFirstFormat() {
-  if (received_get_formats()) {
-    ASSERT_NE(pcm_formats().size(), 0u);
+  ASSERT_NE(pcm_formats().size(), 0u);
 
-    auto& first_format = pcm_formats()[0];
-    pcm_format_.number_of_channels = first_format.number_of_channels[0];
-    pcm_format_.channels_to_use_bitmask = (1 << pcm_format_.number_of_channels) - 1;  // Use all.
-    pcm_format_.sample_format = first_format.sample_formats[0];
-    pcm_format_.bytes_per_sample = first_format.bytes_per_sample[0];
-    pcm_format_.valid_bits_per_sample = first_format.valid_bits_per_sample[0];
-    pcm_format_.frame_rate = first_format.frame_rates[0];
-  }
+  auto& first_format = pcm_formats()[0];
+  pcm_format_.number_of_channels = first_format.number_of_channels[0];
+  pcm_format_.channels_to_use_bitmask = (1 << pcm_format_.number_of_channels) - 1;  // Use all.
+  pcm_format_.sample_format = first_format.sample_formats[0];
+  pcm_format_.bytes_per_sample = first_format.bytes_per_sample[0];
+  pcm_format_.valid_bits_per_sample = first_format.valid_bits_per_sample[0];
+  pcm_format_.frame_rate = first_format.frame_rates[0];
 }
 
 void AdminTest::SelectLastFormat() {
-  if (received_get_formats()) {
-    ASSERT_NE(pcm_formats().size(), 0u);
+  ASSERT_NE(pcm_formats().size(), 0u);
 
-    auto& last_format = pcm_formats()[pcm_formats().size() - 1];
-    pcm_format_.number_of_channels =
-        last_format.number_of_channels[last_format.number_of_channels.size() - 1];
-    pcm_format_.channels_to_use_bitmask = (1 << pcm_format_.number_of_channels) - 1;  // Use all.
-    pcm_format_.sample_format = last_format.sample_formats[last_format.sample_formats.size() - 1];
-    pcm_format_.bytes_per_sample =
-        last_format.bytes_per_sample[last_format.bytes_per_sample.size() - 1];
-    pcm_format_.valid_bits_per_sample =
-        last_format.valid_bits_per_sample[last_format.valid_bits_per_sample.size() - 1];
-    pcm_format_.frame_rate = last_format.frame_rates[last_format.frame_rates.size() - 1];
-  }
+  auto& last_format = pcm_formats()[pcm_formats().size() - 1];
+  pcm_format_.number_of_channels =
+      last_format.number_of_channels[last_format.number_of_channels.size() - 1];
+  pcm_format_.channels_to_use_bitmask = (1 << pcm_format_.number_of_channels) - 1;  // Use all.
+  pcm_format_.sample_format = last_format.sample_formats[last_format.sample_formats.size() - 1];
+  pcm_format_.bytes_per_sample =
+      last_format.bytes_per_sample[last_format.bytes_per_sample.size() - 1];
+  pcm_format_.valid_bits_per_sample =
+      last_format.valid_bits_per_sample[last_format.valid_bits_per_sample.size() - 1];
+  pcm_format_.frame_rate = last_format.frame_rates[last_format.frame_rates.size() - 1];
 }
 
-void AdminTest::RequestRingBuffer() {
-  if (device_access_denied()) {
-    return;
-  }
-
+void AdminTest::RequestRingBufferChannel() {
   fuchsia::hardware::audio::Format format = {};
   format.set_pcm_format(pcm_format_);
 
@@ -108,21 +63,17 @@ void AdminTest::RequestRingBuffer() {
   zx::channel channel = ring_buffer_handle.TakeChannel();
   ring_buffer_ =
       fidl::InterfaceHandle<fuchsia::hardware::audio::RingBuffer>(std::move(channel)).Bind();
-  if (!stream_config().is_bound()) {
-    set_device_access_denied();
-    ADD_FAILURE() << "Failed to get ring buffer channel";
-    return;
-  }
-
-  ring_buffer_.set_error_handler([this](zx_status_t status) {
+  ring_buffer_.set_error_handler([](zx_status_t status) {
     if (status == ZX_ERR_PEER_CLOSED) {
-      set_device_access_denied();
-      ADD_FAILURE() << "Ring buffer error " << status
-                    << ". Is another client already connected to the RingBuffer interface?";
-    } else {
-      ADD_FAILURE() << "Ring buffer error " << status;
+      FAIL() << "RingBuffer channel error " << status
+             << ": is another client already connected to the RingBuffer interface?";
     }
+    FAIL() << "RingBuffer channel error " << status;
   });
+
+  if (!stream_config().is_bound() || !ring_buffer_.is_bound()) {
+    FAIL() << "Failed to get ring buffer channel";
+  }
 
   format_is_set_ = true;
   ring_buffer_ready_ = true;
@@ -130,53 +81,48 @@ void AdminTest::RequestRingBuffer() {
 
 // Request that driver set format to the lowest rate/channelization of the first range reported.
 // This method assumes that the driver has already successfully responded to a GetFormats request.
-void AdminTest::UseMinFormat() {
+void AdminTest::RequestMinFormat() {
   ASSERT_TRUE(received_get_formats());
   ASSERT_GT(pcm_formats().size(), 0u);
 
   SelectFirstFormat();
-  RequestRingBuffer();
+  RequestRingBufferChannel();
   CalculateFrameSize();
 }
 
-// Request that driver set format to the highest rate/channelization of the final range reported.
-// This method assumes that the driver has already successfully responded to a GetFormats request.
-void AdminTest::UseMaxFormat() {
+// Request that driver set the highest rate/channelization of the final range reported. This method
+// assumes that the driver has already successfully responded to a GetFormats request.
+void AdminTest::RequestMaxFormat() {
   ASSERT_TRUE(received_get_formats());
   ASSERT_GT(pcm_formats().size(), 0u);
 
   SelectLastFormat();
-  RequestRingBuffer();
+  RequestRingBufferChannel();
   CalculateFrameSize();
 }
 
 // Ring-buffer channel requests
 //
-// Request that the driver return the FIFO depth (in bytes), at the currently set format.
-// This method relies on the ring buffer channel.
+// Request the FIFO depth in bytes, at the current format (relies on the ring buffer channel).
 void AdminTest::RequestRingBufferProperties() {
-  if (device_access_denied()) {
-    return;
-  }
   ASSERT_TRUE(ring_buffer_ready_);
 
-  ring_buffer_->GetProperties([this](fuchsia::hardware::audio::RingBufferProperties prop) {
+  bool received_get_ring_buffer_properties = false;
+  ring_buffer_->GetProperties([this, &received_get_ring_buffer_properties](
+                                  fuchsia::hardware::audio::RingBufferProperties prop) {
     ring_buffer_props_ = std::move(prop);
 
-    received_get_ring_buffer_properties_ = true;
+    received_get_ring_buffer_properties = true;
   });
 
-  // This command can return an error, so we check for error_occurred_ as well
-  RunLoopUntil([this]() { return received_get_ring_buffer_properties_ || device_access_denied(); });
+  // ring_buffer_->GetProperties can return an error, so we check for failed as well
+  RunLoopUntil([this, &received_get_ring_buffer_properties]() {
+    return received_get_ring_buffer_properties || failed();
+  });
 }
 
-// Request that the driver return a VMO handle for the ring buffer, at the currently set format.
-// This method relies on the ring buffer channel.
+// Request the ring buffer's VMO handle, at the current format (relies on the ring buffer channel).
 void AdminTest::RequestBuffer(uint32_t min_ring_buffer_frames, uint32_t notifications_per_ring) {
-  if (device_access_denied()) {
-    return;
-  }
-
   min_ring_buffer_frames_ = min_ring_buffer_frames;
   notifications_per_ring_ = notifications_per_ring;
   zx::vmo ring_buffer_vmo;
@@ -190,21 +136,17 @@ void AdminTest::RequestBuffer(uint32_t min_ring_buffer_frames, uint32_t notifica
         received_get_buffer_ = true;
       });
 
-  RunLoopUntil([this]() { return received_get_buffer_ || device_access_denied(); });
+  RunLoopUntil([this]() { return received_get_buffer_ || failed(); });
 
+  ring_buffer_mapper_.Unmap();
   const zx_vm_option_t option_flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   EXPECT_EQ(ring_buffer_mapper_.CreateAndMap(ring_buffer_frames_ * frame_size_, option_flags,
                                              nullptr, &ring_buffer_vmo,
                                              ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER),
             ZX_OK);
-
-  FX_LOGS(DEBUG) << "Mapping size: " << ring_buffer_frames_ * frame_size_;
 }
 
 void AdminTest::SetPositionNotification() {
-  if (device_access_denied()) {
-    return;
-  }
   watch_for_next_position_notification_ = true;
 
   ring_buffer_->WatchClockRecoveryPositionInfo(
@@ -238,10 +180,6 @@ void AdminTest::SetPositionNotification() {
 
         ++position_notification_count_;
 
-        FX_LOGS(DEBUG) << "Position " << position_info_.position << ", notification_count "
-                       << position_notification_count_ << ", running_position "
-                       << running_position_;
-
         SetPositionNotification();
       });
 }
@@ -251,23 +189,19 @@ void AdminTest::SetPositionNotification() {
 // clear any previously registered callback, the callback might already be dispatched to us and
 // waiting, so we first clear the watch_for_next_position_notification_ flag to 'nerf' it.
 void AdminTest::SetFailingPositionNotification() {
-  if (device_access_denied()) {
-    return;
-  }
   // Disable any last pending notification from re-queueing itself.
   watch_for_next_position_notification_ = false;
 
   ring_buffer_->WatchClockRecoveryPositionInfo(
-      [](fuchsia::hardware::audio::RingBufferPositionInfo) { FAIL(); });
+      [](fuchsia::hardware::audio::RingBufferPositionInfo) {
+        FAIL() << "Unexpected position notification received";
+      });
 }
 
 // As mentioned above, a previous callback might be dispatched and pending, so we 'nerf' it by
 // clearing watch_for_next_position_notification_. Either way, we register a callback that does not
 // register for another notification nor contribute to position calculations or notification counts.
 void AdminTest::ClearPositionNotification() {
-  if (device_access_denied()) {
-    return;
-  }
   watch_for_next_position_notification_ = false;
 
   ring_buffer_->WatchClockRecoveryPositionInfo(
@@ -277,9 +211,6 @@ void AdminTest::ClearPositionNotification() {
 // Request that the driver start the ring buffer engine, responding with the start_time.
 // This method assumes that the ring buffer VMO was received in a successful GetBuffer response.
 void AdminTest::RequestStart() {
-  if (device_access_denied()) {
-    return;
-  }
   ASSERT_TRUE(ring_buffer_ready_);
 
   auto send_time = zx::clock::get_monotonic().get();
@@ -287,27 +218,24 @@ void AdminTest::RequestStart() {
     start_time_ = start_time;
     received_start_ = true;
   });
-  RunLoopUntil([this]() { return received_start_ || device_access_denied(); });
+  RunLoopUntil([this]() { return received_start_ || failed(); });
   EXPECT_GT(start_time_, send_time);
 }
 
-// Request that the driver stop the ring buffer engine, including quieting position notifications.
+// Request that driver stop the ring buffer, including quieting position notifications.
 // This method assumes that the ring buffer engine has previously been successfully started.
 void AdminTest::RequestStop() {
-  if (device_access_denied()) {
-    return;
-  }
   ASSERT_TRUE(received_start_);
 
   ring_buffer_->Stop([this]() { received_stop_ = true; });
-  RunLoopUntil([this]() { return received_stop_ || device_access_denied(); });
+  RunLoopUntil([this]() { return received_stop_ || failed(); });
 }
 
+// After Stop is called, no position notification should be received.
+// To validate this without any race windows: from within the next position notification itself,
+// we call Stop and register a position notification that FAILs if called.
 // Within the next position notification, Stop and fail on any subsequent position notification.
 void AdminTest::RequestStopAndExpectNoPositionNotifications() {
-  if (device_access_denied()) {
-    return;
-  }
   ASSERT_TRUE(received_start_);
 
   // Disable any last pending notification from re-queueing itself.
@@ -318,20 +246,16 @@ void AdminTest::RequestStopAndExpectNoPositionNotifications() {
 
         SetFailingPositionNotification();
       });
-  RunLoopUntil([this]() { return received_stop_ || device_access_denied(); });
+  RunLoopUntil([this]() { return received_stop_ || failed(); });
 
   // We should NOT receive further position notifications. Wait a bit to give them a chance to run.
-  zx::nanosleep(zx::deadline_after(zx::sec(1)));
+  zx::nanosleep(zx::deadline_after(zx::msec(200)));
   RunLoopUntilIdle();
 }
 
 // Wait for the specified number of position notifications.
 void AdminTest::ExpectPositionNotifyCount(uint32_t count) {
-  if (device_access_denied()) {
-    return;
-  }
-  RunLoopUntil(
-      [this, count]() { return position_notification_count_ >= count || device_access_denied(); });
+  RunLoopUntil([this, count]() { return position_notification_count_ >= count || failed(); });
   ClearPositionNotification();
 
   auto timestamp_duration = position_info_.timestamp - start_time_;
@@ -349,140 +273,113 @@ void AdminTest::ExpectPositionNotifyCount(uint32_t count) {
       (zx::sec(1) * ring_buffer_frames_) / (pcm_format_.frame_rate * notifications_per_ring_);
   double average_num_notif_periods_elapsed = position_notification_count_ - 0.5;
 
-  // Furthermore, notification timing requirements for drivers are somewhat loose, so we include a
-  // tolerance range of +/- 2. notification periods.
-  auto min_allowed_time = ns_per_notification.get() * (average_num_notif_periods_elapsed - 2.);
+  // Furthermore, notification timing requirements for drivers are somewhat loose, so we include
+  // a tolerance range of +/- 2. notification periods.
   auto expected_time = ns_per_notification.get() * average_num_notif_periods_elapsed;
-  auto max_allowed_time = ns_per_notification.get() * (average_num_notif_periods_elapsed + 2.);
+  auto timing_tolerance = ns_per_notification.get() * 2;
+  auto min_allowed_time = expected_time - timing_tolerance;
+  auto max_allowed_time = expected_time + timing_tolerance;
 
-  FX_LOGS(DEBUG) << "Timestamp delta from min/ideal/max: " << std::setw(10)
-                 << (min_allowed_time - timestamp_duration) << " : " << std::setw(10)
-                 << (expected_time - timestamp_duration) << " : " << std::setw(10)
-                 << (max_allowed_time - timestamp_duration);
   EXPECT_GE(timestamp_duration, min_allowed_time)
       << "Notification rate too high. Device clock rate too fast?";
   EXPECT_LE(timestamp_duration, max_allowed_time)
       << "Notification rate too low. Device clock rate too slow?";
-  FX_LOGS(DEBUG) << "Expected " << average_num_notif_periods_elapsed << " intervals, was "
-                 << static_cast<double>(timestamp_duration) / ns_per_notification.get();
 
   // Also validate when the notification was actually received (not just the timestamp).
-  FX_LOGS(DEBUG) << "Observed delta from min/ideal/max : " << std::setw(10)
-                 << (min_allowed_time - observed_duration) << " : " << std::setw(10)
-                 << (expected_time - observed_duration) << " : " << std::setw(10)
-                 << (max_allowed_time - observed_duration);
   EXPECT_GT(observed_duration, min_allowed_time);
-
-  uint64_t expected_bytes = (timestamp_duration * pcm_format_.frame_rate * frame_size_) / ZX_SEC(1);
-  FX_LOGS(DEBUG) << "Running byte position: expected " << expected_bytes << ", actual "
-                 << running_position_ << ", "
-                 << static_cast<double>(expected_bytes) / running_position_;
 }
 
-//
+#define DEFINE_ADMIN_TEST_CLASS(CLASS_NAME, CODE)                               \
+  class CLASS_NAME : public AdminTest {                                         \
+   public:                                                                      \
+    explicit CLASS_NAME(const DeviceEntry& dev_entry) : AdminTest(dev_entry) {} \
+    void TestBody() override { CODE }                                           \
+  }
+
 // Test cases that target each of the various admin commands
-//
-// Verify SET_FORMAT response (low-bit-rate) and that valid ring buffer channel is received.
-TEST_P(AdminTest, SetFormatMin) {
-  RequestFormats();
-  UseMinFormat();
-}
 
-// Verify SET_FORMAT response (high-bit-rate) and that valid ring buffer channel is received.
-TEST_P(AdminTest, SetFormatMax) {
+// Verify valid responses: ring buffer properties, get buffer, ring buffer VMO.
+DEFINE_ADMIN_TEST_CLASS(GetRingBufferProperties, {
   RequestFormats();
-  UseMaxFormat();
-}
-
-// Ring Buffer channel commands
-//
-// Verify a valid ring buffer properties response is successfully received.
-TEST_P(AdminTest, GetRingBufferProperties) {
-  RequestFormats();
-  UseMaxFormat();
+  RequestMaxFormat();
   RequestRingBufferProperties();
-}
-
-// Verify a get buffer esponse and ring buffer VMO is successfully received.
-TEST_P(AdminTest, GetBuffer) {
+});
+DEFINE_ADMIN_TEST_CLASS(GetBuffer, {
   RequestFormats();
-  UseMinFormat();
+  RequestMinFormat();
   RequestBuffer(100, 1);
-}
+});
 
-// Verify that a valid start response is successfully received.
-TEST_P(AdminTest, Start) {
+// Verify that valid start and stop responses are successfully received.
+DEFINE_ADMIN_TEST_CLASS(Start, {
   RequestFormats();
-  UseMinFormat();
+  RequestMinFormat();
   RequestBuffer(32000, 0);
-
   RequestStart();
-}
-
-// Verify that a valid stop command is successfully issued.
-TEST_P(AdminTest, Stop) {
+});
+DEFINE_ADMIN_TEST_CLASS(Stop, {
   RequestFormats();
-  UseMinFormat();
+  RequestMinFormat();
   RequestBuffer(100, 0);
-
   RequestStart();
   RequestStop();
-}
+});
 
-// Verify position notifications at fast rate (~180/sec) over approx 100 ms.
-TEST_P(AdminTest, PositionNotifyFast) {
+// Verify position notifications at fast (~180/sec) and slow (2/sec) rate.
+DEFINE_ADMIN_TEST_CLASS(PositionNotifyFast, {
   RequestFormats();
-  UseMaxFormat();
+  RequestMaxFormat();
   RequestBuffer(8000, 32);
-
   SetPositionNotification();
   RequestStart();
   ExpectPositionNotifyCount(16);
-}
-
-// Verify position notifications at slow rate (2/sec) over approx 1 second.
-TEST_P(AdminTest, PositionNotifySlow) {
+});
+DEFINE_ADMIN_TEST_CLASS(PositionNotifySlow, {
   RequestFormats();
-  UseMinFormat();
+  RequestMinFormat();
   RequestBuffer(48000, 2);
-
   SetPositionNotification();
   RequestStart();
   ExpectPositionNotifyCount(3);
-}
+});
 
-// Verify that no position notifications arrive if notifications_per_ring is 0.
-TEST_P(AdminTest, PositionNotifyNone) {
+// Verify no position notifications arrive after stop, or if notifications_per_ring is 0.
+DEFINE_ADMIN_TEST_CLASS(NoPositionNotifyAfterStop, {
   RequestFormats();
-  UseMaxFormat();
+  RequestMaxFormat();
+  RequestBuffer(8000, 32);
+  SetPositionNotification();
+  RequestStart();
+  ExpectPositionNotifyCount(3);
+  RequestStopAndExpectNoPositionNotifications();
+});
+DEFINE_ADMIN_TEST_CLASS(PositionNotifyNone, {
+  RequestFormats();
+  RequestMaxFormat();
   RequestBuffer(8000, 0);
-
   SetFailingPositionNotification();
   RequestStart();
-
-  // We should NOT receive any position notifications. Wait a bit to give them a chance to run.
-  zx::nanosleep(zx::deadline_after(zx::msec(250)));
+  zx::nanosleep(zx::deadline_after(zx::msec(200)));
   RunLoopUntilIdle();
+});
+
+// Register separate test case instances for each enumerated device
+//
+// See googletest/docs/advanced.md for details
+#define REGISTER_ADMIN_TEST(CLASS_NAME, DEVICE)                                              \
+  testing::RegisterTest("AdminTest", TestNameForEntry(#CLASS_NAME, DEVICE).c_str(), nullptr, \
+                        DevNameForEntry(DEVICE).c_str(), __FILE__, __LINE__,                 \
+                        [=]() -> AdminTest* { return new CLASS_NAME(DEVICE); })
+
+void RegisterAdminTestsForDevice(const DeviceEntry& device_entry) {
+  REGISTER_ADMIN_TEST(GetRingBufferProperties, device_entry);
+  REGISTER_ADMIN_TEST(GetBuffer, device_entry);
+  REGISTER_ADMIN_TEST(Start, device_entry);
+  REGISTER_ADMIN_TEST(Stop, device_entry);
+  REGISTER_ADMIN_TEST(PositionNotifyFast, device_entry);
+  REGISTER_ADMIN_TEST(PositionNotifySlow, device_entry);
+  REGISTER_ADMIN_TEST(NoPositionNotifyAfterStop, device_entry);
+  REGISTER_ADMIN_TEST(PositionNotifyNone, device_entry);
 }
-
-// Verify that no position notifications arrive after stop.
-TEST_P(AdminTest, NoPositionNotifyAfterStop) {
-  RequestFormats();
-  UseMaxFormat();
-  RequestBuffer(8000, 32);
-
-  SetPositionNotification();
-  RequestStart();
-  ExpectPositionNotifyCount(3);
-
-  // After Stop is called, no position notification should be received.
-  // To validate this without any race windows: from within the next position notification itself,
-  // we call Stop and register a position notification that FAILs if called.
-  RequestStopAndExpectNoPositionNotifications();
-}
-
-INSTANTIATE_TEST_SUITE_P(AudioDriverTests, AdminTest,
-                         testing::Values(DeviceType::Input, DeviceType::Output),
-                         TestBase::DeviceTypeToString);
 
 }  // namespace media::audio::drivers::test

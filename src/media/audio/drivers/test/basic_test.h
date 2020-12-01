@@ -15,13 +15,14 @@
 namespace media::audio::drivers::test {
 
 class BasicTest : public TestBase {
- protected:
-  void SetUp() override;
+ public:
+  explicit BasicTest(const DeviceEntry& dev_entry) : TestBase(dev_entry) {}
 
-  void RequestPlugDetect();
+ protected:
   void RequestStreamProperties();
   void RequestGain();
   void RequestSetGain();
+  void RequestPlugDetect();
 
  private:
   static constexpr size_t kUniqueIdLength = 16;
@@ -30,6 +31,7 @@ class BasicTest : public TestBase {
   fuchsia::hardware::audio::GainState gain_state_;
   fuchsia::hardware::audio::GainState set_gain_state_;
   fuchsia::hardware::audio::PlugState plug_state_;
+
   bool received_get_stream_properties_ = false;
   bool received_get_gain_ = false;
   bool received_plug_detect_ = false;
