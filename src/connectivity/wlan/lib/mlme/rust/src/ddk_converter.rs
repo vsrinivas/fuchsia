@@ -4,7 +4,8 @@
 
 use {
     banjo_ddk_protocol_wlan_info as banjo_wlan_info, banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
     wlan_common::{
         ie::{
             parse_ht_capabilities, parse_ht_operation, parse_vht_capabilities, parse_vht_operation,
@@ -29,8 +30,8 @@ pub fn build_ddk_assoc_ctx(
     bssid: Bssid,
     aid: Aid,
     cap: fidl_mlme::NegotiatedCapabilities,
-    ht_op: Option<[u8; fidl_mlme::HT_OP_LEN as usize]>,
-    vht_op: Option<[u8; fidl_mlme::VHT_OP_LEN as usize]>,
+    ht_op: Option<[u8; fidl_internal::HT_OP_LEN as usize]>,
+    vht_op: Option<[u8; fidl_internal::VHT_OP_LEN as usize]>,
 ) -> banjo_wlan_info::WlanAssocCtx {
     let mut rates = [0; banjo_wlan_info::WLAN_MAC_MAX_RATES as usize];
     rates[..cap.rates.len()].clone_from_slice(&cap.rates);
@@ -43,10 +44,10 @@ pub fn build_ddk_assoc_ctx(
         // But default to ERP nonetheless just to be safe.
         _ => banjo_wlan_info::WlanPhyType::ERP,
     };
-    let ht_cap_bytes = cap.ht_cap.map_or([0; fidl_mlme::HT_CAP_LEN as usize], |h| h.bytes);
-    let vht_cap_bytes = cap.vht_cap.map_or([0; fidl_mlme::VHT_CAP_LEN as usize], |v| v.bytes);
-    let ht_op_bytes = ht_op.unwrap_or([0; fidl_mlme::HT_OP_LEN as usize]);
-    let vht_op_bytes = vht_op.unwrap_or([0; fidl_mlme::VHT_OP_LEN as usize]);
+    let ht_cap_bytes = cap.ht_cap.map_or([0; fidl_internal::HT_CAP_LEN as usize], |h| h.bytes);
+    let vht_cap_bytes = cap.vht_cap.map_or([0; fidl_internal::VHT_CAP_LEN as usize], |v| v.bytes);
+    let ht_op_bytes = ht_op.unwrap_or([0; fidl_internal::HT_OP_LEN as usize]);
+    let vht_op_bytes = vht_op.unwrap_or([0; fidl_internal::VHT_OP_LEN as usize]);
     banjo_wlan_info::WlanAssocCtx {
         bssid: bssid.0,
         aid,
@@ -115,10 +116,10 @@ mod tests {
                 cap_info: 0x1234,
                 rates: vec![111, 112, 113, 114, 115, 116, 117, 118, 119, 120],
                 wmm_param: None,
-                ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+                ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
                     bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap(),
                 })),
-                vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+                vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
                     bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap(),
                 })),
             },

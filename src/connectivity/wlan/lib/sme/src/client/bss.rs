@@ -4,7 +4,7 @@
 
 use {
     crate::{Config, Ssid},
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_internal as fidl_internal, fuchsia_zircon as zx,
     wlan_common::{
         bss::{BssDescriptionExt as _, Protection},
         channel::Channel,
@@ -26,7 +26,7 @@ impl ClientConfig {
     /// Converts a given BssDescription into a BssInfo.
     pub fn convert_bss_description(
         &self,
-        bss: &fidl_mlme::BssDescription,
+        bss: &fidl_internal::BssDescription,
         wmm_param: Option<ie::WmmParam>,
     ) -> BssInfo {
         let mut probe_resp_wsc = None;
@@ -60,7 +60,7 @@ impl ClientConfig {
     }
 
     /// Determines whether a given BSS is compatible with this client SME configuration.
-    pub fn is_bss_compatible(&self, bss: &fidl_mlme::BssDescription) -> bool {
+    pub fn is_bss_compatible(&self, bss: &fidl_internal::BssDescription) -> bool {
         let privacy = wlan_common::mac::CapabilityInfo(bss.cap).privacy();
         let protection = bss.protection();
         match &protection {
@@ -101,8 +101,8 @@ pub struct BssInfo {
     pub channel: wlan_common::channel::Channel,
     pub protection: Protection,
     pub compatible: bool,
-    pub ht_cap: Option<fidl_mlme::HtCapabilities>,
-    pub vht_cap: Option<fidl_mlme::VhtCapabilities>,
+    pub ht_cap: Option<fidl_internal::HtCapabilities>,
+    pub vht_cap: Option<fidl_internal::VhtCapabilities>,
     pub probe_resp_wsc: Option<wsc::ProbeRespWsc>,
     pub wmm_param: Option<ie::WmmParam>,
 }
@@ -161,10 +161,10 @@ mod tests {
                            secondary80: 0,
                            cbw: fidl_common::Cbw::Cbw20,
                        },
-                       ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+                       ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
                            bytes: fake_ht_cap_bytes()
                        })),
-                       vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+                       vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
                            bytes: fake_vht_cap_bytes()
                        })),
             ),
@@ -182,8 +182,8 @@ mod tests {
                 channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wpa2Personal,
                 compatible: true,
-                ht_cap: Some(fidl_mlme::HtCapabilities { bytes: fake_ht_cap_bytes() }),
-                vht_cap: Some(fidl_mlme::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
+                ht_cap: Some(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() }),
+                vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
             }
@@ -202,10 +202,10 @@ mod tests {
                            secondary80: 0,
                            cbw: fidl_common::Cbw::Cbw20,
                        },
-                       ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+                       ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
                            bytes: fake_ht_cap_bytes()
                        })),
-                       vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+                       vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
                            bytes: fake_vht_cap_bytes()
                        })),
             ),
@@ -223,8 +223,8 @@ mod tests {
                 channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wpa2Personal,
                 compatible: true,
-                ht_cap: Some(fidl_mlme::HtCapabilities { bytes: fake_ht_cap_bytes() }),
-                vht_cap: Some(fidl_mlme::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
+                ht_cap: Some(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() }),
+                vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: Some(wmm_param),
             }
@@ -241,10 +241,10 @@ mod tests {
                            secondary80: 0,
                            cbw: fidl_common::Cbw::Cbw20,
                        },
-                       ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+                       ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
                            bytes: fake_ht_cap_bytes()
                        })),
-                       vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+                       vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
                            bytes: fake_vht_cap_bytes()
                        })),
             ),
@@ -261,8 +261,8 @@ mod tests {
                 channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wep,
                 compatible: false,
-                ht_cap: Some(fidl_mlme::HtCapabilities { bytes: fake_ht_cap_bytes() }),
-                vht_cap: Some(fidl_mlme::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
+                ht_cap: Some(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() }),
+                vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
             },
@@ -280,10 +280,10 @@ mod tests {
                            secondary80: 0,
                            cbw: fidl_common::Cbw::Cbw20,
                        },
-                       ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+                       ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
                            bytes: fake_ht_cap_bytes()
                        })),
-                       vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+                       vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
                            bytes: fake_vht_cap_bytes()
                        })),
             ),
@@ -300,8 +300,8 @@ mod tests {
                 channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wep,
                 compatible: true,
-                ht_cap: Some(fidl_mlme::HtCapabilities { bytes: fake_ht_cap_bytes() }),
-                vht_cap: Some(fidl_mlme::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
+                ht_cap: Some(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() }),
+                vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
             },

@@ -25,7 +25,8 @@ use {
     banjo_ddk_protocol_wlan_info as banjo_wlan_info, banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
     channel_listener::{ChannelListenerSource, ChannelListenerState},
     channel_scheduler::ChannelScheduler,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     log::{error, warn},
     scanner::Scanner,
     state::States,
@@ -246,7 +247,7 @@ impl ClientMlme {
         }
     }
 
-    fn join_device(&mut self, bss: &fidl_mlme::BssDescription) -> Result<(), Error> {
+    fn join_device(&mut self, bss: &fidl_internal::BssDescription) -> Result<(), Error> {
         let channel = crate::ddk_converter::ddk_channel_from_fidl(bss.chan);
         self.set_main_channel(channel)
             .map_err(|status| Error::Status(format!("Error setting device channel"), status))?;
@@ -860,8 +861,8 @@ impl<'a> BoundClient<'a> {
         cap_info: mac::CapabilityInfo,
         elements: B,
     ) {
-        type HtCapArray = [u8; fidl_mlme::HT_CAP_LEN as usize];
-        type VhtCapArray = [u8; fidl_mlme::VHT_CAP_LEN as usize];
+        type HtCapArray = [u8; fidl_internal::HT_CAP_LEN as usize];
+        type VhtCapArray = [u8; fidl_internal::VHT_CAP_LEN as usize];
 
         let mut assoc_conf = fidl_mlme::AssociateConfirm {
             association_id,
@@ -888,7 +889,7 @@ impl<'a> BoundClient<'a> {
                     Ok(ht_cap) => {
                         assert_eq_size!(ie::HtCapabilities, HtCapArray);
                         let bytes: HtCapArray = ht_cap.as_bytes().try_into().unwrap();
-                        assoc_conf.ht_cap = Some(Box::new(fidl_mlme::HtCapabilities { bytes }))
+                        assoc_conf.ht_cap = Some(Box::new(fidl_internal::HtCapabilities { bytes }))
                     }
                 },
                 Id::VHT_CAPABILITIES => match ie::parse_vht_capabilities(body) {
@@ -896,7 +897,8 @@ impl<'a> BoundClient<'a> {
                     Ok(vht_cap) => {
                         assert_eq_size!(ie::VhtCapabilities, VhtCapArray);
                         let bytes: VhtCapArray = vht_cap.as_bytes().try_into().unwrap();
-                        assoc_conf.vht_cap = Some(Box::new(fidl_mlme::VhtCapabilities { bytes }))
+                        assoc_conf.vht_cap =
+                            Some(Box::new(fidl_internal::VhtCapabilities { bytes }))
                     }
                 },
                 // TODO(fxbug.dev/43938): parse vendor ID and include WMM param if exists
@@ -1140,7 +1142,7 @@ mod tests {
     fn scan_req() -> fidl_mlme::ScanRequest {
         fidl_mlme::ScanRequest {
             txn_id: 1337,
-            bss_type: fidl_mlme::BssTypes::Infrastructure,
+            bss_type: fidl_internal::BssTypes::Infrastructure,
             bssid: BSSID.0,
             ssid: b"ssid".to_vec(),
             scan_type: fidl_mlme::ScanTypes::Passive,
@@ -2223,10 +2225,10 @@ mod tests {
                 result_code: fidl_mlme::AssociateResultCodes::Success,
                 rates: vec![9, 10, 1, 2, 3, 4, 5, 6, 7, 8],
                 wmm_param: None,
-                ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+                ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
                     bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap()
                 })),
-                vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+                vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
                     bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap()
                 })),
             }

@@ -9,7 +9,7 @@ use {
         sink::InfoSink,
         Ssid,
     },
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::warn,
     wlan_rsn::rsna::UpdateSink,
 };
@@ -74,7 +74,7 @@ impl InfoReporter {
         }
     }
 
-    pub fn report_candidate_network(&mut self, desc: fidl_mlme::BssDescription) {
+    pub fn report_candidate_network(&mut self, desc: fidl_internal::BssDescription) {
         warn_if_err!(self.stats_collector.report_candidate_network(desc));
     }
 
@@ -131,8 +131,8 @@ impl InfoReporter {
 }
 
 fn convert_scan_result(
-    result: &Result<Vec<fidl_mlme::BssDescription>, fidl_mlme::ScanResultCodes>,
-) -> (Option<&Vec<fidl_mlme::BssDescription>>, ScanResult) {
+    result: &Result<Vec<fidl_internal::BssDescription>, fidl_mlme::ScanResultCodes>,
+) -> (Option<&Vec<fidl_internal::BssDescription>>, ScanResult) {
     match result {
         Ok(bss_list) => (Some(bss_list), ScanResult::Success),
         Err(code) => (None, ScanResult::Failed(*code)),

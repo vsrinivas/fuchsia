@@ -5,7 +5,8 @@
 use {
     crate::client::{DeviceInfo, Ssid},
     fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, ScanRequest, ScanResultCodes},
+    fidl_fuchsia_wlan_internal::{self as fidl_internal, BssDescription},
+    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, ScanRequest, ScanResultCodes},
     fidl_fuchsia_wlan_sme as fidl_sme,
     log::error,
     std::{
@@ -328,7 +329,7 @@ fn new_scan_request(
 ) -> ScanRequest {
     let scan_req = ScanRequest {
         txn_id: mlme_txn_id,
-        bss_type: fidl_mlme::BssTypes::Infrastructure,
+        bss_type: fidl_internal::BssTypes::Infrastructure,
         bssid: WILDCARD_BSS_ID.clone(),
         ssid,
         scan_type: fidl_mlme::ScanTypes::Passive,

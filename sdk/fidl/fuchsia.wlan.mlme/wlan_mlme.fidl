@@ -6,6 +6,7 @@ library fuchsia.wlan.mlme;
 
 using fuchsia.wlan.common;
 using fuchsia.wlan.mesh;
+using fuchsia.wlan.internal as internal;
 
 // Stub types for communicating between the wlan service and the MLME drivers. Based on the 802.11
 // MLME SAP interface (IEEE Std 802.11-2016 section 6.3).
@@ -13,15 +14,6 @@ using fuchsia.wlan.mesh;
 // TODO(fxbug.dev/21133): restore the commented out enum aliases
 
 // MLME-SCAN.request (IEEE Std 802.11-2016 6.3.3.2)
-
-enum BSSTypes {
-    INFRASTRUCTURE = 1;
-    PERSONAL = 2;
-    INDEPENDENT = 3;
-    MESH = 4;
-    ANY_BSS = 5;
-    //LAST = ANY_BSS;
-};
 
 enum ScanTypes {
     ACTIVE = 1;
@@ -31,7 +23,7 @@ enum ScanTypes {
 
 struct ScanRequest {
     uint64 txn_id;
-    BSSTypes bss_type;
+    internal.BssTypes bss_type;
     array<uint8>:6 bssid;
     bytes:32 ssid;
     ScanTypes scan_type;
@@ -51,25 +43,6 @@ struct ScanRequest {
 
 // MLME-SCAN.confirm (IEEE Std 802.11-2016 6.3.3.3)
 
-// IEEE Std 802.11-2016, 9.4.1.4
-alias CapabilityInfo = uint16;
-
-// IEEE Std 802.11-2016 9.4.2.56
-const uint8 HT_CAP_LEN = 26;
-// IEEE Std 802.11-2016 9.4.2.57
-const uint8 HT_OP_LEN = 22;
-// IEEE Std 802.11-2016 9.5.2.158
-const uint8 VHT_CAP_LEN = 12;
-// IEEE Std 802.11-2016 9.5.2.159
-const uint8 VHT_OP_LEN = 5;
-// IEEE Std 802.11-2016 defines 12 values in dot11SupportedDataRatesRxTable and
-// 2 values for BSS Membership Selector in Table 9-78. Only these 14 values are valid.
-// But in fxbug.dev/41022, some of these values may be duplicated in both SupportedRates(SR) and
-// ExtendedSupportedRates(ESR). Since the SR element allows 8 bytes, and assuming the ESR element
-// duplicates all the values in the SR element plus contains all the remaining valid values, the
-// maximum is set to 8 + 14 = 22.
-const uint8 RATES_MAX_LEN = 22;
-
 // LINT.IfChange
 
 /// WFA WMM v1.2, 2.2.2 Table 5
@@ -82,68 +55,8 @@ const uint8 WMM_PARAM_LEN = 18;
 /// WFA WMM v1.2, 2.2.1
 alias QosInfo = uint8;
 
-// IEEE Std 802.11-2016 9.4.2.56
-struct HtCapabilities {
-    array<uint8>:HT_CAP_LEN bytes;
-};
-
-// IEEE Std 802.11-2016 9.4.2.57
-struct HtOperation {
-    array<uint8>:HT_OP_LEN bytes;
-};
-
-// IEEE Std 802.11-2016 9.5.2.158
-struct VhtCapabilities {
-    array<uint8>:VHT_CAP_LEN bytes;
-};
-
-// IEEE Std 802.11-2016 9.5.2.159
-struct VhtOperation {
-    array<uint8>:VHT_OP_LEN bytes;
-};
-
 struct WmmParameter {
     array<uint8>:WMM_PARAM_LEN bytes;
-};
-
-// IEEE Std 802.11-2016 6.3.3.3.2
-struct BSSDescription {
-    array<uint8>:6 bssid;
-
-    bytes:32 ssid;
-
-    BSSTypes bss_type;
-    uint16 beacon_period; // in TU
-    uint8 dtim_period;
-    uint64 timestamp;
-    uint64 local_time;
-
-    CapabilityInfo cap;
-    // IEEE Std 802.11-2016 9.4.2.3
-    // in 0.5 Mbps, with MSB indicating basic rate. See Table 9-78 for 126, 127.
-    bytes:RATES_MAX_LEN rates;
-    bytes? country;
-
-    bytes? rsne;
-
-    /// All vendor info elements present in the beacon frame. E.g. this may include a WPA1 IE.
-    /// This slice should be a valid chain of IEs including IE headers for each element.
-    bytes? vendor_ies;
-
-    HtCapabilities? ht_cap;
-    HtOperation? ht_op;
-
-    VhtCapabilities? vht_cap;
-    VhtOperation? vht_op;
-
-    // List up non-standard, Fuchsia only parameters
-    fuchsia.wlan.common.WlanChan chan;
-    // The running average of received signal strength indicator in units of dBm. This value is
-    // updated periodically when the client is associated to an AP.
-    int8 rssi_dbm; // dBm
-    // The running average of snr in units of dB. This value is updated periodically when the
-    // client is associated to an AP.
-    int8 snr_db;
 };
 
 enum ScanResultCodes {
@@ -155,7 +68,7 @@ enum ScanResultCodes {
 
 struct ScanResult {
     uint64 txn_id;
-    BSSDescription bss;
+    internal.BssDescription bss;
 };
 
 struct ScanEnd {
@@ -166,10 +79,10 @@ struct ScanEnd {
 // MLME-JOIN.request (IEEE Std 802.11-2016, 6.3.4.2)
 
 struct JoinRequest {
-    BSSDescription selected_bss;
+    internal.BssDescription selected_bss;
     uint32 join_failure_timeout;
     uint32 nav_sync_delay;
-    bytes:RATES_MAX_LEN op_rates;
+    bytes:internal.RATES_MAX_LEN op_rates;
 
     // Combined with what MLME knows about the device capabilities,
     // following parameters determine what to be advertised to the peer
@@ -354,12 +267,12 @@ struct DeauthenticateIndication {
 
 struct AssociateRequest {
     array<uint8>:6 peer_sta_address;
-    CapabilityInfo cap_info;
-    bytes:RATES_MAX_LEN rates;
+    internal.CapabilityInfo cap_info;
+    bytes:internal.RATES_MAX_LEN rates;
     bool qos_capable;
     QosInfo qos_info;
-    HtCapabilities? ht_cap;
-    VhtCapabilities? vht_cap;
+    internal.HtCapabilities? ht_cap;
+    internal.VhtCapabilities? vht_cap;
     bytes? rsne;
     // Serialized list of vendor IEs to be appended after all other associate request IEs.
     bytes? vendor_ies;
@@ -388,11 +301,11 @@ struct AssociateConfirm {
 
     // TODO(fxbug.dev/43063): If we are able to intersect the capabilities with beacon before associating,
     // remove these fields.
-    CapabilityInfo cap_info;
-    bytes:RATES_MAX_LEN rates;
+    internal.CapabilityInfo cap_info;
+    bytes:internal.RATES_MAX_LEN rates;
     WmmParameter? wmm_param;
-    HtCapabilities? ht_cap;
-    VhtCapabilities? vht_cap;
+    internal.HtCapabilities? ht_cap;
+    internal.VhtCapabilities? vht_cap;
 
     // etc
 };
@@ -401,10 +314,10 @@ struct AssociateConfirm {
 
 struct AssociateIndication {
     array<uint8>:6 peer_sta_address;
-    CapabilityInfo cap;
+    internal.CapabilityInfo cap;
     uint16 listen_interval;
     bytes? ssid;
-    bytes:RATES_MAX_LEN rates;
+    bytes:internal.RATES_MAX_LEN rates;
     // BSSMembershipSelectorSet
     bytes? rsne;
 
@@ -421,11 +334,11 @@ struct AssociateResponse {
 
     // This is not part of the MLME SAP, but we need this to set the association context state in
     // the MLME.
-    CapabilityInfo cap;
+    internal.CapabilityInfo cap;
 
     // This combines both the BSSBasicRateSet and the OperationalRateSet, as the MLME will split
     // them up.
-    bytes:RATES_MAX_LEN rates;
+    bytes:internal.RATES_MAX_LEN rates;
 
     // etc
 };
@@ -483,7 +396,7 @@ struct Country {
 
 struct StartRequest {
     bytes:32 ssid;
-    BSSTypes bss_type;
+    internal.BssTypes bss_type;
     uint16 beacon_period; // in TU
     uint8 dtim_period;
 
@@ -491,11 +404,11 @@ struct StartRequest {
     uint8 channel;
 
     // Capability information.
-    CapabilityInfo cap;
+    internal.CapabilityInfo cap;
 
     // This combines both the BSSBasicRateSet and the OperationalRateSet, as the MLME will split
     // them up.
-    bytes:RATES_MAX_LEN rates;
+    bytes:internal.RATES_MAX_LEN rates;
 
     // TODO(porce): Conditionally present. See IEEE Std 802.11-2016, 10.2, 11.8, 11.10.
     // See also dot11MultiDomainCapabilityActivated.
@@ -631,10 +544,10 @@ struct MeshPeeringCommon {
     bytes:32 mesh_id;
     vector<uint8> rates;
     MeshConfiguration mesh_config;
-    HtCapabilities? ht_cap;
-    HtOperation? ht_op;
-    VhtCapabilities? vht_cap;
-    VhtOperation? vht_op;
+    internal.HtCapabilities? ht_cap;
+    internal.HtOperation? ht_op;
+    internal.VhtCapabilities? vht_cap;
+    internal.VhtOperation? vht_op;
 };
 
 // IEEE Std 802.11-2016, 9.6.16.2.2

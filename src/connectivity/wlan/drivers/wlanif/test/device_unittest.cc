@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl/cpp/decoder.h>
@@ -16,6 +17,7 @@
 #include <src/connectivity/wlan/drivers/wlanif/device.h>
 #include <wlan/mlme/dispatcher.h>
 
+namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 bool multicast_promisc_enabled = false;
@@ -161,7 +163,7 @@ TEST(SmeChannel, Bound) {
   // Send scan request to device.
   auto mlme_proxy = wlan_mlme::MLME_SyncProxy(std::move(ctx.mlme));
   mlme_proxy.StartScan(wlan_mlme::ScanRequest{
-      .bss_type = wlan_mlme::BSSTypes::INFRASTRUCTURE,
+      .bss_type = wlan_internal::BssTypes::INFRASTRUCTURE,
       .scan_type = wlan_mlme::ScanTypes::PASSIVE,
   });
 

@@ -17,8 +17,6 @@ fidl("fuchsia.wlan.tap") {
   public_deps = [
     "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.device",
-    "//sdk/fidl/fuchsia.wlan.mlme",
-    "//sdk/fidl/fuchsia.wlan.mlme",
     "//zircon/vdso/zx",
   ]
 }

@@ -1,0 +1,95 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.wlan.internal;
+
+using fuchsia.wlan.common;
+
+enum BssTypes {
+    INFRASTRUCTURE = 1;
+    PERSONAL = 2;
+    INDEPENDENT = 3;
+    MESH = 4;
+    ANY_BSS = 5;
+    //LAST = ANY_BSS;
+};
+
+// IEEE Std 802.11-2016, 9.4.1.4
+using CapabilityInfo = uint16;
+
+// IEEE Std 802.11-2016 9.4.2.56
+const uint8 HT_CAP_LEN = 26;
+// IEEE Std 802.11-2016 9.4.2.57
+const uint8 HT_OP_LEN = 22;
+// IEEE Std 802.11-2016 9.5.2.158
+const uint8 VHT_CAP_LEN = 12;
+// IEEE Std 802.11-2016 9.5.2.159
+const uint8 VHT_OP_LEN = 5;
+// IEEE Std 802.11-2016 defines 12 values in dot11SupportedDataRatesRxTable and
+// 2 values for BSS Membership Selector in Table 9-78. Only these 14 values are valid.
+// But in fxbug.dev/41022, some of these values may be duplicated in both SupportedRates(SR) and
+// ExtendedSupportedRates(ESR). Since the SR element allows 8 bytes, and assuming the ESR element
+// duplicates all the values in the SR element plus contains all the remaining valid values, the
+// maximum is set to 8 + 14 = 22.
+const uint8 RATES_MAX_LEN = 22;
+
+// IEEE Std 802.11-2016 9.4.2.56
+struct HtCapabilities {
+    array<uint8>:HT_CAP_LEN bytes;
+};
+
+// IEEE Std 802.11-2016 9.4.2.57
+struct HtOperation {
+    array<uint8>:HT_OP_LEN bytes;
+};
+
+// IEEE Std 802.11-2016 9.5.2.158
+struct VhtCapabilities {
+    array<uint8>:VHT_CAP_LEN bytes;
+};
+
+// IEEE Std 802.11-2016 9.5.2.159
+struct VhtOperation {
+    array<uint8>:VHT_OP_LEN bytes;
+};
+
+// IEEE Std 802.11-2016 6.3.3.3.2
+struct BssDescription {
+    array<uint8>:6 bssid;
+
+    bytes:32 ssid;
+
+    BssTypes bss_type;
+    uint16 beacon_period; // in TU
+    uint8 dtim_period;
+    uint64 timestamp;
+    uint64 local_time;
+
+    CapabilityInfo cap;
+    // IEEE Std 802.11-2016 9.4.2.3
+    // in 0.5 Mbps, with MSB indicating basic rate. See Table 9-78 for 126, 127.
+    bytes:RATES_MAX_LEN rates;
+    bytes? country;
+
+    bytes? rsne;
+
+    /// All vendor info elements present in the beacon frame. E.g. this may include a WPA1 IE.
+    /// This slice should be a valid chain of IEs including IE headers for each element.
+    bytes? vendor_ies;
+
+    HtCapabilities? ht_cap;
+    HtOperation? ht_op;
+
+    VhtCapabilities? vht_cap;
+    VhtOperation? vht_op;
+
+    // List up non-standard, Fuchsia only parameters
+    fuchsia.wlan.common.WlanChan chan;
+    // The running average of received signal strength indicator in units of dBm. This value is
+    // updated periodically when the client is associated to an AP.
+    int8 rssi_dbm; // dBm
+    // The running average of snr in units of dB. This value is updated periodically when the
+    // client is associated to an AP.
+    int8 snr_db;
+};

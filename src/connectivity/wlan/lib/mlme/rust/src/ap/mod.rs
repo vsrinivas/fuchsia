@@ -15,8 +15,8 @@ use {
         logger,
         timer::{EventId, Scheduler, Timer},
     },
-    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon as zx,
+    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, info, log},
     std::fmt,
     wlan_common::{
@@ -164,7 +164,7 @@ impl Ap {
             return Ok(());
         }
 
-        if req.bss_type != fidl_mlme::BssTypes::Infrastructure {
+        if req.bss_type != fidl_internal::BssTypes::Infrastructure {
             info!("MLME-START.request: BSS type {:?} not supported", req.bss_type);
             self.ctx.send_mlme_start_conf(fidl_mlme::StartResultCodes::NotSupported)?;
             return Ok(());
@@ -776,7 +776,7 @@ mod tests {
         );
         ap.handle_mlme_start_req(fidl_mlme::StartRequest {
             ssid: b"coolnet".to_vec(),
-            bss_type: fidl_mlme::BssTypes::Infrastructure,
+            bss_type: fidl_internal::BssTypes::Infrastructure,
             beacon_period: 5,
             dtim_period: 1,
             channel: 2,
@@ -835,7 +835,7 @@ mod tests {
 
         ap.handle_mlme_start_req(fidl_mlme::StartRequest {
             ssid: b"coolnet".to_vec(),
-            bss_type: fidl_mlme::BssTypes::Infrastructure,
+            bss_type: fidl_internal::BssTypes::Infrastructure,
             beacon_period: 5,
             dtim_period: 1,
             channel: 2,

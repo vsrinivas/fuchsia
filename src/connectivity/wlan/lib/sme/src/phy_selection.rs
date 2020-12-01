@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_wlan_common as fidl_common;
+use fidl_fuchsia_wlan_internal as fidl_internal;
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use log::error;
 use wlan_common::{
@@ -89,7 +90,7 @@ pub fn get_device_band_info(
 
 /// Derive PHY and CBW for Client role
 pub fn derive_phy_cbw(
-    bss: &fidl_mlme::BssDescription,
+    bss: &fidl_internal::BssDescription,
     device_info: &fidl_mlme::DeviceInfo,
     radio_cfg: &RadioConfig,
 ) -> (fidl_common::Phy, fidl_common::Cbw) {

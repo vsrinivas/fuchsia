@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::error,
     static_assertions::assert_eq_size,
     std::convert::TryInto,
@@ -86,8 +86,8 @@ fn intersect(
 
 impl From<fidl_mlme::AssociateConfirm> for ApCapabilities {
     fn from(ac: fidl_mlme::AssociateConfirm) -> Self {
-        type HtCapArray = [u8; fidl_mlme::HT_CAP_LEN as usize];
-        type VhtCapArray = [u8; fidl_mlme::VHT_CAP_LEN as usize];
+        type HtCapArray = [u8; fidl_internal::HT_CAP_LEN as usize];
+        type VhtCapArray = [u8; fidl_internal::VHT_CAP_LEN as usize];
 
         let cap_info = CapabilityInfo(ac.cap_info);
         let rates = ac.rates.iter().map(|&r| SupportedRate(r)).collect();
@@ -113,18 +113,18 @@ impl StaCapabilities {
         &self,
         channel: &Channel,
     ) -> fidl_mlme::NegotiatedCapabilities {
-        type HtCapArray = [u8; fidl_mlme::HT_CAP_LEN as usize];
-        type VhtCapArray = [u8; fidl_mlme::VHT_CAP_LEN as usize];
+        type HtCapArray = [u8; fidl_internal::HT_CAP_LEN as usize];
+        type VhtCapArray = [u8; fidl_internal::VHT_CAP_LEN as usize];
 
         let ht_cap = self.ht_cap.map(|ht_cap| {
             assert_eq_size!(HtCapabilities, HtCapArray);
             let bytes: HtCapArray = ht_cap.as_bytes().try_into().unwrap();
-            fidl_mlme::HtCapabilities { bytes }
+            fidl_internal::HtCapabilities { bytes }
         });
         let vht_cap = self.vht_cap.map(|vht_cap| {
             assert_eq_size!(VhtCapabilities, VhtCapArray);
             let bytes: VhtCapArray = vht_cap.as_bytes().try_into().unwrap();
-            fidl_mlme::VhtCapabilities { bytes }
+            fidl_internal::VhtCapabilities { bytes }
         });
         fidl_mlme::NegotiatedCapabilities {
             channel: channel.to_fidl(),
@@ -211,10 +211,10 @@ mod tests {
             cap_info: 0x1234,
             rates: vec![125, 126, 127, 128, 129],
             wmm_param: None,
-            ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+            ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
                 bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap(),
             })),
-            vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+            vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
                 bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap(),
             })),
         };
@@ -253,10 +253,10 @@ mod tests {
                 cap_info: 0x1234,
                 rates: vec![125, 126, 127, 128, 129],
                 wmm_param: None,
-                ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+                ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
                     bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap()
                 })),
-                vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+                vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
                     bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap()
                 })),
             }

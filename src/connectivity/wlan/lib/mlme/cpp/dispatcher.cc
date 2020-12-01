@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <zircon/fidl.h>
@@ -31,6 +32,7 @@
 namespace wlan {
 
 namespace wlan_common = ::fuchsia::wlan::common;
+namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_minstrel = ::fuchsia::wlan::minstrel;
 namespace wlan_stats = ::fuchsia::wlan::stats;
@@ -209,13 +211,13 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
 
     if (band_info.ht_supported) {
       auto ht_cap = HtCapabilities::FromDdk(band_info.ht_caps);
-      band.ht_cap = wlan_mlme::HtCapabilities::New();
+      band.ht_cap = wlan_internal::HtCapabilities::New();
       static_assert(sizeof(band.ht_cap->bytes) == sizeof(ht_cap));
       memcpy(band.ht_cap->bytes.data(), &ht_cap, sizeof(ht_cap));
     }
     if (band_info.vht_supported) {
       auto vht_cap = VhtCapabilities::FromDdk(band_info.vht_caps);
-      band.vht_cap = wlan_mlme::VhtCapabilities::New();
+      band.vht_cap = wlan_internal::VhtCapabilities::New();
       static_assert(sizeof(band.vht_cap->bytes) == sizeof(vht_cap));
       memcpy(band.vht_cap->bytes.data(), &vht_cap, sizeof(vht_cap));
     }

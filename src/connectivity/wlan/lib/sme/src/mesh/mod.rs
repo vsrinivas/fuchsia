@@ -7,7 +7,7 @@ use {
         clone_utils, phy_selection::get_device_band_info, responder::Responder, sink::MlmeSink,
         timer::TimedEvent, MlmeRequest,
     },
-    fidl_fuchsia_wlan_common as fidl_common,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
     futures::channel::{mpsc, oneshot},
     log::error,
@@ -172,7 +172,7 @@ fn validate_config(config: &Config) -> Result<(), JoinMeshResult> {
 fn create_start_request(config: &Config) -> fidl_mlme::StartRequest {
     fidl_mlme::StartRequest {
         ssid: vec![],
-        bss_type: fidl_mlme::BssTypes::Mesh,
+        bss_type: fidl_internal::BssTypes::Mesh,
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: config.channel,

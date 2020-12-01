@@ -5,7 +5,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MESH_PARSE_MP_ACTION_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MESH_PARSE_MP_ACTION_H_
 
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/common/buffer_reader.h>
 
 namespace wlan {

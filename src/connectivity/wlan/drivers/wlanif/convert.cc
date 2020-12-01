@@ -17,20 +17,21 @@
 namespace wlanif {
 
 namespace wlan_common = ::fuchsia::wlan::common;
+namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
-uint8_t ConvertBSSType(wlan_mlme::BSSTypes bss_type) {
+uint8_t ConvertBssType(wlan_internal::BssTypes bss_type) {
   switch (bss_type) {
-    case wlan_mlme::BSSTypes::INFRASTRUCTURE:
+    case wlan_internal::BssTypes::INFRASTRUCTURE:
       return WLAN_BSS_TYPE_INFRASTRUCTURE;
-    case wlan_mlme::BSSTypes::PERSONAL:
+    case wlan_internal::BssTypes::PERSONAL:
       return WLAN_BSS_TYPE_PERSONAL;
-    case wlan_mlme::BSSTypes::INDEPENDENT:
+    case wlan_internal::BssTypes::INDEPENDENT:
       return WLAN_BSS_TYPE_IBSS;
-    case wlan_mlme::BSSTypes::MESH:
+    case wlan_internal::BssTypes::MESH:
       return WLAN_BSS_TYPE_MESH;
-    case wlan_mlme::BSSTypes::ANY_BSS:
+    case wlan_internal::BssTypes::ANY_BSS:
       return WLAN_BSS_TYPE_ANY_BSS;
     default:
       ZX_ASSERT(0);
@@ -122,7 +123,7 @@ void CopyVendorSpecificIE(const ::std::vector<uint8_t>& in_vendor_specific,
 }
 
 void ConvertRateSets(wlanif_bss_description_t* wlanif_desc,
-                     const wlan_mlme::BSSDescription& fidl_desc) {
+                     const wlan_internal::BssDescription& fidl_desc) {
   if (fidl_desc.rates.size() > WLAN_MAC_MAX_RATES) {
     warnf("rates.size() %lu > max allowed size: %d\n", fidl_desc.rates.size(), WLAN_MAC_MAX_RATES);
     ZX_DEBUG_ASSERT(fidl_desc.rates.size() <= WLAN_MAC_MAX_RATES);
@@ -131,8 +132,8 @@ void ConvertRateSets(wlanif_bss_description_t* wlanif_desc,
   std::copy(fidl_desc.rates.cbegin(), fidl_desc.rates.cend(), std::begin(wlanif_desc->rates));
 }
 
-void ConvertBSSDescription(wlanif_bss_description_t* wlanif_desc,
-                           const wlan_mlme::BSSDescription& fidl_desc) {
+void ConvertBssDescription(wlanif_bss_description_t* wlanif_desc,
+                           const wlan_internal::BssDescription& fidl_desc) {
   // bssid
   std::memcpy(wlanif_desc->bssid, fidl_desc.bssid.data(), ETH_ALEN);
 
@@ -140,7 +141,7 @@ void ConvertBSSDescription(wlanif_bss_description_t* wlanif_desc,
   CopySSID(fidl_desc.ssid, &wlanif_desc->ssid);
 
   // bss_type
-  wlanif_desc->bss_type = ConvertBSSType(fidl_desc.bss_type);
+  wlanif_desc->bss_type = ConvertBssType(fidl_desc.bss_type);
 
   // beacon_period
   wlanif_desc->beacon_period = fidl_desc.beacon_period;
@@ -176,18 +177,18 @@ void ConvertBSSDescription(wlanif_bss_description_t* wlanif_desc,
   wlanif_desc->rssi_dbm = fidl_desc.rssi_dbm;
 }
 
-wlan_mlme::BSSTypes ConvertBSSType(uint8_t bss_type) {
+wlan_internal::BssTypes ConvertBssType(uint8_t bss_type) {
   switch (bss_type) {
     case WLAN_BSS_TYPE_INFRASTRUCTURE:
-      return wlan_mlme::BSSTypes::INFRASTRUCTURE;
+      return wlan_internal::BssTypes::INFRASTRUCTURE;
     case WLAN_BSS_TYPE_PERSONAL:
-      return wlan_mlme::BSSTypes::PERSONAL;
+      return wlan_internal::BssTypes::PERSONAL;
     case WLAN_BSS_TYPE_IBSS:
-      return wlan_mlme::BSSTypes::INDEPENDENT;
+      return wlan_internal::BssTypes::INDEPENDENT;
     case WLAN_BSS_TYPE_MESH:
-      return wlan_mlme::BSSTypes::MESH;
+      return wlan_internal::BssTypes::MESH;
     case WLAN_BSS_TYPE_ANY_BSS:
-      return wlan_mlme::BSSTypes::ANY_BSS;
+      return wlan_internal::BssTypes::ANY_BSS;
     default:
       ZX_ASSERT(0);
   }
@@ -232,16 +233,16 @@ static void ArrayToVector(::fidl::VectorPtr<T>* vecptr, const T* data, size_t le
 
 void ConvertRates(::std::vector<uint8_t>* rates, const wlanif_bss_description_t& wlanif_desc) {
   uint16_t total_rate_count = wlanif_desc.num_rates;
-  if (total_rate_count > wlan_mlme::RATES_MAX_LEN) {
+  if (total_rate_count > wlan_internal::RATES_MAX_LEN) {
     warnf("Non-compliant beacon: num_rates (%u) > max allowed (%d). Excess rates truncated.\n",
-          total_rate_count, wlan_mlme::RATES_MAX_LEN);
-    total_rate_count = wlan_mlme::RATES_MAX_LEN;
+          total_rate_count, wlan_internal::RATES_MAX_LEN);
+    total_rate_count = wlan_internal::RATES_MAX_LEN;
   }
 
   *rates = {wlanif_desc.rates, wlanif_desc.rates + total_rate_count};
 }
 
-void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
+void ConvertBssDescription(wlan_internal::BssDescription* fidl_desc,
                            const wlanif_bss_description_t& wlanif_desc) {
   // bssid
   std::memcpy(fidl_desc->bssid.data(), wlanif_desc.bssid, ETH_ALEN);
@@ -253,7 +254,7 @@ void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
   fidl_desc->ssid = std::move(ssid);
 
   // bss_type
-  fidl_desc->bss_type = ConvertBSSType(wlanif_desc.bss_type);
+  fidl_desc->bss_type = ConvertBssType(wlanif_desc.bss_type);
 
   // beacon_period
   fidl_desc->beacon_period = wlanif_desc.beacon_period;
@@ -835,13 +836,13 @@ void ConvertBandCapabilities(wlan_mlme::BandCapabilities* fidl_band,
   fidl_band->channels.assign(band.channels, band.channels + band.num_channels);
 
   if (band.ht_supported) {
-    fidl_band->ht_cap = wlan_mlme::HtCapabilities::New();
+    fidl_band->ht_cap = wlan_internal::HtCapabilities::New();
     static_assert(sizeof(fidl_band->ht_cap->bytes) == sizeof(band.ht_caps));
     memcpy(fidl_band->ht_cap->bytes.data(), &band.ht_caps, sizeof(band.ht_caps));
   }
 
   if (band.vht_supported) {
-    fidl_band->vht_cap = wlan_mlme::VhtCapabilities::New();
+    fidl_band->vht_cap = wlan_internal::VhtCapabilities::New();
     static_assert(sizeof(fidl_band->vht_cap->bytes) == sizeof(band.vht_caps));
     memcpy(fidl_band->vht_cap->bytes.data(), &band.vht_caps, sizeof(band.vht_caps));
   }

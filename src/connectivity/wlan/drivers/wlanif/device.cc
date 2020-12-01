@@ -245,7 +245,7 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
   impl_req.txn_id = req.txn_id;
 
   // bss_type
-  impl_req.bss_type = ConvertBSSType(req.bss_type);
+  impl_req.bss_type = ConvertBssType(req.bss_type);
 
   // bssid
   std::memcpy(impl_req.bssid, req.bssid.data(), ETH_ALEN);
@@ -303,7 +303,7 @@ void Device::JoinReq(wlan_mlme::JoinRequest req) {
   wlanif_join_req_t impl_req = {};
 
   // selected_bss
-  ConvertBSSDescription(&impl_req.selected_bss, req.selected_bss);
+  ConvertBssDescription(&impl_req.selected_bss, req.selected_bss);
 
   // join_failure_timeout
   impl_req.join_failure_timeout = req.join_failure_timeout;
@@ -451,7 +451,7 @@ void Device::StartReq(wlan_mlme::StartRequest req) {
   CopySSID(req.ssid, &impl_req.ssid);
 
   // bss_type
-  impl_req.bss_type = ConvertBSSType(req.bss_type);
+  impl_req.bss_type = ConvertBssType(req.bss_type);
 
   // beacon_period
   impl_req.beacon_period = req.beacon_period;
@@ -681,7 +681,7 @@ void Device::OnScanResult(const wlanif_scan_result_t* result) {
   fidl_result.txn_id = result->txn_id;
 
   // bss
-  ConvertBSSDescription(&fidl_result.bss, result->bss);
+  ConvertBssDescription(&fidl_result.bss, result->bss);
 
   binding_.events().OnScanResult(std::move(fidl_result));
 }

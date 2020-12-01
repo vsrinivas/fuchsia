@@ -6,7 +6,7 @@
 
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/device/llcpp/fidl.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <net/ethernet.h>
 #include <zircon/status.h>
 
@@ -27,7 +27,7 @@ namespace wlanphy {
 
 namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_device = ::fuchsia::wlan::device;
-namespace wlan_mlme = ::fuchsia::wlan::mlme;
+namespace wlan_internal = ::fuchsia::wlan::internal;
 
 class DeviceConnector : public llcpp::fuchsia::wlan::device::Connector::Interface {
  public:
@@ -213,7 +213,7 @@ void ConvertPhyBandInfo(::std::vector<wlan_device::BandInfo>* BandInfo, uint8_t 
 
     // ht_caps
     if (this_phy_band.ht_supported) {
-      out_band.ht_caps = wlan_mlme::HtCapabilities::New();
+      out_band.ht_caps = wlan_internal::HtCapabilities::New();
       auto ht_cap = ::wlan::HtCapabilities::FromDdk(this_phy_band.ht_caps);
       static_assert(sizeof(out_band.ht_caps->bytes) == sizeof(ht_cap));
       memcpy(out_band.ht_caps->bytes.data(), &ht_cap, sizeof(ht_cap));
@@ -221,7 +221,7 @@ void ConvertPhyBandInfo(::std::vector<wlan_device::BandInfo>* BandInfo, uint8_t 
 
     // vht_caps
     if (this_phy_band.vht_supported) {
-      out_band.vht_caps = wlan_mlme::VhtCapabilities::New();
+      out_band.vht_caps = wlan_internal::VhtCapabilities::New();
       auto vht_cap = ::wlan::VhtCapabilities::FromDdk(this_phy_band.vht_caps);
       static_assert(sizeof(out_band.vht_caps->bytes) == sizeof(vht_cap));
       memcpy(out_band.vht_caps->bytes.data(), &vht_cap, sizeof(vht_cap));

@@ -20,6 +20,7 @@ use {
         timer::{self, EventId, TimedEvent, Timer},
         MacAddr, MlmeRequest, Ssid,
     },
+    fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
     fidl_fuchsia_wlan_sme as fidl_sme,
     futures::channel::{mpsc, oneshot},
@@ -756,7 +757,7 @@ fn create_start_request(
 
     fidl_mlme::StartRequest {
         ssid: ssid.clone(),
-        bss_type: fidl_mlme::BssTypes::Infrastructure,
+        bss_type: fidl_internal::BssTypes::Infrastructure,
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: op.chan.primary,
@@ -874,7 +875,7 @@ mod tests {
                 start_req.cap,
                 mac::CapabilityInfo(0).with_short_preamble(true).with_ess(true).raw(),
             );
-            assert_eq!(start_req.bss_type, fidl_mlme::BssTypes::Infrastructure);
+            assert_eq!(start_req.bss_type, fidl_internal::BssTypes::Infrastructure);
             assert_ne!(start_req.beacon_period, 0);
             assert_ne!(start_req.dtim_period, 0);
             assert_eq!(

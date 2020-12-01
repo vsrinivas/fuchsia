@@ -8,7 +8,8 @@ use {
         client::{bss::BssInfo, rsn::Supplicant},
         Ssid,
     },
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     futures::channel::mpsc,
     std::sync::{
         atomic::{AtomicBool, Ordering},
@@ -36,8 +37,8 @@ pub fn fake_bss_info() -> BssInfo {
         channel: channel::Channel { primary: 1, cbw: channel::Cbw::Cbw20 },
         protection: Protection::Wpa2Personal,
         compatible: true,
-        ht_cap: Some(fidl_mlme::HtCapabilities { bytes: fake_ht_cap_bytes() }),
-        vht_cap: Some(fidl_mlme::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
+        ht_cap: Some(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() }),
+        vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
         probe_resp_wsc: None,
         wmm_param: None,
     }
@@ -46,7 +47,7 @@ pub fn fake_bss_info() -> BssInfo {
 pub fn fake_scan_request() -> fidl_mlme::ScanRequest {
     fidl_mlme::ScanRequest {
         txn_id: 1,
-        bss_type: fidl_mlme::BssTypes::Infrastructure,
+        bss_type: fidl_internal::BssTypes::Infrastructure,
         bssid: [8, 2, 6, 2, 1, 11],
         ssid: vec![],
         scan_type: fidl_mlme::ScanTypes::Active,
@@ -119,8 +120,8 @@ pub fn create_assoc_conf(result_code: fidl_mlme::AssociateResultCodes) -> fidl_m
             rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
             // TODO(fxbug.dev/43938): mock with fake WMM param
             wmm_param: None,
-            ht_cap: Some(Box::new(fidl_mlme::HtCapabilities { bytes: fake_ht_cap_bytes() })),
-            vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities { bytes: fake_vht_cap_bytes() })),
+            ht_cap: Some(Box::new(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() })),
+            vht_cap: Some(Box::new(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() })),
         },
     }
 }

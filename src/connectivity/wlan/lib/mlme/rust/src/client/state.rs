@@ -18,8 +18,8 @@ use {
         key::KeyConfig,
         timer::*,
     },
-    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon as zx,
+    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, info, warn},
     static_assertions::assert_eq_size,
     std::convert::TryInto,
@@ -48,8 +48,8 @@ pub const DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT: u32 = 100;
 /// Number of beacon intervals between association status check (signal report or auto-deatuh).
 pub const ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT: u32 = 10;
 
-type HtOpByteArray = [u8; fidl_mlme::HT_OP_LEN as usize];
-type VhtOpByteArray = [u8; fidl_mlme::VHT_OP_LEN as usize];
+type HtOpByteArray = [u8; fidl_internal::HT_OP_LEN as usize];
+type VhtOpByteArray = [u8; fidl_internal::VHT_OP_LEN as usize];
 
 /// Client joined a BSS (synchronized timers and prepared its underlying hardware).
 /// At this point the Client is able to listen to frames on the BSS' channel.
@@ -2762,10 +2762,10 @@ mod tests {
             cap_info: 0x1234,
             rates: vec![125, 126, 127, 128, 129, 130],
             wmm_param: None,
-            ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+            ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
                 bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap(),
             })),
-            vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+            vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
                 bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap(),
             })),
         };

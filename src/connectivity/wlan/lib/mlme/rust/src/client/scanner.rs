@@ -18,7 +18,8 @@ use {
     anyhow::format_err,
     banjo_ddk_hw_wlan_wlaninfo as banjo_hw_wlaninfo,
     banjo_ddk_protocol_wlan_info as banjo_wlan_info, banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     log::{error, warn},
     thiserror::Error,
     wlan_common::{
@@ -353,7 +354,7 @@ fn get_band_info(
         .next()
 }
 
-fn send_scan_result(txn_id: u64, bss: fidl_mlme::BssDescription, device: &mut Device) {
+fn send_scan_result(txn_id: u64, bss: fidl_internal::BssDescription, device: &mut Device) {
     let result = device.access_sme_sender(|sender| {
         sender.send_on_scan_result(&mut fidl_mlme::ScanResult { txn_id, bss })
     });
@@ -417,7 +418,7 @@ mod tests {
     fn scan_req() -> fidl_mlme::ScanRequest {
         fidl_mlme::ScanRequest {
             txn_id: 1337,
-            bss_type: fidl_mlme::BssTypes::Infrastructure,
+            bss_type: fidl_internal::BssTypes::Infrastructure,
             bssid: BSSID.0,
             ssid: b"ssid".to_vec(),
             scan_type: fidl_mlme::ScanTypes::Passive,
@@ -803,10 +804,10 @@ mod tests {
             scan_result,
             fidl_mlme::ScanResult {
                 txn_id: 1337,
-                bss: fidl_mlme::BssDescription {
+                bss: fidl_internal::BssDescription {
                     bssid: BSSID.0,
                     ssid: b"ssid".to_vec(),
-                    bss_type: fidl_mlme::BssTypes::Infrastructure,
+                    bss_type: fidl_internal::BssTypes::Infrastructure,
                     beacon_period: BEACON_INTERVAL,
                     dtim_period: 1,
                     timestamp: TIMESTAMP,

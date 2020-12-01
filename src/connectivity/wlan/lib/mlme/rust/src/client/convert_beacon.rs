@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
     static_assertions::assert_eq_size,
     std::convert::TryInto,
     wlan_common::{
@@ -24,11 +24,11 @@ pub fn construct_bss_description(
     capability_info: CapabilityInfo,
     ies: &[u8],
     rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
-) -> Result<fidl_mlme::BssDescription, Error> {
-    type HtCapArray = [u8; fidl_mlme::HT_CAP_LEN as usize];
-    type HtOpArray = [u8; fidl_mlme::HT_OP_LEN as usize];
-    type VhtCapArray = [u8; fidl_mlme::VHT_CAP_LEN as usize];
-    type VhtOpArray = [u8; fidl_mlme::VHT_OP_LEN as usize];
+) -> Result<fidl_internal::BssDescription, Error> {
+    type HtCapArray = [u8; fidl_internal::HT_CAP_LEN as usize];
+    type HtOpArray = [u8; fidl_internal::HT_OP_LEN as usize];
+    type VhtCapArray = [u8; fidl_internal::VHT_CAP_LEN as usize];
+    type VhtOpArray = [u8; fidl_internal::VHT_OP_LEN as usize];
 
     let mut ssid = None;
     let mut rates = None;
@@ -71,27 +71,27 @@ pub fn construct_bss_description(
                 let ht_caps = ie::parse_ht_capabilities(body)?;
                 assert_eq_size!(ie::HtCapabilities, HtCapArray);
                 let bytes: HtCapArray = ht_caps.as_bytes().try_into().unwrap();
-                fidl_ht_cap = Some(Box::new(fidl_mlme::HtCapabilities { bytes }))
+                fidl_ht_cap = Some(Box::new(fidl_internal::HtCapabilities { bytes }))
             }
             ie::Id::HT_OPERATION => {
                 let ht_op = ie::parse_ht_operation(body)?;
                 parsed_ht_op = Some(*ht_op);
                 assert_eq_size!(ie::HtOperation, HtOpArray);
                 let bytes: HtOpArray = ht_op.as_bytes().try_into().unwrap();
-                fidl_ht_op = Some(Box::new(fidl_mlme::HtOperation { bytes }));
+                fidl_ht_op = Some(Box::new(fidl_internal::HtOperation { bytes }));
             }
             ie::Id::VHT_CAPABILITIES => {
                 let ht_caps = ie::parse_vht_capabilities(body)?;
                 assert_eq_size!(ie::VhtCapabilities, VhtCapArray);
                 let bytes: VhtCapArray = ht_caps.as_bytes().try_into().unwrap();
-                fidl_vht_cap = Some(Box::new(fidl_mlme::VhtCapabilities { bytes }));
+                fidl_vht_cap = Some(Box::new(fidl_internal::VhtCapabilities { bytes }));
             }
             ie::Id::VHT_OPERATION => {
                 let ht_op = ie::parse_vht_operation(body)?;
                 parsed_vht_op = Some(*ht_op);
                 assert_eq_size!(ie::VhtOperation, VhtOpArray);
                 let bytes: VhtOpArray = ht_op.as_bytes().try_into().unwrap();
-                fidl_vht_op = Some(Box::new(fidl_mlme::VhtOperation { bytes }));
+                fidl_vht_op = Some(Box::new(fidl_internal::VhtOperation { bytes }));
             }
             _ => (),
         }
@@ -108,7 +108,7 @@ pub fn construct_bss_description(
     )
     .ok_or(format_err!("unable to derive channel"))?;
 
-    Ok(fidl_mlme::BssDescription {
+    Ok(fidl_internal::BssDescription {
         bssid: bssid.0,
         ssid,
         bss_type,
@@ -134,12 +134,12 @@ pub fn construct_bss_description(
 
 /// Note: This is in Beacon / Probe Response frames context.
 /// IEEE Std 802.11-2016, 9.4.1.4
-fn get_bss_type(capability_info: CapabilityInfo) -> fidl_mlme::BssTypes {
+fn get_bss_type(capability_info: CapabilityInfo) -> fidl_internal::BssTypes {
     match (capability_info.ess(), capability_info.ibss()) {
-        (true, false) => fidl_mlme::BssTypes::Infrastructure,
-        (false, true) => fidl_mlme::BssTypes::Independent,
-        (false, false) => fidl_mlme::BssTypes::Mesh,
-        _ => fidl_mlme::BssTypes::AnyBss,
+        (true, false) => fidl_internal::BssTypes::Infrastructure,
+        (false, true) => fidl_internal::BssTypes::Independent,
+        (false, false) => fidl_internal::BssTypes::Mesh,
+        _ => fidl_internal::BssTypes::AnyBss,
     }
 }
 
@@ -254,10 +254,10 @@ mod tests {
 
         assert_eq!(
             bss_desc,
-            fidl_mlme::BssDescription {
+            fidl_internal::BssDescription {
                 bssid: BSSID.0,
                 ssid: b"foo-ssid".to_vec(),
-                bss_type: fidl_mlme::BssTypes::Infrastructure,
+                bss_type: fidl_internal::BssTypes::Infrastructure,
                 beacon_period: BEACON_INTERVAL,
                 dtim_period: 1,
                 timestamp: TIMESTAMP,
@@ -278,23 +278,23 @@ mod tests {
                     0xf2, 0x02, 0x01, 0x01, 0x80, 0x00, 0x03, 0xa4, 0x00, 0x00, 0x27, 0xa4, 0x00,
                     0x00, 0x42, 0x43, 0x5e, 0x00, 0x62, 0x32, 0x2f, 0x00
                 ]),
-                ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+                ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
                     bytes: [
                         0xef, 0x09, 0x17, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                         0x00, 0x00
                     ]
                 })),
-                ht_op: Some(Box::new(fidl_mlme::HtOperation {
+                ht_op: Some(Box::new(fidl_internal::HtOperation {
                     bytes: [
                         0x8c, 0x0d, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
                     ]
                 })),
-                vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+                vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
                     bytes: [0x91, 0x59, 0x82, 0x0f, 0xea, 0xff, 0x00, 0x00, 0xea, 0xff, 0x00, 0x00]
                 })),
-                vht_op: Some(Box::new(fidl_mlme::VhtOperation {
+                vht_op: Some(Box::new(fidl_internal::VhtOperation {
                     bytes: [0x00, 0x00, 0x00, 0x00, 0x00]
                 })),
                 rssi_dbm: RX_INFO.rssi_dbm,

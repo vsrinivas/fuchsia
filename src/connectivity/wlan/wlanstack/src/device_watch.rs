@@ -88,7 +88,7 @@ mod tests {
         super::*,
         fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_device::{self as fidl_wlan_dev, SupportedPhy},
-        fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_tap as fidl_wlantap,
+        fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_tap as fidl_wlantap,
         fuchsia_zircon::prelude::*,
         futures::{poll, task::Poll},
         isolated_devmgr::IsolatedDeviceEnv,
@@ -150,7 +150,7 @@ mod tests {
     fn create_2_4_ghz_band_info() -> fidl_wlan_dev::BandInfo {
         fidl_wlan_dev::BandInfo {
             band_id: fidl_common::Band::WlanBand2Ghz,
-            ht_caps: Some(Box::new(fidl_mlme::HtCapabilities {
+            ht_caps: Some(Box::new(fidl_internal::HtCapabilities {
                 bytes: fake_ht_capabilities().as_bytes().try_into().unwrap(),
             })),
             vht_caps: None,

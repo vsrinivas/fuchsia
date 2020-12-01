@@ -6,7 +6,7 @@ use {
     // TODO(porce): Rename the aliases as fidl_*
     fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_device as fidl_device,
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_tap as wlantap,
     std::convert::TryInto,
     wlan_common::ie::*,
@@ -44,7 +44,7 @@ pub(crate) fn create_wlantap_config(
 fn create_2_4_ghz_band_info() -> fidl_device::BandInfo {
     fidl_device::BandInfo {
         band_id: fidl_common::Band::WlanBand2Ghz,
-        ht_caps: Some(Box::new(fidl_mlme::HtCapabilities {
+        ht_caps: Some(Box::new(fidl_internal::HtCapabilities {
             bytes: fake_ht_capabilities().as_bytes().try_into().unwrap(),
         })),
         vht_caps: None,

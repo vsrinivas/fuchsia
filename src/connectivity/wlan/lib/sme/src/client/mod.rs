@@ -28,7 +28,7 @@ use {
         wpa::get_legacy_wpa_association,
     },
     crate::{
-        clone_utils::clone_bss_desc,
+        clone_utils::{clone_bss_desc, clone_scan_request},
         responder::Responder,
         sink::{InfoSink, MlmeSink},
         timer::{self, TimedEvent},
@@ -36,9 +36,8 @@ use {
     },
     anyhow::{format_err, Context as _},
     fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_mlme::{
-        self as fidl_mlme, BssDescription, DeviceInfo, MlmeEvent, ScanRequest,
-    },
+    fidl_fuchsia_wlan_internal::BssDescription,
+    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent, ScanRequest},
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect_contrib::{inspect_insert, inspect_log, log::InspectListClosure},
     futures::channel::{mpsc, oneshot},
@@ -388,7 +387,11 @@ impl ClientSme {
         if let Some(req) = req {
             let is_join_scan = self.scan_sched.is_scanning_to_join();
             let is_connected = self.status().connected_to.is_some();
-            self.context.info.report_scan_started(req.clone(), is_join_scan, is_connected);
+            self.context.info.report_scan_started(
+                clone_scan_request(&req),
+                is_join_scan,
+                is_connected,
+            );
             self.context.mlme_sink.send(MlmeRequest::Scan(req));
         }
     }
@@ -570,7 +573,7 @@ impl super::Station for ClientSme {
 
 fn inspect_log_join_scan(
     ctx: &mut Context,
-    bss_list: &[fidl_mlme::BssDescription],
+    bss_list: &[BssDescription],
     candidate_bssid: Option<MacAddr>,
     result_msg: Option<String>,
 ) {
@@ -730,6 +733,7 @@ fn get_protection(
 mod tests {
     use super::*;
     use crate::Config as SmeConfig;
+    use fidl_fuchsia_wlan_internal as fidl_internal;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use fuchsia_inspect as finspect;
     use wlan_common::{assert_variant, fake_bss, ie::rsn::akm, RadioConfig};
@@ -744,7 +748,7 @@ mod tests {
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
     const DUMMY_HASH_KEY: [u8; 8] = [88, 77, 66, 55, 44, 33, 22, 11];
 
-    fn report_fake_scan_result(sme: &mut ClientSme, bss: fidl_mlme::BssDescription) {
+    fn report_fake_scan_result(sme: &mut ClientSme, bss: fidl_internal::BssDescription) {
         sme.on_mlme_event(MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult { txn_id: 1, bss },
         });

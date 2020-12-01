@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use anyhow::format_err;
-use fidl_fuchsia_wlan_mlme::{BssDescription, DeviceInfo};
+use fidl_fuchsia_wlan_internal::BssDescription;
+use fidl_fuchsia_wlan_mlme::DeviceInfo;
 
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use wlan_common::bss::BssDescriptionExt as _;

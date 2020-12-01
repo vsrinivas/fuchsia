@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_CONVERT_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_CONVERT_H_
 
+#include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <net/ethernet.h>
 
@@ -13,7 +14,7 @@
 
 namespace wlanif {
 
-uint8_t ConvertBSSType(::fuchsia::wlan::mlme::BSSTypes bss_type);
+uint8_t ConvertBssType(::fuchsia::wlan::internal::BssTypes bss_type);
 uint8_t ConvertScanType(::fuchsia::wlan::mlme::ScanTypes scan_type);
 uint8_t ConvertCBW(::fuchsia::wlan::common::CBW cbw);
 void ConvertWlanChan(wlan_channel_t* wlanif_chan,
@@ -24,9 +25,9 @@ void CopySSID(const ::std::vector<uint8_t>& in_ssid, wlanif_ssid_t* out_ssid);
 void CopyRSNE(const ::std::vector<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* out_rsne_len);
 void CopyVendorSpecificIE(const ::std::vector<uint8_t>& in_vendor_ie, uint8_t* out_vendor_ie,
                           size_t* out_vendor_ie_len);
-void ConvertBSSDescription(wlanif_bss_description_t* wlanif_bss_desc,
-                           const ::fuchsia::wlan::mlme::BSSDescription& fidl_bss_desc);
-void ConvertBSSDescription(::fuchsia::wlan::mlme::BSSDescription* fidl_bss_desc,
+void ConvertBssDescription(wlanif_bss_description_t* wlanif_bss_desc,
+                           const ::fuchsia::wlan::internal::BssDescription& fidl_bss_desc);
+void ConvertBssDescription(::fuchsia::wlan::internal::BssDescription* fidl_bss_desc,
                            const wlanif_bss_description_t& wlanif_bss_desc);
 void ConvertAssocInd(::fuchsia::wlan::mlme::AssociateIndication* fidl_ind,
                      const wlanif_assoc_ind_t& assoc_ind);
@@ -37,7 +38,7 @@ void ConvertSetKeyDescriptor(set_key_descriptor_t* key_desc,
                              const ::fuchsia::wlan::mlme::SetKeyDescriptor& fidl_key_desc);
 void ConvertDeleteKeyDescriptor(delete_key_descriptor_t* key_desc,
                                 const ::fuchsia::wlan::mlme::DeleteKeyDescriptor& fidl_key_desc);
-::fuchsia::wlan::mlme::BSSTypes ConvertBSSType(uint8_t bss_type);
+::fuchsia::wlan::internal::BssTypes ConvertBssType(uint8_t bss_type);
 ::fuchsia::wlan::common::CBW ConvertCBW(wlan_channel_bandwidth_t cbw);
 ::fuchsia::wlan::mlme::AuthenticationTypes ConvertAuthType(uint8_t auth_type);
 ::fuchsia::wlan::mlme::ReasonCode ConvertDeauthReasonCode(uint16_t reason);

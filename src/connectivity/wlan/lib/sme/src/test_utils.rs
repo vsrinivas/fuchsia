@@ -4,7 +4,8 @@
 
 use {
     crate::MacAddr,
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
     std::convert::TryInto,
     wlan_common::{
         channel::{Cbw, Phy},
@@ -146,7 +147,7 @@ pub fn fake_device_info_vht(chanwidth: ChanWidthSet) -> fidl_mlme::DeviceInfo {
 pub fn fake_5ghz_band_capabilities_ht_cbw(chanwidth: ChanWidthSet) -> fidl_mlme::BandCapabilities {
     let bc = fake_5ghz_band_capabilities();
     fidl_mlme::BandCapabilities {
-        ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+        ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
             bytes: fake_ht_capabilities_cbw(chanwidth).as_bytes().try_into().unwrap(),
         })),
         ..bc
@@ -156,10 +157,10 @@ pub fn fake_5ghz_band_capabilities_ht_cbw(chanwidth: ChanWidthSet) -> fidl_mlme:
 pub fn fake_band_capabilities_5ghz_vht(chanwidth: ChanWidthSet) -> fidl_mlme::BandCapabilities {
     let bc = fake_5ghz_band_capabilities();
     fidl_mlme::BandCapabilities {
-        ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+        ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
             bytes: fake_ht_capabilities_cbw(chanwidth).as_bytes().try_into().unwrap(),
         })),
-        vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+        vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
             bytes: fake_vht_capabilities().as_bytes().try_into().unwrap(),
         })),
         ..bc
@@ -211,13 +212,13 @@ pub fn fake_5ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
 
 pub fn fake_2ghz_band_capabilities_vht() -> fidl_mlme::BandCapabilities {
     fidl_mlme::BandCapabilities {
-        ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+        ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
             bytes: fake_ht_capabilities_cbw(ChanWidthSet::TWENTY_FORTY)
                 .as_bytes()
                 .try_into()
                 .unwrap(),
         })),
-        vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+        vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
             bytes: fake_vht_capabilities().as_bytes().try_into().unwrap(),
         })),
         ..fake_2ghz_band_capabilities()

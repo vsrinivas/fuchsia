@@ -14,7 +14,7 @@ use {
         phy_selection::get_device_band_info,
     },
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::warn,
     wlan_common::{
         channel::{Cbw, Channel},
@@ -123,8 +123,8 @@ fn derive_channel(ap_channel: Channel, cbw: Cbw) -> Channel {
 /// Wrapper function to convert FIDL {HT,VHT}Capabilities into byte arrays, taking into account the
 /// limitations imposed by the channel bandwidth.
 fn override_ht_vht(
-    fidl_ht_cap: Option<&Box<fidl_mlme::HtCapabilities>>,
-    fidl_vht_cap: Option<&Box<fidl_mlme::VhtCapabilities>>,
+    fidl_ht_cap: Option<&Box<fidl_internal::HtCapabilities>>,
+    fidl_vht_cap: Option<&Box<fidl_internal::VhtCapabilities>>,
     cbw: Cbw,
 ) -> Result<(Option<HtCapabilities>, Option<VhtCapabilities>), Error> {
     if fidl_ht_cap.is_none() && fidl_vht_cap.is_some() {

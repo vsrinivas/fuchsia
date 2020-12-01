@@ -18,6 +18,7 @@ rustc_library("wlan-mlme") {
     "//sdk/banjo/ddk.protocol.wlan.info:ddk.protocol.wlan.info-rustc",
     "//sdk/banjo/ddk.protocol.wlan.mac:ddk.protocol.wlan.mac-rustc",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
+    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal-rustc",
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//sdk/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",

@@ -12,7 +12,7 @@ fidl("fuchsia.wlan.device") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.wlan.common",
-    "//sdk/fidl/fuchsia.wlan.mlme",
+    "//sdk/fidl/fuchsia.wlan.internal",
     "//zircon/vdso/zx",
   ]
 }

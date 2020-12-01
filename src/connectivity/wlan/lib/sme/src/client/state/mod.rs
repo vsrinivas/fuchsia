@@ -25,7 +25,8 @@ use {
         MlmeRequest,
     },
     anyhow::bail,
-    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent},
+    fidl_fuchsia_wlan_internal::{self as fidl_internal, BssDescription},
+    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent},
     fuchsia_inspect_contrib::{inspect_log, log::InspectBytes},
     fuchsia_zircon as zx,
     link_state::LinkState,
@@ -1258,14 +1259,16 @@ fn send_mlme_assoc_req(
     protection_ie: &Option<ProtectionIe>,
     mlme_sink: &MlmeSink,
 ) {
-    assert_eq_size!(ie::HtCapabilities, [u8; fidl_mlme::HT_CAP_LEN as usize]);
+    assert_eq_size!(ie::HtCapabilities, [u8; fidl_internal::HT_CAP_LEN as usize]);
     let ht_cap = capabilities.map_or(None, |c| {
-        c.0.ht_cap.map(|h| fidl_mlme::HtCapabilities { bytes: h.as_bytes().try_into().unwrap() })
+        c.0.ht_cap
+            .map(|h| fidl_internal::HtCapabilities { bytes: h.as_bytes().try_into().unwrap() })
     });
 
-    assert_eq_size!(ie::VhtCapabilities, [u8; fidl_mlme::VHT_CAP_LEN as usize]);
+    assert_eq_size!(ie::VhtCapabilities, [u8; fidl_internal::VHT_CAP_LEN as usize]);
     let vht_cap = capabilities.map_or(None, |c| {
-        c.0.vht_cap.map(|v| fidl_mlme::VhtCapabilities { bytes: v.as_bytes().try_into().unwrap() })
+        c.0.vht_cap
+            .map(|v| fidl_internal::VhtCapabilities { bytes: v.as_bytes().try_into().unwrap() })
     });
     let (rsne, vendor_ies) = match protection_ie.as_ref() {
         Some(ProtectionIe::Rsne(vec)) => (Some(vec.to_vec()), None),
@@ -2854,7 +2857,7 @@ mod tests {
         .into()
     }
 
-    fn link_up_state(bss: Box<fidl_mlme::BssDescription>) -> ClientState {
+    fn link_up_state(bss: Box<BssDescription>) -> ClientState {
         let link_state = testing::new_state(LinkUp {
             protection: Protection::Open,
             since: now(),
@@ -2881,7 +2884,7 @@ mod tests {
     }
 
     fn link_up_state_protected(supplicant: MockSupplicant, bssid: [u8; 6]) -> ClientState {
-        let bss = fidl_mlme::BssDescription { ssid: b"foo".to_vec(), bssid, ..fake_bss!(Wpa2) };
+        let bss = BssDescription { ssid: b"foo".to_vec(), bssid, ..fake_bss!(Wpa2) };
         let rsne = Rsne::wpa2_psk_ccmp_rsne();
         let rsna = Rsna {
             negotiated_protection: NegotiatedProtection::from_rsne(&rsne)

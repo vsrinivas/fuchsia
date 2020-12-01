@@ -5,7 +5,7 @@
 #include "phy-device.h"
 
 #include <fuchsia/wlan/device/llcpp/fidl.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <stdio.h>
 
 #include <algorithm>
@@ -24,7 +24,7 @@ namespace testing {
 
 namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_device = ::fuchsia::wlan::device;
-namespace wlan_mlme = ::fuchsia::wlan::mlme;
+namespace wlan_internal = ::fuchsia::wlan::internal;
 
 #define DEV(c) static_cast<PhyDevice*>(c)
 static zx_protocol_device_t wlanphy_test_device_ops = {
@@ -132,7 +132,7 @@ wlan_device::PhyInfo get_info() {
   ht_caps.mcs_set.rx_mcs_tail.set_val(0);
   ht_caps.mcs_set.tx_mcs.set_val(0x10);
 
-  band24.ht_caps = wlan_mlme::HtCapabilities::New();
+  band24.ht_caps = wlan_internal::HtCapabilities::New();
   static_assert(sizeof(band24.ht_caps->bytes) == sizeof(ht_caps));
   memcpy(band24.ht_caps->bytes.data(), &ht_caps, sizeof(ht_caps));
 
@@ -151,7 +151,7 @@ wlan_device::PhyInfo get_info() {
   ht_caps.mcs_set.rx_mcs_tail.set_val(0);
   ht_caps.mcs_set.tx_mcs.set_val(0x10);
 
-  band5.ht_caps = wlan_mlme::HtCapabilities::New();
+  band5.ht_caps = wlan_internal::HtCapabilities::New();
   static_assert(sizeof(band5.ht_caps->bytes) == sizeof(ht_caps));
   memcpy(band5.ht_caps->bytes.data(), &ht_caps, sizeof(ht_caps));
 

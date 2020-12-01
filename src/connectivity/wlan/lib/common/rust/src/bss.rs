@@ -10,7 +10,7 @@ use {
         mac::CapabilityInfo,
     },
     anyhow::format_err,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
     std::{cmp::Ordering, collections::HashMap, fmt, hash::Hash},
 };
 
@@ -116,7 +116,7 @@ pub trait BssDescriptionExt {
     fn to_non_obfuscated_string(&self) -> String;
 }
 
-impl BssDescriptionExt for fidl_mlme::BssDescription {
+impl BssDescriptionExt for fidl_internal::BssDescription {
     fn protection(&self) -> Protection {
         let supports_wpa_1 = self
             .wpa_ie()
@@ -271,7 +271,7 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
     }
 }
 
-/// The BssCandidacy type is used to rank fidl_mlme::BssDescription values. It is ordered
+/// The BssCandidacy type is used to rank fidl_internal::BssDescription values. It is ordered
 /// first by Protection and then by Dbm.
 #[derive(Debug, Eq, PartialEq)]
 pub struct BssCandidacy {
@@ -293,20 +293,20 @@ impl Ord for BssCandidacy {
 
 /// Given a list of BssDescription, categorize each one based on the latest PHY standard it
 /// supports and return a mapping from Standard to number of BSS.
-pub fn phy_standard_map(bss_list: &Vec<fidl_mlme::BssDescription>) -> HashMap<Standard, usize> {
+pub fn phy_standard_map(bss_list: &Vec<fidl_internal::BssDescription>) -> HashMap<Standard, usize> {
     info_map(bss_list, |bss| bss.latest_standard())
 }
 
 /// Given a list of BssDescription, return a mapping from channel to the number of BSS using
 /// that channel.
-pub fn channel_map(bss_list: &Vec<fidl_mlme::BssDescription>) -> HashMap<u8, usize> {
+pub fn channel_map(bss_list: &Vec<fidl_internal::BssDescription>) -> HashMap<u8, usize> {
     info_map(bss_list, |bss| bss.chan.primary)
 }
 
-fn info_map<F, T>(bss_list: &Vec<fidl_mlme::BssDescription>, f: F) -> HashMap<T, usize>
+fn info_map<F, T>(bss_list: &Vec<fidl_internal::BssDescription>, f: F) -> HashMap<T, usize>
 where
     T: Eq + Hash,
-    F: Fn(&fidl_mlme::BssDescription) -> T,
+    F: Fn(&fidl_internal::BssDescription) -> T,
 {
     let mut info_map: HashMap<T, usize> = HashMap::new();
     for bss in bss_list {
@@ -324,7 +324,7 @@ mod tests {
             fake_unknown_rsne, fake_wpa1_ie_body, invalid_wpa2_wpa3_rsne,
             invalid_wpa3_enterprise_192_bit_rsne, invalid_wpa3_rsne,
         },
-        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
+        fidl_fuchsia_wlan_common as fidl_common,
     };
 
     #[test]
@@ -383,8 +383,8 @@ mod tests {
     #[test]
     fn test_latest_standard_ac() {
         let bss = fake_bss!(Open,
-                            vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities { bytes: Default::default() })),
-                            vht_op: Some(Box::new(fidl_mlme::VhtOperation { bytes: Default::default() }))
+                            vht_cap: Some(Box::new(fidl_internal::VhtCapabilities { bytes: Default::default() })),
+                            vht_op: Some(Box::new(fidl_internal::VhtOperation { bytes: Default::default() }))
         );
         assert_eq!(Standard::Dot11Ac, bss.latest_standard());
     }
@@ -394,8 +394,8 @@ mod tests {
         let bss = fake_bss!(Open,
                             vht_cap: None,
                             vht_op: None,
-                            ht_cap: Some(Box::new(fidl_mlme::HtCapabilities { bytes: Default::default() })),
-                            ht_op: Some(Box::new(fidl_mlme::HtOperation { bytes: Default::default() })),
+                            ht_cap: Some(Box::new(fidl_internal::HtCapabilities { bytes: Default::default() })),
+                            ht_op: Some(Box::new(fidl_internal::HtOperation { bytes: Default::default() })),
         );
         assert_eq!(Standard::Dot11N, bss.latest_standard());
     }
@@ -493,8 +493,8 @@ mod tests {
     }
 
     fn assert_bss_comparison(
-        worse: &fidl_mlme::BssDescription,
-        better: &fidl_mlme::BssDescription,
+        worse: &fidl_internal::BssDescription,
+        better: &fidl_internal::BssDescription,
     ) {
         assert_eq!(Ordering::Less, worse.candidacy().cmp(&better.candidacy()));
         assert_eq!(Ordering::Greater, better.candidacy().cmp(&worse.candidacy()));

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 
@@ -17,6 +18,7 @@
 
 namespace wlanif {
 namespace {
+namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
@@ -49,29 +51,29 @@ wlanif_bss_description_t FakeBssWithSsidLen(uint8_t ssid_len) {
 }
 
 TEST(ConvertTest, ToFidlBSSDescription_SsidEmpty) {
-  wlan_mlme::BSSDescription fidl_desc = {};
-  ConvertBSSDescription(&fidl_desc, FakeBssWithSsidLen(0));
+  wlan_internal::BssDescription fidl_desc = {};
+  ConvertBssDescription(&fidl_desc, FakeBssWithSsidLen(0));
   auto status = ValidateMessage(&fidl_desc);
   EXPECT_EQ(status, ZX_OK);
 }
 
 TEST(ConvertTest, ToFidlBSSDescription_Ssid) {
-  wlan_mlme::BSSDescription fidl_desc = {};
-  ConvertBSSDescription(&fidl_desc, FakeBssWithSsidLen(3));
+  wlan_internal::BssDescription fidl_desc = {};
+  ConvertBssDescription(&fidl_desc, FakeBssWithSsidLen(3));
   auto status = ValidateMessage(&fidl_desc);
   EXPECT_EQ(status, ZX_OK);
 }
 
 TEST(ConvertTest, ToFidlBSSDescription_SsidMaxLength) {
-  wlan_mlme::BSSDescription fidl_desc = {};
-  ConvertBSSDescription(&fidl_desc, FakeBssWithSsidLen(32));
+  wlan_internal::BssDescription fidl_desc = {};
+  ConvertBssDescription(&fidl_desc, FakeBssWithSsidLen(32));
   auto status = ValidateMessage(&fidl_desc);
   EXPECT_EQ(status, ZX_OK);
 }
 
 TEST(ConvertTest, ToFidlBSSDescription_SsidTooLong) {
-  wlan_mlme::BSSDescription fidl_desc = {};
-  ConvertBSSDescription(&fidl_desc, FakeBssWithSsidLen(33));
+  wlan_internal::BssDescription fidl_desc = {};
+  ConvertBssDescription(&fidl_desc, FakeBssWithSsidLen(33));
   auto status = ValidateMessage(&fidl_desc);
   EXPECT_EQ(status, ZX_OK);
 }
@@ -83,8 +85,8 @@ TEST(ConvertTest, ToFidlBSSDescription_Country) {
   memcpy(wlanif_desc.country, country, sizeof(country));
   wlanif_desc.country_len = sizeof(country);
 
-  wlan_mlme::BSSDescription fidl_desc = {};
-  ConvertBSSDescription(&fidl_desc, wlanif_desc);
+  wlan_internal::BssDescription fidl_desc = {};
+  ConvertBssDescription(&fidl_desc, wlanif_desc);
 
   EXPECT_EQ(fidl_desc.country->size(), sizeof(country));
   EXPECT_EQ(memcmp(fidl_desc.country->data(), country, sizeof(country)), 0);
@@ -106,7 +108,7 @@ TEST(ConvertTest, ToVectorRateSets_InvalidRateCount) {
 
   ConvertRates(&rates, bss_desc);
 
-  expected.resize(wlan_mlme::RATES_MAX_LEN);  // ConvertRates will truncate excess rates
+  expected.resize(wlan_internal::RATES_MAX_LEN);  // ConvertRates will truncate excess rates
   EXPECT_EQ(rates, expected);
 }
 
@@ -501,13 +503,13 @@ TEST(ConvertTest, ToFidlPmkInfo) {
 }
 
 TEST(ConvertTest, ToWlanifBssDescription_Country) {
-  wlan_mlme::BSSDescription fidl_desc = {};
+  wlan_internal::BssDescription fidl_desc = {};
   uint8_t country[] = {0x55, 0x53, 0x20, 0x01, 0x0b, 0x1e};
   fidl_desc.country = std::vector<uint8_t>(country, country + sizeof(country));
-  fidl_desc.bss_type = wlan_mlme::BSSTypes::INFRASTRUCTURE;
+  fidl_desc.bss_type = wlan_internal::BssTypes::INFRASTRUCTURE;
 
   wlanif_bss_description_t wlanif_desc = {};
-  ConvertBSSDescription(&wlanif_desc, fidl_desc);
+  ConvertBssDescription(&wlanif_desc, fidl_desc);
 
   EXPECT_EQ(wlanif_desc.country_len, sizeof(country));
   EXPECT_EQ(memcmp(wlanif_desc.country, country, sizeof(country)), 0);

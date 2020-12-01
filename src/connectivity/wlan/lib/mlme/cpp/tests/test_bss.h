@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_BSS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_BSS_H_
 
+#include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/timekeeper/clock.h>
 
@@ -73,8 +74,8 @@ FV TypeCheckWlanFrame(Packet* pkt) {
   return frame;
 }
 
-::fuchsia::wlan::mlme::BSSDescription CreateBssDescription(bool rsn,
-                                                           wlan_channel_t chan = kBssChannel);
+::fuchsia::wlan::internal::BssDescription CreateBssDescription(bool rsn,
+                                                               wlan_channel_t chan = kBssChannel);
 MlmeMsg<::fuchsia::wlan::mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time);
 MlmeMsg<::fuchsia::wlan::mlme::StartRequest> CreateStartRequest(bool protected_ap);
 MlmeMsg<::fuchsia::wlan::mlme::StopRequest> CreateStopRequest();

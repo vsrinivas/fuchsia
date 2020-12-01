@@ -4,6 +4,7 @@
 
 #include "test_bss.h"
 
+#include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 #include <memory>
@@ -23,6 +24,7 @@
 namespace wlan {
 
 namespace wlan_common = ::fuchsia::wlan::common;
+namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 void WriteTim(BufferWriter* w, const PsCfg& ps_cfg) {
@@ -62,14 +64,14 @@ void WriteCountry(BufferWriter* w, const wlan_channel_t chan) {
   common::WriteCountry(w, kCountry, subbands);
 }
 
-wlan_mlme::BSSDescription CreateBssDescription(bool rsne, wlan_channel_t chan) {
+wlan_internal::BssDescription CreateBssDescription(bool rsne, wlan_channel_t chan) {
   common::MacAddr bssid(kBssid1);
 
-  wlan_mlme::BSSDescription bss_desc;
+  wlan_internal::BssDescription bss_desc;
   std::memcpy(bss_desc.bssid.data(), bssid.byte, common::kMacAddrLen);
   std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
   bss_desc.ssid = std::move(ssid);
-  bss_desc.bss_type = wlan_mlme::BSSTypes::INFRASTRUCTURE;
+  bss_desc.bss_type = wlan_internal::BssTypes::INFRASTRUCTURE;
   bss_desc.beacon_period = kBeaconPeriodTu;
   bss_desc.dtim_period = kDtimPeriodTu;
   bss_desc.timestamp = 0;
@@ -104,7 +106,7 @@ wlan_mlme::BSSDescription CreateBssDescription(bool rsne, wlan_channel_t chan) {
 MlmeMsg<wlan_mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time) {
   auto req = wlan_mlme::ScanRequest::New();
   req->txn_id = 0;
-  req->bss_type = wlan_mlme::BSSTypes::ANY_BSS;
+  req->bss_type = wlan_internal::BssTypes::ANY_BSS;
   std::memcpy(req->bssid.data(), kBroadcastBssid, sizeof(kBroadcastBssid));
   req->ssid = {0};
   req->scan_type = wlan_mlme::ScanTypes::PASSIVE;
@@ -118,7 +120,7 @@ MlmeMsg<wlan_mlme::StartRequest> CreateStartRequest(bool protected_ap) {
   auto req = wlan_mlme::StartRequest::New();
   std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
   req->ssid = std::move(ssid);
-  req->bss_type = wlan_mlme::BSSTypes::INFRASTRUCTURE;
+  req->bss_type = wlan_internal::BssTypes::INFRASTRUCTURE;
   req->beacon_period = kBeaconPeriodTu;
   req->dtim_period = kDtimPeriodTu;
   req->channel = kBssChannel.primary;
@@ -215,13 +217,13 @@ MlmeMsg<wlan_mlme::NegotiatedCapabilities> CreateFinalizeAssociationRequest(
   cap->cap_info = ac.cap_info;
   cap->rates.assign(ac.rates, ac.rates + ac.rates_cnt);
   if (ac.has_ht_cap) {
-    cap->ht_cap = wlan_mlme::HtCapabilities::New();
+    cap->ht_cap = wlan_internal::HtCapabilities::New();
     static_assert(sizeof(cap->ht_cap->bytes) == sizeof(ac.ht_cap));
     memcpy(cap->ht_cap->bytes.data(), &ac.ht_cap, sizeof(ac.ht_cap));
   }
 
   if (ac.has_vht_cap) {
-    cap->vht_cap = wlan_mlme::VhtCapabilities::New();
+    cap->vht_cap = wlan_internal::VhtCapabilities::New();
     static_assert(sizeof(cap->vht_cap->bytes) == sizeof(ac.vht_cap));
     memcpy(cap->vht_cap->bytes.data(), &ac.vht_cap, sizeof(ac.vht_cap));
   }
