@@ -9,9 +9,8 @@ use {
     anyhow::{anyhow, Context, Result},
     async_std::io::prelude::BufReadExt,
     async_std::prelude::StreamExt,
-    async_std::task,
     fidl_fuchsia_overnet::MeshControllerProxyInterface,
-    fuchsia_async::Task,
+    fuchsia_async::{Task, Timer},
     futures::channel::oneshot,
     futures::future::FutureExt,
     futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
@@ -182,7 +181,7 @@ impl HostPipeConnection {
                 // TODO(fxbug.dev/52038): Want an exponential backoff that
                 // is sync'd with an explicit "try to start this again
                 // anyway" channel using a select! between the two of them.
-                task::sleep(relaunch_command_delay).await;
+                Timer::new(relaunch_command_delay).await;
             }
         })
     }

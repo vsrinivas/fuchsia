@@ -5,12 +5,12 @@
 use {
     crate::events::{self, DaemonEvent, WireTrafficType},
     anyhow::{bail, Context, Result},
-    async_std::task,
     fastboot::{
         command::{ClientVariable, Command},
         reply::Reply,
         send, upload,
     },
+    fuchsia_async::Timer,
     std::{
         fs::read,
         io::{Read, Write},
@@ -227,7 +227,7 @@ pub(crate) fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
                     });
             }
             // Sleep
-            task::sleep(std::time::Duration::from_secs(3)).await;
+            Timer::new(std::time::Duration::from_secs(3)).await;
         }
     })
     .detach();

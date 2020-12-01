@@ -4,10 +4,10 @@
 
 use {
     anyhow::Result,
-    async_std::task::sleep,
     async_trait::async_trait,
     ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
     fidl_fuchsia_developer_bridge::DaemonProxy,
+    fuchsia_async::Timer,
     std::process::Command,
     std::time::Duration,
 };
@@ -40,7 +40,7 @@ impl DaemonManager for DefaultDaemonManager {
         // a PEER_CLOSED instead of not finding a daemon.
         for _ in 0..KILL_RETRY_COUNT {
             if self.is_running().await {
-                sleep(KILL_RETRY_DELAY).await;
+                Timer::new(KILL_RETRY_DELAY).await;
                 continue;
             }
             break;

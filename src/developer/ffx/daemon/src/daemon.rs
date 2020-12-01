@@ -13,7 +13,6 @@ use {
         ToFidlTarget,
     },
     anyhow::{anyhow, Context, Result},
-    async_std::task,
     async_trait::async_trait,
     chrono::Utc,
     ffx_core::{build_info, TryStreamUtilExt},
@@ -24,6 +23,7 @@ use {
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
+    fuchsia_async::Timer,
     futures::prelude::*,
     std::convert::TryInto,
     std::sync::{Arc, Weak},
@@ -213,7 +213,7 @@ impl Daemon {
                     Ok(svc) => svc,
                     Err(err) => {
                         log::info!("Overnet setup failed: {}, will retry in 1s", err);
-                        task::sleep(Duration::from_secs(1)).await;
+                        Timer::new(Duration::from_secs(1)).await;
                         continue;
                     }
                 };
@@ -222,7 +222,7 @@ impl Daemon {
                         Ok(peers) => peers,
                         Err(err) => {
                             log::info!("Overnet peer discovery failed: {}, will retry", err);
-                            task::sleep(Duration::from_secs(1)).await;
+                            Timer::new(Duration::from_secs(1)).await;
                             // break out of the peer discovery loop on error in
                             // order to reconnect, in case the error causes the
                             // overnet interface to go bad.
@@ -244,7 +244,7 @@ impl Daemon {
                             );
                         }
                     }
-                    task::sleep(Duration::from_millis(100)).await;
+                    Timer::new(Duration::from_millis(100)).await;
                 }
             }
         })
@@ -350,7 +350,7 @@ impl Daemon {
 
                 responder.send(true).context("error sending response")?;
 
-                task::sleep(std::time::Duration::from_millis(20)).await;
+                Timer::new(std::time::Duration::from_millis(20)).await;
 
                 std::process::exit(0);
             }
@@ -371,7 +371,7 @@ impl Daemon {
                             let res: TargetAddrInfo = addr.into();
                             return Ok(res);
                         }
-                        task::sleep(poll_duration).await;
+                        Timer::new(poll_duration).await;
                     }
                 };
 

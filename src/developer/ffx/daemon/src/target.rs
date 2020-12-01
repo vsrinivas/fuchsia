@@ -12,7 +12,6 @@ use {
     crate::task::{SingleFlight, TaskSnapshot},
     anyhow::{anyhow, Context, Error, Result},
     async_std::sync::RwLock,
-    async_std::task,
     async_trait::async_trait,
     chrono::{DateTime, Utc},
     fidl::endpoints::ServiceMarker,
@@ -23,6 +22,7 @@ use {
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address, Subnet},
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
+    fuchsia_async::Timer,
     futures::future,
     futures::lock::Mutex,
     futures::prelude::*,
@@ -401,7 +401,7 @@ impl Target {
                     _ => s,
                 })
                 .await;
-                task::sleep(Duration::from_secs(1)).await;
+                Timer::new(Duration::from_secs(1)).await;
             } else {
                 log::debug!("parent target dropped. exiting");
                 break;

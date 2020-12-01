@@ -14,6 +14,7 @@ use {
     async_std::sync::Mutex,
     async_std::task::JoinHandle,
     async_std::{net::UdpSocket, task},
+    fuchsia_async::Timer,
     futures::FutureExt,
     packet::{InnerPacketBuilder, ParseBuffer},
     std::collections::HashMap,
@@ -169,7 +170,7 @@ async fn interface_discovery(
                 }
             }
         }
-        task::sleep(discovery_interval).await;
+        Timer::new(discovery_interval).await;
     }
 }
 
@@ -250,7 +251,7 @@ async fn query_loop(sock: Arc<UdpSocket>, interval: Duration) {
             return;
         }
 
-        task::sleep(interval).await;
+        Timer::new(interval).await;
     }
 }
 

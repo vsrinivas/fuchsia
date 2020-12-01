@@ -179,7 +179,7 @@ mod tests {
     use {
         super::*,
         anyhow::anyhow,
-        async_std::task,
+        fuchsia_async::Timer,
         futures::future::ready,
         futures::stream::{iter, once},
         std::time::Duration,
@@ -187,7 +187,7 @@ mod tests {
 
     async fn sleep_for_a_year() {
         // Attempts to sleep for an entire year.
-        task::sleep(Duration::from_secs(3153600000)).await;
+        Timer::new(Duration::from_secs(3153600000)).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
