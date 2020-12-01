@@ -41,7 +41,6 @@ source_set("kernel") {
     "$zx/kernel/lib/ktl",
     "$zx/kernel/lib/ktrace",
     "$zx/kernel/lib/libc",
-    "$zx/kernel/lib/load_balancer",
     "$zx/kernel/lib/topology",
     "$zx/kernel/lib/version",
     "$zx/kernel/object",

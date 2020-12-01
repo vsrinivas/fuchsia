@@ -38,9 +38,6 @@ if (current_toolchain == default_toolchain) {
         # <stdlib.h> has #include <lib/heap.h>.
         "$zx/kernel/lib/heap:headers.config",
 
-        # <percpu.h> has #include <lib/load-balancer.h>.
-        "$zx/kernel/lib/load_balancer:headers.config",
-
         # <lib/lockup_detector.h> is included by some "low-level" headers.
         "$zx/kernel/lib/lockup_detector:headers.config",
 

@@ -7,7 +7,6 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_PERCPU_H_
 
 #include <lib/lazy_init/lazy_init.h>
-#include <lib/load_balancer_percpu.h>
 #include <lib/lockup_detector/state.h>
 #include <stddef.h>
 #include <sys/types.h>
@@ -49,8 +48,6 @@ struct percpu {
   // state for runtime lock validation when in irq context
   lockdep::ThreadLockState lock_state;
 #endif
-
-  load_balancer::CpuState load_balancer;
 
   // guest entry/exit statistics
   struct guest_stats gstats;

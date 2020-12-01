@@ -11,7 +11,6 @@
 #include <inttypes.h>
 #include <lib/counters.h>
 #include <lib/ktrace.h>
-#include <lib/load_balancer_percpu.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
@@ -778,17 +777,6 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
                    arch_ints_disabled());
 
   LOCAL_KTRACE(KTRACE_DETAILED, "target_mask: online,active", mp_get_online_mask(), active_mask);
-
-#if !DISABLE_PERIODIC_LOAD_BALANCER
-  // TODO(edcoyne): When we drop the define refactor this unify these functions.
-  if (IsFairThread(thread)) {
-    const cpu_num_t target_cpu = load_balancer::FindTargetCpu(thread);
-
-    SCHED_LTRACEF("thread=%s target_cpu=%u\n", thread->name(), target_cpu);
-    trace.End(target_cpu, available_mask);
-    return target_cpu;
-  }  // deadline threads will follow the old path for now.
-#endif
 
   const cpu_num_t last_cpu = thread->scheduler_state().last_cpu_;
   const cpu_mask_t last_cpu_mask = cpu_num_to_mask(last_cpu);
