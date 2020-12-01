@@ -22,7 +22,7 @@ extend uint fuchsia.BIND_PCI_DID {
   VIRTIO_DEV_TYPE_NETWORK = 0x1041,
   VIRTIO_DEV_TYPE_T_NETWORK = 0x1000,
   RTL8111 = 0x8168,
-}
+};
 
 extend uint fuchsia.BIND_PCI_CLASS {
   UNCLASSIFIED = 0x00,
