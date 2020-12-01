@@ -100,6 +100,20 @@ protocol Sdio {
     RegisterVmo(uint32 vmo_id, handle<vmo> vmo, uint64 offset, uint64 size) -> (zx.status status);
     UnregisterVmo(uint32 vmo_id) -> (zx.status status, handle<vmo> vmo);
 
+    /// Clients are responsible for performing the following cache operations:
+    ///
+    /// After read requests:
+    /// - Call zx_cache_flush with ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE on buffers that
+    ///   have been mapped by the client.
+    /// - Call zx_vmo_op_range with ZX_VMO_OP_CACHE_CLEAN_INVALIDATE on all other buffers.
+    ///
+    /// Note that writing to any portion of a buffer before DoRwTxnNew has returned can corrupt the
+    /// received data.
+    ///
+    /// Before write requests:
+    /// - Call zx_cache_flush with ZX_CACHE_FLUSH_DATA on buffers that have been mapped by the
+    ///   client.
+    /// - Call zx_vmo_op_range with ZX_VMO_OP_CACHE_CLEAN on all other buffers.
     DoRwTxnNew(SdioRwTxnNew txn) -> (zx.status status);
 
     /// Runs tests and logs the results in order to diagnose issues with the bus. Clients should
