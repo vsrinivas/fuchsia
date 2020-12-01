@@ -173,6 +173,7 @@ class X86PageTableBase::ConsistencyManager {
   void queue_free(vm_page_t* page) {
     AssertHeld(pt_->lock_);
     list_add_tail(&to_free_, &page->queue_node);
+    DEBUG_ASSERT(pt_->pages_ > 0);
     pt_->pages_--;
   }
 
