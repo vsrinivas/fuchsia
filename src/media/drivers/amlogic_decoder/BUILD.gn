@@ -89,6 +89,8 @@ if (target_cpu == "arm64") {
       "amlogic-video.cc",
       "amlogic-video.h",
       "decoder_core.h",
+      "extend_bits.cc",
+      "extend_bits.h",
       "firmware_blob.cc",
       "firmware_blob.h",
       "h264_decoder.cc",
@@ -155,7 +157,6 @@ if (target_cpu == "arm64") {
       # TODO(fxb/38132): Migrate to the new bind rules and delete the below
       "//src/lib/ddk:ddk-deprecated-binding-headers",
       "//src/lib/ddktl",
-      "//src/media/lib/extend_bits",
       "//src/media/lib/internal_buffer",
       "//src/media/lib/memory_barriers",
       "//zircon/public/lib/async-cpp",

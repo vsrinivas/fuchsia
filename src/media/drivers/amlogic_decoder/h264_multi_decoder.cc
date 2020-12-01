@@ -16,8 +16,8 @@
 #include <fbl/algorithm.h>
 
 #include "decoder_instance.h"
+#include "extend_bits.h"
 #include "h264_utils.h"
-#include "lib/media/extend_bits/extend_bits.h"
 #include "media/base/decoder_buffer.h"
 #include "media/gpu/h264_decoder.h"
 #include "media/video/h264_level_limits.h"
@@ -2357,14 +2357,24 @@ void H264MultiDecoder::SwappedIn() {
     stream_buffer_size_ = owner_->current_instance()->stream_buffer()->buffer().size();
     ZX_DEBUG_ASSERT(stream_buffer_size_ > kStreamBufferReadAlignment);
     ZX_DEBUG_ASSERT(stream_buffer_size_ % kStreamBufferReadAlignment == 0);
-    ZX_DEBUG_ASSERT(stream_buffer_size_ % ZX_PAGE_SIZE == 0);
+    // IsPow2
+    ZX_DEBUG_ASSERT(((stream_buffer_size_ - 1) & stream_buffer_size_) == 0);
+    // No need for anything fancy here - not that performance-sensitive.
+    uint32_t tmp = stream_buffer_size_;
+    uint32_t stream_buffer_size_bit_count = 0;
+    while (tmp != 1) {
+      ++stream_buffer_size_bit_count;
+      tmp = tmp >> 1;
+    }
+    stream_buffer_size_bit_count_ = stream_buffer_size_bit_count;
   }
 
   // ExtendBits() doesn't know to only let the unwrapped read offset be less than the unwrapped
   // write offset, but rather than teaching ExtendBits() how to do that, just subtract as necessary
   // here instead.
-  unwrapped_saved_read_stream_offset_ = ExtendBitsGeneral(
-      unwrapped_write_stream_offset_, owner_->core()->GetReadOffset(), stream_buffer_size_);
+  unwrapped_saved_read_stream_offset_ =
+      ExtendBits(unwrapped_write_stream_offset_, owner_->core()->GetReadOffset(),
+                 stream_buffer_size_bit_count_);
   if (unwrapped_saved_read_stream_offset_ > unwrapped_write_stream_offset_) {
     unwrapped_saved_read_stream_offset_ -= GetStreamBufferSize();
   }

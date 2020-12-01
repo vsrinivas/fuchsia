@@ -26,52 +26,10 @@ static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c, ui
          (static_cast<uint32_t>(b) << 8) | static_cast<uint32_t>(a);
 }
 
-template <typename T>
-constexpr T AlignUpConstexpr(T value, T divisor) {
-  return (value + divisor - 1) / divisor * divisor;
-}
-
-// For experimentation purposes, this allows easily switching (with a local edit) to allowing larger
-// input buffers, and using a larger stream buffer.  When this is false, the input buffer max size
-// and stream buffer size are tuned for decoding 1080p safely (barely).
-constexpr bool k4kInputFrames = false;
+constexpr uint32_t kStreamBufferSize = 4 * 1024 * 1024;
 
 // See VLD_PADDING_SIZE.
 constexpr uint32_t kPaddingSize = 1024;
-
-// This should be enough space to hold all headers (such as SEI, SPS, PPS), plus the kPaddingSize
-// padding the decoder adds after each header that is delivered in its own packet, before a max-size
-// frame.  This should be large enough to also hold any zero-padding in the input stream before a
-// max-size frame (typically none).
-constexpr uint32_t kBigHeadersBytes = 128 * 1024;
-
-// This is enough to decode 4:2:0 1920x1080 with MinCR 2, assuming headers before the frame don't
-// exceed 128KiB.
-constexpr uint32_t k1080pMaxCompressedFrameSize = 1920 * 1080 * 3 / 2 / 2;
-constexpr uint32_t kDci4kMaxCompressedFrameSize = 4096u * 2160 * 3 / 2 / 2;
-
-constexpr uint32_t k1080pMaxCompressedFrameSizeIncludingHeaders =
-    k1080pMaxCompressedFrameSize + kBigHeadersBytes;
-constexpr uint32_t kDci4kMaxCompressedFrameSizeIncludingHeaders =
-    kDci4kMaxCompressedFrameSize + kBigHeadersBytes;
-
-constexpr uint32_t kMaxCompressedFrameSizeIncludingHeaders =
-    k4kInputFrames ? kDci4kMaxCompressedFrameSizeIncludingHeaders
-                   : k1080pMaxCompressedFrameSizeIncludingHeaders;
-
-constexpr uint32_t kStreamBufferReadAlignment = 512;
-// It might be reasonable to remove this adjustment, given some experimentation to see if the
-// kStreamBufferReadAlignment is sufficient on its own to make kStreamBufferSize work.
-constexpr uint32_t kReadNotEqualWriteAdjustment = 1;
-
-// The ZX_PAGE_SIZE alignment is just because we won't really allocate a partial page via sysmem
-// anyway, so we may as well use the rest of the last needed page even if kStreamBufferReadAlignment
-// might technically work.
-constexpr uint32_t kStreamBufferSize =
-    AlignUpConstexpr(kMaxCompressedFrameSizeIncludingHeaders + kPaddingSize +
-                         kStreamBufferReadAlignment + kReadNotEqualWriteAdjustment,
-                     static_cast<uint32_t>(ZX_PAGE_SIZE));
-static_assert(kStreamBufferSize % ZX_PAGE_SIZE == 0);
 
 // For now we rely on a compressed input frame to be contained entirely in a single buffer.  While
 // this minimum size may work for some demo streams, for now clients are expected to set a larger
@@ -80,8 +38,21 @@ static_assert(kStreamBufferSize % ZX_PAGE_SIZE == 0);
 // accounts for MinCR (see h264 spec) of 2 which is worst-case, and allows for SEI/SPS/PPS that's up
 // to 128 KiB which is probably enough for those headers.
 constexpr uint32_t kInputPerPacketBufferBytesMin = 512 * 1024;
+// For experimentation purposes, allow buffers large enough for worst-case DCI 4k compressed input
+// frames, or the vast majority of kStreamBufferSize, whichever is smaller.  While the HW should be
+// able to decode such streams, the current vdec1 clock rate likely won't result in throughput
+// sufficient to keep up at 60 fps, and maybe not even at 30 fps.
+const uint32_t kInputPerPacketBufferBytesMax =
+    std::min(kStreamBufferSize - kPaddingSize - static_cast<uint32_t>(ZX_PAGE_SIZE),
+             4096u * 2160 * 3 / 2 / 2 + 128 * 1024);
 
-const uint32_t kInputPerPacketBufferBytesMax = kMaxCompressedFrameSizeIncludingHeaders;
+// This is accounting for 1024 bytes padding, and the fact that read and write pointers can't be
+// equal.
+constexpr uint32_t kMaxSupportedNonFrameDataBeforeFrameData = 128 * 1024 - 1024 - 1;
+// This is meant to alert anyone changing buffers sizes if the max non-frame data is being reduced,
+// which might risk not being able to decode some streams we could previously decode.
+static_assert(kStreamBufferSize - kInputPerPacketBufferBytesMin - 1024 - 1 >=
+              kMaxSupportedNonFrameDataBeforeFrameData);
 
 constexpr uint32_t kInputBufferCountForCodecMin = 1;
 constexpr uint32_t kInputBufferCountForCodecMax = 64;

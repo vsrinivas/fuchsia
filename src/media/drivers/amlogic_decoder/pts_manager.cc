@@ -7,7 +7,7 @@
 #include <inttypes.h>
 #include <zircon/assert.h>
 
-#include "lib/media/extend_bits/extend_bits.h"
+#include "extend_bits.h"
 #include "macros.h"
 
 #ifndef AMLOGIC_PTS_DLOG_ENABLE

@@ -66,9 +66,9 @@ constexpr uint32_t kInputReservedForBigHeadersSizeH264 = 128 * 1024;
 constexpr uint32_t kInputMinBufferSizeH264 =
     kInputLargeFrameSizeH264 + kInputReservedForBigHeadersSizeH264;
 
-// We need to ensure we can process frames/superframes up to this large for VP9.  This is the size
-// Chromium currently sets for input buffers (for both h264 and vp9).
-constexpr uint32_t kInputLargeFrameSizeVp9 = 1920 * 1080 * 3 / 2 / 2 + 128 * 1024;
+// We need to ensure we can process frames/superframes up to this large for VP9.  This is 1/2 the
+// size of VDEC on current HW.
+constexpr uint32_t kInputLargeFrameSizeVp9 = 1024 * 1024 * 775 / 100 / 2;
 constexpr uint32_t kInputMinBufferSizeVp9 = kInputLargeFrameSizeVp9;
 
 constexpr uint32_t kInputMinBufferSize = std::max(kInputMinBufferSizeH264, kInputMinBufferSizeVp9);
@@ -218,7 +218,7 @@ uint64_t VideoDecoderRunner::QueueH264Frames(uint64_t stream_lifetime_ordinal,
       accumulator.reserve(new_capacity);
     }
     accumulator.resize(insert_offset + byte_count);
-    // Zero pad first few frames a lot to verify large frames can decode.
+    // Zero pad IDR frames a lot to verify large frames can decode.
     if (IsSliceNalUnitType(nal_unit_type) && frame_count < 5) {
       ZX_DEBUG_ASSERT(byte_count < kInputLargeFrameSizeH264);
       uint32_t zero_padding_bytes = kInputLargeFrameSizeH264 - byte_count;
