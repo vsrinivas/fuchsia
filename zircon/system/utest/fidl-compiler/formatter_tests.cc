@@ -18,10 +18,11 @@
 namespace {
 
 std::map<std::string, std::string> formatted_output_;
+const fidl::ExperimentalFlags FLAGS(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
 void InitializeContents() {
   for (auto element : Examples::map()) {
-    TestLibrary library(element.first, element.second);
+    TestLibrary library(element.first, element.second, FLAGS);
     std::unique_ptr<fidl::raw::File> ast;
     library.Parse(&ast);
 
@@ -37,7 +38,7 @@ TEST(FormatterTests, idempotence_test) {
   InitializeContents();
 
   for (auto element : formatted_output_) {
-    TestLibrary library(element.first, element.second);
+    TestLibrary library(element.first, element.second, FLAGS);
     std::unique_ptr<fidl::raw::File> ast;
     EXPECT_TRUE(library.Parse(&ast));
 
@@ -54,11 +55,12 @@ TEST(FormatterTests, basic_formatting_rules_test) {
 
   std::regex trailing_ws(".*\\s+$");
   std::regex top_level_decl("^\\s*(?:struct|enum|union)\\s+.*");
-  std::regex attribute("\\s*\\[[A-Za-z]+\\]\\s*");
+  std::regex attribute("\\s*\\[[A-Za-z,=\" ]+\\]\\s*");
   std::regex comment("\\s*//.*");
 
   // Break the output into lines
   for (auto element : formatted_output_) {
+    printf("testing %s\n", element.first.c_str());
     std::stringstream ss(element.second);
     std::string line;
     std::vector<std::string> lines;

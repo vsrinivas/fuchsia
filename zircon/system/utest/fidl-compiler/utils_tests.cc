@@ -479,6 +479,9 @@ TEST(UtilsTests, is_only_whitespace) {
     }
   }
 
+  ASSERT_GT(good_output.size(), 0);
+  ASSERT_GT(bad_output.size(), 0);
+
   ASSERT_TRUE(OnlyWhitespaceChanged(bad_output, good_output));
 }
 

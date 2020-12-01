@@ -76,6 +76,8 @@ void TypeConstructor::Accept(TreeVisitor* visitor) const {
     visitor->OnHandleSubtype(handle_subtype.value());
   if (handle_subtype_identifier)
     visitor->OnIdentifier(handle_subtype_identifier);
+  if (handle_rights != nullptr)
+    visitor->OnConstant(handle_rights);
   if (maybe_size != nullptr)
     visitor->OnConstant(maybe_size);
   visitor->OnNullability(nullability);

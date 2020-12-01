@@ -41,19 +41,10 @@ To add a new library with dependencies:
 ## Golden tests
 
 FIDL tools in //tools/fidl use the test libraries as input when defining golden
-tests with //build/testing/golden_test.gni. Due to build unification issues, the
-fidlc goldens are in //tools/fidl/fidlc/goldens rather than here in zircon.
+tests with //build/testing/golden_test.gni. The fidlc goldens are in
+//tools/fidl/fidlc -- eventually all fidlc source code will move there.
 
-To run fidlc golden tests:
+To regenerate all goldens, run `fx regen-goldens fidl`.
 
-```
-fx test fidlc_golden_tests
-```
-
-To regenerate fidlc goldens:
-
-```
-fx regen-goldens fidlc
-# The above is just a shortcut for this:
-fx test fidlgen_golden_tests -- --regen
-```
+To test goldens, run `fx test ${TOOL}_golden_tests` for the specific tool,
+e.g. `fx test fidlc_golden_tests`.

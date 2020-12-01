@@ -77,7 +77,6 @@ group("fidl") {
     "//garnet/examples/fidl/echo_server_go",
     "//garnet/examples/fidl/echo_server_llcpp",
     "//garnet/examples/fidl/echo_server_rust:echo-server-rust",
-    "//garnet/go/src/fidl/examples",
   ]
 }
 

@@ -13,46 +13,25 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
+import("//zircon/tools/fidl/testdata/info.gni")
 
 # The generation depends only on the source, so do it only once.
 if (current_toolchain == default_toolchain) {
   action("gen-examples") {
     visibility = [ ":examples" ]
     outputs = [ "$target_gen_dir/examples.cc" ]
+    script = "gen-examples.sh"
     sources = [
-      # find zircon/tools/fidl/examples -type f | sed -e 's+^zircon\(.*\)$+"//zircon\1",+' | sort
-      "//zircon/tools/fidl/examples/alignment.test.fidl",
-      "//zircon/tools/fidl/examples/bits.test.fidl",
-      "//zircon/tools/fidl/examples/empty.test.fidl",
-      "//zircon/tools/fidl/examples/empty_struct.test.fidl",
-      "//zircon/tools/fidl/examples/enums.test.fidl",
-      "//zircon/tools/fidl/examples/errors.test.fidl",
-      "//zircon/tools/fidl/examples/events.test.fidl",
-      "//zircon/tools/fidl/examples/example-0.test.fidl",
-      "//zircon/tools/fidl/examples/example-1.test.fidl",
-      "//zircon/tools/fidl/examples/example-10.test.fidl",
-      "//zircon/tools/fidl/examples/example-2.test.fidl",
-      "//zircon/tools/fidl/examples/example-3.test.fidl",
-      "//zircon/tools/fidl/examples/example-4.test.fidl",
-      "//zircon/tools/fidl/examples/example-5.test.fidl",
-      "//zircon/tools/fidl/examples/example-6.test.fidl",
-      "//zircon/tools/fidl/examples/example-7.test.fidl",
-      "//zircon/tools/fidl/examples/example-8.test.fidl",
-      "//zircon/tools/fidl/examples/example-9.test.fidl",
-      "//zircon/tools/fidl/examples/library-a/point.test.fidl",
-      "//zircon/tools/fidl/examples/library-b/view.test.fidl",
-      "//zircon/tools/fidl/examples/protocol-ordinals.test.fidl",
-      "//zircon/tools/fidl/examples/simple.test.fidl",
-      "//zircon/tools/fidl/examples/tables.test.fidl",
-      "//zircon/tools/fidl/examples/test.test.fidl",
-      "//zircon/tools/fidl/examples/types.test.fidl",
-
-      # manual
       "testdata/badformat.fidl.noformat",
-      "testdata/doc_comments.test.fidl",
       "testdata/goodformat.test.fidl",
     ]
-    script = "gen-examples.sh"
+    foreach(info, fidl_testdata_info) {
+      # Only use the standalone libraries since they have predictable filenames.
+      if (get_label_info(info.target, "dir") ==
+          "//zircon/tools/fidl/testdata") {
+        sources += [ "//zircon/tools/fidl/testdata/${info.name}.test.fidl" ]
+      }
+    }
     args = rebase_path(outputs, root_build_dir) +
            rebase_path(sources, root_build_dir)
   }

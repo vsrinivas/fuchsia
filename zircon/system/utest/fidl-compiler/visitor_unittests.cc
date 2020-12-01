@@ -14,6 +14,8 @@
 
 namespace {
 
+const fidl::ExperimentalFlags FLAGS(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
 // A TreeVisitor that reads in a file and spits back out the same file
 class NoopTreeVisitor : public fidl::raw::DeclarationOrderTreeVisitor {
  public:
@@ -79,7 +81,7 @@ std::string targeted_diff(const char* expected, const char* actual, size_t size)
 // reconstruct its original contents.
 TEST(VisitorTests, read_and_write_direct_test) {
   for (auto element : Examples::map()) {
-    TestLibrary library(element.first, element.second);
+    TestLibrary library(element.first, element.second, FLAGS);
     std::unique_ptr<fidl::raw::File> ast;
     bool is_parse_success = library.Parse(&ast);
     EXPECT_TRUE(is_parse_success);
