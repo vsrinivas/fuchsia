@@ -145,6 +145,32 @@ pub(crate) async fn perform_scan<F>(
     while let Some(_) = scan_result_consumers.next().await {}
 }
 
+/// Perform a directed active scan for a given network on given channels.
+#[allow(unused)]
+pub(crate) async fn perform_directed_active_scan(
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    network: &types::NetworkIdentifier,
+    channels: Option<Vec<u8>>,
+) -> Result<Vec<types::ScanResult>, ()> {
+    let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+        ssids: vec![network.ssid.clone()],
+        channels: channels.unwrap_or(vec![]),
+    });
+
+    let sme_result = sme_scan(Arc::clone(&iface_manager), scan_request).await;
+
+    sme_result.map(|results| {
+        let mut bss_by_network: HashMap<types::NetworkIdentifier, Vec<types::Bss>> = HashMap::new();
+        insert_bss_to_network_bss_map(&mut bss_by_network, &results, false);
+
+        // The active scan targets a specific SSID, but we want to return only results for the
+        // requested NetworkIdentifier (i.e. SSID + Security tuple).
+        bss_by_network.retain(|network_id, _| network_id == network);
+
+        network_bss_map_to_scan_result(&bss_by_network)
+    })
+}
+
 /// The location sensor module uses scan results to help determine the
 /// device's location, for use by the Emergency Location Provider.
 pub struct LocationSensorUpdater {}
@@ -311,7 +337,8 @@ mod tests {
         fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{channel::oneshot, lock::Mutex, task::Poll},
         pin_utils::pin_mut,
-        std::sync::Arc,
+        rand::Rng as _,
+        std::{convert::TryInto as _, sync::Arc},
         wlan_common::assert_variant,
     };
 
@@ -1746,8 +1773,7 @@ mod tests {
             combined_fidl_aps: _,
         } = create_scan_ap_data();
 
-        let mut bss_by_network: HashMap<fidl_policy::NetworkIdentifier, Vec<types::Bss>> =
-            HashMap::new();
+        let mut bss_by_network: HashMap<types::NetworkIdentifier, Vec<types::Bss>> = HashMap::new();
         insert_bss_to_network_bss_map(&mut bss_by_network, &passive_input_aps, true);
         insert_bss_to_network_bss_map(&mut bss_by_network, &active_input_aps, false);
         let scan_results = network_bss_map_to_scan_result(&bss_by_network);
@@ -1763,6 +1789,98 @@ mod tests {
 
         // This should result in error, since no results were consumed
         assert_variant!(exec.run_until_stalled(&mut send_fut), Poll::Ready(Err(_)));
+    }
+
+    fn generate_random_bss_info() -> fidl_sme::BssInfo {
+        let mut rng = rand::thread_rng();
+        let bssid = (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>();
+        fidl_sme::BssInfo {
+            bssid: bssid.as_slice().try_into().unwrap(),
+            ssid: format!("scan result rand {}", rng.gen::<i32>()).as_bytes().to_vec(),
+            rssi_dbm: rng.gen_range(-100, 20),
+            channel: types::WlanChan {
+                primary: rng.gen_range(1, 255),
+                cbw: fidl_common::Cbw::Cbw20,
+                secondary80: 0,
+            },
+            snr_db: rng.gen_range(-20, 50),
+            compatible: rng.gen::<bool>(),
+            protection: match rng.gen_range(0, 5) {
+                0 => fidl_sme::Protection::Open,
+                1 => fidl_sme::Protection::Wep,
+                2 => fidl_sme::Protection::Wpa1,
+                3 => fidl_sme::Protection::Wpa1Wpa2Personal,
+                4 => fidl_sme::Protection::Wpa2Personal,
+                5 => fidl_sme::Protection::Wpa2Enterprise,
+                6 => fidl_sme::Protection::Wpa3Enterprise,
+                _ => panic!(),
+            },
+        }
+    }
+
+    #[test]
+    fn directed_active_scan_filters_desired_network() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
+
+        // Issue request to scan.
+        let desired_network = types::NetworkIdentifier {
+            ssid: "test_ssid".as_bytes().to_vec(),
+            type_: types::SecurityType::Wpa2,
+        };
+        let desired_channels = vec![1, 36];
+        let scan_fut =
+            perform_directed_active_scan(client, &desired_network, Some(desired_channels.clone()));
+        pin_mut!(scan_fut);
+
+        // Generate scan results
+        let scan_result_aps = vec![
+            fidl_sme::BssInfo {
+                ssid: desired_network.ssid.clone(),
+                protection: fidl_sme::Protection::Wpa3Enterprise, // wrong security type
+                ..generate_random_bss_info()
+            },
+            fidl_sme::BssInfo {
+                ssid: desired_network.ssid.clone(),
+                protection: fidl_sme::Protection::Wpa2Personal,
+                ..generate_random_bss_info()
+            },
+            fidl_sme::BssInfo {
+                ssid: desired_network.ssid.clone(),
+                protection: fidl_sme::Protection::Wpa2Personal,
+                ..generate_random_bss_info()
+            },
+            fidl_sme::BssInfo {
+                ssid: "other ssid".as_bytes().to_vec(),
+                protection: fidl_sme::Protection::Wpa2Personal,
+                ..generate_random_bss_info()
+            },
+        ];
+
+        // Progress scan handler forward so that it will respond to the iterator get next request.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Respond to the scan request
+        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: vec![desired_network.ssid.clone()],
+            channels: desired_channels,
+        });
+        validate_sme_request_and_send_results(
+            &mut exec,
+            &mut sme_stream,
+            &expected_scan_request,
+            &scan_result_aps,
+        );
+
+        // Check for results
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
+            let result = result.unwrap();
+            // Only the desired network is present in results
+            assert_eq!(result.len(), 1);
+            assert_eq!(result[0].id, desired_network);
+            // Two BSSs for this network
+            assert_eq!(result[0].entries.len(), 2);
+        });
     }
 
     // TODO(fxbug.dev/52700) Ignore this test until the location sensor module exists.
