@@ -268,7 +268,12 @@ void lockup_end() {
   state->begin_ticks.store(0, ktl::memory_order_relaxed);
 
   // Do we have a threshold?
-  if (cs_threshold_ticks.load() == 0) {
+  //
+  // Take care to only load |cs_threshold_ticks| once since we might be racing with another thread
+  // calling |lockup_set_cs_threshold_ticks| and it's important that this logic sees a consistent
+  // value.
+  const zx_ticks_t threshold_ticks = cs_threshold_ticks.load();
+  if (threshold_ticks == 0) {
     // Nope.  Lockup detector is disabled.
     return;
   }
@@ -276,7 +281,7 @@ void lockup_end() {
   // Was the threshold exceeded?
   const zx_ticks_t now = current_ticks();
   const zx_ticks_t ticks = (now - begin_ticks);
-  if (ticks < cs_threshold_ticks.load()) {
+  if (ticks < threshold_ticks) {
     // Nope.
     return;
   }
