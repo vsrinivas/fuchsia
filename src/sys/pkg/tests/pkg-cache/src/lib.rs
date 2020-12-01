@@ -31,6 +31,9 @@ mod inspect;
 mod space;
 mod sync;
 
+const PKG_CACHE_CMX: &str =
+    "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache-without-pkgfs.cmx";
+
 trait PkgFs {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
 }
@@ -38,6 +41,82 @@ trait PkgFs {
 impl PkgFs for PkgfsRamdisk {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
         PkgfsRamdisk::root_dir_handle(self)
+    }
+}
+
+struct TestEnvBuilder<PkgFsFn, P>
+where
+    PkgFsFn: FnOnce() -> P,
+    P: PkgFs,
+{
+    pkgfs: PkgFsFn,
+}
+
+impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk> {
+    fn new() -> Self {
+        Self { pkgfs: || PkgfsRamdisk::start().expect("pkgfs to start") }
+    }
+}
+
+impl<PkgFsFn, P> TestEnvBuilder<PkgFsFn, P>
+where
+    PkgFsFn: FnOnce() -> P,
+    P: PkgFs,
+{
+    fn pkgfs<Pother>(self, pkgfs: Pother) -> TestEnvBuilder<impl FnOnce() -> Pother, Pother>
+    where
+        Pother: PkgFs + 'static,
+    {
+        TestEnvBuilder::<_, Pother> { pkgfs: || pkgfs }
+    }
+
+    fn make_nested_environment_label() -> String {
+        let mut salt = [0; 4];
+        zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
+        format!("pkg-cache-env_{}", hex::encode(&salt))
+    }
+
+    fn build(self) -> TestEnv<P> {
+        let pkgfs = (self.pkgfs)();
+
+        let mut fs = ServiceFs::new();
+        fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
+            .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>();
+
+        let logger_factory = Arc::new(MockLoggerFactory::new());
+        let logger_factory_clone = Arc::clone(&logger_factory);
+        fs.add_fidl_service(move |stream| {
+            fasync::Task::spawn(Arc::clone(&logger_factory_clone).run_logger_factory(stream))
+                .detach()
+        });
+
+        let pkg_cache = AppBuilder::new(PKG_CACHE_CMX.to_string())
+            .add_handle_to_namespace("/pkgfs".to_owned(), pkgfs.root_dir_handle().unwrap().into());
+
+        let nested_environment_label = Self::make_nested_environment_label();
+        let env = fs
+            .create_nested_environment(&nested_environment_label)
+            .expect("nested environment to create successfully");
+
+        fasync::Task::spawn(fs.collect()).detach();
+
+        let pkg_cache = pkg_cache.spawn(env.launcher()).expect("pkg_cache to launch");
+
+        let proxies = Proxies {
+            space_manager: pkg_cache
+                .connect_to_service::<SpaceManagerMarker>()
+                .expect("connect to space manager"),
+            package_cache: pkg_cache.connect_to_service::<PackageCacheMarker>().unwrap(),
+        };
+
+        TestEnv {
+            _env: env,
+            pkgfs,
+            proxies,
+            pkg_cache,
+            nested_environment_label,
+            mocks: Mocks { logger_factory },
+        }
     }
 }
 
@@ -149,58 +228,15 @@ impl MockLoggerFactory {
     }
 }
 
-impl<P: PkgFs> TestEnv<P> {
-    fn new(pkgfs: P) -> Self {
-        let mut fs = ServiceFs::new();
-        fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
-            .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>();
-
-        let logger_factory = Arc::new(MockLoggerFactory::new());
-        let logger_factory_clone = Arc::clone(&logger_factory);
-        fs.add_fidl_service(move |stream| {
-            fasync::Task::spawn(Arc::clone(&logger_factory_clone).run_logger_factory(stream))
-                .detach()
-        });
-
-        let pkg_cache = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache-without-pkgfs.cmx".to_string(),
-        )
-            .add_handle_to_namespace("/pkgfs".to_owned(), pkgfs.root_dir_handle().unwrap().into());
-
-        let nested_environment_label = Self::make_nested_environment_label();
-        let env = fs
-            .create_nested_environment(&nested_environment_label)
-            .expect("nested environment to create successfully");
-
-        fasync::Task::spawn(fs.collect()).detach();
-
-        let pkg_cache = pkg_cache.spawn(env.launcher()).expect("pkg_cache to launch");
-
-        let proxies = Proxies {
-            space_manager: pkg_cache
-                .connect_to_service::<SpaceManagerMarker>()
-                .expect("connect to space manager"),
-            package_cache: pkg_cache.connect_to_service::<PackageCacheMarker>().unwrap(),
-        };
-
-        Self {
-            _env: env,
-            pkgfs,
-            proxies,
-            pkg_cache,
-            nested_environment_label,
-            mocks: Mocks { logger_factory },
-        }
+impl TestEnv<PkgfsRamdisk> {
+    fn builder() -> TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk> {
+        TestEnvBuilder::new()
     }
+}
 
+impl<P: PkgFs> TestEnv<P> {
     async fn inspect_hierarchy(&self) -> DiagnosticsHierarchy {
         get_inspect_hierarchy(&self.nested_environment_label, "pkg-cache-without-pkgfs.cmx").await
-    }
-
-    fn make_nested_environment_label() -> String {
-        let mut salt = [0; 4];
-        zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
-        format!("pkg-cache-env_{}", hex::encode(&salt))
     }
 
     pub async fn open_package(&self, merkle: &str) -> Result<DirectoryProxy, zx::Status> {

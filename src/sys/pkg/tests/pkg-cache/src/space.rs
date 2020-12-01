@@ -52,7 +52,7 @@ impl PkgFs for TempDirPkgFs {
 
 #[fasync::run_singlethreaded(test)]
 async fn gc_garbage_file_deleted() {
-    let env = TestEnv::new(TempDirPkgFs::new());
+    let env = TestEnv::builder().pkgfs(TempDirPkgFs::new()).build();
     env.pkgfs.create_garbage();
 
     let res = env.proxies.space_manager.gc().await;
@@ -63,7 +63,7 @@ async fn gc_garbage_file_deleted() {
 
 #[fasync::run_singlethreaded(test)]
 async fn gc_twice_same_client() {
-    let env = TestEnv::new(TempDirPkgFs::new());
+    let env = TestEnv::builder().pkgfs(TempDirPkgFs::new()).build();
     env.pkgfs.create_garbage();
 
     let res = env.proxies.space_manager.gc().await;
@@ -81,7 +81,7 @@ async fn gc_twice_same_client() {
 
 #[fasync::run_singlethreaded(test)]
 async fn gc_twice_different_clients() {
-    let env = TestEnv::new(TempDirPkgFs::new());
+    let env = TestEnv::builder().pkgfs(TempDirPkgFs::new()).build();
     env.pkgfs.create_garbage();
 
     let res = env.proxies.space_manager.gc().await;
@@ -100,7 +100,7 @@ async fn gc_twice_different_clients() {
 
 #[fasync::run_singlethreaded(test)]
 async fn gc_error_missing_garbage_file() {
-    let env = TestEnv::new(TempDirPkgFs::new());
+    let env = TestEnv::builder().pkgfs(TempDirPkgFs::new()).build();
 
     let res = env.proxies.space_manager.gc().await;
 
