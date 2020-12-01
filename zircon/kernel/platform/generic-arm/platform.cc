@@ -322,10 +322,9 @@ void ProcessZbiEarly(zbi_header_t* zbi) {
         // We don't want that information to be accesible after it has
         // been added to the kernel cmdline.
         // Editing the header of a ktl::span will not result in an error.
-        // TODO(fxbug.dev/64272): Inline the following once the GCC bug is fixed.
-        zbi_header_t header{};
-        header.type = ZBI_TYPE_DISCARD;
-        static_cast<void>(view.EditHeader(it, header));
+        static_cast<void>(view.EditHeader(it, zbi_header_t{
+                                                  .type = ZBI_TYPE_DISCARD,
+                                              }));
         mandatory_memset(payload.data(), 0, payload.size());
         break;
       }

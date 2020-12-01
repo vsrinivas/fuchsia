@@ -160,10 +160,7 @@ static void platform_save_bootloader_data(void) {
         // We don't want that information to be accesible after it has
         // been added to the kernel cmdline.
         // Editing the header of a ktl::span will not result in an error.
-        // TODO(fxbug.dev/64272): Inline the following once the GCC bug is fixed.
-        zbi_header_t header{};
-        header.type = ZBI_TYPE_DISCARD;
-        static_cast<void>(view.EditHeader(it, header));
+        static_cast<void>(view.EditHeader(it, zbi_header_t{.type = ZBI_TYPE_DISCARD}));
         mandatory_memset(payload.data(), 0, payload.size());
         break;
       }
@@ -477,10 +474,8 @@ zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi) {
     return image_error.storage_error ? ZX_ERR_BUFFER_TOO_SMALL : ZX_ERR_INTERNAL;
   };
 
-  // TODO(fxbug.dev/64272): inline when possible.
-  zbi_header_t header{};
-  header.type = ZBI_TYPE_E820_TABLE;
-  if (auto result = image.Append(header, zbitl::AsBytes(e820buf, section_length));
+  if (auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_E820_TABLE},
+                                 zbitl::AsBytes(e820buf, section_length));
       result.is_error()) {
     printf("mexec: failed to append E820 map to data ZBI: ");
     zbitl::PrintViewError(result.error_value());
@@ -489,10 +484,8 @@ zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi) {
 
   // Append platform ID.
   if (bootloader.platform_id_size) {
-    // TODO(fxbug.dev/64272): inline when possible.
-    zbi_header_t header{};
-    header.type = ZBI_TYPE_PLATFORM_ID;
-    auto result = image.Append(header, zbitl::AsBytes(bootloader.platform_id));
+    auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_PLATFORM_ID},
+                               zbitl::AsBytes(bootloader.platform_id));
     if (result.is_error()) {
       printf("mexec: failed to append platform ID to data ZBI: ");
       zbitl::PrintViewError(result.error_value());
@@ -501,10 +494,8 @@ zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi) {
   }
   // Append information about the framebuffer to the data ZBI.
   if (bootloader.fb.base) {
-    // TODO(fxbug.dev/64272): inline when possible.
-    zbi_header_t header{};
-    header.type = ZBI_TYPE_FRAMEBUFFER;
-    auto result = image.Append(header, zbitl::AsBytes(bootloader.fb));
+    auto result =
+        image.Append(zbi_header_t{.type = ZBI_TYPE_FRAMEBUFFER}, zbitl::AsBytes(bootloader.fb));
     if (result.is_error()) {
       printf("mexec: failed to append framebuffer data to data ZBI: ");
       zbitl::PrintViewError(result.error_value());
@@ -513,10 +504,8 @@ zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi) {
   }
 
   if (bootloader.efi_system_table) {
-    // TODO(fxbug.dev/64272): inline when possible.
-    zbi_header_t header{};
-    header.type = ZBI_TYPE_EFI_SYSTEM_TABLE;
-    auto result = image.Append(header, zbitl::AsBytes(bootloader.efi_system_table));
+    auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_EFI_SYSTEM_TABLE},
+                               zbitl::AsBytes(bootloader.efi_system_table));
     if (result.is_error()) {
       printf("mexec: Failed to append EFI sys table data to data ZBI: ");
       zbitl::PrintViewError(result.error_value());
@@ -525,10 +514,8 @@ zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi) {
   }
 
   if (bootloader.acpi_rsdp) {
-    // TODO(fxbug.dev/64272): inline when possible.
-    zbi_header_t header{};
-    header.type = ZBI_TYPE_ACPI_RSDP;
-    auto result = image.Append(header, zbitl::AsBytes(bootloader.acpi_rsdp));
+    auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_ACPI_RSDP},
+                               zbitl::AsBytes(bootloader.acpi_rsdp));
     if (result.is_error()) {
       printf("mexec: failed to append ACPI RSDP data to data ZBI: ");
       zbitl::PrintViewError(result.error_value());
@@ -537,10 +524,8 @@ zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi) {
   }
 
   if (bootloader.smbios) {
-    // TODO(fxbug.dev/64272): inline when possible.
-    zbi_header_t header{};
-    header.type = ZBI_TYPE_SMBIOS;
-    auto result = image.Append(header, zbitl::AsBytes(bootloader.smbios));
+    auto result =
+        image.Append(zbi_header_t{.type = ZBI_TYPE_SMBIOS}, zbitl::AsBytes(bootloader.smbios));
     if (result.is_error()) {
       printf("mexec: failed to append SMBIOSs data to data ZBI: ");
       zbitl::PrintViewError(result.error_value());
@@ -549,11 +534,7 @@ zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi) {
   }
 
   auto add_uart = [&](uint32_t extra, auto bytes) -> zx_status_t {
-    // TODO(fxbug.dev/64272): inline when possible.
-    zbi_header_t header{};
-    header.type = ZBI_TYPE_KERNEL_DRIVER;
-    header.extra = extra;
-    auto result = image.Append(header, bytes);
+    auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_KERNEL_DRIVER, .extra = extra}, bytes);
     if (result.is_error()) {
       printf("mexec: failed to append UART data to data ZBI: ");
       zbitl::PrintViewError(result.error_value());
@@ -579,10 +560,8 @@ zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi) {
   }
 
   if (bootloader.nvram.base) {
-    // TODO(fxbug.dev/64272): inline when possible.
-    zbi_header_t header{};
-    header.type = ZBI_TYPE_NVRAM;
-    auto result = image.Append(header, zbitl::AsBytes(bootloader.nvram));
+    auto result =
+        image.Append(zbi_header_t{.type = ZBI_TYPE_NVRAM}, zbitl::AsBytes(bootloader.nvram));
     if (result.is_error()) {
       printf("mexec: failed to append NVRAM data to data ZBI: ");
       zbitl::PrintViewError(result.error_value());

@@ -293,11 +293,8 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void
   // Propagate any stashed crashlog to the next kernel.
   const fbl::RefPtr<VmObject> stashed_crashlog = crashlog_get_stashed();
   if (stashed_crashlog && stashed_crashlog->size() <= UINT32_MAX) {
-    // TODO(fxbug.dev/64272): inline when possible.
-    zbi_header_t header{};
-    header.type = ZBI_TYPE_CRASHLOG;
-    header.length = static_cast<uint32_t>(stashed_crashlog->size());
-    auto append_result = image.Append(header);
+    auto append_result = image.Append(zbi_header_t{
+        .type = ZBI_TYPE_CRASHLOG, .length = static_cast<uint32_t>(stashed_crashlog->size())});
     if (append_result.is_error()) {
       printf("mexec: could not append crashlog: ");
       zbitl::PrintViewError(append_result.error_value());
