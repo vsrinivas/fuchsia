@@ -374,11 +374,6 @@ component_config("component_manager_bootfs_config") {
   dest = "config/component_manager"
 }
 
-# Temporary alias for a soft transition
-group("component_manager_config_bootfs_resource") {
-  deps = [ ":component_manager_bootfs_config" ]
-}
-
 component_config("component_manager_for_examples_config") {
   sources = [ "configs/for_examples_config.json" ]
   dest = "data/component_manager_config"
