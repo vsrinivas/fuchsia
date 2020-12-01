@@ -22,6 +22,4 @@ fuchsia::sys::ServiceListPtr GuestServices::ServeDirectory() {
   return services;
 }
 
-void GuestServices::GetLaunchInfo(GetLaunchInfoCallback callback) {
-  callback(std::move(launch_info_));
-}
+void GuestServices::Get(GetCallback callback) { callback(std::move(launch_info_)); }

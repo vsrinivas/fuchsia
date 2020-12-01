@@ -19,7 +19,7 @@
 #include "src/virtualization/bin/guest/serial.h"
 #include "src/virtualization/bin/guest/socat.h"
 #include "src/virtualization/bin/guest/vshc.h"
-#include "src/virtualization/bin/vmm/guest_config.h"
+#include "src/virtualization/lib/guest_config/guest_config.h"
 
 static void usage() {
   std::cerr << "Usage: guest <command> <package> <command-args>...\n"

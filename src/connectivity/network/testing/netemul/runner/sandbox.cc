@@ -23,7 +23,7 @@
 #include <zircon/status.h>
 
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
-#include <src/virtualization/bin/vmm/guest_config.h>
+#include <src/virtualization/lib/guest_config/guest_config.h>
 #include <src/virtualization/tests/guest_console.h>
 
 #include "src/lib/cmx/cmx.h"

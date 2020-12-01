@@ -16,6 +16,7 @@ group("tests") {
 
   deps = [
     "grpc:tests",
+    "guest_config:tests",
     "guest_interaction:tests",
     "vsh:tests",
   ]

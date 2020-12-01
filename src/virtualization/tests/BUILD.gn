@@ -160,7 +160,6 @@ source_set("lib") {
     ":guest_console",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
-    "//src/virtualization/bin/vmm:guest_config",
   ]
   public_deps = [
     ":fake_netstack",
@@ -228,7 +227,6 @@ executable("virtualization_block_tests") {
     ":guest_console",
     ":lib",
     ":test_main",
-    "//src/virtualization/bin/vmm:guest_config",
     "//src/virtualization/bin/vmm/device:qcow_test_data",
     "//third_party/googletest:gmock",
   ]
@@ -326,7 +324,6 @@ executable("virtualization_net_tests") {
     ":lib",
     ":test_main",
     "//src/lib/inet",
-    "//src/virtualization/bin/vmm:guest_config",
     "//third_party/googletest:gmock",
   ]
 }

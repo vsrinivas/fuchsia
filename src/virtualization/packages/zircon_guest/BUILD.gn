@@ -38,7 +38,7 @@ guest_package("zircon_guest") {
       dest = "${disk_filename}"
     },
   ]
-  block_devices = [ "/guest/data/${disk_filename},ro" ]
+  block_devices = [ "data/${disk_filename},ro" ]
 
   # We insert a config package barrier because the _dependencies of_ this
   # target shouldn't leak to targets that _depend on_ this target.

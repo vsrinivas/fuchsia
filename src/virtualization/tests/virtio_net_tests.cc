@@ -20,7 +20,6 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/trim.h"
 #include "src/lib/inet/ip_address.h"
-#include "src/virtualization/bin/vmm/guest_config.h"
 
 using ::testing::Each;
 using ::testing::HasSubstr;

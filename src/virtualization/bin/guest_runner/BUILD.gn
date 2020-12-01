@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
+
+group("guest_runner") {
+  deps = [ ":guest-runner" ]
+}
 
 executable("bin") {
   output_name = "guest_runner"
@@ -13,26 +17,21 @@ executable("bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/virtualization/lib/guest_config",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fs",
   ]
 }
 
-package("guest_runner") {
-  binaries = [
-    {
-      name = "guest_runner"
-    },
-  ]
+fuchsia_component("component") {
+  component_name = "guest_runner"
+  manifest = "meta/guest_runner.cmx"
 
   deps = [ ":bin" ]
+}
 
-  meta = [
-    {
-      path = rebase_path(
-              "//src/virtualization/bin/guest_runner/meta/guest_runner.cmx")
-      dest = "guest_runner.cmx"
-    },
-  ]
+fuchsia_package("guest-runner") {
+  deps = [ ":component" ]
 }

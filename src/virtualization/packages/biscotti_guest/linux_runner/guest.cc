@@ -18,8 +18,8 @@
 
 #include <memory>
 
-#include "src/virtualization/bin/vmm/guest_config.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
+#include "src/virtualization/lib/guest_config/guest_config.h"
 #include "src/virtualization/packages/biscotti_guest/linux_runner/ports.h"
 #include "src/virtualization/packages/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
 
@@ -85,12 +85,11 @@ static fidl::InterfaceHandle<fuchsia::io::File> GetExtrasPartition() {
   return fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle));
 }
 
-static fidl::VectorPtr<fuchsia::virtualization::BlockDevice> GetBlockDevices(
-    size_t stateful_image_size) {
+static std::vector<fuchsia::virtualization::BlockSpec> GetBlockDevices(size_t stateful_image_size) {
   TRACE_DURATION("linux_runner", "GetBlockDevices");
   auto file_handle = GetOrCreateStatefulPartition(stateful_image_size);
   FX_CHECK(file_handle) << "Failed to open stateful file";
-  std::vector<fuchsia::virtualization::BlockDevice> devices;
+  std::vector<fuchsia::virtualization::BlockSpec> devices;
 #ifdef USE_VOLATILE_BLOCK
   auto stateful_block_mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE;
 #else
@@ -192,7 +191,7 @@ void Guest::StartGuest() {
   fuchsia::virtualization::LaunchInfo launch_info;
   launch_info.url = kLinuxGuestPackage;
   launch_info.guest_config.set_virtio_gpu(false);
-  launch_info.block_devices = GetBlockDevices(config_.stateful_image_size);
+  launch_info.guest_config.set_block_devices(GetBlockDevices(config_.stateful_image_size));
   launch_info.wayland_device = fuchsia::virtualization::WaylandDevice::New();
   launch_info.wayland_device->dispatcher = wayland_dispatcher_.NewBinding();
   launch_info.magma_device = fuchsia::virtualization::MagmaDevice::New();

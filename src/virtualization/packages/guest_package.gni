@@ -36,19 +36,19 @@ template("guest_package") {
     if (defined(invoker.zircon)) {
       args += [
         "--zircon",
-        "/guest/data/kernel",
+        "data/kernel",
       ]
     }
     if (defined(invoker.linux)) {
       args += [
         "--linux",
-        "/guest/data/kernel",
+        "data/kernel",
       ]
     }
     if (defined(invoker.ramdisk)) {
       args += [
         "--ramdisk",
-        "/guest/data/ramdisk",
+        "data/ramdisk",
       ]
     }
     if (defined(invoker.cmdline)) {
@@ -60,7 +60,7 @@ template("guest_package") {
     if (defined(invoker.dtb_overlay)) {
       args += [
         "--dtb-overlay",
-        "/guest/data/dtb_overlay",
+        "data/dtb_overlay",
       ]
     }
     if (defined(invoker.block_devices)) {

@@ -6,6 +6,7 @@
 
 #include <endian.h>
 #include <fcntl.h>
+#include <lib/fdio/fd.h>
 #include <sys/stat.h>
 #include <zircon/boot/e820.h>
 
@@ -168,15 +169,10 @@ static zx_status_t read_fd(const int fd, const PhysMem& phys_mem, const uintptr_
   return ZX_OK;
 }
 
-zx_status_t load_kernel(const std::string& kernel_path, const PhysMem& phys_mem,
+zx_status_t load_kernel(fbl::unique_fd kernel_fd, const PhysMem& phys_mem,
                         const uintptr_t kernel_off) {
-  fbl::unique_fd fd(open(kernel_path.c_str(), O_RDONLY));
-  if (!fd) {
-    FX_LOGS(ERROR) << "Failed to open kernel image " << kernel_path;
-    return ZX_ERR_IO;
-  }
   size_t kernel_size;
-  read_fd(fd.get(), phys_mem, kernel_off, &kernel_size);
+  read_fd(kernel_fd.get(), phys_mem, kernel_off, &kernel_size);
   if (is_within(kDtbOffset, kernel_off, kernel_size)) {
     FX_LOGS(ERROR) << "Kernel location overlaps DTB location";
     return ZX_ERR_OUT_OF_RANGE;
@@ -239,8 +235,8 @@ static zx_status_t read_boot_params(const PhysMem& phys_mem, uintptr_t* guest_ip
 }
 
 static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_mem,
-                                     const std::string& cmdline, const int dtb_overlay_fd,
-                                     const size_t initrd_size) {
+                                     const std::string& cmdline, fbl::unique_fd dtb_overlay_fd,
+                                     const size_t ramdisk_size) {
   // Set type of bootloader.
   bp(phys_mem, LOADER_TYPE) = kLoaderTypeUnspecified;
 
@@ -250,9 +246,9 @@ static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_
   bp(phys_mem, VIDEO_LINES) = 0;
 
   // Set the address and size of the initial RAM disk.
-  if (initrd_size > 0) {
+  if (ramdisk_size > 0) {
     bp(phys_mem, RAMDISK_IMAGE) = kRamdiskOffset;
-    bp(phys_mem, RAMDISK_SIZE) = static_cast<uint32_t>(initrd_size);
+    bp(phys_mem, RAMDISK_SIZE) = static_cast<uint32_t>(ramdisk_size);
   }
 
   // Copy the command line string.
@@ -266,10 +262,10 @@ static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_
   bp(phys_mem, COMMAND_LINE) = cmdline_off;
 
   // If specified, load a device tree overlay.
-  if (dtb_overlay_fd >= 0) {
+  if (dtb_overlay_fd) {
     void* dtb;
     size_t dtb_size;
-    zx_status_t status = read_device_tree(dtb_overlay_fd, phys_mem, kDtbBootParamsOffset,
+    zx_status_t status = read_device_tree(dtb_overlay_fd.get(), phys_mem, kDtbBootParamsOffset,
                                           kRamdiskOffset, &dtb, &dtb_size);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to read device tree";
@@ -327,26 +323,26 @@ static zx_status_t add_memory_entry(void* dtb, int memory_off, zx_gpaddr_t addr,
   return ZX_OK;
 }
 
-static zx_status_t load_device_tree(const int dtb_fd,
+static zx_status_t load_device_tree(fbl::unique_fd dtb_fd,
                                     const fuchsia::virtualization::GuestConfig& cfg,
                                     const PhysMem& phys_mem, const DevMem& dev_mem,
                                     const std::vector<PlatformDevice*>& devices,
-                                    const std::string& cmdline, const int dtb_overlay_fd,
-                                    const size_t initrd_size) {
+                                    const std::string& cmdline, fbl::unique_fd dtb_overlay_fd,
+                                    const size_t ramdisk_size) {
   void* dtb;
   size_t dtb_size;
   zx_status_t status =
-      read_device_tree(dtb_fd, phys_mem, kDtbOffset, kRamdiskOffset, &dtb, &dtb_size);
+      read_device_tree(dtb_fd.get(), phys_mem, kDtbOffset, kRamdiskOffset, &dtb, &dtb_size);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to read device tree";
     return status;
   }
 
   // If specified, load a device tree overlay.
-  if (dtb_overlay_fd >= 0) {
+  if (dtb_overlay_fd) {
     void* dtb_overlay;
-    status = read_device_tree(dtb_overlay_fd, phys_mem, kDtbOverlayOffset, kDtbOffset, &dtb_overlay,
-                              &dtb_size);
+    status = read_device_tree(dtb_overlay_fd.get(), phys_mem, kDtbOverlayOffset, kDtbOffset,
+                              &dtb_overlay, &dtb_size);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to read device tree overlay";
       return status;
@@ -371,14 +367,14 @@ static zx_status_t load_device_tree(const int dtb_fd,
     return ZX_ERR_BAD_STATE;
   }
 
-  if (initrd_size > 0) {
+  if (ramdisk_size > 0) {
     // Add the memory range of the initial RAM disk.
     ret = fdt_setprop_u64(dtb, off, "linux,initrd-start", kRamdiskOffset);
     if (ret != 0) {
       device_tree_error_msg("linux,initrd-start");
       return ZX_ERR_BAD_STATE;
     }
-    ret = fdt_setprop_u64(dtb, off, "linux,initrd-end", kRamdiskOffset + initrd_size);
+    ret = fdt_setprop_u64(dtb, off, "linux,initrd-end", kRamdiskOffset + ramdisk_size);
     if (ret != 0) {
       device_tree_error_msg("linux,initrd-end");
       return ZX_ERR_BAD_STATE;
@@ -472,46 +468,55 @@ static std::string linux_cmdline(std::string cmdline) {
 #endif
 }
 
-zx_status_t setup_linux(const fuchsia::virtualization::GuestConfig& cfg, const PhysMem& phys_mem,
+zx_status_t setup_linux(fuchsia::virtualization::GuestConfig* cfg, const PhysMem& phys_mem,
                         const DevMem& dev_mem, const std::vector<PlatformDevice*>& devices,
                         uintptr_t* guest_ip, uintptr_t* boot_ptr) {
-  // Read the kernel image.
-  zx_status_t status = load_kernel(cfg.kernel_path(), phys_mem, kKernelOffset);
+  fbl::unique_fd kernel_fd;
+  zx_status_t status = fdio_fd_create(cfg->mutable_kernel()->TakeChannel().release(),
+                                      kernel_fd.reset_and_get_address());
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to open kernel image";
+    return status;
+  }
+  status = load_kernel(std::move(kernel_fd), phys_mem, kKernelOffset);
   if (status != ZX_OK) {
     return status;
   }
 
-  size_t initrd_size = 0;
-  if (cfg.has_ramdisk_path()) {
-    fbl::unique_fd initrd_fd(open(cfg.ramdisk_path().c_str(), O_RDONLY));
-    if (!initrd_fd) {
-      FX_LOGS(ERROR) << "Failed to open initial RAM disk " << cfg.ramdisk_path();
+  size_t ramdisk_size = 0;
+  if (cfg->has_ramdisk()) {
+    fbl::unique_fd ramdisk_fd;
+    status = fdio_fd_create(cfg->mutable_ramdisk()->TakeChannel().release(),
+                            ramdisk_fd.reset_and_get_address());
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to open initial RAM disk";
       return ZX_ERR_IO;
     }
 
-    status = read_fd(initrd_fd.get(), phys_mem, kRamdiskOffset, &initrd_size);
+    status = read_fd(ramdisk_fd.get(), phys_mem, kRamdiskOffset, &ramdisk_size);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to read initial RAM disk " << cfg.ramdisk_path();
+      FX_LOGS(ERROR) << "Failed to read initial RAM disk";
       return status;
     }
   }
 
   fbl::unique_fd dtb_overlay_fd;
-  if (cfg.has_dtb_overlay_path()) {
-    dtb_overlay_fd.reset(open(cfg.dtb_overlay_path().c_str(), O_RDONLY));
-    if (!dtb_overlay_fd) {
-      FX_LOGS(ERROR) << "Failed to open device tree overlay " << cfg.dtb_overlay_path();
+  if (cfg->has_dtb_overlay()) {
+    status = fdio_fd_create(cfg->mutable_dtb_overlay()->TakeChannel().release(),
+                            dtb_overlay_fd.reset_and_get_address());
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to open device tree overlay";
       return ZX_ERR_IO;
     }
   }
 
-  const std::string cmdline = linux_cmdline(cfg.cmdline());
+  const std::string cmdline = linux_cmdline(cfg->cmdline());
   if (is_boot_params(phys_mem)) {
     status = read_boot_params(phys_mem, guest_ip);
     if (status != ZX_OK) {
       return status;
     }
-    status = write_boot_params(phys_mem, dev_mem, cmdline, dtb_overlay_fd.get(), initrd_size);
+    status = write_boot_params(phys_mem, dev_mem, cmdline, std::move(dtb_overlay_fd), ramdisk_size);
     if (status != ZX_OK) {
       return status;
     }
@@ -526,8 +531,8 @@ zx_status_t setup_linux(const fuchsia::virtualization::GuestConfig& cfg, const P
       FX_LOGS(ERROR) << "Failed to open device tree " << kDtbPath;
       return ZX_ERR_IO;
     }
-    status = load_device_tree(dtb_fd.get(), cfg, phys_mem, dev_mem, devices, cmdline,
-                              dtb_overlay_fd.get(), initrd_size);
+    status = load_device_tree(std::move(dtb_fd), *cfg, phys_mem, dev_mem, devices, cmdline,
+                              std::move(dtb_overlay_fd), ramdisk_size);
     if (status != ZX_OK) {
       return status;
     }

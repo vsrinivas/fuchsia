@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/vmm/guest_config.h"
+#include "src/virtualization/lib/guest_config/guest_config.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <libgen.h>
@@ -18,7 +18,6 @@
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
-#include "src/virtualization/bin/vmm/guest.h"
 
 namespace guest_config {
 
@@ -63,29 +62,35 @@ zx_status_t parse(const std::string& name, const std::string& value, NumberType*
   return ZX_OK;
 }
 
-zx_status_t parse(const std::string& name, const std::string& value,
+zx_status_t parse(const OpenAt& open_at, const std::string& name, const std::string& value,
                   fuchsia::virtualization::BlockSpec* out) {
+  std::string path;
   std::istringstream token_stream(value);
   std::string token;
   while (std::getline(token_stream, token, ',')) {
-    if (token == "fdio") {
-      out->format = fuchsia::virtualization::BlockFormat::RAW;
-    } else if (token == "qcow") {
-      out->format = fuchsia::virtualization::BlockFormat::QCOW;
-    } else if (token == "rw") {
+    if (token == "rw") {
       out->mode = fuchsia::virtualization::BlockMode::READ_WRITE;
     } else if (token == "ro") {
       out->mode = fuchsia::virtualization::BlockMode::READ_ONLY;
     } else if (token == "volatile") {
       out->mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE;
-    } else if (token.size() > 0 && token[0] == '/') {
-      out->path = std::move(token);
+    } else if (token == "fdio") {
+      out->format = fuchsia::virtualization::BlockFormat::RAW;
+    } else if (token == "qcow") {
+      out->format = fuchsia::virtualization::BlockFormat::QCOW;
+    } else {
+      // Set the last MAX_BLOCK_DEVICE_ID characters of token as the ID.
+      size_t pos = token.size() > fuchsia::virtualization::MAX_BLOCK_DEVICE_ID
+                       ? token.size() - fuchsia::virtualization::MAX_BLOCK_DEVICE_ID
+                       : 0;
+      out->id = token.substr(pos, fuchsia::virtualization::MAX_BLOCK_DEVICE_ID);
+      path = std::move(token);
     }
   }
-  if (out->path.empty()) {
+  if (path.empty()) {
     return ZX_ERR_INVALID_ARGS;
   }
-  return ZX_OK;
+  return open_at(path, out->file.NewRequest());
 }
 
 std::vector<std::string> split(const std::string& spec, char delim) {
@@ -176,20 +181,19 @@ zx_status_t parse(const std::string& name, const std::string& value,
 
 class OptionHandler {
  public:
-  OptionHandler() : field_exists_{[](const GuestConfig& _) { return false; }} {}
-  OptionHandler(std::function<bool(const GuestConfig&)> field_exists)
-      : field_exists_{field_exists} {}
+  OptionHandler() : has_field_{[](const GuestConfig&) { return false; }} {}
+  OptionHandler(std::function<bool(const GuestConfig&)> has_field) : has_field_{has_field} {}
 
   zx_status_t Set(GuestConfig* cfg, const std::string& name, const std::string& value,
                   bool override) {
-    if (override || !field_exists_(*cfg)) {
+    if (override || !has_field_(*cfg)) {
       return SetInternal(cfg, name, value);
     }
     return ZX_OK;
   }
 
   void MaybeSetDefault(GuestConfig* cfg) {
-    if (!field_exists_(*cfg)) {
+    if (!has_field_(*cfg)) {
       SetDefault(cfg);
     }
   }
@@ -201,15 +205,15 @@ class OptionHandler {
                                   const std::string& value) = 0;
   virtual void SetDefault(GuestConfig* cfg) {}
 
-  std::function<bool(const GuestConfig&)> field_exists_;
+  std::function<bool(const GuestConfig&)> has_field_;
 };
 
 template <typename T, bool require_value = true>
 class OptionHandlerWithoutDefaultValue : public OptionHandler {
  public:
-  OptionHandlerWithoutDefaultValue(std::function<bool(const GuestConfig&)> field_exists,
+  OptionHandlerWithoutDefaultValue(std::function<bool(const GuestConfig&)> has_field,
                                    std::function<T*(GuestConfig*)> mutable_field)
-      : OptionHandler{field_exists}, mutable_field_{std::move(mutable_field)} {}
+      : OptionHandler{has_field}, mutable_field_{std::move(mutable_field)} {}
 
  protected:
   void FillMutableField(const T& value, GuestConfig* cfg) { *(mutable_field_(cfg)) = value; }
@@ -235,10 +239,10 @@ class OptionHandlerWithoutDefaultValue : public OptionHandler {
 template <typename T, bool require_value = true>
 class OptionHandlerWithDefaultValue : public OptionHandlerWithoutDefaultValue<T, require_value> {
  public:
-  OptionHandlerWithDefaultValue(std::function<bool(const GuestConfig&)> field_exists,
+  OptionHandlerWithDefaultValue(std::function<bool(const GuestConfig&)> has_field,
                                 std::function<T*(GuestConfig*)> mutable_field,
                                 const T& default_value)
-      : OptionHandlerWithoutDefaultValue<T, require_value>{std::move(field_exists),
+      : OptionHandlerWithoutDefaultValue<T, require_value>{std::move(has_field),
                                                            std::move(mutable_field)},
         default_value_{default_value} {}
 
@@ -250,48 +254,61 @@ class OptionHandlerWithDefaultValue : public OptionHandlerWithoutDefaultValue<T,
   const T default_value_;
 };
 
-class NumCpusOptionHandler : public OptionHandlerWithDefaultValue<uint8_t> {
+using NumCpusOptionHandler = OptionHandlerWithDefaultValue<uint8_t>;
+using BoolOptionHandler = OptionHandlerWithDefaultValue<bool, /* require_value */ false>;
+using StringOptionHandler = OptionHandlerWithoutDefaultValue<std::string>;
+
+class FileOptionHandler : public OptionHandler {
  public:
-  using OptionHandlerWithDefaultValue<uint8_t>::OptionHandlerWithDefaultValue;
+  FileOptionHandler(OpenAt open_at, std::function<bool(const GuestConfig&)> has_field,
+                    std::function<fuchsia::io::FileHandle*(GuestConfig*)> mutable_field)
+      : OptionHandler{has_field},
+        open_at_{std::move(open_at)},
+        mutable_field_{std::move(mutable_field)} {}
 
  protected:
   zx_status_t SetInternal(GuestConfig* cfg, const std::string& name,
                           const std::string& value) override {
-    zx_status_t status = OptionHandlerWithoutDefaultValue::SetInternal(cfg, name, value);
-    if (status == ZX_OK && cfg->cpus() > Guest::kMaxVcpus) {
-      FX_LOGS(ERROR) << "Option: '" << name << "' expects a value <= " << Guest::kMaxVcpus;
+    if (value.empty()) {
+      FX_LOGS(ERROR) << "Option: '" << name << "' expects a value (--" << name << "=<value>)";
       return ZX_ERR_INVALID_ARGS;
+    }
+    fuchsia::io::FileHandle result;
+    zx_status_t status = open_at_(value, result.NewRequest());
+    if (status == ZX_OK) {
+      *(mutable_field_(cfg)) = std::move(result);
     }
     return status;
   }
+
+ private:
+  OpenAt open_at_;
+  std::function<fuchsia::io::FileHandle*(GuestConfig*)> mutable_field_;
 };
 
-using BoolOptionHandler = OptionHandlerWithDefaultValue<bool, /* require_value= */ false>;
-using StringOptionHandler = OptionHandlerWithoutDefaultValue<std::string>;
-
-class KernelOptionHandler : public StringOptionHandler {
+class KernelOptionHandler : public FileOptionHandler {
  public:
   KernelOptionHandler(
-      std::function<bool(const GuestConfig&)> field_exists,
-      std::function<std::string*(GuestConfig*)> mutable_field,
-      std::function<fuchsia::virtualization::Kernel*(GuestConfig*)> mutable_kernel_fn,
-      fuchsia::virtualization::Kernel kernel_kind)
-      : StringOptionHandler{std::move(field_exists), std::move(mutable_field)},
-        mutable_kernel_fn_{std::move(mutable_kernel_fn)},
-        kernel_kind_{kernel_kind} {}
+      OpenAt open_at, std::function<bool(const GuestConfig&)> has_field,
+      std::function<fuchsia::io::FileHandle*(GuestConfig*)> mutable_field,
+      std::function<fuchsia::virtualization::KernelType*(GuestConfig*)> mutable_type_fn,
+      fuchsia::virtualization::KernelType type)
+      : FileOptionHandler{std::move(open_at), std::move(has_field), std::move(mutable_field)},
+        mutable_type_fn_{std::move(mutable_type_fn)},
+        type_{type} {}
 
  private:
   zx_status_t SetInternal(GuestConfig* cfg, const std::string& name,
                           const std::string& value) override {
-    auto result = StringOptionHandler::SetInternal(cfg, name, value);
-    if (result == ZX_OK) {
-      *(mutable_kernel_fn_(cfg)) = kernel_kind_;
+    auto status = FileOptionHandler::SetInternal(cfg, name, value);
+    if (status == ZX_OK) {
+      *(mutable_type_fn_(cfg)) = type_;
     }
-    return result;
+    return status;
   }
 
-  std::function<fuchsia::virtualization::Kernel*(GuestConfig*)> mutable_kernel_fn_;
-  fuchsia::virtualization::Kernel kernel_kind_;
+  std::function<fuchsia::virtualization::KernelType*(GuestConfig*)> mutable_type_fn_;
+  fuchsia::virtualization::KernelType type_;
 };
 
 template <typename T>
@@ -323,12 +340,38 @@ class RepeatedOptionHandler : public OptionHandler {
   std::function<std::vector<T>*(GuestConfig*)> mutable_field_;
 };
 
+template <>
+class RepeatedOptionHandler<fuchsia::virtualization::BlockSpec> : public OptionHandler {
+ public:
+  RepeatedOptionHandler(
+      OpenAt open_at,
+      std::function<std::vector<fuchsia::virtualization::BlockSpec>*(GuestConfig*)> mutable_field)
+      : open_at_(std::move(open_at)), mutable_field_{std::move(mutable_field)} {}
+
+ protected:
+  zx_status_t SetInternal(GuestConfig* cfg, const std::string& name,
+                          const std::string& value) override {
+    if (value.empty()) {
+      FX_LOGS(ERROR) << "Option: '" << name << "' expects a value (--" << name << "=<value>)";
+      return ZX_ERR_INVALID_ARGS;
+    }
+    fuchsia::virtualization::BlockSpec result;
+    auto status = parse(open_at_, name, value, &result);
+    if (status == ZX_OK) {
+      mutable_field_(cfg)->emplace_back(std::move(result));
+    }
+    return status;
+  }
+
+ private:
+  OpenAt open_at_;
+  std::function<std::vector<fuchsia::virtualization::BlockSpec>*(GuestConfig*)> mutable_field_;
+};
+
 std::unordered_map<std::string, std::unique_ptr<OptionHandler>> GetCmdlineOptionHanders() {
   std::unordered_map<std::string, std::unique_ptr<OptionHandler>> handlers;
   handlers.emplace("cmdline-add", std::make_unique<RepeatedOptionHandler<std::string>>(
                                       &GuestConfig::mutable_cmdline_add));
-  handlers.emplace("cmdline", std::make_unique<StringOptionHandler>(&GuestConfig::has_cmdline,
-                                                                    &GuestConfig::mutable_cmdline));
   handlers.emplace(
       "cpus", std::make_unique<NumCpusOptionHandler>(
                   &GuestConfig::has_cpus, &GuestConfig::mutable_cpus, zx_system_get_num_cpus()));
@@ -363,25 +406,28 @@ std::unordered_map<std::string, std::unique_ptr<OptionHandler>> GetCmdlineOption
   return handlers;
 }
 
-std::unordered_map<std::string, std::unique_ptr<OptionHandler>> GetAllOptionHandlers() {
+std::unordered_map<std::string, std::unique_ptr<OptionHandler>> GetAllOptionHandlers(
+    OpenAt open_at) {
   auto handlers = GetCmdlineOptionHanders();
   handlers.emplace("block",
                    std::make_unique<RepeatedOptionHandler<fuchsia::virtualization::BlockSpec>>(
-                       &GuestConfig::mutable_block_devices));
-  handlers.emplace("dtb-overlay",
-                   std::make_unique<StringOptionHandler>(&GuestConfig::has_dtb_overlay_path,
-                                                         &GuestConfig::mutable_dtb_overlay_path));
-  handlers.emplace("linux",
-                   std::make_unique<KernelOptionHandler>(
-                       &GuestConfig::has_kernel_path, &GuestConfig::mutable_kernel_path,
-                       &GuestConfig::mutable_kernel, fuchsia::virtualization::Kernel::LINUX));
+                       open_at.share(), &GuestConfig::mutable_block_devices));
+  handlers.emplace("cmdline", std::make_unique<StringOptionHandler>(&GuestConfig::has_cmdline,
+                                                                    &GuestConfig::mutable_cmdline));
+  handlers.emplace("dtb-overlay", std::make_unique<FileOptionHandler>(
+                                      open_at.share(), &GuestConfig::has_dtb_overlay,
+                                      &GuestConfig::mutable_dtb_overlay));
+  handlers.emplace(
+      "linux", std::make_unique<KernelOptionHandler>(
+                   open_at.share(), &GuestConfig::has_kernel, &GuestConfig::mutable_kernel,
+                   &GuestConfig::mutable_kernel_type, fuchsia::virtualization::KernelType::LINUX));
   handlers.emplace("ramdisk",
-                   std::make_unique<StringOptionHandler>(&GuestConfig::has_ramdisk_path,
-                                                         &GuestConfig::mutable_ramdisk_path));
-  handlers.emplace("zircon",
-                   std::make_unique<KernelOptionHandler>(
-                       &GuestConfig::has_kernel_path, &GuestConfig::mutable_kernel_path,
-                       &GuestConfig::mutable_kernel, fuchsia::virtualization::Kernel::ZIRCON));
+                   std::make_unique<FileOptionHandler>(open_at.share(), &GuestConfig::has_ramdisk,
+                                                       &GuestConfig::mutable_ramdisk));
+  handlers.emplace("zircon", std::make_unique<KernelOptionHandler>(
+                                 open_at.share(), &GuestConfig::has_kernel,
+                                 &GuestConfig::mutable_kernel, &GuestConfig::mutable_kernel_type,
+                                 fuchsia::virtualization::KernelType::ZIRCON));
   return handlers;
 }
 
@@ -393,9 +439,6 @@ void PrintCommandLineUsage(const char* program_name) {
   std::cerr << "\n";
   std::cerr << "OPTIONS:\n";
   std::cerr << "\t--cmdline-add=[string]  Adds 'string' to the existing kernel command line.\n";
-  std::cerr << "\t                        This will overwrite any existing command line created\n";
-  std::cerr << "\t                        using --cmdline or --cmdline-add\n";
-  std::cerr << "\t--cmdline=[string]      Use 'string' as the kernel command line\n";
   std::cerr << "\t--cpus=[number]         Number of virtual CPUs available to the guest\n";
   std::cerr << "\t--default-net           Enable a default net device (defaults to true)\n";
   std::cerr << "\t--memory=[bytes]        Allocate 'bytes' of memory for the guest.\n";
@@ -428,16 +471,9 @@ void SetDefaults(GuestConfig* cfg) {
     cfg->mutable_memory()->push_back({.size = kDefaultMemory});
   }
 
-  for (const auto& [name, handler] : GetAllOptionHandlers()) {
+  for (const auto& [name, handler] : GetCmdlineOptionHanders()) {
     handler->MaybeSetDefault(cfg);
   }
-
-  // This is required as a cmdline-add on the command-line arguments needs to work in combination
-  // with a cmdline from the parsed json file.
-  for (const auto& item : cfg->cmdline_add()) {
-    *cfg->mutable_cmdline() += " " + item;
-  }
-  cfg->clear_cmdline_add();
 
   if (cfg->default_net()) {
     cfg->mutable_net_devices()->push_back({.mac_address = kGuestMacAddress});
@@ -467,21 +503,14 @@ zx_status_t ParseArguments(int argc, const char** argv, fuchsia::virtualization:
   return ZX_OK;
 }
 
-zx_status_t ParseConfig(const std::string& data, GuestConfig* cfg) {
-  // To maintain compatibility with existing code, any cmdline added by the config file gets
-  // prepended to the cmdline provided by the user.
-  if (cfg->has_cmdline()) {
-    cfg->mutable_cmdline_add()->insert(cfg->cmdline_add().begin(), cfg->cmdline());
-    cfg->clear_cmdline();
-  }
-
+zx_status_t ParseConfig(const std::string& data, OpenAt open_at, GuestConfig* cfg) {
   rapidjson::Document document;
   document.Parse(data);
   if (!document.IsObject()) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto opts = GetAllOptionHandlers();
+  auto opts = GetAllOptionHandlers(std::move(open_at));
   for (auto& member : document.GetObject()) {
     auto entry = opts.find(member.name.GetString());
     if (entry == opts.end()) {

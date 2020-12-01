@@ -59,7 +59,7 @@ guest_package("linux_guest") {
       dest = "${disk_filename}"
     },
   ]
-  block_devices = [ "/guest/data/${disk_filename},ro,volatile" ]
+  block_devices = [ "data/${disk_filename},ro,volatile" ]
 
   tests_filename = "tests.img"
   resources += [
@@ -68,7 +68,7 @@ guest_package("linux_guest") {
       dest = "${tests_filename}"
     },
   ]
-  block_devices += [ "/guest/data/${tests_filename},ro,volatile" ]
+  block_devices += [ "data/${tests_filename},ro,volatile" ]
 
   if ("${linux_guest_extras_path}" != "") {
     deps += [ ":extras" ]
@@ -78,6 +78,6 @@ guest_package("linux_guest") {
         dest = "extras.img"
       },
     ]
-    block_devices += [ "/guest/data/extras.img,ro" ]
+    block_devices += [ "data/extras.img,ro" ]
   }
 }

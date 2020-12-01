@@ -11,28 +11,6 @@ group("tests") {
   deps = [ ":vmm_tests" ]
 }
 
-source_set("guest_config") {
-  sources = [
-    "guest.h",
-    "guest_config.cc",
-    "guest_config.h",
-    "io.h",
-    "vcpu.h",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.virtualization",
-    "//sdk/lib/syslog/cpp",
-    "//src/virtualization/bin/vmm/device",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/trace",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
-  ]
-}
-
 source_set("lib") {
   visibility = [ ":*" ]
 
@@ -58,9 +36,11 @@ source_set("lib") {
     "controller/virtio_wl.h",
     "dev_mem.h",
     "guest.cc",
+    "guest.h",
     "guest_impl.cc",
     "guest_impl.h",
     "io.cc",
+    "io.h",
     "linux.cc",
     "linux.h",
     "pci.cc",
@@ -68,6 +48,7 @@ source_set("lib") {
     "platform_device.h",
     "sysinfo.h",
     "vcpu.cc",
+    "vcpu.h",
     "virtio_device.h",
     "virtio_pci.cc",
     "virtio_pci.h",
@@ -111,7 +92,6 @@ source_set("lib") {
   configs += [ "//build/config:all_source" ]
 
   deps = [
-    ":guest_config",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/fidl/fuchsia.virtualization.hardware",
     "//sdk/lib/fdio",
@@ -146,8 +126,8 @@ executable("bin") {
   sources = [ "main.cc" ]
 
   deps = [
-    ":guest_config",
     ":lib",
+    "//src/virtualization/lib/guest_config",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
@@ -199,7 +179,6 @@ executable("vmm_unittests") {
 
   sources = [
     "dev_mem_unittest.cc",
-    "guest_config_unittest.cc",
     "pci_unittest.cc",
     "phys_mem_fake.h",
     "virtio_device_fake.h",
@@ -218,7 +197,6 @@ executable("vmm_unittests") {
   }
 
   deps = [
-    ":guest_config",
     ":lib",
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",

@@ -71,7 +71,7 @@ guest_package("debian_guest") {
       dest = disk_name
     },
   ]
-  block_devices = [ "/guest/data/${disk_name},${disk_options}" ]
+  block_devices = [ "data/${disk_name},${disk_options}" ]
 
   tests_filename = "tests.img"
   resources += [
@@ -80,7 +80,7 @@ guest_package("debian_guest") {
       dest = "${tests_filename}"
     },
   ]
-  block_devices += [ "/guest/data/${tests_filename},ro" ]
+  block_devices += [ "data/${tests_filename},ro" ]
 
   deps += [ "//src/virtualization/lib/guest_interaction:extras" ]
   gis_out_dir =
@@ -92,5 +92,5 @@ guest_package("debian_guest") {
       dest = "extras.img"
     },
   ]
-  block_devices += [ "/guest/data/extras.img,ro" ]
+  block_devices += [ "data/extras.img,ro" ]
 }

@@ -34,8 +34,8 @@ enum BlockFormat {
     QCOW = 1;
 };
 
-/// Properties describing a single block device in the system.
-resource struct BlockDevice {
+/// Properties describing a block device.
+resource struct BlockSpec {
     /// A label used to identify the block device.
     string:MAX_BLOCK_DEVICE_ID id;
     /// The access mode for the block backing file.
@@ -46,13 +46,7 @@ resource struct BlockDevice {
     fuchsia.io.File file;
 };
 
-struct BlockSpec {
-    string:fuchsia.io.MAX_PATH path;
-    BlockFormat format;
-    BlockMode mode;
-};
-
-enum Kernel {
+enum KernelType {
     ZIRCON = 0;
     LINUX = 1;
 };
@@ -79,17 +73,16 @@ struct NetSpec {
 };
 
 /// The configuration required to start up a guest.
-table GuestConfig {
-    /// Which kernel to use. Cannot be changed from the command-line.
-    1: Kernel kernel;
-    // TODO(fxbug.dev/42889): Make kernel_path, ramdisk_path, and block_devices into a fuchsia.io.File
-    /// The path to load the kernel from. Cannot be changed from the command-line.
-    2: string:fuchsia.io.MAX_PATH kernel_path;
-    /// Load the ramdisk_path as an initial RAM disk. Cannot be changed from the command-line.
-    3: string:fuchsia.io.MAX_PATH ramdisk_path;
-    /// The file path to the dtb overlay for a linux kernel. Cannot be changed from the
+resource table GuestConfig {
+    /// Type of kernel to load. Cannot be changed from the command-line.
+    1: KernelType kernel_type;
+    /// File to load the kernel from. Cannot be changed from the command-line.
+    2: fuchsia.io.File kernel;
+    /// File to load the initial RAM disk from. Cannot be changed from the command-line.
+    3: fuchsia.io.File ramdisk;
+    /// File to load the dtb overlay for a Linux kernel from. Cannot be changed from the
     /// command-line.
-    4: string:fuchsia.io.MAX_PATH dtb_overlay_path;
+    4: fuchsia.io.File dtb_overlay;
     /// The command to start the client with.
     5: string:MAX_CMDLINE cmdline;
     /// Any additional arguments to add to the cmdline.

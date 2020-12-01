@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
+#include <lib/fdio/fd.h>
 #include <lib/zbitl/error_string.h>
 #include <lib/zbitl/fd.h>
 #include <lib/zbitl/image.h>
@@ -59,7 +60,7 @@ static inline bool is_within(uintptr_t x, uintptr_t addr, uintptr_t size) {
   return x >= addr && x < addr + size;
 }
 
-zx_status_t read_unified_zbi(const std::string& zbi_path, const uintptr_t kernel_zbi_off,
+zx_status_t read_unified_zbi(fbl::unique_fd zbi_fd, const uintptr_t kernel_zbi_off,
                              const uintptr_t data_zbi_off, const PhysMem& phys_mem,
                              uintptr_t* guest_ip) {
   // Alias for clarity.
@@ -74,9 +75,8 @@ zx_status_t read_unified_zbi(const std::string& zbi_path, const uintptr_t kernel
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::unique_fd fd(open(zbi_path.c_str(), O_RDONLY));
-  if (!fd) {
-    FX_LOGS(ERROR) << "Failed to open ZBI " << zbi_path;
+  if (!zbi_fd) {
+    FX_LOGS(ERROR) << "Failed to open ZBI";
     return ZX_ERR_IO;
   }
 
@@ -85,13 +85,13 @@ zx_status_t read_unified_zbi(const std::string& zbi_path, const uintptr_t kernel
   zbi_header_t kernel_item_header;
   zbi_kernel_t kernel_payload_header;
   {
-    if (auto ret = read(fd.get(), phys_mem.as<void>(kernel_zbi_off, sizeof(complete_zbi_t)),
+    if (auto ret = read(zbi_fd.get(), phys_mem.as<void>(kernel_zbi_off, sizeof(complete_zbi_t)),
                         sizeof(complete_zbi_t));
         ret != sizeof(complete_zbi_t)) {
       FX_LOGS(ERROR) << "Failed to read initial ZBI headers: " << strerror(errno);
       return ZX_ERR_IO;
     }
-    if (auto ret = lseek(fd.get(), 0, SEEK_SET); ret) {
+    if (auto ret = lseek(zbi_fd.get(), 0, SEEK_SET); ret) {
       FX_LOGS(ERROR) << "Failed to seek back to beginning of ZBI: " << strerror(errno);
       return ZX_ERR_IO;
     }
@@ -117,7 +117,7 @@ zx_status_t read_unified_zbi(const std::string& zbi_path, const uintptr_t kernel
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  zbitl::View view(std::move(fd));
+  zbitl::View view(std::move(zbi_fd));
   if (auto result = zbitl::CheckComplete(view); result.is_error()) {
     FX_LOGS(ERROR) << "Incomplete ZBI: " << result.error_value();
     return ZX_ERR_IO_DATA_INTEGRITY;
@@ -295,17 +295,23 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
   return ZX_OK;
 }
 
-zx_status_t setup_zircon(const fuchsia::virtualization::GuestConfig& cfg, const PhysMem& phys_mem,
+zx_status_t setup_zircon(fuchsia::virtualization::GuestConfig* cfg, const PhysMem& phys_mem,
                          const DevMem& dev_mem, const std::vector<PlatformDevice*>& devices,
                          uintptr_t* guest_ip, uintptr_t* boot_ptr) {
-  zx_status_t status =
-      read_unified_zbi(cfg.kernel_path(), kKernelOffset, kRamdiskOffset, phys_mem, guest_ip);
-
+  fbl::unique_fd kernel_fd;
+  zx_status_t status = fdio_fd_create(cfg->mutable_kernel()->TakeChannel().release(),
+                                      kernel_fd.reset_and_get_address());
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to open kernel image";
+    return status;
+  }
+  status =
+      read_unified_zbi(std::move(kernel_fd), kKernelOffset, kRamdiskOffset, phys_mem, guest_ip);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = build_data_zbi(cfg, phys_mem, dev_mem, devices, kRamdiskOffset);
+  status = build_data_zbi(*cfg, phys_mem, dev_mem, devices, kRamdiskOffset);
   if (status != ZX_OK) {
     return status;
   }

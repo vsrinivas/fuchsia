@@ -12,7 +12,6 @@
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
-#include <src/virtualization/bin/vmm/guest_config.h>
 #include <src/virtualization/tests/fake_netstack.h>
 #include <src/virtualization/tests/guest_console.h>
 

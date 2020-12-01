@@ -1,0 +1,53 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/fuchsia_unittest_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":guest-config-tests" ]
+}
+
+source_set("guest_config") {
+  sources = [
+    "guest_config.cc",
+    "guest_config.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
+
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
+  ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.virtualization" ]
+}
+
+executable("unittests") {
+  testonly = true
+  output_name = "guest_config_unittest"
+
+  sources = [ "guest_config_unittest.cc" ]
+
+  deps = [
+    ":guest_config",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+fuchsia_unittest_package("guest-config-tests") {
+  executable_path = "bin/guest_config_unittest"
+  deps = [ ":unittests" ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}

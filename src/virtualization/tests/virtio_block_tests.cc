@@ -21,7 +21,6 @@
 #include "src/virtualization/bin/vmm/device/block.h"
 #include "src/virtualization/bin/vmm/device/qcow.h"
 #include "src/virtualization/bin/vmm/device/qcow_test_data.h"
-#include "src/virtualization/bin/vmm/guest_config.h"
 
 using namespace qcow_test_data;
 using testing::HasSubstr;
@@ -123,7 +122,7 @@ struct TestDevice {
 };
 
 static zx_status_t create_test_device(TestDevice* test_device,
-                                      fuchsia::virtualization::BlockDevice* block_device) {
+                                      fuchsia::virtualization::BlockSpec* block_spec) {
   fbl::unique_fd fd(mkstemp(test_device->file_path.data()));
   if (!fd) {
     FX_LOGS(ERROR) << "Failed to create temporary file";
@@ -146,10 +145,10 @@ static zx_status_t create_test_device(TestDevice* test_device,
     return status;
   }
 
-  block_device->id = test_device->id;
-  block_device->format = test_device->format;
-  block_device->mode = test_device->mode;
-  block_device->file = fidl::InterfaceHandle<fuchsia::io::File>(std::move(channel)).Bind();
+  block_spec->id = test_device->id;
+  block_spec->format = test_device->format;
+  block_spec->mode = test_device->mode;
+  block_spec->file.set_channel(std::move(channel));
 
   return ZX_OK;
 }
@@ -196,17 +195,17 @@ class VirtioBlockTestGuest {
         .pci_device = device_count++,
     });
 
-    std::vector<fuchsia::virtualization::BlockDevice> block_devices;
+    std::vector<fuchsia::virtualization::BlockSpec> block_specs;
     for (auto& test_device : test_devices_) {
-      fuchsia::virtualization::BlockDevice block_device;
-      status = create_test_device(&test_device, &block_device);
+      fuchsia::virtualization::BlockSpec block_spec;
+      status = create_test_device(&test_device, &block_spec);
       if (status != ZX_OK) {
         return status;
       }
-      block_devices.push_back(std::move(block_device));
+      block_specs.push_back(std::move(block_spec));
     }
 
-    launch_info->block_devices = std::move(block_devices);
+    launch_info->guest_config.set_block_devices(std::move(block_specs));
 
     return ZX_OK;
   }
@@ -233,7 +232,6 @@ class VirtioBlockZirconGuest : public ZirconEnclosedGuest, public VirtioBlockTes
     launch_info->guest_config.set_virtio_magma(false);
     launch_info->guest_config.set_virtio_rng(false);
     launch_info->guest_config.set_virtio_vsock(false);
-    guest_config::SetDefaults(&launch_info->guest_config);
 
     // Device count starts at 2: root device, block-0, then the test devices.
     return CreateBlockDevices(/*device_count=*/2, launch_info);
@@ -256,7 +254,6 @@ class VirtioBlockDebianGuest : public DebianEnclosedGuest, public VirtioBlockTes
     launch_info->guest_config.set_virtio_magma(false);
     launch_info->guest_config.set_virtio_rng(false);
     launch_info->guest_config.set_virtio_vsock(false);
-    guest_config::SetDefaults(&launch_info->guest_config);
 
     // Device count starts at 4: root device, block-0, block-1, block-2, then the test devices.
     return CreateBlockDevices(/*device_count=*/4, launch_info);

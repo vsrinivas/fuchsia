@@ -7,7 +7,6 @@ group("packages") {
 
   deps = [
     "debian_guest",
-    "linux_guest",
     "termina_guest",
     "zircon_guest",
   ]

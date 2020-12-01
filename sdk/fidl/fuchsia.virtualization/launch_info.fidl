@@ -48,14 +48,8 @@ resource struct LaunchInfo {
     /// A diagnostic string to associate with this instance.
     string? label;
 
-    // TODO(fxbug.dev/42888): pass the configuration to the guest launcher instead.
-    /// Configuration that will be passed to the VMM binary when launching this guest.
-    ///
-    /// See //src/virtualization/bin/vmm/guest_config.cc for valid options.
+    /// Configuration that will be passed to the VMM when launching the guest.
     GuestConfig guest_config;
-
-    /// A set of block devices to add to the virtual machine.
-    vector<BlockDevice>? block_devices;
 
     /// An optional virtio_wl device.
     ///
@@ -70,5 +64,5 @@ resource struct LaunchInfo {
 
 [Discoverable]
 protocol LaunchInfoProvider {
-    GetLaunchInfo() -> (LaunchInfo launch_info);
+    Get() -> (LaunchInfo launch_info);
 };

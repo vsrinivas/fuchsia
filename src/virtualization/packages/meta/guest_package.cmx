@@ -5,7 +5,7 @@
     "program": {
         "binary": "bin/app"
     },
-    "runner": "fuchsia-pkg://fuchsia.com/guest_runner#meta/guest_runner.cmx",
+    "runner": "fuchsia-pkg://fuchsia.com/guest-runner#meta/guest_runner.cmx",
     "sandbox": {
         "services": [
             "fuchsia.virtualization.LaunchInfoProvider"

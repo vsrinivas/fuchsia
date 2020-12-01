@@ -11,7 +11,7 @@
 #include "src/virtualization/bin/vmm/device/phys_mem.h"
 #include "src/virtualization/bin/vmm/platform_device.h"
 
-zx_status_t setup_zircon(const fuchsia::virtualization::GuestConfig& cfg, const PhysMem& phys_mem,
+zx_status_t setup_zircon(fuchsia::virtualization::GuestConfig* cfg, const PhysMem& phys_mem,
                          const DevMem& dev_mem, const std::vector<PlatformDevice*>& devices,
                          uintptr_t* guest_ip, uintptr_t* boot_ptr);
 

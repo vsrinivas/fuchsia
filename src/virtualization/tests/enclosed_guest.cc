@@ -24,7 +24,6 @@
 #include <string>
 
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/virtualization/bin/vmm/guest_config.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
 #include "src/virtualization/tests/logger.h"
 #include "src/virtualization/tests/periodic_logger.h"
@@ -313,32 +312,31 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo
   if (fd < 0) {
     return ZX_ERR_BAD_STATE;
   }
-  zx_handle_t handle;
-  zx_status_t status = fdio_get_service_handle(fd, &handle);
+  zx::channel channel;
+  zx_status_t status = fdio_get_service_handle(fd, channel.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }
-  launch_info->block_devices.emplace();
-  launch_info->block_devices->push_back({
+  launch_info->guest_config.mutable_block_devices()->push_back({
       "linux_tests",
       fuchsia::virtualization::BlockMode::READ_ONLY,
       fuchsia::virtualization::BlockFormat::RAW,
-      fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle)),
+      fidl::InterfaceHandle<fuchsia::io::File>(std::move(channel)),
   });
   // Add non-prebuilt test extras.
   fd = open("/pkg/data/extras.img", O_RDONLY);
   if (fd < 0) {
     return ZX_ERR_BAD_STATE;
   }
-  status = fdio_get_service_handle(fd, &handle);
+  status = fdio_get_service_handle(fd, channel.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }
-  launch_info->block_devices->push_back({
+  launch_info->guest_config.mutable_block_devices()->push_back({
       "extras",
       fuchsia::virtualization::BlockMode::READ_ONLY,
       fuchsia::virtualization::BlockFormat::RAW,
-      fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle)),
+      fidl::InterfaceHandle<fuchsia::io::File>(std::move(channel)),
   });
   return ZX_OK;
 }

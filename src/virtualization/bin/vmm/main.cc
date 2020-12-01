@@ -32,7 +32,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/vmm/controller/virtio_balloon.h"
 #include "src/virtualization/bin/vmm/controller/virtio_block.h"
@@ -44,7 +43,6 @@
 #include "src/virtualization/bin/vmm/controller/virtio_rng.h"
 #include "src/virtualization/bin/vmm/controller/virtio_wl.h"
 #include "src/virtualization/bin/vmm/guest.h"
-#include "src/virtualization/bin/vmm/guest_config.h"
 #include "src/virtualization/bin/vmm/guest_impl.h"
 #include "src/virtualization/bin/vmm/interrupt_controller.h"
 #include "src/virtualization/bin/vmm/linux.h"
@@ -71,23 +69,11 @@ static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
 // allocator that starts fairly high in the guest physical address space.
 static constexpr zx_gpaddr_t kFirstDynamicDeviceAddr = 0xc00000000;
 
-static zx_gpaddr_t alloc_device_addr(size_t device_size) {
+static zx_gpaddr_t AllocDeviceAddr(size_t device_size) {
   static zx_gpaddr_t next_device_addr = kFirstDynamicDeviceAddr;
   zx_gpaddr_t ret = next_device_addr;
   next_device_addr += device_size;
   return ret;
-}
-
-static zx_status_t read_guest_cfg(const char* cfg_path, fuchsia::virtualization::GuestConfig* cfg) {
-  std::string cfg_str;
-  if (files::ReadFileToString(cfg_path, &cfg_str)) {
-    zx_status_t status = guest_config::ParseConfig(cfg_str, cfg);
-    if (status != ZX_OK) {
-      return status;
-    }
-    guest_config::SetDefaults(cfg);
-  }
-  return ZX_OK;
 }
 
 int main(int argc, char** argv) {
@@ -102,23 +88,19 @@ int main(int argc, char** argv) {
   fuchsia::virtualization::LaunchInfo launch_info;
   fuchsia::virtualization::LaunchInfoProviderSyncPtr launch_info_provider;
   context->svc()->Connect(launch_info_provider.NewRequest());
-  zx_status_t status = launch_info_provider->GetLaunchInfo(&launch_info);
+  zx_status_t status = launch_info_provider->Get(&launch_info);
   // NOTE: This isn't an error yet since only the guest_manager exposes the
   // LaunchInfoProvider service. This will become an error once we invert the
   // dependency between guest_runner and guest_manager.
   if (status != ZX_OK) {
-    FX_LOGS(INFO) << "No launch info provided.";
+    FX_LOGS(ERROR) << "No launch info provided";
+    return status;
   }
+  fuchsia::virtualization::GuestConfig* cfg = &launch_info.guest_config;
 
   GuestImpl guest_controller;
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());
-
-  fuchsia::virtualization::GuestConfig* cfg = &launch_info.guest_config;
-  status = read_guest_cfg("/guest/data/guest.cfg", cfg);
-  if (status != ZX_OK) {
-    return status;
-  }
 
   DevMem dev_mem;
   for (const fuchsia::virtualization::MemorySpec& spec : cfg->memory()) {
@@ -206,43 +188,9 @@ int main(int argc, char** argv) {
     }
   }
 
-  // Setup block device.
-  //
-  // We first add the devices specified in the package config file, followed by
-  // the devices in the launch_info.
-  std::vector<fuchsia::virtualization::BlockDevice> block_infos;
-  for (size_t i = 0; i < cfg->block_devices().size(); i++) {
-    const auto& block_spec = cfg->block_devices()[i];
-    if (block_spec.path.empty()) {
-      FX_LOGS(ERROR) << "Block spec missing path attribute " << status;
-      return ZX_ERR_INVALID_ARGS;
-    }
-    uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE;
-    if (block_spec.mode == fuchsia::virtualization::BlockMode::READ_WRITE) {
-      flags |= fuchsia::io::OPEN_RIGHT_WRITABLE;
-    }
-    fidl::InterfaceHandle<fuchsia::io::File> file;
-    status = fdio_open(block_spec.path.c_str(), flags, file.NewRequest().TakeChannel().release());
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to open " << block_spec.path << " " << status;
-      return status;
-    }
-    block_infos.push_back({
-        .id = fxl::StringPrintf("block-%zu", i),
-        .mode = block_spec.mode,
-        .format = block_spec.format,
-        .file = std::move(file),
-    });
-  }
-  if (launch_info.block_devices) {
-    block_infos.insert(block_infos.end(),
-                       std::make_move_iterator(launch_info.block_devices->begin()),
-                       std::make_move_iterator(launch_info.block_devices->end()));
-  }
-
   // Create a new VirtioBlock device for each device requested.
   std::vector<std::unique_ptr<VirtioBlock>> block_devices;
-  for (auto& block_device : block_infos) {
+  for (auto& block_device : *cfg->mutable_block_devices()) {
     auto block = std::make_unique<VirtioBlock>(guest.phys_mem(), block_device.mode);
     status = bus.Connect(block->pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
@@ -363,7 +311,7 @@ int main(int argc, char** argv) {
   VirtioWl wl(guest.phys_mem());
   if (launch_info.wayland_device) {
     size_t wl_dev_mem_size = launch_info.wayland_device->memory;
-    zx_gpaddr_t wl_dev_mem_offset = alloc_device_addr(wl_dev_mem_size);
+    zx_gpaddr_t wl_dev_mem_offset = AllocDeviceAddr(wl_dev_mem_size);
     if (!dev_mem.AddRange(wl_dev_mem_offset, wl_dev_mem_size)) {
       FX_LOGS(INFO) << "Could not reserve device memory range for wayland device";
       return status;
@@ -396,7 +344,7 @@ int main(int argc, char** argv) {
     if (launch_info.magma_device) {
       magma_dev_mem_size = launch_info.magma_device->memory;
     }
-    zx_gpaddr_t magma_dev_mem_offset = alloc_device_addr(magma_dev_mem_size);
+    zx_gpaddr_t magma_dev_mem_offset = AllocDeviceAddr(magma_dev_mem_size);
     if (!dev_mem.AddRange(magma_dev_mem_offset, magma_dev_mem_size)) {
       FX_PLOGS(INFO, status) << "Could not reserve device memory range for magma device";
       return status;
@@ -463,19 +411,19 @@ int main(int argc, char** argv) {
   // Setup kernel.
   uintptr_t entry = 0;
   uintptr_t boot_ptr = 0;
-  switch (cfg->kernel()) {
-    case fuchsia::virtualization::Kernel::ZIRCON:
-      status = setup_zircon(*cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
+  switch (cfg->kernel_type()) {
+    case fuchsia::virtualization::KernelType::ZIRCON:
+      status = setup_zircon(cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
       break;
-    case fuchsia::virtualization::Kernel::LINUX:
-      status = setup_linux(*cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
+    case fuchsia::virtualization::KernelType::LINUX:
+      status = setup_linux(cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
       break;
     default:
       FX_LOGS(ERROR) << "Unknown kernel";
       return ZX_ERR_INVALID_ARGS;
   }
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to load kernel " << cfg->kernel_path() << " " << status;
+    FX_LOGS(ERROR) << "Failed to load kernel " << status;
     return status;
   }
 

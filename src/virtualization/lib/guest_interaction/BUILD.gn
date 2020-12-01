@@ -110,7 +110,6 @@ source_set("integration_test_lib") {
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
-    "//src/virtualization/bin/vmm:guest_config",
     "//src/virtualization/tests:fake_netstack",
     "//src/virtualization/tests:guest_console",
   ]
