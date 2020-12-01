@@ -13,7 +13,9 @@ import sys
 # graph.  If they contain conflicting requirements for a package 'pub get' will
 # error out and the conflicts will have to be resolved before the packages can
 # be updated.
-ROOT_PUBSPECS = []
+ROOT_PUBSPECS = [
+    'prebuilt/third_party/sky_engine',
+]
 
 FLUTTER_GIT = 'https://github.com/flutter/flutter.git'
 FLUTTER_ROOT = 'third_party/dart-pkg/git/flutter'
