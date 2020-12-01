@@ -5,7 +5,10 @@
 """
 Example usage:
 $ fx set ...
-$ scripts/gn/trim_visibility.py\ --target="//build/config:Wno-conversion"
+$ scripts/gn/trim_visibility.py --target="//build/config:Wno-conversion"
+
+The output is useful for instance if you have a visibility allowlist for
+a deprecation and you'd like to trim it for stale values.
 """
 
 import argparse
@@ -88,6 +91,9 @@ def main():
         for root, _, files in os.walk(target_to_dir(vis)):
             for filename in files:
                 if os.path.splitext(filename)[1] == ".gn":
+                    # This has some false positives, but is better than parsing
+                    # GN files or relying on `gn desc` for the target, each of
+                    # which is a whole can of worms.
                     if args.target in open(os.path.join(root, filename)).read():
                         used_visibility.add(vis)
                         found_usage = True
