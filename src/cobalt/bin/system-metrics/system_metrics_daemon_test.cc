@@ -19,17 +19,14 @@
 #include <gtest/gtest.h>
 
 #include "lib/fidl/cpp/binding_set.h"
-#include "src/cobalt/bin/system-metrics/diagnostics_metrics_registry.cb.h"
 #include "src/cobalt/bin/system-metrics/log_stats_fetcher_impl.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
-#include "src/cobalt/bin/system-metrics/testing/fake_archivist_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_cpu_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_log_stats_fetcher.h"
 #include "src/cobalt/bin/testing/fake_clock.h"
 #include "src/cobalt/bin/testing/fake_logger.h"
 #include "src/cobalt/bin/utils/clock.h"
 
-using cobalt::FakeArchivistStatsFetcher;
 using cobalt::FakeCpuStatsFetcher;
 using cobalt::FakeLogger_Sync;
 using cobalt::FakeSteadyClock;
@@ -59,15 +56,12 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
         context_provider_(),
         fake_clock_(new FakeSteadyClock()),
         fake_log_stats_fetcher_(new cobalt::FakeLogStatsFetcher(dispatcher())),
-        fake_archivist_stats_fetcher_(new cobalt::FakeArchivistStatsFetcher(dispatcher())),
         daemon_(new SystemMetricsDaemon(
             dispatcher(), context_provider_.context(), fake_granular_error_stats_specs_,
-            &fake_logger_, &fake_diagnostics_logger_, &fake_granular_error_stats_logger_,
+            &fake_logger_, &fake_granular_error_stats_logger_,
             std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
             std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()),
-            std::unique_ptr<cobalt::LogStatsFetcher>(fake_log_stats_fetcher_), nullptr,
-            std::unique_ptr<cobalt::ArchivistStatsFetcher>(fake_archivist_stats_fetcher_),
-            "tmp/")) {
+            std::unique_ptr<cobalt::LogStatsFetcher>(fake_log_stats_fetcher_), nullptr, "tmp/")) {
     daemon_->cpu_bucket_config_ = daemon_->InitializeLinearBucketConfig(
         fuchsia_system_metrics::kCpuPercentageIntBucketsFloor,
         fuchsia_system_metrics::kCpuPercentageIntBucketsNumBuckets,
@@ -123,8 +117,6 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
   seconds LogCpuUsage() { return daemon_->LogCpuUsage(); }
 
   void LogLogStats() { daemon_->LogLogStats(); }
-
-  void LogArchivistStats() { daemon_->LogArchivistStats(); }
 
   void PrepareForLogCpuUsage() {
     daemon_->cpu_data_stored_ = 599;
@@ -230,11 +222,9 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider context_provider_;
   FakeSteadyClock* fake_clock_;
   FakeLogger_Sync fake_logger_;
-  FakeLogger_Sync fake_diagnostics_logger_;
   FakeLogger_Sync fake_granular_error_stats_logger_;
   SystemMetricsDaemon::MetricSpecs fake_granular_error_stats_specs_{12312, 543514, 51435145};
   cobalt::FakeLogStatsFetcher* const fake_log_stats_fetcher_;
-  cobalt::FakeArchivistStatsFetcher* const fake_archivist_stats_fetcher_;
   std::unique_ptr<SystemMetricsDaemon> daemon_;
 };
 
@@ -670,43 +660,6 @@ TEST_F(SystemMetricsDaemonTest, LogLogStats) {
   fake_granular_error_stats_logger_.reset_logged_events();
 }
 
-// Check that archivist stats are sent to component diagnostics logger.
-TEST_F(SystemMetricsDaemonTest, LogArchivistStats) {
-  fake_archivist_stats_fetcher_->AddMeasurement(
-      std::make_pair(FakeArchivistStatsFetcher::MeasurementKey(
-                         fuchsia_component_diagnostics::kBatchIteratorGetNextErrorsMetricId,
-                         fuchsia_component_diagnostics::BatchIteratorGetNextErrorsEventCodes{
-                             .pipeline = fuchsia_component_diagnostics::
-                                 BatchIteratorGetNextErrorsMetricDimensionPipeline::All,
-                             .data_type = fuchsia_component_diagnostics::
-                                 BatchIteratorGetNextErrorsMetricDimensionDataType::Inspect,
-                         }
-                             .ToVector()),
-                     100));
-  fake_archivist_stats_fetcher_->AddMeasurement(
-      std::make_pair(FakeArchivistStatsFetcher::MeasurementKey(
-                         fuchsia_component_diagnostics::kBatchIteratorGetNextRequestsMetricId,
-                         fuchsia_component_diagnostics::BatchIteratorGetNextRequestsEventCodes{
-                             .pipeline = fuchsia_component_diagnostics::
-                                 BatchIteratorGetNextRequestsMetricDimensionPipeline::Feedback,
-                             .data_type = fuchsia_component_diagnostics::
-                                 BatchIteratorGetNextRequestsMetricDimensionDataType::Logs,
-                         }
-                             .ToVector()),
-                     3));
-  LogArchivistStats();
-  RunLoopUntilIdle();
-  EXPECT_EQ(2u, fake_diagnostics_logger_.call_count());
-  EXPECT_EQ(fuchsia_component_diagnostics::kBatchIteratorGetNextRequestsMetricId,
-            fake_diagnostics_logger_.last_metric_id());
-  EXPECT_EQ(
-      fuchsia_component_diagnostics::BatchIteratorGetNextRequestsMetricDimensionPipeline::Feedback,
-      fake_diagnostics_logger_.last_event_code());
-  EXPECT_EQ(
-      fuchsia_component_diagnostics::BatchIteratorGetNextRequestsMetricDimensionDataType::Logs,
-      fake_diagnostics_logger_.last_event_code_second_position());
-}
-
 class MockLogger : public ::fuchsia::cobalt::testing::Logger_TestBase {
  public:
   void LogCobaltEvents(std::vector<fuchsia::cobalt::CobaltEvent> events,
@@ -784,9 +737,9 @@ class SystemMetricsDaemonInitializationTest : public gtest::TestLoopFixture {
     // Initialize the SystemMetricsDaemon with the fake context, and other fakes.
     daemon_ = std::unique_ptr<SystemMetricsDaemon>(new SystemMetricsDaemon(
         dispatcher(), context_provider_.context(), fake_granular_error_stats_specs_, nullptr,
-        nullptr, nullptr, std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
-        std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()),
-        nullptr, nullptr, nullptr, "/tmp"));
+        nullptr, std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
+        std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()), nullptr, nullptr,
+        "/tmp"));
   }
 
   // Note that we first save an unprotected pointer in fake_clock_ and then

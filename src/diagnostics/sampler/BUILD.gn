@@ -6,8 +6,12 @@ import("//build/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
+import("//src/diagnostics/sampler/build/config_generator.gni")
 import("//src/sys/build/components.gni")
 
+# Library containing core logic for sampler,
+# library launched by generic diagnostics Launcher
+# to bundle multiple products together and save space.
 rustc_library("lib") {
   name = "sampler"
   edition = "2018"
@@ -52,25 +56,76 @@ rustc_library("lib") {
   ]
 }
 
+# Test package for the unit test from the
+# lapis library.
+test_package("sampler-tests") {
+  deps = [ ":lib_test" ]
+
+  v2_tests = [
+    {
+      name = "sampler_lib_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+# Custom build rule responsible for generating them
+# default config-data the production Lapis service uses
+# as well as the resource rule used by the configuration
+# verification test.
+lapis_configuration("production_lapis") {
+  configs = [ "config/archivist.json" ]
+}
+
+# Rules defining the V1 and V2 Lapis components.
 fuchsia_component("sampler-component") {
   component_name = "sampler"
   deps = [
-    ":archivist_config",
+    ":production_lapis_config_data",
     "//src/diagnostics/launcher:bin",
   ]
   manifest = "meta/sampler.cml"
+}
+
+fuchsia_component("sampler-v1") {
+  component_name = "sampler"
+  manifest = "meta/sampler.cmx"
+  deps = [
+    ":lib",
+    "//src/diagnostics/launcher:bin",
+  ]
 }
 
 fuchsia_package("sampler") {
   deps = [ ":sampler-component" ]
 }
 
-config_data("archivist_config") {
-  for_pkg = "sampler"
-  sources = [ "config/archivist.json" ]
-  outputs = [ "metrics/archivist.json" ]
+# Test binary responsible for readings
+# and validating all client configurations
+# listed in the "production lapis" lapis_configuration.
+rustc_test("config-validation") {
+  testonly = true
+  name = "config_validation_test"
+  deps = [
+    ":lib",
+    "//src/lib/fuchsia-async",
+  ]
+
+  source_root = "tests/config_validation.rs"
+  sources = [ "tests/config_validation.rs" ]
 }
 
+# Test component for config validation.
+fuchsia_component("config-validation-test") {
+  testonly = true
+  manifest = "meta/config-validation-test.cmx"
+  deps = [
+    ":config-validation",
+    ":production_lapis_resources",
+  ]
+}
+
+# Integration test binary for lapis service.
 rustc_test("test-bin") {
   testonly = true
   name = "sampler_integration_tests"
@@ -91,12 +146,14 @@ rustc_test("test-bin") {
   sources = [ "tests/integration.rs" ]
 }
 
-fuchsia_component("sampler-v1") {
-  component_name = "sampler"
-  manifest = "meta/sampler.cmx"
-  deps = [ "//src/diagnostics/launcher:bin" ]
+# Config-data for the integration test.
+config_data("test-config") {
+  for_pkg = "sampler-integration-tests"
+  sources = [ "tests/configs/test_config.json" ]
+  outputs = [ "metrics/test_config.json" ]
 }
 
+# Test component for lapis service integration test.
 fuchsia_component("sampler-integration-test") {
   testonly = true
   manifest = "meta/integration-tests.cmx"
@@ -108,27 +165,13 @@ fuchsia_component("sampler-integration-test") {
 }
 
 fuchsia_test_package("sampler-integration-tests") {
-  test_components = [ ":sampler-integration-test" ]
-  deps = [
-    ":test-config",
-    "//src/cobalt/bin/testing/mock_cobalt:component",
+  test_components = [
+    ":sampler-integration-test",
+    ":config-validation-test",
   ]
-}
-
-config_data("test-config") {
-  for_pkg = "sampler-integration-tests"
-  sources = [ "tests/configs/test_config.json" ]
-  outputs = [ "metrics/test_config.json" ]
-}
-
-test_package("sampler-tests") {
-  deps = [ ":lib_test" ]
-
-  v2_tests = [
-    {
-      name = "sampler_lib_test"
-      environments = basic_envs
-    },
+  deps = [
+    ":production_lapis_resources",
+    ":test-config",
   ]
 }
 
