@@ -7,12 +7,12 @@ import 'dart:convert' show json;
 import 'package:flutter/material.dart' show VoidCallback;
 import 'package:meta/meta.dart';
 
-import 'package:fidl_fuchsia_ui_input2/fidl_async.dart';
+import 'package:fidl_fuchsia_input/fidl_async.dart' show Key;
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
     show Registry, RegistryProxy, Shortcut, Trigger, Listener, ListenerBinding;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' show ViewRef;
 import 'package:fuchsia_services/services.dart' show StartupContext;
-import 'package:zircon/zircon.dart' show EventPairPair;
+import 'package:zircon/zircon.dart' show EventPair, ZX;
 
 /// Listens for keyboard shortcuts and triggers callbacks when they occur.
 class KeyboardShortcuts extends ui_shortcut.Listener {
@@ -20,20 +20,21 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
   final Map<String, VoidCallback> actions;
   final List<Shortcut> shortcuts;
 
-  // final _viewRef = ViewRef(reference: EventPairPair().first);
-  final ViewRef _viewRef;
+  ViewRef _viewRef;
   final ui_shortcut.ListenerBinding _listenerBinding;
 
   KeyboardShortcuts({
     @required this.registry,
     @required this.actions,
     @required String bindings,
-    ui_shortcut.ListenerBinding listenerBinding,
     ViewRef viewRef,
+    ui_shortcut.ListenerBinding listenerBinding,
   })  : shortcuts = _decodeJsonBindings(bindings, actions),
-        _viewRef = viewRef ?? ViewRef(reference: EventPairPair().first),
+        _viewRef = viewRef,
         _listenerBinding = listenerBinding ?? ui_shortcut.ListenerBinding() {
-    registry.setView(_viewRef, _listenerBinding.wrap(this));
+    if (_viewRef != null) {
+      registry.setView(_viewRef, _listenerBinding.wrap(this));
+    }
     shortcuts.forEach(registry.registerShortcut);
   }
 
@@ -44,10 +45,14 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
   }) {
     final shortcutRegistry = ui_shortcut.RegistryProxy();
     startupContext.incoming.connectToService(shortcutRegistry);
+    ViewRef viewRef = ViewRef(
+        reference:
+            EventPair(startupContext.viewRef).duplicate(ZX.RIGHT_SAME_RIGHTS));
     return KeyboardShortcuts(
       registry: shortcutRegistry,
       actions: actions,
       bindings: bindings,
+      viewRef: viewRef,
     );
   }
 
@@ -99,13 +104,17 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
 
         List<dynamic> chords = value;
         VoidCallback callback = actions[key];
-        return chords.whereType<Map>().map((c) {
-          return Shortcut.fromJSON(
-            object: c,
-            onKey: callback,
-            action: key,
-          );
-        }).toList();
+        return chords
+            .whereType<Map>()
+            .map((c) {
+              return Shortcut.parseJson(
+                object: c,
+                onKey: callback,
+                action: key,
+              );
+            })
+            .expand((c) => c)
+            .toList();
       }
       return value;
     });
@@ -137,95 +146,88 @@ class Shortcut extends ui_shortcut.Shortcut {
   VoidCallback onKey;
 
   Shortcut({
-    Key key,
-    Modifiers modifiers,
+    Key key3,
+    List<Key> keysRequired,
+    ui_shortcut.Trigger trigger,
     bool usePriority = true,
     this.exclusive,
     this.onKey,
     this.action,
+    this.chord,
     this.description = '',
   }) : super(
             id: ++lastId,
-            modifiers: modifiers,
-            key: key,
-            usePriority: usePriority);
+            keysRequired: keysRequired,
+            key3: key3,
+            usePriority: usePriority,
+            trigger: trigger);
 
-  Shortcut.fromJSON({
+  static List<Shortcut> parseJson({
     Map<String, dynamic> object,
-    this.onKey,
-    this.action,
-  })  : chord = object['chord'],
-        description = object['description'],
-        exclusive = object['exclusive'] ?? true,
-        super(
-            id: ++lastId,
-            key: Key.$valueOf(object['char']),
-            trigger: object['char'] == null && object['modifier'] != null
-                ? ui_shortcut.Trigger.keyPressedAndReleased
-                : null,
-            modifiers: _modifiersFromArray(object['modifier']));
+    VoidCallback onKey,
+    String action,
+  }) {
+    return _keysRequiredFromArray(object['modifier'])
+        .map((keysRequired) => Shortcut(
+              key3: Key.$valueOf(object['char']),
+              keysRequired: keysRequired.isEmpty ? null : keysRequired,
+              trigger: object['char'] == null && object['modifier'] != null
+                  ? ui_shortcut.Trigger.keyPressedAndReleased
+                  : null,
+              exclusive: object['exclusive'] ?? true,
+              onKey: onKey,
+              action: action,
+              chord: object['chord'],
+              description: object['description'],
+            ))
+        .toList();
+  }
 
   @override
   bool operator ==(dynamic other) =>
       other is Shortcut &&
       id == other.id &&
-      modifiers == other.modifiers &&
-      key == other.key &&
+      key3 == other.key3 &&
+      keysRequired == other.keysRequired &&
       usePriority == other.usePriority;
 
   @override
   int get hashCode =>
-      id.hashCode ^ modifiers.hashCode ^ key.hashCode ^ usePriority.hashCode;
+      id.hashCode ^
+      usePriority.hashCode ^
+      key3.hashCode ^
+      keysRequired.hashCode;
 
   @override
   String toString() =>
-      'id: $id key: $key modifiers: $modifiers action: $action';
+      'id: $id key3: $key3 keysRequired: $keysRequired action: $action';
 
-  static Modifiers _modifiersFromArray(String s) {
+  static List<List<Key>> _keysRequiredFromArray(String s) {
+    List<List<Key>> r = [[]];
     if (s == null) {
-      return null;
+      return r;
     }
-    return s
-        .split('+')
-        .map((x) => x.trim())
-        .map(_modifierFromString)
-        .reduce((prev, next) => prev | next);
+    var modifiers =
+        s.split('+').map((x) => x.trim()).map(_keyVariantsFromString);
+    // Convert list of modifier variants to a list of combinations.
+    for (var modifierVariant in modifiers) {
+      r = r.expand((i) => modifierVariant.map((j) => i + [j])).toList();
+    }
+    return r;
   }
 
-  static Modifiers _modifierFromString(String s) {
+  static List<Key> _keyVariantsFromString(String s) {
     switch (s) {
       case 'shift':
-        return Modifiers.shift;
-      case 'leftShift':
-        return Modifiers.leftShift;
-      case 'rightShift':
-        return Modifiers.rightShift;
+        return [Key.leftShift, Key.rightShift];
       case 'control':
-        return Modifiers.control;
-      case 'leftControl':
-        return Modifiers.leftControl;
-      case 'rightControl':
-        return Modifiers.rightControl;
+        return [Key.leftCtrl, Key.rightCtrl];
       case 'alt':
-        return Modifiers.alt;
-      case 'leftAlt':
-        return Modifiers.leftAlt;
-      case 'rightAlt':
-        return Modifiers.rightAlt;
+        return [Key.leftAlt, Key.rightAlt];
       case 'meta':
-        return Modifiers.meta;
-      case 'leftMeta':
-        return Modifiers.leftMeta;
-      case 'rightMeta':
-        return Modifiers.rightMeta;
-      case 'capsLock':
-        return Modifiers.capsLock;
-      case 'numLock':
-        return Modifiers.numLock;
-      case 'scrollLock':
-        return Modifiers.scrollLock;
+        return [Key.leftMeta, Key.rightMeta];
       default:
-        return Modifiers.$none;
+        return [Key.$valueOf(s)];
     }
   }
 }

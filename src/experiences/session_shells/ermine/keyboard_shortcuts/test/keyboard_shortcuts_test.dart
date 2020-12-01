@@ -4,7 +4,7 @@
 
 import 'dart:convert' show json;
 
-import 'package:fidl_fuchsia_ui_input2/fidl_async.dart';
+import 'package:fidl_fuchsia_input/fidl_async.dart' show Key;
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' show ViewRef;
 
@@ -50,7 +50,72 @@ void main() async {
 
     verify(registry.registerShortcut(any)).called(1);
     expect(shortcuts.shortcuts.length, 1);
-    expect(shortcuts.shortcuts.first.key, Key.escape);
+    expect(shortcuts.shortcuts.first.key3, Key.escape);
+  });
+
+  test('meta key shortcuts', () {
+    final registry = MockRegistry();
+    final shortcuts = KeyboardShortcuts(
+      registry: registry,
+      actions: {'cancel': () {}, 'overview': () {}},
+      bindings: json.encode(<String, dynamic>{
+        'cancel': [
+          {
+            'char': 'leftMeta',
+            'enabled': true,
+          }
+        ],
+        'overview': [
+          {
+            'char': 'escape',
+            'enabled': true,
+            'modifier': 'meta',
+          }
+        ],
+      }),
+      listenerBinding: MockListenerBinding(),
+      viewRef: MockViewRef(),
+    );
+
+    verify(registry.registerShortcut(any)).called(3);
+    expect(shortcuts.shortcuts.length, 3);
+    expect(shortcuts.shortcuts[0].key3, Key.leftMeta);
+    expect(shortcuts.shortcuts[1].key3, Key.escape);
+    expect(shortcuts.shortcuts[2].key3, Key.escape);
+    expect(shortcuts.shortcuts[0].keysRequired, null);
+    expect(shortcuts.shortcuts[1].keysRequired, [Key.leftMeta]);
+    expect(shortcuts.shortcuts[2].keysRequired, [Key.rightMeta]);
+  });
+
+  test('modifiers expand to required keys', () {
+    final registry = MockRegistry();
+    final shortcuts = KeyboardShortcuts(
+      registry: registry,
+      actions: {'cancel': () {}},
+      bindings: json.encode(<String, dynamic>{
+        'cancel': [
+          {
+            'char': 'tab',
+            'enabled': true,
+            'modifier': 'control + shift',
+          }
+        ],
+      }),
+      listenerBinding: MockListenerBinding(),
+      viewRef: MockViewRef(),
+    );
+
+    verify(registry.registerShortcut(any)).called(4);
+    expect(shortcuts.shortcuts.length, 4);
+    expect(shortcuts.shortcuts[0].key3, Key.tab);
+    expect(shortcuts.shortcuts[1].key3, Key.tab);
+    expect(shortcuts.shortcuts[2].key3, Key.tab);
+    expect(shortcuts.shortcuts[3].key3, Key.tab);
+    expect(shortcuts.shortcuts[0].keysRequired, [Key.leftCtrl, Key.leftShift]);
+    expect(shortcuts.shortcuts[1].keysRequired, [Key.leftCtrl, Key.rightShift]);
+    expect(shortcuts.shortcuts[2].keysRequired, [Key.rightCtrl, Key.leftShift]);
+    expect(
+        shortcuts.shortcuts[3].keysRequired, [Key.rightCtrl, Key.rightShift]);
   });
 
   test('Invoke shortcuts', () {
