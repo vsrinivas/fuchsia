@@ -39,6 +39,14 @@ pub async fn connect_to_harness() -> io_test::Io1HarnessProxy {
     .expect("Cannot connect to test harness protocol")
 }
 
+/// Listens for the `OnOpen` event and returns its [Status].
+async fn get_open_status(node_proxy: &io::NodeProxy) -> Status {
+    let mut events = node_proxy.take_event_stream();
+    let io::NodeEvent::OnOpen_ { s, info: _ } =
+        events.next().await.expect("OnOpen event not received").expect("FIDL error");
+    Status::from_raw(s)
+}
+
 /// Helper function to open the desired node in the root folder. Only use this
 /// if testing something other than the open call directly.
 async fn open_node<T: ServiceMarker>(
@@ -51,13 +59,7 @@ async fn open_node<T: ServiceMarker>(
     let (node_proxy, node_server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy");
     dir.open(flags, mode, path, node_server).expect("Cannot open node");
 
-    // Listening to make sure open call succeeded.
-    {
-        let mut events = node_proxy.take_event_stream();
-        let io::NodeEvent::OnOpen_ { s, info: _ } =
-            events.next().await.expect("OnOpen event not received").expect("no fidl error");
-        assert_eq!(Status::from_raw(s), Status::OK);
-    }
+    assert_eq!(get_open_status(&node_proxy).await, Status::OK);
     T::Proxy::from_channel(node_proxy.into_channel().expect("Cannot convert node proxy to channel"))
 }
 
@@ -189,6 +191,118 @@ async fn open_remote_directory_test() {
     assert_eq!(open_request_string, "remote_directory flags:1, mode:16384, path:.");
 }
 
+/// Creates a directory with all rights, and checks it can be opened for all subsets of rights.
+#[fasync::run_singlethreaded(test)]
+async fn open_dir_with_sufficient_rights() {
+    let harness = connect_to_harness().await;
+
+    let root = root_directory(ALL_RIGHTS, vec![]);
+    let root_dir = get_directory_from_harness(&harness, root);
+
+    let constant_flags = [];
+    let variable_flags = [io::OPEN_RIGHT_READABLE, io::OPEN_RIGHT_WRITABLE];
+
+    let dir_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
+    for dir_flags in dir_flags_set {
+        let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
+        root_dir
+            .open(dir_flags | io::OPEN_FLAG_DESCRIBE, io::MODE_TYPE_DIRECTORY, ".", server)
+            .expect("Cannot open directory");
+
+        assert_eq!(get_open_status(&client).await, Status::OK);
+    }
+}
+
+/// Creates a directory with no rights, and checks opening it with any rights fails.
+#[fasync::run_singlethreaded(test)]
+async fn open_dir_with_insufficient_rights() {
+    let harness = connect_to_harness().await;
+
+    let root = root_directory(0, vec![]);
+    let root_dir = get_directory_from_harness(&harness, root);
+
+    let constant_flags = [];
+    let variable_flags = [io::OPEN_RIGHT_READABLE, io::OPEN_RIGHT_WRITABLE];
+
+    let dir_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
+    for dir_flags in dir_flags_set {
+        let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
+        root_dir
+            .open(dir_flags | io::OPEN_FLAG_DESCRIBE, io::MODE_TYPE_DIRECTORY, ".", server)
+            .expect("Cannot open directory");
+
+        assert_eq!(get_open_status(&client).await, Status::ACCESS_DENIED);
+    }
+}
+
+/// Opens a directory, and checks that a child directory can be opened using the same rights.
+#[fasync::run_singlethreaded(test)]
+async fn open_child_dir_with_same_rights() {
+    let harness = connect_to_harness().await;
+
+    let constant_flags = [];
+    let variable_flags = [io::OPEN_RIGHT_READABLE, io::OPEN_RIGHT_WRITABLE];
+
+    let dir_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
+    for dir_flags in dir_flags_set {
+        let root = root_directory(ALL_RIGHTS, vec![directory("child", dir_flags, vec![])]);
+        let root_dir = get_directory_from_harness(&harness, root);
+
+        let parent_dir =
+            open_node::<io::DirectoryMarker>(&root_dir, dir_flags, io::MODE_TYPE_DIRECTORY, ".")
+                .await;
+
+        // Open child directory with same flags as parent.
+        let (child_dir_client, child_dir_server) =
+            create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
+        parent_dir
+            .open(
+                dir_flags | io::OPEN_FLAG_DESCRIBE,
+                io::MODE_TYPE_DIRECTORY,
+                "child",
+                child_dir_server,
+            )
+            .expect("Cannot open directory");
+
+        assert_eq!(get_open_status(&child_dir_client).await, Status::OK);
+    }
+}
+
+/// Opens a directory as readable, and checks that a child directory cannot be opened as writable.
+#[fasync::run_singlethreaded(test)]
+async fn open_child_dir_with_extra_rights() {
+    let harness = connect_to_harness().await;
+
+    let root = root_directory(
+        io::OPEN_RIGHT_READABLE,
+        vec![directory("child", io::OPEN_RIGHT_READABLE, vec![])],
+    );
+    let root_dir = get_directory_from_harness(&harness, root);
+
+    // Open parent as readable.
+    let parent_dir = open_node::<io::DirectoryMarker>(
+        &root_dir,
+        io::OPEN_RIGHT_READABLE,
+        io::MODE_TYPE_DIRECTORY,
+        ".",
+    )
+    .await;
+
+    // Opening child as writable should fail.
+    let (child_dir_client, child_dir_server) =
+        create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
+    parent_dir
+        .open(
+            io::OPEN_RIGHT_WRITABLE | io::OPEN_FLAG_DESCRIBE,
+            io::MODE_TYPE_DIRECTORY,
+            "child",
+            child_dir_server,
+        )
+        .expect("Cannot open directory");
+
+    assert_eq!(get_open_status(&child_dir_client).await, Status::ACCESS_DENIED);
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn file_read_with_sufficient_rights() {
     let harness = connect_to_harness().await;
@@ -200,7 +314,7 @@ async fn file_read_with_sufficient_rights() {
 
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
-        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
+        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
@@ -221,7 +335,7 @@ async fn file_read_with_insufficient_rights() {
 
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
-        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
+        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
@@ -242,7 +356,7 @@ async fn file_read_at_with_sufficient_rights() {
 
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
-        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
+        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
@@ -263,7 +377,7 @@ async fn file_read_at_with_insufficient_rights() {
 
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
-        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
+        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
@@ -284,7 +398,7 @@ async fn file_write_with_sufficient_rights() {
 
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
-        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
+        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
@@ -305,7 +419,7 @@ async fn file_write_with_insufficient_rights() {
 
     let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
     for file_flags in file_flags_set {
-        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, Vec::new())]);
+        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
@@ -326,11 +440,7 @@ async fn file_read_in_subdirectory() {
     for file_flags in file_flags_set {
         let root = root_directory(
             ALL_RIGHTS,
-            vec![directory(
-                "subdir",
-                ALL_RIGHTS,
-                vec![file("testing.txt", file_flags, Vec::new())],
-            )],
+            vec![directory("subdir", ALL_RIGHTS, vec![file("testing.txt", file_flags, vec![])])],
         );
         let test_dir = get_directory_from_harness(&harness, root);
 
