@@ -70,6 +70,15 @@ compiled_action("generate-rust-zircon-syscalls-definitions") {
   deps = [ _zx_json_target ]
 }
 
+rustc_library("fuchsia-cprng") {
+  version = "0.1.1"
+  edition = "2018"
+  with_unit_tests = true
+  source_root = "fuchsia-cprng/src/lib.rs"
+
+  sources = [ "fuchsia-cprng/src/lib.rs" ]
+}
+
 rustc_library("fuchsia-zircon-sys") {
   version = "0.3.3"
   edition = "2018"
@@ -153,12 +162,17 @@ rustc_binary("sleep_forever_util") {
 test_package("fuchsia-zircon-tests") {
   deps = [
     ":exit_with_code_util",
+    ":fuchsia-cprng_test",
     ":fuchsia-zircon-status-tests",
     ":fuchsia-zircon-unittest",
     ":sleep_forever_util",
   ]
 
   tests = [
+    {
+      name = "fuchsia_cprng_lib_test"
+      environments = basic_envs
+    },
     {
       name = "fuchsia_zircon_unittest"
       dest = "fuchsia_zircon_tests"

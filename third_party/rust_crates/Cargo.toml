@@ -222,7 +222,7 @@ cmake = { path = "tiny_mirrors/cmake"}
 # See https://github.com/rafalh/rust-fatfs/pull/37#issuecomment-653760603 for more information.
 crossterm_winapi = { path = "tiny_mirrors/crossterm_winapi" }
 fatfs = { path = "tiny_mirrors/fatfs" }
-fuchsia-cprng = { path = "../../garnet/public/rust/fuchsia-cprng" }
+fuchsia-cprng = { path = "../../src/lib/zircon/rust/fuchsia-cprng" }
 futures-timer = { path = "tiny_mirrors/futures-timer" }
 js-sys = { path = "tiny_mirrors/js-sys" }
 libm = { path = "tiny_mirrors/libm" }

@@ -73,7 +73,6 @@ group("all") {
     "//garnet/lib/rust/webpki-roots-fuchsia:webpki-roots-fuchsia_tests",
     "//garnet/lib/trace_converters:trace_converter_tests",
     "//garnet/public/lib/fostr:tests_package",
-    "//garnet/public/rust:rust-crates-tests",
     "//garnet/tests/acts_tests",
     "//garnet/tests/fdio_spawn:fdio-spawn-tests",
     "//sdk/lib/fuzzing/cpp:fuzz_input_unittests($host_toolchain)",

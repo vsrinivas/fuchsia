@@ -2885,7 +2885,7 @@ static_library("freetype-v0_4_1") {
 
 rust_library("fuchsia-cprng-v0_1_1") {
   crate_name = "fuchsia_cprng"
-  crate_root = "//garnet/public/rust/fuchsia-cprng/src/lib.rs"
+  crate_root = "//src/lib/zircon/rust/fuchsia-cprng/src/lib.rs"
   output_name = "fuchsia_cprng-2003c73715c7fc44"
   configs -= [
     "//build/config:rust_edition_2018",
