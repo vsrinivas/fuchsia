@@ -568,6 +568,38 @@ void LogicalBufferCollection::VLogError(const char* format, va_list args) {
   VLogClientError(current_client_info_, format, args);
 }
 
+void LogicalBufferCollection::InitializeConstraintSnapshots(
+    const ConstraintsList& constraints_list) {
+  ZX_DEBUG_ASSERT(constraints_at_allocation_.empty());
+  ZX_DEBUG_ASSERT(!constraints_list.empty());
+  for (auto& constraints : constraints_list) {
+    ConstraintInfoSnapshot snapshot;
+    snapshot.node = node().CreateChild(CreateUniqueName("collection-at-allocation-"));
+    if (constraints.builder.has_min_buffer_count_for_camping()) {
+      snapshot.node.CreateUint("min_buffer_count_for_camping",
+                               constraints.builder.min_buffer_count_for_camping(),
+                               &snapshot.node_constraints);
+    }
+    if (constraints.builder.has_min_buffer_count_for_shared_slack()) {
+      snapshot.node.CreateUint("min_buffer_count_for_shared_slack",
+                               constraints.builder.min_buffer_count_for_shared_slack(),
+                               &snapshot.node_constraints);
+    }
+    if (constraints.builder.has_min_buffer_count_for_dedicated_slack()) {
+      snapshot.node.CreateUint("min_buffer_count_for_dedicated_slack",
+                               constraints.builder.min_buffer_count_for_dedicated_slack(),
+                               &snapshot.node_constraints);
+    }
+    if (constraints.builder.has_min_buffer_count()) {
+      snapshot.node.CreateUint("min_buffer_count", constraints.builder.min_buffer_count(),
+                               &snapshot.node_constraints);
+    }
+    snapshot.node.CreateUint("debug_id", constraints.client.id, &snapshot.node_constraints);
+    snapshot.node.CreateString("debug_name", constraints.client.name, &snapshot.node_constraints);
+    constraints_at_allocation_.push_back(std::move(snapshot));
+  }
+}
+
 void LogicalBufferCollection::MaybeAllocate() {
   if (!token_views_.empty()) {
     // All tokens must be converted into BufferCollection views or Close()ed
@@ -623,6 +655,7 @@ void LogicalBufferCollection::TryAllocate() {
     ZX_DEBUG_ASSERT(!key->has_constraints());
   }
 
+  InitializeConstraintSnapshots(constraints_list_);
   if (!CombineConstraints()) {
     // It's impossible to combine the constraints due to incompatible
     // constraints, or all participants set null constraints.

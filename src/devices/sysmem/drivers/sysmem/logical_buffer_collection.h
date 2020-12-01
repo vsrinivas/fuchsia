@@ -28,6 +28,14 @@ namespace sysmem_driver {
 class BufferCollectionToken;
 class BufferCollection;
 class MemoryAllocator;
+
+// This class can be used to hold an inspect snapshot of one set of constraints taken from a client
+// at a particular point in time.
+struct ConstraintInfoSnapshot {
+  inspect::Node node;
+  inspect::ValueList node_constraints;
+};
+
 class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> {
  public:
   struct ClientInfo {
@@ -128,6 +136,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
     uint32_t priority{};
     std::string name;
   };
+  using ConstraintsList = std::list<Constraints>;
 
   LogicalBufferCollection(Device* parent_device);
 
@@ -146,6 +155,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   void MaybeAllocate();
 
   void TryAllocate();
+
+  void InitializeConstraintSnapshots(const ConstraintsList& constraints_list);
 
   void SetFailedAllocationResult(zx_status_t status);
 
@@ -229,8 +240,9 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   CollectionMap collection_views_;
 
-  using ConstraintsList = std::list<Constraints>;
   ConstraintsList constraints_list_;
+
+  std::vector<ConstraintInfoSnapshot> constraints_at_allocation_;
 
   bool is_allocate_attempted_ = false;
 
