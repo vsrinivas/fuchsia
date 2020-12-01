@@ -215,6 +215,11 @@ TEST_F(TestExec, BacklogWithInvalidBatch) {
     ASSERT_EQ(MAGMA_STATUS_OK, semaphores[i]->Wait(kTimeoutMs).get());
   }
 
+  // Ensure the driver has completed processing all requests before checking the events array.
+  // Otherwise for invalid batches there can be a race condition where the driver has just
+  // signalled the semaphore, but not yet reset the internal event state.
+  device_->Shutdown();
+
   for (unsigned int i = 0; i < MsdVsiDevice::kNumEvents; i++) {
     ASSERT_TRUE(!device_->events_[i].allocated);
   }
