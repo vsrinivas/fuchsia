@@ -19,7 +19,7 @@ macro_rules! policy_request_respond {
             Ok(crate::policy::base::response::Payload::$payload_type(response)) => {
                 $responder.send_response(response.into())
             }
-            _ => $responder.on_error(),
+            Err(err) => $responder.on_error(&Error::new(err)),
         };
     };
 }

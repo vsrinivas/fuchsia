@@ -504,5 +504,5 @@ async fn test_channel_failure_watch() {
     let display_proxy =
         create_display_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = display_proxy.watch().await;
-    assert_matches!(result, Err(ClientChannelClosed { status: Status::INTERNAL, .. }));
+    assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
 }

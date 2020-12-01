@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Error;
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings::{
     LightError, LightGroup, LightMarker, LightRequest, LightState, LightWatchLightGroupResponder,
@@ -14,6 +15,7 @@ use fuchsia_zircon::Status;
 use crate::fidl_process_full;
 use crate::fidl_processor::settings::RequestContext;
 use crate::light::light_controller::ARG_NAME;
+use crate::shutdown_responder_with_error;
 use crate::switchboard::base::{FidlResponseErrorLogger, SwitchboardError};
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
@@ -23,9 +25,9 @@ impl Sender<Vec<LightGroup>> for LightWatchLightGroupsResponder {
         self.send(&mut data.into_iter()).log_fidl_response_error(LightMarker::DEBUG_NAME);
     }
 
-    fn on_error(self) {
+    fn on_error(self, error: &Error) {
         fx_log_err!("error occurred watching for service: {:?}", LightMarker::DEBUG_NAME);
-        self.control_handle().shutdown_with_epitaph(Status::INTERNAL);
+        shutdown_responder_with_error!(self, error);
     }
 }
 
@@ -50,13 +52,13 @@ impl Sender<Vec<LightGroup>> for IndividualLightGroupResponder {
             .log_fidl_response_error(LightMarker::DEBUG_NAME);
     }
 
-    fn on_error(self) {
+    fn on_error(self, error: &Error) {
         fx_log_err!(
             "error occurred watching light group {} for service: {:?}",
             self.light_group_name,
             LightMarker::DEBUG_NAME
         );
-        self.responder.control_handle().shutdown_with_epitaph(Status::INTERNAL);
+        shutdown_responder_with_error!(self.responder, error);
     }
 }
 

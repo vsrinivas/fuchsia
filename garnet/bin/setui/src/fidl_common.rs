@@ -1,3 +1,6 @@
+use crate::switchboard::base::SwitchboardError;
+use anyhow::Error;
+
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -212,6 +215,24 @@ macro_rules! fidl_process_2 {
     };
 }
 
+pub fn convert_to_epitaph(error: &Error) -> fuchsia_zircon::Status {
+    match error.root_cause().downcast_ref::<SwitchboardError>() {
+        Some(SwitchboardError::UnhandledType(_)) => fuchsia_zircon::Status::UNAVAILABLE,
+        _ => fuchsia_zircon::Status::INTERNAL,
+    }
+}
+
+/// Shuts down the given fidl [`responder`] using a zircon epitaph generated from
+/// the given [`error`].
+#[macro_export]
+macro_rules! shutdown_responder_with_error {
+    ($responder:expr, $error:ident) => {
+        $responder
+            .control_handle()
+            .shutdown_with_epitaph(crate::fidl_common::convert_to_epitaph($error))
+    };
+}
+
 /// Implements the Sender trait for the given FIDL responder(s) that send typed data.
 #[macro_export]
 macro_rules! fidl_hanging_get_responder {
@@ -225,10 +246,12 @@ macro_rules! fidl_hanging_get_responder {
                     <$marker_type as ::fidl::endpoints::ServiceMarker>::DEBUG_NAME);
             }
 
-            fn on_error(self) {
-                ::fuchsia_syslog::fx_log_err!("error occurred watching for service: {:?}",
-                    <$marker_type as ::fidl::endpoints::ServiceMarker>::DEBUG_NAME);
-                self.control_handle().shutdown_with_epitaph(::fuchsia_zircon::Status::INTERNAL);
+            fn on_error(self, error: &anyhow::Error) {
+                ::fuchsia_syslog::fx_log_err!(
+                    "error occurred watching for service: {:?}",
+                    <$marker_type as ::fidl::endpoints::ServiceMarker>::DEBUG_NAME
+                );
+                crate::shutdown_responder_with_error!(self, error);
             }
         })+
     };
@@ -246,12 +269,12 @@ macro_rules! fidl_result_sender_for_responder {
                 <$marker_type as ::fidl::endpoints::ServiceMarker>::DEBUG_NAME);
             }
 
-            fn on_error(self) {
+            fn on_error(self, error:&anyhow::Error) {
                 ::fuchsia_syslog::fx_log_err!(
                     "error occurred watching for service: {:?}",
                     <$marker_type as ::fidl::endpoints::ServiceMarker>::DEBUG_NAME
                 );
-                self.control_handle().shutdown_with_epitaph(::fuchsia_zircon::Status::INTERNAL);
+                crate::shutdown_responder_with_error!(self, error);
             }
         })+
     };

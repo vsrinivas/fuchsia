@@ -244,5 +244,5 @@ async fn test_intl_invalid_timezone() {
 async fn test_channel_failure_watch() {
     let intl_service = create_intl_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = intl_service.watch().await;
-    assert_matches!(result, Err(ClientChannelClosed { status: Status::INTERNAL, .. }));
+    assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
 }

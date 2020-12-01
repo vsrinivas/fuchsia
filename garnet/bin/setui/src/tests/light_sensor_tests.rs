@@ -69,7 +69,7 @@ async fn test_light_sensor() {
 // Tests for light sensor.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_watch_light_sensor_no_service_error() {
-    let expected_error = fuchsia_zircon::Status::INTERNAL;
+    let expected_error = fuchsia_zircon::Status::UNAVAILABLE;
 
     let env = EnvironmentBuilder::new(InMemoryStorageFactory::create())
         .service(ServiceRegistry::serve(ServiceRegistry::create()))

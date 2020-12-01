@@ -511,5 +511,5 @@ async fn test_persisted_values_applied_at_start() {
 async fn test_channel_failure_watch() {
     let audio_proxy = create_audio_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = audio_proxy.watch().await;
-    assert_matches!(result, Err(ClientChannelClosed { status: Status::INTERNAL, .. }));
+    assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
 }

@@ -6,8 +6,8 @@ use {
     crate::internal::switchboard,
     crate::message::base::Audience,
     crate::message::receptor::extract_payload,
-    crate::switchboard::base::*,
-    anyhow::{format_err, Error},
+    crate::switchboard::base::{SettingRequest, SettingResponse, SettingType, SwitchboardError},
+    anyhow::Error,
     fuchsia_async as fasync,
     futures::channel::mpsc::UnboundedSender,
     futures::lock::Mutex,
@@ -68,12 +68,12 @@ where
         self.pending_responders.push((responder, error_sender));
     }
 
-    fn on_error(&mut self) {
+    fn on_error(&mut self, error: &Error) {
         self.initialize();
 
         // Notify responders of error.
         while let Some((responder, optional_exit_tx)) = self.pending_responders.pop() {
-            responder.on_error();
+            responder.on_error(&error);
             if let Some(exit_tx) = optional_exit_tx {
                 exit_tx.unbounded_send(()).ok();
             }
@@ -140,12 +140,19 @@ where
 /// Trait that should be implemented to send data to the hanging get watcher.
 pub trait Sender<T> {
     fn send_response(self, data: T);
-    fn on_error(self);
+    fn on_error(self, error: &Error);
 }
 
 enum ListenCommand {
     Change(SettingType),
     Exit,
+}
+
+// Generates a pattern that pulls a response out of a SwitchBoardAction.
+macro_rules! switchboard_action_response {
+    ($action:pat) => {
+        Ok((switchboard::Payload::Action(switchboard::Action::Response($action)), _))
+    };
 }
 
 impl<T, ST, K> Drop for HangingGetHandler<T, ST, K>
@@ -281,44 +288,55 @@ where
             return;
         }
 
-        if let Ok(response) = self.get_response().await {
-            // We have to borrow the controllers again since self.get_response expects an immutable
-            // borrow, so we can't use it in between uses of the local variable controller.
-            match change_function_key {
-                None => self.default_controller.send_if_needed(response).await,
-                Some(key) => {
-                    self.controllers_by_key.get_mut(&key).unwrap().send_if_needed(response).await
-                }
-            };
-        } else {
-            self.on_error();
+        match self.get_response().await {
+            Ok(response) => {
+                // We have to borrow the controllers again since
+                // self.get_response expects an immutable borrow, so we can't
+                // use it in between uses of the local variable controller.
+                match change_function_key {
+                    None => self.default_controller.send_if_needed(response).await,
+                    Some(key) => {
+                        self.controllers_by_key
+                            .get_mut(&key)
+                            .unwrap()
+                            .send_if_needed(response)
+                            .await
+                    }
+                };
+            }
+            Err(error) => {
+                self.on_error(&error);
+            }
         }
     }
 
     /// Called when receiving a notification that value has changed.
     async fn on_change(&mut self) {
-        if let Ok(response) = self.get_response().await {
-            for controller in self.controllers_by_key.values_mut() {
-                if controller.on_change(&T::from(response.clone())) {
-                    controller.send_if_needed(response.clone()).await;
+        match self.get_response().await {
+            Ok(response) => {
+                for controller in self.controllers_by_key.values_mut() {
+                    if controller.on_change(&T::from(response.clone())) {
+                        controller.send_if_needed(response.clone()).await;
+                    }
+                }
+                if self.default_controller.on_change(&T::from(response.clone())) {
+                    self.default_controller.send_if_needed(response).await;
                 }
             }
-            if self.default_controller.on_change(&T::from(response.clone())) {
-                self.default_controller.send_if_needed(response).await;
+            Err(error) => {
+                self.on_error(&error);
             }
-        } else {
-            self.on_error();
         }
     }
 
-    fn on_error(&mut self) {
+    fn on_error(&mut self, error: &Error) {
         if let Some(exit_tx) = self.listen_exit_tx.take() {
             exit_tx.unbounded_send(()).ok();
         }
 
-        self.default_controller.on_error();
+        self.default_controller.on_error(&error);
         for controller in self.controllers_by_key.values_mut() {
-            controller.on_error();
+            controller.on_error(&error);
         }
     }
 
@@ -334,14 +352,10 @@ where
             )
             .send();
 
-        if let Ok((
-            switchboard::Payload::Action(switchboard::Action::Response(Ok(Some(setting_response)))),
-            _,
-        )) = receptor.next_payload().await
-        {
-            Ok(setting_response)
-        } else {
-            Err(format_err!("Couldn't make request"))
+        match receptor.next_payload().await {
+            switchboard_action_response!(Ok(Some(setting_response))) => Ok(setting_response),
+            switchboard_action_response!(Err(err)) => Err(Error::new(err)),
+            _ => Err(Error::new(SwitchboardError::UnexpectedError("Unexpected error".into()))),
         }
     }
 }
@@ -351,8 +365,10 @@ mod tests {
     use fuchsia_async::DurationExt;
     use fuchsia_zircon as zx;
     use futures::channel::mpsc::UnboundedSender;
+    use std::borrow::Cow;
 
     use crate::message::base::MessengerType;
+    use crate::switchboard::base::{DisplayInfo, LowLightMode, ThemeMode};
 
     use super::*;
 
@@ -360,6 +376,7 @@ mod tests {
     const ID2: f32 = 2.0;
 
     const SETTING_TYPE: SettingType = SettingType::Display;
+    const SET_ERROR: &str = "set failure";
 
     #[derive(PartialEq, Debug, Clone)]
     struct TestStruct {
@@ -369,7 +386,14 @@ mod tests {
     #[derive(PartialEq, Debug, Clone)]
     enum Event {
         Data(TestStruct),
-        Error,
+        SwitchboardError(SwitchboardError),
+        UnknownError,
+    }
+
+    impl<C: Into<Cow<'static, str>>> From<C> for SwitchboardError {
+        fn from(c: C) -> Self {
+            SwitchboardError::UnexpectedError(c.into())
+        }
     }
 
     struct TestSender {
@@ -488,7 +512,7 @@ mod tests {
 
             let mut response = None;
             if self.always_fail {
-                response = Some(Err(SwitchboardError::UnexpectedError("set failure".into())));
+                response = Some(Err(SwitchboardError::from(SET_ERROR)));
             } else if let Some(value) = self.id_to_send {
                 response = Some(Ok(Some(SettingResponse::Brightness(DisplayInfo::new(
                     false,
@@ -512,8 +536,12 @@ mod tests {
             self.sender.unbounded_send(Event::Data(data)).unwrap();
         }
 
-        fn on_error(self) {
-            self.sender.unbounded_send(Event::Error).unwrap();
+        fn on_error(self, error: &Error) {
+            let error = match error.root_cause().downcast_ref::<SwitchboardError>() {
+                Some(switchboard_error) => Event::SwitchboardError(switchboard_error.clone()),
+                _ => Event::UnknownError,
+            };
+            self.sender.unbounded_send(error).unwrap();
         }
     }
 
@@ -562,7 +590,10 @@ mod tests {
             .await;
 
         // The responder should receive an error
-        assert_eq!(hanging_get_listener.next().await.unwrap(), Event::Error);
+        assert_eq!(
+            hanging_get_listener.next().await.unwrap(),
+            Event::SwitchboardError(SwitchboardError::from(SET_ERROR))
+        );
 
         // When set, the exit sender should also be fired
         assert_eq!(exit_rx.next().await, Some(()));

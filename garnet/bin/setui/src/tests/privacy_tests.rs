@@ -80,5 +80,5 @@ async fn test_privacy() {
 async fn test_channel_failure_watch() {
     let privacy_service = create_privacy_test_env_with_failures().await;
     let result = privacy_service.watch().await;
-    assert_matches!(result, Err(ClientChannelClosed { status: Status::INTERNAL, .. }));
+    assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
 }

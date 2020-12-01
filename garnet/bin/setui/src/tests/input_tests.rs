@@ -270,7 +270,7 @@ async fn test_persisted_values_applied_at_start() {
 async fn test_channel_failure_watch() {
     let input_proxy = create_input_test_env_with_failures(InMemoryStorageFactory::create()).await;
     let result = input_proxy.watch().await;
-    assert_matches!(result, Err(ClientChannelClosed { status: Status::INTERNAL, .. }));
+    assert_matches!(result, Err(ClientChannelClosed { status: Status::UNAVAILABLE, .. }));
 }
 
 #[fuchsia_async::run_until_stalled(test)]
