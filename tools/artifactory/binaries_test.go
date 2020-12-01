@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
@@ -60,51 +61,44 @@ func TestDebugBinaryUploads(t *testing.T) {
 			Label:    "//prebuilt",
 		},
 		{
-			Debug:    filepath.Join("..", ".build-id", "pr", "ebuiltA.debug"),
-			Breakpad: filepath.Join("..", ".build-id", "pr", "ebuiltA.sym"),
-			OS:       "fuchsia",
-			Label:    "//prebuilt",
-		},
-		{
 			Debug:    filepath.Join("..", ".build-id", "pr", "ebuiltB.debug"),
 			Breakpad: filepath.Join("..", ".build-id", "pr", "ebuiltB.sym"),
 			OS:       "linux",
 			Label:    "//prebuilt",
 		},
 	}
+	// Duplicates should be ignored.
+	pbins = append(pbins, pbins[0])
 	const prebuiltBinManifest = "manifest"
-	writeJson(t, filepath.Join(buildDir, prebuiltBinManifest), pbins)
+	writeJSON(t, filepath.Join(buildDir, prebuiltBinManifest), pbins)
+
+	bins := []build.Binary{
+		{
+			Debug:    filepath.Join(".build-id", "fi", "rst.debug"),
+			Dist:     filepath.Join(".build-id", "fi", "rst"),
+			Breakpad: filepath.Join("gen", "first.sym"),
+			OS:       "fuchsia",
+			Label:    "//first",
+		},
+		{
+			Debug:    filepath.Join(".build-id", "se", "cond.debug"),
+			Breakpad: filepath.Join("host", "gen", "second.sym"),
+			OS:       "linux",
+			Label:    "//second",
+		},
+		{
+			Debug: filepath.Join(".build-id", "th", "ird.debug"),
+			Dist:  filepath.Join(".build-id", "th", "ird"),
+			OS:    "linux",
+			Label: "//third",
+		},
+	}
+	// Duplicates should be ignored.
+	bins = append(bins, bins[0])
 
 	m := &mockBinModules{
 		buildDir: buildDir,
-		bins: []build.Binary{
-			{
-				Debug:    filepath.Join(".build-id", "fi", "rst.debug"),
-				Dist:     filepath.Join(".build-id", "fi", "rst"),
-				Breakpad: filepath.Join("gen", "first.sym"),
-				OS:       "fuchsia",
-				Label:    "//first",
-			},
-			{
-				Debug:    filepath.Join(".build-id", "fi", "rst.debug"),
-				Dist:     filepath.Join(".build-id", "fi", "rst"),
-				Breakpad: filepath.Join("gen", "first.sym"),
-				OS:       "fuchsia",
-				Label:    "//first",
-			},
-			{
-				Debug:    filepath.Join(".build-id", "se", "cond.debug"),
-				Breakpad: filepath.Join("host", "gen", "second.sym"),
-				OS:       "linux",
-				Label:    "//second",
-			},
-			{
-				Debug: filepath.Join(".build-id", "th", "ird.debug"),
-				Dist:  filepath.Join(".build-id", "th", "ird"),
-				OS:    "linux",
-				Label: "//third",
-			},
-		},
+		bins:     bins,
 		pbins: []build.PrebuiltBinaries{
 			{
 				Name:     "prebuilt",
@@ -125,135 +119,73 @@ func TestDebugBinaryUploads(t *testing.T) {
 		}
 	}
 
-	expectedUploads := []Upload{
-		{
-			Source:      filepath.Join(buildDir, ".build-id", "fi", "rst.debug"),
-			Destination: "DEBUG_NAMESPACE/first.debug",
-			Compress:    true,
-			Deduplicate: true,
+	// Mapping from each file's local filepath to the locations in GCS to which
+	// the file should be uploaded.
+	expectedUploadDestinations := map[string][]string{
+		filepath.Join(buildDir, ".build-id", "fi", "rst.debug"): {
+			"DEBUG_NAMESPACE/first.debug",
+			"BUILDID_NAMESPACE/first/debuginfo",
 		},
-		{
-			Source:      filepath.Join(buildDir, ".build-id", "fi", "rst.debug"),
-			Destination: "BUILDID_NAMESPACE/first/debuginfo",
-			Compress:    true,
-			Deduplicate: true,
+		filepath.Join(buildDir, ".build-id", "fi", "rst"): {
+			"BUILDID_NAMESPACE/first/executable",
 		},
-		{
-			Source:      filepath.Join(buildDir, ".build-id", "fi", "rst"),
-			Destination: "BUILDID_NAMESPACE/first/executable",
-			Compress:    true,
-			Deduplicate: true,
+		filepath.Join(buildDir, "gen", "first.sym"): {
+			"DEBUG_NAMESPACE/first.sym",
+			"BUILDID_NAMESPACE/first/breakpad",
 		},
-		{
-			Source:      filepath.Join(buildDir, "gen", "first.sym"),
-			Destination: "DEBUG_NAMESPACE/first.sym",
-			Compress:    true,
-			Deduplicate: true,
+		filepath.Join(buildDir, ".build-id", "se", "cond.debug"): {
+			"DEBUG_NAMESPACE/second.debug",
+			"BUILDID_NAMESPACE/second/debuginfo",
 		},
-		{
-			Source:      filepath.Join(buildDir, "gen", "first.sym"),
-			Destination: "BUILDID_NAMESPACE/first/breakpad",
-			Compress:    true,
-			Deduplicate: true,
+		filepath.Join(buildDir, "host", "gen", "second.sym"): {
+			"DEBUG_NAMESPACE/second.sym",
+			"BUILDID_NAMESPACE/second/breakpad",
 		},
-		{
-			Source:      filepath.Join(buildDir, ".build-id", "se", "cond.debug"),
-			Destination: "DEBUG_NAMESPACE/second.debug",
-			Compress:    true,
-			Deduplicate: true,
+		filepath.Join(buildDir, ".build-id", "th", "ird.debug"): {
+			"DEBUG_NAMESPACE/third.debug",
+			"BUILDID_NAMESPACE/third/debuginfo",
 		},
-		{
-			Source:      filepath.Join(buildDir, ".build-id", "se", "cond.debug"),
-			Destination: "BUILDID_NAMESPACE/second/debuginfo",
-			Compress:    true,
-			Deduplicate: true,
+		filepath.Join(buildDir, ".build-id", "th", "ird"): {
+			"BUILDID_NAMESPACE/third/executable",
 		},
-		{
-			Source:      filepath.Join(buildDir, "host", "gen", "second.sym"),
-			Destination: "DEBUG_NAMESPACE/second.sym",
-			Compress:    true,
-			Deduplicate: true,
+		filepath.Join(checkout, ".build-id", "pr", "ebuiltA.debug"): {
+			"DEBUG_NAMESPACE/prebuiltA.debug",
+			"BUILDID_NAMESPACE/prebuiltA/debuginfo",
 		},
-		{
-			Source:      filepath.Join(buildDir, "host", "gen", "second.sym"),
-			Destination: "BUILDID_NAMESPACE/second/breakpad",
-			Compress:    true,
-			Deduplicate: true,
+		filepath.Join(checkout, ".build-id", "pr", "ebuiltA.sym"): {
+			"DEBUG_NAMESPACE/prebuiltA.sym",
+			"BUILDID_NAMESPACE/prebuiltA/breakpad",
 		},
-		{
-			Source:      filepath.Join(buildDir, ".build-id", "th", "ird.debug"),
-			Destination: "DEBUG_NAMESPACE/third.debug",
-			Compress:    true,
-			Deduplicate: true,
+		filepath.Join(checkout, ".build-id", "pr", "ebuiltB.debug"): {
+			"DEBUG_NAMESPACE/prebuiltB.debug",
+			"BUILDID_NAMESPACE/prebuiltB/debuginfo",
 		},
-		{
-			Source:      filepath.Join(buildDir, ".build-id", "th", "ird.debug"),
-			Destination: "BUILDID_NAMESPACE/third/debuginfo",
-			Compress:    true,
-			Deduplicate: true,
-		},
-		{
-			Source:      filepath.Join(buildDir, ".build-id", "th", "ird"),
-			Destination: "BUILDID_NAMESPACE/third/executable",
-			Compress:    true,
-			Deduplicate: true,
-		},
-		{
-			Source:      filepath.Join(checkout, ".build-id", "pr", "ebuiltA.debug"),
-			Destination: "DEBUG_NAMESPACE/prebuiltA.debug",
-			Compress:    true,
-			Deduplicate: true,
-		},
-		{
-			Source:      filepath.Join(checkout, ".build-id", "pr", "ebuiltA.debug"),
-			Destination: "BUILDID_NAMESPACE/prebuiltA/debuginfo",
-			Compress:    true,
-			Deduplicate: true,
-		},
-		{
-			Source:      filepath.Join(checkout, ".build-id", "pr", "ebuiltA.sym"),
-			Destination: "DEBUG_NAMESPACE/prebuiltA.sym",
-			Compress:    true,
-			Deduplicate: true,
-		},
-		{
-			Source:      filepath.Join(checkout, ".build-id", "pr", "ebuiltA.sym"),
-			Destination: "BUILDID_NAMESPACE/prebuiltA/breakpad",
-			Compress:    true,
-			Deduplicate: true,
-		},
-		{
-			Source:      filepath.Join(checkout, ".build-id", "pr", "ebuiltB.debug"),
-			Destination: "DEBUG_NAMESPACE/prebuiltB.debug",
-			Compress:    true,
-			Deduplicate: true,
-		},
-		{
-			Source:      filepath.Join(checkout, ".build-id", "pr", "ebuiltB.debug"),
-			Destination: "BUILDID_NAMESPACE/prebuiltB/debuginfo",
-			Compress:    true,
-			Deduplicate: true,
-		},
-		{
-			Source:      filepath.Join(checkout, ".build-id", "pr", "ebuiltB.sym"),
-			Destination: "DEBUG_NAMESPACE/prebuiltB.sym",
-			Compress:    true,
-			Deduplicate: true,
-		},
-		{
-			Source:      filepath.Join(checkout, ".build-id", "pr", "ebuiltB.sym"),
-			Destination: "BUILDID_NAMESPACE/prebuiltB/breakpad",
-			Compress:    true,
-			Deduplicate: true,
+		filepath.Join(checkout, ".build-id", "pr", "ebuiltB.sym"): {
+			"DEBUG_NAMESPACE/prebuiltB.sym",
+			"BUILDID_NAMESPACE/prebuiltB/breakpad",
 		},
 	}
+
+	var expectedUploads []Upload
+	for src, destinations := range expectedUploadDestinations {
+		for _, dest := range destinations {
+			expectedUploads = append(expectedUploads, Upload{
+				Source:      src,
+				Destination: dest,
+				Compress:    true,
+				Deduplicate: true,
+			})
+		}
+	}
+
 	expectedIDs := []string{"first", "prebuiltA"}
 
 	actualUploads, actualIDs, err := debugBinaryUploads(m, "DEBUG_NAMESPACE", "BUILDID_NAMESPACE")
 	if err != nil {
 		t.Fatalf("failed to generate debug binary uploads: %v", err)
 	}
-	if diff := cmp.Diff(expectedUploads, actualUploads); diff != "" {
+	opts := cmpopts.SortSlices(func(a, b Upload) bool { return a.Destination < b.Destination })
+	if diff := cmp.Diff(expectedUploads, actualUploads, opts); diff != "" {
 		t.Fatalf("unexpected debug binary uploads (-want +got):\n%s", diff)
 	}
 	if diff := cmp.Diff(expectedIDs, actualIDs); diff != "" {
@@ -277,8 +209,8 @@ func touch(t *testing.T, file string) {
 	f.Close()
 }
 
-// writeJson writes data as json into file named p.
-func writeJson(t *testing.T, p string, data interface{}) {
+// writeJSON writes data as json into file named p.
+func writeJSON(t *testing.T, p string, data interface{}) {
 	raw, err := json.Marshal(data)
 	if err != nil {
 		t.Fatal(err)
