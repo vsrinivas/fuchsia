@@ -10,4 +10,3 @@ flutter:
     - family: MaterialIcons
       fonts:
         - asset: fonts/MaterialIcons-Regular.otf 
-  uses-material-design: true
