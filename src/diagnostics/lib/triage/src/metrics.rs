@@ -369,6 +369,7 @@ pub enum Function {
     Hours,
     Days,
     Now,
+    OptionF,
 }
 
 /// Lambda stores a function; its parameters and body are evaluated lazily.
@@ -711,7 +712,19 @@ impl<'a> MetricState<'a> {
             Function::Hours => self.time(namespace, operands, 1_000_000_000 * 60 * 60),
             Function::Days => self.time(namespace, operands, 1_000_000_000 * 60 * 60 * 24),
             Function::Now => self.now(operands),
+            Function::OptionF => self.option(namespace, operands),
         }
+    }
+
+    fn option(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
+        for op in operands.iter() {
+            match self.evaluate(namespace, op) {
+                MetricValue::Missing(_) => {}
+                value => return value,
+            }
+        }
+        // This will be improved when we get structured output and structured errors.
+        return missing("Every value was missing");
     }
 
     fn now(&self, operands: &'a [Expression]) -> MetricValue {

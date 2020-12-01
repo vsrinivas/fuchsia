@@ -224,6 +224,7 @@ fn function_name_parser<'a>(i: &'a str) -> IResult<&'a str, Function, VerboseErr
             function!("Hours", Hours),
             function!("Days", Days),
             function!("Now", Now),
+            function!("Option", OptionF),
         )),
     ))(i)
 }
@@ -914,5 +915,15 @@ mod test {
         assert_eq!(time, i(2000));
         assert_missing!(no_time, "Now() requires no operands.");
         Ok(())
+    }
+
+    #[test]
+    fn test_option() {
+        assert_missing!(eval!("Option()"), "Every value was missing");
+        assert_missing!(eval!("Option(a, b, c, d)"), "Every value was missing");
+        assert_eq!(eval!("Option(5)"), i(5));
+        assert_eq!(eval!("Option(5, a)"), i(5));
+        assert_eq!(eval!("Option(a, 5, a)"), i(5));
+        assert_eq!(eval!("Option(a, b, c, d, 5)"), i(5));
     }
 }
