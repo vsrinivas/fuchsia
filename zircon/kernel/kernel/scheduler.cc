@@ -970,7 +970,17 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
       deadline_expired || scaled_total_runtime_ns >= current_state->time_slice_ns_;
 
   // Check the consistency of the absolute deadline and the current time slice.
-  DEBUG_ASSERT(now < absolute_deadline_ns_ || timeslice_expired);
+  DEBUG_ASSERT_MSG(
+      now < absolute_deadline_ns_ || timeslice_expired,
+      "capacity_ns=%" PRId64 " deadline_ns=%" PRId64 " now=%" PRId64
+      " absolute_deadline_ns=%" PRId64 " total_runtime_ns=%" PRId64
+      " scaled_total_runtime_ns=%" PRId64 " finish_time=%" PRId64 " time_slice_ns=%" PRId64
+      " start_of_current_time_slice_ns=%" PRId64,
+      IsDeadlineThread(current_thread) ? current_state->deadline_.capacity_ns.raw_value() : 0,
+      IsDeadlineThread(current_thread) ? current_state->deadline_.deadline_ns.raw_value() : 0,
+      now.raw_value(), absolute_deadline_ns_.raw_value(), total_runtime_ns.raw_value(),
+      scaled_total_runtime_ns.raw_value(), current_state->finish_time_.raw_value(),
+      current_state->time_slice_ns_.raw_value(), start_of_current_time_slice_ns_.raw_value());
 
   // Select a thread to run.
   Thread* const next_thread =
