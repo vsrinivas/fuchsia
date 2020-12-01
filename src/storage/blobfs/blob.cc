@@ -494,9 +494,9 @@ zx_status_t Blob::WriteMetadata(BlobTransaction& transaction) {
     // persistent map with an allocated inode / container.
 
     // If |on_node| is invoked on a node, it means that node was necessary to represent this
-    // blob. Persist the node back to durable storge.
-    auto on_node = [this, &transaction](const ReservedNode& node) {
-      blobfs_->PersistNode(node.index(), transaction);
+    // blob. Persist the node back to durable storage.
+    auto on_node = [this, &transaction](uint32_t node_index) {
+      blobfs_->PersistNode(node_index, transaction);
     };
 
     // If |on_extent| is invoked on an extent, it was necessary to represent this blob. Persist
@@ -542,9 +542,8 @@ zx_status_t Blob::WriteMetadata(BlobTransaction& transaction) {
     // Special case: Empty node.
     ZX_DEBUG_ASSERT(write_info_->node_indices.size() == 1);
     *(blobfs_->GetNode(map_index_)) = inode_;
-    const ReservedNode& node = write_info_->node_indices[0];
-    blobfs_->GetAllocator()->MarkInodeAllocated(node);
-    blobfs_->PersistNode(node.index(), transaction);
+    blobfs_->GetAllocator()->MarkInodeAllocated(std::move(write_info_->node_indices[0]));
+    blobfs_->PersistNode(map_index_, transaction);
   }
   return ZX_OK;
 }

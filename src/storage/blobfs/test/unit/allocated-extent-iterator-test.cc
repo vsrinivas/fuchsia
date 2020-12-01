@@ -45,7 +45,7 @@ void TestSetup(size_t allocated_blocks, size_t allocated_nodes, bool fragmented,
   CopyNodes(nodes, out_nodes);
 
   // Actually populate the node with the provided extents and nodes.
-  auto on_node = [&](const ReservedNode& node) {};
+  auto on_node = [&](uint32_t node_index) {};
   auto on_extent = [&](ReservedExtent& extent) {
     return NodePopulator::IterationCommand::Continue;
   };

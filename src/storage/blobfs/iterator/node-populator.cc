@@ -35,7 +35,8 @@ zx_status_t NodePopulator::Walk(OnNodeCallback on_node, OnExtentCallback on_exte
   uint32_t node_index = nodes_[node_count].index();
 
   InodePtr inode = allocator_->GetNode(node_index);
-  allocator_->MarkInodeAllocated(nodes_[node_count]);
+  allocator_->MarkInodeAllocated(std::move(nodes_[node_count]));
+  on_node(node_index);
 
   ExtentContainer* container = nullptr;
   uint32_t local_index = 0;
@@ -56,11 +57,12 @@ zx_status_t NodePopulator::Walk(OnNodeCallback on_node, OnExtentCallback on_exte
     if (next_container) {
       // Acquire the next container node, and connect it to the
       // previous node.
-      const ReservedNode& node = nodes_[node_count + 1];
+      ReservedNode& node = nodes_[node_count + 1];
       uint32_t next = node.index();
-      uint32_t previous = nodes_[node_count].index();
-      allocator_->MarkContainerNodeAllocated(node, previous);
+      allocator_->MarkContainerNodeAllocated(std::move(node), node_index);
       container = allocator_->GetNode(next)->AsExtentContainer();
+      on_node(next);
+      node_index = next;
 
       node_count++;
       local_index = 0;
@@ -82,12 +84,6 @@ zx_status_t NodePopulator::Walk(OnNodeCallback on_node, OnExtentCallback on_exte
     }
 
     local_index++;
-  }
-
-  // Walk over all nodes in order *after* visiting all extents, now that
-  // we know how many of them are used.
-  for (size_t i = 0; i < node_count + 1; i++) {
-    on_node(nodes_[i]);
   }
 
   return ZX_OK;

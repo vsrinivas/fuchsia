@@ -9,6 +9,7 @@
 #include <blobfs/common.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
+#include <fbl/vector.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/blobfs.h"
@@ -32,7 +33,7 @@ TEST(AllocatorTest, Null) {
 
   fbl::Vector<ReservedExtent> extents;
   ASSERT_EQ(ZX_ERR_NO_SPACE, allocator.ReserveBlocks(1, &extents));
-  ASSERT_FALSE(allocator.ReserveNode());
+  ASSERT_TRUE(allocator.ReserveNode().is_error());
 }
 
 TEST(AllocatorTest, Single) {
@@ -43,8 +44,8 @@ TEST(AllocatorTest, Single) {
   // We can allocate a single unit.
   fbl::Vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(1, &extents), ZX_OK);
-  std::optional<ReservedNode> node = allocator->ReserveNode();
-  ASSERT_TRUE(node);
+  zx::status<ReservedNode> node = allocator->ReserveNode();
+  ASSERT_TRUE(node.is_ok());
 }
 
 TEST(AllocatorTest, SingleCollision) {
@@ -54,30 +55,30 @@ TEST(AllocatorTest, SingleCollision) {
 
   fbl::Vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(1, &extents), ZX_OK);
-  std::optional<ReservedNode> maybe_node = allocator->ReserveNode();
-  ASSERT_TRUE(maybe_node);
-  ReservedNode& node = *maybe_node;
+  zx::status<ReservedNode> maybe_node = allocator->ReserveNode();
+  ASSERT_TRUE(maybe_node.is_ok());
+  ReservedNode& node = maybe_node.value();
+  uint32_t node_index = node.index();
 
   // Check the situation where allocation intersects with the in-flight reservation map.
   fbl::Vector<ReservedExtent> failed_extents;
   ASSERT_EQ(ZX_ERR_NO_SPACE, allocator->ReserveBlocks(1, &failed_extents));
-  ASSERT_FALSE(allocator->ReserveNode());
+  ASSERT_TRUE(allocator->ReserveNode().is_error());
 
   // Check the situation where allocation intersects with the committed map.
   allocator->MarkBlocksAllocated(extents[0]);
-  allocator->MarkInodeAllocated(node);
+  allocator->MarkInodeAllocated(std::move(node));
   ASSERT_EQ(ZX_ERR_NO_SPACE, allocator->ReserveBlocks(1, &failed_extents));
-  ASSERT_FALSE(allocator->ReserveNode());
+  ASSERT_TRUE(allocator->ReserveNode().is_error());
 
   // Check that freeing the space (and releasing the reservation) makes it
   // available for use once more.
   Extent extent = extents[0].extent();
-  allocator->FreeNode(node.index());
-  node.Reset();
+  allocator->FreeNode(node_index);
   extents.reset();
   allocator->FreeBlocks(extent);
   ASSERT_EQ(allocator->ReserveBlocks(1, &extents), ZX_OK);
-  ASSERT_TRUE(allocator->ReserveNode());
+  ASSERT_TRUE(allocator->ReserveNode().is_ok());
 }
 
 // Test the condition where we cannot allocate because (while looking for
@@ -339,7 +340,7 @@ void CheckNodeMapSize(Allocator* allocator, uint64_t size) {
   ASSERT_EQ(allocator->ReserveNodes(size, &nodes), ZX_OK);
 
   // ... But no more.
-  ASSERT_FALSE(allocator->ReserveNode());
+  ASSERT_TRUE(allocator->ReserveNode().is_error());
   ASSERT_EQ(size, allocator->ReservedNodeCount());
 }
 
@@ -590,6 +591,67 @@ TEST(AllocatorTest, FreedBlocksAreReservedUntilTransactionCommits) {
   done.store(true);
 
   thread.join();
+}
+
+TEST(AllocatorTest, ReservedNodeCountIsCorrect) {
+  MockSpaceManager space_manager;
+  std::unique_ptr<Allocator> allocator;
+  InitializeAllocator(/*blocks=*/1, /*nodes=*/5, &space_manager, &allocator);
+
+  fbl::Vector<ReservedNode> reserved_nodes;
+  EXPECT_EQ(allocator->ReserveNodes(/*num_nodes=*/5, &reserved_nodes), ZX_OK);
+  EXPECT_EQ(reserved_nodes.size(), 5ul);
+  EXPECT_EQ(allocator->ReservedNodeCount(), 5u);
+
+  uint32_t inode_index = reserved_nodes[0].index();
+  allocator->MarkInodeAllocated(std::move(reserved_nodes[0]));
+  // A reserved node was allocated which makes it no longer reserved.
+  EXPECT_EQ(allocator->ReservedNodeCount(), 4u);
+
+  allocator->MarkContainerNodeAllocated(std::move(reserved_nodes[1]), inode_index);
+  // Another reserved node was allocated which makes it no longer reserved.
+  EXPECT_EQ(allocator->ReservedNodeCount(), 3u);
+
+  // Drop all reserved nodes which will unreserve the remaining 3 nodes.
+  reserved_nodes.reset();
+  EXPECT_EQ(allocator->ReservedNodeCount(), 0u);
+}
+
+TEST(AllocatorTest, MarkInodeAllocatedIsCorrect) {
+  MockSpaceManager space_manager;
+  std::unique_ptr<Allocator> allocator;
+  InitializeAllocator(/*blocks=*/1, /*nodes=*/1, &space_manager, &allocator);
+
+  auto reserved_node = allocator->ReserveNode();
+  ASSERT_TRUE(reserved_node.is_ok());
+  uint32_t node_index = reserved_node->index();
+  allocator->MarkInodeAllocated(std::move(reserved_node).value());
+  auto node = allocator->GetNode(node_index);
+  ASSERT_NE(node, nullptr);
+  EXPECT_TRUE(node->header.IsAllocated());
+  EXPECT_TRUE(node->header.IsInode());
+}
+
+TEST(AllocatorTest, MarkContainerNodeAllocatedIsCorrect) {
+  MockSpaceManager space_manager;
+  std::unique_ptr<Allocator> allocator;
+  InitializeAllocator(/*blocks=*/1, /*nodes=*/2, &space_manager, &allocator);
+
+  fbl::Vector<ReservedNode> reserved_nodes;
+  ASSERT_EQ(allocator->ReserveNodes(2, &reserved_nodes), ZX_OK);
+  uint32_t inode_index = reserved_nodes[0].index();
+  allocator->MarkInodeAllocated(std::move(reserved_nodes[0]));
+  uint32_t node_index = reserved_nodes[1].index();
+  allocator->MarkContainerNodeAllocated(std::move(reserved_nodes[1]), inode_index);
+
+  auto node = allocator->GetNode(node_index);
+  ASSERT_NE(node, nullptr);
+  EXPECT_TRUE(node->header.IsAllocated());
+  EXPECT_TRUE(node->header.IsExtentContainer());
+
+  auto inode = allocator->GetNode(inode_index);
+  ASSERT_NE(inode, nullptr);
+  EXPECT_EQ(inode->header.next_node, node_index);
 }
 
 }  // namespace

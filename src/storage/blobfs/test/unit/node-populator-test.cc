@@ -41,8 +41,8 @@ TEST(NodePopulatorTest, Null) {
   NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
 
   int nodes_visited = 0;
-  auto on_node = [&](const ReservedNode& node) {
-    ZX_DEBUG_ASSERT(node_index == node.index());
+  auto on_node = [&](uint32_t node) {
+    ZX_DEBUG_ASSERT(node_index == node);
     nodes_visited++;
   };
   auto on_extent = [](ReservedExtent& extent) {
@@ -72,8 +72,8 @@ TEST(NodePopulatorTest, WalkOne) {
   NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
 
   int nodes_visited = 0;
-  auto on_node = [&](const ReservedNode& node) {
-    ZX_DEBUG_ASSERT(node_index == node.index());
+  auto on_node = [&](uint32_t node) {
+    ZX_DEBUG_ASSERT(node_index == node);
     nodes_visited++;
   };
   int extents_visited = 0;
@@ -127,8 +127,8 @@ TEST(NodePopulatorTest, WalkAllInlineExtents) {
   NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
 
   size_t nodes_visited = 0;
-  auto on_node = [&](const ReservedNode& node) {
-    ZX_DEBUG_ASSERT(allocated_nodes[nodes_visited] == node.index());
+  auto on_node = [&](uint32_t node) {
+    ZX_DEBUG_ASSERT(allocated_nodes[nodes_visited] == node);
     nodes_visited++;
   };
   size_t extents_visited = 0;
@@ -185,8 +185,8 @@ TEST(NodePopulatorTest, WalkManyNodes) {
   NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
 
   size_t nodes_visited = 0;
-  auto on_node = [&](const ReservedNode& node) {
-    ZX_DEBUG_ASSERT(allocated_nodes[nodes_visited] == node.index());
+  auto on_node = [&](uint32_t node) {
+    ZX_DEBUG_ASSERT(allocated_nodes[nodes_visited] == node);
     nodes_visited++;
   };
   size_t extents_visited = 0;
@@ -261,8 +261,8 @@ TEST(NodePopulatorTest, WalkManyContainers) {
   ASSERT_EQ(0u, inode->extent_count);
 
   size_t nodes_visited = 0;
-  auto on_node = [&](const ReservedNode& node) {
-    ZX_DEBUG_ASSERT(allocated_nodes[nodes_visited] == node.index());
+  auto on_node = [&](uint32_t node) {
+    ZX_DEBUG_ASSERT(allocated_nodes[nodes_visited] == node);
     nodes_visited++;
   };
   size_t extents_visited = 0;
@@ -344,8 +344,8 @@ TEST(NodePopulatorTest, WalkExtraNodes) {
   ASSERT_EQ(0u, inode->extent_count);
 
   size_t nodes_visited = 0;
-  auto on_node = [&](const ReservedNode& node) {
-    ZX_DEBUG_ASSERT(allocated_nodes[nodes_visited] == node.index());
+  auto on_node = [&](uint32_t node) {
+    ZX_DEBUG_ASSERT(allocated_nodes[nodes_visited] == node);
     nodes_visited++;
   };
   size_t extents_visited = 0;
@@ -415,8 +415,8 @@ TEST(NodePopulatorTest, WalkExtraExtents) {
   ASSERT_EQ(0ul, inode->extent_count);
 
   size_t nodes_visited = 0;
-  auto on_node = [&](const ReservedNode& node) {
-    ZX_DEBUG_ASSERT(allocated_nodes[nodes_visited] == node.index());
+  auto on_node = [&](uint32_t node) {
+    ZX_DEBUG_ASSERT(allocated_nodes[nodes_visited] == node);
     nodes_visited++;
   };
   size_t extents_visited = 0;

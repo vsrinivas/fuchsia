@@ -15,7 +15,6 @@
 
 #include "src/storage/blobfs/allocator/allocator.h"
 #include "src/storage/blobfs/allocator/extent-reserver.h"
-#include "src/storage/blobfs/allocator/node-reserver.h"
 
 namespace blobfs {
 
@@ -39,7 +38,7 @@ class NodePopulator {
     Stop,
   };
 
-  using OnNodeCallback = fbl::Function<void(const ReservedNode& node)>;
+  using OnNodeCallback = fbl::Function<void(uint32_t node_index)>;
   using OnExtentCallback = fbl::Function<IterationCommand(ReservedExtent& extent)>;
 
   // Utilizes the |allocator| to locate all nodes provided by |nodes|, and allocate each

@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
 #include <zircon/types.h>
@@ -148,12 +149,12 @@ ReservedExtent Allocator::FreeBlocks(const Extent& extent) {
 
 zx_status_t Allocator::ReserveNodes(uint64_t num_nodes, fbl::Vector<ReservedNode>* out_nodes) {
   for (uint64_t i = 0; i < num_nodes; i++) {
-    std::optional<ReservedNode> node = ReserveNode();
-    if (!node) {
+    zx::status<ReservedNode> node = ReserveNode();
+    if (node.is_error()) {
       out_nodes->reset();
-      return ZX_ERR_NO_SPACE;
+      return node.status_value();
     }
-    out_nodes->push_back(*std::move(node));
+    out_nodes->push_back(std::move(node).value());
   }
   return ZX_OK;
 }
@@ -182,28 +183,28 @@ zx_status_t Allocator::Grow() {
   return status;
 }
 
-std::optional<ReservedNode> Allocator::ReserveNode() {
+zx::status<ReservedNode> Allocator::ReserveNode() {
   TRACE_DURATION("blobfs", "ReserveNode");
   uint32_t node_index;
   zx_status_t status;
   if ((status = FindNode(&node_index)) != ZX_OK) {
     // If we didn't find any free inodes, try adding more via FVM.
     if (((status = Grow()) != ZX_OK) || (status = FindNode(&node_index)) != ZX_OK) {
-      return std::nullopt;
+      return zx::error(status);
     }
   }
 
   ZX_DEBUG_ASSERT(!GetNode(node_index)->header.IsAllocated());
-  std::optional<ReservedNode> node(ReservedNode(this, node_index));
+  ++reserved_node_count_;
 
-  return node;
+  return zx::ok(ReservedNode(this, node_index));
 }
 
 void Allocator::MarkNodeAllocated(uint32_t node_index) {
   ZX_ASSERT(node_bitmap_->MarkAllocated(node_index) == ZX_OK);
 }
 
-void Allocator::MarkInodeAllocated(const ReservedNode& node) {
+void Allocator::MarkInodeAllocated(ReservedNode node) {
   InodePtr mapped_inode = GetNode(node.index());
   ZX_ASSERT((mapped_inode->header.flags & kBlobFlagAllocated) == 0);
   mapped_inode->header.flags = kBlobFlagAllocated;
@@ -211,9 +212,11 @@ void Allocator::MarkInodeAllocated(const ReservedNode& node) {
   // specification, it is chosen to trigger crashing when used. This will be
   // updated to a usable value when another node is appended to the list.
   mapped_inode->header.next_node = kMaxNodeId;
+  node.Release();
+  --reserved_node_count_;
 }
 
-void Allocator::MarkContainerNodeAllocated(const ReservedNode& node, uint32_t previous_node) {
+void Allocator::MarkContainerNodeAllocated(ReservedNode node, uint32_t previous_node) {
   const uint32_t index = node.index();
   GetNode(previous_node)->header.next_node = index;
   ExtentContainer* container = GetNode(index)->AsExtentContainer();
@@ -225,12 +228,23 @@ void Allocator::MarkContainerNodeAllocated(const ReservedNode& node, uint32_t pr
   container->header.next_node = kMaxNodeId;
   container->previous_node = previous_node;
   container->extent_count = 0;
+  node.Release();
+  --reserved_node_count_;
 }
 
 void Allocator::FreeNode(uint32_t node_index) {
   GetNode(node_index)->header.flags = 0;
   ZX_ASSERT(node_bitmap_->Free(node_index) == ZX_OK);
 }
+
+void Allocator::UnreserveNode(ReservedNode node) {
+  zx_status_t status = node_bitmap_->Free(node.index());
+  ZX_ASSERT_MSG(status == ZX_OK, "Failed to unreserve node: %s", zx_status_get_string(status));
+  node.Release();
+  --reserved_node_count_;
+}
+
+uint32_t Allocator::ReservedNodeCount() const { return reserved_node_count_; }
 
 zx_status_t Allocator::ResetBlockMapSize() {
   ZX_DEBUG_ASSERT(ReservedBlockCount() == 0);
@@ -467,7 +481,6 @@ zx_status_t Allocator::FindNode(uint32_t* node_index_out) {
   uint32_t node_index = static_cast<uint32_t>(i);
   ZX_ASSERT(!GetNode(node_index)->header.IsAllocated());
   // Found a free node, which should not be reserved.
-  ZX_ASSERT(!IsNodeReserved(node_index));
   *node_index_out = node_index;
   return ZX_OK;
 }

@@ -4,77 +4,120 @@
 
 #include "src/storage/blobfs/allocator/node-reserver.h"
 
+#include <lib/zx/status.h>
+
+#include <memory>
+
 #include <bitmap/rle-bitmap.h>
 #include <gtest/gtest.h>
+#include <id_allocator/id_allocator.h>
 
 #include "src/storage/blobfs/allocator/extent-reserver.h"
 
 namespace blobfs {
 namespace {
 
-// Test that reserving a node actually changes the node count, and that RAII releases the node.
-TEST(NodeReserver, Reserve) {
-  NodeReserver reserver;
-  {
-    const uint32_t ino = 3;
-    ReservedNode reserved_node(&reserver, ino);
-    EXPECT_EQ(1u, reserver.ReservedNodeCount());
+class FakeNodeReserver : public NodeReserverInterface {
+ public:
+  explicit FakeNodeReserver(uint32_t node_count) {
+    ZX_ASSERT(id_allocator::IdAllocator::Create(node_count, &node_bitmap_) == ZX_OK);
   }
-  EXPECT_EQ(0u, reserver.ReservedNodeCount());
+
+  zx::status<ReservedNode> ReserveNode() override {
+    zx_status_t status;
+    size_t index;
+    if ((status = node_bitmap_->Allocate(&index)) != ZX_OK) {
+      return zx::error(status);
+    }
+    ++reserved_node_count_;
+    return zx::ok(ReservedNode(this, index));
+  }
+
+  void UnreserveNode(ReservedNode node) override {
+    // Catch duplicate calls to |UnreserveNode|.
+    ASSERT_TRUE(node_bitmap_->IsBusy(node.index()));
+    ASSERT_EQ(node_bitmap_->Free(node.index()), ZX_OK);
+    node.Release();
+    --reserved_node_count_;
+  }
+
+  uint32_t ReservedNodeCount() const override { return reserved_node_count_; }
+
+  bool IsNodeReserved(uint32_t node_index) { return node_bitmap_->IsBusy(node_index); }
+
+ private:
+  std::unique_ptr<id_allocator::IdAllocator> node_bitmap_;
+  uint32_t reserved_node_count_ = 0;
+};
+
+TEST(NodeReserver, DestructorUnreservesNode) {
+  FakeNodeReserver reserver(/*node_count=*/1);
+  uint32_t node_index;
+  {
+    auto node = reserver.ReserveNode();
+    ASSERT_TRUE(node.is_ok());
+    node_index = node->index();
+    EXPECT_EQ(reserver.ReservedNodeCount(), 1u);
+    EXPECT_TRUE(reserver.IsNodeReserved(node_index));
+  }
+  EXPECT_EQ(reserver.ReservedNodeCount(), 0u);
+  EXPECT_FALSE(reserver.IsNodeReserved(node_index));
 }
 
-TEST(NodeReserver, ReserveReset) {
-  NodeReserver reserver;
+TEST(NodeReserver, ReleasePreventsNodeFromBeingUnreserved) {
+  FakeNodeReserver reserver(/*node_count=*/1);
+  uint32_t node_index;
   {
-    const uint32_t ino = 3;
-    ReservedNode reserved_node(&reserver, ino);
-    EXPECT_EQ(1u, reserver.ReservedNodeCount());
-    reserved_node.Reset();
-    EXPECT_EQ(0u, reserver.ReservedNodeCount());
+    auto node = reserver.ReserveNode();
+    ASSERT_TRUE(node.is_ok());
+    node_index = node->index();
+    EXPECT_EQ(reserver.ReservedNodeCount(), 1u);
+    EXPECT_TRUE(reserver.IsNodeReserved(node_index));
+    node->Release();
   }
-  EXPECT_EQ(0u, reserver.ReservedNodeCount());
+  EXPECT_EQ(reserver.ReservedNodeCount(), 1u);
+  EXPECT_TRUE(reserver.IsNodeReserved(node_index));
 }
 
-// Test the constructors of the reserved node.
-TEST(NodeReserver, Constructor) {
-  NodeReserver reserver;
-  // Test the constructor.
+TEST(NodeReserver, MoveConstructorReleasesMovedFromNode) {
+  FakeNodeReserver reserver(/*node_count=*/1);
   {
-    ReservedNode reserved_node(&reserver, 3);
-    EXPECT_EQ(3u, reserved_node.index());
-    EXPECT_EQ(1u, reserver.ReservedNodeCount());
+    auto reserved_node = reserver.ReserveNode();
+    ASSERT_TRUE(reserved_node.is_ok());
+    uint32_t node_index = reserved_node->index();
+    EXPECT_EQ(reserver.ReservedNodeCount(), 1u);
+
+    ReservedNode dest_node(std::move(reserved_node).value());
+    EXPECT_EQ(dest_node.index(), node_index);
+    EXPECT_EQ(reserver.ReservedNodeCount(), 1u);
+
+    // If the moved from node wasn't released then there would be 2 calls to |UnreserveNode| for the
+    // same node.
   }
-  EXPECT_EQ(0u, reserver.ReservedNodeCount());
+  EXPECT_EQ(reserver.ReservedNodeCount(), 0u);
 }
 
-TEST(NodeReserver, MoveConstructor) {
-  NodeReserver reserver;
-  // Test the move constructor.
+TEST(NodeReserver, MoveAssignmentUnreservesSelfAndReleasesTheMovedFromNode) {
+  FakeNodeReserver reserver(/*node_count=*/2);
   {
-    ReservedNode reserved_node(&reserver, 3);
-    EXPECT_EQ(3u, reserved_node.index());
-    EXPECT_EQ(1u, reserver.ReservedNodeCount());
+    auto node1 = reserver.ReserveNode();
+    ASSERT_TRUE(node1.is_ok());
+    uint32_t node1_index = node1->index();
 
-    ReservedNode dest_node(std::move(reserved_node));
-    EXPECT_EQ(3u, dest_node.index());
-    EXPECT_EQ(1u, reserver.ReservedNodeCount());
+    auto node2 = reserver.ReserveNode();
+    ASSERT_TRUE(node2.is_ok());
+    uint32_t node2_index = node2->index();
+
+    EXPECT_NE(node1_index, node2_index);
+    EXPECT_EQ(reserver.ReservedNodeCount(), 2u);
+
+    node2.value() = std::move(node1).value();
+
+    EXPECT_EQ(reserver.ReservedNodeCount(), 1u);
+    EXPECT_FALSE(reserver.IsNodeReserved(node2_index));
+    EXPECT_EQ(node2->index(), node1_index);
   }
-  EXPECT_EQ(0u, reserver.ReservedNodeCount());
-}
-
-TEST(NodeReserver, MoveAssignment) {
-  NodeReserver reserver;
-  // Test the move assignment operator.
-  {
-    ReservedNode reserved_node(&reserver, 3);
-    EXPECT_EQ(3u, reserved_node.index());
-    EXPECT_EQ(1u, reserver.ReservedNodeCount());
-
-    ReservedNode dest_node = std::move(reserved_node);
-    EXPECT_EQ(3u, dest_node.index());
-    EXPECT_EQ(1u, reserver.ReservedNodeCount());
-  }
-  EXPECT_EQ(0u, reserver.ReservedNodeCount());
+  EXPECT_EQ(reserver.ReservedNodeCount(), 0u);
 }
 
 }  // namespace

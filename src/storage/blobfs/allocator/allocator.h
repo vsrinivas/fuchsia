@@ -58,14 +58,13 @@ class SpaceManager : public storage::VmoidRegistry {
 //
 // Also maintains reservation mappings, to help in-progress allocations avoid
 // from being persisted too early.
-class Allocator : private ExtentReserver, private NodeReserver, public NodeFinder {
+class Allocator : private ExtentReserver, private NodeReserverInterface, public NodeFinder {
  public:
   Allocator(SpaceManager* space_manager, RawBitmap block_map, fzl::ResizeableVmoMapper node_map,
             std::unique_ptr<id_allocator::IdAllocator> nodes_bitmap);
   ~Allocator();
 
   using ExtentReserver::ReservedBlockCount;
-  using NodeReserver::ReservedNodeCount;
 
   ////////////////
   // blobfs::NodeFinder interface.
@@ -122,16 +121,22 @@ class Allocator : private ExtentReserver, private NodeReserver, public NodeFinde
   // On failure, |out_nodes| is cleared.
   zx_status_t ReserveNodes(uint64_t num_nodes, fbl::Vector<ReservedNode>* out_nodes);
 
-  // Reserves a nodes for allocation (in-memory).
-  std::optional<ReservedNode> ReserveNode();
+  ////////////////
+  // blobfs::NodeReserverInterface interface.
+
+  zx::status<ReservedNode> ReserveNode() override;
+
+  void UnreserveNode(ReservedNode node) override;
+
+  uint32_t ReservedNodeCount() const override;
 
   // Marks a reserved node by updating the node map to indicate it is an
   // allocated inode.
-  void MarkInodeAllocated(const ReservedNode& node);
+  void MarkInodeAllocated(ReservedNode node);
 
   // Marks a reserved node by updating the node map to indicate it is an
-  // allocated extent container
-  void MarkContainerNodeAllocated(const ReservedNode& node, uint32_t previous_node);
+  // allocated extent container.  Makes |node| follow |previous_node| in the extent container list.
+  void MarkContainerNodeAllocated(ReservedNode node, uint32_t previous_node);
 
   // Mark a node allocated. The node may or may not be reserved.
   void MarkNodeAllocated(uint32_t node_index);
@@ -212,6 +217,8 @@ class Allocator : private ExtentReserver, private NodeReserver, public NodeFinde
   // Guards growing node_map_, which will invalidate outstanding pointers.
   std::shared_mutex node_map_grow_mutex_;
   std::unique_ptr<id_allocator::IdAllocator> node_bitmap_;
+  // The number of nodes currently reservered.
+  uint64_t reserved_node_count_ = 0;
 
   bool log_allocation_failure_ = true;
 };
