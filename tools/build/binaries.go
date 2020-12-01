@@ -50,6 +50,10 @@ type Binary struct {
 	// Breakpad is the path to the breakpad symbol file for the debug binary, if
 	// present.
 	Breakpad string `json:"breakpad,omitempty"`
+
+	// GSYM is the path to the GSYM symbol file for the debug binary, if
+	// present.
+	GSYM string `json:"gsym,omitempty"`
 }
 
 // ELFBuildID returns the build ID associated to a given binary. If no

@@ -34,7 +34,8 @@ func (m mockBinModules) Args() build.Args {
 		panic("was not able to marshal `true`: " + err.Error())
 	}
 	return build.Args(map[string]json.RawMessage{
-		"output_breakpad_syms": trueMsg,
+		outputBreakpadSymsArg: trueMsg,
+		outputGSYMArg:         trueMsg,
 	})
 }
 
@@ -57,6 +58,7 @@ func TestDebugBinaryUploads(t *testing.T) {
 		{
 			Debug:    filepath.Join("..", ".build-id", "pr", "ebuiltA.debug"),
 			Breakpad: filepath.Join("..", ".build-id", "pr", "ebuiltA.sym"),
+			GSYM:     filepath.Join("..", ".build-id", "pr", "ebuiltA.gsym"),
 			OS:       "fuchsia",
 			Label:    "//prebuilt",
 		},
@@ -77,6 +79,7 @@ func TestDebugBinaryUploads(t *testing.T) {
 			Debug:    filepath.Join(".build-id", "fi", "rst.debug"),
 			Dist:     filepath.Join(".build-id", "fi", "rst"),
 			Breakpad: filepath.Join("gen", "first.sym"),
+			GSYM:     filepath.Join("gen", "first.gsym"),
 			OS:       "fuchsia",
 			Label:    "//first",
 		},
@@ -109,13 +112,17 @@ func TestDebugBinaryUploads(t *testing.T) {
 
 	// The logic under test deals in file existence.
 	for _, bin := range pbins {
-		touch(t, filepath.Join(buildDir, bin.Debug))
-		touch(t, filepath.Join(buildDir, bin.Breakpad))
+		for _, file := range []string{bin.Debug, bin.Breakpad, bin.GSYM} {
+			if file != "" {
+				touch(t, filepath.Join(buildDir, file))
+			}
+		}
 	}
 	for _, bin := range m.bins {
-		touch(t, filepath.Join(buildDir, bin.Debug))
-		if bin.Breakpad != "" {
-			touch(t, filepath.Join(buildDir, bin.Breakpad))
+		for _, file := range []string{bin.Debug, bin.Breakpad, bin.GSYM} {
+			if file != "" {
+				touch(t, filepath.Join(buildDir, file))
+			}
 		}
 	}
 
@@ -132,6 +139,10 @@ func TestDebugBinaryUploads(t *testing.T) {
 		filepath.Join(buildDir, "gen", "first.sym"): {
 			"DEBUG_NAMESPACE/first.sym",
 			"BUILDID_NAMESPACE/first/breakpad",
+		},
+		filepath.Join(buildDir, "gen", "first.gsym"): {
+			"DEBUG_NAMESPACE/first.gsym",
+			"BUILDID_NAMESPACE/first/gsym",
 		},
 		filepath.Join(buildDir, ".build-id", "se", "cond.debug"): {
 			"DEBUG_NAMESPACE/second.debug",
@@ -155,6 +166,10 @@ func TestDebugBinaryUploads(t *testing.T) {
 		filepath.Join(checkout, ".build-id", "pr", "ebuiltA.sym"): {
 			"DEBUG_NAMESPACE/prebuiltA.sym",
 			"BUILDID_NAMESPACE/prebuiltA/breakpad",
+		},
+		filepath.Join(checkout, ".build-id", "pr", "ebuiltA.gsym"): {
+			"DEBUG_NAMESPACE/prebuiltA.gsym",
+			"BUILDID_NAMESPACE/prebuiltA/gsym",
 		},
 		filepath.Join(checkout, ".build-id", "pr", "ebuiltB.debug"): {
 			"DEBUG_NAMESPACE/prebuiltB.debug",

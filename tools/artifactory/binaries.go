@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	outputBreakpadSymsGNArg = "output_breakpad_syms"
+	outputBreakpadSymsArg = "output_breakpad_syms"
+	outputGSYMArg         = "output_gsym"
 )
 
 // DebugBinaryUploads parses the binary manifest associated to a build and
@@ -44,9 +45,13 @@ func debugBinaryUploads(mods binModules, debugNamespace, buildidNamespace string
 	var fuchsiaBuildIDs []string
 	buildIDSet := make(map[string]struct{})
 
-	breakpadEmitted, err := mods.Args().BoolValue(outputBreakpadSymsGNArg)
+	breakpadEmitted, err := mods.Args().BoolValue(outputBreakpadSymsArg)
 	if err != nil && err != build.ErrArgNotSet {
 		return nil, nil, fmt.Errorf("failed to determine whether breakpad symbols were output in the build: %v", err)
+	}
+	gsymEmitted, err := mods.Args().BoolValue(outputGSYMArg)
+	if err != nil && err != build.ErrArgNotSet {
+		return nil, nil, fmt.Errorf("failed to determine whether GSYM was output in the build: %v", err)
 	}
 
 	for _, bin := range bins {
@@ -123,6 +128,32 @@ func debugBinaryUploads(mods binModules, debugNamespace, buildidNamespace string
 			uploads = append(uploads, Upload{
 				Source:      breakpadSrc,
 				Destination: fmt.Sprintf("%s/%s/breakpad", buildidNamespace, id),
+				Deduplicate: true,
+				Compress:    true,
+			})
+		}
+		if gsymEmitted {
+			if bin.GSYM == "" {
+				if bin.OS == "fuchsia" {
+					return nil, nil, fmt.Errorf("GSYM file for %q was not present in metadata", bin.Label)
+				}
+				continue
+			}
+			gsymSrc := filepath.Join(mods.BuildDir(), bin.GSYM)
+			if gsymBuilt, err := osmisc.FileExists(gsymSrc); err != nil {
+				return nil, nil, fmt.Errorf("failed to determine if GSYM file for %q was built: %v", bin.Label, err)
+			} else if !gsymBuilt {
+				return nil, nil, fmt.Errorf("gsym file for %q was not built", bin.Label)
+			}
+			uploads = append(uploads, Upload{
+				Source:      gsymSrc,
+				Destination: fmt.Sprintf("%s/%s.gsym", debugNamespace, id),
+				Deduplicate: true,
+				Compress:    true,
+			})
+			uploads = append(uploads, Upload{
+				Source:      gsymSrc,
+				Destination: fmt.Sprintf("%s/%s/gsym", buildidNamespace, id),
 				Deduplicate: true,
 				Compress:    true,
 			})
