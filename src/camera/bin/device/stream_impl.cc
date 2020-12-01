@@ -107,6 +107,9 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
     return;
   }
 
+  // The frame is valid and camera is unmuted, so increment the frame counter.
+  ++frame_counter_;
+
   // Discard the frame if there are too many frames outstanding.
   // TODO(fxbug.dev/64801): Recycle LRU frames.
   if (frame_waiters_.size() == max_camping_buffers_) {

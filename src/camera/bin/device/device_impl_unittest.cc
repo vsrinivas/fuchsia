@@ -219,10 +219,12 @@ TEST_F(DeviceImplTest, GetFrames) {
   bool frame2_received = false;
   auto callback2 = [&](fuchsia::camera3::FrameInfo info) {
     ASSERT_EQ(info.buffer_index, kBufferId2);
+    EXPECT_EQ(info.frame_counter, 2u);
     frame2_received = true;
   };
   auto callback1 = [&](fuchsia::camera3::FrameInfo info) {
     ASSERT_EQ(info.buffer_index, kBufferId1);
+    EXPECT_EQ(info.frame_counter, 1u);
     frame1_received = true;
     info.release_fence.reset();
     fuchsia::camera2::FrameAvailableInfo frame2_info;
