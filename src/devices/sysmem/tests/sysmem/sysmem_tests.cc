@@ -7,6 +7,7 @@
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <inttypes.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -2997,6 +2998,95 @@ TEST(Sysmem, TooManyBuffers) {
   EXPECT_NE(status, ZX_OK, "");
 
   VerifyServerAlive(allocator_client);
+}
+
+class EventSinkServer : public llcpp::fuchsia::sysmem::BufferCollectionEvents::Interface {
+ public:
+  explicit EventSinkServer(async::Loop& loop) : loop_(loop) {}
+
+  void OnDuplicatedTokensKnownByServer(
+      OnDuplicatedTokensKnownByServerCompleter::Sync& completer) override {
+    EXPECT_FALSE(got_tokens_known_);
+    got_tokens_known_ = true;
+    loop_.Quit();
+  }
+
+  void OnBuffersAllocated(zx_status_t status,
+                          llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info,
+                          OnBuffersAllocatedCompleter::Sync& completer) override {
+    EXPECT_TRUE(!status_);
+    status_ = status;
+    buffer_collection_info_ = std::move(buffer_collection_info);
+    loop_.Quit();
+  }
+
+  void OnAllocateSingleBufferDone(zx_status_t status,
+                                  llcpp::fuchsia::sysmem::SingleBufferInfo single_buffer_info,
+                                  OnAllocateSingleBufferDoneCompleter::Sync& completer) override {
+    EXPECT_TRUE(false);
+  }
+
+  bool got_tokens_known() const { return got_tokens_known_; }
+  zx_status_t status() const {
+    ZX_DEBUG_ASSERT(status_);
+    return *status_;
+  }
+  const llcpp::fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info() {
+    return buffer_collection_info_;
+  }
+
+ private:
+  async::Loop& loop_;
+  bool got_tokens_known_ = false;
+  std::optional<zx_status_t> status_;
+  llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info_;
+};
+
+TEST(Sysmem, EventSink) {
+  zx::channel collection_client;
+  zx_status_t status = make_single_participant_collection(&collection_client);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel event_channel_server, event_channel_client;
+  ASSERT_OK(zx::channel::create(0, &event_channel_client, &event_channel_server));
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  EXPECT_OK(fuchsia_sysmem_BufferCollectionSetEventSink(collection_client.get(),
+                                                        event_channel_client.release()));
+  EventSinkServer server(loop);
+  bool was_unbound = false;
+  EXPECT_TRUE(fidl::BindServer(loop.dispatcher(), std::move(event_channel_server), &server,
+                               fidl::OnUnboundFn<EventSinkServer>(
+                                   [&was_unbound, &loop](EventSinkServer* server,
+                                                         fidl::UnbindInfo info, zx::channel) {
+                                     was_unbound = true;
+                                     EXPECT_EQ(info.reason, fidl::UnbindInfo::kPeerClosed);
+                                     loop.Quit();
+                                   }))
+                  .is_ok());
+  loop.Run();
+  EXPECT_TRUE(server.got_tokens_known());
+  loop.ResetQuit();
+
+  BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+  constraints->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+  constraints->min_buffer_count_for_camping = 1;
+  constraints->has_buffer_memory_constraints = true;
+  constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{};
+  constraints->buffer_memory_constraints.cpu_domain_supported = true;
+  constraints->buffer_memory_constraints.min_size_bytes = 1;
+  EXPECT_OK(fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                          constraints.release()));
+  loop.Run();
+
+  EXPECT_EQ(ZX_OK, server.status());
+  EXPECT_EQ(1u, server.buffer_collection_info().buffer_count);
+  loop.ResetQuit();
+  EXPECT_FALSE(was_unbound);
+  collection_client.reset();
+
+  loop.Run();
+  EXPECT_TRUE(was_unbound);
+  loop.Shutdown();
 }
 
 bool BasicAllocationSucceeds(

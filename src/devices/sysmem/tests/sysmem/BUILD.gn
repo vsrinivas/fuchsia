@@ -21,6 +21,8 @@ test("sysmem") {
     "//zircon/public/lib/fidl-llcpp",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fidl-async-2",
   ]
 }
