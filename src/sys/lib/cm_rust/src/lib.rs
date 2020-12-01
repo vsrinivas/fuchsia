@@ -842,6 +842,37 @@ impl fmt::Display for CapabilityName {
     }
 }
 
+/// A named capability type.
+///
+/// `CapabilityTypeName` provides a user friendly type encoding for a capability.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum CapabilityTypeName {
+    Directory,
+    Event,
+    EventStream,
+    Protocol,
+    Resolver,
+    Runner,
+    Service,
+    Storage,
+}
+
+impl fmt::Display for CapabilityTypeName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let display_name = match &self {
+            CapabilityTypeName::Directory => "directory",
+            CapabilityTypeName::Event => "event",
+            CapabilityTypeName::EventStream => "event_stream",
+            CapabilityTypeName::Protocol => "protocol",
+            CapabilityTypeName::Resolver => "resolver",
+            CapabilityTypeName::Runner => "runner",
+            CapabilityTypeName::Service => "service",
+            CapabilityTypeName::Storage => "storage",
+        };
+        write!(f, "{}", display_name)
+    }
+}
+
 // TODO: Runners and third parties can use this to parse `facets`.
 impl FidlIntoNative<Option<HashMap<String, Value>>> for Option<fsys::Object> {
     fn fidl_into_native(self) -> Option<HashMap<String, Value>> {

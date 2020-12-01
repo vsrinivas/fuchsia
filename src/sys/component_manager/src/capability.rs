@@ -66,6 +66,16 @@ impl CapabilitySource {
             CapabilitySource::Capability { .. } => None,
         }
     }
+
+    pub fn type_name(&self) -> CapabilityTypeName {
+        match self {
+            CapabilitySource::Component { capability, .. } => capability.type_name(),
+            CapabilitySource::Framework { capability, .. } => capability.type_name(),
+            CapabilitySource::Builtin { capability } => capability.type_name(),
+            CapabilitySource::Namespace { capability } => capability.type_name(),
+            CapabilitySource::Capability { source_capability, .. } => source_capability.type_name(),
+        }
+    }
 }
 
 impl fmt::Display for CapabilitySource {
@@ -109,14 +119,14 @@ impl InternalCapability {
     }
 
     /// Returns a name for the capability type.
-    pub fn type_name(&self) -> &'static str {
+    pub fn type_name(&self) -> CapabilityTypeName {
         match self {
-            InternalCapability::Service(_) => "service",
-            InternalCapability::Protocol(_) => "protocol",
-            InternalCapability::Directory(_) => "directory",
-            InternalCapability::Runner(_) => "runner",
-            InternalCapability::Event(_) => "event",
-            InternalCapability::Resolver(_) => "resolver",
+            InternalCapability::Service(_) => CapabilityTypeName::Service,
+            InternalCapability::Protocol(_) => CapabilityTypeName::Protocol,
+            InternalCapability::Directory(_) => CapabilityTypeName::Directory,
+            InternalCapability::Runner(_) => CapabilityTypeName::Runner,
+            InternalCapability::Event(_) => CapabilityTypeName::Event,
+            InternalCapability::Resolver(_) => CapabilityTypeName::Resolver,
         }
     }
 
@@ -306,44 +316,44 @@ impl ComponentCapability {
     }
 
     /// Returns a name for the capability type.
-    pub fn type_name(&self) -> &'static str {
+    pub fn type_name(&self) -> CapabilityTypeName {
         match self {
             ComponentCapability::Use(use_) => match use_ {
-                UseDecl::Protocol(_) => "protocol",
-                UseDecl::Directory(_) => "directory",
-                UseDecl::Service(_) => "service",
-                UseDecl::Storage(_) => "storage",
-                UseDecl::Runner(_) => "runner",
-                UseDecl::Event(_) => "event",
-                UseDecl::EventStream(_) => "event_stream",
+                UseDecl::Protocol(_) => CapabilityTypeName::Protocol,
+                UseDecl::Directory(_) => CapabilityTypeName::Directory,
+                UseDecl::Service(_) => CapabilityTypeName::Service,
+                UseDecl::Storage(_) => CapabilityTypeName::Storage,
+                UseDecl::Runner(_) => CapabilityTypeName::Runner,
+                UseDecl::Event(_) => CapabilityTypeName::Event,
+                UseDecl::EventStream(_) => CapabilityTypeName::EventStream,
             },
             ComponentCapability::Environment(env) => match env {
-                EnvironmentCapability::Runner { .. } => "runner",
-                EnvironmentCapability::Resolver { .. } => "resolver",
+                EnvironmentCapability::Runner { .. } => CapabilityTypeName::Runner,
+                EnvironmentCapability::Resolver { .. } => CapabilityTypeName::Resolver,
             },
             ComponentCapability::Expose(expose) | ComponentCapability::UsedExpose(expose) => {
                 match expose {
-                    ExposeDecl::Protocol(_) => "protocol",
-                    ExposeDecl::Directory(_) => "directory",
-                    ExposeDecl::Service(_) => "service",
-                    ExposeDecl::Runner(_) => "runner",
-                    ExposeDecl::Resolver(_) => "resolver",
+                    ExposeDecl::Protocol(_) => CapabilityTypeName::Protocol,
+                    ExposeDecl::Directory(_) => CapabilityTypeName::Directory,
+                    ExposeDecl::Service(_) => CapabilityTypeName::Service,
+                    ExposeDecl::Runner(_) => CapabilityTypeName::Runner,
+                    ExposeDecl::Resolver(_) => CapabilityTypeName::Resolver,
                 }
             }
             ComponentCapability::Offer(offer) => match offer {
-                OfferDecl::Protocol(_) => "protocol",
-                OfferDecl::Directory(_) => "directory",
-                OfferDecl::Service(_) => "service",
-                OfferDecl::Storage(_) => "storage",
-                OfferDecl::Runner(_) => "runner",
-                OfferDecl::Resolver(_) => "resolver",
-                OfferDecl::Event(_) => "event",
+                OfferDecl::Protocol(_) => CapabilityTypeName::Protocol,
+                OfferDecl::Directory(_) => CapabilityTypeName::Directory,
+                OfferDecl::Service(_) => CapabilityTypeName::Service,
+                OfferDecl::Storage(_) => CapabilityTypeName::Storage,
+                OfferDecl::Runner(_) => CapabilityTypeName::Runner,
+                OfferDecl::Resolver(_) => CapabilityTypeName::Resolver,
+                OfferDecl::Event(_) => CapabilityTypeName::Event,
             },
-            ComponentCapability::Protocol(_) => "protocol",
-            ComponentCapability::Directory(_) => "directory",
-            ComponentCapability::Storage(_) => "storage",
-            ComponentCapability::Runner(_) => "runner",
-            ComponentCapability::Resolver(_) => "resolver",
+            ComponentCapability::Protocol(_) => CapabilityTypeName::Protocol,
+            ComponentCapability::Directory(_) => CapabilityTypeName::Directory,
+            ComponentCapability::Storage(_) => CapabilityTypeName::Storage,
+            ComponentCapability::Runner(_) => CapabilityTypeName::Runner,
+            ComponentCapability::Resolver(_) => CapabilityTypeName::Resolver,
         }
     }
 
@@ -1126,5 +1136,24 @@ mod tests {
         });
         let moniker = ChildMoniker::new("".to_string(), None, 0);
         capability.find_offer_service_sources(&default_component_decl(), &moniker);
+    }
+
+    #[test]
+    fn capability_type_name() {
+        let storage_capability = ComponentCapability::Storage(StorageDecl {
+            name: "foo".into(),
+            source: StorageDirectorySource::Parent,
+            backing_dir: "bar".into(),
+            subdir: None,
+        });
+        assert_eq!(storage_capability.type_name(), CapabilityTypeName::Storage);
+
+        let event_capability = ComponentCapability::Use(UseDecl::Event(UseEventDecl {
+            source: cm_rust::UseSource::Parent,
+            source_name: "started".into(),
+            target_name: "started-x".into(),
+            filter: None,
+        }));
+        assert_eq!(event_capability.type_name(), CapabilityTypeName::Event);
     }
 }

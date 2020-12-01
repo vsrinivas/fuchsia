@@ -898,7 +898,7 @@ async fn find_environment_component_capability_source<'a>(
                     ModelError::from(RoutingError::environment_from_child_expose_not_found(
                         &partial,
                         &env_realm.abs_moniker,
-                        capability.type_name(),
+                        capability.type_name().to_string(),
                         capability.source_id(),
                     ))
                 })?,
@@ -1045,7 +1045,7 @@ async fn walk_offer_chain<'a>(
                 ComponentCapability::Environment(_) => {
                     ModelError::from(RoutingError::environment_from_parent_not_found(
                         &pos.abs_last_child_moniker(),
-                        pos.capability.type_name(),
+                        pos.capability.type_name().to_string(),
                         pos.capability.source_id(),
                     ))
                 }
@@ -1313,7 +1313,7 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
                     ModelError::from(RoutingError::environment_from_child_expose_not_found(
                         &partial,
                         pos.moniker().parent().as_ref().expect("impossible source above root"),
-                        pos.capability.type_name(),
+                        pos.capability.type_name().to_string(),
                         pos.capability.source_id(),
                     ))
                 }
