@@ -16,7 +16,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <tuple>
 #include <utility>
 
@@ -64,7 +63,7 @@ ReportId SeedReportId() {
 
 struct CrashReporterError {
   cobalt::CrashState crash_state;
-  std::string_view log_message;
+  const char* log_message;
 };
 
 // Make the appropriate ReportingPolicyWatcher for the upload policy in |config|.
@@ -175,10 +174,11 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
           .and_then([this, report_id](
                         Product& product) -> ::fit::promise<promise_tuple_t, CrashReporterError> {
             if (!product_quotas_.HasQuotaRemaining(product)) {
+              FX_LOGST(INFO, tags_->Get(report_id)) << "Daily report quota reached, won't retry";
               return ::fit::make_result_promise<promise_tuple_t, CrashReporterError>(
                   ::fit::error(CrashReporterError{
                       cobalt::CrashState::kOnDeviceQuotaReached,
-                      "daily report quota reached",
+                      nullptr,
                   }));
             }
 
@@ -222,8 +222,10 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
           })
           .then([this, report_id](::fit::result<void, CrashReporterError>& result) {
             if (result.is_error()) {
-              FX_LOGST(ERROR, tags_->Get(report_id))
-                  << "Failed to file report: " << result.error().log_message << ". Won't retry";
+              if (result.error().log_message) {
+                FX_LOGST(ERROR, tags_->Get(report_id))
+                    << "Failed to file report: " << result.error().log_message << ". Won't retry";
+              }
               tags_->Unregister(report_id);
               info_.LogCrashState(result.error().crash_state);
             } else {
