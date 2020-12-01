@@ -67,11 +67,11 @@ non-nullable counterparts in LLCPP, and are omitted from the table above.
 ### User defined types {#user-defined-types}
 
 In LLCPP, a user defined type (bits, enum, constant, struct, union, or table) is
-referred to using the generated class or variable (see [Type Definitions](#type-definitions)
-). The nullable version of a user defined type
+referred to using the generated class or variable (see [Type
+Definitions](#type-definitions)). The nullable version of a user defined type
 `T` is referred to using a `fidl::tracking_ptr` of the generated type *except*
-for unions, which simply use the generated type itself. Refer to the [LLCPP memory guide][llcpp-allocation]
-for information about `tracking_ptr`.
+for unions, which simply use the generated type itself. Refer to the [LLCPP
+memory guide][llcpp-allocation] for information about `tracking_ptr`.
 
 ## Type definitions {#type-definitions}
 
@@ -96,26 +96,20 @@ this example `0b111`):
 
 * `explicit constexpr FileMode(uint16_t)`: Constructs a value from an underlying
   primitive value, preserving any unknown bit members.
-* `constexpr static fit::optional<FileMode> TryFrom(uint16_t value)`: Constructs an
-  instance of the bits from an underlying primitive value if the value does not
-  contain any unknown members, and returns `fit::nullopt` otherwise.
-* `constexpr static FileMode TruncatingUnknown(uint16_t value)`: Constructs an instance
-  of the bits from an underlying primitive value, clearing any unknown members.
+* `constexpr static fit::optional<FileMode> TryFrom(uint16_t value)`: Constructs
+  an instance of the bits from an underlying primitive value if the value does
+  not contain any unknown members, and returns `fit::nullopt` otherwise.
+* `constexpr static FileMode TruncatingUnknown(uint16_t value)`: Constructs an
+  instance of the bits from an underlying primitive value, clearing any unknown
+  members.
 * Bitwise operators: Implementations for the `|`, `|=`, `&`, `&=`, `^`, `^=`,
   and `~` operators are provided, allowing bitwise operations on the bits like
   `mode |= FileMode::EXECUTE`.
 * Comparison operators `==` and `!=`.
 * Explicit conversion functions for `uint16_t` and `bool`.
 
-Example usage:
-
-```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="bits" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
-```
-
-#### Flexible bits {#flexible-bits}
-
-Flexible bits have the following additional methods:
+If `FileMode` is [flexible][lang-flexible], it will have the following
+additional methods:
 
 * `constexpr FileMode unknown_bits() const`: Returns a bits value that contains
   only the unknown members from this bits value.
@@ -125,6 +119,12 @@ Flexible bits have the following additional methods:
 Note: When applying bitwise negation to bits values that contain unknown
 members, the resulting bits value is only defined for the known bits.
 
+Example usage:
+
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="bits" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+```
+
 ### Enums {#enums}
 
 Given the [enum][lang-enums] definition:
@@ -133,8 +133,8 @@ Given the [enum][lang-enums] definition:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="enums" %}
 ```
 
-The FIDL toolchain generates an equivalent C++ `enum class` using the specified
-underlying type, or `uint32_t` if none is specified:
+The FIDL toolchain generates a C++ `enum class` using the specified underlying
+type, or `uint32_t` if none is specified:
 
 ```c++
 enum class LocationType : uint32_t {
@@ -166,11 +166,11 @@ following methods:
   there is no such member, then the underlying value of the returned enum member
   is unspecified.
 * `explicit constexpr operator int32_t() const`: Converts the enum back to its
-  underlying value
+  underlying value.
 
 The generated class contains a static member for each enum member, which are
 guaranteed to match the members of the `enum class` in the equivalent
-`strict enum`:
+[strict][lang-flexible] enum:
 
 * `const static LocationType MUSEUM`
 * `const static LocationType AIRPORT`
@@ -221,7 +221,7 @@ enum class Tag : fidl_xunion_tag_t {
 ```
 
 Each member of `Tag` has a value matching its ordinal specified in the `union`
-definition. Reserved fields do not have any generated code
+definition. Reserved fields do not have any generated code.
 
 `JsonValue` provides the following methods:
 
@@ -262,9 +262,8 @@ Example usage:
 
 #### Flexible unions and unknown variants
 
-[Flexible unions][lang-unions] (that is, unions that are prefixed with the
-`flexible` keyword in their FIDL definition) have an extra variant in the
-generated `Tag`:
+[Flexible][lang-flexible] unions have an extra variant in the generated `Tag`
+class:
 
 ```c++
   enum class Tag : fidl_xunion_tag_t {
@@ -276,12 +275,10 @@ generated `Tag`:
 When a FIDL message containing a union with an unknown variant is decoded into
 `JsonValue`, `JsonValue::Which()` will return `JsonValue::Tag::kUnknown`.
 
+The LLCPP bindings do not store the raw bytes and handles of unknown variants.
+
 Encoding a union with an unknown variant is not supported and will cause
 an encoding failure.
-
-The decoding operation will fail when encountering an unknown variant at a
-`strict` union type, or when encountering an unknown variant containing
-handles at a flexible non-resource union type.
 
 ### Tables {#tables}
 
@@ -345,8 +342,8 @@ Example usage:
 In addition to assigning fields with `std::unique_ptr`, any of the allocation
 strategies described in the [tutorial][llcpp-allocation] can also be used.
 
-Note: Tables with unknown fields will decode successfully but
-will fail to encode.
+Note: Tables with unknown fields will decode successfully but will fail to
+encode.
 
 ## Protocols {#protocols}
 
@@ -508,12 +505,13 @@ virtual void OnReply(fidl::DecodedMessage<MakeMoveResponse> msg)
 virtual void OnError()
 ```
 
-Only one of the two methods is called for a single response: `OnReply()` is called
-with a successfully decoded response, whereas `OnError()` is called on any error
-that would cause the response context to be discarded without `OnReply()` being
-called. You are responsible for ensuring that the response context object
-outlives the duration of the entire async call, since the `fidl::Client` borrows
-the context object by address to avoid implicit allocation.
+Only one of the two methods is called for a single response: `OnReply()` is
+called with a successfully decoded response, whereas `OnError()` is called on
+any error that would cause the response context to be discarded without
+`OnReply()` being called. You are responsible for ensuring that the response
+context object outlives the duration of the entire async call, since the
+`fidl::Client` borrows the context object by address to avoid implicit
+allocation.
 
 Note: If the client is destroyed with outstanding asynchronous transactions,
 `OnError()` will be invoked for all of the associated `ResponseContext`s
@@ -551,8 +549,8 @@ Note: If the client is destroyed with outstanding asynchronous transactions,
   two way method, which takes in backing storage for the request buffer,
   followed by the request parameters, and finally backing storage for the
   response buffer, and returns an `UnownedResultOf`.
-* `fidl::Result HandleEvents(EventHandlers& handlers)`: Blocks to consume exactly
-  one event from the channel. See [Events](#events)
+* `fidl::Result HandleEvents(EventHandlers& handlers)`: Blocks to consume
+  exactly one event from the channel. See [Events](#events)
 
 Note that each method has both an owned and caller-allocated variant. In brief,
 the owned variant of each method handles memory allocation for requests and
@@ -575,8 +573,8 @@ the only difference being that they are all `static` and take an
 * `static UnownedResultOf::MakeMove MakeMove(zx::unowned_channel _client_end,
   fidl::BufferSpan _request_buffer, uint8_t row, uint8_t col, fidl::BufferSpan
   _response_buffer);`:
-* `static fidl::Result HandleEvents(zx::unowned_channel client_end, EventHandlers&
-  handlers)`:
+* `static fidl::Result HandleEvents(zx::unowned_channel client_end,
+  EventHandlers& handlers)`:
 
 #### Result, ResultOf and UnownedResultOf [#resultof]
 
@@ -714,13 +712,13 @@ following `Reply` methods:
 * `::fidl::Result Reply(fidl::BufferSpan _buffer, bool success,
   fidl::tracking_ptr<GameState> new_state)`
 
-Because the status returned by Reply is identical to the unbinding status, it can be safely
-ignored.
+Because the status returned by Reply is identical to the unbinding status, it
+can be safely ignored.
 
 Finally, sync completers for two way methods can be coverted to an async
-completer using the `ToAsync()` method. Async completers can out-live the scope of the
-handler by e.g. moving it into a lambda capture (see [LLCPP tutorial][llcpp-async-example]
-for example usage), allowing the server to
+completer using the `ToAsync()` method. Async completers can out-live the scope
+of the handler by e.g. moving it into a lambda capture (see [LLCPP
+tutorial][llcpp-async-example] for example usage), allowing the server to
 respond to requests asynchronously. The async completer has the same methods for
 responding to the client as the sync completer.
 
@@ -806,7 +804,8 @@ When using a `fidl::Client`, events can be handled asynchronously by passing the
 class a `TicTacToe::AsyncEventHandlers` object. This class has the following
 members:
 
-* `fit::function<void(OnOpponentMoveResponse* message)> on_opponent_move`: Handler for an event.
+* `fit::function<void(OnOpponentMoveResponse* message)> on_opponent_move`:
+  Handler for an event.
 
 For `SyncClient` and `Call` clients, events are handled synchronously by calling
 a `HandleEvents` function and passing it a `TicTacToe::EventHandlers`.
@@ -823,9 +822,9 @@ There are two variants of the `HandleEvents` function available:
 * `TicTacToe::Call::HandleEvents(zx::unowned_channel client_end, EventHandlers& handlers)`:
   An unbound version that also takes in an `unowned_channel`.
 
-If the handlers are always the same (from one call to `HandleEvents` to the other), the
-`EventHandlers` object should be constructed once and used each time you need to call
-`HandleEvents`.
+If the handlers are always the same (from one call to `HandleEvents` to the
+other), the `EventHandlers` object should be constructed once and used each time
+you need to call `HandleEvents`.
 
 #### Server
 
@@ -859,11 +858,11 @@ should be preferred whenever possible. Using the methods listed below may
 introduce a race condition between unbinding the server connection and sending
 some final events on the same channel.
 
-The `TicTacToe` class provides static methods for sending events on a channel. Like
-the client [Call](#client-call) APIs, these methods take an `unowned_channel` as
-the first argument, sending the event over this channel. Each event has managed
-and caller-allocating sender events, analogous to the [client API](#client) as
-well as the [server completers](#server-completers).
+The `TicTacToe` class provides static methods for sending events on a channel.
+Like the client [Call](#client-call) APIs, these methods take an
+`unowned_channel` as the first argument, sending the event over this channel.
+Each event has managed and caller-allocating sender events, analogous to the
+[client API](#client) as well as the [server completers](#server-completers).
 
 The event sender methods are:
 
@@ -964,16 +963,18 @@ Name[]` field on the protocol class, containing the full protocol name.
 
 ## Explicit encoding and decoding {#encoding-decoding}
 
-FIDL messages are automatically encoded when they are sent and decoded when they are received.
+FIDL messages are automatically encoded when they are sent and decoded when they
+are received.
 
-However, some use cases like persistence need to explicitly encode or decode a table or struct.
+However, some use cases like persistence need to explicitly encode or decode a
+table or struct.
 
 This section describes how to explicitly use the encoding and the decoding.
 
 ### Encoding
 
-When an object is allocated and initialized, `fidl::OwnedEncodedMessage<FidlType>` can be used to
-encode it. For example:
+When an object is allocated and initialized,
+`fidl::OwnedEncodedMessage<FidlType>` can be used to encode it. For example:
 
 ```c++
 void Encode(::llcpp::fuchsia::examples::User& user) {
@@ -987,8 +988,8 @@ void Encode(::llcpp::fuchsia::examples::User& user) {
 }
 ```
 
-At this point, the table `user` is encoded within `encoded`. The following methods are
-available on an encoded FIDL type:
+At this point, the table `user` is encoded within `encoded`. The following
+methods are available on an encoded FIDL type:
 
 * `bool encoded.ok()`
 * `zx_status_t encoded.status()`
@@ -1016,7 +1017,8 @@ void UseEncodedUser(std::vector<uint8_t> buffer) {
 }
 ```
 
-When an object is decoded, the following methods are available on a decoded FIDL type:
+When an object is decoded, the following methods are available on a decoded FIDL
+type:
 
 * `bool decoded.ok()`
 * `zx_status_t decoded.status()`
@@ -1027,18 +1029,19 @@ When an object is decoded, the following methods are available on a decoded FIDL
 The FIDL type is the type used by the templated class (in the example above:
 `::llcpp::fuchsia::examples::User`).
 
-The primary object is decoded in place within the provided buffer. This is also the case of all
-the secondary objects. That means that the provided buffer must be kept alive while the decoded
-value is used.
+The primary object is decoded in place within the provided buffer. This is also
+the case of all the secondary objects. That means that the provided buffer must
+be kept alive while the decoded value is used.
 
-For FIDL types which allow handles, the handles can be specified during construction after the
-bytes (the same way bytes are specified).
+For FIDL types which allow handles, the handles can be specified during
+construction after the bytes (the same way bytes are specified).
 
 ### Persistence
 
-Persistence is not officially supported by LLCPP. However, explicit encoding and decoding can be
-used to store FIDL values by encoding a value and then writing it and by reading a value and
-then decoding it. In that case, the values can't use any handle.
+Persistence is not officially supported by LLCPP. However, explicit encoding and
+decoding can be used to store FIDL values by encoding a value and then writing
+it and by reading a value and then decoding it. In that case, the values can't
+use any handle.
 
 <!-- xrefs -->
 [llcpp-allocation]: /docs/development/languages/fidl/guides/llcpp-memory-ownership.md
@@ -1049,9 +1052,11 @@ then decoding it. In that case, the values can't use any handle.
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
 [lang-bits]: /docs/reference/fidl/language/language.md#bits
 [lang-enums]: /docs/reference/fidl/language/language.md#enums
+[lang-flexible]: /docs/reference/fidl/language/language.md#strict-vs-flexible
 [lang-structs]: /docs/reference/fidl/language/language.md#structs
 [lang-tables]: /docs/reference/fidl/language/language.md#tables
 [lang-unions]: /docs/reference/fidl/language/language.md#unions
+[lang-resource]: /docs/reference/fidl/language/language.md#value-vs-resource
 [lang-protocols]: /docs/reference/fidl/language/language.md#protocols
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
 [union-lexicon]: /docs/reference/fidl/language/lexicon.md#union-terms

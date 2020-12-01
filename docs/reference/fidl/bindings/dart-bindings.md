@@ -126,8 +126,10 @@ or every flag set (`$mask`):
 * `FileMode operator |(FileMode other)`: Bitwise or operator.
 * `FileMode operator &(FileMode other)`: Bitwise and operator.
 * `bool operator(dynamic other)`: Equality operator.
-* `int getUnknownBits()`: Returns only the set bits that are unknown.
+* `int getUnknownBits()`: Returns only the set bits that are unknown. Always
+  returns 0 for [strict][lang-flexible] bits.
 * `bool hasUnknownBits()`: Returns whether this value contains any unknown bits.
+  Always returns `false` for [strict][lang-flexible] bits.
 
 Example usage:
 
@@ -143,8 +145,8 @@ Given the [enum][lang-enums] definition:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="enums" %}
 ```
 
-The FIDL toolchain generates a `LocationType` class with `static const` variables for
-each enum member:
+The FIDL toolchain generates a `LocationType` class with `static const`
+variables for each enum member:
 
 * `static const LocationType museum`
 * `static const LocationType airport`
@@ -152,17 +154,18 @@ each enum member:
 
 As well as the following variables:
 
-* `static const Map<String, LocationType> $valuesMap`: A mapping ofthe string
+* `static const Map<String, LocationType> $valuesMap`: A mapping of the string
   representation of the member (`'museum'`, `'airport'`, or `'restaurant'`) to
   its corresponding enum value (`LocationType.museum`, `LocationType.airport`,
   or `LocationType.restaurant`)
-* `static const List<LocationType> $values`: A list of all of the LocationTypes.
+* `static const List<LocationType> $values`: A list of all of the enum values.
 
-For `flexible` enums, an unknown placeholder member will be generated as well:
+If `LocationType` is [flexible][lang-flexible], it will have an unknown
+placeholder member as well:
 
 * `static const LocationType $unknown`
 
-If the `enum` has a member tagged with the [`[Unknown]`][unknown-attr] attribute,
+If the enum has a member tagged with the [`[Unknown]`][unknown-attr] attribute,
 the placeholder variable will have the same value as the tagged unknown
 member.
 
@@ -171,8 +174,8 @@ member.
 * `static LocationType $valueOf(String name)`: Look up a string name in the
   `$valuesMap`.
 * `String toString()`: Returns a readable representation of the `LocationType`.
-* `bool isUnknown()`: Returns whether this enum is unknown. Always returns `false`
-  for `strict` enum types.
+* `bool isUnknown()`: Returns whether this enum is unknown. Always returns
+  `false` for [strict][lang-flexible] enums.
 
 Example usage:
 
@@ -240,14 +243,16 @@ As well as a `JsonValue` class with the following methods:
 * `Object get $data`: Getter for the underlying union data.
 * `bool operator ==(dynamic other)`: Equality operator that performs deep
    comparison when compared to another `JsonValue` of the same variant.
+* `fidl.UnknownRawData? get $unknownData`: Returns the bytes and handles of the
+  unknown data if this union contains an unknown variant, or `null` otherwise.
+  Always returns `null` for [strict][lang-flexible] unions.
 
-Flexible unions have additional methods for interacting with unknown data:
+If `JsonValue` is [flexible][lang-flexible], it will have the following
+additional methods:
 
 * `const JsonValue.with$UnknownData(int ordinal, fidl.UnknownRawData data)`:
   Constructor for a value with an unknown variant set. This should only be used
   for testing, e.g. to check that code handles unknown unions correctly.
-* `fidl.UnknownRawData? get $unknownData`: Returns the bytes and handles of the
-  unknown data if this union contains an unknown variant, or null otherwise.
 
 Example usage:
 
@@ -257,9 +262,8 @@ Example usage:
 
 #### Flexible unions and unknown variants
 
-[Flexible unions][lang-unions] (that is, unions that are prefixed with the
-`flexible` keyword in their FIDL definition) have an extra variant in the
-generated tag class:
+[Flexible][lang-flexible] unions have an extra variant in the generated tag
+class:
 
 ```dart
 enum JsonValueTag {
@@ -276,8 +280,9 @@ When a FIDL message containing a union with an unknown variant is decoded into
 Encoding a union with an unknown variant writes the unknown data and the
 original ordinal back onto the wire.
 
-Non-flexible (i.e. `strict`) unions fail when decoding a data containing an
-unknown variant.
+[Strict][lang-flexible] unions fail when decoding an unknown variant.
+[Flexible][lang-flexible] unions that are [value][lang-resource] types fail when
+decoding an unknown variant with handles.
 
 ### Tables {#tables}
 
@@ -323,8 +328,8 @@ protocol TicTacToe {
 ```
 
 Note: The `MakeMove` method above returns a bool representing success, and a
-nullable response value. This is considered un-idiomatic, you should use an [error type](#protocols-results)
-instead.
+nullable response value. This is considered un-idiomatic, you should use an
+[error type](#protocols-results) instead.
 
 FIDL generates an abstract `TicTacToe` class, which defines the interface of the
 service used by clients to proxy calls to the server, and for the server for
@@ -370,9 +375,10 @@ Examples on how to set up and bind a proxy class to a channel are covered in the
 Implementing a server for a FIDL protocol involves providing a concrete
 implementation of `TicTacToe` abstract class.
 
-The bindings provide a `TicTacToeBinding` class that can bind to a `TicTacToe` instance and a
-channel, and listens to incoming messages on the channel, dispatches them to the server
-implementation, and sends messages back through the channel. This class implements
+The bindings provide a `TicTacToeBinding` class that can bind to a `TicTacToe`
+instance and a channel, and listens to incoming messages on the channel,
+dispatches them to the server implementation, and sends messages back through
+the channel. This class implements
 <!-- TODO(fxbug.dev/58672) add link to API docs when those are available -->
 `fidl.AsyncBinding<TicTacToe>`.
 
@@ -513,6 +519,7 @@ and all events are implemented by returning a Stream with a single
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
 [lang-bits]: /docs/reference/fidl/language/language.md#bits
 [lang-enums]: /docs/reference/fidl/language/language.md#enums
+[lang-flexible]: /docs/reference/fidl/language/language.md#strict-vs-flexible
 [lang-structs]: /docs/reference/fidl/language/language.md#structs
 [lang-tables]: /docs/reference/fidl/language/language.md#tables
 [lang-unions]: /docs/reference/fidl/language/language.md#unions

@@ -24,6 +24,16 @@ bits FileMode : uint16 {
 };
 // [END bits]
 
+// TODO(fxbug.dev/65466): Make flexible bits work with libfuzzer.
+[BindingsDenylist = "libfuzzer"]
+// [START flexible_bits]
+flexible bits FlexibleFileMode : uint16 {
+    READ = 0b001;
+    WRITE = 0b010;
+    EXECUTE = 0b100;
+};
+// [END flexible_bits]
+
 // [START enums]
 enum LocationType {
     MUSEUM = 1;
@@ -31,6 +41,16 @@ enum LocationType {
     RESTAURANT = 3;
 };
 // [END enums]
+
+// TODO(fxbug.dev/65466): Make flexible enums work with libfuzzer.
+[BindingsDenylist = "libfuzzer"]
+// [START flexible_enums]
+flexible enum FlexibleLocationType {
+    MUSEUM = 1;
+    AIRPORT = 2;
+    RESTAURANT = 3;
+};
+// [END flexible_enums]
 
 // [START structs]
 struct Color {
@@ -46,6 +66,14 @@ union JsonValue {
     3: string:MAX_STRING_LENGTH string_value;
 };
 // [END unions]
+
+// [START flexible_unions]
+flexible union FlexibleJsonValue {
+    1: reserved;
+    2: int32 int_value;
+    3: string:MAX_STRING_LENGTH string_value;
+};
+// [END flexible_unions]
 
 // [START tables]
 table User {

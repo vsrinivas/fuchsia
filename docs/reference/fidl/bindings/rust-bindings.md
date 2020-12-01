@@ -123,25 +123,24 @@ Given the [bits][lang-bits] definition:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="bits" %}
 ```
 
-The FIDL toolchain generates an equivalent set of
-[bitflags](https://fuchsia-docs.firebaseapp.com/rust/bitflags/index.html) called
+The FIDL toolchain generates a set of
+[`bitflags`](https://fuchsia-docs.firebaseapp.com/rust/bitflags/) called
 `FileMode` with flags `FileMode::Read`, `FileMode::Write`, and
-`FileMode::Execute`. Bits members using screaming snake case are converted to
-camel case in the generated Rust code.
+`FileMode::Execute`. Bits members are emitted in camel case in the generated
+Rust code.
+<!-- TODO(fxbug.dev/47034): Should be UPPER_SNAKE_CASE, not CamelCase. -->
 
-The bitflags struct also has the following methods implemented for it:
+The `bitflags` struct also provides the following methods:
 
-* `get_unknown_bits(&self) -> u16`: Returns a primitive value containing only the
-  unknown members from this bits value.
+* `get_unknown_bits(&self) -> u16`: Returns a primitive value containing only
+  the unknown members from this bits value. For [strict][lang-flexible] bits, it
+  is marked `#[deprecated]` and always returns 0.
 * `has_unknown_bits(&self) -> bool`: Returns whether this value contains any
-  unknown bits.
+  unknown bits. For [strict][lang-flexible] bits, it is marked `#[deprecated]`
+  and always returns `false`.
 
-These two methods are provided for both `strict` as well as `flexible` bits to make
-it easier to transition between `strict` and `flexible`, but the methods are marked as `#[deprecated]` for `strict` bits. `get_unknown_bits` and `has_unknown_bits` will
-always return `0` and `false` respectively, for `strict` bits.
-
-The generated `bitflags` struct always has the complete set of [`[#derive]`
- rules](#derives).
+The generated `FileMode` struct always has the complete set of [`#[derive]`
+rules](#derives).
 
 Example usage:
 
@@ -157,8 +156,8 @@ Given the [enum][lang-enums] definition:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="enums" %}
 ```
 
-The FIDL toolchain generates an equivalent Rust `enum` using the specified
-underlying type, or `u32` if none is specified:
+The FIDL toolchain generates a Rust `enum` using the specified underlying type,
+or `u32` if none is specified:
 
 ```rust
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -175,35 +174,42 @@ With the following methods:
 * `from_primitive(prim: u32) -> Option<Self>`: Returns `Some` of the enum
   variant corresponding to the discriminant value if any, and `None` otherwise.
 * `into_primitive(&self) -> u32`: Returns the underlying discriminant value.
-
-There are also the following methods, which are deprecated for `strict` enums
-but exist for both `strict` and `flexible` enums to facilitate transitioning
-between the two:
-
 * `validate(self) -> Result<Self, u32>`: Returns `Ok` of the value if it
   corresponds to a known member, or an `Err` of the underlying primitive value
-  otherwise. Always returns the latter for `strict` enum types.
-* `is_unknown(&self) -> bool`: Returns whether this enum is unknown. Always
-  returns `false` for `strict` enum types.
+  otherwise. For [strict][lang-flexible] types, it is marked `#[deprecated]` and
+  always returns `Ok`.
+* `is_unknown(&self) -> bool`: Returns whether this enum is unknown. For
+  [strict][lang-flexible] types, it is marked `#[deprecated]` and always returns
+  `false`.
 
-There are also methods that are only generated for `flexible` enums:
+If `LocationType` is [flexible][lang-flexible], it will have the following
+additional methods:
 
 * `from_primitive_allow_unknown(prim: u32) -> Self`: Create an instance of the
-  enum from an primitive value.
+  enum from a primitive value.
 * `unknown() -> Self`: Return a placeholder unknown enum value. If the enum
   contains a member marked with [`[Unknown]`][unknown-attr], then the value
   returned by this method contains the value of specified unknown member.
 
-`flexible` enums also have a `ColorUnknown` macro that should be used to match
-against unknown members.
-
-The generated `enum` always has the complete set of [`[#derive]` rules](#derives).
+The generated `LocationType` `enum` always has the complete set of [`#[derive]`
+rules](#derives).
 
 Example usage:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="enums" adjust_indentation="auto" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="enums_init" adjust_indentation="auto" %}
 ```
+
+To provide source-compatibility, [flexible][lang-flexible] enums have an unknown
+macro that should be used to match against unknown members instead of the `_`
+pattern. For example, see the use of the `LocationTypeUnknown!()` macro:
+
+```rust
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="enums_match" adjust_indentation="auto" %}
+```
+
+The unknown macro acts the same as a `_` pattern, but it can be configured to
+expand to an exhaustive match. This is useful for discovering missing cases.
 
 ### Structs {#types-structs}
 
@@ -213,7 +219,7 @@ Given the [struct][lang-structs] declaration:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="structs" %}
 ```
 
-The FIDL toolchain generates an equivalent Rust `struct`:
+The FIDL toolchain generates a Rust `struct`:
 
 ```rust
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -226,7 +232,7 @@ pub struct Color {
 Note: The default values for struct members are not yet supported in the Rust
 bindings, and therefore do not affect the generated Rust `struct`.
 
-The generated `Color` `struct` follows the [`[#derive]` rules](#derives).
+The generated `Color` `struct` follows the [`#[derive]` rules](#derives).
 
 Example usage:
 
@@ -242,7 +248,7 @@ Given the [union][lang-unions] definition:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="unions" %}
 ```
 
-The FIDL toolchain generates an equivalent Rust `enum`:
+The FIDL toolchain generates a Rust `enum`:
 
 ```rust
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -252,34 +258,59 @@ pub enum JsonValue {
 }
 ```
 
-The generated `JsonValue` `enum` follows the [`[#derive]` rules](#derives).
+With the following methods:
+
+* `validate(self) -> Result<Self, (u64, Vec<u8>)>`: Returns `Ok` of the value if
+  it corresponds to a known variant, or an `Err` containing the ordinal and raw
+  bytes otherwise. For [resource][lang-resource] types, the `Vec<u8>` changes to
+  `fidl::UnknownData`. For [strict][lang-flexible] types, it is marked
+  `#[deprecated]` and always returns `Ok`.
+* `is_unknown(&self) -> bool`: Returns whether this union is unknown. Always
+  returns `false` for non-flexible union types. For [strict][lang-flexible]
+  types, it is marked `#[deprecated]` and always returns `false`.
+
+If `JsonValue` is [flexible][lang-flexible], it will have the following
+additional methods:
+
+* `unknown(ordinal: u64, data: Vec<u8>) -> Self`: Create an unknown union value.
+  This should only be used in tests. For [`resource`][lang-resource] types, the
+  `Vec<u8>` changes to `fidl::UnknownData`.)
+
+The generated `JsonValue` `enum` follows the [`#[derive]` rules](#derives).
 
 Example usage:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="unions" adjust_indentation="auto" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="unions_init" adjust_indentation="auto" %}
 ```
 
-#### Flexible unions
+#### Flexible unions and unknown variants
 
-[Flexible unions][lang-unions] (that is, unions that are prefixed with the
-`flexible` keyword in their FIDL definition) have an enum additional variant
-generated to represent the case where the variant is unknown. This variant is
-considered private - users should instead match against it with a catch all
-case, which also ensures that adding new variants to a flexible union is source
-compatible:
+[Flexible][lang-flexible] unions have an extra variant generated to represent
+the unknown case. This variant is considered private and should not be
+referenced directly.
+
+To provide source-compatibility, [flexible][lang-flexible] unions have an
+unknown macro that should be used to match against unknown members instead of
+the `_` pattern. For example, see the use of the `JsonValueUnknown!()` macro:
 
 ```rust
-// this code will still compile if a new union variant is added
-match json_value {
-    JsonValue::IntValue(val) => ...,
-    JsonValue::StringValue(val) => ...,
-    _ => ..., // unknown variant
-}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="unions_match" adjust_indentation="auto" %}
 ```
+
+The unknown macro acts the same as a `_` pattern, but it can be configured to
+expand to an exhaustive match. This is useful for discovering missing cases.
+
+When a FIDL message containing a union with an unknown variant is decoded into
+`JsonValue`, `JsonValue::validate` returns `Err(ordinal, data)` where `ordinal`
+is the unknown ordinal and `data` contains the raws bytes and handles.
 
 Encoding a union with an unknown variant writes the unknown data and the
 original ordinal back onto the wire.
+
+[Strict][lang-flexible] unions fail when decoding an unknown variant.
+[Flexible][lang-flexible] unions that are [value][lang-resource] types fail when
+decoding an unknown variant with handles.
 
 ### Tables {#types-tables}
 
@@ -289,13 +320,16 @@ Given the [table][lang-tables] definition:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="tables" %}
 ```
 
-The FIDL toolchain generates a `struct` `User` where each member is optional:
+The FIDL toolchain generates a `struct` `User` with optional members:
 
 ```rust
 #[derive(Debug, PartialEq)]
 pub struct User {
   pub age: Option<u8>,
   pub name: Option<String>,
+  #[deprecated = "Use `..Foo::empty()` to construct and `..` to match."]
+  #[doc(hidden)]
+  pub __non_exhaustive: (),
 }
 ```
 
@@ -304,15 +338,21 @@ With the following methods:
 * `empty() -> User`: Returns a new `User`, with each member initialized to
   `None`.
 
-The generated `User` `struct` follows the [`[#derive]` rules](#derives).
+The generated `User` `struct` follows the [`#[derive]` rules](#derives).
 
-The recommended way of initializing a table is using the struct update syntax,
-which prevents API breakage when new fields are added.
-
-Example usage:
+The `__non_exhaustive` member prevents intializing the table exhaustively, which
+causes API breakage when new fields are added. Instead, you should use the
+struct update syntax to fill in unspecified fields with `empty()`. For example:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="tables" adjust_indentation="auto" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="tables_init" adjust_indentation="auto" %}
+```
+
+Similarly, tables do not permit exhaustive matching. Instead, you must use the
+`..` syntax to ignore unspecified fields. For example:
+
+```rust
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="tables_match" adjust_indentation="auto" %}
 ```
 
 ### Derives {#derives}
@@ -591,13 +631,13 @@ protocol B {
 
 #### Transitional
 
-The `"Transitional"` attribute only affects the `ProxyInterface` trait, which is
+The `[Transitional]` attribute only affects the `ProxyInterface` trait, which is
 sometimes used in test code. For non-test code, protocols can be transitioned on
 the server side by having request handlers temporarily use a catch-all match arm
 in the `Request` handler. Client code does not need to be soft transitioned
 since the generated proxy will always implement all methods.
 
-For methods annotated with the `"Transitional"` attribute,  the `ProxyInterface`
+For methods annotated with the `[Transitional]` attribute,  the `ProxyInterface`
 trait for [asynchronous clients](#protocols-client-asynchronous}) provides
 default implementations that call `unimplemented!()`. As noted earlier, this has
 no effect on the `Proxy` type, which always implements all the trait's methods.
@@ -606,7 +646,7 @@ used for fake proxies in client-side unit tests.
 
 #### Discoverable
 
-For protocols annotated with the `"Discoverable"` attribute, the Marker type
+For protocols annotated with the `[Discoverable]` attribute, the Marker type
 additionally implements the `fidl::endpoints::DiscoverableService` trait.
 
 ## Appendix A: Derived traits {#derived-traits}
@@ -625,13 +665,15 @@ The calculation of traits derivation rules is visible in
 ```
 
 <!-- xrefs -->
-[lang-constants]: /docs/reference/fidl/language/language.md#constants
 [lang-bits]: /docs/reference/fidl/language/language.md#bits
+[lang-constants]: /docs/reference/fidl/language/language.md#constants
 [lang-enums]: /docs/reference/fidl/language/language.md#enums
+[lang-flexible]: /docs/reference/fidl/language/language.md#strict-vs-flexible
+[lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
+[lang-protocols]: /docs/reference/fidl/language/language.md#protocols
+[lang-resource]: /docs/reference/fidl/language/language.md#value-vs-resource
 [lang-structs]: /docs/reference/fidl/language/language.md#structs
 [lang-tables]: /docs/reference/fidl/language/language.md#tables
 [lang-unions]: /docs/reference/fidl/language/language.md#unions
-[lang-protocols]: /docs/reference/fidl/language/language.md#protocols
-[lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
 [tutorial]: /docs/development/languages/fidl/tutorials/rust
-[lang-resource]: /docs/reference/fidl/language/language.md#value-vs-resource
+[unknown-attr]: /docs/reference/fidl/language/attributes.md#unknown

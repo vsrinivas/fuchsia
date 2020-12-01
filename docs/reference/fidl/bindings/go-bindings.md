@@ -114,9 +114,10 @@ In addition, it provides the following methods for `FileMode`:
 * `func (x FileMode) String() string`: Returns a human readable string of the
   bits.
 * `func (x FileMode) GetUnknownBits() uint64`: Returns a value that contains only
-  the unknown members from this bits value, as a `uint64`.
+  the unknown members from this bits value, as a `uint64`. Always returns 0 for
+  [strict][lang-flexible] bits.
 * `func (x FileMode) HasUnknownBits() bool`: Returns whether this value contains
-  any unknown bits.
+  any unknown bits. Always returns `false` for [strict][lang-flexible] bits.
 
 Example usage:
 
@@ -145,21 +146,23 @@ const (
 )
 ```
 
-For `flexible` enums, an unknown placeholder member will be generated as well:
+If `LocationType` is [flexible][lang-flexible], it will have an unknown
+placeholder member as well:
 
 ```golang
 	LocationType_Unknown LocationType = 0x7fffffff
 ```
 
-If the `enum` has a member tagged with the [`[Unknown]`][unknown-attr] attribute,
+If the enum has a member tagged with the [`[Unknown]`][unknown-attr] attribute,
 the generated unknown variable will have the same value as the tagged unknown
 member.
 
-In addition, it provides the following methods for `LocationType`:
+`LocationType` provides the following methods:
 
-* `func (x LocationType) IsUnknown() bool`: Returns whether this enum value
-  is unknown.
-* `func (x LocationType) String() string`: Returns a human readable string of the enum.
+* `func (x LocationType) IsUnknown() bool`: Returns whether this enum value is
+  unknown. Always returns `false` for [strict][lang-flexible] enums.
+* `func (x LocationType) String() string`: Returns a human readable string of
+  the enum.
 
 Example usage:
 
@@ -212,7 +215,7 @@ const (
 )
 ```
 
-as well as a `JsonValue` struct with fields for the tag and each
+As well as a `JsonValue` struct with fields for the tag and each
 [variant][union-lexicon] of the union:
 
 ```golang
@@ -230,12 +233,13 @@ type JsonValue struct {
   SetStringValue(stringValue string)`: Sets the union to contain a specific
   variant, updating the tag accordingly.
 
-If `JsonValue` is `flexible` it will have the following additional methods:
+If `JsonValue` is [flexible][lang-flexible], it will have the following
+additional methods:
 
 * `func (_m *JsonValue) GetUnknownData() fidl.UnknownData`: Returns the raw
   bytes and handles of the unknown data. The slice of handles is returned in
-  [traversal order][traversal], and is guaranteed to be empty if the table is
-  not annotated with the `resource` modifier.
+  [traversal order][traversal], and is guaranteed to be empty if the union is
+  a [resource][lang-resource] type.
 
 The FIDL toolchain also generates factory functions for constructing instances
 of `JsonValue`:
@@ -251,9 +255,8 @@ Example usage:
 
 #### Flexible unions and unknown variants
 
-[Flexible unions][lang-unions] (that is, unions that are prefixed with the
-`flexible` keyword in their FIDL definition) have an extra variant in the
-generated tag class:
+[Flexible][lang-flexible] unions have an extra variant in the generated tag
+class:
 
 ```golang
 const (
@@ -265,12 +268,12 @@ const (
 When a FIDL message containing a union with an unknown variant is decoded into
 `JsonValue`, `.Which()` will return `JsonValue_unknownData`.
 
-Go does not support encoding a flexible union if it has an unknown ordinal.
-Sending a message containg a union with an unknown variant will cause encoding
-to fail.
+Encoding a union with an unknown variant writes the unknown data and the
+original ordinal back onto the wire.
 
-Non-flexible (i.e. `strict`) unions fail when decoding a data containing an
-unknown variant.
+[Strict][lang-flexible] unions fail when decoding an unknown variant.
+[Flexible][lang-flexible] unions that are [value][lang-resource] types fail when
+decoding an unknown variant with handles.
 
 ### Tables {#tables}
 
@@ -494,9 +497,9 @@ protocol name.
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
 [lang-bits]: /docs/reference/fidl/language/language.md#bits
 [lang-enums]: /docs/reference/fidl/language/language.md#enums
+[lang-flexible]: /docs/reference/fidl/language/language.md#strict-vs-flexible
 [lang-structs]: /docs/reference/fidl/language/language.md#structs
 [lang-tables]: /docs/reference/fidl/language/language.md#tables
-[lang-unions]: /docs/reference/fidl/language/language.md#unions
 [lang-protocols]: /docs/reference/fidl/language/language.md#protocols
 [lang-resource]: /docs/reference/fidl/language/language.md#value-vs-resource
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition

@@ -50,7 +50,7 @@ fidl_testdata_info = [
     name = "arrays"
     target = "//zircon/tools/fidl/testdata:fidl.test.arrays"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
     build_denylist = [
@@ -70,7 +70,7 @@ fidl_testdata_info = [
     name = "bits"
     target = "//zircon/tools/fidl/testdata:fidl.test.bits"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
   },
@@ -78,7 +78,7 @@ fidl_testdata_info = [
     name = "byte_and_bytes"
     target = "//zircon/tools/fidl/testdata:fidl.test.byteandbytes"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
   },
@@ -86,7 +86,7 @@ fidl_testdata_info = [
     name = "consts"
     target = "//zircon/tools/fidl/testdata:fidl.test.consts"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
     build_denylist = [
@@ -137,7 +137,7 @@ fidl_testdata_info = [
     name = "encapsulated_structs"
     target = "//zircon/tools/fidl/testdata:fidl.test.encapsulatedstructs"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
   },
@@ -145,7 +145,7 @@ fidl_testdata_info = [
     name = "enum"
     target = "//zircon/tools/fidl/testdata:fidl.test.enum"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
   },
@@ -161,7 +161,7 @@ fidl_testdata_info = [
     name = "escaping"
     target = "//zircon/tools/fidl/testdata:fidl.test.escaping"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
   },
@@ -177,7 +177,7 @@ fidl_testdata_info = [
     name = "handles"
     target = "//zircon/tools/fidl/testdata:fidl.test.handles"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
     build_denylist = [
@@ -200,7 +200,7 @@ fidl_testdata_info = [
     name = "handles_in_types"
     target = "//zircon/tools/fidl/testdata:fidl.test.handlesintypes"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
   },
@@ -233,7 +233,7 @@ fidl_testdata_info = [
     name = "padding"
     target = "//zircon/tools/fidl/testdata:fidl.test.padding"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
   },
@@ -285,7 +285,7 @@ fidl_testdata_info = [
     name = "struct"
     target = "//zircon/tools/fidl/testdata:fidl.test.struct"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
   },
@@ -293,7 +293,7 @@ fidl_testdata_info = [
     name = "struct_default_value_enum_library_reference"
     target = "//zircon/tools/fidl/testdata/struct_default_value_enum_library_reference:fidl.test.structdefaultvalueenumlibraryreference"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
 
       # TODO(fxbug.dev/45007): Syzkaller does not support enum member references
@@ -309,7 +309,7 @@ fidl_testdata_info = [
     name = "table"
     target = "//zircon/tools/fidl/testdata:fidl.test.table"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
   },
@@ -317,7 +317,7 @@ fidl_testdata_info = [
     name = "transitive_dependencies"
     target = "//zircon/tools/fidl/testdata/transitive_dependencies:fidl.test.transitivedependencies"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
   },
@@ -333,7 +333,7 @@ fidl_testdata_info = [
     name = "type_aliases"
     target = "//zircon/tools/fidl/testdata/type_aliases:fidl.test.typealiases"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
   },
@@ -353,7 +353,7 @@ fidl_testdata_info = [
     name = "union_sandwich"
     target = "//zircon/tools/fidl/testdata:fidl.test.unionsandwich"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
     host_build_denylist = [
@@ -365,7 +365,7 @@ fidl_testdata_info = [
     name = "vectors"
     target = "//zircon/tools/fidl/testdata:fidl.test.vectors"
     denylist = [
-      # Libfuzzer fails without at least one nonempty protocol definition.
+      # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
   },

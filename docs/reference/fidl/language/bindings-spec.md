@@ -277,7 +277,7 @@ enum | unknown variant | same as the underlying type of the `enum`
 bits | unknown bits | same as the underlying type of the `bits`
 
 Strict types MUST fail to decode when encountering any unknown data.
-and flexible types MUST succeed when decoding a value with unknown data (with
+Flexible types MUST succeed when decoding a value with unknown data (with
 one exception, see [value types and resource types](#value-resource)).
 
 In general, the underlying unknown data can either be discarded during decoding,
@@ -517,4 +517,4 @@ interface Hasher {
 [attributes]: /docs/reference/fidl/language/attributes.md
 [llcpp]: /docs/reference/fidl/bindings/llcpp-bindings.md
 [source-compatible]: /docs/development/languages/fidl/guides/abi-api-compat.md#strict-flexible
-[soft transitions]: /docs/contribute/governance/rfcs/0002_platform_versioning.md#terminology
+[soft-transitions]: /docs/contribute/governance/rfcs/0002_platform_versioning.md#terminology

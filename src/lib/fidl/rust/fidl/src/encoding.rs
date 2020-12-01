@@ -3167,7 +3167,7 @@ where
 ///
 /// ```rust
 /// pub fn unknown(ordinal: u64, data: fidl::UnknownData) -> Self;
-/// pub fn validate(self) -> Result<Self, fidl::UnknownData>;
+/// pub fn validate(self) -> Result<Self, (u64, fidl::UnknownData)>;
 /// pub fn is_unknown(&self) -> bool;
 /// ```
 ///

@@ -494,9 +494,16 @@ Unions are denoted by their declared name (e.g. **Result**) and nullability:
 
 ### Strict vs. Flexible {#strict-vs-flexible}
 
-FIDL declarations can either have strict or flexible behavior. For strict types
-only, serializing or deserializing a value which contains data not described
-in the declaration is a validation error.
+FIDL declarations can either have **strict** or **flexible** behavior:
+
+<!-- TODO(fxbug.dev/64463): Update this when defaults change. -->
+*   Bits, enums, and unions are strict unless declared with the `flexible`
+    modifier.
+*   Structs always have strict behavior.
+*   Tables always have flexible behavior.
+
+For strict types only, serializing or deserializing a value which contains data
+not described in the declaration is a validation error.
 
 In this example:
 
@@ -505,18 +512,14 @@ In this example:
 ```
 
 By virtue of being flexible, it is simpler for `FlexibleEither` to evolve to
-carry a third variant.. A client aware of the previous definition of
+carry a third variant. A client aware of the previous definition of
 `FlexibleEither` without the third variant can still receive a union from a
 server which has been updated to contain the larger set of variants. If the
 union is of the unknown variant, bindings may expose it as unknown data (i.e. as
 raw bytes and handles) to the user and allow re-encoding the unknown union (e.g.
 to support proxy-like use cases). The methods provided for interacting with
 unknown data for flexible types are described in detail in the [bindings
-reference][bindings-ref].
-
-Bits, enums, and unions can be declared to either have strict or flexible
-behavior. Tables always have flexible behavior, and structs always have strict
-behavior.
+reference][bindings-reference].
 
 More details are discussed in
 [FTP-033: Handling of Unknown Fields and Strictness][ftp-033].

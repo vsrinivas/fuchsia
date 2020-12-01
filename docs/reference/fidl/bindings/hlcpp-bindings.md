@@ -102,6 +102,7 @@ enum class FileMode : uint16_t {
     EXECUTE = 4u;
 };
 ```
+
 In addition, FIDL generates the following methods for `FileMode`:
 
 * Bitwise operators: implementations for the `|`, `|=`, `&`, `&=`, `^`, `^=`,
@@ -122,8 +123,8 @@ Example usage:
 
 #### Flexible bits {#flexible-bits}
 
-Flexible bits are implemented as a `class` instead of an `enum class`, with
-the following additional methods:
+[Flexible][lang-flexible] bits are implemented as a `class` instead of an `enum
+class`, with the following additional methods:
 
 * `constexpr FileMode()`: Default constructor that initializes a value with no
   bits set.
@@ -163,8 +164,8 @@ Given the [enum][lang-enums] definition:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="enums" %}
 ```
 
-The FIDL toolchain generates an equivalent C++ `enum class` using the specified
-underlying type, or `uint32_t` if none is specified:
+The FIDL toolchain generates a C++ `enum class` using the specified underlying
+type, or `uint32_t` if none is specified:
 
 ```c++
 enum class LocationType : uint32_t {
@@ -182,8 +183,8 @@ Example usage:
 
 #### Flexible enums {#flexible-enums}
 
-Flexible enums are implemented as a `class` instead of an `enum class`, with
-the following methods:
+[Flexible][lang-flexible] enums are implemented as a `class` instead of an `enum
+class`, with the following methods:
 
 * `constexpr LocationType()`: Default constructor which initializes the enum to
   an unspecified unknown value.
@@ -200,7 +201,7 @@ the following methods:
 
 The generated class contains a static member for each enum member, which are
 guaranteed to match the members of the `enum class` in the equivalent
-`strict enum`:
+[strict][lang-flexible] enum:
 
 * `const static LocationType MUSEUM`
 * `const static LocationType AIRPORT`
@@ -311,9 +312,8 @@ Example usage:
 
 #### Flexible unions and unknown variants
 
-This section describes differences in generated code if `JsonValue` were marked
-as [`flexible`][lang-unions]. Flexible unions have an extra variant in the
-generated `Tag`:
+[Flexible][lang-flexible] unions have an extra variant in the generated `Tag`
+class:
 
 ```c++
 enum Tag : fidl_xunion_tag_t {
@@ -331,8 +331,8 @@ data which will depend on whether the type is a
 [value or resource type][lang-resource]. Value types will not have
 unknown data methods that reference `zx::handle`.
 
-A flexible `JsonValue` that is a resource type has the following extra
-methods:
+A flexible `JsonValue` that is a [resource][lang-resource] type has the
+following extra methods:
 
 * `const vector<uint8_t>* UnknownBytes() const`: Returns the raw bytes of the
   union variant if it is unknown, or `nullptr` otherwise.
@@ -345,8 +345,8 @@ methods:
   bytes, and handles. This method should only be used for testing, e.g. to
   ensure that code can handle unknown data correctly.
 
-A flexible `JsonValue` not annotated with `resource` has the following extra
-methods
+A flexible `JsonValue` that is a [value][lang-resource] type has the following
+extra methods:
 
 * `const vector<uint8_t>* UnknownBytes() const`: Returns the raw bytes of the
   union variant if it is unknown, or `nullptr` otherwise.
@@ -356,9 +356,12 @@ methods
   be used for testing, e.g. to ensure that code can handle unknown data
   correctly.
 
-Non-flexible (i.e. `strict`) unions fail when decoding a data containing an
-unknown variant. Flexible non-resource unions fail when decoding data containing
-an unknown variant with handles.
+Encoding a union with an unknown variant writes the unknown data and the
+original ordinal back onto the wire.
+
+[Strict][lang-flexible] unions fail when decoding an unknown variant.
+[Flexible][lang-flexible] unions that are [value][lang-resource] types fail when
+decoding an unknown variant with handles.
 
 ### Tables {#tables}
 
@@ -392,7 +395,8 @@ Tables that are a value type will not have unknown
 data methods that reference `zx::handle`, and will fail to decode data with
 unknown fields that contain handles.
 
-A resource `User` will have the following methods:
+If `User` is a [resource][lang-resource] type, it will have the following
+methods:
 
 * `const std::map<uint64_t, fidl::UnknownData>>& UnknownData() const`: Returns a
   map from ordinal to bytes and handles. The handles are guaranteed to be in
@@ -402,7 +406,7 @@ A resource `User` will have the following methods:
   method should only be used for testing, e.g. to check that tables with unknown
   fields are handled correctly.
 
-A non-resource `User` will have the following methods:
+If `User` is a [value][lang-resource] type, it will have the following methods:
 
 * `const std::map<uint64_t, vector<uint8_t>& UnknownData() const`: Returns a
   map from ordinal to bytes.
@@ -412,6 +416,7 @@ A non-resource `User` will have the following methods:
   handled correctly.
 
 `User` also has the following associated generated values:
+
 * `UserPtr`: an alias to `unique_ptr<User>`.
 
 Example usage:
@@ -671,6 +676,7 @@ For the same `TicTacToe` protocol listed above, the FIDL toolchain generates a
 [lang-constants]: /docs/reference/fidl/language/language.md#constants
 [lang-bits]: /docs/reference/fidl/language/language.md#bits
 [lang-enums]: /docs/reference/fidl/language/language.md#enums
+[lang-flexible]: /docs/reference/fidl/language/language.md#strict-vs-flexible
 [lang-structs]: /docs/reference/fidl/language/language.md#structs
 [lang-tables]: /docs/reference/fidl/language/language.md#tables
 [lang-unions]: /docs/reference/fidl/language/language.md#unions
