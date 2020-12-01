@@ -28,8 +28,6 @@ rustc_library("fuchsia-async") {
     "src/handle/mod.rs",
     "src/lib.rs",
     "src/net/mod.rs",
-    "src/net/tcp.rs",
-    "src/net/udp.rs",
     "src/runtime/mod.rs",
     "src/runtime/stub.rs",
     "src/temp.rs",
@@ -47,6 +45,9 @@ rustc_library("fuchsia-async") {
       "src/handle/zircon/on_signals.rs",
       "src/handle/zircon/rwhandle.rs",
       "src/handle/zircon/socket.rs",
+      "src/net/fuchsia/mod.rs",
+      "src/net/fuchsia/tcp.rs",
+      "src/net/fuchsia/udp.rs",
       "src/runtime/fuchsia/executor.rs",
       "src/runtime/fuchsia/instrumentation.rs",
       "src/runtime/fuchsia/mod.rs",
@@ -65,6 +66,7 @@ rustc_library("fuchsia-async") {
       "src/handle/emulated/channel.rs",
       "src/handle/emulated/mod.rs",
       "src/handle/emulated/socket.rs",
+      "src/net/portable/mod.rs",
       "src/runtime/portable.rs",
     ]
   }

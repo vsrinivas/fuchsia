@@ -13,7 +13,7 @@ mod handle;
 pub use self::handle::channel::{Channel, RecvMsg};
 pub use self::handle::socket::Socket;
 
-#[cfg(target_os = "fuchsia")]
+/// Asynchronous networking abstractions.
 pub mod net;
 
 #[cfg(target_os = "fuchsia")]
