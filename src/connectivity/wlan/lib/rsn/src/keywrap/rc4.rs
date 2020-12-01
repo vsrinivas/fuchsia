@@ -28,11 +28,10 @@ impl Algorithm for Rc4 {
     fn wrap_key(&self, kek: &[u8], iv: &[u8; 16], data: &[u8]) -> Result<Vec<u8>, Error> {
         // The key construction and skip used here are not obviously documented by WFA, and were
         // determined from the wpa_supplicant implementation.
-        // RC4 uses a combination of the KEK and IV as an encryption key.
-        let mut key = kek.to_vec();
-        key.extend(iv.iter().cloned());
+        // RC4 uses IV || KEY for the seed.
+        let seed = [iv, kek].concat();
         // RC4 advances the stream cipher before beginning encryption.
-        Ok(Self::process_with_skip(&key[..], data, STREAM_SKIP))
+        Ok(Self::process_with_skip(&seed[..], data, STREAM_SKIP))
     }
 
     fn unwrap_key(&self, kek: &[u8], iv: &[u8; 16], data: &[u8]) -> Result<Vec<u8>, Error> {
@@ -68,17 +67,17 @@ mod tests {
     }
 
     #[test]
-    fn test_key_generation() {
+    fn test_iv_kek_concatenation() {
         // Based on RFC 6229 192 bit key 1 test case
-        let kek = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
         let iv = [
-            0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16,
-            0x17, 0x18,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
+            0x0f, 0x10,
         ];
+        let kek = [0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18];
         let expected = Vec::from_hex("6bd2378ec341c9a42f37ba79f88a32ff").unwrap();
         let data = vec![0u8; expected.len()];
         let rc4 = Rc4;
-        let wrapped = rc4.wrap_key(&kek[..], &iv, &data[..]).unwrap();
+        let wrapped = rc4.wrap_key(&kek, &iv, &data).unwrap();
         assert_eq!(wrapped, expected);
     }
 
