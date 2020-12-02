@@ -13,6 +13,7 @@ use {
         rtc::Rtc,
         time_source::TimeSource,
         time_source_manager::{KernelMonotonicProvider, TimeSourceManager},
+        util::time_at_monotonic,
     },
     chrono::prelude::*,
     fidl_fuchsia_time as ftime, fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -323,8 +324,8 @@ fn determine_strategy(correction: zx::Duration) -> (ClockCorrectionStrategy, Sle
 
 /// Returns the offset between UTC and monotonic times in the supplied clock.
 fn get_clock_offset(clock: &zx::Clock) -> zx::Duration {
-    // Clock read failures should only be caused by an invalid clock object.
-    clock.read().expect("failed to read UTC clock") - zx::Time::get_monotonic()
+    let monotonic_ref = zx::Time::get_monotonic();
+    time_at_monotonic(&clock, monotonic_ref) - monotonic_ref
 }
 
 #[cfg(test)]

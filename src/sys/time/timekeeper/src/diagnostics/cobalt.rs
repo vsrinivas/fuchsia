@@ -8,6 +8,7 @@ use {
         enums::{
             ClockCorrectionStrategy, ClockUpdateReason, InitialClockState, StartClockSource, Track,
         },
+        util::time_at_monotonic,
         MonitorTrack, PrimaryTrack, TimeSource,
     },
     fuchsia_async as fasync,
@@ -124,10 +125,9 @@ impl CobaltDiagnostics {
         );
         if track == Track::Monitor {
             if let Some(monitor_clock) = self.monitor_clock.as_ref() {
-                let (primary, monitor) = match read_clocks((&self.primary_clock, monitor_clock)) {
-                    Ok(times) => times,
-                    Err(_) => return,
-                };
+                let monotonic_ref = zx::Time::get_monotonic();
+                let primary = time_at_monotonic(&self.primary_clock, monotonic_ref);
+                let monitor = time_at_monotonic(monitor_clock, monotonic_ref);
                 let direction =
                     if monitor >= primary { Direction::Positive } else { Direction::Negative };
                 locked_sender.log_event_count(
@@ -202,20 +202,6 @@ impl Diagnostics for CobaltDiagnostics {
             }
         }
     }
-}
-
-/// Read the time in two clocks, ensuring a short delay between the samples.
-fn read_clocks(clocks: (&zx::Clock, &zx::Clock)) -> Result<(zx::Time, zx::Time), zx::Status> {
-    const MAX_DELAY: zx::Duration = zx::Duration::from_micros(500);
-    for _ in 0..3 {
-        let monotonic_before = zx::Time::get_monotonic();
-        let times = (clocks.0.read()?, clocks.1.read()?);
-        let monotonic_after = zx::Time::get_monotonic();
-        if monotonic_after - monotonic_before < MAX_DELAY {
-            return Ok(times);
-        }
-    }
-    Err(zx::Status::TIMED_OUT)
 }
 
 #[cfg(test)]

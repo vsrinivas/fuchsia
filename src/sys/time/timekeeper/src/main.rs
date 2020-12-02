@@ -14,6 +14,7 @@ mod notifier;
 mod rtc;
 mod time_source;
 mod time_source_manager;
+mod util;
 
 use {
     crate::{
