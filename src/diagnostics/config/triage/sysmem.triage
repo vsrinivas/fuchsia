@@ -1,0 +1,52 @@
+{
+    select: {
+        contiguous_allocations_failed: "INSPECT:bootstrap/driver_manager:root/sysmem/heaps/SysmemContiguousPool:allocations_failed",
+        protected_allocations_failed: "INSPECT:bootstrap/driver_manager:root/sysmem/heaps/SysmemAmlogicProtectedPool:allocations_failed",
+        tee_secure_allocations_failed: "INSPECT:bootstrap/driver_manager:root/sysmem/heaps/tee_secure:allocations_failed",
+    },
+    act: {
+        contiguous_failed: {
+            type: "Warning",
+            trigger: "contiguous_allocations_failed > 0",
+            print: "The sysmem contiguous pool has run out of memory at some point. Please file a bug under Graphics",
+        },
+        protected_failed: {
+            type: "Warning",
+            trigger: "protected_allocations_failed > 0",
+            print: "The sysmem amlogic protected pool has run out of memory at some point. Please file a bug under Graphics",
+        },
+        tee_secure_failed: {
+            type: "Warning",
+            trigger: "tee_secure_allocations_failed > 0",
+            print: "The sysmem amlogic tee secure pool has run out of memory at some point. Please file a bug under Graphics",
+        },
+    },
+    test: {
+        all_ok: {
+            no: [
+                "contiguous_failed",
+                "protected_failed",
+                "tee_secure_failed",
+            ],
+            yes: [],
+            values: {
+                contiguous_allocations_failed: 0,
+                protected_allocations_failed: 0,
+                tee_secure_allocations_failed: 0,
+            },
+        },
+        all_failed: {
+            no: [],
+            yes: [
+                "contiguous_failed",
+                "protected_failed",
+                "tee_secure_failed",
+            ],
+            values: {
+                contiguous_allocations_failed: 1,
+                protected_allocations_failed: 1,
+                tee_secure_allocations_failed: 1,
+            },
+        },
+    },
+}

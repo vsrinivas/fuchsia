@@ -154,6 +154,8 @@ class Device final : public DdkDeviceType,
   async::Loop loop_;
   thrd_t loop_thrd_;
 
+  // Currently located at bootstrap/driver_manager:root/sysmem.
+  inspect::Node sysmem_root_;
   inspect::Node heaps_;
 
   inspect::Node collections_node_;

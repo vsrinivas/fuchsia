@@ -319,8 +319,11 @@ void Device::CheckForUnbind() {
 }
 
 zx_status_t Device::Bind() {
-  heaps_ = inspector_.GetRoot().CreateChild("heaps");
-  collections_node_ = inspector_.GetRoot().CreateChild("collections");
+  // Put everything under a node called "sysmem" because there's currently there's not a simple way
+  // to distinguish (using a selector) which driver inspect information is coming from.
+  sysmem_root_ = inspector_.GetRoot().CreateChild("sysmem");
+  heaps_ = sysmem_root_.CreateChild("heaps");
+  collections_node_ = sysmem_root_.CreateChild("collections");
 
   zx_status_t status = ddk::PDevProtocolClient::CreateFromDevice(parent_, &pdev_);
   if (status != ZX_OK) {
