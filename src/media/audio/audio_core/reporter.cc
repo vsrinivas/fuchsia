@@ -156,6 +156,105 @@ class Reporter::OverflowUnderflowTracker {
   const uint32_t cobalt_time_since_last_event_or_session_start_metric_id_;
 };
 
+class Reporter::ObjectTracker {
+ public:
+  ObjectTracker(Reporter::Impl& impl, AudioObjectsCreatedMetricDimensionObjectType object_type)
+      : impl_(impl), object_type_(object_type) {}
+
+  void SetFormat(const Format& f) { format_ = f; }
+
+  // Marks the object "enabled", which triggers a cobalt metric increment.
+  void Enable() {
+    // Ignore when cobalt is disabled.
+    auto& logger = impl_.cobalt_logger;
+    if (!logger) {
+      return;
+    }
+
+    // Log exactly once.
+    if (enabled_ || !format_) {
+      return;
+    }
+    enabled_ = true;
+
+    AudioObjectsCreatedMetricDimensionSampleFormat sample_format;
+    switch (format_->sample_format()) {
+      case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
+        sample_format = AudioObjectsCreatedMetricDimensionSampleFormat::Uint8;
+        break;
+      case fuchsia::media::AudioSampleFormat::SIGNED_16:
+        sample_format = AudioObjectsCreatedMetricDimensionSampleFormat::Int16;
+        break;
+      case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
+        sample_format = AudioObjectsCreatedMetricDimensionSampleFormat::Int24;
+        break;
+      case fuchsia::media::AudioSampleFormat::FLOAT:
+        sample_format = AudioObjectsCreatedMetricDimensionSampleFormat::Float32;
+        break;
+      default:
+        sample_format = AudioObjectsCreatedMetricDimensionSampleFormat::Other;
+        break;
+    }
+    AudioObjectsCreatedMetricDimensionChannels channels;
+    switch (format_->channels()) {
+      case 1:
+        channels = AudioObjectsCreatedMetricDimensionChannels::Chan1;
+        break;
+      case 2:
+        channels = AudioObjectsCreatedMetricDimensionChannels::Chan2;
+        break;
+      case 4:
+        channels = AudioObjectsCreatedMetricDimensionChannels::Chan4;
+        break;
+      default:
+        channels = AudioObjectsCreatedMetricDimensionChannels::Other;
+        break;
+    }
+    AudioObjectsCreatedMetricDimensionFrameRate frame_rate;
+    switch (format_->frames_per_second()) {
+      case 16000:
+        frame_rate = AudioObjectsCreatedMetricDimensionFrameRate::Rate16000;
+        break;
+      case 44100:
+        frame_rate = AudioObjectsCreatedMetricDimensionFrameRate::Rate44100;
+        break;
+      case 48000:
+        frame_rate = AudioObjectsCreatedMetricDimensionFrameRate::Rate48000;
+        break;
+      case 96000:
+        frame_rate = AudioObjectsCreatedMetricDimensionFrameRate::Rate96000;
+        break;
+      default:
+        frame_rate = AudioObjectsCreatedMetricDimensionFrameRate::Other;
+        break;
+    }
+    auto e = fuchsia::cobalt::CobaltEvent{
+        .metric_id = kAudioObjectsCreatedMetricId,
+        .event_codes = {object_type_, sample_format, channels, frame_rate},
+        .payload =
+            fuchsia::cobalt::EventPayload::WithEventCount(fuchsia::cobalt::CountEvent{.count = 1}),
+    };
+    impl_.threading_model.FidlDomain().PostTask([&logger, e = std::move(e)]() mutable {
+      logger->LogCobaltEvent(std::move(e), [](fuchsia::cobalt::Status status) {
+        if (status == fuchsia::cobalt::Status::OK) {
+          return;
+        }
+        if (status == fuchsia::cobalt::Status::BUFFER_FULL) {
+          FX_LOGS_FIRST_N(WARNING, 50) << "Cobalt logger failed with buffer full";
+        } else {
+          FX_LOGS(ERROR) << "Cobalt logger failed with code " << static_cast<int>(status);
+        }
+      });
+    });
+  }
+
+ private:
+  Reporter::Impl& impl_;
+  AudioObjectsCreatedMetricDimensionObjectType object_type_;
+  std::optional<Format> format_;
+  bool enabled_ = false;
+};
+
 class FormatInfo {
  public:
   FormatInfo(inspect::Node& parent_node, const std::string& name)
@@ -195,16 +294,17 @@ class FormatInfo {
   inspect::UintProperty frames_per_second_;
 };
 
-class DeviceDriverInfo {
+class Reporter::DeviceDriverInfo {
  public:
-  DeviceDriverInfo(inspect::Node& parent_node)
+  DeviceDriverInfo(inspect::Node& parent_node, ObjectTracker&& object_tracker)
       : node_(parent_node.CreateChild("driver")),
         name_(node_.CreateString("name", "unknown")),
         total_delay_(node_.CreateUint("external delay + fifo delay (ns)", 0)),
         external_delay_(node_.CreateUint("external delay (ns)", 0)),
         fifo_delay_(node_.CreateUint("fifo delay (ns)", 0)),
         fifo_depth_(node_.CreateUint("fifo depth in frames", 0)),
-        format_(parent_node, "format") {}
+        format_(parent_node, "format"),
+        object_tracker_(std::move(object_tracker)) {}
 
   void Set(const AudioDriver& d) {
     name_.Set(d.manufacturer_name() + ' ' + d.product_name());
@@ -214,6 +314,8 @@ class DeviceDriverInfo {
     fifo_depth_.Set(d.fifo_depth_frames());
     if (auto f = d.GetFormat(); f.has_value()) {
       format_.Set(*f);
+      object_tracker_.SetFormat(*f);
+      object_tracker_.Enable();
     }
   }
 
@@ -225,6 +327,7 @@ class DeviceDriverInfo {
   inspect::UintProperty fifo_delay_;
   inspect::UintProperty fifo_depth_;
   FormatInfo format_;
+  ObjectTracker object_tracker_;
 };
 
 class DeviceGainInfo {
@@ -269,7 +372,8 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
   OutputDeviceImpl(Reporter::Impl& impl, const std::string& name, const std::string& thread_name)
       : node_(impl.outputs_node.CreateChild(name)),
         thread_name_(node_.CreateString("mixer thread name", thread_name)),
-        driver_info_(node_),
+        driver_info_(
+            node_, ObjectTracker(impl, AudioObjectsCreatedMetricDimensionObjectType::OutputDevice)),
         gain_info_(node_),
         device_underflows_(
             std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
@@ -339,7 +443,8 @@ class Reporter::InputDeviceImpl : public Reporter::InputDevice {
   InputDeviceImpl(Reporter::Impl& impl, const std::string& name, const std::string& thread_name)
       : node_(impl.inputs_node.CreateChild(name)),
         thread_name_(node_.CreateString("mixer thread name", thread_name)),
-        driver_info_(node_),
+        driver_info_(
+            node_, ObjectTracker(impl, AudioObjectsCreatedMetricDimensionObjectType::InputDevice)),
         gain_info_(node_) {
     time_since_death_ = node_.CreateLazyValues("InputDeviceTimeSinceDeath", [this] {
       inspect::Inspector i;
@@ -371,16 +476,20 @@ class Reporter::InputDeviceImpl : public Reporter::InputDevice {
   std::optional<zx::time> time_of_death_;
 };
 
-class ClientPort {
+class Reporter::ClientPort {
  public:
-  ClientPort(inspect::Node& node)
-      : format_(node, "format"),
+  ClientPort(inspect::Node& node, ObjectTracker&& object_tracker)
+      : object_tracker_(std::move(object_tracker)),
+        format_(node, "format"),
         payload_buffers_node_(node.CreateChild("payload buffers")),
         gain_db_(node.CreateDouble("gain db", 0.0)),
         muted_(node.CreateBool("muted", false)),
         set_gain_with_ramp_calls_(node.CreateUint("calls to SetGainWithRamp", 0)) {}
 
-  void SetFormat(const Format& format) { format_.Set(format); }
+  void SetFormat(const Format& format) {
+    object_tracker_.SetFormat(format);
+    format_.Set(format);
+  }
 
   void SetGain(float gain_db) { gain_db_.Set(gain_db); }
   void SetGainWithRamp(float gain_db, zx::duration duration,
@@ -402,6 +511,7 @@ class ClientPort {
   }
 
   void SendPacket(const fuchsia::media::StreamPacket& packet) {
+    object_tracker_.Enable();
     std::lock_guard<std::mutex> lock(mutex_);
     auto b = payload_buffers_.find(packet.payload_buffer_id);
     if (b == payload_buffers_.end()) {
@@ -412,6 +522,7 @@ class ClientPort {
   }
 
  private:
+  ObjectTracker object_tracker_;
   FormatInfo format_;
   inspect::Node payload_buffers_node_;
 
@@ -438,7 +549,8 @@ class Reporter::RendererImpl : public Reporter::Renderer {
  public:
   RendererImpl(Reporter::Impl& impl)
       : node_(impl.renderers_node.CreateChild(impl.NextRendererName())),
-        client_port_(node_),
+        client_port_(node_,
+                     ObjectTracker(impl, AudioObjectsCreatedMetricDimensionObjectType::Renderer)),
         min_lead_time_ns_(node_.CreateUint("min lead time (ns)", 0)),
         pts_continuity_threshold_seconds_(node_.CreateDouble("pts continuity threshold (s)", 0.0)),
         final_stream_gain_(node_.CreateDouble("final stream gain (post-volume) dbfs", 0.0)),
@@ -510,7 +622,8 @@ class Reporter::CapturerImpl : public Reporter::Capturer {
  public:
   CapturerImpl(Reporter::Impl& impl, const std::string& thread_name)
       : node_(impl.capturers_node.CreateChild(impl.NextCapturerName())),
-        client_port_(node_),
+        client_port_(node_,
+                     ObjectTracker(impl, AudioObjectsCreatedMetricDimensionObjectType::Capturer)),
         min_fence_time_ns_(node_.CreateUint("min fence time (ns)", 0)),
         usage_(node_.CreateString("usage", "default")),
         thread_name_(node_.CreateString("mixer thread name", thread_name)),

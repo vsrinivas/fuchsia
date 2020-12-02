@@ -210,12 +210,16 @@ class Reporter {
 
  private:
   class OverflowUnderflowTracker;
+  class ObjectTracker;
+  class DeviceDriverInfo;
   class OutputDeviceImpl;
   class InputDeviceImpl;
+  class ClientPort;
   class RendererImpl;
   class CapturerImpl;
 
   friend class OverflowUnderflowTracker;
+  friend class ObjectTracker;
   friend class OutputDeviceImpl;
   friend class InputDeviceImpl;
   friend class RendererImpl;
