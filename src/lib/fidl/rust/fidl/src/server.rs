@@ -35,7 +35,7 @@ impl ServeInner {
         &self.channel
     }
 
-    /// Set the server to shutdown.
+    /// Set the server to shutdown the next time the stream is polled.
     pub fn shutdown(&self) {
         self.shutdown.store(true, atomic::Ordering::Relaxed);
         self.waker.wake();

@@ -667,6 +667,8 @@ pub struct SomeProtocolControlHandle {
 }
 
 impl SomeProtocolControlHandle {
+    /// Set the server to shutdown. The underlying channel is only closed the
+    /// next time the stream is polled.
     pub fn shutdown(&self) {
         self.inner.shutdown()
     }

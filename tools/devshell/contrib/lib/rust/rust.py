@@ -31,7 +31,7 @@ class GnTarget:
         match = re.match(
             r"([\w/.-]*)" + r"(:([\w-]+))?" + r"(\(([\w/:-]+)\))?$", gn_target)
         if match is None:
-            print(f"Invalid GN label '{gen_target}'")
+            print(f"Invalid GN label '{gn_target}'")
             raise ValueError(gn_target)
         path, name, toolchain = match.group(1, 3, 5)
 

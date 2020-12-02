@@ -403,6 +403,8 @@ pub struct TopControlHandle {
 }
 
 impl TopControlHandle {
+    /// Set the server to shutdown. The underlying channel is only closed the
+    /// next time the stream is polled.
     pub fn shutdown(&self) {
         self.inner.shutdown()
     }
@@ -419,11 +421,11 @@ pub struct TopGetFooResponder {
     ordinal: u64,
 }
 
+/// Set the the channel to be shutdown (see [`TopControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
 impl std::ops::Drop for TopGetFooResponder {
     fn drop(&mut self) {
-        // Shutdown the channel if the responder is dropped without sending a response
-        // so that the client doesn't hang. To prevent this behavior, some methods
-        // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };

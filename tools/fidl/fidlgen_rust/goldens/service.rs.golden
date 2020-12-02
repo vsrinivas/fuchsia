@@ -351,6 +351,8 @@ pub struct FirstProtocolControlHandle {
 }
 
 impl FirstProtocolControlHandle {
+    /// Set the server to shutdown. The underlying channel is only closed the
+    /// next time the stream is polled.
     pub fn shutdown(&self) {
         self.inner.shutdown()
     }
@@ -684,6 +686,8 @@ pub struct SecondProtocolControlHandle {
 }
 
 impl SecondProtocolControlHandle {
+    /// Set the server to shutdown. The underlying channel is only closed the
+    /// next time the stream is polled.
     pub fn shutdown(&self) {
         self.inner.shutdown()
     }

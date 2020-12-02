@@ -818,6 +818,8 @@ pub struct {{ $protocol.Name }}ControlHandle {
 }
 
 impl {{ $protocol.Name }}ControlHandle {
+	/// Set the server to shutdown. The underlying channel is only closed the
+	/// next time the stream is polled.
 	pub fn shutdown(&self) {
 		self.inner.shutdown()
 	}
@@ -867,11 +869,11 @@ pub struct {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 	ordinal: u64,
 }
 
+/// Set the the channel to be shutdown (see [` + "`{{ $protocol.Name }}ControlHandle::shutdown`" + `])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call ` + "`drop_without_shutdown`" + `.
 impl std::ops::Drop for {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 	fn drop(&mut self) {
-		// Shutdown the channel if the responder is dropped without sending a response
-		// so that the client doesn't hang. To prevent this behavior, some methods
-		// call "drop_without_shutdown"
 		self.control_handle.shutdown();
 		// Safety: drops once, never accessed again
 		unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };

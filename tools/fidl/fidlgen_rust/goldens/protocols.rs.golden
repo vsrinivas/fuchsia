@@ -1094,6 +1094,8 @@ pub struct WithAndWithoutRequestResponseControlHandle {
 }
 
 impl WithAndWithoutRequestResponseControlHandle {
+    /// Set the server to shutdown. The underlying channel is only closed the
+    /// next time the stream is polled.
     pub fn shutdown(&self) {
         self.inner.shutdown()
     }
@@ -1145,11 +1147,11 @@ pub struct WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
     ordinal: u64,
 }
 
+/// Set the the channel to be shutdown (see [`WithAndWithoutRequestResponseControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
 impl std::ops::Drop for WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
     fn drop(&mut self) {
-        // Shutdown the channel if the responder is dropped without sending a response
-        // so that the client doesn't hang. To prevent this behavior, some methods
-        // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
@@ -1223,11 +1225,11 @@ pub struct WithAndWithoutRequestResponseNoRequestWithResponseResponder {
     ordinal: u64,
 }
 
+/// Set the the channel to be shutdown (see [`WithAndWithoutRequestResponseControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
 impl std::ops::Drop for WithAndWithoutRequestResponseNoRequestWithResponseResponder {
     fn drop(&mut self) {
-        // Shutdown the channel if the responder is dropped without sending a response
-        // so that the client doesn't hang. To prevent this behavior, some methods
-        // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
@@ -1301,11 +1303,11 @@ pub struct WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
     ordinal: u64,
 }
 
+/// Set the the channel to be shutdown (see [`WithAndWithoutRequestResponseControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
 impl std::ops::Drop for WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
     fn drop(&mut self) {
-        // Shutdown the channel if the responder is dropped without sending a response
-        // so that the client doesn't hang. To prevent this behavior, some methods
-        // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
@@ -1379,11 +1381,11 @@ pub struct WithAndWithoutRequestResponseWithRequestWithResponseResponder {
     ordinal: u64,
 }
 
+/// Set the the channel to be shutdown (see [`WithAndWithoutRequestResponseControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
 impl std::ops::Drop for WithAndWithoutRequestResponseWithRequestWithResponseResponder {
     fn drop(&mut self) {
-        // Shutdown the channel if the responder is dropped without sending a response
-        // so that the client doesn't hang. To prevent this behavior, some methods
-        // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
@@ -2084,6 +2086,8 @@ pub struct WithErrorSyntaxControlHandle {
 }
 
 impl WithErrorSyntaxControlHandle {
+    /// Set the server to shutdown. The underlying channel is only closed the
+    /// next time the stream is polled.
     pub fn shutdown(&self) {
         self.inner.shutdown()
     }
@@ -2100,11 +2104,11 @@ pub struct WithErrorSyntaxResponseAsStructResponder {
     ordinal: u64,
 }
 
+/// Set the the channel to be shutdown (see [`WithErrorSyntaxControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
 impl std::ops::Drop for WithErrorSyntaxResponseAsStructResponder {
     fn drop(&mut self) {
-        // Shutdown the channel if the responder is dropped without sending a response
-        // so that the client doesn't hang. To prevent this behavior, some methods
-        // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
@@ -2187,11 +2191,11 @@ pub struct WithErrorSyntaxErrorAsPrimitiveResponder {
     ordinal: u64,
 }
 
+/// Set the the channel to be shutdown (see [`WithErrorSyntaxControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
 impl std::ops::Drop for WithErrorSyntaxErrorAsPrimitiveResponder {
     fn drop(&mut self) {
-        // Shutdown the channel if the responder is dropped without sending a response
-        // so that the client doesn't hang. To prevent this behavior, some methods
-        // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
@@ -2274,11 +2278,11 @@ pub struct WithErrorSyntaxErrorAsEnumResponder {
     ordinal: u64,
 }
 
+/// Set the the channel to be shutdown (see [`WithErrorSyntaxControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
 impl std::ops::Drop for WithErrorSyntaxErrorAsEnumResponder {
     fn drop(&mut self) {
-        // Shutdown the channel if the responder is dropped without sending a response
-        // so that the client doesn't hang. To prevent this behavior, some methods
-        // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
@@ -2995,6 +2999,8 @@ pub struct ChannelProtocolControlHandle {
 }
 
 impl ChannelProtocolControlHandle {
+    /// Set the server to shutdown. The underlying channel is only closed the
+    /// next time the stream is polled.
     pub fn shutdown(&self) {
         self.inner.shutdown()
     }
@@ -3028,11 +3034,11 @@ pub struct ChannelProtocolMethodBResponder {
     ordinal: u64,
 }
 
+/// Set the the channel to be shutdown (see [`ChannelProtocolControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
 impl std::ops::Drop for ChannelProtocolMethodBResponder {
     fn drop(&mut self) {
-        // Shutdown the channel if the responder is dropped without sending a response
-        // so that the client doesn't hang. To prevent this behavior, some methods
-        // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
@@ -3106,11 +3112,11 @@ pub struct ChannelProtocolMutateSocketResponder {
     ordinal: u64,
 }
 
+/// Set the the channel to be shutdown (see [`ChannelProtocolControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
 impl std::ops::Drop for ChannelProtocolMutateSocketResponder {
     fn drop(&mut self) {
-        // Shutdown the channel if the responder is dropped without sending a response
-        // so that the client doesn't hang. To prevent this behavior, some methods
-        // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
@@ -3672,6 +3678,8 @@ pub struct TransitionalControlHandle {
 }
 
 impl TransitionalControlHandle {
+    /// Set the server to shutdown. The underlying channel is only closed the
+    /// next time the stream is polled.
     pub fn shutdown(&self) {
         self.inner.shutdown()
     }
@@ -3705,11 +3713,11 @@ pub struct TransitionalRequestResponder {
     ordinal: u64,
 }
 
+/// Set the the channel to be shutdown (see [`TransitionalControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
 impl std::ops::Drop for TransitionalRequestResponder {
     fn drop(&mut self) {
-        // Shutdown the channel if the responder is dropped without sending a response
-        // so that the client doesn't hang. To prevent this behavior, some methods
-        // call "drop_without_shutdown"
         self.control_handle.shutdown();
         // Safety: drops once, never accessed again
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
