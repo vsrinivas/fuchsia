@@ -89,6 +89,7 @@ class UlibfsHarness : public fuchsia::io::test::Io1Harness {
     config.set_no_exec(false);
     config.set_no_vmofile(false);
     config.set_no_remote_dir(false);
+    config.set_no_admin(false);
     callback(std::move(config));
   }
 

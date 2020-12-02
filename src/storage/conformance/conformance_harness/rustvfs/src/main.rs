@@ -73,11 +73,12 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                 let config = Io1Config {
                     immutable_file: Some(false),
                     immutable_dir: Some(false),
-                    no_exec: Some(false),
+                    no_exec: Some(true),
                     no_vmofile: Some(false),
                     // TODO(fxbug.dev/33880): Remote directories are supported by the vfs, just
                     // haven't been implemented in this harness yet.
                     no_remote_dir: Some(true),
+                    no_admin: Some(true),
                     ..Io1Config::EMPTY
                 };
                 responder.send(config)?;

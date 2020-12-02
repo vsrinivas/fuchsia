@@ -43,7 +43,7 @@ table Io1Config {
     /// Directories are read-only.
     2: bool immutable_dir;
 
-    /// The exec rights is not supported.
+    /// The exec right is not supported.
     3: bool no_exec;
 
     /// Vmofiles are not supported.
@@ -51,6 +51,9 @@ table Io1Config {
 
     /// Remote directories are not supported.
     5: bool no_remote_dir;
+
+    /// The admin right is not supported.
+    6: bool no_admin;
 };
 
 resource table Directory {

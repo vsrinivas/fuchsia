@@ -73,34 +73,32 @@ fn get_directory_from_harness(
     return client;
 }
 
-/// Constant representing the aggregate of all io.fidl rights.
-// TODO(fxbug.dev/59574): Add io::OPEN_RIGHT_EXECUTABLE and io::OPEN_RIGHT_ADMIN back here once
-// they are supported by rustvfs (or alternatively add tests to check they *are not* supported for
-// all implementations, or add a config flag to allow controlling this as a test configuration
-// option).
-const ALL_RIGHTS: u32 = io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE;
+/// Returns a constant representing the aggregate of all io.fidl rights that are supported by the
+/// test harness.
+async fn all_rights_for_harness(harness: &io_test::Io1HarnessProxy) -> u32 {
+    let config = harness.get_config().await.expect("Cannot get config from harness");
+
+    let mut all_rights = io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE;
+
+    if !config.no_exec.unwrap_or_default() {
+        all_rights |= io::OPEN_RIGHT_EXECUTABLE;
+    }
+    if !config.no_admin.unwrap_or_default() {
+        all_rights |= io::OPEN_RIGHT_ADMIN;
+    }
+    all_rights
+}
 
 /// Returns a list of flag combinations to test. Returns a vector of the aggregate of
 /// every constant flag and every combination of variable flags.
-/// Ex. build_flag_combinations([100], [010, 001]) would return [100, 110, 101, 111]
+/// Ex. build_flag_combinations(100, 011) would return [100, 110, 101, 111]
 /// for flags expressed as binary. We exclude the no rights case as that is an
-/// invalid argument in most cases. Ex. build_flag_combinations([], [010, 001])
+/// invalid argument in most cases. Ex. build_flag_combinations(0, 011)
 /// would return [010, 001, 011] without the 000 case.
-/// All flags passed in must be single bit values.
-fn build_flag_combinations(constant_flags: &[u32], variable_flags: &[u32]) -> Vec<u32> {
-    // Initial check to make sure all flags are single bit.
-    for flag in constant_flags {
-        assert_eq!(flag & (flag - 1), 0);
-    }
-    for flag in variable_flags {
-        assert_eq!(flag & (flag - 1), 0);
-    }
-    let mut base_flag = 0;
-    for flag in constant_flags {
-        base_flag |= flag;
-    }
-    let mut vec = vec![base_flag];
-    for flag in variable_flags {
+fn build_flag_combinations(constant_flags: u32, variable_flags: u32) -> Vec<u32> {
+    let mut vec = vec![constant_flags];
+
+    for flag in split_flags(variable_flags) {
         let length = vec.len();
         for i in 0..length {
             vec.push(vec[i] | flag);
@@ -109,6 +107,19 @@ fn build_flag_combinations(constant_flags: &[u32], variable_flags: &[u32]) -> Ve
     vec.retain(|element| *element != 0);
 
     vec
+}
+
+/// Splits a bitset into a vector of its component bits. e.g. 1011 becomes [0001, 0010, 1000].
+fn split_flags(flags: u32) -> Vec<u32> {
+    let mut flags = flags;
+    let mut bits = vec![];
+    while flags != 0 {
+        // x & -x returns the lowest bit set in x. Add it to the vec and then unset that bit.
+        let lowest_bit = flags & flags.wrapping_neg();
+        bits.push(lowest_bit);
+        flags ^= lowest_bit;
+    }
+    bits
 }
 
 fn root_directory(flags: u32, entries: Vec<io_test::DirectoryEntry>) -> io_test::Directory {
@@ -195,15 +206,12 @@ async fn open_remote_directory_test() {
 #[fasync::run_singlethreaded(test)]
 async fn open_dir_with_sufficient_rights() {
     let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
 
-    let root = root_directory(ALL_RIGHTS, vec![]);
+    let root = root_directory(all_rights, vec![]);
     let root_dir = get_directory_from_harness(&harness, root);
 
-    let constant_flags = [];
-    let variable_flags = [io::OPEN_RIGHT_READABLE, io::OPEN_RIGHT_WRITABLE];
-
-    let dir_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
-    for dir_flags in dir_flags_set {
+    for dir_flags in build_flag_combinations(0, all_rights) {
         let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
         root_dir
             .open(dir_flags | io::OPEN_FLAG_DESCRIBE, io::MODE_TYPE_DIRECTORY, ".", server)
@@ -217,15 +225,12 @@ async fn open_dir_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn open_dir_with_insufficient_rights() {
     let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
 
     let root = root_directory(0, vec![]);
     let root_dir = get_directory_from_harness(&harness, root);
 
-    let constant_flags = [];
-    let variable_flags = [io::OPEN_RIGHT_READABLE, io::OPEN_RIGHT_WRITABLE];
-
-    let dir_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
-    for dir_flags in dir_flags_set {
+    for dir_flags in build_flag_combinations(0, all_rights) {
         let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
         root_dir
             .open(dir_flags | io::OPEN_FLAG_DESCRIBE, io::MODE_TYPE_DIRECTORY, ".", server)
@@ -239,13 +244,10 @@ async fn open_dir_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn open_child_dir_with_same_rights() {
     let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
 
-    let constant_flags = [];
-    let variable_flags = [io::OPEN_RIGHT_READABLE, io::OPEN_RIGHT_WRITABLE];
-
-    let dir_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
-    for dir_flags in dir_flags_set {
-        let root = root_directory(ALL_RIGHTS, vec![directory("child", dir_flags, vec![])]);
+    for dir_flags in build_flag_combinations(0, all_rights) {
+        let root = root_directory(all_rights, vec![directory("child", dir_flags, vec![])]);
         let root_dir = get_directory_from_harness(&harness, root);
 
         let parent_dir =
@@ -306,15 +308,12 @@ async fn open_child_dir_with_extra_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn file_read_with_sufficient_rights() {
     let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
 
     let filename = "testing.txt";
 
-    let constant_flags = [io::OPEN_RIGHT_READABLE];
-    let variable_flags = [io::OPEN_RIGHT_WRITABLE];
-
-    let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
-    for file_flags in file_flags_set {
-        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, vec![])]);
+    for file_flags in build_flag_combinations(io::OPEN_RIGHT_READABLE, all_rights) {
+        let root = root_directory(all_rights, vec![file(filename, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
@@ -327,15 +326,14 @@ async fn file_read_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn file_read_with_insufficient_rights() {
     let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
 
     let filename = "testing.txt";
 
-    let constant_flags = [];
-    let variable_flags = [io::OPEN_RIGHT_WRITABLE];
+    let not_readable_flags = all_rights & !io::OPEN_RIGHT_READABLE;
 
-    let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
-    for file_flags in file_flags_set {
-        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, vec![])]);
+    for file_flags in build_flag_combinations(0, not_readable_flags) {
+        let root = root_directory(all_rights, vec![file(filename, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
@@ -348,15 +346,12 @@ async fn file_read_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn file_read_at_with_sufficient_rights() {
     let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
 
     let filename = "testing.txt";
 
-    let constant_flags = [io::OPEN_RIGHT_READABLE];
-    let variable_flags = [io::OPEN_RIGHT_WRITABLE];
-
-    let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
-    for file_flags in file_flags_set {
-        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, vec![])]);
+    for file_flags in build_flag_combinations(io::OPEN_RIGHT_READABLE, all_rights) {
+        let root = root_directory(all_rights, vec![file(filename, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
@@ -369,15 +364,14 @@ async fn file_read_at_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn file_read_at_with_insufficient_rights() {
     let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
 
     let filename = "testing.txt";
 
-    let constant_flags = [];
-    let variable_flags = [io::OPEN_RIGHT_WRITABLE];
+    let not_readable_flags = all_rights & !io::OPEN_RIGHT_READABLE;
 
-    let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
-    for file_flags in file_flags_set {
-        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, vec![])]);
+    for file_flags in build_flag_combinations(0, not_readable_flags) {
+        let root = root_directory(all_rights, vec![file(filename, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
@@ -390,15 +384,12 @@ async fn file_read_at_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn file_write_with_sufficient_rights() {
     let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
 
     let filename = "testing.txt";
 
-    let constant_flags = [io::OPEN_RIGHT_WRITABLE];
-    let variable_flags = [io::OPEN_RIGHT_READABLE];
-
-    let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
-    for file_flags in file_flags_set {
-        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, vec![])]);
+    for file_flags in build_flag_combinations(io::OPEN_RIGHT_WRITABLE, all_rights) {
+        let root = root_directory(all_rights, vec![file(filename, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
@@ -411,15 +402,14 @@ async fn file_write_with_sufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn file_write_with_insufficient_rights() {
     let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
 
     let filename = "testing.txt";
 
-    let constant_flags = [];
-    let variable_flags = [io::OPEN_RIGHT_READABLE];
+    let non_writable_flags = all_rights & !io::OPEN_RIGHT_WRITABLE;
 
-    let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
-    for file_flags in file_flags_set {
-        let root = root_directory(ALL_RIGHTS, vec![file(filename, file_flags, vec![])]);
+    for file_flags in build_flag_combinations(0, non_writable_flags) {
+        let root = root_directory(all_rights, vec![file(filename, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
@@ -432,15 +422,12 @@ async fn file_write_with_insufficient_rights() {
 #[fasync::run_singlethreaded(test)]
 async fn file_read_in_subdirectory() {
     let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
 
-    let constant_flags = [io::OPEN_RIGHT_READABLE];
-    let variable_flags = [io::OPEN_RIGHT_WRITABLE];
-
-    let file_flags_set = build_flag_combinations(&constant_flags, &variable_flags);
-    for file_flags in file_flags_set {
+    for file_flags in build_flag_combinations(io::OPEN_RIGHT_READABLE, all_rights) {
         let root = root_directory(
-            ALL_RIGHTS,
-            vec![directory("subdir", ALL_RIGHTS, vec![file("testing.txt", file_flags, vec![])])],
+            all_rights,
+            vec![directory("subdir", all_rights, vec![file("testing.txt", file_flags, vec![])])],
         );
         let test_dir = get_directory_from_harness(&harness, root);
 
@@ -458,23 +445,31 @@ async fn file_read_in_subdirectory() {
 
 #[cfg(test)]
 mod tests {
-    use super::build_flag_combinations;
+    use super::{build_flag_combinations, split_flags};
 
     #[test]
     fn test_build_flag_combinations() {
-        let constant_flags = [0b100];
-        let variable_flags = [0b010, 0b001];
-        let generated_combinations = build_flag_combinations(&constant_flags, &variable_flags);
-        let expected_result = [0b100, 0b110, 0b101, 0b111];
+        let constant_flags = 0b100;
+        let variable_flags = 0b011;
+        let generated_combinations = build_flag_combinations(constant_flags, variable_flags);
+        let expected_result = [0b100, 0b101, 0b110, 0b111];
         assert_eq!(generated_combinations, expected_result);
     }
 
     #[test]
     fn test_build_flag_combinations_without_empty_rights() {
-        let constant_flags = [];
-        let variable_flags = [0b010, 0b001];
-        let generated_combinations = build_flag_combinations(&constant_flags, &variable_flags);
-        let expected_result = [0b010, 0b001, 0b011];
+        let constant_flags = 0;
+        let variable_flags = 0b011;
+        let generated_combinations = build_flag_combinations(constant_flags, variable_flags);
+        let expected_result = [0b001, 0b010, 0b011];
         assert_eq!(generated_combinations, expected_result);
+    }
+
+    #[test]
+    fn test_split_flags() {
+        assert_eq!(split_flags(0), vec![]);
+        assert_eq!(split_flags(0b001), vec![0b001]);
+        assert_eq!(split_flags(0b101), vec![0b001, 0b100]);
+        assert_eq!(split_flags(0b111), vec![0b001, 0b010, 0b100]);
     }
 }
