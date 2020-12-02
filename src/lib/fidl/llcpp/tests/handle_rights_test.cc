@@ -80,8 +80,8 @@ class HandleRightsTest : public ::testing::Test {
 
     zx::channel server_end;
     ASSERT_EQ(zx::channel::create(0, &client_end_, &server_end), ZX_OK);
-    server_ = std::make_unique<HandleRightsServer>();
-    fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(server_end), server_.get());
+    fidl::BindServer(loop_->dispatcher(), std::move(server_end),
+                     std::make_unique<HandleRightsServer>());
   }
 
   test::HandleRights::SyncClient SyncClient() {
@@ -91,12 +91,12 @@ class HandleRightsTest : public ::testing::Test {
 
   fidl::Client<test::HandleRights> AsyncClient(test::HandleRights::AsyncEventHandlers handlers) {
     EXPECT_TRUE(client_end_.is_valid());
-    return fidl::Client<test::HandleRights>(std::move(client_end_), loop_->dispatcher(), std::move(handlers));
+    return fidl::Client<test::HandleRights>(std::move(client_end_), loop_->dispatcher(),
+                                            std::move(handlers));
   }
 
  private:
   std::unique_ptr<async::Loop> loop_;
-  std::unique_ptr<HandleRightsServer> server_;
   zx::channel client_end_;
 };
 
@@ -152,7 +152,6 @@ TEST_F(HandleRightsTest, SyncSendWrongType) {
   ASSERT_EQ(resp.status(), ZX_ERR_WRONG_TYPE);
 }
 
-/* TODO(fxb/65577) Re-enable these tests.
 TEST_F(HandleRightsTest, AsyncSendTooFewRights) {
   auto client = AsyncClient({});
   zx::event ev;
@@ -180,4 +179,3 @@ TEST_F(HandleRightsTest, AsyncSendWrongType) {
   // The channel is closed after a type error on the sending side.
   ASSERT_EQ(resp.status(), ZX_ERR_WRONG_TYPE);
 }
-*/
