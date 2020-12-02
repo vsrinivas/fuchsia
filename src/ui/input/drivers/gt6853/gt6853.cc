@@ -612,4 +612,4 @@ static zx_driver_ops_t gt6853_driver_ops = []() -> zx_driver_ops_t {
 
 }  // namespace touch
 
-ZIRCON_DRIVER(Gt6853Device, touch::gt6853_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(Gt6853Device, touch::gt6853_driver_ops, "zircon", "0.1");

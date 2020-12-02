@@ -349,4 +349,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace thermal
 
-ZIRCON_DRIVER(aml_thermal, thermal::driver_ops, "aml-therm-lgcy", "0.1")
+ZIRCON_DRIVER(aml_thermal, thermal::driver_ops, "aml-therm-lgcy", "0.1");

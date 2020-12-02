@@ -999,4 +999,4 @@ static constexpr zx_driver_ops_t ax88179_driver_ops = []() {
 }();
 
 // clang-format off
-ZIRCON_DRIVER(ethernet_ax88179, ax88179_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(ethernet_ax88179, ax88179_driver_ops, "zircon", "0.1");

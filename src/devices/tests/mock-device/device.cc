@@ -528,4 +528,4 @@ const zx_driver_ops_t kMockDeviceOps = []() {
 
 }  // namespace mock_device
 
-ZIRCON_DRIVER(mock_device, mock_device::kMockDeviceOps, "zircon", "0.1")
+ZIRCON_DRIVER(mock_device, mock_device::kMockDeviceOps, "zircon", "0.1");

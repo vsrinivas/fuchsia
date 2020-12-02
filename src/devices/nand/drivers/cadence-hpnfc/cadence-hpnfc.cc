@@ -617,4 +617,4 @@ static zx_driver_ops_t cadence_hpnfc_driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-ZIRCON_DRIVER(cadence_hpnfc, cadence_hpnfc_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(cadence_hpnfc, cadence_hpnfc_driver_ops, "zircon", "0.1");

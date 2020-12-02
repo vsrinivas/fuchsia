@@ -127,4 +127,4 @@ static constexpr zx_driver_ops_t shtv3_driver_ops = []() {
 
 }  // namespace temperature
 
-ZIRCON_DRIVER(shtv3, temperature::shtv3_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(shtv3, temperature::shtv3_driver_ops, "zircon", "0.1");

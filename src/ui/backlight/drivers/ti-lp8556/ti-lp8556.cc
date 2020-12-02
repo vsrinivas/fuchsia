@@ -352,4 +352,4 @@ static constexpr zx_driver_ops_t ti_lp8556_driver_ops = []() {
 
 }  // namespace ti
 
-ZIRCON_DRIVER(ti_lp8556, ti::ti_lp8556_driver_ops, "TI-LP8556", "0.1")
+ZIRCON_DRIVER(ti_lp8556, ti::ti_lp8556_driver_ops, "TI-LP8556", "0.1");

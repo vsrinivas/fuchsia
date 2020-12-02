@@ -867,6 +867,6 @@ static constexpr zx_driver_ops_t goldfish_control_driver_ops = []() -> zx_driver
 }();
 
 // clang-format off
-ZIRCON_DRIVER(goldfish_control_composite, goldfish_control_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(goldfish_control_composite, goldfish_control_driver_ops, "zircon", "0.1");
 
 // clang-format on

@@ -448,7 +448,7 @@ impl Migrator {
         source_output.push_str(&contents[include.end()..args.match_start]);
         source_output.push_str(
             format!(
-                "ZIRCON_DRIVER({}, {}, {}, {})\n",
+                "ZIRCON_DRIVER({}, {}, {}, {});\n",
                 args.driver_name, args.driver_ops, args.vendor, args.version
             )
             .as_str(),

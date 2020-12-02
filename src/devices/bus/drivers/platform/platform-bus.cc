@@ -663,4 +663,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace platform_bus
 
-ZIRCON_DRIVER(platform_bus, platform_bus::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(platform_bus, platform_bus::driver_ops, "zircon", "0.1");

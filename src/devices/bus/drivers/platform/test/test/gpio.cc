@@ -178,4 +178,4 @@ constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace gpio
 
-ZIRCON_DRIVER(test_gpio, gpio::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(test_gpio, gpio::driver_ops, "zircon", "0.1");

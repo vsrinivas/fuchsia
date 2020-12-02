@@ -606,4 +606,4 @@ static zx_driver_ops_t usb_hub_driver_ops = {
     .bind = usb_hub::UsbHubDevice::Bind,
 };
 
-ZIRCON_DRIVER(usb_hub_rewrite, usb_hub_driver_ops, "fuchsia", "0.1")
+ZIRCON_DRIVER(usb_hub_rewrite, usb_hub_driver_ops, "fuchsia", "0.1");

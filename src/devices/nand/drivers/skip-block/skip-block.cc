@@ -723,4 +723,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace nand
 
-ZIRCON_DRIVER(skip_block, nand::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(skip_block, nand::driver_ops, "zircon", "0.1");

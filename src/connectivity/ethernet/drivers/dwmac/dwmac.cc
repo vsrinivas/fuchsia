@@ -609,4 +609,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace eth
 
-ZIRCON_DRIVER(dwmac, eth::driver_ops, "designware_mac", "0.1")
+ZIRCON_DRIVER(dwmac, eth::driver_ops, "designware_mac", "0.1");

@@ -198,4 +198,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace board_test
 
-ZIRCON_DRIVER(test_bus, board_test::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(test_bus, board_test::driver_ops, "zircon", "0.1");

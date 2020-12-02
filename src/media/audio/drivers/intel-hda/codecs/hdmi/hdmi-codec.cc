@@ -53,4 +53,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace intel_hda
 }  // namespace audio
 
-ZIRCON_DRIVER(hdmi_ihda_codec, audio::intel_hda::codecs::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(hdmi_ihda_codec, audio::intel_hda::codecs::driver_ops, "zircon", "0.1");

@@ -731,4 +731,4 @@ static zx_driver_ops_t ax88772b_driver_ops = {
     .bind = ax88772b_bind,
 };
 
-ZIRCON_DRIVER(ethernet_ax88772b, ax88772b_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(ethernet_ax88772b, ax88772b_driver_ops, "zircon", "0.1");

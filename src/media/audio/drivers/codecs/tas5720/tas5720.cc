@@ -334,6 +334,6 @@ static zx_driver_ops_t driver_ops = []() {
 }  // namespace audio
 
 // clang-format off
-ZIRCON_DRIVER(ti_tas5720, audio::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(ti_tas5720, audio::driver_ops, "zircon", "0.1");
 
 // clang-format on

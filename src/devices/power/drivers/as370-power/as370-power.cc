@@ -339,6 +339,6 @@ static constexpr zx_driver_ops_t as370_power_driver_ops = []() {
 }  // namespace power
 
 // clang-format off
-ZIRCON_DRIVER(as370_power, power::as370_power_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(as370_power, power::as370_power_driver_ops, "zircon", "0.1");
 
 //clang-format on

@@ -430,4 +430,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace eth
 
-ZIRCON_DRIVER(tapctl, eth::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(tapctl, eth::driver_ops, "zircon", "0.1");

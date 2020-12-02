@@ -172,4 +172,4 @@ static zx_driver_ops_t pci_sdhci_driver_ops = {
     .bind = pci_sdhci_bind,
 };
 
-ZIRCON_DRIVER(pci_sdhci, pci_sdhci_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(pci_sdhci, pci_sdhci_driver_ops, "zircon", "0.1");

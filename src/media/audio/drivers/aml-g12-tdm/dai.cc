@@ -399,4 +399,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace audio::aml_g12
 
 // clang-format off
-ZIRCON_DRIVER(aml_g12_tdm_dai, audio::aml_g12::driver_ops, "aml-g12-tdm-dai", "0.1")
+ZIRCON_DRIVER(aml_g12_tdm_dai, audio::aml_g12::driver_ops, "aml-g12-tdm-dai", "0.1");

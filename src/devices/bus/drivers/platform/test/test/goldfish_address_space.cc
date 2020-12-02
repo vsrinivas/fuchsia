@@ -101,4 +101,4 @@ constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace goldfish
 
-ZIRCON_DRIVER(test_goldfish_address_space, goldfish::address_space::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(test_goldfish_address_space, goldfish::address_space::driver_ops, "zircon", "0.1");

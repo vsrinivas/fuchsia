@@ -27,4 +27,4 @@ static zx_driver_ops_t my_driver_cpp_driver_ops = []() -> zx_driver_ops_t {
 
 }  // namespace my_driver_cpp
 
-ZIRCON_DRIVER(MyDriverCpp, my_driver_cpp::my_driver_cpp_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(MyDriverCpp, my_driver_cpp::my_driver_cpp_driver_ops, "zircon", "0.1");

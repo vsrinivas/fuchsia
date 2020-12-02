@@ -339,4 +339,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace audio
 
-ZIRCON_DRIVER(ti_tas58xx, audio::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(ti_tas58xx, audio::driver_ops, "zircon", "0.1");

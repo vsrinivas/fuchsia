@@ -144,4 +144,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace virtualbus
 
-ZIRCON_DRIVER(usb_virtual_bus_tester, virtualbus::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(usb_virtual_bus_tester, virtualbus::driver_ops, "zircon", "0.1");

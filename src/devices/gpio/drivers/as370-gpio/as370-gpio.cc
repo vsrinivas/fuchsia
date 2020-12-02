@@ -532,4 +532,4 @@ static constexpr zx_driver_ops_t as370_gpio_driver_ops = []() -> zx_driver_ops_t
 }();
 
 // clang-format off
-ZIRCON_DRIVER(as370_gpio, as370_gpio_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(as370_gpio, as370_gpio_driver_ops, "zircon", "0.1");

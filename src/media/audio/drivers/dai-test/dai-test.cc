@@ -188,4 +188,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace audio::daitest
 
-ZIRCON_DRIVER(dai_test, audio::daitest::driver_ops, "dai-test", "0.1")
+ZIRCON_DRIVER(dai_test, audio::daitest::driver_ops, "dai-test", "0.1");

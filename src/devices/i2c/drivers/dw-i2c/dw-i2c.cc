@@ -694,6 +694,6 @@ static zx_driver_ops_t dw_i2c_driver_ops = {
 }  // namespace dw_i2c
 
 // clang-format off
-ZIRCON_DRIVER(dw_i2c, dw_i2c::dw_i2c_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(dw_i2c, dw_i2c::dw_i2c_driver_ops, "zircon", "0.1");
 
 //clang-format on

@@ -106,4 +106,4 @@ zx_driver_ops_t pl031_driver_ops = {
 
 }  // namespace rtc
 
-ZIRCON_DRIVER(pl031, rtc::pl031_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(pl031, rtc::pl031_driver_ops, "zircon", "0.1");

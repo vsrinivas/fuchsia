@@ -108,4 +108,4 @@ constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace i2c
 
-ZIRCON_DRIVER(test_i2c, i2c::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(test_i2c, i2c::driver_ops, "zircon", "0.1");

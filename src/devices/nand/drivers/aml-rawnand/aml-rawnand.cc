@@ -1000,4 +1000,4 @@ static constexpr zx_driver_ops_t amlrawnand_driver_ops = []() {
 
 }  // namespace amlrawnand
 
-ZIRCON_DRIVER(aml_rawnand, amlrawnand::amlrawnand_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(aml_rawnand, amlrawnand::amlrawnand_driver_ops, "zircon", "0.1");

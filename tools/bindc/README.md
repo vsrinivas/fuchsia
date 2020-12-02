@@ -26,7 +26,7 @@ Currently, it produces a C header file that may be included by a driver. The hea
 macro:
 
 ```
-ZIRCON_DRIVER(Driver, Ops, VendorName, Version)
+ZIRCON_DRIVER(Driver, Ops, VendorName, Version);
 ```
  * `Driver` is the name of the driver.
  * `Ops` is a `zx_driver_ops`, which are the driver operation hooks

@@ -629,4 +629,4 @@ static constexpr zx_driver_ops_t mtk_thermal_driver_ops = []() -> zx_driver_ops_
   return ops;
 }();
 
-ZIRCON_DRIVER(mtk_thermal, mtk_thermal_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(mtk_thermal, mtk_thermal_driver_ops, "zircon", "0.1");

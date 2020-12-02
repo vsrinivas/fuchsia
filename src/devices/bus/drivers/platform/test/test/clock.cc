@@ -175,4 +175,4 @@ constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace
 
-ZIRCON_DRIVER(test_clock, driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(test_clock, driver_ops, "zircon", "0.1");

@@ -1033,4 +1033,4 @@ static constexpr zx_driver_ops_t eth_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER(ethernet, eth_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(ethernet, eth_driver_ops, "zircon", "0.1");

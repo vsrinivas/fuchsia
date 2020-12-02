@@ -305,8 +305,7 @@ static_assert(offsetof(zircon_driver_note_t, payload) == sizeof(zircon_driver_no
       /* .binding = */ {
 #define ZIRCON_DRIVER_END_PRIV(Driver) \
   }                                    \
-  }                                    \
-  ;
+  }
 
 // TODO: if we moved the Ops from the BEGIN() to END() macro we
 //      could add a zircon_driver_note_t* to the zx_driver_rec_t,

@@ -118,4 +118,4 @@ static zx_driver_ops_t network_driver_ops = []() {
 
 }  // namespace network
 
-ZIRCON_DRIVER(network, network::network_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(network, network::network_driver_ops, "zircon", "0.1");

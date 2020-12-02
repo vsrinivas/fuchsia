@@ -77,4 +77,4 @@ static zx_driver_ops_t test_driver_ops = {
     .create = test_create,
 };
 
-ZIRCON_DRIVER(test_bus, test_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(test_bus, test_driver_ops, "zircon", "0.1");

@@ -804,4 +804,4 @@ static zx_driver_ops_t ft8201_driver_ops = []() -> zx_driver_ops_t {
 
 }  // namespace touch
 
-ZIRCON_DRIVER(Ft8201Device, touch::ft8201_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(Ft8201Device, touch::ft8201_driver_ops, "zircon", "0.1");

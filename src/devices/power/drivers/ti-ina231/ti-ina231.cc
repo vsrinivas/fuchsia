@@ -160,4 +160,4 @@ static constexpr zx_driver_ops_t ti_ina231_driver_ops = []() {
 
 }  // namespace power_sensor
 
-ZIRCON_DRIVER(ti_ina231, power_sensor::ti_ina231_driver_ops, "ti-ina231", "0.1")
+ZIRCON_DRIVER(ti_ina231, power_sensor::ti_ina231_driver_ops, "ti-ina231", "0.1");

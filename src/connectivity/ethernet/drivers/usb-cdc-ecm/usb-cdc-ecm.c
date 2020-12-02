@@ -690,4 +690,4 @@ static zx_driver_ops_t ecm_driver_ops = {
     .bind = ecm_bind,
 };
 
-ZIRCON_DRIVER(ethernet_usb_cdc_ecm, ecm_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(ethernet_usb_cdc_ecm, ecm_driver_ops, "zircon", "0.1");

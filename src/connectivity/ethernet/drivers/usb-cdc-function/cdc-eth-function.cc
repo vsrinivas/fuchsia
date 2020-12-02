@@ -962,4 +962,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace usb_cdc_function
 
 // clang-format off
-ZIRCON_DRIVER(usb_cdc, usb_cdc_function::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(usb_cdc, usb_cdc_function::driver_ops, "zircon", "0.1");

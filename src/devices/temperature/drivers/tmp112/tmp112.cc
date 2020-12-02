@@ -119,4 +119,4 @@ static constexpr zx_driver_ops_t tmp112_driver_ops = []() {
 
 }  // namespace temperature
 
-ZIRCON_DRIVER(tmp112, temperature::tmp112_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(tmp112, temperature::tmp112_driver_ops, "zircon", "0.1");

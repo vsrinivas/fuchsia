@@ -498,6 +498,6 @@ static zx_driver_ops_t driver_ops = {
 }  // namespace lp50xx_light
 
 // clang-format off
-ZIRCON_DRIVER(lp50xx_light, lp50xx_light::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(lp50xx_light, lp50xx_light::driver_ops, "zircon", "0.1");
 
 //clang-format on

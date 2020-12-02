@@ -78,4 +78,4 @@ constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace vreg
 
-ZIRCON_DRIVER(test_vreg, vreg::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(test_vreg, vreg::driver_ops, "zircon", "0.1");

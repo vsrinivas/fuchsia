@@ -70,4 +70,4 @@ static zx_driver_ops_t test_compatibility_hook_child_driver_ops = []() -> zx_dri
   return ops;
 }();
 
-ZIRCON_DRIVER(TestCompatibilityHookChild, test_compatibility_hook_child_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(TestCompatibilityHookChild, test_compatibility_hook_child_driver_ops, "zircon", "0.1");

@@ -1122,4 +1122,4 @@ static constexpr zx_driver_ops_t sdhci_driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-ZIRCON_DRIVER(sdhci, sdhci_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(sdhci, sdhci_driver_ops, "zircon", "0.1");

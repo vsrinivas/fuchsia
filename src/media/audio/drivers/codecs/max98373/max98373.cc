@@ -268,4 +268,4 @@ static zx_driver_ops_t driver_ops = []() {
 
 }  // namespace audio
 
-ZIRCON_DRIVER(max98373, audio::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(max98373, audio::driver_ops, "zircon", "0.1");

@@ -442,4 +442,4 @@ static zx_driver_ops_t rtl8111_ethernet_driver_ops = {
     .bind = rtl8111_bind,
 };
 
-ZIRCON_DRIVER(realtek_rtl8111, rtl8111_ethernet_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(realtek_rtl8111, rtl8111_ethernet_driver_ops, "zircon", "0.1");

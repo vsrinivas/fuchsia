@@ -14,4 +14,4 @@ static constexpr zx_driver_ops_t ram_nand_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER(ram_nand, ram_nand_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(ram_nand, ram_nand_driver_ops, "zircon", "0.1");

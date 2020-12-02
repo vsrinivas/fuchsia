@@ -122,4 +122,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace phy
 
-ZIRCON_DRIVER(rtl8211f, phy::driver_ops, "rtl8211-phy", "0.1")
+ZIRCON_DRIVER(rtl8211f, phy::driver_ops, "rtl8211-phy", "0.1");

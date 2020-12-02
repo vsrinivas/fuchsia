@@ -456,4 +456,4 @@ static constexpr zx_driver_ops_t device_ops = []() {
 
 }  // namespace fake_ot
 
-ZIRCON_DRIVER(fake_ot, fake_ot::device_ops, "zircon", "0.1")
+ZIRCON_DRIVER(fake_ot, fake_ot::device_ops, "zircon", "0.1");

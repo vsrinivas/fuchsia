@@ -295,4 +295,4 @@ static constexpr zx_driver_ops_t vs680_thermal_driver_ops = []() -> zx_driver_op
   return ops;
 }();
 
-ZIRCON_DRIVER(vs680_thermal, vs680_thermal_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(vs680_thermal, vs680_thermal_driver_ops, "zircon", "0.1");

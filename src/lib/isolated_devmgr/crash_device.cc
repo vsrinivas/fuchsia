@@ -53,4 +53,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace crash
 
-ZIRCON_DRIVER(crash_device, crash::driver_ops, "fuchsia", "0.1")
+ZIRCON_DRIVER(crash_device, crash::driver_ops, "fuchsia", "0.1");

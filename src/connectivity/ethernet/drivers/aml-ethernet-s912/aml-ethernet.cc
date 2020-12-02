@@ -187,4 +187,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace eth
 
 // clang-format off
-ZIRCON_DRIVER(aml_eth, eth::driver_ops, "aml-ethernet", "0.1")
+ZIRCON_DRIVER(aml_eth, eth::driver_ops, "aml-ethernet", "0.1");

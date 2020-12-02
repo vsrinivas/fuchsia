@@ -372,6 +372,6 @@ static constexpr zx_driver_ops_t cypress_touch_driver_ops = []() {
 }  // namespace cypress
 
 // clang-format off
-ZIRCON_DRIVER(cypress_cy8cmbr3108, cypress::cypress_touch_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(cypress_cy8cmbr3108, cypress::cypress_touch_driver_ops, "zircon", "0.1");
 
 //clang-format on

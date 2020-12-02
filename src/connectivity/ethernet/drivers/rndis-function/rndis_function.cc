@@ -1176,4 +1176,4 @@ static zx_driver_ops_t rndis_function_driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-ZIRCON_DRIVER(rndis_function, rndis_function_driver_ops, "fuchsia", "0.1")
+ZIRCON_DRIVER(rndis_function, rndis_function_driver_ops, "fuchsia", "0.1");

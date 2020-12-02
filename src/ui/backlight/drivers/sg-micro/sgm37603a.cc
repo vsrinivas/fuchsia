@@ -195,4 +195,4 @@ static constexpr zx_driver_ops_t sgm37603a_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER(sgm37603a, sgm37603a_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(sgm37603a, sgm37603a_driver_ops, "zircon", "0.1");

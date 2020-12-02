@@ -805,4 +805,4 @@ static zx_driver_ops_t test_driver_ops = {
     .bind = test_bind,
 };
 
-ZIRCON_DRIVER(test_composite, test_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(test_composite, test_driver_ops, "zircon", "0.1");

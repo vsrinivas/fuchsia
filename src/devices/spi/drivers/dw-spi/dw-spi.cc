@@ -167,5 +167,5 @@ static zx_driver_ops_t driver_ops = []() {
 }  // namespace spi
 
 // clang-format off
-ZIRCON_DRIVER(dw_spi, spi::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(dw_spi, spi::driver_ops, "zircon", "0.1");
 

@@ -277,4 +277,4 @@ constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace
 }  // namespace fake_usb_ax88179_function
 
-ZIRCON_DRIVER(fake_usb_ax88179, fake_usb_ax88179_function::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(fake_usb_ax88179, fake_usb_ax88179_function::driver_ops, "zircon", "0.1");

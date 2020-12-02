@@ -44,4 +44,4 @@ static constexpr zx_driver_ops_t driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-ZIRCON_DRIVER(unit_test_fail, driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(unit_test_fail, driver_ops, "zircon", "0.1");

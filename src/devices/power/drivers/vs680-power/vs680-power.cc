@@ -209,4 +209,4 @@ static constexpr zx_driver_ops_t vs680_power_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER(vs680_power, vs680_power_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(vs680_power, vs680_power_driver_ops, "zircon", "0.1");

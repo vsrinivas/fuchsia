@@ -206,4 +206,4 @@ static constexpr zx_driver_ops_t bma253_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER(bma253, bma253_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(bma253, bma253_driver_ops, "zircon", "0.1");

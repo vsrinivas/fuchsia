@@ -75,4 +75,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace
 
-ZIRCON_DRIVER(test_bti_board, driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(test_bti_board, driver_ops, "zircon", "0.1");

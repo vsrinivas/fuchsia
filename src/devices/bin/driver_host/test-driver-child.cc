@@ -77,4 +77,4 @@ static zx_driver_ops_t test_devhost_child_driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-ZIRCON_DRIVER(test-devhost-child, test_devhost_child_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(test-devhost-child, test_devhost_child_driver_ops, "zircon", "0.1");

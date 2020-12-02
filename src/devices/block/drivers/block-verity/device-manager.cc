@@ -396,4 +396,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace block_verity
 
-ZIRCON_DRIVER(block_verity, block_verity::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(block_verity, block_verity::driver_ops, "zircon", "0.1");

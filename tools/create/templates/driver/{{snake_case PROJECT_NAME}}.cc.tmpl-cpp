@@ -25,4 +25,4 @@ static zx_driver_ops_t {{snake_case PROJECT_NAME}}_driver_ops = []() -> zx_drive
 
 }  // namespace {{snake_case PROJECT_NAME}}
 
-ZIRCON_DRIVER({{pascal_case PROJECT_NAME}}, {{snake_case PROJECT_NAME}}::{{snake_case PROJECT_NAME}}_driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER({{pascal_case PROJECT_NAME}}, {{snake_case PROJECT_NAME}}::{{snake_case PROJECT_NAME}}_driver_ops, "zircon", "0.1");
