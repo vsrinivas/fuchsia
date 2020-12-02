@@ -33,15 +33,10 @@
 #define __NO_RETURN __attribute__((__noreturn__))
 #define __MALLOC __attribute__((__malloc__))
 #define __WEAK __attribute__((__weak__))
-#define __GNU_INLINE __attribute__((__gnu_inline__))
 #define __GET_CALLER(x) __builtin_return_address(0)
 #define __GET_FRAME(x) __builtin_frame_address(0)
-#define __NAKED __attribute__((__naked__))
 #define __ISCONSTANT(x) __builtin_constant_p(x)
 #define __NO_INLINE __attribute__((__noinline__))
-#define __SRAM __NO_INLINE __SECTION(".sram.text")
-#define __CONSTRUCTOR __attribute__((__constructor__))
-#define __DESTRUCTOR __attribute__((__destructor__))
 #define __RESTRICT __restrict
 
 #ifndef __clang__
@@ -66,7 +61,6 @@
 #endif
 
 #define __ALWAYS_INLINE __attribute__((__always_inline__))
-#define __MAY_ALIAS __attribute__((__may_alias__))
 #define __NONNULL(x) __attribute__((__nonnull__ x))
 #define __WARN_UNUSED_RESULT __attribute__((__warn_unused_result__))
 #define __UNREACHABLE __builtin_unreachable()
