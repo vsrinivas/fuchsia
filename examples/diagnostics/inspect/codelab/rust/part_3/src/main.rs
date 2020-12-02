@@ -9,18 +9,19 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client, server::ServiceFs},
     fuchsia_inspect::{component, health::Reporter},
-    fuchsia_syslog::{self as syslog, macros::*},
+    fuchsia_syslog,
     futures::{future::try_join, FutureExt, StreamExt},
+    tracing::info,
 };
 
 mod reverser;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["inspect_rust_codelab", "part3"])?;
+    fuchsia_syslog::init_with_tags(&["inspect_rust_codelab", "part4"])?;
     let mut fs = ServiceFs::new();
 
-    fx_log_info!("starting up...");
+    info!("starting up...");
 
     component::inspector().serve(&mut fs)?;
 
@@ -49,7 +50,7 @@ async fn main() -> Result<(), Error> {
         match fizzbuzz.execute(30u32).await {
             Ok(result) => {
                 component::health().set_ok();
-                fx_log_info!("Got FizzBuzz: {}", result);
+                info!(%result, "Got FizzBuzz");
             }
             Err(_) => {
                 component::health().set_unhealthy("FizzBuzz connection closed");

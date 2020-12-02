@@ -8,10 +8,11 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::{self as inspect, component, HistogramProperty, NumericProperty},
-    fuchsia_syslog::{self as syslog, macros::*},
+    fuchsia_syslog,
     fuchsia_zircon::{self as zx},
     futures::{StreamExt, TryStreamExt},
     std::sync::Arc,
+    tracing::{error, info},
 };
 
 struct FizzBuzzServerMetrics {
@@ -56,7 +57,7 @@ impl FizzBuzzServer {
         fasync::Task::local(async move {
             self.metrics.incoming_connection_count.add(1);
             self.handle_request_stream(stream).await.unwrap_or_else(|e| {
-                fx_log_err!("Error handling fizzbuzz request stream: {:?}", e);
+                error!(?e, "Error handling fizzbuzz request stream");
             });
             self.metrics.closed_connection_count.add(1);
         })
@@ -92,10 +93,10 @@ fn fizzbuzz(n: u32) -> String {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["inspect_rust_codelab", "fizzbuzz"])?;
+    fuchsia_syslog::init_with_tags(&["inspect_rust_codelab", "fizzbuzz"])?;
     let mut fs = ServiceFs::new();
 
-    fx_log_info!("starting up...");
+    info!("starting up...");
 
     let metrics = Arc::new(FizzBuzzServerMetrics::new());
 

@@ -14,9 +14,9 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_component::server::NestedEnvironment,
-    fuchsia_syslog::macros::*,
     fuchsia_zircon as zx,
     futures::{TryFutureExt, TryStreamExt},
+    tracing::error,
 };
 
 pub struct CodelabEnvironment {
@@ -122,7 +122,7 @@ impl CodelabEnvironment {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e| fx_log_err!("Error waiting for component: {:?}", e)),
+            .unwrap_or_else(|e| error!(?e, "Error waiting for component")),
         )
         .detach()
     }

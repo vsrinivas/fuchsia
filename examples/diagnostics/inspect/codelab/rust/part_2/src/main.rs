@@ -8,8 +8,9 @@ use {
     fidl_fuchsia_examples_inspect::FizzBuzzMarker,
     fuchsia_async as fasync,
     fuchsia_component::{client, server::ServiceFs},
-    fuchsia_syslog::{self as syslog, macros::*},
+    fuchsia_syslog,
     futures::{future::try_join, FutureExt, StreamExt},
+    tracing::info,
 };
 
 // [START part_1_use_inspect]
@@ -20,10 +21,10 @@ mod reverser;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["inspect_rust_codelab", "part2"])?;
+    fuchsia_syslog::init_with_tags(&["inspect_rust_codelab", "part2"])?;
     let mut fs = ServiceFs::new();
 
-    fx_log_info!("starting up...");
+    info!("starting up...");
 
     // [START part_1_serve_inspect]
     component::inspector().serve(&mut fs)?;
@@ -56,7 +57,7 @@ async fn main() -> Result<(), Error> {
         match fizzbuzz.execute(30u32).await {
             Ok(result) => {
                 // CODELAB: Add Inspect here to see if there is a response.
-                fx_log_info!("Got FizzBuzz: {}", result);
+                info!(%result, "Got FizzBuzz");
             }
             Err(_) => {
                 // CODELAB: Add Inspect here to see if there is an error
