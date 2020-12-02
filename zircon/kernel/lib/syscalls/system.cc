@@ -65,7 +65,7 @@ __END_CDECLS
 
 class IdentityPageAllocator {
  public:
-  IdentityPageAllocator() : aspace_(nullptr), mapping_id_(0) {
+  explicit IdentityPageAllocator(uintptr_t alloc_start) : alloc_start_(alloc_start) {
     allocated_ = LIST_INITIAL_VALUE(allocated_);
   }
   ~IdentityPageAllocator() { pmm_free(&allocated_); }
@@ -79,8 +79,10 @@ class IdentityPageAllocator {
 
  private:
   zx_status_t InitializeAspace();
-  fbl::RefPtr<VmAspace> aspace_;
-  size_t mapping_id_;
+  fbl::RefPtr<VmAspace> aspace_ = nullptr;
+  size_t mapping_id_ = 0;
+  // Minimum physical/virtual address for all allocations.
+  uintptr_t alloc_start_;
   list_node allocated_;
 };
 
@@ -148,7 +150,8 @@ zx_status_t IdentityPageAllocator::Allocate(void** result) {
   //       from the pmm rather than using "alloc_pages_greater_than" which is
   //       somewhat of a hack.
   paddr_t pa;
-  st = alloc_pages_greater_than(0, 1, 4 * GB, &pa);
+  DEBUG_ASSERT(alloc_start_ < 4 * GB);
+  st = alloc_pages_greater_than(alloc_start_, 1, 4 * GB - alloc_start_, &pa);
   if (st != ZX_OK) {
     LTRACEF("mexec: failed to allocate page in low memory\n");
     return st;
@@ -351,9 +354,14 @@ NO_ASAN zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vm
     return result;
   }
 
+  uintptr_t kernel_image_end = get_kernel_base_phys() + new_kernel_len;
+
   paddr_t final_bootimage_addr = new_bootimage_addr;
-  // For testing purposes, we may want the bootdata at a high address.
-  if (force_high_mem) {
+  // For testing purposes, we may want the bootdata at a high address. Alternatively if our
+  // coalesced VMO should overlap into the target kernel range then we also need to move it, and
+  // placing it high is as good as anywhere else.
+  if (force_high_mem ||
+      Intersects(final_bootimage_addr, bootimage_len, get_kernel_base_phys(), kernel_image_end)) {
     const size_t page_count = bootimage_len / PAGE_SIZE + 1;
     fbl::AllocChecker ac;
     ktl::unique_ptr<paddr_t[]> paddrs(new (&ac) paddr_t[page_count]);
@@ -369,7 +377,7 @@ NO_ASAN zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vm
     final_bootimage_addr = paddrs.get()[0];
   }
 
-  IdentityPageAllocator id_alloc;
+  IdentityPageAllocator id_alloc(kernel_image_end);
   void* id_page_addr = 0x0;
   result = id_alloc.Allocate(&id_page_addr);
   if (result != ZX_OK) {
@@ -437,9 +445,15 @@ NO_ASAN zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vm
   // Null terminated list.
   ops[ops_idx++] = {0, 0, 0};
 
-  // Make sure that the kernel, when copied, will not overwrite the bootdata.
+  // Make sure that the kernel, when copied, will not overwrite the bootdata, our mexec code or
+  // copy ops.
   DEBUG_ASSERT(!Intersects(reinterpret_cast<uintptr_t>(ops[0].dst), ops[0].len,
                            reinterpret_cast<uintptr_t>(final_bootimage_addr), bootimage_len));
+  DEBUG_ASSERT(!Intersects(reinterpret_cast<uintptr_t>(ops[0].dst), ops[0].len,
+                           reinterpret_cast<uintptr_t>(id_page_addr),
+                           static_cast<size_t>(PAGE_SIZE)));
+  DEBUG_ASSERT(!Intersects(reinterpret_cast<uintptr_t>(ops[0].dst), ops[0].len,
+                           reinterpret_cast<uintptr_t>(ops_ptr), static_cast<size_t>(PAGE_SIZE)));
 
   // Sync because there is code in here that we intend to run.
   arch_sync_cache_range((vaddr_t)id_page_addr, PAGE_SIZE);
