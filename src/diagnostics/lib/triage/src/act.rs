@@ -33,7 +33,7 @@ impl<'a> ActionContext<'a> {
         let fetcher = FileDataFetcher::new(diagnostic_data);
         let mut action_results = ActionResults::new();
         fetcher.errors().iter().for_each(|e| {
-            action_results.add_warning(format!("[ERROR] {}", e));
+            action_results.add_warning(format!("[DEBUG: BAD DATA] {}", e));
         });
         ActionContext {
             actions,
@@ -240,7 +240,7 @@ impl ActionContext<'_> {
             }
             other => {
                 self.action_results.add_warning(format!(
-                    "[ERROR] Unexpected value type in config '{}' (need boolean): {}",
+                    "[DEBUG: BAD CONFIG] Unexpected value type in config '{}' (need boolean): {}",
                     namespace, other
                 ));
                 false
@@ -283,11 +283,11 @@ impl ActionContext<'_> {
             other => {
                 #[cfg(target_os = "fuchsia")]
                 error!(
-                    "[ERROR] Unexpected value type in config '{}' (need boolean): {}",
+                    "[DEBUG: BAD CONFIG] Unexpected value type in config '{}' (need boolean): {}",
                     namespace, other
                 );
                 self.action_results.add_warning(format!(
-                    "[ERROR] Unexpected value type in config '{}' (need boolean): {}",
+                    "[DEBUG: BAD CONFIG] Unexpected value type in config '{}' (need boolean): {}",
                     namespace, other
                 ));
                 false
@@ -466,7 +466,7 @@ mod test {
         // Caution - test footgun! This error will show up without calling process() but
         // most get_warnings() results will not.
         assert_eq!(
-            &vec!["[ERROR] Unable to deserialize Inspect contents for abcd2 to node hierarchy"
+            &vec!["[DEBUG: BAD DATA] Unable to deserialize Inspect contents for abcd2 to node hierarchy"
                 .to_string()],
             action_context.action_results.get_warnings()
         );

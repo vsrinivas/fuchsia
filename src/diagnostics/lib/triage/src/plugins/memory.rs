@@ -64,7 +64,7 @@ impl Plugin for MemoryPlugin {
                         match parsed{
                             Some(parsed) => Some((name, value, mult*parsed)),
                             None => {
-                                results.add_warning(format!("[ERROR] Could not parse '{}' as a valid size. Something is wrong with the output of memory_monitor.cmx.", value));
+                                results.add_warning(format!("[DEBUG: BAD DATA] Could not parse '{}' as a valid size. Something is wrong with the output of memory_monitor.cmx.", value));
                                 None
                             }
                         }
@@ -97,7 +97,7 @@ mod tests {
                 .map(|s| s.to_string())
                 .collect();
         let expected_warnings: Vec<String> =
-            vec!["[ERROR] Could not parse 'ABCD' as a valid size. Something is wrong with the output of memory_monitor.cmx."]
+            vec!["[DEBUG: BAD DATA] Could not parse 'ABCD' as a valid size. Something is wrong with the output of memory_monitor.cmx."]
                 .into_iter()
                 .map(|s| s.to_string())
                 .collect();

@@ -31,7 +31,7 @@ impl Plugin for RoutingErrorsPlugin {
                     }
                     _ => {
                         results.add_warning(
-                            "[ERROR] Routing Errors plugin encountered a bug analyzing \
+                            "[DEBUG: BAD DATA] Routing Errors plugin encountered a bug analyzing \
                     log line, capture group missing"
                                 .to_string(),
                         );
@@ -40,7 +40,7 @@ impl Plugin for RoutingErrorsPlugin {
                 };
             if pattern_match.len() == 0 {
                 results.add_warning(
-                    "[ERROR] Routing Errors plugin encountered a bug analyzing log \
+                    "[DEBUG: BAD DATA] Routing Errors plugin encountered a bug analyzing log \
                 line, capture group missing"
                         .to_string(),
                 );
