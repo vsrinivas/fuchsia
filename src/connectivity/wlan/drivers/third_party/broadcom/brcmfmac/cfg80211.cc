@@ -5009,11 +5009,10 @@ static zx_status_t brcmf_process_auth_event(struct brcmf_if* ifp, const struct b
   ZX_DEBUG_ASSERT(!brcmf_is_apmode(ifp->vif));
 
   if (e->status != BRCMF_E_STATUS_SUCCESS) {
-    BRCMF_ERR("Failed to authenticate with AP.");
-    BRCMF_ERR("  auth %s", brcmf_fweh_get_auth_type_str(e->auth_type));
-    BRCMF_ERR("  status %s", brcmf_fweh_get_event_status_str(e->status));
-    BRCMF_ERR("  reason %s", wlan_status_code_str(static_cast<wlan_status_code_t>(e->reason)));
-    BRCMF_ERR("  flags 0x%x", e->flags);
+    BRCMF_INFO("Auth Failure auth %s status %s reason %s flags 0x%x",
+               brcmf_fweh_get_auth_type_str(e->auth_type),
+               brcmf_fweh_get_event_status_str(e->status),
+               wlan_status_code_str(static_cast<wlan_status_code_t>(e->reason)), e->flags);
     // It appears FW continues to be busy with authentication when this event is received
     // specifically with WEP. Attempt to shutdown the IF.
     bcme_status_t fwerr = BCME_OK;
