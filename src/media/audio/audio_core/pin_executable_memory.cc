@@ -17,6 +17,9 @@
 
 namespace media::audio {
 
+// Note: This is available in as PAGE_SIZE from <arch/defines.h>, but that header
+// is not available outside of the kernel. We expect PAGE_SIZE to be no smaller than
+// this value (it may be larger, e.g. 16k or 64k on some architectures).
 static constexpr auto kPageSizeBytes = 4096;
 
 // Memory is considered "unused" if it has not been touched for more than 30s.
