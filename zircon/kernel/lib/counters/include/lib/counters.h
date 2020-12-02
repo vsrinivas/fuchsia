@@ -151,6 +151,9 @@ class Counter {
 // out in per-CPU chunks.
 #define KCOUNTER_DECLARE(var, name, type)                                                     \
   namespace {                                                                                 \
+  static_assert(__INCLUDE_LEVEL__ == 0,                                                       \
+                "kcounters should not be defined in a header as doing so may result in the "  \
+                "creation of multiple unrelated counters with the same name");                \
   int64_t kcounter_arena_##var SPECIAL_SECTION(".bss.kcounter." name, int64_t)[SMP_MAX_CPUS]; \
   const counters::Descriptor kcounter_desc_##var SPECIAL_SECTION("kcountdesc." name,          \
                                                                  counters::Descriptor) = {    \
