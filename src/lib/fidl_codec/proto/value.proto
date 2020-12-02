@@ -35,6 +35,7 @@ message HandleInfo {
   uint32 handle = 1;
   uint32 type = 2;
   uint32 rights = 3;
+  uint32 operation = 4;
 }
 
 // Defines a union value.

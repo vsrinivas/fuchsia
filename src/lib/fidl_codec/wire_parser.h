@@ -24,8 +24,9 @@ namespace fidl_codec {
 // have been thrown during the decoding. Each error starts with the absolute offset in the
 // buffer (where the error occured) and ends with a new line.
 bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes, uint32_t num_bytes,
-                   const zx_handle_info_t* handles, uint32_t num_handles,
-                   std::unique_ptr<StructValue>* decoded_object, std::ostream& error_stream);
+                   const zx_handle_disposition_t* handles, uint32_t num_handles,
+                   std::unique_ptr<StructValue>* decoded_object,
+                   std::ostream& error_stream);
 
 // Given a wire-formatted |message| and a schema for that message represented by
 // |method|,  populates |decoded_object| with an object representing that
@@ -37,8 +38,9 @@ bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes, uint32_t
 // have been thrown during the decoding. Each error starts with the absolute offset in the
 // buffer (where the error occured) and ends with a new line.
 bool DecodeResponse(const InterfaceMethod* method, const uint8_t* bytes, uint32_t num_bytes,
-                    const zx_handle_info_t* handles, uint32_t num_handles,
-                    std::unique_ptr<StructValue>* decoded_object, std::ostream& error_stream);
+                    const zx_handle_disposition_t* handles, uint32_t num_handles,
+                    std::unique_ptr<StructValue>* decoded_object,
+                    std::ostream& error_stream);
 
 }  // namespace fidl_codec
 

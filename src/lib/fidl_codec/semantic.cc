@@ -358,8 +358,12 @@ void ExpressionValue::PrettyPrint(PrettyPrinter& printer) {
       value_->PrettyPrint(value_type_, printer);
       break;
     case kHandle: {
-      zx_handle_info_t handle_info{.handle = handle_};
-      printer.DisplayHandle(handle_info);
+      zx_handle_disposition_t handle_disposition{.operation = fidl_codec::kNoHandleDisposition,
+                                                 .handle = handle_,
+                                                 .type = ZX_OBJ_TYPE_NONE,
+                                                 .rights = ZX_RIGHT_NONE,
+                                                 .result = ZX_OK};
+      printer.DisplayHandle(handle_disposition);
       break;
     }
     case kInferredHandleInfo:

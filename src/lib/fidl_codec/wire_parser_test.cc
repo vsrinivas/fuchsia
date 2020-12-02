@@ -95,20 +95,23 @@ TEST_F(WireParserTest, ParseSingleString) {
   ASSERT_NE(method, nullptr);
   ASSERT_EQ("Grob", method->name());
 
-  zx_handle_info_t* handle_infos = nullptr;
+  zx_handle_disposition_t* handle_dispositions = nullptr;
   if (message.handles().size() > 0) {
-    handle_infos = new zx_handle_info_t[message.handles().size()];
+    handle_dispositions = new zx_handle_disposition_t[message.handles().size()];
     for (uint32_t i = 0; i < message.handles().size(); ++i) {
-      handle_infos[i].handle = message.handles().data()[i];
-      handle_infos[i].type = ZX_OBJ_TYPE_NONE;
-      handle_infos[i].rights = 0;
+      handle_dispositions[i].operation = fidl_codec::kNoHandleDisposition;
+      handle_dispositions[i].handle = message.handles().data()[i];
+      handle_dispositions[i].type = ZX_OBJ_TYPE_NONE;
+      handle_dispositions[i].rights = 0;
+      handle_dispositions[i].result = ZX_OK;
     }
   }
 
   std::unique_ptr<fidl_codec::StructValue> decoded_request;
   std::stringstream error_stream;
-  fidl_codec::DecodeRequest(method, message.bytes().data(), message.bytes().size(), handle_infos,
-                            message.handles().size(), &decoded_request, error_stream);
+  fidl_codec::DecodeRequest(method, message.bytes().data(), message.bytes().size(),
+                            handle_dispositions, message.handles().size(),
+                            &decoded_request, error_stream);
   rapidjson::Document actual;
   if (decoded_request != nullptr) {
     decoded_request->ExtractJson(actual.GetAllocator(), actual);
@@ -118,7 +121,7 @@ TEST_F(WireParserTest, ParseSingleString) {
   expected.Parse(R"JSON({"value":"one"})JSON");
   ASSERT_EQ(expected, actual);
 
-  delete[] handle_infos;
+  delete[] handle_dispositions;
 }
 
 // This is a general-purpose macro for calling InterceptRequest and checking its
@@ -135,106 +138,108 @@ TEST_F(WireParserTest, ParseSingleString) {
 // This is useful when we want to test that we can decode junk data.
 // If num_bytes is not -1, instead of decoding the full buffer, we only decode num_bytes of buffer.
 // This is helpful when we want to test display of incorect data.
-#define TEST_DECODE_WIRE_BODY_COMMON(_iface, patched_offset, patched_value, _json_value,           \
-                                     _pretty_print, num_bytes, ...)                                \
-  do {                                                                                             \
-    fidl::MessageBuffer buffer;                                                                    \
-    fidl::Message message = buffer.CreateEmptyMessage();                                           \
-    using test::fidlcodec::examples::FidlCodecTestInterface;                                       \
-    InterceptRequest<FidlCodecTestInterface>(                                                      \
-        message,                                                                                   \
-        [&](fidl::InterfacePtr<FidlCodecTestInterface>& ptr) { ptr->_iface(__VA_ARGS__); });       \
-                                                                                                   \
-    fidl_message_header_t header = message.header();                                               \
-                                                                                                   \
-    const std::vector<const InterfaceMethod*>* methods = loader()->GetByOrdinal(header.ordinal);   \
-    ASSERT_NE(methods, nullptr);                                                                   \
-    ASSERT_TRUE(!methods->empty());                                                                \
-    const InterfaceMethod* method = (*methods)[0];                                                 \
-    ASSERT_NE(method, nullptr);                                                                    \
-    ASSERT_EQ(#_iface, method->name());                                                            \
-                                                                                                   \
-    zx_handle_info_t* handle_infos = nullptr;                                                      \
-    if (message.handles().size() > 0) {                                                            \
-      handle_infos = new zx_handle_info_t[message.handles().size()];                               \
-      for (uint32_t i = 0; i < message.handles().size(); ++i) {                                    \
-        handle_infos[i].handle = message.handles().data()[i];                                      \
-        handle_infos[i].type = ZX_OBJ_TYPE_CHANNEL;                                                \
-        handle_infos[i].rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE |              \
-                                 ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT |          \
-                                 ZX_RIGHT_INSPECT;                                                 \
-      }                                                                                            \
-    }                                                                                              \
-    if (patched_offset != -1) {                                                                    \
-      *(reinterpret_cast<uint64_t*>(message.bytes().data() + patched_offset)) = patched_value;     \
-    }                                                                                              \
-                                                                                                   \
-    std::stringstream error_stream;                                                                \
-    MessageDecoder decoder(message.bytes().data(),                                                 \
-                           (num_bytes == -1) ? message.bytes().size() : num_bytes, handle_infos,   \
-                           message.handles().size(), error_stream);                                \
-    std::unique_ptr<StructValue> object = decoder.DecodeMessage(*method->request());               \
-    if ((num_bytes == -1) && (patched_offset == -1)) {                                             \
-      std::cerr << error_stream.str();                                                             \
-      ASSERT_FALSE(decoder.HasError()) << "Could not decode message";                              \
-    }                                                                                              \
-    rapidjson::Document actual;                                                                    \
-    if (object != nullptr) {                                                                       \
-      object->ExtractJson(actual.GetAllocator(), actual);                                          \
-    }                                                                                              \
-    rapidjson::StringBuffer actual_string;                                                         \
-    rapidjson::Writer<rapidjson::StringBuffer> actual_w(actual_string);                            \
-    actual.Accept(actual_w);                                                                       \
-                                                                                                   \
-    rapidjson::Document expected;                                                                  \
-    std::string expected_source = _json_value;                                                     \
-    expected.Parse(expected_source.c_str());                                                       \
-    rapidjson::StringBuffer expected_string;                                                       \
-    rapidjson::Writer<rapidjson::StringBuffer> expected_w(expected_string);                        \
-    expected.Accept(expected_w);                                                                   \
-                                                                                                   \
-    ASSERT_EQ(expected, actual) << "expected = " << expected_string.GetString() << " ("            \
-                                << expected_source << ")"                                          \
-                                << " and actual = " << actual_string.GetString();                  \
-                                                                                                   \
-    std::stringstream result;                                                                      \
-    if (object != nullptr) {                                                                       \
-      PrettyPrinter printer(result, FakeColors, false, "", 80, /*header_on_every_line=*/false);    \
-      object->PrettyPrint(nullptr, printer);                                                       \
-    }                                                                                              \
-    ASSERT_EQ(result.str(), _pretty_print)                                                         \
-        << "expected = " << _pretty_print << " actual = " << result.str();                         \
-                                                                                                   \
-    for (uint32_t actual = 0; actual < message.bytes().actual(); ++actual) {                       \
-      std::stringstream error_stream;                                                              \
-      MessageDecoder decoder(message.bytes().data(), actual, handle_infos,                         \
-                             message.handles().size(), error_stream);                              \
-      std::unique_ptr<StructValue> object = decoder.DecodeMessage(*method->request());             \
-      ASSERT_TRUE(decoder.HasError()) << "expect decoder error for buffer size " << actual         \
-                                      << " instead of " << message.bytes().actual();               \
-    }                                                                                              \
-                                                                                                   \
-    for (uint32_t actual = 0; message.handles().actual() > actual; actual++) {                     \
-      std::stringstream error_stream;                                                              \
-      MessageDecoder decoder(message.bytes().data(), message.bytes().size(), handle_infos, actual, \
-                             error_stream);                                                        \
-      std::unique_ptr<StructValue> object = decoder.DecodeMessage(*method->request());             \
-      ASSERT_TRUE(decoder.HasError()) << "expect decoder error for handle size " << actual         \
-                                      << " instead of " << message.handles().actual();             \
-    }                                                                                              \
-                                                                                                   \
-    if ((num_bytes == -1) && (patched_offset == -1)) {                                             \
-      auto encode_result = Encoder::EncodeMessage(header.txid, header.ordinal, header.flags,       \
-                                                  header.magic_number, *object.get());             \
-      ASSERT_THAT(encode_result.bytes, ::testing::ElementsAreArray(message.bytes()));              \
-      ASSERT_EQ(message.handles().size(), encode_result.handles.size());                           \
-                                                                                                   \
-      for (uint32_t i = 0; i < message.handles().size(); ++i) {                                    \
-        EXPECT_EQ(message.handles().data()[i], encode_result.handles[i].handle);                   \
-      }                                                                                            \
-    }                                                                                              \
-                                                                                                   \
-    delete[] handle_infos;                                                                         \
+#define TEST_DECODE_WIRE_BODY_COMMON(_iface, patched_offset, patched_value, _json_value,          \
+                                     _pretty_print, num_bytes, ...)                               \
+  do {                                                                                            \
+    fidl::MessageBuffer buffer;                                                                   \
+    fidl::Message message = buffer.CreateEmptyMessage();                                          \
+    using test::fidlcodec::examples::FidlCodecTestInterface;                                      \
+    InterceptRequest<FidlCodecTestInterface>(                                                     \
+        message,                                                                                  \
+        [&](fidl::InterfacePtr<FidlCodecTestInterface>& ptr) { ptr->_iface(__VA_ARGS__); });      \
+                                                                                                  \
+    fidl_message_header_t header = message.header();                                              \
+                                                                                                  \
+    const std::vector<const InterfaceMethod*>* methods = loader()->GetByOrdinal(header.ordinal);  \
+    ASSERT_NE(methods, nullptr);                                                                  \
+    ASSERT_TRUE(!methods->empty());                                                               \
+    const InterfaceMethod* method = (*methods)[0];                                                \
+    ASSERT_NE(method, nullptr);                                                                   \
+    ASSERT_EQ(#_iface, method->name());                                                           \
+                                                                                                  \
+    zx_handle_disposition_t* handle_dispositions = nullptr;                                       \
+    if (message.handles().size() > 0) {                                                           \
+      handle_dispositions = new zx_handle_disposition_t[message.handles().size()];                \
+      for (uint32_t i = 0; i < message.handles().size(); ++i) {                                   \
+        handle_dispositions[i].operation = fidl_codec::kNoHandleDisposition;                                     \
+        handle_dispositions[i].handle = message.handles().data()[i];                              \
+        handle_dispositions[i].type = ZX_OBJ_TYPE_CHANNEL;                                        \
+        handle_dispositions[i].rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE |      \
+                                        ZX_RIGHT_SIGNAL | ZX_RIGHT_SIGNAL_PEER | ZX_RIGHT_WAIT |  \
+                                        ZX_RIGHT_INSPECT;                                         \
+        handle_dispositions[i].result = ZX_OK;                                                    \
+      }                                                                                           \
+    }                                                                                             \
+    if (patched_offset != -1) {                                                                   \
+      *(reinterpret_cast<uint64_t*>(message.bytes().data() + patched_offset)) = patched_value;    \
+    }                                                                                             \
+                                                                                                  \
+    std::stringstream error_stream;                                                               \
+    MessageDecoder decoder(                                                                       \
+        message.bytes().data(), (num_bytes == -1) ? message.bytes().size() : num_bytes,           \
+        handle_dispositions, message.handles().size(), error_stream);  \
+    std::unique_ptr<StructValue> object = decoder.DecodeMessage(*method->request());              \
+    if ((num_bytes == -1) && (patched_offset == -1)) {                                            \
+      std::cerr << error_stream.str();                                                            \
+      ASSERT_FALSE(decoder.HasError()) << "Could not decode message";                             \
+    }                                                                                             \
+    rapidjson::Document actual;                                                                   \
+    if (object != nullptr) {                                                                      \
+      object->ExtractJson(actual.GetAllocator(), actual);                                         \
+    }                                                                                             \
+    rapidjson::StringBuffer actual_string;                                                        \
+    rapidjson::Writer<rapidjson::StringBuffer> actual_w(actual_string);                           \
+    actual.Accept(actual_w);                                                                      \
+                                                                                                  \
+    rapidjson::Document expected;                                                                 \
+    std::string expected_source = _json_value;                                                    \
+    expected.Parse(expected_source.c_str());                                                      \
+    rapidjson::StringBuffer expected_string;                                                      \
+    rapidjson::Writer<rapidjson::StringBuffer> expected_w(expected_string);                       \
+    expected.Accept(expected_w);                                                                  \
+                                                                                                  \
+    ASSERT_EQ(expected, actual) << "expected = " << expected_string.GetString() << " ("           \
+                                << expected_source << ")"                                         \
+                                << " and actual = " << actual_string.GetString();                 \
+                                                                                                  \
+    std::stringstream result;                                                                     \
+    if (object != nullptr) {                                                                      \
+      PrettyPrinter printer(result, FakeColors, false, "", 80, /*header_on_every_line=*/false);   \
+      object->PrettyPrint(nullptr, printer);                                                      \
+    }                                                                                             \
+    ASSERT_EQ(result.str(), _pretty_print)                                                        \
+        << "expected = " << _pretty_print << " actual = " << result.str();                        \
+                                                                                                  \
+    for (uint32_t actual = 0; actual < message.bytes().actual(); ++actual) {                      \
+      std::stringstream error_stream;                                                             \
+      MessageDecoder decoder(message.bytes().data(), actual, handle_dispositions,                 \
+                             message.handles().size(), error_stream);  \
+      std::unique_ptr<StructValue> object = decoder.DecodeMessage(*method->request());            \
+      ASSERT_TRUE(decoder.HasError()) << "expect decoder error for buffer size " << actual        \
+                                      << " instead of " << message.bytes().actual();              \
+    }                                                                                             \
+                                                                                                  \
+    for (uint32_t actual = 0; message.handles().actual() > actual; actual++) {                    \
+      std::stringstream error_stream;                                                             \
+      MessageDecoder decoder(message.bytes().data(), message.bytes().size(), handle_dispositions, \
+                             actual, error_stream);                    \
+      std::unique_ptr<StructValue> object = decoder.DecodeMessage(*method->request());            \
+      ASSERT_TRUE(decoder.HasError()) << "expect decoder error for handle size " << actual        \
+                                      << " instead of " << message.handles().actual();            \
+    }                                                                                             \
+                                                                                                  \
+    if ((num_bytes == -1) && (patched_offset == -1)) {                                            \
+      auto encode_result = Encoder::EncodeMessage(header.txid, header.ordinal, header.flags,      \
+                                                  header.magic_number, *object.get());            \
+      ASSERT_THAT(encode_result.bytes, ::testing::ElementsAreArray(message.bytes()));             \
+      ASSERT_EQ(message.handles().size(), encode_result.handles.size());                          \
+                                                                                                  \
+      for (uint32_t i = 0; i < message.handles().size(); ++i) {                                   \
+        EXPECT_EQ(message.handles().data()[i], encode_result.handles[i].handle);                  \
+      }                                                                                           \
+    }                                                                                             \
+                                                                                                  \
+    delete[] handle_dispositions;                                                                 \
   } while (0)
 
 #define TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, ...) \
@@ -1589,13 +1594,15 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
 
   fidl_message_header_t header = message.header();
 
-  zx_handle_info_t* handle_infos = nullptr;
+  zx_handle_disposition_t* handle_dispositions = nullptr;
   if (message.handles().size() > 0) {
-    handle_infos = new zx_handle_info_t[message.handles().size()];
+    handle_dispositions = new zx_handle_disposition_t[message.handles().size()];
     for (uint32_t i = 0; i < message.handles().size(); ++i) {
-      handle_infos[i].handle = message.handles().data()[i];
-      handle_infos[i].type = ZX_OBJ_TYPE_NONE;
-      handle_infos[i].rights = 0;
+      handle_dispositions[i].operation = fidl_codec::kNoHandleDisposition;
+      handle_dispositions[i].handle = message.handles().data()[i];
+      handle_dispositions[i].type = ZX_OBJ_TYPE_NONE;
+      handle_dispositions[i].rights = 0;
+      handle_dispositions[i].result = ZX_OK;
     }
   }
 
@@ -1609,8 +1616,9 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
 
   std::unique_ptr<fidl_codec::StructValue> decoded_request;
   std::stringstream error_stream;
-  fidl_codec::DecodeRequest(method, message.bytes().data(), message.bytes().size(), handle_infos,
-                            message.handles().size(), &decoded_request, error_stream);
+  fidl_codec::DecodeRequest(method, message.bytes().data(), message.bytes().size(),
+                            handle_dispositions, message.handles().size(),
+                            &decoded_request, error_stream);
   rapidjson::Document actual;
   if (decoded_request != nullptr) {
     decoded_request->ExtractJson(actual.GetAllocator(), actual);
@@ -1619,7 +1627,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   // Checks that an invalid type generates an invalid value.
   ASSERT_STREQ(actual["i32"].GetString(), "(invalid)");
 
-  delete[] handle_infos;
+  delete[] handle_dispositions;
   ASSERT_STREQ(log_msg.str().c_str(), "Invalid type");
 }
 

@@ -158,7 +158,10 @@ void Encoder::VisitHandleValue(const HandleValue* node, const Type* for_type) {
     WriteValue<uint32_t>(FIDL_HANDLE_ABSENT);
   } else {
     WriteValue<uint32_t>(FIDL_HANDLE_PRESENT);
-    handles_.push_back(node->handle());
+    zx_handle_info_t info = {.handle = node->handle().handle,
+                             .type = node->handle().type,
+                             .rights = node->handle().rights};
+    handles_.push_back(info);
   }
 }
 

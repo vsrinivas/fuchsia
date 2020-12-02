@@ -1349,6 +1349,27 @@ class SyscallFidlMessageHandleInfo : public SyscallFidlMessage<zx_handle_info_t>
                                                    Stage stage) const override;
 };
 
+class SyscallFidlMessageHandleDisposition : public SyscallFidlMessage<zx_handle_disposition_t> {
+ public:
+  SyscallFidlMessageHandleDisposition(int64_t error_code, std::string_view name,
+                                      fidl_codec::SyscallFidlType type,
+                                      std::unique_ptr<Access<zx_handle_t>> handle,
+                                      std::unique_ptr<Access<uint8_t>> bytes,
+                                      std::unique_ptr<Access<uint32_t>> num_bytes,
+                                      std::unique_ptr<Access<zx_handle_disposition_t>> handles,
+                                      std::unique_ptr<Access<uint32_t>> num_handles)
+      : SyscallFidlMessage<zx_handle_disposition_t>(error_code, name, type, std::move(handle),
+                                                    std::move(bytes), std::move(num_bytes),
+                                                    std::move(handles), std::move(num_handles)) {}
+
+  bool InlineValue() const override { return false; }
+
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override;
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoder* decoder,
+                                                   Stage stage) const override;
+};
+
 enum class SyscallKind {
   // Describes a function (like startup functions).
   kFunction,
@@ -1568,13 +1589,25 @@ class Syscall {
   }
 
   // Adds an input FIDL message to display.
-  void InputFidlMessage(std::string_view name, fidl_codec::SyscallFidlType type,
-                        std::unique_ptr<Access<zx_handle_t>> handle,
-                        std::unique_ptr<Access<uint8_t>> bytes,
-                        std::unique_ptr<Access<uint32_t>> num_bytes,
-                        std::unique_ptr<Access<zx_handle_t>> handles,
-                        std::unique_ptr<Access<uint32_t>> num_handles) {
+  void InputFidlMessageHandle(std::string_view name, fidl_codec::SyscallFidlType type,
+                              std::unique_ptr<Access<zx_handle_t>> handle,
+                              std::unique_ptr<Access<uint8_t>> bytes,
+                              std::unique_ptr<Access<uint32_t>> num_bytes,
+                              std::unique_ptr<Access<zx_handle_t>> handles,
+                              std::unique_ptr<Access<uint32_t>> num_handles) {
     inputs_.push_back(std::make_unique<SyscallFidlMessageHandle>(
+        0, name, type, std::move(handle), std::move(bytes), std::move(num_bytes),
+        std::move(handles), std::move(num_handles)));
+  }
+
+  // Adds an input FIDL message to display.
+  void InputFidlMessageHandleDisposition(std::string_view name, fidl_codec::SyscallFidlType type,
+                                         std::unique_ptr<Access<zx_handle_t>> handle,
+                                         std::unique_ptr<Access<uint8_t>> bytes,
+                                         std::unique_ptr<Access<uint32_t>> num_bytes,
+                                         std::unique_ptr<Access<zx_handle_disposition_t>> handles,
+                                         std::unique_ptr<Access<uint32_t>> num_handles) {
+    inputs_.push_back(std::make_unique<SyscallFidlMessageHandleDisposition>(
         0, name, type, std::move(handle), std::move(bytes), std::move(num_bytes),
         std::move(handles), std::move(num_handles)));
   }
@@ -2153,11 +2186,13 @@ inline std::unique_ptr<fidl_codec::Value> GenerateHandleValue(Type handle) {
 
 template <>
 inline std::unique_ptr<fidl_codec::Value> GenerateHandleValue(zx_handle_t handle) {
-  zx_handle_info_t info;
-  info.handle = handle;
-  info.type = ZX_OBJ_TYPE_NONE;
-  info.rights = 0;
-  return std::make_unique<fidl_codec::HandleValue>(info);
+  zx_handle_disposition_t result;
+  result.operation = fidl_codec::kNoHandleDisposition;
+  result.handle = handle;
+  result.rights = 0;
+  result.type = ZX_OBJ_TYPE_NONE;
+  result.result = ZX_OK;
+  return std::make_unique<fidl_codec::HandleValue>(result);
 }
 
 // Display a value on a stream.
@@ -2298,11 +2333,13 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
       printer << fidl_codec::ResetColor;
       break;
     case SyscallType::kHandle: {
-      zx_handle_info_t handle_info;
-      handle_info.handle = value;
-      handle_info.type = ZX_OBJ_TYPE_NONE;
-      handle_info.rights = 0;
-      printer.DisplayHandle(handle_info);
+      zx_handle_disposition_t handle_disposition;
+      handle_disposition.operation = fidl_codec::kNoHandleDisposition;
+      handle_disposition.handle = value;
+      handle_disposition.type = ZX_OBJ_TYPE_NONE;
+      handle_disposition.rights = 0;
+      handle_disposition.result = ZX_OK;
+      printer.DisplayHandle(handle_disposition);
       break;
     }
     case SyscallType::kInfoMapsType:

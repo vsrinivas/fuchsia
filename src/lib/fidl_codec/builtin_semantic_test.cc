@@ -45,12 +45,13 @@ class BuiltinSemanticTest : public SemanticParserTest {
 
  protected:
   HandleSemantic handle_semantic_;
-  const zx_handle_info_t channel0_;
-  const zx_handle_info_t channel2_;
+  const zx_handle_disposition_t channel0_;
+  const zx_handle_disposition_t channel2_;
 };
 
 BuiltinSemanticTest::BuiltinSemanticTest()
-    : channel0_({kChannel0, 0, 0, 0}), channel2_({kChannel2, 0, 0, 0}) {
+    : channel0_({fidl_codec::kNoHandleDisposition, kChannel0, 0, 0, ZX_OK}),
+      channel2_({fidl_codec::kNoHandleDisposition, kChannel2, 0, 0, ZX_OK}) {
   library_loader_.ParseBuiltinSemantic();
   handle_semantic_.AddLinkedHandles(kPid, kChannel0, kChannel1);
   handle_semantic_.AddLinkedHandles(kPid, kChannel2, kChannel3);
@@ -252,9 +253,11 @@ TEST_F(BuiltinSemanticTest, CreateComponent) {
   launch_info->AddField("url",
                         std::make_unique<StringValue>(
                             "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx"));
-  launch_info->AddField("directory_request", std::make_unique<HandleValue>(channel0_));
+  launch_info->AddField("directory_request",
+                        std::make_unique<HandleValue>(channel0_));
   request.AddField("launch_info", std::move(launch_info));
-  request.AddField("controller", std::make_unique<HandleValue>(channel2_));
+  request.AddField("controller",
+                   std::make_unique<HandleValue>(channel2_));
 
   ExecuteWrite(method->semantic(), &request, nullptr);
 

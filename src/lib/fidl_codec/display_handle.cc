@@ -107,7 +107,17 @@ void ShortObjTypeName(zx_obj_type_t obj_type, PrettyPrinter& printer) {
   }
 }
 
-void DisplayHandle(const zx_handle_info_t& handle, PrettyPrinter& printer) {
+void DisplayHandle(const zx_handle_disposition_t& handle, PrettyPrinter& printer) {
+  if (handle.operation != kNoHandleDisposition) {
+    switch (handle.operation) {
+      case ZX_HANDLE_OP_MOVE:
+        printer << "Move(";
+        break;
+      case ZX_HANDLE_OP_DUPLICATE:
+        printer << "Duplicate(";
+        break;
+    }
+  }
   printer << Red;
   if (handle.type != ZX_OBJ_TYPE_NONE) {
     ShortObjTypeName(handle.type, printer);
@@ -117,10 +127,16 @@ void DisplayHandle(const zx_handle_info_t& handle, PrettyPrinter& printer) {
   snprintf(buffer, sizeof(buffer), "%08x", handle.handle);
   printer << buffer;
   printer << ResetColor;
-  if (handle.rights != 0) {
-    printer << '(';
+  if (handle.operation != kNoHandleDisposition) {
+    printer << ", ";
     printer.DisplayRights(handle.rights);
-    printer << ')';
+    printer << ")";
+  } else {
+    if (handle.rights != 0) {
+      printer << '(';
+      printer.DisplayRights(handle.rights);
+      printer << ')';
+    }
   }
 }
 

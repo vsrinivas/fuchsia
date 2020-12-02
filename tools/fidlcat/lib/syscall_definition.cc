@@ -48,6 +48,34 @@ class ZxChannelCallArgs {
   }
 };
 
+class ZxChannelCallEtcArgs {
+ public:
+  static const uint8_t* wr_bytes(const zx_channel_call_etc_args_t* from) {
+    return (from == nullptr) ? nullptr : reinterpret_cast<const uint8_t*>(from->wr_bytes);
+  }
+  static const zx_handle_disposition_t* wr_handles(const zx_channel_call_etc_args_t* from) {
+    return (from == nullptr) ? nullptr : from->wr_handles;
+  }
+  static const uint8_t* rd_bytes(const zx_channel_call_etc_args_t* from) {
+    return (from == nullptr) ? nullptr : reinterpret_cast<const uint8_t*>(from->rd_bytes);
+  }
+  static const zx_handle_info_t* rd_handles(const zx_channel_call_etc_args_t* from) {
+    return (from == nullptr) ? nullptr : from->rd_handles;
+  }
+  static uint32_t wr_num_bytes(const zx_channel_call_etc_args_t* from) {
+    return (from == nullptr) ? 0 : from->wr_num_bytes;
+  }
+  static uint32_t wr_num_handles(const zx_channel_call_etc_args_t* from) {
+    return (from == nullptr) ? 0 : from->wr_num_handles;
+  }
+  static uint32_t rd_num_bytes(const zx_channel_call_etc_args_t* from) {
+    return (from == nullptr) ? 0 : from->rd_num_bytes;
+  }
+  static uint32_t rd_num_handles(const zx_channel_call_etc_args_t* from) {
+    return (from == nullptr) ? 0 : from->rd_num_handles;
+  }
+};
+
 class ZxX86_64ExcData : public Class<zx_x86_64_exc_data_t> {
  public:
   static const ZxX86_64ExcData* GetClass();
@@ -3485,12 +3513,13 @@ void SyscallDecoderDispatcher::Populate() {
                                          std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
     zx_channel_write->Input<uint32_t>("options",
                                       std::make_unique<ArgumentAccess<uint32_t>>(options));
-    zx_channel_write->InputFidlMessage("", fidl_codec::SyscallFidlType::kOutputMessage,
-                                       std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
-                                       std::make_unique<ArgumentAccess<uint8_t>>(bytes),
-                                       std::make_unique<ArgumentAccess<uint32_t>>(num_bytes),
-                                       std::make_unique<ArgumentAccess<zx_handle_t>>(handles),
-                                       std::make_unique<ArgumentAccess<uint32_t>>(num_handles));
+    zx_channel_write->InputFidlMessageHandle(
+        "", fidl_codec::SyscallFidlType::kOutputMessage,
+        std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        std::make_unique<ArgumentAccess<uint8_t>>(bytes),
+        std::make_unique<ArgumentAccess<uint32_t>>(num_bytes),
+        std::make_unique<ArgumentAccess<zx_handle_t>>(handles),
+        std::make_unique<ArgumentAccess<uint32_t>>(num_handles));
 
     zx_channel_write->set_inference(&SyscallDecoderDispatcher::ZxChannelWrite);
 
@@ -3503,6 +3532,43 @@ void SyscallDecoderDispatcher::Populate() {
       }
     });
   }
+
+  {
+    Syscall* zx_channel_write_etc =
+        Add("zx_channel_write_etc", SyscallReturnType::kStatus, SyscallKind::kChannelWrite);
+    // Arguments
+    auto handle = zx_channel_write_etc->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_channel_write_etc->Argument<uint32_t>(SyscallType::kUint32);
+    auto bytes = zx_channel_write_etc->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto num_bytes = zx_channel_write_etc->Argument<uint32_t>(SyscallType::kUint32);
+    auto handles =
+        zx_channel_write_etc->PointerArgument<zx_handle_disposition_t>(SyscallType::kHandle);
+    auto num_handles = zx_channel_write_etc->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_channel_write_etc->Input<zx_handle_t>("handle",
+                                             std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_channel_write_etc->Input<uint32_t>("options",
+                                          std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_channel_write_etc->InputFidlMessageHandleDisposition(
+        "", fidl_codec::SyscallFidlType::kOutputMessage,
+        std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        std::make_unique<ArgumentAccess<uint8_t>>(bytes),
+        std::make_unique<ArgumentAccess<uint32_t>>(num_bytes),
+        std::make_unique<ArgumentAccess<zx_handle_disposition_t>>(handles),
+        std::make_unique<ArgumentAccess<uint32_t>>(num_handles));
+
+    zx_channel_write_etc->set_inference(&SyscallDecoderDispatcher::ZxChannelWrite);
+
+    zx_channel_write_etc->set_compute_statistics([](const OutputEvent* event) {
+      const fidl_codec::FidlMessageValue* message = event->invoked_event()->GetMessage();
+      if ((message != nullptr) && !message->unknown_direction()) {
+        CloseHandleVisitor visitor(event);
+        message->Visit(&visitor, nullptr);
+        event->thread()->process()->AddEvent(event, message);
+      }
+    });
+  }
+
   {
     Syscall* zx_channel_call =
         Add("zx_channel_call", SyscallReturnType::kStatus, SyscallKind::kChannelCall);
@@ -3526,7 +3592,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_channel_call->Input<uint32_t>(
         "rd_num_handles", std::make_unique<FieldAccess<zx_channel_call_args, uint32_t>>(
                               args, ZxChannelCallArgs::rd_num_handles, SyscallType::kUint32));
-    zx_channel_call->InputFidlMessage(
+    zx_channel_call->InputFidlMessageHandle(
         "", fidl_codec::SyscallFidlType::kOutputRequest,
         std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
         std::make_unique<PointerFieldAccess<zx_channel_call_args, uint8_t>>(
@@ -3555,6 +3621,74 @@ void SyscallDecoderDispatcher::Populate() {
     zx_channel_call->set_inference(&SyscallDecoderDispatcher::ZxChannelCall);
 
     zx_channel_call->set_compute_statistics([](const OutputEvent* event) {
+      const fidl_codec::FidlMessageValue* request = event->invoked_event()->GetMessage();
+      if (request != nullptr) {
+        CloseHandleVisitor close_handle_visitor(event);
+        request->Visit(&close_handle_visitor, nullptr);
+        event->thread()->process()->AddEvent(event, request);
+      }
+      const fidl_codec::FidlMessageValue* response = event->GetMessage();
+      if (response != nullptr) {
+        CreateHandleVisitor create_handle_visitor(event);
+        response->Visit(&create_handle_visitor, nullptr);
+      }
+    });
+  }
+
+  {
+    Syscall* zx_channel_call_etc =
+        Add("zx_channel_call_etc", SyscallReturnType::kStatus, SyscallKind::kChannelCall);
+    // Arguments
+    auto handle = zx_channel_call_etc->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_channel_call_etc->Argument<uint32_t>(SyscallType::kUint32);
+    auto deadline = zx_channel_call_etc->Argument<zx_time_t>(SyscallType::kTime);
+    auto args =
+        zx_channel_call_etc->PointerArgument<zx_channel_call_etc_args_t>(SyscallType::kStruct);
+    auto actual_bytes = zx_channel_call_etc->PointerArgument<uint32_t>(SyscallType::kUint32);
+    auto actual_handles = zx_channel_call_etc->PointerArgument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_channel_call_etc->Input<zx_handle_t>("handle",
+                                            std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_channel_call_etc->Input<uint32_t>("options",
+                                         std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_channel_call_etc->Input<zx_time_t>("deadline",
+                                          std::make_unique<ArgumentAccess<zx_time_t>>(deadline));
+    zx_channel_call_etc->Input<uint32_t>(
+        "rd_num_bytes", std::make_unique<FieldAccess<zx_channel_call_etc_args, uint32_t>>(
+                            args, ZxChannelCallEtcArgs::rd_num_bytes, SyscallType::kUint32));
+    zx_channel_call_etc->Input<uint32_t>(
+        "rd_num_handles", std::make_unique<FieldAccess<zx_channel_call_etc_args, uint32_t>>(
+                              args, ZxChannelCallEtcArgs::rd_num_handles, SyscallType::kUint32));
+    zx_channel_call_etc->InputFidlMessageHandleDisposition(
+        "", fidl_codec::SyscallFidlType::kOutputRequest,
+        std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        std::make_unique<PointerFieldAccess<zx_channel_call_etc_args, uint8_t>>(
+            args, ZxChannelCallEtcArgs::wr_bytes, SyscallType::kUint8),
+        std::make_unique<FieldAccess<zx_channel_call_etc_args, uint32_t>>(
+            args, ZxChannelCallEtcArgs::wr_num_bytes, SyscallType::kUint32),
+        std::make_unique<PointerFieldAccess<zx_channel_call_etc_args, zx_handle_disposition_t>>(
+            args, ZxChannelCallEtcArgs::wr_handles, SyscallType::kHandle),
+        std::make_unique<FieldAccess<zx_channel_call_etc_args, uint32_t>>(
+            args, ZxChannelCallEtcArgs::wr_num_handles, SyscallType::kUint32));
+    // Outputs
+    zx_channel_call_etc->OutputFidlMessageHandleInfo(
+        ZX_OK, "", fidl_codec::SyscallFidlType::kInputResponse,
+        std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        std::make_unique<PointerFieldAccess<zx_channel_call_etc_args, uint8_t>>(
+            args, ZxChannelCallEtcArgs::rd_bytes, SyscallType::kUint8),
+        std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes),
+        std::make_unique<PointerFieldAccess<zx_channel_call_etc_args, zx_handle_info_t>>(
+            args, ZxChannelCallEtcArgs::rd_handles, SyscallType::kHandle),
+        std::make_unique<ArgumentAccess<uint32_t>>(actual_handles));
+    zx_channel_call_etc->Output<uint32_t>(ZX_ERR_BUFFER_TOO_SMALL, "actual_bytes",
+                                          std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes));
+    zx_channel_call_etc->Output<uint32_t>(
+        ZX_ERR_BUFFER_TOO_SMALL, "actual_handles",
+        std::make_unique<ArgumentAccess<uint32_t>>(actual_handles));
+
+    zx_channel_call_etc->set_inference(&SyscallDecoderDispatcher::ZxChannelCall);
+
+    zx_channel_call_etc->set_compute_statistics([](const OutputEvent* event) {
       const fidl_codec::FidlMessageValue* request = event->invoked_event()->GetMessage();
       if (request != nullptr) {
         CloseHandleVisitor close_handle_visitor(event);

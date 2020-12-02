@@ -13,6 +13,7 @@
 #include <memory>
 #include <string>
 
+#include "src/lib/fidl_codec/printer.h"
 #include "third_party/quickjs/quickjs-libc.h"
 #include "third_party/quickjs/quickjs.h"
 
@@ -40,11 +41,14 @@ JSClassDef handle_class_ = {
     .finalizer = nullptr,
 };
 
-zx_handle_info_t HandleFromJsval(JSValue val) {
+zx_handle_disposition_t HandleFromJsval(JSValue val) {
   auto opaque = reinterpret_cast<JSFuchsiaHandle *>(JS_GetOpaque(val, handle_class_id_));
-  zx_handle_info_t handle;
+  zx_handle_disposition_t handle;
+  handle.operation = fidl_codec::kNoHandleDisposition;
   handle.handle = opaque->handle;
   handle.type = opaque->type;
+  handle.rights = ZX_RIGHT_NONE;
+  handle.result = ZX_OK;
   return handle;
 }
 
@@ -267,11 +271,11 @@ JSValue GetChild(JSContext *ctx, JSValueConst /*this_val*/, int argc, JSValueCon
   static_assert(sizeof(zx_rights_t) == sizeof(uint32_t));
   uint64_t koid;
   zx_rights_t rights;
-  zx_handle_info_t handle_info = HandleFromJsval(argv[0]);
+  zx_handle_disposition_t handle_disposition = HandleFromJsval(argv[0]);
   JS_ToInt64(ctx, reinterpret_cast<int64_t *>(&koid), argv[1]);
   JS_ToInt32(ctx, reinterpret_cast<int32_t *>(&rights), argv[2]);
   zx_handle_t out;
-  zx_status_t status = zx_object_get_child(handle_info.handle, koid, rights, &out);
+  zx_status_t status = zx_object_get_child(handle_disposition.handle, koid, rights, &out);
   if (status != ZX_OK) {
     return ZxStatusToError(ctx, status);
   }
@@ -405,7 +409,7 @@ JSValue ObjectGetInfo(JSContext *ctx, JSValueConst /*this_val*/, int argc, JSVal
   if (argc != 2) {
     return JS_ThrowSyntaxError(ctx, "Bad arguments to zx.objectGetInfo");
   }
-  zx_handle_info_t handle_info = HandleFromJsval(argv[0]);
+  zx_handle_disposition_t handle_disposition = HandleFromJsval(argv[0]);
   uint32_t topic;
   if (JS_ToUint32(ctx, &topic, argv[1])) {
     return JS_ThrowSyntaxError(ctx, "Bad topic for zx.objectGetInfo");
@@ -427,7 +431,7 @@ JSValue ObjectGetInfo(JSContext *ctx, JSValueConst /*this_val*/, int argc, JSVal
   do {
     attempt++;
     void *buffer = controller->SetBuffer(buffer_size);
-    zx_status_t status = zx_object_get_info(handle_info.handle, topic, buffer,
+    zx_status_t status = zx_object_get_info(handle_disposition.handle, topic, buffer,
                                             controller->BufferSize(), &actual, &avail);
     if (status != ZX_OK) {
       return ZxStatusToError(ctx, status);
@@ -443,7 +447,7 @@ JSValue ObjectGetProperty(JSContext *ctx, JSValueConst /*this_val*/, int argc, J
   if (argc != 2) {
     return JS_ThrowSyntaxError(ctx, "Bad arguments to zx.objectGetProperty");
   }
-  zx_handle_info_t handle_info = HandleFromJsval(argv[0]);
+  zx_handle_disposition_t handle_disposition = HandleFromJsval(argv[0]);
   uint32_t property;
   if (JS_ToUint32(ctx, &property, argv[1])) {
     return JS_ThrowSyntaxError(ctx, "Bad property for zx.objectGetProperty");
@@ -453,7 +457,8 @@ JSValue ObjectGetProperty(JSContext *ctx, JSValueConst /*this_val*/, int argc, J
                                  property);
   }
   char name[ZX_MAX_NAME_LEN];
-  zx_status_t status = zx_object_get_property(handle_info.handle, property, name, sizeof(name));
+  zx_status_t status =
+      zx_object_get_property(handle_disposition.handle, property, name, sizeof(name));
   if (status != ZX_OK) {
     return ZxStatusToError(ctx, status);
   }
@@ -478,9 +483,9 @@ JSValue Kill(JSContext *ctx, JSValueConst /*this_val*/, int argc, JSValueConst *
   if (argc != 1) {
     return JS_ThrowSyntaxError(ctx, "Bad arguments to zx.kill");
   }
-  zx_handle_info_t handle_info = HandleFromJsval(argv[0]);
+  zx_handle_disposition_t handle_disposition = HandleFromJsval(argv[0]);
 
-  zx_status_t status = zx_task_kill(handle_info.handle);
+  zx_status_t status = zx_task_kill(handle_disposition.handle);
   if (status != ZX_OK) {
     return ZxStatusToError(ctx, status);
   }

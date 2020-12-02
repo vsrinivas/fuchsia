@@ -457,7 +457,7 @@ void TableValue::Visit(Visitor* visitor, const Type* for_type) const {
 
 FidlMessageValue::FidlMessageValue(fidl_codec::DecodedMessage* message, std::string global_errors,
                                    const uint8_t* bytes, uint32_t num_bytes,
-                                   const zx_handle_info_t* handles, uint32_t num_handles)
+                                   const zx_handle_disposition_t* handles, uint32_t num_handles)
     : txid_(message->txid()),
       ordinal_(message->ordinal()),
       global_errors_(std::move(global_errors)),

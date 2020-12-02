@@ -37,10 +37,11 @@ class FidlcatPrinter : public fidl_codec::PrettyPrinter {
 
   bool DumpMessages() const override { return dump_messages_; }
 
-  void DisplayHandle(const zx_handle_info_t& handle) override;
+  void DisplayHandle(const zx_handle_disposition_t& handle) override;
   void DisplayHandle(zx_handle_t handle) {
-    zx_handle_info_t info = {.handle = handle, .type = 0, .rights = 0};
-    DisplayHandle(info);
+    zx_handle_disposition_t disposition = {
+        .operation = fidl_codec::kNoHandleDisposition, .handle = handle, .type = 0, .rights = 0, .result = ZX_OK};
+    DisplayHandle(disposition);
   }
   void DisplayHandleInfo(HandleInfo* handle_info);
   void DisplayStatus(zx_status_t status);

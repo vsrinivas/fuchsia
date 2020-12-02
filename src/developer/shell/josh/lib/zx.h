@@ -18,7 +18,7 @@ namespace zx {
 JSValue ZxStatusToError(JSContext *ctx, zx_status_t status);
 
 // Extracts a handle from a given JSValue Handle object.
-zx_handle_info_t HandleFromJsval(JSValue val);
+zx_handle_disposition_t HandleFromJsval(JSValue val);
 
 // Returns a module that supports syscall functionality.
 JSModuleDef *ZxModuleInit(JSContext *ctx, const char *module_name);

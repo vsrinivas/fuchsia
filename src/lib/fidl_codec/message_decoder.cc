@@ -24,8 +24,9 @@ std::string DocumentToString(rapidjson::Document* document);
 
 bool DecodedMessage::DecodeMessage(MessageDecoderDispatcher* dispatcher, uint64_t process_koid,
                                    zx_handle_t handle, const uint8_t* bytes, uint32_t num_bytes,
-                                   const zx_handle_info_t* handles, uint32_t num_handles,
-                                   SyscallFidlType type, std::ostream& error_stream) {
+                                   const zx_handle_disposition_t* handles, uint32_t num_handles,
+                                   SyscallFidlType type,
+                                   std::ostream& error_stream) {
   if ((bytes == nullptr) || (num_bytes < sizeof(fidl_message_header_t))) {
     error_stream << "not enough data for message\n";
     return false;
@@ -161,7 +162,7 @@ Direction MessageDecoderDispatcher::ComputeDirection(uint64_t process_koid, zx_h
 }
 
 MessageDecoder::MessageDecoder(const uint8_t* bytes, uint32_t num_bytes,
-                               const zx_handle_info_t* handles, uint32_t num_handles,
+                               const zx_handle_disposition_t* handles, uint32_t num_handles,
                                std::ostream& error_stream)
     : num_bytes_(num_bytes),
       start_byte_pos_(bytes),

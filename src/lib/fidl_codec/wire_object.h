@@ -242,9 +242,10 @@ class StringValue : public Value {
 // A handle.
 class HandleValue : public Value {
  public:
-  explicit HandleValue(const zx_handle_info_t& handle) : handle_(handle) {}
+  HandleValue(const zx_handle_disposition_t& handle)
+      : handle_(handle) {}
 
-  const zx_handle_info_t& handle() const { return handle_; }
+  const zx_handle_disposition_t& handle() const { return handle_; }
 
   const HandleValue* AsHandleValue() const override { return this; }
 
@@ -258,7 +259,7 @@ class HandleValue : public Value {
   void Visit(Visitor* visitor, const Type* for_type) const override;
 
  private:
-  const zx_handle_info_t handle_;
+  const zx_handle_disposition_t handle_;
 };
 
 // An union.
@@ -401,7 +402,7 @@ class TableValue : public Value {
 class FidlMessageValue : public Value {
  public:
   FidlMessageValue(fidl_codec::DecodedMessage* message, std::string global_errors,
-                   const uint8_t* bytes, uint32_t num_bytes, const zx_handle_info_t* handles,
+                   const uint8_t* bytes, uint32_t num_bytes, const zx_handle_disposition_t* handles,
                    uint32_t num_handles);
   FidlMessageValue(zx_txid_t txid, uint64_t ordinal, const std::string& global_errors,
                    const std::string& epitaph_error, bool received, bool is_request,
@@ -428,9 +429,9 @@ class FidlMessageValue : public Value {
   bool is_request() const { return is_request_; }
   bool unknown_direction() const { return unknown_direction_; }
   const fidl_codec::InterfaceMethod* method() const { return method_; }
-  const std::vector<uint8_t> bytes() const { return bytes_; }
-  const std::vector<zx_handle_info_t> handles() const { return handles_; }
-  void add_handle(const zx_handle_info_t& handle) { handles_.emplace_back(handle); }
+  const std::vector<uint8_t>& bytes() const { return bytes_; }
+  const std::vector<zx_handle_disposition_t>& handles() const { return handles_; }
+  void add_handle(const zx_handle_disposition_t& handle) { handles_.emplace_back(handle); }
   const StructValue* decoded_request() const { return decoded_request_.get(); }
   void set_decoded_request(std::unique_ptr<StructValue> decoded_request) {
     decoded_request_ = std::move(decoded_request);
@@ -484,7 +485,7 @@ class FidlMessageValue : public Value {
   // All the bytes of the message.
   std::vector<uint8_t> bytes_;
   // All the handles of the message.
-  std::vector<zx_handle_info_t> handles_;
+  std::vector<zx_handle_disposition_t> handles_;
   // Value of the request we have been able to decode.
   std::unique_ptr<StructValue> decoded_request_;
   // Errors generated during the decoding of the request. If not empty, decoded_request_ holds only

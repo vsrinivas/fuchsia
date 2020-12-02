@@ -199,7 +199,7 @@ JSValue DecodeResponse(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
   int32_t handles_len;
   // It's an array, so assume this works...
   JS_ToInt32(ctx, &handles_len, JS_GetPropertyStr(ctx, argv[1], "length"));
-  std::array<zx_handle_info_t, ZX_CHANNEL_MAX_MSG_HANDLES> handle_buf;
+  std::array<zx_handle_disposition_t, ZX_CHANNEL_MAX_MSG_HANDLES> handle_buf;
   // Check if handles returned anything useful.
   for (int32_t i = 0; i < handles_len; i++) {
     JSValue val = JS_GetPropertyUint32(ctx, argv[1], i);

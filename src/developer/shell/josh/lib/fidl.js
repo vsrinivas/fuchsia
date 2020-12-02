@@ -326,7 +326,7 @@ class ProtocolClient {
 // Something fidl_codec should do: when we improve the JSON output for it, this should be
 // less necessary.
 function parseFidlcatHandle(handleStr) {
-  var regex = /[A-Z_]*:([0-9a-f]+)\(.*\)/gi;
+  var regex = /[A-Z_]*:([0-9a-f]+)(\(.*\))?/gi;
   return parseInt(handleStr.replace(regex, '$1'), 16);
 }
 

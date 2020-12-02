@@ -62,6 +62,7 @@ void ProtoVisitor::VisitHandleValue(const fidl_codec::HandleValue* node,
   handle_info->set_handle(node->handle().handle);
   handle_info->set_type(node->handle().type);
   handle_info->set_rights(node->handle().rights);
+  handle_info->set_operation(static_cast<int32_t>(node->handle().operation));
 }
 
 void ProtoVisitor::VisitUnionValue(const fidl_codec::UnionValue* node,
@@ -117,6 +118,7 @@ void ProtoVisitor::VisitFidlMessageValue(const fidl_codec::FidlMessageValue* nod
     handle_info->set_handle(handle.handle);
     handle_info->set_type(handle.type);
     handle_info->set_rights(handle.rights);
+    handle_info->set_operation(-1);
   }
   if (node->decoded_request() != nullptr) {
     fidl_message->set_has_request(true);
@@ -177,11 +179,13 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
       return std::make_unique<fidl_codec::StringValue>(proto_value.string_value());
     case proto::Value::kHandleValue: {
       const proto::HandleInfo& proto_handle_info = proto_value.handle_value();
-      zx_handle_info handle_info;
-      handle_info.handle = proto_handle_info.handle();
-      handle_info.type = proto_handle_info.type();
-      handle_info.rights = proto_handle_info.rights();
-      return std::make_unique<fidl_codec::HandleValue>(handle_info);
+      zx_handle_disposition_t handle_disposition;
+      handle_disposition.operation = static_cast<zx_handle_op_t>(proto_handle_info.operation());
+      handle_disposition.handle = proto_handle_info.handle();
+      handle_disposition.type = proto_handle_info.type();
+      handle_disposition.rights = proto_handle_info.rights();
+      handle_disposition.result = ZX_OK;
+      return std::make_unique<fidl_codec::HandleValue>(handle_disposition);
     }
     case proto::Value::kUnionValue: {
       auto union_type = type->AsUnionType();
@@ -285,11 +289,13 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
           proto_message.response_errors());
       for (int index = 0; index < proto_message.handle_size(); ++index) {
         const proto::HandleInfo proto_handle_info = proto_message.handle(index);
-        zx_handle_info handle_info;
-        handle_info.handle = proto_handle_info.handle();
-        handle_info.type = proto_handle_info.type();
-        handle_info.rights = proto_handle_info.rights();
-        message->add_handle(handle_info);
+        zx_handle_disposition_t handle_disposition;
+        handle_disposition.operation = fidl_codec::kNoHandleDisposition;
+        handle_disposition.handle = proto_handle_info.handle();
+        handle_disposition.type = proto_handle_info.type();
+        handle_disposition.rights = proto_handle_info.rights();
+        handle_disposition.result = ZX_OK;
+        message->add_handle(handle_disposition);
       }
       if (method != nullptr) {
         // We can have a null method if we replay a file with a different state (for example, we

@@ -176,25 +176,27 @@ std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandle::GenerateValue(Sysca
   uint32_t num_bytes_value = num_bytes()->Value(decoder, stage);
   const zx_handle_t* handles_value = handles()->Content(decoder, stage);
   uint32_t num_handles_value = num_handles()->Value(decoder, stage);
-  zx_handle_info_t* handle_infos_value = nullptr;
+  zx_handle_disposition_t* handle_dispositions_value = nullptr;
   if (num_handles_value > 0) {
-    handle_infos_value = new zx_handle_info_t[num_handles_value];
+    handle_dispositions_value = new zx_handle_disposition_t[num_handles_value];
     for (uint32_t i = 0; i < num_handles_value; ++i) {
-      handle_infos_value[i].handle = handles_value[i];
-      handle_infos_value[i].type = ZX_OBJ_TYPE_NONE;
-      handle_infos_value[i].rights = 0;
+      handle_dispositions_value[i].operation = fidl_codec::kNoHandleDisposition;
+      handle_dispositions_value[i].handle = handles_value[i];
+      handle_dispositions_value[i].rights = 0;
+      handle_dispositions_value[i].type = ZX_OBJ_TYPE_NONE;
+      handle_dispositions_value[i].result = ZX_OK;
     }
   }
   fidl_codec::DecodedMessage message;
   std::stringstream error_stream;
   message.DecodeMessage(decoder->dispatcher()->MessageDecoderDispatcher(),
                         decoder->fidlcat_thread()->process()->koid(), handle_value, bytes_value,
-                        num_bytes_value, handle_infos_value, num_handles_value, type(),
-                        error_stream);
+                        num_bytes_value, handle_dispositions_value, num_handles_value,
+                        type(), error_stream);
   auto result = std::make_unique<fidl_codec::FidlMessageValue>(
-      &message, error_stream.str(), bytes_value, num_bytes_value, handle_infos_value,
+      &message, error_stream.str(), bytes_value, num_bytes_value, handle_dispositions_value,
       num_handles_value);
-  delete[] handle_infos_value;
+  delete[] handle_dispositions_value;
   if (result->is_request()) {
     if (result->matched_request()) {
       decoder->set_semantic(result->method()->semantic());
@@ -219,14 +221,59 @@ std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandleInfo::GenerateValue(
   uint32_t num_bytes_value = num_bytes()->Value(decoder, stage);
   const zx_handle_info_t* handle_infos_value = handles()->Content(decoder, stage);
   uint32_t num_handles_value = num_handles()->Value(decoder, stage);
+  zx_handle_disposition_t* handle_dispositions_value = nullptr;
+  if (num_handles_value > 0) {
+    handle_dispositions_value = new zx_handle_disposition_t[num_handles_value];
+    for (uint32_t i = 0; i < num_handles_value; ++i) {
+      handle_dispositions_value[i].operation = fidl_codec::kNoHandleDisposition;
+      handle_dispositions_value[i].handle = handle_infos_value[i].handle;
+      handle_dispositions_value[i].type = handle_infos_value[i].type;
+      handle_dispositions_value[i].rights = handle_infos_value[i].rights;
+      handle_dispositions_value[i].result = ZX_OK;
+    }
+  }
   fidl_codec::DecodedMessage message;
   std::stringstream error_stream;
   message.DecodeMessage(decoder->dispatcher()->MessageDecoderDispatcher(),
                         decoder->fidlcat_thread()->process()->koid(), handle_value, bytes_value,
-                        num_bytes_value, handle_infos_value, num_handles_value, type(),
-                        error_stream);
+                        num_bytes_value, handle_dispositions_value, num_handles_value,
+                        type(), error_stream);
   auto result = std::make_unique<fidl_codec::FidlMessageValue>(
-      &message, error_stream.str(), bytes_value, num_bytes_value, handle_infos_value,
+      &message, error_stream.str(), bytes_value, num_bytes_value, handle_dispositions_value,
+      num_handles_value);
+  delete[] handle_dispositions_value;
+  if (result->is_request()) {
+    if (result->matched_request()) {
+      decoder->set_semantic(result->method()->semantic());
+      decoder->set_decoded_request(result->decoded_request());
+    }
+    if (result->matched_response()) {
+      decoder->set_semantic(result->method()->semantic());
+      decoder->set_decoded_response(result->decoded_response());
+    }
+  }
+  return result;
+}
+
+std::unique_ptr<fidl_codec::Type> SyscallFidlMessageHandleDisposition::ComputeType() const {
+  return std::make_unique<fidl_codec::FidlMessageType>();
+}
+
+std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandleDisposition::GenerateValue(
+    SyscallDecoder* decoder, Stage stage) const {
+  zx_handle_t handle_value = handle()->Value(decoder, stage);
+  const uint8_t* bytes_value = bytes()->Content(decoder, stage);
+  uint32_t num_bytes_value = num_bytes()->Value(decoder, stage);
+  const zx_handle_disposition_t* handle_dispositions_value = handles()->Content(decoder, stage);
+  uint32_t num_handles_value = num_handles()->Value(decoder, stage);
+  fidl_codec::DecodedMessage message;
+  std::stringstream error_stream;
+  message.DecodeMessage(decoder->dispatcher()->MessageDecoderDispatcher(),
+                        decoder->fidlcat_thread()->process()->koid(), handle_value, bytes_value,
+                        num_bytes_value, handle_dispositions_value, num_handles_value,
+                        type(), error_stream);
+  auto result = std::make_unique<fidl_codec::FidlMessageValue>(
+      &message, error_stream.str(), bytes_value, num_bytes_value, handle_dispositions_value,
       num_handles_value);
   if (result->is_request()) {
     if (result->matched_request()) {

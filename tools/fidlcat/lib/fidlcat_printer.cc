@@ -25,10 +25,10 @@ FidlcatPrinter::FidlcatPrinter(SyscallDisplayDispatcher* dispatcher, Process* pr
                                std::ostream& os, std::string_view line_header, int tabulations)
     : FidlcatPrinter(dispatcher, process, os, dispatcher->colors(), line_header, tabulations) {}
 
-void FidlcatPrinter::DisplayHandle(const zx_handle_info_t& handle) {
+void FidlcatPrinter::DisplayHandle(const zx_handle_disposition_t& handle) {
   HandleInfo* handle_info = process_->SearchHandleInfo(handle.handle);
-  if ((handle.type == ZX_OBJ_TYPE_NONE) && (handle_info != nullptr)) {
-    zx_handle_info_t tmp = handle;
+  if ((handle.type == ZX_OBJ_TYPE_NONE) && (handle_info != nullptr) && (handle.operation == fidl_codec::kNoHandleDisposition)) {
+    zx_handle_disposition_t tmp = handle;
     tmp.type = handle_info->object_type();
     fidl_codec::DisplayHandle(tmp, *this);
   } else {
@@ -44,9 +44,12 @@ void FidlcatPrinter::DisplayHandle(const zx_handle_info_t& handle) {
 }
 
 void FidlcatPrinter::DisplayHandleInfo(HandleInfo* handle_info) {
-  zx_handle_info_t info = {
-      .handle = handle_info->handle(), .type = handle_info->object_type(), .rights = 0};
-  fidl_codec::DisplayHandle(info, *this);
+  zx_handle_disposition_t disposition = {.operation = fidl_codec::kNoHandleDisposition,
+                                         .handle = handle_info->handle(),
+                                         .type = handle_info->object_type(),
+                                         .rights = 0,
+                                         .result = ZX_OK};
+  fidl_codec::DisplayHandle(disposition, *this);
   const fidl_codec::semantic::InferredHandleInfo* inferred_handle_info =
       inference_.GetInferredHandleInfo(handle_info->thread()->process()->koid(),
                                        handle_info->handle());

@@ -16,8 +16,9 @@ namespace {
 // specified by str.
 // Returns true on success, false on failure.
 bool DecodeMessage(const Struct& str, const uint8_t* bytes, uint32_t num_bytes,
-                   const zx_handle_info_t* handles, uint32_t num_handles,
-                   std::unique_ptr<StructValue>* decoded_object, std::ostream& error_stream) {
+                   const zx_handle_disposition_t* handles, uint32_t num_handles,
+                   std::unique_ptr<StructValue>* decoded_object,
+                   std::ostream& error_stream) {
   MessageDecoder decoder(bytes, num_bytes, handles, num_handles, error_stream);
   *decoded_object = decoder.DecodeMessage(str);
   return !decoder.HasError();
@@ -26,23 +27,25 @@ bool DecodeMessage(const Struct& str, const uint8_t* bytes, uint32_t num_bytes,
 }  // anonymous namespace
 
 bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes, uint32_t num_bytes,
-                   const zx_handle_info_t* handles, uint32_t num_handles,
-                   std::unique_ptr<StructValue>* decoded_object, std::ostream& error_stream) {
+                   const zx_handle_disposition_t* handles, uint32_t num_handles,
+                   std::unique_ptr<StructValue>* decoded_object,
+                   std::ostream& error_stream) {
   if (method->request() == nullptr) {
     return false;
   }
-  return DecodeMessage(*method->request(), bytes, num_bytes, handles, num_handles, decoded_object,
-                       error_stream);
+  return DecodeMessage(*method->request(), bytes, num_bytes, handles, num_handles,
+                       decoded_object, error_stream);
 }
 
 bool DecodeResponse(const InterfaceMethod* method, const uint8_t* bytes, uint32_t num_bytes,
-                    const zx_handle_info_t* handles, uint32_t num_handles,
-                    std::unique_ptr<StructValue>* decoded_object, std::ostream& error_stream) {
+                    const zx_handle_disposition_t* handles, uint32_t num_handles,
+                    std::unique_ptr<StructValue>* decoded_object,
+                    std::ostream& error_stream) {
   if (method->response() == nullptr) {
     return false;
   }
-  return DecodeMessage(*method->response(), bytes, num_bytes, handles, num_handles, decoded_object,
-                       error_stream);
+  return DecodeMessage(*method->response(), bytes, num_bytes, handles, num_handles,
+                       decoded_object, error_stream);
 }
 
 }  // namespace fidl_codec

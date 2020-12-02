@@ -81,7 +81,7 @@ TEST_F(TaskTest, Kill) {
     ctx_->DumpError();
   }
   ASSERT_FALSE(JS_IsException(handle_to_root_js));
-  zx_handle_info_t handle_to_root = zx::HandleFromJsval(handle_to_root_js);
+  zx_handle_disposition_t handle_to_root = zx::HandleFromJsval(handle_to_root_js);
 
   // spawn a proccess, child of root job and get its koid
   const char* argv[] = {"/pkg/bin/spawn_child_test_util", nullptr};
@@ -146,7 +146,7 @@ TEST_F(TaskTest, KillAll) {
     ctx_->DumpError();
   }
   ASSERT_FALSE(JS_IsException(handle_to_root_js));
-  zx_handle_info_t handle_to_root = zx::HandleFromJsval(handle_to_root_js);
+  zx_handle_disposition_t handle_to_root = zx::HandleFromJsval(handle_to_root_js);
 
   // get koid of current process to make the spawned name unique
   zx_handle_t cur_process_handle = zx_process_self();

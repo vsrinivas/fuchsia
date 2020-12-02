@@ -25,6 +25,8 @@ namespace fidl_codec {
 constexpr int kTabSize = 2;
 constexpr uint64_t kOneBillion = 1'000'000'000L;
 
+constexpr zx_handle_op_t kNoHandleDisposition = 0xffffffffu;
+
 #define kSecondsPerMinute 60
 #define kMinutesPerHour 60
 #define kHoursPerDay 24
@@ -72,7 +74,11 @@ class PrettyPrinter {
 
   // Displays a handle. This allows the caller to also display some infered data we have inferered
   // for this handle (if any).
-  virtual void DisplayHandle(const zx_handle_info_t& handle);
+  // If handle.operation == kNoHandleDisposition, only the info part of zx_handle_disposition_t is
+  // used and printed.
+  // Else, the handle comes from the write of an "etc" function (zx_channel_write_etc or write part
+  // of a zx_channel_call_etc). In that case, the full disposition is used to print the handle.
+  virtual void DisplayHandle(const zx_handle_disposition_t& handle);
 
   // Displays a bti perm.
   void DisplayBtiPerm(uint32_t perm);

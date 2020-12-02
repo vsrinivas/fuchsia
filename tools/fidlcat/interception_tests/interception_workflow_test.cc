@@ -506,20 +506,21 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
     }
   }
 
-// TODO(fxbug.dev/62955) put back this string within expected when 62955 will be fixed.
-// "__libc_extensions_init",
+  // TODO(fxbug.dev/62955) put back this string within expected when 62955 will be fixed.
+  // "__libc_extensions_init",
 
-  std::set<std::string> expected = {
-                                    "processargs_extract_handles",
+  std::set<std::string> expected = {"processargs_extract_handles",
                                     "zx_bti_create",
                                     "zx_bti_pin",
                                     "zx_bti_release_quarantine",
                                     "zx_cache_flush",
                                     "zx_channel_call",
+                                    "zx_channel_call_etc",
                                     "zx_channel_create",
                                     "zx_channel_read",
                                     "zx_channel_read_etc",
                                     "zx_channel_write",
+                                    "zx_channel_write_etc",
                                     "zx_clock_adjust",
                                     "zx_clock_get",
                                     "zx_clock_get_monotonic",

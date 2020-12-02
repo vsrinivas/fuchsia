@@ -59,8 +59,8 @@ class DecodedMessage {
   // Decodes a message and fill all the fields. Returns true if we can display something.
   bool DecodeMessage(MessageDecoderDispatcher* dispatcher, uint64_t process_koid,
                      zx_handle_t handle, const uint8_t* bytes, uint32_t num_bytes,
-                     const zx_handle_info_t* handles, uint32_t num_handles, SyscallFidlType type,
-                     std::ostream& error_stream);
+                     const zx_handle_disposition_t* handles, uint32_t num_handles,
+                     SyscallFidlType type, std::ostream& error_stream);
 
  private:
   const fidl_message_header_t* header_ = nullptr;
@@ -123,7 +123,7 @@ class MessageDecoderDispatcher {
 // Helper to decode a message (request or response). It generates a StructValue.
 class MessageDecoder {
  public:
-  MessageDecoder(const uint8_t* bytes, uint32_t num_bytes, const zx_handle_info_t* handles,
+  MessageDecoder(const uint8_t* bytes, uint32_t num_bytes, const zx_handle_disposition_t* handles,
                  uint32_t num_handles, std::ostream& error_stream);
   MessageDecoder(MessageDecoder* container, uint64_t offset, uint64_t num_bytes_remaining,
                  uint64_t num_handles_remaining);
@@ -132,7 +132,7 @@ class MessageDecoder {
 
   uint32_t num_bytes() const { return num_bytes_; }
 
-  const zx_handle_info_t* handle_pos() const { return handle_pos_; }
+  const zx_handle_disposition_t* handle_pos() const { return handle_pos_; }
 
   uint64_t next_object_offset() const { return next_object_offset_; }
 
@@ -179,13 +179,15 @@ class MessageDecoder {
 
   // Consumes a handle. Returns FIDL_HANDLE_ABSENT if there is no handle
   // available.
-  zx_handle_info_t GetNextHandle() {
+  zx_handle_disposition_t GetNextHandle() {
     if (handle_pos_ == end_handle_pos_) {
       AddError() << "Not enough handles\n";
-      zx_handle_info_t result;
+      zx_handle_disposition_t result;
+      result.operation = kNoHandleDisposition;
       result.handle = FIDL_HANDLE_ABSENT;
       result.type = ZX_OBJ_TYPE_NONE;
       result.rights = 0;
+      result.result = ZX_OK;
       return result;
     }
     return *handle_pos_++;
@@ -223,10 +225,10 @@ class MessageDecoder {
   const uint8_t* const start_byte_pos_;
 
   // The end of the message.
-  const zx_handle_info_t* const end_handle_pos_;
+  const zx_handle_disposition_t* const end_handle_pos_;
 
   // The current handle decoding position in the message.
-  const zx_handle_info_t* handle_pos_;
+  const zx_handle_disposition_t* handle_pos_;
 
   // Location of the next out of line object.
   uint64_t next_object_offset_ = 0;

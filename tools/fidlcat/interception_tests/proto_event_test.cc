@@ -99,12 +99,22 @@ TEST_F(ProtoEventTest, InvokedAndOutputEvent) {
   int64_t timestamp_output = time(nullptr);
   auto output_event = std::make_shared<OutputEvent>(
       timestamp_output, dispatcher()->SearchThread(kTid), syscall, ZX_OK, invoked_event);
-  zx_handle_info handle_0 = {.handle = kHandle0, .type = ZX_OBJ_TYPE_CHANNEL, .rights = 0};
-  zx_handle_info handle_1 = {.handle = kHandle1, .type = ZX_OBJ_TYPE_CHANNEL, .rights = 0};
-  output_event->AddInlineField(syscall->SearchInlineMember("out0", /*invoked=*/false),
-                               std::make_unique<fidl_codec::HandleValue>(handle_0));
-  output_event->AddInlineField(syscall->SearchInlineMember("out1", /*invoked=*/false),
-                               std::make_unique<fidl_codec::HandleValue>(handle_1));
+  zx_handle_disposition_t handle_0 = {.operation = fidl_codec::kNoHandleDisposition,
+                                      .handle = kHandle0,
+                                      .type = ZX_OBJ_TYPE_CHANNEL,
+                                      .rights = 0,
+                                      .result = ZX_OK};
+  zx_handle_disposition_t handle_1 = {.operation = fidl_codec::kNoHandleDisposition,
+                                      .handle = kHandle1,
+                                      .type = ZX_OBJ_TYPE_CHANNEL,
+                                      .rights = 0,
+                                      .result = ZX_OK};
+  output_event->AddInlineField(
+      syscall->SearchInlineMember("out0", /*invoked=*/false),
+      std::make_unique<fidl_codec::HandleValue>(handle_0));
+  output_event->AddInlineField(
+      syscall->SearchInlineMember("out1", /*invoked=*/false),
+      std::make_unique<fidl_codec::HandleValue>(handle_1));
 
   proto::Event proto_invoked_event;
   invoked_event->Write(&proto_invoked_event);

@@ -585,15 +585,17 @@ std::unique_ptr<Value> HandleType::Decode(MessageDecoder* decoder, uint64_t offs
                         << "> for handle\n";
     handle = FIDL_HANDLE_ABSENT;
   }
-  zx_handle_info_t handle_info;
   if (handle == FIDL_HANDLE_ABSENT) {
-    handle_info.handle = FIDL_HANDLE_ABSENT;
-    handle_info.type = ZX_OBJ_TYPE_NONE;
-    handle_info.rights = 0;
+    zx_handle_disposition_t handle_disposition;
+    handle_disposition.operation = fidl_codec::kNoHandleDisposition;
+    handle_disposition.handle = FIDL_HANDLE_ABSENT;
+    handle_disposition.type = ZX_OBJ_TYPE_NONE;
+    handle_disposition.rights = 0;
+    handle_disposition.result = ZX_OK;
+    return std::make_unique<HandleValue>(handle_disposition);
   } else {
-    handle_info = decoder->GetNextHandle();
+    return std::make_unique<HandleValue>(decoder->GetNextHandle());
   }
-  return std::make_unique<HandleValue>(handle_info);
 }
 
 void HandleType::Visit(TypeVisitor* visitor) const { visitor->VisitHandleType(this); }
