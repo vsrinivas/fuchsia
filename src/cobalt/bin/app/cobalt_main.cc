@@ -32,6 +32,7 @@
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
+#include "src/public/cobalt_config.h"
 
 // Command-line flags
 
@@ -243,11 +244,16 @@ int main(int argc, const char** argv) {
 
   auto boardname = ReadBoardName(context->svc());
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "cobalt_fidl_provider");
+  cobalt::UploadScheduleConfig upload_schedule = {
+      .target_interval = schedule_interval,
+      .min_interval = min_interval,
+      .initial_interval = initial_interval,
+      .jitter = upload_jitter,
+  };
   cobalt::CobaltApp app = cobalt::CobaltApp::CreateCobaltApp(
-      std::move(context), loop.dispatcher(), schedule_interval, min_interval, initial_interval,
-      upload_jitter, event_aggregator_backfill_days, start_event_aggregator_worker,
-      use_memory_observation_store, max_bytes_per_observation_store, ReadBuildInfo("product"),
-      boardname, ReadBuildInfo("version"));
+      std::move(context), loop.dispatcher(), upload_schedule, event_aggregator_backfill_days,
+      start_event_aggregator_worker, use_memory_observation_store, max_bytes_per_observation_store,
+      ReadBuildInfo("product"), boardname, ReadBuildInfo("version"));
   loop.Run();
   return 0;
 }

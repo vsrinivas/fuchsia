@@ -56,8 +56,7 @@ std::unique_ptr<CobaltRegistry> ReadRegistry(const std::string& global_metrics_r
 CobaltConfig CobaltApp::CreateCobaltConfig(
     async_dispatcher_t* dispatcher, const std::string& global_metrics_registry_path,
     const FuchsiaConfigurationData& configuration_data, FuchsiaSystemClockInterface* system_clock,
-    FuchsiaHTTPClient::LoaderFactory http_loader_factory, std::chrono::seconds target_interval,
-    std::chrono::seconds min_interval, std::chrono::seconds initial_interval, float upload_jitter,
+    FuchsiaHTTPClient::LoaderFactory http_loader_factory, UploadScheduleConfig upload_schedule_cfg,
     size_t event_aggregator_backfill_days, bool use_memory_observation_store,
     size_t max_bytes_per_observation_store, const std::string& product_name,
     const std::string& board_name, const std::string& version,
@@ -94,10 +93,12 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
       .local_aggregate_store_dir = kLocalAggregationPath,
       .local_aggregate_store_strategy = StorageStrategy::Delayed,
 
-      .target_interval = target_interval,
-      .min_interval = min_interval,
-      .initial_interval = initial_interval,
-      .upload_jitter = upload_jitter,
+      .upload_schedule_cfg = upload_schedule_cfg,
+      // TODO(jaredweinstein): remove once these values are no longer in use.
+      .target_interval = upload_schedule_cfg.target_interval,
+      .min_interval = upload_schedule_cfg.min_interval,
+      .initial_interval = upload_schedule_cfg.initial_interval,
+      .upload_jitter = upload_schedule_cfg.jitter,
 
       .target_pipeline = std::move(target_pipeline),
 
@@ -118,11 +119,10 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
 
 CobaltApp CobaltApp::CreateCobaltApp(
     std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
-    std::chrono::seconds target_interval, std::chrono::seconds min_interval,
-    std::chrono::seconds initial_interval, float upload_jitter,
-    size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
-    bool use_memory_observation_store, size_t max_bytes_per_observation_store,
-    const std::string& product_name, const std::string& board_name, const std::string& version) {
+    UploadScheduleConfig upload_schedule_cfg, size_t event_aggregator_backfill_days,
+    bool start_event_aggregator_worker, bool use_memory_observation_store,
+    size_t max_bytes_per_observation_store, const std::string& product_name,
+    const std::string& board_name, const std::string& version) {
   // Create the configuration data from the data in the filesystem.
   FuchsiaConfigurationData configuration_data;
 
@@ -137,9 +137,8 @@ CobaltApp CobaltApp::CreateCobaltApp(
         context_ptr->svc()->Connect(loader_sync.NewRequest());
         return loader_sync;
       },
-      target_interval, min_interval, initial_interval, upload_jitter,
-      event_aggregator_backfill_days, use_memory_observation_store, max_bytes_per_observation_store,
-      product_name, board_name, version,
+      upload_schedule_cfg, event_aggregator_backfill_days, use_memory_observation_store,
+      max_bytes_per_observation_store, product_name, board_name, version,
       std::make_unique<ActivityListenerImpl>(dispatcher, context->svc())));
 
   cobalt_service->SetDataCollectionPolicy(configuration_data.GetDataCollectionPolicy());

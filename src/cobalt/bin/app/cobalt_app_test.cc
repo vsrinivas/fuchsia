@@ -59,9 +59,9 @@ class CreateCobaltConfigTest : public gtest::TestLoopFixture {
           service_directory_provider_.service_directory()->Connect(loader_sync.NewRequest());
           return loader_sync;
         },
-        target_interval, min_interval, initial_interval, jitter, event_aggregator_backfill_days,
-        use_memory_observation_store, max_bytes_per_observation_store, product_name, board_name,
-        version,
+        UploadScheduleConfig{target_interval, min_interval, initial_interval, jitter},
+        event_aggregator_backfill_days, use_memory_observation_store,
+        max_bytes_per_observation_store, product_name, board_name, version,
         std::make_unique<ActivityListenerImpl>(dispatcher(), context_provider_.context()->svc()));
   }
 
@@ -117,7 +117,7 @@ TEST_F(CreateCobaltConfigTest, ConfigFields) {
       CreateCobaltConfig("/pkg/data/testapp_metrics_registry.pb", configuration_data,
                          std::chrono::seconds(1), std::chrono::seconds(2), std::chrono::seconds(3),
                          test_jitter, 4, true, 1048000, "core", "x64", "0.1.2");
-  EXPECT_EQ(config.upload_jitter, test_jitter);
+  EXPECT_EQ(config.upload_schedule_cfg.jitter, test_jitter);
 }
 
 class CobaltAppTest : public gtest::TestLoopFixture {
