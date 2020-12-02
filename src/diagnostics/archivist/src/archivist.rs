@@ -12,13 +12,16 @@ use {
         repository::DataRepo,
     },
     anyhow::Error,
+    fidl::{endpoints::RequestStream, AsyncChannel},
     fidl_fuchsia_diagnostics::Selector,
     fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
+    fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
     fidl_fuchsia_sys_internal::SourceIdentity,
     fuchsia_async::{self as fasync, Task},
     fuchsia_component::server::{ServiceFs, ServiceObj, ServiceObjTrait},
     fuchsia_inspect::{component, health::Reporter},
     fuchsia_inspect_derive::WithInspect,
+    fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
@@ -31,7 +34,7 @@ use {
         path::{Path, PathBuf},
         sync::Arc,
     },
-    tracing::{debug, error, warn},
+    tracing::{debug, error, info, warn},
 };
 
 /// Spawns controller sends stop signal.
@@ -144,6 +147,37 @@ impl Archivist {
             .add_fidl_service(move |stream| spawn_controller(stream, stop_sender.clone()));
         self.stop_recv = Some(stop_recv);
         debug!("Controller services initialized.");
+        self
+    }
+
+    fn take_lifecycle_channel() -> LifecycleRequestStream {
+        let lifecycle_handle_info = HandleInfo::new(HandleType::Lifecycle, 0);
+        let lifecycle_handle = take_startup_handle(lifecycle_handle_info)
+            .expect("must have been provided a lifecycle channel in procargs");
+        let x: zx::Channel = lifecycle_handle.into();
+        let async_x = AsyncChannel::from(
+            fasync::Channel::from_channel(x).expect("Async channel conversion failed."),
+        );
+        LifecycleRequestStream::from_channel(async_x)
+    }
+
+    pub fn install_lifecycle_listener(&mut self) -> &mut Self {
+        let (mut stop_sender, stop_recv) = mpsc::channel(0);
+        let mut req_stream = Self::take_lifecycle_channel();
+
+        Task::spawn(async move {
+            debug!("Awaiting request to close");
+            while let Some(LifecycleRequest::Stop { .. }) =
+                req_stream.try_next().await.expect("Failure receiving lifecycle FIDL message")
+            {
+                info!("Initiating shutdown.");
+                stop_sender.send(()).await.unwrap();
+            }
+        })
+        .detach();
+
+        self.stop_recv = Some(stop_recv);
+        debug!("Lifecycle listener initialized.");
         self
     }
 

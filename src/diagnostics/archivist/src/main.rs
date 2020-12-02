@@ -51,6 +51,10 @@ pub struct Args {
     #[argh(switch)]
     install_controller: bool,
 
+    /// retrieve a fuchsia.process.Lifecycle handle from the runtime and listen to shutdown events
+    #[argh(switch)]
+    listen_to_lifecycle: bool,
+
     /// connect to fuchsia.diagnostics.internal.DetectController
     #[argh(switch)]
     connect_to_detect: bool,
@@ -119,8 +123,17 @@ fn main() -> Result<(), Error> {
         archivist.log_manager().clone().forward_logs();
     }
 
+    assert!(
+        !(opt.install_controller && opt.listen_to_lifecycle),
+        "only one shutdown mechanism can be specified."
+    );
+
     if opt.install_controller {
         archivist.install_controller_service();
+    }
+
+    if opt.listen_to_lifecycle {
+        archivist.install_lifecycle_listener();
     }
 
     if !opt.disable_log_connector {

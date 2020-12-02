@@ -6,9 +6,11 @@
             "--connect-to-detect",
             "--connect-to-log-stats",
             "--connect-to-sampler",
+            "--listen-to-lifecycle",
             "--config-path",
             "/config/data/archivist_config.json",
         ],
+        lifecycle: { stop_event: "notify" },
     },
     capabilities: [
         {
