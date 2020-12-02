@@ -1,0 +1,36 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.wlan.product.deprecatedclient;
+
+/// Maximum allowed SSID length
+const uint8 MAX_SSID_LENGTH = 32;
+
+/// Represents the current association state of a client interface if one exists.
+enum State {
+    NO_CLIENT = 0;
+    DISASSOCIATED = 1;
+    ASSOCIATING = 2;
+    ASSOCIATED = 3;
+};
+
+/// Encapsulates information associated with the access point to which a WLAN client is associated.
+struct Ap {
+    string:MAX_SSID_LENGTH ssid;
+    int8 rssi_dbm;
+};
+
+/// Represents the current state of a WLAN client interface.
+struct WlanStatus {
+    State state;
+    Ap? current_ap;
+};
+
+// NOTE: This FIDL protocol is deprecated.  Please do not add new uses that depend on it.
+/// Allows legacy interactions with a WLAN client interface.
+[Discoverable]
+protocol DeprecatedClient {
+    /// Queries the status of the most recently discovered WLAN client interface.
+    Status() -> (WlanStatus status);
+};

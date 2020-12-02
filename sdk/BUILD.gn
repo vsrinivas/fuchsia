@@ -210,6 +210,7 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.weave:fuchsia.weave_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.web:fuchsia.web_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.wlan.product.deprecatedclient:fuchsia.wlan.product.deprecatedclient_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration:fuchsia.wlan.product.deprecatedconfiguration_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service_sdk($fidl_toolchain)",
   ]

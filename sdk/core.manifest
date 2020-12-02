@@ -118,6 +118,7 @@ sdk://fidl/fuchsia.weave
 sdk://fidl/fuchsia.web
 sdk://fidl/fuchsia.wlan.common
 sdk://fidl/fuchsia.wlan.policy
+sdk://fidl/fuchsia.wlan.product.deprecatedclient
 sdk://fidl/fuchsia.wlan.product.deprecatedconfiguration
 sdk://fidl/fuchsia.wlan.service
 sdk://fidl/fuchsia.wlan.stats
