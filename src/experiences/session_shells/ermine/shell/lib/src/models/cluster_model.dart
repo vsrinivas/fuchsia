@@ -7,11 +7,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 import 'package:tiler/tiler.dart' show TilerModel, TileModel;
 
 import '../utils/presenter.dart';
 import '../utils/suggestion.dart';
+import '../utils/utils.dart';
 import 'ermine_shell.dart';
 import 'ermine_story.dart';
 
@@ -20,7 +22,7 @@ const _kMinTileSize = Size(320, 240);
 
 /// Defines a collection of [ClusterModel] instances. Calls [notifyListeners] when
 /// a cluster is added or deleted.
-class ClustersModel extends ChangeNotifier implements ErmineShell {
+class ClustersModel extends ChangeNotifier implements ErmineShell, Inspectable {
   /// The list of [ClusterModel] initialized to one cluster.
   final List<ClusterModel> clusters = [ClusterModel()];
 
@@ -266,6 +268,30 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
           .first;
     }
     return null;
+  }
+
+  @override
+  void onInspect(Node node) {
+    if (hasStories) {
+      for (int i = 0; i < clusters.length; i++) {
+        final cluster = clusters[i];
+        final clusterNode = node.child('cluster-$i');
+        for (int j = 0; j < cluster.stories.length; j++) {
+          final story = cluster.stories[j];
+          final storyNode = clusterNode.child('component-$j');
+          storyNode.stringProperty('name').setValue(story.name);
+          storyNode.stringProperty('id').setValue(story.id);
+          storyNode.boolProperty('focused').setValue(story.focused);
+          Rect rect =
+              rectFromGlobalKey(GlobalObjectKey(story.childViewConnection));
+          rect ??= Rect.zero;
+          storyNode.stringProperty('viewport').setValue(
+              '${rect.left},${rect.top},${rect.width},${rect.height}');
+        }
+      }
+    } else {
+      node.delete();
+    }
   }
 }
 

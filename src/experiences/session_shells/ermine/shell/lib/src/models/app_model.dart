@@ -303,6 +303,9 @@ class AppModel {
     // Session.
     node.stringProperty('session').setValue('started');
 
+    // Clusters.
+    clustersModel.onInspect(node.child('workspaces'));
+
     // Ask.
     askKey.currentState?.onInspect(node.child('ask'));
 
