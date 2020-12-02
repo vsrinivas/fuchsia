@@ -5,6 +5,10 @@
 use {
     super::*,
     crate::{merkle_str, pinned_pkg_url},
+    fidl_fuchsia_update_installer_ext::{
+        FetchFailureReason, PrepareFailureReason, Progress, State, UpdateInfo,
+        UpdateInfoAndProgress,
+    },
     pretty_assertions::assert_eq,
 };
 
@@ -239,4 +243,82 @@ async fn fails_when_package_cache_sync_fails() {
             BlobfsSync,
         ]
     );
+}
+
+/// Verifies that when we fail to resolve the update package, we get a Prepare failure with the
+/// expected `PrepareFailureReason`.
+async fn assert_prepare_failure_reason(
+    resolve_status: Status,
+    expected_reason: PrepareFailureReason,
+) {
+    let env = TestEnv::builder().build();
+    env.resolver.mock_resolve_failure(UPDATE_PKG_URL, resolve_status);
+
+    let mut attempt = env.start_update().await.unwrap();
+
+    assert_eq!(attempt.next().await.unwrap().unwrap(), State::Prepare);
+    assert_eq!(attempt.next().await.unwrap().unwrap(), State::FailPrepare(expected_reason));
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn prepare_failure_reason_out_of_space() {
+    assert_prepare_failure_reason(Status::NO_SPACE, PrepareFailureReason::OutOfSpace).await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn prepare_failure_reason_internal() {
+    assert_prepare_failure_reason(Status::ACCESS_DENIED, PrepareFailureReason::Internal).await;
+    assert_prepare_failure_reason(Status::ADDRESS_UNREACHABLE, PrepareFailureReason::Internal)
+        .await;
+    assert_prepare_failure_reason(Status::INTERNAL, PrepareFailureReason::Internal).await;
+    assert_prepare_failure_reason(Status::IO, PrepareFailureReason::Internal).await;
+    assert_prepare_failure_reason(Status::NOT_FOUND, PrepareFailureReason::Internal).await;
+    assert_prepare_failure_reason(Status::UNAVAILABLE, PrepareFailureReason::Internal).await;
+}
+
+/// Verifies that when we fail to resolve a non-update package, we get a Fetch failure with the
+/// expected `FetchFailureReason`.
+async fn assert_fetch_failure_reason(resolve_status: Status, expected_reason: FetchFailureReason) {
+    let env = TestEnv::builder().build();
+    env.resolver
+        .register_package("update", "upd4t3")
+        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]));
+    env.resolver.mock_resolve_failure(SYSTEM_IMAGE_URL, resolve_status);
+
+    let mut attempt = env.start_update().await.unwrap();
+
+    let info = UpdateInfo::builder().download_size(0).build();
+    let progress = Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build();
+    assert_eq!(attempt.next().await.unwrap().unwrap(), State::Prepare);
+    assert_eq!(
+        attempt.next().await.unwrap().unwrap(),
+        State::Fetch(
+            UpdateInfoAndProgress::builder().info(info.clone()).progress(progress.clone()).build()
+        )
+    );
+    assert_eq!(
+        attempt.next().await.unwrap().unwrap(),
+        State::FailFetch(
+            UpdateInfoAndProgress::builder()
+                .info(info)
+                .progress(progress)
+                .build()
+                .with_reason(expected_reason)
+        )
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn fetch_failure_reason_out_of_space() {
+    assert_fetch_failure_reason(Status::NO_SPACE, FetchFailureReason::OutOfSpace).await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn fetch_failure_reason_internal() {
+    assert_fetch_failure_reason(Status::ACCESS_DENIED, FetchFailureReason::Internal).await;
+    assert_fetch_failure_reason(Status::ADDRESS_UNREACHABLE, FetchFailureReason::Internal).await;
+    assert_fetch_failure_reason(Status::INTERNAL, FetchFailureReason::Internal).await;
+    assert_fetch_failure_reason(Status::IO, FetchFailureReason::Internal).await;
+    assert_fetch_failure_reason(Status::NOT_FOUND, FetchFailureReason::Internal).await;
+    assert_fetch_failure_reason(Status::UNAVAILABLE, FetchFailureReason::Internal).await;
 }

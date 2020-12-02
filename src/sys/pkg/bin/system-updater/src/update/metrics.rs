@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::update::config::Initiator,
+    crate::update::{config::Initiator, FetchError, PrepareError, ResolveError},
     cobalt_client::traits::AsEventCode,
     cobalt_sw_delivery_registry as metrics,
+    fuchsia_zircon::Status,
     futures::future::Future,
     std::{
         convert::TryInto,
@@ -25,21 +26,27 @@ pub fn connect_to_cobalt() -> (Client, impl Future<Output = ()>) {
     (Client(cobalt), cobalt_fut)
 }
 
-pub fn result_to_status_code(res: Result<(), &anyhow::Error>) -> StatusCode {
-    use fuchsia_zircon::Status;
+fn status_to_status_code(status: &Status) -> StatusCode {
+    match *status {
+        Status::IO => StatusCode::ErrorStorage,
+        Status::NO_SPACE => StatusCode::ErrorStorageOutOfSpace,
+        Status::ADDRESS_UNREACHABLE => StatusCode::ErrorUntrustedTufRepo,
+        Status::UNAVAILABLE => StatusCode::ErrorNetworking,
+        _ => StatusCode::Error,
+    }
+}
 
+pub fn result_to_status_code(res: Result<(), &anyhow::Error>) -> StatusCode {
     match res {
         Ok(()) => StatusCode::Success,
 
         Err(e) => {
-            if let Some(crate::update::ResolveError::Status(status)) = e.downcast_ref() {
-                match *status {
-                    Status::IO => StatusCode::ErrorStorage,
-                    Status::NO_SPACE => StatusCode::ErrorStorageOutOfSpace,
-                    Status::ADDRESS_UNREACHABLE => StatusCode::ErrorUntrustedTufRepo,
-                    Status::UNAVAILABLE => StatusCode::ErrorNetworking,
-                    _ => StatusCode::Error,
-                }
+            if let Some(FetchError::Resolve(ResolveError::Status(status, _))) = e.downcast_ref() {
+                status_to_status_code(status)
+            } else if let Some(PrepareError::ResolveUpdate(ResolveError::Status(status, _))) =
+                e.downcast_ref()
+            {
+                status_to_status_code(status)
             } else {
                 // Fallback to a generic catch-all error status code when the error didn't contain
                 // context indicating more clearly what type of error happened.

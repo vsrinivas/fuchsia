@@ -8,7 +8,10 @@
 //! `fidl_fuchsia_update_installer` bindings.
 
 pub mod state;
-pub use state::{Progress, State, StateId, UpdateInfo, UpdateInfoAndProgress};
+pub use state::{
+    FetchFailureReason, PrepareFailureReason, Progress, State, StateId, UpdateInfo,
+    UpdateInfoAndProgress,
+};
 
 pub mod options;
 pub use options::{Initiator, Options};
@@ -358,7 +361,7 @@ mod tests {
 
             assert_eq!(
                 returned_update_attempt.try_collect::<Vec<State>>().await.unwrap(),
-                vec![State::FailPrepare]
+                vec![State::FailPrepare(PrepareFailureReason::Internal)]
             );
         };
 
@@ -370,7 +373,9 @@ mod tests {
                         .unwrap();
 
                     let mut attempt = TestAttempt::new(monitor);
-                    attempt.send_state_and_recv_ack(State::FailPrepare).await;
+                    attempt
+                        .send_state_and_recv_ack(State::FailPrepare(PrepareFailureReason::Internal))
+                        .await;
                 }
                 request => panic!("Unexpected request: {:?}", request),
             }
@@ -622,7 +627,7 @@ mod tests {
 
             assert_eq!(
                 monitor.try_collect::<Vec<State>>().await.unwrap(),
-                vec![State::Prepare, State::FailPrepare]
+                vec![State::Prepare, State::FailPrepare(PrepareFailureReason::Internal)]
             );
         };
 
@@ -634,7 +639,9 @@ mod tests {
                     let mut monitor = TestAttempt::new(monitor);
 
                     monitor.send_state_and_recv_ack(State::Prepare).await;
-                    monitor.send_state_and_recv_ack(State::FailPrepare).await;
+                    monitor
+                        .send_state_and_recv_ack(State::FailPrepare(PrepareFailureReason::Internal))
+                        .await;
                 }
                 request => panic!("Unexpected request: {:?}", request),
             }
