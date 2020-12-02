@@ -172,6 +172,8 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 		ret = append(ret, &stringInLogCheck{String: "Timed out loading dynamic linker from fuchsia.ldsvc.Loader", Type: lt})
 		ret = append(ret, &stringInLogCheck{String: "ERROR: AddressSanitizer", Type: lt})
 		ret = append(ret, &stringInLogCheck{String: "ERROR: LeakSanitizer", Type: lt, ExceptBlocks: []*logBlock{
+			// startString and endString should match string in //zircon/system/ulib/c/test/sanitizer/lsan-test.cc.
+			{startString: "[===LSAN EXCEPT BLOCK START===]", endString: "[===LSAN EXCEPT BLOCK END===]"},
 			// Kernel out-of-memory test "OOMHard" may report false positive leaks.
 			{startString: "RUN   TestOOMHard", endString: "PASS: TestOOMHard"},
 		}})
