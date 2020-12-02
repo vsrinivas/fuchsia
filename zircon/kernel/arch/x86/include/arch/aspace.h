@@ -107,6 +107,8 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
   zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count,
                               const HarvestCallback& accessed_callback) override;
 
+  zx_status_t FreeUnaccessed(vaddr_t vaddr, size_t count) override { return ZX_ERR_NOT_SUPPORTED; }
+
   paddr_t arch_table_phys() const override { return pt_->phys(); }
   paddr_t pt_phys() const { return pt_->phys(); }
   size_t pt_pages() const { return pt_->pages(); }
@@ -116,6 +118,11 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
   IoBitmap& io_bitmap() { return io_bitmap_; }
 
   static void ContextSwitch(X86ArchVmAspace* from, X86ArchVmAspace* to);
+
+  // X86 has accessed and dirty flags on intermediate page table mappings, and not just terminal
+  // page mappings. This means FreeUnaccessed is able to directly reclaim page tables without
+  // needing to harvest individual page mappings via HarvestAccessed.
+  static constexpr bool HasNonTerminalAccessedFlag() { return true; }
 
  private:
   // Test the vaddr against the address space's range.

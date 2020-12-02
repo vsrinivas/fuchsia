@@ -47,11 +47,18 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count,
                               const HarvestCallback& accessed_callback) override;
 
+  zx_status_t FreeUnaccessed(vaddr_t vaddr, size_t count) override { return ZX_ERR_NOT_SUPPORTED; }
+
   paddr_t arch_table_phys() const override { return tt_phys_; }
   uint16_t arch_asid() const { return asid_; }
   void arch_set_asid(uint16_t asid) { asid_ = asid; }
 
   static void ContextSwitch(ArmArchVmAspace* from, ArmArchVmAspace* to);
+
+  // ARM only has accessed flags on terminal page mappings. This means that FreeUnaccessed will
+  // only be able to free page tables where terminal accessed flags have been removed using
+  // HarvestAccessed.
+  static constexpr bool HasNonTerminalAccessedFlag() { return false; }
 
  private:
   class ConsistencyManager;

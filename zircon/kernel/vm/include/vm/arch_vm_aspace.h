@@ -97,6 +97,14 @@ class ArchVmAspaceInterface {
   // Marks any pages in the given virtual address range as being accessed.
   virtual zx_status_t MarkAccessed(vaddr_t vaddr, size_t count) = 0;
 
+  // Walks the page tables backing the given range and frees any page tables based on the accessed
+  // flags. The accessed flags examined depends on |HasNonTerminalAccessedFlag| and when true this
+  // reclaims any page table entries that have not been accessed, and clears any existing access
+  // bits. If false this reclaims page tables where all entries do not have accessed flags, but
+  // does not clear any accessed bits. To clear accessed flags on terminal entries |HarvestAccessed|
+  // must be used.
+  virtual zx_status_t FreeUnaccessed(vaddr_t vaddr, size_t count) = 0;
+
   // Physical address of the backing data structure used for translation.
   //
   // This should be treated as an opaque value outside of
