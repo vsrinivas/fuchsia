@@ -14,7 +14,7 @@ use {
         LaunchConfiguration, LaunchError, LauncherRequest, LauncherRequestStream, RestartError,
         RestarterRequest, RestarterRequestStream,
     },
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_ui_lifecycle as fui_lifecycle,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -43,6 +43,9 @@ struct SessionManagerState {
 
     /// The realm in which sessions will be launched.
     realm: fsys::RealmProxy,
+
+    /// Proxy to the scenic lifecycle service.
+    scenic_lifecycle: Option<fui_lifecycle::LifecycleControllerProxy>,
 }
 
 /// Manages the session lifecycle and provides services to control the session.
@@ -56,9 +59,17 @@ impl SessionManager {
     ///
     /// # Parameters
     /// - `realm`: The realm in which sessions will be launched.
-    pub fn new(realm: fsys::RealmProxy) -> SessionManager {
-        let state =
-            SessionManagerState { session_url: None, session_exposed_dir_channel: None, realm };
+    /// - `scenic_lifecycle`: Proxy to the scenic lifecycle service.
+    pub fn new(
+        realm: fsys::RealmProxy,
+        scenic_lifecycle: Option<fui_lifecycle::LifecycleControllerProxy>,
+    ) -> SessionManager {
+        let state = SessionManagerState {
+            session_url: None,
+            session_exposed_dir_channel: None,
+            realm,
+            scenic_lifecycle,
+        };
         SessionManager { state: Arc::new(Mutex::new(state)) }
     }
 
@@ -248,6 +259,13 @@ impl SessionManager {
     /// Handles calls to Restarter.Restart().
     async fn handle_restart_request(&mut self) -> Result<(), RestartError> {
         let mut state = self.state.lock().await;
+
+        if let Some(scenic_lifecycle) = &state.scenic_lifecycle {
+            if let Err(_) = scenic_lifecycle.terminate() {
+                return Err(RestartError::NotRunning);
+            }
+        }
+
         if let Some(ref session_url) = state.session_url {
             startup::launch_session(&session_url, &state.realm)
                 .await
@@ -371,7 +389,7 @@ mod tests {
             };
         });
 
-        let session_manager = SessionManager::new(realm);
+        let session_manager = SessionManager::new(realm, None);
         let (launcher, _restarter) = serve_session_manager_services(session_manager);
 
         assert!(launcher
@@ -406,7 +424,7 @@ mod tests {
             };
         });
 
-        let session_manager = SessionManager::new(realm);
+        let session_manager = SessionManager::new(realm, None);
         let (launcher, restarter) = serve_session_manager_services(session_manager);
 
         assert!(launcher
@@ -428,7 +446,7 @@ mod tests {
             assert!(false);
         });
 
-        let session_manager = SessionManager::new(realm);
+        let session_manager = SessionManager::new(realm, None);
         let (_launcher, restarter) = serve_session_manager_services(session_manager);
 
         assert_eq!(

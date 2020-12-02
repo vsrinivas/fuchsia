@@ -17,6 +17,7 @@
                 "fuchsia.input.injection.InputDeviceRegistry",
                 "fuchsia.session.Launcher",
                 "fuchsia.session.Restarter",
+                "fuchsia.ui.lifecycle.LifecycleController",
             ],
         },
     ],
@@ -31,6 +32,7 @@
             protocol: [ "fuchsia.cobalt.LoggerFactory" ],
             from: "parent",
         },
+        { protocol: "fuchsia.ui.lifecycle.LifecycleController" },
         {
             directory: "component-manager-config-data",
             from: "parent",
