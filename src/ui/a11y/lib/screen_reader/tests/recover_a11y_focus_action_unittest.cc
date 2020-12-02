@@ -47,8 +47,16 @@ class RecoverA11YFocusActionTest : public gtest::TestLoopFixture {
     fuchsia::accessibility::semantics::Node node;
     node.set_node_id(0);
     node.set_role(fuchsia::accessibility::semantics::Role::TEXT_FIELD);
+    node.mutable_child_ids()->push_back(1);
+
+    fuchsia::accessibility::semantics::Node node2;
+    node2.set_node_id(1);
+    node2.mutable_attributes()->set_label("node2");
+
     std::vector<decltype(node)> update_nodes;
     update_nodes.push_back(std::move(node));
+    update_nodes.push_back(std::move(node2));
+
     semantic_provider_.UpdateSemanticNodes(std::move(update_nodes));
     RunLoopUntilIdle();
     semantic_provider_.CommitUpdates();
@@ -81,15 +89,20 @@ TEST_F(RecoverA11YFocusActionTest, FocusIsStillValid) {
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsUpdateHighlightsCalled());
 }
 
-TEST_F(RecoverA11YFocusActionTest, FocusNoLongerExists) {
+TEST_F(RecoverA11YFocusActionTest, InvalidFocusRecoversToFirstDescribableNode) {
   // Sets the focus to a node that does not exist, then run the action.
-  a11y_focus_manager_ptr_->SetA11yFocus(semantic_provider_.koid(), 1,
+  a11y_focus_manager_ptr_->SetA11yFocus(semantic_provider_.koid(), 100,
                                         [](bool result) { EXPECT_TRUE(result); });
   a11y::RecoverA11YFocusAction action(&action_context_, screen_reader_context_.get());
   action.Run({});
   RunLoopUntilIdle();
   auto focus = a11y_focus_manager_ptr_->GetA11yFocus();
-  ASSERT_FALSE(focus);
+  ASSERT_TRUE(focus);
+  EXPECT_EQ(semantic_provider_.koid(), focus->view_ref_koid);
+  EXPECT_EQ(focus->node_id, 1u);
+
+  EXPECT_EQ(mock_speaker_ptr_->node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->node_ids()[0], 1u);
 }
 
 }  // namespace

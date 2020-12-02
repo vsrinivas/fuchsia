@@ -43,6 +43,9 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
   // Root node id, which will be used to set the default node_id for a view.
   static constexpr uint32_t kRootNodeId = 0;
 
+  static constexpr char kCurrentlyFocusedKoidInspectNodeName[] = "currently_focused_koid";
+  static constexpr char kCurrentlyFocusedNodeIdInspectNodeName[] = "currently_focused_node_id";
+
   // |focus_chain_requester| and |registry| must outlive this object.
   explicit A11yFocusManager(AccessibilityFocusChainRequester* focus_chain_requester,
                             AccessibilityFocusChainRegistry* registry,
@@ -67,9 +70,6 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
   // |{currently_focused_view,
   // focused_node_in_view_map_[currently_focused_view_]}|.
   virtual void UpdateHighlights();
-
-  static constexpr char kCurrentlyFocusedKoidInspectNodeName[] = "currently_focused_koid";
-  static constexpr char kCurrentlyFocusedNodeIdInspectNodeName[] = "currently_focused_node_id";
 
  protected:
   // For mocks only.

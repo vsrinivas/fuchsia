@@ -5,6 +5,8 @@
 #ifndef SRC_UI_A11Y_LIB_SCREEN_READER_RECOVER_A11Y_FOCUS_ACTION_H_
 #define SRC_UI_A11Y_LIB_SCREEN_READER_RECOVER_A11Y_FOCUS_ACTION_H_
 
+#include <lib/fit/scope.h>
+
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
@@ -20,6 +22,9 @@ class RecoverA11YFocusAction : public ScreenReaderAction {
   ~RecoverA11YFocusAction() override;
 
   void Run(ActionData process_data) override;
+
+ private:
+  fit::scope scope_;
 };
 
 }  // namespace a11y

@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/ui/a11y/lib/screen_reader/util/util.h"
+
 namespace a11y {
 
 RecoverA11YFocusAction::RecoverA11YFocusAction(ActionContext* action_context,
@@ -16,22 +18,23 @@ RecoverA11YFocusAction::~RecoverA11YFocusAction() = default;
 
 void RecoverA11YFocusAction::Run(ActionData process_data) {
   auto a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
-  if (!a11y_focus_manager) {
-    FX_LOGS(ERROR) << "RecoverA11yFocusAction::Run: Null focus manager.";
-    return;
-  }
+  FX_DCHECK(a11y_focus_manager);
 
   auto a11y_focus = a11y_focus_manager->GetA11yFocus();
   if (!a11y_focus) {
     return;
   }
 
-  // Get the node in focus.
-  const fuchsia::accessibility::semantics::Node* focussed_node;
-  focussed_node = action_context_->semantics_source->GetSemanticNode(a11y_focus->view_ref_koid,
-                                                                     a11y_focus->node_id);
+  if (!action_context_->semantics_source->ViewHasSemantics(a11y_focus->view_ref_koid)) {
+    a11y_focus_manager->ClearA11yFocus();
+    return;
+  }
 
-  if (focussed_node) {
+  // Get the node in focus.
+  const auto* focused_node = action_context_->semantics_source->GetSemanticNode(
+      a11y_focus->view_ref_koid, a11y_focus->node_id);
+
+  if (focused_node) {
     // If the semantic tree has been updated, it's possible that the bounding
     // box of the currently focused node has changed. Therefore, we should
     // redraw highlights.
@@ -41,9 +44,46 @@ void RecoverA11YFocusAction::Run(ActionData process_data) {
     return;
   }
 
-  // This focus no longer exists. Clears its old value and waits for a new user interaction (which
-  // will set the focus automatically once they try to select sommething).
-  a11y_focus_manager->ClearA11yFocus();
+  // The node is no longer present but the view is still providing semantics.
+  // The current strategy is from the root, tries to find the first focusable node and set the focus
+  // to it.
+  const int starting_id = 0;
+  focused_node =
+      action_context_->semantics_source->GetSemanticNode(a11y_focus->view_ref_koid, starting_id);
+  if (!focused_node) {
+    a11y_focus_manager->ClearA11yFocus();
+    return;
+  }
+
+  // Now, put in focus a node that is describable and speak it to the user, to inform where the
+  // Screen Reader navigated.
+  if (!NodeIsDescribable(focused_node)) {
+    focused_node = action_context_->semantics_source->GetNextNode(
+        a11y_focus->view_ref_koid, starting_id,
+        [](const fuchsia::accessibility::semantics::Node* node) {
+          return NodeIsDescribable(node);
+        });
+
+    if (!focused_node) {
+      // This tree does not have a node that is describable.
+      return;
+    }
+  }
+
+  uint32_t focused_node_id = focused_node->node_id();
+  auto promise =
+      ExecuteAccessibilityActionPromise(a11y_focus->view_ref_koid, focused_node_id,
+                                        fuchsia::accessibility::semantics::Action::SHOW_ON_SCREEN)
+          .and_then([this, focused_node_id, a11y_focus]() mutable {
+            return SetA11yFocusPromise(focused_node_id, a11y_focus->view_ref_koid);
+          })
+          .and_then([this, a11y_focus, focused_node_id]() mutable {
+            return BuildSpeechTaskFromNodePromise(a11y_focus->view_ref_koid, focused_node_id);
+          })
+          // Cancel any promises if this class goes out of scope.
+          .wrap_with(scope_);
+  auto* executor = screen_reader_context_->executor();
+  executor->schedule_task(std::move(promise));
 }
 
 }  // namespace a11y

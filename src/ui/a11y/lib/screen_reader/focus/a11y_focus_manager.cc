@@ -100,6 +100,10 @@ void A11yFocusManager::UpdateInspectProperties() {
 void A11yFocusManager::UpdateHighlights() {
   FocusHighlightManager::SemanticNodeIdentifier newly_focused_node;
 
+  if (currently_focused_view_ == ZX_KOID_INVALID) {
+    return;
+  }
+
   newly_focused_node.koid = currently_focused_view_;
   newly_focused_node.node_id = focused_node_in_view_map_[currently_focused_view_];
 
