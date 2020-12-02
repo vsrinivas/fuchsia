@@ -268,6 +268,10 @@
             path: "/svc_for_sys/fuchsia.fonts.Provider",
         },
         {
+            protocol: "fuchsia.update.CommitStatusProvider",
+            path: "/svc_for_sys/fuchsia.update.CommitStatusProvider",
+        },
+        {
             protocol: "fuchsia.developer.remotecontrol.RemoteControl",
             path: "/svc_for_sys/fuchsia.developer.remotecontrol.RemoteControl",
         },

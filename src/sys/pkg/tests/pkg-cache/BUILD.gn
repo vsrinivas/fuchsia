@@ -15,9 +15,11 @@ rustc_test("driver") {
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
+    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -33,6 +35,7 @@ rustc_test("driver") {
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/lib/system-image",
     "//src/sys/pkg/testing/blobfs-ramdisk",
+    "//src/sys/pkg/testing/mock-paver",
     "//src/sys/pkg/testing/pkgfs-ramdisk",
     "//third_party/cobalt/src/lib/client/rust:cobalt-client",
     "//third_party/rust_crates:anyhow",
@@ -59,6 +62,7 @@ test_package("pkg-cache-integration-tests") {
     ":driver",
     "//garnet/go/src/grand_unified_binary",
     "//src/storage/bin/blobfs",
+    "//src/sys/pkg/bin/grand-swd-binary",
     "//src/sys/pkg/bin/pkg-cache:bin",
     "//src/sys/pkg/bin/pm:pm_bin",
   ]
@@ -78,6 +82,10 @@ test_package("pkg-cache-integration-tests") {
     {
       name = "pm"
     },
+    {
+      name = "grand_swd_binary"
+      dest = "system-update-committer"
+    },
   ]
 
   meta = [
@@ -85,6 +93,11 @@ test_package("pkg-cache-integration-tests") {
       path = rebase_path(
               "//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-without-pkgfs.cmx")
       dest = "pkg-cache-without-pkgfs.cmx"
+    },
+    {
+      path = rebase_path(
+              "//src/sys/pkg/tests/system-update-committer/meta/system-update-committer.cmx")
+      dest = "system-update-committer.cmx"
     },
   ]
 

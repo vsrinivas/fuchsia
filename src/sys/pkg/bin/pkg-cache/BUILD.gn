@@ -26,6 +26,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
+    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/rust",

@@ -6,6 +6,7 @@ use {
     crate::{blob_location::BlobLocation, pkgfs_inspect::PkgfsInspectState},
     anyhow::{anyhow, Context as _, Error},
     cobalt_sw_delivery_registry as metrics,
+    fidl_fuchsia_update::CommitStatusProviderMarker,
     fuchsia_async::Task,
     fuchsia_cobalt::{CobaltConnector, ConnectionType},
     fuchsia_component::server::ServiceFs,
@@ -58,6 +59,10 @@ async fn main() -> Result<(), Error> {
         future::join3(static_packages_fut, blob_location_fut, pkgfs_inspect_fut).await
     };
 
+    let commit_status_provider =
+        fuchsia_component::client::connect_to_service::<CommitStatusProviderMarker>()
+            .context("while connecting to commit status provider")?;
+
     enum IncomingService {
         PackageCache(fidl_fuchsia_pkg::PackageCacheRequestStream),
         SpaceManager(fidl_fuchsia_space::ManagerRequestStream),
@@ -84,7 +89,7 @@ async fn main() -> Result<(), Error> {
                     .map(|res| res.context("while serving fuchsia.pkg.PackageCache")),
                 ),
                 IncomingService::SpaceManager(stream) => Task::spawn(
-                    gc_service::serve(pkgfs_ctl.clone(), stream)
+                    gc_service::serve(pkgfs_ctl.clone(), commit_status_provider.clone(), stream)
                         .map(|res| res.context("while serving fuchsia.space.Manager")),
                 ),
             }

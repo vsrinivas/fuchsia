@@ -6,6 +6,11 @@ library fuchsia.space;
 
 enum ErrorCode : uint32 {
     INTERNAL = 1;
+    /// The system is in the process of being updated, and the current system version has not yet
+    /// been committed. GC is blocked to protect the blobs required by the previous system version.
+    /// Consumers may use [`fuchsia.update/CommitStatusProvider.IsCurrentSystemCommitted`] to track
+    /// when the commit completes.
+    PENDING_COMMIT = 2;
 };
 
 [Discoverable]

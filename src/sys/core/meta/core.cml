@@ -80,6 +80,11 @@
             to: [ "#debug_serial" ],
         },
         {
+            protocol: "fuchsia.update.CommitStatusProvider",
+            from: "#system-update-committer",
+            to: [ "#appmgr" ],
+        },
+        {
             protocol: [
                 "fuchsia.ui.activity.control.Control",
                 "fuchsia.ui.activity.Provider",

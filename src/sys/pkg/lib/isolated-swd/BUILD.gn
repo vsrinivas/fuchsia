@@ -21,6 +21,7 @@ rustc_library("isolated-swd") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
+    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -53,6 +54,7 @@ rustc_library("isolated-swd") {
   ]
 
   test_deps = [
+    "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:openat",

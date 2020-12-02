@@ -13,7 +13,8 @@
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.update.CommitStatusProvider"
         ]
     }
 }

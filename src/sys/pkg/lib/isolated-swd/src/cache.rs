@@ -4,13 +4,15 @@
 
 use {
     crate::pkgfs::Pkgfs,
-    anyhow::{Context, Error},
+    anyhow::{anyhow, Context, Error},
+    fidl_fuchsia_update::{CommitStatusProviderRequest, CommitStatusProviderRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::{
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs, ServiceObj},
     },
-    fuchsia_zircon::{self as zx, HandleBased},
+    fuchsia_syslog::fx_log_warn,
+    fuchsia_zircon::{self as zx, HandleBased, Peered},
     futures::prelude::*,
     std::sync::Arc,
 };
@@ -41,7 +43,18 @@ impl Cache {
         fs.add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
             .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>()
             .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
-            .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>();
+            .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>()
+            // TODO(fxbug.dev/65383) investigate how isolated-ota should work with commits.
+            // GC is traditionally blocked on the previous updated being committed. Here, we relax
+            // this restriction because it does not make sense for isolated-swd.
+            .add_fidl_service(move |stream| {
+                fasync::Task::spawn(Self::serve_commit_status_provider(stream).unwrap_or_else(
+                    |e| {
+                        fx_log_warn!("error running CommitStatusProvider service: {:#}", anyhow!(e))
+                    },
+                ))
+                .detach()
+            });
 
         // We use a salt so the unit tests work as expected.
         let env = fs.create_salted_nested_environment("isolated-swd-env")?;
@@ -55,6 +68,25 @@ impl Cache {
 
     pub fn directory_request(&self) -> Arc<fuchsia_zircon::Channel> {
         self.pkg_cache_directory.clone()
+    }
+
+    /// Serve a `CommitStatusProvider` that always says the system is committed.
+    async fn serve_commit_status_provider(
+        mut stream: CommitStatusProviderRequestStream,
+    ) -> Result<(), Error> {
+        let (p0, p1) = zx::EventPair::create().context("while creating event pair")?;
+        let () = p0
+            .signal_peer(zx::Signals::NONE, zx::Signals::USER_0)
+            .context("while signalling peer")?;
+
+        while let Some(request) = stream.try_next().await.context("while obtaining request")? {
+            let CommitStatusProviderRequest::IsCurrentSystemCommitted { responder, .. } = request;
+            let p1_clone =
+                p1.duplicate_handle(zx::Rights::BASIC).context("while duplicating event pair")?;
+            let () = responder.send(p1_clone).context("while sending event pair")?;
+        }
+
+        Ok(())
     }
 }
 
@@ -99,8 +131,21 @@ pub mod tests {
             .cache
             ._pkg_cache
             .connect_to_service::<fidl_fuchsia_pkg::PackageCacheMarker>()
-            .expect("connecting to pkg cache");
+            .expect("connecting to pkg cache service");
 
         assert_eq!(proxy.sync().await.unwrap(), Ok(()));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    pub async fn test_cache_handles_gc() {
+        let cache = CacheForTest::new().expect("launching cache");
+
+        let proxy = cache
+            .cache
+            ._pkg_cache
+            .connect_to_service::<fidl_fuchsia_space::ManagerMarker>()
+            .expect("connecting to space manager service");
+
+        assert_eq!(proxy.gc().await.unwrap(), Ok(()));
     }
 }
