@@ -85,13 +85,12 @@ static void TestThread(fuchsia::hardware::ethernet::MacAddress mac_addr, FakeNet
 
 class VirtioNetMultipleInterfacesZirconGuest : public ZirconEnclosedGuest {
  public:
-  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
-    launch_info->url = kZirconGuestUrl;
-    launch_info->guest_config.set_virtio_gpu(false);
+  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
+    *url = kZirconGuestUrl;
+    cfg->set_virtio_gpu(false);
     // Disable netsvc to avoid spamming the net device with logs.
-    launch_info->guest_config.mutable_cmdline_add()->push_back(
-        "kernel.serial=none netsvc.disable=true");
-    launch_info->guest_config.mutable_net_devices()->emplace_back(kSecondNicNetSpec);
+    cfg->mutable_cmdline_add()->emplace_back("kernel.serial=none netsvc.disable=true");
+    cfg->mutable_net_devices()->emplace_back(kSecondNicNetSpec);
     return ZX_OK;
   }
 };
@@ -135,10 +134,10 @@ TEST_F(VirtioNetMultipleInterfacesZirconGuestTest, ReceiveAndSend) {
 #if __x86_64__
 class VirtioNetMultipleInterfacesDebianGuest : public DebianEnclosedGuest {
  public:
-  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
-    launch_info->url = kDebianGuestUrl;
-    launch_info->guest_config.set_virtio_gpu(false);
-    launch_info->guest_config.mutable_net_devices()->emplace_back(kSecondNicNetSpec);
+  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
+    *url = kDebianGuestUrl;
+    cfg->set_virtio_gpu(false);
+    cfg->mutable_net_devices()->emplace_back(kSecondNicNetSpec);
     return ZX_OK;
   }
 };

@@ -37,15 +37,15 @@ void RealmImpl::AddBinding(fidl::InterfaceRequest<Realm> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-void RealmImpl::LaunchInstance(fuchsia::virtualization::LaunchInfo launch_info,
+void RealmImpl::LaunchInstance(std::string url, fidl::StringPtr label,
+                               fuchsia::virtualization::GuestConfig cfg,
                                fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
                                LaunchInstanceCallback callback) {
   fuchsia::sys::ComponentControllerPtr component_controller;
   fuchsia::sys::LaunchInfo info;
-  info.url = launch_info.url;
+  info.url = url;
   auto services = sys::ServiceDirectory::CreateWithRequest(&info.directory_request);
-  std::string label = launch_info.label.value_or(launch_info.url);
-  auto guest_services = std::make_unique<GuestServices>(std::move(launch_info));
+  auto guest_services = std::make_unique<GuestServices>(std::move(cfg));
   info.additional_services = guest_services->ServeDirectory();
   launcher_->CreateComponent(std::move(info), component_controller.NewRequest());
   services->Connect(std::move(controller));
@@ -59,9 +59,9 @@ void RealmImpl::LaunchInstance(fuchsia::virtualization::LaunchInfo launch_info,
       std::make_unique<GuestVsockEndpoint>(cid, std::move(guest_endpoint), &host_vsock_endpoint_);
 
   component_controller.set_error_handler([this, cid](zx_status_t status) { guests_.erase(cid); });
-  auto component =
-      std::make_unique<GuestComponent>(label, std::move(endpoint), std::move(services),
-                                       std::move(guest_services), std::move(component_controller));
+  auto component = std::make_unique<GuestComponent>(label.value_or(url), std::move(endpoint),
+                                                    std::move(services), std::move(guest_services),
+                                                    std::move(component_controller));
 
   bool inserted;
   std::tie(std::ignore, inserted) = guests_.insert({cid, std::move(component)});

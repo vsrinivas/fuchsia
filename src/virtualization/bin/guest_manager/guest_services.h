@@ -11,19 +11,19 @@
 
 #include "src/virtualization/bin/guest_manager/guest_vsock_endpoint.h"
 
-class GuestServices : public fuchsia::virtualization::LaunchInfoProvider {
+class GuestServices : public fuchsia::virtualization::GuestConfigProvider {
  public:
-  GuestServices(fuchsia::virtualization::LaunchInfo launch_info);
+  explicit GuestServices(fuchsia::virtualization::GuestConfig cfg);
 
   fuchsia::sys::ServiceListPtr ServeDirectory();
 
  private:
-  // |fuchsia::virtualization::LaunchInfoProvider|
+  // |fuchsia::virtualization::GuestConfigProvider|
   void Get(GetCallback callback) override;
 
   component::ServiceProviderBridge services_;
-  fidl::Binding<fuchsia::virtualization::LaunchInfoProvider> binding_{this};
-  fuchsia::virtualization::LaunchInfo launch_info_;
+  fidl::Binding<fuchsia::virtualization::GuestConfigProvider> binding_{this};
+  fuchsia::virtualization::GuestConfig cfg_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_GUEST_SERVICES_H_

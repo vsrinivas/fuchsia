@@ -40,7 +40,8 @@ class RealmImpl : public fuchsia::virtualization::Realm {
 
  private:
   // |fuchsia::virtualization::Realm|
-  void LaunchInstance(fuchsia::virtualization::LaunchInfo launch_info,
+  void LaunchInstance(std::string url, fidl::StringPtr label,
+                      fuchsia::virtualization::GuestConfig cfg,
                       fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
                       LaunchInstanceCallback callback) override;
   void ListInstances(ListInstancesCallback callback) override;

@@ -85,25 +85,21 @@ int main(int argc, char** argv) {
   std::unique_ptr<sys::ComponentContext> context =
       sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  fuchsia::virtualization::LaunchInfo launch_info;
-  fuchsia::virtualization::LaunchInfoProviderSyncPtr launch_info_provider;
-  context->svc()->Connect(launch_info_provider.NewRequest());
-  zx_status_t status = launch_info_provider->Get(&launch_info);
-  // NOTE: This isn't an error yet since only the guest_manager exposes the
-  // LaunchInfoProvider service. This will become an error once we invert the
-  // dependency between guest_runner and guest_manager.
+  fuchsia::virtualization::GuestConfig cfg;
+  fuchsia::virtualization::GuestConfigProviderSyncPtr cfg_provider;
+  context->svc()->Connect(cfg_provider.NewRequest());
+  zx_status_t status = cfg_provider->Get(&cfg);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "No launch info provided";
     return status;
   }
-  fuchsia::virtualization::GuestConfig* cfg = &launch_info.guest_config;
 
   GuestImpl guest_controller;
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());
 
   DevMem dev_mem;
-  for (const fuchsia::virtualization::MemorySpec& spec : cfg->memory()) {
+  for (const fuchsia::virtualization::MemorySpec& spec : cfg.memory()) {
     // Avoid a collision between static and dynamic address assignment.
     if (spec.base + spec.size > kFirstDynamicDeviceAddr) {
       FX_LOGS(ERROR) << "Requested memory should be less than " << kFirstDynamicDeviceAddr;
@@ -118,7 +114,7 @@ int main(int argc, char** argv) {
   }
 
   Guest guest;
-  status = guest.Init(cfg->memory());
+  status = guest.Init(cfg.memory());
   if (status != ZX_OK) {
     return status;
   }
@@ -136,7 +132,7 @@ int main(int argc, char** argv) {
   // Setup interrupt controller.
   InterruptController interrupt_controller(&guest);
 #if __aarch64__
-  status = interrupt_controller.Init(cfg->cpus(), cfg->interrupts());
+  status = interrupt_controller.Init(cfg.cpus(), cfg.interrupts());
 #elif __x86_64__
   status = interrupt_controller.Init();
 #endif
@@ -176,7 +172,7 @@ int main(int argc, char** argv) {
 
   // Setup balloon device.
   VirtioBalloon balloon(guest.phys_mem());
-  if (cfg->virtio_balloon()) {
+  if (cfg.virtio_balloon()) {
     status = bus.Connect(balloon.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       return status;
@@ -190,7 +186,7 @@ int main(int argc, char** argv) {
 
   // Create a new VirtioBlock device for each device requested.
   std::vector<std::unique_ptr<VirtioBlock>> block_devices;
-  for (auto& block_device : *cfg->mutable_block_devices()) {
+  for (auto& block_device : *cfg.mutable_block_devices()) {
     auto block = std::make_unique<VirtioBlock>(guest.phys_mem(), block_device.mode);
     status = bus.Connect(block->pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
@@ -207,7 +203,7 @@ int main(int argc, char** argv) {
 
   // Setup console device.
   VirtioConsole console(guest.phys_mem());
-  if (cfg->virtio_console()) {
+  if (cfg.virtio_console()) {
     status = bus.Connect(console.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       return status;
@@ -223,7 +219,7 @@ int main(int argc, char** argv) {
   VirtioGpu gpu(guest.phys_mem());
   VirtioInput input_keyboard(guest.phys_mem(), VirtioInput::Keyboard);
   VirtioInput input_pointer(guest.phys_mem(), VirtioInput::Pointer);
-  if (cfg->virtio_gpu()) {
+  if (cfg.virtio_gpu()) {
     // Setup keyboard device.
     status = bus.Connect(input_keyboard.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
@@ -262,7 +258,7 @@ int main(int argc, char** argv) {
 
   // Setup net device.
   std::vector<std::unique_ptr<VirtioNet>> net_devices;
-  for (auto net_device : cfg->net_devices()) {
+  for (auto net_device : cfg.net_devices()) {
     auto net = std::make_unique<VirtioNet>(guest.phys_mem());
     status = bus.Connect(net->pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
@@ -279,7 +275,7 @@ int main(int argc, char** argv) {
 
   // Setup RNG device.
   VirtioRng rng(guest.phys_mem());
-  if (cfg->virtio_rng()) {
+  if (cfg.virtio_rng()) {
     status = bus.Connect(rng.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       return status;
@@ -295,7 +291,7 @@ int main(int argc, char** argv) {
   // until it is moved out of process.
   async::Loop vsock_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   VirtioVsock vsock(context.get(), guest.phys_mem(), vsock_loop.dispatcher());
-  if (cfg->virtio_vsock()) {
+  if (cfg.virtio_vsock()) {
     status = bus.Connect(vsock.pci_device(), vsock_loop.dispatcher(), false);
     if (status != ZX_OK) {
       return status;
@@ -309,8 +305,8 @@ int main(int argc, char** argv) {
 
   // Setup wayland device.
   VirtioWl wl(guest.phys_mem());
-  if (launch_info.wayland_device) {
-    size_t wl_dev_mem_size = launch_info.wayland_device->memory;
+  if (cfg.has_wayland_device()) {
+    size_t wl_dev_mem_size = cfg.wayland_device().memory;
     zx_gpaddr_t wl_dev_mem_offset = AllocDeviceAddr(wl_dev_mem_size);
     if (!dev_mem.AddRange(wl_dev_mem_offset, wl_dev_mem_size)) {
       FX_LOGS(INFO) << "Could not reserve device memory range for wayland device";
@@ -328,7 +324,7 @@ int main(int argc, char** argv) {
       return status;
     }
     status = wl.Start(guest.object(), std::move(wl_vmar),
-                      std::move(launch_info.wayland_device->dispatcher), launcher.get(),
+                      std::move(cfg.mutable_wayland_device()->dispatcher), launcher.get(),
                       device_loop.dispatcher());
     if (status != ZX_OK) {
       FX_LOGS(INFO) << "Could not start wayland device";
@@ -338,12 +334,9 @@ int main(int argc, char** argv) {
 
   // Setup magma device.
   VirtioMagma magma(guest.phys_mem());
-  if (launch_info.magma_device || cfg->virtio_magma()) {
+  if (cfg.has_magma_device()) {
     // TODO(fxbug.dev/12619): simplify vmm launch configs
-    size_t magma_dev_mem_size = 16 * 1024 * 1024 * 1024ull;
-    if (launch_info.magma_device) {
-      magma_dev_mem_size = launch_info.magma_device->memory;
-    }
+    size_t magma_dev_mem_size = cfg.magma_device().memory;
     zx_gpaddr_t magma_dev_mem_offset = AllocDeviceAddr(magma_dev_mem_size);
     if (!dev_mem.AddRange(magma_dev_mem_offset, magma_dev_mem_size)) {
       FX_PLOGS(INFO, status) << "Could not reserve device memory range for magma device";
@@ -362,7 +355,7 @@ int main(int argc, char** argv) {
     }
     fidl::InterfaceHandle<fuchsia::virtualization::hardware::VirtioWaylandImporter>
         wayland_importer_handle = nullptr;
-    if (launch_info.wayland_device) {
+    if (cfg.has_wayland_device()) {
       status = wl.GetImporter(wayland_importer_handle.NewRequest());
       if (status != ZX_OK) {
         FX_PLOGS(INFO, status) << "Could not get wayland importer";
@@ -390,7 +383,7 @@ int main(int argc, char** argv) {
       .dsdt_path = kDsdtPath,
       .mcfg_path = kMcfgPath,
       .io_apic_addr = IoApic::kPhysBase,
-      .cpus = cfg->cpus(),
+      .cpus = cfg.cpus(),
   };
   status = create_acpi_table(acpi_cfg, guest.phys_mem());
   if (status != ZX_OK) {
@@ -411,12 +404,12 @@ int main(int argc, char** argv) {
   // Setup kernel.
   uintptr_t entry = 0;
   uintptr_t boot_ptr = 0;
-  switch (cfg->kernel_type()) {
+  switch (cfg.kernel_type()) {
     case fuchsia::virtualization::KernelType::ZIRCON:
-      status = setup_zircon(cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
+      status = setup_zircon(&cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
       break;
     case fuchsia::virtualization::KernelType::LINUX:
-      status = setup_linux(cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
+      status = setup_linux(&cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
       break;
     default:
       FX_LOGS(ERROR) << "Unknown kernel";

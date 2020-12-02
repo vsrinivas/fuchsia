@@ -502,10 +502,8 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
   return fit::make_promise([this, env, &guest]()
                                -> fit::promise<fuchsia::virtualization::GuestPtr, SandboxResult> {
            // Launch the guest
-           fuchsia::virtualization::LaunchInfo guest_launch_info;
-           guest_launch_info.label = guest.guest_label();
-           guest_launch_info.url = guest.guest_image_url();
-           guest_launch_info.guest_config.set_virtio_gpu(false);
+           fuchsia::virtualization::GuestConfig cfg;
+           cfg.set_virtio_gpu(false);
 
            if (!guest.macs().empty()) {
              for (const std::pair<std::string, std::string>& mac_ethertap_mapping : guest.macs()) {
@@ -516,19 +514,20 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
                for (size_t i = 0; i != 6; ++i) {
                  out.mac_address.octets[i] = static_cast<uint8_t>(bytes[i]);
                }
-               guest_launch_info.guest_config.mutable_net_devices()->push_back(out);
+               cfg.mutable_net_devices()->push_back(out);
              }
 
              // Prevent the guest from receiving a default MAC address from the VirtioNet
              // internals.
-             guest_launch_info.guest_config.set_default_net(false);
+             cfg.set_default_net(false);
            }
 
            fuchsia::virtualization::GuestPtr guest_controller;
 
            fit::bridge<fuchsia::virtualization::GuestPtr, SandboxResult> bridge;
            realm_->LaunchInstance(
-               std::move(guest_launch_info), guest_controller.NewRequest(),
+               guest.guest_image_url(), guest.guest_label(), std::move(cfg),
+               guest_controller.NewRequest(),
                [completer = std::move(bridge.completer),
                 guest_controller = std::move(guest_controller)](uint32_t cid) mutable {
                  completer.complete_ok(std::move(guest_controller));

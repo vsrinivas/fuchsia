@@ -49,7 +49,7 @@ zx_status_t ReadGuestCfg(const fuchsia::io::DirectoryHandle& dir, const std::str
 }
 
 class ServiceProviderImpl : public fuchsia::sys::ServiceProvider,
-                            public fuchsia::virtualization::LaunchInfoProvider {
+                            public fuchsia::virtualization::GuestConfigProvider {
  public:
   static void CreateAndServe(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request,
                              fuchsia::io::DirectoryHandle pkg_dir,
@@ -69,49 +69,48 @@ class ServiceProviderImpl : public fuchsia::sys::ServiceProvider,
 
   // |fuchsia::sys::ServiceProvider|
   void ConnectToService(std::string service_name, zx::channel channel) override {
-    if (service_name == fuchsia::virtualization::LaunchInfoProvider::Name_) {
-      fidl::InterfaceRequest<fuchsia::virtualization::LaunchInfoProvider> request(
+    if (service_name == fuchsia::virtualization::GuestConfigProvider::Name_) {
+      fidl::InterfaceRequest<fuchsia::virtualization::GuestConfigProvider> request(
           std::move(channel));
       bindings_.AddBinding(this, std::move(request));
     }
   }
 
-  // |fuchsia::virtualization::LaunchInfoProvider|
+  // |fuchsia::virtualization::GuestConfigProvider|
   void Get(GetCallback callback) override {
-    fuchsia::virtualization::LaunchInfo launch_info;
+    fuchsia::virtualization::GuestConfig cfg;
     // Read configuration provided by the component that launched us.
-    fuchsia::virtualization::LaunchInfoProviderSyncPtr provider;
-    zx_status_t status = fdio_service_connect_at(svc_dir_.channel().get(),
-                                                 fuchsia::virtualization::LaunchInfoProvider::Name_,
-                                                 provider.NewRequest().TakeChannel().release());
+    fuchsia::virtualization::GuestConfigProviderSyncPtr provider;
+    zx_status_t status = fdio_service_connect_at(
+        svc_dir_.channel().get(), fuchsia::virtualization::GuestConfigProvider::Name_,
+        provider.NewRequest().TakeChannel().release());
     if (status == ZX_OK) {
       // Get returns a status code, but failure is non-fatal, so ignore it.
-      /* status = */ provider->Get(&launch_info);
+      /* status = */ provider->Get(&cfg);
     }
-    auto cfg = &launch_info.guest_config;
-    auto block_devices = std::move(*cfg->mutable_block_devices());
+    auto block_devices = std::move(*cfg.mutable_block_devices());
     // Read configuration from the guest's package.
-    status = ReadGuestCfg(pkg_dir_, "data/guest.cfg", cfg);
+    status = ReadGuestCfg(pkg_dir_, "data/guest.cfg", &cfg);
     if (status != ZX_OK) {
       FX_LOGS(WARNING) << "Failed to read guest configuration";
     }
     // Make sure that block devices provided by the configuration in the guest's
     // package take precedence, as the order matters.
     for (auto& block_device : block_devices) {
-      cfg->mutable_block_devices()->emplace_back(std::move(block_device));
+      cfg.mutable_block_devices()->emplace_back(std::move(block_device));
     }
     // Merge the command-line additions into the main kernel command-line field.
-    for (auto& cmdline : *cfg->mutable_cmdline_add()) {
-      cfg->mutable_cmdline()->append(" " + cmdline);
+    for (auto& cmdline : *cfg.mutable_cmdline_add()) {
+      cfg.mutable_cmdline()->append(" " + cmdline);
     }
-    cfg->clear_cmdline_add();
+    cfg.clear_cmdline_add();
     // Set any defaults, before returning the configuration.
-    guest_config::SetDefaults(cfg);
-    callback(std::move(launch_info));
+    guest_config::SetDefaults(&cfg);
+    callback(std::move(cfg));
   }
 
   fidl::Binding<fuchsia::sys::ServiceProvider> service_provider_binding_;
-  fidl::BindingSet<fuchsia::virtualization::LaunchInfoProvider> bindings_;
+  fidl::BindingSet<fuchsia::virtualization::GuestConfigProvider> bindings_;
   fuchsia::io::DirectoryHandle pkg_dir_;
   fuchsia::io::DirectoryHandle svc_dir_;
 };
@@ -154,10 +153,10 @@ class RunnerImpl : public fuchsia::sys::Runner {
       }
     }
 
-    // We list the LaunchInfoProvider service, so that the VMM can connect back
-    // to the guest runner in order to get its LaunchInfo.
+    // We list the GuestConfigProvider service, so that the VMM can connect back
+    // to the guest runner in order to get its GuestConfig.
     auto service_list = fuchsia::sys::ServiceList::New();
-    service_list->names.emplace_back(fuchsia::virtualization::LaunchInfoProvider::Name_);
+    service_list->names.emplace_back(fuchsia::virtualization::GuestConfigProvider::Name_);
     ServiceProviderImpl::CreateAndServe(service_list->provider.NewRequest(), std::move(pkg_dir),
                                         std::move(svc_dir));
     launch_info.additional_services = std::move(service_list);

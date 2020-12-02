@@ -20,7 +20,7 @@
             "fuchsia.sys.Launcher",
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.virtualization.LaunchInfoProvider"
+            "fuchsia.virtualization.GuestConfigProvider"
         ]
     }
 }

@@ -188,18 +188,16 @@ void Guest::StartGuest() {
   FX_CHECK(!guest_controller_) << "Called StartGuest with an existing instance";
   FX_LOGS(INFO) << "Launching guest...";
 
-  fuchsia::virtualization::LaunchInfo launch_info;
-  launch_info.url = kLinuxGuestPackage;
-  launch_info.guest_config.set_virtio_gpu(false);
-  launch_info.guest_config.set_block_devices(GetBlockDevices(config_.stateful_image_size));
-  launch_info.wayland_device = fuchsia::virtualization::WaylandDevice::New();
-  launch_info.wayland_device->dispatcher = wayland_dispatcher_.NewBinding();
-  launch_info.magma_device = fuchsia::virtualization::MagmaDevice::New();
+  fuchsia::virtualization::GuestConfig cfg;
+  cfg.set_virtio_gpu(false);
+  cfg.set_block_devices(GetBlockDevices(config_.stateful_image_size));
+  cfg.mutable_wayland_device()->dispatcher = wayland_dispatcher_.NewBinding();
+  cfg.set_magma_device(fuchsia::virtualization::MagmaDevice());
 
   auto vm_create_nonce = TRACE_NONCE();
   TRACE_FLOW_BEGIN("linux_runner", "LaunchInstance", vm_create_nonce);
-  guest_env_->LaunchInstance(std::move(launch_info), guest_controller_.NewRequest(),
-                             [this, vm_create_nonce](uint32_t cid) {
+  guest_env_->LaunchInstance(kLinuxGuestPackage, nullptr, std::move(cfg),
+                             guest_controller_.NewRequest(), [this, vm_create_nonce](uint32_t cid) {
                                TRACE_DURATION("linux_runner", "LaunchInstance Callback");
                                TRACE_FLOW_END("linux_runner", "LaunchInstance", vm_create_nonce);
                                FX_LOGS(INFO) << "Guest launched with CID " << cid;

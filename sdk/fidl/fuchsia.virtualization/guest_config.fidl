@@ -6,15 +6,41 @@ library fuchsia.virtualization;
 
 using fuchsia.hardware.ethernet;
 using fuchsia.io;
+using zx;
 
 const uint8 MAX_BLOCK_DEVICE_ID = 20;
-const uint16 MAX_CMDLINE = 1024;
-
-const uint8 MAX_CMDLINE_ADD = 64;
 const uint8 MAX_MEMORY = 32;
 const uint8 MAX_BLOCK_DEVICES = 32;
 const uint8 MAX_NET_DEVICES = 32;
 const uint8 MAX_INTERRUPTS = 128;
+
+/// Type of kernel used by a guest.
+enum KernelType {
+    ZIRCON = 0;
+    LINUX = 1;
+};
+
+/// Memory policy for a MemorySpec.
+enum MemoryPolicy {
+    /// Map a VMO as cached memory into a guest physical address space.
+    GUEST_CACHED = 0;
+    /// Map a VMO with 1:1 correspondence with host memory as cached memory into
+    /// a guest physical address space.
+    HOST_CACHED = 1;
+    /// Map a VMO with 1:1 correspondence with host memory as device memory into
+    /// a guest physical address space.
+    HOST_DEVICE = 2;
+};
+
+/// Properties describing a region of guest physical address space.
+struct MemorySpec {
+    /// Base address of a region of guest physical address space.
+    zx.gpaddr base;
+    /// Size of a region of guest physical address space.
+    uint64 size;
+    /// Memory policy of a region of guest physical address space.
+    MemoryPolicy policy;
+};
 
 /// Mode of the file backing a block device.
 enum BlockMode {
@@ -46,30 +72,43 @@ resource struct BlockSpec {
     fuchsia.io.File file;
 };
 
-enum KernelType {
-    ZIRCON = 0;
-    LINUX = 1;
-};
-
-enum MemoryPolicy {
-    /// Map a VMO as cached memory into the guest physical address space.
-    GUEST_CACHED = 0;
-    /// Map a VMO with 1:1 correspondence with host memory as cached memory into
-    /// the guest physical address space.
-    HOST_CACHED = 1;
-    /// Map a VMO with 1:1 correspondence with host memory as device memory into
-    /// the guest physical address space.
-    HOST_DEVICE = 2;
-};
-
-struct MemorySpec {
-    uint64 base;
-    uint64 size;
-    MemoryPolicy policy;
-};
-
 struct NetSpec {
     fuchsia.hardware.ethernet.MacAddress mac_address;
+};
+
+/// Protocol to receive channels for Wayland connections.
+[Discoverable]
+protocol WaylandDispatcher {
+    /// Inform dispatcher of new connection.
+    ///
+    /// When a client opens a new connection to the virtio_wl device, a new
+    /// zx::channel will be created for that connection. The virtio_wl device
+    /// will retain one endpoint of that channel and the other endpoint will be
+    /// provided to this method. The messages on the channel will be Wayland
+    /// protocol messages as sent by the client. Each channel datagram will
+    /// contain 1 or more complete Wayland messages.
+    OnNewConnection(zx.handle:CHANNEL channel);
+};
+
+/// Properties describing a virtio_wl device.
+resource struct WaylandDevice {
+    /// The amount of guest-physical address space to allocate for virtio_wl
+    /// buffers.
+    ///
+    /// Default to a 1GiB allocation.
+    uint64 memory = 1073741824;
+
+    /// The dispatcher for new virtio_wl connections.
+    WaylandDispatcher dispatcher;
+};
+
+/// Properties describing a virtio_magma device.
+struct MagmaDevice {
+    /// The amount of guest-physical address space to allocate for virtio_magma
+    /// buffers.
+    ///
+    /// Default to a 16GiB allocation.
+    uint64 memory = 17179869184;
 };
 
 /// The configuration required to start up a guest.
@@ -78,39 +117,50 @@ resource table GuestConfig {
     1: KernelType kernel_type;
     /// File to load the kernel from. Cannot be changed from the command-line.
     2: fuchsia.io.File kernel;
-    /// File to load the initial RAM disk from. Cannot be changed from the command-line.
-    3: fuchsia.io.File ramdisk;
-    /// File to load the dtb overlay for a Linux kernel from. Cannot be changed from the
+    /// File to load the initial RAM disk from. Cannot be changed from the
     /// command-line.
+    3: fuchsia.io.File ramdisk;
+    /// File to load the dtb overlay for a Linux kernel from. Cannot be changed
+    /// from the command-line.
     4: fuchsia.io.File dtb_overlay;
-    /// The command to start the client with.
-    5: string:MAX_CMDLINE cmdline;
-    /// Any additional arguments to add to the cmdline.
-    6: vector<string:MAX_CMDLINE>:MAX_CMDLINE_ADD cmdline_add;
+    /// Kernel command-line to use. Cannot be changed from the command-line.
+    5: string:MAX cmdline;
+    /// Additional kernel command-lines to append to the main command-line.
+    6: vector<string:MAX>:MAX cmdline_add;
 
-    /// The number of CPUs to provide to the guest.
+    /// The number of CPUs to provide to a guest.
     7: uint8 cpus;
-    /// The layout of memory to be mapped into the guest.
+    /// The layout of memory to be mapped into a guest.
     8: vector<MemorySpec>:MAX_MEMORY memory;
-    /// A list of block devices to give the guest. Cannot be changed from the command-line.
-    9: vector<BlockSpec>:MAX_BLOCK_DEVICES block_devices;
-    /// A list of specifications for network devices.
-    10: vector<NetSpec>:MAX_NET_DEVICES net_devices;
     /// A list of physical interrupts to bind to.
-    11: vector<uint32>:MAX_INTERRUPTS interrupts;
+    9: vector<uint32>:MAX_INTERRUPTS interrupts;
+    /// A list of block devices to give a guest. Cannot be changed from the
+    /// command-line.
+    10: vector<BlockSpec>:MAX_BLOCK_DEVICES block_devices;
+    /// A list of specifications for network devices.
+    11: vector<NetSpec>:MAX_NET_DEVICES net_devices;
+    /// Optional virtio-wl device.
+    12: WaylandDevice wayland_device;
+    /// Optional virtio-magma device.
+    13: MagmaDevice magma_device;
 
     /// Whether to add a default network device (default).
-    12: bool default_net;
+    14: bool default_net;
     /// Enable virtio-balloon (default).
-    13: bool virtio_balloon;
+    15: bool virtio_balloon;
     /// Enable virtio-console (default).
-    14: bool virtio_console;
+    16: bool virtio_console;
     /// Enable virtio-gpu (default).
-    15: bool virtio_gpu;
-    /// Enable virtio-magma (default).
-    16: bool virtio_magma;
+    17: bool virtio_gpu;
     /// Enable virtio-rng (default).
-    17: bool virtio_rng;
+    18: bool virtio_rng;
     /// Enable virtio-vsock (default).
-    18: bool virtio_vsock;
+    19: bool virtio_vsock;
+};
+
+/// Protocol to provide a guest's configuration.
+[Discoverable]
+protocol GuestConfigProvider {
+    /// Get the |guest_config|.
+    Get() -> (GuestConfig guest_config);
 };

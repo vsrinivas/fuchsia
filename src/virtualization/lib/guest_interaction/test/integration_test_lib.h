@@ -47,18 +47,16 @@ class GuestInteractionTest : public sys::testing::TestWithEnvironment {
 
   void LaunchDebianGuest() {
     // Launch the Debian guest
-    fuchsia::virtualization::LaunchInfo guest_launch_info;
-    guest_launch_info.url = kDebianGuestUrl;
-    guest_launch_info.label = kGuestLabel;
-    guest_launch_info.guest_config.set_virtio_gpu(false);
+    fuchsia::virtualization::GuestConfig cfg;
+    cfg.set_virtio_gpu(false);
 
-    fuchsia::virtualization::ManagerPtr guest_environment_manager;
-    fuchsia::virtualization::GuestPtr guest_instance_controller;
+    fuchsia::virtualization::ManagerPtr manager;
+    fuchsia::virtualization::GuestPtr guest;
     cid_ = -1;
 
-    env_->ConnectToService(guest_environment_manager.NewRequest());
-    guest_environment_manager->Create(fuchsia::netemul::guest::DEFAULT_REALM, realm_.NewRequest());
-    realm_->LaunchInstance(std::move(guest_launch_info), guest_instance_controller.NewRequest(),
+    env_->ConnectToService(manager.NewRequest());
+    manager->Create(fuchsia::netemul::guest::DEFAULT_REALM, realm_.NewRequest());
+    realm_->LaunchInstance(kDebianGuestUrl, kGuestLabel, std::move(cfg), guest.NewRequest(),
                            [&](uint32_t callback_cid) { cid_ = callback_cid; });
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return cid_ >= 0; }, zx::sec(5)));
 
@@ -66,7 +64,7 @@ class GuestInteractionTest : public sys::testing::TestWithEnvironment {
     // receives some sensible output from the guest to ensure that the guest is
     // usable.
     zx::socket socket;
-    guest_instance_controller->GetSerial([&socket](zx::socket s) { socket = std::move(s); });
+    guest->GetSerial([&socket](zx::socket s) { socket = std::move(s); });
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&socket] { return socket.is_valid(); }, zx::sec(30)));
 
     GuestConsole serial(std::make_unique<ZxSocket>(std::move(socket)));

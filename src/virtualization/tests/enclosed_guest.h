@@ -88,8 +88,8 @@ class EnclosedGuest {
   GuestConsole* GetConsole() { return console_.get(); }
 
  protected:
-  // Provides guest specific |launch_info|, called by Start.
-  virtual zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) = 0;
+  // Provides guest specific |url| and |cfg|, called by Start.
+  virtual zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) = 0;
 
   // Waits until the guest is ready to run test utilities, called by Start.
   virtual zx_status_t WaitForSystemReady() = 0;
@@ -125,13 +125,13 @@ class EnclosedGuest {
 
 template <typename EnclosedGuestImpl>
 class SingleCpuEnclosedGuest : public EnclosedGuestImpl {
-  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
-    zx_status_t status = EnclosedGuestImpl::LaunchInfo(launch_info);
+  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
+    zx_status_t status = EnclosedGuestImpl::LaunchInfo(url, cfg);
     if (status != ZX_OK) {
       return status;
     }
-    launch_info->guest_config.set_virtio_gpu(false);
-    launch_info->guest_config.set_cpus(1);
+    cfg->set_virtio_gpu(false);
+    cfg->set_cpus(1);
     return ZX_OK;
   }
 };
@@ -144,7 +144,7 @@ class ZirconEnclosedGuest : public EnclosedGuest {
   GuestKernel GetGuestKernel() override { return GuestKernel::ZIRCON; }
 
  protected:
-  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override;
+  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override;
   zx_status_t WaitForSystemReady() override;
   zx_status_t ShutdownAndWait() override;
   std::string ShellPrompt() override { return "$ "; }
@@ -158,7 +158,7 @@ class DebianEnclosedGuest : public EnclosedGuest {
   GuestKernel GetGuestKernel() override { return GuestKernel::LINUX; }
 
  protected:
-  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override;
+  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override;
   zx_status_t WaitForSystemReady() override;
   zx_status_t ShutdownAndWait() override;
   std::string ShellPrompt() override { return "$ "; }
@@ -175,7 +175,7 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
                       int32_t* return_code) override;
 
  protected:
-  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override;
+  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override;
   zx_status_t WaitForSystemReady() override;
   zx_status_t ShutdownAndWait() override;
   std::string ShellPrompt() override { return "$ "; }

@@ -394,9 +394,6 @@ std::unordered_map<std::string, std::unique_ptr<OptionHandler>> GetCmdlineOption
   handlers.emplace("virtio-gpu",
                    std::make_unique<BoolOptionHandler>(&GuestConfig::has_virtio_gpu,
                                                        &GuestConfig::mutable_virtio_gpu, true));
-  handlers.emplace("virtio-magma",
-                   std::make_unique<BoolOptionHandler>(&GuestConfig::has_virtio_magma,
-                                                       &GuestConfig::mutable_virtio_magma, true));
   handlers.emplace("virtio-rng",
                    std::make_unique<BoolOptionHandler>(&GuestConfig::has_virtio_rng,
                                                        &GuestConfig::mutable_virtio_rng, true));

@@ -4,10 +4,12 @@
 
 library fuchsia.virtualization;
 
+using fuchsia.sys;
+
 protocol Realm {
     /// Launch a new guest instance into this environment. The `cid` of the
     /// instance is returned so that it can be uniquely identified.
-    LaunchInstance(LaunchInfo launch_info,
+    LaunchInstance(fuchsia.sys.component_url url, string:MAX? label, GuestConfig guest_config,
                    request<Guest> controller)
         -> (uint32 cid);
 

@@ -135,20 +135,16 @@ zx_status_t EnclosedGuest::Start() {
     return ZX_ERR_TIMED_OUT;
   }
 
-  fuchsia::virtualization::LaunchInfo guest_launch_info;
-  status = LaunchInfo(&guest_launch_info);
+  std::string url;
+  fuchsia::virtualization::GuestConfig cfg;
+  status = LaunchInfo(&url, &cfg);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failure launching guest image: " << zx_status_get_string(status);
     return status;
   }
 
-  // Generate an environment label from the URL, but remove path separator
-  // characters which aren't allowed in the label.
-  std::string env_label = guest_launch_info.url;
-  std::replace(env_label.begin(), env_label.end(), '/', ':');
-
   enclosing_environment_->ConnectToService(manager_.NewRequest());
-  manager_->Create(env_label, realm_.NewRequest());
+  manager_->Create("EnclosedGuest", realm_.NewRequest());
 
   status = SetupVsockServices();
   if (status != ZX_OK) {
@@ -157,7 +153,7 @@ zx_status_t EnclosedGuest::Start() {
 
   // Launch the guest.
   bool launch_complete = false;
-  realm_->LaunchInstance(std::move(guest_launch_info), guest_.NewRequest(),
+  realm_->LaunchInstance(url, nullptr, std::move(cfg), guest_.NewRequest(),
                          [this, &launch_complete](uint32_t cid) {
                            guest_cid_ = cid;
                            launch_complete = true;
@@ -207,10 +203,10 @@ zx_status_t EnclosedGuest::RunUtil(const std::string& util, const std::vector<st
   return Execute(GetTestUtilCommand(util, argv), {}, result);
 }
 
-zx_status_t ZirconEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) {
-  launch_info->url = kZirconGuestUrl;
-  launch_info->guest_config.mutable_cmdline_add()->push_back("kernel.serial=none");
-  launch_info->guest_config.set_virtio_magma(false);
+zx_status_t ZirconEnclosedGuest::LaunchInfo(std::string* url,
+                                            fuchsia::virtualization::GuestConfig* cfg) {
+  *url = kZirconGuestUrl;
+  cfg->mutable_cmdline_add()->push_back("kernel.serial=none");
   return ZX_OK;
 }
 
@@ -260,9 +256,9 @@ std::vector<std::string> ZirconEnclosedGuest::GetTestUtilCommand(
   return exec_argv;
 }
 
-zx_status_t DebianEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) {
-  launch_info->url = kDebianGuestUrl;
-  launch_info->guest_config.set_virtio_magma(false);
+zx_status_t DebianEnclosedGuest::LaunchInfo(std::string* url,
+                                            fuchsia::virtualization::GuestConfig* cfg) {
+  *url = kDebianGuestUrl;
   return ZX_OK;
 }
 
@@ -303,9 +299,10 @@ std::vector<std::string> DebianEnclosedGuest::GetTestUtilCommand(
   return exec_argv;
 }
 
-zx_status_t TerminaEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) {
-  launch_info->url = kTerminaGuestUrl;
-  launch_info->guest_config.set_virtio_gpu(false);
+zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
+                                             fuchsia::virtualization::GuestConfig* cfg) {
+  *url = kTerminaGuestUrl;
+  cfg->set_virtio_gpu(false);
 
   // Add the block device that contains the test binaries.
   int fd = open("/pkg/data/linux_tests.img", O_RDONLY);
@@ -317,7 +314,7 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo
   if (status != ZX_OK) {
     return status;
   }
-  launch_info->guest_config.mutable_block_devices()->push_back({
+  cfg->mutable_block_devices()->push_back({
       "linux_tests",
       fuchsia::virtualization::BlockMode::READ_ONLY,
       fuchsia::virtualization::BlockFormat::RAW,
@@ -332,7 +329,7 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo
   if (status != ZX_OK) {
     return status;
   }
-  launch_info->guest_config.mutable_block_devices()->push_back({
+  cfg->mutable_block_devices()->push_back({
       "extras",
       fuchsia::virtualization::BlockMode::READ_ONLY,
       fuchsia::virtualization::BlockFormat::RAW,

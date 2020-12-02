@@ -84,9 +84,9 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     *func = [env_id, cid, context]() { handle_balloon_stats(env_id, cid, context); };
   } else if (cmd_view == "launch" && argc >= 2) {
     *func = [argc, argv, loop, context]() mutable {
-      fuchsia::virtualization::GuestConfig guest_config{};
-      if (read_guest_cfg(argc, argv, &guest_config)) {
-        handle_launch(argc - 1, argv + 1, loop, std::move(guest_config), context);
+      fuchsia::virtualization::GuestConfig cfg;
+      if (read_guest_cfg(argc, argv, &cfg)) {
+        handle_launch(argc - 1, argv + 1, loop, std::move(cfg), context);
       }
     };
   } else if (cmd_view == "list") {

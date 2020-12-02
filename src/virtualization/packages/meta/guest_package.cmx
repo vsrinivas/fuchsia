@@ -8,7 +8,7 @@
     "runner": "fuchsia-pkg://fuchsia.com/guest-runner#meta/guest_runner.cmx",
     "sandbox": {
         "services": [
-            "fuchsia.virtualization.LaunchInfoProvider"
+            "fuchsia.virtualization.GuestConfigProvider"
         ]
     }
 }

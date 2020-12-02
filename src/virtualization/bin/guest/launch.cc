@@ -11,8 +11,7 @@
 #include "src/virtualization/bin/guest/serial.h"
 
 void handle_launch(int argc, const char** argv, async::Loop* loop,
-                   fuchsia::virtualization::GuestConfig guest_config,
-                   sys::ComponentContext* context) {
+                   fuchsia::virtualization::GuestConfig cfg, sys::ComponentContext* context) {
   // Create environment.
   fuchsia::virtualization::ManagerPtr manager;
   zx_status_t status = context->svc()->Connect(manager.NewRequest());
@@ -24,11 +23,9 @@ void handle_launch(int argc, const char** argv, async::Loop* loop,
   manager->Create(argv[0], realm.NewRequest());
 
   // Launch guest.
-  fuchsia::virtualization::LaunchInfo launch_info;
-  launch_info.url = fxl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx", argv[0], argv[0]);
-  launch_info.guest_config = std::move(guest_config);
+  auto url = fxl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx", argv[0], argv[0]);
   fuchsia::virtualization::GuestPtr guest;
-  realm->LaunchInstance(std::move(launch_info), guest.NewRequest(), [](uint32_t) {});
+  realm->LaunchInstance(url, nullptr, std::move(cfg), guest.NewRequest(), [](uint32_t) {});
 
   // Setup serial console.
   SerialConsole console(loop);

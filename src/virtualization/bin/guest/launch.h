@@ -11,7 +11,6 @@
 #include <lib/sys/cpp/component_context.h>
 
 void handle_launch(int argc, const char** argv, async::Loop* loop,
-                   fuchsia::virtualization::GuestConfig guest_config,
-                   sys::ComponentContext* context);
+                   fuchsia::virtualization::GuestConfig cfg, sys::ComponentContext* context);
 
 #endif  // SRC_VIRTUALIZATION_BIN_GUEST_LAUNCH_H_

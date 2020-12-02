@@ -15,7 +15,8 @@ void FakeManager::Create(fidl::StringPtr label,
   realm_binding_.Bind(std::move(request));
 }
 
-void FakeManager::LaunchInstance(fuchsia::virtualization::LaunchInfo launch_info,
+void FakeManager::LaunchInstance(std::string url, fidl::StringPtr label,
+                                 fuchsia::virtualization::GuestConfig guest_config,
                                  fidl::InterfaceRequest<fuchsia::virtualization::Guest> request,
                                  LaunchInstanceCallback callback) {
   FX_CHECK(!guest_binding_.is_bound()) << "Guest is already bound";

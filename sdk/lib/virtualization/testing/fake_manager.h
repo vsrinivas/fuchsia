@@ -35,7 +35,8 @@ class FakeManager : public fuchsia::virtualization::Manager,
   void Connect(uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) override;
 
   // |fuchsia::virtualization::Realm|
-  void LaunchInstance(fuchsia::virtualization::LaunchInfo launch_info,
+  void LaunchInstance(std::string url, fidl::StringPtr label,
+                      fuchsia::virtualization::GuestConfig guest_config,
                       fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
                       LaunchInstanceCallback callback) override;
   void ListInstances(ListInstancesCallback callback) override;

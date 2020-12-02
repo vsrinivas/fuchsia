@@ -7,19 +7,18 @@
 #include <lib/fidl/cpp/vector.h>
 #include <lib/zx/channel.h>
 
-GuestServices::GuestServices(fuchsia::virtualization::LaunchInfo launch_info)
-    : launch_info_(std::move(launch_info)) {
-  services_.AddService<fuchsia::virtualization::LaunchInfoProvider>(
-      [this](fidl::InterfaceRequest<fuchsia::virtualization::LaunchInfoProvider> request) {
+GuestServices::GuestServices(fuchsia::virtualization::GuestConfig cfg) : cfg_(std::move(cfg)) {
+  services_.AddService<fuchsia::virtualization::GuestConfigProvider>(
+      [this](fidl::InterfaceRequest<fuchsia::virtualization::GuestConfigProvider> request) {
         binding_.Bind(std::move(request));
       });
 }
 
 fuchsia::sys::ServiceListPtr GuestServices::ServeDirectory() {
   auto services = fuchsia::sys::ServiceList::New();
-  services->names.push_back(fuchsia::virtualization::LaunchInfoProvider::Name_);
+  services->names.emplace_back(fuchsia::virtualization::GuestConfigProvider::Name_);
   services->provider = services_.AddBinding();
   return services;
 }
 
-void GuestServices::Get(GetCallback callback) { callback(std::move(launch_info_)); }
+void GuestServices::Get(GetCallback callback) { callback(std::move(cfg_)); }

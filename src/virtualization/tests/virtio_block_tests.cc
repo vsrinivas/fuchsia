@@ -155,8 +155,7 @@ static zx_status_t create_test_device(TestDevice* test_device,
 
 class VirtioBlockTestGuest {
  public:
-  zx_status_t CreateBlockDevices(uint8_t device_count,
-                                 fuchsia::virtualization::LaunchInfo* launch_info) {
+  zx_status_t CreateBlockDevices(uint8_t device_count, fuchsia::virtualization::GuestConfig* cfg) {
     zx_status_t status;
 
     test_devices_.push_back({
@@ -205,7 +204,7 @@ class VirtioBlockTestGuest {
       block_specs.push_back(std::move(block_spec));
     }
 
-    launch_info->guest_config.set_block_devices(std::move(block_specs));
+    cfg->set_block_devices(std::move(block_specs));
 
     return ZX_OK;
   }
@@ -218,45 +217,44 @@ class VirtioBlockTestGuest {
 
 class VirtioBlockZirconGuest : public ZirconEnclosedGuest, public VirtioBlockTestGuest {
  public:
-  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
-    zx_status_t status = ZirconEnclosedGuest::LaunchInfo(launch_info);
+  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
+    zx_status_t status = ZirconEnclosedGuest::LaunchInfo(url, cfg);
     if (status != ZX_OK) {
       return status;
     }
 
-    // Disable other virtio devices to ensure there's enough space on the PCI bus, and to simplify
-    // slot assignment.
-    launch_info->guest_config.set_default_net(false);
-    launch_info->guest_config.set_virtio_balloon(false);
-    launch_info->guest_config.set_virtio_gpu(false);
-    launch_info->guest_config.set_virtio_magma(false);
-    launch_info->guest_config.set_virtio_rng(false);
-    launch_info->guest_config.set_virtio_vsock(false);
+    // Disable other virtio devices to ensure there's enough space on the PCI
+    // bus, and to simplify slot assignment.
+    cfg->set_default_net(false);
+    cfg->set_virtio_balloon(false);
+    cfg->set_virtio_gpu(false);
+    cfg->set_virtio_rng(false);
+    cfg->set_virtio_vsock(false);
 
     // Device count starts at 2: root device, block-0, then the test devices.
-    return CreateBlockDevices(/*device_count=*/2, launch_info);
+    return CreateBlockDevices(/*device_count=*/2, cfg);
   }
 };
 
 class VirtioBlockDebianGuest : public DebianEnclosedGuest, public VirtioBlockTestGuest {
  public:
-  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
-    zx_status_t status = DebianEnclosedGuest::LaunchInfo(launch_info);
+  zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override {
+    zx_status_t status = DebianEnclosedGuest::LaunchInfo(url, cfg);
     if (status != ZX_OK) {
       return status;
     }
 
-    // Disable other virtio devices to ensure there's enough space on the PCI bus, and to simplify
-    // slot assignment.
-    launch_info->guest_config.set_default_net(false);
-    launch_info->guest_config.set_virtio_balloon(false);
-    launch_info->guest_config.set_virtio_gpu(false);
-    launch_info->guest_config.set_virtio_magma(false);
-    launch_info->guest_config.set_virtio_rng(false);
-    launch_info->guest_config.set_virtio_vsock(false);
+    // Disable other virtio devices to ensure there's enough space on the PCI
+    // bus, and to simplify slot assignment.
+    cfg->set_default_net(false);
+    cfg->set_virtio_balloon(false);
+    cfg->set_virtio_gpu(false);
+    cfg->set_virtio_rng(false);
+    cfg->set_virtio_vsock(false);
 
-    // Device count starts at 4: root device, block-0, block-1, block-2, then the test devices.
-    return CreateBlockDevices(/*device_count=*/4, launch_info);
+    // Device count starts at 4: root device, block-0, block-1, block-2, then
+    // the test devices.
+    return CreateBlockDevices(/*device_count=*/4, cfg);
   }
 };
 
