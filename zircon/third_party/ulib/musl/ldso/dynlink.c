@@ -2076,12 +2076,10 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
 
 #ifdef __aarch64__
 // The official psABI document at
-// https://developer.arm.com/docs/ihi0057/c/dwarf-for-the-arm-64-bit-architecture-aarch64-abi-2018q4
-// does not assign a DWARF register number for TPIDR_mode.  For now use 128, which
-// is above the range reserved in the ABI.
-// TODO(mcgrathr): I've pinged ARM about assigning more numbers; hopefully we'll
-// get a tentative assignment from them soon and update this to match.
-#define DWARG_REGNO_TP 128  // TPIDR_EL0
+// https://developer.arm.com/documentation/ihi0057/latest (2020Q2 version) does
+// not assign a DWARF register number for TPIDR_mode.  But ARM has posted
+// https://github.com/ARM-software/abi-aa/pull/53 to assign new numbers.
+#define DWARG_REGNO_TP 36  // TPIDR_EL0
 #elif defined(__x86_64__)
 #define DWARG_REGNO_TP 58  // %fs.base
 #endif
