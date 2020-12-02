@@ -557,7 +557,7 @@ decode_success("ResourceTableUnknownTrailingHandlesDropped") {
 decode_failure("ValueTableUnknownTrailingHandlesRejected") {
     // TODO(fxbug.dev/61848): Move the rest from ValueTableUnknownTrailingHandlesDropped
     // and ValueTableUnknownTrailingHandlesIncorrectlyStored.
-    bindings_allowlist = [dart,hlcpp],
+    bindings_allowlist = [go,dart,hlcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),

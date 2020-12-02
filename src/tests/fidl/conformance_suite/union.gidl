@@ -184,9 +184,9 @@ decode_failure("StrictUnionUnknownValueWithHandles") {
 }
 
 decode_failure("FlexibleUnionUnknownValueWithHandles") {
-    // TODO(fxbug.dev/62772): Add bindings here as they properly implement the
-    // value/resource distinction for flexible types.
-    bindings_allowlist = [dart,hlcpp,rust],
+    // LLCPP does not store handles, so does not fail when decoding unknown
+    // handles for a value type.
+    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
