@@ -120,8 +120,8 @@ fuchsia_unittest_package("fidl-foo-tests") { # package names must use hyphens
 
 We can now run the test by package name (`fx test fidl-foo-tests`) or by
 component name (`fx test fidl_foo_tests`). For single-test packages like this,
-**use the component name in documentation** (e.g. contributing_to_fidl.md,
-`"Test:"` lines in commit messages).
+**use the component name in documentation** (e.g.
+[Contributing to Fidl][contributing], `"Test:"` lines in commit messages).
 
 For multiple device tests, collect them all in a **single package** with
 `fuchsia_test_package`. For example, suppose we split `fidl_foo_tests` into
@@ -365,7 +365,7 @@ rustc_library("baz") {
 This automatically creates a `baz_test` target that builds a `baz_lib_test`
 binary. **Do not use this**, for two reasons:
 
-1.  The [naming guidelines](#naming) require a `_tests` suffix, not `-test`.
+1.  The [naming guidelines](#naming) require a `_tests` suffix, not `_test`.
 2.  It will be
     [deprecated](https://fuchsia.googlesource.com/fuchsia/+/9d9f092f2b30598c3929bd30d0058d4e052bb0f4/build/rust/rustc_library.gni#91)
     soon.
@@ -424,3 +424,4 @@ tests. Using `fx test`, we can already
 [package_names]: /docs/concepts/packages/package_url.md#package_identity
 [source_code_layout]: /docs/concepts/source_code/layout.md
 [building_components]: /docs/development/components/build.md
+[contributing]: /docs/contribute/contributing-to-fidl
