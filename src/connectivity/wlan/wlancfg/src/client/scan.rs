@@ -149,11 +149,11 @@ pub(crate) async fn perform_scan<F>(
 #[allow(unused)]
 pub(crate) async fn perform_directed_active_scan(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    network: &types::NetworkIdentifier,
+    ssid: &Vec<u8>,
     channels: Option<Vec<u8>>,
 ) -> Result<Vec<types::ScanResult>, ()> {
     let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-        ssids: vec![network.ssid.clone()],
+        ssids: vec![ssid.clone()],
         channels: channels.unwrap_or(vec![]),
     });
 
@@ -163,9 +163,8 @@ pub(crate) async fn perform_directed_active_scan(
         let mut bss_by_network: HashMap<types::NetworkIdentifier, Vec<types::Bss>> = HashMap::new();
         insert_bss_to_network_bss_map(&mut bss_by_network, &results, false);
 
-        // The active scan targets a specific SSID, but we want to return only results for the
-        // requested NetworkIdentifier (i.e. SSID + Security tuple).
-        bss_by_network.retain(|network_id, _| network_id == network);
+        // The active scan targets a specific SSID, ensure only that SSID is present in results
+        bss_by_network.retain(|network_id, _| network_id.ssid == *ssid);
 
         network_bss_map_to_scan_result(&bss_by_network)
     })
@@ -1824,29 +1823,26 @@ mod tests {
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
 
         // Issue request to scan.
-        let desired_network = types::NetworkIdentifier {
-            ssid: "test_ssid".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa2,
-        };
+        let desired_ssid = "test_ssid".as_bytes().to_vec();
         let desired_channels = vec![1, 36];
         let scan_fut =
-            perform_directed_active_scan(client, &desired_network, Some(desired_channels.clone()));
+            perform_directed_active_scan(client, &desired_ssid, Some(desired_channels.clone()));
         pin_mut!(scan_fut);
 
         // Generate scan results
         let scan_result_aps = vec![
             fidl_sme::BssInfo {
-                ssid: desired_network.ssid.clone(),
-                protection: fidl_sme::Protection::Wpa3Enterprise, // wrong security type
+                ssid: desired_ssid.clone(),
+                protection: fidl_sme::Protection::Wpa3Enterprise,
                 ..generate_random_bss_info()
             },
             fidl_sme::BssInfo {
-                ssid: desired_network.ssid.clone(),
+                ssid: desired_ssid.clone(),
                 protection: fidl_sme::Protection::Wpa2Personal,
                 ..generate_random_bss_info()
             },
             fidl_sme::BssInfo {
-                ssid: desired_network.ssid.clone(),
+                ssid: desired_ssid.clone(),
                 protection: fidl_sme::Protection::Wpa2Personal,
                 ..generate_random_bss_info()
             },
@@ -1862,7 +1858,7 @@ mod tests {
 
         // Respond to the scan request
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![desired_network.ssid.clone()],
+            ssids: vec![desired_ssid.clone()],
             channels: desired_channels,
         });
         validate_sme_request_and_send_results(
@@ -1874,12 +1870,24 @@ mod tests {
 
         // Check for results
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
-            let result = result.unwrap();
-            // Only the desired network is present in results
-            assert_eq!(result.len(), 1);
-            assert_eq!(result[0].id, desired_network);
+            let mut result = result.unwrap();
+            // Two networks with the desired SSID are present
+            assert_eq!(result.len(), 2);
+            result.sort_by_key(|r| r.id.clone());
+            // One network is WPA2
+            assert_eq!(result[0].id, types::NetworkIdentifier{
+                ssid: desired_ssid.clone(),
+                type_: types::SecurityType::Wpa2
+            });
             // Two BSSs for this network
             assert_eq!(result[0].entries.len(), 2);
+            // Other network is WPA3
+            assert_eq!(result[1].id, types::NetworkIdentifier{
+                ssid: desired_ssid.clone(),
+                type_: types::SecurityType::Wpa3
+            });
+            // One BSS for this network
+            assert_eq!(result[1].entries.len(), 1);
         });
     }
 
