@@ -255,6 +255,17 @@ zx_status_t File::Read(void* data, size_t len, size_t off, size_t* out_actual) {
   return ReadInternal(&transaction, data, len, off, out_actual);
 }
 
+zx::status<uint32_t> File::GetRequiredBlockCount(size_t offset, size_t length) {
+  zx::status<blk_t> uncached = zx::error(ZX_ERR_INVALID_ARGS);
+  uncached = ::minfs::GetRequiredBlockCount(offset, length, Vfs()->BlockSize());
+  if (!DirtyCacheEnabled()) {
+    return uncached;
+  }
+
+  // dirty cache should remain disabled.
+  ZX_ASSERT(false);
+}
+
 zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
   TRACE_DURATION("minfs", "File::Write", "ino", GetIno(), "len", len, "off", offset);
   FX_LOGS(DEBUG) << "minfs_write() vn=" << this << "(#" << GetIno() << ") len=" << len
@@ -266,7 +277,7 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
       [&ticker, &out_actual, this]() { Vfs()->UpdateWriteMetrics(*out_actual, ticker.End()); });
 
   // Calculate maximum number of blocks to reserve for this write operation.
-  auto reserve_blocks_or = GetRequiredBlockCount(offset, len, Vfs()->BlockSize());
+  auto reserve_blocks_or = GetRequiredBlockCount(offset, len);
   if (reserve_blocks_or.is_error()) {
     return reserve_blocks_or.error_value();
   }

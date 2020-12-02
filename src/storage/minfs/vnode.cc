@@ -349,26 +349,36 @@ zx_status_t VnodeMinfs::Purge(Transaction* transaction) {
   return fs_->InoFree(transaction, this);
 }
 
+zx_status_t VnodeMinfs::RemoveUnlinked() {
+  ZX_ASSERT(IsUnlinked());
+  zx_status_t status;
+  std::unique_ptr<Transaction> transaction;
+
+  if ((status = fs_->BeginTransaction(0, 0, &transaction)) != ZX_OK) {
+    // In case of error, we still need to release this vnode because it's not possible to retry,
+    // and we cannot block destruction. The inode will get cleaned up on next remount.
+    fs_->VnodeRelease(this);
+    return status;
+  }
+
+  fs_->RemoveUnlinked(transaction.get(), this);
+  if ((status = Purge(transaction.get())) != ZX_OK) {
+    return status;
+  }
+
+  fs_->CommitTransaction(std::move(transaction));
+  return ZX_OK;
+}
+
 zx_status_t VnodeMinfs::Close() {
   ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Closing ino with no fds open");
   fd_count_--;
 
-  if (fd_count_ == 0 && IsUnlinked()) {
-    zx_status_t status;
-    std::unique_ptr<Transaction> transaction;
-    if ((status = fs_->BeginTransaction(0, 0, &transaction)) != ZX_OK) {
-      // In case of error, we still need to release this vnode because it's not possible to retry,
-      // and we cannot block destruction. The inode will get cleaned up on next remount.
-      fs_->VnodeRelease(this);
-      return status;
-    }
-    fs_->RemoveUnlinked(transaction.get(), this);
-    if ((status = Purge(transaction.get())) != ZX_OK) {
-      return status;
-    }
-    fs_->CommitTransaction(std::move(transaction));
+  if (fd_count_ != 0 || !IsUnlinked()) {
+    return ZX_OK;
   }
-  return ZX_OK;
+
+  return RemoveUnlinked();
 }
 
 // Internal read. Usable on directories.

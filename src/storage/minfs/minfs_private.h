@@ -394,15 +394,8 @@ class Minfs :
 
   const MountOptions& mount_options() { return mount_options_; }
 
-  static bool DirtyCacheEnabled() {
-#if defined(__Fuchsia__) && defined(MINFS_ENABLE_DIRTY_CACHE)
-    // Assert if dirty cache is enabled accidentally.
-    static_assert(false, "Dirty cache is yet unimplemented!");
-    return true;
-#else
-    return false;
-#endif  // __Fuchsia__
-  }
+  // Return true if dirty cache is enabled.
+  static bool DirtyCacheEnabled();
 
  private:
   using HashTable = fbl::HashTable<ino_t, VnodeMinfs*>;

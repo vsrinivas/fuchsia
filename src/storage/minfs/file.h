@@ -59,6 +59,9 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
   zx_status_t Truncate(size_t len) final;
 
+  // Returns the number of blocks required to persist uncached data of size |length|
+  // starting at |offset|.
+  zx::status<uint32_t> GetRequiredBlockCount(size_t offset, size_t length);
   // Flushes(sends the transaction to journaling layer to be written to journal and disk) or caches
   // current transaction.
   zx::status<> FlushTransaction(std::unique_ptr<Transaction> transaction, bool force_flush = false);

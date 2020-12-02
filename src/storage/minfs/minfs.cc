@@ -503,7 +503,7 @@ std::unique_ptr<Bcache> Minfs::Destroy(std::unique_ptr<Minfs> minfs) {
 }
 
 zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
-                                    std::unique_ptr<Transaction>* out) {
+                                    std::unique_ptr<Transaction>* transaction) {
   ZX_DEBUG_ASSERT(reserve_inodes <= TransactionLimits::kMaxInodeBitmapBlocks);
 #ifdef __Fuchsia__
   if (journal_ == nullptr) {
@@ -518,7 +518,7 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
   ZX_DEBUG_ASSERT(reserve_blocks <= limits_.GetMaximumDataBlocks());
 #endif
   // Reserve blocks from allocators before returning WritebackWork to client.
-  return Transaction::Create(this, reserve_inodes, reserve_blocks, inodes_.get(), out);
+  return Transaction::Create(this, reserve_inodes, reserve_blocks, inodes_.get(), transaction);
 }
 
 #ifdef __Fuchsia__

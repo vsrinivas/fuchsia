@@ -133,6 +133,7 @@ static_library("minfs") {
       "inspector_inode.cc",
       "inspector_inode_table.cc",
       "inspector_superblock.cc",
+      "minfs_target.cc",
       "resizeable_vmo_buffer.cc",
       "superblock.cc",
       "vnode_allocation.cc",
@@ -180,6 +181,7 @@ static_library("minfs") {
       "bcache_host.cc",
       "file_host.cc",
       "host.cc",
+      "minfs_host.cc",
       "superblock_host.cc",
     ]
     deps += [

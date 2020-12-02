@@ -117,6 +117,9 @@ class VnodeMinfs : public fs::Vnode,
   // vnode will fail.
   virtual zx_status_t CanUnlink() const = 0;
 
+  // Removes from disk an unlinked and closed vnode. Asserts that inode IsUnlinked().
+  zx_status_t RemoveUnlinked();
+
   // Returns the current block count of the vnode.
   virtual blk_t GetBlockCount() const = 0;
 
