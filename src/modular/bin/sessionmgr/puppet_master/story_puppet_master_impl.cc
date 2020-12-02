@@ -205,15 +205,20 @@ void StoryPuppetMasterImpl::WatchAnnotations(WatchAnnotationsCallback callback) 
     return;
   }
 
-  session_storage_->add_on_annotations_updated_once(
-      story_name_,
-      [callback = std::move(callback)](std::string story_id,
-                                       std::vector<fuchsia::modular::Annotation> annotations) {
+  session_storage_->SubscribeAnnotationsUpdated(
+      [story_name = story_name_, callback = std::move(callback)](
+          std::string story_id, const std::vector<fuchsia::modular::Annotation>& annotations,
+          const std::set<std::string>& /*annotation_keys_added*/,
+          const std::set<std::string>& /*annotation_keys_deleted*/) {
+        if (story_id != story_name) {
+          return WatchInterest::kContinue;
+        }
         fuchsia::modular::StoryPuppetMaster_WatchAnnotations_Response response{};
-        response.annotations = std::move(annotations);
+        response.annotations = fidl::Clone(annotations);
         fuchsia::modular::StoryPuppetMaster_WatchAnnotations_Result result{};
         result.set_response(std::move(response));
         callback(std::move(result));
+        return WatchInterest::kStop;
       });
 }
 

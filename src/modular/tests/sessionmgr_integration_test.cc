@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/element/cpp/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl_test_base.h>
 #include <fuchsia/intl/cpp/fidl.h>
@@ -16,6 +17,7 @@
 
 #include "src/lib/files/glob.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/testing/annotations_matchers.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_graphical_presenter.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
@@ -26,7 +28,7 @@ namespace {
 constexpr char kTestStoryId[] = "test_story";
 constexpr char kTestModuleUrl[] = "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fake_module.cmx";
 
-using session::annotations::AnnotationEq;
+using element::annotations::AnnotationEq;
 using ::testing::ByRef;
 using ::testing::ElementsAre;
 
@@ -248,7 +250,7 @@ TEST_F(SessionmgrIntegrationTest, PresentViewIsCalled) {
   // Add Event Listeners
   bool called_present_view = false;
   fake_graphical_presenter->set_on_present_view(
-      [&](fuchsia::session::ViewSpec view_spec) { called_present_view = true; });
+      [&](fuchsia::element::ViewSpec view_spec) { called_present_view = true; });
 
   bool called_dismiss = false;
   fake_graphical_presenter->set_on_dismiss([&] { called_dismiss = true; });
@@ -291,31 +293,27 @@ TEST_F(SessionmgrIntegrationTest, AnnotationsArePassedToGraphicalPresenter) {
 
   // Add Event Listeners
   bool called_present_view = false;
-  fake_graphical_presenter->set_on_present_view([&](fuchsia::session::ViewSpec view_spec) {
+  fake_graphical_presenter->set_on_present_view([&](fuchsia::element::ViewSpec view_spec) {
     called_present_view = true;
     ASSERT_TRUE(view_spec.has_annotations());
-    ASSERT_TRUE(view_spec.annotations().has_custom_annotations());
 
-    auto expected_annotation =
-        fuchsia::session::Annotation{.key = kTestAnnotationKey,
-                                     .value = std::make_unique<fuchsia::session::Value>(
-                                         fuchsia::session::Value::WithText(kTestAnnotationValue))};
-    ASSERT_THAT(view_spec.annotations().custom_annotations(),
-                ElementsAre(AnnotationEq(ByRef(expected_annotation))));
+    auto expected_annotation = fuchsia::element::Annotation{
+        .key = modular::annotations::ToElementAnnotationKey(kTestAnnotationKey),
+        .value = fuchsia::element::AnnotationValue::WithText(kTestAnnotationValue)};
+    ASSERT_THAT(view_spec.annotations(), ElementsAre(AnnotationEq(ByRef(expected_annotation))));
   });
 
   bool called_on_annotate = false;
-  fake_graphical_presenter->set_on_annotate([&](fuchsia::session::Annotations annotations) {
-    called_on_annotate = true;
-    ASSERT_TRUE(annotations.has_custom_annotations());
+  fake_graphical_presenter->set_on_update_annotations(
+      [&](const std::vector<fuchsia::element::Annotation>& annotations_to_set,
+          const std::vector<fuchsia::element::AnnotationKey>& annotations_to_delete) {
+        called_on_annotate = true;
 
-    auto expected_annotation = fuchsia::session::Annotation{
-        .key = kTestAnnotationKey,
-        .value = std::make_unique<fuchsia::session::Value>(
-            fuchsia::session::Value::WithText(kTestAnnotationUpdateValue))};
-    ASSERT_THAT(annotations.custom_annotations(),
-                ElementsAre(AnnotationEq(ByRef(expected_annotation))));
-  });
+        auto expected_annotation = fuchsia::element::Annotation{
+            .key = modular::annotations::ToElementAnnotationKey(kTestAnnotationKey),
+            .value = fuchsia::element::AnnotationValue::WithText(kTestAnnotationUpdateValue)};
+        ASSERT_THAT(annotations_to_set, ElementsAre(AnnotationEq(ByRef(expected_annotation))));
+      });
 
   // Create the story and add annotations
   fuchsia::modular::StoryPuppetMasterPtr story_master;
@@ -364,7 +362,7 @@ TEST_F(SessionmgrIntegrationTest, DeleteStoryWhenViewControllerIsClosed) {
   // Add Event Listeners
   bool called_present_view = false;
   fake_graphical_presenter->set_on_present_view(
-      [&](fuchsia::session::ViewSpec view_spec) { called_present_view = true; });
+      [&](fuchsia::element::ViewSpec view_spec) { called_present_view = true; });
 
   bool called_dismiss = false;
   fake_graphical_presenter->set_on_dismiss([&] { called_dismiss = true; });
@@ -433,7 +431,7 @@ TEST_F(SessionmgrIntegrationTest, DeleteStoryWhenViewControllerIsClosed) {
   // Close the view controller and wait for the module to stop.
   fake_graphical_presenter->CloseFirstViewController();
   RunLoopUntil([&] { return !fake_module_1.is_running(); });
-  
+
   // Run the loop until there are the expected number of state changes;
   // having called Stop() is not enough to guarantee seeing all updates.
   RunLoopUntil([&] { return sequence_of_story_states.size() == 6; });
@@ -448,7 +446,7 @@ TEST_F(SessionmgrIntegrationTest, DeleteStoryWhenViewControllerIsClosed) {
                   fuchsia::modular::StoryState::STOPPED, fuchsia::modular::StoryState::RUNNING,
                   fuchsia::modular::StoryState::STOPPED, fuchsia::modular::StoryState::RUNNING,
                   fuchsia::modular::StoryState::STOPPING, fuchsia::modular::StoryState::STOPPED));
-  
+
   // Ensure that only the first module was stopped.
   ASSERT_TRUE(fake_module_2.is_running());
 }

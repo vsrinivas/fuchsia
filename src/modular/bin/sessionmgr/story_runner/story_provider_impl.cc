@@ -207,20 +207,32 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment,
       session_inspect_node_(root_node),
       weak_factory_(this) {
   session_storage_->SubscribeStoryDeleted(
-      [weak_ptr = weak_factory_.GetWeakPtr()](std::string story_id) {
-        if (!weak_ptr) {
+      [weak_this = weak_factory_.GetWeakPtr()](std::string story_id) {
+        if (!weak_this) {
           return WatchInterest::kStop;
         }
-        weak_ptr->OnStoryStorageDeleted(std::move(story_id));
+        weak_this->OnStoryStorageDeleted(std::move(story_id));
         return WatchInterest::kContinue;
       });
   session_storage_->SubscribeStoryUpdated(
-      [weak_ptr = weak_factory_.GetWeakPtr()](
+      [weak_this = weak_factory_.GetWeakPtr()](
           std::string story_id, const fuchsia::modular::internal::StoryData& story_data) {
-        if (!weak_ptr) {
+        if (!weak_this) {
           return WatchInterest::kStop;
         }
-        weak_ptr->OnStoryStorageUpdated(std::move(story_id), story_data);
+        weak_this->OnStoryStorageUpdated(std::move(story_id), story_data);
+        return WatchInterest::kContinue;
+      });
+  session_storage_->SubscribeAnnotationsUpdated(
+      [weak_this = weak_factory_.GetWeakPtr()](
+          std::string story_id, const std::vector<fuchsia::modular::Annotation>& annotations,
+          const std::set<std::string>& annotation_keys_updated,
+          const std::set<std::string>& annotation_keys_deleted) {
+        if (!weak_this) {
+          return WatchInterest::kStop;
+        }
+        weak_this->OnAnnotationsUpdated(std::move(story_id), annotations, annotation_keys_updated,
+                                        annotation_keys_deleted);
         return WatchInterest::kContinue;
       });
 }
@@ -238,7 +250,7 @@ void StoryProviderImpl::StopAllStories(fit::function<void()> callback) {
 void StoryProviderImpl::SetPresentationProtocol(PresentationProtocolPtr presentation_protocol) {
   presentation_protocol_ = std::move(presentation_protocol);
   if (auto graphical_presenter =
-          std::get_if<fuchsia::session::GraphicalPresenterPtr>(&presentation_protocol_)) {
+          std::get_if<fuchsia::element::GraphicalPresenterPtr>(&presentation_protocol_)) {
     graphical_presenter->set_error_handler([](zx_status_t status) {
       FX_PLOGS(ERROR, status)
           << "GraphicalPresenter service channel (from session shell component) "
@@ -253,7 +265,7 @@ void StoryProviderImpl::SetPresentationProtocol(PresentationProtocolPtr presenta
     });
   } else {
     FX_NOTREACHED() << "The session shell component should implement either "
-                       "fuchsia.modular.SessionShell or fuchsia.session.GraphicalPresenter";
+                       "fuchsia.modular.SessionShell or fuchsia.element.GraphicalPresenter";
   }
 }
 
@@ -264,14 +276,14 @@ void StoryProviderImpl::Teardown(fit::function<void()> callback) {
   // after all pending messgages have been processed.
   bindings_.CloseAll();
   if (auto graphical_presenter =
-          std::get_if<fuchsia::session::GraphicalPresenterPtr>(&presentation_protocol_)) {
+          std::get_if<fuchsia::element::GraphicalPresenterPtr>(&presentation_protocol_)) {
     graphical_presenter->set_error_handler(nullptr);
   } else if (auto session_shell =
                  std::get_if<fuchsia::modular::SessionShellPtr>(&presentation_protocol_)) {
     session_shell->set_error_handler(nullptr);
   } else {
     FX_NOTREACHED() << "The session shell component should implement either "
-                       "fuchsia.modular.SessionShell or fuchsia.session.GraphicalPresenter";
+                       "fuchsia.modular.SessionShell or fuchsia.element.GraphicalPresenter";
   }
   operation_queue_.Add(std::make_unique<StopAllStoriesCall>(this, [] {}));
   operation_queue_.Add(std::make_unique<StopStoryShellCall>(this, std::move(callback)));
@@ -385,24 +397,24 @@ void StoryProviderImpl::GetStoryInfo2(std::string story_id, GetStoryInfo2Callbac
 
 void StoryProviderImpl::AttachOrPresentView(std::string story_id,
                                             fuchsia::ui::views::ViewHolderToken view_holder_token) {
-  if (std::holds_alternative<fuchsia::session::GraphicalPresenterPtr>(presentation_protocol_)) {
+  if (std::holds_alternative<fuchsia::element::GraphicalPresenterPtr>(presentation_protocol_)) {
     PresentView(story_id, std::move(view_holder_token));
   } else if (std::holds_alternative<fuchsia::modular::SessionShellPtr>(presentation_protocol_)) {
     AttachView(story_id, std::move(view_holder_token));
   } else {
     FX_NOTREACHED() << "The session shell component but implement either "
-                       "fuchsia.modular.SessionShell or fuchsia.session.GraphicalPresenter";
+                       "fuchsia.modular.SessionShell or fuchsia.element.GraphicalPresenter";
   }
 }
 
 void StoryProviderImpl::DetachOrDismissView(std::string story_id, fit::function<void()> done) {
-  if (std::holds_alternative<fuchsia::session::GraphicalPresenterPtr>(presentation_protocol_)) {
+  if (std::holds_alternative<fuchsia::element::GraphicalPresenterPtr>(presentation_protocol_)) {
     DismissView(story_id, std::move(done));
   } else if (std::holds_alternative<fuchsia::modular::SessionShellPtr>(presentation_protocol_)) {
     DetachView(story_id, std::move(done));
   } else {
     FX_NOTREACHED() << "The session shell component but implement either "
-                       "fuchsia.modular.SessionShell or fuchsia.session.GraphicalPresenter";
+                       "fuchsia.modular.SessionShell or fuchsia.element.GraphicalPresenter";
   }
 }
 
@@ -411,10 +423,11 @@ void StoryProviderImpl::AttachView(std::string story_id,
   FX_DCHECK(std::holds_alternative<fuchsia::modular::SessionShellPtr>(presentation_protocol_))
       << "AttachView expects a SessionShellPtr PresentationProtocolPtr";
   auto& session_shell = std::get<fuchsia::modular::SessionShellPtr>(presentation_protocol_);
-  FX_CHECK(session_shell.get()) << "The session shell component must keep alive a "
-                             "fuchsia.modular.SessionShell service for sessionmgr to function.";
+  FX_CHECK(session_shell.get())
+      << "The session shell component must keep alive a "
+         "fuchsia.modular.SessionShell service for sessionmgr to function.";
   fuchsia::modular::ViewIdentifier view_id;
-  view_id.story_id = story_id;
+  view_id.story_id = std::move(story_id);
   session_shell->AttachView2(std::move(view_id), std::move(view_holder_token));
 }
 
@@ -422,105 +435,135 @@ void StoryProviderImpl::DetachView(std::string story_id, fit::function<void()> d
   FX_DCHECK(std::holds_alternative<fuchsia::modular::SessionShellPtr>(presentation_protocol_))
       << "DetachView expects a SessionShellPtr PresentationProtocolPtr";
   auto& session_shell = std::get<fuchsia::modular::SessionShellPtr>(presentation_protocol_);
-  FX_CHECK(session_shell.get()) << "The session shell component must keep alive a "
-                             "fuchsia.modular.SessionShell service for sessionmgr to function.";
+  FX_CHECK(session_shell.get())
+      << "The session shell component must keep alive a "
+         "fuchsia.modular.SessionShell service for sessionmgr to function.";
   fuchsia::modular::ViewIdentifier view_id;
-  view_id.story_id = story_id;
+  view_id.story_id = std::move(story_id);
   session_shell->DetachView(std::move(view_id), std::move(done));
 }
 
 void StoryProviderImpl::PresentView(std::string story_id,
                                     fuchsia::ui::views::ViewHolderToken view_holder_token) {
-  FX_DCHECK(std::holds_alternative<fuchsia::session::GraphicalPresenterPtr>(presentation_protocol_))
+  FX_DCHECK(std::holds_alternative<fuchsia::element::GraphicalPresenterPtr>(presentation_protocol_))
       << "PresentView expects a GraphicalPresenter PresentationProtocolPtr";
   auto& graphical_presenter =
-      std::get<fuchsia::session::GraphicalPresenterPtr>(presentation_protocol_);
+      std::get<fuchsia::element::GraphicalPresenterPtr>(presentation_protocol_);
   FX_CHECK(graphical_presenter.get())
-      << "The session shell component must keep alive a fuchsia.session.GraphicalPresenter service "
+      << "The session shell component must keep alive a fuchsia.element.GraphicalPresenter service "
          "for sessionmgr to function.";
 
-  fuchsia::session::ViewSpec view_spec;
+  fuchsia::element::ViewSpec view_spec;
   view_spec.set_view_holder_token(std::move(view_holder_token));
 
   fuchsia::modular::internal::StoryDataPtr story_data = session_storage_->GetStoryData(story_id);
   if (story_data->story_info().has_annotations()) {
     view_spec.set_annotations(
-        annotations::ToSessionAnnotations(story_data->story_info().annotations()));
+        annotations::ToElementAnnotations(story_data->story_info().annotations()));
   }
 
-  fuchsia::session::ViewControllerPtr view_controller;
+  fuchsia::element::ViewControllerPtr view_controller;
   view_controller.set_error_handler(
       [weak_this = weak_factory_.GetWeakPtr(), story_id](zx_status_t status) {
-        FX_PLOGS(ERROR, status) << "ViewController connection closed.";
-        if (weak_this) {
-          weak_this->operation_queue_.Add(std::make_unique<StopStoryCall>(
-              story_id, /* skip_notifying_sessionshell =*/false,
-              &weak_this->story_runtime_containers_, [weak_this, story_id] {
-                // Delete the story
-                weak_this->session_storage_->DeleteStory(story_id);
-
-                for (auto& callback : weak_this->dismiss_callbacks_[story_id]) {
-                  callback();
-                }
-
-                // Remove view controllers from the map
-                weak_this->view_controllers_.erase(story_id);
-                weak_this->dismiss_callbacks_.erase(story_id);
-              }));
-        }
-      });
-
-  graphical_presenter->PresentView(std::move(view_spec), view_controller.NewRequest());
-
-  view_controllers_[story_id].push_back(std::move(view_controller));
-  session_storage_->add_on_annotations_updated_once(
-      story_id,
-      [weak_this = weak_factory_.GetWeakPtr()](
-          std::string story_id, std::vector<fuchsia::modular::Annotation> new_annotations) {
         if (!weak_this) {
           return;
         }
-        weak_this->OnAnnotationsUpdated(story_id, std::move(new_annotations));
+
+        FX_PLOGS(ERROR, status) << "ViewController connection closed.";
+
+        weak_this->operation_queue_.Add(std::make_unique<StopStoryCall>(
+            story_id, /*skip_notifying_sessionshell=*/false, &weak_this->story_runtime_containers_,
+            [weak_this, story_id] {
+              // Delete the story
+              weak_this->session_storage_->DeleteStory(story_id);
+
+              for (auto& callback : weak_this->dismiss_callbacks_[story_id]) {
+                callback();
+              }
+
+              // Remove view controllers from the map
+              weak_this->view_controllers_.erase(story_id);
+              weak_this->dismiss_callbacks_.erase(story_id);
+            }));
+      });
+
+  graphical_presenter->PresentView(
+      std::move(view_spec), view_controller.NewRequest(),
+      [weak_this = weak_factory_.GetWeakPtr(), story_id = std::move(story_id),
+       view_controller = std::move(view_controller)](
+          const fuchsia::element::GraphicalPresenter_PresentView_Result& result) mutable {
+        if (!weak_this) {
+          return;
+        }
+
+        if (result.is_err()) {
+          if (result.err() == fuchsia::element::PresentViewError::INVALID_ARGS) {
+            FX_LOGS(ERROR) << "Error presenting view: PresentViewError "
+                           << static_cast<uint32_t>(result.err()) << " (INVALID_ARGS). "
+                           << "This is a bug!";
+          } else {
+            FX_LOGS(WARNING) << "Error presenting view: PresentViewError: "
+                             << static_cast<uint32_t>(result.err());
+          }
+          return;
+        }
+
+        weak_this->view_controllers_[story_id].push_back(std::move(view_controller));
       });
 }
 
 void StoryProviderImpl::DismissView(std::string story_id, fit::function<void()> done) {
-  FX_DCHECK(std::holds_alternative<fuchsia::session::GraphicalPresenterPtr>(presentation_protocol_))
+  FX_DCHECK(std::holds_alternative<fuchsia::element::GraphicalPresenterPtr>(presentation_protocol_))
       << "DismissView expects a GraphicalPresenter PresentationProtocolPtr";
   auto& graphical_presenter =
-      std::get<fuchsia::session::GraphicalPresenterPtr>(presentation_protocol_);
+      std::get<fuchsia::element::GraphicalPresenterPtr>(presentation_protocol_);
   FX_CHECK(graphical_presenter.get())
-      << "The session shell component keep alive a fuchsia.session.GraphicalPresenter service for "
+      << "The session shell component keep alive a fuchsia.element.GraphicalPresenter service for "
          "sessionmgr to function.";
 
   auto it = view_controllers_.find(story_id);
   FX_CHECK(it != view_controllers_.end()) << "No story with id: " << story_id << " found.";
 
   dismiss_callbacks_[story_id].push_back(std::move(done));
-  for (fuchsia::session::ViewControllerPtr& view_controller : view_controllers_[story_id]) {
+  for (fuchsia::element::ViewControllerPtr& view_controller : view_controllers_[story_id]) {
     view_controller->Dismiss();
   }
 }
 
 void StoryProviderImpl::OnAnnotationsUpdated(
-    std::string story_id, std::vector<fuchsia::modular::Annotation> annotations) {
-  for (const fuchsia::session::ViewControllerPtr& view_controller : view_controllers_[story_id]) {
-    // Wait for the annotations to be updated and incorperated into the presentation before notifying of the change
-    view_controller->Annotate(annotations::ToSessionAnnotations(annotations),
-                              [weak_this = weak_factory_.GetWeakPtr(), story_id] {
-                                weak_this->NotifyStoryStateChange(story_id);
-                              });
-  }
+    std::string story_id, const std::vector<fuchsia::modular::Annotation>& annotations,
+    const std::set<std::string>& annotation_keys_updated,
+    const std::set<std::string>& annotation_keys_deleted) {
+  for (const fuchsia::element::ViewControllerPtr& view_controller : view_controllers_[story_id]) {
+    // Convert Modular annotations that were updated to element annotations.
+    std::vector<fuchsia::element::Annotation> element_annotations;
+    for (const auto& modular_annotation : annotations) {
+      if (annotation_keys_updated.find(modular_annotation.key) != annotation_keys_updated.end()) {
+        element_annotations.push_back(annotations::ToElementAnnotation(modular_annotation));
+      }
+    }
 
-  session_storage_->add_on_annotations_updated_once(
-      story_id,
-      [weak_this = weak_factory_.GetWeakPtr()](
-          std::string story_id, std::vector<fuchsia::modular::Annotation> new_annotations) {
-        if (!weak_this) {
-          return;
-        }
-        weak_this->OnAnnotationsUpdated(story_id, std::move(new_annotations));
-      });
+    // Convert keys of Modular annotations that were delete to element annotation keys.
+    std::vector<fuchsia::element::AnnotationKey> annotations_to_delete;
+    annotations_to_delete.reserve(annotation_keys_deleted.size());
+    for (const auto& deleted_key : annotation_keys_deleted) {
+      annotations_to_delete.push_back(annotations::ToElementAnnotationKey(deleted_key));
+    }
+
+    // Wait for the annotations to be updated and incorperated into the presentation before
+    // notifying of the change
+    view_controller->UpdateAnnotations(
+        std::move(element_annotations), std::move(annotations_to_delete),
+        [weak_this = weak_factory_.GetWeakPtr(),
+         story_id](const fuchsia::element::AnnotationController_UpdateAnnotations_Result& result) {
+          if (result.is_err()) {
+            FX_LOGS(ERROR) << "Error updating view annotations: UpdateAnnotationsError: "
+                           << static_cast<uint32_t>(result.err());
+            return;
+          }
+          weak_this->NotifyStoryStateChange(story_id);
+        });
+  }
 }
 
 void StoryProviderImpl::NotifyStoryStateChange(std::string story_id) {

@@ -6,19 +6,27 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/syslog/cpp/macros.h>
 
 namespace modular_testing {
 
-void FakeViewController::Annotate(fuchsia::session::Annotations annotations,
-                                  AnnotateCallback callback) {
-  if (fake_graphical_presenter_->on_annotate_) {
-    fake_graphical_presenter_->on_annotate_(std::move(annotations));
+void FakeViewController::UpdateAnnotations(
+    std::vector<fuchsia::element::Annotation> annotations_to_set,
+    std::vector<fuchsia::element::AnnotationKey> annotations_to_delete,
+    UpdateAnnotationsCallback callback) {
+  if (fake_graphical_presenter_->on_update_annotations_) {
+    fake_graphical_presenter_->on_update_annotations_(std::move(annotations_to_set),
+                                                      std::move(annotations_to_delete));
   }
 
   if (callback) {
-    callback();
+    fuchsia::element::AnnotationController_UpdateAnnotations_Result result;
+    result.set_response({});
+    callback(std::move(result));
   }
 }
+
+void FakeViewController::GetAnnotations(GetAnnotationsCallback callback) { FX_NOTIMPLEMENTED(); };
 
 void FakeViewController::Dismiss() {
   if (fake_graphical_presenter_->on_dismiss_) {
@@ -53,14 +61,14 @@ void FakeGraphicalPresenter::OnCreate(fuchsia::sys::StartupInfo startup_info) {
   component_context()->svc()->Connect(session_shell_context_.NewRequest());
   session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-  fit::function<void(fidl::InterfaceRequest<fuchsia::session::GraphicalPresenter> request)>
+  fit::function<void(fidl::InterfaceRequest<fuchsia::element::GraphicalPresenter> request)>
       graphical_presenter_handler =
-          [this](fidl::InterfaceRequest<fuchsia::session::GraphicalPresenter> request) {
+          [this](fidl::InterfaceRequest<fuchsia::element::GraphicalPresenter> request) {
             if (on_graphical_presenter_connected_) {
               on_graphical_presenter_connected_();
             }
             graphical_presenter_bindings_.AddBinding(this, std::move(request),
-                                                     /* dispatcher =*/nullptr,
+                                                     /*dispatcher=*/nullptr,
                                                      std::move(on_graphical_presenter_error_));
           };
 
@@ -74,8 +82,9 @@ void FakeGraphicalPresenter::OnDestroy() {
 }
 
 void FakeGraphicalPresenter::PresentView(
-    fuchsia::session::ViewSpec view_spec,
-    ::fidl::InterfaceRequest<fuchsia::session::ViewController> view_controller_request) {
+    fuchsia::element::ViewSpec view_spec,
+    ::fidl::InterfaceRequest<fuchsia::element::ViewController> view_controller_request,
+    PresentViewCallback callback) {
   auto view_controller = std::make_shared<FakeViewController>(this);
   view_controller_bindings_.AddBinding(view_controller.get(), std::move(view_controller_request));
   view_controllers_.push_back(std::move(view_controller));
@@ -83,6 +92,10 @@ void FakeGraphicalPresenter::PresentView(
   if (on_present_view_) {
     on_present_view_(std::move(view_spec));
   }
+
+  fuchsia::element::GraphicalPresenter_PresentView_Result result;
+  result.set_response({});
+  callback(std::move(result));
 }
 
 }  // namespace modular_testing

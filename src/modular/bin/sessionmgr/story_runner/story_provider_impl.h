@@ -5,9 +5,9 @@
 #ifndef SRC_MODULAR_BIN_SESSIONMGR_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
 #define SRC_MODULAR_BIN_SESSIONMGR_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
 
+#include <fuchsia/element/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
-#include <fuchsia/session/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
@@ -38,7 +38,7 @@
 namespace modular {
 
 using PresentationProtocolPtr =
-    std::variant<fuchsia::modular::SessionShellPtr, fuchsia::session::GraphicalPresenterPtr>;
+    std::variant<fuchsia::modular::SessionShellPtr, fuchsia::element::GraphicalPresenterPtr>;
 
 // StoryControllerImpl has a circular dependency on StoryProviderImpl.
 class StoryControllerImpl;
@@ -135,18 +135,19 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   // |fuchsia::modular::StoryProvider|
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher) override;
 
-  // Called by *session_storage_.
+  // Callbacks invoked through subscriptions on |session_storage_|.
   void OnStoryStorageDeleted(std::string story_id);
   void OnStoryStorageUpdated(std::string story_id,
                              const fuchsia::modular::internal::StoryData& story_data);
+  void OnAnnotationsUpdated(std::string story_id,
+                            const std::vector<fuchsia::modular::Annotation>& annotations,
+                            const std::set<std::string>& annotation_keys_updated,
+                            const std::set<std::string>& annotation_keys_deleted);
 
   void NotifyStoryWatchers(const fuchsia::modular::internal::StoryData* story_data,
                            fuchsia::modular::StoryState story_state);
 
   void MaybeLoadStoryShell();
-
-  void OnAnnotationsUpdated(std::string story_id,
-                            std::vector<fuchsia::modular::Annotation> annotations);
 
   // Called through AttachOrPresentView and send a token for the
   // view of the story identified by |story_id| to the current session shell.
@@ -237,10 +238,9 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   PresentationProtocolPtr presentation_protocol_;
 
   // The key for this map is the story id
-  std::unordered_map<std::string, std::vector<fuchsia::session::ViewControllerPtr>> view_controllers_;
+  std::unordered_map<std::string, std::vector<fuchsia::element::ViewControllerPtr>>
+      view_controllers_;
   std::unordered_map<std::string, std::vector<fit::function<void()>>> dismiss_callbacks_;
-
-  std::shared_ptr<OnAnnotationsUpdatedCallback> on_annotations_updated;
 
   // Operations implemented here.
   class LoadStoryRuntimeCall;

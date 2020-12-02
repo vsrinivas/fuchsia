@@ -5,24 +5,30 @@
 #ifndef SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_GRAPHICAL_PRESENTER_H_
 #define SRC_MODULAR_LIB_MODULAR_TEST_HARNESS_CPP_FAKE_GRAPHICAL_PRESENTER_H_
 
-#include <fuchsia/session/cpp/fidl.h>
+#include <fuchsia/element/cpp/fidl.h>
 #include <lib/modular/testing/cpp/fake_component.h>
 
 namespace modular_testing {
 
 class FakeGraphicalPresenter;
 
-class FakeViewController : public fuchsia::session::ViewController {
+class FakeViewController : public fuchsia::element::ViewController {
  public:
-  FakeViewController(FakeGraphicalPresenter* fake_graphical_presenter)
+  explicit FakeViewController(FakeGraphicalPresenter* fake_graphical_presenter)
       : fake_graphical_presenter_(fake_graphical_presenter) {}
 
-  // |fuchsia::session::ViewController|
-  void Annotate(fuchsia::session::Annotations annotations, AnnotateCallback callback) override;
+  // |ViewController| (composed |AnnotationController|)
+  void UpdateAnnotations(std::vector<fuchsia::element::Annotation> annotations_to_set,
+                         std::vector<fuchsia::element::AnnotationKey> annotations_to_delete,
+                         UpdateAnnotationsCallback callback) override;
 
-  // |fuchsia::session::ViewController|
+  // |ViewController| (composed |AnnotationController|)
+  void GetAnnotations(GetAnnotationsCallback callback) override;
+
+  // |ViewController|
   void Dismiss() override;
 
+ private:
   FakeGraphicalPresenter* fake_graphical_presenter_;
 };
 
@@ -42,7 +48,7 @@ class FakeViewController : public fuchsia::session::ViewController {
 // RunLoopUntil([&] { return fake_graphical_presenter->is_running(); });
 // ...
 class FakeGraphicalPresenter : public modular_testing::FakeComponent,
-                               fuchsia::session::GraphicalPresenter {
+                               fuchsia::element::GraphicalPresenter {
  public:
   using StoryShellRequest = fidl::InterfaceRequest<fuchsia::modular::StoryShell>;
 
@@ -86,12 +92,15 @@ class FakeGraphicalPresenter : public modular_testing::FakeComponent,
   }
 
   void set_on_present_view(
-      fit::function<void(fuchsia::session::ViewSpec view_spec)> on_present_view) {
+      fit::function<void(fuchsia::element::ViewSpec view_spec)> on_present_view) {
     on_present_view_ = std::move(on_present_view);
   }
 
-  void set_on_annotate(fit::function<void(fuchsia::session::Annotations annotations)> on_annotate) {
-    on_annotate_ = std::move(on_annotate);
+  void set_on_update_annotations(
+      fit::function<void(std::vector<fuchsia::element::Annotation> annotations_to_set,
+                         std::vector<fuchsia::element::AnnotationKey> annotations_to_delete)>
+          on_update_annotations) {
+    on_update_annotations_ = std::move(on_update_annotations);
   }
 
   void set_on_dismiss(fit::function<void()> on_dismiss) { on_dismiss_ = std::move(on_dismiss); }
@@ -103,26 +112,29 @@ class FakeGraphicalPresenter : public modular_testing::FakeComponent,
   // |modular_testing::FakeComponent|
   void OnDestroy() override;
 
-  // |fuchsia::session::GraphicalPresenter|
+  // |fuchsia::element::GraphicalPresenter|
   void PresentView(
-      fuchsia::session::ViewSpec view_spec,
-      ::fidl::InterfaceRequest<fuchsia::session::ViewController> view_controller_request) override;
+      fuchsia::element::ViewSpec view_spec,
+      ::fidl::InterfaceRequest<fuchsia::element::ViewController> view_controller_request,
+      PresentViewCallback callback) override;
 
   fuchsia::modular::SessionShellContextPtr session_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
 
-  fidl::BindingSet<fuchsia::session::GraphicalPresenter> graphical_presenter_bindings_;
-  fidl::BindingSet<fuchsia::session::ViewController> view_controller_bindings_;
+  fidl::BindingSet<fuchsia::element::GraphicalPresenter> graphical_presenter_bindings_;
+  fidl::BindingSet<fuchsia::element::ViewController> view_controller_bindings_;
 
   std::vector<std::shared_ptr<FakeViewController>> view_controllers_;
 
   fit::function<void()> on_destroy_;
   fit::function<void()> on_graphical_presenter_connected_;
   fit::function<void(zx_status_t)> on_graphical_presenter_error_;
-  fit::function<void(fuchsia::session::ViewSpec view_spec)> on_present_view_;
+  fit::function<void(fuchsia::element::ViewSpec view_spec)> on_present_view_;
 
  public:
-  fit::function<void(fuchsia::session::Annotations annotations)> on_annotate_;
+  fit::function<void(std::vector<fuchsia::element::Annotation> annotations_to_set,
+                     std::vector<fuchsia::element::AnnotationKey> annotations_to_delete)>
+      on_update_annotations_;
   fit::function<void()> on_dismiss_;
 };
 

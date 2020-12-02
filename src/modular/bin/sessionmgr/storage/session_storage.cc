@@ -8,8 +8,6 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
-#include <unordered_set>
-
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/lib/fidl/clone.h"
 
@@ -43,9 +41,8 @@ void SessionStorage::DeleteStory(std::string story_name) {
 
   story_data_backing_store_.erase(it);
   story_storage_backing_store_.erase(story_name);
-  on_annotations_updated_callbacks_.erase(story_name);
 
-  NotifyStoryDeleted(std::move(story_name));
+  story_deleted_watchers_.Notify(std::move(story_name));
 }
 
 fuchsia::modular::internal::StoryDataPtr SessionStorage::GetStoryData(std::string story_name) {
@@ -88,6 +85,30 @@ std::optional<fuchsia::modular::AnnotationError> SessionStorage::MergeStoryAnnot
     }
   }
 
+  // Get the keys of annotations that are updated (added or set) and deleted by the merge operation.
+  std::set<std::string> old_annotation_keys;
+  if (story_data.story_info().has_annotations()) {
+    for (const auto& annotation : story_data.story_info().annotations()) {
+      old_annotation_keys.insert(annotation.key);
+    }
+  }
+
+  std::set<std::string> annotation_keys_updated;
+  std::set<std::string> annotation_keys_to_delete;
+  for (const auto& annotation : annotations) {
+    if (annotation.value) {
+      annotation_keys_updated.insert(annotation.key);
+    } else {
+      annotation_keys_to_delete.insert(annotation.key);
+    }
+  }
+
+  // |annotation_keys_to_delete| might contain keys for annotations that already don't exist.
+  std::set<std::string> annotation_keys_deleted;
+  std::set_intersection(old_annotation_keys.begin(), old_annotation_keys.end(),
+                        annotation_keys_to_delete.begin(), annotation_keys_to_delete.end(),
+                        std::inserter(annotation_keys_deleted, annotation_keys_deleted.end()));
+
   // Merge annotations.
   auto new_annotations =
       story_data.story_info().has_annotations()
@@ -100,7 +121,8 @@ std::optional<fuchsia::modular::AnnotationError> SessionStorage::MergeStoryAnnot
     return fuchsia::modular::AnnotationError::TOO_MANY_ANNOTATIONS;
   }
 
-  NotifyAndRemoveOnAnnotationsUpdated(story_name, new_annotations);
+  annotations_updated_watchers_.Notify(story_name, new_annotations, annotation_keys_updated,
+                                       annotation_keys_deleted);
 
   // Mutate story in-place.
   // No need to write story data back to map because we modify it in place.
@@ -134,24 +156,6 @@ void SessionStorage::NotifyStoryUpdated(std::string story_id) {
   const auto& story_data = it->second;
 
   story_updated_watchers_.Notify(std::move(story_id), story_data);
-}
-
-void SessionStorage::NotifyStoryDeleted(std::string story_id) {
-  story_deleted_watchers_.Notify(std::move(story_id));
-}
-
-void SessionStorage::NotifyAndRemoveOnAnnotationsUpdated(
-    std::string story_id, const std::vector<fuchsia::modular::Annotation>& annotations) {
-  auto it = on_annotations_updated_callbacks_.find(story_id);
-  if (it == on_annotations_updated_callbacks_.end()) {
-    return;
-  }
-
-  for (const auto& callback : it->second) {
-    callback(story_id, fidl::Clone(annotations));
-  }
-
-  on_annotations_updated_callbacks_.erase(it);
 }
 
 }  // namespace modular

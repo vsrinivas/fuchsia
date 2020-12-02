@@ -142,7 +142,7 @@ void SessionmgrImpl::Initialize(
 void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
   struct UIHandlers {
     fuchsia::modular::SessionShellPtr session_shell;
-    fuchsia::session::GraphicalPresenterPtr graphical_presenter;
+    fuchsia::element::GraphicalPresenterPtr graphical_presenter;
   };
 
   auto ui_handlers = std::make_shared<UIHandlers>();
