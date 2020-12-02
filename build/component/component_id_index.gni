@@ -79,19 +79,26 @@ template("component_id_index_config_data") {
   # Step 2: Merge the collected index files (listed in the intermediary file)
   # into 1 index.
   component_id_index_merge = "${target_name}_merge"
-  component_id_index_merged_index_path =
+  component_id_index_merged_index_json_path =
       "${target_out_dir}/${target_name}_merged_index.json"
+  component_id_index_merged_index_fidl_path =
+      "${target_out_dir}/${target_name}_merged_index.fidlbin"
   compiled_action(component_id_index_merge) {
     forward_variables_from(invoker, [ "testonly" ])
     tool = "//tools/component_id_index"
     sources = [ component_id_index_input_manifest_path ]
-    outputs = [ component_id_index_merged_index_path ]
+    outputs = [
+      component_id_index_merged_index_json_path,
+      component_id_index_merged_index_fidl_path,
+    ]
     depfile = "${target_out_dir}/${target_name}.d"
     args = [
       "--input_manifest",
       rebase_path(component_id_index_input_manifest_path),
-      "--output_file",
-      rebase_path(component_id_index_merged_index_path),
+      "--output_index_json",
+      rebase_path(component_id_index_merged_index_json_path),
+      "--output_index_fidl",
+      rebase_path(component_id_index_merged_index_fidl_path),
       "--depfile",
       rebase_path(depfile, root_build_dir),
     ]
@@ -102,7 +109,7 @@ template("component_id_index_config_data") {
   config_data(target_name) {
     forward_variables_from(invoker, [ "testonly" ])
     for_pkg = "appmgr"
-    sources = [ rebase_path(component_id_index_merged_index_path) ]
+    sources = [ rebase_path(component_id_index_merged_index_json_path) ]
     outputs = [ "component_id_index" ]
 
     deps = [ ":${component_id_index_merge}" ]

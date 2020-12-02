@@ -5,12 +5,13 @@
 // This library must remain platform-agnostic because it used by a host tool and within Fuchsia.
 
 use anyhow::{anyhow, Context, Result};
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::str;
 use thiserror::Error;
+
+pub mod fidl_convert;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct AppmgrMoniker {

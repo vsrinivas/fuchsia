@@ -5,8 +5,11 @@
 use anyhow::{anyhow, Context, Result};
 
 use component_id_index::*;
+use fidl::encoding::encode_persistent;
+use fidl_fuchsia_component_internal as fcomponent_internal;
 use serde_json;
 use serde_json5;
+use std::convert::TryInto;
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
@@ -16,14 +19,16 @@ use structopt::StructOpt;
 #[structopt(about = "Validate and merge component ID index files.")]
 struct CommandLineOpts {
     #[structopt(
-        short,
         long,
-        help = "Path to a manifest text file containing a list of index files, one on each line. All index files are merged into a single index, written to the supplied --output_file"
+        help = "Path to a manifest text file containing a list of index files, one on each line. All index files are merged into a single index, written to the supplied --output_index_json and --output_index_fidl"
     )]
     input_manifest: PathBuf,
 
-    #[structopt(short, long, help = "Where to write the merged index file.")]
-    output_file: PathBuf,
+    #[structopt(long, help = "Where to write the merged index file, encoded in JSON.")]
+    output_index_json: PathBuf,
+
+    #[structopt(long, help = "Where to write the merged index file, encoded in FIDL wire-format.")]
+    output_index_fidl: PathBuf,
 
     #[structopt(
         short,
@@ -68,15 +73,28 @@ fn run(opts: CommandLineOpts) -> anyhow::Result<()> {
         .collect::<Result<Vec<String>, _>>()
         .context("Could not read input manifest")?;
     let merged_index = merge_index_from_json5_files(input_files.as_slice())?;
-    let serialized_output =
+
+    let serialized_output_json =
         serde_json::to_string(&merged_index).context("Could not json-encode merged index")?;
-    fs::write(&opts.output_file, serialized_output.as_bytes())
-        .context("Could not write merged index to file")?;
+    fs::write(&opts.output_index_json, serialized_output_json.as_bytes())
+        .context("Could not write merged JSON-encoded index to file")?;
+
+    let mut merged_index_fidl: fcomponent_internal::ComponentIdIndex = merged_index.try_into()?;
+    let serialized_output_fidl =
+        encode_persistent(&mut merged_index_fidl).context("Could not fidl-encode merged index")?;
+    fs::write(&opts.output_index_fidl, serialized_output_fidl)
+        .context("Could not write merged FIDL-encoded index to file")?;
 
     // write out the depfile
     fs::write(
         &opts.depfile,
-        format!("{}: {}\n", opts.output_file.to_str().unwrap(), input_files.join(" ")),
+        format!(
+            "{}: {}\n{}: {}\n",
+            opts.output_index_json.to_str().unwrap(),
+            input_files.join(" "),
+            opts.output_index_fidl.to_str().unwrap(),
+            input_files.join(" ")
+        ),
     )
     .context("Could not write to depfile")
 }
@@ -190,7 +208,8 @@ See https://fuchsia.dev/fuchsia-src/development/components/component_id_index#de
         let mut tmp_input_manifest = tempfile::NamedTempFile::new().unwrap();
         let mut tmp_input_index1 = tempfile::NamedTempFile::new().unwrap();
         let mut tmp_input_index2 = tempfile::NamedTempFile::new().unwrap();
-        let tmp_output_manifest = tempfile::NamedTempFile::new().unwrap();
+        let tmp_output_index_json = tempfile::NamedTempFile::new().unwrap();
+        let tmp_output_index_fidl = tempfile::NamedTempFile::new().unwrap();
         let tmp_output_depfile = tempfile::NamedTempFile::new().unwrap();
 
         // the manifest lists two index files:
@@ -213,7 +232,8 @@ See https://fuchsia.dev/fuchsia-src/development/components/component_id_index#de
         assert!(matches!(
             run(CommandLineOpts {
                 input_manifest: tmp_input_manifest.path().to_path_buf(),
-                output_file: tmp_output_manifest.path().to_path_buf(),
+                output_index_json: tmp_output_index_json.path().to_path_buf(),
+                output_index_fidl: tmp_output_index_fidl.path().to_path_buf(),
                 depfile: tmp_output_depfile.path().to_path_buf(),
             }),
             Ok(_)
@@ -222,15 +242,18 @@ See https://fuchsia.dev/fuchsia-src/development/components/component_id_index#de
         // assert that the output index file contains the merged index.
         let mut merged_index = index1.clone();
         merged_index.instances.extend_from_slice(&index2.instances);
-        let index_files = [String::from(tmp_output_manifest.path().to_str().unwrap())];
+        let index_files = [String::from(tmp_output_index_json.path().to_str().unwrap())];
         assert_eq!(merged_index, merge_index_from_json5_files(&index_files).unwrap());
 
         // assert the structure of the dependency file:
-        //  <output_manifest>: <input index 1> <input index 2>\n
+        //  <merged_output_index>: <input index 1> <input index 2>\n
         assert_eq!(
             format!(
-                "{}: {} {}\n",
-                tmp_output_manifest.path().to_str().unwrap(),
+                "{}: {} {}\n{}: {} {}\n",
+                tmp_output_index_json.path().to_str().unwrap(),
+                tmp_input_index1.path().to_str().unwrap(),
+                tmp_input_index2.path().to_str().unwrap(),
+                tmp_output_index_fidl.path().to_str().unwrap(),
                 tmp_input_index1.path().to_str().unwrap(),
                 tmp_input_index2.path().to_str().unwrap()
             ),

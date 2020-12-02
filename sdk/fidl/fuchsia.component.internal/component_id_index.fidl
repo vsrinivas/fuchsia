@@ -1,0 +1,58 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// The FIDL representation of the component ID Index.
+///
+/// See (component ID index)[//docs/development/components/component_id_index.md]
+/// for documentation on the schema.
+library fuchsia.component.internal;
+
+using fuchsia.component;
+using fuchsia.sys;
+
+/// 256 bits encoded in lower-cased base64 (64 chars).
+using InstanceId = string:64;
+/// The path to the appmgr realm where the component runs.
+using AppmgrRealmPath = vector<fuchsia.component.name>:256;
+
+/// Top-level type describing the component ID index.
+table ComponentIdIndex {
+    /// If `true`, `appmgr` requires components which use
+    /// `isolated-persistent-storage` to list their instance in the index.
+    /// Otherwise, they fail to run.  Note that this flag is only used by appmgr,
+    /// and is ignored by component_manager.
+    1: bool appmgr_restrict_isolated_persistent_storage;
+
+    /// A list of component ID instance entries.
+    ///
+    /// Required, but may be empty.
+    2: vector<InstanceIdEntry>:1024 instances;
+};
+
+table InstanceIdEntry {
+    /// A 256-bit identifier encoded in base64 which is unique across all other
+    /// instance IDs in the index.
+    1: InstanceId instance_id;
+
+    /// A moniker identifying a component instance which is associated with `instance_id`.
+    2: AppmgrMoniker appmgr_moniker;
+};
+
+table AppmgrMoniker {
+    /// The component's URL.
+    1: fuchsia.sys.component_url url;
+
+    /// The path to the appmgr realm where the component runs.
+    2: AppmgrRealmPath realm_path;
+
+    /// The component instance's previous realm paths. `appmgr` will consider
+    /// these realms in addition to `realm_path`. This feature is useful when
+    /// moving a component to a new `realm_path`, but still needing to retain the
+    /// previous realm paths. For example, this feature can be used when a
+    /// component ID index change and the realm path code change cannot be
+    /// submitted atomically.
+    ///
+    /// Optional.
+    3: vector<AppmgrRealmPath>:64 transitional_realm_paths;
+};

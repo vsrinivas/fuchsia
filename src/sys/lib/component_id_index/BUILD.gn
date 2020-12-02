@@ -11,6 +11,8 @@ rustc_library("component_id_index") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde",
@@ -19,7 +21,10 @@ rustc_library("component_id_index") {
 
   test_deps = [ "//third_party/rust_crates:proptest" ]
 
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/fidl_convert.rs",
+    "src/lib.rs",
+  ]
 }
 
 test_package("component-id-index-tests") {

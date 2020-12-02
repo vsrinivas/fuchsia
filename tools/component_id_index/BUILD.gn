@@ -9,6 +9,8 @@ rustc_binary("component_id_index") {
   name = "component_id_index"
 
   deps = [
+    "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/sys/lib/component_id_index",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:rand",
