@@ -31,7 +31,7 @@ ScreenshotData CreateEmptyScreenshot() {
   return screenshot;
 }
 
-ScreenshotData CreateCheckerboardScreenshot(const size_t image_dim_in_px) {
+ScreenshotData CreateCheckerboardScreenshot(const uint32_t image_dim_in_px) {
   const size_t height = image_dim_in_px;
   const size_t width = image_dim_in_px;
   const size_t block_size = 10;

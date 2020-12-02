@@ -22,7 +22,7 @@ fuchsia::ui::scenic::ScreenshotData CreateEmptyScreenshot();
 
 // Returns an 8-bit BGRA image of a |image_dim_in_px| x |image_dim_in_px| checkerboard, where each
 // white/black region is a 10x10 pixel square.
-fuchsia::ui::scenic::ScreenshotData CreateCheckerboardScreenshot(const size_t image_dim_in_px);
+fuchsia::ui::scenic::ScreenshotData CreateCheckerboardScreenshot(const uint32_t image_dim_in_px);
 
 // Returns an empty screenshot with a pixel format different from BGRA-8.
 fuchsia::ui::scenic::ScreenshotData CreateNonBGRA8Screenshot();

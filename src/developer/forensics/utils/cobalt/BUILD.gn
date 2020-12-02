@@ -33,9 +33,6 @@ source_set("cobalt") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 ###############################################################################

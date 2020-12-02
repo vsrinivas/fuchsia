@@ -51,9 +51,6 @@ source_set("lz4_decoder") {
     ":ring_buffer",
     "//src/lib/fxl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 source_set("lz4_encoder") {
@@ -74,9 +71,6 @@ source_set("lz4_encoder") {
     ":ring_buffer",
     "//sdk/lib/syslog/cpp",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 source_set("lz4_utils") {
@@ -86,9 +80,6 @@ source_set("lz4_utils") {
     "//src/developer/forensics/feedback_data:constants",
     "//zircon/public/lib/lz4",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 source_set("production") {

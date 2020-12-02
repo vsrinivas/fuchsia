@@ -74,7 +74,4 @@ source_set("reader") {
     "//src/lib/fxl",
     "//zircon/system/ulib/trace",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

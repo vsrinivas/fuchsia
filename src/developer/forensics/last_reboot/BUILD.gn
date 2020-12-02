@@ -37,9 +37,6 @@ source_set("main") {
     "//src/developer/forensics/utils/component",
   ]
 
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-
   visibility += [ "//src/developer/forensics:*" ]
 }
 
@@ -108,9 +105,6 @@ source_set("reboot_watcher") {
     "//src/lib/files",
     "//src/lib/fxl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("reporter") {

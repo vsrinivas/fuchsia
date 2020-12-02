@@ -33,8 +33,8 @@ bool RawToPng(const png_structp png_ptr, const png_infop info_ptr,
   const int bit_depth = 8;
 
   // Set the headers: output is 8-bit depth, RGBA format like the input.
-  png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
-               PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+  png_set_IHDR(png_ptr, info_ptr, (uint32_t)width, (uint32_t)height, bit_depth, PNG_COLOR_TYPE_RGBA,
+               PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 
   std::vector<uint8_t> imgdata;
   if (!fsl::VectorFromVmo(raw_image, &imgdata)) {

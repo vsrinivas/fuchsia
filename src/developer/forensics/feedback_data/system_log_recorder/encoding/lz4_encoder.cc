@@ -27,7 +27,7 @@ std::string Lz4Encoder::Encode(const std::string& msg) {
 
   // lz4 forces us to output separately (1) the size of the encoded message and (2) the encoded
   // message itself.
-  const size_t max_encoded_size = LZ4_compressBound(msg.size());
+  const size_t max_encoded_size = LZ4_compressBound((int)msg.size());
   std::vector<char> encoded(max_encoded_size);
 
   // Make a copy that will stay in memory for LZ4 to use
@@ -35,7 +35,7 @@ std::string Lz4Encoder::Encode(const std::string& msg) {
 
   // Encode message.
   const int encoded_size = LZ4_compress_fast_continue(stream_, chunk_copy_ptr, encoded.data(),
-                                                      msg.size(), max_encoded_size, 0);
+                                                      (int)msg.size(), (int)max_encoded_size, 0);
 
   FX_CHECK((size_t)encoded_size <= kMaxChunkSize);
 
@@ -46,7 +46,8 @@ std::string Lz4Encoder::Encode(const std::string& msg) {
     return EncodeSize(kEncodeSizeError) + Encode(kDroppedError);
   }
 
-  return EncodeSize(encoded_size) + std::string(encoded.begin(), encoded.begin() + encoded_size);
+  return EncodeSize((uint16_t)encoded_size) +
+         std::string(encoded.begin(), encoded.begin() + encoded_size);
 }
 
 void Lz4Encoder::Reset() {

@@ -32,7 +32,7 @@ bool Archive(const std::map<std::string, std::string>& files, Buffer* archive, z
       return false;
     }
 
-    if (const int status = zipWriteInFileInZip(*zf, content.data(), content.size());
+    if (const int status = zipWriteInFileInZip(*zf, content.data(), (uint32_t)content.size());
         status != ZIP_OK) {
       FX_LOGS(ERROR) << fxl::Substitute("cannot write $0 in output zip archive: ", filename)
                      << status;

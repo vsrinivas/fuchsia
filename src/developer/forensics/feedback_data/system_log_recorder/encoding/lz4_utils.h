@@ -54,7 +54,7 @@ inline std::string EncodeSize(uint16_t size) {
 //
 // Note: we do not cast directly into uint16_t to avoid alignment issues.
 inline uint16_t DecodeSize(const char** data_ptr) {
-  uint16_t size = ((unsigned char)(*data_ptr)[0] << 8) + (unsigned char)(*data_ptr)[1];
+  uint16_t size = (uint16_t)((unsigned char)(*data_ptr)[0] << 8) + (unsigned char)(*data_ptr)[1];
   *data_ptr += 2;
   return size;
 }

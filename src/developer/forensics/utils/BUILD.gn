@@ -22,9 +22,6 @@ source_set("archive") {
     "//src/lib/fxl",
     "//third_party/zlib:minizip",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("errors") {
@@ -70,9 +67,6 @@ source_set("logs") {
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("previous_boot_file") {

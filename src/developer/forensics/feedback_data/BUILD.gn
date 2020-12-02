@@ -103,9 +103,6 @@ source_set("data_provider") {
     "//src/lib/uuid",
     "//third_party/libpng",
   ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("datastore") {
@@ -176,9 +173,6 @@ source_set("device_id_provider") {
     "//src/lib/fxl",
     "//src/lib/uuid",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("errors") {

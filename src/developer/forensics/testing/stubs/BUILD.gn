@@ -60,9 +60,6 @@ source_set("cobalt") {
     "//src/lib/fsl",
     "//zircon/public/lib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("crash_reporter") {
@@ -216,9 +213,6 @@ source_set("logger") {
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/async:async-cpp",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("product_info_provider") {
@@ -288,9 +282,6 @@ source_set("scenic") {
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/zx",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("utc_provider") {

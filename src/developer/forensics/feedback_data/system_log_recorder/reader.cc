@@ -153,9 +153,9 @@ bool Concatenate(const std::string& logs_dir, Decoder* decoder, const std::strin
   // Set the default compression to NAN in case Concatenate() fails.
   *compression_ratio = NAN;
 
-  if(!files::IsDirectory(logs_dir)) {
-     FX_LOGS(WARNING) << "No previous boot logs found";
-     return false;
+  if (!files::IsDirectory(logs_dir)) {
+    FX_LOGS(WARNING) << "No previous boot logs found";
+    return false;
   }
 
   std::vector<std::string> file_paths;
@@ -222,7 +222,8 @@ bool Concatenate(const std::string& logs_dir, Decoder* decoder, const std::strin
   }
 
   // Compression ratio rounded up to the next decimal, e.g., 2.54x compression -> 2.6x.
-  int decimal_ratio = (uncompressed_log.size() * 10 - 1) / total_compressed_log_size + 1;
+  uint32_t decimal_ratio =
+      ((uint32_t)uncompressed_log.size() * 10 - 1) / total_compressed_log_size + 1;
   *compression_ratio = ((float)decimal_ratio) / 10.0f;
 
   return true;
