@@ -31,10 +31,8 @@ zx_library("digest") {
     "node-digest.cc",
   ]
 
-  deps = [
-    "//third_party/boringssl",
-    "//zircon/public/lib/fbl",
-  ]
+  deps = [ "//third_party/boringssl" ]
+  public_deps = [ "//zircon/public/lib/fbl" ]
 }
 
 group("tests") {

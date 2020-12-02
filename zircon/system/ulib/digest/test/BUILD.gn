@@ -12,12 +12,16 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":digest-unit-tests" ]
+  deps = [
+    ":digest-fuzzers",
+    ":digest-unit-tests",
+  ]
 }
 
 test("digest") {
@@ -60,4 +64,13 @@ fuchsia_component("digest-unit-tests-component") {
 
 fuchsia_test_package("digest-unit-tests") {
   test_components = [ ":digest-unit-tests-component" ]
+}
+
+fuzzer("merkle-tree-fuzzer") {
+  sources = [ "merkle-tree-fuzzer.cc" ]
+  deps = [ "//zircon/system/ulib/digest" ]
+}
+
+fuzzers_package("digest-fuzzers") {
+  cpp_fuzzers = [ ":merkle-tree-fuzzer" ]
 }
