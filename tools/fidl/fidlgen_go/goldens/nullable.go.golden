@@ -131,6 +131,17 @@ type SimpleUnion struct {
 	B                float32 `fidl_ordinal:"2"`
 }
 
+func (_m *SimpleUnion) reset() {
+	switch _m.I_simpleUnionTag {
+	case 1:
+		var _zeroed int32
+		_m.A = _zeroed
+	case 2:
+		var _zeroed float32
+		_m.B = _zeroed
+	}
+}
+
 func (_m *SimpleUnion) Which() I_simpleUnionTag {
 	return _m.I_simpleUnionTag
 }
@@ -140,6 +151,7 @@ func (_m *SimpleUnion) Ordinal() uint64 {
 }
 
 func (_m *SimpleUnion) SetA(a int32) {
+	_m.reset()
 	_m.I_simpleUnionTag = SimpleUnionA
 	_m.A = a
 }
@@ -151,6 +163,7 @@ func SimpleUnionWithA(a int32) SimpleUnion {
 }
 
 func (_m *SimpleUnion) SetB(b float32) {
+	_m.reset()
 	_m.I_simpleUnionTag = SimpleUnionB
 	_m.B = b
 }

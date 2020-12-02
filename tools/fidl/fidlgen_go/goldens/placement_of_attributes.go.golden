@@ -126,6 +126,14 @@ type ExampleUnion struct {
 	Variant           uint32 `fidl_ordinal:"1"`
 }
 
+func (_m *ExampleUnion) reset() {
+	switch _m.I_exampleUnionTag {
+	case 1:
+		var _zeroed uint32
+		_m.Variant = _zeroed
+	}
+}
+
 func (_m *ExampleUnion) Which() I_exampleUnionTag {
 	return _m.I_exampleUnionTag
 }
@@ -135,6 +143,7 @@ func (_m *ExampleUnion) Ordinal() uint64 {
 }
 
 func (_m *ExampleUnion) SetVariant(variant uint32) {
+	_m.reset()
 	_m.I_exampleUnionTag = ExampleUnionVariant
 	_m.Variant = variant
 }
@@ -158,6 +167,17 @@ type ExampleXUnion struct {
 	Variant            uint32 `fidl_ordinal:"1"`
 }
 
+func (_m *ExampleXUnion) reset() {
+	switch _m.I_exampleXUnionTag {
+	case 1:
+		var _zeroed uint32
+		_m.Variant = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
 func (_m *ExampleXUnion) Which() I_exampleXUnionTag {
 	switch _m.I_exampleXUnionTag {
 	case 1:
@@ -172,6 +192,7 @@ func (_m *ExampleXUnion) Ordinal() uint64 {
 }
 
 func (_m *ExampleXUnion) SetVariant(variant uint32) {
+	_m.reset()
 	_m.I_exampleXUnionTag = ExampleXUnionVariant
 	_m.Variant = variant
 }

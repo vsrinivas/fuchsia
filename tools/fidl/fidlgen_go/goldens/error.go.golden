@@ -52,6 +52,17 @@ type ExampleFooResult struct {
 	Err                   uint32             `fidl_ordinal:"2"`
 }
 
+func (_m *ExampleFooResult) reset() {
+	switch _m.I_exampleFooResultTag {
+	case 1:
+		var _zeroed ExampleFooResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed uint32
+		_m.Err = _zeroed
+	}
+}
+
 func (_m *ExampleFooResult) Which() I_exampleFooResultTag {
 	return _m.I_exampleFooResultTag
 }
@@ -61,6 +72,7 @@ func (_m *ExampleFooResult) Ordinal() uint64 {
 }
 
 func (_m *ExampleFooResult) SetResponse(response ExampleFooResponse) {
+	_m.reset()
 	_m.I_exampleFooResultTag = ExampleFooResultResponse
 	_m.Response = response
 }
@@ -72,6 +84,7 @@ func ExampleFooResultWithResponse(response ExampleFooResponse) ExampleFooResult 
 }
 
 func (_m *ExampleFooResult) SetErr(err uint32) {
+	_m.reset()
 	_m.I_exampleFooResultTag = ExampleFooResultErr
 	_m.Err = err
 }

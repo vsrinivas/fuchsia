@@ -347,6 +347,17 @@ type WithErrorSyntaxResponseAsStructResult struct {
 	Err                                        uint32                                  `fidl_ordinal:"2"`
 }
 
+func (_m *WithErrorSyntaxResponseAsStructResult) reset() {
+	switch _m.I_withErrorSyntaxResponseAsStructResultTag {
+	case 1:
+		var _zeroed WithErrorSyntaxResponseAsStructResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed uint32
+		_m.Err = _zeroed
+	}
+}
+
 func (_m *WithErrorSyntaxResponseAsStructResult) Which() I_withErrorSyntaxResponseAsStructResultTag {
 	return _m.I_withErrorSyntaxResponseAsStructResultTag
 }
@@ -356,6 +367,7 @@ func (_m *WithErrorSyntaxResponseAsStructResult) Ordinal() uint64 {
 }
 
 func (_m *WithErrorSyntaxResponseAsStructResult) SetResponse(response WithErrorSyntaxResponseAsStructResponse) {
+	_m.reset()
 	_m.I_withErrorSyntaxResponseAsStructResultTag = WithErrorSyntaxResponseAsStructResultResponse
 	_m.Response = response
 }
@@ -367,6 +379,7 @@ func WithErrorSyntaxResponseAsStructResultWithResponse(response WithErrorSyntaxR
 }
 
 func (_m *WithErrorSyntaxResponseAsStructResult) SetErr(err uint32) {
+	_m.reset()
 	_m.I_withErrorSyntaxResponseAsStructResultTag = WithErrorSyntaxResponseAsStructResultErr
 	_m.Err = err
 }
@@ -390,6 +403,17 @@ type WithErrorSyntaxErrorAsPrimitiveResult struct {
 	Err                                        uint32                                  `fidl_ordinal:"2"`
 }
 
+func (_m *WithErrorSyntaxErrorAsPrimitiveResult) reset() {
+	switch _m.I_withErrorSyntaxErrorAsPrimitiveResultTag {
+	case 1:
+		var _zeroed WithErrorSyntaxErrorAsPrimitiveResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed uint32
+		_m.Err = _zeroed
+	}
+}
+
 func (_m *WithErrorSyntaxErrorAsPrimitiveResult) Which() I_withErrorSyntaxErrorAsPrimitiveResultTag {
 	return _m.I_withErrorSyntaxErrorAsPrimitiveResultTag
 }
@@ -399,6 +423,7 @@ func (_m *WithErrorSyntaxErrorAsPrimitiveResult) Ordinal() uint64 {
 }
 
 func (_m *WithErrorSyntaxErrorAsPrimitiveResult) SetResponse(response WithErrorSyntaxErrorAsPrimitiveResponse) {
+	_m.reset()
 	_m.I_withErrorSyntaxErrorAsPrimitiveResultTag = WithErrorSyntaxErrorAsPrimitiveResultResponse
 	_m.Response = response
 }
@@ -410,6 +435,7 @@ func WithErrorSyntaxErrorAsPrimitiveResultWithResponse(response WithErrorSyntaxE
 }
 
 func (_m *WithErrorSyntaxErrorAsPrimitiveResult) SetErr(err uint32) {
+	_m.reset()
 	_m.I_withErrorSyntaxErrorAsPrimitiveResultTag = WithErrorSyntaxErrorAsPrimitiveResultErr
 	_m.Err = err
 }
@@ -433,6 +459,17 @@ type WithErrorSyntaxErrorAsEnumResult struct {
 	Err                                   ErrorEnun                          `fidl_ordinal:"2"`
 }
 
+func (_m *WithErrorSyntaxErrorAsEnumResult) reset() {
+	switch _m.I_withErrorSyntaxErrorAsEnumResultTag {
+	case 1:
+		var _zeroed WithErrorSyntaxErrorAsEnumResponse
+		_m.Response = _zeroed
+	case 2:
+		var _zeroed ErrorEnun
+		_m.Err = _zeroed
+	}
+}
+
 func (_m *WithErrorSyntaxErrorAsEnumResult) Which() I_withErrorSyntaxErrorAsEnumResultTag {
 	return _m.I_withErrorSyntaxErrorAsEnumResultTag
 }
@@ -442,6 +479,7 @@ func (_m *WithErrorSyntaxErrorAsEnumResult) Ordinal() uint64 {
 }
 
 func (_m *WithErrorSyntaxErrorAsEnumResult) SetResponse(response WithErrorSyntaxErrorAsEnumResponse) {
+	_m.reset()
 	_m.I_withErrorSyntaxErrorAsEnumResultTag = WithErrorSyntaxErrorAsEnumResultResponse
 	_m.Response = response
 }
@@ -453,6 +491,7 @@ func WithErrorSyntaxErrorAsEnumResultWithResponse(response WithErrorSyntaxErrorA
 }
 
 func (_m *WithErrorSyntaxErrorAsEnumResult) SetErr(err ErrorEnun) {
+	_m.reset()
 	_m.I_withErrorSyntaxErrorAsEnumResultTag = WithErrorSyntaxErrorAsEnumResultErr
 	_m.Err = err
 }

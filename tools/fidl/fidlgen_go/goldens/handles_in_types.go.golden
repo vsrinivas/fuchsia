@@ -77,6 +77,17 @@ type UnionWithHandle struct {
 	H                    _zx.VMO `fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0" fidl_ordinal:"1"`
 }
 
+func (_m *UnionWithHandle) reset() {
+	switch _m.I_unionWithHandleTag {
+	case 1:
+		var _zeroed _zx.VMO
+		_m.H = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
 func (_m *UnionWithHandle) Which() I_unionWithHandleTag {
 	switch _m.I_unionWithHandleTag {
 	case 1:
@@ -91,6 +102,7 @@ func (_m *UnionWithHandle) Ordinal() uint64 {
 }
 
 func (_m *UnionWithHandle) SetH(h _zx.VMO) {
+	_m.reset()
 	_m.I_unionWithHandleTag = UnionWithHandleH
 	_m.H = h
 }

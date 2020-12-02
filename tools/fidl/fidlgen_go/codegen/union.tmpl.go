@@ -32,6 +32,30 @@ type {{ .Name }} struct {
 	{{- end }}
 }
 
+{{- /*
+The reset() method below zeroes out all existing variant data, but does not
+clear the tag value. This method is meant to be used internally by Set...()-like
+methods to "reset" the union container back to a fully zeroed state before
+setting a new variant. Failing to do this will result in newly constructed
+unions and modified-in-place unions with ostensibly the same variant to fail
+equality checks.
+*/}}
+
+func (_m *{{ .Name }}) reset() {
+	switch _m.{{ .TagName }} {
+	{{- range .Members }}
+	case {{ .Ordinal }}:
+    var _zeroed {{ .Type }}
+		_m.{{ .Name }} = _zeroed
+	{{- end }}
+  {{- if .IsFlexible }}
+	default:
+    var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	{{- end }}
+  }
+}
+
 func (_m *{{ .Name }}) Which() {{ .TagName }} {
 	{{- if .IsStrict }}
 	return _m.{{ .TagName }}
@@ -54,6 +78,7 @@ func (_m *{{ .Name }}) Ordinal() uint64 {
 {{- range .Members }}
 
 func (_m *{{ $.Name }}) Set{{ .Name }}({{ .PrivateName }} {{ .Type }}) {
+  _m.reset()
 	_m.{{ $.TagName }} = {{ $.Name }}{{ .Name }}
 	_m.{{ .Name }} = {{ .PrivateName }}
 }

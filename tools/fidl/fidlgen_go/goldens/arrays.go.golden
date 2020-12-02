@@ -39,6 +39,14 @@ type UnionSmallArray struct {
 	A                    [2]uint32 `fidl_ordinal:"1"`
 }
 
+func (_m *UnionSmallArray) reset() {
+	switch _m.I_unionSmallArrayTag {
+	case 1:
+		var _zeroed [2]uint32
+		_m.A = _zeroed
+	}
+}
+
 func (_m *UnionSmallArray) Which() I_unionSmallArrayTag {
 	return _m.I_unionSmallArrayTag
 }
@@ -48,6 +56,7 @@ func (_m *UnionSmallArray) Ordinal() uint64 {
 }
 
 func (_m *UnionSmallArray) SetA(a [2]uint32) {
+	_m.reset()
 	_m.I_unionSmallArrayTag = UnionSmallArrayA
 	_m.A = a
 }
@@ -69,6 +78,14 @@ type UnionLargeArray struct {
 	A                    [100]uint32 `fidl_ordinal:"1"`
 }
 
+func (_m *UnionLargeArray) reset() {
+	switch _m.I_unionLargeArrayTag {
+	case 1:
+		var _zeroed [100]uint32
+		_m.A = _zeroed
+	}
+}
+
 func (_m *UnionLargeArray) Which() I_unionLargeArrayTag {
 	return _m.I_unionLargeArrayTag
 }
@@ -78,6 +95,7 @@ func (_m *UnionLargeArray) Ordinal() uint64 {
 }
 
 func (_m *UnionLargeArray) SetA(a [100]uint32) {
+	_m.reset()
 	_m.I_unionLargeArrayTag = UnionLargeArrayA
 	_m.A = a
 }

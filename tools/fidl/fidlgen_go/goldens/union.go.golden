@@ -95,6 +95,17 @@ type PizzaOrPasta struct {
 	Pasta             Pasta `fidl_ordinal:"2"`
 }
 
+func (_m *PizzaOrPasta) reset() {
+	switch _m.I_pizzaOrPastaTag {
+	case 1:
+		var _zeroed Pizza
+		_m.Pizza = _zeroed
+	case 2:
+		var _zeroed Pasta
+		_m.Pasta = _zeroed
+	}
+}
+
 func (_m *PizzaOrPasta) Which() I_pizzaOrPastaTag {
 	return _m.I_pizzaOrPastaTag
 }
@@ -104,6 +115,7 @@ func (_m *PizzaOrPasta) Ordinal() uint64 {
 }
 
 func (_m *PizzaOrPasta) SetPizza(pizza Pizza) {
+	_m.reset()
 	_m.I_pizzaOrPastaTag = PizzaOrPastaPizza
 	_m.Pizza = pizza
 }
@@ -115,6 +127,7 @@ func PizzaOrPastaWithPizza(pizza Pizza) PizzaOrPasta {
 }
 
 func (_m *PizzaOrPasta) SetPasta(pasta Pasta) {
+	_m.reset()
 	_m.I_pizzaOrPastaTag = PizzaOrPastaPasta
 	_m.Pasta = pasta
 }
@@ -138,6 +151,17 @@ type ExplicitPizzaOrPasta struct {
 	Pasta                     Pasta `fidl_ordinal:"4"`
 }
 
+func (_m *ExplicitPizzaOrPasta) reset() {
+	switch _m.I_explicitPizzaOrPastaTag {
+	case 1:
+		var _zeroed Pizza
+		_m.Pizza = _zeroed
+	case 4:
+		var _zeroed Pasta
+		_m.Pasta = _zeroed
+	}
+}
+
 func (_m *ExplicitPizzaOrPasta) Which() I_explicitPizzaOrPastaTag {
 	return _m.I_explicitPizzaOrPastaTag
 }
@@ -147,6 +171,7 @@ func (_m *ExplicitPizzaOrPasta) Ordinal() uint64 {
 }
 
 func (_m *ExplicitPizzaOrPasta) SetPizza(pizza Pizza) {
+	_m.reset()
 	_m.I_explicitPizzaOrPastaTag = ExplicitPizzaOrPastaPizza
 	_m.Pizza = pizza
 }
@@ -158,6 +183,7 @@ func ExplicitPizzaOrPastaWithPizza(pizza Pizza) ExplicitPizzaOrPasta {
 }
 
 func (_m *ExplicitPizzaOrPasta) SetPasta(pasta Pasta) {
+	_m.reset()
 	_m.I_explicitPizzaOrPastaTag = ExplicitPizzaOrPastaPasta
 	_m.Pasta = pasta
 }
@@ -183,6 +209,20 @@ type FlexiblePizzaOrPasta struct {
 	Pasta                     Pasta `fidl_ordinal:"2"`
 }
 
+func (_m *FlexiblePizzaOrPasta) reset() {
+	switch _m.I_flexiblePizzaOrPastaTag {
+	case 1:
+		var _zeroed Pizza
+		_m.Pizza = _zeroed
+	case 2:
+		var _zeroed Pasta
+		_m.Pasta = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
 func (_m *FlexiblePizzaOrPasta) Which() I_flexiblePizzaOrPastaTag {
 	switch _m.I_flexiblePizzaOrPastaTag {
 	case 1:
@@ -199,6 +239,7 @@ func (_m *FlexiblePizzaOrPasta) Ordinal() uint64 {
 }
 
 func (_m *FlexiblePizzaOrPasta) SetPizza(pizza Pizza) {
+	_m.reset()
 	_m.I_flexiblePizzaOrPastaTag = FlexiblePizzaOrPastaPizza
 	_m.Pizza = pizza
 }
@@ -210,6 +251,7 @@ func FlexiblePizzaOrPastaWithPizza(pizza Pizza) FlexiblePizzaOrPasta {
 }
 
 func (_m *FlexiblePizzaOrPasta) SetPasta(pasta Pasta) {
+	_m.reset()
 	_m.I_flexiblePizzaOrPastaTag = FlexiblePizzaOrPastaPasta
 	_m.Pasta = pasta
 }
@@ -236,6 +278,17 @@ type StrictPizzaOrPasta struct {
 	Pasta                   Pasta `fidl_ordinal:"2"`
 }
 
+func (_m *StrictPizzaOrPasta) reset() {
+	switch _m.I_strictPizzaOrPastaTag {
+	case 1:
+		var _zeroed Pizza
+		_m.Pizza = _zeroed
+	case 2:
+		var _zeroed Pasta
+		_m.Pasta = _zeroed
+	}
+}
+
 func (_m *StrictPizzaOrPasta) Which() I_strictPizzaOrPastaTag {
 	return _m.I_strictPizzaOrPastaTag
 }
@@ -245,6 +298,7 @@ func (_m *StrictPizzaOrPasta) Ordinal() uint64 {
 }
 
 func (_m *StrictPizzaOrPasta) SetPizza(pizza Pizza) {
+	_m.reset()
 	_m.I_strictPizzaOrPastaTag = StrictPizzaOrPastaPizza
 	_m.Pizza = pizza
 }
@@ -256,6 +310,7 @@ func StrictPizzaOrPastaWithPizza(pizza Pizza) StrictPizzaOrPasta {
 }
 
 func (_m *StrictPizzaOrPasta) SetPasta(pasta Pasta) {
+	_m.reset()
 	_m.I_strictPizzaOrPastaTag = StrictPizzaOrPastaPasta
 	_m.Pasta = pasta
 }
@@ -281,6 +336,20 @@ type Union struct {
 	VectorStringAlsoNeedsConstructor []string `fidl_bounds:"" fidl_ordinal:"3"`
 }
 
+func (_m *Union) reset() {
+	switch _m.I_unionTag {
+	case 1:
+		var _zeroed int32
+		_m.Primitive = _zeroed
+	case 2:
+		var _zeroed string
+		_m.StringNeedsConstructor = _zeroed
+	case 3:
+		var _zeroed []string
+		_m.VectorStringAlsoNeedsConstructor = _zeroed
+	}
+}
+
 func (_m *Union) Which() I_unionTag {
 	return _m.I_unionTag
 }
@@ -290,6 +359,7 @@ func (_m *Union) Ordinal() uint64 {
 }
 
 func (_m *Union) SetPrimitive(primitive int32) {
+	_m.reset()
 	_m.I_unionTag = UnionPrimitive
 	_m.Primitive = primitive
 }
@@ -301,6 +371,7 @@ func UnionWithPrimitive(primitive int32) Union {
 }
 
 func (_m *Union) SetStringNeedsConstructor(stringNeedsConstructor string) {
+	_m.reset()
 	_m.I_unionTag = UnionStringNeedsConstructor
 	_m.StringNeedsConstructor = stringNeedsConstructor
 }
@@ -312,6 +383,7 @@ func UnionWithStringNeedsConstructor(stringNeedsConstructor string) Union {
 }
 
 func (_m *Union) SetVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor []string) {
+	_m.reset()
 	_m.I_unionTag = UnionVectorStringAlsoNeedsConstructor
 	_m.VectorStringAlsoNeedsConstructor = vectorStringAlsoNeedsConstructor
 }
@@ -339,6 +411,23 @@ type FlexibleUnion struct {
 	VectorStringAlsoNeedsConstructor []string `fidl_bounds:"" fidl_ordinal:"3"`
 }
 
+func (_m *FlexibleUnion) reset() {
+	switch _m.I_flexibleUnionTag {
+	case 1:
+		var _zeroed int32
+		_m.Primitive = _zeroed
+	case 2:
+		var _zeroed string
+		_m.StringNeedsConstructor = _zeroed
+	case 3:
+		var _zeroed []string
+		_m.VectorStringAlsoNeedsConstructor = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
 func (_m *FlexibleUnion) Which() I_flexibleUnionTag {
 	switch _m.I_flexibleUnionTag {
 	case 1:
@@ -357,6 +446,7 @@ func (_m *FlexibleUnion) Ordinal() uint64 {
 }
 
 func (_m *FlexibleUnion) SetPrimitive(primitive int32) {
+	_m.reset()
 	_m.I_flexibleUnionTag = FlexibleUnionPrimitive
 	_m.Primitive = primitive
 }
@@ -368,6 +458,7 @@ func FlexibleUnionWithPrimitive(primitive int32) FlexibleUnion {
 }
 
 func (_m *FlexibleUnion) SetStringNeedsConstructor(stringNeedsConstructor string) {
+	_m.reset()
 	_m.I_flexibleUnionTag = FlexibleUnionStringNeedsConstructor
 	_m.StringNeedsConstructor = stringNeedsConstructor
 }
@@ -379,6 +470,7 @@ func FlexibleUnionWithStringNeedsConstructor(stringNeedsConstructor string) Flex
 }
 
 func (_m *FlexibleUnion) SetVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor []string) {
+	_m.reset()
 	_m.I_flexibleUnionTag = FlexibleUnionVectorStringAlsoNeedsConstructor
 	_m.VectorStringAlsoNeedsConstructor = vectorStringAlsoNeedsConstructor
 }
@@ -407,6 +499,20 @@ type StrictUnion struct {
 	VectorStringAlsoNeedsConstructor []string `fidl_bounds:"" fidl_ordinal:"3"`
 }
 
+func (_m *StrictUnion) reset() {
+	switch _m.I_strictUnionTag {
+	case 1:
+		var _zeroed int32
+		_m.Primitive = _zeroed
+	case 2:
+		var _zeroed string
+		_m.StringNeedsConstructor = _zeroed
+	case 3:
+		var _zeroed []string
+		_m.VectorStringAlsoNeedsConstructor = _zeroed
+	}
+}
+
 func (_m *StrictUnion) Which() I_strictUnionTag {
 	return _m.I_strictUnionTag
 }
@@ -416,6 +522,7 @@ func (_m *StrictUnion) Ordinal() uint64 {
 }
 
 func (_m *StrictUnion) SetPrimitive(primitive int32) {
+	_m.reset()
 	_m.I_strictUnionTag = StrictUnionPrimitive
 	_m.Primitive = primitive
 }
@@ -427,6 +534,7 @@ func StrictUnionWithPrimitive(primitive int32) StrictUnion {
 }
 
 func (_m *StrictUnion) SetStringNeedsConstructor(stringNeedsConstructor string) {
+	_m.reset()
 	_m.I_strictUnionTag = StrictUnionStringNeedsConstructor
 	_m.StringNeedsConstructor = stringNeedsConstructor
 }
@@ -438,6 +546,7 @@ func StrictUnionWithStringNeedsConstructor(stringNeedsConstructor string) Strict
 }
 
 func (_m *StrictUnion) SetVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor []string) {
+	_m.reset()
 	_m.I_strictUnionTag = StrictUnionVectorStringAlsoNeedsConstructor
 	_m.VectorStringAlsoNeedsConstructor = vectorStringAlsoNeedsConstructor
 }
@@ -459,6 +568,14 @@ type FieldCollision struct {
 	FieldCollisionTag   int32 `fidl_ordinal:"1"`
 }
 
+func (_m *FieldCollision) reset() {
+	switch _m.I_fieldCollisionTag {
+	case 1:
+		var _zeroed int32
+		_m.FieldCollisionTag = _zeroed
+	}
+}
+
 func (_m *FieldCollision) Which() I_fieldCollisionTag {
 	return _m.I_fieldCollisionTag
 }
@@ -468,6 +585,7 @@ func (_m *FieldCollision) Ordinal() uint64 {
 }
 
 func (_m *FieldCollision) SetFieldCollisionTag(fieldCollisionTag int32) {
+	_m.reset()
 	_m.I_fieldCollisionTag = FieldCollisionFieldCollisionTag
 	_m.FieldCollisionTag = fieldCollisionTag
 }
@@ -491,6 +609,17 @@ type ExplicitUnion struct {
 	StringNeedsConstructor string `fidl_bounds:"" fidl_ordinal:"3"`
 }
 
+func (_m *ExplicitUnion) reset() {
+	switch _m.I_explicitUnionTag {
+	case 1:
+		var _zeroed int32
+		_m.Primitive = _zeroed
+	case 3:
+		var _zeroed string
+		_m.StringNeedsConstructor = _zeroed
+	}
+}
+
 func (_m *ExplicitUnion) Which() I_explicitUnionTag {
 	return _m.I_explicitUnionTag
 }
@@ -500,6 +629,7 @@ func (_m *ExplicitUnion) Ordinal() uint64 {
 }
 
 func (_m *ExplicitUnion) SetPrimitive(primitive int32) {
+	_m.reset()
 	_m.I_explicitUnionTag = ExplicitUnionPrimitive
 	_m.Primitive = primitive
 }
@@ -511,6 +641,7 @@ func ExplicitUnionWithPrimitive(primitive int32) ExplicitUnion {
 }
 
 func (_m *ExplicitUnion) SetStringNeedsConstructor(stringNeedsConstructor string) {
+	_m.reset()
 	_m.I_explicitUnionTag = ExplicitUnionStringNeedsConstructor
 	_m.StringNeedsConstructor = stringNeedsConstructor
 }
@@ -534,6 +665,17 @@ type ReverseOrdinalUnion struct {
 	First                    uint32 `fidl_ordinal:"1"`
 }
 
+func (_m *ReverseOrdinalUnion) reset() {
+	switch _m.I_reverseOrdinalUnionTag {
+	case 2:
+		var _zeroed uint32
+		_m.Second = _zeroed
+	case 1:
+		var _zeroed uint32
+		_m.First = _zeroed
+	}
+}
+
 func (_m *ReverseOrdinalUnion) Which() I_reverseOrdinalUnionTag {
 	return _m.I_reverseOrdinalUnionTag
 }
@@ -543,6 +685,7 @@ func (_m *ReverseOrdinalUnion) Ordinal() uint64 {
 }
 
 func (_m *ReverseOrdinalUnion) SetSecond(second uint32) {
+	_m.reset()
 	_m.I_reverseOrdinalUnionTag = ReverseOrdinalUnionSecond
 	_m.Second = second
 }
@@ -554,6 +697,7 @@ func ReverseOrdinalUnionWithSecond(second uint32) ReverseOrdinalUnion {
 }
 
 func (_m *ReverseOrdinalUnion) SetFirst(first uint32) {
+	_m.reset()
 	_m.I_reverseOrdinalUnionTag = ReverseOrdinalUnionFirst
 	_m.First = first
 }
@@ -579,6 +723,20 @@ type FlexibleFoo struct {
 	I                int32  `fidl_ordinal:"2"`
 }
 
+func (_m *FlexibleFoo) reset() {
+	switch _m.I_flexibleFooTag {
+	case 1:
+		var _zeroed string
+		_m.S = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.I = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
 func (_m *FlexibleFoo) Which() I_flexibleFooTag {
 	switch _m.I_flexibleFooTag {
 	case 1:
@@ -595,6 +753,7 @@ func (_m *FlexibleFoo) Ordinal() uint64 {
 }
 
 func (_m *FlexibleFoo) SetS(s string) {
+	_m.reset()
 	_m.I_flexibleFooTag = FlexibleFooS
 	_m.S = s
 }
@@ -606,6 +765,7 @@ func FlexibleFooWithS(s string) FlexibleFoo {
 }
 
 func (_m *FlexibleFoo) SetI(i int32) {
+	_m.reset()
 	_m.I_flexibleFooTag = FlexibleFooI
 	_m.I = i
 }
@@ -632,6 +792,17 @@ type StrictFoo struct {
 	I              int32  `fidl_ordinal:"2"`
 }
 
+func (_m *StrictFoo) reset() {
+	switch _m.I_strictFooTag {
+	case 1:
+		var _zeroed string
+		_m.S = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.I = _zeroed
+	}
+}
+
 func (_m *StrictFoo) Which() I_strictFooTag {
 	return _m.I_strictFooTag
 }
@@ -641,6 +812,7 @@ func (_m *StrictFoo) Ordinal() uint64 {
 }
 
 func (_m *StrictFoo) SetS(s string) {
+	_m.reset()
 	_m.I_strictFooTag = StrictFooS
 	_m.S = s
 }
@@ -652,6 +824,7 @@ func StrictFooWithS(s string) StrictFoo {
 }
 
 func (_m *StrictFoo) SetI(i int32) {
+	_m.reset()
 	_m.I_strictFooTag = StrictFooI
 	_m.I = i
 }
@@ -677,6 +850,20 @@ type ExplicitFoo struct {
 	I                int32  `fidl_ordinal:"1"`
 }
 
+func (_m *ExplicitFoo) reset() {
+	switch _m.I_explicitFooTag {
+	case 2:
+		var _zeroed string
+		_m.S = _zeroed
+	case 1:
+		var _zeroed int32
+		_m.I = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
 func (_m *ExplicitFoo) Which() I_explicitFooTag {
 	switch _m.I_explicitFooTag {
 	case 2:
@@ -693,6 +880,7 @@ func (_m *ExplicitFoo) Ordinal() uint64 {
 }
 
 func (_m *ExplicitFoo) SetS(s string) {
+	_m.reset()
 	_m.I_explicitFooTag = ExplicitFooS
 	_m.S = s
 }
@@ -704,6 +892,7 @@ func ExplicitFooWithS(s string) ExplicitFoo {
 }
 
 func (_m *ExplicitFoo) SetI(i int32) {
+	_m.reset()
 	_m.I_explicitFooTag = ExplicitFooI
 	_m.I = i
 }
@@ -730,6 +919,17 @@ type ExplicitStrictFoo struct {
 	I                      int32  `fidl_ordinal:"2"`
 }
 
+func (_m *ExplicitStrictFoo) reset() {
+	switch _m.I_explicitStrictFooTag {
+	case 3:
+		var _zeroed string
+		_m.S = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.I = _zeroed
+	}
+}
+
 func (_m *ExplicitStrictFoo) Which() I_explicitStrictFooTag {
 	return _m.I_explicitStrictFooTag
 }
@@ -739,6 +939,7 @@ func (_m *ExplicitStrictFoo) Ordinal() uint64 {
 }
 
 func (_m *ExplicitStrictFoo) SetS(s string) {
+	_m.reset()
 	_m.I_explicitStrictFooTag = ExplicitStrictFooS
 	_m.S = s
 }
@@ -750,6 +951,7 @@ func ExplicitStrictFooWithS(s string) ExplicitStrictFoo {
 }
 
 func (_m *ExplicitStrictFoo) SetI(i int32) {
+	_m.reset()
 	_m.I_explicitStrictFooTag = ExplicitStrictFooI
 	_m.I = i
 }
@@ -775,6 +977,20 @@ type OlderSimpleUnion struct {
 	F                     float32 `fidl_ordinal:"2"`
 }
 
+func (_m *OlderSimpleUnion) reset() {
+	switch _m.I_olderSimpleUnionTag {
+	case 1:
+		var _zeroed int64
+		_m.I = _zeroed
+	case 2:
+		var _zeroed float32
+		_m.F = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
 func (_m *OlderSimpleUnion) Which() I_olderSimpleUnionTag {
 	switch _m.I_olderSimpleUnionTag {
 	case 1:
@@ -791,6 +1007,7 @@ func (_m *OlderSimpleUnion) Ordinal() uint64 {
 }
 
 func (_m *OlderSimpleUnion) SetI(i int64) {
+	_m.reset()
 	_m.I_olderSimpleUnionTag = OlderSimpleUnionI
 	_m.I = i
 }
@@ -802,6 +1019,7 @@ func OlderSimpleUnionWithI(i int64) OlderSimpleUnion {
 }
 
 func (_m *OlderSimpleUnion) SetF(f float32) {
+	_m.reset()
 	_m.I_olderSimpleUnionTag = OlderSimpleUnionF
 	_m.F = f
 }
@@ -832,6 +1050,23 @@ type NewerSimpleUnion struct {
 	V                     []string `fidl_bounds:"" fidl_ordinal:"3"`
 }
 
+func (_m *NewerSimpleUnion) reset() {
+	switch _m.I_newerSimpleUnionTag {
+	case 1:
+		var _zeroed int64
+		_m.I = _zeroed
+	case 2:
+		var _zeroed string
+		_m.S = _zeroed
+	case 3:
+		var _zeroed []string
+		_m.V = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
 func (_m *NewerSimpleUnion) Which() I_newerSimpleUnionTag {
 	switch _m.I_newerSimpleUnionTag {
 	case 1:
@@ -850,6 +1085,7 @@ func (_m *NewerSimpleUnion) Ordinal() uint64 {
 }
 
 func (_m *NewerSimpleUnion) SetI(i int64) {
+	_m.reset()
 	_m.I_newerSimpleUnionTag = NewerSimpleUnionI
 	_m.I = i
 }
@@ -861,6 +1097,7 @@ func NewerSimpleUnionWithI(i int64) NewerSimpleUnion {
 }
 
 func (_m *NewerSimpleUnion) SetS(s string) {
+	_m.reset()
 	_m.I_newerSimpleUnionTag = NewerSimpleUnionS
 	_m.S = s
 }
@@ -872,6 +1109,7 @@ func NewerSimpleUnionWithS(s string) NewerSimpleUnion {
 }
 
 func (_m *NewerSimpleUnion) SetV(v []string) {
+	_m.reset()
 	_m.I_newerSimpleUnionTag = NewerSimpleUnionV
 	_m.V = v
 }
@@ -900,6 +1138,20 @@ type StrictSimpleXUnion struct {
 	S                       string  `fidl_bounds:"" fidl_ordinal:"3"`
 }
 
+func (_m *StrictSimpleXUnion) reset() {
+	switch _m.I_strictSimpleXUnionTag {
+	case 1:
+		var _zeroed int32
+		_m.I = _zeroed
+	case 2:
+		var _zeroed float32
+		_m.F = _zeroed
+	case 3:
+		var _zeroed string
+		_m.S = _zeroed
+	}
+}
+
 func (_m *StrictSimpleXUnion) Which() I_strictSimpleXUnionTag {
 	return _m.I_strictSimpleXUnionTag
 }
@@ -909,6 +1161,7 @@ func (_m *StrictSimpleXUnion) Ordinal() uint64 {
 }
 
 func (_m *StrictSimpleXUnion) SetI(i int32) {
+	_m.reset()
 	_m.I_strictSimpleXUnionTag = StrictSimpleXUnionI
 	_m.I = i
 }
@@ -920,6 +1173,7 @@ func StrictSimpleXUnionWithI(i int32) StrictSimpleXUnion {
 }
 
 func (_m *StrictSimpleXUnion) SetF(f float32) {
+	_m.reset()
 	_m.I_strictSimpleXUnionTag = StrictSimpleXUnionF
 	_m.F = f
 }
@@ -931,6 +1185,7 @@ func StrictSimpleXUnionWithF(f float32) StrictSimpleXUnion {
 }
 
 func (_m *StrictSimpleXUnion) SetS(s string) {
+	_m.reset()
 	_m.I_strictSimpleXUnionTag = StrictSimpleXUnionS
 	_m.S = s
 }
@@ -954,6 +1209,17 @@ type XUnionContainingEmptyStruct struct {
 	Empty                            Empty `fidl_ordinal:"1"`
 }
 
+func (_m *XUnionContainingEmptyStruct) reset() {
+	switch _m.I_xUnionContainingEmptyStructTag {
+	case 1:
+		var _zeroed Empty
+		_m.Empty = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
 func (_m *XUnionContainingEmptyStruct) Which() I_xUnionContainingEmptyStructTag {
 	switch _m.I_xUnionContainingEmptyStructTag {
 	case 1:
@@ -968,6 +1234,7 @@ func (_m *XUnionContainingEmptyStruct) Ordinal() uint64 {
 }
 
 func (_m *XUnionContainingEmptyStruct) SetEmpty(empty Empty) {
+	_m.reset()
 	_m.I_xUnionContainingEmptyStructTag = XUnionContainingEmptyStructEmpty
 	_m.Empty = empty
 }
@@ -992,6 +1259,14 @@ type StrictBoundedXUnion struct {
 	V                        []uint8 `fidl_bounds:"10" fidl_ordinal:"1"`
 }
 
+func (_m *StrictBoundedXUnion) reset() {
+	switch _m.I_strictBoundedXUnionTag {
+	case 1:
+		var _zeroed []uint8
+		_m.V = _zeroed
+	}
+}
+
 func (_m *StrictBoundedXUnion) Which() I_strictBoundedXUnionTag {
 	return _m.I_strictBoundedXUnionTag
 }
@@ -1001,6 +1276,7 @@ func (_m *StrictBoundedXUnion) Ordinal() uint64 {
 }
 
 func (_m *StrictBoundedXUnion) SetV(v []uint8) {
+	_m.reset()
 	_m.I_strictBoundedXUnionTag = StrictBoundedXUnionV
 	_m.V = v
 }
@@ -1026,6 +1302,20 @@ type ExplicitXUnion struct {
 	F                   float32 `fidl_ordinal:"4"`
 }
 
+func (_m *ExplicitXUnion) reset() {
+	switch _m.I_explicitXUnionTag {
+	case 1:
+		var _zeroed int64
+		_m.I = _zeroed
+	case 4:
+		var _zeroed float32
+		_m.F = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
 func (_m *ExplicitXUnion) Which() I_explicitXUnionTag {
 	switch _m.I_explicitXUnionTag {
 	case 1:
@@ -1042,6 +1332,7 @@ func (_m *ExplicitXUnion) Ordinal() uint64 {
 }
 
 func (_m *ExplicitXUnion) SetI(i int64) {
+	_m.reset()
 	_m.I_explicitXUnionTag = ExplicitXUnionI
 	_m.I = i
 }
@@ -1053,6 +1344,7 @@ func ExplicitXUnionWithI(i int64) ExplicitXUnion {
 }
 
 func (_m *ExplicitXUnion) SetF(f float32) {
+	_m.reset()
 	_m.I_explicitXUnionTag = ExplicitXUnionF
 	_m.F = f
 }

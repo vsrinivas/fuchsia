@@ -260,6 +260,14 @@ type StrictUnion struct {
 	Field int32 `fidl_ordinal:"1"`
 }
 
+func (_m *StrictUnion) reset() {
+	switch _m.I_strictUnionTag {
+	case 1:
+		var _zeroed int32
+		_m.Field = _zeroed
+	}
+}
+
 func (_m *StrictUnion) Which() I_strictUnionTag {
 	return _m.I_strictUnionTag
 }
@@ -269,6 +277,7 @@ func (_m *StrictUnion) Ordinal() uint64 {
 }
 
 func (_m *StrictUnion) SetField(field int32) {
+	_m.reset()
 	_m.I_strictUnionTag = StrictUnionField
 	_m.Field = field
 }
@@ -298,6 +307,17 @@ type FlexibleUnion struct {
 	Field int32 `fidl_ordinal:"1"`
 }
 
+func (_m *FlexibleUnion) reset() {
+	switch _m.I_flexibleUnionTag {
+	case 1:
+		var _zeroed int32
+		_m.Field = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
 func (_m *FlexibleUnion) Which() I_flexibleUnionTag {
 	switch _m.I_flexibleUnionTag {
 	case 1:
@@ -312,6 +332,7 @@ func (_m *FlexibleUnion) Ordinal() uint64 {
 }
 
 func (_m *FlexibleUnion) SetField(field int32) {
+	_m.reset()
 	_m.I_flexibleUnionTag = FlexibleUnionField
 	_m.Field = field
 }

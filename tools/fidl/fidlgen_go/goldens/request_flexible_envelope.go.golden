@@ -65,6 +65,20 @@ type FlexibleFoo struct {
 	I                int32  `fidl_ordinal:"2"`
 }
 
+func (_m *FlexibleFoo) reset() {
+	switch _m.I_flexibleFooTag {
+	case 1:
+		var _zeroed string
+		_m.S = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.I = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
 func (_m *FlexibleFoo) Which() I_flexibleFooTag {
 	switch _m.I_flexibleFooTag {
 	case 1:
@@ -81,6 +95,7 @@ func (_m *FlexibleFoo) Ordinal() uint64 {
 }
 
 func (_m *FlexibleFoo) SetS(s string) {
+	_m.reset()
 	_m.I_flexibleFooTag = FlexibleFooS
 	_m.S = s
 }
@@ -92,6 +107,7 @@ func FlexibleFooWithS(s string) FlexibleFoo {
 }
 
 func (_m *FlexibleFoo) SetI(i int32) {
+	_m.reset()
 	_m.I_flexibleFooTag = FlexibleFooI
 	_m.I = i
 }
@@ -118,6 +134,17 @@ type StrictFoo struct {
 	I              int32  `fidl_ordinal:"2"`
 }
 
+func (_m *StrictFoo) reset() {
+	switch _m.I_strictFooTag {
+	case 1:
+		var _zeroed string
+		_m.S = _zeroed
+	case 2:
+		var _zeroed int32
+		_m.I = _zeroed
+	}
+}
+
 func (_m *StrictFoo) Which() I_strictFooTag {
 	return _m.I_strictFooTag
 }
@@ -127,6 +154,7 @@ func (_m *StrictFoo) Ordinal() uint64 {
 }
 
 func (_m *StrictFoo) SetS(s string) {
+	_m.reset()
 	_m.I_strictFooTag = StrictFooS
 	_m.S = s
 }
@@ -138,6 +166,7 @@ func StrictFooWithS(s string) StrictFoo {
 }
 
 func (_m *StrictFoo) SetI(i int32) {
+	_m.reset()
 	_m.I_strictFooTag = StrictFooI
 	_m.I = i
 }

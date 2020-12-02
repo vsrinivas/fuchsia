@@ -81,6 +81,14 @@ type UnionSize8Alignment4 struct {
 	Variant                   uint32 `fidl_ordinal:"1"`
 }
 
+func (_m *UnionSize8Alignment4) reset() {
+	switch _m.I_unionSize8Alignment4Tag {
+	case 1:
+		var _zeroed uint32
+		_m.Variant = _zeroed
+	}
+}
+
 func (_m *UnionSize8Alignment4) Which() I_unionSize8Alignment4Tag {
 	return _m.I_unionSize8Alignment4Tag
 }
@@ -90,6 +98,7 @@ func (_m *UnionSize8Alignment4) Ordinal() uint64 {
 }
 
 func (_m *UnionSize8Alignment4) SetVariant(variant uint32) {
+	_m.reset()
 	_m.I_unionSize8Alignment4Tag = UnionSize8Alignment4Variant
 	_m.Variant = variant
 }
@@ -111,6 +120,14 @@ type UnionSize12Alignment4 struct {
 	Variant                    [6]uint8 `fidl_ordinal:"1"`
 }
 
+func (_m *UnionSize12Alignment4) reset() {
+	switch _m.I_unionSize12Alignment4Tag {
+	case 1:
+		var _zeroed [6]uint8
+		_m.Variant = _zeroed
+	}
+}
+
 func (_m *UnionSize12Alignment4) Which() I_unionSize12Alignment4Tag {
 	return _m.I_unionSize12Alignment4Tag
 }
@@ -120,6 +137,7 @@ func (_m *UnionSize12Alignment4) Ordinal() uint64 {
 }
 
 func (_m *UnionSize12Alignment4) SetVariant(variant [6]uint8) {
+	_m.reset()
 	_m.I_unionSize12Alignment4Tag = UnionSize12Alignment4Variant
 	_m.Variant = variant
 }
@@ -141,6 +159,14 @@ type UnionSize24Alignment8 struct {
 	Variant                    StructSize16Alignment8 `fidl_ordinal:"1"`
 }
 
+func (_m *UnionSize24Alignment8) reset() {
+	switch _m.I_unionSize24Alignment8Tag {
+	case 1:
+		var _zeroed StructSize16Alignment8
+		_m.Variant = _zeroed
+	}
+}
+
 func (_m *UnionSize24Alignment8) Which() I_unionSize24Alignment8Tag {
 	return _m.I_unionSize24Alignment8Tag
 }
@@ -150,6 +176,7 @@ func (_m *UnionSize24Alignment8) Ordinal() uint64 {
 }
 
 func (_m *UnionSize24Alignment8) SetVariant(variant StructSize16Alignment8) {
+	_m.reset()
 	_m.I_unionSize24Alignment8Tag = UnionSize24Alignment8Variant
 	_m.Variant = variant
 }
@@ -171,6 +198,14 @@ type UnionSize36Alignment4 struct {
 	Variant                    [32]uint8 `fidl_ordinal:"1"`
 }
 
+func (_m *UnionSize36Alignment4) reset() {
+	switch _m.I_unionSize36Alignment4Tag {
+	case 1:
+		var _zeroed [32]uint8
+		_m.Variant = _zeroed
+	}
+}
+
 func (_m *UnionSize36Alignment4) Which() I_unionSize36Alignment4Tag {
 	return _m.I_unionSize36Alignment4Tag
 }
@@ -180,6 +215,7 @@ func (_m *UnionSize36Alignment4) Ordinal() uint64 {
 }
 
 func (_m *UnionSize36Alignment4) SetVariant(variant [32]uint8) {
+	_m.reset()
 	_m.I_unionSize36Alignment4Tag = UnionSize36Alignment4Variant
 	_m.Variant = variant
 }
