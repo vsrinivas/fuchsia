@@ -336,6 +336,19 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 
 		if sshAddr.IP == nil {
 			// Reachable when ResolveIP times out because no error is returned.
+			// Invoke `threads` over serial if possible to dump process state to logs.
+			// Invokes the command twice to identify hanging processes.
+			socketPath := os.Getenv(constants.SerialSocketEnvKey)
+			if conn, err := net.Dial("unix", socketPath); err != nil {
+				logger.Errorf(ctx, "failed to open serial socket %s to invoke threads: %s", socketPath, err)
+			} else {
+				for i := 0; i < 2; i++ {
+					if _, err := io.WriteString(conn, fmt.Sprintf("\r\nthreads --all-processes\r\n")); err != nil {
+						logger.Errorf(ctx, "failed to send threads over serial socket: %s", err)
+					}
+					time.Sleep(5 * time.Second)
+				}
+			}
 			return fmt.Errorf("%s for %s", constants.FailedToResolveIPErrorMsg, t.Nodename())
 		}
 
