@@ -193,7 +193,7 @@ source_set("scudo") {
   ]
 
   # GWP-ASan is opt-in via the SCUDO_OPTIONS environment variable.
-  defines = [ "SCUDO_DEFAULT_OPTIONS=GWP_ASAN_Enabled=false" ]
+  defines = [ "GWP_ASAN_DEFAULT_ENABLED=false" ]
 }
 
 source_set("scudo.testonly") {
