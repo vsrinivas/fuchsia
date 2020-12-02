@@ -243,7 +243,10 @@ project!*
 
 The decision whether to accept an RFC is made by the Eng Council, acting in
 [rough consensus](https://en.wikipedia.org/wiki/Rough_consensus) with each
-other. If the Eng Council cannot reach rough consensus, the RFC is not accepted.
+other. If the decision involves an RFC that has Eng Council members as authors,
+those members must recuse themselves from the decision.
+
+If the Eng Council cannot reach rough consensus, the RFC is not accepted.
 In deciding whether to accept an RFC, the Eng Council will consider the
 following factors:
 
