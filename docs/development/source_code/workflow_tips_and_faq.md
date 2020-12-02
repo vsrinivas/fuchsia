@@ -2,13 +2,14 @@
 
 ## Workflow tips
 
-This is a list of tips that should help you be more productive when working on fuchsia.
+This is a list of tips that should help you be more productive when working
+on Fuchsia.
 
 ### Install Gerrit Monitor
 
 Install the [Gerrit Monitor](https://chrome.google.com/webstore/detail/gerrit-monitor/leakcdjcdifiihdgalplgkghidmfafoh)
-Chrome extension to have in the Chrome toolbar the list of CLs requiring your
-attention.
+Chrome extension to include the list of Gerrit changes that require
+your attention in your Chrome toolbar.
 
 ### Enable three-way diffs in Git
 
@@ -154,9 +155,9 @@ You'll need to *upload* a patch set to
 [Gerrit](https://fuchsia-review.googlesource.com/) to have it reviewed by
 others. We do this with `jiri upload`.
 
-Gerrit uses an auto-generated metadata marker in the CL description to figure
-out which Gerrit review thread to upload a patch to, such as: `Change-Id:
-I681125d950205fa7654e4a8ac0b3fee7985f5a4f`
+Gerrit uses an auto-generated metadata marker in the change's description
+to figure out which Gerrit review thread to upload a patch to, such
+as: `Change-Id: I681125d950205fa7654e4a8ac0b3fee7985f5a4f`
 
 This is different from a git commit's SHA hash, and can be considered stable
 during review, as you make edits to your changes and commits. Use the same
@@ -238,8 +239,8 @@ If you have a particular commit that you want jiri to honor, download its
 
 ### Q: What if I need an atomic commit across git repositories?
 
-A: Can't, sorry. Try to arrange your CLs to not break each petal during a
-transition (i.e., do a [soft
+A: Can't, sorry. Try to arrange your changes so that they don't break each
+petal during a transition (i.e., do a [soft
 transition](working_across_petals.md#soft-transitions-preferred)). But sometimes
 you will necessarily break things; aim to minimize the duration of breakage
 (i.e., a [hard transition](working_across_petals.md#hard-transitions)).
@@ -375,10 +376,10 @@ Use the following steps to execute a hard transition:
 1.  Prepare changes to all affected repositories. If all of these repositories
     are part of the Platform Source Tree:
 
-    1.  Upload CLs containing the changes to fuchsia-review.googlesource.com.
-    1.  Upload another CL that modifies the *global integration* repository to
-        reference the git revisions from your CLs. Perform a "dry run" of the
-        commit queue for this CL.
+    1.  Upload the relevant changes to fuchsia-review.googlesource.com.
+    1.  Upload another change that modifies the *global integration*
+        repository to reference the git revisions from your changes. Perform
+        a "dry run" of the commit queue for this Gerrit change.
 
 1.  Notify the team stating your intention to execute a hard transition.
 

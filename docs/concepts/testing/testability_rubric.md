@@ -132,9 +132,9 @@ receiving Testability+1.
     are not easily observable, such as unexposed implementation
     details, heuristics, or "cosmetic" changes (e.g. background color of a UI).
     Tests of the style `assert_eq!(CONFIG_PARAM, 5);` are not considered useful
-    and are not required by testability. However, if the CL results in an easily
-    observable behavioral change, the CL should include a test for the new
-    behavior.
+    and are not required by testability. However, if the contribution results
+    in an easily observable behavioral change, that contirbution should
+    include a test for the new behavior.
 
 ## What does require testing
 
@@ -212,7 +212,7 @@ colon and before the run_count so as to distinguish it from colons in the test
 name. Otherwise the colon and run_count will be treated as part of the test
 name.
 
-Note: If your CL increases a test's duration, then the historical duration
+Note: If your change increases a test's duration, then the historical duration
 data may no longer be accurate and the number of runs calculated by the
 infrastructure may cause the shard to time out. In this case, you'll have to
 edit the commit message and specify a lower number of runs.
@@ -220,7 +220,7 @@ edit the commit message and specify a lower number of runs.
 #### Determine success
 
 If it worked, any builders running the tests specified by the MULTIPLY feature
-will add comments to the CL that say:
+will add comments to the change that say:
 
 ```txt
 A builder created multiplier shards. Click the following link for more details:

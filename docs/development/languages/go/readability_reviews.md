@@ -11,8 +11,8 @@ The suggested workflow:
 2.  Author: If you'd like a go readability review, add
     go-readability-reviewers@fuchsia-infra.iam.gserviceaccount.com
 3.  Author: At this point you can either merge the change (if you want to
-    respond to comments in a follow-up CL) or wait for the readability review
-    (if you want to incorpirate the comments in the current CL).
+    respond to comments in a follow-up change) or wait for the readability review
+    (if you want to incorporate the comments in the current change).
 4.  The GWSQ service will assign a readability reviewer.
 5.  Reviewer: Take a look and leave comments. If there are no comments, please
     just CR+1. Please do not CR+2.

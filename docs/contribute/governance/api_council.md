@@ -194,7 +194,7 @@ A change in a particular functional area should typically be approved by the
 council member responsible for that area, but any council member can approve the
 change if the responsible council member is unavailable.
 
-Before being merged, every CL that modifies the Fuchsia API Surface must receive
+Before being merged, every change that modifies the Fuchsia API Surface must receive
 an API-Review+1 from a member of [api-council@fuchsia.com][api-council-group] in
 addition to the usual Code-Review+2. The same person can provide both
 API-Review+1 and Code-Review+2 for a given change, but someone cannot give their

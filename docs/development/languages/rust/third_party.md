@@ -19,7 +19,7 @@ other third-party crates. List all the new crates that end up with being
 brought in, in the OSRB review. For OSRB, follow the instructions under the
 "Process for 3rd Party Hosted Code" section in [this document][osrb-process].
 
-Note: You need to get OSRB approval first before uploading a CL for review.
+Note: You need to get OSRB approval first before uploading a change for review.
 
 ## Steps to add a third-party crate
 
@@ -55,7 +55,7 @@ Note: You need to get OSRB approval first before uploading a CL for review.
    ```
 1. Identify all the crates to be brought
    (see the diff in `//third_party/rust_crates/vendor/`).
-   Do not submit the CL for code review. Get OSRB approval first.
+   Do not submit the change for code review. Get OSRB approval first.
    If there are any files in the source repository that are not included when
    vendored, make a note of that for the OSRB reviewer. For example, font files
    that are only used for testing but are excluded when the crate is vendored.
@@ -87,7 +87,7 @@ To update a third-party crate, do the following:
    See [cargo-gnaw's README][cargo-gnaw-readme] for more details.
 1. Identify all new library dependencies brought in
    (see the diff in `//third_party/rust_crates/vendor/`).
-   Again, do not submit the CL for code review until you've received OSRB
+   Again, do not submit the change for code review until you've received OSRB
    approval for any new dependencies added.
 1. After OSRB approval, upload the change for review to Gerrit and merge as
    above.

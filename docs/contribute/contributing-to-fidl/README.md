@@ -160,22 +160,24 @@ really well for doing remote work from your laptop.
 
 #### References to other CLs
 
-To reference another CL in a commit message, always use the `Change-ID`.
+To reference another Gerrit change in a commit message, always use
+the `Change-ID`.
 
 Using the `Change-ID` is preferred since:
 
-* The git sha is only known after a change lands, and while guidance could be
-  given to use the `Change-Id` in one case, and the git sha in the other, we
-  prefer a uniform guidance.
-* The CL number is assigned by Gerrit, and is not part of the persistent history
-  of the repository. Should we change review mechanism, the `Change-Id` will
-  continue to be part of the recorded history, whereas CL numbers will not.
-  There are also rare occurrences where CL numbers may be lost, e.g. due to
-  re-indexing issues.
+* The git SHA is only known after a change is merged, and while guidance
+  could be given to use the `Change-Id` in one case, and the git SHA in the
+  other, we prefer a uniform guidance.
+* The link to the change is assigned by Gerrit, and is not part of the
+  persistent history of the repository. Should we change the review mechanism,
+  the `Change-Id` will continue to be part of the recorded history, whereas
+  change's number will not. There are also rare occurrences where change
+  numbers may be lost, e.g. due to re-indexing issues.
 
-For instance, to refer to the CL which added [FTP-042] we should use
-`I32b966810d21a249647887fa45b61720ad01714c`, and not the git sha
-`5d40ee8c42d1b0e4d8b690786da12a0a947c1aaa`, nor the CL number `fxr/284569`.
+For instance, to refer to the change that added [FTP-042] we should use
+`I32b966810d21a249647887fa45b61720ad01714c`, and not the git SHA
+`5d40ee8c42d1b0e4d8b690786da12a0a947c1aaa` or the link to the
+change, https://fuchsia-review.googlesource.com/c/fuchsia/+/284569.
 
 #### Multi-step change
 

@@ -12,7 +12,7 @@ decisions made and the configurations enabled.
 # Tooling Integration
 
 The Fuchsia team provides two ways to format and lint code: subcommands in the developer-side fx
-tool, and integrated Tricium analysis on uploaded CLs. In addition, a subset of formatting and
+tool, and integrated Tricium analysis on uploaded changes. In addition, a subset of formatting and
 linting is eligible to be directly included in the build, with strict limitations around accuracy.
 
 ## Developer tooling (IDEs and fx)
@@ -55,7 +55,7 @@ form. Tricium then comments on the appropriate line with the linter warning.
 
 Tricium, where possible, only runs the tools on the changed lines in a commit, though not all
 linters support this behavior. For the ones that do, this is so that existing but irrelevant lint
-errors do not distract from the CL itself and only directly relevant lints are surfaced.
+errors do not distract from the change itself and only directly relevant lints are surfaced.
 
 Analysis results are often based on heuristics. As a result, they do from time to time produce
 false positives. Fuchsia aims to support a high bar for these analyzers, with any analyzer with

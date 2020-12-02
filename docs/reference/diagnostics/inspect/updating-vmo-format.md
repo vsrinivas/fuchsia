@@ -9,7 +9,8 @@ This document describes how to extend the [**Component Inspection File Format**]
 A total of 256 types are possible in the Inspect Format. This section
 describes how to add a new type and update all library implementations.
 
-This section describes how to break down your change into multiple CLs:
+This section describes how to break down your change into multiple
+Gerrit changes:
 
 * [Choose type number](#choose-type-number)
 * [Update C++ implementation](#update-cpp)
@@ -29,7 +30,7 @@ this change for review.
 
 The examples in this section create a new type called "MyFoo."
 
-Every change from this section goes into a single CL:
+Every change from this section goes into a single Gerrit change:
 
 * [Set up](#set-up)
 * [Bitfield updates](#bitfield-updates)

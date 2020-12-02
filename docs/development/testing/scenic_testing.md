@@ -31,8 +31,8 @@ You can specify packages in these ways:
 
 ## Scenic and CQ
 
-Tests are automatically run before submission by trybots for every CL in Fuchsia. See the
-`fuchsia-x64-release` and `fuchsia-x64-debug` bots on
+Tests are automatically run before submission by trybots for every change in
+Fuchsia. See the `fuchsia-x64-release` and `fuchsia-x64-debug` bots on
 [https://ci.chromium.org/p/fuchsia/builders](https://ci.chromium.org/p/fuchsia/builders).
 
 ### Add a new test suite to existing CQ tests

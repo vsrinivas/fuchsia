@@ -167,7 +167,7 @@ Additionally, you can always upload your patch to Gerrit and do a CQ dry run.
 
 ## Q: How do I run this unit test in a CQ dry run?
 
-A: Clicking on CQ dry run (aka +1) will take your CL's properly defined unit
+A: Clicking on CQ dry run (aka +1) will take your change's properly defined unit
 test and run it on multiple bots, one for each build target (*x86-64* versus
 *arm64*, *release* versus *debug*). Each job will have an output page showing
 all the tests that ran.
