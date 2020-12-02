@@ -9,11 +9,6 @@ import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
 import("//src/sys/build/components.gni")
 
-group("cmd-buf-benchmark") {
-  deps = [ ":cmd-buf-benchmark-test-package" ]
-  testonly = true
-}
-
 resource("shaders") {
   sources = [
     "../common/shaders/frag.spv",
@@ -47,13 +42,6 @@ fuchsia_component("cmd-buf-benchmark-component") {
   if (is_fuchsia) {
     deps += vulkan_validation_layers.public_deps +
             image_pipe_swapchain_fb.public_deps
-  }
-}
-
-fuchsia_test_package("cmd-buf-benchmark-test-package") {
-  test_components = [ ":cmd-buf-benchmark-component" ]
-  test_specs = {
-    environments = magma_hardware_envs
   }
 }
 
@@ -139,4 +127,11 @@ copy("spirv_copy") {
 #
 group("cmd-buf-benchmark-glfw") {
   deps = [ ":bin($host_toolchain)" ]
+}
+
+fuchsia_test_package("cmd-buf-benchmark") {
+  test_components = [ ":cmd-buf-benchmark-component" ]
+  test_specs = {
+    environments = magma_hardware_envs
+  }
 }
