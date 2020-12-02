@@ -56,7 +56,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   zx_status_t SdmmcRequest(sdmmc_req_t* req);
   zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb);
   zx_status_t SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo, uint64_t offset,
-                               uint64_t size);
+                               uint64_t size, uint32_t vmo_rights);
   zx_status_t SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo* out_vmo);
   zx_status_t SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]);
 
@@ -89,6 +89,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   struct OwnedVmoInfo {
     uint64_t offset;
     uint64_t size;
+    uint32_t rights;
   };
 
   using SdmmcVmoStore = vmo_store::VmoStore<vmo_store::HashTableStorage<uint32_t, OwnedVmoInfo>>;

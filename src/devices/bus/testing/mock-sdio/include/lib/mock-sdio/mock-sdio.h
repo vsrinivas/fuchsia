@@ -128,7 +128,8 @@ class MockSdio : ddk::SdioProtocol<MockSdio> {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t SdioRegisterVmo(uint32_t vmo_id, zx::vmo vmo, uint64_t offset, uint64_t size) {
+  zx_status_t SdioRegisterVmo(uint32_t vmo_id, zx::vmo vmo, uint64_t offset, uint64_t size,
+                              uint32_t vmo_rights) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t SdioUnregisterVmo(uint32_t vmo_id, zx::vmo* out_vmo) { return ZX_ERR_NOT_SUPPORTED; }

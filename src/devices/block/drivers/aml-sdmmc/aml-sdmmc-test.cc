@@ -977,7 +977,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosBlockMode) {
   for (uint32_t i = 0; i < countof(buffers); i++) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
-    EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512));
+    EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512, SDMMC_VMO_RIGHT_WRITE));
     buffers[i] = {
         .buffer =
             {
@@ -1039,7 +1039,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosBlockMode) {
   EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
 
   EXPECT_OK(dut_->SdmmcUnregisterVmo(3, 0, &vmo));
-  EXPECT_NOT_OK(dut_->SdmmcRegisterVmo(2, 0, std::move(vmo), 0, 512));
+  EXPECT_NOT_OK(dut_->SdmmcRegisterVmo(2, 0, std::move(vmo), 0, 512, SDMMC_VMO_RIGHT_WRITE));
 
   request.client_id = 0;
   EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
@@ -1054,7 +1054,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosNotBlockSizeMultiple) {
   for (uint32_t i = 0; i < countof(buffers); i++) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
-    EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512));
+    EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512, SDMMC_VMO_RIGHT_WRITE));
     buffers[i] = {
         .buffer =
             {
@@ -1091,7 +1091,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosByteMode) {
   for (uint32_t i = 0; i < countof(buffers); i++) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
-    EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512));
+    EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512, SDMMC_VMO_RIGHT_WRITE));
     buffers[i] = {
         .buffer =
             {
@@ -1152,7 +1152,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoByteModeMultiBlock) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
   InitializeContiguousPaddrs(1);
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, 512));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, 512, SDMMC_VMO_RIGHT_WRITE));
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -1213,7 +1213,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoOffsetNotAligned) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
   InitializeContiguousPaddrs(1);
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 2, 512));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 2, 512, SDMMC_VMO_RIGHT_WRITE));
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -1247,7 +1247,8 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferMultipleDescriptors) {
   const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
   ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
   InitializeSingleVmoPaddrs(pages);
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, (pages * PAGE_SIZE) - 8));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, (pages * PAGE_SIZE) - 8,
+                                   SDMMC_VMO_RIGHT_WRITE));
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -1312,7 +1313,8 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferNotPageAligned) {
   const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
   ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
   InitializeNonContiguousPaddrs(pages);
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, (pages * PAGE_SIZE) - 8));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, (pages * PAGE_SIZE) - 8,
+                                   SDMMC_VMO_RIGHT_WRITE));
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -1346,7 +1348,8 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferPageAligned) {
   const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
   ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
   InitializeNonContiguousPaddrs(pages);
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 16, (pages * PAGE_SIZE) - 16));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 16, (pages * PAGE_SIZE) - 16,
+                                   SDMMC_VMO_RIGHT_WRITE));
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -1410,7 +1413,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoWritePastEnd) {
   const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
   ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
   InitializeNonContiguousPaddrs(pages);
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 32, 32 * 384));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 32, 32 * 384, SDMMC_VMO_RIGHT_WRITE));
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -1477,23 +1480,23 @@ TEST_F(AmlSdmmcTest, SeparateClientVmoSpaces) {
   ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
   const zx_koid_t vmo1_koid = GetVmoKoid(vmo);
   EXPECT_NE(vmo1_koid, ZX_KOID_INVALID);
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, PAGE_SIZE));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, PAGE_SIZE, SDMMC_VMO_RIGHT_WRITE));
 
   ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
   const zx_koid_t vmo2_koid = GetVmoKoid(vmo);
   EXPECT_NE(vmo2_koid, ZX_KOID_INVALID);
-  EXPECT_OK(dut_->SdmmcRegisterVmo(2, 0, std::move(vmo), 0, PAGE_SIZE));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(2, 0, std::move(vmo), 0, PAGE_SIZE, SDMMC_VMO_RIGHT_WRITE));
 
   ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
-  EXPECT_NOT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, PAGE_SIZE));
+  EXPECT_NOT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, PAGE_SIZE, SDMMC_VMO_RIGHT_WRITE));
 
   ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
-  EXPECT_NOT_OK(dut_->SdmmcRegisterVmo(1, 8, std::move(vmo), 0, PAGE_SIZE));
+  EXPECT_NOT_OK(dut_->SdmmcRegisterVmo(1, 8, std::move(vmo), 0, PAGE_SIZE, SDMMC_VMO_RIGHT_WRITE));
 
   ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
   const zx_koid_t vmo3_koid = GetVmoKoid(vmo);
   EXPECT_NE(vmo3_koid, ZX_KOID_INVALID);
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 1, std::move(vmo), 0, PAGE_SIZE));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 1, std::move(vmo), 0, PAGE_SIZE, SDMMC_VMO_RIGHT_WRITE));
 
   EXPECT_OK(dut_->SdmmcUnregisterVmo(1, 0, &vmo));
   EXPECT_EQ(GetVmoKoid(vmo), vmo1_koid);
@@ -1521,7 +1524,7 @@ TEST_F(AmlSdmmcTest, RequestWithOwnedAndUnownedVmos) {
     ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
     ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmos[i]));
 
-    EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512));
+    EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512, SDMMC_VMO_RIGHT_WRITE));
     buffers[i * 2] = {
         .buffer =
             {
@@ -1643,7 +1646,7 @@ TEST_F(AmlSdmmcTest, ResetCmdInfoBits) {
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(PAGE_SIZE * 3, 0, &vmo));
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 2, std::move(vmo), 0, PAGE_SIZE * 3));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 2, std::move(vmo), 0, PAGE_SIZE * 3, SDMMC_VMO_RIGHT_WRITE));
 
   sdmmc_buffer_region_t buffer = {
       .buffer = {.vmo_id = 1},
@@ -1695,6 +1698,78 @@ TEST_F(AmlSdmmcTest, ResetCmdInfoBits) {
   EXPECT_EQ(descs[2].cmd_arg, 0);
   EXPECT_EQ(descs[2].data_addr, 0x1997'e000);
   EXPECT_EQ(descs[2].resp_addr, 0);
+}
+
+TEST_F(AmlSdmmcTest, WriteToReadOnlyVmo) {
+  ASSERT_OK(dut_->Init());
+
+  InitializeContiguousPaddrs(10);
+
+  sdmmc_buffer_region_t buffers[10];
+  for (uint32_t i = 0; i < countof(buffers); i++) {
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    const uint32_t vmo_rights = SDMMC_VMO_RIGHT_READ | (i == 5 ? 0 : SDMMC_VMO_RIGHT_WRITE);
+    EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512, vmo_rights));
+    buffers[i] = {
+        .buffer =
+            {
+                .vmo_id = i,
+            },
+        .type = SDMMC_BUFFER_TYPE_VMO_ID,
+        .offset = 0,
+        .size = 32 * (i + 2),
+    };
+  }
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDIO_IO_RW_DIRECT_EXTENDED,
+      .cmd_flags = SDIO_IO_RW_DIRECT_EXTENDED_FLAGS | SDMMC_CMD_READ,
+      .arg = 0x29000015,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = buffers,
+      .buffers_count = countof(buffers),
+  };
+  uint32_t response[4] = {};
+  EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
+}
+
+TEST_F(AmlSdmmcTest, ReadFromWriteOnlyVmo) {
+  ASSERT_OK(dut_->Init());
+
+  InitializeContiguousPaddrs(10);
+
+  sdmmc_buffer_region_t buffers[10];
+  for (uint32_t i = 0; i < countof(buffers); i++) {
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    const uint32_t vmo_rights = SDMMC_VMO_RIGHT_WRITE | (i == 5 ? 0 : SDMMC_VMO_RIGHT_READ);
+    EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512, vmo_rights));
+    buffers[i] = {
+        .buffer =
+            {
+                .vmo_id = i,
+            },
+        .type = SDMMC_BUFFER_TYPE_VMO_ID,
+        .offset = 0,
+        .size = 32 * (i + 2),
+    };
+  }
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDIO_IO_RW_DIRECT_EXTENDED,
+      .cmd_flags = SDIO_IO_RW_DIRECT_EXTENDED_FLAGS,
+      .arg = 0x29000015,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = buffers,
+      .buffers_count = countof(buffers),
+  };
+  uint32_t response[4] = {};
+  EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
 }
 
 }  // namespace sdmmc

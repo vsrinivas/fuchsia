@@ -243,8 +243,8 @@ void SdioFunctionDevice::DoVendorControlRwByte(bool write, uint8_t addr, uint8_t
 }
 
 zx_status_t SdioFunctionDevice::SdioRegisterVmo(uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
-                                                uint64_t size) {
-  return sdio_parent_->SdioRegisterVmo(function_, vmo_id, std::move(vmo), offset, size);
+                                                uint64_t size, uint32_t vmo_rights) {
+  return sdio_parent_->SdioRegisterVmo(function_, vmo_id, std::move(vmo), offset, size, vmo_rights);
 }
 
 zx_status_t SdioFunctionDevice::SdioUnregisterVmo(uint32_t vmo_id, zx::vmo* out_vmo) {

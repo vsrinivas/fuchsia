@@ -77,8 +77,9 @@ class SdioScatterGatherTest : public zxtest::Test {
         mapper2_.CreateAndMap(PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo2_));
     ASSERT_OK(mapper3_.CreateAndMap(PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo3));
 
-    EXPECT_OK(dut_.SdioRegisterVmo(function, 1, std::move(vmo1), 0, PAGE_SIZE));
-    EXPECT_OK(dut_.SdioRegisterVmo(function, 3, std::move(vmo3), 8, PAGE_SIZE - 8));
+    const uint32_t vmo_rights = SDMMC_VMO_RIGHT_READ | SDMMC_VMO_RIGHT_WRITE;
+    EXPECT_OK(dut_.SdioRegisterVmo(function, 1, std::move(vmo1), 0, PAGE_SIZE, vmo_rights));
+    EXPECT_OK(dut_.SdioRegisterVmo(function, 3, std::move(vmo3), 8, PAGE_SIZE - 8, vmo_rights));
   }
 
  protected:

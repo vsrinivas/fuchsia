@@ -637,13 +637,14 @@ zx_status_t SdioControllerDevice::SdioDoVendorControlRwByte(bool write, uint8_t 
 }
 
 zx_status_t SdioControllerDevice::SdioRegisterVmo(uint8_t fn_idx, uint32_t vmo_id, zx::vmo vmo,
-                                                  uint64_t offset, uint64_t size) {
+                                                  uint64_t offset, uint64_t size,
+                                                  uint32_t vmo_rights) {
   if (!SdioFnIdxValid(fn_idx) || fn_idx == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   fbl::AutoLock lock(&lock_);
-  return sdmmc_.host().RegisterVmo(vmo_id, fn_idx, std::move(vmo), offset, size);
+  return sdmmc_.host().RegisterVmo(vmo_id, fn_idx, std::move(vmo), offset, size, vmo_rights);
 }
 
 zx_status_t SdioControllerDevice::SdioUnregisterVmo(uint8_t fn_idx, uint32_t vmo_id,

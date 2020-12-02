@@ -208,7 +208,7 @@ zx_status_t FakeSdmmcDevice::SdmmcRegisterInBandInterrupt(
 }
 
 zx_status_t FakeSdmmcDevice::SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo,
-                                              uint64_t offset, uint64_t size) {
+                                              uint64_t offset, uint64_t size, uint32_t vmo_rights) {
   if (client_id >= countof(registered_vmos_)) {
     return ZX_ERR_OUT_OF_RANGE;
   }

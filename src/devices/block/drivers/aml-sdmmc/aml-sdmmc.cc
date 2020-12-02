@@ -74,14 +74,7 @@ AmlSdmmc::AmlSdmmc(zx_device_t* parent, zx::bti bti, ddk::MmioBuffer mmio,
       dead_(false),
       pending_txn_(false) {
   for (auto& store : registered_vmos_) {
-    store.emplace(vmo_store::Options{
-        .pin =
-            vmo_store::PinOptions{
-                .bti = bti_.borrow(),
-                .bti_pin_options = ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE,
-                .index = true,
-            },
-    });
+    store.emplace(vmo_store::Options{});
   }
 }
 
@@ -724,6 +717,15 @@ zx::status<aml_sdmmc_desc_t*> AmlSdmmc::SetupOwnedVmoDescs(const sdmmc_req_new_t
                                                            const sdmmc_buffer_region_t& buffer,
                                                            vmo_store::StoredVmo<OwnedVmoInfo>& vmo,
                                                            aml_sdmmc_desc_t* const cur_desc) {
+  if (!(req.cmd_flags & SDMMC_CMD_READ) && !(vmo.meta().rights & SDMMC_VMO_RIGHT_READ)) {
+    AML_SDMMC_ERROR("Request would read from write-only VMO");
+    return zx::error(ZX_ERR_ACCESS_DENIED);
+  }
+  if ((req.cmd_flags & SDMMC_CMD_READ) && !(vmo.meta().rights & SDMMC_VMO_RIGHT_WRITE)) {
+    AML_SDMMC_ERROR("Request would write to read-only VMO");
+    return zx::error(ZX_ERR_ACCESS_DENIED);
+  }
+
   if (buffer.offset + buffer.size > vmo.meta().size) {
     AML_SDMMC_ERROR("buffer reads past vmo end: offset %zu, size %zu, vmo size %zu",
                     buffer.offset + vmo.meta().offset, buffer.size, vmo.meta().size);
@@ -1166,13 +1168,29 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
 }
 
 zx_status_t AmlSdmmc::SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo,
-                                       uint64_t offset, uint64_t size) {
+                                       uint64_t offset, uint64_t size, uint32_t vmo_rights) {
   if (client_id >= countof(registered_vmos_)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
+  if (vmo_rights == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-  return registered_vmos_[client_id]->RegisterWithKey(vmo_id, std::move(vmo),
-                                                      OwnedVmoInfo{.offset = offset, .size = size});
+  vmo_store::StoredVmo<OwnedVmoInfo> stored_vmo(std::move(vmo), OwnedVmoInfo{
+                                                                    .offset = offset,
+                                                                    .size = size,
+                                                                    .rights = vmo_rights,
+                                                                });
+  const uint32_t read_perm = (vmo_rights & SDMMC_VMO_RIGHT_READ) ? ZX_BTI_PERM_READ : 0;
+  const uint32_t write_perm = (vmo_rights & SDMMC_VMO_RIGHT_WRITE) ? ZX_BTI_PERM_WRITE : 0;
+  zx_status_t status = stored_vmo.Pin(bti_, read_perm | write_perm, true);
+  if (status != ZX_OK) {
+    AML_SDMMC_ERROR("Failed to pin VMO %u for client %u: %s", vmo_id, client_id,
+                    zx_status_get_string(status));
+    return status;
+  }
+
+  return registered_vmos_[client_id]->RegisterWithKey(vmo_id, std::move(stored_vmo));
 }
 
 zx_status_t AmlSdmmc::SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo* out_vmo) {

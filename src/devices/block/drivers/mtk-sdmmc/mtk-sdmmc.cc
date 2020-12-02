@@ -787,7 +787,7 @@ zx_status_t MtkSdmmc::SdmmcRegisterInBandInterrupt(
 }
 
 zx_status_t MtkSdmmc::SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo,
-                                       uint64_t offset, uint64_t size) {
+                                       uint64_t offset, uint64_t size, uint32_t vmo_rights) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

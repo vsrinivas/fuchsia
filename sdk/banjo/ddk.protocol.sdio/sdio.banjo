@@ -97,7 +97,8 @@ protocol Sdio {
     DoVendorControlRwByte(bool write, uint8 addr, uint8 write_byte) -> (zx.status s, uint8 read_byte);
 
     // See ddk.protocol.sdmmc.
-    RegisterVmo(uint32 vmo_id, handle<vmo> vmo, uint64 offset, uint64 size) -> (zx.status status);
+    RegisterVmo(uint32 vmo_id, handle<vmo> vmo, uint64 offset, uint64 size, uint32 vmo_rights)
+        -> (zx.status status);
     UnregisterVmo(uint32 vmo_id) -> (zx.status status, handle<vmo> vmo);
 
     /// Clients are responsible for performing the following cache operations:

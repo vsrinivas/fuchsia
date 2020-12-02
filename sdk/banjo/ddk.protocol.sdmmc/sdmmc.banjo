@@ -138,6 +138,11 @@ struct SdmmcHostInfo {
     uint64 prefs;
 };
 
+enum SdmmcVmoRight : uint32 {
+    READ = 0x1;   // The protocol implementation can read from this VMO (used for write requests).
+    WRITE = 0x2;  // The protocol implementation can write to this VMO (used for read requests).
+};
+
 [Layout = "ddk-interface"]
 protocol InBandInterrupt {
     Callback() -> ();
@@ -167,15 +172,15 @@ protocol Sdmmc {
     /// Request in an SdmmcBufferRegion. VMO IDs are chosen by the caller, and may be any uint32
     /// value.
 
-    /// Registers a VMO and transfers ownership to the protocol implementation. The implementation
-    /// may map vmo with ZX_VM_PERM_READ and ZX_VM_PERM_WRITE and/or pin it with ZX_BTI_PERM_READ
-    /// and ZX_BTI_PERM_WRITE. The implementation may pin vmo during this call or any time it is
-    /// used in a request, and may keep it pinned until the VMO is unregistered. client_id may be
-    /// in [0, SDMMC_MAX_CLIENT_ID] and identifies the ID space for this VMO to be registered in
-    /// (that is, two different VMOs may use the same ID if they are registered for different
-    /// clients).
+    /// Registers a VMO and transfers ownership to the protocol implementation. vmo_rights is a bit
+    /// field containing SdmmcVmoRight values, and determines the read/write permissions used by
+    /// the implementation when pinning or mapping the VMO. The implementation may pin vmo during
+    /// this call or any time it is used in a request, and may keep it pinned until the VMO is
+    /// unregistered. client_id may be in [0, SDMMC_MAX_CLIENT_ID] and identifies the ID space for
+    /// this VMO to be registered in (that is, two different VMOs may use the same ID if they are
+    /// registered for different clients).
     RegisterVmo(uint32 vmo_id, uint8 client_id, handle<vmo> vmo, uint64 offset,
-                uint64 size) -> (zx.status status);
+                uint64 size, uint32 vmo_rights) -> (zx.status status);
     /// The callee unmaps/unpins the VMO and returns ownership to the caller.
     UnregisterVmo(uint32 vmo_id, uint8 client_id) -> (zx.status status, handle<vmo> vmo);
 
