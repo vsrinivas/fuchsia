@@ -29,6 +29,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/doctor:ffx_doctor",
       "//src/developer/ffx/plugins/overnet:ffx_overnet_plugin",
       "//src/developer/ffx/plugins/packaging:ffx_packaging",
+      "//src/developer/ffx/plugins/platform:ffx_platform",
       "//src/developer/ffx/plugins/scrutiny:ffx_scrutiny",
       "//src/developer/ffx/plugins/sdk:ffx_sdk",
       "//src/developer/ffx/plugins/self-test:ffx_selftest",
