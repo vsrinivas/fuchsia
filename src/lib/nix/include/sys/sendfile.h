@@ -5,11 +5,11 @@
 #ifndef SRC_LIB_NIX_INCLUDE_SYS_SENDFILE_H_
 #define SRC_LIB_NIX_INCLUDE_SYS_SENDFILE_H_
 
+#include <unistd.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <unistd.h>
 
 ssize_t sendfile(int out_fd, int in_fd, off_t* offset, size_t count);
 

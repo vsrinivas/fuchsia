@@ -5,10 +5,6 @@
 #ifndef SRC_LIB_NIX_INCLUDE_SYS_EPOLL_H_
 #define SRC_LIB_NIX_INCLUDE_SYS_EPOLL_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <fcntl.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -52,6 +48,10 @@ struct epoll_event {
   uint32_t events;
   epoll_data_t data;
 };
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 int epoll_create(int);
 int epoll_create1(int);

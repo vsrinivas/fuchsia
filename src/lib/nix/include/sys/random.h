@@ -5,15 +5,15 @@
 #ifndef SRC_LIB_NIX_INCLUDE_SYS_RANDOM_H_
 #define SRC_LIB_NIX_INCLUDE_SYS_RANDOM_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdint.h>
 #include <unistd.h>
 
 #define GRND_NONBLOCK 0x0001
 #define GRND_RANDOM 0x0002
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // Fills the provided |buffer| with |buffer_size| random bytes. The |flags|
 // argument is a bitmask that can contain zero or more of the flags

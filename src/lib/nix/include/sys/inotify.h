@@ -5,10 +5,6 @@
 #ifndef SYS_INOTIFY_H_
 #define SYS_INOTIFY_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <fcntl.h>
 #include <stdint.h>
 
@@ -48,6 +44,10 @@ struct inotify_event {
 
 #define IN_ISDIR 0x40000000
 #define IN_ONESHOT 0x80000000
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 int inotify_init(void);
 int inotify_init1(int);
