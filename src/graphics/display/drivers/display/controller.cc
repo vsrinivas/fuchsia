@@ -846,9 +846,24 @@ bool Controller::GetDisplayPhysicalDimensions(uint64_t display_id, uint32_t* hor
 
 zx_status_t Controller::DdkOpen(zx_device_t** dev_out, uint32_t flags) { return ZX_OK; }
 
+static void PrintChannelKoids(bool is_vc, const zx::channel& channel) {
+  zx_info_handle_basic_t info{};
+  size_t actual, avail;
+  zx_status_t status = channel.get_info(
+      ZX_INFO_HANDLE_BASIC, &info, sizeof(info), &actual, &avail);
+  if (status != ZX_OK || info.type != ZX_OBJ_TYPE_CHANNEL) {
+    zxlogf(DEBUG, "Could not get koids for handle(type=%d): %d", info.type, status);
+    return;
+  }
+  ZX_DEBUG_ASSERT(actual == avail);
+  zxlogf(INFO, "%s client connecting on channel (c=0x%lx, s=0x%lx)",
+         is_vc ? "vc" : "dc", info.related_koid, info.koid);
+}
+
 zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
                                      zx::channel client_channel,
                                      fit::function<void()> on_client_dead) {
+  PrintChannelKoids(is_vc, client_channel);
   fbl::AllocChecker ac;
   std::unique_ptr<async::Task> task = fbl::make_unique_checked<async::Task>(&ac);
   if (!ac.check()) {
