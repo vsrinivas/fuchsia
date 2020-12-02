@@ -1284,6 +1284,8 @@ func (ns *Netstack) onAddEndpoint(e *endpoint) {
 	if ep, loaded := ns.endpoints.LoadOrStore(key, e.ep); loaded {
 		var info stack.TransportEndpointInfo
 		switch t := ep.Info().(type) {
+		case *tcp.EndpointInfo:
+			info = t.TransportEndpointInfo
 		case *stack.TransportEndpointInfo:
 			info = *t
 		}

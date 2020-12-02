@@ -583,6 +583,8 @@ type socketInfoInspectImpl struct {
 func (impl *socketInfoInspectImpl) ReadData() inspect.Object {
 	var common stack.TransportEndpointInfo
 	switch t := impl.info.(type) {
+	case *tcp.EndpointInfo:
+		common = t.TransportEndpointInfo
 	case *stack.TransportEndpointInfo:
 		common = *t
 	default:
