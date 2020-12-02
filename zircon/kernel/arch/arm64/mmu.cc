@@ -11,6 +11,7 @@
 #include <bits.h>
 #include <debug.h>
 #include <inttypes.h>
+#include <lib/counters.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
 #include <stdlib.h>
@@ -66,6 +67,11 @@ pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP] __ALIGNE
 pte_t* arm64_get_kernel_ptable() { return arm64_kernel_translation_table; }
 
 namespace {
+
+KCOUNTER(cm_flush_all, "mmu.consistency_manager.flush_all")
+KCOUNTER(cm_flush_all_replacing, "mmu.consistency_manager.flush_all_replacing")
+KCOUNTER(cm_single_tlb_invalidates, "mmu.consistency_manager.single_tlb_invalidate")
+KCOUNTER(cm_flush, "mmu.consistency_manager.flush")
 
 AsidAllocator asid;
 
@@ -245,6 +251,110 @@ bool page_table_is_clear(const volatile pte_t* page_table, uint page_size_shift)
 
 }  // namespace
 
+// A consistency manager that tracks TLB updates, walker syncs and free pages in an effort to
+// minimize DSBs (by delaying and coalescing TLB invalidations) and switching to full ASID
+// invalidations if too many TLB invalidations are requested.
+class ArmArchVmAspace::ConsistencyManager {
+ public:
+  ConsistencyManager(ArmArchVmAspace& aspace) TA_REQ(aspace.lock_) : aspace_(aspace) {}
+  ~ConsistencyManager() {
+    Flush();
+    if (!list_is_empty(&to_free_)) {
+      pmm_free(&to_free_);
+    }
+  }
+
+  // Flag that a walker sync is required. A walker sync implies that at the least a DMB needs to
+  // happen at some point in the future so that the local page table walker can see an update.
+  void SyncWalker() { sync_walker_ = true; }
+
+  // Queue a TLB entry for flushing. This may get turned into a complete ASID flush.
+  void FlushEntry(vaddr_t va, bool terminal) {
+    AssertHeld(aspace_.lock_);
+    // Check we have queued too many entries already.
+    if (num_pending_tlbs_ >= kMaxPendingTlbs) {
+      // Most of the time we will now prefer to invalidate the entire ASID, the exception is if
+      // this aspace is using the global ASID.
+      if (aspace_.asid_ != MMU_ARM64_GLOBAL_ASID) {
+        // Keep counting entries so that we can track how many TLB invalidates we saved by grouping.
+        num_pending_tlbs_++;
+        return;
+      }
+      Flush();
+    }
+
+    // va must be page aligned so we can safely throw away the bottom bit.
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(va));
+    DEBUG_ASSERT(aspace_.IsValidVaddr(va));
+
+    pending_tlbs_[num_pending_tlbs_].terminal = terminal;
+    pending_tlbs_[num_pending_tlbs_].va_shifted = va >> 1;
+    num_pending_tlbs_++;
+  }
+
+  // Performs any pending synchronization of TLBs and page table walkers. Includes the DSB to ensure
+  // TLB flushes have completed prior to returning to user.
+  void Flush() TA_REQ(aspace_.lock_) {
+    cm_flush.Add(1);
+    if (num_pending_tlbs_ == 0) {
+      if (sync_walker_) {
+        // Even if we flush no TLBs, we may need to synchronize the walker, this is just a DMB.
+        __dmb(ARM_MB_ISHST);
+        sync_walker_ = false;
+      }
+      return;
+    }
+    // Need a DSB to synchronize any page table updates prior to flushing the TLBs.
+    __dsb(ARM_MB_ISHST);
+    sync_walker_ = false;
+
+    // Check if we should just be performing a full ASID invalidation.
+    if (num_pending_tlbs_ >= kMaxPendingTlbs && aspace_.asid_ != MMU_ARM64_GLOBAL_ASID) {
+      cm_flush_all.Add(1);
+      cm_flush_all_replacing.Add(num_pending_tlbs_);
+      aspace_.FlushAsid();
+    } else {
+      for (size_t i = 0; i < num_pending_tlbs_; i++) {
+        const vaddr_t va = pending_tlbs_[i].va_shifted << 1;
+        DEBUG_ASSERT(aspace_.IsValidVaddr(va));
+        aspace_.FlushTLBEntry(va, pending_tlbs_[i].terminal);
+      }
+      cm_single_tlb_invalidates.Add(num_pending_tlbs_);
+    }
+
+    // DSB to ensure TLB flushes happen prior to returning to user.
+    __dsb(ARM_MB_ISHST);
+    num_pending_tlbs_ = 0;
+  }
+
+  // Queue a page for freeing that is dependent on TLB flushing. This is for pages that were
+  // previously installed as page tables and they should not be reused until the non-terminal TLB
+  // flush has occurred.
+  void FreePage(vm_page_t* page) { list_add_tail(&to_free_, &page->queue_node); }
+
+ private:
+  // Maximum number of TLB entries we will queue before switching to ASID invalidation.
+  static constexpr size_t kMaxPendingTlbs = 16;
+
+  // Pending TLBs to flush are stored as 63 bits, with the bottom bit stolen to store the terminal
+  // flag. 63 bits is more than enough as these entries are page aligned at the minimum.
+  struct {
+    bool terminal : 1;
+    uint64_t va_shifted : 63;
+  } pending_tlbs_[kMaxPendingTlbs];
+  size_t num_pending_tlbs_ = 0;
+
+  // Tracks whether we need to synchronize the walker or not. This needs to occur even if we have no
+  // TLB entries to invalidate.
+  bool sync_walker_ = false;
+
+  // vm_page_t's to release to the PMM after the TLB invalidation occurs.
+  list_node to_free_ = LIST_INITIAL_VALUE(to_free_);
+
+  // The aspace we are invalidating TLBs for.
+  const ArmArchVmAspace& aspace_;
+};
+
 uint ArmArchVmAspace::MmuFlagsFromPte(pte_t pte) {
   uint mmu_flags = 0;
   if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
@@ -368,7 +478,8 @@ zx_status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp, uint page_size_shif
   return ZX_OK;
 }
 
-void ArmArchVmAspace::FreePageTable(void* vaddr, paddr_t paddr, uint page_size_shift) {
+void ArmArchVmAspace::FreePageTable(void* vaddr, paddr_t paddr, uint page_size_shift,
+                                    ConsistencyManager& cm) {
   LTRACEF("vaddr %p paddr 0x%lx page_size_shift %u\n", vaddr, paddr, page_size_shift);
 
   // currently we only support freeing a single page
@@ -380,13 +491,14 @@ void ArmArchVmAspace::FreePageTable(void* vaddr, paddr_t paddr, uint page_size_s
   if (!page) {
     panic("bad page table paddr 0x%lx\n", paddr);
   }
-  pmm_free_page(page);
+  cm.FreePage(page);
 
   pt_pages_--;
 }
 
 zx_status_t ArmArchVmAspace::SplitLargePage(vaddr_t vaddr, uint index_shift, uint page_size_shift,
-                                            vaddr_t pt_index, volatile pte_t* page_table) {
+                                            vaddr_t pt_index, volatile pte_t* page_table,
+                                            ConsistencyManager& cm) {
   DEBUG_ASSERT(index_shift > page_size_shift);
 
   const pte_t pte = page_table[pt_index];
@@ -423,23 +535,19 @@ zx_status_t ArmArchVmAspace::SplitLargePage(vaddr_t vaddr, uint index_shift, uin
   // no need to update the page table count here since we're replacing a block entry with a table
   // entry.
 
-  // ensure that the update is observable from hardware page table walkers before TLB
-  // operations can occur.
-  __dsb(ARM_MB_ISHST);
-
-  FlushTLBEntry(vaddr, false);
+  cm.FlushEntry(vaddr, false);
 
   return ZX_OK;
 }
 
 // use the appropriate TLB flush instruction to globally flush the modified entry
 // terminal is set when flushing at the final level of the page table.
-void ArmArchVmAspace::FlushTLBEntry(vaddr_t vaddr, bool terminal) {
-  if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
+void ArmArchVmAspace::FlushTLBEntry(vaddr_t vaddr, bool terminal) const {
+  if (unlikely(flags_ & ARCH_ASPACE_FLAG_GUEST)) {
     paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
     __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vttbr, vaddr, terminal);
     DEBUG_ASSERT(status == ZX_OK);
-  } else if (asid_ == MMU_ARM64_GLOBAL_ASID) {
+  } else if (unlikely(asid_ == MMU_ARM64_GLOBAL_ASID)) {
     // flush this address on all ASIDs
     if (terminal) {
       ARM64_TLBI(vaale1is, vaddr >> 12);
@@ -456,7 +564,7 @@ void ArmArchVmAspace::FlushTLBEntry(vaddr_t vaddr, bool terminal) {
   }
 }
 
-void ArmArchVmAspace::FlushAsid() {
+void ArmArchVmAspace::FlushAsid() const {
   if (unlikely(flags_ & ARCH_ASPACE_FLAG_GUEST)) {
     paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
     __UNUSED zx_status_t status = arm64_el2_tlbi_vmid(vttbr);
@@ -469,10 +577,9 @@ void ArmArchVmAspace::FlushAsid() {
   }
 }
 
-// NOTE: caller must DSB afterwards to ensure TLB entries are flushed
 ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size,
                                         uint index_shift, uint page_size_shift,
-                                        volatile pte_t* page_table) {
+                                        volatile pte_t* page_table, ConsistencyManager& cm) {
   const vaddr_t block_size = 1UL << index_shift;
   const vaddr_t block_mask = block_size - 1;
 
@@ -497,7 +604,7 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
 
       // Recurse a level.
       UnmapPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
-                     page_size_shift, next_page_table);
+                     page_size_shift, next_page_table, cm);
 
       // if we unmapped an entire page table leaf and/or the unmap made the level below us empty,
       // free the page table
@@ -505,25 +612,15 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
         LTRACEF("pte %p[0x%lx] = 0 (was page table)\n", page_table, index);
         update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
 
-        // ensure that the update is observable from hardware page table walkers before TLB
-        // operations can occur.
-        __dsb(ARM_MB_ISHST);
-
-        // flush the non terminal TLB entry
-        FlushTLBEntry(vaddr, false);
-
-        FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, page_size_shift);
+        // We can safely defer TLB flushing as the consistency manager will not return the backing
+        // page to the PMM until after the tlb is flushed.
+        cm.FlushEntry(vaddr, false);
+        FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, page_size_shift, cm);
       }
     } else if (is_pte_valid(pte)) {
       LTRACEF("pte %p[0x%lx] = 0\n", page_table, index);
       update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
-
-      // ensure that the update is observable from hardware page table walkers before TLB
-      // operations can occur.
-      __dsb(ARM_MB_ISHST);
-
-      // flush the terminal TLB entry
-      FlushTLBEntry(vaddr, true);
+      cm.FlushEntry(vaddr, true);
     } else {
       LTRACEF("pte %p[0x%lx] already clear\n", page_table, index);
     }
@@ -536,10 +633,10 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
   return unmap_size;
 }
 
-// NOTE: caller must DSB afterwards to ensure TLB entries are flushed
 ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, paddr_t paddr_in,
                                       size_t size_in, pte_t attrs, uint index_shift,
-                                      uint page_size_shift, volatile pte_t* page_table) {
+                                      uint page_size_shift, volatile pte_t* page_table,
+                                      ConsistencyManager& cm) {
   vaddr_t vaddr = vaddr_in;
   vaddr_t vaddr_rel = vaddr_rel_in;
   paddr_t paddr = paddr_in;
@@ -558,8 +655,8 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
 
   auto cleanup = fbl::AutoCall([&]() {
     AssertHeld(lock_);
-    UnmapPageTable(vaddr_in, vaddr_rel_in, size_in - size, index_shift, page_size_shift,
-                   page_table);
+    UnmapPageTable(vaddr_in, vaddr_rel_in, size_in - size, index_shift, page_size_shift, page_table,
+                   cm);
   });
 
   size_t mapped_size = 0;
@@ -593,7 +690,8 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
           LTRACEF("allocated page table, vaddr %p, paddr 0x%lx\n", pt_vaddr, page_table_paddr);
           arch_zero_page(pt_vaddr);
 
-          // ensure that the zeroing is observable from hardware page table walkers
+          // ensure that the zeroing is observable from hardware page table walkers, as we need to
+          // do this prior to writing the pte we cannot defer it using the consistency manager.
           __dmb(ARM_MB_ISHST);
 
           pte = page_table_paddr | MMU_PTE_L012_DESCRIPTOR_TABLE;
@@ -617,7 +715,7 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
 
       ssize_t ret =
           MapPageTable(vaddr, vaddr_rem, paddr, chunk_size, attrs,
-                       index_shift - (page_size_shift - 3), page_size_shift, next_page_table);
+                       index_shift - (page_size_shift - 3), page_size_shift, next_page_table, cm);
       if (ret < 0) {
         if (allocated_page_table) {
           // We just allocated this page table. The unmap in err will not clean it up as the size
@@ -629,14 +727,10 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
           DEBUG_ASSERT(page_table_is_clear(next_page_table, page_size_shift));
           update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
 
-          // ensure that the update is observable from hardware page table walkers before TLB
-          // operations can occur.
-          __dsb(ARM_MB_ISHST);
-
-          // flush the non terminal TLB entry
-          FlushTLBEntry(vaddr, false);
-
-          FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, page_size_shift);
+          // We can safely defer TLB flushing as the consistency manager will not return the backing
+          // page to the PMM until after the tlb is flushed.
+          cm.FlushEntry(vaddr, false);
+          FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, page_size_shift, cm);
         }
         return ret;
       }
@@ -670,10 +764,10 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
   return mapped_size;
 }
 
-// NOTE: caller must DSB afterwards to ensure TLB entries are flushed
 zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
                                               size_t size_in, pte_t attrs, uint index_shift,
-                                              uint page_size_shift, volatile pte_t* page_table) {
+                                              uint page_size_shift, volatile pte_t* page_table,
+                                              ConsistencyManager& cm) {
   vaddr_t vaddr = vaddr_in;
   vaddr_t vaddr_rel = vaddr_rel_in;
   size_t size = size_in;
@@ -698,13 +792,14 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
     if (index_shift > page_size_shift &&
         (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_BLOCK &&
         chunk_size != block_size) {
-      zx_status_t s = SplitLargePage(vaddr, index_shift, page_size_shift, index, page_table);
+      zx_status_t s = SplitLargePage(vaddr, index_shift, page_size_shift, index, page_table, cm);
       if (likely(s == ZX_OK)) {
         pte = page_table[index];
       } else {
         // If split fails, just unmap the whole block and let a
         // subsequent page fault clean it up.
-        UnmapPageTable(vaddr - vaddr_rel, 0, block_size, index_shift, page_size_shift, page_table);
+        UnmapPageTable(vaddr - vaddr_rel, 0, block_size, index_shift, page_size_shift, page_table,
+                       cm);
         pte = 0;
       }
     }
@@ -717,18 +812,12 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
 
       // Recurse a level.
       ProtectPageTable(vaddr, vaddr_rem, chunk_size, attrs, index_shift - (page_size_shift - 3),
-                       page_size_shift, next_page_table);
+                       page_size_shift, next_page_table, cm);
     } else if (is_pte_valid(pte)) {
       pte = (pte & ~MMU_PTE_PERMISSION_MASK) | attrs;
       LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
       update_pte(&page_table[index], pte);
-
-      // ensure that the update is observable from hardware page table walkers before TLB
-      // operations can occur.
-      __dsb(ARM_MB_ISHST);
-
-      // flush the terminal TLB entry
-      FlushTLBEntry(vaddr, true);
+      cm.FlushEntry(vaddr, true);
     } else {
       LTRACEF("page table entry does not exist, index %#" PRIxPTR ", %#" PRIx64 "\n", index, pte);
     }
@@ -740,11 +829,11 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
   return ZX_OK;
 }
 
-// NOTE: if this returns true, caller must DSB afterwards to ensure TLB entries are flushed
-bool ArmArchVmAspace::HarvestAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in, size_t size,
+void ArmArchVmAspace::HarvestAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in, size_t size,
                                                const uint index_shift, const uint page_size_shift,
                                                volatile pte_t* page_table,
-                                               const HarvestCallback& accessed_callback) {
+                                               const HarvestCallback& accessed_callback,
+                                               ConsistencyManager& cm) {
   const vaddr_t block_size = 1UL << index_shift;
   const vaddr_t block_mask = block_size - 1;
 
@@ -752,8 +841,6 @@ bool ArmArchVmAspace::HarvestAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_
 
   // vaddr_rel and size must be page aligned
   DEBUG_ASSERT(((vaddr_rel | size) & ((1UL << page_size_shift) - 1)) == 0);
-
-  bool flushed_tlb = false;
 
   while (size) {
     const vaddr_t vaddr_rem = vaddr_rel & block_mask;
@@ -772,11 +859,8 @@ bool ArmArchVmAspace::HarvestAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_
       const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
       volatile pte_t* next_page_table =
           static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
-      if (HarvestAccessedPageTable(vaddr, vaddr_rem, chunk_size,
-                                   index_shift - (page_size_shift - 3), page_size_shift,
-                                   next_page_table, accessed_callback)) {
-        flushed_tlb = true;
-      }
+      HarvestAccessedPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
+                               page_size_shift, next_page_table, accessed_callback, cm);
     } else if (is_pte_valid(pte)) {
       if (pte & MMU_PTE_ATTR_AF) {
         const paddr_t pte_addr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
@@ -792,15 +876,7 @@ bool ArmArchVmAspace::HarvestAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_
           LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
           update_pte(&page_table[index], pte);
 
-          // ensure that the update is observable from hardware page table walkers before TLB
-          // operations can occur.
-          __dsb(ARM_MB_ISHST);
-
-          // flush the terminal TLB entry
-          FlushTLBEntry(vaddr, true);
-
-          // propagate back up to the caller that a tlb flush happened so they can synchronize.
-          flushed_tlb = true;
+          cm.FlushEntry(vaddr, true);
         }
       }
     }
@@ -808,12 +884,11 @@ bool ArmArchVmAspace::HarvestAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_
     vaddr_rel += chunk_size;
     size -= chunk_size;
   }
-  return flushed_tlb;
 }
 
 void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in, size_t size,
                                             uint index_shift, uint page_size_shift,
-                                            volatile pte_t* page_table) {
+                                            volatile pte_t* page_table, ConsistencyManager& cm) {
   const vaddr_t block_size = 1UL << index_shift;
   const vaddr_t block_mask = block_size - 1;
 
@@ -840,8 +915,8 @@ void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in,
       volatile pte_t* next_page_table =
           static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
       MarkAccessedPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
-                            page_size_shift, next_page_table);
-    } else if (is_pte_valid(pte)) {
+                            page_size_shift, next_page_table, cm);
+    } else if (is_pte_valid(pte) && (pte & MMU_PTE_ATTR_AF) == 0) {
       pte |= MMU_PTE_ATTR_AF;
       update_pte(&page_table[index], pte);
 
@@ -849,7 +924,7 @@ void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in,
       // not need to do any TLB maintenance and can just issue a dmb to ensure the hardware walker
       // sees the new entry. If the access bit was already set then this operation is a no-op and
       // we can leave any TLB entries alone.
-      __dmb(ARM_MB_ISHST);
+      cm.SyncWalker();
     }
     vaddr += chunk_size;
     vaddr_rel += chunk_size;
@@ -857,10 +932,9 @@ void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in,
   }
 }
 
-// internal routine to map a run of pages. dsb must be called after MapPages is called.
 ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
                                   vaddr_t vaddr_base, uint top_size_shift, uint top_index_shift,
-                                  uint page_size_shift) {
+                                  uint page_size_shift, ConsistencyManager& cm) {
   vaddr_t vaddr_rel = vaddr - vaddr_base;
   vaddr_t vaddr_rel_max = 1UL << top_size_shift;
 
@@ -877,13 +951,13 @@ ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte
 
   LOCAL_KTRACE("mmu map", (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
   ssize_t ret = MapPageTable(vaddr, vaddr_rel, paddr, size, attrs, top_index_shift, page_size_shift,
-                             tt_virt_);
+                             tt_virt_, cm);
   return ret;
 }
 
 ssize_t ArmArchVmAspace::UnmapPages(vaddr_t vaddr, size_t size, vaddr_t vaddr_base,
-                                    uint top_size_shift, uint top_index_shift,
-                                    uint page_size_shift) {
+                                    uint top_size_shift, uint top_index_shift, uint page_size_shift,
+                                    ConsistencyManager& cm) {
   vaddr_t vaddr_rel = vaddr - vaddr_base;
   vaddr_t vaddr_rel_max = 1UL << top_size_shift;
 
@@ -897,8 +971,8 @@ ssize_t ArmArchVmAspace::UnmapPages(vaddr_t vaddr, size_t size, vaddr_t vaddr_ba
 
   LOCAL_KTRACE("mmu unmap", (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
 
-  ssize_t ret = UnmapPageTable(vaddr, vaddr_rel, size, top_index_shift, page_size_shift, tt_virt_);
-  __dsb(ARM_MB_SY);
+  ssize_t ret =
+      UnmapPageTable(vaddr, vaddr_rel, size, top_index_shift, page_size_shift, tt_virt_, cm);
   return ret;
 }
 
@@ -920,9 +994,10 @@ zx_status_t ArmArchVmAspace::ProtectPages(vaddr_t vaddr, size_t size, pte_t attr
 
   LOCAL_KTRACE("mmu protect", (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
 
-  zx_status_t ret =
-      ProtectPageTable(vaddr, vaddr_rel, size, attrs, top_index_shift, page_size_shift, tt_virt_);
-  __dsb(ARM_MB_SY);
+  ConsistencyManager cm(*this);
+
+  zx_status_t ret = ProtectPageTable(vaddr, vaddr_rel, size, attrs, top_index_shift,
+                                     page_size_shift, tt_virt_, cm);
   return ret;
 }
 
@@ -992,9 +1067,10 @@ zx_status_t ArmArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
     uint top_size_shift, top_index_shift, page_size_shift;
     MmuParamsFromFlags(mmu_flags, &attrs, &vaddr_base, &top_size_shift, &top_index_shift,
                        &page_size_shift);
+
+    ConsistencyManager cm(*this);
     ret = MapPages(vaddr, paddr, count * PAGE_SIZE, attrs, vaddr_base, top_size_shift,
-                   top_index_shift, page_size_shift);
-    __dsb(ARM_MB_SY);
+                   top_index_shift, page_size_shift, cm);
   }
 
   if (mapped) {
@@ -1048,10 +1124,11 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
 
     ssize_t ret;
     size_t idx = 0;
+    ConsistencyManager cm(*this);
     auto undo = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
       if (idx > 0) {
         UnmapPages(vaddr, idx * PAGE_SIZE, vaddr_base, top_size_shift, top_index_shift,
-                   page_size_shift);
+                   page_size_shift, cm);
       }
     });
 
@@ -1060,7 +1137,7 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
       paddr_t paddr = phys[idx];
       DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
       ret = MapPages(v, paddr, PAGE_SIZE, attrs, vaddr_base, top_size_shift, top_index_shift,
-                     page_size_shift);
+                     page_size_shift, cm);
       if (ret < 0) {
         return static_cast<zx_status_t>(ret);
       }
@@ -1068,7 +1145,6 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
       v += PAGE_SIZE;
       total_mapped += ret / PAGE_SIZE;
     }
-    __dsb(ARM_MB_SY);
     undo.cancel();
   }
   DEBUG_ASSERT(total_mapped <= count);
@@ -1106,8 +1182,9 @@ zx_status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped
     MmuParamsFromFlags(0, nullptr, &vaddr_base, &top_size_shift, &top_index_shift,
                        &page_size_shift);
 
+    ConsistencyManager cm(*this);
     ret = UnmapPages(vaddr, count * PAGE_SIZE, vaddr_base, top_size_shift, top_index_shift,
-                     page_size_shift);
+                     page_size_shift, cm);
   }
 
   if (unmapped) {
@@ -1177,14 +1254,10 @@ zx_status_t ArmArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
   LOCAL_KTRACE("mmu harvest accessed",
                (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
 
-  // It's fairly reasonable for there to be nothing to harvest, and dsb is expensive, so
-  // HarvestAccessedPageTable will return true if it performed a TLB invalidation that we need to
-  // synchronize with.
-  if (HarvestAccessedPageTable(vaddr, vaddr_rel, size, top_index_shift, page_size_shift, tt_virt_,
-                               accessed_callback)) {
-    __dsb(ARM_MB_SY);
-  }
+  ConsistencyManager cm(*this);
 
+  HarvestAccessedPageTable(vaddr, vaddr_rel, size, top_index_shift, page_size_shift, tt_virt_,
+                           accessed_callback, cm);
   return ZX_OK;
 }
 
@@ -1213,9 +1286,10 @@ zx_status_t ArmArchVmAspace::MarkAccessed(vaddr_t vaddr, size_t count) {
 
   LOCAL_KTRACE("mmu mark accessed", (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
 
-  MarkAccessedPageTable(vaddr, vaddr_rel, size, top_index_shift, page_size_shift, tt_virt_);
-  // MarkAccessedPageTable does not perform any TLB operations, so unlike most other top level mmu
-  // functions we do not need to perform a dsb to synchronize.
+  ConsistencyManager cm(*this);
+
+  MarkAccessedPageTable(vaddr, vaddr_rel, size, top_index_shift, page_size_shift, tt_virt_, cm);
+
   return ZX_OK;
 }
 
