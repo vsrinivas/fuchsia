@@ -16,7 +16,12 @@ source_set("pthread") {
   configs += [ "//build/unification/config:zircon-migrated" ]
 
   testonly = true
-  sources = [ "pthread.cc" ]
+  sources = [
+    "pthread.cc",
+    "pthread_c.c",
+  ]
+
+  cflags_c = [ "-Wgnu-empty-initializer" ]
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",

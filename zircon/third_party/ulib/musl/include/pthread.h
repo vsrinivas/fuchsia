@@ -54,12 +54,21 @@ extern "C" {
 
 #define PTHREAD_PROCESS_PRIVATE 0
 
+#ifdef __cplusplus
 #define PTHREAD_MUTEX_INITIALIZER \
   {}
 #define PTHREAD_RWLOCK_INITIALIZER \
   {}
 #define PTHREAD_COND_INITIALIZER \
   {}
+#else
+#define PTHREAD_MUTEX_INITIALIZER \
+  { 0 }
+#define PTHREAD_RWLOCK_INITIALIZER \
+  { 0 }
+#define PTHREAD_COND_INITIALIZER \
+  { 0 }
+#endif
 #define PTHREAD_ONCE_INIT 0
 
 #define PTHREAD_CANCEL_ENABLE 0
