@@ -216,7 +216,7 @@ func (c *Conn) makeSession(ctx context.Context, stdout io.Writer, stderr io.Writ
 	select {
 	case r := <-ch:
 		if r.err != nil {
-			return nil, fmt.Errorf("failed to start ssh session: %w", r.err)
+			return nil, ConnectionError{fmt.Errorf("failed to start ssh session: %w", r.err)}
 		}
 		return r.session, nil
 	case <-ctx.Done():
