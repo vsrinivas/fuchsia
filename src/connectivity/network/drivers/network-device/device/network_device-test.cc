@@ -6,6 +6,7 @@
 #include <lib/sync/completion.h>
 #include <lib/syslog/global.h>
 
+#include <fbl/auto_call.h>
 #include <zxtest/cpp/zxtest.h>
 #include <zxtest/zxtest.h>
 
@@ -1037,6 +1038,69 @@ TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
   return_session.Commit();
   ASSERT_OK(WaitRxAvailable());
   ASSERT_EQ(impl_.rx_buffers().size_slow(), impl_.info().rx_depth);
+}
+
+TEST_F(NetworkDeviceTest, RxQueueIdlesOnPausedSession) {
+  ASSERT_OK(CreateDevice());
+
+  struct {
+    fbl::Mutex lock;
+    fit::optional<uint64_t> key __TA_GUARDED(lock);
+  } observed_key;
+
+  sync_completion_t completion;
+
+  auto get_next_key = [&observed_key,
+                       &completion](zx::duration timeout) -> fit::result<uint64_t, zx_status_t> {
+    zx_status_t status = sync_completion_wait(&completion, timeout.get());
+    fbl::AutoLock l(&observed_key.lock);
+    if (status != ZX_OK) {
+      // Whenever wait fails, key must not have a value.
+      auto k = observed_key.key;
+      EXPECT_FALSE(k.has_value(), "unexpected observed key value %ld", *k);
+      return fit::error(status);
+    }
+    sync_completion_reset(&completion);
+    if (!observed_key.key.has_value()) {
+      return fit::error(ZX_ERR_BAD_STATE);
+    }
+    auto key = *observed_key.key;
+    observed_key.key.reset();
+    return fit::ok(key);
+  };
+
+  auto* dev_iface = static_cast<internal::DeviceInterface*>(device_.get());
+  dev_iface->evt_rx_queue_packet = [&observed_key, &completion](uint64_t key) {
+    fbl::AutoLock l(&observed_key.lock);
+    auto k = observed_key.key;
+    EXPECT_FALSE(k.has_value(), "expected empty observed key, got %ld", *k);
+    observed_key.key = key;
+    sync_completion_signal(&completion);
+  };
+  auto undo = fbl::MakeAutoCall([dev_iface]() {
+    // Clear event handler so we don't see any of the teardown.
+    dev_iface->evt_rx_queue_packet = nullptr;
+  });
+
+  TestSession session;
+  ASSERT_OK(OpenSession(&session));
+
+  auto key = get_next_key(zx::duration::infinite());
+  ASSERT_TRUE(key.is_ok(), "failed to get next key: %s", zx_status_get_string(key.error()));
+  ASSERT_EQ(key.value(), internal::RxQueue::kSessionSwitchKey);
+  session.ResetDescriptor(0);
+  // Make the FIFO readable.
+  ASSERT_OK(session.SendRx(0));
+  // It should not trigger any RxQueue events.
+  key = get_next_key(zx::msec(50));
+  ASSERT_TRUE(key.is_error(), "unexpected key value %ld", key.value());
+  ASSERT_STATUS(key.error(), ZX_ERR_TIMED_OUT);
+
+  // Kill the session and check that we see a session switch again.
+  ASSERT_OK(session.Close());
+  key = get_next_key(zx::duration::infinite());
+  ASSERT_TRUE(key.is_ok(), "failed to get next key: %s", zx_status_get_string(key.error()));
+  ASSERT_EQ(key.value(), internal::RxQueue::kSessionSwitchKey);
 }
 
 }  // namespace testing

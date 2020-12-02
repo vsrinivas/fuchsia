@@ -229,6 +229,7 @@ class DeviceInterface : public netdev::Device::Interface,
  public:
   // Event hooks used in tests:
   fit::function<void(const char*)> evt_session_started;
+  fit::function<void(uint64_t)> evt_rx_queue_packet;
   // Unsafe accessors used in tests:
   const SessionList& sessions_unsafe() const { return sessions_; }
 };

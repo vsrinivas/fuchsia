@@ -744,6 +744,7 @@ void DeviceInterface::NotifyDeadSession(Session* dead_session) {
   if (dead_session == primary_session_.get()) {
     // Nullify primary session.
     session_ptr = std::move(primary_session_);
+    rx_queue_->TriggerSessionChanged();
   } else {
     session_ptr = sessions_.erase(*dead_session);
   }

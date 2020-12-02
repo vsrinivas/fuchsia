@@ -11,13 +11,6 @@
 
 namespace network::internal {
 
-namespace {
-constexpr uint64_t kTriggerRxKey = 1;
-constexpr uint64_t kSessionSwitchKey = 2;
-constexpr uint64_t kFifoWatchKey = 3;
-constexpr uint64_t kQuitWatchKey = 4;
-}  // namespace
-
 RxQueue::~RxQueue() {
   // running_ is tied to the lifetime of the watch thread, it's cleared in`RxQueue::JoinThread`.
   // This assertion protects us from destruction paths where `RxQueue::JoinThread` is not called.
@@ -239,6 +232,9 @@ int RxQueue::WatchThread() {
         LOGF_ERROR("RxQueue::WatchThread port wait failed %s", zx_status_get_string(status));
         return status;
       }
+      if (parent_->evt_rx_queue_packet) {
+        parent_->evt_rx_queue_packet(packet.key);
+      }
       switch (packet.key) {
         case kQuitWatchKey:
           LOG_TRACE("RxQueue::WatchThread got quit key");
@@ -251,13 +247,14 @@ int RxQueue::WatchThread() {
                          zx_status_get_string(status));
               return status;
             }
+            waiting_on_fifo = false;
           }
           observed_fifo = parent_->primary_rx_fifo();
           LOGF_TRACE("RxQueue primary FIFO changed, valid=%d", static_cast<bool>(observed_fifo));
           break;
         case kFifoWatchKey:
           if ((packet.signal.observed & ZX_FIFO_PEER_CLOSED) || packet.status != ZX_OK) {
-            // If observing the FIFO fails, we're assuming that the sesions is being closed. We're
+            // If observing the FIFO fails, we're assuming that the session is being closed. We're
             // just going to dispose of our reference to the observed FIFO and wait for
             // `DeviceInterface` to signal us that a new primary session is available when that
             // happens.
@@ -292,7 +289,10 @@ int RxQueue::WatchThread() {
       }
       // We only need to wait on the FIFO if we didn't get enough buffers.
       // Otherwise, we'll trigger the loop again once the device calls CompleteRx.
-      should_wait_on_fifo = device_buffer_count_ < parent_->info().rx_depth;
+      //
+      // Similarly, we should not wait on the FIFO if the device has not started yet.
+      should_wait_on_fifo =
+          device_buffer_count_ < parent_->info().rx_depth && parent_->IsDataPlaneOpen();
 
       // We release the main rx queue lock before calling into the parent device,
       // so we don't cause a re-entrant deadlock.
