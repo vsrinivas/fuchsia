@@ -1318,7 +1318,7 @@ class Interface final {
   // event comment #3
   static zx_status_t SendOnEventEvent(::zx::unowned_channel _channel);
 
-  class EventSender;
+  class WeakEventSender;
 };
 
 // service comment #1
@@ -1531,7 +1531,7 @@ class Interface::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
-class Interface::EventSender {
+class Interface::WeakEventSender {
  public:
   zx_status_t OnEvent() const {
     if (auto _binding = binding_.lock()) {
@@ -1543,7 +1543,7 @@ class Interface::EventSender {
  private:
   friend class ::fidl::ServerBindingRef<Interface>;
 
-  explicit EventSender(
+  explicit WeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 

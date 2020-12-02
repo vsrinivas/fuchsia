@@ -1313,7 +1313,7 @@ class Protocol final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  class EventSender;
+  class WeakEventSender;
 };
 
 }  // namespace requestflexibleenvelope
@@ -1509,12 +1509,12 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
-class Protocol::EventSender {
+class Protocol::WeakEventSender {
  public:
  private:
   friend class ::fidl::ServerBindingRef<Protocol>;
 
-  explicit EventSender(
+  explicit WeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 

@@ -974,7 +974,7 @@ class ExampleProtocol final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  class EventSender;
+  class WeakEventSender;
 };
 
 }  // namespace placementofattributes
@@ -1091,12 +1091,12 @@ class ExampleProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
-class ExampleProtocol::EventSender {
+class ExampleProtocol::WeakEventSender {
  public:
  private:
   friend class ::fidl::ServerBindingRef<ExampleProtocol>;
 
-  explicit EventSender(
+  explicit WeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 

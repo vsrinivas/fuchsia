@@ -891,7 +891,7 @@ class {{ .Name }} final {
     {{- end }}
   {{- end }}
 
-  class EventSender;
+  class WeakEventSender;
 };
 {{- end }}
 

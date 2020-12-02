@@ -778,7 +778,7 @@ class Example final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  class EventSender;
+  class WeakEventSender;
 };
 
 }  // namespace error
@@ -885,12 +885,12 @@ class Example::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
-class Example::EventSender {
+class Example::WeakEventSender {
  public:
  private:
   friend class ::fidl::ServerBindingRef<Example>;
 
-  explicit EventSender(
+  explicit WeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 

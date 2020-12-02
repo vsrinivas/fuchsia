@@ -1499,7 +1499,7 @@ class SimpleProtocol final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  class EventSender;
+  class WeakEventSender;
 };
 
 extern "C" const fidl_type_t fidl_test_nullable_Int32WrapperTable;
@@ -1832,12 +1832,12 @@ class SimpleProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
-class SimpleProtocol::EventSender {
+class SimpleProtocol::WeakEventSender {
  public:
  private:
   friend class ::fidl::ServerBindingRef<SimpleProtocol>;
 
-  explicit EventSender(
+  explicit WeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 

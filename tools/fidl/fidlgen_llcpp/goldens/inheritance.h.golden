@@ -533,7 +533,7 @@ class super final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  class EventSender;
+  class WeakEventSender;
 };
 
 extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
@@ -1027,7 +1027,7 @@ class sub final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  class EventSender;
+  class WeakEventSender;
 };
 
 }  // namespace inheritance
@@ -1135,12 +1135,12 @@ class super::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
-class super::EventSender {
+class super::WeakEventSender {
  public:
  private:
   friend class ::fidl::ServerBindingRef<super>;
 
-  explicit EventSender(
+  explicit WeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 
@@ -1192,12 +1192,12 @@ class sub::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
-class sub::EventSender {
+class sub::WeakEventSender {
  public:
  private:
   friend class ::fidl::ServerBindingRef<sub>;
 
-  explicit EventSender(
+  explicit WeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 

@@ -312,7 +312,7 @@ class SecondProtocol final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  class EventSender;
+  class WeakEventSender;
 };
 
 extern "C" const fidl_type_t
@@ -581,7 +581,7 @@ class FirstProtocol final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  class EventSender;
+  class WeakEventSender;
 };
 
 class SingleMemberService final {
@@ -980,12 +980,12 @@ class SecondProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
-class SecondProtocol::EventSender {
+class SecondProtocol::WeakEventSender {
  public:
  private:
   friend class ::fidl::ServerBindingRef<SecondProtocol>;
 
-  explicit EventSender(
+  explicit WeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 
@@ -1012,12 +1012,12 @@ class FirstProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
-class FirstProtocol::EventSender {
+class FirstProtocol::WeakEventSender {
  public:
  private:
   friend class ::fidl::ServerBindingRef<FirstProtocol>;
 
-  explicit EventSender(
+  explicit WeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 

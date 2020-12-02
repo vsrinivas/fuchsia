@@ -1685,7 +1685,7 @@ class Transitional final {
   static zx_status_t SendEventEvent(::zx::unowned_channel _channel,
                                     ::fidl::BufferSpan _buffer, int64_t x);
 
-  class EventSender;
+  class WeakEventSender;
 };
 
 extern "C" const fidl_type_t
@@ -3013,7 +3013,7 @@ class ChannelProtocol final {
                                      ::fidl::BufferSpan _buffer, int64_t a,
                                      int64_t b);
 
-  class EventSender;
+  class WeakEventSender;
 };
 
 extern "C" const fidl_type_t
@@ -5546,7 +5546,7 @@ class WithAndWithoutRequestResponse final {
                                              ::fidl::BufferSpan _buffer,
                                              ::fidl::StringView ret);
 
-  class EventSender;
+  class WeakEventSender;
 };
 
 extern "C" const fidl_type_t
@@ -6904,7 +6904,7 @@ class WithErrorSyntax final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  class EventSender;
+  class WeakEventSender;
 };
 
 }  // namespace protocols
@@ -7534,7 +7534,7 @@ class Transitional::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
-class Transitional::EventSender {
+class Transitional::WeakEventSender {
  public:
   zx_status_t Event(int64_t x) const {
     if (auto _binding = binding_.lock()) {
@@ -7554,7 +7554,7 @@ class Transitional::EventSender {
  private:
   friend class ::fidl::ServerBindingRef<Transitional>;
 
-  explicit EventSender(
+  explicit WeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 
@@ -7652,7 +7652,7 @@ class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
-class ChannelProtocol::EventSender {
+class ChannelProtocol::WeakEventSender {
  public:
   zx_status_t EventA(int64_t a, int64_t b) const {
     if (auto _binding = binding_.lock()) {
@@ -7672,7 +7672,7 @@ class ChannelProtocol::EventSender {
  private:
   friend class ::fidl::ServerBindingRef<ChannelProtocol>;
 
-  explicit EventSender(
+  explicit WeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 
@@ -7858,7 +7858,7 @@ class WithAndWithoutRequestResponse::ClientImpl final
   AsyncEventHandlers handlers_;
 };
 
-class WithAndWithoutRequestResponse::EventSender {
+class WithAndWithoutRequestResponse::WeakEventSender {
  public:
   zx_status_t OnEmptyResponse() const {
     if (auto _binding = binding_.lock()) {
@@ -7886,7 +7886,7 @@ class WithAndWithoutRequestResponse::EventSender {
  private:
   friend class ::fidl::ServerBindingRef<WithAndWithoutRequestResponse>;
 
-  explicit EventSender(
+  explicit WeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 
@@ -7998,12 +7998,12 @@ class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
-class WithErrorSyntax::EventSender {
+class WithErrorSyntax::WeakEventSender {
  public:
  private:
   friend class ::fidl::ServerBindingRef<WithErrorSyntax>;
 
-  explicit EventSender(
+  explicit WeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 

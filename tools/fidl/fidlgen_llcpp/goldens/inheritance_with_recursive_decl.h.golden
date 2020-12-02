@@ -341,7 +341,7 @@ class Parent final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  class EventSender;
+  class WeakEventSender;
 };
 
 extern "C" const fidl_type_t
@@ -861,7 +861,7 @@ class Child final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  class EventSender;
+  class WeakEventSender;
 };
 
 }  // namespace inheritancewithrecursivedecl
@@ -955,12 +955,12 @@ class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
-class Parent::EventSender {
+class Parent::WeakEventSender {
  public:
  private:
   friend class ::fidl::ServerBindingRef<Parent>;
 
-  explicit EventSender(
+  explicit WeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 
@@ -1001,12 +1001,12 @@ class Child::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
-class Child::EventSender {
+class Child::WeakEventSender {
  public:
  private:
   friend class ::fidl::ServerBindingRef<Child>;
 
-  explicit EventSender(
+  explicit WeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 

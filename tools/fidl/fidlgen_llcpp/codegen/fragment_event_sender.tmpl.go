@@ -6,7 +6,7 @@ package codegen
 
 const fragmentEventSenderTmpl = `
 {{- define "EventSenderDeclaration" }}
-class {{ .Name }}::EventSender {
+class {{ .Name }}::WeakEventSender {
  public:
   {{- range .Events }}
   zx_status_t {{ .Name }}({{ template "Params" .Response }}) const {
@@ -31,7 +31,7 @@ class {{ .Name }}::EventSender {
  private:
   friend class ::fidl::ServerBindingRef<{{ .Name }}>;
 
-  explicit EventSender(std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
+  explicit WeakEventSender(std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
       : binding_(std::move(binding)) {}
 
   std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
