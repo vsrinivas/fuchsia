@@ -8,7 +8,11 @@ use log::error;
 use {
     super::{
         config::DiagnosticData,
-        metrics::{Fetcher, FileDataFetcher, Metric, MetricState, MetricValue, Metrics},
+        metrics::{
+            fetch::{Fetcher, FileDataFetcher},
+            metric_value::MetricValue,
+            Metric, MetricState, Metrics,
+        },
         plugins::{register_plugins, Plugin},
     },
     serde::{self, Deserialize},

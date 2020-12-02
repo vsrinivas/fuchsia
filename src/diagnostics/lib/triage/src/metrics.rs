@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod fetch;
-pub mod variable;
+pub(crate) mod fetch;
+pub(crate) mod metric_value;
+pub(crate) mod parse;
+pub(crate) mod variable;
 
 use {
-    super::config::{self, DataFetcher, DiagnosticData, Source},
-    diagnostics_hierarchy::{ArrayContent, Property as DiagnosticProperty},
-    fetch::{InspectFetcher, KeyValueFetcher, SelectorString, SelectorType, TextFetcher},
-    lazy_static::lazy_static,
+    fetch::{Fetcher, FileDataFetcher, SelectorString, TrialDataFetcher},
+    metric_value::MetricValue,
     serde::{Deserialize, Deserializer},
-    serde_json::Value as JsonValue,
     std::{clone::Clone, cmp::min, collections::HashMap, convert::TryFrom},
     variable::VariableName,
 };
@@ -64,273 +63,6 @@ pub struct MetricState<'a> {
     pub metrics: &'a Metrics,
     pub fetcher: Fetcher<'a>,
     now: Option<i64>,
-}
-
-/// [Fetcher] is a source of values to feed into the calculations. It may contain data either
-/// from snapshot.zip files (e.g. inspect.json data that can be accessed via "select" entries)
-/// or supplied in the specification of a trial.
-pub enum Fetcher<'a> {
-    FileData(FileDataFetcher<'a>),
-    TrialData(TrialDataFetcher<'a>),
-}
-
-/// [FileDataFetcher] contains fetchers for data in snapshot.zip files.
-#[derive(Clone)]
-pub struct FileDataFetcher<'a> {
-    pub inspect: &'a InspectFetcher,
-    pub syslog: &'a TextFetcher,
-    pub klog: &'a TextFetcher,
-    pub bootlog: &'a TextFetcher,
-    pub annotations: &'a KeyValueFetcher,
-}
-
-impl<'a> FileDataFetcher<'a> {
-    pub fn new(data: &'a Vec<DiagnosticData>) -> FileDataFetcher<'a> {
-        let mut fetcher = FileDataFetcher {
-            inspect: InspectFetcher::ref_empty(),
-            syslog: TextFetcher::ref_empty(),
-            klog: TextFetcher::ref_empty(),
-            bootlog: TextFetcher::ref_empty(),
-            annotations: KeyValueFetcher::ref_empty(),
-        };
-        for DiagnosticData { source, data, .. } in data.iter() {
-            match source {
-                Source::Inspect => {
-                    if let DataFetcher::Inspect(data) = data {
-                        fetcher.inspect = data;
-                    }
-                }
-                Source::Syslog => {
-                    if let DataFetcher::Text(data) = data {
-                        fetcher.syslog = data;
-                    }
-                }
-                Source::Klog => {
-                    if let DataFetcher::Text(data) = data {
-                        fetcher.klog = data;
-                    }
-                }
-                Source::Bootlog => {
-                    if let DataFetcher::Text(data) = data {
-                        fetcher.bootlog = data;
-                    }
-                }
-                Source::Annotations => {
-                    if let DataFetcher::KeyValue(data) = data {
-                        fetcher.annotations = data;
-                    }
-                }
-            }
-        }
-        fetcher
-    }
-
-    fn fetch(&self, selector: &SelectorString) -> MetricValue {
-        match selector.selector_type {
-            // Selectors return a vector. Non-wildcarded Inspect selectors will return a
-            // single element, except in the case of multiple components with the same
-            // entry in the "moniker" field, where multiple matches are possible.
-            SelectorType::Inspect => MetricValue::Vector(self.inspect.fetch(&selector)),
-        }
-    }
-
-    // Return a vector of errors encountered by contained fetchers.
-    pub fn errors(&self) -> Vec<String> {
-        self.inspect.component_errors.iter().map(|e| format!("{}", e)).collect()
-    }
-}
-
-/// [TrialDataFetcher] stores the key-value lookup for metric names whose values are given as
-/// part of a trial (under the "test" section of the .triage files).
-#[derive(Clone)]
-pub struct TrialDataFetcher<'a> {
-    values: &'a HashMap<String, JsonValue>,
-    klog: &'a TextFetcher,
-    syslog: &'a TextFetcher,
-    bootlog: &'a TextFetcher,
-    annotations: &'a KeyValueFetcher,
-}
-
-lazy_static! {
-    static ref EMPTY_JSONVALUES: HashMap<String, JsonValue> = HashMap::new();
-}
-
-impl<'a> TrialDataFetcher<'a> {
-    pub fn new(values: &'a HashMap<String, JsonValue>) -> TrialDataFetcher<'a> {
-        TrialDataFetcher {
-            values,
-            klog: TextFetcher::ref_empty(),
-            syslog: TextFetcher::ref_empty(),
-            bootlog: TextFetcher::ref_empty(),
-            annotations: KeyValueFetcher::ref_empty(),
-        }
-    }
-
-    pub fn new_empty() -> TrialDataFetcher<'static> {
-        TrialDataFetcher {
-            values: &EMPTY_JSONVALUES,
-            klog: TextFetcher::ref_empty(),
-            syslog: TextFetcher::ref_empty(),
-            bootlog: TextFetcher::ref_empty(),
-            annotations: KeyValueFetcher::ref_empty(),
-        }
-    }
-
-    pub fn set_syslog(&mut self, fetcher: &'a TextFetcher) {
-        self.syslog = fetcher;
-    }
-
-    pub fn set_klog(&mut self, fetcher: &'a TextFetcher) {
-        self.klog = fetcher;
-    }
-
-    pub fn set_bootlog(&mut self, fetcher: &'a TextFetcher) {
-        self.bootlog = fetcher;
-    }
-
-    pub fn set_annotations(&mut self, fetcher: &'a KeyValueFetcher) {
-        self.annotations = fetcher;
-    }
-
-    fn fetch(&self, name: &str) -> MetricValue {
-        match self.values.get(name) {
-            Some(value) => MetricValue::from(value),
-            None => MetricValue::Missing(format!("Value {} not overridden in test", name)),
-        }
-    }
-
-    fn has_entry(&self, name: &str) -> bool {
-        self.values.contains_key(name)
-    }
-}
-
-/// The calculated or selected value of a Metric.
-///
-/// Missing means that the value could not be calculated; its String tells
-/// the reason.
-#[derive(Deserialize, Debug, Clone)]
-pub enum MetricValue {
-    // Ensure every variant of MetricValue is tested in metric_value_traits().
-    // TODO(cphoenix): Support u64.
-    Int(i64),
-    Float(f64),
-    String(String),
-    Bool(bool),
-    Vector(Vec<MetricValue>),
-    Bytes(Vec<u8>),
-    Missing(String),
-    Lambda(Box<Lambda>),
-}
-
-impl PartialEq for MetricValue {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (MetricValue::Int(l), MetricValue::Int(r)) => l == r,
-            (MetricValue::Float(l), MetricValue::Float(r)) => l == r,
-            (MetricValue::Bytes(l), MetricValue::Bytes(r)) => l == r,
-            (MetricValue::Int(l), MetricValue::Float(r)) => *l as f64 == *r,
-            (MetricValue::Float(l), MetricValue::Int(r)) => *l == *r as f64,
-            (MetricValue::String(l), MetricValue::String(r)) => l == r,
-            (MetricValue::Bool(l), MetricValue::Bool(r)) => l == r,
-            (MetricValue::Vector(l), MetricValue::Vector(r)) => l == r,
-            _ => false,
-        }
-    }
-}
-
-impl Eq for MetricValue {}
-
-impl std::fmt::Display for MetricValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &*self {
-            MetricValue::Int(n) => write!(f, "Int({})", n),
-            MetricValue::Float(n) => write!(f, "Float({})", n),
-            MetricValue::Bool(n) => write!(f, "Bool({})", n),
-            MetricValue::String(n) => write!(f, "String({})", n),
-            MetricValue::Vector(n) => write!(f, "Vector({:?})", n),
-            MetricValue::Bytes(n) => write!(f, "Bytes({:?})", n),
-            MetricValue::Missing(n) => write!(f, "Missing({})", n),
-            MetricValue::Lambda(n) => write!(f, "Fn({:?})", n),
-        }
-    }
-}
-
-impl Into<MetricValue> for f64 {
-    fn into(self) -> MetricValue {
-        MetricValue::Float(self)
-    }
-}
-
-impl Into<MetricValue> for i64 {
-    fn into(self) -> MetricValue {
-        MetricValue::Int(self)
-    }
-}
-
-impl From<DiagnosticProperty> for MetricValue {
-    fn from(property: DiagnosticProperty) -> Self {
-        match property {
-            DiagnosticProperty::String(_name, value) => Self::String(value),
-            DiagnosticProperty::Bytes(_name, value) => Self::Bytes(value),
-            DiagnosticProperty::Int(_name, value) => Self::Int(value),
-            DiagnosticProperty::Uint(_name, value) => Self::Int(value as i64),
-            DiagnosticProperty::Double(_name, value) => Self::Float(value),
-            DiagnosticProperty::Bool(_name, value) => Self::Bool(value),
-            // TODO(cphoenix): Figure out what to do about histograms.
-            DiagnosticProperty::DoubleArray(_name, ArrayContent::Values(values)) => {
-                Self::Vector(map_vec(&values, |value| Self::Float(*value)))
-            }
-            DiagnosticProperty::IntArray(_name, ArrayContent::Values(values)) => {
-                Self::Vector(map_vec(&values, |value| Self::Int(*value)))
-            }
-            DiagnosticProperty::UintArray(_name, ArrayContent::Values(values)) => {
-                Self::Vector(map_vec(&values, |value| Self::Int(*value as i64)))
-            }
-            DiagnosticProperty::DoubleArray(_name, ArrayContent::Buckets(_))
-            | DiagnosticProperty::IntArray(_name, ArrayContent::Buckets(_))
-            | DiagnosticProperty::UintArray(_name, ArrayContent::Buckets(_)) => {
-                Self::Missing("Histograms aren't supported (yet)".to_string())
-            }
-        }
-    }
-}
-
-impl From<JsonValue> for MetricValue {
-    fn from(value: JsonValue) -> Self {
-        match value {
-            JsonValue::String(value) => Self::String(value),
-            JsonValue::Bool(value) => Self::Bool(value),
-            JsonValue::Number(_) => Self::from(&value),
-            JsonValue::Array(values) => {
-                Self::Vector(values.into_iter().map(|v| Self::from(v)).collect())
-            }
-            _ => Self::Missing("Unsupported JSON type".to_owned()),
-        }
-    }
-}
-
-impl From<&JsonValue> for MetricValue {
-    fn from(value: &JsonValue) -> Self {
-        match value {
-            JsonValue::String(value) => Self::String(value.clone()),
-            JsonValue::Bool(value) => Self::Bool(*value),
-            JsonValue::Number(value) => {
-                if value.is_i64() {
-                    Self::Int(value.as_i64().unwrap())
-                } else if value.is_u64() {
-                    Self::Int(value.as_u64().unwrap() as i64)
-                } else if value.is_f64() {
-                    Self::Float(value.as_f64().unwrap())
-                } else {
-                    Self::Missing("Unable to convert JSON number".to_owned())
-                }
-            }
-            JsonValue::Array(values) => {
-                Self::Vector(values.iter().map(|v| Self::from(v)).collect())
-            }
-            _ => Self::Missing("Unsupported JSON type".to_owned()),
-        }
-    }
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
@@ -641,7 +373,7 @@ impl<'a> MetricState<'a> {
     }
 
     fn evaluate_value(&self, namespace: &str, expression: &str) -> MetricValue {
-        match config::parse::parse_expression(expression) {
+        match parse::parse_expression(expression) {
             Ok(expr) => self.evaluate(namespace, &expr),
             Err(e) => MetricValue::Missing(format!("Expression parse error\n{}", e)),
         }
@@ -649,7 +381,7 @@ impl<'a> MetricState<'a> {
 
     /// Evaluate an Expression which contains only base values, not referring to other Metrics.
     pub fn evaluate_math(expr: &str) -> MetricValue {
-        let parsed = match config::parse::parse_expression(expr) {
+        let parsed = match parse::parse_expression(expr) {
             Ok(p) => p,
             Err(err) => {
                 return MetricValue::Missing(format!("Failed to parse '{}': {}", expr, err))
@@ -1202,9 +934,9 @@ impl<'a> MetricState<'a> {
 pub(crate) mod test {
     use super::*;
     use {
+        crate::config::{DiagnosticData, Source},
         anyhow::Error,
         lazy_static::lazy_static,
-        serde_json::{json, Number as JsonNumber},
     };
 
     /// Missing should never equal anything, even an identical Missing. Code (tests) can use
@@ -1219,130 +951,7 @@ pub(crate) mod test {
         };
     }
 
-    #[test]
-    fn test_equality() {
-        // Equal Value, Equal Type
-        assert_eq!(MetricValue::Int(1), MetricValue::Int(1));
-        assert_eq!(MetricValue::Float(1.0), MetricValue::Float(1.0));
-        assert_eq!(MetricValue::String("A".to_string()), MetricValue::String("A".to_string()));
-        assert_eq!(MetricValue::Bool(true), MetricValue::Bool(true));
-        assert_eq!(MetricValue::Bool(false), MetricValue::Bool(false));
-        assert_eq!(
-            MetricValue::Vector(vec![
-                MetricValue::Int(1),
-                MetricValue::Float(1.0),
-                MetricValue::String("A".to_string()),
-                MetricValue::Bool(true),
-            ]),
-            MetricValue::Vector(vec![
-                MetricValue::Int(1),
-                MetricValue::Float(1.0),
-                MetricValue::String("A".to_string()),
-                MetricValue::Bool(true),
-            ])
-        );
-        assert_eq!(MetricValue::Bytes(vec![1, 2, 3]), MetricValue::Bytes(vec![1, 2, 3]));
-
-        // Floats and ints interconvert. Test both ways for full code coverage.
-        assert_eq!(MetricValue::Int(1), MetricValue::Float(1.0));
-        assert_eq!(MetricValue::Float(1.0), MetricValue::Int(1));
-
-        // Numbers, vectors, and byte arrays do not interconvert when compared with Rust ==.
-        // Note, though, that the expression "1 == [1]" will evaluate to true.
-        assert!(MetricValue::Int(1) != MetricValue::Vector(vec![MetricValue::Int(1)]));
-        assert!(MetricValue::Bytes(vec![1]) != MetricValue::Vector(vec![MetricValue::Int(1)]));
-        assert!(MetricValue::Int(1) != MetricValue::Bytes(vec![1]));
-
-        // Nested array
-        assert_eq!(
-            MetricValue::Vector(vec![
-                MetricValue::Int(1),
-                MetricValue::Float(1.0),
-                MetricValue::String("A".to_string()),
-                MetricValue::Bool(true),
-            ]),
-            MetricValue::Vector(vec![
-                MetricValue::Int(1),
-                MetricValue::Float(1.0),
-                MetricValue::String("A".to_string()),
-                MetricValue::Bool(true),
-            ])
-        );
-
-        // Missing should never be equal
-        assert!(MetricValue::Missing("err".to_string()) != MetricValue::Missing("err".to_string()));
-        // Use assert_missing() macro to test error messages.
-        assert_missing!(MetricValue::Missing("err".to_string()), "err");
-
-        // We don't have a contract for Lambda equality. We probably don't need one.
-    }
-
-    #[test]
-    fn test_inequality() {
-        // Different Value, Equal Type
-        assert_ne!(MetricValue::Int(1), MetricValue::Int(2));
-        assert_ne!(MetricValue::Float(1.0), MetricValue::Float(2.0));
-        assert_ne!(MetricValue::String("A".to_string()), MetricValue::String("B".to_string()));
-        assert_ne!(MetricValue::Bool(true), MetricValue::Bool(false));
-        assert_ne!(
-            MetricValue::Vector(vec![
-                MetricValue::Int(1),
-                MetricValue::Float(1.0),
-                MetricValue::String("A".to_string()),
-                MetricValue::Bool(true),
-            ]),
-            MetricValue::Vector(vec![
-                MetricValue::Int(2),
-                MetricValue::Float(2.0),
-                MetricValue::String("B".to_string()),
-                MetricValue::Bool(false),
-            ])
-        );
-
-        // Different Type
-        assert_ne!(MetricValue::Int(2), MetricValue::Float(1.0));
-        assert_ne!(MetricValue::Int(1), MetricValue::String("A".to_string()));
-        assert_ne!(MetricValue::Int(1), MetricValue::Bool(true));
-        assert_ne!(MetricValue::Float(1.0), MetricValue::String("A".to_string()));
-        assert_ne!(MetricValue::Float(1.0), MetricValue::Bool(true));
-        assert_ne!(MetricValue::String("A".to_string()), MetricValue::Bool(true));
-    }
-
-    #[test]
-    fn test_fmt() {
-        assert_eq!(format!("{}", MetricValue::Int(3)), "Int(3)");
-        assert_eq!(format!("{}", MetricValue::Float(3.5)), "Float(3.5)");
-        assert_eq!(format!("{}", MetricValue::Bool(true)), "Bool(true)");
-        assert_eq!(format!("{}", MetricValue::Bool(false)), "Bool(false)");
-        assert_eq!(format!("{}", MetricValue::String("cat".to_string())), "String(cat)");
-        assert_eq!(
-            format!("{}", MetricValue::Vector(vec![MetricValue::Int(1), MetricValue::Float(2.5)])),
-            "Vector([Int(1), Float(2.5)])"
-        );
-        assert_eq!(format!("{}", MetricValue::Bytes(vec![1u8, 2u8])), "Bytes([1, 2])");
-        assert_eq!(
-            format!("{}", MetricValue::Missing("Where is Waldo?".to_string())),
-            "Missing(Where is Waldo?)"
-        );
-    }
-
     lazy_static! {
-        static ref LOCAL_M: HashMap<String, JsonValue> = {
-            let mut m = HashMap::new();
-            m.insert("foo".to_owned(), JsonValue::try_from(42).unwrap());
-            m.insert("a::b".to_owned(), JsonValue::try_from(7).unwrap());
-            m
-        };
-        static ref FOO_42_AB_7_TRIAL_FETCHER: TrialDataFetcher<'static> =
-            TrialDataFetcher::new(&LOCAL_M);
-        static ref LOCAL_F: Vec<DiagnosticData> = {
-            let s = r#"[{
-                "data_source": "Inspect",
-                "moniker": "bar.cmx",
-                "payload": { "root": { "bar": 99 }}
-            }]"#;
-            vec![DiagnosticData::new("i".to_string(), Source::Inspect, s.to_string()).unwrap()]
-        };
         static ref EMPTY_F: Vec<DiagnosticData> = {
             let s = r#"[]"#;
             vec![DiagnosticData::new("i".to_string(), Source::Inspect, s.to_string()).unwrap()]
@@ -1351,150 +960,9 @@ pub(crate) mod test {
             let s = r#"[{"moniker": "abcd", "payload": null}]"#;
             vec![DiagnosticData::new("i".to_string(), Source::Inspect, s.to_string()).unwrap()]
         };
-        static ref BAR_99_FILE_FETCHER: FileDataFetcher<'static> = FileDataFetcher::new(&LOCAL_F);
         static ref EMPTY_FILE_FETCHER: FileDataFetcher<'static> = FileDataFetcher::new(&EMPTY_F);
         static ref NO_PAYLOAD_FETCHER: FileDataFetcher<'static> =
             FileDataFetcher::new(&NO_PAYLOAD_F);
-        static ref BAR_SELECTOR: SelectorString =
-            SelectorString::try_from("INSPECT:bar.cmx:root:bar".to_owned()).unwrap();
-        static ref WRONG_SELECTOR: SelectorString =
-            SelectorString::try_from("INSPECT:bar.cmx:root:oops".to_owned()).unwrap();
-    }
-
-    // Unlike the assert_missing macro, this matches any Missing() regardless of its payload
-    // message. It flags `message` if `value` is not Missing(_).
-    fn require_missing(value: MetricValue, message: &'static str) {
-        match value {
-            MetricValue::Missing(_) => {}
-            _ => assert!(false, message),
-        }
-    }
-
-    #[test]
-    fn test_file_fetch() {
-        assert_eq!(
-            BAR_99_FILE_FETCHER.fetch(&BAR_SELECTOR),
-            MetricValue::Vector(vec![MetricValue::Int(99)])
-        );
-        assert_eq!(BAR_99_FILE_FETCHER.fetch(&WRONG_SELECTOR), MetricValue::Vector(vec![]),);
-    }
-
-    #[test]
-    fn test_trial_fetch() {
-        assert!(FOO_42_AB_7_TRIAL_FETCHER.has_entry("foo"));
-        assert!(FOO_42_AB_7_TRIAL_FETCHER.has_entry("a::b"));
-        assert!(!FOO_42_AB_7_TRIAL_FETCHER.has_entry("a:b"));
-        assert!(!FOO_42_AB_7_TRIAL_FETCHER.has_entry("oops"));
-        assert_eq!(FOO_42_AB_7_TRIAL_FETCHER.fetch("foo"), MetricValue::Int(42));
-        require_missing(
-            FOO_42_AB_7_TRIAL_FETCHER.fetch("oops"),
-            "Trial fetcher found bogus selector",
-        );
-    }
-
-    macro_rules! variable {
-        ($name:expr) => {
-            &VariableName::new($name.to_string())
-        };
-    }
-
-    #[test]
-    fn test_eval_with_file() {
-        let mut file_map = HashMap::new();
-        file_map.insert("bar".to_owned(), Metric::Selector(BAR_SELECTOR.clone()));
-        file_map.insert("bar_plus_one".to_owned(), Metric::Eval("bar+1".to_owned()));
-        file_map.insert("oops_plus_one".to_owned(), Metric::Eval("oops+1".to_owned()));
-        let mut other_file_map = HashMap::new();
-        other_file_map.insert("bar".to_owned(), Metric::Eval("42".to_owned()));
-        let mut metrics = HashMap::new();
-        metrics.insert("bar_file".to_owned(), file_map);
-        metrics.insert("other_file".to_owned(), other_file_map);
-        let file_state =
-            MetricState::new(&metrics, Fetcher::FileData(BAR_99_FILE_FETCHER.clone()), None);
-        assert_eq!(
-            file_state.evaluate_variable("bar_file", variable!("bar_plus_one")),
-            MetricValue::Int(100)
-        );
-        require_missing(
-            file_state.evaluate_variable("bar_file", variable!("oops_plus_one")),
-            "File found nonexistent name",
-        );
-        assert_eq!(
-            file_state.evaluate_variable("bar_file", variable!("bar")),
-            MetricValue::Vector(vec![MetricValue::Int(99)])
-        );
-        assert_eq!(
-            file_state.evaluate_variable("other_file", variable!("bar")),
-            MetricValue::Int(42)
-        );
-        assert_eq!(
-            file_state.evaluate_variable("other_file", variable!("other_file::bar")),
-            MetricValue::Int(42)
-        );
-        assert_eq!(
-            file_state.evaluate_variable("other_file", variable!("bar_file::bar")),
-            MetricValue::Vector(vec![MetricValue::Int(99)])
-        );
-        require_missing(
-            file_state.evaluate_variable("other_file", variable!("bar_plus_one")),
-            "Shouldn't have found bar_plus_one in other_file",
-        );
-        require_missing(
-            file_state.evaluate_variable("missing_file", variable!("bar_plus_one")),
-            "Shouldn't have found bar_plus_one in missing_file",
-        );
-        require_missing(
-            file_state.evaluate_variable("bar_file", variable!("other_file::bar_plus_one")),
-            "Shouldn't have found other_file::bar_plus_one",
-        );
-    }
-
-    #[test]
-    fn test_eval_with_trial() {
-        let mut trial_map = HashMap::new();
-        // The (broken) "foo" selector should be ignored in favor of the "foo" fetched value.
-        trial_map.insert("foo".to_owned(), Metric::Selector(BAR_SELECTOR.clone()));
-        trial_map.insert("foo_plus_one".to_owned(), Metric::Eval("foo+1".to_owned()));
-        trial_map.insert("oops_plus_one".to_owned(), Metric::Eval("oops+1".to_owned()));
-        trial_map.insert("ab_plus_one".to_owned(), Metric::Eval("a::b+1".to_owned()));
-        trial_map.insert("ac_plus_one".to_owned(), Metric::Eval("a::c+1".to_owned()));
-        // The file "a" should be completely ignored when testing foo_file.
-        let mut a_map = HashMap::new();
-        a_map.insert("b".to_owned(), Metric::Eval("2".to_owned()));
-        a_map.insert("c".to_owned(), Metric::Eval("3".to_owned()));
-        a_map.insert("foo".to_owned(), Metric::Eval("4".to_owned()));
-        let mut metrics = HashMap::new();
-        metrics.insert("foo_file".to_owned(), trial_map);
-        metrics.insert("a".to_owned(), a_map);
-        let trial_state =
-            MetricState::new(&metrics, Fetcher::TrialData(FOO_42_AB_7_TRIAL_FETCHER.clone()), None);
-        // foo from values shadows foo selector.
-        assert_eq!(
-            trial_state.evaluate_variable("foo_file", variable!("foo")),
-            MetricValue::Int(42)
-        );
-        // Value shadowing also works in expressions.
-        assert_eq!(
-            trial_state.evaluate_variable("foo_file", variable!("foo_plus_one")),
-            MetricValue::Int(43)
-        );
-        // foo can shadow eval as well as selector.
-        assert_eq!(trial_state.evaluate_variable("a", variable!("foo")), MetricValue::Int(42));
-        // A value that's not there should be "Missing" (e.g. not crash)
-        require_missing(
-            trial_state.evaluate_variable("foo_file", variable!("oops_plus_one")),
-            "Trial found nonexistent name",
-        );
-        // a::b ignores the "b" in file "a" and uses "a::b" from values.
-        assert_eq!(
-            trial_state.evaluate_variable("foo_file", variable!("ab_plus_one")),
-            MetricValue::Int(8)
-        );
-        // a::c should return Missing, not look up c in file a.
-        require_missing(
-            trial_state.evaluate_variable("foo_file", variable!("ac_plus_one")),
-            "Trial should not have read c from file a",
-        );
     }
 
     #[test]
@@ -1708,119 +1176,6 @@ pub(crate) mod test {
         );
     }
 
-    #[test]
-    fn metric_value_from_json() {
-        /*
-            JSON subtypes:
-                Bool(bool),
-                Number(Number),
-                String(String),
-                Array(Vec<Value>),
-                Object(Map<String, Value>),
-        */
-        macro_rules! test_from {
-            ($json:path, $metric:path, $value:expr) => {
-                test_from_to!($json, $metric, $value, $value);
-            };
-        }
-        macro_rules! test_from_int {
-            ($json:path, $metric:path, $value:expr) => {
-                test_from_to!($json, $metric, JsonNumber::from($value), $value);
-            };
-        }
-        macro_rules! test_from_float {
-            ($json:path, $metric:path, $value:expr) => {
-                test_from_to!($json, $metric, JsonNumber::from_f64($value).unwrap(), $value);
-            };
-        }
-        macro_rules! test_from_to {
-            ($json:path, $metric:path, $json_value:expr, $metric_value:expr) => {
-                let metric_value = $metric($metric_value);
-                let json_value = $json($json_value);
-                assert_eq!(metric_value, MetricValue::from(json_value));
-            };
-        }
-        test_from!(JsonValue::String, MetricValue::String, "Hi World".to_string());
-        test_from_int!(JsonValue::Number, MetricValue::Int, 3);
-        test_from_int!(JsonValue::Number, MetricValue::Int, std::i64::MAX);
-        test_from_int!(JsonValue::Number, MetricValue::Int, std::i64::MIN);
-        test_from_to!(JsonValue::Number, MetricValue::Int, JsonNumber::from(std::u64::MAX), -1);
-        test_from_float!(JsonValue::Number, MetricValue::Float, 3.14);
-        test_from_float!(JsonValue::Number, MetricValue::Float, std::f64::MAX);
-        test_from_float!(JsonValue::Number, MetricValue::Float, std::f64::MIN);
-        test_from!(JsonValue::Bool, MetricValue::Bool, true);
-        test_from!(JsonValue::Bool, MetricValue::Bool, false);
-        let json_vec = vec![json!(1), json!(2), json!(3)];
-        let metric_vec = vec![MetricValue::Int(1), MetricValue::Int(2), MetricValue::Int(3)];
-        test_from_to!(JsonValue::Array, MetricValue::Vector, json_vec, metric_vec);
-        assert_missing!(
-            MetricValue::from(JsonValue::Object(serde_json::Map::new())),
-            "Unsupported JSON type"
-        );
-    }
-
-    #[test]
-    fn metric_value_from_diagnostic_property() {
-        /*
-            DiagnosticProperty subtypes:
-                String(Key, String),
-                Bytes(Key, Vec<u8>),
-                Int(Key, i64),
-                Uint(Key, u64),
-                Double(Key, f64),
-                Bool(Key, bool),
-                DoubleArray(Key, ArrayContent<f64>),
-                IntArray(Key, ArrayContent<i64>),
-                UintArray(Key, ArrayContent<u64>),
-        */
-        macro_rules! test_from {
-            ($diagnostic:path, $metric:path, $value:expr) => {
-                test_from_to!($diagnostic, $metric, $value, $value);
-            };
-        }
-        macro_rules! test_from_to {
-            ($diagnostic:path, $metric:path, $diagnostic_value:expr, $metric_value:expr) => {
-                assert_eq!(
-                    $metric($metric_value),
-                    MetricValue::from($diagnostic("foo".to_string(), $diagnostic_value))
-                );
-            };
-        }
-        test_from!(DiagnosticProperty::String, MetricValue::String, "Hi World".to_string());
-        test_from!(DiagnosticProperty::Bytes, MetricValue::Bytes, vec![1, 2, 3]);
-        test_from!(DiagnosticProperty::Int, MetricValue::Int, 3);
-        test_from!(DiagnosticProperty::Int, MetricValue::Int, std::i64::MAX);
-        test_from!(DiagnosticProperty::Int, MetricValue::Int, std::i64::MIN);
-        test_from!(DiagnosticProperty::Uint, MetricValue::Int, 3);
-        test_from_to!(DiagnosticProperty::Uint, MetricValue::Int, std::u64::MAX, -1);
-        test_from!(DiagnosticProperty::Double, MetricValue::Float, 3.14);
-        test_from!(DiagnosticProperty::Double, MetricValue::Float, std::f64::MAX);
-        test_from!(DiagnosticProperty::Double, MetricValue::Float, std::f64::MIN);
-        test_from!(DiagnosticProperty::Bool, MetricValue::Bool, true);
-        test_from!(DiagnosticProperty::Bool, MetricValue::Bool, false);
-        let diagnostic_array = ArrayContent::Values(vec![1.5, 2.5, 3.5]);
-        test_from_to!(
-            DiagnosticProperty::DoubleArray,
-            MetricValue::Vector,
-            diagnostic_array,
-            vec![MetricValue::Float(1.5), MetricValue::Float(2.5), MetricValue::Float(3.5)]
-        );
-        let diagnostic_array = ArrayContent::Values(vec![1, 2, 3]);
-        test_from_to!(
-            DiagnosticProperty::IntArray,
-            MetricValue::Vector,
-            diagnostic_array,
-            vec![MetricValue::Int(1), MetricValue::Int(2), MetricValue::Int(3)]
-        );
-        let diagnostic_array = ArrayContent::Values(vec![1, 2, 3]);
-        test_from_to!(
-            DiagnosticProperty::UintArray,
-            MetricValue::Vector,
-            diagnostic_array,
-            vec![MetricValue::Int(1), MetricValue::Int(2), MetricValue::Int(3)]
-        );
-    }
-
     // TODO(fxbug.dev/58922): Modify or probably delete this function after better error design.
     #[test]
     fn test_missing_hacks() -> Result<(), Error> {
@@ -1846,7 +1201,7 @@ pub(crate) mod test {
             MetricState::new(&metrics, Fetcher::FileData(FileDataFetcher::new(&files)), Some(1234));
         let state_missing =
             MetricState::new(&metrics, Fetcher::FileData(FileDataFetcher::new(&files)), None);
-        let now_expression = config::parse::parse_expression("Now()").unwrap();
+        let now_expression = parse::parse_expression("Now()").unwrap();
         assert_missing!(MetricState::evaluate_math("Now()"), "No valid time available");
         assert_eq!(state_1234.evaluate_expression(&now_expression), MetricValue::Int(1234));
         assert_missing!(

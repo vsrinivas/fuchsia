@@ -7,8 +7,9 @@ use {
         act::{Action, Actions},
         config::ParseResult,
         metrics::{
-            fetch::{KeyValueFetcher, TextFetcher},
-            Fetcher, MetricState, MetricValue, TrialDataFetcher,
+            fetch::{Fetcher, KeyValueFetcher, TextFetcher, TrialDataFetcher},
+            metric_value::MetricValue,
+            MetricState,
         },
     },
     anyhow::{bail, format_err, Error},

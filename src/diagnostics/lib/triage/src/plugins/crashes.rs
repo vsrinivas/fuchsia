@@ -4,7 +4,7 @@
 
 use {
     super::Plugin,
-    crate::{act::ActionResults, metrics::FileDataFetcher},
+    crate::{act::ActionResults, metrics::fetch::FileDataFetcher},
     regex::Regex,
 };
 

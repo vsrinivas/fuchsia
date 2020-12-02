@@ -4,7 +4,7 @@
 
 use {
     super::{helpers::analyze_logs, Plugin},
-    crate::{act::ActionResults, metrics::FileDataFetcher},
+    crate::{act::ActionResults, metrics::fetch::FileDataFetcher},
     regex::Regex,
 };
 
@@ -62,7 +62,7 @@ mod tests {
     use {
         super::RoutingErrorsPlugin,
         crate::{
-            metrics::{fetch::TextFetcher, FileDataFetcher},
+            metrics::fetch::{FileDataFetcher, TextFetcher},
             plugins::Plugin,
         },
     };

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::metrics::FileDataFetcher,
+    crate::metrics::fetch::FileDataFetcher,
     regex::{Match, Regex},
 };
 

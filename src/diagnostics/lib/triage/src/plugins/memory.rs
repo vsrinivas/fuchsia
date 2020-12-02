@@ -6,7 +6,10 @@ use {
     super::Plugin,
     crate::{
         act::ActionResults,
-        metrics::{fetch::SelectorString, FileDataFetcher, MetricValue},
+        metrics::{
+            fetch::{FileDataFetcher, SelectorString},
+            metric_value::MetricValue,
+        },
     },
     itertools::Itertools,
     std::convert::TryFrom,

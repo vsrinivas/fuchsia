@@ -4,7 +4,7 @@
 
 use {
     crate::act::ActionContext,
-    crate::metrics::{MetricState, MetricValue},
+    crate::metrics::{metric_value::MetricValue, MetricState},
     anyhow::{bail, Error},
     injectable_time::{MonotonicTime, TimeSource},
     regex::Regex,
