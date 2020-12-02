@@ -241,6 +241,7 @@ async fn do_client_connect(cmd: opts::ClientConnectCmd, wlan_svc: WlanSvc) -> Re
     let (local, remote) = endpoints::create_proxy()?;
     let mut req = fidl_sme::ConnectRequest {
         ssid: ssid.as_bytes().to_vec(),
+        bss_desc: None,
         credential,
         radio_cfg: fidl_sme::RadioConfig {
             override_phy: phy.is_some(),

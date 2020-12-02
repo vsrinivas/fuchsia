@@ -280,6 +280,7 @@ async fn connecting_state(
         .map_err(|e| ExitReason(Err(format_err!("Failed to create proxy: {:?}", e))))?;
     let mut sme_connect_request = fidl_sme::ConnectRequest {
         ssid: options.connect_request.network.ssid.clone(),
+        bss_desc: None,
         credential: sme_credential_from_policy(&options.connect_request.credential),
         radio_cfg: RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl(),
         deprecated_scan_type: fidl_fuchsia_wlan_common::ScanType::Active,
@@ -1568,6 +1569,7 @@ mod tests {
                         },
                         protection: fidl_sme::Protection::Unknown,
                         compatible: true,
+                        bss_desc: None,
                     }))
                 }).expect("could not send sme response");
             }
@@ -1653,6 +1655,7 @@ mod tests {
                         },
                         protection: fidl_sme::Protection::Unknown,
                         compatible: true,
+                        bss_desc: None,
                     }))
                 }).expect("could not send sme response");
             }
@@ -1715,6 +1718,7 @@ mod tests {
                         },
                         protection: fidl_sme::Protection::Unknown,
                         compatible: true,
+                        bss_desc: None,
                     }))
                 }).expect("could not send sme response");
             }
@@ -2254,6 +2258,7 @@ mod tests {
                         },
                         protection: fidl_sme::Protection::Unknown,
                         compatible: true,
+                        bss_desc: None,
                     }))
                 }).expect("could not send sme response");
             }

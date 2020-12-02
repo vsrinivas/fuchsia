@@ -460,6 +460,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa2Personal,
                 compatible: true,
+                bss_desc: None,
             };
             Box::new(bss_info)
         })

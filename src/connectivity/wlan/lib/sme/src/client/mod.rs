@@ -1623,6 +1623,7 @@ mod tests {
     fn connect_req(ssid: Ssid, credential: fidl_sme::Credential) -> fidl_sme::ConnectRequest {
         fidl_sme::ConnectRequest {
             ssid,
+            bss_desc: None,
             credential,
             radio_cfg: RadioConfig::default().to_fidl(),
             deprecated_scan_type: fidl_common::ScanType::Passive,

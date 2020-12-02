@@ -400,6 +400,7 @@ mod tests {
             },
             protection: fidl_sme::Protection::Wpa2Personal,
             compatible: true,
+            bss_desc: None,
         };
         let ap = legacy::Ap {
             bssid: vec![0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f],
@@ -467,6 +468,7 @@ mod tests {
             },
             protection,
             compatible,
+            bss_desc: None,
         }
     }
 
@@ -788,6 +790,7 @@ mod tests {
                         },
                         protection: fidl_sme::Protection::Unknown,
                         compatible: true,
+                        bss_desc: None,
                     }))
                 }).expect("could not send sme response");
             }
@@ -973,6 +976,7 @@ mod tests {
             },
             protection: fidl_sme::Protection::Unknown,
             compatible: true,
+            bss_desc: None,
         };
         assert_variant!(
             sme_response,

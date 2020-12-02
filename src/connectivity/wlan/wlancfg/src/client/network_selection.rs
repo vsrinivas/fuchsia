@@ -1285,6 +1285,7 @@ mod tests {
                         },
                         protection: fidl_sme::Protection::Wpa3Enterprise,
                         compatible: true,
+                        bss_desc: None,
                     },
                     fidl_sme::BssInfo {
                         bssid: [0, 0, 0, 0, 0, 0],
@@ -1298,6 +1299,7 @@ mod tests {
                         },
                         protection: fidl_sme::Protection::Wpa1,
                         compatible: true,
+                        bss_desc: None,
                     },
                 ];
                 // Send all the APs

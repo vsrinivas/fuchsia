@@ -13,5 +13,6 @@ pub(crate) fn clone_bss_info(bss: &fidl_sme::BssInfo) -> fidl_sme::BssInfo {
         channel: bss.channel,
         protection: bss.protection,
         compatible: bss.compatible,
+        bss_desc: bss.bss_desc.clone(),
     }
 }

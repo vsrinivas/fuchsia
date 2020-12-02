@@ -520,6 +520,7 @@ mod tests {
             let _ = self.disconnected_ifaces.pop();
             let mut req = fidl_sme::ConnectRequest {
                 ssid: connect_req.network.ssid,
+                bss_desc: None,
                 credential: sme_credential_from_policy(&connect_req.credential),
                 radio_cfg: fidl_sme::RadioConfig {
                     override_phy: false,

@@ -101,6 +101,7 @@ async fn multiple_clients_ap() {
     // Start client 1
     let mut client1_connect_req = ConnectRequest {
         ssid: SSID.to_vec(),
+        bss_desc: None,
         credential: Credential::None(fidl_sme::Empty {}),
         radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, WLANCFG_DEFAULT_AP_CHANNEL.primary)
             .to_fidl(),
@@ -134,6 +135,7 @@ async fn multiple_clients_ap() {
     // Start client 2
     let mut client2_connect_req = ConnectRequest {
         ssid: SSID.to_vec(),
+        bss_desc: None,
         credential: Credential::None(fidl_sme::Empty {}),
         radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, WLANCFG_DEFAULT_AP_CHANNEL.primary)
             .to_fidl(),

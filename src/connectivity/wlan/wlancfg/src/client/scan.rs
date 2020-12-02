@@ -494,6 +494,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
+                bss_desc: None,
             },
             fidl_sme::BssInfo {
                 bssid: [1, 2, 3, 4, 5, 6],
@@ -507,6 +508,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa2Personal,
                 compatible: true,
+                bss_desc: None,
             },
             fidl_sme::BssInfo {
                 bssid: [7, 8, 9, 10, 11, 12],
@@ -520,6 +522,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: false,
+                bss_desc: None,
             },
         ];
         // input_aps contains some duplicate SSIDs, which should be
@@ -639,6 +642,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
+                bss_desc: None,
             },
             fidl_sme::BssInfo {
                 bssid: [8, 8, 8, 8, 8, 8],
@@ -652,6 +656,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa2Personal,
                 compatible: true,
+                bss_desc: None,
             },
         ];
         let combined_internal_aps = vec![
@@ -1169,6 +1174,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
+                bss_desc: None,
             },
             fidl_sme::BssInfo {
                 bssid: [0, 0, 0, 0, 0, 0],
@@ -1182,6 +1188,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
+                bss_desc: None,
             },
         ];
 
@@ -1224,6 +1231,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
+                bss_desc: None,
             },
             fidl_sme::BssInfo {
                 bssid: [1, 2, 3, 4, 5, 6],
@@ -1237,6 +1245,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
+                bss_desc: None,
             },
         ];
 
@@ -1814,6 +1823,7 @@ mod tests {
                 6 => fidl_sme::Protection::Wpa3Enterprise,
                 _ => panic!(),
             },
+            bss_desc: None,
         }
     }
 
