@@ -11,13 +11,13 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 
 #include "max98927-registers.h"
+#include "src/media/audio/drivers/codecs/max98927/max98927_bind.h"
 
 namespace audio {
 namespace max98927 {
@@ -248,10 +248,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace max98927
 }  // namespace audio
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(max98927, audio::max98927::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MAXIM),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MAXIM_MAX98927),
-ZIRCON_DRIVER_END(max98927)
-    // clang-format on
+ZIRCON_DRIVER(max98927, audio::max98927::driver_ops, "zircon", "0.1");
