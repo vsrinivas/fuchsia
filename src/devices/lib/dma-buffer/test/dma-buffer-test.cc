@@ -62,7 +62,7 @@ zx_status_t zx_vmo_create_contiguous(zx_handle_t bti_handle, size_t size, uint32
 
 zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out) {
   zx::vmo vmo = {};
-  zx_status_t status = REAL_SYSCALL(zx_vmo_create)(size, 0, vmo.reset_and_get_address());
+  zx_status_t status = REAL_SYSCALL(zx_vmo_create)(size, options, vmo.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }
