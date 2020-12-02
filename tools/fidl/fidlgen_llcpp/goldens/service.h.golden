@@ -312,6 +312,7 @@ class SecondProtocol final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+  class EventSender;
   class WeakEventSender;
 };
 
@@ -581,6 +582,7 @@ class FirstProtocol final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+  class EventSender;
   class WeakEventSender;
 };
 
@@ -980,6 +982,21 @@ class SecondProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
+// |EventSender| owns a server endpoint of a channel speaking
+// the SecondProtocol protocol, and can send events in that protocol.
+class SecondProtocol::EventSender {
+ public:
+  // Constructs an event sender with an invalid channel.
+  EventSender() = default;
+
+  // TODO(fxbug.dev/65212): EventSender should take a ::fidl::ServerEnd.
+  explicit EventSender(::zx::channel server_end)
+      : server_end_(std::move(server_end)) {}
+
+ private:
+  ::zx::channel server_end_;
+};
+
 class SecondProtocol::WeakEventSender {
  public:
  private:
@@ -1010,6 +1027,21 @@ class FirstProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
       fidl_incoming_msg_t* msg) override;
 
   AsyncEventHandlers handlers_;
+};
+
+// |EventSender| owns a server endpoint of a channel speaking
+// the FirstProtocol protocol, and can send events in that protocol.
+class FirstProtocol::EventSender {
+ public:
+  // Constructs an event sender with an invalid channel.
+  EventSender() = default;
+
+  // TODO(fxbug.dev/65212): EventSender should take a ::fidl::ServerEnd.
+  explicit EventSender(::zx::channel server_end)
+      : server_end_(std::move(server_end)) {}
+
+ private:
+  ::zx::channel server_end_;
 };
 
 class FirstProtocol::WeakEventSender {

@@ -778,6 +778,7 @@ class Example final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+  class EventSender;
   class WeakEventSender;
 };
 
@@ -883,6 +884,21 @@ class Example::ClientImpl final : private ::fidl::internal::ClientBase {
       fidl_incoming_msg_t* msg) override;
 
   AsyncEventHandlers handlers_;
+};
+
+// |EventSender| owns a server endpoint of a channel speaking
+// the Example protocol, and can send events in that protocol.
+class Example::EventSender {
+ public:
+  // Constructs an event sender with an invalid channel.
+  EventSender() = default;
+
+  // TODO(fxbug.dev/65212): EventSender should take a ::fidl::ServerEnd.
+  explicit EventSender(::zx::channel server_end)
+      : server_end_(std::move(server_end)) {}
+
+ private:
+  ::zx::channel server_end_;
 };
 
 class Example::WeakEventSender {

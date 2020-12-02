@@ -227,6 +227,26 @@ TEST(SyncClientTest, DefaultInitializationError) {
   ASSERT_EQ(ZX_ERR_BAD_HANDLE, resp.status());
 }
 
+TEST(EventSenderTest, SendEvent) {
+  zx::channel h1, h2;
+  ASSERT_EQ(zx::channel::create(0, &h1, &h2), ZX_OK);
+  test::Frobinator::EventSender event_sender(std::move(h2));
+  ASSERT_EQ(ZX_OK, event_sender.Hrob(fidl::StringView("foo")));
+
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  bool received = false;
+  fidl::Client<test::Frobinator> client(
+      std::move(h1), loop.dispatcher(),
+      test::Frobinator::AsyncEventHandlers{.hrob = [&](test::Frobinator::HrobResponse* message) {
+        ASSERT_EQ(std::string(message->value.data(), message->value.size()), std::string("foo"));
+        received = true;
+        loop.Quit();
+      }});
+
+  loop.Run();
+  ASSERT_TRUE(received);
+}
+
 class HandleProviderServer : public test::HandleProvider::Interface {
  public:
   void GetHandle(GetHandleCompleter::Sync& completer) override {

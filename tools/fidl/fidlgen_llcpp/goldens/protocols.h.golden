@@ -1685,6 +1685,7 @@ class Transitional final {
   static zx_status_t SendEventEvent(::zx::unowned_channel _channel,
                                     ::fidl::BufferSpan _buffer, int64_t x);
 
+  class EventSender;
   class WeakEventSender;
 };
 
@@ -3013,6 +3014,7 @@ class ChannelProtocol final {
                                      ::fidl::BufferSpan _buffer, int64_t a,
                                      int64_t b);
 
+  class EventSender;
   class WeakEventSender;
 };
 
@@ -5546,6 +5548,7 @@ class WithAndWithoutRequestResponse final {
                                              ::fidl::BufferSpan _buffer,
                                              ::fidl::StringView ret);
 
+  class EventSender;
   class WeakEventSender;
 };
 
@@ -6904,6 +6907,7 @@ class WithErrorSyntax final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+  class EventSender;
   class WeakEventSender;
 };
 
@@ -7534,6 +7538,30 @@ class Transitional::ClientImpl final : private ::fidl::internal::ClientBase {
   AsyncEventHandlers handlers_;
 };
 
+// |EventSender| owns a server endpoint of a channel speaking
+// the Transitional protocol, and can send events in that protocol.
+class Transitional::EventSender {
+ public:
+  // Constructs an event sender with an invalid channel.
+  EventSender() = default;
+
+  // TODO(fxbug.dev/65212): EventSender should take a ::fidl::ServerEnd.
+  explicit EventSender(::zx::channel server_end)
+      : server_end_(std::move(server_end)) {}
+
+  zx_status_t Event(int64_t x) const {
+    return SendEventEvent(::zx::unowned_channel(server_end_), std::move(x));
+  }
+
+  zx_status_t Event(::fidl::BufferSpan _buffer, int64_t x) const {
+    return SendEventEvent(::zx::unowned_channel(server_end_),
+                          std::move(_buffer), std::move(x));
+  }
+
+ private:
+  ::zx::channel server_end_;
+};
+
 class Transitional::WeakEventSender {
  public:
   zx_status_t Event(int64_t x) const {
@@ -7650,6 +7678,31 @@ class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
       fidl_incoming_msg_t* msg) override;
 
   AsyncEventHandlers handlers_;
+};
+
+// |EventSender| owns a server endpoint of a channel speaking
+// the ChannelProtocol protocol, and can send events in that protocol.
+class ChannelProtocol::EventSender {
+ public:
+  // Constructs an event sender with an invalid channel.
+  EventSender() = default;
+
+  // TODO(fxbug.dev/65212): EventSender should take a ::fidl::ServerEnd.
+  explicit EventSender(::zx::channel server_end)
+      : server_end_(std::move(server_end)) {}
+
+  zx_status_t EventA(int64_t a, int64_t b) const {
+    return SendEventAEvent(::zx::unowned_channel(server_end_), std::move(a),
+                           std::move(b));
+  }
+
+  zx_status_t EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const {
+    return SendEventAEvent(::zx::unowned_channel(server_end_),
+                           std::move(_buffer), std::move(a), std::move(b));
+  }
+
+ private:
+  ::zx::channel server_end_;
 };
 
 class ChannelProtocol::WeakEventSender {
@@ -7858,6 +7911,37 @@ class WithAndWithoutRequestResponse::ClientImpl final
   AsyncEventHandlers handlers_;
 };
 
+// |EventSender| owns a server endpoint of a channel speaking
+// the WithAndWithoutRequestResponse protocol, and can send events in that
+// protocol.
+class WithAndWithoutRequestResponse::EventSender {
+ public:
+  // Constructs an event sender with an invalid channel.
+  EventSender() = default;
+
+  // TODO(fxbug.dev/65212): EventSender should take a ::fidl::ServerEnd.
+  explicit EventSender(::zx::channel server_end)
+      : server_end_(std::move(server_end)) {}
+
+  zx_status_t OnEmptyResponse() const {
+    return SendOnEmptyResponseEvent(::zx::unowned_channel(server_end_));
+  }
+
+  zx_status_t OnWithResponse(::fidl::StringView ret) const {
+    return SendOnWithResponseEvent(::zx::unowned_channel(server_end_),
+                                   std::move(ret));
+  }
+
+  zx_status_t OnWithResponse(::fidl::BufferSpan _buffer,
+                             ::fidl::StringView ret) const {
+    return SendOnWithResponseEvent(::zx::unowned_channel(server_end_),
+                                   std::move(_buffer), std::move(ret));
+  }
+
+ private:
+  ::zx::channel server_end_;
+};
+
 class WithAndWithoutRequestResponse::WeakEventSender {
  public:
   zx_status_t OnEmptyResponse() const {
@@ -7996,6 +8080,21 @@ class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
       fidl_incoming_msg_t* msg) override;
 
   AsyncEventHandlers handlers_;
+};
+
+// |EventSender| owns a server endpoint of a channel speaking
+// the WithErrorSyntax protocol, and can send events in that protocol.
+class WithErrorSyntax::EventSender {
+ public:
+  // Constructs an event sender with an invalid channel.
+  EventSender() = default;
+
+  // TODO(fxbug.dev/65212): EventSender should take a ::fidl::ServerEnd.
+  explicit EventSender(::zx::channel server_end)
+      : server_end_(std::move(server_end)) {}
+
+ private:
+  ::zx::channel server_end_;
 };
 
 class WithErrorSyntax::WeakEventSender {

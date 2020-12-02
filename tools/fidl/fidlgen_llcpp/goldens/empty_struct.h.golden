@@ -1055,6 +1055,7 @@ class EmptyProtocol final {
       ::zx::unowned_channel _channel, ::fidl::BufferSpan _buffer,
       ::llcpp::fidl::test::emptystruct::Empty e);
 
+  class EventSender;
   class WeakEventSender;
 };
 
@@ -1210,6 +1211,31 @@ class EmptyProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
       fidl_incoming_msg_t* msg) override;
 
   AsyncEventHandlers handlers_;
+};
+
+// |EventSender| owns a server endpoint of a channel speaking
+// the EmptyProtocol protocol, and can send events in that protocol.
+class EmptyProtocol::EventSender {
+ public:
+  // Constructs an event sender with an invalid channel.
+  EventSender() = default;
+
+  // TODO(fxbug.dev/65212): EventSender should take a ::fidl::ServerEnd.
+  explicit EventSender(::zx::channel server_end)
+      : server_end_(std::move(server_end)) {}
+
+  zx_status_t Receive(::llcpp::fidl::test::emptystruct::Empty e) const {
+    return SendReceiveEvent(::zx::unowned_channel(server_end_), std::move(e));
+  }
+
+  zx_status_t Receive(::fidl::BufferSpan _buffer,
+                      ::llcpp::fidl::test::emptystruct::Empty e) const {
+    return SendReceiveEvent(::zx::unowned_channel(server_end_),
+                            std::move(_buffer), std::move(e));
+  }
+
+ private:
+  ::zx::channel server_end_;
 };
 
 class EmptyProtocol::WeakEventSender {
