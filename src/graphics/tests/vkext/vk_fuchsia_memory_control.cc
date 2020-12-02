@@ -319,6 +319,42 @@ TEST_P(MemoryControl, DecommitWhilePinned) {
   EXPECT_LE(memory_size, expected_memory_size_);
 }
 
+TEST_P(MemoryControl, MultipleOps) {
+  if (!(control_properties_.wholeMemoryOperations & vk::MemoryOpFlagBitsFUCHSIA::eDecommit)) {
+    printf("Skipping because can't decommit\n");
+    GTEST_SKIP();
+  }
+
+  auto vk_device_memory =
+      AllocateAndInitializeDeviceMemory(control_properties_.wholeMemoryOperations);
+
+  vk::MemoryRangeFUCHSIA range;
+  range.memory = vk_device_memory.get();
+  range.offset = 0u;
+  range.size = VK_WHOLE_SIZE;
+
+  EXPECT_EQ(vk::Result::eSuccess,
+            ctx_->device()
+                ->modifyMemoryRangeFUCHSIA(
+                    vk::MemoryOpFlagBitsFUCHSIA::eUnpin | vk::MemoryOpFlagBitsFUCHSIA::eDecommit,
+                    range, loader_)
+                .result);
+
+  VkDeviceSize memory_size = ctx_->device()->getMemoryCommitment(vk_device_memory.get());
+  EXPECT_EQ(memory_size, 0u);
+
+  EXPECT_EQ(vk::Result::eSuccess,
+            ctx_->device()
+                ->modifyMemoryRangeFUCHSIA(
+                    vk::MemoryOpFlagBitsFUCHSIA::eUnpin | vk::MemoryOpFlagBitsFUCHSIA::eDecommit |
+                        vk::MemoryOpFlagBitsFUCHSIA::ePin | vk::MemoryOpFlagBitsFUCHSIA::eCommit,
+                    range, loader_)
+                .result);
+
+  memory_size = ctx_->device()->getMemoryCommitment(vk_device_memory.get());
+  EXPECT_LE(memory_size, expected_memory_size_);
+}
+
 INSTANTIATE_TEST_SUITE_P(AllTypes, MemoryControl,
                          testing::Range(0u, static_cast<uint32_t>(VK_MAX_MEMORY_TYPES)));
 
