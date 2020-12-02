@@ -74,14 +74,14 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
           .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
           .ns = {.prefix = "/svc"},
       },
-      &fs_object);
+      std::move(fs_object));
 
   fdio_spawn_actions.AddActionWithHandle(
       fdio_spawn_action_t{
           .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
           .h = {.id = PA_HND(PA_USER0, 0)},
       },
-      &hrpc);
+      std::move(hrpc));
 
   if (resource.is_valid()) {
     fdio_spawn_actions.AddActionWithHandle(
@@ -89,7 +89,7 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
             .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
             .h = {.id = PA_HND(PA_RESOURCE, 0)},
         },
-        &resource);
+        std::move(resource));
   }
 
   uint32_t flags = FDIO_SPAWN_CLONE_ENVIRON | FDIO_SPAWN_CLONE_STDIO | FDIO_SPAWN_CLONE_UTC_CLOCK;
@@ -108,7 +108,7 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
             .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
             .h = {.id = PA_HND(PA_LDSVC_LOADER, 0)},
         },
-        &loader_service_client);
+        std::move(loader_service_client));
   }
 
   fdio_spawn_actions.AddActionWithHandle(
@@ -116,7 +116,7 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
           .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
           .h = {.id = PA_DIRECTORY_REQUEST},
       },
-      &diagnostics_server);
+      std::move(diagnostics_server));
 
   zx::process proc;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];

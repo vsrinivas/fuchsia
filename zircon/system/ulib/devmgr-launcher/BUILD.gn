@@ -25,6 +25,7 @@ zx_library("devmgr-launcher") {
   public_deps = [ "//zircon/public/lib/fit" ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/fdio:fdio-spawn-actions",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",

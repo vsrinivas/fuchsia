@@ -9,6 +9,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
+#include <lib/fdio/spawn-actions.h>
 #include <lib/fdio/spawn.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
@@ -19,6 +20,7 @@
 #include <zircon/status.h>
 
 #include <utility>
+#include <vector>
 
 #include <fbl/algorithm.h>
 
@@ -43,31 +45,37 @@ zx_status_t LaunchFshost(Args args, zx::channel svc_client, zx::channel fshost_o
 
   const bool clone_stdio = !args.stdio.is_valid();
 
-  fbl::Vector<const char*> argv;
+  std::vector<const char*> argv;
   argv.push_back(kFshostPath);
   if (args.disable_block_watcher) {
     argv.push_back("--disable-block-watcher");
   }
   argv.push_back(nullptr);
 
-  fbl::Vector<fdio_spawn_action_t> actions;
-  actions.push_back(fdio_spawn_action_t{
+  FdioSpawnActions actions;
+  actions.AddAction(fdio_spawn_action_t{
       .action = FDIO_SPAWN_ACTION_SET_NAME,
       .name = {.data = "test-fshost"},
   });
-  actions.push_back(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_JOB_DEFAULT, 0), .handle = job_copy.release()},
-  });
-  actions.push_back(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_DIRECTORY_REQUEST, 0), .handle = fshost_outgoing_server.release()},
-  });
+  actions.AddActionWithHandle(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = PA_HND(PA_JOB_DEFAULT, 0)},
+      },
+      std::move(job_copy));
+  actions.AddActionWithHandle(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = PA_HND(PA_DIRECTORY_REQUEST, 0)},
+      },
+      std::move(fshost_outgoing_server));
 
-  actions.push_back(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-      .ns = {.prefix = "/dev", .handle = devfs_client.release()},
-  });
+  actions.AddActionWithNamespace(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+          .ns = {.prefix = "/dev"},
+      },
+      std::move(devfs_client));
 
   zx::channel local, remote;
   status = zx::channel::create(0, &local, &remote);
@@ -78,18 +86,22 @@ zx_status_t LaunchFshost(Args args, zx::channel svc_client, zx::channel fshost_o
   if (status != ZX_OK) {
     return status;
   }
-  actions.push_back(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-      .ns = {.prefix = "/boot", .handle = local.release()},
-  });
+  actions.AddActionWithNamespace(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+          .ns = {.prefix = "/boot"},
+      },
+      std::move(local));
 
-  actions.push_back(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-      .ns = {.prefix = "/svc", .handle = svc_client.release()},
-  });
+  actions.AddActionWithNamespace(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+          .ns = {.prefix = "/svc"},
+      },
+      std::move(svc_client));
 
   if (!clone_stdio) {
-    actions.push_back(fdio_spawn_action_t{
+    actions.AddAction(fdio_spawn_action_t{
         .action = FDIO_SPAWN_ACTION_TRANSFER_FD,
         .fd = {.local_fd = args.stdio.release(), .target_fd = FDIO_FLAG_USE_FOR_STDIO},
     });
@@ -101,9 +113,10 @@ zx_status_t LaunchFshost(Args args, zx::channel svc_client, zx::channel fshost_o
   }
 
   zx::process new_process;
+  std::vector<fdio_spawn_action_t> spawn_actions = actions.GetActions();
   status = fdio_spawn_etc(devmgr_job.get(), flags, kFshostPath, argv.data(), nullptr /* environ */,
-                          actions.size(), actions.data(), new_process.reset_and_get_address(),
-                          nullptr /* err_msg */);
+                          spawn_actions.size(), spawn_actions.data(),
+                          new_process.reset_and_get_address(), nullptr /* err_msg */);
   if (status != ZX_OK) {
     return status;
   }
@@ -151,7 +164,7 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
 
   const bool clone_stdio = !args.stdio.is_valid();
 
-  fbl::Vector<const char*> argv;
+  std::vector<const char*> argv;
   argv.push_back(kDevmgrPath);
   argv.push_back("--no-start-svchost");
   for (const char* path : args.driver_search_paths) {
@@ -174,35 +187,44 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
   }
   argv.push_back(nullptr);
 
-  fbl::Vector<fdio_spawn_action_t> actions;
-  actions.push_back(fdio_spawn_action_t{
+  FdioSpawnActions actions;
+  actions.AddAction(fdio_spawn_action_t{
       .action = FDIO_SPAWN_ACTION_SET_NAME,
       .name = {.data = "test-devmgr"},
   });
-  actions.push_back(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_JOB_DEFAULT, 0), .handle = devmgr_job_copy.release()},
-  });
-  actions.push_back(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = DEVMGR_LAUNCHER_DEVFS_ROOT_HND, .handle = devfs_server.release()},
-  });
-  actions.push_back(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND,
-            .handle = outgoing_services_server.release()},
-  });
-  actions.push_back(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_LIFECYCLE, .handle = component_lifecycle_server.release()},
-  });
+  actions.AddActionWithHandle(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = PA_HND(PA_JOB_DEFAULT, 0)},
+      },
+      std::move(devmgr_job_copy));
+  actions.AddActionWithHandle(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = DEVMGR_LAUNCHER_DEVFS_ROOT_HND},
+      },
+      std::move(devfs_server));
+  actions.AddActionWithHandle(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND},
+      },
+      std::move(outgoing_services_server));
+  actions.AddActionWithHandle(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = PA_LIFECYCLE},
+      },
+      std::move(component_lifecycle_server));
 
   for (auto& ns : args.flat_namespace) {
-    zx_handle_t ns_handle_clone = fdio_service_clone(ns.second.get());
-    actions.push_back(fdio_spawn_action_t{
-        .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-        .ns = {.prefix = ns.first, .handle = ns_handle_clone},
-    });
+    zx::handle ns_handle_clone(fdio_service_clone(ns.second.get()));
+    actions.AddActionWithNamespace(
+        fdio_spawn_action_t{
+            .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+            .ns = {.prefix = ns.first},
+        },
+        std::move(ns_handle_clone));
   }
 
   zx::channel local, remote;
@@ -215,15 +237,19 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
     return status;
   }
 
-  actions.push_back(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-      .ns = {.prefix = "/boot", .handle = local.release()},
-  });
+  actions.AddActionWithNamespace(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+          .ns = {.prefix = "/boot"},
+      },
+      std::move(local));
 
-  actions.push_back(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-      .ns = {.prefix = "/svc", .handle = svc_client.release()},
-  });
+  actions.AddActionWithNamespace(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+          .ns = {.prefix = "/svc"},
+      },
+      std::move(svc_client));
 
   if (!clone_stdio) {
     zx_handle_t stdio_clone;
@@ -240,7 +266,7 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
 
     int stdio_clone_fd = fdio_bind_to_fd(stdio_clone_fdio_t, -1, 0);
 
-    actions.push_back(fdio_spawn_action_t{
+    actions.AddAction(fdio_spawn_action_t{
         .action = FDIO_SPAWN_ACTION_TRANSFER_FD,
         .fd = {.local_fd = stdio_clone_fd, .target_fd = FDIO_FLAG_USE_FOR_STDIO},
     });
@@ -252,9 +278,10 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
   }
 
   zx::process new_process;
+  std::vector<fdio_spawn_action_t> spawn_actions = actions.GetActions();
   status = fdio_spawn_etc(job.get(), flags, kDevmgrPath, argv.data(), nullptr /* environ */,
-                          actions.size(), actions.data(), new_process.reset_and_get_address(),
-                          nullptr /* err_msg */);
+                          spawn_actions.size(), spawn_actions.data(),
+                          new_process.reset_and_get_address(), nullptr /* err_msg */);
   if (status != ZX_OK) {
     return status;
   }

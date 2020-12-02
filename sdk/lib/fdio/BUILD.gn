@@ -24,6 +24,20 @@ config("fdio_includes") {
   include_dirs = [ "include" ]
 }
 
+if (is_fuchsia) {
+  zx_library("fdio-spawn-actions") {
+    configs += [ "//build/config:all_source" ]
+    sdk = "source"
+    sdk_publishable = true
+    sdk_headers = [ "lib/fdio/spawn-actions.h" ]
+    shared = true
+    deps = [
+      ":fdio",
+      "//zircon/public/lib/zx",
+    ]
+  }
+}
+
 # TODO(fxbug.dev/38226): This is a kludge to make "foosan-fuzzer" builds actually just use
 # the plain "foosan" build of libfdio.  This works around the problem that
 # libfuzzer itself calls into libfdio and so its own calls pollute the data
@@ -104,14 +118,6 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "//zircon/system/ulib/zxio",
       "//zircon/third_party/ulib/musl:getifaddrs-internal",
     ]
-  }
-  zx_library("fdio-spawn-actions") {
-    configs += [ "//build/config:all_source" ]
-    sdk = "shared"
-    sdk_publishable = true
-    sdk_headers = [ "lib/fdio/spawn-actions.h" ]
-    shared = true
-    deps = [ ":fdio" ]
   }
 } else {
   source_set("fdio") {

@@ -254,13 +254,13 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
           .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
           .h = {.id = PA_DIRECTORY_REQUEST},
       },
-      &dir_request);
+      std::move(dir_request));
   fdio_spawn_actions.AddActionWithHandle(
       fdio_spawn_action_t{
           .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
           .h = {.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO)},
       },
-      &logger);
+      std::move(logger));
 
   // Give svchost a restricted root job handle. svchost is already a privileged system service
   // as it controls system-wide process launching. With the root job it can consolidate a few
@@ -270,7 +270,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
           .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
           .h = {.id = PA_HND(PA_USER0, 1)},
       },
-      &root_job_copy);
+      std::move(root_job_copy));
 
   // Also give svchost a restricted root resource handle, this allows it to run the kernel-debug
   // service.
@@ -280,7 +280,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
             .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
             .h = {.id = PA_HND(PA_USER0, 2)},
         },
-        &root_resource_copy);
+        std::move(root_resource_copy));
   }
 
   // Add handle to channel to allow svchost to proxy fidl services to us.
@@ -289,7 +289,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
           .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
           .h = {.id = PA_HND(PA_USER0, 3)},
       },
-      &coordinator_client);
+      std::move(coordinator_client));
 
   // Add handle to channel to allow svchost to connect to services from devcoordinator's /svc, which
   // is hosted by fragment_manager and includes services routed from other fragments; see
@@ -299,7 +299,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
           .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
           .h = {.id = PA_HND(PA_USER0, 7)},
       },
-      &devcoordinator_svc);
+      std::move(devcoordinator_svc));
 
   // Give svchost access to /dev/class/sysmem, to enable svchost to forward sysmem service
   // requests to the sysmem driver.  Create a namespace containing /dev/class/sysmem.
@@ -313,7 +313,7 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
           .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
           .ns = {.prefix = "/sysmem"},
       },
-      &fs_handle);
+      std::move(fs_handle));
 
   uint32_t spawn_flags =
       FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_UTC_CLOCK;
