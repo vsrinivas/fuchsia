@@ -195,7 +195,7 @@ class Publisher : public Mdns::Publisher {
   // Mdns::Publisher implementation.
   void ReportSuccess(bool success) override {}
 
-  void GetPublication(bool query, const std::string& subtype,
+  void GetPublication(Mdns::PublicationCause publication_cause, const std::string& subtype,
                       const std::vector<inet::SocketAddress>& source_addresses,
                       fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override {
     callback(Mdns::Publication::Create(inet::IpPort::From_in_port_t(5353), {}));
@@ -210,7 +210,7 @@ class NonPublisher : public Mdns::Publisher {
   // Mdns::Publisher implementation.
   void ReportSuccess(bool success) override {}
 
-  void GetPublication(bool query, const std::string& subtype,
+  void GetPublication(Mdns::PublicationCause publication_cause, const std::string& subtype,
                       const std::vector<inet::SocketAddress>& source_addresses,
                       fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override {
     callback(nullptr);
@@ -225,7 +225,7 @@ class AsyncPublisher : public Mdns::Publisher {
   // Mdns::Publisher implementation.
   void ReportSuccess(bool success) override {}
 
-  void GetPublication(bool query, const std::string& subtype,
+  void GetPublication(Mdns::PublicationCause publication_cause, const std::string& subtype,
                       const std::vector<inet::SocketAddress>& source_addresses,
                       fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override {
     get_publication_callback_ = std::move(callback);
@@ -427,8 +427,8 @@ TEST_F(MdnsUnitTests, PublishBoth) {
   Publisher publisher;
 
   // Publish wired-only.
-  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false,
-                                                  Media::kBoth, &publisher));
+  EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, Media::kBoth,
+                                                  &publisher));
   RunLoopUntilIdle();
   MdnsAddresses addresses;
   ExpectSendMessageCalled(addresses.multicast_reply());

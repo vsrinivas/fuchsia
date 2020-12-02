@@ -40,7 +40,7 @@ class InstanceResponderTest : public AgentTest, public Mdns::Publisher {
   // Expects that the agent has called |GetPublication| with the given parameters. Returns the
   // callback passed to |GetPublication|.
   fit::function<void(std::unique_ptr<Mdns::Publication>)> ExpectGetPublicationCall(
-      bool query, const std::string& subtype,
+      Mdns::PublicationCause publication_cause, const std::string& subtype,
       const std::vector<inet::SocketAddress>& source_addresses);
 
   // Expects that nothing else has happened.
@@ -52,12 +52,15 @@ class InstanceResponderTest : public AgentTest, public Mdns::Publisher {
   // Expects a single announcement (a 'GetPublication' call and subsequent publication).
   void ExpectAnnouncement(Media media = Media::kBoth);
 
-  // Expects a single publication.
+  // Expects a single multicast publication.
   void ExpectPublication(Media media = Media::kBoth);
+
+  // Expects a single publication to the given reply address.
+  void ExpectPublication(ReplyAddress reply_address);
 
  private:
   struct GetPublicationCall {
-    bool query_;
+    Mdns::PublicationCause publication_cause_;
     const std::string subtype_;
     std::vector<inet::SocketAddress> source_addresses_;
     fit::function<void(std::unique_ptr<Mdns::Publication>)> callback_;
@@ -66,10 +69,10 @@ class InstanceResponderTest : public AgentTest, public Mdns::Publisher {
   // |Mdns::Publisher| implementation.
   void ReportSuccess(bool success) override { report_success_parameter_.emplace(success); }
 
-  void GetPublication(bool query, const std::string& subtype,
+  void GetPublication(Mdns::PublicationCause publication_cause, const std::string& subtype,
                       const std::vector<inet::SocketAddress>& source_addresses,
                       fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override {
-    get_publication_calls_.push(GetPublicationCall{.query_ = query,
+    get_publication_calls_.push(GetPublicationCall{.publication_cause_ = publication_cause,
                                                    .subtype_ = subtype,
                                                    .source_addresses_ = source_addresses,
                                                    .callback_ = std::move(callback)});
@@ -88,10 +91,10 @@ const std::string InstanceResponderTest::kInstanceName = "testinstance";
 
 fit::function<void(std::unique_ptr<Mdns::Publication>)>
 InstanceResponderTest::ExpectGetPublicationCall(
-    bool query, const std::string& subtype,
+    Mdns::PublicationCause publication_cause, const std::string& subtype,
     const std::vector<inet::SocketAddress>& source_addresses) {
   EXPECT_FALSE(get_publication_calls_.empty());
-  EXPECT_EQ(query, get_publication_calls_.front().query_);
+  EXPECT_EQ(publication_cause, get_publication_calls_.front().publication_cause_);
   EXPECT_EQ(subtype, get_publication_calls_.front().subtype_);
   auto callback = std::move(get_publication_calls_.front().callback_);
   EXPECT_EQ(source_addresses, get_publication_calls_.front().source_addresses_);
@@ -118,7 +121,8 @@ void InstanceResponderTest::ExpectAnnouncements(Media media) {
 }
 
 void InstanceResponderTest::ExpectAnnouncement(Media media) {
-  ExpectGetPublicationCall(false, "", {})(Mdns::Publication::Create(kPort));
+  ExpectGetPublicationCall(Mdns::PublicationCause::kAnnouncement, "",
+                           {})(Mdns::Publication::Create(kPort));
   ExpectPublication(media);
 }
 
@@ -134,7 +138,11 @@ ReplyAddress InstanceResponderTest::MulticastReply(Media media) {
 }
 
 void InstanceResponderTest::ExpectPublication(Media media) {
-  auto message = ExpectOutboundMessage(MulticastReply(media));
+  ExpectPublication(MulticastReply(media));
+}
+
+void InstanceResponderTest::ExpectPublication(ReplyAddress reply_address) {
+  auto message = ExpectOutboundMessage(reply_address);
 
   auto resource = ExpectResource(message.get(), MdnsResourceSection::kAnswer, service_full_name(),
                                  DnsType::kPtr, DnsClass::kIn, false);
@@ -184,7 +192,7 @@ TEST_F(InstanceResponderTest, MulticastRateLimit) {
   // First question.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
                              addresses().multicast_reply(), sender_address0);
-  ExpectGetPublicationCall(true, "",
+  ExpectGetPublicationCall(Mdns::PublicationCause::kQueryMulticastResponse, "",
                            {sender_address0.socket_address()})(Mdns::Publication::Create(kPort));
   ExpectPublication();
   ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
@@ -194,7 +202,7 @@ TEST_F(InstanceResponderTest, MulticastRateLimit) {
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
                              addresses().multicast_reply(), sender_address0);
   ExpectPostTaskForTimeAndInvoke(zx::sec(1), zx::sec(1));
-  ExpectGetPublicationCall(true, "",
+  ExpectGetPublicationCall(Mdns::PublicationCause::kQueryMulticastResponse, "",
                            {sender_address0.socket_address()})(Mdns::Publication::Create(kPort));
   ExpectPublication();
   ExpectPostTaskForTimeAndInvoke(zx::sec(60), zx::sec(60));  // idle cleanup
@@ -203,7 +211,7 @@ TEST_F(InstanceResponderTest, MulticastRateLimit) {
   // Third question - no delay, because 60 virtual seconds have passed.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
                              addresses().multicast_reply(), sender_address0);
-  ExpectGetPublicationCall(true, "",
+  ExpectGetPublicationCall(Mdns::PublicationCause::kQueryMulticastResponse, "",
                            {sender_address0.socket_address()})(Mdns::Publication::Create(kPort));
   ExpectPublication();
   ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
@@ -215,7 +223,7 @@ TEST_F(InstanceResponderTest, MulticastRateLimit) {
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
                              addresses().multicast_reply(), sender_address1);
   ExpectPostTaskForTimeAndInvoke(zx::sec(1), zx::sec(1));
-  ExpectGetPublicationCall(true, "",
+  ExpectGetPublicationCall(Mdns::PublicationCause::kQueryMulticastResponse, "",
                            {sender_address0.socket_address(), sender_address1.socket_address()})(
       Mdns::Publication::Create(kPort));
   ExpectPublication();
@@ -249,7 +257,7 @@ TEST_F(InstanceResponderTest, SourceAddresses) {
                              addresses().multicast_reply(), sender_address1);
 
   // Expect only pertinent sender address.
-  ExpectGetPublicationCall(true, "",
+  ExpectGetPublicationCall(Mdns::PublicationCause::kQueryMulticastResponse, "",
                            {sender_address1.socket_address()})(Mdns::Publication::Create(kPort));
   ExpectPublication();
   ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
@@ -274,7 +282,7 @@ TEST_F(InstanceResponderTest, SourceAddressLimit) {
                              addresses().multicast_reply(), sender_address);
 
   // Expect one sender address.
-  ExpectGetPublicationCall(true, "",
+  ExpectGetPublicationCall(Mdns::PublicationCause::kQueryMulticastResponse, "",
                            {sender_address.socket_address()})(Mdns::Publication::Create(kPort));
   ExpectPublication();
   ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
@@ -288,7 +296,7 @@ TEST_F(InstanceResponderTest, SourceAddressLimit) {
   ExpectPostTaskForTimeAndInvoke(zx::sec(1), zx::sec(1));
 
   // Expect 64 sender addresses.
-  ExpectGetPublicationCall(true, "",
+  ExpectGetPublicationCall(Mdns::PublicationCause::kQueryMulticastResponse, "",
                            {sender_address.socket_address(), sender_address.socket_address(),
                             sender_address.socket_address(), sender_address.socket_address(),
                             sender_address.socket_address(), sender_address.socket_address(),
@@ -345,7 +353,7 @@ TEST_F(InstanceResponderTest, WirelessOnly) {
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
       inet::IpAddress(192, 168, 1, 100), Media::kWireless);
 
-  // Question from wired should be ingored.
+  // Question from wired should be ignored.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
                              addresses().multicast_reply_wired_only(), wired_sender_address);
   ExpectNoGetPublicationCall();
@@ -354,8 +362,9 @@ TEST_F(InstanceResponderTest, WirelessOnly) {
   // Question from wireless should be answered.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
                              addresses().multicast_reply_wireless_only(), wireless_sender_address);
-  ExpectGetPublicationCall(true, "",
-                           {wireless_sender_address.socket_address()})(Mdns::Publication::Create(kPort));
+  ExpectGetPublicationCall(
+      Mdns::PublicationCause::kQueryMulticastResponse, "",
+      {wireless_sender_address.socket_address()})(Mdns::Publication::Create(kPort));
   ExpectPublication(Media::kWireless);
   ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
   ExpectNoOther();
@@ -375,7 +384,7 @@ TEST_F(InstanceResponderTest, WiredOnly) {
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
       inet::IpAddress(192, 168, 1, 100), Media::kWireless);
 
-  // Question from wireless should be ingored.
+  // Question from wireless should be ignored.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
                              addresses().multicast_reply_wireless_only(), wireless_sender_address);
   ExpectNoGetPublicationCall();
@@ -388,10 +397,32 @@ TEST_F(InstanceResponderTest, WiredOnly) {
   // Question from wired should be answered.
   under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
                              addresses().multicast_reply_wired_only(), wired_sender_address);
-  ExpectGetPublicationCall(true, "",
-                           {wired_sender_address.socket_address()})(Mdns::Publication::Create(kPort));
+  ExpectGetPublicationCall(
+      Mdns::PublicationCause::kQueryMulticastResponse, "",
+      {wired_sender_address.socket_address()})(Mdns::Publication::Create(kPort));
   ExpectPublication(Media::kWired);
   ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
+  ExpectNoOther();
+}
+
+// Tests that a query for a unicast response is recognized as such.
+TEST_F(InstanceResponderTest, Unicast) {
+  InstanceResponder under_test(this, kServiceName, kInstanceName, Media::kBoth, this);
+  SetAgent(under_test);
+
+  // Normal startup.
+  under_test.Start(kHostFullName, addresses());
+  ExpectAnnouncements();
+
+  ReplyAddress sender_address(inet::SocketAddress(192, 168, 1, 1, kPort),
+                              inet::IpAddress(192, 168, 1, 100), Media::kWired);
+
+  auto question = DnsQuestion(service_full_name(), DnsType::kPtr);
+  question.unicast_response_ = true;
+  under_test.ReceiveQuestion(question, sender_address, sender_address);
+  ExpectGetPublicationCall(Mdns::PublicationCause::kQueryUnicastResponse, "",
+                           {sender_address.socket_address()})(Mdns::Publication::Create(kPort));
+  ExpectPublication(sender_address);
   ExpectNoOther();
 }
 

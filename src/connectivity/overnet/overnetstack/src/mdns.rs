@@ -5,8 +5,9 @@
 use anyhow::Error;
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_net_mdns::{
-    Publication, PublicationResponder_Request, PublicationResponder_RequestStream, PublisherMarker,
-    PublisherProxy, ServiceSubscriberRequest, ServiceSubscriberRequestStream, SubscriberMarker,
+    Media, Publication, PublicationResponder_Request, PublicationResponder_RequestStream,
+    PublisherMarker, PublisherProxy, ServiceSubscriberRequest, ServiceSubscriberRequestStream,
+    SubscriberMarker,
 };
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -27,6 +28,7 @@ async fn connect_to_proxy(
         .publish_service_instance(
             SERVICE_NAME,
             &format!("{}", node_id.0),
+            Media::Wired | Media::Wireless,
             true,
             fidl::endpoints::ClientEnd::new(proxy),
         )
@@ -212,13 +214,17 @@ mod tests {
     fn test_fuchsia_to_rust_ipaddr6() {
         //test example IPv6 address [fe80::5054:ff:fe40:5763]
         //fidl_fuchsia_net::Ipv6Address
-        let ipv6_addr = fidl_fuchsia_net::Ipv6Address{
-            addr : [0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x50, 0x54, 0x00, 0xff, 0xfe, 0x40, 0x57, 0x63]
+        let ipv6_addr = fidl_fuchsia_net::Ipv6Address {
+            addr: [
+                0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x50, 0x54, 0x00, 0xff, 0xfe, 0x40,
+                0x57, 0x63,
+            ],
         };
 
         //std::net::IpAddr
-        let net_addr =  std::net::IpAddr::V6(std::net::Ipv6Addr::new(
-            0xff80, 0x0000, 0x0000, 0x0000, 0x5054, 0x00ff, 0xfe40, 0x5763));
+        let net_addr = std::net::IpAddr::V6(std::net::Ipv6Addr::new(
+            0xff80, 0x0000, 0x0000, 0x0000, 0x5054, 0x00ff, 0xfe40, 0x5763,
+        ));
 
         //expected:[fuchsia_to_rust_ipaddr6(ipv6_addr)] == [net_addr]
         assert_eq!(fuchsia_to_rust_ipaddr6(ipv6_addr), net_addr);

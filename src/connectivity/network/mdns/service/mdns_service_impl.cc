@@ -19,6 +19,40 @@
 #include "src/connectivity/network/mdns/service/mdns_names.h"
 #include "src/lib/fsl/types/type_converters.h"
 
+namespace fidl {
+
+template <>
+struct TypeConverter<mdns::Media, fuchsia::net::mdns::Media> {
+  static mdns::Media Convert(fuchsia::net::mdns::Media value) {
+    switch (value) {
+      case fuchsia::net::mdns::Media::WIRED:
+        return mdns::Media::kWired;
+      case fuchsia::net::mdns::Media::WIRELESS:
+        return mdns::Media::kWireless;
+      default:
+        FX_DCHECK(value ==
+                  (fuchsia::net::mdns::Media::WIRED | fuchsia::net::mdns::Media::WIRELESS));
+        return mdns::Media::kBoth;
+    }
+  }
+};
+
+template <>
+struct TypeConverter<fuchsia::net::mdns::PublicationCause, mdns::Mdns::PublicationCause> {
+  static fuchsia::net::mdns::PublicationCause Convert(mdns::Mdns::PublicationCause value) {
+    switch (value) {
+      case mdns::Mdns::PublicationCause::kAnnouncement:
+        return fuchsia::net::mdns::PublicationCause::ANNOUNCEMENT;
+      case mdns::Mdns::PublicationCause::kQueryMulticastResponse:
+        return fuchsia::net::mdns::PublicationCause::QUERY_MULTICAST_RESPONSE;
+      case mdns::Mdns::PublicationCause::kQueryUnicastResponse:
+        return fuchsia::net::mdns::PublicationCause::QUERY_UNICAST_RESPONSE;
+    }
+  }
+};
+
+}  // namespace fidl
+
 namespace mdns {
 namespace {
 
@@ -198,7 +232,7 @@ void MdnsServiceImpl::SubscribeToService2(
 }
 
 void MdnsServiceImpl::PublishServiceInstance(
-    std::string service, std::string instance, bool perform_probe,
+    std::string service, std::string instance, fuchsia::net::mdns::Media media, bool perform_probe,
     fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder> responder_handle,
     PublishServiceInstanceCallback callback) {
   FX_DCHECK(responder_handle);
@@ -219,6 +253,16 @@ void MdnsServiceImpl::PublishServiceInstance(
     return;
   }
 
+  if (media != fuchsia::net::mdns::Media::WIRED && media != fuchsia::net::mdns::Media::WIRELESS &&
+      media != (fuchsia::net::mdns::Media::WIRED | fuchsia::net::mdns::Media::WIRELESS)) {
+    FX_LOGS(ERROR) << "PublishServiceInstance called with invalid media "
+                   << static_cast<uint32_t>(media);
+    fuchsia::net::mdns::Publisher_PublishServiceInstance_Result result;
+    result.set_err(fuchsia::net::mdns::Error::INVALID_MEDIA);
+    callback(std::move(result));
+    return;
+  }
+
   // TODO(fxbug.dev/56579): Review this approach to conflicts.
   std::string instance_full_name = MdnsNames::LocalInstanceFullName(instance, service);
 
@@ -234,8 +278,8 @@ void MdnsServiceImpl::PublishServiceInstance(
         publishers_by_instance_full_name_.erase(instance_full_name);
       });
 
-  bool result =
-      mdns_.PublishServiceInstance(service, instance, perform_probe, Media::kBoth, publisher.get());
+  bool result = mdns_.PublishServiceInstance(service, instance, perform_probe,
+                                             fidl::To<Media>(media), publisher.get());
   // Because of the erase call above, |PublishServiceInstance| should always succeed.
   FX_DCHECK(result);
 
@@ -442,7 +486,7 @@ void MdnsServiceImpl::SimplePublisher::ReportSuccess(bool success) {
 }
 
 void MdnsServiceImpl::SimplePublisher::GetPublication(
-    bool query, const std::string& subtype,
+    Mdns::PublicationCause publication_cause, const std::string& subtype,
     const std::vector<inet::SocketAddress>& source_addresses,
     fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) {
   FX_DCHECK(subtype.empty() || MdnsNames::IsValidSubtypeName(subtype));
@@ -547,13 +591,14 @@ void MdnsServiceImpl::ResponderPublisher::ReportSuccess(bool success) {
 }
 
 void MdnsServiceImpl::ResponderPublisher::GetPublication(
-    bool query, const std::string& subtype,
+    Mdns::PublicationCause publication_cause, const std::string& subtype,
     const std::vector<inet::SocketAddress>& source_addresses,
     fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) {
   FX_DCHECK(subtype.empty() || MdnsNames::IsValidSubtypeName(subtype));
   if (responder_) {
     responder_->OnPublication(
-        query, subtype, MdnsFidlUtil::Convert(source_addresses),
+        fidl::To<fuchsia::net::mdns::PublicationCause>(publication_cause), subtype,
+        MdnsFidlUtil::Convert(source_addresses),
         [this, callback = std::move(callback)](fuchsia::net::mdns::PublicationPtr publication_ptr) {
           if (publication_ptr) {
             for (auto& text : publication_ptr->text) {
@@ -581,7 +626,8 @@ void MdnsServiceImpl::ResponderPublisher::GetPublication(
   } else {
     FX_DCHECK(responder2_);
     responder2_->OnPublication(
-        query, subtype, MdnsFidlUtil::Convert(source_addresses),
+        publication_cause != Mdns::PublicationCause::kAnnouncement, subtype,
+        MdnsFidlUtil::Convert(source_addresses),
         [this, callback = std::move(callback)](fuchsia::net::mdns::PublicationPtr publication_ptr) {
           if (publication_ptr) {
             for (auto& text : publication_ptr->text) {

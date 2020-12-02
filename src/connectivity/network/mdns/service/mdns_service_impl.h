@@ -43,7 +43,8 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
 
   // fuchsia::net::mdns::Publisher implementation.
   void PublishServiceInstance(
-      std::string service, std::string instance, bool perform_probe,
+      std::string service, std::string instance, fuchsia::net::mdns::Media media,
+      bool perform_probe,
       fidl::InterfaceHandle<fuchsia::net::mdns::PublicationResponder> responder_handle,
       PublishServiceInstanceCallback callback) override;
 
@@ -125,7 +126,7 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
     // Mdns::Publisher implementation.
     void ReportSuccess(bool success) override;
 
-    void GetPublication(bool query, const std::string& subtype,
+    void GetPublication(Mdns::PublicationCause publication_cause, const std::string& subtype,
                         const std::vector<inet::SocketAddress>& source_addresses,
                         fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override;
 
@@ -153,7 +154,7 @@ class MdnsServiceImpl : public fuchsia::net::mdns::Resolver,
     // Mdns::Publisher implementation.
     void ReportSuccess(bool success) override;
 
-    void GetPublication(bool query, const std::string& subtype,
+    void GetPublication(Mdns::PublicationCause publication_cause, const std::string& subtype,
                         const std::vector<inet::SocketAddress>& source_addresses,
                         fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override;
 

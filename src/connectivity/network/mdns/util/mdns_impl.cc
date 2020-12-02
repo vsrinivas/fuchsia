@@ -118,7 +118,9 @@ void MdnsImpl::Respond(const std::string& service_name, const std::string& insta
 
   EnsurePublisher();
   publisher_->PublishServiceInstance(
-      service_name, instance_name, true, std::move(responder_handle),
+      service_name, instance_name,
+      fuchsia::net::mdns::Media::WIRED | fuchsia::net::mdns::Media::WIRELESS, true,
+      std::move(responder_handle),
       [this](fuchsia::net::mdns::Publisher_PublishServiceInstance_Result result) {
         if (result.is_response()) {
           std::cout << "instance successfully published\n";
@@ -130,12 +132,12 @@ void MdnsImpl::Respond(const std::string& service_name, const std::string& insta
             case fuchsia::net::mdns::Error::INVALID_INSTANCE_NAME:
               std::cout << "ERROR: instance name is invalid\n";
               break;
-            case fuchsia::net::mdns::Error::ALREADY_PUBLISHED_LOCALLY:
-              std::cout << "ERROR: instance was already published by this host\n";
-              break;
             case fuchsia::net::mdns::Error::ALREADY_PUBLISHED_ON_SUBNET:
               std::cout << "ERROR: instance was already published by another "
                            "host on the subnet\n";
+              break;
+            case fuchsia::net::mdns::Error::INVALID_MEDIA:
+              std::cout << "ERROR: media value is invalid\n";
               break;
               // The default case has been deliberately omitted here so that
               // this switch statement will be updated whenever the |Result|
@@ -208,10 +210,21 @@ void MdnsImpl::Quit() {
   quit_callback_();
 }
 
-void MdnsImpl::OnPublication(bool query, fidl::StringPtr subtype,
+void MdnsImpl::OnPublication(fuchsia::net::mdns::PublicationCause publication_cause,
+                             fidl::StringPtr subtype,
                              std::vector<fuchsia::net::IpAddress> source_addresses,
                              OnPublicationCallback callback) {
-  std::cout << (query ? "query" : "initial publication");
+  switch (publication_cause) {
+    case fuchsia::net::mdns::PublicationCause::ANNOUNCEMENT:
+      std::cout << "initial publication";
+      break;
+    case fuchsia::net::mdns::PublicationCause::QUERY_MULTICAST_RESPONSE:
+      std::cout << "multicast query";
+      break;
+    case fuchsia::net::mdns::PublicationCause::QUERY_UNICAST_RESPONSE:
+      std::cout << "unicast query";
+      break;
+  }
   if (subtype) {
     std::cout << " for subtype " << subtype;
   }

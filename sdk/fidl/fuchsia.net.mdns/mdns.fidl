@@ -15,6 +15,7 @@ using zx;
 //    PublicationResponder2 (completed)
 // 2) Transition all clients to the '2' versions. (completed)
 // 3) Change the originals to be identical to the '2' versions. (completed)
+// 3.1) Implement new features under the original names. (completed)
 // 4) Transition all clients to the original names.
 // 5) Remove the '2' versions.
 
@@ -96,6 +97,7 @@ protocol Publisher {
     [Transitional]
     PublishServiceInstance(service_name service,
                            instance_name instance,
+                           Media media,
                            bool perform_probe,
                            PublicationResponder publication_responder) -> () error Error;
 
@@ -118,6 +120,15 @@ protocol Publisher {
                             PublicationResponder2 publication_responder) -> () error Error;
 };
 
+/// Specifies network media on which a service instance should be published.
+bits Media : uint32 {
+    /// Specifies wired interfaces.
+    WIRED = 1;
+
+    /// Specifies wireless interfaces.
+    WIRELESS = 2;
+};
+
 /// Error values for instance publishing.
 enum Error : int32 {
     /// The specified service name is invalid.
@@ -126,17 +137,13 @@ enum Error : int32 {
     /// The specified instance name is invalid.
     INVALID_INSTANCE_NAME = 2;
 
-    /// The specified service instance is already being published by this
-    /// mDNS implementation.
-    /// NOTE: This value isn't used currently. It appears here for backward
-    /// compatibility.
-    [Deprecated]
-    ALREADY_PUBLISHED_LOCALLY = 3;
-
     /// The specified service instance is already being published by another
     /// host on the subnet. This result occurs when an initial probe discovers
     /// a conflicting instance.
     ALREADY_PUBLISHED_ON_SUBNET = 4;
+
+    // The specified `Media` value is invalid.
+    INVALID_MEDIA = 5;
 };
 
 /// Client-implemented interface for subscribers. Method replies are used to
@@ -239,14 +246,14 @@ table ServiceInstance2 {
 protocol PublicationResponder {
     /// Provides instance information for initial announcements and query
     /// responses relating to the service instance specified in
-    /// `Publisher.PublishServiceInstance`. `query` indicates whether data is
-    /// requested for an initial announcement (false) or in response to a query
-    /// (true). If the publication relates to a subtype of the service,
-    /// `subtype` contains the subtype, otherwise it is null. If `publication`
-    /// is null, no announcement or response is transmitted. Strings in `text`
-    /// are transmitted in the TXT record.
+    /// `Publisher.PublishServiceInstance`.  If the publication relates to a
+    /// subtype of the service, `subtype` contains the subtype, otherwise
+    /// it is null. If `publication` is null, no announcement or response is
+    /// transmitted. Strings in `text` are transmitted in the TXT record.
     OnPublication(
-        bool query, subtype_name? subtype, vector<fuchsia.net.IpAddress>:64 source_addresses)
+        PublicationCause publication_cause,
+        subtype_name? subtype,
+        vector<fuchsia.net.IpAddress>:64 source_addresses)
         -> (Publication? publication);
 
     /// Sets the subtypes for the service instance. The specified subtypes will
@@ -259,6 +266,20 @@ protocol PublicationResponder {
     /// through `OnPublication`, which replies with the new port and text
     /// values.
     -> Reannounce();
+};
+
+/// Describes the cause of a publication.
+enum PublicationCause : int32 {
+    /// Indicates the publication is part of an initial announcement.
+    ANNOUNCEMENT = 1;
+
+    /// Indicates the publication is in response to a question that requests a
+    /// multicast response.
+    QUERY_MULTICAST_RESPONSE = 2;
+
+    /// Indicates the publication is in response to a question that requests a
+    /// unicast response.
+    QUERY_UNICAST_RESPONSE = 3;
 };
 
 /// Client-supplied publication responder interface.

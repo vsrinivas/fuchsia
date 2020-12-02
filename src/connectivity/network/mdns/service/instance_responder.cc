@@ -45,11 +45,19 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
     return;
   }
 
+  // We infer publication cause from the reply address. Announcements don't use this path, and
+  // there are cases in which we send unicast even though the unicast bit is not set on the question
+  // (specifically, when the reply address port isn't 5353). A V4 multicast reply address indicates
+  // V4 and V6 multicast.
+  auto publication_cause = reply_address.socket_address() == addresses().v4_multicast()
+                               ? Mdns::PublicationCause::kQueryMulticastResponse
+                               : Mdns::PublicationCause::kQueryUnicastResponse;
+
   switch (question.type_) {
     case DnsType::kPtr:
       if (MdnsNames::MatchServiceName(name, service_name_, &subtype)) {
         LogSenderAddress(sender_address);
-        MaybeGetAndSendPublication(subtype, reply_address);
+        MaybeGetAndSendPublication(publication_cause, subtype, reply_address);
       } else if (question.name_.dotted_string_ == MdnsNames::kAnyServiceFullName) {
         SendAnyServiceResponse(reply_address);
       }
@@ -58,14 +66,14 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
     case DnsType::kTxt:
       if (question.name_.dotted_string_ == instance_full_name_) {
         LogSenderAddress(sender_address);
-        MaybeGetAndSendPublication("", reply_address);
+        MaybeGetAndSendPublication(publication_cause, "", reply_address);
       }
       break;
     case DnsType::kAny:
       if (question.name_.dotted_string_ == instance_full_name_ ||
           MdnsNames::MatchServiceName(name, service_name_, &subtype)) {
         LogSenderAddress(sender_address);
-        MaybeGetAndSendPublication(subtype, reply_address);
+        MaybeGetAndSendPublication(publication_cause, subtype, reply_address);
       }
       break;
     default:
@@ -130,7 +138,7 @@ void InstanceResponder::LogSenderAddress(const ReplyAddress& sender_address) {
 }
 
 void InstanceResponder::SendAnnouncement() {
-  GetAndSendPublication(false, "", multicast_reply());
+  GetAndSendPublication(Mdns::PublicationCause::kAnnouncement, "", multicast_reply());
 
   for (const std::string& subtype : subtypes_) {
     SendSubtypePtrRecord(subtype, DnsResource::kShortTimeToLive, multicast_reply());
@@ -151,14 +159,15 @@ void InstanceResponder::SendAnyServiceResponse(const ReplyAddress& reply_address
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
 }
 
-void InstanceResponder::MaybeGetAndSendPublication(const std::string& subtype,
+void InstanceResponder::MaybeGetAndSendPublication(Mdns::PublicationCause publication_cause,
+                                                   const std::string& subtype,
                                                    const ReplyAddress& reply_address) {
   if (publisher_ == nullptr) {
     return;
   }
 
-  // We only throttle multicast sends. A V4 multicast reply address indicates V4 and V6 multicast.
-  if (reply_address.socket_address() == addresses().v4_multicast()) {
+  // We only throttle multicast sends.
+  if (publication_cause == Mdns::PublicationCause::kQueryMulticastResponse) {
     zx::time throttle_state = kThrottleStateIdle;
     auto iter = throttle_state_by_subtype_.find(subtype);
     if (iter != throttle_state_by_subtype_.end()) {
@@ -178,23 +187,31 @@ void InstanceResponder::MaybeGetAndSendPublication(const std::string& subtype,
       // currently scheduled. We need to schedule a multicast send for one second after the
       // previous one.
       PostTaskForTime(
-          [this, subtype, reply_address]() { GetAndSendPublication(true, subtype, reply_address); },
+          [this, publication_cause, subtype, reply_address]() {
+            GetAndSendPublication(publication_cause, subtype, reply_address);
+          },
           throttle_state + kMinMulticastInterval);
       return;
     }
+
+    // We fall through here when throttling isn't in effect, and the response should be sent
+    // immediately.
   }
 
-  GetAndSendPublication(true, subtype, reply_address);
+  GetAndSendPublication(publication_cause, subtype, reply_address);
 }
 
-void InstanceResponder::GetAndSendPublication(bool query, const std::string& subtype,
+void InstanceResponder::GetAndSendPublication(Mdns::PublicationCause publication_cause,
+                                              const std::string& subtype,
                                               const ReplyAddress& reply_address) {
   if (publisher_ == nullptr) {
     return;
   }
 
+  bool query = publication_cause != Mdns::PublicationCause::kAnnouncement;
+
   publisher_->GetPublication(
-      query, subtype, sender_addresses_,
+      publication_cause, subtype, sender_addresses_,
       [this, query, subtype, reply_address](std::unique_ptr<Mdns::Publication> publication) {
         if (publication) {
           SendPublication(*publication, subtype, reply_address);

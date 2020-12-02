@@ -116,6 +116,12 @@ class Mdns : public MdnsAgent::Host {
     friend class Mdns;
   };
 
+  enum class PublicationCause {
+    kAnnouncement,
+    kQueryMulticastResponse,
+    kQueryUnicastResponse,
+  };
+
   // Abstract base class for client-supplied publisher.
   class Publisher {
    public:
@@ -140,13 +146,13 @@ class Mdns : public MdnsAgent::Host {
 
     // Provides instance information for initial announcements and query
     // responses relating to the service instance specified in |AddResponder|.
-    // |query| indicates whether data is requested for an initial announcement
-    // (false) or in response to a query (true). If the publication relates to
+    // |pubication_type| indicates whether data is requested for an initial announcement
+    // or in response to a multicast or unicast query. If the publication relates to
     // a subtype of the service, |subtype| contains the subtype, otherwise it is
     // empty. |source_addresses| supplies the source addresses of the queries that
     // caused this publication. If the publication provided by the callback is null, no
     // announcement or response is transmitted.
-    virtual void GetPublication(bool query, const std::string& subtype,
+    virtual void GetPublication(PublicationCause pubication_type, const std::string& subtype,
                                 const std::vector<inet::SocketAddress>& source_addresses,
                                 fit::function<void(std::unique_ptr<Publication>)> callback) = 0;
 

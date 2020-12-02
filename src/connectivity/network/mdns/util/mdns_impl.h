@@ -44,8 +44,8 @@ class MdnsImpl : public fuchsia::net::mdns::PublicationResponder,
   void Quit();
 
   // fuchsia::net::mdns::PublicationResponder implementation.
-  void OnPublication(bool query, fidl::StringPtr subtype,
-                     std::vector<fuchsia::net::IpAddress> source_addresses,
+  void OnPublication(fuchsia::net::mdns::PublicationCause publication_cause,
+                     fidl::StringPtr subtype, std::vector<fuchsia::net::IpAddress> source_addresses,
                      OnPublicationCallback callback) override;
 
   // fuchsia::net::mdns::ServiceSubscriber implementation.

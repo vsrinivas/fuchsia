@@ -62,11 +62,12 @@ class InstanceResponder : public MdnsAgent {
 
   // Calls |GetAndSendPublication| with |query| set to true after first determining if the send
   // should be throttled.
-  void MaybeGetAndSendPublication(const std::string& subtype, const ReplyAddress& reply_address);
+  void MaybeGetAndSendPublication(Mdns::PublicationCause publication_cause,
+                                  const std::string& subtype, const ReplyAddress& reply_address);
 
   // Gets an |Mdns::Publication| from |mdns_responder_| and, if not null, sends
   // it. An empty |subtype| indicates no subtype.
-  void GetAndSendPublication(bool query, const std::string& subtype,
+  void GetAndSendPublication(Mdns::PublicationCause publication_cause, const std::string& subtype,
                              const ReplyAddress& reply_address);
 
   // Sends a publication. An empty |subtype| indicates no subtype.
