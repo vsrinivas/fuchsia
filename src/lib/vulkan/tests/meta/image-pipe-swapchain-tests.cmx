@@ -1,14 +1,7 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "system-services": [
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.vulkan.loader.Loader"
-            ]
-        }
-    },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
         "binary": "test/image-pipe-swapchain-tests"
@@ -17,14 +10,8 @@
         "dev": [
             "class/display-controller"
         ],
-        "features": [
-            "vulkan"
-        ],
         "services": [
-            "fuchsia.process.Launcher",
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.process.Launcher"
         ]
     }
 }

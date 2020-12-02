@@ -1,17 +1,9 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
         "binary": "test/test_magma_vsi_exec_bin"
-    },
-    "sandbox": {
-        "features": [
-            "vulkan"
-        ],
-        "services": [
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.vulkan.loader.Loader"
-        ]
     }
 }

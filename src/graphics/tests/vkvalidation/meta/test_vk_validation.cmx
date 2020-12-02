@@ -1,27 +1,9 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "system-services": [
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
-                "fuchsia.vulkan.loader.Loader"
-            ]
-        }
-    },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
         "binary": "test/test_vk_validation"
-    },
-    "sandbox": {
-        "features": [
-            "vulkan"
-        ],
-        "services": [
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.vulkan.loader.Loader"
-        ]
     }
 }
