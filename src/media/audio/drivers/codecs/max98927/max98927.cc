@@ -5,7 +5,6 @@
 #include "max98927.h"
 
 #include <endian.h>
-#include <fuchsia/hardware/audiocodec/c/fidl.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/fidl-utils/bind.h>
 #include <zircon/assert.h>
@@ -76,14 +75,6 @@ zx_status_t Max98927Device::FidlSetEnabled(bool enable) {
     Disable();
   }
   return ZX_OK;
-}
-
-zx_status_t Max98927Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  using Binder = fidl::Binder<Max98927Device>;
-  static const fuchsia_hardware_audiocodec_Device_ops_t kOps = {
-      .SetEnabled = Binder::BindMember<&Max98927Device::FidlSetEnabled>,
-  };
-  return fuchsia_hardware_audiocodec_Device_dispatch(this, txn, msg, &kOps);
 }
 
 void Max98927Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
