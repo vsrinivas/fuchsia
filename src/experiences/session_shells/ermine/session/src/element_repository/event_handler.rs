@@ -73,7 +73,7 @@ impl ElementEventHandler {
             view_holder_token: Some(token_pair.view_holder_token),
             view_ref: Some(view_ref_dup),
             annotations: Some(annotations),
-            ..ViewSpec::empty()
+            ..ViewSpec::EMPTY
         };
 
         let (view_controller_proxy, server_end) = create_proxy::<ViewControllerMarker>()?;
@@ -422,7 +422,7 @@ mod tests {
                 key: "foo".to_string(),
                 value: Some(Box::new(Value::Text("bar".to_string()))),
             }]),
-            ..Annotations::empty()
+            ..Annotations::EMPTY
         };
         let _ = element_controller.set_annotations(new_annotations).await;
 
@@ -458,7 +458,7 @@ mod tests {
                     key: "foo".to_string(),
                     value: Some(Box::new(Value::Text("bar".to_string()))),
                 }]),
-                ..Annotations::empty()
+                ..Annotations::EMPTY
             };
             let _ = element_controller.set_annotations(new_annotations).await;
         })
@@ -494,7 +494,7 @@ mod tests {
                 key: "foo".to_string(),
                 value: Some(Box::new(Value::Text("bar".to_string()))),
             }]),
-            ..Annotations::empty()
+            ..Annotations::EMPTY
         };
 
         {
