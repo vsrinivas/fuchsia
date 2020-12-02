@@ -1,0 +1,30 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    program: {
+        binary: "bin/pkgfs_reflector",
+    },
+    capabilities: [
+        { protocol: "test.pkg.reflector.Reflector" },
+        {
+            directory: "pkgfs",
+            rights: [ "rw*" ],
+            path: "/pkgfs",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        { protocol: "fuchsia.logger.LogSink" },
+    ],
+    expose: [
+        {
+            protocol: "test.pkg.reflector.Reflector",
+            from: "self",
+        },
+        {
+            directory: "pkgfs",
+            from: "self",
+        },
+    ],
+}

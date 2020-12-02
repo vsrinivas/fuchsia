@@ -1,0 +1,44 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
+
+fidl("test.pkg.reflector") {
+  testonly = true
+  sources = [ "reflector.test.fidl" ]
+  public_deps = [ "//sdk/fidl/fuchsia.io" ]
+}
+
+rustc_binary("bin") {
+  testonly = true
+  name = "pkgfs_reflector"
+  edition = "2018"
+
+  deps = [
+    ":test.pkg.reflector-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("pkgfs-reflector") {
+  testonly = true
+  manifest = "meta/pkgfs-reflector.cml"
+  deps = [ ":bin" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ "integration-tests:tests" ]
+}

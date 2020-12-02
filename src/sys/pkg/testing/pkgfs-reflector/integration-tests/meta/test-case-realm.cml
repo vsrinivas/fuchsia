@@ -1,0 +1,44 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "pkgfs_reflector",
+            url: "fuchsia-pkg://fuchsia.com/pkgfs-reflector-integration-test#meta/pkgfs-reflector.cm",
+        },
+        {
+            name: "thinger",
+            url: "fuchsia-pkg://fuchsia.com/pkgfs-reflector-integration-test#meta/test-case-thinger.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#pkgfs_reflector",
+                "#thinger",
+            ],
+        },
+        {
+            directory: "pkgfs",
+            from: "#pkgfs_reflector",
+            to: [ "#thinger" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "test.pkg.reflector.Reflector",
+            from: "#pkgfs_reflector",
+        },
+        {
+            directory: "pkgfs",
+            from: "#pkgfs_reflector",
+        },
+        {
+            protocol: "test.pkg.thinger.Thinger",
+            from: "#thinger",
+        },
+    ],
+}

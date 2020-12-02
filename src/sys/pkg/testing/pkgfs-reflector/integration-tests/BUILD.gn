@@ -1,0 +1,86 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//src/sys/build/components.gni")
+
+fidl("test.pkg.thinger") {
+  testonly = true
+  sources = [ "thinger.test.fidl" ]
+}
+
+rustc_test("driver-bin") {
+  name = "test_driver"
+  edition = "2018"
+
+  sources = [ "src/driver.rs" ]
+  source_root = "src/driver.rs"
+
+  deps = [
+    ":test.pkg.thinger-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//src/lib/syslog/rust:syslog",
+    "//src/sys/pkg/testing/pkgfs-reflector:test.pkg.reflector-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+rustc_binary("thinger-bin") {
+  testonly = true
+  name = "test_thinger"
+  edition = "2018"
+
+  sources = [ "src/thinger.rs" ]
+  source_root = "src/thinger.rs"
+
+  deps = [
+    ":test.pkg.thinger-rustc",
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+fuchsia_component("test-driver") {
+  testonly = true
+  manifest = "meta/test-driver.cml"
+  deps = [ ":driver-bin" ]
+}
+
+fuchsia_component("test-case-realm") {
+  testonly = true
+  manifest = "meta/test-case-realm.cml"
+}
+
+fuchsia_component("test-case-thinger") {
+  testonly = true
+  manifest = "meta/test-case-thinger.cml"
+  deps = [ ":thinger-bin" ]
+}
+
+fuchsia_test_package("pkgfs-reflector-integration-test") {
+  test_components = [ ":test-driver" ]
+  deps = [
+    ":test-case-realm",
+    ":test-case-thinger",
+    "//src/sys/pkg/testing/pkgfs-reflector:pkgfs-reflector",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":pkgfs-reflector-integration-test" ]
+}
