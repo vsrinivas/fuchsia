@@ -43,8 +43,6 @@
 //! This library currently doesn't work outside of a component (the filesystem utility binary paths
 //! are hard-coded strings).
 
-#![deny(missing_docs)]
-
 use {
     anyhow::{format_err, Context as _, Error},
     cstr::cstr,
@@ -55,200 +53,25 @@ use {
     },
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, Task},
-    std::{ffi::CStr, marker::PhantomData},
+    std::ffi::CStr,
 };
 
-/// Options to pass to the underlying filesystem process. They are passed as argument flags, and are
-/// always present on the call even if they don't apply to the operation.
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct FSOptions {
-    /// Filesystem will be mounted read-only. Applies to mounting.
-    pub readonly: bool,
-    /// Increase logging output from the filesystem. Applies to mounting, fsck, and format.
-    pub verbose: bool,
-    /// Configure metric collection by the filesystem. Applies to mounting.
-    pub metrics: bool,
+/// Stores state of the mounted filesystem instance
+struct FSInstance {
+    process: zx::Process,
+    mount_point: String,
 }
 
-/// Describes the information for working with a particular native filesystem.
-pub trait Layout {
-    /// Path to the filesystem utility binary.
-    fn path() -> &'static CStr;
-    /// A human readable name for the filesystem.
-    fn name() -> &'static str;
-    /// Default options for the binary for this filesystem layout.
-    fn options() -> FSOptions;
-}
-
-/// Filesystem represents a managed filesystem partition with a particular layout. It is constructed
-/// with functions associated with the [`Layout`] types. Right now, those include [`Blobfs`] and
-/// [`Minfs`].
-pub struct Filesystem<FSType>
-where
-    FSType: Layout,
-{
-    namespace: Namespace,
-    device: NodeSynchronousProxy,
-    process: Option<zx::Process>,
-    mount_point: Option<String>,
-    launcher: FSLauncher<FSType, ProcLauncher>,
-}
-
-impl<FSType> Drop for Filesystem<FSType>
-where
-    FSType: Layout,
-{
-    fn drop(&mut self) {
-        if let Some(_) = self.mount_point {
-            let _result = self.unmount();
-        }
-    }
-}
-
-/// The blobfs layout type.
-pub struct Blobfs;
-
-impl Blobfs {
-    /// Manage a blobfs partition on the provided device. The device is not formatted, mounted, or
-    /// modified at this point.
-    pub fn new(device_path: &str) -> Result<Filesystem<Self>, Error> {
-        let (block_device, server_chan) = zx::Channel::create()?;
-        fdio::service_connect(device_path, server_chan).context("connecting to block device")?;
-        Filesystem::new(block_device)
-    }
-
-    /// Manage a blobfs partition on the provided device. The device is not formatted, mounted, or
-    /// modified at this point.
-    pub fn from_channel(device_channel: zx::Channel) -> Result<Filesystem<Self>, Error> {
-        Filesystem::new(device_channel)
-    }
-}
-
-impl Layout for Blobfs {
-    fn path() -> &'static CStr {
-        cstr!("/pkg/bin/blobfs")
-    }
-
-    fn name() -> &'static str {
-        "blobfs"
-    }
-
-    fn options() -> FSOptions {
-        FSOptions { readonly: false, verbose: false, metrics: false }
-    }
-}
-
-/// The minfs layout type.
-pub struct Minfs;
-
-impl Minfs {
-    /// Manage a minfs partition on the provided device. The device is not formatted, mounted, or
-    /// modified at this point.
-    pub fn new(device_path: &str) -> Result<Filesystem<Self>, Error> {
-        let (block_device, server_chan) = zx::Channel::create()?;
-        fdio::service_connect(device_path, server_chan).context("connecting to block device")?;
-        Filesystem::new(block_device)
-    }
-
-    /// Manage a minfs partition on the provided device. The device is not formatted, mounted, or
-    /// modified at this point.
-    pub fn from_channel(device_channel: zx::Channel) -> Result<Filesystem<Self>, Error> {
-        Filesystem::new(device_channel)
-    }
-}
-
-impl Layout for Minfs {
-    fn path() -> &'static CStr {
-        cstr!("/pkg/bin/minfs")
-    }
-
-    fn name() -> &'static str {
-        "minfs"
-    }
-
-    fn options() -> FSOptions {
-        FSOptions { readonly: false, verbose: false, metrics: false }
-    }
-}
-
-impl Filesystem<Minfs> {
-    /// Increase logging output from the filesystem process. Only the minfs binary has this option.
-    pub fn set_verbose(&mut self, enable: bool) {
-        self.launcher.options.verbose = enable;
-    }
-}
-
-/// The factoryfs layout type.
-pub struct Factoryfs;
-
-impl Factoryfs {
-    /// Manage a factoryfs partition on the provided device. The device is not formatted, mounted,
-    /// or modified at this point.
-    pub fn new(device_path: &str) -> Result<Filesystem<Self>, Error> {
-        let (block_device, server_chan) = zx::Channel::create()?;
-        fdio::service_connect(device_path, server_chan).context("connecting to block device")?;
-        Filesystem::new(block_device)
-    }
-
-    /// Manage a factory partition on the provided device. The device is not formatted, mounted, or
-    /// modified at this point.
-    pub fn from_channel(device_channel: zx::Channel) -> Result<Filesystem<Self>, Error> {
-        Filesystem::new(device_channel)
-    }
-}
-
-impl Layout for Factoryfs {
-    fn path() -> &'static CStr {
-        cstr!("/pkg/bin/factoryfs")
-    }
-
-    fn name() -> &'static str {
-        "factoryfs"
-    }
-
-    // factoryfs doesn't actually support any options, so even though it is "read only" we don't
-    // use the readonly flag.
-    fn options() -> FSOptions {
-        FSOptions { readonly: false, verbose: false, metrics: false }
-    }
-}
-
-impl<FSType> Filesystem<FSType>
-where
-    FSType: Layout,
-{
-    /// Manage a filesystem partition on the provided device. The device is not formatted, mounted,
-    /// or modified at this point.
-    ///
-    /// This function is not public. The only way to construct a new filesystem type is through one
-    /// of the structs that implements Layout.
-    fn new(device: zx::Channel) -> Result<Filesystem<FSType>, Error> {
-        let namespace = Namespace::installed().context("failed to get installed namespace")?;
-        let device = NodeSynchronousProxy::new(device);
-        Ok(Filesystem {
-            namespace,
-            device,
-            process: None,
-            mount_point: None,
-            launcher: FSLauncher::new(FSType::options()),
-        })
-    }
-
-    /// Mount the filesystem as read only.
-    pub fn set_readonly(&mut self, enable: bool) {
-        self.launcher.options.readonly = enable;
-    }
-
-    /// Configure the collection of metrics.
-    pub fn set_metrics(&mut self, enable: bool) {
-        self.launcher.options.metrics = enable;
-    }
-
-    /// Initialize the filesystem partition that exists on the provided block device, allowing it to
+impl FSInstance {
+    /// Mount the filesystem partition that exists on the provided block device, allowing it to
     /// receive requests on the root channel. In order to be mounted in the traditional sense, the
     /// client side of the provided root channel needs to be bound to a path in a namespace
     /// somewhere.
-    fn initialize(&mut self, block_device: zx::Channel) -> Result<zx::Channel, Error> {
+    fn mount(
+        block_device: zx::Channel,
+        args: Vec<&CStr>,
+        mount_point: &str,
+    ) -> Result<Self, Error> {
         let (client_chan, server_chan) = zx::Channel::create()?;
 
         let actions = vec![
@@ -258,12 +81,7 @@ where
             SpawnAction::add_handle(HandleInfo::new(HandleType::User0, 1), block_device.into()),
         ];
 
-        if self.process.is_some() {
-            return Err(format_err!("filesystem process is already running!"));
-        }
-        self.process.replace(
-            self.launcher.run_command(cstr!("mount"), actions).context("failed to mount")?,
-        );
+        let process = launch_process(&args, actions)?;
 
         let signals = client_chan
             .wait_handle(zx::Signals::USER_0 | zx::Signals::CHANNEL_PEER_CLOSED, zx::Time::INFINITE)
@@ -273,7 +91,124 @@ where
             return Err(format_err!("failed to mount: CHANNEL_PEER_CLOSED"));
         }
 
-        Ok(client_chan)
+        let namespace = Namespace::installed().context("failed to get installed namespace")?;
+        namespace
+            .bind(mount_point, client_chan)
+            .context("failed to bind client channel into default namespace")?;
+
+        Ok(Self { process, mount_point: mount_point.to_string() })
+    }
+
+    /// Unmount the filesystem partition. The partition must already be mounted.
+    fn unmount(self) -> Result<(), Error> {
+        let (client_chan, server_chan) = zx::Channel::create()?;
+
+        let namespace = Namespace::installed().context("failed to get installed namespace")?;
+        namespace
+            .connect(&self.mount_point, OPEN_RIGHT_ADMIN, server_chan)
+            .context("failed to connect to filesystem")?;
+
+        let mut proxy = DirectoryAdminSynchronousProxy::new(client_chan);
+        proxy.unmount(zx::Time::INFINITE).context("failed to unmount")?;
+
+        namespace
+            .unbind(&self.mount_point)
+            .context("failed to unbind filesystem from default namespace")
+    }
+
+    /// Terminate the filesystem process and force unmount the mount point
+    fn kill(self) -> Result<(), Error> {
+        self.process.kill().context("Could not kill filesystem process")?;
+
+        let namespace = Namespace::installed().context("failed to get installed namespace")?;
+        namespace
+            .unbind(&self.mount_point)
+            .context("failed to unbind filesystem from default namespace")
+    }
+}
+
+fn launch_process(args: &[&CStr], mut actions: Vec<SpawnAction<'_>>) -> Result<zx::Process, Error> {
+    let options = SpawnOptions::CLONE_ALL;
+
+    let process = match spawn_etc(
+        &zx::Handle::invalid().into(),
+        options,
+        args[0],
+        args,
+        None,
+        &mut actions,
+    ) {
+        Ok(process) => process,
+        Err((status, message)) => {
+            return Err(format_err!(
+                "failed to spawn process. launched with: {:?}, status: {}, message: {}",
+                args,
+                status,
+                message
+            ));
+        }
+    };
+
+    Ok(process)
+}
+
+fn run_command_and_wait_for_clean_exit(
+    args: Vec<&CStr>,
+    block_device: zx::Channel,
+) -> Result<(), Error> {
+    let actions = vec![
+        // device handle is passed in as a PA_USER0 handle at argument 1
+        SpawnAction::add_handle(HandleInfo::new(HandleType::User0, 1), block_device.into()),
+    ];
+
+    let process = launch_process(&args, actions)?;
+
+    let _signals = process
+        .wait_handle(zx::Signals::PROCESS_TERMINATED, zx::Time::INFINITE)
+        .context(format!("failed to wait for process to complete"))?;
+
+    let info = process.info().context("failed to get process info")?;
+    if !info.exited || info.return_code != 0 {
+        return Err(format_err!("process returned non-zero exit code ({})", info.return_code));
+    }
+
+    Ok(())
+}
+
+/// Describes the configuration for a particular native filesystem.
+pub trait FSConfig {
+    /// Path to the filesystem binary
+    fn binary_path(&self) -> &CStr;
+
+    /// Arguments passed to the binary for all subcommands
+    fn generic_args(&self) -> Vec<&CStr>;
+
+    /// Arguments passed to the binary for mounting
+    fn mount_args(&self) -> Vec<&CStr>;
+}
+
+/// Manages a block device for filesystem operations
+pub struct Filesystem<FSC: FSConfig> {
+    device: NodeSynchronousProxy,
+    config: FSC,
+    instance: Option<FSInstance>,
+}
+
+impl<FSC: FSConfig> Filesystem<FSC> {
+    /// Manage a filesystem on a device at the given path. The device is not formatted, mounted, or
+    /// modified at this point.
+    pub fn from_path(device_path: &str, config: FSC) -> Result<Self, Error> {
+        let (client_end, server_end) = zx::Channel::create()?;
+        fdio::service_connect(device_path, server_end)
+            .context("could not connect to block device")?;
+        Self::from_channel(client_end, config)
+    }
+
+    /// Manage a filesystem on a device at the given channel. The device is not formatted, mounted,
+    /// or modified at this point.
+    pub fn from_channel(client_end: zx::Channel, config: FSC) -> Result<Self, Error> {
+        let device = NodeSynchronousProxy::new(client_end);
+        Ok(Self { device, config, instance: None })
     }
 
     /// Returns a channel to the block device.
@@ -284,284 +219,335 @@ where
         Ok(channel)
     }
 
-    /// Format the associated device with a fresh filesystem. It must not be mounted.
-    pub fn format(&mut self) -> Result<(), Error> {
-        if let Some(mount_point) = &self.mount_point {
-            // shouldn't be mounted if we are going to format it
-            return Err(format_err!(
-                "failed to format {}: mounted at {}",
-                FSType::name(),
-                mount_point
-            ));
-        }
-
-        let device = self.get_channel()?;
-
-        self.launcher
-            .run_command_with_device(cstr!("mkfs"), device)
-            .context("failed to format device")?;
-
-        Ok(())
-    }
-
     /// Mount the provided block device and bind it to the provided mount_point in the default
     /// namespace. The filesystem can't already be mounted, and the mount will fail if the provided
     /// mount path doesn't already exist. The path is relative to the root of the default namespace,
     /// and can't contain any '.' or '..' entries.
     pub fn mount(&mut self, mount_point: &str) -> Result<(), Error> {
-        if let Some(mount_point) = &self.mount_point {
-            // already mounted?
-            return Err(format_err!(
-                "failed to mount {}: already mounted at {}",
-                FSType::name(),
-                mount_point
-            ));
+        if self.instance.is_some() {
+            return Err(format_err!("cannot mount. filesystem is already mounted"));
         }
 
-        let channel = self.get_channel()?;
-        let client_chan = self.initialize(channel)?;
-        self.namespace
-            .bind(mount_point, client_chan)
-            .context("failed to bind client channel into default namespace")?;
+        let block_device = self.get_channel()?;
 
-        self.mount_point = Some(String::from(mount_point));
+        let mut args = vec![self.config.binary_path(), cstr!("mount")];
+        args.append(&mut self.config.generic_args());
+        args.append(&mut self.config.mount_args());
+
+        self.instance = Some(FSInstance::mount(block_device, args, mount_point)?);
 
         Ok(())
     }
 
-    /// Unmount the filesystem partition. The partition must already be mounted.
-    pub fn unmount(&mut self) -> Result<(), Error> {
-        let (client_chan, server_chan) = zx::Channel::create()?;
-        let mount_point =
-            self.mount_point.take().ok_or_else(|| format_err!("failed to unmount: not mounted"))?;
-        self.namespace
-            .connect(&mount_point, OPEN_RIGHT_ADMIN, server_chan)
-            .context("failed to connect to filesystem")?;
+    /// Format the associated device with a fresh filesystem. It must not be mounted.
+    pub fn format(&mut self) -> Result<(), Error> {
+        if self.instance.is_some() {
+            return Err(format_err!("cannot format! filesystem is mounted"));
+        }
 
-        let mut proxy = DirectoryAdminSynchronousProxy::new(client_chan);
-        proxy.unmount(zx::Time::INFINITE).context("failed to unmount")?;
+        let block_device = self.get_channel()?;
 
-        self.namespace
-            .unbind(&mount_point)
-            .context("failed to unbind filesystem from default namespace")?;
+        let mut args = vec![self.config.binary_path(), cstr!("mkfs")];
+        args.append(&mut self.config.generic_args());
 
-        self.process.take().context("filesystem process isn't running!")?;
-        Ok(())
-    }
-
-    /// Terminate the filesystem process and force unmount the mount point
-    pub fn kill(&mut self) -> Result<(), Error> {
-        let process = self.process.take().context("filesystem process isn't running!")?;
-        process.kill().context("Could not kill filesystem process")?;
-
-        let mount_point =
-            self.mount_point.take().ok_or_else(|| format_err!("failed to unmount: not mounted"))?;
-
-        self.namespace
-            .unbind(&mount_point)
-            .context("failed to unbind filesystem from default namespace")
+        run_command_and_wait_for_clean_exit(args, block_device).context("failed to format device")
     }
 
     /// Run fsck on the filesystem partition. Returns Ok(()) if fsck succeeds, or the associated
     /// error if it doesn't. Will fail if run on a mounted partition.
     pub fn fsck(&mut self) -> Result<(), Error> {
-        if let Some(mount_point) = &self.mount_point {
-            return Err(format_err!("failed to fsck: mounted at {}", mount_point));
+        if self.instance.is_some() {
+            return Err(format_err!("cannot fsck! filesystem is mounted"));
         }
 
-        let device = self.get_channel()?;
+        let block_device = self.get_channel()?;
 
-        self.launcher.run_command_with_device(cstr!("fsck"), device).context("fsck failed")?;
+        let mut args = vec![self.config.binary_path(), cstr!("fsck")];
+        args.append(&mut self.config.generic_args());
 
-        Ok(())
+        run_command_and_wait_for_clean_exit(args, block_device).context("failed to fsck device")
+    }
+
+    /// Unmount the filesystem partition. The partition must already be mounted.
+    pub fn unmount(&mut self) -> Result<(), Error> {
+        if let Some(instance) = self.instance.take() {
+            instance.unmount()
+        } else {
+            Err(format_err!("cannot unmount. filesystem is not mounted"))
+        }
+    }
+
+    /// Terminate the filesystem process and force unmount the mount point
+    pub fn kill(&mut self) -> Result<(), Error> {
+        if let Some(instance) = self.instance.take() {
+            instance.kill()
+        } else {
+            Err(format_err!("cannot kill. filesystem is not mounted"))
+        }
     }
 }
 
-trait Launcher {
-    fn launch_process(args: &[&CStr], actions: Vec<SpawnAction<'_>>) -> Result<zx::Process, Error>;
-}
-
-struct ProcLauncher;
-impl Launcher for ProcLauncher {
-    fn launch_process(
-        args: &[&CStr],
-        mut actions: Vec<SpawnAction<'_>>,
-    ) -> Result<zx::Process, Error> {
-        let options = SpawnOptions::CLONE_ALL;
-
-        let process = match spawn_etc(
-            &zx::Handle::invalid().into(),
-            options,
-            args[0],
-            args,
-            None,
-            &mut actions,
-        ) {
-            Ok(process) => process,
-            Err((status, message)) => {
-                return Err(format_err!(
-                    "failed to spawn process. launched with: {:?}, status: {}, message: {}",
-                    args,
-                    status,
-                    message
-                ));
-            }
-        };
-
-        Ok(process)
+impl<FSC: FSConfig> Drop for Filesystem<FSC> {
+    fn drop(&mut self) {
+        if self.instance.is_some() {
+            // Unmount if possible.
+            let _ = self.unmount();
+        }
     }
 }
 
-struct FSLauncher<FSType, L>
-where
-    FSType: Layout,
-    L: Launcher,
-{
-    pub options: FSOptions,
-    _type_marker: PhantomData<FSType>,
-    _launcher_marker: PhantomData<L>,
+///
+/// FILESYSTEMS
+///
+
+/// Layout of blobs in blobfs
+pub enum BlobLayout {
+    /// Merkle tree is stored in a separate block
+    Padded,
+    /// Merkle tree is appended to the last block of data
+    Compact,
 }
 
-impl<FSType, L> FSLauncher<FSType, L>
-where
-    FSType: Layout,
-    L: Launcher,
-{
-    pub fn new(options: FSOptions) -> Self {
-        FSLauncher { options, _type_marker: PhantomData, _launcher_marker: PhantomData }
+/// Compression used for blobs in blobfs
+pub enum BlobCompression {
+    ZSTD,
+    ZSTDSeekable,
+    ZSTDChunked,
+    Uncompressed,
+}
+
+/// Eviction policy used for blobs in blobfs
+pub enum BlobEvictionPolicy {
+    NeverEvict,
+    EvictImmediately,
+}
+
+/// Blobfs Filesystem Configuration
+/// If fields are None or false, they will not be set in arguments.
+#[derive(Default)]
+pub struct Blobfs {
+    pub verbose: bool,
+    pub readonly: bool,
+    pub metrics: bool,
+    pub blob_layout: Option<BlobLayout>,
+    pub blob_compression: Option<BlobCompression>,
+    pub blob_eviction_policy: Option<BlobEvictionPolicy>,
+}
+
+impl Blobfs {
+    /// Manages a block device at a given path using
+    /// the default configuration.
+    pub fn new(path: &str) -> Result<Filesystem<Self>, Error> {
+        Filesystem::from_path(path, Self::default())
     }
 
-    pub fn run_command_with_device(
-        &self,
-        command: &'static CStr,
-        block_device: zx::Channel,
-    ) -> Result<(), Error> {
-        let actions = vec![
-            // device handle is passed in as a PA_USER0 handle at argument 1
-            SpawnAction::add_handle(HandleInfo::new(HandleType::User0, 1), block_device.into()),
-        ];
-
-        let process = self.run_command(command, actions)?;
-
-        let _signals = process
-            .wait_handle(zx::Signals::PROCESS_TERMINATED, zx::Time::INFINITE)
-            .context(format!("failed to wait for process to complete"))?;
-
-        let info = process.info().context("failed to get process info")?;
-        if !info.exited || info.return_code != 0 {
-            return Err(format_err!("process returned non-zero exit code ({})", info.return_code));
-        }
-
-        Ok(())
+    /// Manages a block device at a given channel using
+    /// the default configuration.
+    pub fn from_channel(channel: zx::Channel) -> Result<Filesystem<Self>, Error> {
+        Filesystem::from_channel(channel, Self::default())
     }
+}
 
-    pub fn run_command(
-        &self,
-        command: &'static CStr,
-        actions: Vec<SpawnAction<'_>>,
-    ) -> Result<zx::Process, Error> {
-        let mut args = vec![FSType::path()];
-        if self.options.metrics {
-            args.push(cstr!("--metrics"));
-        }
-        if self.options.readonly {
-            args.push(cstr!("--readonly"));
-        }
-        if self.options.verbose {
+impl FSConfig for Blobfs {
+    fn binary_path(&self) -> &CStr {
+        cstr!("/pkg/bin/blobfs")
+    }
+    fn generic_args(&self) -> Vec<&CStr> {
+        let mut args = vec![];
+        if self.verbose {
             args.push(cstr!("--verbose"));
         }
-        args.push(command);
+        args
+    }
+    fn mount_args(&self) -> Vec<&CStr> {
+        let mut args = vec![];
+        if self.readonly {
+            args.push(cstr!("--readonly"));
+        }
+        if self.metrics {
+            args.push(cstr!("--metrics"));
+        }
+        if let Some(layout) = &self.blob_layout {
+            args.push(cstr!("--blob_layout_format"));
+            args.push(match layout {
+                BlobLayout::Padded => cstr!("padded"),
+                BlobLayout::Compact => cstr!("compact"),
+            });
+        }
+        if let Some(compression) = &self.blob_compression {
+            args.push(cstr!("--compression"));
+            args.push(match compression {
+                BlobCompression::ZSTD => cstr!("ZSTD"),
+                BlobCompression::ZSTDSeekable => cstr!("ZSTD_SEEKABLE"),
+                BlobCompression::ZSTDChunked => cstr!("ZSTD_CHUNKED"),
+                BlobCompression::Uncompressed => cstr!("UNCOMPRESSED"),
+            });
+        }
+        if let Some(eviction_policy) = &self.blob_eviction_policy {
+            args.push(cstr!("--eviction_policy"));
+            args.push(match eviction_policy {
+                BlobEvictionPolicy::NeverEvict => cstr!("NEVER_EVICT"),
+                BlobEvictionPolicy::EvictImmediately => cstr!("EVICT_IMMEDIATELY"),
+            })
+        }
+        args
+    }
+}
 
-        L::launch_process(&args, actions)
+/// Minfs Filesystem Configuration
+/// If fields are None or false, they will not be set in arguments.
+#[derive(Default)]
+pub struct Minfs {
+    // TODO(xbhatnag): Add support for fvm_data_slices
+    pub verbose: bool,
+    pub readonly: bool,
+    pub metrics: bool,
+    pub fsck_after_every_transaction: bool,
+}
+
+impl Minfs {
+    /// Manages a block device at a given path using
+    /// the default configuration.
+    pub fn new(path: &str) -> Result<Filesystem<Self>, Error> {
+        Filesystem::from_path(path, Self::default())
+    }
+
+    /// Manages a block device at a given channel using
+    /// the default configuration.
+    pub fn from_channel(channel: zx::Channel) -> Result<Filesystem<Self>, Error> {
+        Filesystem::from_channel(channel, Self::default())
+    }
+}
+
+/// TODO(xbhatnag): This code is only required for a soft migration
+/// of this library. This code is used by our vendor repo, so we maintain
+/// compatibility until we can migrate the vendor code as well.
+impl Filesystem<Minfs> {
+    pub fn set_readonly(&mut self, readonly: bool) {
+        self.config.readonly = readonly;
+    }
+}
+
+impl FSConfig for Minfs {
+    fn binary_path(&self) -> &CStr {
+        cstr!("/pkg/bin/minfs")
+    }
+    fn generic_args(&self) -> Vec<&CStr> {
+        let mut args = vec![];
+        if self.verbose {
+            args.push(cstr!("--verbose"));
+        }
+        args
+    }
+    fn mount_args(&self) -> Vec<&CStr> {
+        let mut args = vec![];
+        if self.readonly {
+            args.push(cstr!("--readonly"));
+        }
+        if self.metrics {
+            args.push(cstr!("--metrics"));
+        }
+        if self.fsck_after_every_transaction {
+            args.push(cstr!("--fsck_after_every_transaction"));
+        }
+        args
+    }
+}
+
+/// Factoryfs Filesystem Configuration
+/// If fields are None or false, they will not be set in arguments.
+#[derive(Default)]
+pub struct Factoryfs {
+    pub verbose: bool,
+    pub metrics: bool,
+}
+
+impl Factoryfs {
+    /// Manages a block device at a given path using
+    /// the default configuration.
+    pub fn new(path: &str) -> Result<Filesystem<Self>, Error> {
+        Filesystem::from_path(path, Self::default())
+    }
+
+    /// Manages a block device at a given channel using
+    /// the default configuration.
+    pub fn from_channel(channel: zx::Channel) -> Result<Filesystem<Self>, Error> {
+        Filesystem::from_channel(channel, Self::default())
+    }
+}
+
+impl FSConfig for Factoryfs {
+    fn binary_path(&self) -> &CStr {
+        cstr!("/pkg/bin/factoryfs")
+    }
+    fn generic_args(&self) -> Vec<&CStr> {
+        let mut args = vec![];
+        if self.verbose {
+            args.push(cstr!("--verbose"));
+        }
+        args
+    }
+    fn mount_args(&self) -> Vec<&CStr> {
+        let mut args = vec![];
+        if self.metrics {
+            args.push(cstr!("--metrics"));
+        }
+        args
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        super::{Blobfs, FSLauncher, FSOptions, Factoryfs, Filesystem, Launcher, Minfs},
-        anyhow::Error,
-        cstr::cstr,
-        fdio::SpawnAction,
-        fuchsia_zircon::{self as zx, HandleBased},
+        super::{
+            BlobCompression, BlobEvictionPolicy, BlobLayout, Blobfs, Factoryfs, Filesystem, Minfs,
+        },
+        fuchsia_zircon::HandleBased,
         ramdevice_client::RamdiskClient,
-        std::ffi::CStr,
         std::io::{Read, Seek, Write},
-        thiserror::Error,
     };
 
-    /// the only way to really move info out of the launch_process function is through the return
-    /// value. we want to confirm that the correct one was called, so we return something only a
-    /// test impl can return - something defined in the test mod - through the error type.
-    #[derive(Debug, Copy, Clone, PartialEq, Eq, Error)]
-    struct ExpectedError;
-    impl std::fmt::Display for ExpectedError {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "test passed")
-        }
-    }
-
-    #[test]
-    fn fs_launcher_no_args() {
-        struct TestLauncherNoArgs;
-        impl Launcher for TestLauncherNoArgs {
-            fn launch_process(
-                args: &[&CStr],
-                _actions: Vec<SpawnAction<'_>>,
-            ) -> Result<zx::Process, Error> {
-                assert_eq!(args, &[cstr!("/pkg/bin/blobfs"), cstr!("mount")]);
-                Err(ExpectedError.into())
-            }
-        }
-
-        let launcher: FSLauncher<Blobfs, TestLauncherNoArgs> =
-            FSLauncher::new(FSOptions { readonly: false, verbose: false, metrics: false });
-        let res = launcher.run_command(cstr!("mount"), vec![]);
-        assert_eq!(res.unwrap_err().downcast_ref::<ExpectedError>().unwrap(), &ExpectedError);
-    }
-
-    #[test]
-    fn fs_launcher_all_args() {
-        struct TestLauncherAllArgs;
-        impl Launcher for TestLauncherAllArgs {
-            fn launch_process(
-                args: &[&CStr],
-                _actions: Vec<SpawnAction<'_>>,
-            ) -> Result<zx::Process, Error> {
-                assert_eq!(
-                    args,
-                    &[
-                        cstr!("/pkg/bin/blobfs"),
-                        cstr!("--metrics"),
-                        cstr!("--readonly"),
-                        cstr!("--verbose"),
-                        cstr!("mount")
-                    ]
-                );
-                Err(ExpectedError.into())
-            }
-        }
-
-        let launcher: FSLauncher<Blobfs, TestLauncherAllArgs> =
-            FSLauncher::new(FSOptions { readonly: true, verbose: true, metrics: true });
-        let res = launcher.run_command(cstr!("mount"), vec![]);
-        assert_eq!(res.unwrap_err().downcast_ref::<ExpectedError>().unwrap(), &ExpectedError);
-    }
-
-    fn ramdisk_blobfs(block_size: u64) -> (RamdiskClient, Filesystem<Blobfs>) {
+    fn ramdisk(block_size: u64) -> RamdiskClient {
         isolated_driver_manager::launch_isolated_driver_manager().unwrap();
         ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(10))
             .unwrap();
-        let ramdisk = RamdiskClient::create(block_size, 1 << 16).unwrap();
+        RamdiskClient::create(block_size, 1 << 16).unwrap()
+    }
+
+    fn blobfs(ramdisk: &RamdiskClient) -> Filesystem<Blobfs> {
         let device = ramdisk.open().unwrap();
-        let blobfs = Blobfs::from_channel(device).unwrap();
-        (ramdisk, blobfs)
+        Blobfs::from_channel(device).unwrap()
+    }
+
+    #[test]
+    fn blobfs_custom_config() {
+        let block_size = 512;
+        let mount_point = "/test-fs-root";
+
+        let ramdisk = ramdisk(block_size);
+        let device = ramdisk.open().unwrap();
+        let config = Blobfs {
+            verbose: true,
+            metrics: true,
+            readonly: true,
+            blob_layout: Some(BlobLayout::Compact),
+            blob_compression: Some(BlobCompression::Uncompressed),
+            blob_eviction_policy: Some(BlobEvictionPolicy::EvictImmediately),
+        };
+        let mut blobfs = Filesystem::from_channel(device, config).unwrap();
+
+        blobfs.format().expect("failed to format blobfs");
+        blobfs.fsck().expect("failed to fsck blobfs");
+        blobfs.mount(mount_point).expect("failed to mount blobfs");
+
+        ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
     #[test]
     fn blobfs_format_fsck_success() {
         let block_size = 512;
-        let (ramdisk, mut blobfs) = ramdisk_blobfs(block_size);
+        let ramdisk = ramdisk(block_size);
+        let mut blobfs = blobfs(&ramdisk);
 
         blobfs.format().expect("failed to format blobfs");
         blobfs.fsck().expect("failed to fsck blobfs");
@@ -572,7 +558,8 @@ mod tests {
     #[test]
     fn blobfs_format_fsck_error() {
         let block_size = 512;
-        let (ramdisk, mut blobfs) = ramdisk_blobfs(block_size);
+        let ramdisk = ramdisk(block_size);
+        let mut blobfs = blobfs(&ramdisk);
 
         blobfs.format().expect("failed to format blobfs");
 
@@ -593,7 +580,8 @@ mod tests {
     fn blobfs_format_mount_write_remount_read_unmount() {
         let block_size = 512;
         let mount_point = "/test-fs-root";
-        let (ramdisk, mut blobfs) = ramdisk_blobfs(block_size);
+        let ramdisk = ramdisk(block_size);
+        let mut blobfs = blobfs(&ramdisk);
 
         blobfs.format().expect("failed to format blobfs");
         blobfs.mount(mount_point).expect("failed to mount blobfs the first time");
@@ -624,20 +612,38 @@ mod tests {
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
-    fn ramdisk_minfs(block_size: u64) -> (RamdiskClient, Filesystem<Minfs>) {
-        isolated_driver_manager::launch_isolated_driver_manager().unwrap();
-        ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(10))
-            .unwrap();
-        let ramdisk = RamdiskClient::create(block_size, 1 << 16).unwrap();
+    fn minfs(ramdisk: &RamdiskClient) -> Filesystem<Minfs> {
         let device = ramdisk.open().unwrap();
-        let minfs = Minfs::from_channel(device).unwrap();
-        (ramdisk, minfs)
+        Minfs::from_channel(device).unwrap()
+    }
+
+    #[test]
+    fn minfs_custom_config() {
+        let block_size = 512;
+        let mount_point = "/test-fs-root";
+
+        let ramdisk = ramdisk(block_size);
+        let device = ramdisk.open().unwrap();
+        let config = Minfs {
+            verbose: true,
+            metrics: true,
+            readonly: true,
+            fsck_after_every_transaction: true,
+        };
+        let mut minfs = Filesystem::from_channel(device, config).unwrap();
+
+        minfs.format().expect("failed to format minfs");
+        minfs.fsck().expect("failed to fsck minfs");
+        minfs.mount(mount_point).expect("failed to mount minfs");
+
+        ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
     #[test]
     fn minfs_format_fsck_success() {
         let block_size = 8192;
-        let (ramdisk, mut minfs) = ramdisk_minfs(block_size);
+        let ramdisk = ramdisk(block_size);
+        let mut minfs = minfs(&ramdisk);
 
         minfs.format().expect("failed to format minfs");
         minfs.fsck().expect("failed to fsck minfs");
@@ -648,7 +654,8 @@ mod tests {
     #[test]
     fn minfs_format_fsck_error() {
         let block_size = 8192;
-        let (ramdisk, mut minfs) = ramdisk_minfs(block_size);
+        let ramdisk = ramdisk(block_size);
+        let mut minfs = minfs(&ramdisk);
 
         minfs.format().expect("failed to format minfs");
 
@@ -678,7 +685,8 @@ mod tests {
     fn minfs_format_mount_write_remount_read_unmount() {
         let block_size = 8192;
         let mount_point = "/test-fs-root";
-        let (ramdisk, mut minfs) = ramdisk_minfs(block_size);
+        let ramdisk = ramdisk(block_size);
+        let mut minfs = minfs(&ramdisk);
 
         minfs.format().expect("failed to format minfs");
         minfs.mount(mount_point).expect("failed to mount minfs the first time");
@@ -707,20 +715,33 @@ mod tests {
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
-    fn ramdisk_factoryfs(block_size: u64) -> (RamdiskClient, Filesystem<Factoryfs>) {
-        isolated_driver_manager::launch_isolated_driver_manager().unwrap();
-        ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(10))
-            .unwrap();
-        let ramdisk = RamdiskClient::create(block_size, 1 << 16).unwrap();
+    fn factoryfs(ramdisk: &RamdiskClient) -> Filesystem<Factoryfs> {
         let device = ramdisk.open().unwrap();
-        let factoryfs = Factoryfs::from_channel(device).unwrap();
-        (ramdisk, factoryfs)
+        Factoryfs::from_channel(device).unwrap()
+    }
+
+    #[test]
+    fn factoryfs_custom_config() {
+        let block_size = 512;
+        let mount_point = "/test-fs-root";
+
+        let ramdisk = ramdisk(block_size);
+        let device = ramdisk.open().unwrap();
+        let config = Factoryfs { verbose: true, metrics: true };
+        let mut factoryfs = Filesystem::from_channel(device, config).unwrap();
+
+        factoryfs.format().expect("failed to format factoryfs");
+        factoryfs.fsck().expect("failed to fsck factoryfs");
+        factoryfs.mount(mount_point).expect("failed to mount factoryfs");
+
+        ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
     #[test]
     fn factoryfs_format_fsck_success() {
         let block_size = 512;
-        let (ramdisk, mut factoryfs) = ramdisk_factoryfs(block_size);
+        let ramdisk = ramdisk(block_size);
+        let mut factoryfs = factoryfs(&ramdisk);
 
         factoryfs.format().expect("failed to format factoryfs");
         factoryfs.fsck().expect("failed to fsck factoryfs");
@@ -732,7 +753,8 @@ mod tests {
     fn factoryfs_format_mount_unmount() {
         let block_size = 512;
         let mount_point = "/test-fs-root";
-        let (ramdisk, mut factoryfs) = ramdisk_factoryfs(block_size);
+        let ramdisk = ramdisk(block_size);
+        let mut factoryfs = factoryfs(&ramdisk);
 
         factoryfs.format().expect("failed to format factoryfs");
         factoryfs.mount(mount_point).expect("failed to mount factoryfs");
