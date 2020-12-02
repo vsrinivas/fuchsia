@@ -34,7 +34,7 @@ class HermeticGoldenTest : public HermeticPipelineTest {
  public:
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
-  struct WaveformTestCase {
+  struct TestCase {
     std::string test_name;
     PipelineConstants pipeline;
 
@@ -65,32 +65,18 @@ class HermeticGoldenTest : public HermeticPipelineTest {
 
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
-  void RunWaveformTest(const WaveformTestCase<InputFormat, OutputFormat>& tc);
+  void Run(const TestCase<InputFormat, OutputFormat>& tc);
 
-  // These tests feed one or more impulses into a pipeline, producing an output buffer,
-  // then validate that the impulses appear at the correct positions in the output.
-  //
-  // TODO(mpuryear): remove HermeticGoldenTest::RunImpulseTest etc, after clients move to
-  // HermeticImpulseTest.
+  // TODO(mpuryear): remove the below, once clients have moved to simpler names
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
-  struct ImpulseTestCase {
-    std::string test_name;
-    PipelineConstants pipeline;
-
-    TypedFormat<InputFormat> input_format;
-    TypedFormat<OutputFormat> output_format;
-
-    // Width, height, and location of the input impulses. Impulses should be separated by
-    // at least pipeline.pre_end_ramp_frames + pipeline.post_start_ramp_frames.
-    size_t impulse_width_in_frames;
-    typename SampleFormatTraits<InputFormat>::SampleT impulse_magnitude;
-    std::vector<size_t> impulse_locations_in_frames;
-  };
+  using WaveformTestCase = TestCase<InputFormat, OutputFormat>;
 
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
-  void RunImpulseTest(const ImpulseTestCase<InputFormat, OutputFormat>& tc);
+  void RunWaveformTest(const TestCase<InputFormat, OutputFormat>& tc) {
+    Run(tc);
+  }
 };
 
 }  // namespace media::audio::test

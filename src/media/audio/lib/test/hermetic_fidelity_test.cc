@@ -23,14 +23,16 @@ using ASF = fuchsia::media::AudioSampleFormat;
 
 namespace media::audio::test {
 
+namespace {
 struct ResultsIndex {
-  HermeticFidelityTest::FidelityRenderPath path;
+  HermeticFidelityTest::RenderPath path;
   size_t channel;
 
   bool operator<(const ResultsIndex& rhs) const {
     return std::tie(path, channel) < std::tie(rhs.path, rhs.channel);
   }
 };
+};  // namespace
 
 // For each path|channel, we maintain results arrays for Frequency Response and for Sinad.
 // A map of these array results is saved as a function-local static variable. If
@@ -43,16 +45,15 @@ struct ResultsIndex {
 // static
 // Retrieve (initially allocating, if necessary) the array of level results for this path|channel.
 std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& HermeticFidelityTest::level_results(
-    FidelityRenderPath path, size_t channel) {
+    RenderPath path, size_t channel) {
   // Allocated only when first needed, and automatically cleaned up when process exits.
   static auto results_level_db =
       new std::map<ResultsIndex, std::array<double, HermeticFidelityTest::kNumReferenceFreqs>>();
 
   ResultsIndex index{.path = path, .channel = channel};
   if (results_level_db->find(index) == results_level_db->end()) {
-    std::array<double, kNumReferenceFreqs> empty;
-    std::fill(empty.begin(), empty.end(), std::numeric_limits<double>::infinity());
-    results_level_db->insert({index, empty});
+    auto& results = (*results_level_db)[index];
+    std::fill(results.begin(), results.end(), std::numeric_limits<double>::infinity());
   }
 
   return results_level_db->find(index)->second;
@@ -62,16 +63,15 @@ std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& HermeticFidelityTe
 // Retrieve (initially allocating, if necessary) the array of sinad results for this path|channel.
 // A map of these array results is saved as a function-local static variable.
 std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& HermeticFidelityTest::sinad_results(
-    FidelityRenderPath path, size_t channel) {
+    RenderPath path, size_t channel) {
   // Allocated only when first needed, and automatically cleaned up when process exits.
   static auto results_sinad_db =
       new std::map<ResultsIndex, std::array<double, HermeticFidelityTest::kNumReferenceFreqs>>();
 
   ResultsIndex index{.path = path, .channel = channel};
   if (results_sinad_db->find(index) == results_sinad_db->end()) {
-    std::array<double, kNumReferenceFreqs> empty;
-    std::fill(empty.begin(), empty.end(), std::numeric_limits<double>::infinity());
-    results_sinad_db->insert({index, empty});
+    auto& results = (*results_sinad_db)[index];
+    std::fill(results.begin(), results.end(), std::numeric_limits<double>::infinity());
   }
 
   return results_sinad_db->find(index)->second;
@@ -120,18 +120,18 @@ void HermeticFidelityTest::TranslateReferenceFrequencies(uint32_t device_frame_r
 
 template <ASF InputFormat, ASF OutputFormat>
 AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
-    TypedFormat<InputFormat> input_format, size_t input_buffer_frames, FidelityRenderPath path,
+    TypedFormat<InputFormat> input_format, size_t input_buffer_frames, RenderPath path,
     AudioBuffer<InputFormat> input, VirtualOutput<OutputFormat>* device) {
   FX_CHECK(input_format.frames_per_second() == 96000);
 
   fuchsia::media::AudioRenderUsage usage = fuchsia::media::AudioRenderUsage::MEDIA;
 
-  if (path == FidelityRenderPath::Communications) {
+  if (path == RenderPath::Communications) {
     usage = fuchsia::media::AudioRenderUsage::COMMUNICATION;
   }
 
   // Render input such that first input frame will be rendered into first ring buffer frame.
-  if (path == FidelityRenderPath::Ultrasound) {
+  if (path == RenderPath::Ultrasound) {
     auto renderer = CreateUltrasoundRenderer(input_format, input_buffer_frames, true);
     auto packets = renderer->AppendPackets({&input});
 
@@ -151,7 +151,7 @@ AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
 
 template <ASF InputFormat, ASF OutputFormat>
 void HermeticFidelityTest::DisplaySummaryResults(
-    const FidelityTestCase<InputFormat, OutputFormat>& test_case) {
+    const TestCase<InputFormat, OutputFormat>& test_case) {
   // Loop by channel, displaying summary results, in a separate loop from checking each result.
   for (const auto& channel_spec : test_case.channels_to_measure) {
     // Show results in tabular forms, for easy copy into hermetic_fidelity_results.cc.
@@ -176,8 +176,7 @@ void HermeticFidelityTest::DisplaySummaryResults(
 }
 
 template <ASF InputFormat, ASF OutputFormat>
-void HermeticFidelityTest::VerifyResults(
-    const FidelityTestCase<InputFormat, OutputFormat>& test_case) {
+void HermeticFidelityTest::VerifyResults(const TestCase<InputFormat, OutputFormat>& test_case) {
   // Loop by channel_to_measure
   for (const auto& channel_spec : test_case.channels_to_measure) {
     const auto& chan_level_results_db = level_results(test_case.path, channel_spec.channel);
@@ -208,8 +207,8 @@ void HermeticFidelityTest::VerifyResults(
 // (3) Assess the e2e input data path (from device to capturer)
 //     Included for completeness: we apply no capture effects; should equal audio_fidelity_tests.
 template <ASF InputFormat, ASF OutputFormat>
-void HermeticFidelityTest::RunFidelityTest(
-    const HermeticFidelityTest::FidelityTestCase<InputFormat, OutputFormat>& tc) {
+void HermeticFidelityTest::Run(
+    const HermeticFidelityTest::TestCase<InputFormat, OutputFormat>& tc) {
   // Compute input signal length: time to ramp in, enough to analyze, time to ramp out.
   size_t input_signal_frames =
       std::ceil(static_cast<double>(kFreqTestBufSize * tc.input_format.frames_per_second()) /
@@ -393,7 +392,7 @@ void HermeticFidelityTest::RunFidelityTest(
 }
 
 // We only run the pipeline fidelity tests with FLOAT inputs/outputs, for full data precision.
-template void HermeticFidelityTest::RunFidelityTest<ASF::FLOAT, ASF::FLOAT>(
-    const FidelityTestCase<ASF::FLOAT, ASF::FLOAT>& tc);
+template void HermeticFidelityTest::Run<ASF::FLOAT, ASF::FLOAT>(
+    const TestCase<ASF::FLOAT, ASF::FLOAT>& tc);
 
 }  // namespace media::audio::test

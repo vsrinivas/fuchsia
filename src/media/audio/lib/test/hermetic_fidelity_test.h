@@ -27,7 +27,7 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   static const std::array<uint32_t, kNumReferenceFreqs> kReferenceFrequencies;
 
   // Test the three render paths present in today's effects configuration.
-  enum class FidelityRenderPath {
+  enum class RenderPath {
     Media = 0,
     Communications = 1,
     Ultrasound = 2,
@@ -46,11 +46,11 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   // This struct includes all the configuration info for this full-spectrum test.
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
-  struct FidelityTestCase {
+  struct TestCase {
     std::string test_name;
 
     TypedFormat<InputFormat> input_format;
-    FidelityRenderPath path;
+    RenderPath path;
     const std::set<size_t> channels_to_play;
 
     PipelineConstants pipeline;
@@ -65,7 +65,7 @@ class HermeticFidelityTest : public HermeticPipelineTest {
 
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
-  void RunFidelityTest(const FidelityTestCase<InputFormat, OutputFormat>& tc);
+  void Run(const TestCase<InputFormat, OutputFormat>& tc);
 
  protected:
   // Custom build-time flags (if needed, could be converted to cmdline flags)
@@ -96,9 +96,9 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   static inline double DoubleToDb(double val) { return std::log10(val) * 20.0; }
 
   static std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& level_results(
-      FidelityRenderPath path, size_t channel);
+      RenderPath path, size_t channel);
   static std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& sinad_results(
-      FidelityRenderPath path, size_t channel);
+      RenderPath path, size_t channel);
 
   void TranslateReferenceFrequencies(uint32_t device_frame_rate);
 
@@ -106,25 +106,39 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
   AudioBuffer<OutputFormat> GetRendererOutput(TypedFormat<InputFormat> input_format,
-                                              size_t input_buffer_frames, FidelityRenderPath path,
+                                              size_t input_buffer_frames, RenderPath path,
                                               AudioBuffer<InputFormat> input,
                                               VirtualOutput<OutputFormat>* device);
 
   // Display results for this path, in tabular form for each compare/copy to existing limits.
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
-  void DisplaySummaryResults(const FidelityTestCase<InputFormat, OutputFormat>& test_case);
+  void DisplaySummaryResults(const TestCase<InputFormat, OutputFormat>& test_case);
 
   // Validate results for the given channel set, against channel-mapped results arrays.
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
-  void VerifyResults(const FidelityTestCase<InputFormat, OutputFormat>& test_case);
+  void VerifyResults(const TestCase<InputFormat, OutputFormat>& test_case);
 
  private:
   // Ref frequencies, internally translated to values corresponding to a buffer[kFreqTestBufSize].
   std::array<uint32_t, kNumReferenceFreqs> translated_ref_freqs_;
 
   bool save_fidelity_wav_files_;
+
+ public:
+  // TODO(mpuryear): remove the below, once clients have moved to simpler names
+  using FidelityRenderPath = RenderPath;
+
+  template <fuchsia::media::AudioSampleFormat InputFormat,
+            fuchsia::media::AudioSampleFormat OutputFormat>
+  using FidelityTestCase = TestCase<InputFormat, OutputFormat>;
+
+  template <fuchsia::media::AudioSampleFormat InputFormat,
+            fuchsia::media::AudioSampleFormat OutputFormat>
+  void RunFidelityTest(const TestCase<InputFormat, OutputFormat>& tc) {
+    Run(tc);
+  }
 };
 
 inline bool operator<(const HermeticFidelityTest::ChannelMeasurement& lhs,

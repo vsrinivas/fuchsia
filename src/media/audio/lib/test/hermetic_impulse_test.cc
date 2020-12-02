@@ -22,8 +22,7 @@ using ASF = fuchsia::media::AudioSampleFormat;
 namespace media::audio::test {
 
 template <ASF InputFormat, ASF OutputFormat>
-void HermeticImpulseTest::RunImpulseTest(
-    const HermeticImpulseTest::ImpulseTestCase<InputFormat, OutputFormat>& tc) {
+void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, OutputFormat>& tc) {
   // Compute the number of input frames.
   auto start_of_last_impulse = tc.impulse_locations_in_frames.back();
   auto num_input_frames = start_of_last_impulse + tc.impulse_width_in_frames +
@@ -135,9 +134,9 @@ void HermeticImpulseTest::RunImpulseTest(
 // Explicitly instantiate (almost) all possible implementations.
 // We intentionally don't instantiate implementations with OutputFormat = UNSIGNED_8
 // because such hardware is no longer in use, therefore it's not worth testing.
-#define INSTANTIATE(InputFormat, OutputFormat)                                  \
-  template void HermeticImpulseTest::RunImpulseTest<InputFormat, OutputFormat>( \
-      const ImpulseTestCase<InputFormat, OutputFormat>& tc);
+#define INSTANTIATE(InputFormat, OutputFormat)                       \
+  template void HermeticImpulseTest::Run<InputFormat, OutputFormat>( \
+      const TestCase<InputFormat, OutputFormat>& tc);
 
 INSTANTIATE(ASF::UNSIGNED_8, ASF::SIGNED_16)
 INSTANTIATE(ASF::UNSIGNED_8, ASF::SIGNED_24_IN_32)

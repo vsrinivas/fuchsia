@@ -109,22 +109,12 @@ source_set("hermetic_pipeline_test_main") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.media",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
   ]
 
-  public_deps = [
-    ":hermetic_audio_test",
-    "//sdk/fidl/fuchsia.media",
-  ]
-}
-
-# TODO: Remove this, once clients move to hermetic_pipeline_test_main
-# Main entry point for tests that use hermetic_golden_test.h.
-source_set("hermetic_golden_test_main") {
-  testonly = true
-
-  public_deps = [ ":hermetic_pipeline_test_main" ]
+  public_deps = [ ":hermetic_audio_test" ]
 }
 
 # Flexible utility class for channel-based communication (such as to drivers or device services).

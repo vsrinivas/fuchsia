@@ -18,7 +18,7 @@ class HermeticImpulseTest : public HermeticPipelineTest {
  public:
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
-  struct ImpulseTestCase {
+  struct TestCase {
     std::string test_name;
     PipelineConstants pipeline;
 
@@ -34,7 +34,18 @@ class HermeticImpulseTest : public HermeticPipelineTest {
 
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
-  void RunImpulseTest(const ImpulseTestCase<InputFormat, OutputFormat>& tc);
+  void Run(const TestCase<InputFormat, OutputFormat>& tc);
+
+  // TODO(mpuryear): remove the below, once clients have moved to simpler names
+  template <fuchsia::media::AudioSampleFormat InputFormat,
+            fuchsia::media::AudioSampleFormat OutputFormat>
+  using ImpulseTestCase = TestCase<InputFormat, OutputFormat>;
+
+  template <fuchsia::media::AudioSampleFormat InputFormat,
+            fuchsia::media::AudioSampleFormat OutputFormat>
+  void RunImpulseTest(const TestCase<InputFormat, OutputFormat>& tc) {
+    Run(tc);
+  }
 };
 
 }  // namespace media::audio::test
