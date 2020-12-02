@@ -62,7 +62,7 @@ rustc_library("bt-a2dp") {
 }
 
 test_package("tests") {
-  package_name = "bt-a2dp-tests"
+  package_name = "bt-a2dp-lib-tests"
 
   deps = [ ":bt-a2dp_test" ]
 

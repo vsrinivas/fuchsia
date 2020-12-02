@@ -1,0 +1,24 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/bt_a2dp"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.bluetooth.a2dp.ComponentLifecycle",
+            "fuchsia.bluetooth.avdtp.PeerManager",
+            "fuchsia.bluetooth.avrcp.PeerManager",
+            "fuchsia.bluetooth.bredr.Profile",
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.media.AudioDeviceEnumerator",
+            "fuchsia.media.SessionAudioConsumerFactory",
+            "fuchsia.media.sessions2.Publisher",
+            "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.settings.Audio",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}
