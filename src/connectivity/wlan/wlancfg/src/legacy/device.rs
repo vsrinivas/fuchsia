@@ -4,7 +4,8 @@
 
 use {
     crate::{
-        legacy::shim, mode_management::iface_manager_api::IfaceManagerApi,
+        legacy::{Iface, IfaceRef},
+        mode_management::iface_manager_api::IfaceManagerApi,
         mode_management::phy_manager::PhyManagerApi,
     },
     anyhow::format_err,
@@ -19,7 +20,7 @@ use {
 
 pub(crate) struct Listener {
     proxy: DeviceServiceProxy,
-    legacy_shim: shim::IfaceRef,
+    legacy_shim: IfaceRef,
     phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
 }
@@ -119,7 +120,7 @@ async fn on_iface_added_legacy(listener: &Listener, iface_id: u16) -> Result<(),
             zx::Status::ok(status)
                 .map_err(|e| format_err!("GetClientSme returned an error: {}", e))?;
 
-            let lc = shim::Iface {
+            let lc = Iface {
                 service,
                 iface_manager: listener.iface_manager.clone(),
                 sme: sme.clone(),
@@ -141,7 +142,7 @@ async fn on_iface_added_legacy(listener: &Listener, iface_id: u16) -> Result<(),
 impl Listener {
     pub fn new(
         proxy: DeviceServiceProxy,
-        legacy_shim: shim::IfaceRef,
+        legacy_shim: IfaceRef,
         phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     ) -> Self {

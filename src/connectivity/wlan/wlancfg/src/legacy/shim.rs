@@ -5,60 +5,17 @@ use {
     crate::{
         client::state_machine as client_fsm,
         config_management::{Credential, NetworkIdentifier, SavedNetworksManager, SecurityType},
-        mode_management::iface_manager_api::IfaceManagerApi,
+        legacy::IfaceRef,
         util::clone::clone_bss_info,
     },
-    fidl, fidl_fuchsia_wlan_device_service as wlan_service,
-    fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_service as legacy,
+    fidl, fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_service as legacy,
     fidl_fuchsia_wlan_sme as fidl_sme, fidl_fuchsia_wlan_stats as fidl_wlan_stats, fuchsia_async,
     fuchsia_zircon as zx,
-    futures::{lock::Mutex as FutureMutex, prelude::*, select},
+    futures::{prelude::*, select},
     itertools::Itertools,
     log::{debug, error, info},
-    std::{
-        cmp::Ordering,
-        collections::HashMap,
-        sync::{Arc, Mutex},
-    },
+    std::{cmp::Ordering, collections::HashMap, sync::Arc},
 };
-
-#[derive(Clone)]
-pub(crate) struct Iface {
-    pub service: wlan_service::DeviceServiceProxy,
-    pub iface_manager: Arc<FutureMutex<dyn IfaceManagerApi + Send>>,
-    pub sme: fidl_sme::ClientSmeProxy,
-    pub iface_id: u16,
-}
-
-#[derive(Clone)]
-pub(crate) struct IfaceRef(Arc<Mutex<Option<Iface>>>);
-impl IfaceRef {
-    pub fn new() -> Self {
-        IfaceRef(Arc::new(Mutex::new(None)))
-    }
-    pub fn set_if_empty(&self, iface: Iface) {
-        let mut c = self.0.lock().unwrap();
-        if c.is_none() {
-            *c = Some(iface);
-        }
-    }
-    pub fn remove_if_matching(&self, iface_id: u16) {
-        let mut c = self.0.lock().unwrap();
-        let same_id = match *c {
-            Some(ref c) => c.iface_id == iface_id,
-            None => false,
-        };
-        if same_id {
-            *c = None;
-        }
-    }
-    pub fn get(&self) -> Result<Iface, legacy::Error> {
-        self.0.lock().unwrap().clone().ok_or_else(|| legacy::Error {
-            code: legacy::ErrCode::NotFound,
-            description: "No wireless interface found".to_string(),
-        })
-    }
-}
 
 const MAX_CONCURRENT_WLAN_REQUESTS: usize = 1000;
 
@@ -413,13 +370,18 @@ fn empty_counter() -> fidl_wlan_stats::Counter {
 mod tests {
     use {
         super::*,
-        crate::{access_point::state_machine as ap_fsm, util::logger::set_logger_for_test},
+        crate::{
+            access_point::state_machine as ap_fsm, legacy::Iface,
+            mode_management::iface_manager_api::IfaceManagerApi, util::logger::set_logger_for_test,
+        },
         async_trait::async_trait,
         fidl::endpoints::create_proxy,
-        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
+        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device_service as wlan_service,
+        fuchsia_async as fasync,
         futures::{channel::oneshot, lock::Mutex as FutureMutex, stream::StreamFuture, task::Poll},
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
+        std::sync::{Arc, Mutex},
         tempfile::TempDir,
         wlan_common::assert_variant,
     };

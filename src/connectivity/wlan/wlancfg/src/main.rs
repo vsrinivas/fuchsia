@@ -16,7 +16,7 @@ use {
     crate::{
         client::network_selection::NetworkSelector,
         config_management::SavedNetworksManager,
-        legacy::{device, shim},
+        legacy::{device, IfaceRef},
         mode_management::{
             create_iface_manager, iface_manager_api::IfaceManagerApi, phy_manager::PhyManager,
         },
@@ -50,7 +50,7 @@ async fn serve_fidl(
     ap: access_point::AccessPoint,
     configurator: legacy::deprecated_configuration::DeprecatedConfigurator,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    legacy_client_ref: shim::IfaceRef,
+    legacy_client_ref: IfaceRef,
     saved_networks: Arc<SavedNetworksManager>,
     network_selector: Arc<NetworkSelector>,
     client_sender: util::listener::ClientListenerMessageSender,
@@ -219,7 +219,7 @@ fn main() -> Result<(), Error> {
         network_selector.clone(),
     );
 
-    let legacy_client = shim::IfaceRef::new();
+    let legacy_client = IfaceRef::new();
     let listener = device::Listener::new(
         wlan_svc.clone(),
         legacy_client.clone(),
