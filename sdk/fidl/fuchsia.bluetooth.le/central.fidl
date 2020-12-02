@@ -4,7 +4,7 @@
 
 library fuchsia.bluetooth.le;
 
-using fuchsia.bluetooth;
+using fuchsia.bluetooth as bt;
 using fuchsia.bluetooth.gatt;
 
 [Discoverable]
@@ -14,12 +14,12 @@ protocol Central {
     /// be present on the peripheral.
     ///
     /// This method only returns peripherals (i.e. connectable devices).
-    GetPeripherals(vector<string>? service_uuids) -> (vector<RemoteDevice> peripherals);
+    GetPeripherals(vector<bt.UuidString>:MAX? service_uuids) -> (vector<RemoteDevice>:MAX peripherals);
 
     /// Returns information about a single peripheral that is known to the system from previous scan,
     /// connection, and/or bonding procedures based on its unique identifier. Returns null if
     /// `identifier` is not recognized.
-    GetPeripheral(string identifier) -> (RemoteDevice? peripheral);
+    GetPeripheral(bt.PeerIdString identifier) -> (RemoteDevice? peripheral);
 
     /// Initiates a scan session for nearby peripherals and broadcasters. Discovered devices will be
     /// reported via CentralDelegate.OnDeviceDiscovered(). If a scan session is already in progress,
@@ -40,12 +40,12 @@ protocol Central {
     /// On success, `gatt_client` will be bound and can be used for GATT client
     /// role procedures. On failure, `gatt_client` will be closed and `status` will
     /// indicate an error.
-    ConnectPeripheral(string identifier, ConnectionOptions options,
+    ConnectPeripheral(bt.PeerIdString identifier, ConnectionOptions options,
                       request<fuchsia.bluetooth.gatt.Client> gatt_client)
         -> (fuchsia.bluetooth.Status status);
 
     /// Disconnects this Central's connection to the peripheral with the given identifier.
-    DisconnectPeripheral(string identifier) -> (fuchsia.bluetooth.Status status);
+    DisconnectPeripheral(bt.PeerIdString identifier) -> (fuchsia.bluetooth.Status status);
 
     /// Called when the scan state changes, e.g. when a scan session terminates due to a call to
     /// Central.StopScan() or another unexpected condition.
@@ -57,5 +57,5 @@ protocol Central {
     -> OnDeviceDiscovered(RemoteDevice device);
 
     /// Called when this Central's connection to a peripheral with the given identifier is terminated.
-    -> OnPeripheralDisconnected(string identifier);
+    -> OnPeripheralDisconnected(bt.PeerIdString identifier);
 };

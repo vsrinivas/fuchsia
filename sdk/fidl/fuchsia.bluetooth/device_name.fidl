@@ -1,0 +1,12 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth;
+
+/// The maximum length of a device name. This value was selected based on the HCI and GAP
+/// specifications (v5.2, Vol 4, Part E, 7.3.11 and Vol 3, Part C, 12.1).
+const uint8 MAX_DEVICE_NAME_LENGTH = 248;
+
+/// Alias for a Bluetooth device name.
+using DeviceName = string:MAX_DEVICE_NAME_LENGTH;

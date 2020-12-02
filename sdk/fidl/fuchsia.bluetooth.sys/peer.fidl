@@ -48,7 +48,7 @@ table Peer {
     5: bool bonded;
 
     /// The name of the peer, if known.
-    6: string name;
+    6: bt.DeviceName name;
 
     /// The LE appearance property. Present if this peer supports LE and the
     /// appearance information was obtained over advertising and/or GATT.

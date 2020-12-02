@@ -5,19 +5,16 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.bluetooth") {
-  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "string-bounds-not-specified" ]
-
   sdk_category = "partner"
 
   sources = [
     "address.fidl",
     "appearance.fidl",
     "connection_role.fidl",
+    "deprecated.fidl",
     "device_class.fidl",
+    "device_name.fidl",
     "id.fidl",
-    "nullables.fidl",
-    "status.fidl",
     "uuid.fidl",
   ]
 }

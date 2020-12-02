@@ -30,7 +30,7 @@ table HostInfo {
 
     /// The local name of this host. This is the name that is visible to other devices when this
     /// host is in the discoverable mode.
-    5: string local_name;
+    5: bt.DeviceName local_name;
 
     /// Whether or not the local adapter is currently discoverable over BR/EDR and
     /// LE physical channels.
@@ -45,7 +45,7 @@ table HostInfo {
 protocol HostWatcher {
     /// Obtain a list of all available Bluetooth controllers and their state. A response is sent
     /// only if this list has changed since the last time the client has sent this message.
-    Watch() -> (vector<HostInfo> hosts);
+    Watch() -> (vector<HostInfo>:MAX hosts);
 
     /// Designates the host with the given `id` as active. All Bluetooth procedures will be routed
     /// over this host. Any previously assigned active host will be disabled and all of its pending

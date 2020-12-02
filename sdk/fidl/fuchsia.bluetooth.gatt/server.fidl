@@ -4,14 +4,14 @@
 
 library fuchsia.bluetooth.gatt;
 
-using fuchsia.bluetooth;
+using fuchsia.bluetooth as bt;
 
 /// Interface for responding to requests on a local service.
 protocol LocalServiceDelegate {
     /// Notifies the delegate when a remote device with `peer_id` enables or
     /// disables notifications or indications on the characteristic with the given
     /// `characteristic_id`.
-    OnCharacteristicConfiguration(uint64 characteristic_id, string peer_id,
+    OnCharacteristicConfiguration(uint64 characteristic_id, bt.PeerIdString peer_id,
                                   bool notify, bool indicate);
 
     /// Called when a remote device issues a request to read the value of the
@@ -47,7 +47,7 @@ protocol LocalService {
     ///
     /// This method has no effect if the peer has not enabled notifications or
     /// indications on the requested characteristic.
-    NotifyValue(uint64 characteristic_id, string peer_id, bytes value, bool confirm);
+    NotifyValue(uint64 characteristic_id, bt.PeerIdString peer_id, bytes value, bool confirm);
 };
 
 [Discoverable]

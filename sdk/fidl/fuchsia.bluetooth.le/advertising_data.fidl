@@ -22,7 +22,7 @@ struct ManufacturerData {
 /// broadcaster.
 table AdvertisingData {
     /// Long or short name of the device.
-    1: string name;
+    1: bt.DeviceName name;
 
     /// The appearance of the device.
     2: bt.Appearance appearance;
@@ -32,18 +32,18 @@ table AdvertisingData {
     3: int8 tx_power_level;
 
     /// Service UUIDs.
-    4: vector<bt.Uuid> service_uuids;
+    4: vector<bt.Uuid>:MAX service_uuids;
 
     /// Service data entries.
-    5: vector<ServiceData> service_data;
+    5: vector<ServiceData>:MAX service_data;
 
     /// Manufacturer-specific data entries.
-    6: vector<ManufacturerData> manufacturer_data;
+    6: vector<ManufacturerData>:MAX manufacturer_data;
 
     /// String representing a URI to be advertised, as defined in [IETF STD 66](https://tools.ietf.org/html/std66).
     /// Each entry should be a UTF-8 string including the scheme. For more information, see:
     /// - https://www.iana.org/assignments/uri-schemes/uri-schemes.xhtml for allowed schemes;
     /// - https://www.bluetooth.com/specifications/assigned-numbers/uri-scheme-name-string-mapping
     ///   for code-points used by the system to compress the scheme to save space in the payload.
-    7: vector<string> uris;
+    7: vector<string:MAX>:MAX uris;
 };

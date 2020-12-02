@@ -9,8 +9,6 @@ fidl("fuchsia.bluetooth.gatt") {
   excluded_checks = [
     "invalid-case-for-constant",
     "protocol-name-includes-service",
-    "string-bounds-not-specified",
-    "vector-bounds-not-specified",
   ]
 
   sdk_category = "partner"

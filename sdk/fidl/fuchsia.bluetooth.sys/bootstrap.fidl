@@ -26,7 +26,7 @@ protocol Bootstrap {
     /// Repeated calls will append identities.
     // TODO(fxbug.dev/1304): If necessary, paginate bonding data to allow an arbitrary number of bonds for
     // each identity, e.g. AddBonds(adapter_id, bonds).
-    AddIdentities(vector<Identity> identities);
+    AddIdentities(vector<Identity>:MAX identities);
 
     /// Writes all added bootstrapping data to the Bluetooth core stack. The server will close the
     /// channel regardless of success. Returns without error if successful and the stack will be

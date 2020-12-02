@@ -63,7 +63,7 @@ protocol Access {
     /// when the system is in discoverable mode and during name discovery procedures.
     ///
     /// + request `name` The complete local name to assign to the system.
-    SetLocalName(string name);
+    SetLocalName(bt.DeviceName name);
 
     /// Set the local device class that will be visible to nearby peers when the system is in
     /// discoverable mode.
@@ -97,7 +97,11 @@ protocol Access {
     ///
     /// - response `updated` Peers that were added or updated since the last call to WatchPeers().
     /// - response `removed` Ids of peers that were removed since the last call to WatchPeers().
-    WatchPeers() -> (vector<Peer> updated, vector<bt.PeerId> removed);
+    // TODO(fxbug.dev/65461): Implement a pagination scheme for this method and apply suitable
+    // vectors bounds. MAX will likely not prevent this method from overfilling a FIDL message if
+    // the client falls behind. This can happen during device discovery as it can involve high
+    // volume of peer updates.
+    WatchPeers() -> (vector<Peer>:MAX updated, vector<bt.PeerId>:MAX removed);
 
     /// Initiate a connection to the peer with the given `id`. This method connects both BR/EDR and
     /// LE transports depending on the technologies that the peer is known to support.

@@ -4,7 +4,7 @@
 
 library fuchsia.bluetooth.gatt;
 
-using fuchsia.bluetooth;
+using fuchsia.bluetooth as bt;
 
 table ReadByTypeResult {
     /// Characteristic or descriptor id.
@@ -18,7 +18,7 @@ table ReadByTypeResult {
 protocol RemoteService {
     /// Returns the characteristics and characteristic descriptors that belong to
     /// this service.
-    DiscoverCharacteristics() -> (fuchsia.bluetooth.Status status, vector<Characteristic> characteristics);
+    DiscoverCharacteristics() -> (fuchsia.bluetooth.Status status, vector<Characteristic>:MAX_CHARACTERISTIC_COUNT characteristics);
 
     /// Reads the value of the characteristic with `id` and returns it in the
     /// reply. If `status` indicates an error `value` will be empty.
@@ -164,7 +164,7 @@ protocol Client {
     ///
     /// To further interact with services, clients must obtain a RemoteService
     /// handle by calling ConnectToService().
-    ListServices(vector<string>? uuids) -> (fuchsia.bluetooth.Status status, vector<ServiceInfo> services);
+    ListServices(vector<bt.UuidString>:MAX? uuids) -> (fuchsia.bluetooth.Status status, vector<ServiceInfo>:MAX_SERVICE_COUNT services);
 
     /// Connects the RemoteService with the given identifier.
     ConnectToService(uint64 id, request<RemoteService> service);

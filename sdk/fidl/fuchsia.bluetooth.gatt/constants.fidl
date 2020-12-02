@@ -11,3 +11,29 @@ const uint16 MAX_READ_BY_TYPE_RESULTS = 189;
 
 // From Bluetooth Core Spec v5.2, Vol 3, Part F, 3.4.4.2.
 const uint16 MAX_READ_BY_TYPE_VALUE_LENGTH = 253;
+
+// The maximum number of attributes that can be contained in an attribute database.
+const uint16 MAX_ATTRIBUTE_COUNT = 0xFFFF;
+
+// The maximum number of services allowed. While the specification does not define an upper
+// limit, this number is here to impose a bound on FIDL messages.
+//
+// This number is calculated based on 1 attribute per service declaration for a database that
+// contains no characteristics.
+const uint16 MAX_SERVICE_COUNT = MAX_ATTRIBUTE_COUNT;
+
+// The maximum number of characteristics allowed. While the specification does not define an upper
+// limit, this number is here to impose a bound on FIDL messages.
+//
+// This number is calculated based on 2 attributes per characteristic and excluding the service
+// declaration attribute. I.e. this is the number of characteristics that can be represented in a
+// database with a single service and no characteristic descriptors.
+const uint16 MAX_CHARACTERISTIC_COUNT = 0x7FFF; // (MAX_ATTRIBUTE_COUNT - 1) / 2;
+
+// The maximum number of characteristic descriptors allowed. While the specification does not define
+// an upper limit, this number is here to impose a bound on FIDL messages.
+//
+// This number is calculated based on 1 attribute per descriptor and excluding the service and
+// characteristic declaration attributes. I.e. this is the number of characteristics that can be
+// represented in a database with a single service and a single characteristic.
+const uint16 MAX_DESCRIPTOR_COUNT = 0xFFFC; // MAX_ATTRIBUTE_COUNT - 3;

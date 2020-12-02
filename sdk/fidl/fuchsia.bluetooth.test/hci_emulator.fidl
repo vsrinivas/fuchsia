@@ -133,7 +133,7 @@ protocol Peer {
     ///
     /// Multiple calls to this method can be outstanding at a given time. All calls will resolve in
     /// a response as soon as there is a change to the connection state.
-    WatchConnectionStates() -> (vector<ConnectionState> states);
+    WatchConnectionStates() -> (vector<ConnectionState>:MAX states);
 };
 
 /// Protocol used to emulate a Bluetooth controller that supports the standard Bluetooth HCI.
@@ -185,7 +185,7 @@ protocol HciEmulator {
     /// Multiple calls to this method can be outstanding at a given time. All calls will resolve in
     /// a response as soon as there is a change to the scan state.
     /// (see [hanging get pattern](//docs/development/api/fidl.md#delay-responses-using-hanging-gets))
-    WatchLeScanStates() -> (vector<LeScanState> states);
+    WatchLeScanStates() -> (vector<LeScanState>:MAX states);
 
     /// Returns the most recent set of state transitions for the link layer LE legacy advertising
     /// procedure. This method returns when there has been a state change since the last invocation
@@ -195,5 +195,5 @@ protocol HciEmulator {
     /// [`fuchsia.bluetooth.test/HciEmulator`] channel will be closed if a call received when one is
     /// already pending.
     /// (see [hanging get pattern](//docs/development/api/fidl.md#delay-responses-using-hanging-gets))
-    WatchLegacyAdvertisingStates() -> (vector<LegacyAdvertisingState> states);
+    WatchLegacyAdvertisingStates() -> (vector<LegacyAdvertisingState>:MAX states);
 };

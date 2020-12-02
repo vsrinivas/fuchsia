@@ -4,25 +4,25 @@
 
 library fuchsia.bluetooth.le;
 
-using fuchsia.bluetooth;
+using fuchsia.bluetooth as bt;
 
-/// [[DEPRECATED]]
+[Deprecated]
 struct ServiceDataEntry {
-    string uuid;
+    bt.UuidString uuid;
     bytes data;
 };
 
-/// [[DEPRECATED]]
+[Deprecated]
 struct ManufacturerSpecificDataEntry {
     uint16 company_id;
     bytes data;
 };
 
 /// Represents advertising and scan response data advertised by a broadcaster or peripheral.
-/// [[DEPRECATED]]
+[Deprecated]
 struct AdvertisingDataDeprecated {
     /// Name of the device.
-    string? name;
+    bt.DeviceName? name;
 
     /// The radio transmission power level reported in the advertisement.
     fuchsia.bluetooth.Int8? tx_power_level;
@@ -31,29 +31,29 @@ struct AdvertisingDataDeprecated {
     fuchsia.bluetooth.UInt16? appearance;
 
     /// List of service UUIDs reported in the advertisement.
-    vector<string>? service_uuids;
+    vector<bt.UuidString>:MAX? service_uuids;
 
     /// Service data included in the advertisement.
-    vector<ServiceDataEntry>? service_data;
+    vector<ServiceDataEntry>:MAX? service_data;
 
     /// Manufacturer specific data entries.
-    vector<ManufacturerSpecificDataEntry>? manufacturer_specific_data;
+    vector<ManufacturerSpecificDataEntry>:MAX? manufacturer_specific_data;
 
     /// Service UUIDs that were solicited in the advertisement. Peripherals can invite centrals that
     /// expose certain services to connect to them using service solicitation.
-    vector<string>? solicited_service_uuids;
+    vector<bt.UuidString>:MAX? solicited_service_uuids;
 
     /// URIs included in the advertising packet.
     /// These are full URIs (they are encoded/decoded automatically)
-    vector<string>? uris;
+    vector<string:MAX>:MAX? uris;
 };
 
 /// Represents a remote Bluetooth Low Energy device. A RemoteDevice can represent a central,
 /// broadcaster, or peripheral based on the API from which it was received.
-/// [[DEPRECATED]]
+[Deprecated]
 struct RemoteDevice {
     /// Identifier that uniquely identifies this device on the current system.
-    string identifier;
+    bt.PeerIdString identifier;
 
     /// Whether or not this device is connectable. Non-connectable devices are typically acting in the
     /// LE broadcaster role.
@@ -69,14 +69,14 @@ struct RemoteDevice {
 /// Filter parameters for use during a scan. A discovered peripheral or broadcaster will be reported
 /// to applications only if it satisfies all of the provided filter parameters. Null fields will be
 /// ignored.
-/// [[DEPRECATED]]
+[Deprecated]
 struct ScanFilter {
     /// Filter based on advertised service UUIDs. A peripheral that advertises at least one of the
     /// entries in `service_uuids` will satisfy this filter.
-    vector<string>? service_uuids;
+    vector<bt.UuidString>:MAX? service_uuids;
 
     /// Filter based on service data containing one of the given UUIDs.
-    vector<string>? service_data_uuids;
+    vector<bt.UuidString>:MAX? service_data_uuids;
 
     /// Filter based on a company identifier present in the manufacturer data. If this filter parameter
     /// is set, then the advertising payload must contain manufacturer specific data with the provided
@@ -89,7 +89,7 @@ struct ScanFilter {
     fuchsia.bluetooth.Bool? connectable;
 
     /// Filter results based on a portion of the advertised device name.
-    string? name_substring;
+    bt.DeviceName? name_substring;
 
     /// Filter results based on the path loss of the radio wave. A device that matches this filter must
     /// satisfy the following:

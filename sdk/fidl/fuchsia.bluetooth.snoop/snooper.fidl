@@ -4,7 +4,8 @@
 
 library fuchsia.bluetooth.snoop;
 
-using fuchsia.bluetooth;
+using fuchsia.bluetooth as bt;
+using fuchsia.io as io;
 
 /// Timestamp represents the number of seconds and nanoseconds since the Unix epoch.
 struct Timestamp {
@@ -60,9 +61,9 @@ protocol Snoop {
     ///   `Start` can only be called once per connection. After the first request, subsequent requests
     ///   always return an error.
     ///   `host_device` values that are not recognized by the server return an error.
-    Start(bool follow, string? host_device) -> (fuchsia.bluetooth.Status status);
+    Start(bool follow, string:io.MAX_FILENAME? host_device) -> (bt.Status status);
 
     /// An event containing a packet that the client has registered interest in receiving and the
     /// `host_device` which generated the packet.
-    -> OnPacket(string host_device, SnoopPacket packet);
+    -> OnPacket(string:io.MAX_FILENAME host_device, SnoopPacket packet);
 };

@@ -54,7 +54,7 @@ table LeData {
     2: LeConnectionParameters connection_parameters;
 
     /// Known GATT service UUIDs.
-    3: vector<bt.Uuid> services;
+    3: vector<bt.Uuid>:MAX_PEER_SERVICES services;
 
     /// The LE long-term key. Present if the link was encrypted. This field is superseded by the
     /// `peer_ltk` and `local_ltk` fields. It is invalid for the `ltk` field to be present
@@ -104,7 +104,7 @@ table BredrData {
     2: bt.ConnectionRole role_preference;
 
     /// Known service UUIDs obtained from EIR data or SDP.
-    3: vector<bt.Uuid> services;
+    3: vector<bt.Uuid>:MAX_PEER_SERVICES services;
 
     /// The semi-permanent BR/EDR key. Present if link was paired with Secure
     /// Simple Pairing or stronger.
@@ -162,7 +162,7 @@ table BondingData {
     2: bt.Address local_address;
 
     /// The name of the peer, if known.
-    3: string name;
+    3: bt.DeviceName name;
 
     /// Bonding data that is present when this peer is paired on the LE transport.
     ///
@@ -217,5 +217,5 @@ table Identity {
     1: HostData host;
 
     /// All bonds that use a public identity address must contain the same local address.
-    2: vector<BondingData> bonds;
+    2: vector<BondingData>:MAX bonds;
 };

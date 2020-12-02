@@ -1,12 +1,29 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 library fuchsia.bluetooth;
 
-/// DEPRECATED. Do not use these types in new code. Prefer the "error" syntax, protocol-specific
-/// enums and zx.status instead.
+// DEPRECATED. Do not use these types in new code.
 
+// TODO(fxbug.dev/44616): Remove all usage of the following types and delete them.
+
+[Deprecated]
+struct Bool {
+    bool value;
+};
+
+[Deprecated]
+struct Int8 {
+    int8 value;
+};
+
+[Deprecated]
+struct UInt16 {
+    uint16 value;
+};
+
+[Deprecated = "Use protocol specific error enums and zx.status instead"]
 enum ErrorCode {
     UNKNOWN = 0;
     FAILED = 1;
@@ -22,6 +39,7 @@ enum ErrorCode {
     PROTOCOL_ERROR = 11;
 };
 
+[Deprecated = "Use protocol specific error enums instead"]
 // Represents an error result returned from an asynchronous operation.
 struct Error {
     // Represents a high-level error code. If this is set to ErrorCode.PROTOCOL_ERROR, then
@@ -36,11 +54,22 @@ struct Error {
 
     // Debug descriptioon of an error. This provides additional debugging information for an error
     // and is not intended to be displayed in user interfaces.
-    string? description;
+    string:MAX? description;
 };
 
+[Deprecated = "Use protocol specific error enums and the 'error' syntax instead"]
 // Represents the result of an asynchronous operation.
 struct Status {
     // `error` will be null if this represents a "success" status, i.e. no error has occurred.
     Error? error;
 };
+
+/// The size of the standard string representation for a UUID. This value is based on the canonical
+/// 36-character 8-4-4-4-12 format defined in IETF RFC4122 Section 3.
+const uint8 UUID_STRING_REPRESENTATION_LENGTH = 36;
+
+[Deprecated = "Use fuchsia.bluetooth/Uuid instead"]
+using UuidString = string:UUID_STRING_REPRESENTATION_LENGTH;
+
+[Deprecated = "Use fuchsia.bluetooth/PeerId instead"]
+using PeerIdString = string:16;

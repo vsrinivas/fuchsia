@@ -4,7 +4,8 @@
 
 library fuchsia.bluetooth.avrcp.test;
 
-using fuchsia.bluetooth.avrcp;
+using fuchsia.bluetooth as bt;
+using fuchsia.bluetooth.avrcp as avrcp;
 using zx;
 
 [Discoverable]
@@ -18,7 +19,7 @@ protocol PeerManagerExt {
     /// controller clients interacting with the same remote peer while using the test controller.
     /// TODO (fxbug.dev/898): change peer_id to fuchsia.bluetooth.PeerId type after BrEdr profile service
     /// switches.
-    GetControllerForTarget(string peer_id, request<ControllerExt> client) -> () error zx.status;
+    GetControllerForTarget(bt.PeerIdString peer_id, request<ControllerExt> client) -> () error zx.status;
 };
 
 /// Provides additional methods not in `Controller` that are strictly for testing and debug.
@@ -29,7 +30,7 @@ protocol ControllerExt {
     /// Queries the target and returns what events are supported for notification.
     /// Sends GetCapabilties(0x03 (`EVENTS_SUPPORTED`)) command for all events supported by
     /// the negoitated version of AVRCP.
-    GetEventsSupported() -> (vector<fuchsia.bluetooth.avrcp.NotificationEvent> events_supported) error fuchsia.bluetooth.avrcp.ControllerError;
+    GetEventsSupported() -> (vector<avrcp.NotificationEvent>:avrcp.MAX_NOTIFICATIONS events_supported) error avrcp.ControllerError;
 
     /// Explicitly attempt to connect to the remote peer.
     Connect();
@@ -40,5 +41,5 @@ protocol ControllerExt {
     /// Send raw vendor depedent "Control" command packet to a specific PDU on the remote peer.
     /// Returns the entire response packet including the headers or error if the remote endpoint
     /// disconnects or does not return a response in set amount of time.
-    SendRawVendorDependentCommand(uint8 pdu_id, bytes command) -> (bytes response) error fuchsia.bluetooth.avrcp.ControllerError;
+    SendRawVendorDependentCommand(uint8 pdu_id, bytes command) -> (bytes response) error avrcp.ControllerError;
 };

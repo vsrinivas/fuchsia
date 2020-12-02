@@ -61,10 +61,10 @@ protocol Host {
     ///
     /// - response `updated` Peers that were added or updated since the last call to WatchPeers().
     /// - response `removed` Ids of peers that were removed since the last call to WatchPeers().
-    WatchPeers() -> (vector<sys.Peer> updated, vector<bt.PeerId> removed);
+    WatchPeers() -> (vector<sys.Peer>:MAX updated, vector<bt.PeerId>:MAX removed);
 
     /// Sets the local name for this host device.
-    SetLocalName(string local_name) -> () error sys.Error;
+    SetLocalName(bt.DeviceName local_name) -> () error sys.Error;
 
     /// Sets the device class for this host device.
     SetDeviceClass(bt.DeviceClass device_class) -> () error sys.Error;
@@ -174,7 +174,7 @@ protocol Host {
     /// `errors`. This can happen for entries that are malformed and for peers that are already
     /// known to the bt-host. An empty `errors` list indicates that all bonds were successfully
     /// restored.
-    RestoreBonds(vector<sys.BondingData> bonds) -> (vector<sys.BondingData> errors);
+    RestoreBonds(vector<sys.BondingData>:MAX bonds) -> (vector<sys.BondingData>:MAX errors);
 
     // ===== Events =====
 

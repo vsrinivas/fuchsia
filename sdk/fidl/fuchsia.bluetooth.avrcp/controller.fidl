@@ -4,6 +4,7 @@
 
 library fuchsia.bluetooth.avrcp;
 
+using fuchsia.bluetooth as bt;
 using zx;
 
 [Discoverable]
@@ -12,7 +13,7 @@ protocol PeerManager {
     /// `peer_id`.
     /// TODO (fxbug.dev/898): change peer_id to fuchsia.bluetooth.PeerId type after BrEdr profile service
     /// switches.
-    GetControllerForTarget(string peer_id, request<Controller> client) -> () error zx.status;
+    GetControllerForTarget(bt.PeerIdString peer_id, request<Controller> client) -> () error zx.status;
 
     /// Set the absolute volume handler.  Only one handler may be set  at at time.
     /// If a second handler is registered it will be dropped and an error will

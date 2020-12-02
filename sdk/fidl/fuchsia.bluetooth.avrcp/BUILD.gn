@@ -5,9 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.bluetooth.avrcp") {
-  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "string-bounds-not-specified" ]
-
   sdk_category = "internal"
 
   sources = [
@@ -15,5 +12,8 @@ fidl("fuchsia.bluetooth.avrcp") {
     "target.fidl",
     "types.fidl",
   ]
-  public_deps = [ "//zircon/vdso/zx" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.bluetooth",
+    "//zircon/vdso/zx",
+  ]
 }
