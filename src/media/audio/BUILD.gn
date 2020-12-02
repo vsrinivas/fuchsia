@@ -21,12 +21,13 @@ group("audio") {
 group("drivers") {
   testonly = true
   deps = [
-    "drivers/alc5514",
-    "drivers/alc5663",
     "drivers/aml-g12-tdm",
     "drivers/as370-pdm-input",
     "drivers/as370-tdm-output",
+    "drivers/codecs/alc5514",
+    "drivers/codecs/alc5663",
     "drivers/codecs/max98373",
+    "drivers/codecs/max98927",
     "drivers/codecs/tas27xx",
     "drivers/codecs/tas5720",
     "drivers/codecs/tas5782",
@@ -35,7 +36,6 @@ group("drivers") {
     "drivers/intel-hda/codecs/qemu:qemu-audio-codec",
     "drivers/intel-hda/codecs/realtek:realtek-audio-codec",
     "drivers/intel-hda/controller:intel-hda",
-    "drivers/max98927",
     "drivers/mt8167-tdm-input",
     "drivers/mt8167-tdm-output",
     "drivers/usb-audio",

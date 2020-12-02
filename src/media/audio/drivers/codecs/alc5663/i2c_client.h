@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_DRIVERS_ALC5663_I2C_CLIENT_H_
-#define SRC_MEDIA_AUDIO_DRIVERS_ALC5663_I2C_CLIENT_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5663_I2C_CLIENT_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5663_I2C_CLIENT_H_
 
 #include <lib/device-protocol/i2c-channel.h>
 #include <sys/types.h>
@@ -142,4 +142,4 @@ zx_status_t I2cClient<AddressIntType>::Write(AddressIntType addr, ValueType val)
 
 }  // namespace audio::alc5663
 
-#endif  // SRC_MEDIA_AUDIO_DRIVERS_ALC5663_I2C_CLIENT_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5663_I2C_CLIENT_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_DRIVERS_ALC5663_ALC5663_REGISTERS_H_
-#define SRC_MEDIA_AUDIO_DRIVERS_ALC5663_ALC5663_REGISTERS_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5663_ALC5663_REGISTERS_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5663_ALC5663_REGISTERS_H_
 
 #include <zircon/types.h>
 
@@ -405,4 +405,4 @@ struct DacRefLdoControlReg {
 
 }  // namespace audio::alc5663
 
-#endif  // SRC_MEDIA_AUDIO_DRIVERS_ALC5663_ALC5663_REGISTERS_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5663_ALC5663_REGISTERS_H_

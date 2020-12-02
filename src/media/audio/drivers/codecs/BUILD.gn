@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "alc5663:tests",
     "max98373:tests",
     "tas27xx:tests",
     "tas5720:tests",

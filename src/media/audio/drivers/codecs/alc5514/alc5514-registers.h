@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_DRIVERS_ALC5514_ALC5514_REGISTERS_H_
-#define SRC_MEDIA_AUDIO_DRIVERS_ALC5514_ALC5514_REGISTERS_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5514_ALC5514_REGISTERS_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5514_ALC5514_REGISTERS_H_
 
 /**
  * Register definitions taken from
@@ -144,4 +144,4 @@ constexpr uint32_t DEVICE_ID_ALC5514 = 0x10EC5514;
 }  // namespace alc5514
 }  // namespace audio
 
-#endif  // SRC_MEDIA_AUDIO_DRIVERS_ALC5514_ALC5514_REGISTERS_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5514_ALC5514_REGISTERS_H_

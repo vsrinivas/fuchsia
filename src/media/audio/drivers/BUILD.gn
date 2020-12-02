@@ -9,7 +9,6 @@ group("drivers") {
 group("tests") {
   testonly = true
   deps = [
-    "alc5663:tests",
     "aml-g12-pdm:tests",
     "aml-g12-tdm:tests",
     "as370-tdm-output:tests",
