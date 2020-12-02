@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/weave_ble_manager_unittests"
+        "binary": "test/ble_manager_unittests"
     },
     "sandbox": {
         "features": [

@@ -13,7 +13,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/weave_platform_manager_unittests"
+        "binary": "test/platform_manager_unittests"
     },
     "sandbox": {
         "features": [

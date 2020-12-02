@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/weave_thread_stack_manager_unittests"
+        "binary": "test/thread_stack_manager_unittests"
     }
 }

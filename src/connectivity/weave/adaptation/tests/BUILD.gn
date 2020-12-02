@@ -3,141 +3,110 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/test/test_package.gni")
+import("//build/test.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+import("//src/sys/build/fuchsia_unittest_component.gni")
 
 group("tests") {
   testonly = true
   public_deps = [ ":weavestack-adaptation-unittests" ]
 }
 
-test_package("weavestack-adaptation-unittests") {
-  tests = [
-    {
-      name = "weave_ble_manager_unittests"
-    },
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "configuration_manager_unittests"
-    },
-    {
-      name = "group_key_store_unittests"
-    },
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "platform_case_auth_delegate_unittests"
-    },
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "weave_config_manager_unittests"
-    },
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "weave_connectivity_manager_unittests"
-    },
-    {
-      name = "weave_thread_stack_manager_unittests"
-    },
-    {
-      name = "weave_platform_manager_unittests"
-    },
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "weave_warm_platform_support_unittests"
-    },
-  ]
-  deps = [
-    ":config",
-    ":configuration_manager_unittests",
-    ":group_key_store_unittests",
-    ":platform_case_auth_delegate_unittests",
-    ":weave_ble_manager_unittests",
-    ":weave_config_manager_unittests",
-    ":weave_connectivity_manager_unittests",
-    ":weave_platform_manager_unittests",
-    ":weave_thread_stack_manager_unittests",
-    ":weave_warm_platform_support_unittests",
-  ]
-  resources = [
-    {
-      path = rebase_path("testdata/config.json")
-      dest = "config.json"
-    },
-    {
-      path =
-          rebase_path("../../weavestack/data/default_environment_schema.json")
-      dest = "default_environment_schema.json"
-    },
-    {
-      path = rebase_path("testdata/default_store.json")
-      dest = "default_store.json"
-    },
-    {
-      path = rebase_path("testdata/default_store_schema.json")
-      dest = "default_store_schema.json"
-    },
-    {
-      path = rebase_path("testdata/invalid_default_store.json")
-      dest = "invalid_default_store.json"
-    },
-    {
-      path = rebase_path("testdata/test_mfr_private_key")
-      dest = "test_mfr_private_key"
-    },
-    {
-      path = rebase_path("testdata/test_mfr_cert")
-      dest = "test_mfr_cert"
-    },
-  ]
+fuchsia_unittest_component("ble-manager-test") {
+  manifest = rebase_path("meta/ble_manager_unittests.cmx")
+  deps = [ ":ble_manager_unittests" ]
 }
 
-executable("weave_ble_manager_unittests") {
-  testonly = true
-  output_name = "weave_ble_manager_unittests"
+fuchsia_unittest_component("configuration-manager-test") {
+  manifest = rebase_path("meta/configuration_manager_unittests.cmx")
+  deps = [ ":configuration_manager_unittests" ]
+}
+
+fuchsia_unittest_component("connectivity-manager-test") {
+  manifest = rebase_path("meta/connectivity_manager_unittests.cmx")
+  deps = [ ":connectivity_manager_unittests" ]
+}
+
+fuchsia_unittest_component("group-key-store-test") {
+  manifest = rebase_path("meta/group_key_store_unittests.cmx")
+  deps = [ ":group_key_store_unittests" ]
+}
+
+fuchsia_unittest_component("platform-case-auth-delegate-test") {
+  manifest = rebase_path("meta/platform_case_auth_delegate_unittests.cmx")
+  deps = [ ":platform_case_auth_delegate_unittests" ]
+}
+
+fuchsia_unittest_component("platform-manager-test") {
+  manifest = rebase_path("meta/platform_manager_unittests.cmx")
+  deps = [ ":platform_manager_unittests" ]
+}
+
+fuchsia_unittest_component("thread-stack-manager-test") {
+  manifest = rebase_path("meta/thread_stack_manager_unittests.cmx")
+  deps = [ ":thread_stack_manager_unittests" ]
+}
+
+fuchsia_unittest_component("warm-platform-support-test") {
+  manifest = rebase_path("meta/warm_platform_support_unittests.cmx")
+  deps = [ ":warm_platform_support_unittests" ]
+}
+
+fuchsia_unittest_component("weave-config-manager-test") {
+  manifest = rebase_path("meta/weave_config_manager_unittests.cmx")
+  deps = [ ":weave_config_manager_unittests" ]
+}
+
+test("ble_manager_unittests") {
+  output_name = "ble_manager_unittests"
   sources = [ "ble_manager_unittests.cpp" ]
   deps = [ ":common_test_deps" ]
 }
 
-executable("configuration_manager_unittests") {
-  testonly = true
+test("configuration_manager_unittests") {
   output_name = "configuration_manager_unittests"
   sources = [ "configuration_manager_unittests.cpp" ]
   deps = [ ":common_test_deps" ]
 }
 
-executable("group_key_store_unittests") {
-  testonly = true
+test("connectivity_manager_unittests") {
+  output_name = "connectivity_manager_unittests"
+  sources = [ "connectivity_manager_unittests.cpp" ]
+  deps = [ ":common_test_deps" ]
+}
+
+test("group_key_store_unittests") {
   output_name = "group_key_store_unittests"
   sources = [ "group_key_store_unittests.cpp" ]
   deps = [ ":common_test_deps" ]
 }
 
-executable("platform_case_auth_delegate_unittests") {
-  testonly = true
+test("platform_case_auth_delegate_unittests") {
   output_name = "platform_case_auth_delegate_unittests"
   sources = [ "platform_case_auth_delegate_unittests.cpp" ]
   deps = [ ":common_test_deps" ]
 }
 
-executable("weave_platform_manager_unittests") {
-  testonly = true
-  output_name = "weave_platform_manager_unittests"
+test("platform_manager_unittests") {
+  output_name = "platform_manager_unittests"
   sources = [ "platform_manager_unittests.cpp" ]
   deps = [ ":common_test_deps" ]
 }
 
-executable("weave_config_manager_unittests") {
-  testonly = true
+test("thread_stack_manager_unittests") {
+  output_name = "thread_stack_manager_unittests"
+  sources = [ "thread_stack_manager_unittests.cpp" ]
+  deps = [ ":common_test_deps" ]
+}
+
+test("warm_platform_support_unittests") {
+  output_name = "warm_platform_support_unittests"
+  sources = [ "warm_unittests.cpp" ]
+  deps = [ ":common_test_deps" ]
+}
+
+test("weave_config_manager_unittests") {
   output_name = "weave_config_manager_unittests"
   sources = [ "weave_config_manager_unittests.cpp" ]
   deps = [
@@ -146,25 +115,25 @@ executable("weave_config_manager_unittests") {
   ]
 }
 
-executable("weave_thread_stack_manager_unittests") {
-  testonly = true
-  output_name = "weave_thread_stack_manager_unittests"
-  sources = [ "thread_stack_manager_unittests.cpp" ]
-  deps = [ ":common_test_deps" ]
+resource("weavestack-adaptation-resources") {
+  sources = [
+    "../../weavestack/data/default_environment_schema.json",
+    "testdata/config.json",
+    "testdata/default_store.json",
+    "testdata/default_store_schema.json",
+    "testdata/invalid_default_store.json",
+    "testdata/test_mfr_cert",
+    "testdata/test_mfr_private_key",
+  ]
+  outputs = [ "data/{{source_file_part}}" ]
 }
 
-executable("weave_connectivity_manager_unittests") {
-  testonly = true
-  output_name = "weave_connectivity_manager_unittests"
-  sources = [ "connectivity_manager_unittests.cpp" ]
-  deps = [ ":common_test_deps" ]
-}
-
-executable("weave_warm_platform_support_unittests") {
-  testonly = true
-  output_name = "weave_warm_platform_support_unittests"
-  sources = [ "warm_unittests.cpp" ]
-  deps = [ ":common_test_deps" ]
+config_data("weavestack-adaptation-config") {
+  for_pkg = "weavestack-adaptation-unittests"
+  sources = [
+    "testdata/default_environment.json",
+    "testdata/device_info.json",
+  ]
 }
 
 group("common_test_deps") {
@@ -179,10 +148,25 @@ group("common_test_deps") {
   ]
 }
 
-config_data("config") {
-  for_pkg = "weavestack-adaptation-unittests"
-  sources = [
-    "testdata/default_environment.json",
-    "testdata/device_info.json",
+fuchsia_test_package("weavestack-adaptation-unittests") {
+  test_components = [
+    ":ble-manager-test",
+    ":configuration-manager-test",
+    ":connectivity-manager-test",
+    ":group-key-store-test",
+    ":platform-case-auth-delegate-test",
+    ":platform-manager-test",
+    ":thread-stack-manager-test",
+    ":warm-platform-support-test",
+    ":weave-config-manager-test",
+  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  deps = [
+    ":weavestack-adaptation-config",
+    ":weavestack-adaptation-resources",
   ]
 }
