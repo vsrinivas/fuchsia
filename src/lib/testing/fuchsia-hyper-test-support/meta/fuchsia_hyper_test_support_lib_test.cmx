@@ -1,22 +1,14 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
-                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
-            }
-        }
-    },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/fuchsia-hyper/hyper.shard.cmx",
+        "src/lib/fuchsia-hyper/hyper_testing.shard.cmx"
     ],
     "program": {
         "binary": "test/fuchsia_hyper_test_support_lib_test"
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.NameLookup",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher"
         ]

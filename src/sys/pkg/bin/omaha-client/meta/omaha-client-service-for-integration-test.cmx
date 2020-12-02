@@ -1,6 +1,7 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
         "binary": "bin/omaha-client-service"
@@ -10,7 +11,6 @@
             "root-ssl-certificates"
         ],
         "services": [
-            "fuchsia.posix.socket.Provider",
             "fuchsia.update.installer.Installer"
         ]
     }

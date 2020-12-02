@@ -1,17 +1,16 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
         "binary": "bin/amberctl"
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.NameLookup",
             "fuchsia.pkg.PackageResolver",
             "fuchsia.pkg.RepositoryManager",
             "fuchsia.pkg.rewrite.Engine",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.space.Manager",
             "fuchsia.update.Manager"
         ]

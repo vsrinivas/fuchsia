@@ -2,14 +2,14 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
-                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                 "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ramdisk-isolated-devmgr#meta/ramdisk-isolated-devmgr.cmx"
             }
         }
     },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/fuchsia-hyper/hyper.shard.cmx",
+        "src/lib/fuchsia-hyper/hyper_testing.shard.cmx"
     ],
     "program": {
         "binary": "test/usb-system-update-checker-integration-test"
@@ -24,8 +24,6 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.device.NameProvider",
-            "fuchsia.net.NameLookup",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
             "fuchsia.stash.SecureStore",
             "fuchsia.sys.Environment",

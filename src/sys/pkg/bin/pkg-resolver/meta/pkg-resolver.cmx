@@ -1,6 +1,7 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
         "binary": "bin/pkg-resolver"
@@ -23,11 +24,9 @@
         "services": [
             "fuchsia.boot.Arguments",
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.net.NameLookup",
             "fuchsia.paver.Paver",
             "fuchsia.pkg.LocalMirror",
             "fuchsia.pkg.PackageCache",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.tracing.provider.Registry"
         ]
     }

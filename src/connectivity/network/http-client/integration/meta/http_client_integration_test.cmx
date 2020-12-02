@@ -1,20 +1,14 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/http-client-integration-tests#meta/netstack-debug.cmx"
-            }
-        }
-    },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/fuchsia-hyper/hyper.shard.cmx",
+        "src/lib/fuchsia-hyper/hyper_testing.shard.cmx"
     ],
     "program": {
         "binary": "bin/http_client_integration_test"
     },
     "sandbox": {
         "services": [
-            "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Launcher"
         ]
     }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "src/lib/fuchsia-hyper/hyper_testing.shard.cml" ],
     children: [
         {
             name: "test_driver",
@@ -20,20 +21,12 @@
         {
             protocol: [ "fuchsia.posix.socket.Provider" ],
             from: "#netstack",
-            to: [
-                "#dns_resolver",
-                "#test_driver",
-            ],
+            to: [ "#test_driver" ],
         },
         {
             protocol: [ "fuchsia.net.NameLookup" ],
             from: "#dns_resolver",
             to: [ "#test_driver" ],
-        },
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
-            from: "parent",
-            to: [ "#netstack" ],
         },
         {
             protocol: [
@@ -42,12 +35,6 @@
             ],
             from: "parent",
             to: [ "#test_driver" ],
-        },
-        {
-            storage: "temp",
-            from: "parent",
-            as: "cache",
-            to: [ "#netstack" ],
         },
         {
             storage: "temp",

@@ -4,6 +4,7 @@
 
 use {
     crate::{HyperConnectorFuture, TcpOptions, TcpStream},
+    fidl_fuchsia_net::{NameLookupMarker, NameLookupProxy},
     fidl_fuchsia_posix_socket::{ProviderMarker, ProviderProxy},
     fuchsia_async::{self, net},
     fuchsia_component::client::connect_to_service,
@@ -18,10 +19,7 @@ use {
     rustls::ClientConfig,
     std::{
         convert::TryFrom as _,
-        net::{
-            AddrParseError, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6,
-            ToSocketAddrs,
-        },
+        net::{AddrParseError, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
         num::{ParseIntError, TryFromIntError},
     },
     tcp_stream_ext::TcpStreamExt as _,
@@ -36,7 +34,7 @@ pub(crate) fn configure_cert_store(tls: &mut ClientConfig) {
 #[derive(Clone)]
 pub struct HyperConnector {
     tcp_options: TcpOptions,
-    provider: RealProviderConnector,
+    provider: RealServiceConnector,
 }
 
 impl HyperConnector {
@@ -45,7 +43,7 @@ impl HyperConnector {
     }
 
     pub fn from_tcp_options(tcp_options: TcpOptions) -> Self {
-        Self { tcp_options, provider: RealProviderConnector }
+        Self { tcp_options, provider: RealServiceConnector }
     }
 }
 
@@ -84,9 +82,9 @@ impl HyperConnector {
         let addr = if let Some(addr) = parse_ip_addr(&self.provider, host, port).await? {
             addr
         } else {
-            // TODO(cramertj): smarter DNS-- nonblocking, don't just pick first addr
-            (host, port).to_socket_addrs()?.next().ok_or_else(|| {
-                io::Error::new(io::ErrorKind::Other, "destination resolved to no address")
+            // TODO(fxbug.dev/65391): don't just pick first addr.
+            resolve_ip_addr(&self.provider, host, port).await?.next().ok_or_else(|| {
+                io::Error::new(io::ErrorKind::Other, "host name resolution returned no hosts")
             })?
         };
 
@@ -126,10 +124,14 @@ trait ProviderConnector {
     fn connect(&self) -> Result<ProviderProxy, io::Error>;
 }
 
-#[derive(Clone)]
-struct RealProviderConnector;
+trait NameLookupConnector {
+    fn connect(&self) -> Result<NameLookupProxy, io::Error>;
+}
 
-impl ProviderConnector for RealProviderConnector {
+#[derive(Clone)]
+struct RealServiceConnector;
+
+impl ProviderConnector for RealServiceConnector {
     fn connect(&self) -> Result<ProviderProxy, io::Error> {
         connect_to_service::<ProviderMarker>().map_err(|err| {
             io::Error::new(
@@ -138,6 +140,60 @@ impl ProviderConnector for RealProviderConnector {
             )
         })
     }
+}
+
+impl NameLookupConnector for RealServiceConnector {
+    fn connect(&self) -> Result<NameLookupProxy, io::Error> {
+        connect_to_service::<NameLookupMarker>().map_err(|err| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("failed to connect to name lookup service: {}", err),
+            )
+        })
+    }
+}
+
+async fn resolve_ip_addr(
+    name_lookup: &impl NameLookupConnector,
+    host: &str,
+    port: u16,
+) -> Result<impl Iterator<Item = SocketAddr>, io::Error> {
+    let proxy = name_lookup.connect()?;
+    let fidl_fuchsia_net::LookupResult { addresses, .. } = proxy
+        .lookup_ip2(
+            host,
+            fidl_fuchsia_net::LookupIpOptions2 {
+                ipv4_lookup: Some(true),
+                ipv6_lookup: Some(true),
+                sort_addresses: Some(true),
+                ..fidl_fuchsia_net::LookupIpOptions2::empty()
+            },
+        )
+        .await
+        .map_err(|err| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("failed to call NameProvider.LookupIp: {}", err),
+            )
+        })?
+        .map_err(|err| {
+            // Match stdlib's behavior, which maps all GAI errors but EAI_SYSTEM
+            // to io::ErrorKind::Other.
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("NameProvider.LookupIp failure: {:?}", err),
+            )
+        })?;
+
+    Ok(addresses
+        .ok_or_else(|| {
+            io::Error::new(io::ErrorKind::Other, "addresses not provided in NameProvider response")
+        })?
+        .into_iter()
+        .map(move |addr| {
+            let fidl_fuchsia_net_ext::IpAddress(addr) = addr.into();
+            SocketAddr::new(addr, port)
+        }))
 }
 
 async fn parse_ip_addr(
@@ -351,17 +407,17 @@ mod test {
         let expected = "fe80::1:2:3:4".parse::<Ipv6Addr>().unwrap();
 
         assert_matches!(
-            parse_ip_addr(&RealProviderConnector, "[fe80::1:2:3:4%25lo]", 8080).await,
+            parse_ip_addr(&RealServiceConnector, "[fe80::1:2:3:4%25lo]", 8080).await,
             Ok(Some(addr)) if addr == SocketAddr::V6(SocketAddrV6::new(expected, 8080, 0, 1))
         );
 
         assert_matches!(
-            parse_ip_addr(&RealProviderConnector, "[fe80::1:2:3:4%25]", 8080).await,
+            parse_ip_addr(&RealServiceConnector, "[fe80::1:2:3:4%25]", 8080).await,
             Err(err) if err.kind() == io::ErrorKind::NotFound
         );
 
         assert_matches!(
-            parse_ip_addr(&RealProviderConnector, "[fe80::1:2:3:4%25unknownif]", 8080).await,
+            parse_ip_addr(&RealServiceConnector, "[fe80::1:2:3:4%25unknownif]", 8080).await,
             Err(err) if err.kind() == io::ErrorKind::NotFound
         );
     }
@@ -422,5 +478,94 @@ mod test {
         let ((), res) = future::join(provider_fut, parse_ip_fut).await;
 
         assert_matches!(res, Err(err) if err.kind() == io::ErrorKind::Other);
+    }
+
+    struct ProxyConnector<T> {
+        proxy: T,
+    }
+
+    impl NameLookupConnector for ProxyConnector<NameLookupProxy> {
+        fn connect(&self) -> Result<NameLookupProxy, io::Error> {
+            Ok(self.proxy.clone())
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_resolve_ip_addr() {
+        let (sender, receiver) = futures::channel::mpsc::unbounded();
+        let (proxy, stream) = create_proxy_and_stream::<NameLookupMarker>()
+            .expect("failed to create NameLookup proxy and stream");
+        const TEST_HOSTNAME: &'static str = "foobar.com";
+        let name_lookup_fut = stream.zip(receiver).for_each(|(req, mut rsp)| match req {
+            Ok(fidl_fuchsia_net::NameLookupRequest::LookupIp2 { hostname, options, responder }) => {
+                assert_eq!(hostname.as_str(), TEST_HOSTNAME);
+                assert_eq!(
+                    options,
+                    fidl_fuchsia_net::LookupIpOptions2 {
+                        ipv4_lookup: Some(true),
+                        ipv6_lookup: Some(true),
+                        sort_addresses: Some(true),
+                        ..fidl_fuchsia_net::LookupIpOptions2::empty()
+                    }
+                );
+                futures::future::ready(
+                    responder.send(&mut rsp).expect("failed to send FIDL response"),
+                )
+            }
+            req => panic!("unexpected item in request stream {:?}", req),
+        });
+
+        let connector = ProxyConnector { proxy };
+
+        let ip_v4 = Ipv4Addr::LOCALHOST.into();
+        let ip_v6 = Ipv6Addr::LOCALHOST.into();
+        const PORT1: u16 = 1234;
+        const PORT2: u16 = 4321;
+
+        let test_fut = async move {
+            // Test expectation's error variant is a tuple of the lookup error
+            // to inject and the expected io error kind returned.
+            type Expectation =
+                Result<Vec<std::net::IpAddr>, (fidl_fuchsia_net::LookupError, io::ErrorKind)>;
+            let test_resolve = |port, expect: Expectation| {
+                let fidl_response = expect
+                    .clone()
+                    .map(|addrs| fidl_fuchsia_net::LookupResult {
+                        addresses: Some(
+                            addrs
+                                .into_iter()
+                                .map(|std| fidl_fuchsia_net_ext::IpAddress(std).into())
+                                .collect(),
+                        ),
+                        ..fidl_fuchsia_net::LookupResult::empty()
+                    })
+                    .map_err(|(fidl_err, _io_err)| fidl_err);
+                let expect = expect
+                    .map(|addrs| {
+                        addrs.into_iter().map(|addr| SocketAddr::new(addr, port)).collect()
+                    })
+                    .map_err(|(_fidl_err, io_err)| io_err);
+                let () = sender
+                    .unbounded_send(fidl_response.clone())
+                    .expect("failed to send expectation");
+                resolve_ip_addr(&connector, TEST_HOSTNAME, port)
+                    .map_ok(Iterator::collect::<Vec<_>>)
+                    // Map IO error to kind so we can do equality.
+                    .map_err(|err| err.kind())
+                    .map(move |result| {
+                        assert_eq!(result, expect);
+                    })
+            };
+            let () = test_resolve(PORT1, Ok(vec![ip_v4])).await;
+            let () = test_resolve(PORT2, Ok(vec![ip_v6])).await;
+            let () = test_resolve(PORT1, Ok(vec![ip_v4, ip_v6])).await;
+            let () = test_resolve(
+                PORT1,
+                Err((fidl_fuchsia_net::LookupError::NotFound, io::ErrorKind::Other)),
+            )
+            .await;
+        };
+
+        let ((), ()) = futures::future::join(name_lookup_fut, test_fut).await;
     }
 }

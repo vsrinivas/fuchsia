@@ -1,6 +1,7 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
         "binary": "bin/system_recovery"
@@ -20,9 +21,7 @@
             "root-ssl-certificates"
         ],
         "services": [
-            "fuchsia.net.NameLookup",
             "fuchsia.paver.Paver",
-            "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
             "fuchsia.recovery.FactoryReset",
             "fuchsia.sys.Environment",
