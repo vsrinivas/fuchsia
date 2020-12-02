@@ -37,6 +37,7 @@ zx_status_t MerkleTree<T, VP, MT, HL>::SetDataLength(size_t data_len) {
     return ZX_ERR_NO_MEMORY;
   }
   next_->hash_list_.SetNodeId(hash_list_.GetNodeId() + 1);
+  next_->SetNodeSize(GetNodeSize());
   next_->SetUseCompactFormat(use_compact_format_);
   size_t next_len = use_compact_format_ ? list_len : fbl::round_up(list_len, GetNodeSize());
   return next_->SetDataLength(next_len);

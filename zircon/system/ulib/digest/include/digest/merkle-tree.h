@@ -31,7 +31,7 @@ class MerkleTree {
   DISALLOW_COPY_ASSIGN_AND_MOVE(MerkleTree);
 
   size_t GetNodeSize() const { return hash_list_.GetNodeSize(); }
-  void SetNodeSize(size_t node_size) { hash_list_.SetNodeSize(); }
+  void SetNodeSize(size_t node_size) { hash_list_.SetNodeSize(node_size); }
 
   // When set to |true| the hash lists in the tree will not contain padding.
   void SetUseCompactFormat(bool use_compact_format);

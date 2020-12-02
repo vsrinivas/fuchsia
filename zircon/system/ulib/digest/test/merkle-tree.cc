@@ -7,6 +7,7 @@
 #include <zircon/status.h>
 
 #include <algorithm>
+#include <iterator>
 #include <memory>
 #include <string>
 
@@ -22,6 +23,7 @@
 namespace digest {
 namespace {
 
+using ::testing::Combine;
 using ::testing::ElementsAreArray;
 using ::testing::Not;
 using ::testing::TestParamInfo;
@@ -32,46 +34,129 @@ using ::testing::ValuesIn;
 // tree. These determine those sizes in a consistent way.
 const uint64_t kNodeSize = kDefaultNodeSize;
 const uint64_t kDigestsPerNode = kNodeSize / kSha256Length;
+const uint64_t kSmallNodeSize = kMinNodeSize;
+const uint64_t kLargeNodeSize = kDefaultNodeSize * 2;
+
+struct TreeParam {
+  size_t data_len;
+  size_t node_size;
+  size_t tree_len;
+  bool use_compact_format;
+  const char *digest;
+};
 
 // The hard-coded trees used for testing were created by using sha256sum on
 // files generated using echo -ne, dd, and xxd
-struct TreeParam {
+struct TestData {
   size_t data_len;
-  size_t tree_len;
-  bool use_compact_format;
-  const char digest[(kSha256Length * 2) + 1];
+  size_t node_size;
+  size_t padded_tree_len;
+  size_t compact_tree_len;
+  const char *digest;
+  const char *description;
 };
 
-constexpr TreeParam kTreeParams[] = {
-    {0, 0, false, "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b"},
-    {1, 0, false, "0967e0f62a104d1595610d272dfab3d2fa2fe07be0eebce13ef5d79db142610e"},
-    {kNodeSize / 2, 0, false, "0a90612c255555469dead72c8fdc41eec06dfe04a30a1f2b7c480ff95d20c5ec"},
-    {kNodeSize - 1, 0, false, "f2abd690381bab3ce485c814d05c310b22c34a7441418b5c1a002c344a80e730"},
-    {kNodeSize, 0, false, "68d131bc271f9c192d4f6dcd8fe61bef90004856da19d0f2f514a7f4098b0737"},
-    {kNodeSize + 1, kNodeSize, false,
-     "374781f7d770b6ee9c1a63e186d2d0ccdad10d6aef4fd027e82b1be5b70a2a0c"},
-    {kNodeSize * 8, kNodeSize, false,
-     "f75f59a944d2433bc6830ec243bfefa457704d2aed12f30539cd4f18bf1d62cf"},
-    {kNodeSize * (kDigestsPerNode + 1), kNodeSize * 3, false,
-     "7d75dfb18bfd48e03b5be4e8e9aeea2f89880cb81c1551df855e0d0a0cc59a67"},
-    {kNodeSize * (kDigestsPerNode + 1) + (kNodeSize / 2), kNodeSize * 3, false,
-     "7577266aa98ce587922fdc668c186e27f3c742fb1b732737153b70ae46973e43"},
+constexpr TestData kDataLen0 = {
+    .data_len = 0,
+    .node_size = kNodeSize,
+    .padded_tree_len = 0,
+    .compact_tree_len = 0,
+    .digest = "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
+    .description = "DataLen0",
+};
+constexpr TestData kDataLen1 = {
+    .data_len = 1,
+    .node_size = kNodeSize,
+    .padded_tree_len = 0,
+    .compact_tree_len = 0,
+    .digest = "0967e0f62a104d1595610d272dfab3d2fa2fe07be0eebce13ef5d79db142610e",
+    .description = "DataLen1",
+};
+constexpr TestData kDataLenHalfNodeSize = {
+    .data_len = kNodeSize / 2,
+    .node_size = kNodeSize,
+    .padded_tree_len = 0,
+    .compact_tree_len = 0,
+    .digest = "0a90612c255555469dead72c8fdc41eec06dfe04a30a1f2b7c480ff95d20c5ec",
+    .description = "DataLenHalfNodeSize",
+};
+constexpr TestData kDataLenOneLessThanNodeSize = {
+    .data_len = kNodeSize - 1,
+    .node_size = kNodeSize,
+    .padded_tree_len = 0,
+    .compact_tree_len = 0,
+    .digest = "f2abd690381bab3ce485c814d05c310b22c34a7441418b5c1a002c344a80e730",
+    .description = "DataLenOneLessThanNodeSize",
+};
+constexpr TestData kDataLenEqualsNodeSize = {
+    .data_len = kNodeSize,
+    .node_size = kNodeSize,
+    .padded_tree_len = 0,
+    .compact_tree_len = 0,
+    .digest = "68d131bc271f9c192d4f6dcd8fe61bef90004856da19d0f2f514a7f4098b0737",
+    .description = "DataLenEqualsNodeSize",
+};
+constexpr TestData kDataLenOneMoreThanNodeSize = {
+    .data_len = kNodeSize + 1,
+    .node_size = kNodeSize,
+    .padded_tree_len = kNodeSize,
+    .compact_tree_len = kSha256Length * 2,
+    .digest = "374781f7d770b6ee9c1a63e186d2d0ccdad10d6aef4fd027e82b1be5b70a2a0c",
+    .description = "DataLenOneMoreThanNodeSize",
+};
+constexpr TestData kDataLen8TimesNodeSize = {
+    .data_len = kNodeSize * 8,
+    .node_size = kNodeSize,
+    .padded_tree_len = kNodeSize,
+    .compact_tree_len = kSha256Length * 8,
+    .digest = "f75f59a944d2433bc6830ec243bfefa457704d2aed12f30539cd4f18bf1d62cf",
+    .description = "DataLen8TimesNodeSize",
+};
+constexpr TestData kDataLenWithSecondTreeLevel = {
+    .data_len = kNodeSize * (kDigestsPerNode + 1),
+    .node_size = kNodeSize,
+    .padded_tree_len = kNodeSize * 3,
+    .compact_tree_len = kNodeSize + kSha256Length * 3,
+    .digest = "7d75dfb18bfd48e03b5be4e8e9aeea2f89880cb81c1551df855e0d0a0cc59a67",
+    .description = "DataLenWithSecondTreeLevel",
+};
+constexpr TestData kDataLen2109440 = {
+    .data_len = kNodeSize * (kDigestsPerNode + 1) + (kNodeSize / 2),
+    .node_size = kNodeSize,
+    .padded_tree_len = kNodeSize * 3,
+    .compact_tree_len = kNodeSize + kSha256Length * 4,
+    .digest = "7577266aa98ce587922fdc668c186e27f3c742fb1b732737153b70ae46973e43",
+    .description = "DataLen2109440",
+};
+constexpr TestData kDataLenWithSecondTreeLevelAndSmallNodeSize = {
+    .data_len = kSmallNodeSize * (kSmallNodeSize / kSha256Length + 1),
+    .node_size = kSmallNodeSize,
+    .padded_tree_len = kSmallNodeSize * 3,
+    .compact_tree_len = kSmallNodeSize + kSha256Length * 3,
+    .digest = "971c80ba49ba3a67d20d123467ac40e4b9202c363f386aeedd9966bf669e0b2f",
+    .description = "DataLenWithSecondTreeLevelAndSmallNodeSize",
+};
+constexpr TestData kDataLenWithSecondTreeLevelAndLargeNodeSize = {
+    .data_len = kLargeNodeSize * (kLargeNodeSize / kSha256Length + 1),
+    .node_size = kLargeNodeSize,
+    .padded_tree_len = kLargeNodeSize * 3,
+    .compact_tree_len = kLargeNodeSize + kSha256Length * 3,
+    .digest = "58c4a882572b280d19cdf0d374071f3d0a7913ff2b3e0dd579a055a834395b43",
+    .description = "DataLenWithSecondTreeLevelAndLargeNodeSize",
 };
 
-constexpr TreeParam kCompactTreeParams[] = {
-    {0, 0, true, "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b"},
-    {1, 0, true, "0967e0f62a104d1595610d272dfab3d2fa2fe07be0eebce13ef5d79db142610e"},
-    {kNodeSize / 2, 0, true, "0a90612c255555469dead72c8fdc41eec06dfe04a30a1f2b7c480ff95d20c5ec"},
-    {kNodeSize - 1, 0, true, "f2abd690381bab3ce485c814d05c310b22c34a7441418b5c1a002c344a80e730"},
-    {kNodeSize, 0, true, "68d131bc271f9c192d4f6dcd8fe61bef90004856da19d0f2f514a7f4098b0737"},
-    {kNodeSize + 1, kSha256Length * 2, true,
-     "374781f7d770b6ee9c1a63e186d2d0ccdad10d6aef4fd027e82b1be5b70a2a0c"},
-    {kNodeSize * 8, kSha256Length * 8, true,
-     "f75f59a944d2433bc6830ec243bfefa457704d2aed12f30539cd4f18bf1d62cf"},
-    {kNodeSize * (kDigestsPerNode + 1), kNodeSize + kSha256Length * 3, true,
-     "7d75dfb18bfd48e03b5be4e8e9aeea2f89880cb81c1551df855e0d0a0cc59a67"},
-    {kNodeSize * (kDigestsPerNode + 1) + (kNodeSize / 2), kNodeSize + kSha256Length * 4, true,
-     "7577266aa98ce587922fdc668c186e27f3c742fb1b732737153b70ae46973e43"},
+constexpr const TestData *kTestData[] = {
+    &kDataLen0,
+    &kDataLen1,
+    &kDataLenHalfNodeSize,
+    &kDataLenOneLessThanNodeSize,
+    &kDataLenEqualsNodeSize,
+    &kDataLenOneMoreThanNodeSize,
+    &kDataLen8TimesNodeSize,
+    &kDataLenWithSecondTreeLevel,
+    &kDataLen2109440,
+    &kDataLenWithSecondTreeLevelAndSmallNodeSize,
+    &kDataLenWithSecondTreeLevelAndLargeNodeSize,
 };
 
 std::unique_ptr<uint8_t[]> AllocateBuffer(size_t len, int value) {
@@ -85,27 +170,45 @@ std::unique_ptr<uint8_t[]> AllocateBuffer(size_t len, int value) {
   return buffer;
 }
 
-class MerkleTreeTest : public TestWithParam<TreeParam> {};
+TreeParam ConvertTestDataToTreeParam(const TestData &test_data, bool use_compact_format) {
+  return {
+      .data_len = test_data.data_len,
+      .node_size = test_data.node_size,
+      .tree_len = use_compact_format ? test_data.compact_tree_len : test_data.padded_tree_len,
+      .use_compact_format = use_compact_format,
+      .digest = test_data.digest,
+  };
+}
+
+class MerkleTreeTest : public TestWithParam<std::tuple<const TestData *, bool>> {
+ public:
+  static TreeParam GetTreeParam() {
+    auto [test_data, use_compact_format] = GetParam();
+    return ConvertTestDataToTreeParam(*test_data, use_compact_format);
+  }
+};
 
 template <class MT>
 void TestGetTreeLength(const TreeParam &tree_param) {
   MT mt;
+  mt.SetNodeSize(tree_param.node_size);
   mt.SetUseCompactFormat(tree_param.use_compact_format);
   EXPECT_OK(mt.SetDataLength(tree_param.data_len));
   EXPECT_EQ(mt.GetTreeLength(), tree_param.tree_len);
 }
 
 TEST_P(MerkleTreeTest, MerkleTreeCreatorGetTreeLength) {
-  TestGetTreeLength<MerkleTreeCreator>(GetParam());
+  TestGetTreeLength<MerkleTreeCreator>(GetTreeParam());
 }
 
 TEST_P(MerkleTreeTest, MerkleTreeVerifierGetTreeLength) {
-  TestGetTreeLength<MerkleTreeVerifier>(GetParam());
+  TestGetTreeLength<MerkleTreeVerifier>(GetTreeParam());
 }
 
 template <class MT>
 void TestSetTree(const TreeParam &tree_param) {
   MT mt;
+  mt.SetNodeSize(tree_param.node_size);
   mt.SetUseCompactFormat(tree_param.use_compact_format);
   uint8_t root[kSha256Length];
   size_t tree_len = tree_param.tree_len;
@@ -121,12 +224,14 @@ void TestSetTree(const TreeParam &tree_param) {
   EXPECT_OK(mt.SetTree(tree.get(), tree_len, root, sizeof(root)));
 }
 
-TEST_P(MerkleTreeTest, MerkleTreeCreatorSetTree) { TestSetTree<MerkleTreeCreator>(GetParam()); }
+TEST_P(MerkleTreeTest, MerkleTreeCreatorSetTree) { TestSetTree<MerkleTreeCreator>(GetTreeParam()); }
 
-TEST_P(MerkleTreeTest, MerkleTreeVerifierSetTree) { TestSetTree<MerkleTreeVerifier>(GetParam()); }
+TEST_P(MerkleTreeTest, MerkleTreeVerifierSetTree) {
+  TestSetTree<MerkleTreeVerifier>(GetTreeParam());
+}
 
 TEST_P(MerkleTreeTest, Create) {
-  const TreeParam &tree_param = GetParam();
+  TreeParam tree_param = GetTreeParam();
   size_t data_len = tree_param.data_len;
   std::unique_ptr<uint8_t[]> data = AllocateBuffer(data_len, 0xff);
   size_t tree_len = tree_param.tree_len;
@@ -140,6 +245,7 @@ TEST_P(MerkleTreeTest, Create) {
 
   // Valid, added all at once
   MerkleTreeCreator creator;
+  creator.SetNodeSize(tree_param.node_size);
   creator.SetUseCompactFormat(tree_param.use_compact_format);
   ASSERT_OK(creator.SetDataLength(data_len));
   ASSERT_OK(creator.SetTree(tree.get(), tree_len, root, sizeof(root)));
@@ -170,7 +276,7 @@ TEST_P(MerkleTreeTest, Create) {
 
 TEST_P(MerkleTreeTest, Verify) {
   srand(::testing::UnitTest::GetInstance()->random_seed());
-  const TreeParam &tree_param = GetParam();
+  TreeParam tree_param = GetTreeParam();
   size_t data_len = tree_param.data_len;
   std::unique_ptr<uint8_t[]> data = AllocateBuffer(data_len, 0xff);
   size_t tree_len = tree_param.tree_len;
@@ -181,12 +287,14 @@ TEST_P(MerkleTreeTest, Verify) {
 
   uint8_t root[kSha256Length];
   MerkleTreeCreator creator;
+  creator.SetNodeSize(tree_param.node_size);
   creator.SetUseCompactFormat(tree_param.use_compact_format);
   ASSERT_OK(creator.SetDataLength(data_len));
   ASSERT_OK(creator.SetTree(tree.get(), tree_len, root, sizeof(root)));
   ASSERT_OK(creator.Append(data.get(), data_len));
   // Verify all
   MerkleTreeVerifier verifier;
+  verifier.SetNodeSize(tree_param.node_size);
   verifier.SetUseCompactFormat(tree_param.use_compact_format);
   EXPECT_OK(verifier.SetDataLength(data_len));
   EXPECT_OK(verifier.SetTree(tree.get(), tree_len, root, sizeof(root)));
@@ -206,10 +314,10 @@ TEST_P(MerkleTreeTest, Verify) {
     tree[flip] ^= 0xff;
   }
 
-  for (size_t data_off = 0; data_off < data_len; data_off += kNodeSize) {
-    // Unaligned ( +2 doesn't line up with any node boundarys or data ends in the tree params)
+  for (size_t data_off = 0; data_off < data_len; data_off += tree_param.node_size) {
+    // Unaligned ( +2 doesn't line up with any node boundaries or data ends in the tree params)
     uint8_t *buf = &data[data_off];
-    size_t buf_len = std::min(data_len - data_off, kNodeSize);
+    size_t buf_len = std::min(data_len - data_off, tree_param.node_size);
     EXPECT_STATUS(verifier.Verify(buf, buf_len + 2, data_off), ZX_ERR_INVALID_ARGS);
     // Verify each node
     EXPECT_OK(verifier.Verify(buf, buf_len, data_off));
@@ -238,16 +346,19 @@ TEST_P(MerkleTreeTest, Verify) {
 }
 
 TEST_P(MerkleTreeTest, CalculateMerkleTreeSize) {
-  const TreeParam &tree_param = GetParam();
-  EXPECT_EQ(
-      CalculateMerkleTreeSize(tree_param.data_len, kDefaultNodeSize, tree_param.use_compact_format),
-      tree_param.tree_len);
+  TreeParam tree_param = GetTreeParam();
+  EXPECT_EQ(CalculateMerkleTreeSize(tree_param.data_len, tree_param.node_size,
+                                    tree_param.use_compact_format),
+            tree_param.tree_len);
 }
 
-class MerkleTreeStaticMethodsTest : public TestWithParam<TreeParam> {};
+class MerkleTreeStaticMethodsTest : public TestWithParam<const TestData *> {
+ public:
+  static TreeParam GetTreeParam() { return ConvertTestDataToTreeParam(*GetParam(), false); }
+};
 
 TEST_P(MerkleTreeStaticMethodsTest, Create) {
-  const TreeParam &tree_param = GetParam();
+  TreeParam tree_param = GetTreeParam();
   size_t data_len = tree_param.data_len;
   std::unique_ptr<uint8_t[]> data = AllocateBuffer(data_len, 0xff);
   size_t tree_len;
@@ -260,7 +371,7 @@ TEST_P(MerkleTreeStaticMethodsTest, Create) {
 
 TEST_P(MerkleTreeStaticMethodsTest, Verify) {
   srand(::testing::UnitTest::GetInstance()->random_seed());
-  const TreeParam &tree_param = GetParam();
+  TreeParam tree_param = GetTreeParam();
   size_t data_len = tree_param.data_len;
   std::unique_ptr<uint8_t[]> data = AllocateBuffer(data_len, 0xff);
   size_t tree_len;
@@ -297,17 +408,30 @@ TEST_P(MerkleTreeStaticMethodsTest, Verify) {
                 ZX_ERR_IO_DATA_INTEGRITY);
 }
 
-std::string TreeParamName(const TestParamInfo<TreeParam> &param) {
-  return "DataLen" + std::to_string(param.param.data_len);
+std::string TestParamName(const TestParamInfo<std::tuple<const TestData *, bool>> &param) {
+  auto [test_data, use_compact_format] = param.param;
+  std::string test_name = test_data->description;
+  if (use_compact_format) {
+    test_name += "Compact";
+  }
+  return test_name;
 }
 
-INSTANTIATE_TEST_SUITE_P(MerkleTree, MerkleTreeTest, ValuesIn(kTreeParams), TreeParamName);
+std::vector<const TestData *> TestDataForStaticMethodsTests() {
+  std::vector<const TestData *> test_data;
+  std::copy_if(std::begin(kTestData), std::end(kTestData), std::back_inserter(test_data),
+               [](const TestData *data) { return data->node_size == kDefaultNodeSize; });
+  return test_data;
+}
 
-INSTANTIATE_TEST_SUITE_P(CompactMerkleTree, MerkleTreeTest, ValuesIn(kCompactTreeParams),
-                         TreeParamName);
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MerkleTreeTest,
+                         Combine(ValuesIn(kTestData), testing::Bool()), TestParamName);
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MerkleTreeStaticMethodsTest, ValuesIn(kTreeParams),
-                         TreeParamName);
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MerkleTreeStaticMethodsTest,
+                         ValuesIn(TestDataForStaticMethodsTests()),
+                         [](const TestParamInfo<const TestData *> &param) {
+                           return param.param->description;
+                         });
 
 }  // namespace
 }  // namespace digest
