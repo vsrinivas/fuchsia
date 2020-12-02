@@ -588,11 +588,17 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* sys_roo
         //
         // TODO(fxbug.dev/56832): Remove this when we have a better way to manage driver
         // dependencies on ACPI.
+        constexpr uint32_t kMAXL_Id = make_fourcc('M', 'A', 'X', 'L');
+        constexpr uint32_t kMAXR_Id = make_fourcc('M', 'A', 'X', 'R');
+        constexpr uint32_t kRT53_Id = make_fourcc('R', 'T', '5', '3');
+        constexpr uint32_t kRT54_Id = make_fourcc('R', 'T', '5', '4');
         constexpr uint32_t kHDAS_Id = make_fourcc('H', 'D', 'A', 'S');
         constexpr uint32_t kI2Cx_Id = make_fourcc('I', '2', 'C', 0);
         constexpr uint32_t kI2Cx_Mask = make_fourcc(0xFF, 0xFF, 0xFF, 0x00);
 
-        if ((info->Name == kHDAS_Id) || ((info->Name & kI2Cx_Mask) == kI2Cx_Id)) {
+        if ((info->Name == kMAXL_Id) || (info->Name == kMAXR_Id) || (info->Name == kRT53_Id) ||
+            (info->Name == kRT54_Id) || (info->Name == kHDAS_Id) ||
+            ((info->Name & kI2Cx_Mask) == kI2Cx_Id)) {
           // We must have already seen at least one PCI root due to traversal order.
           if (!last_pci_bbn.has_value()) {
             zxlogf(WARNING,

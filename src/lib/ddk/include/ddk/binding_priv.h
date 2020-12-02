@@ -127,6 +127,8 @@ __BEGIN_CDECLS
 #define BIND_I2C_CLASS 0x0A00
 #define BIND_I2C_BUS_ID 0x0A01
 #define BIND_I2C_ADDRESS 0x0A02
+#define BIND_I2C_VID 0x0A03
+#define BIND_I2C_DID 0x0A04
 
 // GPIO binding variables at 0x0A1X
 #define BIND_GPIO_PIN 0x0A10

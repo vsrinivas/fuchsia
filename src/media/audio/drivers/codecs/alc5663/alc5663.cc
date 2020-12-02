@@ -445,7 +445,7 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 // clang-format off
 ZIRCON_DRIVER_BEGIN(alc5663, audio::alc5663::driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_ACPI_HID_0_3, 0x31304543), // '10EC' (Realtek)
-    BI_MATCH_IF(EQ, BIND_ACPI_HID_4_7, 0x35363633), // '5663'
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_REALTEK),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ALC5663),
 ZIRCON_DRIVER_END(alc5663)
     // clang-format on

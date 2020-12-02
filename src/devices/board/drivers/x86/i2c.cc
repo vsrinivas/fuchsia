@@ -13,11 +13,28 @@
 #include <acpica/acpi.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/metadata/i2c.h>
+#include <ddk/platform-defs.h>
 
 #include "acpi-private.h"
 #include "dev.h"
 #include "util.h"
+
+bool AddDeviveProperty(acpi_i2c_device_t& dev, uint16_t vid, uint16_t did,
+                       const ACPI_DEVICE_INFO& info, const ACPI_DEVICE_INFO& i2c_bus_info) {
+  if (dev.propcount + 2 > std::size(dev.props)) {
+    zxlogf(WARNING,
+           "Insufficient space to store I2C class in devprops for ACPI I2C device "
+           "\"%s\" on bus \"%s\"\n",
+           fourcc_to_string(info.Name).str, fourcc_to_string(i2c_bus_info.Name).str);
+    return false;
+  }
+
+  dev.props[dev.propcount].id = BIND_I2C_VID;
+  dev.props[dev.propcount++].value = vid;
+  dev.props[dev.propcount].id = BIND_I2C_DID;
+  dev.props[dev.propcount++].value = did;
+  return true;
+}
 
 zx_status_t I2cBusPublishMetadata(zx_device_t* dev, uint8_t pci_bus_num, uint64_t adr,
                                   const ACPI_DEVICE_INFO& i2c_bus_info,
@@ -96,8 +113,9 @@ zx_status_t I2cBusPublishMetadata(zx_device_t* dev, uint8_t pci_bus_num, uint64_
         // and go looking for the resource which describes the I2C specific details
         // of this device (its address, expected speed, and so on).
         ACPI_STATUS acpi_status;
-        acpi_status =
-            acpi::WalkResources(object, "_CRS", [&new_dev](ACPI_RESOURCE* resource) -> ACPI_STATUS {
+        acpi_status = acpi::WalkResources(
+            object, "_CRS",
+            [&new_dev, &info, &i2c_bus_info](ACPI_RESOURCE* resource) -> ACPI_STATUS {
               if (resource->Type != ACPI_RESOURCE_TYPE_SERIAL_BUS) {
                 return AE_NOT_FOUND;
               }
@@ -111,6 +129,20 @@ zx_status_t I2cBusPublishMetadata(zx_device_t* dev, uint8_t pci_bus_num, uint64_
               new_dev.address = i2c->SlaveAddress;
               new_dev.bus_speed = i2c->ConnectionSpeed;
 
+              // TODO(fxbug.dev/56832): This is a very focused hack to support binding to I2C
+              // on specific hardware.  Once the bug has been resolved, driver clients will be able
+              // to access their relevant ACPI info on their own and all of this can go away.
+              if (!strcmp(info->HardwareId.String, ALC5663_HID_STRING)) {
+                if (!AddDeviveProperty(new_dev, PDEV_VID_REALTEK, PDEV_DID_ALC5663, *info,
+                                       i2c_bus_info)) {
+                  return AE_OK;
+                }
+              } else if (!strcmp(info->HardwareId.String, MAX98927_HID_STRING)) {
+                if (!AddDeviveProperty(new_dev, PDEV_VID_MAXIM, PDEV_DID_MAXIM_MAX98927, *info,
+                                       i2c_bus_info)) {
+                  return AE_OK;
+                }
+              }
               return AE_CTRL_TERMINATE;
             });
 
@@ -119,7 +151,8 @@ zx_status_t I2cBusPublishMetadata(zx_device_t* dev, uint8_t pci_bus_num, uint64_
               WARNING,
               "Failed to find ACPI CRS for I2C device \"%s\" on bus \"%s\" (status %d).  Skipping "
               "device.\n",
-              fourcc_to_string(info->Name).str, fourcc_to_string(i2c_bus_info.Name).str, status);
+              fourcc_to_string(info->Name).str, fourcc_to_string(i2c_bus_info.Name).str,
+              acpi_status);
           return AE_OK;
         }
 

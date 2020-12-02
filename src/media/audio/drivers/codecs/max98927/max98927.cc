@@ -251,7 +251,7 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 // clang-format off
 ZIRCON_DRIVER_BEGIN(max98927, audio::max98927::driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_ACPI_HID_0_3, 0x4d583938), // 'MX98'
-    BI_MATCH_IF(EQ, BIND_ACPI_HID_4_7, 0x39323700), // '927\0'
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MAXIM),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MAXIM_MAX98927),
 ZIRCON_DRIVER_END(max98927)
     // clang-format on

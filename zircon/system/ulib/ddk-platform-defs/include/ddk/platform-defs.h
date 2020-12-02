@@ -181,6 +181,7 @@ __BEGIN_CDECLS
 // REALTEK
 #define PDEV_VID_REALTEK            0x0B
 #define PDEV_PID_RTL8211F           0x01
+#define PDEV_DID_ALC5663            0x01
 
 // Designware
 #define PDEV_VID_DESIGNWARE         0x0C
@@ -328,6 +329,7 @@ __BEGIN_CDECLS
 // Maxim
 #define PDEV_VID_MAXIM              0x15
 #define PDEV_DID_MAXIM_MAX98373      0x01
+#define PDEV_DID_MAXIM_MAX98927      0x02
 
 // Nordic
 #define PDEV_VID_NORDIC             0x16

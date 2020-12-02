@@ -197,11 +197,6 @@ zx_status_t IntelI2cController::Init() {
 }
 
 void IntelI2cController::DdkInit(ddk::InitTxn txn) {
-  uint16_t vendor_id;
-  uint16_t device_id;
-  pci_.ConfigRead16(PCI_CONFIG_VENDOR_ID, &vendor_id);
-  pci_.ConfigRead16(PCI_CONFIG_DEVICE_ID, &device_id);
-
   auto status = AddSubordinates();
   if (status != ZX_OK) {
     zxlogf(ERROR, "adding subordinates failed: %s", zx_status_get_string(status));
@@ -218,9 +213,9 @@ void IntelI2cController::DdkInit(ddk::InitTxn txn) {
     auto& subordinate = it.second;
 
     chan.bus_id = 0;
-    chan.vid = vendor_id;
+    chan.vid = subordinate->vendor_id();
     chan.pid = 0;
-    chan.did = device_id;
+    chan.did = subordinate->device_id();
     chan.address = subordinate->GetChipAddress();
     chan.i2c_class = subordinate->GetI2cClass();
   }
@@ -318,14 +313,20 @@ zx_status_t IntelI2cController::AddSubordinate(const uint8_t width, const uint16
 
   uint32_t i2c_class = 0;
 
+  uint16_t vendor_id = 0;
+  uint16_t device_id = 0;
   for (uint32_t i = 0; i < propcount; i++) {
     if (props[i].id == BIND_I2C_CLASS) {
       i2c_class = props[i].value;
-      break;
+    } else if (props[i].id == BIND_I2C_VID) {
+      vendor_id = static_cast<uint16_t>(props[i].value);
+    } else if (props[i].id == BIND_I2C_DID) {
+      device_id = static_cast<uint16_t>(props[i].value);
     }
   }
 
-  auto subordinate = IntelI2cSubordinate::Create(this, width, address, i2c_class);
+  auto subordinate =
+      IntelI2cSubordinate::Create(this, width, address, i2c_class, vendor_id, device_id);
 
   if (subordinate == nullptr) {
     zxlogf(ERROR, "Failed to create subordinate.");
@@ -853,4 +854,4 @@ BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI), BI_ABORT_IF(NE, BIND_PCI_VID, 0
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C3_DID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C4_DID),
-ZIRCON_DRIVER_END(intel_i2c)
+    ZIRCON_DRIVER_END(intel_i2c)
