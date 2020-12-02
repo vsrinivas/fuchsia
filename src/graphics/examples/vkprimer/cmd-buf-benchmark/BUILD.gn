@@ -17,25 +17,15 @@ resource("shaders") {
   outputs = [ "data/shaders/{{source_file_part}}" ]
 }
 
-resource("layers") {
-  sources = []
-  foreach(resource, vulkan_validation_layers.resources) {
-    sources += [ resource.path ]
-  }
-  foreach(resource, image_pipe_swapchain_fb.resources) {
-    sources += [ resource.path ]
-  }
-  outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
-}
-
 fuchsia_component("cmd-buf-benchmark-component") {
   testonly = true
   component_name = "cmd-buf-benchmark"
   manifest = "meta/cmd-buf-benchmark.cmx"
   deps = [
     ":bin",
-    ":layers",
     ":shaders",
+    "//src/lib/vulkan:image-pipe-swapchain-fb",
+    "//src/lib/vulkan:validation-layers",
     "//third_party/Vulkan-Loader:libvulkan",
   ]
 

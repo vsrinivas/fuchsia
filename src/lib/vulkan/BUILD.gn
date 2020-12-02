@@ -9,6 +9,7 @@ import("//src/lib/vulkan/build/symlink.gni")
 import("//src/lib/vulkan/compact_image.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
+import("//src/sys/build/components.gni")
 
 # Centralizing the GN points of entry into Vulkan ecosystem repositories here is helpful
 # for grasping the full scope.  Note, there are also entry points in //sdk/BUILD.gn.
@@ -78,6 +79,22 @@ config("vulkan_hpp") {
     "VULKAN_HPP_ASSERT(expr)=do {} while(0)",
     "VULKAN_HPP_NO_EXCEPTIONS",
   ]
+}
+
+resource("validation-layers") {
+  sources = []
+  foreach(resource, vulkan_validation_layers.resources) {
+    sources += [ resource.path ]
+  }
+  outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
+}
+
+resource("image-pipe-swapchain-fb") {
+  sources = []
+  foreach(resource, image_pipe_swapchain_fb.resources) {
+    sources += [ resource.path ]
+  }
+  outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
 }
 
 sdk_atom("vulkan_layers") {
