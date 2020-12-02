@@ -25,7 +25,7 @@ namespace devmgr {
 namespace {
 
 zx::status<> WaitForPkgfsLaunchCompletion(zx::process proc) {
-  auto deadline = zx::deadline_after(zx::sec(20));
+  auto deadline = zx::deadline_after(zx::sec(100));
   zx_signals_t observed;
   auto status =
       zx::make_status(proc.wait_one(ZX_USER_SIGNAL_0 | ZX_PROCESS_TERMINATED, deadline, &observed));
