@@ -8,7 +8,13 @@ import("//src/media/audio/hardware.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":audio_driver_tests" ]
+
+  # These tests must run in release builds because they have hard realtime constraints.
+  # Debug builds are too slow.
+  # TODO(fxbug.dev/65608): Split into tests that have realtime constraints and tests that do not.
+  if (!is_debug) {
+    deps = [ ":audio_driver_tests" ]
+  }
 }
 
 test_package("audio_driver_tests") {
