@@ -6,26 +6,23 @@ import("//build/cpp/cpp_fuzzer.gni")
 
 group("testing") {
   testonly = true
-  deps = []
-  if (is_fuchsia) {
-    deps += [ ":zbitl-fuzzers" ]
-  }
+  deps = [ ":zbitl-fuzzers" ]
 }
 
 fuzzer_package("zbitl-fuzzers") {
-  cpp_fuzzers = [
-    ":mem-config",
-    ":iteration",
-  ]
   fuzz_host = true
+  cpp_fuzzers = [
+    ":iteration-fuzzer",
+    ":mem-config-fuzzer",
+  ]
 }
 
-cpp_fuzzer("iteration") {
+cpp_fuzzer("iteration-fuzzer") {
   sources = [ "iteration-fuzzer.cc" ]
   deps = [ ".." ]
 }
 
-cpp_fuzzer("mem-config") {
+cpp_fuzzer("mem-config-fuzzer") {
   sources = [ "mem-config-fuzzer.cc" ]
   deps = [ ".." ]
 }
