@@ -66,7 +66,7 @@ Top_Proxy::Top_Proxy(::fidl::internal::ProxyController* controller)
 
 Top_Proxy::~Top_Proxy() = default;
 
-zx_status_t Top_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t Top_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -83,7 +83,8 @@ namespace {
 Top_GetFoo_ResponseHandler(Top::GetFooCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback, "Callback must not be empty for Top::GetFoo\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<::bottom::Foo>(&decoder, 16));
         return ZX_OK;
@@ -124,7 +125,7 @@ class Top_GetFoo_Responder final {
 
 }  // namespace
 
-zx_status_t Top_Stub::Dispatch_(::fidl::Message message,
+zx_status_t Top_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
                                 ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =
@@ -170,7 +171,7 @@ Top_SyncProxy::~Top_SyncProxy() = default;
 zx_status_t Top_SyncProxy::GetFoo(::bottom::Foo* out_foo) {
   ::fidl::Encoder _encoder(internal::kTop_GetFoo_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_transitivedependenciescompose_TopGetFooRequestTable,
       &fidl_test_transitivedependenciescompose_TopGetFooResponseTable,

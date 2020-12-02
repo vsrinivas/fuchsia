@@ -34,7 +34,7 @@ class ProtoValueTest : public ::testing::Test {
   LibraryLoader* loader() const { return loader_; }
   Library* library() const { return library_; }
 
-  std::unique_ptr<FidlMessageValue> CreateFidlMessage(const fidl::Message& message) {
+  std::unique_ptr<FidlMessageValue> CreateFidlMessage(const fidl::HLCPPIncomingMessage& message) {
     std::unique_ptr<zx_handle_info_t[]> handle_infos;
     if (message.handles().size() > 0) {
       handle_infos = std::make_unique<zx_handle_info_t[]>(message.handles().size());
@@ -135,11 +135,12 @@ TEST_F(ProtoValueTest, StringValue) {
 }
 
 TEST_F(ProtoValueTest, HandleValue) {
-  PROTO_TEST(std::make_unique<HandleValue>(zx_handle_disposition_t{.operation = fidl_codec::kNoHandleDisposition,
-                                                                   .handle = 0x1234,
-                                                                   .type = ZX_OBJ_TYPE_CHANNEL,
-                                                                   .rights = ZX_RIGHT_DUPLICATE,
-                                                                   .result = ZX_OK}),
+  PROTO_TEST(std::make_unique<HandleValue>(
+                 zx_handle_disposition_t{.operation = fidl_codec::kNoHandleDisposition,
+                                         .handle = 0x1234,
+                                         .type = ZX_OBJ_TYPE_CHANNEL,
+                                         .rights = ZX_RIGHT_DUPLICATE,
+                                         .result = ZX_OK}),
              nullptr, false, "Channel:00001234(ZX_RIGHT_DUPLICATE)");
 }
 
@@ -262,7 +263,7 @@ TEST_F(ProtoValueTest, TableValue) {
 
 TEST_F(ProtoValueTest, FidlMessageValue) {
   fidl::MessageBuffer buffer_;
-  fidl::Message message = buffer_.CreateEmptyMessage();
+  fidl::HLCPPIncomingMessage message = buffer_.CreateEmptyIncomingMessage();
   InterceptRequest<test::fidlcodec::examples::FidlCodecTestInterface>(
       message, [&](fidl::InterfacePtr<test::fidlcodec::examples::FidlCodecTestInterface>& ptr) {
         ptr->StringInt("Hello FIDL", 100);

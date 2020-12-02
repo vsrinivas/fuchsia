@@ -31,7 +31,7 @@ class Stub {
   //
   // The |PendingResponse| object has affinity for the current thread and is not
   // safe to transport to another thread.
-  virtual zx_status_t Dispatch_(Message message, PendingResponse response) = 0;
+  virtual zx_status_t Dispatch_(HLCPPIncomingMessage message, PendingResponse response) = 0;
 
   // The protocol-agnostic object that can send messages.
   //

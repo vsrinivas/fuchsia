@@ -547,7 +547,7 @@ Interface_Proxy::Interface_Proxy(::fidl::internal::ProxyController* controller)
 
 Interface_Proxy::~Interface_Proxy() = default;
 
-zx_status_t Interface_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t Interface_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     case internal::kInterface_OnEvent_Ordinal: {
@@ -590,7 +590,8 @@ Interface_Stub::~Interface_Stub() = default;
 namespace {}  // namespace
 
 zx_status_t Interface_Stub::Dispatch_(
-    ::fidl::Message message, ::fidl::internal::PendingResponse response) {
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =
       Interface_RequestDecoder::GetType(message.ordinal(), &needs_response);

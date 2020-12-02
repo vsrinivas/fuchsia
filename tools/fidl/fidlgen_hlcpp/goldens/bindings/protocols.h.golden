@@ -429,7 +429,8 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalOneWayRequestTable;
 
 class Transitional_RequestEncoder {
  public:
-  static ::fidl::Message Request(::fidl::Encoder* _encoder, int64_t* x) {
+  static ::fidl::HLCPPOutgoingMessage Request(::fidl::Encoder* _encoder,
+                                              int64_t* x) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, x, 16);
@@ -441,7 +442,8 @@ class Transitional_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message OneWay(::fidl::Encoder* _encoder, int64_t* x) {
+  static ::fidl::HLCPPOutgoingMessage OneWay(::fidl::Encoder* _encoder,
+                                             int64_t* x) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, x, 16);
@@ -463,7 +465,8 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
 
 class Transitional_ResponseEncoder {
  public:
-  static ::fidl::Message Request(::fidl::Encoder* _encoder, int64_t* y) {
+  static ::fidl::HLCPPOutgoingMessage Request(::fidl::Encoder* _encoder,
+                                              int64_t* y) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, y, 16);
@@ -474,7 +477,8 @@ class Transitional_ResponseEncoder {
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message Event(::fidl::Encoder* _encoder, int64_t* x) {
+  static ::fidl::HLCPPOutgoingMessage Event(::fidl::Encoder* _encoder,
+                                            int64_t* x) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, x, 16);
@@ -501,8 +505,8 @@ extern "C" const fidl_type_t
 
 class ChannelProtocol_RequestEncoder {
  public:
-  static ::fidl::Message MethodA(::fidl::Encoder* _encoder, int64_t* a,
-                                 int64_t* b) {
+  static ::fidl::HLCPPOutgoingMessage MethodA(::fidl::Encoder* _encoder,
+                                              int64_t* a, int64_t* b) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, a, 16);
@@ -516,8 +520,8 @@ class ChannelProtocol_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message MethodB(::fidl::Encoder* _encoder, int64_t* a,
-                                 int64_t* b) {
+  static ::fidl::HLCPPOutgoingMessage MethodB(::fidl::Encoder* _encoder,
+                                              int64_t* a, int64_t* b) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, a, 16);
@@ -531,8 +535,8 @@ class ChannelProtocol_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message MutateSocket(::fidl::Encoder* _encoder,
-                                      ::zx::socket* a) {
+  static ::fidl::HLCPPOutgoingMessage MutateSocket(::fidl::Encoder* _encoder,
+                                                   ::zx::socket* a) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, a, 16);
@@ -558,8 +562,8 @@ extern "C" const fidl_type_t
 
 class ChannelProtocol_ResponseEncoder {
  public:
-  static ::fidl::Message EventA(::fidl::Encoder* _encoder, int64_t* a,
-                                int64_t* b) {
+  static ::fidl::HLCPPOutgoingMessage EventA(::fidl::Encoder* _encoder,
+                                             int64_t* a, int64_t* b) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, a, 16);
@@ -571,7 +575,8 @@ class ChannelProtocol_ResponseEncoder {
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message MethodB(::fidl::Encoder* _encoder, int64_t* result) {
+  static ::fidl::HLCPPOutgoingMessage MethodB(::fidl::Encoder* _encoder,
+                                              int64_t* result) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);
@@ -583,8 +588,8 @@ class ChannelProtocol_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message MutateSocket(::fidl::Encoder* _encoder,
-                                      ::zx::socket* b) {
+  static ::fidl::HLCPPOutgoingMessage MutateSocket(::fidl::Encoder* _encoder,
+                                                   ::zx::socket* b) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, b, 16);
@@ -618,7 +623,8 @@ extern "C" const fidl_type_t
 
 class WithAndWithoutRequestResponse_RequestEncoder {
  public:
-  static ::fidl::Message NoRequestNoResponse(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage NoRequestNoResponse(
+      ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -631,7 +637,8 @@ class WithAndWithoutRequestResponse_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message NoRequestEmptyResponse(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage NoRequestEmptyResponse(
+      ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -644,7 +651,8 @@ class WithAndWithoutRequestResponse_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message NoRequestWithResponse(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage NoRequestWithResponse(
+      ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -657,8 +665,8 @@ class WithAndWithoutRequestResponse_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message WithRequestNoResponse(::fidl::Encoder* _encoder,
-                                               ::std::string* arg) {
+  static ::fidl::HLCPPOutgoingMessage WithRequestNoResponse(
+      ::fidl::Encoder* _encoder, ::std::string* arg) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, arg, 16);
@@ -672,8 +680,8 @@ class WithAndWithoutRequestResponse_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message WithRequestEmptyResponse(::fidl::Encoder* _encoder,
-                                                  ::std::string* arg) {
+  static ::fidl::HLCPPOutgoingMessage WithRequestEmptyResponse(
+      ::fidl::Encoder* _encoder, ::std::string* arg) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, arg, 16);
@@ -687,8 +695,8 @@ class WithAndWithoutRequestResponse_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message WithRequestWithResponse(::fidl::Encoder* _encoder,
-                                                 ::std::string* arg) {
+  static ::fidl::HLCPPOutgoingMessage WithRequestWithResponse(
+      ::fidl::Encoder* _encoder, ::std::string* arg) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, arg, 16);
@@ -721,7 +729,8 @@ extern "C" const fidl_type_t
 
 class WithAndWithoutRequestResponse_ResponseEncoder {
  public:
-  static ::fidl::Message NoRequestEmptyResponse(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage NoRequestEmptyResponse(
+      ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -733,8 +742,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message NoRequestWithResponse(::fidl::Encoder* _encoder,
-                                               ::std::string* ret) {
+  static ::fidl::HLCPPOutgoingMessage NoRequestWithResponse(
+      ::fidl::Encoder* _encoder, ::std::string* ret) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, ret, 16);
@@ -747,7 +756,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message WithRequestEmptyResponse(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage WithRequestEmptyResponse(
+      ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -759,8 +769,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message WithRequestWithResponse(::fidl::Encoder* _encoder,
-                                                 ::std::string* ret) {
+  static ::fidl::HLCPPOutgoingMessage WithRequestWithResponse(
+      ::fidl::Encoder* _encoder, ::std::string* ret) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, ret, 16);
@@ -773,7 +783,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message OnEmptyResponse(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage OnEmptyResponse(
+      ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -785,8 +796,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message OnWithResponse(::fidl::Encoder* _encoder,
-                                        ::std::string* ret) {
+  static ::fidl::HLCPPOutgoingMessage OnWithResponse(::fidl::Encoder* _encoder,
+                                                     ::std::string* ret) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, ret, 16);
@@ -930,7 +941,8 @@ extern "C" const fidl_type_t
 
 class WithErrorSyntax_RequestEncoder {
  public:
-  static ::fidl::Message ResponseAsStruct(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage ResponseAsStruct(
+      ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -943,7 +955,8 @@ class WithErrorSyntax_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message ErrorAsPrimitive(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage ErrorAsPrimitive(
+      ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -956,7 +969,7 @@ class WithErrorSyntax_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message ErrorAsEnum(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage ErrorAsEnum(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -981,7 +994,7 @@ extern "C" const fidl_type_t
 
 class WithErrorSyntax_ResponseEncoder {
  public:
-  static ::fidl::Message ResponseAsStruct(
+  static ::fidl::HLCPPOutgoingMessage ResponseAsStruct(
       ::fidl::Encoder* _encoder,
       ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
           result) {
@@ -997,7 +1010,7 @@ class WithErrorSyntax_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message ErrorAsPrimitive(
+  static ::fidl::HLCPPOutgoingMessage ErrorAsPrimitive(
       ::fidl::Encoder* _encoder,
       ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
           result) {
@@ -1013,7 +1026,7 @@ class WithErrorSyntax_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message ErrorAsEnum(
+  static ::fidl::HLCPPOutgoingMessage ErrorAsEnum(
       ::fidl::Encoder* _encoder,
       ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* result) {
     fidl_trace(WillHLCPPEncode);
@@ -1590,7 +1603,7 @@ class Transitional_RequestDecoder {
   Transitional_RequestDecoder() = default;
   virtual ~Transitional_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -1629,7 +1642,7 @@ class Transitional_ResponseDecoder {
   Transitional_ResponseDecoder() = default;
   virtual ~Transitional_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -1680,7 +1693,7 @@ class Transitional_Proxy final : public ::fidl::internal::Proxy,
   explicit Transitional_Proxy(::fidl::internal::ProxyController* controller);
   ~Transitional_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   void Request(int64_t x, RequestCallback callback) override;
   void OneWay(int64_t x) override;
   EventCallback Event;
@@ -1699,7 +1712,7 @@ class Transitional_Stub final : public ::fidl::internal::Stub,
   explicit Transitional_Stub(Transitional_clazz* impl);
   ~Transitional_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
   void Event(int64_t x) override;
 
@@ -1744,7 +1757,7 @@ class ChannelProtocol_RequestDecoder {
   ChannelProtocol_RequestDecoder() = default;
   virtual ~ChannelProtocol_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -1790,7 +1803,7 @@ class ChannelProtocol_ResponseDecoder {
   ChannelProtocol_ResponseDecoder() = default;
   virtual ~ChannelProtocol_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -1848,7 +1861,7 @@ class ChannelProtocol_Proxy final : public ::fidl::internal::Proxy,
   explicit ChannelProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~ChannelProtocol_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   void MethodA(int64_t a, int64_t b) override;
   EventACallback EventA;
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override;
@@ -1868,7 +1881,7 @@ class ChannelProtocol_Stub final : public ::fidl::internal::Stub,
   explicit ChannelProtocol_Stub(ChannelProtocol_clazz* impl);
   ~ChannelProtocol_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
   void EventA(int64_t a, int64_t b) override;
 
@@ -1927,7 +1940,7 @@ class WithAndWithoutRequestResponse_RequestDecoder {
   WithAndWithoutRequestResponse_RequestDecoder() = default;
   virtual ~WithAndWithoutRequestResponse_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -1995,7 +2008,7 @@ class WithAndWithoutRequestResponse_ResponseDecoder {
   WithAndWithoutRequestResponse_ResponseDecoder() = default;
   virtual ~WithAndWithoutRequestResponse_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -2080,7 +2093,7 @@ class WithAndWithoutRequestResponse_Proxy final
       ::fidl::internal::ProxyController* controller);
   ~WithAndWithoutRequestResponse_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   void NoRequestNoResponse() override;
   void NoRequestEmptyResponse(NoRequestEmptyResponseCallback callback) override;
   void NoRequestWithResponse(NoRequestWithResponseCallback callback) override;
@@ -2111,7 +2124,7 @@ class WithAndWithoutRequestResponse_Stub final
       WithAndWithoutRequestResponse_clazz* impl);
   ~WithAndWithoutRequestResponse_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
   void OnEmptyResponse() override;
   void OnWithResponse(::std::string ret) override;
@@ -2166,7 +2179,7 @@ class WithErrorSyntax_RequestDecoder {
   WithErrorSyntax_RequestDecoder() = default;
   virtual ~WithErrorSyntax_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -2210,7 +2223,7 @@ class WithErrorSyntax_ResponseDecoder {
   WithErrorSyntax_ResponseDecoder() = default;
   virtual ~WithErrorSyntax_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -2286,7 +2299,7 @@ class WithErrorSyntax_Proxy final : public ::fidl::internal::Proxy,
   explicit WithErrorSyntax_Proxy(::fidl::internal::ProxyController* controller);
   ~WithErrorSyntax_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   void ResponseAsStruct(ResponseAsStructCallback callback) override;
   void ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) override;
   void ErrorAsEnum(ErrorAsEnumCallback callback) override;
@@ -2305,7 +2318,7 @@ class WithErrorSyntax_Stub final : public ::fidl::internal::Stub,
   explicit WithErrorSyntax_Stub(WithErrorSyntax_clazz* impl);
   ~WithErrorSyntax_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:

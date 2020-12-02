@@ -16,8 +16,9 @@ MessageBuilder::MessageBuilder(const fidl_type_t* type, uint32_t bytes_capacity,
 
 MessageBuilder::~MessageBuilder() = default;
 
-zx_status_t MessageBuilder::Encode(Message* message_out, const char** error_msg_out) {
-  *message_out = Message(Finalize(), HandlePart(buffer_.handles(), buffer_.handles_capacity()));
+zx_status_t MessageBuilder::Encode(HLCPPOutgoingMessage* message_out, const char** error_msg_out) {
+  *message_out =
+      HLCPPOutgoingMessage(Finalize(), HandlePart(buffer_.handles(), buffer_.handles_capacity()));
   return message_out->Encode(type_, error_msg_out);
 }
 

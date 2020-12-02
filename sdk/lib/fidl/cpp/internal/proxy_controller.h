@@ -60,7 +60,7 @@ class ProxyController : public MessageHandler {
   //
   // Returns an error if the message fails to encode properly or if the message
   // cannot be written to the channel.
-  zx_status_t Send(const fidl_type_t* type, Message message,
+  zx_status_t Send(const fidl_type_t* type, HLCPPOutgoingMessage message,
                    std::unique_ptr<SingleUseMessageHandler> response_handler);
 
   // Clears all the state associated with this |ProxyController|.
@@ -75,7 +75,7 @@ class ProxyController : public MessageHandler {
   //
   // The message might be a response to a previously sent message or an
   // unsolicited event.
-  zx_status_t OnMessage(Message message) final;
+  zx_status_t OnMessage(HLCPPIncomingMessage message) final;
 
   // Causes the |ProxyController| to |ClearPendingHandlers()|.
   void OnChannelGone() final;

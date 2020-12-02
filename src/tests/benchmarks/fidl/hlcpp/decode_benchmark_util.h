@@ -27,7 +27,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER);
     auto offset = enc.Alloc(EncodedSize<FidlType>);
     obj.Encode(&enc, offset);
-    fidl::Message encode_msg = enc.GetMessage();
+    fidl::HLCPPOutgoingMessage encode_msg = enc.GetMessage();
 
     buffer.resize(encode_msg.bytes().actual());
     handles.resize(encode_msg.handles().actual());
@@ -38,7 +38,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     state->NextStep();  // End: Setup. Begin: Decode.
 
     {
-      fidl::Message decode_msg(
+      fidl::HLCPPIncomingMessage decode_msg(
           fidl::BytePart(buffer.data(), static_cast<uint32_t>(buffer.size()),
                          static_cast<uint32_t>(buffer.size())),
           fidl::HandlePart(handles.data(), static_cast<uint32_t>(handles.size()),

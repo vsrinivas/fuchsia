@@ -56,7 +56,7 @@ class MessageBuilder : public Builder {
   //
   // The |message| parameter might be modified even if this method returns an
   // error.
-  zx_status_t Encode(Message* message_out, const char** error_msg_out);
+  zx_status_t Encode(HLCPPOutgoingMessage* message_out, const char** error_msg_out);
 
   // Resets all the data in the |MessageBuffer|.
   //

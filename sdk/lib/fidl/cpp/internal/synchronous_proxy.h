@@ -38,7 +38,7 @@ class SynchronousProxy final : public MessageSender {
   // Does not block.
   //
   // Returns an error if validation or writing fails.
-  zx_status_t Send(const fidl_type_t* type, Message message) final;
+  zx_status_t Send(const fidl_type_t* type, HLCPPOutgoingMessage message) final;
 
   // Validate that |request| matches the given |request_type| and sends
   // |request| through the underlying channel. Blocks until it receives a
@@ -49,7 +49,7 @@ class SynchronousProxy final : public MessageSender {
   //
   // Returns an error if validation, writing, reading, or decoding fails.
   zx_status_t Call(const fidl_type_t* request_type, const fidl_type_t* response_type,
-                   Message request, Message* response);
+                   HLCPPOutgoingMessage request, HLCPPIncomingMessage* response);
 
   // The underlying channel.
   const zx::channel& channel() const { return channel_; }

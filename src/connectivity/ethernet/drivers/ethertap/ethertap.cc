@@ -209,7 +209,7 @@ void TapDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
   memcpy(data, op.operation()->data_buffer, length);
 
   const char* err = nullptr;
-  fidl::Message msg(builder.Finalize(), fidl::HandlePart());
+  fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandlePart());
   auto status = msg.Encode(&fuchsia_hardware_ethertap_TapDeviceOnFrameEventTable, &err);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ethertap: EthernetImplQueueTx error encoding: %d %s", status, err);
@@ -279,7 +279,7 @@ zx_status_t TapDevice::EthernetImplSetParam(uint32_t param, int32_t value, const
   // so log it but don't report failure on the SetParam attempt.
 
   const char* err = nullptr;
-  fidl::Message msg(builder.Finalize(), fidl::HandlePart());
+  fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandlePart());
   auto status = msg.Encode(&fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventTable, &err);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ethertap: EthernetImplSetParam error encoding: %d %s", status, err);

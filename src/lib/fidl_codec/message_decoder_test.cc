@@ -46,15 +46,16 @@ class MessageDecoderTest : public ::testing::Test {
   // Intercepts the caller's method call on a FIDL InterfacePtr and returns the bytes
   // sent over the channel.
   template <class T>
-  fidl::Message InvokeAndIntercept(std::function<void(fidl::InterfacePtr<T>&)> invoker) {
-    fidl::Message message = buffer_.CreateEmptyMessage();
+  fidl::HLCPPIncomingMessage InvokeAndIntercept(
+      std::function<void(fidl::InterfacePtr<T>&)> invoker) {
+    fidl::HLCPPIncomingMessage message = buffer_.CreateEmptyIncomingMessage();
     InterceptRequest<T>(message, invoker);
     return message;
   }
 
   // Simulates a server sending an epitaph and returns the bytes sent over the channel.
-  fidl::Message InvokeAndReceiveEpitaph(zx_status_t epitaph) {
-    fidl::Message message = buffer_.CreateEmptyMessage();
+  fidl::HLCPPIncomingMessage InvokeAndReceiveEpitaph(zx_status_t epitaph) {
+    fidl::HLCPPIncomingMessage message = buffer_.CreateEmptyIncomingMessage();
     // The protocol doesn't matter, no methods are actually called.
     InterceptEpitaphResponse<FidlCodecTestInterface>(message, epitaph);
     return message;
@@ -62,7 +63,7 @@ class MessageDecoderTest : public ::testing::Test {
 
   // Asserts that the decoded and FIDL message matches the expected display output.
   // `syscall_type` interprets the FIDL message as received or sent.
-  void AssertDecoded(const fidl::Message& message, SyscallFidlType syscall_type,
+  void AssertDecoded(const fidl::HLCPPIncomingMessage& message, SyscallFidlType syscall_type,
                      const char* expected) {
     std::unique_ptr<zx_handle_info_t[]> handle_infos;
     if (message.handles().size() > 0) {

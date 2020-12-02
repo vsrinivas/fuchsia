@@ -43,7 +43,7 @@ class LoggerImpl : public fbl::SinglyLinkedListable<std::unique_ptr<LoggerImpl>>
                     const zx_packet_signal_t* signal);
   zx_status_t ReadAndDispatchMessage(fidl::MessageBuffer* buffer, async_dispatcher_t* dispatcher);
 
-  zx_status_t Connect(fidl::Message message, async_dispatcher_t* dispatcher);
+  zx_status_t Connect(fidl::HLCPPIncomingMessage message, async_dispatcher_t* dispatcher);
 
   zx_status_t PrintLogMessage(const fx_log_packet_t* packet);
 

@@ -19,13 +19,13 @@ SynchronousProxy::~SynchronousProxy() = default;
 
 zx::channel SynchronousProxy::TakeChannel() { return std::move(channel_); }
 
-zx_status_t SynchronousProxy::Send(const fidl_type_t* type, Message message) {
+zx_status_t SynchronousProxy::Send(const fidl_type_t* type, HLCPPOutgoingMessage message) {
   return fidl::internal::SendMessage(channel_, type, std::move(message));
 }
 
 zx_status_t SynchronousProxy::Call(const fidl_type_t* request_type,
-                                   const fidl_type_t* response_type, Message request,
-                                   Message* response) {
+                                   const fidl_type_t* response_type, HLCPPOutgoingMessage request,
+                                   HLCPPIncomingMessage* response) {
   const char* error_msg = nullptr;
   zx_status_t status = request.Validate(request_type, &error_msg);
   if (status != ZX_OK) {

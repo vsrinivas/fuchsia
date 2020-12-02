@@ -79,7 +79,7 @@ class WireParserTest : public ::testing::Test {
 
 TEST_F(WireParserTest, ParseSingleString) {
   fidl::MessageBuffer buffer;
-  fidl::Message message = buffer.CreateEmptyMessage();
+  fidl::HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
 
   InterceptRequest<fidl::test::frobinator::Frobinator>(
       message, [](fidl::InterfacePtr<fidl::test::frobinator::Frobinator>& ptr) {
@@ -110,8 +110,8 @@ TEST_F(WireParserTest, ParseSingleString) {
   std::unique_ptr<fidl_codec::StructValue> decoded_request;
   std::stringstream error_stream;
   fidl_codec::DecodeRequest(method, message.bytes().data(), message.bytes().size(),
-                            handle_dispositions, message.handles().size(),
-                            &decoded_request, error_stream);
+                            handle_dispositions, message.handles().size(), &decoded_request,
+                            error_stream);
   rapidjson::Document actual;
   if (decoded_request != nullptr) {
     decoded_request->ExtractJson(actual.GetAllocator(), actual);
@@ -142,7 +142,7 @@ TEST_F(WireParserTest, ParseSingleString) {
                                      _pretty_print, num_bytes, ...)                               \
   do {                                                                                            \
     fidl::MessageBuffer buffer;                                                                   \
-    fidl::Message message = buffer.CreateEmptyMessage();                                          \
+    fidl::HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();                     \
     using test::fidlcodec::examples::FidlCodecTestInterface;                                      \
     InterceptRequest<FidlCodecTestInterface>(                                                     \
         message,                                                                                  \
@@ -161,7 +161,7 @@ TEST_F(WireParserTest, ParseSingleString) {
     if (message.handles().size() > 0) {                                                           \
       handle_dispositions = new zx_handle_disposition_t[message.handles().size()];                \
       for (uint32_t i = 0; i < message.handles().size(); ++i) {                                   \
-        handle_dispositions[i].operation = fidl_codec::kNoHandleDisposition;                                     \
+        handle_dispositions[i].operation = fidl_codec::kNoHandleDisposition;                      \
         handle_dispositions[i].handle = message.handles().data()[i];                              \
         handle_dispositions[i].type = ZX_OBJ_TYPE_CHANNEL;                                        \
         handle_dispositions[i].rights = ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE |      \
@@ -175,9 +175,9 @@ TEST_F(WireParserTest, ParseSingleString) {
     }                                                                                             \
                                                                                                   \
     std::stringstream error_stream;                                                               \
-    MessageDecoder decoder(                                                                       \
-        message.bytes().data(), (num_bytes == -1) ? message.bytes().size() : num_bytes,           \
-        handle_dispositions, message.handles().size(), error_stream);  \
+    MessageDecoder decoder(message.bytes().data(),                                                \
+                           (num_bytes == -1) ? message.bytes().size() : num_bytes,                \
+                           handle_dispositions, message.handles().size(), error_stream);          \
     std::unique_ptr<StructValue> object = decoder.DecodeMessage(*method->request());              \
     if ((num_bytes == -1) && (patched_offset == -1)) {                                            \
       std::cerr << error_stream.str();                                                            \
@@ -213,7 +213,7 @@ TEST_F(WireParserTest, ParseSingleString) {
     for (uint32_t actual = 0; actual < message.bytes().actual(); ++actual) {                      \
       std::stringstream error_stream;                                                             \
       MessageDecoder decoder(message.bytes().data(), actual, handle_dispositions,                 \
-                             message.handles().size(), error_stream);  \
+                             message.handles().size(), error_stream);                             \
       std::unique_ptr<StructValue> object = decoder.DecodeMessage(*method->request());            \
       ASSERT_TRUE(decoder.HasError()) << "expect decoder error for buffer size " << actual        \
                                       << " instead of " << message.bytes().actual();              \
@@ -222,7 +222,7 @@ TEST_F(WireParserTest, ParseSingleString) {
     for (uint32_t actual = 0; message.handles().actual() > actual; actual++) {                    \
       std::stringstream error_stream;                                                             \
       MessageDecoder decoder(message.bytes().data(), message.bytes().size(), handle_dispositions, \
-                             actual, error_stream);                    \
+                             actual, error_stream);                                               \
       std::unique_ptr<StructValue> object = decoder.DecodeMessage(*method->request());            \
       ASSERT_TRUE(decoder.HasError()) << "expect decoder error for handle size " << actual        \
                                       << " instead of " << message.handles().actual();            \
@@ -1585,7 +1585,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   loader.AddContent(bad_schema, &err);
   ASSERT_TRUE(err.value == LibraryReadError::ErrorValue::kOk);
   fidl::MessageBuffer buffer;
-  fidl::Message message = buffer.CreateEmptyMessage();
+  fidl::HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
 
   InterceptRequest<test::fidlcodec::examples::FidlCodecTestInterface>(
       message, [](fidl::InterfacePtr<test::fidlcodec::examples::FidlCodecTestInterface>& ptr) {
@@ -1617,8 +1617,8 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   std::unique_ptr<fidl_codec::StructValue> decoded_request;
   std::stringstream error_stream;
   fidl_codec::DecodeRequest(method, message.bytes().data(), message.bytes().size(),
-                            handle_dispositions, message.handles().size(),
-                            &decoded_request, error_stream);
+                            handle_dispositions, message.handles().size(), &decoded_request,
+                            error_stream);
   rapidjson::Document actual;
   if (decoded_request != nullptr) {
     decoded_request->ExtractJson(actual.GetAllocator(), actual);

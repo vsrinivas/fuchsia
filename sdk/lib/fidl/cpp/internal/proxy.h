@@ -20,7 +20,7 @@ class Proxy {
   //
   // The memory backing the message will remain valid until this method returns,
   // at which point the memory might or might not be deallocated.
-  virtual zx_status_t Dispatch_(Message message) = 0;
+  virtual zx_status_t Dispatch_(HLCPPIncomingMessage message) = 0;
 };
 
 }  // namespace internal

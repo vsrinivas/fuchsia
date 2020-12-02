@@ -59,7 +59,8 @@ class AsyncLoopForTestImpl {
 // This binds |invoke| to one end of a channel, invokes it, and drops the wire
 // format bits it picks up off the other end into |message|.
 template <class T>
-void InterceptRequest(fidl::Message& message, std::function<void(fidl::InterfacePtr<T>&)> invoke) {
+void InterceptRequest(fidl::HLCPPIncomingMessage& message,
+                      std::function<void(fidl::InterfacePtr<T>&)> invoke) {
   AsyncLoopForTest loop;
 
   zx::channel h1, h2;
@@ -83,7 +84,7 @@ void InterceptRequest(fidl::Message& message, std::function<void(fidl::Interface
 // This creates two channels and sends an `epitaph` on one, and reads the resulting
 // bytes from the other into `message`.
 template <class T>
-void InterceptEpitaphResponse(fidl::Message& message, zx_status_t epitaph) {
+void InterceptEpitaphResponse(fidl::HLCPPIncomingMessage& message, zx_status_t epitaph) {
   AsyncLoopForTest loop;
 
   zx::channel h1, h2;

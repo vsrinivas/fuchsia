@@ -518,7 +518,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
 
 class Interface_RequestEncoder {
  public:
-  static ::fidl::Message Method(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage Method(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -537,7 +537,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 
 class Interface_ResponseEncoder {
  public:
-  static ::fidl::Message OnEvent(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage OnEvent(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -1024,7 +1024,7 @@ class Interface_RequestDecoder {
   Interface_RequestDecoder() = default;
   virtual ~Interface_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -1058,7 +1058,7 @@ class Interface_ResponseDecoder {
   Interface_ResponseDecoder() = default;
   virtual ~Interface_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -1102,7 +1102,7 @@ class Interface_Proxy final : public ::fidl::internal::Proxy, public Interface {
   explicit Interface_Proxy(::fidl::internal::ProxyController* controller);
   ~Interface_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   void Method() override;
   OnEventCallback OnEvent;
 
@@ -1120,7 +1120,7 @@ class Interface_Stub final : public ::fidl::internal::Stub,
   explicit Interface_Stub(Interface_clazz* impl);
   ~Interface_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
   void OnEvent() override;
 

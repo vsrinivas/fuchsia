@@ -26,7 +26,7 @@ class CopyingMessageHandler : public MessageHandler {
   std::vector<uint8_t> bytes_;
   std::vector<zx_handle_t> handles_;
 
-  zx_status_t OnMessage(Message message) override {
+  zx_status_t OnMessage(HLCPPIncomingMessage message) override {
     ++message_count_;
     auto& bytes = message.bytes();
     bytes_ = std::vector<uint8_t>(bytes.data(), bytes.data() + bytes.actual());
@@ -42,14 +42,16 @@ class StatusMessageHandler : public MessageHandler {
  public:
   zx_status_t status = ZX_OK;
 
-  zx_status_t OnMessage(Message message) override { return status; }
+  zx_status_t OnMessage(HLCPPIncomingMessage message) override { return status; }
 };
 
 class CallbackMessageHandler : public MessageHandler {
  public:
-  fit::function<zx_status_t(Message)> callback;
+  fit::function<zx_status_t(HLCPPIncomingMessage)> callback;
 
-  zx_status_t OnMessage(Message message) override { return callback(std::move(message)); }
+  zx_status_t OnMessage(HLCPPIncomingMessage message) override {
+    return callback(std::move(message));
+  }
 };
 
 class DestructionCounter {
@@ -292,7 +294,7 @@ TEST(MessageReader, UnbindDuringHandler) {
   zx::channel stash;
 
   CallbackMessageHandler handler;
-  handler.callback = [&reader, &stash](Message message) {
+  handler.callback = [&reader, &stash](HLCPPIncomingMessage message) {
     stash = reader.Unbind();
     return ZX_OK;
   };
@@ -348,7 +350,7 @@ TEST(MessageReader, ShouldWaitFromRead) {
   MessageReader reader(&handler);
 
   int message_count = 0;
-  handler.callback = [&message_count, &reader](Message message) {
+  handler.callback = [&message_count, &reader](HLCPPIncomingMessage message) {
     ++message_count;
     uint32_t actual_bytes, actual_handles;
     EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
@@ -403,7 +405,7 @@ TEST(MessageReader, ShouldWaitFromReadWithUnbind) {
   MessageReader reader(&handler);
 
   int message_count = 0;
-  handler.callback = [&message_count, &reader](Message message) {
+  handler.callback = [&message_count, &reader](HLCPPIncomingMessage message) {
     ++message_count;
     uint32_t actual_bytes, actual_handles;
     EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
@@ -538,7 +540,7 @@ TEST(MessageReader, ReentrantDestruction) {
   int read_count = 0;
 
   CallbackMessageHandler handler;
-  handler.callback = [&reader, &read_count](Message message) {
+  handler.callback = [&reader, &read_count](HLCPPIncomingMessage message) {
     ++read_count;
     reader.reset();
     return ZX_OK;
@@ -574,7 +576,7 @@ TEST(MessageReader, DoubleReentrantDestruction) {
   int read_count = 0;
 
   CallbackMessageHandler handler;
-  handler.callback = [&reader, &read_count](Message message) {
+  handler.callback = [&reader, &read_count](HLCPPIncomingMessage message) {
     ++read_count;
     if (read_count == 1) {
       reader->WaitAndDispatchOneMessageUntil(zx::time::infinite());
@@ -616,7 +618,7 @@ TEST(MessageReader, DoubleReentrantUnbind) {
   int read_count = 0;
 
   CallbackMessageHandler handler;
-  handler.callback = [&reader, &read_count](Message message) {
+  handler.callback = [&reader, &read_count](HLCPPIncomingMessage message) {
     ++read_count;
     if (read_count == 1) {
       reader.WaitAndDispatchOneMessageUntil(zx::time::infinite());

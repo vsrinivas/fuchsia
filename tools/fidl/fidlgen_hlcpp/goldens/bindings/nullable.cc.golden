@@ -490,7 +490,8 @@ SimpleProtocol_Proxy::SimpleProtocol_Proxy(
 
 SimpleProtocol_Proxy::~SimpleProtocol_Proxy() = default;
 
-zx_status_t SimpleProtocol_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t SimpleProtocol_Proxy::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -508,7 +509,8 @@ SimpleProtocol_Add_ResponseHandler(SimpleProtocol::AddCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback,
                       "Callback must not be empty for SimpleProtocol::Add\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<int32_t>(&decoder, 16));
         return ZX_OK;
@@ -551,7 +553,8 @@ class SimpleProtocol_Add_Responder final {
 }  // namespace
 
 zx_status_t SimpleProtocol_Stub::Dispatch_(
-    ::fidl::Message message, ::fidl::internal::PendingResponse response) {
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type = SimpleProtocol_RequestDecoder::GetType(
       message.ordinal(), &needs_response);
@@ -600,7 +603,7 @@ zx_status_t SimpleProtocol_SyncProxy::Add(int32_t a, int32_t b,
                                           int32_t* out_sum) {
   ::fidl::Encoder _encoder(internal::kSimpleProtocol_Add_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_nullable_SimpleProtocolAddRequestTable,
       &fidl_test_nullable_SimpleProtocolAddResponseTable,

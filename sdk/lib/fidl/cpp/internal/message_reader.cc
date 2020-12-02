@@ -199,7 +199,7 @@ void MessageReader::OnHandleReady(async_dispatcher_t* dispatcher, zx_status_t st
 }
 
 zx_status_t MessageReader::ReadAndDispatchMessage(MessageBuffer* buffer) {
-  Message message = buffer->CreateEmptyMessage();
+  HLCPPIncomingMessage message = buffer->CreateEmptyIncomingMessage();
   zx_status_t status = message.Read(channel_.get(), 0);
   if (status == ZX_ERR_SHOULD_WAIT)
     return status;

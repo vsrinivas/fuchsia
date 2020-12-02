@@ -93,7 +93,7 @@ void LogExporter::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase*
 }
 
 zx_status_t LogExporter::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
-  fidl::Message message = buffer->CreateEmptyMessage();
+  fidl::HLCPPIncomingMessage message = buffer->CreateEmptyIncomingMessage();
   zx_status_t status = message.Read(channel_.get(), 0);
   if (status != ZX_OK) {
     return status;
@@ -195,7 +195,7 @@ int LogExporter::LogMessage(fuchsia_logger_LogMessage* log_message) {
   return 0;
 }
 
-zx_status_t LogExporter::Log(fidl::Message message) {
+zx_status_t LogExporter::Log(fidl::HLCPPIncomingMessage message) {
   const char* error_msg = nullptr;
   zx_status_t status = message.Decode(&fuchsia_logger_LogListenerSafeLogRequestTable, &error_msg);
   if (status != ZX_OK) {
@@ -215,7 +215,7 @@ zx_status_t LogExporter::Log(fidl::Message message) {
   return channel_.write(0, &response, sizeof(response), nullptr, 0);
 }
 
-zx_status_t LogExporter::LogMany(fidl::Message message) {
+zx_status_t LogExporter::LogMany(fidl::HLCPPIncomingMessage message) {
   const char* error_msg = nullptr;
   zx_status_t status =
       message.Decode(&fuchsia_logger_LogListenerSafeLogManyRequestTable, &error_msg);

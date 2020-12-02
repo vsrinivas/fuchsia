@@ -99,10 +99,10 @@ class LogExporter {
   zx_status_t ReadAndDispatchMessage(fidl::MessageBuffer* buffer);
 
   // Implementation of LogListener Log method.
-  zx_status_t Log(fidl::Message message);
+  zx_status_t Log(fidl::HLCPPIncomingMessage message);
 
   // Implementation of LogListener LogMany method.
-  zx_status_t LogMany(fidl::Message message);
+  zx_status_t LogMany(fidl::HLCPPIncomingMessage message);
 
   // Helper method to log |message| to file.
   int LogMessage(fuchsia_logger_LogMessage* message);

@@ -62,7 +62,7 @@ Parent_Proxy::Parent_Proxy(::fidl::internal::ProxyController* controller)
 
 Parent_Proxy::~Parent_Proxy() = default;
 
-zx_status_t Parent_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t Parent_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -88,7 +88,7 @@ Parent_Stub::~Parent_Stub() = default;
 
 namespace {}  // namespace
 
-zx_status_t Parent_Stub::Dispatch_(::fidl::Message message,
+zx_status_t Parent_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
                                    ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =
@@ -191,7 +191,7 @@ Child_Proxy::Child_Proxy(::fidl::internal::ProxyController* controller)
 
 Child_Proxy::~Child_Proxy() = default;
 
-zx_status_t Child_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t Child_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -225,7 +225,7 @@ Child_Stub::~Child_Stub() = default;
 
 namespace {}  // namespace
 
-zx_status_t Child_Stub::Dispatch_(::fidl::Message message,
+zx_status_t Child_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
                                   ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =

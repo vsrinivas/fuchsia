@@ -15,11 +15,11 @@ StubController::StubController() : weak_(nullptr), reader_(this) {}
 
 StubController::~StubController() { InvalidateWeakIfNeeded(); }
 
-zx_status_t StubController::Send(const fidl_type_t* type, Message message) {
+zx_status_t StubController::Send(const fidl_type_t* type, HLCPPOutgoingMessage message) {
   return fidl::internal::SendMessage(reader_.channel(), type, std::move(message));
 }
 
-zx_status_t StubController::OnMessage(Message message) {
+zx_status_t StubController::OnMessage(HLCPPIncomingMessage message) {
   zx_txid_t txid = message.txid();
   WeakStubController* weak = nullptr;
   if (txid) {

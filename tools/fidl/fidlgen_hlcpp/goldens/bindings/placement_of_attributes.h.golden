@@ -389,8 +389,8 @@ extern "C" const fidl_type_t
 
 class ExampleProtocol_RequestEncoder {
  public:
-  static ::fidl::Message Method(::fidl::Encoder* _encoder,
-                                ::exampleusing::Empty* arg) {
+  static ::fidl::HLCPPOutgoingMessage Method(::fidl::Encoder* _encoder,
+                                             ::exampleusing::Empty* arg) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, arg, 16);
@@ -726,7 +726,7 @@ class ExampleProtocol_RequestDecoder {
   ExampleProtocol_RequestDecoder() = default;
   virtual ~ExampleProtocol_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -760,7 +760,7 @@ class ExampleProtocol_ResponseDecoder {
   ExampleProtocol_ResponseDecoder() = default;
   virtual ~ExampleProtocol_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -799,7 +799,7 @@ class ExampleProtocol_Proxy final : public ::fidl::internal::Proxy,
   explicit ExampleProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~ExampleProtocol_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   void Method(::exampleusing::Empty arg) override;
 
  private:
@@ -817,7 +817,7 @@ class ExampleProtocol_Stub final : public ::fidl::internal::Stub,
   explicit ExampleProtocol_Stub(ExampleProtocol_clazz* impl);
   ~ExampleProtocol_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:

@@ -53,7 +53,7 @@ class DispatcherTest : public ::testing::Test {
 
 TEST_F(DispatcherTest, TwoStringArrayInt) {
   fidl::MessageBuffer buffer;
-  fidl::Message message = buffer.CreateEmptyMessage();
+  fidl::HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
   InterceptRequest<FidlCodecTestInterface>(
       message, [&](fidl::InterfacePtr<FidlCodecTestInterface>& ptr) {
         ptr->TwoStringArrayInt(TwoStringArrayFromVals("harpo", "chico"), 1);
@@ -62,8 +62,8 @@ TEST_F(DispatcherTest, TwoStringArrayInt) {
   DecodedMessage decoded_message;
   std::stringstream error_stream;
   decoded_message.DecodeMessage(dispatcher(), kProcessKoid, kHandle, message.bytes().data(),
-                                message.bytes().size(), nullptr, 0,
-                                SyscallFidlType::kOutputMessage, error_stream);
+                                message.bytes().size(), nullptr, 0, SyscallFidlType::kOutputMessage,
+                                error_stream);
   auto result = std::make_unique<fidl_codec::FidlMessageValue>(&decoded_message, error_stream.str(),
                                                                message.bytes().data(),
                                                                message.bytes().size(), nullptr, 0);
@@ -82,7 +82,7 @@ TEST_F(DispatcherTest, TwoStringArrayInt) {
 
 TEST_F(DispatcherTest, TwoStringArrayIntIncorrect) {
   fidl::MessageBuffer buffer;
-  fidl::Message message = buffer.CreateEmptyMessage();
+  fidl::HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
   InterceptRequest<FidlCodecTestInterface>(
       message, [&](fidl::InterfacePtr<FidlCodecTestInterface>& ptr) {
         ptr->TwoStringArrayInt(TwoStringArrayFromVals("harpo", "chico"), 1);

@@ -417,7 +417,7 @@ class SomeProtocol_RequestDecoder {
   SomeProtocol_RequestDecoder() = default;
   virtual ~SomeProtocol_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -446,7 +446,7 @@ class SomeProtocol_ResponseDecoder {
   SomeProtocol_ResponseDecoder() = default;
   virtual ~SomeProtocol_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -484,7 +484,7 @@ class SomeProtocol_Proxy final : public ::fidl::internal::Proxy,
   explicit SomeProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~SomeProtocol_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
 
  private:
   SomeProtocol_Proxy(const SomeProtocol_Proxy&) = delete;
@@ -500,7 +500,7 @@ class SomeProtocol_Stub final : public ::fidl::internal::Stub,
   explicit SomeProtocol_Stub(SomeProtocol_clazz* impl);
   ~SomeProtocol_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:

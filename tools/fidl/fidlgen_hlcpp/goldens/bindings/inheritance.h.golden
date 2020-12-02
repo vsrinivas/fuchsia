@@ -27,7 +27,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
 
 class super_RequestEncoder {
  public:
-  static ::fidl::Message foo(::fidl::Encoder* _encoder, ::std::string* s) {
+  static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
+                                          ::std::string* s) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, s, 16);
@@ -47,7 +48,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
 
 class super_ResponseEncoder {
  public:
-  static ::fidl::Message foo(::fidl::Encoder* _encoder, int64_t* y) {
+  static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
+                                          int64_t* y) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, y, 16);
@@ -69,7 +71,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
 
 class sub_RequestEncoder {
  public:
-  static ::fidl::Message foo(::fidl::Encoder* _encoder, ::std::string* s) {
+  static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
+                                          ::std::string* s) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, s, 16);
@@ -89,7 +92,8 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 
 class sub_ResponseEncoder {
  public:
-  static ::fidl::Message foo(::fidl::Encoder* _encoder, int64_t* y) {
+  static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
+                                          int64_t* y) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, y, 16);
@@ -161,7 +165,7 @@ class super_RequestDecoder {
   super_RequestDecoder() = default;
   virtual ~super_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -195,7 +199,7 @@ class super_ResponseDecoder {
   super_ResponseDecoder() = default;
   virtual ~super_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -238,7 +242,7 @@ class super_Proxy final : public ::fidl::internal::Proxy, public super {
   explicit super_Proxy(::fidl::internal::ProxyController* controller);
   ~super_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   void foo(::std::string s, fooCallback callback) override;
 
  private:
@@ -255,7 +259,7 @@ class super_Stub final : public ::fidl::internal::Stub,
   explicit super_Stub(super_clazz* impl);
   ~super_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
@@ -292,7 +296,7 @@ class sub_RequestDecoder {
   sub_RequestDecoder() = default;
   virtual ~sub_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -326,7 +330,7 @@ class sub_ResponseDecoder {
   sub_ResponseDecoder() = default;
   virtual ~sub_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -369,7 +373,7 @@ class sub_Proxy final : public ::fidl::internal::Proxy, public sub {
   explicit sub_Proxy(::fidl::internal::ProxyController* controller);
   ~sub_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   void foo(::std::string s, fooCallback callback) override;
 
  private:
@@ -385,7 +389,7 @@ class sub_Stub final : public ::fidl::internal::Stub, public sub_EventSender {
   explicit sub_Stub(sub_clazz* impl);
   ~sub_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:

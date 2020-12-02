@@ -30,8 +30,8 @@ zx_status_t WaitForPerformActions(const zx::channel& c,
 
   FIDL_ALIGNDECL uint8_t request_buf[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl::Message request(fidl::BytePart(request_buf, sizeof(request_buf)),
-                        fidl::HandlePart(handles, std::size(handles)));
+  fidl::HLCPPIncomingMessage request(fidl::BytePart(request_buf, sizeof(request_buf)),
+                                     fidl::HandlePart(handles, std::size(handles)));
   status = request.Read(c.get(), 0);
   if (status != ZX_OK) {
     return status;

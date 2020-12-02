@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_MOCK_DEVICE_H_
+#define SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_MOCK_DEVICE_H_
 
 #include <fuchsia/device/mock/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -60,7 +61,7 @@ class MockDevice : public fuchsia::device::mock::MockDevice {
 
  private:
   // The buffers inside of |msg_out| must be allocated by the caller.
-  zx_status_t Dispatch(fidl::Message* msg, fidl::Message* msg_out);
+  zx_status_t Dispatch(fidl::HLCPPOutgoingMessage* msg, fidl::HLCPPIncomingMessage* msg_out);
 
   // Walks the action list and patches up any action_ids before converting it
   // to a vector
@@ -77,3 +78,5 @@ class MockDevice : public fuchsia::device::mock::MockDevice {
 };
 
 }  // namespace libdriver_integration_test
+
+#endif  // SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_MOCK_DEVICE_H_

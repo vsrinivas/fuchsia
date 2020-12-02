@@ -36,7 +36,7 @@ ProxyController& ProxyController::operator=(ProxyController&& other) {
   return *this;
 }
 
-zx_status_t ProxyController::Send(const fidl_type_t* type, Message message,
+zx_status_t ProxyController::Send(const fidl_type_t* type, HLCPPOutgoingMessage message,
                                   std::unique_ptr<SingleUseMessageHandler> response_handler) {
   zx_txid_t txid = 0;
   if (response_handler) {
@@ -70,7 +70,7 @@ void ProxyController::Reset() {
   ClearPendingHandlers();
 }
 
-zx_status_t ProxyController::OnMessage(Message message) {
+zx_status_t ProxyController::OnMessage(HLCPPIncomingMessage message) {
   zx_txid_t txid = message.txid();
   if (!txid) {
     if (!proxy_)

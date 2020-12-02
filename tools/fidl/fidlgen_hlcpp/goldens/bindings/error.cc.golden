@@ -278,7 +278,7 @@ Example_Proxy::Example_Proxy(::fidl::internal::ProxyController* controller)
 
 Example_Proxy::~Example_Proxy() = default;
 
-zx_status_t Example_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t Example_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -296,7 +296,8 @@ Example_foo_ResponseHandler(Example::fooCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback,
                       "Callback must not be empty for Example::foo\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<::fidl::test::error::Example_foo_Result>(
             &decoder, 16));
@@ -337,7 +338,8 @@ class Example_foo_Responder final {
 }  // namespace
 
 zx_status_t Example_Stub::Dispatch_(
-    ::fidl::Message message, ::fidl::internal::PendingResponse response) {
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =
       Example_RequestDecoder::GetType(message.ordinal(), &needs_response);
@@ -385,7 +387,7 @@ zx_status_t Example_SyncProxy::foo(
     ::std::string s, ::fidl::test::error::Example_foo_Result* out_result) {
   ::fidl::Encoder _encoder(internal::kExample_foo_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ =
       proxy_.Call(&fidl_test_error_ExamplefooRequestTable,
                   &fidl_test_error_ExamplefooResponseTable,

@@ -34,8 +34,14 @@ zx_handle_t* MessageBuffer::handles() const {
   return reinterpret_cast<zx_handle_t*>(buffer_ + AddPadding(bytes_capacity_));
 }
 
-Message MessageBuffer::CreateEmptyMessage() {
-  return Message(BytePart(bytes(), bytes_capacity()), HandlePart(handles(), handles_capacity()));
+HLCPPOutgoingMessage MessageBuffer::CreateEmptyOutgoingMessage() {
+  return HLCPPOutgoingMessage(BytePart(bytes(), bytes_capacity()),
+                              HandlePart(handles(), handles_capacity()));
+}
+
+HLCPPIncomingMessage MessageBuffer::CreateEmptyIncomingMessage() {
+  return HLCPPIncomingMessage(BytePart(bytes(), bytes_capacity()),
+                              HandlePart(handles(), handles_capacity()));
 }
 
 Builder MessageBuffer::CreateBuilder() { return Builder(bytes(), bytes_capacity()); }

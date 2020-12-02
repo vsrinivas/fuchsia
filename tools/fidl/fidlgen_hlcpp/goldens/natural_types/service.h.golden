@@ -40,7 +40,8 @@ extern "C" const fidl_type_t
 
 class SecondProtocol_RequestEncoder {
  public:
-  static ::fidl::Message MethodOnSecond(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage MethodOnSecond(
+      ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -70,7 +71,7 @@ extern "C" const fidl_type_t
 
 class FirstProtocol_RequestEncoder {
  public:
-  static ::fidl::Message MethodOnFirst(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage MethodOnFirst(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 

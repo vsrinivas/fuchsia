@@ -40,7 +40,8 @@ extern "C" const fidl_type_t
 
 class SecondProtocol_RequestEncoder {
  public:
-  static ::fidl::Message MethodOnSecond(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage MethodOnSecond(
+      ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -70,7 +71,7 @@ extern "C" const fidl_type_t
 
 class FirstProtocol_RequestEncoder {
  public:
-  static ::fidl::Message MethodOnFirst(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage MethodOnFirst(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -161,7 +162,7 @@ class SecondProtocol_RequestDecoder {
   SecondProtocol_RequestDecoder() = default;
   virtual ~SecondProtocol_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -195,7 +196,7 @@ class SecondProtocol_ResponseDecoder {
   SecondProtocol_ResponseDecoder() = default;
   virtual ~SecondProtocol_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -234,7 +235,7 @@ class SecondProtocol_Proxy final : public ::fidl::internal::Proxy,
   explicit SecondProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~SecondProtocol_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   void MethodOnSecond() override;
 
  private:
@@ -251,7 +252,7 @@ class SecondProtocol_Stub final : public ::fidl::internal::Stub,
   explicit SecondProtocol_Stub(SecondProtocol_clazz* impl);
   ~SecondProtocol_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
@@ -287,7 +288,7 @@ class FirstProtocol_RequestDecoder {
   FirstProtocol_RequestDecoder() = default;
   virtual ~FirstProtocol_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -321,7 +322,7 @@ class FirstProtocol_ResponseDecoder {
   FirstProtocol_ResponseDecoder() = default;
   virtual ~FirstProtocol_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -360,7 +361,7 @@ class FirstProtocol_Proxy final : public ::fidl::internal::Proxy,
   explicit FirstProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~FirstProtocol_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   void MethodOnFirst() override;
 
  private:
@@ -377,7 +378,7 @@ class FirstProtocol_Stub final : public ::fidl::internal::Stub,
   explicit FirstProtocol_Stub(FirstProtocol_clazz* impl);
   ~FirstProtocol_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:

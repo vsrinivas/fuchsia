@@ -165,7 +165,8 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
 
 class Example_RequestEncoder {
  public:
-  static ::fidl::Message foo(::fidl::Encoder* _encoder, ::std::string* s) {
+  static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
+                                          ::std::string* s) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, s, 16);
@@ -185,8 +186,9 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 
 class Example_ResponseEncoder {
  public:
-  static ::fidl::Message foo(::fidl::Encoder* _encoder,
-                             ::fidl::test::error::Example_foo_Result* result) {
+  static ::fidl::HLCPPOutgoingMessage foo(
+      ::fidl::Encoder* _encoder,
+      ::fidl::test::error::Example_foo_Result* result) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);

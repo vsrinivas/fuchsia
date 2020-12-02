@@ -37,10 +37,15 @@ class MessageBuffer {
   // The total number of handles that can be stored in this buffer.
   uint32_t handles_capacity() const { return handles_capacity_; }
 
-  // Creates a |Message| that is backed by the memory in this buffer.
+  // Creates a |HLCPPOutgoingMessage| that is backed by the memory in this buffer.
   //
-  // The returned |Message| contains no bytes or handles.
-  Message CreateEmptyMessage();
+  // The returned |HLCPPOutgoingMessage| contains no bytes or handles.
+  HLCPPOutgoingMessage CreateEmptyOutgoingMessage();
+
+  // Creates a |HLCPPIncomingMessage| that is backed by the memory in this buffer.
+  //
+  // The returned |HLCPPIncomingMessage| contains no bytes or handles.
+  HLCPPIncomingMessage CreateEmptyIncomingMessage();
 
   // Creates a |Builder| that is backed by the memory in this buffer.
   Builder CreateBuilder();

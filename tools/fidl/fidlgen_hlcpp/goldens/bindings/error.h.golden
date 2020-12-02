@@ -165,7 +165,8 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
 
 class Example_RequestEncoder {
  public:
-  static ::fidl::Message foo(::fidl::Encoder* _encoder, ::std::string* s) {
+  static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
+                                          ::std::string* s) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, s, 16);
@@ -185,8 +186,9 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
 
 class Example_ResponseEncoder {
  public:
-  static ::fidl::Message foo(::fidl::Encoder* _encoder,
-                             ::fidl::test::error::Example_foo_Result* result) {
+  static ::fidl::HLCPPOutgoingMessage foo(
+      ::fidl::Encoder* _encoder,
+      ::fidl::test::error::Example_foo_Result* result) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);
@@ -345,7 +347,7 @@ class Example_RequestDecoder {
   Example_RequestDecoder() = default;
   virtual ~Example_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -379,7 +381,7 @@ class Example_ResponseDecoder {
   Example_ResponseDecoder() = default;
   virtual ~Example_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -424,7 +426,7 @@ class Example_Proxy final : public ::fidl::internal::Proxy, public Example {
   explicit Example_Proxy(::fidl::internal::ProxyController* controller);
   ~Example_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   void foo(::std::string s, fooCallback callback) override;
 
  private:
@@ -441,7 +443,7 @@ class Example_Stub final : public ::fidl::internal::Stub,
   explicit Example_Stub(Example_clazz* impl);
   ~Example_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:

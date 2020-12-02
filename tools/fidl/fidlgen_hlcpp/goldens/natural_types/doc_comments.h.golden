@@ -518,7 +518,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
 
 class Interface_RequestEncoder {
  public:
-  static ::fidl::Message Method(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage Method(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -537,7 +537,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 
 class Interface_ResponseEncoder {
  public:
-  static ::fidl::Message OnEvent(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage OnEvent(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 

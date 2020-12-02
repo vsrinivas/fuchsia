@@ -37,7 +37,7 @@ class {{ .RequestEncoderName }} {
   {{- with $protocol := . }}
   {{- range .Methods }}
   {{- if .HasRequest }}
-  static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Request }}) {
+  static ::fidl::HLCPPOutgoingMessage {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Request }}) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
 
@@ -67,7 +67,7 @@ class {{ .ResponseEncoderName }} {
   {{- with $protocol := . }}
   {{- range .Methods }}
   {{- if .HasResponse }}
-  static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Response }}) {
+  static ::fidl::HLCPPOutgoingMessage {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Response }}) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
 

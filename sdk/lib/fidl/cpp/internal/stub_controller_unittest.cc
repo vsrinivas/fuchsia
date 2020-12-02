@@ -22,9 +22,9 @@ namespace {
 
 class CallbackStub : public Stub {
  public:
-  fit::function<zx_status_t(Message, PendingResponse)> callback;
+  fit::function<zx_status_t(HLCPPIncomingMessage, PendingResponse)> callback;
 
-  zx_status_t Dispatch_(Message message, PendingResponse response) override {
+  zx_status_t Dispatch_(HLCPPIncomingMessage message, PendingResponse response) override {
     return callback(std::move(message), std::move(response));
   }
 };
@@ -46,12 +46,12 @@ TEST(StubController, NoResponse) {
   CallbackStub stub;
 
   int callback_count = 0;
-  stub.callback = [&callback_count](Message message, PendingResponse response) {
+  stub.callback = [&callback_count](HLCPPIncomingMessage message, PendingResponse response) {
     ++callback_count;
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_FALSE(response.needs_response());
     EXPECT_EQ(ZX_ERR_BAD_STATE,
-              response.Send(&unbounded_nonnullable_string_message_type, Message()));
+              response.Send(&unbounded_nonnullable_string_message_type, HLCPPOutgoingMessage()));
     return ZX_OK;
   };
 
@@ -83,7 +83,7 @@ TEST(StubController, Response) {
   CallbackStub stub;
 
   int callback_count = 0;
-  stub.callback = [&callback_count](Message message, PendingResponse response) {
+  stub.callback = [&callback_count](HLCPPIncomingMessage message, PendingResponse response) {
     ++callback_count;
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_TRUE(response.needs_response());
@@ -103,7 +103,7 @@ TEST(StubController, Response) {
 
   int response_count = 0;
   auto handler = std::make_unique<SingleUseMessageHandler>(
-      [&response_count](Message&& message) {
+      [&response_count](HLCPPIncomingMessage&& message) {
         ++response_count;
         EXPECT_EQ(42u, message.ordinal());
         return ZX_OK;
@@ -134,7 +134,8 @@ TEST(StubController, ResponseAfterUnbind) {
   CallbackStub stub;
 
   int callback_count = 0;
-  stub.callback = [&callback_count, &stub_ctrl](Message message, PendingResponse response) {
+  stub.callback = [&callback_count, &stub_ctrl](HLCPPIncomingMessage message,
+                                                PendingResponse response) {
     ++callback_count;
 
     stub_ctrl.reader().Unbind();
@@ -157,7 +158,7 @@ TEST(StubController, ResponseAfterUnbind) {
 
   int response_count = 0;
   auto handler = std::make_unique<SingleUseMessageHandler>(
-      [&response_count](Message&& message) {
+      [&response_count](HLCPPIncomingMessage&& message) {
         ++response_count;
         return ZX_OK;
       },
@@ -187,7 +188,8 @@ TEST(StubController, ResponseAfterDestroy) {
   CallbackStub stub;
 
   int callback_count = 0;
-  stub.callback = [&callback_count, &stub_ctrl](Message message, PendingResponse response) {
+  stub.callback = [&callback_count, &stub_ctrl](HLCPPIncomingMessage message,
+                                                PendingResponse response) {
     ++callback_count;
 
     stub_ctrl.reset();
@@ -210,7 +212,7 @@ TEST(StubController, ResponseAfterDestroy) {
 
   int response_count = 0;
   auto handler = std::make_unique<SingleUseMessageHandler>(
-      [&response_count](Message&& message) {
+      [&response_count](HLCPPIncomingMessage&& message) {
         ++response_count;
         return ZX_OK;
       },
@@ -246,7 +248,7 @@ TEST(StubController, BadResponse) {
   CallbackStub stub;
 
   int callback_count = 0;
-  stub.callback = [&callback_count](Message message, PendingResponse response) {
+  stub.callback = [&callback_count](HLCPPIncomingMessage message, PendingResponse response) {
     ++callback_count;
     EXPECT_EQ(5u, message.ordinal());
     EXPECT_TRUE(response.needs_response());
@@ -265,7 +267,7 @@ TEST(StubController, BadResponse) {
 
   int response_count = 0;
   auto handler = std::make_unique<SingleUseMessageHandler>(
-      [&response_count](Message&& message) {
+      [&response_count](HLCPPIncomingMessage&& message) {
         ++response_count;
         return ZX_OK;
       },
@@ -300,7 +302,7 @@ TEST(StubController, BadMessage) {
   CallbackStub stub;
 
   int callback_count = 0;
-  stub.callback = [&callback_count](Message message, PendingResponse response) {
+  stub.callback = [&callback_count](HLCPPIncomingMessage message, PendingResponse response) {
     ++callback_count;
     return ZX_OK;
   };

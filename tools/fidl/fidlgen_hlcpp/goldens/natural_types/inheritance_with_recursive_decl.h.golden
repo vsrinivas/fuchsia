@@ -28,7 +28,7 @@ extern "C" const fidl_type_t
 
 class Parent_RequestEncoder {
  public:
-  static ::fidl::Message First(
+  static ::fidl::HLCPPOutgoingMessage First(
       ::fidl::Encoder* _encoder,
       ::fidl::InterfaceRequest<
           ::fidl::test::inheritancewithrecursivedecl::Parent>* request) {
@@ -65,7 +65,7 @@ extern "C" const fidl_type_t
 
 class Child_RequestEncoder {
  public:
-  static ::fidl::Message First(
+  static ::fidl::HLCPPOutgoingMessage First(
       ::fidl::Encoder* _encoder,
       ::fidl::InterfaceRequest<
           ::fidl::test::inheritancewithrecursivedecl::Parent>* request) {
@@ -82,7 +82,7 @@ class Child_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message Second(
+  static ::fidl::HLCPPOutgoingMessage Second(
       ::fidl::Encoder* _encoder,
       ::fidl::InterfaceRequest<
           ::fidl::test::inheritancewithrecursivedecl::Parent>* request) {

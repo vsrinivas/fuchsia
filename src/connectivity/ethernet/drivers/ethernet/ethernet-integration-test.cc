@@ -162,7 +162,7 @@ class EthertapClient {
     ASSERT_EQ(ZX_OK, channel_.wait_one(ZX_CHANNEL_READABLE, FAIL_TIMEOUT, &obs), "%s", msg);
     ASSERT_TRUE(obs & ZX_CHANNEL_READABLE, "%s", msg);
 
-    fidl::Message message(fidl::BytePart(read_buf, READBUF_SIZE), fidl::HandlePart());
+    fidl::HLCPPIncomingMessage message(fidl::BytePart(read_buf, READBUF_SIZE), fidl::HandlePart());
     ASSERT_EQ(ZX_OK, message.Read(channel_.get(), 0), "%s", msg);
     ASSERT_EQ(message.ordinal(), ordinal, "%s", msg);
     const char* fidl_err = nullptr;

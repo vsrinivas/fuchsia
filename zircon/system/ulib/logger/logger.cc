@@ -161,7 +161,7 @@ void LoggerImpl::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* 
 
 zx_status_t LoggerImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer,
                                                async_dispatcher_t* dispatcher) {
-  fidl::Message message = buffer->CreateEmptyMessage();
+  fidl::HLCPPIncomingMessage message = buffer->CreateEmptyIncomingMessage();
   zx_status_t status = message.Read(channel_.get(), 0);
   if (status != ZX_OK)
     return status;
@@ -177,7 +177,8 @@ zx_status_t LoggerImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer,
   }
 }
 
-zx_status_t LoggerImpl::Connect(fidl::Message message, async_dispatcher_t* dispatcher) {
+zx_status_t LoggerImpl::Connect(fidl::HLCPPIncomingMessage message,
+                                async_dispatcher_t* dispatcher) {
   if (socket_) {
     return ZX_ERR_INVALID_ARGS;
   }

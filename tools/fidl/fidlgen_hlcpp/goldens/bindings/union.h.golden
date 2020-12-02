@@ -1116,8 +1116,8 @@ extern "C" const fidl_type_t
 
 class TestProtocol_RequestEncoder {
  public:
-  static ::fidl::Message StrictXUnionHenceResponseMayBeStackAllocated(
-      ::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage
+  StrictXUnionHenceResponseMayBeStackAllocated(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -1130,8 +1130,8 @@ class TestProtocol_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      ::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage
+  FlexibleXUnionHenceResponseMustBeHeapAllocated(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -1155,7 +1155,8 @@ extern "C" const fidl_type_t
 
 class TestProtocol_ResponseEncoder {
  public:
-  static ::fidl::Message StrictXUnionHenceResponseMayBeStackAllocated(
+  static ::fidl::HLCPPOutgoingMessage
+  StrictXUnionHenceResponseMayBeStackAllocated(
       ::fidl::Encoder* _encoder,
       ::fidl::test::union_::StrictBoundedXUnion* xu) {
     fidl_trace(WillHLCPPEncode);
@@ -1170,7 +1171,8 @@ class TestProtocol_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message FlexibleXUnionHenceResponseMustBeHeapAllocated(
+  static ::fidl::HLCPPOutgoingMessage
+  FlexibleXUnionHenceResponseMustBeHeapAllocated(
       ::fidl::Encoder* _encoder, ::fidl::test::union_::OlderSimpleUnion* xu) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
@@ -3639,7 +3641,7 @@ class TestProtocol_RequestDecoder {
   TestProtocol_RequestDecoder() = default;
   virtual ~TestProtocol_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -3680,7 +3682,7 @@ class TestProtocol_ResponseDecoder {
   TestProtocol_ResponseDecoder() = default;
   virtual ~TestProtocol_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -3740,7 +3742,7 @@ class TestProtocol_Proxy final : public ::fidl::internal::Proxy,
   explicit TestProtocol_Proxy(::fidl::internal::ProxyController* controller);
   ~TestProtocol_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   void StrictXUnionHenceResponseMayBeStackAllocated(
       StrictXUnionHenceResponseMayBeStackAllocatedCallback callback) override;
   void FlexibleXUnionHenceResponseMustBeHeapAllocated(
@@ -3760,7 +3762,7 @@ class TestProtocol_Stub final : public ::fidl::internal::Stub,
   explicit TestProtocol_Stub(TestProtocol_clazz* impl);
   ~TestProtocol_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:

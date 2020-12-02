@@ -8,7 +8,7 @@
 
 namespace fidl {
 
-Decoder::Decoder(Message message) : message_(std::move(message)) {}
+Decoder::Decoder(HLCPPIncomingMessage message) : message_(std::move(message)) {}
 
 Decoder::~Decoder() = default;
 

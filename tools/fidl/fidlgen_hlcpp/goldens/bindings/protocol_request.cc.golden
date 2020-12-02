@@ -86,7 +86,7 @@ Parent_Proxy::Parent_Proxy(::fidl::internal::ProxyController* controller)
 
 Parent_Proxy::~Parent_Proxy() = default;
 
-zx_status_t Parent_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t Parent_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -104,7 +104,8 @@ Parent_GetChild_ResponseHandler(Parent::GetChildCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback,
                       "Callback must not be empty for Parent::GetChild\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(
             ::fidl::DecodeAs<::fidl::InterfaceHandle<
@@ -129,7 +130,8 @@ Parent_GetChildRequest_ResponseHandler(
   ZX_DEBUG_ASSERT_MSG(
       callback, "Callback must not be empty for Parent::GetChildRequest\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(
             ::fidl::DecodeAs<
@@ -203,7 +205,7 @@ class Parent_GetChildRequest_Responder final {
 
 }  // namespace
 
-zx_status_t Parent_Stub::Dispatch_(::fidl::Message message,
+zx_status_t Parent_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
                                    ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =
@@ -271,7 +273,7 @@ zx_status_t Parent_SyncProxy::GetChild(
         out_c) {
   ::fidl::Encoder _encoder(internal::kParent_GetChild_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ =
       proxy_.Call(&fidl_test_protocolrequest_ParentGetChildRequestTable,
                   &fidl_test_protocolrequest_ParentGetChildResponseTable,
@@ -288,7 +290,7 @@ zx_status_t Parent_SyncProxy::GetChildRequest(
     ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>* out_r) {
   ::fidl::Encoder _encoder(internal::kParent_GetChildRequest_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocolrequest_ParentGetChildRequestRequestTable,
       &fidl_test_protocolrequest_ParentGetChildRequestResponseTable,
@@ -350,7 +352,7 @@ Child_Proxy::Child_Proxy(::fidl::internal::ProxyController* controller)
 
 Child_Proxy::~Child_Proxy() = default;
 
-zx_status_t Child_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t Child_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -367,7 +369,7 @@ Child_Stub::~Child_Stub() = default;
 
 namespace {}  // namespace
 
-zx_status_t Child_Stub::Dispatch_(::fidl::Message message,
+zx_status_t Child_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
                                   ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =

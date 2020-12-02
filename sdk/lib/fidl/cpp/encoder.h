@@ -47,7 +47,7 @@ class Encoder final {
   void EncodeUnknownHandle(zx::object_base* value);
 #endif
 
-  Message GetMessage();
+  HLCPPOutgoingMessage GetMessage();
 
   void Reset(uint64_t ordinal);
 

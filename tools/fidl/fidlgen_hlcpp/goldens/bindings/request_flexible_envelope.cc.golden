@@ -452,7 +452,7 @@ Protocol_Proxy::Protocol_Proxy(::fidl::internal::ProxyController* controller)
 
 Protocol_Proxy::~Protocol_Proxy() = default;
 
-zx_status_t Protocol_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t Protocol_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -472,7 +472,8 @@ Protocol_RequestStrictResponseFlexible_ResponseHandler(
                       "Callback must not be empty for "
                       "Protocol::RequestStrictResponseFlexible\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<
                   ::fidl::test::requestflexibleenvelope::FlexibleFoo>(&decoder,
@@ -503,7 +504,8 @@ Protocol_RequestFlexibleResponseStrict_ResponseHandler(
                       "Callback must not be empty for "
                       "Protocol::RequestFlexibleResponseStrict\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(
             ::fidl::DecodeAs<::fidl::test::requestflexibleenvelope::StrictFoo>(
@@ -573,7 +575,8 @@ class Protocol_RequestFlexibleResponseStrict_Responder final {
 }  // namespace
 
 zx_status_t Protocol_Stub::Dispatch_(
-    ::fidl::Message message, ::fidl::internal::PendingResponse response) {
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =
       Protocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
@@ -635,7 +638,7 @@ zx_status_t Protocol_SyncProxy::RequestStrictResponseFlexible(
   ::fidl::Encoder _encoder(
       internal::kProtocol_RequestStrictResponseFlexible_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable,
       &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable,
@@ -654,7 +657,7 @@ zx_status_t Protocol_SyncProxy::RequestFlexibleResponseStrict(
   ::fidl::Encoder _encoder(
       internal::kProtocol_RequestFlexibleResponseStrict_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable,
       &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable,

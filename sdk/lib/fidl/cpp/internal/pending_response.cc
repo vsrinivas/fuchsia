@@ -55,7 +55,7 @@ PendingResponse& PendingResponse::operator=(PendingResponse&& other) {
   return *this;
 }
 
-zx_status_t PendingResponse::Send(const fidl_type_t* type, Message message) {
+zx_status_t PendingResponse::Send(const fidl_type_t* type, HLCPPOutgoingMessage message) {
   if (!weak_controller_)
     return ZX_ERR_BAD_STATE;
   StubController* controller = weak_controller_->controller();

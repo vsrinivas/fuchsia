@@ -48,7 +48,7 @@ class EventSender final : public fidl::internal::MessageSender {
   zx::channel TakeChannel() { return std::move(channel_); }
 
  private:
-  zx_status_t Send(const fidl_type_t* type, Message message) final {
+  zx_status_t Send(const fidl_type_t* type, HLCPPOutgoingMessage message) final {
     return fidl::internal::SendMessage(channel_, type, std::move(message));
   }
 

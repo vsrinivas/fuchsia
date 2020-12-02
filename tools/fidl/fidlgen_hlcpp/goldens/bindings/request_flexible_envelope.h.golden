@@ -215,7 +215,7 @@ extern "C" const fidl_type_t
 
 class Protocol_RequestEncoder {
  public:
-  static ::fidl::Message RequestStrictResponseFlexible(
+  static ::fidl::HLCPPOutgoingMessage RequestStrictResponseFlexible(
       ::fidl::Encoder* _encoder,
       ::fidl::test::requestflexibleenvelope::StrictFoo* s) {
     fidl_trace(WillHLCPPEncode);
@@ -231,7 +231,7 @@ class Protocol_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message RequestFlexibleResponseStrict(
+  static ::fidl::HLCPPOutgoingMessage RequestFlexibleResponseStrict(
       ::fidl::Encoder* _encoder,
       ::fidl::test::requestflexibleenvelope::FlexibleFoo* s) {
     fidl_trace(WillHLCPPEncode);
@@ -258,7 +258,7 @@ extern "C" const fidl_type_t
 
 class Protocol_ResponseEncoder {
  public:
-  static ::fidl::Message RequestStrictResponseFlexible(
+  static ::fidl::HLCPPOutgoingMessage RequestStrictResponseFlexible(
       ::fidl::Encoder* _encoder,
       ::fidl::test::requestflexibleenvelope::FlexibleFoo* f) {
     fidl_trace(WillHLCPPEncode);
@@ -273,7 +273,7 @@ class Protocol_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message RequestFlexibleResponseStrict(
+  static ::fidl::HLCPPOutgoingMessage RequestFlexibleResponseStrict(
       ::fidl::Encoder* _encoder,
       ::fidl::test::requestflexibleenvelope::StrictFoo* f) {
     fidl_trace(WillHLCPPEncode);
@@ -490,7 +490,7 @@ class Protocol_RequestDecoder {
   Protocol_RequestDecoder() = default;
   virtual ~Protocol_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -536,7 +536,7 @@ class Protocol_ResponseDecoder {
   Protocol_ResponseDecoder() = default;
   virtual ~Protocol_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -596,7 +596,7 @@ class Protocol_Proxy final : public ::fidl::internal::Proxy, public Protocol {
   explicit Protocol_Proxy(::fidl::internal::ProxyController* controller);
   ~Protocol_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   void RequestStrictResponseFlexible(
       ::fidl::test::requestflexibleenvelope::StrictFoo s,
       RequestStrictResponseFlexibleCallback callback) override;
@@ -618,7 +618,7 @@ class Protocol_Stub final : public ::fidl::internal::Stub,
   explicit Protocol_Stub(Protocol_clazz* impl);
   ~Protocol_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:

@@ -25,7 +25,7 @@ namespace {
 
 class MagicNumberMessageHandler : public internal::MessageHandler {
  public:
-  zx_status_t OnMessage(Message message) override {
+  zx_status_t OnMessage(HLCPPIncomingMessage message) override {
     is_supported = message.is_supported_version();
     return ZX_OK;
   }

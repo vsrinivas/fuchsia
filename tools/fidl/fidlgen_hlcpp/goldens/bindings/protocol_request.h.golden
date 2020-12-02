@@ -34,7 +34,7 @@ extern "C" const fidl_type_t
 
 class Parent_RequestEncoder {
  public:
-  static ::fidl::Message GetChild(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage GetChild(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -45,7 +45,8 @@ class Parent_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message GetChildRequest(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage GetChildRequest(
+      ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -57,7 +58,7 @@ class Parent_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message TakeChild(
+  static ::fidl::HLCPPOutgoingMessage TakeChild(
       ::fidl::Encoder* _encoder,
       ::fidl::InterfaceHandle<class ::fidl::test::protocolrequest::Child>* c) {
     fidl_trace(WillHLCPPEncode);
@@ -72,7 +73,7 @@ class Parent_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message TakeChildRequest(
+  static ::fidl::HLCPPOutgoingMessage TakeChildRequest(
       ::fidl::Encoder* _encoder,
       ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>* r) {
     fidl_trace(WillHLCPPEncode);
@@ -98,7 +99,7 @@ extern "C" const fidl_type_t
 
 class Parent_ResponseEncoder {
  public:
-  static ::fidl::Message GetChild(
+  static ::fidl::HLCPPOutgoingMessage GetChild(
       ::fidl::Encoder* _encoder,
       ::fidl::InterfaceHandle<class ::fidl::test::protocolrequest::Child>* c) {
     fidl_trace(WillHLCPPEncode);
@@ -112,7 +113,7 @@ class Parent_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message GetChildRequest(
+  static ::fidl::HLCPPOutgoingMessage GetChildRequest(
       ::fidl::Encoder* _encoder,
       ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>* r) {
     fidl_trace(WillHLCPPEncode);
@@ -214,7 +215,7 @@ class Parent_RequestDecoder {
   Parent_RequestDecoder() = default;
   virtual ~Parent_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -271,7 +272,7 @@ class Parent_ResponseDecoder {
   Parent_ResponseDecoder() = default;
   virtual ~Parent_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -337,7 +338,7 @@ class Parent_Proxy final : public ::fidl::internal::Proxy, public Parent {
   explicit Parent_Proxy(::fidl::internal::ProxyController* controller);
   ~Parent_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   void GetChild(GetChildCallback callback) override;
   void GetChildRequest(GetChildRequestCallback callback) override;
   void TakeChild(
@@ -361,7 +362,7 @@ class Parent_Stub final : public ::fidl::internal::Stub,
   explicit Parent_Stub(Parent_clazz* impl);
   ~Parent_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
@@ -406,7 +407,7 @@ class Child_RequestDecoder {
   Child_RequestDecoder() = default;
   virtual ~Child_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type =
         GetType(request.ordinal(), &needs_response);
@@ -435,7 +436,7 @@ class Child_ResponseDecoder {
   Child_ResponseDecoder() = default;
   virtual ~Child_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -472,7 +473,7 @@ class Child_Proxy final : public ::fidl::internal::Proxy, public Child {
   explicit Child_Proxy(::fidl::internal::ProxyController* controller);
   ~Child_Proxy() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
 
  private:
   Child_Proxy(const Child_Proxy&) = delete;
@@ -488,7 +489,7 @@ class Child_Stub final : public ::fidl::internal::Stub,
   explicit Child_Stub(Child_clazz* impl);
   ~Child_Stub() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:

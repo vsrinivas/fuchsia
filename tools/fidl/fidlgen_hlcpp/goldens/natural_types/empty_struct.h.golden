@@ -49,8 +49,8 @@ extern "C" const fidl_type_t
 
 class EmptyProtocol_RequestEncoder {
  public:
-  static ::fidl::Message Send(::fidl::Encoder* _encoder,
-                              ::fidl::test::emptystruct::Empty* e) {
+  static ::fidl::HLCPPOutgoingMessage Send(
+      ::fidl::Encoder* _encoder, ::fidl::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, e, 16);
@@ -62,8 +62,8 @@ class EmptyProtocol_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message SendAndReceive(::fidl::Encoder* _encoder,
-                                        ::fidl::test::emptystruct::Empty* e) {
+  static ::fidl::HLCPPOutgoingMessage SendAndReceive(
+      ::fidl::Encoder* _encoder, ::fidl::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, e, 16);
@@ -88,8 +88,8 @@ extern "C" const fidl_type_t
 
 class EmptyProtocol_ResponseEncoder {
  public:
-  static ::fidl::Message Receive(::fidl::Encoder* _encoder,
-                                 ::fidl::test::emptystruct::Empty* e) {
+  static ::fidl::HLCPPOutgoingMessage Receive(
+      ::fidl::Encoder* _encoder, ::fidl::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, e, 16);
@@ -100,8 +100,8 @@ class EmptyProtocol_ResponseEncoder {
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message SendAndReceive(::fidl::Encoder* _encoder,
-                                        ::fidl::test::emptystruct::Empty* e) {
+  static ::fidl::HLCPPOutgoingMessage SendAndReceive(
+      ::fidl::Encoder* _encoder, ::fidl::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, e, 16);

@@ -36,36 +36,39 @@ TEST(Message, BasicTests) {
   data[1] = 'b';
   data[2] = 'c';
 
-  fidl::Message message(builder.Finalize(),
-                        fidl::HandlePart(handle_buffer, ZX_CHANNEL_MAX_MSG_HANDLES));
+  fidl::HLCPPOutgoingMessage outgoing_message(
+      builder.Finalize(), fidl::HandlePart(handle_buffer, ZX_CHANNEL_MAX_MSG_HANDLES));
 
-  EXPECT_EQ(message.txid(), 5u);
-  EXPECT_EQ(message.ordinal(), 42u);
+  EXPECT_EQ(outgoing_message.txid(), 5u);
+  EXPECT_EQ(outgoing_message.ordinal(), 42u);
 
-  fidl::BytePart payload = message.payload();
+  fidl::BytePart payload = outgoing_message.payload();
   EXPECT_EQ(reinterpret_cast<fidl::StringView*>(payload.data()), view);
 
   zx::channel h1, h2;
   EXPECT_EQ(zx::channel::create(0, &h1, &h2), ZX_OK);
 
-  EXPECT_EQ(ZX_OK, message.Write(h1.get(), 0u));
+  EXPECT_EQ(ZX_OK, outgoing_message.Write(h1.get(), 0u));
 
   memset(byte_buffer, 0, ZX_CHANNEL_MAX_MSG_BYTES);
 
-  EXPECT_EQ(message.txid(), 0u);
-  EXPECT_EQ(message.ordinal(), 0u);
+  EXPECT_EQ(outgoing_message.txid(), 0u);
+  EXPECT_EQ(outgoing_message.ordinal(), 0u);
 
-  EXPECT_EQ(ZX_OK, message.Read(h2.get(), 0u));
+  fidl::HLCPPIncomingMessage incoming_message(
+      fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES),
+      fidl::HandlePart(handle_buffer, ZX_CHANNEL_MAX_MSG_HANDLES));
+  EXPECT_EQ(ZX_OK, incoming_message.Read(h2.get(), 0u));
 
-  EXPECT_EQ(message.txid(), 5u);
-  EXPECT_EQ(message.ordinal(), 42u);
+  EXPECT_EQ(incoming_message.txid(), 5u);
+  EXPECT_EQ(incoming_message.ordinal(), 42u);
 }
 
 TEST(Message, ReadErrorCodes) {
   // Create a Message buffer.
   constexpr size_t kBufferSize = 100;
   uint8_t byte_buffer[kBufferSize];
-  fidl::Message message(fidl::BytePart::WrapEmpty(byte_buffer), fidl::HandlePart());
+  fidl::HLCPPIncomingMessage message(fidl::BytePart::WrapEmpty(byte_buffer), fidl::HandlePart());
 
   // Create a channel.
   zx::channel client, server;
@@ -113,7 +116,7 @@ TEST(MessageBuilder, BasicTests) {
   zx_handle_t handle_value = e.release();
   *handle_ptr = handle_value;
 
-  fidl::Message message;
+  fidl::HLCPPOutgoingMessage message;
   const char* error_msg;
   EXPECT_EQ(builder.Encode(&message, &error_msg), ZX_OK);
 
@@ -133,7 +136,7 @@ TEST(MessagePart, IsStlContainerTest) {
 }
 
 TEST(MessagePart, Size) {
-  fidl::Message message;
+  fidl::HLCPPOutgoingMessage message;
 
   EXPECT_EQ(message.bytes().size(), 0u);
 

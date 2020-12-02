@@ -26,7 +26,7 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
       fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER);
       auto offset = enc.Alloc(fidl::EncodingInlineSize<FidlType, fidl::Encoder>(&enc));
       obj.Encode(&enc, offset);
-      fidl::Message msg = enc.GetMessage();
+      fidl::HLCPPOutgoingMessage msg = enc.GetMessage();
       ZX_ASSERT(ZX_OK == msg.Validate(FidlType::FidlType, nullptr));
     }
 

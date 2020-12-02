@@ -118,8 +118,8 @@ class MlmeMsg : public BaseMlmeMsg {
     }
 
     // Construct a fidl Message and decode it into M.
-    fidl::Message msg(fidl::BytePart(payload.data(), payload.size(), payload.size()),
-                      fidl::HandlePart());
+    fidl::HLCPPIncomingMessage msg(fidl::BytePart(payload.data(), payload.size(), payload.size()),
+                                   fidl::HandlePart());
     fidl::Decoder decoder(std::move(msg));
     return {{fidl::DecodeAs<M>(&decoder, 0), h->ordinal, h->txid}};
   }

@@ -534,7 +534,8 @@ ExampleProtocol_Proxy::ExampleProtocol_Proxy(
 
 ExampleProtocol_Proxy::~ExampleProtocol_Proxy() = default;
 
-zx_status_t ExampleProtocol_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t ExampleProtocol_Proxy::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -562,7 +563,8 @@ ExampleProtocol_Stub::~ExampleProtocol_Stub() = default;
 namespace {}  // namespace
 
 zx_status_t ExampleProtocol_Stub::Dispatch_(
-    ::fidl::Message message, ::fidl::internal::PendingResponse response) {
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type = ExampleProtocol_RequestDecoder::GetType(
       message.ordinal(), &needs_response);

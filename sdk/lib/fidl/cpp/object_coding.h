@@ -24,7 +24,9 @@ zx_status_t EncodeObject(T* object, std::vector<uint8_t>* output, const char** e
 template <class T>
 zx_status_t DecodeObject(uint8_t* bytes, size_t bytes_length, T* object,
                          const char** error_msg_out) {
-  Message msg(BytePart(bytes, static_cast<uint32_t>(bytes_length), static_cast<uint32_t>(bytes_length)), HandlePart());
+  HLCPPIncomingMessage msg(
+      BytePart(bytes, static_cast<uint32_t>(bytes_length), static_cast<uint32_t>(bytes_length)),
+      HandlePart());
   zx_status_t status = msg.Decode(T::FidlType, error_msg_out);
   if (status != ZX_OK) {
     return status;
@@ -37,7 +39,9 @@ zx_status_t DecodeObject(uint8_t* bytes, size_t bytes_length, T* object,
 template <class T>
 zx_status_t ValidateObject(uint8_t* bytes, size_t bytes_length, T* object,
                            const char** error_msg_out) {
-  return Message(BytePart(bytes, static_cast<uint32_t>(bytes_length), static_cast<uint32_t>(bytes_length)), HandlePart())
+  return HLCPPOutgoingMessage(BytePart(bytes, static_cast<uint32_t>(bytes_length),
+                                       static_cast<uint32_t>(bytes_length)),
+                              HandlePart())
       .Validate(T::FidlType, error_msg_out);
 }
 

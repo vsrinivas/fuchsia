@@ -1116,8 +1116,8 @@ extern "C" const fidl_type_t
 
 class TestProtocol_RequestEncoder {
  public:
-  static ::fidl::Message StrictXUnionHenceResponseMayBeStackAllocated(
-      ::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage
+  StrictXUnionHenceResponseMayBeStackAllocated(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -1130,8 +1130,8 @@ class TestProtocol_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      ::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage
+  FlexibleXUnionHenceResponseMustBeHeapAllocated(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -1155,7 +1155,8 @@ extern "C" const fidl_type_t
 
 class TestProtocol_ResponseEncoder {
  public:
-  static ::fidl::Message StrictXUnionHenceResponseMayBeStackAllocated(
+  static ::fidl::HLCPPOutgoingMessage
+  StrictXUnionHenceResponseMayBeStackAllocated(
       ::fidl::Encoder* _encoder,
       ::fidl::test::union_::StrictBoundedXUnion* xu) {
     fidl_trace(WillHLCPPEncode);
@@ -1170,7 +1171,8 @@ class TestProtocol_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message FlexibleXUnionHenceResponseMustBeHeapAllocated(
+  static ::fidl::HLCPPOutgoingMessage
+  FlexibleXUnionHenceResponseMustBeHeapAllocated(
       ::fidl::Encoder* _encoder, ::fidl::test::union_::OlderSimpleUnion* xu) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));

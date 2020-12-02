@@ -17,7 +17,7 @@ namespace fidl {
 
 class Decoder final {
  public:
-  explicit Decoder(Message message);
+  explicit Decoder(HLCPPIncomingMessage message);
   ~Decoder();
 
   template <typename T>
@@ -47,7 +47,7 @@ class Decoder final {
 #endif
 
  private:
-  Message message_;
+  HLCPPIncomingMessage message_;
 #ifdef __Fuchsia__
   uint32_t handle_index_ = 0;
 #endif

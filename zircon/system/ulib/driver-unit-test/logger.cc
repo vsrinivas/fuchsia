@@ -54,7 +54,7 @@ zx_status_t Logger::SendLogMessage(const char* log_msg) {
   req->msg.size = log_msg_size;
   memcpy(data, log_msg, log_msg_size);
 
-  fidl::Message msg(builder.Finalize(), fidl::HandlePart());
+  fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandlePart());
   const char* err = nullptr;
   auto status = msg.Encode(&fuchsia_driver_test_LoggerLogMessageRequestTable, &err);
   if (status != ZX_OK) {
@@ -86,7 +86,7 @@ zx_status_t Logger::SendLogTestCase() {
   req->result.failed = test_case_result_.failed;
   req->result.skipped = test_case_result_.skipped;
 
-  fidl::Message msg(builder.Finalize(), fidl::HandlePart());
+  fidl::HLCPPOutgoingMessage msg(builder.Finalize(), fidl::HandlePart());
   const char* err = nullptr;
   auto status = msg.Encode(&fuchsia_driver_test_LoggerLogTestCaseRequestTable, &err);
   if (status != ZX_OK) {

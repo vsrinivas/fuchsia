@@ -34,7 +34,7 @@ extern "C" const fidl_type_t
 
 class Parent_RequestEncoder {
  public:
-  static ::fidl::Message GetChild(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage GetChild(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -45,7 +45,8 @@ class Parent_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message GetChildRequest(::fidl::Encoder* _encoder) {
+  static ::fidl::HLCPPOutgoingMessage GetChildRequest(
+      ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
@@ -57,7 +58,7 @@ class Parent_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message TakeChild(
+  static ::fidl::HLCPPOutgoingMessage TakeChild(
       ::fidl::Encoder* _encoder,
       ::fidl::InterfaceHandle<class ::fidl::test::protocolrequest::Child>* c) {
     fidl_trace(WillHLCPPEncode);
@@ -72,7 +73,7 @@ class Parent_RequestEncoder {
 
     return _encoder->GetMessage();
   }
-  static ::fidl::Message TakeChildRequest(
+  static ::fidl::HLCPPOutgoingMessage TakeChildRequest(
       ::fidl::Encoder* _encoder,
       ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>* r) {
     fidl_trace(WillHLCPPEncode);
@@ -98,7 +99,7 @@ extern "C" const fidl_type_t
 
 class Parent_ResponseEncoder {
  public:
-  static ::fidl::Message GetChild(
+  static ::fidl::HLCPPOutgoingMessage GetChild(
       ::fidl::Encoder* _encoder,
       ::fidl::InterfaceHandle<class ::fidl::test::protocolrequest::Child>* c) {
     fidl_trace(WillHLCPPEncode);
@@ -112,7 +113,7 @@ class Parent_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
-  static ::fidl::Message GetChildRequest(
+  static ::fidl::HLCPPOutgoingMessage GetChildRequest(
       ::fidl::Encoder* _encoder,
       ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>* r) {
     fidl_trace(WillHLCPPEncode);

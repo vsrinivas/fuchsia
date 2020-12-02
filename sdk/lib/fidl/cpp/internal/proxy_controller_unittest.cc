@@ -39,7 +39,7 @@ TEST(ProxyController, Send) {
                                    nullptr));
 
   MessageBuffer buffer;
-  Message message = buffer.CreateEmptyMessage();
+  HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
   EXPECT_EQ(ZX_OK, message.Read(h2.get(), 0));
   EXPECT_EQ(0u, message.txid());
   EXPECT_EQ(5u, message.ordinal());
@@ -63,7 +63,7 @@ TEST(ProxyController, Callback) {
 
   int callback_count = 0;
   auto handler = std::make_unique<SingleUseMessageHandler>(
-      [&callback_count](Message&& message) {
+      [&callback_count](HLCPPIncomingMessage&& message) {
         ++callback_count;
         EXPECT_EQ(42u, message.ordinal());
         return ZX_OK;
@@ -78,7 +78,7 @@ TEST(ProxyController, Callback) {
   EXPECT_EQ(0, callback_count);
 
   MessageBuffer buffer;
-  Message message = buffer.CreateEmptyMessage();
+  HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
   EXPECT_EQ(ZX_OK, message.Read(h2.get(), 0));
   EXPECT_NE(0u, message.txid());
   EXPECT_EQ(3u, message.ordinal());
@@ -223,7 +223,7 @@ TEST(ProxyController, Move) {
 
   int callback_count = 0;
   auto handler = std::make_unique<SingleUseMessageHandler>(
-      [&callback_count](Message&& message) {
+      [&callback_count](HLCPPIncomingMessage&& message) {
         ++callback_count;
         EXPECT_EQ(42u, message.ordinal());
         return ZX_OK;
@@ -238,7 +238,7 @@ TEST(ProxyController, Move) {
   EXPECT_EQ(0, callback_count);
 
   MessageBuffer buffer;
-  Message message = buffer.CreateEmptyMessage();
+  HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
   EXPECT_EQ(ZX_OK, message.Read(h2.get(), 0));
   EXPECT_NE(0u, message.txid());
   EXPECT_EQ(3u, message.ordinal());
@@ -273,7 +273,7 @@ TEST(ProxyController, Reset) {
 
   int callback_count = 0;
   auto handler = std::make_unique<SingleUseMessageHandler>(
-      [&callback_count](Message&& message) {
+      [&callback_count](HLCPPIncomingMessage&& message) {
         ++callback_count;
         EXPECT_EQ(42u, message.ordinal());
         return ZX_OK;
@@ -288,7 +288,7 @@ TEST(ProxyController, Reset) {
   EXPECT_EQ(0, callback_count);
 
   MessageBuffer buffer;
-  Message message = buffer.CreateEmptyMessage();
+  HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
   EXPECT_EQ(ZX_OK, message.Read(h2.get(), 0));
   EXPECT_NE(0u, message.txid());
   EXPECT_EQ(3u, message.ordinal());
@@ -329,7 +329,7 @@ TEST(ProxyController, ReentrantDestructor) {
     StringPtr string("world!");
     fidl::Encode(&encoder, &string, encoder.Alloc(sizeof(fidl_string_t)));
     auto callback_handler = std::make_unique<SingleUseMessageHandler>(
-        [](Message&& message) { return ZX_OK; }, &zero_arg_message_type);
+        [](HLCPPIncomingMessage&& message) { return ZX_OK; }, &zero_arg_message_type);
     zx_status_t status = controller.Send(&unbounded_nonnullable_string_message_type,
                                          encoder.GetMessage(), std::move(callback_handler));
     EXPECT_EQ(ZX_ERR_BAD_HANDLE, status);
@@ -337,7 +337,8 @@ TEST(ProxyController, ReentrantDestructor) {
     controller.Reset();
   });
   auto handler = std::make_unique<SingleUseMessageHandler>(
-      [defer = std::move(defer)](Message&& message) { return ZX_OK; }, &zero_arg_message_type);
+      [defer = std::move(defer)](HLCPPIncomingMessage&& message) { return ZX_OK; },
+      &zero_arg_message_type);
 
   EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
                                    std::move(handler)));

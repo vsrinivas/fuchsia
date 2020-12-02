@@ -62,7 +62,7 @@ super_Proxy::super_Proxy(::fidl::internal::ProxyController* controller)
 
 super_Proxy::~super_Proxy() = default;
 
-zx_status_t super_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t super_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -79,7 +79,8 @@ namespace {
 super_foo_ResponseHandler(super::fooCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback, "Callback must not be empty for super::foo\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
         return ZX_OK;
@@ -118,7 +119,7 @@ class super_foo_Responder final {
 
 }  // namespace
 
-zx_status_t super_Stub::Dispatch_(::fidl::Message message,
+zx_status_t super_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
                                   ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =
@@ -166,7 +167,7 @@ super_SyncProxy::~super_SyncProxy() = default;
 zx_status_t super_SyncProxy::foo(::std::string s, int64_t* out_y) {
   ::fidl::Encoder _encoder(internal::ksuper_foo_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ =
       proxy_.Call(&fidl_test_inheritance_superfooRequestTable,
                   &fidl_test_inheritance_superfooResponseTable,
@@ -221,7 +222,7 @@ sub_Proxy::sub_Proxy(::fidl::internal::ProxyController* controller)
 
 sub_Proxy::~sub_Proxy() = default;
 
-zx_status_t sub_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t sub_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -238,7 +239,8 @@ namespace {
 sub_foo_ResponseHandler(sub::fooCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback, "Callback must not be empty for sub::foo\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
         return ZX_OK;
@@ -277,7 +279,7 @@ class sub_foo_Responder final {
 
 }  // namespace
 
-zx_status_t sub_Stub::Dispatch_(::fidl::Message message,
+zx_status_t sub_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
                                 ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =
@@ -325,7 +327,7 @@ sub_SyncProxy::~sub_SyncProxy() = default;
 zx_status_t sub_SyncProxy::foo(::std::string s, int64_t* out_y) {
   ::fidl::Encoder _encoder(internal::ksub_foo_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ =
       proxy_.Call(&fidl_test_inheritance_subfooRequestTable,
                   &fidl_test_inheritance_subfooResponseTable,

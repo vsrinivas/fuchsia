@@ -74,7 +74,7 @@ class PendingResponse final : public MessageSender {
   //
   // If the associated |WeakStubController| is no longer available (e.g., if it
   // has been destroyed), this function will return |ZX_ERR_BAD_STATE|.
-  zx_status_t Send(const fidl_type_t* type, Message message) final;
+  zx_status_t Send(const fidl_type_t* type, HLCPPOutgoingMessage message) final;
 
  private:
   // This class should be small enough to fit into the inline storage for an

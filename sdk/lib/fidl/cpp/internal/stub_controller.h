@@ -49,7 +49,7 @@ class StubController final : public MessageHandler, public MessageSender {
   //
   // Returns an error if the message fails to encode properly or if the message
   // cannot be written to the channel.
-  zx_status_t Send(const fidl_type_t* type, Message message) final;
+  zx_status_t Send(const fidl_type_t* type, HLCPPOutgoingMessage message) final;
 
  private:
   // Called by the |MessageReader| when a message arrives on the channel from
@@ -58,7 +58,7 @@ class StubController final : public MessageHandler, public MessageSender {
   // The message will be dispatched using the |stub()|. If the message expects a
   // response, the |stub()| will also be given a |PendingResponse| object that
   // can be used to send a reply to the message.
-  zx_status_t OnMessage(Message message) final;
+  zx_status_t OnMessage(HLCPPIncomingMessage message) final;
 
   // Causes the |StubController| to invalidate all outstanding weak pointers,
   // preventing outstanding |PendingResponse| objects from sending messages on

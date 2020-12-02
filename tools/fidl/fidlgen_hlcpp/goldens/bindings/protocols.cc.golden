@@ -822,7 +822,8 @@ Transitional_Proxy::Transitional_Proxy(
 
 Transitional_Proxy::~Transitional_Proxy() = default;
 
-zx_status_t Transitional_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t Transitional_Proxy::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     case internal::kTransitional_Event_Ordinal: {
@@ -858,7 +859,8 @@ Transitional_Request_ResponseHandler(Transitional::RequestCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback,
                       "Callback must not be empty for Transitional::Request\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
         return ZX_OK;
@@ -906,7 +908,8 @@ class Transitional_Request_Responder final {
 }  // namespace
 
 zx_status_t Transitional_Stub::Dispatch_(
-    ::fidl::Message message, ::fidl::internal::PendingResponse response) {
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =
       Transitional_RequestDecoder::GetType(message.ordinal(), &needs_response);
@@ -963,7 +966,7 @@ Transitional_SyncProxy::~Transitional_SyncProxy() = default;
 zx_status_t Transitional_SyncProxy::Request(int64_t x, int64_t* out_y) {
   ::fidl::Encoder _encoder(internal::kTransitional_Request_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_TransitionalRequestRequestTable,
       &fidl_test_protocols_TransitionalRequestResponseTable,
@@ -1048,7 +1051,8 @@ ChannelProtocol_Proxy::ChannelProtocol_Proxy(
 
 ChannelProtocol_Proxy::~ChannelProtocol_Proxy() = default;
 
-zx_status_t ChannelProtocol_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t ChannelProtocol_Proxy::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     case internal::kChannelProtocol_EventA_Ordinal: {
@@ -1092,7 +1096,8 @@ ChannelProtocol_MethodB_ResponseHandler(
   ZX_DEBUG_ASSERT_MSG(
       callback, "Callback must not be empty for ChannelProtocol::MethodB\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<int64_t>(&decoder, 16));
         return ZX_OK;
@@ -1118,7 +1123,8 @@ ChannelProtocol_MutateSocket_ResponseHandler(
       callback,
       "Callback must not be empty for ChannelProtocol::MutateSocket\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<::zx::socket>(&decoder, 16));
         return ZX_OK;
@@ -1181,7 +1187,8 @@ class ChannelProtocol_MutateSocket_Responder final {
 }  // namespace
 
 zx_status_t ChannelProtocol_Stub::Dispatch_(
-    ::fidl::Message message, ::fidl::internal::PendingResponse response) {
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type = ChannelProtocol_RequestDecoder::GetType(
       message.ordinal(), &needs_response);
@@ -1255,7 +1262,7 @@ zx_status_t ChannelProtocol_SyncProxy::MethodB(int64_t a, int64_t b,
                                                int64_t* out_result) {
   ::fidl::Encoder _encoder(internal::kChannelProtocol_MethodB_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_ChannelProtocolMethodBRequestTable,
       &fidl_test_protocols_ChannelProtocolMethodBResponseTable,
@@ -1270,7 +1277,7 @@ zx_status_t ChannelProtocol_SyncProxy::MutateSocket(::zx::socket a,
                                                     ::zx::socket* out_b) {
   ::fidl::Encoder _encoder(internal::kChannelProtocol_MutateSocket_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_ChannelProtocolMutateSocketRequestTable,
       &fidl_test_protocols_ChannelProtocolMutateSocketResponseTable,
@@ -1391,7 +1398,7 @@ WithAndWithoutRequestResponse_Proxy::~WithAndWithoutRequestResponse_Proxy() =
     default;
 
 zx_status_t WithAndWithoutRequestResponse_Proxy::Dispatch_(
-    ::fidl::Message message) {
+    ::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     case internal::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
@@ -1460,7 +1467,8 @@ WithAndWithoutRequestResponse_NoRequestEmptyResponse_ResponseHandler(
       "Callback must not be empty for "
       "WithAndWithoutRequestResponse::NoRequestEmptyResponse\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         callback_();
         return ZX_OK;
       },
@@ -1488,7 +1496,8 @@ WithAndWithoutRequestResponse_NoRequestWithResponse_ResponseHandler(
                       "Callback must not be empty for "
                       "WithAndWithoutRequestResponse::NoRequestWithResponse\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<::std::string>(&decoder, 16));
         return ZX_OK;
@@ -1529,7 +1538,8 @@ WithAndWithoutRequestResponse_WithRequestEmptyResponse_ResponseHandler(
       "Callback must not be empty for "
       "WithAndWithoutRequestResponse::WithRequestEmptyResponse\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         callback_();
         return ZX_OK;
       },
@@ -1559,7 +1569,8 @@ WithAndWithoutRequestResponse_WithRequestWithResponse_ResponseHandler(
       "Callback must not be empty for "
       "WithAndWithoutRequestResponse::WithRequestWithResponse\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<::std::string>(&decoder, 16));
         return ZX_OK;
@@ -1673,7 +1684,8 @@ class WithAndWithoutRequestResponse_WithRequestWithResponse_Responder final {
 }  // namespace
 
 zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
-    ::fidl::Message message, ::fidl::internal::PendingResponse response) {
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =
       WithAndWithoutRequestResponse_RequestDecoder::GetType(message.ordinal(),
@@ -1786,7 +1798,7 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::NoRequestEmptyResponse() {
   ::fidl::Encoder _encoder(
       internal::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable,
       &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable,
@@ -1802,7 +1814,7 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::NoRequestWithResponse(
   ::fidl::Encoder _encoder(
       internal::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable,
       &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable,
@@ -1831,7 +1843,7 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestEmptyResponse(
       internal::
           kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable,
       &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable,
@@ -1847,7 +1859,7 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestWithResponse(
   ::fidl::Encoder _encoder(
       internal::kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable,
       &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable,
@@ -1927,7 +1939,8 @@ WithErrorSyntax_Proxy::WithErrorSyntax_Proxy(
 
 WithErrorSyntax_Proxy::~WithErrorSyntax_Proxy() = default;
 
-zx_status_t WithErrorSyntax_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t WithErrorSyntax_Proxy::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -1947,7 +1960,8 @@ WithErrorSyntax_ResponseAsStruct_ResponseHandler(
       callback,
       "Callback must not be empty for WithErrorSyntax::ResponseAsStruct\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<::fidl::test::protocols::
                                        WithErrorSyntax_ResponseAsStruct_Result>(
@@ -1975,7 +1989,8 @@ WithErrorSyntax_ErrorAsPrimitive_ResponseHandler(
       callback,
       "Callback must not be empty for WithErrorSyntax::ErrorAsPrimitive\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<::fidl::test::protocols::
                                        WithErrorSyntax_ErrorAsPrimitive_Result>(
@@ -2003,7 +2018,8 @@ WithErrorSyntax_ErrorAsEnum_ResponseHandler(
       callback,
       "Callback must not be empty for WithErrorSyntax::ErrorAsEnum\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<
                   ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>(
@@ -2090,7 +2106,8 @@ class WithErrorSyntax_ErrorAsEnum_Responder final {
 }  // namespace
 
 zx_status_t WithErrorSyntax_Stub::Dispatch_(
-    ::fidl::Message message, ::fidl::internal::PendingResponse response) {
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type = WithErrorSyntax_RequestDecoder::GetType(
       message.ordinal(), &needs_response);
@@ -2148,7 +2165,7 @@ zx_status_t WithErrorSyntax_SyncProxy::ResponseAsStruct(
         out_result) {
   ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ResponseAsStruct_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable,
       &fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable,
@@ -2166,7 +2183,7 @@ zx_status_t WithErrorSyntax_SyncProxy::ErrorAsPrimitive(
         out_result) {
   ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestTable,
       &fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable,
@@ -2183,7 +2200,7 @@ zx_status_t WithErrorSyntax_SyncProxy::ErrorAsEnum(
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* out_result) {
   ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ErrorAsEnum_Ordinal);
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestTable,
       &fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable,

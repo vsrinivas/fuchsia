@@ -26,7 +26,7 @@ class MessageHandler {
   //
   // The memory backing the message will remain valid until this method returns,
   // at which point the memory might or might not be deallocated.
-  virtual zx_status_t OnMessage(Message message) = 0;
+  virtual zx_status_t OnMessage(HLCPPIncomingMessage message) = 0;
 
   // The channel from which the messages were being read is gone.
   //
@@ -65,13 +65,15 @@ class SingleUseMessageHandler {
   //
   // Hence we only allocate as much as the size of the capture, here a `fit::function`.
   constexpr static size_t kCallableSize =
-      sizeof(fit::function<zx_status_t(fidl::Message&& message)>);
+      sizeof(fit::function<zx_status_t(fidl::HLCPPIncomingMessage&& message)>);
 
-  template <typename Callable,
-            typename = std::enable_if_t<std::is_same<
-                typename fit::callable_traits<Callable>::return_type, zx_status_t>::value>,
-            typename = std::enable_if_t<std::is_same<typename fit::callable_traits<Callable>::args,
-                                                     fit::parameter_pack<fidl::Message&&>>::value>>
+  template <
+      typename Callable,
+      typename = std::enable_if_t<
+          std::is_same<typename fit::callable_traits<Callable>::return_type, zx_status_t>::value>,
+      typename =
+          std::enable_if_t<std::is_same<typename fit::callable_traits<Callable>::args,
+                                        fit::parameter_pack<fidl::HLCPPIncomingMessage&&>>::value>>
   constexpr explicit SingleUseMessageHandler(Callable&& target, const fidl_type_t* type) {
     static_assert(sizeof(Callable) <= kCallableSize,
                   "Callable is too big to store in a SingleUseMessageHandler");
@@ -87,7 +89,7 @@ class SingleUseMessageHandler {
   SingleUseMessageHandler(SingleUseMessageHandler&&) = delete;
   SingleUseMessageHandler& operator=(SingleUseMessageHandler&&) = delete;
 
-  zx_status_t operator()(fidl::Message message) {
+  zx_status_t operator()(fidl::HLCPPIncomingMessage message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(type_, &error_msg);
     if (status != ZX_OK) {
@@ -107,7 +109,8 @@ class SingleUseMessageHandler {
 
  private:
   template <typename Callable>
-  static zx_status_t InvokeImpl(SingleUseMessageHandler* handler, fidl::Message&& message) {
+  static zx_status_t InvokeImpl(SingleUseMessageHandler* handler,
+                                fidl::HLCPPIncomingMessage&& message) {
     auto& target = *reinterpret_cast<Callable*>(&handler->storage_);
     return target(std::move(message));
   }
@@ -119,7 +122,7 @@ class SingleUseMessageHandler {
   }
 
   typename std::aligned_storage<kCallableSize>::type storage_;
-  zx_status_t (*invoke_)(SingleUseMessageHandler* handler, fidl::Message&&) = nullptr;
+  zx_status_t (*invoke_)(SingleUseMessageHandler* handler, fidl::HLCPPIncomingMessage&&) = nullptr;
   void (*destroy_)(SingleUseMessageHandler* handler) = nullptr;
   const fidl_type_t* type_;
 };

@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/io/c/fidl.h>
-#include <test/placeholders/cpp/fidl.h>
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/channel.h>
 
 #include <gtest/gtest.h>
+#include <test/placeholders/cpp/fidl.h>
 
 TEST(ServiceDirectoryTest, Control) {
   zx::channel svc_client, svc_server;
@@ -20,7 +20,7 @@ TEST(ServiceDirectoryTest, Control) {
   EXPECT_EQ(ZX_OK, directory.Connect(echo.NewRequest()));
 
   fidl::MessageBuffer buffer;
-  auto message = buffer.CreateEmptyMessage();
+  auto message = buffer.CreateEmptyIncomingMessage();
   message.Read(svc_server.get(), 0);
 
   EXPECT_EQ(fuchsia_io_DirectoryOpenOrdinal, message.ordinal());
@@ -35,7 +35,7 @@ TEST(ServiceDirectoryTest, CreateWithRequest) {
   EXPECT_EQ(ZX_OK, directory->Connect(echo.NewRequest()));
 
   fidl::MessageBuffer buffer;
-  auto message = buffer.CreateEmptyMessage();
+  auto message = buffer.CreateEmptyIncomingMessage();
   message.Read(svc_server.get(), 0);
 
   EXPECT_EQ(fuchsia_io_DirectoryOpenOrdinal, message.ordinal());
@@ -50,7 +50,7 @@ TEST(ServiceDirectoryTest, Clone) {
   EXPECT_TRUE(directory->CloneChannel().is_valid());
 
   fidl::MessageBuffer buffer;
-  auto message = buffer.CreateEmptyMessage();
+  auto message = buffer.CreateEmptyIncomingMessage();
   message.Read(svc_server.get(), 0);
 
   EXPECT_EQ(fuchsia_io_DirectoryCloneOrdinal, message.ordinal());

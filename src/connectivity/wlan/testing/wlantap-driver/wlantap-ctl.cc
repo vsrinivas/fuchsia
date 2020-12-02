@@ -74,7 +74,7 @@ struct WlantapCtl : wlantap::WlantapCtl::Interface {
         completer.Reply(status);
         return;
       }
-      fidl::Decoder dec(fidl::Message(
+      fidl::Decoder dec(fidl::HLCPPIncomingMessage(
           ::fidl::BytePart(decoded.bytes(), decoded.byte_actual(), decoded.byte_actual()),
           fidl::HandlePart()));
       ::fuchsia::wlan::tap::WlantapPhyConfig::Decode(&dec, phy_config.get(), /* offset = */ 0);

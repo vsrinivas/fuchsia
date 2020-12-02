@@ -106,7 +106,7 @@ class {{ .RequestDecoderName }} {
   {{ .RequestDecoderName }}() = default;
   virtual ~{{ .RequestDecoderName }}() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage request) {
     bool needs_response;
     const fidl_type_t* request_type = GetType(request.ordinal(), &needs_response);
     if (request_type == nullptr) {
@@ -153,7 +153,7 @@ class {{ .ResponseDecoderName }} {
   {{ .ResponseDecoderName }}() = default;
   virtual ~{{ .ResponseDecoderName }}() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
+  zx_status_t Decode_(::fidl::HLCPPIncomingMessage response) {
     const fidl_type_t* response_type = GetType(response.ordinal());
     if (response_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -223,7 +223,7 @@ class {{ .ProxyName }} final : public ::fidl::internal::Proxy, public {{ .Name }
   explicit {{ .ProxyName }}(::fidl::internal::ProxyController* controller);
   ~{{ .ProxyName }}() override;
 
-  zx_status_t Dispatch_(::fidl::Message message) override;
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
 
   {{- range .Methods }}
     {{- if .HasRequest }}
@@ -246,7 +246,7 @@ class {{ .StubName }} final : public ::fidl::internal::Stub, public {{ .EventSen
   explicit {{ .StubName }}({{ .ClassName }}* impl);
   ~{{ .StubName }}() override;
 
-  zx_status_t Dispatch_(::fidl::Message message,
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
   {{- range .Methods }}
@@ -344,7 +344,7 @@ const fidl_type_t* {{ .ResponseDecoderName }}::GetType(uint64_t ordinal) {
 
 {{ .ProxyName }}::~{{ .ProxyName }}() = default;
 
-zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::Message message) {
+zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     {{- range .Methods }}
@@ -395,7 +395,7 @@ namespace {
   ZX_DEBUG_ASSERT_MSG(callback,
                       "Callback must not be empty for {{ $.Name }}::{{ .Name }}\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message&& message) {
+      [callback_ = std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
       {{- if .Response }}
         ::fidl::Decoder decoder(std::move(message));
       {{- end }}
@@ -462,7 +462,7 @@ class {{ .ResponderType }} final {
 }  // namespace
 
 zx_status_t {{ .StubName }}::Dispatch_(
-    ::fidl::Message message,
+    ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type = {{ .RequestDecoderName }}::GetType(message.ordinal(), &needs_response);
@@ -539,7 +539,7 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
   ::fidl::Encoder _encoder(internal::{{ .OrdinalName }});
     {{- if .HasResponse }}
   ::fidl::MessageBuffer buffer_;
-  ::fidl::Message response_ = buffer_.CreateEmptyMessage();
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(&{{ .RequestTypeName }}, &{{ .ResponseTypeName }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .Request -}}
     , &{{ $param.Name }}

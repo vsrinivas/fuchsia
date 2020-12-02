@@ -105,8 +105,9 @@ zx_status_t SendOnOpenEvent(zx_handle_t ch, OnOpenMsg msg, zx_handle_t* handles,
                             uint32_t num_handles) {
   const bool contains_nodeinfo = msg.primary.node_info.tag != fidl_xunion_tag_t(0);
   uint32_t msg_size = contains_nodeinfo ? sizeof(msg) : sizeof(msg.primary);
-  fidl::Message fidl_msg(fidl::BytePart(reinterpret_cast<uint8_t*>(&msg), msg_size, msg_size),
-                         fidl::HandlePart(handles, num_handles, num_handles));
+  fidl::HLCPPOutgoingMessage fidl_msg(
+      fidl::BytePart(reinterpret_cast<uint8_t*>(&msg), msg_size, msg_size),
+      fidl::HandlePart(handles, num_handles, num_handles));
   return fidl_msg.Write(ch, 0);
 }
 

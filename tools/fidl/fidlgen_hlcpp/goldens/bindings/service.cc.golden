@@ -61,7 +61,8 @@ SecondProtocol_Proxy::SecondProtocol_Proxy(
 
 SecondProtocol_Proxy::~SecondProtocol_Proxy() = default;
 
-zx_status_t SecondProtocol_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t SecondProtocol_Proxy::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -89,7 +90,8 @@ SecondProtocol_Stub::~SecondProtocol_Stub() = default;
 namespace {}  // namespace
 
 zx_status_t SecondProtocol_Stub::Dispatch_(
-    ::fidl::Message message, ::fidl::internal::PendingResponse response) {
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type = SecondProtocol_RequestDecoder::GetType(
       message.ordinal(), &needs_response);
@@ -181,7 +183,8 @@ FirstProtocol_Proxy::FirstProtocol_Proxy(
 
 FirstProtocol_Proxy::~FirstProtocol_Proxy() = default;
 
-zx_status_t FirstProtocol_Proxy::Dispatch_(::fidl::Message message) {
+zx_status_t FirstProtocol_Proxy::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     default: {
@@ -209,7 +212,8 @@ FirstProtocol_Stub::~FirstProtocol_Stub() = default;
 namespace {}  // namespace
 
 zx_status_t FirstProtocol_Stub::Dispatch_(
-    ::fidl::Message message, ::fidl::internal::PendingResponse response) {
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
   bool needs_response;
   const fidl_type_t* request_type =
       FirstProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
