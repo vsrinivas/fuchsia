@@ -30,9 +30,6 @@ rustc_library("vfs") {
     "//third_party/rust_crates:void",
   ]
 
-  # TODO(fxbug.dev/48539): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   with_unit_tests = true
   sources = [
     "src/common.rs",

@@ -79,6 +79,9 @@ rustc_library("lib") {
     "//third_party/rust_crates:pin-utils",
   ]
 
+  # TODO(fxbug.dev/61386): Fix the leaks and remove this
+  test_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   sources = [
     "src/accessibility.rs",
     "src/accessibility/accessibility_controller.rs",
