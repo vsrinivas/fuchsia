@@ -14,6 +14,9 @@ int __pthread_detach(pthread_t t) {
       _zx_vmar_unmap(_zx_vmar_root_self(), (uintptr_t)t->tcb_region.iov_base,
                      t->tcb_region.iov_len);
       return 0;
+    case ZX_ERR_INVALID_ARGS:
+      // The thread isn't joinable. It was already joined or detached.
+      return EINVAL;
     default:
       return ESRCH;
   }

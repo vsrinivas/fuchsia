@@ -124,6 +124,24 @@ test("posix-clocks-test") {
   ]
 }
 
+test("pthread-detach-idempotent-test") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  sources = [ "pthread_detach_idempotent.cc" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
 test("atexit-test") {
   if (is_fuchsia) {
     configs += [
@@ -149,6 +167,7 @@ group("test") {
   deps = [
     ":atexit-test-pkg",
     ":posix-clocks-test-pkg",
+    ":pthread-detach-idempotent-test-pkg",
     "noop:tests",
   ]
   foreach(case, default_stack_size_cases) {
@@ -170,4 +189,9 @@ bootfs_test("cdebugdata-test-bootfs-test") {
 fuchsia_unittest_package("posix-clocks-test-pkg") {
   executable_path = "test/posix-clocks-test"
   deps = [ ":posix-clocks-test" ]
+}
+
+fuchsia_unittest_package("pthread-detach-idempotent-test-pkg") {
+  executable_path = "test/pthread-detach-idempotent-test"
+  deps = [ ":pthread-detach-idempotent-test" ]
 }
