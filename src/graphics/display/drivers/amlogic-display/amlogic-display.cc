@@ -802,13 +802,13 @@ int AmlogicDisplay::VSyncThread() {
       break;
     }
     fbl::AutoLock lock(&display_lock_);
-    uint64_t live[] = {};
+    uint64_t live = 0;
     if (osd_) {
-      live[0] = osd_->GetLastImageApplied();
+      live = osd_->GetLastImageApplied();
     }
-    bool current_image_valid = live[0] != 0;
+    bool current_image_valid = live != 0;
     if (dc_intf_.is_valid()) {
-      dc_intf_.OnDisplayVsync(kDisplayId, timestamp.get(), live, current_image_valid);
+      dc_intf_.OnDisplayVsync(kDisplayId, timestamp.get(), &live, current_image_valid);
     }
   }
 
