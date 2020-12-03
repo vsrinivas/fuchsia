@@ -71,8 +71,8 @@ func (x ExampleBits) GetUnknownBits() uint64 {
 	return uint64(^ExampleBits_Mask & x)
 }
 
-func (x ExampleBits) InvertKnownBits() ExampleBits {
-	return (^ExampleBits_Mask & x) | (ExampleBits_Mask & ^x)
+func (x ExampleBits) InvertBits() ExampleBits {
+	return ExampleBits_Mask & ^x
 }
 
 // HasBits validates that all flipped bits in the mask are set.

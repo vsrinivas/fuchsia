@@ -33,8 +33,8 @@ func (x MyBits) GetUnknownBits() uint64 {
 	return uint64(^MyBits_Mask & x)
 }
 
-func (x MyBits) InvertKnownBits() MyBits {
-	return (^MyBits_Mask & x) | (MyBits_Mask & ^x)
+func (x MyBits) InvertBits() MyBits {
+	return MyBits_Mask & ^x
 }
 
 // HasBits validates that all flipped bits in the mask are set.
@@ -85,8 +85,8 @@ func (x StrictBits) GetUnknownBits() uint64 {
 	return uint64(^StrictBits_Mask & x)
 }
 
-func (x StrictBits) InvertKnownBits() StrictBits {
-	return (^StrictBits_Mask & x) | (StrictBits_Mask & ^x)
+func (x StrictBits) InvertBits() StrictBits {
+	return StrictBits_Mask & ^x
 }
 
 // HasBits validates that all flipped bits in the mask are set.
@@ -135,8 +135,8 @@ func (x FlexibleBits) GetUnknownBits() uint64 {
 	return uint64(^FlexibleBits_Mask & x)
 }
 
-func (x FlexibleBits) InvertKnownBits() FlexibleBits {
-	return (^FlexibleBits_Mask & x) | (FlexibleBits_Mask & ^x)
+func (x FlexibleBits) InvertBits() FlexibleBits {
+	return FlexibleBits_Mask & ^x
 }
 
 // HasBits validates that all flipped bits in the mask are set.

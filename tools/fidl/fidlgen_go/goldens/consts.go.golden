@@ -94,8 +94,8 @@ func (x BitsType) GetUnknownBits() uint64 {
 	return uint64(^BitsType_Mask & x)
 }
 
-func (x BitsType) InvertKnownBits() BitsType {
-	return (^BitsType_Mask & x) | (BitsType_Mask & ^x)
+func (x BitsType) InvertBits() BitsType {
+	return BitsType_Mask & ^x
 }
 
 // HasBits validates that all flipped bits in the mask are set.
