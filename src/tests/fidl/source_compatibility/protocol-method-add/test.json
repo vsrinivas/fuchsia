@@ -1,0 +1,92 @@
+{
+  "title": "TODO",
+  "fidl": {
+    "during": {
+      "source": "fidl/during.test.fidl"
+    },
+    "after": {
+      "source": "fidl/after.test.fidl"
+    },
+    "before": {
+      "source": "fidl/before.test.fidl"
+    }
+  },
+  "hlcpp": [
+    {
+      "fidl": "before",
+      "source": "hlcpp/before.cc"
+    },
+    {
+      "fidl": "during"
+    },
+    {
+      "source": "hlcpp/after.cc"
+    },
+    {
+      "fidl": "after"
+    }
+  ],
+  "llcpp": [
+    {
+      "fidl": "before",
+      "source": "llcpp/before.cc"
+    },
+    {
+      "fidl": "during"
+    },
+    {
+      "source": "llcpp/after.cc"
+    },
+    {
+      "fidl": "after"
+    }
+  ],
+  "rust": [
+    {
+      "fidl": "before",
+      "source": "rust/before.rs"
+    },
+    {
+      "source": "rust/during.rs"
+    },
+    {
+      "fidl": "during"
+    },
+    {
+      "fidl": "after"
+    },
+    {
+      "source": "rust/after.rs"
+    }
+  ],
+  "go": [
+    {
+      "fidl": "before",
+      "source": "go/before.go"
+    },
+    {
+      "fidl": "during"
+    },
+    {
+      "source": "go/after.go"
+    },
+    {
+      "fidl": "after"
+    }
+  ],
+  "dart": [
+    {
+      "fidl": "before",
+      "source": "dart/before.dart"
+    },
+    {
+      "fidl": "during"
+    },
+    {
+      "source": "dart/after.dart"
+    },
+    {
+      "fidl": "after"
+    }
+  ]
+}
