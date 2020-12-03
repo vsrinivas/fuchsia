@@ -580,6 +580,23 @@ Target* System::CreateNewTarget(Target* clone) {
   return CreateNewTargetImpl(static_cast<TargetImpl*>(clone));
 }
 
+Err System::DeleteTarget(Target* t) {
+  if (targets_.size() == 1)
+    return Err("Can't delete the last target.");
+  if (t->GetState() != Target::kNone)
+    return Err("Can't delete a process that's currently attached, detached, or starting.");
+
+  for (auto& observer : session()->target_observers())
+    observer.WillDestroyTarget(t);
+
+  auto found =
+      std::find_if(targets_.begin(), targets_.end(), [t](const auto& a) { return t == a.get(); });
+  FX_DCHECK(found != targets_.end());
+  targets_.erase(found);
+
+  return Err();
+}
+
 Job* System::CreateNewJob() {
   auto job = std::make_unique<Job>(session(), false);
   Job* to_return = job.get();

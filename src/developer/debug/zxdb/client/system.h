@@ -93,9 +93,13 @@ class System : public ClientObject,
   // Schedules a request for the system process tree.
   void GetProcessTree(ProcessTreeCallback callback);
 
-  // Creates a new target in this System instance. If "clone" is given, the settings from that
+  // Creates/Deletes a target in this System instance. If "clone" is given, the settings from that
   // target will be cloned into the new one. If clone is null, an empty Target will be allocated.
+  //
+  // Targets can't be deleted if they're running, and there must always be at least one target
+  // in the system. Delete will fail otherwise.
   Target* CreateNewTarget(Target* clone);
+  Err DeleteTarget(Target* t);
 
   // New jobs will have no attached job.
   Job* CreateNewJob();

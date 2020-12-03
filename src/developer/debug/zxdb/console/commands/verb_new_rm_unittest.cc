@@ -32,7 +32,7 @@ class VerbNewRmTest : public RemoteAPITest {
 
 }  // namespace
 
-TEST_F(VerbNewRmTest, NewRm) {
+TEST_F(VerbNewRmTest, FilterAndJob) {
   MockConsole console(&session());
 
   console.ProcessInputLine("attach foobar");
@@ -115,6 +115,51 @@ TEST_F(VerbNewRmTest, NewRm) {
       " # pattern job\n"
       " 2 foobar    *\n",
       event.output.AsString());
+}
+
+TEST_F(VerbNewRmTest, Process) {
+  MockConsole console(&session());
+
+  // Create process 2. It will become the current one.
+  console.ProcessInputLine("pr new");
+  auto event = console.GetOutputEvent();
+  EXPECT_EQ("Process 2 state=\"Not running\" name=\"\"", event.output.AsString());
+
+  console.ProcessInputLine("process rm");
+  event = console.GetOutputEvent();
+  EXPECT_EQ("Removed Process 2 state=\"Not running\" name=\"\"", event.output.AsString());
+
+  // The removal should have reassigned the current process to #1.
+  console.ProcessInputLine("pr");
+  event = console.GetOutputEvent();
+  EXPECT_EQ(
+      "  # State       Koid Name\n"
+      "▶ 1 Not running      \n",
+      event.output.AsString());
+
+  // Trying to delete the last one should fail.
+  console.ProcessInputLine("pr 1 rm");
+  event = console.GetOutputEvent();
+  EXPECT_EQ("Can't delete the last target.", event.output.AsString());
+}
+
+TEST_F(VerbNewRmTest, Breakpoint) {
+  MockConsole console(&session());
+
+  // Removing with no breakpoint.
+  console.ProcessInputLine("bp rm");
+  auto event = console.GetOutputEvent();
+  EXPECT_EQ("No breakpoint to remove.", event.output.AsString());
+
+  // Create a new breakpoint.
+  console.ProcessInputLine("bp new");
+  event = console.GetOutputEvent();
+  EXPECT_EQ("Breakpoint 1 pending @ <no location>\n", event.output.AsString());
+
+  // Delete it.
+  console.ProcessInputLine("breakpoint rm");
+  event = console.GetOutputEvent();
+  EXPECT_EQ("Removed Breakpoint 1 pending @ <no location>\n", event.output.AsString());
 }
 
 }  // namespace zxdb
