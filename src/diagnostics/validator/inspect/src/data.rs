@@ -1179,6 +1179,9 @@ impl From<DiagnosticsHierarchy> for Data {
                     iProperty::IntArray(n, content) => (n, content.to_generic()),
                     iProperty::UintArray(n, content) => (n, content.to_generic()),
                     iProperty::DoubleArray(n, content) => (n, content.to_generic()),
+                    iProperty::StringList(_, _) => {
+                        panic!("StringList is not supported in Inspect");
+                    }
                 };
 
                 properties.insert(prop_id, Property { name, id: prop_id, parent: id, payload });

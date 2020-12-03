@@ -280,7 +280,8 @@ property_type_getters!(
     [Bool, boolean, bool],
     [DoubleArray, double_array, ArrayContent<f64>],
     [IntArray, int_array, ArrayContent<i64>],
-    [UintArray, uint_array, ArrayContent<u64>]
+    [UintArray, uint_array, ArrayContent<u64>],
+    [StringList, string_list, Vec<String>]
 );
 
 impl<Key> TrieIterableNode<String, Property<Key>> for DiagnosticsHierarchy<Key> {
@@ -432,6 +433,9 @@ pub enum Property<Key = String> {
 
     /// The value is an unsigned integer array.
     UintArray(Key, ArrayContent<u64>),
+
+    /// The value is a list of strings.
+    StringList(Key, Vec<String>),
 }
 
 impl<K> Property<K> {
@@ -446,6 +450,7 @@ impl<K> Property<K> {
             Property::DoubleArray(k, _) => k,
             Property::IntArray(k, _) => k,
             Property::UintArray(k, _) => k,
+            Property::StringList(k, _) => k,
         }
     }
 }
@@ -464,6 +469,7 @@ impl<K> Property<K> {
             Property::Double(_, _) => "Double",
             Property::DoubleArray(_, _) => "DoubleArray",
             Property::Bool(_, _) => "Bool",
+            Property::StringList(_, _) => "StringList",
         }
     }
 }
@@ -490,6 +496,7 @@ where
             Property::DoubleArray(_, v) => pair!("{:?}", v),
             Property::IntArray(_, v) => pair!("{:?}", v),
             Property::UintArray(_, v) => pair!("{:?}", v),
+            Property::StringList(_, v) => pair!("{:?}", v),
         }
     }
 }
@@ -633,7 +640,8 @@ where
             | Property::UintArray(name, _)
             | Property::Double(name, _)
             | Property::Bool(name, _)
-            | Property::DoubleArray(name, _) => name.as_ref(),
+            | Property::DoubleArray(name, _)
+            | Property::StringList(name, _) => name.as_ref(),
         }
     }
 }
@@ -1168,6 +1176,30 @@ mod tests {
                         missing: vec![],
                     }
                 ],
+                properties: vec![],
+                missing: vec![],
+            }
+        );
+    }
+
+    #[test]
+    fn string_lists() {
+        let mut hierarchy = DiagnosticsHierarchy::new_root();
+        let prop_1 =
+            Property::StringList("x".to_string(), vec!["foo".to_string(), "bar".to_string()]);
+        let path_1 = vec!["root", "one"];
+        hierarchy.add_property(&path_1, prop_1.clone());
+
+        assert_eq!(
+            hierarchy,
+            DiagnosticsHierarchy {
+                name: "root".to_string(),
+                children: vec![DiagnosticsHierarchy {
+                    name: "one".to_string(),
+                    properties: vec![prop_1],
+                    children: vec![],
+                    missing: vec![],
+                },],
                 properties: vec![],
                 missing: vec![],
             }

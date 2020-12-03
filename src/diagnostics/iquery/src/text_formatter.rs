@@ -62,6 +62,7 @@ fn output_hierarchy(diagnostics_hierarchy: DiagnosticsHierarchy, indent: usize) 
         Property::IntArray(name, array) => output_array(&value_indent, &name, &array),
         Property::UintArray(name, array) => output_array(&value_indent, &name, &array),
         Property::DoubleArray(name, array) => output_array(&value_indent, &name, &array),
+        Property::StringList(name, list) => format!("{}{} = {:?}", value_indent, name, list),
     }));
 
     lines.extend(

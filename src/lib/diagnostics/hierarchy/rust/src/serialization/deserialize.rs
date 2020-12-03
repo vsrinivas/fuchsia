@@ -85,6 +85,7 @@ enum FieldValue<Key> {
     Array(Vec<NumericValue>),
     Histogram(Vec<Bucket<NumericValue>>),
     Node(HashMap<Key, FieldValue<Key>>),
+    StringList(Vec<String>),
 }
 
 impl<Key: Clone> IntoProperty<Key> for FieldValue<Key> {
@@ -98,6 +99,7 @@ impl<Key: Clone> IntoProperty<Key> for FieldValue<Key> {
             Self::Bool(value) => Some(Property::Bool(key.clone(), value)),
             Self::Array(values) => values.into_property(key),
             Self::Histogram(buckets) => buckets.into_property(key),
+            Self::StringList(list) => Some(Property::StringList(key.clone(), list)),
             Self::Node(_) => None,
         }
     }
@@ -216,23 +218,30 @@ where
         while let Some(elem) = seq.next_element::<SeqItem>()? {
             result.push(elem);
         }
-        // There can be two types of sequences: the histogram (containing buckets) and the regular
-        // arrays (containing numeric values). There cannot be a sequence containing a mix of them.
+        // There can be three types of sequences: the histogram
+        // (containing buckets), regular arrays (containing numeric values),
+        // and string lists (containing only strings). There cannot be a
+        // sequence containing a mix of them.
         let mut array = vec![];
         let mut histogram = vec![];
+        let mut strings = vec![];
         for item in result {
             match item {
                 SeqItem::Value(x) => array.push(x),
                 SeqItem::Bucket(x) => histogram.push(x),
+                SeqItem::StringValue(x) => strings.push(x),
             }
         }
-        if histogram.len() > 0 && array.is_empty() {
-            return Ok(FieldValue::Histogram(histogram));
+
+        match (!array.is_empty(), !histogram.is_empty(), !strings.is_empty()) {
+            (true, false, false) => Ok(FieldValue::Array(array)),
+            (false, true, false) => Ok(FieldValue::Histogram(histogram)),
+            (false, false, _) => {
+                // Numeric arrays cannot be empty, but string lists can.
+                Ok(FieldValue::StringList(strings))
+            }
+            _ => Err(de::Error::custom("unexpected sequence containing mixed values")),
         }
-        if array.len() > 0 && histogram.is_empty() {
-            return Ok(FieldValue::Array(array));
-        }
-        Err(de::Error::custom("unexpected sequence containing mixed values"))
     }
 }
 
@@ -241,6 +250,7 @@ where
 enum SeqItem {
     Value(NumericValue),
     Bucket(Bucket<NumericValue>),
+    StringValue(String),
 }
 
 enum NumericValue {
@@ -457,6 +467,11 @@ mod tests {
                 ),
                 Property::Bool("bool_true".to_string(), true),
                 Property::Bool("bool_false".to_string(), false),
+                Property::StringList(
+                    "string_list".to_string(),
+                    vec!["foo".to_string(), "bar".to_string()],
+                ),
+                Property::StringList("empty_string_list".to_string(), vec![]),
             ],
             vec![
                 DiagnosticsHierarchy::new(
@@ -524,6 +539,8 @@ mod tests {
                     2,
                     18446744073709551615
                 ],
+                \"string_list\": [\"foo\", \"bar\"],
+                \"empty_string_list\": [],
                 \"b\": {
                     \"histogram\": {
                         \"buckets\": [

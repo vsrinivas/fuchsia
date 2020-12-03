@@ -96,6 +96,9 @@ impl From<DiagnosticProperty> for MetricValue {
             | DiagnosticProperty::UintArray(_name, ArrayContent::Buckets(_)) => {
                 Self::Missing("Histograms aren't supported (yet)".to_string())
             }
+            DiagnosticProperty::StringList(_name, _list) => {
+                Self::Missing("StringLists aren't supported (yet)".to_string())
+            }
         }
     }
 }

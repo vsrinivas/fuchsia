@@ -51,6 +51,9 @@ where
                 Property::UintArray(_, array) => {
                     s.serialize_entry(name, &array)?;
                 }
+                Property::StringList(_, list) => {
+                    s.serialize_entry(name, &list)?;
+                }
             };
         }
         for child in self.hierarchy.children.iter() {
@@ -141,6 +144,11 @@ mod tests {
                 Property::UintArray("array".to_string(), ArrayContent::Values(vec![0, 2, 4])),
                 Property::Bool("bool_true".to_string(), true),
                 Property::Bool("bool_false".to_string(), false),
+                Property::StringList(
+                    "string_list".to_string(),
+                    vec!["foo".to_string(), "bar".to_string()],
+                ),
+                Property::StringList("empty_string_list".to_string(), vec![]),
             ],
             vec![
                 DiagnosticsHierarchy::new(
@@ -186,6 +194,11 @@ mod tests {
     ],
     "bool_false": false,
     "bool_true": true,
+    "empty_string_list": [],
+    "string_list": [
+      "foo",
+      "bar"
+    ],
     "a": {
       "bytes": "b64:BfGr",
       "double": 2.5,

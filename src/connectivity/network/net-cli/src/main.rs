@@ -562,7 +562,8 @@ fn visit_inspect_object(
             | Bool(_, _)
             | DoubleArray(_, _)
             | IntArray(_, _)
-            | UintArray(_, _) => continue,
+            | UintArray(_, _)
+            | StringList(_, _) => continue,
         };
         t.add_row(row![r->value, format!("{}{}", prefix, key)]);
     }
