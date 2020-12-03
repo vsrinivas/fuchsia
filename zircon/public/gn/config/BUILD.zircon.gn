@@ -908,6 +908,16 @@ config("static-libc++") {
   }
 }
 
+# Statically linked posititon independent executable.
+config("static-pie") {
+  cflags = [ "-fPIE" ]
+  defines = [ "ZX_STATIC_PIE=1" ]
+  ldflags = [
+    "-Wl,-pie",
+    "-Wl,--no-dynamic-linker",
+  ]
+}
+
 config("pure") {
   if (!is_gcc) {
     # TODO(fxbug.dev/48501): This disables the SwitchToLookupTable optimization,

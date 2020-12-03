@@ -11,7 +11,10 @@ config("strict-align") {
 source_set("phys") {
   sources = [ "start.S" ]
   include_dirs = [ "$zx/.." ]
-  deps = [ "$zx/kernel/lib/arch" ]
+  deps = [
+    "$zx/kernel/lib/arch",
+    "$zx/system/ulib/static-pie",
+  ]
 }
 
 config("zbi_executable.config") {

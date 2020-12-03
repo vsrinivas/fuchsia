@@ -88,9 +88,6 @@ template("phys_executable") {
       }
       deps = [ ":$executable_target" ]
 
-      # Make sure it's purely position-independent.
-      pure = true
-
       # Use the same variant for the extraction that will have built the
       # actual executable.
       variant_target = {

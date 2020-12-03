@@ -23,6 +23,7 @@ source_set("phys") {
     "ktl_type_traits_tests.cc",
     "popcount.cc",
     "printf_tests.cc",
+    "relocation_tests.cc",
     "string_view_tests.cc",
     "unittest_tests.cc",
   ]
@@ -84,6 +85,7 @@ if (toolchain.environment == "kernel") {
       "pow2_tests.cc",
       "preempt_disable_tests.cc",
       "relaxed_atomic_tests.cc",
+      "relocation_tests.cc",
       "resource_tests.cc",
       "sleep_tests.cc",
       "span_tests.cc",

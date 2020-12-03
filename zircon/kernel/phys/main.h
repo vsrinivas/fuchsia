@@ -10,6 +10,10 @@
 #include <lib/arch/ticks.h>
 #include <zircon/compiler.h>
 
+#if defined(ZX_STATIC_PIE)
+#include <lib/static-pie/static-pie.h>
+#endif
+
 // There's never any such object but the static analysis API requires some
 // C++ object to refer to.  The PHYS_SINGLETHREAD marker on any function
 // asserts that it is only run in the single thread rooted at PhysMain.
@@ -38,5 +42,20 @@ extern "C" [[noreturn]] void PhysMain(void*, arch::EarlyTicks) PHYS_SINGLETHREAD
 // then hand off to ZbiMain.  So ZbiMain is the main entry point that a ZBI
 // executable defines.  It can use printf (and stdout generally) freely.
 [[noreturn]] void ZbiMain(void* zbi, arch::EarlyTicks) PHYS_SINGLETHREAD;
+
+extern "C" __LOCAL const char PHYS_LOAD_ADDRESS[];  // Address this file was loaded into memory.
+
+// Apply any relocations to our binary.
+//
+// This is a no-op on binaries linked to a fixed location, but is required for
+// binaries compiled as position-independent to ensure pointers in data sections,
+// vtables, etc, are updated to their correct locations.
+inline void ApplyRelocations() {
+#if defined(ZX_STATIC_PIE)
+  // If we are position-independent, apply any simple fixups required.
+  static_pie::ApplyDynamicRelocations(static_pie::_DYNAMIC,
+                                      reinterpret_cast<uintptr_t>(PHYS_LOAD_ADDRESS));
+#endif
+}
 
 #endif  // ZIRCON_KERNEL_PHYS_MAIN_H_

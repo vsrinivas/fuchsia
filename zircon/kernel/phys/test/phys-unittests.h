@@ -13,6 +13,7 @@ bool stack_tests();
 // These are in kernel/tests.
 bool popcount_tests();
 bool printf_tests();
+bool relocation_tests();
 bool string_view_tests();
 bool unittest_tests();
 bool zbitl_tests();

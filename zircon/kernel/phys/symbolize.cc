@@ -18,7 +18,6 @@ namespace {
 
 // On x86-32, there is a fixed link-time address.
 #ifdef __i386__
-extern "C" [[gnu::weak]] const char PHYS_LOAD_ADDRESS[];
 static constexpr auto kLinkTimeAddress = PHYS_LOAD_ADDRESS;
 #else
 static constexpr uintptr_t kLinkTimeAddress = 0;

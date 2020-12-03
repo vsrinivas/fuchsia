@@ -19,6 +19,9 @@
 FILE FILE::stdout_;
 
 void PhysMain(void* zbi, arch::EarlyTicks ticks) {
+  // Apply any relocations required to ourself.
+  ApplyRelocations();
+
   // The serial console starts out as the uart::null driver that just drops
   // everything on the floor.  This is local in PhysMain rather than being
   // global so it can be nontrivally default-constructed in case that's needed.

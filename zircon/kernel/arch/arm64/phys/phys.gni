@@ -15,10 +15,15 @@ phys_configs = [
 
   # All phys executables should be small enough for the tiny code model.
   "$zx_build_config:tiny",
+
+  # Compile as a position-independent executable. The code will apply its own
+  # fixups during initialization.
+  "$zx_build_config:static-pie",
 ]
 phys_tags = [
   "strict-align",
   "tiny",
+  "static-pie",
 ]
 
 phys_exclude_variant_tags = []

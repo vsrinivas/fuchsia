@@ -30,7 +30,6 @@ if (current_toolchain == default_toolchain) {
       configs += standard_fuchsia_configs
       configs += [
         "$zx/kernel:standalone",
-        "$zx_build_config:pure",
         "$zx/kernel:warnings",
         "$zx/kernel/arch/$kernel_cpu:abi",
         ":defines",
@@ -127,6 +126,7 @@ if (current_toolchain == default_toolchain) {
       "zbi-main.cc",
     ]
     deps = [
+      ":main",
       "$zx/kernel/lib/arch",
       "$zx/kernel/lib/boot-options",
       "$zx/system/ulib/uart",
@@ -144,6 +144,13 @@ if (current_toolchain == default_toolchain) {
       # "main.h" has #include <lib/arch/ticks.h>.
       "$zx/kernel/lib/arch",
     ]
+
+    # If the toolchain is compiling a PIE executable, include required libraries.
+    if (toolchain.tags + [ "static-pie" ] - [ "static-pie" ] !=
+        toolchain.tags) {
+      # "main.h" has #include <lib/static-pie/static-pie.h>
+      public_deps += [ "$zx/system/ulib/static-pie" ]
+    }
   }
 
   # This is linked into the special-case phys_executable() tests that

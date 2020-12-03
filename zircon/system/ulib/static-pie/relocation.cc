@@ -152,16 +152,14 @@ void ApplyDynamicRelocs(Program program, fbl::Span<const Elf64DynamicEntry> tabl
   }
 }
 
-}  // namespace static_pie
-
-extern "C" void ApplyDynamicRelocations(const static_pie::Elf64DynamicEntry* dynamic_table,
-                                        uintptr_t load_address) {
+void ApplyDynamicRelocations(const Elf64DynamicEntry* dynamic_table, uintptr_t load_address) {
   // Apply relocations.
   fbl::Span<std::byte> data(reinterpret_cast<std::byte*>(load_address), SIZE_MAX);
-  static_pie::ApplyDynamicRelocs(
-      static_pie::Program{data},
-      fbl::Span<const static_pie::Elf64DynamicEntry>(dynamic_table, SIZE_MAX), load_address);
+  ApplyDynamicRelocs(Program{data}, fbl::Span<const Elf64DynamicEntry>(dynamic_table, SIZE_MAX),
+                     load_address);
 
   // Compiler barrier. Ensure stores are committed prior to return.
   std::atomic_signal_fence(std::memory_order_seq_cst);
 }
+
+}  // namespace static_pie

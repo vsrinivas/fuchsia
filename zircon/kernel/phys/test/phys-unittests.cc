@@ -19,6 +19,7 @@ const char Symbolize::kProgramName_[] = "phys-unittests";
 // into a const global with relocations.
 #define TEST_SUITES(SUITE) \
   SUITE(stack_tests)       \
+  SUITE(relocation_tests)  \
   SUITE(popcount_tests)    \
   SUITE(printf_tests)      \
   SUITE(string_view_tests) \

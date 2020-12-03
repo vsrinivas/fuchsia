@@ -14,6 +14,9 @@
 FILE FILE::stdout_;
 
 void PhysMain(void* zbi, arch::EarlyTicks ticks) {
+  // Apply any relocations required to ourself.
+  ApplyRelocations();
+
   uart::qemu::KernelDriver<> uart;
   FILE::stdout_ = FILE{&uart};
 
