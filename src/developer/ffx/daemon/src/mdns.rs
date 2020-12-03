@@ -21,7 +21,7 @@ use {
     std::collections::HashSet,
     std::fmt::Write,
     std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
-    std::sync::Arc,
+    std::sync::{Arc, Weak},
     std::time::Duration,
     zerocopy::ByteSlice,
 };
@@ -60,113 +60,103 @@ async fn interface_discovery(
     let mut should_log_v4_listen_error = true;
     let mut should_log_v6_listen_error = true;
 
-    let mut v4_listen_socket: Option<Arc<UdpSocket>> = None;
-    let mut v6_listen_socket: Option<Arc<UdpSocket>> = None;
+    let mut v4_listen_socket: Weak<UdpSocket> = Weak::new();
+    let mut v6_listen_socket: Weak<UdpSocket> = Weak::new();
 
     loop {
-        // Block holds the lock on the task map.
-        {
-            let mut tasks = socket_tasks.lock().await;
-
-            if v4_listen_socket.is_none() {
-                match make_listen_socket((MDNS_MCAST_V4, MDNS_PORT).into())
-                    .context("make_listen_socket for IPv4")
-                {
-                    Ok(sock) => {
-                        let sock = Arc::new(sock);
-                        v4_listen_socket.replace(sock.clone());
-                        tasks.insert(
-                            (MDNS_MCAST_V4, MDNS_PORT).into(),
-                            task::spawn(recv_loop(sock.clone(), e.clone())),
+        if v4_listen_socket.upgrade().is_none() {
+            match make_listen_socket((MDNS_MCAST_V4, MDNS_PORT).into())
+                .context("make_listen_socket for IPv4")
+            {
+                Ok(sock) => {
+                    let sock = Arc::new(sock);
+                    v4_listen_socket = Arc::downgrade(&sock);
+                    task::spawn(recv_loop(sock, e.clone()));
+                    should_log_v4_listen_error = true;
+                }
+                Err(err) => {
+                    if should_log_v4_listen_error {
+                        log::error!(
+                            "unable to bind IPv4 listen socket: {}. Discovery may fail.",
+                            err
                         );
-                        should_log_v4_listen_error = true;
-                    }
-                    Err(err) => {
-                        if should_log_v4_listen_error {
-                            log::error!(
-                                "mdns: unable to bind IPv4 listen socket: {}. Discovery may fail.",
-                                err
-                            );
-                            should_log_v4_listen_error = false;
-                        }
+                        should_log_v4_listen_error = false;
                     }
                 }
             }
+        }
 
-            if v6_listen_socket.is_none() {
-                match make_listen_socket((MDNS_MCAST_V6, MDNS_PORT).into())
-                    .context("make_listen_socket for IPv6")
-                {
-                    Ok(sock) => {
-                        let sock = Arc::new(sock);
-                        v6_listen_socket.replace(sock.clone());
-                        tasks.insert(
-                            (MDNS_MCAST_V6, MDNS_PORT).into(),
-                            task::spawn(recv_loop(sock.clone(), e.clone())),
+        if v6_listen_socket.upgrade().is_none() {
+            match make_listen_socket((MDNS_MCAST_V6, MDNS_PORT).into())
+                .context("make_listen_socket for IPv6")
+            {
+                Ok(sock) => {
+                    let sock = Arc::new(sock);
+                    v6_listen_socket = Arc::downgrade(&sock);
+                    task::spawn(recv_loop(sock, e.clone()));
+                    should_log_v6_listen_error = true;
+                }
+                Err(err) => {
+                    if should_log_v6_listen_error {
+                        log::error!(
+                            "unable to bind IPv6 listen socket: {}. Discovery may fail.",
+                            err
                         );
-                        should_log_v6_listen_error = true;
-                    }
-                    Err(err) => {
-                        if should_log_v6_listen_error {
-                            log::error!(
-                                "mdns: unable to bind IPv6 listen socket: {}. Discovery may fail.",
-                                err
-                            );
-                            should_log_v6_listen_error = false;
-                        }
+                        should_log_v6_listen_error = false;
                     }
                 }
             }
+        }
 
-            for iface in net::get_mcast_interfaces().unwrap_or(Vec::new()) {
-                let maybe_id = iface.id();
-                // Note: further below we only map over this result, and don't log repeatedly.
-                match maybe_id.as_ref() {
-                    Ok(id) => {
-                        if let Some(ref sock) = v6_listen_socket {
-                            let _ = sock.join_multicast_v6(&MDNS_MCAST_V6, *id);
-                        }
+        for iface in net::get_mcast_interfaces().unwrap_or(Vec::new()) {
+            match iface.id() {
+                Ok(id) => {
+                    if let Some(sock) = v6_listen_socket.upgrade() {
+                        let _ = sock.join_multicast_v6(&MDNS_MCAST_V6, id);
                     }
-                    Err(err) => {
-                        log::warn!("{}", err);
+                }
+                Err(err) => {
+                    log::warn!("{}", err);
+                }
+            }
+
+            for addr in iface.addrs.iter() {
+                let mut addr = addr.clone();
+                addr.set_port(MDNS_PORT);
+
+                // TODO(raggi): remove duplicate joins, log unexpected errors
+                if let SocketAddr::V4(addr) = addr {
+                    if let Some(sock) = v4_listen_socket.upgrade() {
+                        let _ = sock.join_multicast_v4(MDNS_MCAST_V4, *addr.ip());
                     }
                 }
 
-                for addr in iface.addrs.iter() {
-                    // TODO(raggi): remove duplicate joins, log unexpected errors
-                    if let SocketAddr::V4(addr) = addr {
-                        if let Some(ref sock) = v4_listen_socket {
-                            let _ = sock.join_multicast_v4(MDNS_MCAST_V4, *addr.ip());
+                if socket_tasks.lock().await.get(&addr).is_some() {
+                    continue;
+                }
+
+                let sock = iface
+                    .id()
+                    .map(|id| match make_sender_socket(id, addr.clone(), ttl) {
+                        Ok(sock) => Some(sock),
+                        Err(err) => {
+                            log::info!("mdns: failed to bind {}: {}", &addr, err);
+                            None
                         }
-                    }
+                    })
+                    .ok()
+                    .flatten();
 
-                    if tasks.get(addr).is_some() {
-                        continue;
-                    }
-
-                    log::debug!("mdns: discovered new interface addr: {}: {}", iface.name, addr);
-
-                    maybe_id.iter().next().map(|id| {
-                        let mut saddr = addr.clone();
-                        saddr.set_port(MDNS_PORT);
-                        let sock = match make_sender_socket(*id, saddr, ttl) {
-                            Ok(sock) => sock,
-                            Err(err) => {
-                                log::info!("mdns: failed to bind {}: {}", addr, err);
-                                return;
-                            }
-                        };
-
-                        tasks.insert(
-                            addr.clone(),
-                            task::spawn(query_recv_loop(
-                                Arc::new(sock),
-                                e.clone(),
-                                query_interval,
-                                socket_tasks.clone(),
-                            )),
-                        );
-                    });
+                if sock.is_some() {
+                    socket_tasks.lock().await.insert(
+                        addr.clone(),
+                        task::spawn(query_recv_loop(
+                            Arc::new(sock.unwrap()),
+                            e.clone(),
+                            query_interval,
+                            socket_tasks.clone(),
+                        )),
+                    );
                 }
             }
         }
@@ -185,7 +175,10 @@ async fn recv_loop(sock: Arc<UdpSocket>, e: events::Queue<events::DaemonEvent>) 
                 buf = &mut buf[..sz];
                 addr
             }
-            _ => continue,
+            Err(err) => {
+                log::info!("listen socket recv error: {}, mdns listener closed", err);
+                return;
+            }
         };
 
         let msg = match buf.parse::<dns::Message<_>>() {
@@ -222,7 +215,7 @@ lazy_static::lazy_static! {
             dns::DomainBuilder::from_str("_fuchsia._udp.local").unwrap(),
             dns::Type::Ptr,
             dns::Class::In,
-            false,
+            true,
         );
 
         let mut message = dns::MessageBuilder::new(0, true);
@@ -247,7 +240,7 @@ async fn query_loop(sock: Arc<UdpSocket>, interval: Duration) {
 
     loop {
         if let Err(err) = sock.send_to(&QUERY_BUF, to_addr).await {
-            log::info!("mdns query failed: {:?}", err);
+            log::info!("mdns query failed: {}", err);
             return;
         }
 
@@ -266,11 +259,6 @@ async fn query_recv_loop(
     let mut recv = recv_loop(sock.clone(), e).boxed().fuse();
     let mut query = query_loop(sock.clone(), interval).boxed().fuse();
 
-    let _ = futures::select!(
-        _ = recv => {},
-        _ = query => {},
-    );
-
     let addr = match sock.local_addr() {
         Ok(addr) => addr,
         Err(err) => {
@@ -279,8 +267,18 @@ async fn query_recv_loop(
         }
     };
 
-    tasks.lock().await.remove(&addr).map(|t| t.cancel());
-    log::info!("mdns: shut down query socket {}", addr);
+    log::info!("mdns: started query socket {}", &addr);
+
+    let _ = futures::select!(
+        _ = recv => {},
+        _ = query => {},
+    );
+
+    drop(recv);
+    drop(query);
+
+    tasks.lock().await.remove(&addr).map(drop);
+    log::info!("mdns: shut down query socket {}", &addr);
 }
 
 // TODO(fxbug.dev/44855): This needs to be e2e tested.

@@ -108,6 +108,30 @@ fn is_local_multicast_addr(addr: &InterfaceAddress) -> bool {
     inet_addr.ip().to_std().is_local_addr()
 }
 
+#[cfg(target_os = "macos")]
+fn is_not_apple_touchbar(addr: &InterfaceAddress) -> bool {
+    // TOUCHBAR is the link-local IPv6 address used by the Apple Touchbar
+    // interface on some MacBooks. This interface is always "up", declares
+    // MULTICAST routable, and always configured with the same
+    // link-local address.
+    // Despite this, the interface never has a valid multicast route, and so
+    // it is desirable to exclude it.
+    const TOUCHBAR: IpAddr =
+        IpAddr::V6(Ipv6Addr::new(0xfe80, 0, 0, 0, 0xaede, 0x48ff, 0xfe00, 0x1122));
+
+    let inet_addr = match addr.address {
+        Some(SockAddr::Inet(inet)) => inet,
+        _ => return true,
+    };
+
+    inet_addr.ip().to_std() != TOUCHBAR
+}
+
+#[cfg(not(target_os = "macos"))]
+fn is_not_apple_touchbar(_addr: &InterfaceAddress) -> bool {
+    true
+}
+
 // ifaddr_to_socketaddr returns Some(std::net::SocketAddr) if ifaddr contains an inet addr, none otherwise.
 fn ifaddr_to_socketaddr(ifaddr: InterfaceAddress) -> Option<std::net::SocketAddr> {
     match ifaddr.address {
@@ -123,6 +147,7 @@ fn select_mcast_interfaces(
     iter: &mut dyn Iterator<Item = InterfaceAddress>,
 ) -> Vec<McastInterface> {
     iter.filter(is_local_multicast_addr)
+        .filter(is_not_apple_touchbar)
         .sorted_by_key(|ifaddr| ifaddr.interface_name.to_string())
         .group_by(|ifaddr| ifaddr.interface_name.to_string())
         .into_iter()
@@ -166,6 +191,9 @@ mod tests {
         // Assert that we find each interface and address from a raw getifaddrs call in the set of returned interfaces.
         for exiface in getifaddrs().unwrap() {
             if !is_local_multicast_addr(&exiface) {
+                continue;
+            }
+            if !is_not_apple_touchbar(&exiface) {
                 continue;
             }
             assert!(interfaces.iter().find(|iface| iface.name == exiface.interface_name).is_some());
@@ -328,5 +356,33 @@ mod tests {
         for addr in not_local_addresses {
             assert!(!&addr.is_local_addr());
         }
+    }
+
+    #[test]
+    fn test_is_not_apple_touchbar() {
+        let not_touchbar = InterfaceAddress {
+            interface_name: "not-touchbar".to_string(),
+            flags: InterfaceFlags::IFF_UP | InterfaceFlags::IFF_MULTICAST,
+            address: Some(sockaddr("[fe80::2]:1234")),
+            netmask: Some(sockaddr("255.255.255.0:0")),
+            broadcast: None,
+            destination: None,
+        };
+
+        let touchbar = InterfaceAddress {
+            interface_name: "touchbar".to_string(),
+            flags: InterfaceFlags::IFF_UP | InterfaceFlags::IFF_MULTICAST,
+            address: Some(sockaddr("[fe80::aede:48ff:fe00:1122]:1234")),
+            netmask: Some(sockaddr("255.255.255.0:0")),
+            broadcast: None,
+            destination: None,
+        };
+
+        assert!(is_not_apple_touchbar(&not_touchbar));
+
+        #[cfg(target_os = "macos")]
+        assert!(!is_not_apple_touchbar(&touchbar));
+        #[cfg(not(target_os = "macos"))]
+        assert!(is_not_apple_touchbar(&touchbar));
     }
 }

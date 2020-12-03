@@ -11,7 +11,7 @@ pub(crate) const DEFAULT_SOCKET: &str = "/tmp/ascendd";
 #[cfg(test)]
 pub(crate) const DEFAULT_SOCKET: &str = "/tmp/ascendd_for_testing_only";
 
-pub(crate) const MDNS_BROADCAST_INTERVAL_SECS: u64 = 120;
+pub(crate) const MDNS_BROADCAST_INTERVAL_SECS: u64 = 20;
 
 // How many seconds to give before dropping an MDNS target and marking it
 // as disconnected.
