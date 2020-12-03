@@ -11,53 +11,90 @@
 #include <zircon/boot/image.h>
 #include <zircon/status.h>
 
-#include "decompressor.h"
 #include "util.h"
 
 namespace {
 
 constexpr const char kBootfsVmoName[] = "uncompressed-bootfs";
+constexpr const char kScratchVmoName[] = "bootfs-decompression-scratch";
 
-zx::vmo DecompressBootfs(const zx::debuglog& log, const zx::vmar& vmar_self, const zx::vmo& zbi_vmo,
-                         uint64_t payload_offset, uint32_t payload_size,
-                         uint32_t uncompressed_size) {
-  zx::vmo bootfs_vmo;
-  zx_status_t status = zx::vmo::create(uncompressed_size, 0, &bootfs_vmo);
-  check(log, status, "cannot create BOOTFS VMO (%u bytes)", uncompressed_size);
-  status = zbi_decompress(log, vmar_self, zbi_vmo, payload_offset, payload_size, bootfs_vmo, 0,
-                          uncompressed_size);
-  check(log, status, "failed to decompress BOOTFS");
-  printl(log, "decompressed BOOTFS to VMO!\n");
-  return bootfs_vmo;
-}
+// This is used as the zbitl::View::CopyStorageItem callback to allocate
+// scratch memory used by decompression.
+class ScratchAllocator {
+ public:
+  class Holder {
+   public:
+    Holder() = delete;
+    Holder(const Holder&) = delete;
+    Holder& operator=(const Holder&) = delete;
 
-zx::vmo ExtractBootfs(const zx::debuglog& log, const zx::vmar& vmar_self, const zx::vmo& zbi_vmo,
-                      uint64_t payload_offset, uint32_t payload_size) {
-  zx::vmo bootfs_vmo;
+    // Unlike the default move constructor and move assignment operators, these
+    // ensure that exactly one destructor cleans up the mapping.
 
-  if (payload_offset % ZX_PAGE_SIZE == 0) {
-    zx_status_t status =
-        zbi_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, payload_offset, payload_size, &bootfs_vmo);
-    check(log, status, "zx_vmo_create_child failed for BOOTFS");
-    printl(log, "cloned uncompressed BOOTFS to VMO!\n");
-    return bootfs_vmo;
+    Holder(Holder&& other) {
+      *this = std::move(other);
+      ZX_ASSERT(*vmar_);
+      ZX_ASSERT(*log_);
+    }
+
+    Holder& operator=(Holder&& other) {
+      std::swap(vmar_, other.vmar_);
+      std::swap(log_, other.log_);
+      std::swap(mapping_, other.mapping_);
+      std::swap(size_, other.size_);
+      ZX_ASSERT(*vmar_);
+      ZX_ASSERT(*log_);
+      return *this;
+    }
+
+    Holder(const zx::vmar& vmar, const zx::debuglog& log, size_t size)
+        : vmar_(vmar), log_(log), size_(size) {
+      ZX_ASSERT(*vmar_);
+      ZX_ASSERT(*log_);
+      zx::vmo vmo;
+      Do(zx::vmo::create(size, 0, &vmo), "allocate");
+      Do(vmar_->map(0, vmo, 0, size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &mapping_), "map");
+      Do(vmo.set_property(ZX_PROP_NAME, kScratchVmoName, sizeof(kScratchVmoName) - 1), "name");
+    }
+
+    // zbitl::View::CopyStorageItem calls this get the scratch memory.
+    void* get() const { return reinterpret_cast<void*>(mapping_); }
+
+    ~Holder() {
+      if (mapping_ != 0) {
+        Do(vmar_->unmap(mapping_, size_), "unmap");
+      }
+    }
+
+   private:
+    void Do(zx_status_t status, const char* what) {
+      check(*log_, status, "cannot %s %zu-byte VMO for %s", what, size_, kScratchVmoName);
+      printl(*log_, "OK %s %zu-byte VMO for %s", what, size_, kScratchVmoName);
+    }
+
+    zx::unowned_vmar vmar_;
+    zx::unowned_debuglog log_;
+    uintptr_t mapping_ = 0;
+    size_t size_ = 0;
+  };
+
+  ScratchAllocator() = delete;
+
+  ScratchAllocator(const zx::vmar& vmar_self, const zx::debuglog& log)
+      : vmar_(zx::unowned_vmar{vmar_self}), log_(zx::unowned_debuglog{log}) {
+    ZX_ASSERT(*vmar_);
+    ZX_ASSERT(*log_);
   }
 
-  // The data is not aligned, so it must be copied into a new VMO.
-  zx_status_t status = zx::vmo::create(payload_size, 0, &bootfs_vmo);
-  check(log, status, "cannot create BOOTFS VMO (%u bytes)", payload_size);
-  uintptr_t bootfs_payload;
-  status = vmar_self.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, bootfs_vmo, 0, payload_size,
-                         &bootfs_payload);
-  check(log, status, "cannot map BOOTFS VMO (%u bytes)", payload_size);
-  status = zbi_vmo.read(reinterpret_cast<void*>(bootfs_payload), payload_offset, payload_size);
-  check(log, status, "cannot read BOOTFS into VMO (%u bytes)", payload_size);
-  status = vmar_self.unmap(bootfs_payload, payload_size);
-  check(log, status, "cannot unmap BOOTFS VMO (%u bytes)", payload_size);
+  // zbitl::View::CopyStorageItem calls this to allocate scratch space.
+  fitx::result<std::string_view, Holder> operator()(size_t size) const {
+    return fitx::ok(Holder{*vmar_, *log_, size});
+  }
 
-  printl(log, "copied uncompressed BOOTFS to VMO!\n");
-  return bootfs_vmo;
-}
+ private:
+  zx::unowned_vmar vmar_;
+  zx::unowned_debuglog log_;
+};
 
 }  // namespace
 
@@ -67,13 +104,29 @@ zx::vmo GetBootfsFromZbi(const zx::debuglog& log, const zx::vmar& vmar_self,
       zbitl::MapUnownedVmo{zx::unowned_vmo{zbi_vmo}, zx::unowned_vmar{vmar_self}});
 
   for (auto it = zbi.begin(); it != zbi.end(); ++it) {
-    auto [header, payload] = *it;
-    if (header->type == ZBI_TYPE_STORAGE_BOOTFS) {
-      zx::vmo bootfs_vmo =
-          (header->flags & ZBI_FLAG_STORAGE_COMPRESSED)
-              ? DecompressBootfs(log, vmar_self, zbi_vmo, payload, header->length, header->extra)
-              : ExtractBootfs(log, vmar_self, zbi_vmo, payload, header->length);
-      bootfs_vmo.set_property(ZX_PROP_NAME, kBootfsVmoName, sizeof(kBootfsVmoName) - 1);
+    if ((*it).header->type == ZBI_TYPE_STORAGE_BOOTFS) {
+      auto result = zbi.CopyStorageItem(it, ScratchAllocator{vmar_self, log});
+      if (result.is_error()) {
+        if (result.error_value().read_error) {
+          fail(log, "cannot extract BOOTFS from ZBI: %.*s: read error: %s\n",
+               static_cast<int>(result.error_value().zbi_error.size()),
+               result.error_value().zbi_error.data(),
+               zx_status_get_string(*result.error_value().read_error));
+        } else if (result.error_value().write_error) {
+          fail(log, "cannot extract BOOTFS from ZBI: %.*s: write error: %s\n",
+               static_cast<int>(result.error_value().zbi_error.size()),
+               result.error_value().zbi_error.data(),
+               zx_status_get_string(*result.error_value().write_error));
+        } else {
+          fail(log, "cannot extract BOOTFS from ZBI: %.*s\n",
+               static_cast<int>(result.error_value().zbi_error.size()),
+               result.error_value().zbi_error.data());
+        }
+      }
+
+      zx::vmo bootfs_vmo = std::move(result).value().release();
+      check(log, bootfs_vmo.set_property(ZX_PROP_NAME, kBootfsVmoName, sizeof(kBootfsVmoName) - 1),
+            "cannot set name of uncompressed BOOTFS VMO");
 
       // Signal that we've already processed this one.
       // GCC's -Wmissing-field-initializers is buggy: it should allow

@@ -131,10 +131,7 @@ if (toolchain.environment == "userboot") {
   loadable_module("userboot") {
     sources = [
       "bootfs.cc",
-      "bump_allocator.cc",
-      "decompressor.cc",
       "loader-service.cc",
-      "mapper.cc",
       "option.cc",
       "start.cc",
       "userboot-elf.cc",
@@ -142,10 +139,7 @@ if (toolchain.environment == "userboot") {
       "zbi.cc",
       "zx_panic.cc",
     ]
-    defines = [
-      "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"",
-      "ZSTD_STATIC_LINKING_ONLY",
-    ]
+    defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
     ldflags = [ "-Wl,-e,_start" ]
     libs = [ vdso_syms_ld ]
     deps = [
@@ -163,7 +157,6 @@ if (toolchain.environment == "userboot") {
       "$zx/third_party/ulib/musl/src/exit:abort",
       "$zx/third_party/ulib/musl/src/string:minimal_str",
       "$zx/third_party/ulib/musl/src/string:stdmem",
-      "$zx/third_party/ulib/zstd:zstd-decompress-standalone",
     ]
   }
 
