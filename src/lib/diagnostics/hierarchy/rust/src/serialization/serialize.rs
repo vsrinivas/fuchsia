@@ -107,9 +107,9 @@ impl<'a> Serialize for Bucket<f64> {
         let parts = [("count", self.count), ("floor", self.floor), ("upper_bound", self.upper)];
         for (entry_key, value) in parts.iter() {
             if *value == std::f64::MAX || *value == std::f64::INFINITY {
-                s.serialize_entry(entry_key, "Infinity")?;
+                s.serialize_entry(entry_key, &std::f64::MAX)?;
             } else if *value == std::f64::MIN || *value == std::f64::NEG_INFINITY {
-                s.serialize_entry(entry_key, "-Infinity")?;
+                s.serialize_entry(entry_key, &std::f64::MIN)?;
             } else {
                 s.serialize_entry(entry_key, value)?;
             }
@@ -193,7 +193,7 @@ mod tests {
         "buckets": [
           {
             "count": 1.0,
-            "floor": "-Infinity",
+            "floor": -1.7976931348623157e308,
             "upper_bound": 0.0
           },
           {
@@ -204,7 +204,7 @@ mod tests {
           {
             "count": 4.0,
             "floor": 2.0,
-            "upper_bound": "Infinity"
+            "upper_bound": 1.7976931348623157e308
           }
         ]
       }

@@ -380,19 +380,6 @@ impl<'de> Visitor<'de> for NumericValueVisitor {
     fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E> {
         Ok(NumericValue::Double(value))
     }
-
-    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        if value == "-Infinity" {
-            return Ok(NumericValue::Double(std::f64::MIN));
-        }
-        if value == "Infinity" {
-            return Ok(NumericValue::Double(std::f64::MAX));
-        }
-        Err(de::Error::invalid_value(de::Unexpected::Str(value), &"Infinity/-Infinity or a number"))
-    }
 }
 
 #[cfg(test)]
@@ -511,7 +498,7 @@ mod tests {
                         \"buckets\": [
                             {
                                 \"count\": 1.0,
-                                \"floor\": \"-Infinity\",
+                                \"floor\": -1.7976931348623157e308,
                                 \"upper_bound\": 0.0
                             },
                             {
@@ -527,7 +514,7 @@ mod tests {
                             {
                                 \"count\": 7.0,
                                 \"floor\": 8.0,
-                                \"upper_bound\": \"Infinity\"
+                                \"upper_bound\": 1.7976931348623157e308
                             }
                         ]
                     }

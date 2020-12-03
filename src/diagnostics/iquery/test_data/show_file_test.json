@@ -92,7 +92,7 @@
           "buckets": [
             {
               "count": 11.0,
-              "floor": "-Infinity",
+              "floor": -1.7976931348623157e308,
               "upper_bound": 0.0
             },
             {
@@ -113,7 +113,7 @@
             {
               "count": 15.0,
               "floor": 1.5,
-              "upper_bound": "Infinity"
+              "upper_bound": 1.7976931348623157e308
             }
           ]
         },
@@ -179,7 +179,7 @@
           "buckets": [
             {
               "count": 11.0,
-              "floor": "-Infinity",
+              "floor": -1.7976931348623157e308,
               "upper_bound": 0.0
             },
             {
@@ -200,7 +200,7 @@
             {
               "count": 0.0,
               "floor": 11.25,
-              "upper_bound": "Infinity"
+              "upper_bound": 1.7976931348623157e308
             }
           ]
         },
@@ -409,7 +409,7 @@
           "buckets": [
             {
               "count": 11.0,
-              "floor": "-Infinity",
+              "floor": -1.7976931348623157e308,
               "upper_bound": 0.0
             },
             {
@@ -430,7 +430,7 @@
             {
               "count": 15.0,
               "floor": 1.5,
-              "upper_bound": "Infinity"
+              "upper_bound": 1.7976931348623157e308
             }
           ]
         },
@@ -496,7 +496,7 @@
           "buckets": [
             {
               "count": 11.0,
-              "floor": "-Infinity",
+              "floor": -1.7976931348623157e308,
               "upper_bound": 0.0
             },
             {
@@ -517,7 +517,7 @@
             {
               "count": 0.0,
               "floor": 11.25,
-              "upper_bound": "Infinity"
+              "upper_bound": 1.7976931348623157e308
             }
           ]
         },
