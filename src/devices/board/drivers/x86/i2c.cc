@@ -137,6 +137,11 @@ zx_status_t I2cBusPublishMetadata(zx_device_t* dev, uint8_t pci_bus_num, uint64_
                                        i2c_bus_info)) {
                   return AE_OK;
                 }
+              } else if (!strcmp(info->HardwareId.String, ALC5514_HID_STRING)) {
+                if (!AddDeviveProperty(new_dev, PDEV_VID_REALTEK, PDEV_DID_ALC5514, *info,
+                                       i2c_bus_info)) {
+                  return AE_OK;
+                }
               } else if (!strcmp(info->HardwareId.String, MAX98927_HID_STRING)) {
                 if (!AddDeviveProperty(new_dev, PDEV_VID_MAXIM, PDEV_DID_MAXIM_MAX98927, *info,
                                        i2c_bus_info)) {

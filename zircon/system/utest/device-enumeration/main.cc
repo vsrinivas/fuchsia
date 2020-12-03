@@ -125,6 +125,8 @@ fbl::String GetTestFilter() {
     return "*Vs680Evk*";
   } else if (!strcmp(board_name, "luis")) {
     return "*Luis*";
+  } else if (!strcmp(board_name, "Eve")) {
+    return "*Eve*";
   } else if (!strcmp(board_name, "Standard PC (Q35 + ICH9, 2009)")) {
     // QEMU and AEMU with emulated Q35 boards have this board name.
     return "*QemuX64Q35*";
@@ -560,6 +562,20 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
       // USB ethernet; Can be RNDIS or CDC based on build config. Update this after fxbug.dev/58584
       // is fixed.
       "dwc2/dwc2/usb-peripheral/function-000",
+  };
+
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+}
+
+TEST_F(DeviceEnumerationTest, EveTest) {
+  static const char* kDevicePaths[] = {
+      "sys/pci/00:1f.3/intel-hda-000/output-stream-001",     // Controller headphones/speakers.
+      "sys/pci/00:1f.3/intel-hda-000/output-stream-003",     // Controller headphones/speakers.
+      "sys/pci/00:1f.3/intel-hda-000/input-stream-002",      // Controller mics.
+      "sys/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-57/max98927",  // Codec left speaker.
+      "sys/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-58/max98927",  // Codec right speaker.
+      "sys/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-19/alc5663",   // Codec headphones.
+      "sys/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-87/alc5514",   // Codec mics.
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

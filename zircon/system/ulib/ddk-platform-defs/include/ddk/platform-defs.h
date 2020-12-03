@@ -182,6 +182,7 @@ __BEGIN_CDECLS
 #define PDEV_VID_REALTEK            0x0B
 #define PDEV_PID_RTL8211F           0x01
 #define PDEV_DID_ALC5663            0x01
+#define PDEV_DID_ALC5514            0x02
 
 // Designware
 #define PDEV_VID_DESIGNWARE         0x0C
