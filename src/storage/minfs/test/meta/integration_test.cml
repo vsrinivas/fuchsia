@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "test/minfs-dirty-cache-integration",
     },
@@ -19,7 +20,6 @@
         { runner: "gtest_runner" },
         {
             protocol: [
-                "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
                 "fuchsia.sys.Launcher",
             ],

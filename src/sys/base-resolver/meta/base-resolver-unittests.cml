@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/base_resolver_bin_test",
     },
@@ -12,7 +13,6 @@
     use: [
         // Use test runner which will expose `fuchsia.test.Suite` on test's behalf.
         { runner: "rust_test_runner" },
-        { protocol: "fuchsia.logger.LogSink" },
     ],
     expose: [
         // The Test Runner Framework expects this protocol to be exposed
