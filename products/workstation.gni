@@ -33,6 +33,8 @@ cache_package_labels += [
   "//src/experiences/bin/simple_browser:web_engine_config",
   "//src/experiences/session_shells/ermine",
   "//src/experiences/session_shells/ermine/session:session_config",
+  "//src/media/playback/bundles:services",
+  "//src/media/playback/bundles:audio_consumer_config",
   "//src/session",
 ]
 
