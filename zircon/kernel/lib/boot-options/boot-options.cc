@@ -60,7 +60,8 @@ std::optional<int64_t> BootOptions::ParseInt(std::string_view value) {
             return false;
         }
       }
-      result = result_value * neg;
+      mul_overflow(result_value, neg, &result_value);
+      result = result_value;  // Finally set the result.
       return true;
     }
     return false;

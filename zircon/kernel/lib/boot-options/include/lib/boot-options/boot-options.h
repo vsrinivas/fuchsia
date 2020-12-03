@@ -66,6 +66,9 @@ struct BootOptions {
 
   // This modifies the string in place even though it's const.
   static void Redact(std::string_view string) {
+    if (string.empty()) {
+      return;
+    }
     constexpr char kRedacted = 'x';
     char* begin = const_cast<char*>(&string[0]);
     char* end = begin + string.size();
