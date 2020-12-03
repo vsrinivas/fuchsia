@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string.h>
+#include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
 #include <ddk/driver.h>
@@ -14,10 +15,34 @@
 
 zx_status_t mmio_buffer_init(mmio_buffer_t* buffer, zx_off_t offset, size_t size, zx_handle_t vmo,
                              uint32_t cache_policy) {
-  zx_status_t status = zx_vmo_set_cache_policy(vmo, cache_policy);
+  if (!buffer) {
+    zx_handle_close(vmo);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  // |zx_vmo_set_cache_policy| will always return an error if it encounters a
+  // VMO that has already been mapped. To enable tests where a VMO may be mapped
+  // and modified already by a test fixture we only set the cache policy of a
+  // provided VMO if the requested cache policy does not match the VMO's current
+  // cache policy.
+  zx_info_vmo_t info = {};
+  zx_status_t status = zx_object_get_info(vmo, ZX_INFO_VMO, &info, sizeof(info), NULL, NULL);
   if (status != ZX_OK) {
     zx_handle_close(vmo);
     return status;
+  }
+
+  if (info.cache_policy != cache_policy) {
+    status = zx_vmo_set_cache_policy(vmo, cache_policy);
+    if (status != ZX_OK) {
+      zx_handle_close(vmo);
+      return status;
+    }
+  }
+
+  uint64_t result = 0;
+  if (add_overflow(offset, size, &result) || result > info.size_bytes) {
+    zx_handle_close(vmo);
+    return ZX_ERR_OUT_OF_RANGE;
   }
 
   uintptr_t vaddr;

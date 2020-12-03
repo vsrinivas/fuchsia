@@ -21,9 +21,13 @@ test("ddk-unittest") {
       configs -= fdio_config
     }
   }
-  sources = [ "phys-iter-test.cc" ]
+  sources = [
+    "mmio-buffer-test.cc",
+    "phys-iter-test.cc",
+  ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
