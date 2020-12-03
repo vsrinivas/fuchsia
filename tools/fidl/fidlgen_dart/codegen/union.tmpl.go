@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package templates
+package codegen
 
-const Union = `
+const unionTmpl = `
 {{- define "UnionDeclaration" -}}
 enum {{ .TagName }} {
 {{- if .IsFlexible }}

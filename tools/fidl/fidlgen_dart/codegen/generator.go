@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package backend
+package codegen
 
 import (
 	"io"
@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/backend/ir"
-	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/backend/templates"
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
@@ -21,29 +19,29 @@ type FidlGenerator struct {
 
 func NewFidlGenerator() *FidlGenerator {
 	tmpls := template.New("DartTemplates")
-	template.Must(tmpls.Parse(templates.Bits))
-	template.Must(tmpls.Parse(templates.Const))
-	template.Must(tmpls.Parse(templates.Enum))
-	template.Must(tmpls.Parse(templates.Interface))
-	template.Must(tmpls.Parse(templates.Library))
-	template.Must(tmpls.Parse(templates.Struct))
-	template.Must(tmpls.Parse(templates.Table))
-	template.Must(tmpls.Parse(templates.Union))
+	template.Must(tmpls.Parse(bitsTmpl))
+	template.Must(tmpls.Parse(constTmpl))
+	template.Must(tmpls.Parse(enumTmpl))
+	template.Must(tmpls.Parse(protocolTmpl))
+	template.Must(tmpls.Parse(libraryTmpl))
+	template.Must(tmpls.Parse(structTmpl))
+	template.Must(tmpls.Parse(tableTmpl))
+	template.Must(tmpls.Parse(unionTmpl))
 	return &FidlGenerator{
 		tmpls: tmpls,
 	}
 }
 
-func (gen FidlGenerator) generateAsyncFile(wr io.Writer, tree ir.Root) error {
+func (gen FidlGenerator) generateAsyncFile(wr io.Writer, tree Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "GenerateAsyncFile", tree)
 }
 
-func (gen FidlGenerator) generateTestFile(wr io.Writer, tree ir.Root) error {
+func (gen FidlGenerator) generateTestFile(wr io.Writer, tree Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "GenerateTestFile", tree)
 }
 
 func writeFile(
-	generate func(io.Writer, ir.Root) error, tree ir.Root,
+	generate func(io.Writer, Root) error, tree Root,
 	outputFilename string, dartfmt string) error {
 
 	if err := os.MkdirAll(filepath.Dir(outputFilename), os.ModePerm); err != nil {
@@ -66,10 +64,10 @@ func writeFile(
 	return generatedPipe.Close()
 }
 
-func (gen FidlGenerator) GenerateAsyncFile(tree ir.Root, path string, dartfmt string) error {
+func (gen FidlGenerator) GenerateAsyncFile(tree Root, path string, dartfmt string) error {
 	return writeFile(gen.generateAsyncFile, tree, path, dartfmt)
 }
 
-func (gen FidlGenerator) GenerateTestFile(tree ir.Root, path string, dartfmt string) error {
+func (gen FidlGenerator) GenerateTestFile(tree Root, path string, dartfmt string) error {
 	return writeFile(gen.generateTestFile, tree, path, dartfmt)
 }

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package templates
+package codegen
 
-// Interface is the template for interface declarations.
-const Interface = `
+const protocolTmpl = `
 {{- define "Params" -}}
   {{- range $index, $param := . -}}
     {{- if $index }}, {{ end -}}{{ $param.Type.Decl }} {{ $param.Name }}

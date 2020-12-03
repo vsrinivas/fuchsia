@@ -11,8 +11,7 @@ import (
 	"os"
 	"path"
 
-	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/backend"
-	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/backend/ir"
+	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/codegen"
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
@@ -66,9 +65,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	tree := ir.Compile(fidl)
+	tree := codegen.Compile(fidl)
 
-	generator := backend.NewFidlGenerator()
+	generator := codegen.NewFidlGenerator()
 
 	outAsyncPath := *flags.outAsyncPath
 	if outAsyncPath != "" {

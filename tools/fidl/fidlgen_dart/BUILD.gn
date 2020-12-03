@@ -16,17 +16,17 @@ go_library("fidlgen_dart_lib") {
 
   deps = [ "//tools/fidl/lib/fidlgen" ]
   sources = [
-    "backend/generator.go",
-    "backend/ir/ir.go",
-    "backend/templates/bits.tmpl.go",
-    "backend/templates/const.tmpl.go",
-    "backend/templates/enum.tmpl.go",
-    "backend/templates/interface.tmpl.go",
-    "backend/templates/library.tmpl.go",
-    "backend/templates/struct.tmpl.go",
-    "backend/templates/table.tmpl.go",
-    "backend/templates/union.tmpl.go",
-    "fidlgen_dart.go",
+    "codegen/bits.tmpl.go",
+    "codegen/const.tmpl.go",
+    "codegen/enum.tmpl.go",
+    "codegen/generator.go",
+    "codegen/interface.tmpl.go",
+    "codegen/ir.go",
+    "codegen/library.tmpl.go",
+    "codegen/struct.tmpl.go",
+    "codegen/table.tmpl.go",
+    "codegen/union.tmpl.go",
+    "main.go",
   ]
 }
 
