@@ -1471,7 +1471,12 @@ TEST(NetStreamTest, ShutdownDuringConnect) {
 TEST(LocalhostTest, RaceLocalPeerClose) {
   fbl::unique_fd listener;
   ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
-
+#if !defined(__Fuchsia__)
+  // Make the listener non-blocking so that we can let accept system call return
+  // below when there are no acceptable connections.
+  int flags = fcntl(listener.get(), F_GETFL, 0);
+  ASSERT_EQ(fcntl(listener.get(), F_SETFL, flags | O_NONBLOCK), 0) << strerror(errno);
+#endif
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
       .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
@@ -1512,10 +1517,24 @@ TEST(LocalhostTest, RaceLocalPeerClose) {
 
       // Accept the connection and close it, adding new racing signal (operating on `close`) to
       // Netstack.
-      fbl::unique_fd local;
-      ASSERT_TRUE(local = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
-          << strerror(errno);
-      ASSERT_EQ(close(local.release()), 0) << strerror(errno);
+      int local = accept(listener.get(), nullptr, nullptr);
+      if (local < 0) {
+#if !defined(__Fuchsia__)
+        // We get EAGAIN when there are no pending acceptable connections. Though the peer connect
+        // was a blocking call, it can return before the final ACK is sent out causing the RST from
+        // linger0+close to be sent out before the final ACK. This would result in that connection
+        // to be not completed and hence not added to the acceptable queue.
+        //
+        // The above race does not currently exist on Fuchsia where the final ACK would always
+        // be sent out over lo before connect() call returns.
+        ASSERT_EQ(errno, EAGAIN)
+#else
+        FAIL()
+#endif
+        << strerror(errno);
+      } else {
+        ASSERT_EQ(close(local), 0) << strerror(errno);
+      }
     });
   }
 
