@@ -84,6 +84,9 @@ table LightSensorData {
 table Theme {
     // theme_type will be absent if no theme has been set.
     1: ThemeType theme_type;
+    // Lack of a theme mode can be represented by an absent theme_mode or a
+    // theme_mode of 0x0.
+    2: ThemeMode theme_mode;
 };
 
 enum LowLightMode {
@@ -96,10 +99,27 @@ enum LowLightMode {
     ENABLE = 2;
 };
 
+// Specifies a specific theme that should be used by the UI.
+// Any other theme information, such as guidance as to how to pick a theme,
+// should be communicated using `ThemeMode`.
 enum ThemeType {
     DEFAULT = 0;
     LIGHT = 1;
     DARK = 2;
+
     /// Product can choose a theme based on ambient cues.
+    // DEPRECATED: AUTO should be indicated using the AUTO value in
+    // ThemeMode.
+    //
+    // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=64775):
+    // Remove AUTO.
     AUTO = 3;
+};
+
+// Specifies options that pertain to selection or display of a theme in the
+// UI. If a specific theme needs to be specified, that should be done using
+// `ThemeType`.
+bits ThemeMode {
+    /// Product can choose a theme based on ambient cues.
+    AUTO = 0x01;
 };
