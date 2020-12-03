@@ -1,5 +1,4 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/appmgr",
 
