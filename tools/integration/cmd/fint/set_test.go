@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -20,10 +21,12 @@ import (
 
 type fakeSubprocessRunner struct {
 	commandsRun [][]string
+	mockStdout  []byte
 }
 
-func (r *fakeSubprocessRunner) Run(_ context.Context, cmd []string, _, _ io.Writer) error {
+func (r *fakeSubprocessRunner) Run(_ context.Context, cmd []string, stdout, _ io.Writer) error {
 	r.commandsRun = append(r.commandsRun, cmd)
+	stdout.Write(r.mockStdout)
 	return nil
 }
 
@@ -67,43 +70,57 @@ func TestRunGen(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if tc.staticSpec == nil {
-			tc.staticSpec = &fintpb.Static{}
-		}
-		runner := &fakeSubprocessRunner{}
-		platform := "mac-x64"
-		if err := runGen(ctx, runner, tc.staticSpec, &contextSpec, platform, []string{"arg1", "arg2"}); err != nil {
-			t.Fatalf("Unexpected error from runGen: %v", err)
-		}
-		if len(runner.commandsRun) != 1 {
-			t.Fatalf("Expected runGen to run one command, but it ran %d", len(runner.commandsRun))
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.staticSpec == nil {
+				tc.staticSpec = &fintpb.Static{}
+			}
+			runner := &fakeSubprocessRunner{
+				mockStdout: []byte("some stdout"),
+			}
 
-		cmd := runner.commandsRun[0]
-		if len(cmd) < 4 {
-			t.Fatalf("runGen ran wrong command: %v", cmd)
-		}
+			failureSummaryPath := filepath.Join(t.TempDir(), "gen-stdout")
+			platform := "mac-x64"
+			if err := runGen(ctx, runner, tc.staticSpec, &contextSpec, platform, []string{"arg1", "arg2"}, failureSummaryPath); err != nil {
+				t.Fatalf("Unexpected error from runGen: %v", err)
+			}
 
-		exe, subcommand, buildDir, argsOption := cmd[0], cmd[1], cmd[2], cmd[len(cmd)-1]
-		otherOptions := cmd[3 : len(cmd)-1]
-		// Intentionally flexible about the path within the checkout to the gn dir
-		// in case it's every intentionally changed.
-		expectedExePattern := regexp.MustCompile(
-			fmt.Sprintf(`^%s(/\w+)+/%s/gn$`, contextSpec.CheckoutDir, platform),
-		)
-		if !expectedExePattern.MatchString(exe) {
-			t.Errorf("runGen ran wrong GN executable: %s, expected a match of %s", exe, expectedExePattern)
-		}
-		if subcommand != "gen" {
-			t.Errorf("Expected runGen to run `gn gen`, but got `gn %s`", subcommand)
-		}
-		if buildDir != contextSpec.BuildDir {
-			t.Errorf("Expected runGen to use build dir from context (%s) but got %s", contextSpec.BuildDir, buildDir)
-		}
-		if !strings.HasPrefix(argsOption, "--args=") {
-			t.Errorf("Expected runGen to pass --args as last flag")
-		}
-		assertSubset(t, tc.expectedOptions, otherOptions, false)
+			failureSummary, err := ioutil.ReadFile(failureSummaryPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(failureSummary) != string(runner.mockStdout) {
+				t.Errorf("runGen produced the wrong failure output: %q, expected %q", failureSummary, runner.mockStdout)
+			}
+
+			if len(runner.commandsRun) != 1 {
+				t.Fatalf("Expected runGen to run one command, but it ran %d", len(runner.commandsRun))
+			}
+			cmd := runner.commandsRun[0]
+			if len(cmd) < 4 {
+				t.Fatalf("runGen ran wrong command: %v", cmd)
+			}
+
+			exe, subcommand, buildDir, argsOption := cmd[0], cmd[1], cmd[2], cmd[len(cmd)-1]
+			otherOptions := cmd[3 : len(cmd)-1]
+			// Intentionally flexible about the path within the checkout to the gn dir
+			// in case it's every intentionally changed.
+			expectedExePattern := regexp.MustCompile(
+				fmt.Sprintf(`^%s(/\w+)+/%s/gn$`, contextSpec.CheckoutDir, platform),
+			)
+			if !expectedExePattern.MatchString(exe) {
+				t.Errorf("runGen ran wrong GN executable: %s, expected a match of %s", exe, expectedExePattern)
+			}
+			if subcommand != "gen" {
+				t.Errorf("Expected runGen to run `gn gen`, but got `gn %s`", subcommand)
+			}
+			if buildDir != contextSpec.BuildDir {
+				t.Errorf("Expected runGen to use build dir from context (%s) but got %s", contextSpec.BuildDir, buildDir)
+			}
+			if !strings.HasPrefix(argsOption, "--args=") {
+				t.Errorf("Expected runGen to pass --args as last flag")
+			}
+			assertSubset(t, tc.expectedOptions, otherOptions, false)
+		})
 	}
 }
 

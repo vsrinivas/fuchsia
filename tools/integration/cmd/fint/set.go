@@ -36,8 +36,9 @@ type subprocessRunner interface {
 }
 
 type SetCommand struct {
-	staticSpecPath  string
-	contextSpecPath string
+	staticSpecPath     string
+	contextSpecPath    string
+	failureSummaryPath string
 }
 
 func (*SetCommand) Name() string { return "set" }
@@ -60,6 +61,13 @@ func (c *SetCommand) SetFlags(f *flag.FlagSet) {
 		("path to a Context .textproto file. If unset, the " +
 			fuchsiaDirEnvVar +
 			" will be used to locate the checkout."),
+	)
+	f.StringVar(
+		&c.failureSummaryPath,
+		"failure-summary",
+		"",
+		("if set, brief plain text logs that are useful for debugging in case of failures will " +
+			"be written to this file ."),
 	)
 }
 
@@ -118,7 +126,7 @@ func (c *SetCommand) run(ctx context.Context) error {
 	}
 
 	runner := &runner.SubprocessRunner{}
-	return runGen(ctx, runner, staticSpec, contextSpec, platform, genArgs)
+	return runGen(ctx, runner, staticSpec, contextSpec, platform, genArgs, c.failureSummaryPath)
 }
 
 func defaultContextSpec() (*fintpb.Context, error) {
@@ -139,6 +147,7 @@ func runGen(
 	contextSpec *fintpb.Context,
 	platform string,
 	args []string,
+	failureSummaryPath string,
 ) error {
 	gnPath := filepath.Join(contextSpec.CheckoutDir, "prebuilt", "third_party", "gn", platform, "gn")
 	genCmd := []string{
@@ -158,7 +167,23 @@ func runGen(
 
 	genCmd = append(genCmd, fmt.Sprintf("--args=%s", strings.Join(args, " ")))
 
-	if err := runner.Run(ctx, genCmd, os.Stdout, os.Stderr); err != nil {
+	// When `gn gen` fails, it outputs a brief helpful error message to stdout,
+	// so we can just use the entire gen stdout as our failure summary. We'll
+	// record it to the failure summary path even when gen succeeds, and leave
+	// it to the caller to decide what to do with it based on whether the fint
+	// command succeeds.
+	var stdout io.Writer = os.Stdout
+	if failureSummaryPath != "" {
+		file, err := osmisc.CreateFile(failureSummaryPath)
+		if err != nil {
+			return fmt.Errorf("failed to create failure summary file: %w", err)
+		}
+		defer file.Close()
+		stdout = io.MultiWriter(file, os.Stdout)
+	}
+	io.MultiWriter(os.Stdout)
+
+	if err := runner.Run(ctx, genCmd, stdout, os.Stderr); err != nil {
 		return fmt.Errorf("error running gn gen: %w", err)
 	}
 	return nil
