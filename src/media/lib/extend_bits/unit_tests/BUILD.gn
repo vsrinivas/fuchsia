@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+group("unit_tests") {
+  testonly = true
+  deps = [ ":extend-bits-tests" ]
+}
+
+executable("extend_bits_tests") {
+  testonly = true
+  sources = [ "extend_bits_tests.cc" ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+  public_deps = [ "//src/media/lib/extend_bits" ]
+}
+
+fuchsia_unittest_package("extend-bits-tests") {
+  executable_path = "bin/extend_bits_tests"
+  deps = [ ":extend_bits_tests" ]
+}

@@ -21,6 +21,7 @@
 #include "third_party/libvpx/vp9/common/vp9_loopfilter.h"
 #include "third_party/vp9_adapt_probs/vp9_coefficient_adaptation.h"
 #include "util.h"
+#include "vp9_configuration.h"
 #include "vp9_utils.h"
 #include "watchdog.h"
 
@@ -1448,7 +1449,9 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     current_mpred_buffer_ = std::make_unique<MpredBuffer>();
     // The largest coding unit is assumed to be 64x32.
     constexpr uint32_t kLcuMvBytes = 0x240;
-    constexpr uint32_t kLcuCount = 4096 * 2048 / (64 * 32);
+    // Round up 1080 to 1088 and 2160 to 2176 so that all dimensions are divisible by 64, in case of
+    // decoding a portrait mode video.
+    constexpr uint32_t kLcuCount = kUseLessRam ? 1920 * 1088 / (64 * 32) : 4096 * 2176 / (64 * 32);
     uint64_t rounded_up_size =
         fbl::round_up(kLcuCount * kLcuMvBytes, static_cast<uint64_t>(PAGE_SIZE));
     auto internal_buffer = InternalBuffer::CreateAligned(

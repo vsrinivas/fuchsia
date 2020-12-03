@@ -15,6 +15,7 @@
 #include "hevcdec.h"
 #include "pts_manager.h"
 #include "src/media/lib/memory_barriers/memory_barriers.h"
+#include "vp9_configuration.h"
 #include "vp9_decoder.h"
 #include "vp9_utils.h"
 
@@ -68,11 +69,30 @@ unsigned char new_stream_ivf[] = {
     0x00, 0x30, 0x60, 0x00, 0x00, 0x13, 0xbf, 0xff, 0xfd, 0x15, 0x62, 0x00, 0x00, 0x00};
 unsigned int new_stream_ivf_len = 74;
 constexpr uint32_t kHeaderSkipBytes = 32 + 12;  // Skip IVF headers.
-constexpr uint32_t kFlushThroughBytes = 16384;
 constexpr uint32_t kEndOfStreamWidth = 42;
 constexpr uint32_t kEndOfStreamHeight = 52;
 
-constexpr uint32_t kStreamBufferSize = 4 * 1024 * 1024;
+constexpr uint32_t kFlushThroughBytes = 16384;
+
+template <typename T>
+constexpr T AlignUpConstexpr(T value, T divisor) {
+  return (value + divisor - 1) / divisor * divisor;
+}
+
+// This is set based on a buffer size setting in Chromium.  If Chromium can't deliver more data per
+// packet than this, then there's not much point in allowing larger input buffers, or using the RAM
+// to support larger input buffers.  This isn't to say that I necessarily think this size is safe,
+// but since we don't have any rigorous max size for a VP9 superframe, pretty much no size we pick
+// will necessarily be safe for _all_ streams.  This might be a little smaller than I'm comfortable
+// with but it does save some RAM.
+constexpr uint32_t kLittleInputPerPacketBufferBytesMin = 1920 * 1080 * 3 / 2 / 2 + 128 * 1024;
+// The HW requires a full frame to be present in the stream buffer at a time, and we want to limit
+// the size of the stream buffer also, so force the input buffer size.
+constexpr uint32_t kLittleInputPerPacketBufferBytesMax = kLittleInputPerPacketBufferBytesMin;
+
+constexpr uint32_t kLittleStreamBufferSize =
+    AlignUpConstexpr(kLittleInputPerPacketBufferBytesMax + kFlushThroughBytes + 8,
+                     static_cast<uint32_t>(ZX_PAGE_SIZE));
 
 // For now, force the input buffer size to be exactly 1/2 VDEC so that exactly two buffers barely
 // fit in VDEC.  The HW requires a VP9 superframe to be in a single buffer.  At this size we can be
@@ -80,12 +100,18 @@ constexpr uint32_t kStreamBufferSize = 4 * 1024 * 1024;
 // of it.  But even if we used all of VDEC instead of 1/2 of VDEC, we could still not be certain of
 // that.  By using 1/2 of VDEC for each of 2 buffers, we get performance benefits over using all of
 // VDEC for 1 buffer.
-constexpr uint32_t kInputPerPacketBufferBytesMin = 1024 * 1024 * 775 / 100 / 2;
-// The max is allowed to be up a size that consumes most of the stream buffer, but not all of the
-// stream buffer.  We might be able to subtract less than ZX_PAGE_SIZE here, but we do need to leave
-// room for kFlushThroughBytes.
+constexpr uint32_t kBigInputPerPacketBufferBytesMin = 1024 * 1024 * 775 / 100 / 2;
+constexpr uint32_t kBigInputPerPacketBufferBytesMax = kBigInputPerPacketBufferBytesMin;
+
+constexpr uint32_t kBigStreamBufferSize = AlignUpConstexpr(
+    kBigInputPerPacketBufferBytesMax + kFlushThroughBytes + 8, static_cast<uint32_t>(ZX_PAGE_SIZE));
+
+constexpr uint32_t kInputPerPacketBufferBytesMin =
+    kUseLessRam ? kLittleInputPerPacketBufferBytesMin : kBigInputPerPacketBufferBytesMin;
 constexpr uint32_t kInputPerPacketBufferBytesMax =
-    kStreamBufferSize - kFlushThroughBytes - ZX_PAGE_SIZE;
+    kUseLessRam ? kLittleInputPerPacketBufferBytesMax : kBigInputPerPacketBufferBytesMax;
+constexpr uint32_t kStreamBufferSize = kUseLessRam ? kLittleStreamBufferSize : kBigStreamBufferSize;
+static_assert(kStreamBufferSize % ZX_PAGE_SIZE == 0);
 
 constexpr uint32_t kInputBufferCountForCodecMin = 1;
 constexpr uint32_t kInputBufferCountForCodecMax = 64;
