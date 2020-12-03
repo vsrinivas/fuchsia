@@ -31,7 +31,7 @@ use log::debug;
 use parking_lot::Mutex;
 use push_source::{PushSource, TestUpdateAlgorithm, Update};
 use std::sync::Arc;
-use test_util::{assert_geq, assert_leq};
+use test_util::{assert_geq, assert_leq, assert_lt};
 use time_metrics_registry::{
     RealTimeClockEventsMetricDimensionEventType as RtcEventType,
     TimeMetricDimensionExperiment as Experiment, TimeMetricDimensionTrack as Track,
@@ -332,6 +332,9 @@ lazy_static! {
     );
 }
 
+/// Time between each reported sample.
+const BETWEEN_SAMPLES: zx::Duration = zx::Duration::from_seconds(5);
+
 /// The standard deviation to report on valid time samples.
 const STD_DEV: zx::Duration = zx::Duration::from_millis(50);
 
@@ -623,4 +626,56 @@ fn test_start_clock_from_rtc() {
             );
         },
     );
+}
+
+#[test]
+fn test_slew_clock() {
+    // Constants for controlling the duration of the slew we want to induce. These constants
+    // are intended to tune the test to avoid flakes and do not necessarily need to match up with
+    // those in timekeeper.
+    const SLEW_DURATION: zx::Duration = zx::Duration::from_minutes(90);
+    const NOMINAL_SLEW_PPM: i64 = 20;
+    let error_for_slew = SLEW_DURATION * NOMINAL_SLEW_PPM / 1_000_000;
+
+    let clock = new_clock();
+    timekeeper_test(Arc::clone(&clock), None, |mut push_source_controller, _, _| async move {
+        // Let the first sample be slightly in the past so later samples are not in the future.
+        let sample_1_monotonic = zx::Time::get_monotonic() - BETWEEN_SAMPLES;
+        let sample_1_utc = *VALID_TIME;
+        push_source_controller
+            .set_sample(TimeSample {
+                utc: Some(sample_1_utc.into_nanos()),
+                monotonic: Some(sample_1_monotonic.into_nanos()),
+                standard_deviation: Some(STD_DEV.into_nanos()),
+                ..TimeSample::empty()
+            })
+            .await;
+
+        // After the first sample, the clock is started, and running at the same rate as
+        // the reference.
+        fasync::OnSignals::new(&*clock, zx::Signals::CLOCK_STARTED).await.unwrap();
+        let clock_rate = clock.get_details().unwrap().mono_to_synthetic.rate;
+        assert_eq!(clock_rate.reference_ticks, clock_rate.synthetic_ticks);
+        let last_generation_counter = clock.get_details().unwrap().generation_counter;
+
+        // Push a second sample that indicates UTC running slightly behind monotonic.
+        let sample_2_monotonic = sample_1_monotonic + BETWEEN_SAMPLES;
+        let sample_2_utc = sample_1_utc + BETWEEN_SAMPLES - error_for_slew * 2;
+        push_source_controller
+            .set_sample(TimeSample {
+                utc: Some(sample_2_utc.into_nanos()),
+                monotonic: Some(sample_2_monotonic.into_nanos()),
+                standard_deviation: Some(STD_DEV.into_nanos()),
+                ..TimeSample::empty()
+            })
+            .await;
+
+        // After the second sample, the clock is running slightly slower than the reference.
+        wait_until(|| clock.get_details().unwrap().generation_counter != last_generation_counter)
+            .await;
+        let slew_rate = clock.get_details().unwrap().mono_to_synthetic.rate;
+        assert_lt!(slew_rate.synthetic_ticks, slew_rate.reference_ticks);
+
+        // TODO(fxbug.dev/65239) - verify that the slew completes.
+    });
 }
