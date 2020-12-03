@@ -338,7 +338,6 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 			// Reachable when ResolveIP times out because no error is returned.
 			// Invoke `threads` over serial if possible to dump process state to logs.
 			// Invokes the command twice to identify hanging processes.
-			socketPath := os.Getenv(constants.SerialSocketEnvKey)
 			if conn, err := net.Dial("unix", socketPath); err != nil {
 				logger.Errorf(ctx, "failed to open serial socket %s to invoke threads: %s", socketPath, err)
 			} else {
