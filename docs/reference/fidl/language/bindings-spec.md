@@ -109,6 +109,13 @@ mask of all values. In pseudo code:
 
 This mask value is provided in the [JSON IR][jsonir] for convenience.
 
+In languages where operator overloading is supported, such as C++, bitwise
+negation MUST be implemented by overloading the built in operator in a manner
+that always unsets the unknown members of the bitfield.  In languages that do
+not support operator overloading, such as Go, values SHOULD provide an
+`InvertBits()` method (cased in the manner most appropriate for the language)
+for executing the masked inversion.
+
 Bindings SHOULD NOT support other operators since they could result in invalid
 bits value (or risk a non-obvious translation of their meaning), e.g.:
 
