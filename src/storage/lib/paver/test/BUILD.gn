@@ -42,6 +42,7 @@ test("test") {
     "//src/devices/lib/amlogic",
     "//src/firmware/lib/abr",
     "//src/storage/lib/paver",
+    "//src/storage/lib/utils:topological_path",
     "//zircon/public/lib/async",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",

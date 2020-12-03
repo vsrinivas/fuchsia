@@ -37,12 +37,12 @@
 #include <fbl/auto_call.h>
 #include <fs-management/launch.h>
 #include <fs-management/mount.h>
-#include <fs/test_support/test_support.h>
 #include <fvm/format.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
 #include "src/storage/blobfs/test/integration/fdio_test.h"
+#include "src/storage/lib/utils/topological_path.h"
 
 namespace blobfs {
 namespace {
@@ -1142,7 +1142,8 @@ TEST_P(BlobfsIntegrationTest, QueryDevicePath) {
   ASSERT_FALSE(path.empty());
 
   // TODO(fxbug.dev/63405): The NULL terminator probably shouldn't be here.
-  ASSERT_EQ(fs::GetTopologicalPath(fs().DevicePath().value()) + std::string(1, '\0'), path);
+  ASSERT_EQ(storage::GetTopologicalPath(fs().DevicePath().value()).value() + std::string(1, '\0'),
+            path);
   printf("device_path %s\n", fs().DevicePath()->c_str());
 
   root_fd.reset(open(fs().mount_path().c_str(), O_RDONLY));

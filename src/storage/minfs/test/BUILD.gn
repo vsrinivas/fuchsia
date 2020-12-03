@@ -84,7 +84,6 @@ test("minfs-integration") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",
-    "//zircon/system/ulib/fs/test/posix:posix_tests",
     "//zircon/system/ulib/fvm",
   ]
 }

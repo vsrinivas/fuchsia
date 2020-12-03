@@ -76,9 +76,6 @@ class SkipBlockDevice {
   fzl::VmoMapper mapper_;
 };
 
-// Returns the relative topological path for a test device's channel.
-std::string GetTopologicalPath(const zx::channel& channel);
-
 // Dummy DevicePartition implementation meant to be used for testing. All functions are no-ops, i.e.
 // they silently pass without doing anything. Tests can inherit from this class and override
 // functions that are relevant for their test cases; this class provides an easy way to inherit from

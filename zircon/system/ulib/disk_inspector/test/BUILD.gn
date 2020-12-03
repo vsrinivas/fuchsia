@@ -46,7 +46,6 @@ test("disk_inspector_unit") {
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/disk_inspector",
-    "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
   ]

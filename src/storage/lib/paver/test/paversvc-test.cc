@@ -42,6 +42,7 @@
 #include "src/storage/lib/paver/paver.h"
 #include "src/storage/lib/paver/test/test-utils.h"
 #include "src/storage/lib/paver/utils.h"
+#include "src/storage/lib/utils/topological_path.h"
 
 namespace {
 
@@ -1630,7 +1631,7 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   EXPECT_BYTES_EQ(fvm_magic, buffer, sizeof(fvm_magic));
 
   zx::channel channel = std::move(result->result.mutable_response().volume);
-  std::string path = GetTopologicalPath(channel);
+  std::string path = storage::GetTopologicalPath(channel).value().substr(5);  // strip "/dev/"
   ASSERT_FALSE(path.empty());
 
   std::string blob_path = path + "/blobfs-p-1/block";

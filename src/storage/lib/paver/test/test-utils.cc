@@ -91,25 +91,6 @@ void SkipBlockDevice::Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
   device->reset(new SkipBlockDevice(std::move(ctl), *std::move(ram_nand), std::move(mapper)));
 }
 
-std::string GetTopologicalPath(const zx::channel& channel) {
-  std::string path;
-  auto result =
-      llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(zx::unowned_channel(channel));
-  if (!result.ok() || result->result.is_err()) {
-    return path;
-  }
-
-  auto& raw_path = result->result.response().path;
-
-  constexpr char kDevRoot[] = "/dev/";
-  if (strncmp(raw_path.data(), kDevRoot, strlen(kDevRoot)) != 0) {
-    return path;
-  }
-
-  path.assign(raw_path.data() + strlen(kDevRoot), raw_path.size() - strlen(kDevRoot));
-  return path;
-}
-
 FakePartitionClient::FakePartitionClient(size_t block_count, size_t block_size)
     : block_size_(block_size) {
   partition_size_ = block_count * block_size;

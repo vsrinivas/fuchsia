@@ -137,7 +137,6 @@ group("tests") {
   deps = [
     "journal:tests",
     "test:tests",
-    "test_support:tests",
     "transaction:tests",
   ]
 }

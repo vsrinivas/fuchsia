@@ -65,7 +65,6 @@ test("factoryfs_unit") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fs-test-utils",
-    "//zircon/system/ulib/fs/test_support",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
   ]

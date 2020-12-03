@@ -14,12 +14,12 @@
 #include <thread>
 #include <vector>
 
-#include <fs/test_support/test_support.h>
 #include <fvm/format.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
+#include "src/storage/lib/utils/topological_path.h"
 
 namespace blobfs {
 namespace {
@@ -77,7 +77,8 @@ class QueryServiceTest : public BlobfsWithFvmTest {
     ASSERT_EQ(std::string(info.name().data(), info.name().size()), expected_fs_name)
         << "Unexpected filesystem mounted";
 
-    const std::string expected_device_path = fs::GetTopologicalPath(fs().DevicePath().value());
+    const std::string expected_device_path =
+        storage::GetTopologicalPath(fs().DevicePath().value()).value();
     ASSERT_EQ(expected_device_path.size(), info.device_path().size());
     ASSERT_EQ(std::string(info.device_path().data(), info.device_path().size()),
               expected_device_path)
