@@ -4,6 +4,8 @@
 
 #include "minfs-costs.h"
 
+#include <gtest/gtest.h>
+
 // We try to manually count number of IOs issued and number of bytes transferred
 // during common fs operations.
 // We reduce our dependency on files outside this file so that any breaking
@@ -51,7 +53,7 @@ uint64_t MinfsProperties::FsBytesToBlocks(uint64_t bytes) const {
 
 // Update total_calls and bytes_transferrd stats.
 void MinfsProperties::AddIoStats(uint64_t total_calls, uint64_t blocks_transferred,
-                                 fuchsia_storage_metrics_CallStat* out) const {
+                                 llcpp::fuchsia::storage::metrics::CallStat* out) const {
   out->success.total_calls += total_calls;
   out->success.bytes_transferred += FsBlockToBytes(blocks_transferred);
 }
@@ -199,7 +201,7 @@ void MinfsProperties::AddWriteCost(uint64_t start_offset, uint64_t bytes_per_wri
                                    BlockFidlMetrics* out) const {
   // Only writing less than a block at offset 0 is supported at the moment.
   EXPECT_LE(bytes_per_write, superblock_.block_size);
-  EXPECT_EQ(start_offset, 0);
+  EXPECT_EQ(start_offset, 0u);
   // A write would involve (not in that order)
   // 1. Allocating a block
   // 2. Updating inode to point to block

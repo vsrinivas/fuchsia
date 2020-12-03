@@ -24,40 +24,42 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
-#include <fs-test-utils/fixture.h>
-#include <fs/test_support/environment.h>
+#include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
-#include <zxtest/zxtest.h>
 
+#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
 
+namespace minfs {
 namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 
 template <bool repairable>
-class MountTestTemplate : public zxtest::Test {
+class MountTestTemplate : public testing::Test {
  public:
   void SetUp() final {
-    ASSERT_EQ(ramdisk_create_at(fs::g_environment->devfs_root().get(), 512, 1 << 16, &ramdisk_),
-              ZX_OK);
-    ramdisk_path_ = std::string("/fake/dev/") + ramdisk_get_path(ramdisk_);
-    ASSERT_OK(
-        mkfs(ramdisk_path_.c_str(), DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options));
+    ramdisk_ =
+        isolated_devmgr::RamDisk::Create(/*block_size=*/512, /*block_count=*/1 << 16).value();
 
-    int ramdisk_block_fd = ramdisk_get_block_fd(ramdisk_);
+    ramdisk_path_ = ramdisk_->path();
+    ASSERT_EQ(
+        mkfs(ramdisk_path_.c_str(), DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
+        0);
+
+    int ramdisk_block_fd = ramdisk_get_block_fd(ramdisk_->client());
     zx::channel block_channel;
-    ASSERT_OK(fdio_fd_clone(ramdisk_block_fd, block_channel.reset_and_get_address()));
+    ASSERT_EQ(fdio_fd_clone(ramdisk_block_fd, block_channel.reset_and_get_address()), ZX_OK);
     std::unique_ptr<block_client::RemoteBlockDevice> device;
-    ASSERT_OK(block_client::RemoteBlockDevice::Create(std::move(block_channel), &device));
+    ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(block_channel), &device), ZX_OK);
     bool readonly_device = false;
-    ASSERT_OK(minfs::CreateBcache(std::move(device), &readonly_device, &bcache_));
+    ASSERT_EQ(minfs::CreateBcache(std::move(device), &readonly_device, &bcache_), ZX_OK);
     ASSERT_FALSE(readonly_device);
 
-    ASSERT_OK(zx::channel::create(0, &root_client_end_, &root_server_end_));
-    ASSERT_OK(loop_.StartThread("minfs test dispatcher"));
+    ASSERT_EQ(zx::channel::create(0, &root_client_end_, &root_server_end_), ZX_OK);
+    ASSERT_EQ(loop_.StartThread("minfs test dispatcher"), ZX_OK);
   }
 
   void ReadSuperblock(minfs::Superblock* out) {
@@ -65,7 +67,7 @@ class MountTestTemplate : public zxtest::Test {
     EXPECT_TRUE(fd);
 
     EXPECT_EQ(pread(fd.get(), out, sizeof(*out), minfs::kSuperblockStart * minfs::kMinfsBlockSize),
-              sizeof(*out));
+              static_cast<ssize_t>(sizeof(*out)));
   }
 
   void Unmount() {
@@ -75,17 +77,15 @@ class MountTestTemplate : public zxtest::Test {
     // Unmount the filesystem, thereby terminating the minfs instance.
     // TODO(fxbug.dev/34531): After deprecating the DirectoryAdmin interface, switch to unmount
     // using the admin service found within the export directory.
-    EXPECT_OK(fio::DirectoryAdmin::Call::Unmount(zx::unowned_channel(root_client_end())).status());
+    EXPECT_EQ(fio::DirectoryAdmin::Call::Unmount(zx::unowned_channel(root_client_end())).status(),
+              ZX_OK);
     unmounted_ = true;
   }
 
-  void TearDown() final {
-    Unmount();
-    ASSERT_OK(ramdisk_destroy(ramdisk_));
-  }
+  void TearDown() final { Unmount(); }
 
  protected:
-  ramdisk_client_t* ramdisk() const { return ramdisk_; }
+  ramdisk_client_t* ramdisk() const { return ramdisk_->client(); }
 
   const char* ramdisk_path() const { return ramdisk_path_.c_str(); }
 
@@ -113,7 +113,7 @@ class MountTestTemplate : public zxtest::Test {
   fbl::unique_fd clone_root_as_fd() {
     zx::channel clone_client_end = clone_root_client_end();
     fbl::unique_fd root_fd;
-    EXPECT_OK(fdio_fd_create(clone_client_end.release(), root_fd.reset_and_get_address()));
+    EXPECT_EQ(fdio_fd_create(clone_client_end.release(), root_fd.reset_and_get_address()), ZX_OK);
     EXPECT_TRUE(root_fd.is_valid());
     return root_fd;
   }
@@ -130,28 +130,28 @@ class MountTestTemplate : public zxtest::Test {
 
  private:
   bool unmounted_ = false;
-  ramdisk_client_t* ramdisk_ = nullptr;
+  std::optional<isolated_devmgr::RamDisk> ramdisk_;
   std::string ramdisk_path_;
   std::unique_ptr<minfs::Bcache> bcache_ = nullptr;
-  zx::channel root_client_end_ = {};
-  zx::channel root_server_end_ = {};
+  zx::channel root_client_end_;
+  zx::channel root_server_end_;
   async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 };
 
 using MountTest = MountTestTemplate<false>;
 
 TEST_F(MountTest, ServeDataRootCheckInode) {
-  ASSERT_OK(MountAndServe(minfs::ServeLayout::kDataRootOnly));
+  ASSERT_EQ(MountAndServe(minfs::ServeLayout::kDataRootOnly), ZX_OK);
 
   // Verify that |root_client_end| corresponds to the root of the filesystem.
   auto attr_result = fio::Node::Call::GetAttr(zx::unowned_channel(root_client_end()));
-  ASSERT_OK(attr_result.status());
-  ASSERT_OK(attr_result->s);
+  ASSERT_EQ(attr_result.status(), ZX_OK);
+  ASSERT_EQ(attr_result->s, ZX_OK);
   EXPECT_EQ(attr_result->attributes.id, minfs::kMinfsRootIno);
 }
 
 TEST_F(MountTest, ServeDataRootAllowFileCreationInRoot) {
-  ASSERT_OK(MountAndServe(minfs::ServeLayout::kDataRootOnly));
+  ASSERT_EQ(MountAndServe(minfs::ServeLayout::kDataRootOnly), ZX_OK);
 
   // Adding a file is allowed here...
   fbl::unique_fd root_fd = clone_root_as_fd();
@@ -163,7 +163,7 @@ TEST_F(MountTest, ServeDataRootAllowFileCreationInRoot) {
 }
 
 TEST_F(MountTest, ServeExportDirectoryExportRootDirectoryEntries) {
-  ASSERT_OK(MountAndServe(minfs::ServeLayout::kExportDirectory));
+  ASSERT_EQ(MountAndServe(minfs::ServeLayout::kExportDirectory), ZX_OK);
   fbl::unique_fd root_fd = clone_root_as_fd();
   ASSERT_TRUE(root_fd.is_valid());
 
@@ -172,7 +172,7 @@ TEST_F(MountTest, ServeExportDirectoryExportRootDirectoryEntries) {
   fbl::unique_fd dir_fd(dup(root_fd.get()));
   ASSERT_TRUE(dir_fd.is_valid());
   DIR* dir = fdopendir(dir_fd.get());
-  ASSERT_NOT_NULL(dir);
+  ASSERT_NE(dir, nullptr);
   dir_fd.release();
   fbl::AutoCall close_dir([&]() { closedir(dir); });
   int count = 0;
@@ -180,7 +180,7 @@ TEST_F(MountTest, ServeExportDirectoryExportRootDirectoryEntries) {
   // TODO(fxbug.dev/34531): Adjust this test accordingly when the admin service is added.
   while ((entry = readdir(dir)) != nullptr) {
     if ((strcmp(entry->d_name, ".") != 0) && (strcmp(entry->d_name, "..") != 0)) {
-      EXPECT_STR_EQ(entry->d_name, "root");
+      EXPECT_EQ(entry->d_name, std::string_view("root"));
       EXPECT_EQ(entry->d_type, DT_DIR);
       EXPECT_EQ(count, 0);
       count++;
@@ -190,7 +190,7 @@ TEST_F(MountTest, ServeExportDirectoryExportRootDirectoryEntries) {
 }
 
 TEST_F(MountTest, ServeExportDirectoryDisallowFileCreationInExportRoot) {
-  ASSERT_OK(MountAndServe(minfs::ServeLayout::kExportDirectory));
+  ASSERT_EQ(MountAndServe(minfs::ServeLayout::kExportDirectory), ZX_OK);
   fbl::unique_fd root_fd = clone_root_as_fd();
   ASSERT_TRUE(root_fd.is_valid());
 
@@ -200,7 +200,7 @@ TEST_F(MountTest, ServeExportDirectoryDisallowFileCreationInExportRoot) {
 }
 
 TEST_F(MountTest, ServeExportDirectoryAllowFileCreationInDataRoot) {
-  ASSERT_OK(MountAndServe(minfs::ServeLayout::kExportDirectory));
+  ASSERT_EQ(MountAndServe(minfs::ServeLayout::kExportDirectory), ZX_OK);
   fbl::unique_fd root_fd = clone_root_as_fd();
   ASSERT_TRUE(root_fd.is_valid());
 
@@ -218,24 +218,24 @@ TEST_F(RepairableMountTest, SyncDuringMount) {
   minfs::Superblock info;
   ReadSuperblock(&info);
   ASSERT_EQ(minfs::kMinfsFlagClean & info.flags, minfs::kMinfsFlagClean);
-  ASSERT_OK(MountAndServe(minfs::ServeLayout::kExportDirectory));
+  ASSERT_EQ(MountAndServe(minfs::ServeLayout::kExportDirectory), ZX_OK);
 
   // Reading raw device after mount should get us superblock with clean bit
   // unset.
   ReadSuperblock(&info);
-  ASSERT_EQ(minfs::kMinfsFlagClean & info.flags, 0);
+  ASSERT_EQ(minfs::kMinfsFlagClean & info.flags, 0u);
 }
 
 // After successful unmount, superblock's clean bit should be set and persisted
 // to the disk. Reading superblock from raw disk should return set clean bit.
 TEST_F(RepairableMountTest, SyncDuringUnmount) {
   minfs::Superblock info;
-  ASSERT_OK(MountAndServe(minfs::ServeLayout::kExportDirectory));
+  ASSERT_EQ(MountAndServe(minfs::ServeLayout::kExportDirectory), ZX_OK);
 
   // Reading raw device after mount should get us superblock with clean bit
   // unset.
   ReadSuperblock(&info);
-  ASSERT_EQ(minfs::kMinfsFlagClean & info.flags, 0);
+  ASSERT_EQ(minfs::kMinfsFlagClean & info.flags, 0u);
   Unmount();
 
   // Reading raw device after unmount should get us superblock with clean bit
@@ -245,3 +245,4 @@ TEST_F(RepairableMountTest, SyncDuringUnmount) {
 }
 
 }  // namespace
+}  // namespace minfs

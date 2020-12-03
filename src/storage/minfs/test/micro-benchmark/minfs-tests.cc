@@ -31,42 +31,52 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
-#include <fs-test-utils/fixture.h>
+#include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 #include <storage-metrics/block-metrics.h>
 #include <storage-metrics/fs-metrics.h>
-#include <zxtest/zxtest.h>
 
-#include "block-device-utils.h"
-#include "minfs-costs.h"
+#include "src/storage/fs_test/fs_test_fixture.h"
 #include "src/storage/minfs/format.h"
+#include "src/storage/minfs/test/micro-benchmark/block-device-utils.h"
+#include "src/storage/minfs/test/micro-benchmark/minfs-costs.h"
 
 namespace minfs_micro_benchmanrk {
 namespace {
 
 using MinfsFidlMetrics = fuchsia_minfs_Metrics;
 
-template <typename FsPropertiesType, const FsPropertiesType* fs_properties>
-class MinfsMicroBenchmarkFixture : public zxtest::Test {
+template <const MinfsProperties& fs_properties>
+class MinfsMicroBenchmarkFixture : public fs_test::BaseFilesystemTest {
  public:
+  static fs_test::TestFilesystemOptions GetOptionsFromProperties(
+      const MinfsProperties& properties) {
+    fs_test::TestFilesystemOptions options = fs_test::TestFilesystemOptions::MinfsWithoutFvm();
+    options.device_block_size = properties.DeviceSizes().block_size;
+    options.device_block_count = properties.DeviceSizes().block_count;
+    return options;
+  }
+
+  MinfsMicroBenchmarkFixture()
+      : fs_test::BaseFilesystemTest(GetOptionsFromProperties(fs_properties)) {}
+
   enum Reset {
     kReset,    // Resets(clears) stats after getting the stats.
     kNoReset,  // Leaves stats unchanged  after getting the stats.
   };
   // Retrieves metrics for the block device at device_. Clears metrics if clear is true.
   void GetBlockMetrics(Reset reset, BlockFidlMetrics* out_stats) const {
-    fbl::unique_fd fd(open(device_->Path(), O_RDONLY));
+    fbl::unique_fd fd(open(fs().DevicePath().value().c_str(), O_RDONLY));
     ASSERT_TRUE(fd);
 
     fdio_cpp::FdioCaller caller(std::move(fd));
-    zx_status_t status;
-    zx_status_t io_status = fuchsia_hardware_block_BlockGetStats(
-        caller.borrow_channel(), reset == Reset::kReset, &status, out_stats);
-    ASSERT_OK(io_status);
-    ASSERT_OK(status);
+    auto result = llcpp::fuchsia::hardware::block::Block::Call::GetStats(caller.channel(),
+                                                                         reset == Reset::kReset);
+    ASSERT_EQ(result.status(), ZX_OK);
+    *out_stats = *result->stats;
   }
 
-  const FsPropertiesType& FsProperties() const { return properties_; }
+  const MinfsProperties& FsProperties() const { return properties_; }
 
   void CompareAndDump(const BlockFidlMetrics& computed) {
     BlockFidlMetrics from_device;
@@ -145,7 +155,7 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
   }
 
   void WriteAndCompare(int fd, int bytes_per_write, int write_count) {
-    EXPECT_LE(bytes_per_write, minfs::kMinfsBlockSize);
+    EXPECT_LE(bytes_per_write, static_cast<int>(minfs::kMinfsBlockSize));
     BlockFidlMetrics computed = {}, unused_;
     Sync();
     // Clear block metrics
@@ -153,7 +163,7 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
 
     uint8_t ch[bytes_per_write];
     for (int i = 0; i < write_count; i++) {
-      EXPECT_EQ(write(fd, ch, sizeof(ch)), sizeof(ch));
+      EXPECT_EQ(write(fd, ch, sizeof(ch)), static_cast<ssize_t>(sizeof(ch)));
     }
     FsProperties().AddWriteCost(0, bytes_per_write, write_count, &computed);
 
@@ -167,10 +177,7 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
   void Sync() { EXPECT_EQ(fsync(root_fd_.get()), 0); }
 
  protected:
-  void SetUp() override {
-    device_.reset(new BlockDevice(properties_.DeviceSizes()));
-    SetUpFs();
-  }
+  void SetUp() override { SetUpFs(); }
 
   void TearDown() override { UnmountAndCompareBlockMetrics(); }
 
@@ -184,82 +191,65 @@ class MinfsMicroBenchmarkFixture : public zxtest::Test {
   // Creates a filesystem and mounts it. Clears block metrics after creating the
   // filesystem but before mounting it.
   void SetUpFs() {
-    auto path = device_->Path();
-    ASSERT_OK(mkfs(path, properties_.DiskFormat(), launch_stdio_sync, &properties_.MkfsOptions()));
+    ASSERT_EQ(fs().Unmount().status_value(), ZX_OK);
 
-    umount(properties_.MountPath());
-    unlink(properties_.MountPath());
-    EXPECT_EQ(mkdir(properties_.MountPath(), 0666), 0);
-    device_fd_.reset(open(path, O_RDWR));
-    EXPECT_GT(device_fd_.get(), 0);
-
-    uint8_t superblock_block[minfs::kMinfsBlockSize];
+    minfs::Superblock superblock;
     // We are done with mkfs and are ready to mount the filesystem. Keep a copy
     // of formatted superblock.
-    EXPECT_EQ(minfs::kMinfsBlockSize,
-              read(device_->BlockFd(), superblock_block, minfs::kMinfsBlockSize));
-    properties_.SetSuperblock(*reinterpret_cast<const minfs::Superblock*>(superblock_block));
-    fsync(device_fd_.get());
+    fbl::unique_fd fd(open(fs().DevicePath().value().c_str(), O_RDONLY));
+    EXPECT_EQ(read(fd.get(), &superblock, sizeof(superblock)),
+              static_cast<ssize_t>(sizeof(superblock)));
+    properties_.SetSuperblock(superblock);
 
     // Clear block metrics after mkfs and verify that they are cleared.
     BlockFidlMetrics metrics;
     GetBlockMetrics(Reset::kReset, &metrics);
     GetBlockMetrics(Reset::kNoReset, &metrics);
-    EXPECT_EQ(metrics.read.success.total_calls, 0);
-    EXPECT_EQ(metrics.read.failure.total_calls, 0);
-    EXPECT_EQ(metrics.flush.success.total_calls, 0);
-    EXPECT_EQ(metrics.flush.failure.total_calls, 0);
-    EXPECT_EQ(metrics.write.success.total_calls, 0);
-    EXPECT_EQ(metrics.write.failure.total_calls, 0);
-    EXPECT_EQ(metrics.read.success.bytes_transferred, 0);
-    EXPECT_EQ(metrics.read.failure.bytes_transferred, 0);
-    EXPECT_EQ(metrics.write.success.bytes_transferred, 0);
-    EXPECT_EQ(metrics.write.failure.bytes_transferred, 0);
-    EXPECT_EQ(metrics.flush.success.bytes_transferred, 0);
-    EXPECT_EQ(metrics.flush.failure.bytes_transferred, 0);
+    EXPECT_EQ(metrics.read.success.total_calls, 0ul);
+    EXPECT_EQ(metrics.read.failure.total_calls, 0ul);
+    EXPECT_EQ(metrics.flush.success.total_calls, 0ul);
+    EXPECT_EQ(metrics.flush.failure.total_calls, 0ul);
+    EXPECT_EQ(metrics.write.success.total_calls, 0ul);
+    EXPECT_EQ(metrics.write.failure.total_calls, 0ul);
+    EXPECT_EQ(metrics.read.success.bytes_transferred, 0ul);
+    EXPECT_EQ(metrics.read.failure.bytes_transferred, 0ul);
+    EXPECT_EQ(metrics.write.success.bytes_transferred, 0ul);
+    EXPECT_EQ(metrics.write.failure.bytes_transferred, 0ul);
+    EXPECT_EQ(metrics.flush.success.bytes_transferred, 0ul);
+    EXPECT_EQ(metrics.flush.failure.bytes_transferred, 0ul);
 
-    const mount_options_t options = GetMountOptions();
-    EXPECT_EQ(mount(device_fd_.get(), properties_.MountPath(), properties_.DiskFormat(), &options,
-                    launch_stdio_async),
-              0);
-
-    root_fd_.reset(open(properties_.MountPath(), O_RDONLY));
-    EXPECT_GT(root_fd_.get(), 0);
-
+    EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
     mounted_ = true;
+    root_fd_ = fbl::unique_fd(open(fs().mount_path().c_str(), O_RDONLY | O_DIRECTORY));
+    ASSERT_TRUE(root_fd_);
   }
 
   bool Mounted() const { return mounted_; }
 
   void TearDownFs() {
     if (Mounted()) {
-      EXPECT_OK(umount(properties_.MountPath()));
-      EXPECT_OK(unlink(properties_.MountPath()));
+      EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
       mounted_ = false;
     }
   }
 
-  FsPropertiesType properties_ = *fs_properties;
-  std::unique_ptr<BlockDevice> device_ = {};
-  fbl::unique_fd device_fd_;
-  fbl::unique_fd root_fd_;
+  MinfsProperties properties_ = fs_properties;
   bool mounted_ = false;
+  fbl::unique_fd root_fd_;
 };
 
 constexpr BlockDeviceSizes kDefaultBlockDeviceSizes = {8192, 1 << 13};
 
-constexpr const char kDefaultMinfsMountPath[] = "/memfs/minfs_micro_benchmark_test";
 constexpr const minfs::Superblock kMinfsZeroedSuperblock = {};
 constexpr const mkfs_options_t kMinfsDefaultMkfsOptions = {
     .fvm_data_slices = 1,
     .verbose = false,
 };
 
-const MinfsProperties kDefaultMinfsProperties(kDefaultBlockDeviceSizes, DISK_FORMAT_MINFS,
-                                              kMinfsDefaultMkfsOptions, kMinfsZeroedSuperblock,
-                                              kDefaultMinfsMountPath);
+constexpr MinfsProperties kDefaultMinfsProperties(kDefaultBlockDeviceSizes, DISK_FORMAT_MINFS,
+                                                  kMinfsDefaultMkfsOptions, kMinfsZeroedSuperblock);
 
-using MinfsMicroBenchmark = MinfsMicroBenchmarkFixture<MinfsProperties, &kDefaultMinfsProperties>;
+using MinfsMicroBenchmark = MinfsMicroBenchmarkFixture<kDefaultMinfsProperties>;
 
 TEST_F(MinfsMicroBenchmark, MountCosts) {
   BlockFidlMetrics computed = {};
@@ -281,21 +271,18 @@ TEST_F(MinfsMicroBenchmark, SyncCosts) {
 }
 
 TEST_F(MinfsMicroBenchmark, LookUpCosts) {
-  std::string filename = FsProperties().MountPath();
-  filename.append("/file.txt");
+  std::string filename = GetPath("file.txt");
   LookUpAndCompare(filename.c_str(), true);
 }
 
 TEST_F(MinfsMicroBenchmark, CreateCosts) {
-  std::string filename = FsProperties().MountPath();
-  filename.append("/file.txt");
+  std::string filename = GetPath("file.txt");
   fbl::unique_fd unused_fd_;
   CreateAndCompare(filename.c_str(), &unused_fd_);
 }
 
 TEST_F(MinfsMicroBenchmark, WriteCosts) {
-  std::string filename = FsProperties().MountPath();
-  filename.append("/file.txt");
+  std::string filename = GetPath("file.txt");
   fbl::unique_fd fd;
   CreateAndCompare(filename.c_str(), &fd);
   // To write 1 byte, we end up writing 81920 bytes spread over 6 block device
@@ -304,8 +291,7 @@ TEST_F(MinfsMicroBenchmark, WriteCosts) {
 }
 
 TEST_F(MinfsMicroBenchmark, MultipleWritesWithinOneBlockCosts) {
-  std::string filename = FsProperties().MountPath();
-  filename.append("/file.txt");
+  std::string filename = GetPath("file.txt");
   fbl::unique_fd fd;
   CreateAndCompare(filename.c_str(), &fd);
   // To write 81 bytes spread over 9 call, we end up writing 540672 bytes spread
@@ -314,8 +300,7 @@ TEST_F(MinfsMicroBenchmark, MultipleWritesWithinOneBlockCosts) {
 }
 
 TEST_F(MinfsMicroBenchmark, SmallFileMultiBlockWriteCost) {
-  std::string filename = FsProperties().MountPath();
-  filename.append("/file.txt");
+  std::string filename = GetPath("file.txt");
   fbl::unique_fd fd;
   CreateAndCompare(filename.c_str(), &fd);
   // To write 49152 bytes spread over 6 call, we end up writing 450560 bytes spread
@@ -325,7 +310,3 @@ TEST_F(MinfsMicroBenchmark, SmallFileMultiBlockWriteCost) {
 
 }  // namespace
 }  // namespace minfs_micro_benchmanrk
-
-int main(int argc, char** argv) {
-  return fs_test_utils::RunWithMemFs([argc, argv]() { return RUN_ALL_TESTS(argc, argv); });
-}

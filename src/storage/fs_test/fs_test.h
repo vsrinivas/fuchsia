@@ -76,6 +76,7 @@ class FilesystemInstance {
   FilesystemInstance& operator=(const FilesystemInstance&) = delete;
   virtual ~FilesystemInstance() = default;
 
+  virtual zx::status<> Format(const TestFilesystemOptions&) = 0;
   virtual zx::status<> Mount(const std::string& mount_path, const mount_options_t& options) = 0;
   virtual zx::status<> Unmount(const std::string& mount_path);
   virtual zx::status<> Fsck() = 0;
@@ -114,11 +115,6 @@ class Filesystem {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
   virtual const Traits& GetTraits() const = 0;
-
- protected:
-  // A wrapper around fs-management that can be used by subclasses if they so wish.
-  static zx::status<> Format(const std::string& device_path, disk_format_t format,
-                             const mkfs_options_t& options);
 };
 
 // Template that implementations can use to gain the SharedInstance method.
@@ -129,6 +125,13 @@ class FilesystemImpl : public Filesystem {
     static const auto* const kInstance = new T();
     return *kInstance;
   }
+};
+
+template <typename T, typename Instance>
+class FilesystemImplWithDefaultMake : public FilesystemImpl<T> {
+ public:
+  zx::status<std::unique_ptr<FilesystemInstance>> Make(
+      const TestFilesystemOptions& options) const override;
 };
 
 // Support for Memfs.
@@ -204,6 +207,9 @@ class TestFilesystem {
   // called first if that is required.
   zx::status<> Fsck();
 
+  // Formats a file system instance.
+  zx::status<> Format() { return filesystem_->Format(options_); }
+
   zx::status<std::string> DevicePath() const;
 
   const Filesystem::Traits& GetTraits() const { return options_.filesystem->GetTraits(); }
@@ -220,7 +226,7 @@ class TestFilesystem {
 
   zx::status<::llcpp::fuchsia::io::FilesystemInfo> GetFsInfo();
 
-  zx::unowned_channel GetOutgoingDirectory() const { return filesystem_->GetOutgoingDirectory(); }
+  zx::unowned_channel GetOutgoingDirectory() const { return filesystem_->GetOutgoingDirectory(); };
 
  private:
   // Creates a mount point for the instance, mounts it and returns a TestFilesystem.

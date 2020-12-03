@@ -10,8 +10,10 @@
 
 namespace fs_test {
 
+class BlobfsInstance;
+
 // Support for blobfs.
-class BlobfsFilesystem : public FilesystemImpl<BlobfsFilesystem> {
+class BlobfsFilesystem : public FilesystemImplWithDefaultMake<BlobfsFilesystem, BlobfsInstance> {
  public:
   const Traits& GetTraits() const override {
     static Traits traits{
@@ -27,10 +29,6 @@ class BlobfsFilesystem : public FilesystemImpl<BlobfsFilesystem> {
     };
     return traits;
   }
-
-  // Creates a ram device and formats a new blobfs file system.
-  zx::status<std::unique_ptr<FilesystemInstance>> Make(
-      const TestFilesystemOptions& options) const override;
 
   // Opens an existing blobfs file system.  Currently, this only works with ram nand devices, not
   // ram disks.  The data is provided via the vmo provided within the options.

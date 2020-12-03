@@ -9,48 +9,50 @@
 #include <string>
 #include <vector>
 
-#include <zxtest/zxtest.h>
+#include "src/storage/fs_test/fs_test_fixture.h"
 
-#include "src/storage/minfs/test/integration/minfs_fixtures.h"
-#include "src/storage/minfs/test/integration/utils.h"
-
+namespace minfs {
 namespace {
 
-class PowerTest : public MinfsTestWithFvm {
+class PowerTest : public fs_test::BaseFilesystemTest {
  public:
-  PowerTest() : runner_(this) {}
-  void RunWithFailures(std::function<void()> function) { runner_.Run(function); }
-
- protected:
-  fs::PowerFailureRunner runner_;
+  PowerTest() : BaseFilesystemTest(fs_test::TestFilesystemOptions::DefaultMinfs()) {}
 };
 
-void RunBasics(void) {
-  ASSERT_TRUE(CreateDirectory("/alpha"));
-  ASSERT_TRUE(CreateDirectory("/alpha/bravo"));
-  ASSERT_TRUE(CreateDirectory("/alpha/bravo/charlie"));
-  ASSERT_TRUE(CreateDirectory("/alpha/bravo/charlie/delta"));
-  ASSERT_TRUE(CreateDirectory("/alpha/bravo/charlie/delta/echo"));
-  fbl::unique_fd fd1 = CreateFile("/alpha/bravo/charlie/delta/echo/foxtrot");
-  ASSERT_TRUE(fd1);
-  fbl::unique_fd fd2 = OpenFile("/alpha/bravo/charlie/delta/echo/foxtrot");
-  ASSERT_TRUE(fd2);
-  ASSERT_EQ(write(fd1.get(), "Hello, World!\n", 14), 14);
-  fd1.reset();
-  fd2.reset();
+TEST_F(PowerTest, Basics) {
+  RunSimulatedPowerCutTest(
+      fs_test::PowerCutOptions{
+          .stride = 5,  // Chosen so test does not run for too long.
+      },
+      [&] {
+        ASSERT_EQ(mkdir(GetPath("alpha").c_str(), 0755), 0);
+        ASSERT_EQ(mkdir(GetPath("alpha/bravo").c_str(), 0755), 0);
+        ASSERT_EQ(mkdir(GetPath("alpha/bravo/charlie").c_str(), 0755), 0);
+        ASSERT_EQ(mkdir(GetPath("alpha/bravo/charlie/delta").c_str(), 0755), 0);
+        ASSERT_EQ(mkdir(GetPath("alpha/bravo/charlie/delta/echo").c_str(), 0755), 0);
+        std::string file = GetPath("alpha/bravo/charlie/delta/echo/foxtrot");
+        fbl::unique_fd fd1(open(file.c_str(), O_CREAT | O_RDWR, 0666));
+        ASSERT_TRUE(fd1);
+        fbl::unique_fd fd2(open(file.c_str(), O_RDWR));
+        ASSERT_TRUE(fd2);
+        ASSERT_EQ(write(fd1.get(), "Hello, World!\n", 14), 14);
+        fd1.reset();
+        fd2.reset();
 
-  fd1 = CreateFile("/file.txt");
-  ASSERT_TRUE(fd1);
+        file = GetPath("file.txt");
+        fd1 = fbl::unique_fd(open(file.c_str(), O_CREAT | O_RDWR, 0666));
+        ASSERT_TRUE(fd1);
 
-  ASSERT_EQ(unlink(BuildPath("/file.txt").c_str()), 0);
-  ASSERT_TRUE(CreateDirectory("/emptydir"));
-  fd1 = OpenReadOnly("/emptydir");
-  ASSERT_TRUE(fd1);
+        ASSERT_EQ(unlink(file.c_str()), 0);
 
-  ASSERT_EQ(rmdir(BuildPath("/emptydir").c_str()), 0);
+        std::string dir = GetPath("emptydir");
+        ASSERT_EQ(mkdir(dir.c_str(), 0755), 0);
+        fd1 = fbl::unique_fd(open(dir.c_str(), O_RDONLY));
+        ASSERT_TRUE(fd1);
+
+        ASSERT_EQ(rmdir(dir.c_str()), 0);
+      });
 }
-
-TEST_F(PowerTest, Basics) { RunWithFailures(&RunBasics); }
 
 constexpr int kDataSize = 16 * 1024;
 void* GetData() {
@@ -62,54 +64,60 @@ void* GetData() {
   return s_data_block;
 }
 
-fbl::unique_fd CreateAndWrite(const std::string& path) {
-  fbl::unique_fd file = CreateFile(path);
-  write(file.get(), GetData(), kDataSize);
-  return file;
+TEST_F(PowerTest, DeleteAndWrite) {
+  RunSimulatedPowerCutTest(
+      fs_test::PowerCutOptions{
+          .stride = 43,  // Chosen so test does not run for too long.
+      },
+      [&] {
+        ASSERT_EQ(mkdir(GetPath("alpha").c_str(), 0755), 0);
+
+        std::vector<std::string> names = {
+            GetPath("alpha/bravo"), GetPath("alpha/charlie"), GetPath("alpha/delta"),
+            GetPath("alpha/echo"),  GetPath("alpha/foxtrot"),
+        };
+        std::vector<fbl::unique_fd> files;
+
+        for (size_t i = 0; i < 10; i++) {
+          fbl::unique_fd file(open(names[i % names.size()].c_str(), O_CREAT | O_RDWR, 0666));
+          ASSERT_TRUE(file);
+          ASSERT_EQ(write(file.get(), GetData(), kDataSize), static_cast<ssize_t>(kDataSize));
+          files.push_back(std::move(file));
+          if (i % 2) {
+            // Create a directory over a file.
+            ASSERT_EQ(unlink(names[i % names.size()].c_str()), 0);
+            ASSERT_EQ(mkdir(names[i % names.size()].c_str(), 0755), 0);
+          }
+
+          if (i < 2) {
+            continue;
+          }
+
+          // May or may nor succeed.
+          write(files[i - 1].get(), GetData(), kDataSize);
+          files[i - 2].reset();
+          unlink(names[(i - 2) % names.size()].c_str());
+        }
+      });
 }
 
-void RunDeleteAndWrite(void) {
-  CreateDirectory("/alpha");
-
-  std::vector<std::string> names = {
-      BuildPath("/alpha/bravo"), BuildPath("/alpha/charlie"), BuildPath("/alpha/delta"),
-      BuildPath("/alpha/echo"),  BuildPath("/alpha/foxtrot"),
-  };
-  std::vector<fbl::unique_fd> files;
-
-  for (size_t i = 0; i < 10; i++) {
-    files.push_back(CreateAndWrite(names[i % names.size()]));
-    ASSERT_TRUE(files[i]);
-    if (i % 2) {
-      // Create a directory over a file.
-      unlink(names[i % names.size()].c_str());
-      CreateDirectory(names[i % names.size()]);
-    }
-
-    if (i < 2) {
-      continue;
-    }
-
-    // May or may nor succeed.
-    write(files[i - 1].get(), GetData(), kDataSize);
-    files[i - 2].reset();
-    unlink(names[(i - 2) % names.size()].c_str());
-  }
+TEST_F(PowerTest, LargeWrite) {
+  RunSimulatedPowerCutTest(fs_test::PowerCutOptions({
+                               .stride = 92771,  // Chosen so test does not run for too long.
+                           }),
+                           [&] {
+                             std::string name = GetPath("the name");
+                             for (int n = 0; n < 10; n++) {
+                               fbl::unique_fd file(open(name.c_str(), O_CREAT | O_RDWR, 0666));
+                               ASSERT_TRUE(file);
+                               const int kBufferSize = 1024 * 1024 * 4;
+                               std::vector<char> buffer(kBufferSize, 'p');
+                               ASSERT_EQ(write(file.get(), buffer.data(), kBufferSize),
+                                         static_cast<ssize_t>(kBufferSize));
+                               ASSERT_EQ(unlink(name.c_str()), 0);
+                             }
+                           });
 }
-
-TEST_F(PowerTest, DeleteAndWrite) { RunWithFailures(&RunDeleteAndWrite); }
-
-void RunLargeWrite(void) {
-  for (int n = 0; n < 10; n++) {
-    fbl::unique_fd file = CreateFile("the name");
-    const int kBufferSize = 1024 * 1024 * 4;
-    std::vector<char> buffer(kBufferSize);
-    memset(buffer.data(), 'p', kBufferSize);
-    write(file.get(), buffer.data(), kBufferSize);
-    unlink("the name");
-  }
-}
-
-TEST_F(PowerTest, LargeWrite) { RunWithFailures(&RunLargeWrite); }
 
 }  // namespace
+}  // namespace minfs

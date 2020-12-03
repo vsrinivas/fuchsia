@@ -16,6 +16,14 @@
 
 namespace fs_test {
 
+struct PowerCutOptions {
+  // If true, reformat after each iteration.
+  bool reformat = false;
+
+  // The number of blocks to increment after each iteration.
+  int stride = 1;
+};
+
 class BaseFilesystemTest : public testing::Test {
  public:
   BaseFilesystemTest(const TestFilesystemOptions& options)
@@ -30,6 +38,11 @@ class BaseFilesystemTest : public testing::Test {
 
   TestFilesystem& fs() { return fs_; }
   const TestFilesystem& fs() const { return fs_; }
+
+  // Repeatedly run the given test function simulating a power cut at different block write counts
+  // for each iteration.
+  void RunSimulatedPowerCutTest(const PowerCutOptions& options,
+                                std::function<void()> test_function);
 
  protected:
   TestFilesystem fs_;

@@ -10,8 +10,8 @@ group("tests") {
   testonly = true
   deps = [
     "bin:tests",
+    "blobfs:tests",
     "blobfs-corrupt:tests",
-    "blobfs/test",
     "conformance:tests",
     "ext4:tests",
     "extractor:tests",

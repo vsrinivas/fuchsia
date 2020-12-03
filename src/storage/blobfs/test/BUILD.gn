@@ -14,6 +14,7 @@ group("test") {
     ":blobfs-host($host_toolchain)",
     ":blobfs-integration-package",
     ":blobfs-unittest",
+    "//src/lib/isolated_devmgr/v2_component",
   ]
 }
 

@@ -5,6 +5,8 @@
 #ifndef SRC_STORAGE_MINFS_TEST_MICRO_BENCHMARK_MINFS_COSTS_H_
 #define SRC_STORAGE_MINFS_TEST_MICRO_BENCHMARK_MINFS_COSTS_H_
 
+#include <fuchsia/storage/metrics/llcpp/fidl.h>
+
 #include <fs-management/mount.h>
 
 #include "block-device-utils.h"
@@ -20,13 +22,12 @@ class MinfsProperties {
     kTransactionWithData,
   };
 
-  MinfsProperties(BlockDeviceSizes block_device_sizes, disk_format_t format,
-                  mkfs_options_t mkfs_options, minfs::Superblock superblock, const char* mount_path)
+  constexpr MinfsProperties(BlockDeviceSizes block_device_sizes, disk_format_t format,
+                            mkfs_options_t mkfs_options, minfs::Superblock superblock)
       : block_device_sizes_(block_device_sizes),
         format_(format),
         mkfs_options_(mkfs_options),
-        superblock_(superblock),
-        mount_path_(mount_path) {}
+        superblock_(superblock) {}
 
   // Adds to |out| the cost to mount a clean, freshly created, empty filesystem.
   void AddMountCost(BlockFidlMetrics* out) const;
@@ -57,8 +58,6 @@ class MinfsProperties {
     memcpy(&superblock_, &src, sizeof(superblock_));
   }
 
-  const char* MountPath() const { return mount_path_; }
-
  private:
   // Converts FS blocks to number bytes.
   uint64_t FsBlockToBytes(uint64_t blocks) const;
@@ -73,7 +72,7 @@ class MinfsProperties {
 
   // Update total_calls and bytes_transferrd stats.
   void AddIoStats(uint64_t total_calls, uint64_t blocks_transferred,
-                  fuchsia_storage_metrics_CallStat* out) const;
+                  llcpp::fuchsia::storage::metrics::CallStat* out) const;
 
   void AddMultipleBlocksReadCosts(uint64_t block_count, BlockFidlMetrics* out) const;
 
@@ -96,7 +95,6 @@ class MinfsProperties {
   disk_format_t format_;
   mkfs_options_t mkfs_options_;
   minfs::Superblock superblock_;
-  const char* mount_path_;
 };
 
 }  // namespace minfs_micro_benchmanrk

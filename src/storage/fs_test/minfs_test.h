@@ -10,11 +10,11 @@
 
 namespace fs_test {
 
+class MinfsInstance;
+
 // Support for Minfs.
-class MinfsFilesystem : public FilesystemImpl<MinfsFilesystem> {
+class MinfsFilesystem : public FilesystemImplWithDefaultMake<MinfsFilesystem, MinfsInstance> {
  public:
-  zx::status<std::unique_ptr<FilesystemInstance>> Make(
-      const TestFilesystemOptions& options) const override;
   zx::status<std::unique_ptr<FilesystemInstance>> Open(
       const TestFilesystemOptions& options) const override;
   const Traits& GetTraits() const override {

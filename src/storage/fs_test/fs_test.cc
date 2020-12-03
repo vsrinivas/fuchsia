@@ -323,6 +323,17 @@ zx::status<> FsDirectoryAdminUnmount(const std::string& mount_path) {
   return zx::ok();
 }
 
+zx::status<> DefaultFormat(const std::string& device_path, disk_format_t format,
+                           const mkfs_options_t& options) {
+  auto status = zx::make_status(mkfs(device_path.c_str(), format, launch_stdio_sync, &options));
+  if (status.is_error()) {
+    std::cout << "Could not format " << disk_format_string(format)
+              << " file system: " << status.status_string() << std::endl;
+    return status;
+  }
+  return zx::ok();
+}
+
 }  // namespace
 
 TestFilesystemOptions TestFilesystemOptions::DefaultMinfs() {
@@ -400,17 +411,6 @@ std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
   return results;
 }
 
-zx::status<> Filesystem::Format(const std::string& device_path, disk_format_t format,
-                                const mkfs_options_t& options) {
-  auto status = zx::make_status(mkfs(device_path.c_str(), format, launch_stdio_sync, &options));
-  if (status.is_error()) {
-    std::cout << "Could not format " << disk_format_string(format)
-              << " file system: " << status.status_string() << std::endl;
-    return status;
-  }
-  return zx::ok();
-}
-
 // -- FilesystemInstance --
 
 // Default implementation
@@ -421,12 +421,32 @@ zx::status<> FilesystemInstance::Unmount(const std::string& mount_path) {
   return FsUnbind(mount_path);
 }
 
+template <typename T, typename Instance>
+zx::status<std::unique_ptr<FilesystemInstance>> FilesystemImplWithDefaultMake<T, Instance>::Make(
+    const TestFilesystemOptions& options) const {
+  auto result = CreateRamDevice(options);
+  if (result.is_error()) {
+    return result.take_error();
+  }
+  auto [device, device_path] = std::move(result).value();
+  auto instance = std::make_unique<Instance>(std::move(device), std::move(device_path));
+  zx::status<> status = instance->Format(options);
+  if (status.is_error()) {
+    return status.take_error();
+  }
+  return zx::ok(std::move(instance));
+}
+
 // -- Minfs --
 
 class MinfsInstance : public FilesystemInstance {
  public:
   MinfsInstance(RamDevice device, std::string device_path)
       : device_(std::move(device)), device_path_(std::move(device_path)) {}
+
+  virtual zx::status<> Format(const TestFilesystemOptions& options) override {
+    return DefaultFormat(device_path_, DISK_FORMAT_MINFS, default_mkfs_options);
+  }
 
   zx::status<> Mount(const std::string& mount_path, const mount_options_t& options) override {
     return FsMount(device_path_, mount_path, DISK_FORMAT_MINFS, options);
@@ -458,20 +478,6 @@ class MinfsInstance : public FilesystemInstance {
   std::string device_path_;
 };
 
-zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Make(
-    const TestFilesystemOptions& options) const {
-  auto result = CreateRamDevice(options);
-  if (result.is_error()) {
-    return result.take_error();
-  }
-  auto [device, device_path] = std::move(result).value();
-  zx::status<> status = Filesystem::Format(device_path, DISK_FORMAT_MINFS, default_mkfs_options);
-  if (status.is_error()) {
-    return status.take_error();
-  }
-  return zx::ok(std::make_unique<MinfsInstance>(std::move(device), std::move(device_path)));
-}
-
 zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Open(
     const TestFilesystemOptions& options) const {
   auto result = OpenRamNand(options);
@@ -496,7 +502,7 @@ class MemfsInstance : public FilesystemInstance {
       ZX_ASSERT(sync_completion_wait(&sync, zx::duration::infinite().get()) == ZX_OK);
     }
   }
-  zx::status<> Format() {
+  zx::status<> Format(const TestFilesystemOptions&) override {
     return zx::make_status(
         memfs_create_filesystem(loop_.dispatcher(), &fs_, root_.reset_and_get_address()));
   }
@@ -529,7 +535,7 @@ class MemfsInstance : public FilesystemInstance {
 zx::status<std::unique_ptr<FilesystemInstance>> MemfsFilesystem::Make(
     const TestFilesystemOptions& options) const {
   auto instance = std::make_unique<MemfsInstance>();
-  zx::status<> status = instance->Format();
+  zx::status<> status = instance->Format(options);
   if (status.is_error()) {
     return status.take_error();
   }
@@ -542,6 +548,12 @@ class FatfsInstance : public FilesystemInstance {
  public:
   FatfsInstance(isolated_devmgr::RamDisk ram_disk, std::string device_path)
       : ram_disk_(std::move(ram_disk)), device_path_(std::move(device_path)) {}
+
+  zx::status<> Format(const TestFilesystemOptions&) override {
+    mkfs_options_t mkfs_options = default_mkfs_options;
+    mkfs_options.sectors_per_cluster = 2;  // 1 KiB cluster size
+    return DefaultFormat(device_path_, DISK_FORMAT_FAT, mkfs_options);
+  }
 
   zx::status<> Mount(const std::string& mount_path, const mount_options_t& base_options) override {
     mount_options_t options = base_options;
@@ -601,13 +613,12 @@ zx::status<std::unique_ptr<FilesystemInstance>> FatFilesystem::Make(
     return ram_disk_or.take_error();
   }
   auto [ram_disk, device_path] = std::move(ram_disk_or).value();
-  mkfs_options_t mkfs_options = default_mkfs_options;
-  mkfs_options.sectors_per_cluster = 2;  // 1 KiB cluster size
-  zx::status<> status = Filesystem::Format(device_path, DISK_FORMAT_FAT, mkfs_options);
+  auto instance = std::make_unique<FatfsInstance>(std::move(ram_disk), device_path);
+  zx::status<> status = instance->Format(options);
   if (status.is_error()) {
     return status.take_error();
   }
-  return zx::ok(std::make_unique<FatfsInstance>(std::move(ram_disk), device_path));
+  return zx::ok(std::move(instance));
 }
 
 // -- Blobfs --
@@ -616,6 +627,15 @@ class BlobfsInstance : public FilesystemInstance {
  public:
   BlobfsInstance(RamDevice device, std::string device_path)
       : device_(std::move(device)), device_path_(std::move(device_path)) {}
+
+  zx::status<> Format(const TestFilesystemOptions& options) override {
+    mkfs_options_t mkfs_options = default_mkfs_options;
+    if (options.blob_layout_format) {
+      mkfs_options.blob_layout_format =
+          blobfs::GetBlobLayoutFormatCommandLineArg(options.blob_layout_format.value());
+    }
+    return DefaultFormat(device_path_, DISK_FORMAT_BLOBFS, mkfs_options);
+  }
 
   zx::status<> Mount(const std::string& mount_path, const mount_options_t& options) override {
     return FsMount(device_path_, mount_path, DISK_FORMAT_BLOBFS, options, &outgoing_directory_);
@@ -651,25 +671,6 @@ class BlobfsInstance : public FilesystemInstance {
   std::string device_path_;
   zx::channel outgoing_directory_;
 };
-
-zx::status<std::unique_ptr<FilesystemInstance>> BlobfsFilesystem::Make(
-    const TestFilesystemOptions& options) const {
-  auto result = CreateRamDevice(options);
-  if (result.is_error()) {
-    return result.take_error();
-  }
-  auto [device, device_path] = std::move(result).value();
-  mkfs_options_t mkfs_options = default_mkfs_options;
-  if (options.blob_layout_format) {
-    mkfs_options.blob_layout_format =
-        blobfs::GetBlobLayoutFormatCommandLineArg(options.blob_layout_format.value());
-  }
-  zx::status<> status = Filesystem::Format(device_path, DISK_FORMAT_BLOBFS, mkfs_options);
-  if (status.is_error()) {
-    return status.take_error();
-  }
-  return zx::ok(std::make_unique<BlobfsInstance>(std::move(device), device_path));
-}
 
 zx::status<std::unique_ptr<FilesystemInstance>> BlobfsFilesystem::Open(
     const TestFilesystemOptions& options) const {

@@ -200,7 +200,8 @@ group("tests") {
   deps = [
     "allocator/test:minfs-allocator-tests",
     "test:minfs-fuzzers",
-    "test:minfs-host($host_toolchain)",
     "test:minfs-tests",
+    "test/host:minfs_host($host_toolchain)",
+    "//src/lib/isolated_devmgr/v2_component",
   ]
 }

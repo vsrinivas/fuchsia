@@ -54,7 +54,6 @@ class BufferedFile {
 
     fs_ = fs;
     bytes_per_write_ = bytes_per_write;
-    std::cerr << path << max_size << bytes_to_write << bytes_per_write_ << std::endl;
     file_path_ = path;
     fd_.reset(open(file_path_.c_str(), O_RDWR | O_CREAT));
     EXPECT_TRUE(fd_);

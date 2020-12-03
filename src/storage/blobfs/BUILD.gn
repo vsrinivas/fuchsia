@@ -286,3 +286,8 @@ fuchsia_component("decompressor-sandbox") {
   manifest = "meta/decompressor-sandbox.cml"
   deps = [ ":decompressor" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test" ]
+}
