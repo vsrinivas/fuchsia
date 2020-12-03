@@ -1,4 +1,8 @@
 {
+    include: [
+        // http://fxbug.dev/65728 delete the below
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
     children: [
         {
             name: "custom-timeout-child",

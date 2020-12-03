@@ -1,5 +1,10 @@
 // Example realm that provisions an Echo client and service and eagerly runs the client.
 {
+    include: [
+        // http://fxbug.dev/65728 delete the below
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
+
     // Two children: a server and client. "echo_client" has "eager" startup so it
     // will be started along with the realm.
     children: [

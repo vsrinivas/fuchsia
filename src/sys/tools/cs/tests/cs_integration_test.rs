@@ -261,7 +261,7 @@ async fn echo_realm() {
             merkle_root: Some(
                 "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string(),
             ),
-            incoming_capabilities: vec!["pkg".to_string()],
+            incoming_capabilities: vec!["fuchsia.logger.LogSink".to_string(), "pkg".to_string()],
             outgoing_capabilities: None,
             exposed_capabilities: vec![],
         }),
