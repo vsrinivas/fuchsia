@@ -176,7 +176,7 @@ template("pm_publish") {
   # should be computed so we don't forget to copy the file when we rotate the
   # root metadata.
   copy("root_manifest") {
-    sources = [ "$amber_keys_dir/metadata/6.root.json" ]
+    sources = [ "$amber_keys_dir/metadata/7.root.json" ]
 
     outputs = [ "$amber_repository_dir/repository/root.json" ]
   }
@@ -190,6 +190,7 @@ template("pm_publish") {
       "$amber_keys_dir/metadata/4.root.json",
       "$amber_keys_dir/metadata/5.root.json",
       "$amber_keys_dir/metadata/6.root.json",
+      "$amber_keys_dir/metadata/7.root.json",
     ]
 
     outputs = [ "$amber_repository_dir/repository/{{source_file_part}}" ]
