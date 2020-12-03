@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use {
+    crate::blobs::OpenBlob,
     anyhow::{anyhow, Error},
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_io::{DirectoryMarker, FileRequest, FileRequestStream},
     fidl_fuchsia_pkg::{
         NeededBlobsMarker, PackageCacheRequest, PackageCacheRequestStream, PackageIndexEntry,
         PackageIndexIteratorRequest, PackageIndexIteratorRequestStream, PackageUrl,
@@ -171,6 +172,173 @@ async fn open<'a>(
     Ok(())
 }
 
+#[derive(thiserror::Error, Debug)]
+enum ServeWriteBlobError {
+    #[error("protocol violation: file request stream terminated unexpectedly")]
+    UnexpectedClose,
+
+    #[error("protocol violation: file request stream fidl error")]
+    Fidl(#[source] fidl::Error),
+
+    #[error("protocol violation: expected {expected} request, got {received}")]
+    UnexpectedRequest { received: &'static str, expected: &'static str },
+
+    #[error("insufficient storage space is available")]
+    NoSpace,
+
+    #[error("the provided blob data is corrupt")]
+    Corrupt,
+
+    #[error("while truncating the blob")]
+    Truncate(#[source] pkgfs::install::BlobTruncateError),
+
+    #[error("while writing to the blob")]
+    Write(#[source] pkgfs::install::BlobWriteError),
+}
+
+impl From<pkgfs::install::BlobTruncateError> for ServeWriteBlobError {
+    fn from(e: pkgfs::install::BlobTruncateError) -> Self {
+        match e {
+            pkgfs::install::BlobTruncateError::NoSpace => ServeWriteBlobError::NoSpace,
+            e => ServeWriteBlobError::Truncate(e),
+        }
+    }
+}
+
+impl From<pkgfs::install::BlobWriteError> for ServeWriteBlobError {
+    fn from(e: pkgfs::install::BlobWriteError) -> Self {
+        match e {
+            pkgfs::install::BlobWriteError::NoSpace => ServeWriteBlobError::NoSpace,
+            pkgfs::install::BlobWriteError::Corrupt => ServeWriteBlobError::Corrupt,
+            e => ServeWriteBlobError::Write(e),
+        }
+    }
+}
+
+impl ServeWriteBlobError {
+    /// Determines if this error should cancel the associated Get() operation (true) or should
+    /// allow the NeededBlobs client retry the operation later (false).
+    #[allow(dead_code)]
+    fn is_fatal(&self) -> bool {
+        match self {
+            ServeWriteBlobError::UnexpectedClose => true,
+            ServeWriteBlobError::Fidl(_) => true,
+            ServeWriteBlobError::UnexpectedRequest { .. } => true,
+            ServeWriteBlobError::NoSpace => false,
+            ServeWriteBlobError::Corrupt => false,
+            ServeWriteBlobError::Truncate(_) => true,
+            ServeWriteBlobError::Write(_) => true,
+        }
+    }
+}
+
+#[cfg_attr(not(test), allow(dead_code))]
+async fn serve_write_blob(
+    mut stream: FileRequestStream,
+    blob: OpenBlob,
+) -> Result<(), ServeWriteBlobError> {
+    use pkgfs::install::{
+        Blob, BlobTruncateError, BlobWriteError, BlobWriteSuccess, NeedsData, NeedsTruncate,
+    };
+
+    let OpenBlob { blob, closer } = blob;
+
+    enum State {
+        ExpectTruncate(Blob<NeedsTruncate>),
+        ExpectData(Blob<NeedsData>),
+        ExpectClose,
+    };
+
+    impl State {
+        fn expectation(&self) -> &'static str {
+            match self {
+                State::ExpectTruncate(_) => "truncate",
+                State::ExpectData(_) => "write",
+                State::ExpectClose => "close",
+            }
+        }
+    }
+
+    let mut state = State::ExpectTruncate(blob);
+
+    let task = async {
+        while let Some(request) = stream.try_next().await.map_err(ServeWriteBlobError::Fidl)? {
+            state = match (request, state) {
+                (FileRequest::Truncate { length, responder }, State::ExpectTruncate(blob)) => {
+                    let res = blob.truncate(length).await;
+
+                    // Interpret responding errors as the stream closing unexpectedly.
+                    let _ = responder.send(
+                        match &res {
+                            Ok(_) => Status::OK,
+                            Err(BlobTruncateError::NoSpace) => Status::NO_SPACE,
+                            Err(BlobTruncateError::Fidl(_))
+                            | Err(BlobTruncateError::UnexpectedResponse(_)) => Status::INTERNAL,
+                        }
+                        .into_raw(),
+                    );
+
+                    let blob = res?;
+                    State::ExpectData(blob)
+                }
+
+                (FileRequest::Write { data, responder }, State::ExpectData(blob)) => {
+                    let res = blob.write(&data).await;
+
+                    let _ = responder.send(
+                        match &res {
+                            Ok(_) => Status::OK,
+                            Err(BlobWriteError::NoSpace) => Status::NO_SPACE,
+                            Err(BlobWriteError::Corrupt) => Status::IO_DATA_INTEGRITY,
+                            Err(BlobWriteError::Overwrite) => Status::IO,
+                            Err(BlobWriteError::Fidl(_))
+                            | Err(BlobWriteError::UnexpectedResponse(_)) => Status::INTERNAL,
+                        }
+                        .into_raw(),
+                        data.len() as u64,
+                    );
+
+                    match res? {
+                        BlobWriteSuccess::MoreToWrite(blob) => State::ExpectData(blob),
+                        BlobWriteSuccess::Done => State::ExpectClose,
+                    }
+                }
+
+                // Close is allowed in any state, but the blob is only written if we were expecting
+                // a close.
+                (FileRequest::Close { responder }, State::ExpectClose) => {
+                    let _ = responder.send(Status::OK.into_raw());
+                    return Ok(());
+                }
+                (FileRequest::Close { responder }, _) => {
+                    let _ = responder.send(Status::OK.into_raw());
+                    return Err(ServeWriteBlobError::UnexpectedClose);
+                }
+
+                (request, state) => {
+                    return Err(ServeWriteBlobError::UnexpectedRequest {
+                        received: request.method_name(),
+                        expected: state.expectation(),
+                    });
+                }
+            };
+        }
+
+        match state {
+            State::ExpectClose => Ok(()),
+            _ => Err(ServeWriteBlobError::UnexpectedClose),
+        }
+    };
+
+    // Handle the request stream, then close the blob, then close the stream to avoid retry races
+    // creating a blob that is still open.
+    let res = task.await;
+    closer.close().await;
+    drop(stream);
+
+    res
+}
+
 /// Serves the `PackageIndexIteratorRequest` with as many entries per request as will fit in a fidl
 /// message.
 async fn serve_base_package_index(
@@ -291,5 +459,424 @@ mod tests {
         assert_eq!(chunk.len(), 0);
 
         let () = task.await;
+    }
+}
+
+#[cfg(test)]
+mod serve_write_blob_tests {
+    use {
+        super::*,
+        crate::blobs::BlobKind,
+        fidl_fuchsia_io::{FileMarker, FileProxy},
+        matches::assert_matches,
+        proptest::prelude::*,
+        proptest_derive::Arbitrary,
+    };
+
+    /// Calls the provided test function with an open File proxy being served by serve_write_blob
+    /// and the corresponding request stream representing the open pkgfs install blob file.
+    async fn do_serve_write_blob_with<F, Fut>(cb: F) -> Result<(), ServeWriteBlobError>
+    where
+        F: FnOnce(FileProxy, FileRequestStream) -> Fut,
+        Fut: Future<Output = ()>,
+    {
+        let (pkgfs_blob, pkgfs_blob_stream) = OpenBlob::new_test(BlobKind::Data);
+
+        let (pkg_cache_blob, pkg_cache_blob_stream) =
+            fidl::endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+
+        let task = serve_write_blob(pkg_cache_blob_stream, pkgfs_blob);
+        let test = cb(pkg_cache_blob, pkgfs_blob_stream);
+
+        let (res, ()) = future::join(task, test).await;
+        res
+    }
+
+    /// Handles a single FIDL request on the provided stream, panicing if the received request is
+    /// not the expected kind.
+    macro_rules! serve_fidl_request {
+        (
+            $stream:expr, { $pat:pat => $handler:block, }
+        ) => {
+            match $stream.next().await.unwrap().unwrap() {
+                $pat => $handler,
+                req => panic!("unexpected request: {:?}", req),
+            }
+        };
+    }
+
+    /// Runs the provided FIDL request stream to compleation, running each handler in sequence,
+    /// panicing if any incoming request is not the expected kind.
+    macro_rules! serve_fidl_stream {
+        (
+            $stream:expr, { $( $pat:pat => $handler:block, )* }
+        ) => {
+            async move {
+                $(
+                    serve_fidl_request!($stream, { $pat => $handler, });
+                )*
+                assert_matches!($stream.next().await, None);
+            }
+        }
+    }
+
+    /// Sends a truncate request, asserts that the remote end receives the request, responds to the
+    /// request, and asserts that the truncate request receives the expected mapped status code.
+    async fn verify_truncate(
+        proxy: &FileProxy,
+        stream: &mut FileRequestStream,
+        length: u64,
+        pkgfs_response: Status,
+    ) -> Status {
+        let ((), o) = future::join(
+            async move {
+                serve_fidl_request!(stream, {
+                    FileRequest::Truncate { length: actual_length, responder } => {
+                        assert_eq!(length, actual_length);
+                        responder.send(pkgfs_response.into_raw()).unwrap();
+                    },
+                });
+            },
+            async move { proxy.truncate(length).await.map(Status::from_raw).unwrap() },
+        )
+        .await;
+        o
+    }
+
+    /// Sends a write request, asserts that the remote end receives the request, responds to the
+    /// request, and asserts that the write request receives the expected mapped status code/length.
+    async fn verify_write(
+        proxy: &FileProxy,
+        stream: &mut FileRequestStream,
+        data: &[u8],
+        pkgfs_response: Status,
+    ) -> Status {
+        let ((), o) = future::join(
+            async move {
+                serve_fidl_request!(stream, {
+                    FileRequest::Write{ data: actual_data, responder } => {
+                        assert_eq!(data, actual_data);
+                        responder.send(pkgfs_response.into_raw(), data.len() as u64).unwrap();
+                    },
+                });
+            },
+            async move {
+                let (s, len) =
+                    proxy.write(data).await.map(|(s, len)| (Status::from_raw(s), len)).unwrap();
+                if s == Status::OK {
+                    assert_eq!(len, data.len() as u64);
+                }
+                s
+            },
+        )
+        .await;
+        o
+    }
+
+    /// Verify that closing the proxy results in the pkgfs backing file being explicitly closed.
+    async fn verify_inner_blob_closes(proxy: FileProxy, mut stream: FileRequestStream) {
+        drop(proxy);
+        serve_fidl_stream!(stream, {
+            FileRequest::Close { responder } => {
+                responder.send(Status::OK.into_raw()).unwrap();
+            },
+        })
+        .await;
+    }
+
+    /// Verify that an explicit close() request is proxied through to the pkgfs backing file.
+    async fn verify_explicit_close(proxy: FileProxy, mut stream: FileRequestStream) {
+        let ((), ()) = future::join(
+            serve_fidl_stream!(stream, {
+                FileRequest::Close { responder } => {
+                    responder.send(Status::OK.into_raw()).unwrap();
+                },
+            }),
+            async move {
+                let _ = proxy.close().await;
+                drop(proxy);
+            },
+        )
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn start_stop() {
+        let res = do_serve_write_blob_with(|proxy, stream| async move {
+            drop(proxy);
+            drop(stream);
+        })
+        .await;
+        assert_matches!(res, Err(ServeWriteBlobError::UnexpectedClose));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn happy_path_succeeds() {
+        do_serve_write_blob_with(|proxy, mut stream| async move {
+            assert_eq!(verify_truncate(&proxy, &mut stream, 200, Status::OK).await, Status::OK);
+            assert_eq!(verify_write(&proxy, &mut stream, &[1; 100], Status::OK).await, Status::OK);
+            assert_eq!(verify_write(&proxy, &mut stream, &[2; 100], Status::OK).await, Status::OK);
+            verify_explicit_close(proxy, stream).await;
+        })
+        .await
+        .unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn happy_path_implicit_close_succeeds() {
+        do_serve_write_blob_with(|proxy, mut stream| async move {
+            assert_eq!(verify_truncate(&proxy, &mut stream, 200, Status::OK).await, Status::OK);
+            assert_eq!(verify_write(&proxy, &mut stream, &[1; 100], Status::OK).await, Status::OK);
+            assert_eq!(verify_write(&proxy, &mut stream, &[2; 100], Status::OK).await, Status::OK);
+            verify_inner_blob_closes(proxy, stream).await;
+        })
+        .await
+        .unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn raises_out_of_space_during_truncate() {
+        let res = do_serve_write_blob_with(|proxy, mut stream| async move {
+            assert_eq!(
+                verify_truncate(&proxy, &mut stream, 100, Status::NO_SPACE).await,
+                Status::NO_SPACE
+            );
+            verify_inner_blob_closes(proxy, stream).await;
+        })
+        .await;
+        assert_matches!(res, Err(ServeWriteBlobError::NoSpace));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn truncate_maps_unknown_errors_to_internal() {
+        let res = do_serve_write_blob_with(|proxy, mut stream| async move {
+            assert_eq!(
+                verify_truncate(&proxy, &mut stream, 100, Status::ADDRESS_UNREACHABLE).await,
+                Status::INTERNAL
+            );
+            verify_inner_blob_closes(proxy, stream).await;
+        })
+        .await;
+        assert_matches!(res, Err(ServeWriteBlobError::Truncate(_)));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn raises_out_of_space_during_write() {
+        let res = do_serve_write_blob_with(|proxy, mut stream| async move {
+            assert_eq!(verify_truncate(&proxy, &mut stream, 100, Status::OK).await, Status::OK);
+            assert_eq!(
+                verify_write(&proxy, &mut stream, &[0; 1], Status::NO_SPACE).await,
+                Status::NO_SPACE
+            );
+            verify_inner_blob_closes(proxy, stream).await;
+        })
+        .await;
+        assert_matches!(res, Err(ServeWriteBlobError::NoSpace));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn raises_corrupt_during_last_write() {
+        let res = do_serve_write_blob_with(|proxy, mut stream| async move {
+            assert_eq!(verify_truncate(&proxy, &mut stream, 10, Status::OK).await, Status::OK);
+            assert_eq!(verify_write(&proxy, &mut stream, &[0; 5], Status::OK).await, Status::OK);
+            assert_eq!(
+                verify_write(&proxy, &mut stream, &[1; 5], Status::IO_DATA_INTEGRITY).await,
+                Status::IO_DATA_INTEGRITY
+            );
+            verify_inner_blob_closes(proxy, stream).await;
+        })
+        .await;
+        assert_matches!(res, Err(ServeWriteBlobError::Corrupt));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn write_maps_unknown_errors_to_internal() {
+        let res = do_serve_write_blob_with(|proxy, mut stream| async move {
+            assert_eq!(verify_truncate(&proxy, &mut stream, 100, Status::OK).await, Status::OK);
+            assert_eq!(
+                verify_write(&proxy, &mut stream, &[1; 1], Status::ADDRESS_UNREACHABLE).await,
+                Status::INTERNAL
+            );
+            verify_inner_blob_closes(proxy, stream).await;
+        })
+        .await;
+        assert_matches!(res, Err(ServeWriteBlobError::Write(_)));
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Arbitrary)]
+    enum StubRequestor {
+        Clone,
+        Describe,
+        Sync,
+        GetAttr,
+        SetAttr,
+        NodeGetFlags,
+        NodeSetFlags,
+        Write,
+        WriteAt,
+        Read,
+        ReadAt,
+        Seek,
+        Truncate,
+        GetFlags,
+        SetFlags,
+        GetBuffer,
+        // New API that references fuchsia.io2. Not strictly necessary to verify all possible
+        // ordinals (which is the space of a u64 anyway).
+        // AdvisoryLock
+
+        // Always allowed.
+        // Close
+    }
+
+    impl StubRequestor {
+        fn method_name(self) -> &'static str {
+            match self {
+                StubRequestor::Clone => "clone",
+                StubRequestor::Describe => "describe",
+                StubRequestor::Sync => "sync",
+                StubRequestor::GetAttr => "get_attr",
+                StubRequestor::SetAttr => "set_attr",
+                StubRequestor::NodeGetFlags => "node_get_flags",
+                StubRequestor::NodeSetFlags => "node_set_flags",
+                StubRequestor::Write => "write",
+                StubRequestor::WriteAt => "write_at",
+                StubRequestor::Read => "read",
+                StubRequestor::ReadAt => "read_at",
+                StubRequestor::Seek => "seek",
+                StubRequestor::Truncate => "truncate",
+                StubRequestor::GetFlags => "get_flags",
+                StubRequestor::SetFlags => "set_flags",
+                StubRequestor::GetBuffer => "get_buffer",
+            }
+        }
+
+        fn make_stub_request(self, proxy: &FileProxy) -> impl Future<Output = ()> {
+            use fidl::encoding::Decodable;
+            match self {
+                StubRequestor::Clone => {
+                    let (_, server_end) =
+                        fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().unwrap();
+                    let _ = proxy.clone(0, server_end);
+                    future::ready(()).boxed()
+                }
+                StubRequestor::Describe => proxy.describe().map(|_| ()).boxed(),
+                StubRequestor::Sync => proxy.sync().map(|_| ()).boxed(),
+                StubRequestor::GetAttr => proxy.get_attr().map(|_| ()).boxed(),
+                StubRequestor::SetAttr => proxy
+                    .set_attr(0, &mut fidl_fuchsia_io::NodeAttributes::new_empty())
+                    .map(|_| ())
+                    .boxed(),
+                StubRequestor::NodeGetFlags => proxy.node_get_flags().map(|_| ()).boxed(),
+                StubRequestor::NodeSetFlags => proxy.node_set_flags(0).map(|_| ()).boxed(),
+                StubRequestor::Write => proxy.write(&[0; 0]).map(|_| ()).boxed(),
+                StubRequestor::WriteAt => proxy.write_at(&[0; 0], 0).map(|_| ()).boxed(),
+                StubRequestor::Read => proxy.read(0).map(|_| ()).boxed(),
+                StubRequestor::ReadAt => proxy.read_at(0, 0).map(|_| ()).boxed(),
+                StubRequestor::Seek => {
+                    proxy.seek(0, fidl_fuchsia_io::SeekOrigin::Start).map(|_| ()).boxed()
+                }
+                StubRequestor::Truncate => proxy.truncate(0).map(|_| ()).boxed(),
+                StubRequestor::GetFlags => proxy.get_flags().map(|_| ()).boxed(),
+                StubRequestor::SetFlags => proxy.set_flags(0).map(|_| ()).boxed(),
+                StubRequestor::GetBuffer => proxy.get_buffer(0).map(|_| ()).boxed(),
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Arbitrary)]
+    enum InitialState {
+        ExpectTruncate,
+        ExpectWrite,
+        ExpectClose,
+    }
+
+    impl InitialState {
+        fn expected_method_name(self) -> &'static str {
+            match self {
+                InitialState::ExpectTruncate => "truncate",
+                InitialState::ExpectWrite => "write",
+                InitialState::ExpectClose => "close",
+            }
+        }
+
+        async fn enter(self, proxy: &FileProxy, stream: &mut FileRequestStream) {
+            match self {
+                InitialState::ExpectTruncate => {}
+                InitialState::ExpectWrite => {
+                    assert_eq!(verify_truncate(proxy, stream, 100, Status::OK).await, Status::OK);
+                }
+                InitialState::ExpectClose => {
+                    assert_eq!(verify_truncate(proxy, stream, 100, Status::OK).await, Status::OK);
+                    assert_eq!(
+                        verify_write(proxy, stream, &[0; 100], Status::OK).await,
+                        Status::OK
+                    );
+                }
+            }
+        }
+    }
+
+    proptest! {
+        // Failure seed persistence isn't working in Fuchsia tests, and these tests are expected to
+        // verify the entire input space anyway. Enable result caching to skip running the same
+        // case more than once.
+        #![proptest_config(ProptestConfig{
+            failure_persistence: None,
+            result_cache: proptest::test_runner::basic_result_cache,
+            ..Default::default()
+        })]
+
+        #[test]
+        fn allows_close_in_any_state(initial_state: InitialState) {
+            let mut executor = fuchsia_async::Executor::new().unwrap();
+            let () = executor.run_singlethreaded(async move {
+
+                let res = do_serve_write_blob_with(|proxy, mut stream| async move {
+                    initial_state.enter(&proxy, &mut stream).await;
+                    verify_explicit_close(proxy, stream).await;
+                })
+                .await;
+
+                match initial_state {
+                    InitialState::ExpectClose => assert_matches!(res, Ok(())),
+                    _ => assert_matches!(res, Err(ServeWriteBlobError::UnexpectedClose)),
+                }
+            });
+        }
+
+        #[test]
+        fn rejects_unexpected_requests(initial_state: InitialState, bad_request: StubRequestor) {
+            // Skip stub requests that are the expected request for this initial state.
+            prop_assume!(initial_state.expected_method_name() != bad_request.method_name());
+
+            let mut executor = fuchsia_async::Executor::new().unwrap();
+            let () = executor.run_singlethreaded(async move {
+
+                let res = do_serve_write_blob_with(|proxy, mut stream| async move {
+                    initial_state.enter(&proxy, &mut stream).await;
+
+                    let bad_request_fut = bad_request.make_stub_request(&proxy);
+
+                    let ((), ()) = future::join(
+                        async move {
+                            let _ = bad_request_fut.await;
+                        },
+                        verify_inner_blob_closes(proxy, stream),
+                    )
+                    .await;
+                })
+                .await;
+
+                match res {
+                    Err(ServeWriteBlobError::UnexpectedRequest{ received, expected }) => {
+                        prop_assert_eq!(received, bad_request.method_name());
+                        prop_assert_eq!(expected, initial_state.expected_method_name());
+                    }
+                    res => panic!("Expected UnexpectedRequest error, got {:?}", res),
+                }
+                Ok(())
+            })?;
+        }
     }
 }

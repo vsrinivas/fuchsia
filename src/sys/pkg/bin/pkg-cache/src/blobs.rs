@@ -65,6 +65,15 @@ pub struct OpenBlob {
     pub closer: pkgfs::install::BlobCloser,
 }
 
+impl OpenBlob {
+    /// Creates a new OpenBlob backed by the returned file request stream.
+    #[cfg(test)]
+    pub fn new_test(kind: BlobKind) -> (Self, fidl_fuchsia_io::FileRequestStream) {
+        let (blob, closer, stream) = pkgfs::install::Blob::new_test(kind.into());
+        (Self { blob, closer }, stream)
+    }
+}
+
 #[cfg(test)]
 mod open_blob_tests {
     use {
