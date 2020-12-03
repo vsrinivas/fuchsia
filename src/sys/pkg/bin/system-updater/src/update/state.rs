@@ -7,7 +7,10 @@
 
 use {
     async_generator::Yield,
-    fidl_fuchsia_update_installer_ext::{Progress, State, UpdateInfo, UpdateInfoAndProgress},
+    fidl_fuchsia_update_installer_ext::{
+        FetchFailureReason, PrepareFailureReason, Progress, State, UpdateInfo,
+        UpdateInfoAndProgress,
+    },
 };
 
 /// Tracks a numeric goal and the current progress towards that goal, ensuring progress can only go
@@ -76,8 +79,8 @@ impl Prepare {
     }
 
     /// Transition to the FailPrepare terminal state.
-    pub async fn fail(self, co: &mut Yield<State>) {
-        co.yield_(State::FailPrepare).await;
+    pub async fn fail(self, co: &mut Yield<State>, reason: PrepareFailureReason) {
+        co.yield_(State::FailPrepare(reason)).await;
     }
 }
 
@@ -120,8 +123,8 @@ impl Fetch {
     }
 
     /// Transition to the FailFetch terminal state.
-    pub async fn fail(self, co: &mut Yield<State>) {
-        co.yield_(State::FailFetch(self.info_progress())).await;
+    pub async fn fail(self, co: &mut Yield<State>, reason: FetchFailureReason) {
+        co.yield_(State::FailFetch(self.info_progress().with_reason(reason))).await;
     }
 }
 
@@ -326,10 +329,10 @@ mod tests {
         assert_eq!(
             collect_states(|mut co| async move {
                 let state = Prepare::enter(&mut co).await;
-                state.fail(&mut co).await
+                state.fail(&mut co, PrepareFailureReason::Internal).await
             })
             .await,
-            vec![State::Prepare, State::FailPrepare,]
+            vec![State::Prepare, State::FailPrepare(PrepareFailureReason::Internal),]
         );
     }
 
@@ -344,7 +347,7 @@ mod tests {
                     .enter_fetch(&mut co, UpdateInfo::builder().download_size(0).build(), 4)
                     .await;
                 state.add_progress(&mut co, 1).await;
-                state.fail(&mut co).await
+                state.fail(&mut co, FetchFailureReason::Internal).await
             })
             .await,
             vec![
@@ -369,6 +372,7 @@ mod tests {
                         Progress::builder().fraction_completed(0.25).bytes_downloaded(0).build()
                     )
                     .unwrap()
+                    .with_reason(FetchFailureReason::Internal)
                 ),
             ]
         );

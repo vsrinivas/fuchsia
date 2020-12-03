@@ -170,7 +170,9 @@ async fn monitor_update_progress(
 mod test_apply_system_update_impl {
     use super::*;
     use fidl_fuchsia_update_installer::RebootControllerRequest;
-    use fidl_fuchsia_update_installer_ext::{Progress, UpdateInfo, UpdateInfoAndProgress};
+    use fidl_fuchsia_update_installer_ext::{
+        PrepareFailureReason, Progress, UpdateInfo, UpdateInfoAndProgress,
+    };
     use fuchsia_async as fasync;
     use matches::assert_matches;
     use proptest::prelude::*;
@@ -490,8 +492,10 @@ mod test_apply_system_update_impl {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_installer_failure_event() {
-        let mut update_installer =
-            ProgressUpdateInstaller::new(vec![State::Prepare, State::FailPrepare]);
+        let mut update_installer = ProgressUpdateInstaller::new(vec![
+            State::Prepare,
+            State::FailPrepare(PrepareFailureReason::Internal),
+        ]);
 
         let mut stream =
             apply_system_update_impl(&mut update_installer, Initiator::User).await.unwrap();

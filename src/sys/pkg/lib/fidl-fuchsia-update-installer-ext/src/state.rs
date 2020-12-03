@@ -26,8 +26,8 @@ pub enum State {
     Reboot(UpdateInfoAndProgress),
     DeferReboot(UpdateInfoAndProgress),
     Complete(UpdateInfoAndProgress),
-    FailPrepare,
-    FailFetch(UpdateInfoAndProgress),
+    FailPrepare(PrepareFailureReason),
+    FailFetch(FailFetchData),
     FailStage(UpdateInfoAndProgress),
 }
 
@@ -64,7 +64,7 @@ pub struct UpdateInfoBuilderWithDownloadSize {
 }
 
 /// Mutable progress information for an update attempt.
-#[derive(Arbitrary, Clone, Debug, Serialize, PartialEq, PartialOrd)]
+#[derive(Arbitrary, Clone, Copy, Debug, Serialize, PartialEq, PartialOrd)]
 pub struct Progress {
     /// Within the range of [0.0, 1.0]
     #[proptest(strategy = "0.0f32 ..= 1.0")]
@@ -116,6 +116,29 @@ pub struct UpdateInfoAndProgressBuilderWithInfoAndProgress {
     progress: Progress,
 }
 
+#[derive(Arbitrary, Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(tag = "reason", rename_all = "snake_case")]
+#[allow(missing_docs)]
+pub enum PrepareFailureReason {
+    Internal,
+    OutOfSpace,
+}
+
+#[derive(Arbitrary, Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+#[allow(missing_docs)]
+pub enum FetchFailureReason {
+    Internal,
+    OutOfSpace,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[allow(missing_docs)]
+pub struct FailFetchData {
+    info_and_progress: UpdateInfoAndProgress,
+    reason: FetchFailureReason,
+}
+
 impl State {
     /// Obtain the variant name (strip out the data).
     pub fn id(&self) -> StateId {
@@ -127,7 +150,7 @@ impl State {
             State::Reboot(_) => StateId::Reboot,
             State::DeferReboot(_) => StateId::DeferReboot,
             State::Complete(_) => StateId::Complete,
-            State::FailPrepare => StateId::FailPrepare,
+            State::FailPrepare(_) => StateId::FailPrepare,
             State::FailFetch(_) => StateId::FailFetch,
             State::FailStage(_) => StateId::FailStage,
         }
@@ -165,7 +188,7 @@ impl State {
             State::Reboot(_) => "reboot",
             State::DeferReboot(_) => "defer_reboot",
             State::Complete(_) => "complete",
-            State::FailPrepare => "fail_prepare",
+            State::FailPrepare(_) => "fail_prepare",
             State::FailFetch(_) => "fail_fetch",
             State::FailStage(_) => "fail_stage",
         }
@@ -177,14 +200,15 @@ impl State {
         use State::*;
 
         match self {
-            Prepare | FailPrepare => {}
+            Prepare => {}
+            FailFetch(data) => data.write_to_inspect(node),
+            FailPrepare(reason) => reason.write_to_inspect(node),
             Fetch(info_progress)
             | Stage(info_progress)
             | WaitToReboot(info_progress)
             | Reboot(info_progress)
             | DeferReboot(info_progress)
             | Complete(info_progress)
-            | FailFetch(info_progress)
             | FailStage(info_progress) => {
                 info_progress.write_to_inspect(node);
             }
@@ -194,14 +218,14 @@ impl State {
     /// Extracts info_and_progress, if the state supports it.
     fn info_and_progress(&self) -> Option<&UpdateInfoAndProgress> {
         match self {
-            State::Prepare | State::FailPrepare => None,
+            State::Prepare | State::FailPrepare(_) => None,
+            State::FailFetch(data) => Some(&data.info_and_progress),
             State::Fetch(data)
             | State::Stage(data)
             | State::WaitToReboot(data)
             | State::Reboot(data)
             | State::DeferReboot(data)
             | State::Complete(data)
-            | State::FailFetch(data)
             | State::FailStage(data) => Some(data),
         }
     }
@@ -356,6 +380,11 @@ impl UpdateInfoAndProgress {
         &self.progress
     }
 
+    /// Constructs a FailFetchData with the given reason.
+    pub fn with_reason(self, reason: FetchFailureReason) -> FailFetchData {
+        FailFetchData { info_and_progress: self, reason }
+    }
+
     fn write_to_inspect(&self, node: &inspect::Node) {
         node.record_child("info", |n| {
             self.info.write_to_inspect(n);
@@ -394,6 +423,61 @@ impl UpdateInfoAndProgressBuilderWithInfoAndProgress {
     pub fn build(self) -> UpdateInfoAndProgress {
         let Self { info, progress } = self;
         UpdateInfoAndProgress { info, progress }
+    }
+}
+
+impl FailFetchData {
+    fn write_to_inspect(&self, node: &inspect::Node) {
+        self.info_and_progress.write_to_inspect(node);
+        self.reason.write_to_inspect(node);
+    }
+}
+
+impl PrepareFailureReason {
+    fn write_to_inspect(&self, node: &inspect::Node) {
+        node.record_string("reason", format!("{:?}", self))
+    }
+}
+
+impl From<fidl::PrepareFailureReason> for PrepareFailureReason {
+    fn from(reason: fidl::PrepareFailureReason) -> Self {
+        match reason {
+            fidl::PrepareFailureReason::Internal => PrepareFailureReason::Internal,
+            fidl::PrepareFailureReason::OutOfSpace => PrepareFailureReason::OutOfSpace,
+        }
+    }
+}
+
+impl From<PrepareFailureReason> for fidl::PrepareFailureReason {
+    fn from(reason: PrepareFailureReason) -> Self {
+        match reason {
+            PrepareFailureReason::Internal => fidl::PrepareFailureReason::Internal,
+            PrepareFailureReason::OutOfSpace => fidl::PrepareFailureReason::OutOfSpace,
+        }
+    }
+}
+
+impl FetchFailureReason {
+    fn write_to_inspect(&self, node: &inspect::Node) {
+        node.record_string("reason", format!("{:?}", self))
+    }
+}
+
+impl From<fidl::FetchFailureReason> for FetchFailureReason {
+    fn from(reason: fidl::FetchFailureReason) -> Self {
+        match reason {
+            fidl::FetchFailureReason::Internal => FetchFailureReason::Internal,
+            fidl::FetchFailureReason::OutOfSpace => FetchFailureReason::OutOfSpace,
+        }
+    }
+}
+
+impl From<FetchFailureReason> for fidl::FetchFailureReason {
+    fn from(reason: FetchFailureReason) -> Self {
+        match reason {
+            FetchFailureReason::Internal => fidl::FetchFailureReason::Internal,
+            FetchFailureReason::OutOfSpace => fidl::FetchFailureReason::OutOfSpace,
+        }
     }
 }
 
@@ -437,6 +521,44 @@ impl<'de> Deserialize<'de> for Progress {
     }
 }
 
+impl Serialize for FailFetchData {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+
+        let mut state = serializer.serialize_struct("FailFetchData", 3)?;
+        state.serialize_field("info", &self.info_and_progress.info)?;
+        state.serialize_field("progress", &self.info_and_progress.progress)?;
+        state.serialize_field("reason", &self.reason)?;
+        state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for FailFetchData {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+
+        #[derive(Debug, Deserialize)]
+        pub struct DeFailFetchData {
+            info: UpdateInfo,
+            progress: Progress,
+            reason: FetchFailureReason,
+        }
+
+        let DeFailFetchData { info, progress, reason } =
+            DeFailFetchData::deserialize(deserializer)?;
+
+        UpdateInfoAndProgress::new(info, progress)
+            .map_err(|e| D::Error::custom(e.to_string()))
+            .map(|info_and_progress| info_and_progress.with_reason(reason))
+    }
+}
+
 /// An error encountered while pairing an [`UpdateInfo`] and [`Progress`].
 #[derive(Debug, Error, PartialEq, Eq)]
 #[error("more bytes were fetched than should have been fetched")]
@@ -466,6 +588,7 @@ pub enum DecodeStateError {
 pub enum RequiredStateField {
     Info,
     Progress,
+    Reason,
 }
 
 impl From<State> for fidl::State {
@@ -514,11 +637,15 @@ impl From<State> for fidl::State {
                     ..fidl::CompleteData::EMPTY
                 })
             }
-            State::FailPrepare => fidl::State::FailPrepare(fidl::FailPrepareData::EMPTY),
-            State::FailFetch(UpdateInfoAndProgress { info, progress }) => {
+            State::FailPrepare(reason) => fidl::State::FailPrepare(fidl::FailPrepareData {
+                reason: Some(reason.into()),
+                ..fidl::FailPrepareData::EMPTY
+            }),
+            State::FailFetch(FailFetchData { info_and_progress, reason }) => {
                 fidl::State::FailFetch(fidl::FailFetchData {
-                    info: Some(info.into()),
-                    progress: Some(progress.into()),
+                    info: Some(info_and_progress.info.into()),
+                    progress: Some(info_and_progress.progress.into()),
+                    reason: Some(reason.into()),
                     ..fidl::FailFetchData::EMPTY
                 })
             }
@@ -574,9 +701,17 @@ impl TryFrom<fidl::State> for State {
             fidl::State::Complete(fidl::CompleteData { info, progress, .. }) => {
                 State::Complete(decode_info_progress(info, progress)?)
             }
-            fidl::State::FailPrepare(fidl::FailPrepareData { .. }) => State::FailPrepare,
-            fidl::State::FailFetch(fidl::FailFetchData { info, progress, .. }) => {
-                State::FailFetch(decode_info_progress(info, progress)?)
+            fidl::State::FailPrepare(fidl::FailPrepareData { reason, .. }) => State::FailPrepare(
+                reason.ok_or(DecodeStateError::MissingField(RequiredStateField::Reason))?.into(),
+            ),
+            fidl::State::FailFetch(fidl::FailFetchData { info, progress, reason, .. }) => {
+                State::FailFetch(
+                    decode_info_progress(info, progress)?.with_reason(
+                        reason
+                            .ok_or(DecodeStateError::MissingField(RequiredStateField::Reason))?
+                            .into(),
+                    ),
+                )
             }
             fidl::State::FailStage(fidl::FailStageData { info, progress, .. }) => {
                 State::FailStage(decode_info_progress(info, progress)?)
@@ -672,6 +807,21 @@ impl Arbitrary for UpdateInfoAndProgress {
 
     fn arbitrary_with((): Self::Parameters) -> Self::Strategy {
         arb_info_and_progress().prop_map(|(info, progress)| Self { info, progress }).boxed()
+    }
+}
+
+impl Arbitrary for FailFetchData {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with((): Self::Parameters) -> Self::Strategy {
+        arb_info_and_progress()
+            .prop_flat_map(|(info, progress)| {
+                any::<FetchFailureReason>().prop_map(move |reason| {
+                    UpdateInfoAndProgress { info, progress }.with_reason(reason)
+                })
+            })
+            .boxed()
     }
 }
 
@@ -880,7 +1030,12 @@ mod tests {
 
         // States with the same ids can merge, even if the data is different.
         #[test]
-        fn states_with_same_ids_can_merge(state: State, different_data: UpdateInfoAndProgress) {
+        fn states_with_same_ids_can_merge(
+            state: State,
+            different_data: UpdateInfoAndProgress,
+            different_prepare_reason: PrepareFailureReason,
+            different_fetch_reason: FetchFailureReason,
+        ) {
             let state_with_different_data = match state.clone() {
                  State::Prepare => State::Prepare,
                     State::Fetch(_) => State::Fetch(different_data),
@@ -889,8 +1044,11 @@ mod tests {
                     State::Reboot(_) => State::Reboot(different_data),
                     State::DeferReboot(_) => State::DeferReboot(different_data),
                     State::Complete(_) => State::Complete(different_data),
-                    State::FailPrepare => State::FailPrepare,
-                    State::FailFetch(_) => State::FailFetch(different_data),
+                    // We currently allow merging states with different failure reasons, though
+                    // we don't expect that to ever happen in practice.
+                    State::FailPrepare(_) => State::FailPrepare(different_prepare_reason),
+                    State::FailFetch(_) =>
+                        State::FailFetch(different_data.with_reason(different_fetch_reason)),
                     State::FailStage(_) => State::FailStage(different_data),
             };
             prop_assert!(state.can_merge(&state_with_different_data));
@@ -905,7 +1063,48 @@ mod tests {
     }
 
     #[test]
-    fn state_populates_inspect() {
+    fn populates_inspect_fail_fetch() {
+        let state = State::FailFetch(
+            UpdateInfoAndProgress {
+                info: UpdateInfo { download_size: 4096 },
+                progress: Progress { bytes_downloaded: 2048, fraction_completed: 0.5 },
+            }
+            .with_reason(FetchFailureReason::Internal),
+        );
+        let inspector = Inspector::new();
+        state.write_to_inspect(&inspector.root());
+        assert_inspect_tree! {
+            inspector,
+            root: {
+                "state": "fail_fetch",
+                "info": {
+                    "download_size": 4096u64,
+                },
+                "progress": {
+                    "bytes_downloaded": 2048u64,
+                    "fraction_completed": 0.5f64,
+                },
+                "reason": "Internal",
+            }
+        }
+    }
+
+    #[test]
+    fn populates_inspect_fail_prepare() {
+        let state = State::FailPrepare(PrepareFailureReason::OutOfSpace);
+        let inspector = Inspector::new();
+        state.write_to_inspect(&inspector.root());
+        assert_inspect_tree! {
+            inspector,
+            root: {
+                "state": "fail_prepare",
+                "reason": "OutOfSpace",
+            }
+        }
+    }
+
+    #[test]
+    fn populates_inspect_reboot() {
         let state = State::Reboot(UpdateInfoAndProgress {
             info: UpdateInfo { download_size: 4096 },
             progress: Progress { bytes_downloaded: 2048, fraction_completed: 0.5 },
@@ -936,7 +1135,7 @@ mod tests {
     }
 
     #[test]
-    fn json_deserializes_state() {
+    fn json_deserializes_state_reboot() {
         assert_eq!(
             serde_json::from_value::<State>(json!({
                 "id": "reboot",
@@ -953,6 +1152,43 @@ mod tests {
                 info: UpdateInfo { download_size: 100 },
                 progress: Progress { bytes_downloaded: 100, fraction_completed: 1.0 },
             })
+        );
+    }
+
+    #[test]
+    fn json_deserializes_state_fail_prepare() {
+        assert_eq!(
+            serde_json::from_value::<State>(json!({
+                "id": "fail_prepare",
+                "reason": "internal",
+            }))
+            .unwrap(),
+            State::FailPrepare(PrepareFailureReason::Internal)
+        );
+    }
+
+    #[test]
+    fn json_deserializes_state_fail_fetch() {
+        assert_eq!(
+            serde_json::from_value::<State>(json!({
+                "id": "fail_fetch",
+                "info": {
+                    "download_size": 100,
+                },
+                "progress": {
+                    "bytes_downloaded": 100,
+                    "fraction_completed": 1.0,
+                },
+                "reason": "out_of_space",
+            }))
+            .unwrap(),
+            State::FailFetch(
+                UpdateInfoAndProgress {
+                    info: UpdateInfo { download_size: 100 },
+                    progress: Progress { bytes_downloaded: 100, fraction_completed: 1.0 },
+                }
+                .with_reason(FetchFailureReason::OutOfSpace)
+            )
         );
     }
 

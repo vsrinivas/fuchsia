@@ -323,7 +323,9 @@ mod tests {
         fidl_fuchsia_paver::{BootManagerMarker, DataSinkMarker},
         fidl_fuchsia_pkg::{PackageCacheMarker, PackageResolverMarker},
         fidl_fuchsia_space::ManagerMarker as SpaceManagerMarker,
-        fidl_fuchsia_update_installer_ext::{Progress, UpdateInfo, UpdateInfoAndProgress},
+        fidl_fuchsia_update_installer_ext::{
+            PrepareFailureReason, Progress, UpdateInfo, UpdateInfoAndProgress,
+        },
         fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty, Inspector},
         mpsc::{Receiver, Sender},
         parking_lot::Mutex,
@@ -486,12 +488,13 @@ mod tests {
         );
 
         let () = state_sender.send(State::Prepare).await.unwrap();
-        let () = state_sender.send(State::FailPrepare).await.unwrap();
+        let () =
+            state_sender.send(State::FailPrepare(PrepareFailureReason::Internal)).await.unwrap();
         drop(state_sender);
 
         assert_eq!(
             state_receiver.collect::<Vec<State>>().await,
-            vec![State::Prepare, State::FailPrepare]
+            vec![State::Prepare, State::FailPrepare(PrepareFailureReason::Internal)]
         );
     }
 
@@ -518,21 +521,22 @@ mod tests {
 
         // Send state updates to the update task.
         let () = state_sender.send(State::Prepare).await.unwrap();
-        let () = state_sender.send(State::FailPrepare).await.unwrap();
+        let () =
+            state_sender.send(State::FailPrepare(PrepareFailureReason::Internal)).await.unwrap();
         drop(state_sender);
 
         // Each monitor should get these events.
         assert_eq!(
             state_receiver0.collect::<Vec<State>>().await,
-            vec![State::Prepare, State::FailPrepare]
+            vec![State::Prepare, State::FailPrepare(PrepareFailureReason::Internal)]
         );
         assert_eq!(
             state_receiver1.collect::<Vec<State>>().await,
-            vec![State::Prepare, State::FailPrepare]
+            vec![State::Prepare, State::FailPrepare(PrepareFailureReason::Internal)]
         );
         assert_eq!(
             state_receiver2.collect::<Vec<State>>().await,
-            vec![State::Prepare, State::FailPrepare]
+            vec![State::Prepare, State::FailPrepare(PrepareFailureReason::Internal)]
         );
     }
 
@@ -563,17 +567,18 @@ mod tests {
 
         // Send state updates to the update task, then end the update by dropping the sender.
         let () = state_sender.send(State::Prepare).await.unwrap();
-        let () = state_sender.send(State::FailPrepare).await.unwrap();
+        let () =
+            state_sender.send(State::FailPrepare(PrepareFailureReason::Internal)).await.unwrap();
         drop(state_sender);
 
         // Each monitor should get these events.
         assert_eq!(
             state_receiver0.collect::<Vec<State>>().await,
-            vec![State::Prepare, State::FailPrepare]
+            vec![State::Prepare, State::FailPrepare(PrepareFailureReason::Internal)]
         );
         assert_eq!(
             state_receiver1.collect::<Vec<State>>().await,
-            vec![State::Prepare, State::FailPrepare]
+            vec![State::Prepare, State::FailPrepare(PrepareFailureReason::Internal)]
         );
     }
 
@@ -683,14 +688,15 @@ mod tests {
         // Even though the ControlRequest channel was dropped, the update attempt should still
         // be running it should be able to receive state events from the monitor stream.
         let () = state_sender.send(State::Prepare).await.unwrap();
-        let () = state_sender.send(State::FailPrepare).await.unwrap();
+        let () =
+            state_sender.send(State::FailPrepare(PrepareFailureReason::Internal)).await.unwrap();
 
         // Even if we drop the sender (which ends the update attempt), the state receivers
         // should still receive all the events we've sent up until this point.
         drop(state_sender);
         assert_eq!(
             state_receiver.collect::<Vec<State>>().await,
-            vec![State::Prepare, State::FailPrepare]
+            vec![State::Prepare, State::FailPrepare(PrepareFailureReason::Internal)]
         );
 
         // Ensures the update manager task stops after it sends the buffered state events to monitors.
@@ -838,7 +844,8 @@ mod tests {
                 .await,
             Ok(Ok("second-attempt-id".to_string()))
         );
-        let () = state_sender1.send(State::FailPrepare).await.unwrap();
+        let () =
+            state_sender1.send(State::FailPrepare(PrepareFailureReason::Internal)).await.unwrap();
         let _ = state_receiver1.next().await;
         assert_inspect_tree!(
             inspector,
@@ -846,7 +853,8 @@ mod tests {
                 current_attempt: {
                     start_timestamp_nanos: AnyProperty,
                     status: {
-                        state: "fail_prepare"
+                        state: "fail_prepare",
+                        reason: "Internal",
                     }
                 }
             }

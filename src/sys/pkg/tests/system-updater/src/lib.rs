@@ -508,7 +508,7 @@ impl MockLogger {
             match event {
                 fidl_fuchsia_cobalt::LoggerRequest::LogCobaltEvent { event, responder } => {
                     self.cobalt_events.lock().push(event);
-                    responder.send(fidl_fuchsia_cobalt::Status::Ok)?;
+                    let _ = responder.send(fidl_fuchsia_cobalt::Status::Ok);
                 }
                 _ => {
                     panic!("unhandled Logger method {:?}", event);
@@ -549,7 +549,7 @@ impl MockLoggerFactory {
                             .unwrap_or_else(|e| eprintln!("error while running Logger: {:?}", e)),
                     )
                     .detach();
-                    responder.send(fidl_fuchsia_cobalt::Status::Ok)?;
+                    let _ = responder.send(fidl_fuchsia_cobalt::Status::Ok);
                 }
                 _ => {
                     panic!("unhandled LoggerFactory method: {:?}", event);

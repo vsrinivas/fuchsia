@@ -150,7 +150,7 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_update_installer::{
-            InstallationProgress, InstallerRequest, InstallerRequestStream,
+            FailPrepareData, InstallationProgress, InstallerRequest, InstallerRequestStream,
             RebootControllerRequest, State, UpdateInfo,
         },
         fuchsia_async as fasync,
@@ -337,9 +337,12 @@ mod tests {
 
                     let monitor = monitor.into_proxy().unwrap();
                     let () = monitor
-                        .on_state(&mut State::FailPrepare(
-                            fidl_fuchsia_update_installer::FailPrepareData::EMPTY,
-                        ))
+                        .on_state(&mut State::FailPrepare(FailPrepareData {
+                            reason: Some(
+                                fidl_fuchsia_update_installer::PrepareFailureReason::Internal,
+                            ),
+                            ..FailPrepareData::EMPTY
+                        }))
                         .await
                         .unwrap();
                 }
