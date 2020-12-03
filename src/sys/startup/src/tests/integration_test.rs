@@ -19,7 +19,7 @@ async fn integration_test() {
         .component_manager_url(
             "fuchsia-pkg://fuchsia.com/startup-integration-test#meta/component_manager.cmx",
         )
-        .config("/pkg/data/component_manager_config");
+        .config("/pkg/data/component_manager_debug_config");
     let test: OpaqueTest = builder.build().await.unwrap();
     let event_source = test.connect_to_event_source().await.unwrap();
 
@@ -28,7 +28,7 @@ async fn integration_test() {
 
     let event = EventMatcher::ok()
         .moniker("./startup")
-        .capability_id("fuchsia.appmgr.Startup")
+        .capability_name("fuchsia.appmgr.Startup")
         .expect_match::<CapabilityRouted>(&mut event_stream)
         .await;
     event.resume().await.unwrap();

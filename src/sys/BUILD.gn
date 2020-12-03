@@ -30,6 +30,7 @@ group("tests") {
     "locate:tests",
     "pkg:tests",
     "run_test_suite:tests",
+    "startup:tests",
     "stash:tests",
     "sysmgr:tests",
     "test_manager:tests",
