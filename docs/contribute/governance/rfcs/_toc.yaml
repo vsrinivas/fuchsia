@@ -30,5 +30,7 @@ toc:
   path: /docs/contribute/governance/rfcs/0010_channel_iovec.md
 - title: "RFC-0011: zx_object_get_info ZX_INFO_KMEM_STATS_EXTENDED"
   path: /docs/contribute/governance/rfcs/0011_getinfo_kmemstats_extended.md
+- title: "RFC-0012: Zircon Discardable Memory"
+  path: /docs/contribute/governance/rfcs/0012_zircon_discardable_memory.md
 - title: "RFC template"
   path: /docs/contribute/governance/rfcs/TEMPLATE.md

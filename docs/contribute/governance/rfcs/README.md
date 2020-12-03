@@ -65,6 +65,7 @@ RFC                                                     | Submitted  | Reviewed 
 [RFC-0009](0009_edge_triggered_async_wait.md)           | 2020-10-22 | 2020-11-04 | Edge triggered async_wait
 [RFC-0010](0010_channel_iovec.md)                       | 2020-10-01 | 2020-11-06 | zx_channel_iovec_t support for zx_channel_write and zx_channel_call
 [RFC-0011](0011_getinfo_kmemstats_extended.md)          | 2020-11-04 | 2020-11-20 | zx_object_get_info ZX_INFO_KMEM_STATS_EXTENDED
+[RFC-0012](0012_zircon_discardable_memory.md)           | 2020-10-27 | 2020-12-02 | Zircon Discardable Memory
 
 ## Rejected proposals
 
