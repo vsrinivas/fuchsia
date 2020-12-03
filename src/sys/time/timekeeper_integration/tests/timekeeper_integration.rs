@@ -679,3 +679,59 @@ fn test_slew_clock() {
         // TODO(fxbug.dev/65239) - verify that the slew completes.
     });
 }
+
+#[test]
+fn test_step_clock() {
+    const STEP_ERROR: zx::Duration = zx::Duration::from_hours(1);
+    let clock = new_clock();
+    timekeeper_test(Arc::clone(&clock), None, |mut push_source_controller, _, _| async move {
+        // Let the first sample be slightly in the past so later samples are not in the future.
+        let monotonic_before = zx::Time::get_monotonic();
+        let sample_1_monotonic = monotonic_before - BETWEEN_SAMPLES;
+        let sample_1_utc = *VALID_TIME;
+        push_source_controller
+            .set_sample(TimeSample {
+                utc: Some(sample_1_utc.into_nanos()),
+                monotonic: Some(sample_1_monotonic.into_nanos()),
+                standard_deviation: Some(STD_DEV.into_nanos()),
+                ..TimeSample::empty()
+            })
+            .await;
+
+        // After the first sample, the clock is started, and running at the same rate as
+        // the reference.
+        fasync::OnSignals::new(&*clock, zx::Signals::CLOCK_STARTED).await.unwrap();
+        let utc_now = clock.read().unwrap();
+        let monotonic_after = zx::Time::get_monotonic();
+        assert_geq!(utc_now, sample_1_utc + BETWEEN_SAMPLES);
+        assert_leq!(utc_now, sample_1_utc + BETWEEN_SAMPLES + (monotonic_after - monotonic_before));
+
+        let clock_last_set_ticks = clock.get_details().unwrap().last_value_update_ticks;
+
+        let sample_2_monotonic = sample_1_monotonic + BETWEEN_SAMPLES;
+        let sample_2_utc = sample_1_utc + BETWEEN_SAMPLES + STEP_ERROR;
+        push_source_controller
+            .set_sample(TimeSample {
+                utc: Some(sample_2_utc.into_nanos()),
+                monotonic: Some(sample_2_monotonic.into_nanos()),
+                standard_deviation: Some(STD_DEV.into_nanos()),
+                ..TimeSample::empty()
+            })
+            .await;
+        wait_until(|| clock.get_details().unwrap().last_value_update_ticks != clock_last_set_ticks)
+            .await;
+        let utc_now_2 = clock.read().unwrap();
+        let monotonic_after_2 = zx::Time::get_monotonic();
+
+        // After the second sample, the clock should have jumped to an offset approximately halfway
+        // between the offsets defined in the two samples. 500 ms is added to the upper bound as
+        // the estimate takes more of the second sample into account (as the oscillator drift is
+        // added to the uncertainty of the first sample).
+        let jump_utc = sample_2_utc - STEP_ERROR / 2;
+        assert_geq!(utc_now_2, jump_utc);
+        assert_leq!(
+            utc_now_2,
+            jump_utc + (monotonic_after_2 - monotonic_before) + zx::Duration::from_millis(500)
+        );
+    });
+}
