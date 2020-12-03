@@ -146,11 +146,17 @@ For [flexible](#strict-flexible) bits:
   other bitwise operators retain the same semantics for unknown bits members as
   for known members.
 
-Note: In some languages, it is difficult or impossible to prevent users from
+Strict bits MAY provide the above APIs as well in order to simplify [transitions
+betwen strict and flexible][source-compatible].
+
+In some languages, it is difficult or impossible to prevent users from
 manually creating an instance of a `bits` type from a primitive, therefore
 preventing bindings designers from restricting strict bits values to having a
-properly restricted domain. In this case, it is acceptable to provide the
-"flexible only" APIs to strict bits as well.
+properly restricted domain. In this case, bindings authors SHOULD provide the
+unknown data related APIs for strict bits.
+
+In languages with compile-checked deprecation warnings such as Rust, the unknown
+data related APIs SHOULD be provided for strict bits but marked as deprecated.
 
 ### Enum support
 
