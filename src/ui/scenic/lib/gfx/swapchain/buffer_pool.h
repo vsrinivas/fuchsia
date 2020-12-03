@@ -9,7 +9,6 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/zx/event.h>
 #include <lib/zx/handle.h>
-#include <lib/zx/vmo.h>
 #include <zircon/pixelformat.h>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -30,7 +29,6 @@ namespace gfx {
 class BufferPool {
  public:
   struct Framebuffer {
-    zx::vmo vmo;
     escher::GpuMemPtr device_memory;
     escher::ImagePtr escher_image;
     uint64_t id;

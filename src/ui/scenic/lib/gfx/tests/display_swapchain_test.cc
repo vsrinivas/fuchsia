@@ -13,6 +13,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/lib/display/get_hardware_display_controller.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
@@ -155,8 +156,8 @@ class DisplaySwapchainTest : public Fixture {
         [this](const FrameTimings& timings) { ++frame_rendered_call_count_; });
   }
 
-  const BufferPool& Framebuffers(DisplaySwapchain* swapchain) const {
-    return swapchain->swapchain_buffers_;
+  BufferPool* Framebuffers(DisplaySwapchain* swapchain) const {
+    return &swapchain->swapchain_buffers_;
   }
 
   escher::Escher* escher() { return escher_.get(); }
@@ -238,7 +239,24 @@ VK_TEST_F(DisplaySwapchainTest, RenderProtectedStress) {
 
 VK_TEST_F(DisplaySwapchainTest, InitializesFramebuffers) {
   auto swapchain = CreateSwapchain(display());
-  EXPECT_EQ(3u, Framebuffers(swapchain.get()).size());
+
+  BufferPool* buffer_pool = Framebuffers(swapchain.get());
+  EXPECT_EQ(3u, buffer_pool->size());
+  zx::vmo vmo = ExportMemoryAsVmo(escher(), buffer_pool->GetUnused()->device_memory);
+  EXPECT_EQ(0u, fsl::GetObjectName(vmo.get()).find("Display"));
+}
+
+VK_TEST_F(DisplaySwapchainTest, InitializesProtectedFramebuffers) {
+  if (!CreateVulkanDeviceQueues(/*use_protected_memory=*/true)) {
+    GTEST_SKIP();
+  }
+  auto swapchain = CreateSwapchain(display());
+  swapchain->SetUseProtectedMemory(true);
+
+  BufferPool* buffer_pool = Framebuffers(swapchain.get());
+  EXPECT_EQ(3u, buffer_pool->size());
+  zx::vmo vmo = ExportMemoryAsVmo(escher(), buffer_pool->GetUnused()->device_memory);
+  EXPECT_EQ(0u, fsl::GetObjectName(vmo.get()).find("Display-Protected"));
 }
 
 }  // namespace test

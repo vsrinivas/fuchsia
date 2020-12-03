@@ -170,16 +170,18 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
     FX_LOGS(ERROR) << "Sysmem tokens couldn't be allocated";
     return false;
   }
-  zx_status_t status;
+
+  local_token->SetName(100u, use_protected_memory ? "Display-Protected" : "Display");
+  local_token->SetDebugClientInfo("buffer_pool", 0u);
 
   auto tokens = DuplicateToken(local_token, 2);
-
   if (tokens.empty()) {
     FX_LOGS(ERROR) << "Sysmem tokens failed to be duped.";
     return false;
   }
 
   // Set display buffer constraints.
+  tokens[1]->SetDebugClientInfo("scenic", 0u);
   auto display_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
   auto result = scenic_impl::ImportBufferCollection(display_collection_id,
                                                     *environment->display_controller.get(),
@@ -211,6 +213,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   create_info.sharingMode = vk::SharingMode::eExclusive;
   create_info.initialLayout = vk::ImageLayout::eUndefined;
 
+  tokens[0]->SetDebugClientInfo("vulkan", 0u);
   vk::BufferCollectionCreateInfoFUCHSIA import_collection;
   import_collection.collectionToken = tokens[0].Unbind().TakeChannel().release();
   auto import_result = environment->vk_device.createBufferCollectionFUCHSIA(
@@ -245,7 +248,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   constraints.min_buffer_count = count;
   constraints.usage.vulkan = fuchsia::sysmem::noneUsage;
-  status = sysmem_collection->SetConstraints(true, constraints);
+  zx_status_t status = sysmem_collection->SetConstraints(true, constraints);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to set constraints:" << status;
     return false;
