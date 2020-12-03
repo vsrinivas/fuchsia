@@ -2964,6 +2964,11 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
     return WLAN_START_RESULT_NOT_SUPPORTED;
   }
 
+  // Enter AP_START_PENDING mode before we abort any on-going scans. As soon as
+  // we abort a scan we're open for other scans coming in and we want to make
+  // sure those scans are blocked by setting this bit.
+  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state);
+
   if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
     BRCMF_ERR(
         "Scanning in progress when AP start request comes, scan status (%lu), aborting scan to "
@@ -2989,9 +2994,6 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
   brcmf_enable_mpc(ifp, 0);
   brcmf_configure_arp_nd_offload(ifp, false);
 
-  // Enter AP_START_PENDING mode right before the timer starts, because timer could check the AP
-  // start state when firing.
-  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &ifp->vif->sme_state);
   // Start timer before starting to issue commands.
   cfg->ap_start_timer->Start(BRCMF_AP_START_TIMER_DUR_MS);
   // set to open authentication for external supplicant
