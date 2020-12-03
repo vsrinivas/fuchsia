@@ -47,7 +47,7 @@ struct LocalConnection {
 
   // The vnode corresponding to this directory. |vn| references some
   // directory in |fs|.
-  const LocalVnode* vn;
+  LocalVnode* vn;
 };
 
 static_assert(offsetof(LocalConnection, io) == 0, "LocalConnection must be castable to zxio_t");
@@ -170,8 +170,7 @@ constexpr fdio_ops_t kLocalConnectionOps = []() {
 
 }  // namespace
 
-fdio_t* CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
-                              fbl::RefPtr<const LocalVnode> vn) {
+fdio_t* CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs, fbl::RefPtr<LocalVnode> vn) {
   fdio_t* io = fdio_alloc(&kLocalConnectionOps);
   if (io == nullptr) {
     return nullptr;
@@ -189,6 +188,13 @@ fdio_t* CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
   dir->fs = fbl::ExportToRawPtr(&fs);
   dir->vn = fbl::ExportToRawPtr(&vn);
   return io;
+}
+
+fbl::RefPtr<LocalVnode> GetLocalNodeFromConnectionIfAny(fdio_t* io) {
+  if (fdio_get_ops(io) != &kLocalConnectionOps) {
+    return nullptr;
+  }
+  return fbl::RefPtr<LocalVnode>(fdio_get_local_dir(io)->vn);
 }
 
 }  // namespace fdio_internal

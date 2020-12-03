@@ -641,3 +641,10 @@ static int stub_eventfd_write(int fd, eventfd_t value) {
   return -1;
 }
 weak_alias(stub_eventfd_write, eventfd_write);
+
+static int stub_chroot(const char* path) {
+  libc_io_functions_not_implemented_use_fdio_instead();
+  errno = ENOSYS;
+  return -1;
+}
+weak_alias(stub_chroot, chroot);

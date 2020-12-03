@@ -43,11 +43,8 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
   // its parent.
   void Unlink();
 
-  // Sets the remote connection of the current vnode.
-  // This is only permitted if the current vnode has:
-  // - No existing connection, and
-  // - No children.
-  zx_status_t SetRemote(zx::channel remote);
+  // Detaches this vnode from its parent. The Vnode's own children are not unlinked.
+  void UnlinkFromParent();
 
   // Invoke |Fn()| on all children of this LocalVnode.
   // May be used as a const visitor-pattern for all children.
@@ -81,11 +78,12 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
   const zx::channel& Remote() const { return remote_; }
   const fbl::String& Name() const { return name_; }
 
+  bool has_children() const { return !entries_by_id_.is_empty(); }
+
  private:
   void AddEntry(fbl::RefPtr<LocalVnode> vn);
   void RemoveEntry(LocalVnode* vn);
   void UnlinkChildren();
-  void UnlinkFromParent();
   LocalVnode(fbl::RefPtr<LocalVnode> parent, zx::channel remote, fbl::String name);
 
   struct IdTreeTag {};
@@ -129,7 +127,7 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
   EntryByNameMap entries_by_name_;
 
   fbl::RefPtr<LocalVnode> parent_;
-  zx::channel remote_;
+  const zx::channel remote_;
   const fbl::String name_;
 };
 

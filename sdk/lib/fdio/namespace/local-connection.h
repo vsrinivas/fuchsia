@@ -19,8 +19,12 @@ namespace fdio_internal {
 // filesystem, which are released on |fdio_t|'s close method.
 //
 // On failure, nullptr is returned.
-fdio_t* CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
-                              fbl::RefPtr<const LocalVnode> vn);
+fdio_t* CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs, fbl::RefPtr<LocalVnode> vn);
+
+// If |io| is a connection to a local Vnode, returns a reference to that LocalVnode.
+//
+// Otherwise, returns nullptr.
+fbl::RefPtr<LocalVnode> GetLocalNodeFromConnectionIfAny(fdio_t* io);
 
 struct DirentIteratorState {
   // The ID of the most recent vnode returned by |LocalVnode::Readdir|.

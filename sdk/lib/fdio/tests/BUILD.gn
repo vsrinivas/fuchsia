@@ -2,16 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxbug.dev/36139.                   #
-##########################################
-
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
 import("//build/test.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 
@@ -19,6 +9,7 @@ fuchsia_unittest_package("fdio-unittest-package") {
   manifest = "meta/fdio_test.cmx"
   deps = [
     ":accept-child",
+    ":chroot-child",
     ":fdio",
     ":hello-world",
     ":null-namespace-child",
@@ -28,6 +19,11 @@ fuchsia_unittest_package("fdio-unittest-package") {
 group("tests") {
   testonly = true
   deps = [
+    # We build the chroot-child binary for host to make it easier to experiment with host
+    # behavior of chroot. Unfortunately, we cannot test host chroot behavior automatically
+    # because calling chroot requires root (or other) privileges that we lack in our host
+    # test environment.
+    ":chroot-child($host_toolchain)",
     ":fdio-unittest-package",
     ":fdio_hosttests($host_toolchain)",
     "constructors:tests",
@@ -59,6 +55,7 @@ test("fdio") {
   # fdio_hosttests above.
   sources = [
     "fdio_atexit.cc",
+    "fdio_chroot.cc",
     "fdio_directory.cc",
     "fdio_eventfd.cc",
     "fdio_fd.cc",
@@ -111,6 +108,20 @@ executable("accept-child") {
     "//sdk/lib/fdio",
     "//src/zircon/lib/zircon",
   ]
+}
+
+executable("chroot-child") {
+  visibility = [ ":*" ]
+
+  testonly = true
+  sources = [ "fdio_chroot_child.cc" ]
+
+  if (is_fuchsia) {
+    deps = [
+      "//sdk/lib/fdio",
+      "//src/zircon/lib/zircon",
+    ]
+  }
 }
 
 # Used by tests in fdio_startup.cc.

@@ -256,6 +256,12 @@ int fdio_pipe_pair(fdio_t** a, fdio_t** b, uint32_t options);
 // Creates an |fdio_t| referencing the root of the |ns| namespace.
 fdio_t* fdio_ns_open_root(fdio_ns_t* ns);
 
+// Change the root of the given namespace |ns| to match |io|.
+//
+// Does not take ownership of |io|. The caller is responsible for retaining a reference to |io|
+// for the duration of this call and for releasing that reference after this function returns.
+zx_status_t fdio_ns_set_root(fdio_ns_t* ns, fdio_t* io);
+
 // Validates a |path| argument.
 //
 // Returns ZX_OK if |path| is non-null and less than |PATH_MAX| in length

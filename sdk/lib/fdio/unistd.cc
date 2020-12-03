@@ -1617,6 +1617,84 @@ int chdir(const char* path) {
   return 0;
 }
 
+static zx_status_t resolve_path(const char* relative, char* out_resolved, size_t* out_length) {
+  bool is_dir = false;
+  if (relative[0] == '/') {
+    return __fdio_cleanpath(relative, out_resolved, out_length, &is_dir);
+  }
+
+  char buffer[PATH_MAX] = {};
+  {
+    fbl::AutoLock cwd_lock(&fdio_cwd_lock);
+    strcpy(buffer, fdio_cwd_path);
+  }
+  size_t cwd_length = strlen(buffer);
+  size_t relative_length = strlen(relative);
+
+  if (cwd_length + relative_length + 2 > PATH_MAX) {
+    return ZX_ERR_BAD_PATH;
+  }
+
+  buffer[cwd_length] = '/';
+  memcpy(buffer + cwd_length + 1, relative, relative_length + 1);
+  return __fdio_cleanpath(buffer, out_resolved, out_length, &is_dir);
+}
+
+__EXPORT
+int chroot(const char* path) {
+  char root_path[PATH_MAX];
+  size_t root_path_length = 0u;
+  zx_status_t status = resolve_path(path, root_path, &root_path_length);
+  if (status != ZX_OK) {
+    return ERROR(status);
+  }
+
+  fdio_t* io;
+  status = __fdio_open(&io, root_path, O_RDONLY | O_DIRECTORY, 0);
+  if (status != ZX_OK) {
+    return ERROR(status);
+  }
+
+  fdio_t* old_root = nullptr;
+  {
+    // We acquire the |cwd_lock| after calling |__fdio_open| because we cannot hold this lock for
+    // the duration of the |__fdio_open| call. We are careful to pass an absolute path to
+    // |__fdio_open| to ensure that we're using a consistent value for the |cwd| throughout the
+    // |chroot| operation. If there is a concurrent call to |chdir| during the |__fdio_open|
+    // operation, then we could end up in an inconsistent state, but the only inconsistency would be
+    // the name we apply to the cwd session in the new chrooted namespace.
+    fbl::AutoLock cwd_lock(&fdio_cwd_lock);
+    fbl::AutoLock lock(&fdio_lock);
+
+    status = fdio_ns_set_root(fdio_root_ns, io);
+    if (status != ZX_OK) {
+      fdio_release(io);
+      return ERROR(status);
+    }
+
+    // We are now committed to the root.
+
+    // If the new root path is a prefix of the cwd path, then we can express the current cwd as a
+    // path in the new root by trimming off the prefix. Otherwise, we no longer have a name for the
+    // cwd.
+    if (root_path_length > 1) {
+      std::string_view cwd_view(fdio_cwd_path);
+      if (cwd_view.find(root_path) == 0u && fdio_cwd_path[root_path_length] == '/') {
+        cwd_view.remove_prefix(root_path_length);
+        memmove(fdio_cwd_path, cwd_view.data(), cwd_view.length() + 1);
+      } else {
+        strcpy(fdio_cwd_path, "(unreachable)");
+      }
+    }
+
+    old_root = fdio_root_handle;
+    fdio_root_handle = io;
+  }
+
+  fdio_release(old_root);
+  return 0;
+}
+
 struct __dirstream {
   mtx_t lock;
 

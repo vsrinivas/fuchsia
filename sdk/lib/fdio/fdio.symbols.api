@@ -10,6 +10,7 @@ bind
 chdir
 chmod
 chown
+chroot
 close
 closedir
 connect

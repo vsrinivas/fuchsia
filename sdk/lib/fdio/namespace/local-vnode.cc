@@ -50,19 +50,6 @@ void LocalVnode::Unlink() {
   UnlinkFromParent();
 }
 
-zx_status_t LocalVnode::SetRemote(zx::channel remote) {
-  if (remote_.is_valid()) {
-    // Cannot re-bind after initial bind.
-    return ZX_ERR_ALREADY_EXISTS;
-  }
-  if (!entries_by_id_.is_empty()) {
-    // Overlay remotes are disallowed.
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  remote_ = std::move(remote);
-  return ZX_OK;
-}
-
 // Returns a child if it has the name |name|.
 // Otherwise, returns nullptr.
 fbl::RefPtr<LocalVnode> LocalVnode::Lookup(const fbl::StringPiece& name) const {

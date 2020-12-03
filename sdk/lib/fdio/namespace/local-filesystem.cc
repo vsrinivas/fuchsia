@@ -33,6 +33,9 @@
 
 namespace fio = ::llcpp::fuchsia::io;
 
+// The |mode| argument used for |fuchsia.io.Directory/Open| calls.
+#define FDIO_CONNECT_MODE ((uint32_t)0755)
+
 namespace {
 
 struct ExportState {
@@ -67,9 +70,9 @@ fdio_namespace::~fdio_namespace() {
   root_->Unlink();
 }
 
-zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<const LocalVnode>* in_out_vn,
+zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn,
                                        const char** in_out_path) const {
-  fbl::RefPtr<const LocalVnode> vn = *in_out_vn;
+  fbl::RefPtr<LocalVnode> vn = *in_out_vn;
   const char* path = *in_out_path;
 
   // Empty path or "." matches initial node.
@@ -118,7 +121,7 @@ zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<const LocalVnode>* in_out_vn,
   }
 }
 
-zx_status_t fdio_namespace::Open(fbl::RefPtr<const LocalVnode> vn, const char* path, uint32_t flags,
+zx_status_t fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char* path, uint32_t flags,
                                  uint32_t mode, fdio_t** out) const {
   {
     fbl::AutoLock lock(&lock_);
@@ -195,7 +198,7 @@ zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* s
   return ZX_OK;
 }
 
-fdio_t* fdio_namespace::CreateConnection(fbl::RefPtr<const LocalVnode> vn) const {
+fdio_t* fdio_namespace::CreateConnection(fbl::RefPtr<LocalVnode> vn) const {
   return fdio_internal::CreateLocalConnection(fbl::RefPtr(this), std::move(vn));
 }
 
@@ -206,7 +209,7 @@ zx_status_t fdio_namespace::Connect(const char* path, uint32_t flags, zx::channe
   }
   path++;
 
-  fbl::RefPtr<const LocalVnode> vn;
+  fbl::RefPtr<LocalVnode> vn;
   {
     fbl::AutoLock lock(&lock_);
     vn = root_;
@@ -308,13 +311,22 @@ zx_status_t fdio_namespace::Bind(const char* path, zx::channel remote) {
   path++;
 
   fbl::AutoLock lock(&lock_);
-  fbl::RefPtr<LocalVnode> vn = root_;
   if (path[0] == 0) {
+    if (root_->Remote().is_valid()) {
+      // Cannot re-bind after initial bind.
+      return ZX_ERR_ALREADY_EXISTS;
+    }
+    if (root_->has_children()) {
+      // Overlay remotes are disallowed.
+      return ZX_ERR_NOT_SUPPORTED;
+    }
     // The path was "/" so we're trying to bind to the root vnode.
-    return vn->SetRemote(std::move(remote));
+    root_ = LocalVnode::Create(nullptr, std::move(remote), "");
+    return ZX_OK;
   }
 
   zx_status_t status = ZX_OK;
+  fbl::RefPtr<LocalVnode> vn = root_;
   fbl::RefPtr<LocalVnode> first_new_node = nullptr;
 
   // If we fail, but leave any intermediate nodes, we need to clean them up
@@ -376,22 +388,43 @@ fdio_t* fdio_namespace::OpenRoot() const {
     return CreateConnection(root_);
   }
 
-  // Borrow a reference to root's |remote| connection.
-  //
-  // We may safely access this member after unlocking because:
+  // We may safely access Remote() after unlocking because:
   // - Remotes are immutable on LocalVnodes once they have been set (immutability is
   // guaranteed).
-  // - fdio_namespace holds a strong reference to |root_| for the duration of this
-  // method (lifetime is guaranteed).
-  const zx::channel& remote = root_->Remote();
+  fbl::RefPtr<LocalVnode> vn = root_;
   lock.release();
 
   fdio_t* io;
-  zx_status_t status = fdio_remote_clone(remote.get(), &io);
+  zx_status_t status = fdio_remote_clone(vn->Remote().get(), &io);
   if (status != ZX_OK) {
     return nullptr;
   }
   return io;
+}
+
+zx_status_t fdio_namespace::SetRoot(fdio_t* io) {
+  fbl::RefPtr<LocalVnode> vn = fdio_internal::GetLocalNodeFromConnectionIfAny(io);
+
+  if (!vn) {
+    zx::channel handle;
+    zx_status_t status = fdio_zxio_clone(io, handle.reset_and_get_address());
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    vn = LocalVnode::Create(nullptr, std::move(handle), "");
+  }
+
+  fbl::AutoLock lock(&lock_);
+  if (vn == root_) {
+    // Nothing to do.
+    return ZX_OK;
+  }
+
+  vn->UnlinkFromParent();
+  std::swap(root_, vn);
+  vn->Unlink();
+  return ZX_OK;
 }
 
 zx_status_t fdio_namespace::Export(fdio_flat_namespace_t** out) const {

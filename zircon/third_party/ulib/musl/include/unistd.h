@@ -150,6 +150,7 @@ unsigned ualarm(unsigned, unsigned);
 #define L_INCR 1
 #define L_XTND 2
 int vhangup(void);
+int chroot(const char*);
 int getpagesize(void);
 int getdtablesize(void);
 int sethostname(const char*, size_t);

@@ -40,6 +40,11 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   // Returns |nullptr| on failure.
   fdio_t* OpenRoot() const;
 
+  // Change the root of this namespace to match |io|.
+  //
+  // Does not take ownership of |io|.
+  zx_status_t SetRoot(fdio_t* io);
+
   // Export all remote references and their paths in a flat format.
   zx_status_t Export(fdio_flat_namespace_t** out) const;
 
@@ -53,8 +58,8 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   // Create a new |fdio_t| object referring to the object at |path|.
   //
   // This object may represent either a local node, or a remote object.
-  zx_status_t Open(fbl::RefPtr<const LocalVnode> vn, const char* path, uint32_t flags,
-                   uint32_t mode, fdio_t** out) const;
+  zx_status_t Open(fbl::RefPtr<LocalVnode> vn, const char* path, uint32_t flags, uint32_t mode,
+                   fdio_t** out) const;
 
   // Connect to a remote object within the namespace.
   //
@@ -78,12 +83,12 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   // Creates a local |fdio_t| object with a connection to a vnode.
   // This object will increase the number of references to the namespace by
   // one.
-  fdio_t* CreateConnection(fbl::RefPtr<const LocalVnode> vn) const;
+  fdio_t* CreateConnection(fbl::RefPtr<LocalVnode> vn) const;
 
   // Lookup repeatedly to traverse vnodes within the local filesystem.
   //
   // |vn| and |path| are input and output parameters.
-  zx_status_t WalkLocked(fbl::RefPtr<const LocalVnode>* vn, const char** path) const
+  zx_status_t WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn, const char** in_out_path) const
       __TA_REQUIRES(lock_);
 
   mutable fbl::Mutex lock_;

@@ -176,6 +176,7 @@ zx_status_t fdio_open_fd(const char* path, uint32_t flags, int* out_fd) {
   }
   path++;
 
+  // TODO: Missing fdio_lock.
   return fdio_open_fd_common(fdio_root_handle, path, flags, out_fd);
 }
 

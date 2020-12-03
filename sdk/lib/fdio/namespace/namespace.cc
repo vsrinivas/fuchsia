@@ -20,6 +20,8 @@
 
 fdio_t* fdio_ns_open_root(fdio_ns_t* ns) { return ns->OpenRoot(); }
 
+zx_status_t fdio_ns_set_root(fdio_ns_t* ns, fdio_t* io) { return ns->SetRoot(io); }
+
 __BEGIN_CDECLS
 
 __EXPORT
