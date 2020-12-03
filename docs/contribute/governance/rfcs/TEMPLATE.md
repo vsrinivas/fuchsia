@@ -25,9 +25,9 @@ This is the technically detailed version of your proposal.
 ## Implementation
 
 How will you go about implementing this design? Can the change be made in a
-single CL or does the change involve a complex migration of third-party
-dependencies? Do you plan to structure the implementation into phases? What
-dependencies exist at each phase?
+single Gerrit change or does the change involve a complex migration of
+third-party dependencies? Do you plan to structure the implementation
+into phases? What dependencies exist at each phase?
 
 ## Performance
 
