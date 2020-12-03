@@ -64,7 +64,7 @@ static constexpr device_fragment_part_t gpio_bootloader_fragment[] = {
     {std::size(gpio_bootloader_match), gpio_bootloader_match},
 };
 static constexpr device_fragment_t ot_fragments[] = {
-    {"ot-radio", std::size(ot_dev_fragment), ot_dev_fragment},
+    {"spi", std::size(ot_dev_fragment), ot_dev_fragment},
     {"gpio-int", std::size(gpio_int_fragment), gpio_int_fragment},
     {"gpio-reset", std::size(gpio_reset_fragment), gpio_reset_fragment},
     {"gpio-bootloader", std::size(gpio_bootloader_fragment), gpio_bootloader_fragment},
