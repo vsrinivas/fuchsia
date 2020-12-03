@@ -164,7 +164,7 @@ func newNetbootQuery(nodename string, cookie uint32, port int) (*netbootQuery, e
 		isOpen:  true}, nil
 }
 
-func (n *netbootQuery) write() error {
+func (n *netbootQuery) write(ctx context.Context) error {
 	// Cleanup function is used here in favor of defer to be explicit about
 	// what is being returned. It is difficult to reason about otherwise.
 	cleanup := func(e error) error {
@@ -191,37 +191,22 @@ func (n *netbootQuery) write() error {
 		if iface.Flags&net.FlagLoopback != 0 {
 			continue
 		}
-		addrs, err := iface.Addrs()
+		_, err := n.conn.WriteToUDP(buf.Bytes(), &net.UDPAddr{
+			IP:   net.IPv6linklocalallnodes,
+			Port: n.port,
+			Zone: iface.Name,
+		})
+
+		logger.Debugf(ctx, "writing on %s: %v", iface.Name, err)
+
+		// Skip errors here, as it may be possible to write on
+		// some interfaces but not others. Track last error in
+		// case all writes fail on all interfaces.
 		if err != nil {
-			return cleanup(err)
+			lastWriteErr = err
+			continue
 		}
-
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-			if ip == nil || ip.To16() == nil {
-				continue
-			}
-
-			_, err := n.conn.WriteToUDP(buf.Bytes(), &net.UDPAddr{
-				IP:   net.IPv6linklocalallnodes,
-				Port: n.port,
-				Zone: iface.Name,
-			})
-			// Skip errors here, as it may be possible to write on
-			// some interfaces but not others. Track last error in
-			// case all writes fail on all interfaces.
-			if err != nil {
-				lastWriteErr = err
-				continue
-			}
-			wrote = true
-		}
+		wrote = true
 	}
 	if !wrote {
 		return cleanup(fmt.Errorf("write on any iface. Last err: %v", lastWriteErr))
@@ -382,13 +367,13 @@ func (n *Client) StartDiscover(ctx context.Context, t chan<- *Target, nodename s
 	}
 	go func() {
 		defer q.close()
+		if err := q.write(ctx); err != nil {
+			t <- &Target{Error: err}
+			return
+		}
 
 		for {
 			logger.Debugf(ctx, "discovering nodename=%s", nodename)
-			if err := q.write(); err != nil {
-				t <- &Target{Error: err}
-				return
-			}
 			target, err := q.read()
 			if err != nil {
 				t <- &Target{Error: err}
