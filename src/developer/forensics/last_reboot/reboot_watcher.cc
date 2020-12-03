@@ -20,6 +20,8 @@ std::string FormatReason(fuchsia::hardware::power::statecontrol::RebootReason re
       return "USER REQUEST";
     case RebootReason::SYSTEM_UPDATE:
       return "SYSTEM UPDATE";
+    case RebootReason::RETRY_SYSTEM_UPDATE:
+      return "RETRY SYSTEM UPDATE";
     case RebootReason::HIGH_TEMPERATURE:
       return "HIGH TEMPERATURE";
     case RebootReason::SESSION_FAILURE:

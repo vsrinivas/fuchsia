@@ -8,7 +8,13 @@ library fuchsia.hardware.power.statecontrol;
 // Contact OWNERS before adding a new value.
 enum RebootReason {
     USER_REQUEST = 1;
+
+    /// A new system update has been downloaded.
     SYSTEM_UPDATE = 2;
+
+    /// Applying the system update has failed.
+    RETRY_SYSTEM_UPDATE = 8;
+
     HIGH_TEMPERATURE = 3;
     FACTORY_DATA_RESET = 6;
 

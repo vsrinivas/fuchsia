@@ -62,6 +62,11 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootReasons, ImminentGracefulRebootWatcher
                                  "SYSTEM UPDATE",
                              },
                              {
+                                 "RetrySystemUpdate",
+                                 RebootReason::RETRY_SYSTEM_UPDATE,
+                                 "RETRY SYSTEM UPDATE",
+                             },
+                             {
                                  "HighTemperature",
                                  RebootReason::HIGH_TEMPERATURE,
                                  "HIGH TEMPERATURE",
