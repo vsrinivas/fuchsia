@@ -18,7 +18,7 @@ mod version;
 pub use crate::{
     board::VerifyBoardError,
     hash::HashError,
-    image::{Image, ImageClass, OpenImageError},
+    image::{Image, ImageClass, ImageType, OpenImageError},
     images::{ImageList, ResolveImagesError, UnverifiedImageList},
     name::VerifyNameError,
     packages::ParsePackageError,
@@ -52,7 +52,7 @@ impl UpdatePackage {
     /// prefix of the request, sorted alphabetically.
     pub async fn resolve_images(
         &self,
-        requests: &[String],
+        requests: &[ImageType],
     ) -> Result<UnverifiedImageList, ResolveImagesError> {
         images::resolve_images(&self.proxy, requests).await
     }

@@ -79,13 +79,6 @@ test_package("system-updater-integration-tests") {
     },
   ]
 
-  resources = [
-    {
-      path = rebase_path("//src/sys/pkg/bin/system-updater/images")
-      dest = "images"
-    },
-  ]
-
   meta = [
     {
       path = rebase_path(

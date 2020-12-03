@@ -121,19 +121,7 @@ async fn writes_multiple_firmware_types() {
 
     env.run_update().await.expect("success");
 
-    let mut interactions = env.take_interactions();
-    // The order of files listed from a directory isn't guaranteed so the
-    // firmware could be written in either order. Sort by type string so
-    // we can easily validate contents.
-    interactions[11..13].sort_by_key(|event| {
-        if let Paver(PaverEvent::WriteFirmware { configuration: _, firmware_type, payload: _ }) =
-            event
-        {
-            return firmware_type.clone();
-        } else {
-            panic!("Not a WriteFirmware event: {:?}", event);
-        }
-    });
+    let interactions = env.take_interactions();
 
     assert_eq!(
         interactions,

@@ -3,13 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{image::Image, update_mode::UpdateMode},
+    crate::{image::Image, image::ImageClass, image::ImageType, update_mode::UpdateMode},
     fidl_fuchsia_io::DirectoryProxy,
     std::collections::BTreeSet,
     thiserror::Error,
 };
-
-const SUBTYPE_SUFFIX: &str = "[_type]";
 
 /// An error encountered while resolving images.
 #[derive(Debug, Error)]
@@ -58,7 +56,7 @@ pub struct UnverifiedImageList(Vec<Image>);
 
 impl UnverifiedImageList {
     fn contains_zbi_entry(&self) -> bool {
-        self.0.iter().any(|image| image.filename() == "zbi" || image.filename() == "zbi.signed")
+        self.0.iter().any(|image| image.classify() == ImageClass::Zbi)
     }
 
     /// Verify that this image list is appropriate for the given update mode.
@@ -89,22 +87,12 @@ async fn list_dir_files(proxy: &DirectoryProxy) -> Result<BTreeSet<String>, Reso
     Ok(names)
 }
 
-fn resolve(requests: &[String], available: &BTreeSet<String>) -> UnverifiedImageList {
+fn resolve(requests: &[ImageType], available: &BTreeSet<String>) -> UnverifiedImageList {
     let mut res = vec![];
-
     for request in requests {
-        match request.strip_suffix(SUBTYPE_SUFFIX) {
-            Some(prefix) => {
-                for candidate in available.iter() {
-                    if let Some(request) = Image::matches_base(candidate, prefix) {
-                        res.push(request);
-                    }
-                }
-            }
-            None => {
-                if available.contains(request) {
-                    res.push(Image::new(request));
-                }
+        for candidate in available.iter() {
+            if let Some(image) = Image::matches_base(candidate.to_string(), *request) {
+                res.push(image);
             }
         }
     }
@@ -114,10 +102,9 @@ fn resolve(requests: &[String], available: &BTreeSet<String>) -> UnverifiedImage
 
 pub(crate) async fn resolve_images(
     proxy: &DirectoryProxy,
-    requests: &[String],
+    requests: &[ImageType],
 ) -> Result<UnverifiedImageList, ResolveImagesError> {
     let files = list_dir_files(proxy).await?;
-
     Ok(resolve(requests, &files))
 }
 
@@ -138,45 +125,43 @@ mod tests {
 
     #[test]
     fn verify_mode_normal_requires_zbi() {
-        let images = vec![Image::new("foo"), Image::new("zbi")];
+        let images =
+            vec![Image::new(ImageType::Bootloader, None), Image::new(ImageType::Zbi, None)];
         assert_eq!(
             UnverifiedImageList(images.clone()).verify(UpdateMode::Normal),
             Ok(ImageList(images))
         );
 
-        let images = vec![Image::new("foo"), Image::new("zbi.signed")];
+        let images =
+            vec![Image::new(ImageType::Bootloader, None), Image::new(ImageType::ZbiSigned, None)];
         assert_eq!(
             UnverifiedImageList(images.clone()).verify(UpdateMode::Normal),
             Ok(ImageList(images))
         );
 
         assert_eq!(
-            UnverifiedImageList(vec![
-                Image::new("foo"),
-                Image::new("bar"),
-                Image::new("bootloader"),
-            ])
-            .verify(UpdateMode::Normal),
+            UnverifiedImageList(vec![Image::new(ImageType::Bootloader, None),])
+                .verify(UpdateMode::Normal),
             Err(VerifyError::MissingZbi)
         );
     }
 
     #[test]
     fn verify_mode_force_recovery_requires_no_zbi() {
-        let images = vec![Image::new("foo"), Image::new("bar"), Image::new("bootloader")];
+        let images = vec![Image::new(ImageType::Bootloader, None)];
         assert_eq!(
             UnverifiedImageList(images.clone()).verify(UpdateMode::ForceRecovery),
             Ok(ImageList(images))
         );
 
         assert_eq!(
-            UnverifiedImageList(vec![Image::new("foo"), Image::new("zbi")])
+            UnverifiedImageList(vec![Image::new(ImageType::Zbi, None)])
                 .verify(UpdateMode::ForceRecovery),
             Err(VerifyError::UnexpectedZbi)
         );
 
         assert_eq!(
-            UnverifiedImageList(vec![Image::new("foo"), Image::new("zbi.signed")])
+            UnverifiedImageList(vec![Image::new(ImageType::ZbiSigned, None)])
                 .verify(UpdateMode::ForceRecovery),
             Err(VerifyError::UnexpectedZbi)
         );
@@ -185,9 +170,16 @@ mod tests {
     #[test]
     fn image_list_filter_filters_preserving_order() {
         assert_eq!(
-            ImageList(vec![Image::new("foo"), Image::new("bar"), Image::new("bootloader")])
-                .filter(|image| image.name() != "bar"),
-            ImageList(vec![Image::new("foo"), Image::new("bootloader")]),
+            ImageList(vec![
+                Image::new(ImageType::Zbi, None),
+                Image::new(ImageType::ZbiSigned, None),
+                Image::new(ImageType::Bootloader, None)
+            ])
+            .filter(|image| image.name() != "zbi.signed"),
+            ImageList(vec![
+                Image::new(ImageType::Zbi, None),
+                Image::new(ImageType::Bootloader, None)
+            ]),
         );
     }
 
@@ -254,34 +246,34 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn resolve_images_intersects_requests_and_available() {
-        let pkg = update_pkg_with_files(&["a", "b", "c"]).await;
+        let pkg = update_pkg_with_files(&["a", "zbi", "c"]).await;
 
         assert_eq!(
-            pkg.resolve_images(&["b".to_owned(), "c".to_owned(), "e".to_owned()]).await.unwrap(),
-            UnverifiedImageList(vec![Image::new("b"), Image::new("c"),])
+            pkg.resolve_images(&[ImageType::Zbi, ImageType::Bootloader]).await.unwrap(),
+            UnverifiedImageList(vec![Image::new(ImageType::Zbi, None),])
         );
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn resolve_images_expands_subtypes() {
-        let pkg =
-            update_pkg_with_files(&["firmware", "firmware_foo", "firmware_bar", "not_firmware"])
-                .await;
-
+    #[test]
+    fn resolve_ignores_missing_entries() {
         assert_eq!(
-            pkg.resolve_images(&["firmware[_type]".to_owned()]).await.unwrap(),
-            UnverifiedImageList(vec![
-                Image::new("firmware"),
-                Image::join("firmware", "bar"),
-                Image::join("firmware", "foo"),
-            ])
+            resolve(&[ImageType::Zbi, ImageType::Bootloader], &btreeset! { "zbi".to_owned() }),
+            UnverifiedImageList(vec![Image::new(ImageType::Zbi, None)])
+        );
+    }
+
+    #[test]
+    fn resolve_allows_missing_subtypes() {
+        assert_eq!(
+            resolve(&[ImageType::Firmware], &btreeset! { "not_firmware".to_owned() }),
+            UnverifiedImageList(vec![])
         );
     }
 
     #[test]
     fn resolve_ignores_subtype_entry_with_underscore_and_no_contents() {
         assert_eq!(
-            resolve(&["firmware[_type]".to_owned()], &btreeset! { "firmware_".to_owned() }),
+            resolve(&[ImageType::Firmware], &btreeset! { "firmware_".to_owned() }),
             UnverifiedImageList(vec![])
         );
     }
@@ -291,40 +283,22 @@ mod tests {
         // firmware2 doesn't follow the {base}_{subtype} format, should be ignored.
         assert_eq!(
             resolve(
-                &["firmware[_type]".to_owned()],
+                &[ImageType::Firmware],
                 &btreeset! { "firmware_a".to_owned(), "firmware2".to_owned() }
             ),
-            UnverifiedImageList(vec![Image::join("firmware", "a")])
+            UnverifiedImageList(vec![Image::new(ImageType::Firmware, Some("a"))])
         );
     }
 
     #[test]
-    fn resolve_ignores_missing_entries() {
+    fn resolve_allows_subtypes() {
         assert_eq!(
             resolve(
-                &["present".to_owned(), "not_present".to_owned()],
-                &btreeset! { "present".to_owned() }
+                &[ImageType::Firmware],
+                &btreeset! {
+                "firmware_b".to_owned(),}
             ),
-            UnverifiedImageList(vec![Image::new("present")])
-        );
-    }
-
-    #[test]
-    fn resolve_allows_underscores_in_filenames() {
-        assert_eq!(
-            resolve(
-                &["no_subtype".to_owned(), "with_subtype[_type]".to_owned()],
-                &btreeset! { "no_subtype".to_owned(), "with_subtype_a_b".to_owned() }
-            ),
-            UnverifiedImageList(vec![Image::new("no_subtype"), Image::join("with_subtype", "a_b")])
-        );
-    }
-
-    #[test]
-    fn resolve_allows_missing_subtypes() {
-        assert_eq!(
-            resolve(&["firmware[_type]".to_owned()], &btreeset! { "not_firmware".to_owned() }),
-            UnverifiedImageList(vec![])
+            UnverifiedImageList(vec![Image::new(ImageType::Firmware, Some("b")),])
         );
     }
 
@@ -332,13 +306,13 @@ mod tests {
     fn resolve_preserves_request_order() {
         assert_eq!(
             resolve(
-                &["z_first".to_owned(), "middle".to_owned(), "a_last".to_owned()],
-                &btreeset! { "a_last".to_owned(), "middle".to_owned(), "z_first".to_owned() }
+                &[ImageType::Zbi, ImageType::Bootloader, ImageType::FuchsiaVbmeta],
+                &btreeset! { "fuchsia.vbmeta".to_owned(), "bootloader".to_owned(), "zbi".to_owned() }
             ),
             UnverifiedImageList(vec![
-                Image::new("z_first"),
-                Image::new("middle"),
-                Image::new("a_last"),
+                Image::new(ImageType::Zbi, None),
+                Image::new(ImageType::Bootloader, None),
+                Image::new(ImageType::FuchsiaVbmeta, None),
             ])
         );
     }

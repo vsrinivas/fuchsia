@@ -146,10 +146,6 @@ test_package("isolated-swd-tests") {
       path = rebase_path("//src/sys/pkg/lib/fuchsia-pkg-testing/certs/ca.cert")
       dest = "ssl/cert.pem"
     },
-    {
-      path = rebase_path("//src/sys/pkg/bin/system-updater/images")
-      dest = "images"
-    },
   ]
 
   meta = [
@@ -200,13 +196,6 @@ package("isolated-swd-components") {
     {
       name = "system-updater"
       source = "system_updater"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("//src/sys/pkg/bin/system-updater/images")
-      dest = "images"
     },
   ]
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, bail, Context, Error},
+    anyhow::{anyhow, Context, Error},
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_paver::{
         Asset, BootManagerMarker, BootManagerProxy, Configuration, ConfigurationStatus,
@@ -12,7 +12,7 @@ use {
     fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_zircon::{Status, VmoChildOptions},
     thiserror::Error,
-    update_package::{Image, UpdatePackage},
+    update_package::{Image, ImageClass, UpdatePackage},
 };
 
 mod configuration;
@@ -83,37 +83,28 @@ fn classify_image(
     image: &Image,
     desired_config: NonCurrentConfiguration,
 ) -> Result<ImageTarget<'_>, Error> {
-    let target = match image.name() {
-        "zbi" | "zbi.signed" => ImageTarget::Asset {
+    let target = match image.classify() {
+        ImageClass::Zbi => ImageTarget::Asset {
             asset: Asset::Kernel,
             configuration: desired_config.to_target_configuration(),
         },
-        "fuchsia.vbmeta" => ImageTarget::Asset {
+        ImageClass::ZbiVbmeta => ImageTarget::Asset {
             asset: Asset::VerifiedBootMetadata,
             configuration: desired_config.to_target_configuration(),
         },
-        "zedboot" | "zedboot.signed" | "recovery" => ImageTarget::Asset {
+        ImageClass::Recovery => ImageTarget::Asset {
             asset: Asset::Kernel,
             configuration: TargetConfiguration::Single(Configuration::Recovery),
         },
-        "recovery.vbmeta" => ImageTarget::Asset {
+        ImageClass::RecoveryVbmeta => ImageTarget::Asset {
             asset: Asset::VerifiedBootMetadata,
             configuration: TargetConfiguration::Single(Configuration::Recovery),
         },
-        "bootloader" | "firmware" => {
-            // Keep support for update packages still using the older "bootloader" file, which is
-            // handled identically to "firmware" but without subtype support.
-            ImageTarget::Firmware {
-                subtype: image.subtype().unwrap_or(""),
-                configuration: desired_config.to_target_configuration(),
-            }
-        }
-        _ => bail!("unrecognized image: {}", image.name()),
+        ImageClass::Firmware => ImageTarget::Firmware {
+            subtype: image.subtype().unwrap_or(""),
+            configuration: desired_config.to_target_configuration(),
+        },
     };
-
-    if let (ImageTarget::Asset { .. }, Some(subtype)) = (&target, image.subtype()) {
-        bail!("unsupported subtype {:?} for asset {:?}", subtype, target);
-    }
 
     Ok(target)
 }
@@ -204,11 +195,11 @@ async fn write_image_buffer(
     desired_config: NonCurrentConfiguration,
 ) -> Result<(), Error> {
     let target = classify_image(image, desired_config)?;
-    let payload = Payload { display_name: image.filename(), buffer };
+    let payload = Payload { display_name: &image.name(), buffer };
 
     match target {
         ImageTarget::Firmware { subtype, configuration } => {
-            write_firmware_to_configurations(data_sink, configuration, subtype, payload).await?;
+            write_firmware_to_configurations(data_sink, configuration, &subtype, payload).await?;
         }
         ImageTarget::Asset { asset, configuration } => {
             write_asset_to_configurations(data_sink, configuration, asset, payload).await?;
@@ -444,16 +435,16 @@ pub async fn write_image(
     let buffer = update_pkg
         .open_image(&image)
         .await
-        .with_context(|| format!("error opening {}", image.filename()))?;
+        .with_context(|| format!("error opening {}", image.name()))?;
 
-    fx_log_info!("writing {} from update package", image.filename());
+    fx_log_info!("writing {} from update package", image.name());
 
     let res = write_image_buffer(data_sink, buffer, image, desired_config)
         .await
-        .with_context(|| format!("error writing {}", image.filename()));
+        .with_context(|| format!("error writing {}", image.name()));
 
     if let Ok(()) = &res {
-        fx_log_info!("wrote {} successfully", image.filename());
+        fx_log_info!("wrote {} successfully", image.name());
     }
     res
 }
@@ -509,10 +500,10 @@ fn make_buffer(contents: impl AsRef<[u8]>) -> Buffer {
 mod tests {
     use {
         super::*,
-        fidl_fuchsia_paver::DataSinkMarker,
         matches::assert_matches,
         mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
         std::sync::Arc,
+        update_package::ImageType,
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -752,16 +743,18 @@ mod tests {
         write_image_buffer(
             &data_sink,
             make_buffer("firmware contents"),
-            &Image::new("bootloader"),
+            &Image::new(ImageType::Bootloader, None),
             NonCurrentConfiguration::A,
         )
         .await
         .unwrap();
 
+        let image = &Image::new(ImageType::Firmware, Some("foo"));
+
         write_image_buffer(
             &data_sink,
             make_buffer("firmware_foo contents"),
-            &Image::join("firmware", "foo"),
+            image,
             NonCurrentConfiguration::B,
         )
         .await
@@ -798,7 +791,7 @@ mod tests {
         write_image_buffer(
             &data_sink,
             make_buffer("firmware of the future!"),
-            &Image::join("firmware", "unknown"),
+            &Image::new(ImageType::Firmware, Some("unknown")),
             NonCurrentConfiguration::A,
         )
         .await
@@ -829,7 +822,7 @@ mod tests {
             write_image_buffer(
                 &data_sink,
                 make_buffer("oops"),
-                &Image::join("firmware", "error"),
+                &Image::new(ImageType::Firmware, None),
                 NonCurrentConfiguration::A,
             )
             .await,
@@ -840,41 +833,9 @@ mod tests {
             paver.take_events(),
             vec![PaverEvent::WriteFirmware {
                 configuration: Configuration::A,
-                firmware_type: "error".to_owned(),
+                firmware_type: "".to_owned(),
                 payload: b"oops".to_vec()
             }]
-        );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn write_image_buffer_rejects_unknown_images() {
-        let (data_sink, _server_end) = fidl::endpoints::create_proxy::<DataSinkMarker>().unwrap();
-
-        assert_matches!(
-            write_image_buffer(
-                &data_sink,
-                make_buffer("unknown"),
-                &Image::new("unknown"),
-                NonCurrentConfiguration::A,
-            )
-            .await,
-            Err(e) if e.to_string().contains("unrecognized image")
-        );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn write_image_buffer_rejects_asset_with_subtype() {
-        let (data_sink, _server_end) = fidl::endpoints::create_proxy::<DataSinkMarker>().unwrap();
-
-        assert_matches!(
-            write_image_buffer(
-                &data_sink,
-                make_buffer("unknown"),
-                &Image::join("zbi", "2"),
-                NonCurrentConfiguration::A,
-            )
-            .await,
-            Err(e) if e.to_string().contains("unsupported subtype")
         );
     }
 
@@ -886,7 +847,7 @@ mod tests {
         write_image_buffer(
             &data_sink,
             make_buffer("zbi contents"),
-            &Image::new("zbi"),
+            &Image::new(ImageType::Zbi, None),
             NonCurrentConfiguration::A,
         )
         .await
@@ -918,7 +879,7 @@ mod tests {
             write_image_buffer(
                 &data_sink,
                 make_buffer("zbi contents"),
-                &Image::new("zbi"),
+                &Image::new(ImageType::Zbi, None),
                 NonCurrentConfiguration::A,
             )
             .await,
@@ -929,7 +890,7 @@ mod tests {
             write_image_buffer(
                 &data_sink,
                 make_buffer("vbmeta contents"),
-                &Image::new("fuchsia.vbmeta"),
+                &Image::new(ImageType::FuchsiaVbmeta, None),
                 NonCurrentConfiguration::A,
             )
             .await,
@@ -940,7 +901,7 @@ mod tests {
             write_image_buffer(
                 &data_sink,
                 make_buffer("zbi contents"),
-                &Image::new("zbi"),
+                &Image::new(ImageType::Zbi, None),
                 NonCurrentConfiguration::B,
             )
             .await,
@@ -951,89 +912,11 @@ mod tests {
             write_image_buffer(
                 &data_sink,
                 make_buffer("vbmeta contents"),
-                &Image::new("fuchsia.vbmeta"),
+                &Image::new(ImageType::FuchsiaVbmeta, None),
                 NonCurrentConfiguration::B,
             )
             .await,
             Err(e) if e.to_string().contains("write_asset responded with")
-        );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn write_image_buffer_supports_known_image_names() {
-        let paver = Arc::new(MockPaverServiceBuilder::new().build());
-        let data_sink = paver.spawn_data_sink_service();
-
-        for name in &[
-            "bootloader",
-            "firmware",
-            "zbi",
-            "zbi.signed",
-            "fuchsia.vbmeta",
-            "zedboot",
-            "zedboot.signed",
-            "recovery",
-            "recovery.vbmeta",
-        ] {
-            write_image_buffer(
-                &data_sink,
-                make_buffer(format!("{} buffer", name)),
-                &Image::new(*name),
-                NonCurrentConfiguration::B,
-            )
-            .await
-            .unwrap();
-        }
-
-        assert_eq!(
-            paver.take_events(),
-            vec![
-                PaverEvent::WriteFirmware {
-                    configuration: Configuration::B,
-                    firmware_type: "".to_owned(),
-                    payload: b"bootloader buffer".to_vec()
-                },
-                PaverEvent::WriteFirmware {
-                    configuration: Configuration::B,
-                    firmware_type: "".to_owned(),
-                    payload: b"firmware buffer".to_vec()
-                },
-                PaverEvent::WriteAsset {
-                    configuration: Configuration::B,
-                    asset: Asset::Kernel,
-                    payload: b"zbi buffer".to_vec()
-                },
-                PaverEvent::WriteAsset {
-                    configuration: Configuration::B,
-                    asset: Asset::Kernel,
-                    payload: b"zbi.signed buffer".to_vec()
-                },
-                PaverEvent::WriteAsset {
-                    configuration: Configuration::B,
-                    asset: Asset::VerifiedBootMetadata,
-                    payload: b"fuchsia.vbmeta buffer".to_vec()
-                },
-                PaverEvent::WriteAsset {
-                    configuration: Configuration::Recovery,
-                    asset: Asset::Kernel,
-                    payload: b"zedboot buffer".to_vec()
-                },
-                PaverEvent::WriteAsset {
-                    configuration: Configuration::Recovery,
-                    asset: Asset::Kernel,
-                    payload: b"zedboot.signed buffer".to_vec()
-                },
-                PaverEvent::WriteAsset {
-                    configuration: Configuration::Recovery,
-                    asset: Asset::Kernel,
-                    payload: b"recovery buffer".to_vec()
-                },
-                PaverEvent::WriteAsset {
-                    configuration: Configuration::Recovery,
-                    asset: Asset::VerifiedBootMetadata,
-                    payload: b"recovery.vbmeta buffer".to_vec()
-                },
-            ]
         );
     }
 
@@ -1064,6 +947,7 @@ mod abr_not_supported_tests {
         matches::assert_matches,
         mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
         std::sync::Arc,
+        update_package::ImageType,
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1123,7 +1007,7 @@ mod abr_not_supported_tests {
         write_image_buffer(
             &data_sink,
             make_buffer("zbi.signed contents"),
-            &Image::new("zbi.signed"),
+            &Image::new(ImageType::ZbiSigned, None),
             NonCurrentConfiguration::NotSupported,
         )
         .await
@@ -1132,7 +1016,7 @@ mod abr_not_supported_tests {
         write_image_buffer(
             &data_sink,
             make_buffer("the new vbmeta"),
-            &Image::new("fuchsia.vbmeta"),
+            &Image::new(ImageType::FuchsiaVbmeta, None),
             NonCurrentConfiguration::NotSupported,
         )
         .await
@@ -1173,7 +1057,7 @@ mod abr_not_supported_tests {
         write_image_buffer(
             &data_sink,
             make_buffer("firmware contents"),
-            &Image::new("firmware"),
+            &Image::new(ImageType::Firmware, None),
             NonCurrentConfiguration::NotSupported,
         )
         .await
@@ -1216,7 +1100,7 @@ mod abr_not_supported_tests {
             write_image_buffer(
                 &data_sink,
                 make_buffer("zbi.signed contents"),
-                &Image::new("zbi.signed"),
+                &Image::new(ImageType::ZbiSigned, None),
                 NonCurrentConfiguration::NotSupported,
             )
             .await,
@@ -1252,7 +1136,7 @@ mod abr_not_supported_tests {
         write_image_buffer(
             &data_sink,
             make_buffer("zbi.signed contents"),
-            &Image::new("zbi.signed"),
+            &Image::new(ImageType::ZbiSigned, None),
             NonCurrentConfiguration::NotSupported,
         )
         .await
@@ -1290,7 +1174,7 @@ mod abr_not_supported_tests {
         write_image_buffer(
             &data_sink,
             make_buffer("firmware contents"),
-            &Image::new("firmware"),
+            &Image::new(ImageType::Firmware, None),
             NonCurrentConfiguration::NotSupported,
         )
         .await
@@ -1333,7 +1217,7 @@ mod abr_not_supported_tests {
             write_image_buffer(
                 &data_sink,
                 make_buffer("zbi.signed contents"),
-                &Image::new("zbi.signed"),
+                &Image::new(ImageType::ZbiSigned, None),
                 NonCurrentConfiguration::NotSupported,
             )
             .await,

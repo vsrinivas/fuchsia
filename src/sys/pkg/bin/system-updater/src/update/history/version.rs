@@ -12,7 +12,7 @@ use {
     mundane::hash::{Hasher as _, Sha256},
     serde::{Deserialize, Serialize},
     std::{convert::TryInto as _, str::FromStr},
-    update_package::{SystemVersion, UpdatePackage},
+    update_package::{ImageType, SystemVersion, UpdatePackage},
 };
 
 /// The version of the OS.
@@ -73,21 +73,23 @@ impl Version {
                 fx_log_err!("Failed to get system image hash: {:#}", anyhow!(e));
                 "".to_string()
             });
-        let vbmeta_hash = get_image_hash_from_update_package(update_package, "fuchsia.vbmeta")
-            .await
-            .unwrap_or_else(|e| {
-                fx_log_err!("Failed to read vbmeta hash: {:#}", anyhow!(e));
-                "".to_string()
-            });
-        let zbi_hash = match get_image_hash_from_update_package(update_package, "zbi").await {
-            Ok(v) => v,
-            Err(_) => get_image_hash_from_update_package(update_package, "zbi.signed")
+        let vbmeta_hash =
+            get_image_hash_from_update_package(update_package, ImageType::FuchsiaVbmeta)
                 .await
                 .unwrap_or_else(|e| {
-                    fx_log_err!("Failed to read zbi hash: {:#}", anyhow!(e));
+                    fx_log_err!("Failed to read vbmeta hash: {:#}", anyhow!(e));
                     "".to_string()
-                }),
-        };
+                });
+        let zbi_hash =
+            match get_image_hash_from_update_package(update_package, ImageType::Zbi).await {
+                Ok(v) => v,
+                Err(_) => get_image_hash_from_update_package(update_package, ImageType::ZbiSigned)
+                    .await
+                    .unwrap_or_else(|e| {
+                        fx_log_err!("Failed to read zbi hash: {:#}", anyhow!(e));
+                        "".to_string()
+                    }),
+            };
         let build_version = update_package.version().await.unwrap_or_else(|e| {
             fx_log_err!("Failed to read build version: {:#}", anyhow!(e));
             SystemVersion::Opaque("".to_string())
@@ -172,9 +174,9 @@ async fn get_system_image_hash_from_update_package(
 
 async fn get_image_hash_from_update_package(
     update_package: &UpdatePackage,
-    image: &str,
+    image: ImageType,
 ) -> Result<String, Error> {
-    let buffer = update_package.open_image(&update_package::Image::new(image)).await?;
+    let buffer = update_package.open_image(&update_package::Image::new(image, None)).await?;
     Ok(sha256_hash_with_no_trailing_zeros(buffer)?)
 }
 

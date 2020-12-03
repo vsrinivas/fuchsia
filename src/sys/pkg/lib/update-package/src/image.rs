@@ -6,7 +6,6 @@ use {
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_mem::Buffer,
     fuchsia_zircon::{Status, VmoChildOptions},
-    std::fmt,
     thiserror::Error,
 };
 
@@ -30,105 +29,131 @@ pub enum OpenImageError {
     CloneBuffer(fuchsia_zircon::Status),
 }
 
-/// An identifier for an image that can be paved.
-#[derive(Clone, PartialEq, Eq)]
-pub struct Image {
-    filename: String,
+/// An identifier for an image type which corresponds to the file's name without
+/// a subtype.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+pub enum ImageType {
+    /// Kernel image.
+    Zbi,
 
-    /// Byte offset of '_' character separating name and subtype, if this image has a non-empty
-    /// subtype.
-    type_separator: Option<usize>,
+    /// Kernel image.
+    ZbiSigned,
+
+    /// Metadata for the kernel image.
+    FuchsiaVbmeta,
+
+    /// Recovery image.
+    Zedboot,
+
+    /// Recovery image.
+    ZedbootSigned,
+
+    /// Recovery image.
+    Recovery,
+
+    /// Metadata for recovery image.
+    RecoveryVbmeta,
+
+    /// Bootloader.
+    Bootloader,
+
+    /// Firmware
+    Firmware,
+}
+
+impl ImageType {
+    /// The name of the ImageType.
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Zbi => "zbi",
+            Self::ZbiSigned => "zbi.signed",
+            Self::FuchsiaVbmeta => "fuchsia.vbmeta",
+            Self::Zedboot => "zedboot",
+            Self::ZedbootSigned => "zedboot.signed",
+            Self::Recovery => "recovery",
+            Self::RecoveryVbmeta => "recovery.vbmeta",
+            Self::Bootloader => "bootloader",
+            Self::Firmware => "firmware",
+        }
+    }
+}
+
+/// An identifier for an image that can be paved.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Image {
+    imagetype: ImageType,
+    filename: String,
 }
 
 impl Image {
-    /// Construct an Image using the given filename that does not contain a subtype.
-    pub fn new(filename: impl Into<String>) -> Self {
-        Self { filename: filename.into(), type_separator: None }
+    /// Construct an Image using the given imagetype and optional subtype.
+    pub fn new(imagetype: ImageType, subtype: Option<&str>) -> Self {
+        let filename = match subtype {
+            None => imagetype.name().to_string(),
+            Some(subtype) => format!("{}_{}", imagetype.name(), subtype),
+        };
+        Self { imagetype, filename }
+    }
+
+    /// The imagetype of the image relative to the update package.
+    pub fn imagetype(&self) -> ImageType {
+        self.imagetype
+    }
+
+    /// The name of this image as understood by the system updater.
+    pub fn classify(&self) -> ImageClass {
+        match self.imagetype() {
+            ImageType::Zbi | ImageType::ZbiSigned => ImageClass::Zbi,
+            ImageType::FuchsiaVbmeta => ImageClass::ZbiVbmeta,
+            ImageType::Zedboot | ImageType::ZedbootSigned | ImageType::Recovery => {
+                ImageClass::Recovery
+            }
+            ImageType::RecoveryVbmeta => ImageClass::RecoveryVbmeta,
+            ImageType::Bootloader | ImageType::Firmware => ImageClass::Firmware,
+        }
     }
 
     /// Attempt to construct an Image using the given `filename` if it is of the form "{name}" or
-    /// "{name}_{subtype}" where name is equal to the given `base`, or return None if `filename`
-    /// does not start with `base`.
+    /// "{name}_{subtype}" where name is equal to the given `imagetype.name()`, or return None if
+    /// `filename` does not start with `imagetype.name()`.
     ///
     /// # Examples
     ///
-    /// `foo_bar` starts with `foo`, so it matches:
+    /// `firmware_bar` starts with `firmware`, so it matches:
     /// ```
-    /// let image = Image::matches_base("foo_bar", "foo").unwrap();
+    /// let image = Image::matches_base("firmware_bar", ImageType::Firmware).unwrap();
     /// assert_eq!(image.subtype(), Some("bar"));
     /// ```
     ///
-    /// `foo_bar` doesn't start with `bar`, so it doesn't match:
+    /// `firmware_zbi` doesn't start with `zbi`, so it doesn't match:
     /// ```
-    /// let image = Image::matches_base("foo_bar", "bar");
+    /// let image = Image::matches_base("firmware_zbi", ImageType::Zbi);
     /// assert_eq!(image, None);
     /// ```
-    pub(crate) fn matches_base(filename: impl Into<String>, base: &str) -> Option<Self> {
+    pub(crate) fn matches_base(filename: impl Into<String>, imagetype: ImageType) -> Option<Self> {
         let filename = filename.into();
 
-        match filename.strip_prefix(base) {
+        match filename.strip_prefix(imagetype.name()) {
             None | Some("_") => None,
-            Some("") => Some(Self { filename, type_separator: None }),
+            Some("") => Some(Self { imagetype, filename }),
             Some(subtype) if !subtype.starts_with('_') => None,
-            Some(subtype) => {
-                Some(Self { type_separator: Some(filename.len() - subtype.len()), filename })
-            }
-        }
-    }
-
-    /// Test helper to construct an Image from a given name and optional subtype.
-    pub fn join<'a>(name: &'a str, subtype: impl Into<Option<&'a str>>) -> Self {
-        match subtype.into() {
-            Some("") | None => Self { filename: name.to_owned(), type_separator: None },
-            Some(subtype) => {
-                Self { filename: format!("{}_{}", name, subtype), type_separator: Some(name.len()) }
-            }
-        }
-    }
-
-    /// The filename of the image relative to the update package.
-    pub fn filename(&self) -> &str {
-        &self.filename
-    }
-
-    /// The name of this image as understood by the system updater.
-    pub fn name(&self) -> &str {
-        match self.type_separator {
-            Some(n) => &self.filename[..n],
-            None => &self.filename[..],
-        }
-    }
-
-    /// The name of this image as understood by the system updater.
-    pub fn classify(&self) -> Option<ImageClass> {
-        match self.name() {
-            "zbi" | "zbi.signed" => Some(ImageClass::Zbi),
-            "fuchsia.vbmeta" => Some(ImageClass::ZbiVbmeta),
-            "zedboot" | "zedboot.signed" | "recovery" => Some(ImageClass::Recovery),
-            "recovery.vbmeta" => Some(ImageClass::RecoveryVbmeta),
-            "bootloader" | "firmware" => {
-                // Keep support for update packages still using the older "bootloader" file, which
-                // is handled identically to "firmware" but without subtype support.
-                Some(ImageClass::Firmware)
-            }
-            _ => None,
+            Some(_) => Some(Self { imagetype, filename }),
         }
     }
 
     /// The particular type of this image as understood by the paver service, if present.
     pub fn subtype(&self) -> Option<&str> {
-        self.type_separator.map(|n| &self.filename[(n + 1)..])
-    }
-}
+        if self.filename.len() == self.imagetype.name().len() {
+            return None;
+        }
 
-impl fmt::Debug for Image {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Image")
-            .field("filename", &self.filename())
-            .field("name", &self.name())
-            .field("subtype", &self.subtype())
-            .field("class", &self.classify())
-            .finish()
+        Some(&self.filename[(self.imagetype.name().len() + 1)..])
+    }
+
+    /// The filename of the image relative to the update package.
+    pub fn name(&self) -> &str {
+        &self.filename
     }
 }
 
@@ -162,12 +187,9 @@ impl ImageClass {
 }
 
 pub(crate) async fn open(proxy: &DirectoryProxy, image: &Image) -> Result<Buffer, OpenImageError> {
-    let file = io_util::directory::open_file(
-        proxy,
-        image.filename(),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-    )
-    .await?;
+    let file =
+        io_util::directory::open_file(proxy, &image.name(), fidl_fuchsia_io::OPEN_RIGHT_READABLE)
+            .await?;
 
     let (status, buffer) = file
         .get_buffer(fidl_fuchsia_io::VMO_FLAG_READ)
@@ -189,117 +211,114 @@ pub(crate) async fn open(proxy: &DirectoryProxy, image: &Image) -> Result<Buffer
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::UpdatePackage, matches::assert_matches, proptest::prelude::*,
+        super::*, crate::TestUpdatePackage, matches::assert_matches, proptest::prelude::*,
         proptest_derive::Arbitrary,
     };
 
-    const TEST_PATH: &str = "bin/update_package_lib_test";
-    const TEST_PATH_IN_NAMESPACE: &str = "/pkg/bin/update_package_lib_test";
-
     #[test]
     fn image_new() {
-        assert_eq!(Image::new("foo"), Image { filename: "foo".to_owned(), type_separator: None });
+        assert_eq!(
+            Image::new(ImageType::Zbi, None),
+            Image { imagetype: ImageType::Zbi, filename: "zbi".to_string() }
+        );
+    }
+
+    #[test]
+    fn recovery_images_target_recovery() {
+        assert!(
+            Image::new(ImageType::Zedboot, None).classify().targets_recovery(),
+            "image zedboot should target recovery",
+        );
+        assert!(
+            Image::new(ImageType::ZedbootSigned, None).classify().targets_recovery(),
+            "image zedboot.signed should target recovery",
+        );
+        assert!(
+            Image::new(ImageType::Recovery, None).classify().targets_recovery(),
+            "image recovery should target recovery",
+        );
+        assert!(
+            Image::new(ImageType::RecoveryVbmeta, None).classify().targets_recovery(),
+            "image recovery.vbmeta should target recovery",
+        );
+    }
+
+    #[test]
+    fn non_recovery_images_do_not_target_recovery() {
+        assert!(
+            !Image::new(ImageType::Zbi, None).classify().targets_recovery(),
+            "image zbi should not target recovery",
+        );
+        assert!(
+            !Image::new(ImageType::ZbiSigned, None).classify().targets_recovery(),
+            "image zbi.signed not should target recovery",
+        );
+        assert!(
+            !Image::new(ImageType::FuchsiaVbmeta, None).classify().targets_recovery(),
+            "image fuchsia.vbmeta should not target recovery",
+        );
+        assert!(
+            !Image::new(ImageType::Firmware, None).classify().targets_recovery(),
+            "image firmware should not target recovery",
+        );
     }
 
     #[test]
     fn image_matches_base() {
-        assert_eq!(Image::matches_base("foo_bar", "bar"), None);
+        assert_eq!(Image::matches_base("foo_bar", ImageType::Zbi), None);
         assert_eq!(
-            Image::matches_base("foobar", "foobar"),
-            Some(Image { filename: "foobar".to_owned(), type_separator: None })
+            Image::matches_base("firmware", ImageType::Firmware),
+            Some(Image { imagetype: ImageType::Firmware, filename: "firmware".to_string() })
         );
         assert_eq!(
-            Image::matches_base("foo_bar", "foo"),
-            Some(Image { filename: "foo_bar".to_owned(), type_separator: Some(3) })
-        );
-        assert_eq!(
-            Image::matches_base("foo_a", "foo"),
-            Some(Image { filename: "foo_a".to_owned(), type_separator: Some(3) })
+            Image::matches_base("firmware_bar", ImageType::Firmware),
+            Some(Image { imagetype: ImageType::Firmware, filename: "firmware_bar".to_string() })
         );
     }
 
     #[test]
     fn image_matches_base_rejects_underscore_with_no_subtype() {
-        assert_eq!(Image::matches_base("foo_", "foo"), None);
+        assert_eq!(Image::matches_base("firmware_", ImageType::Firmware), None);
     }
 
     #[test]
     fn image_matches_base_rejects_no_underscore_before_subtype() {
-        assert_eq!(Image::matches_base("foo2", "foo"), None);
+        assert_eq!(Image::matches_base("zbi3", ImageType::Zbi), None);
     }
 
     #[test]
-    fn image_join() {
-        assert_eq!(Image::join("foo", None), Image::new("foo"));
-        assert_eq!(Image::join("foo", ""), Image::new("foo"));
-        assert_eq!(Image::join("foo", "bar"), Image::matches_base("foo_bar", "foo").unwrap());
-    }
+    fn test_image_typed_accessors() {
+        let image = Image::new(ImageType::Zbi, None);
+        assert_eq!(image.name(), "zbi");
+        assert_eq!(image.imagetype(), ImageType::Zbi);
+        assert_eq!(image.subtype(), None);
 
-    #[test]
-    fn image_typed_accessors() {
-        let with_subtype = Image::matches_base("foo_bar", "foo").unwrap();
-        assert_eq!(with_subtype.filename(), "foo_bar");
-        assert_eq!(with_subtype.name(), "foo");
-        assert_eq!(with_subtype.subtype(), Some("bar"));
-
-        let empty_subtype = Image::matches_base("foo", "foo").unwrap();
-        assert_eq!(empty_subtype.filename(), "foo");
-        assert_eq!(empty_subtype.name(), "foo");
-        assert_eq!(empty_subtype.subtype(), None);
-    }
-
-    #[test]
-    fn recovery_images_target_recovery() {
-        for name in &["zedboot", "zedboot.signed", "recovery", "recovery.vbmeta"] {
-            assert!(
-                Image::new(*name).classify().unwrap().targets_recovery(),
-                "image {} should target recovery",
-                name
-            );
-        }
-    }
-
-    #[test]
-    fn non_recovery_images_do_not_target_recovery() {
-        for name in &["zbi", "zbi.signed", "fuchsia.vbmeta", "firmware", "unknown"] {
-            if let Some(image) = Image::new(*name).classify() {
-                assert!(!image.targets_recovery(), "image {} should not target recovery", name);
-            }
-        }
-    }
-
-    fn open_this_package_as_update_package() -> UpdatePackage {
-        let pkg = io_util::directory::open_in_namespace(
-            "/pkg",
-            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
-        )
-        .unwrap();
-
-        UpdatePackage::new(pkg)
+        let image = Image::new(ImageType::Zbi, Some("ibz"));
+        assert_eq!(image.name(), "zbi_ibz");
+        assert_eq!(image.imagetype(), ImageType::Zbi);
+        assert_eq!(image.subtype(), Some("ibz"));
     }
 
     #[derive(Debug, Arbitrary)]
     enum ImageConstructor {
         New,
         MatchesBase,
-        Join,
     }
 
     prop_compose! {
         fn arb_image()(
             constructor: ImageConstructor,
-            name: String,
+            imagetype: ImageType,
             subtype: Option<String>,
         ) -> Image {
             let subtype = subtype.as_ref().map(String::as_str);
-            let image = Image::join(&name, subtype);
+            let image = Image::new(imagetype, subtype);
 
             match constructor {
-                ImageConstructor::New => Image::new(image.filename()),
+                ImageConstructor::New => image,
                 ImageConstructor::MatchesBase => {
-                    Image::matches_base(image.filename(), image.name()).unwrap()
+                    Image::matches_base(imagetype.name(), imagetype).unwrap()
                 }
-                ImageConstructor::Join => image,
             }
         }
     }
@@ -307,7 +326,6 @@ mod tests {
     proptest! {
         #[test]
         fn image_accessors_do_not_panic(image in arb_image()) {
-            image.filename();
             image.name();
             image.subtype();
             image.classify();
@@ -315,43 +333,44 @@ mod tests {
         }
 
         #[test]
-        fn filename_starts_with_name(image in arb_image()) {
-            prop_assert!(image.filename().starts_with(image.name()));
+        fn filename_starts_with_imagetype(image in arb_image()) {
+            prop_assert!(image.name().starts_with(image.imagetype().name()));
         }
 
         #[test]
         fn filename_ends_with_underscore_subtype_if_present(image in arb_image()) {
             if let Some(subtype) = image.subtype() {
                 let suffix = format!("_{}", subtype);
-                prop_assert!(image.filename().ends_with(&suffix));
+                prop_assert!(image.name().ends_with(&suffix));
             }
         }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_present_image_succeeds() {
-        let pkg = open_this_package_as_update_package();
-
-        assert_matches!(pkg.open_image(&Image::new(TEST_PATH)).await, Ok(_));
+        assert_matches!(
+            TestUpdatePackage::new()
+                .add_file("zbi", "zbi contents")
+                .await
+                .open_image(&Image::new(ImageType::Zbi, None))
+                .await,
+            Ok(_)
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_missing_image_fails() {
-        let pkg = open_this_package_as_update_package();
-
         assert_matches!(
-            pkg.open_image(&Image::new("missing")).await,
+            TestUpdatePackage::new().open_image(&Image::new(ImageType::Zbi, None)).await,
             Err(OpenImageError::OpenFile(io_util::node::OpenError::OpenError(Status::NOT_FOUND)))
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_image_buffer_matches_expected_contents() {
-        let pkg = open_this_package_as_update_package();
-
-        let buffer = pkg.open_image(&Image::new(TEST_PATH)).await.unwrap();
-
-        let expected = std::fs::read(TEST_PATH_IN_NAMESPACE).unwrap();
+        let update_pkg = TestUpdatePackage::new().add_file("zbi", "zbi contents").await;
+        let buffer = update_pkg.open_image(&Image::new(ImageType::Zbi, None)).await.unwrap();
+        let expected = &b"zbi contents"[..];
         assert_eq!(expected.len() as u64, buffer.size);
 
         let mut actual = vec![0; buffer.size as usize];
@@ -362,10 +381,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_image_buffer_is_resizable() {
-        let pkg = open_this_package_as_update_package();
-
-        let buffer = pkg.open_image(&Image::new(TEST_PATH)).await.unwrap();
-
+        let update_pkg = TestUpdatePackage::new().add_file("zbi", "zbi contents").await;
+        let buffer = update_pkg.open_image(&Image::new(ImageType::Zbi, None)).await.unwrap();
         assert_eq!(buffer.vmo.set_size(buffer.size * 2), Ok(()));
     }
 }

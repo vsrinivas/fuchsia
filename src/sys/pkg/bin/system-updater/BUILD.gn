@@ -69,7 +69,6 @@ rustc_binary("bin") {
     "src/update/genutil.rs",
     "src/update/history.rs",
     "src/update/history/version.rs",
-    "src/update/images.rs",
     "src/update/metrics.rs",
     "src/update/paver.rs",
     "src/update/paver/configuration.rs",
@@ -93,13 +92,6 @@ package("system-updater") {
     {
       path = rebase_path("meta/system-updater.cmx")
       dest = "system-updater.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("images")
-      dest = "images"
     },
   ]
 }

@@ -16,7 +16,7 @@ use {
     futures::{prelude::*, stream::FusedStream},
     parking_lot::Mutex,
     std::{pin::Pin, sync::Arc},
-    update_package::{Image, UpdateMode, UpdatePackage},
+    update_package::{Image, ImageType, UpdateMode, UpdatePackage},
 };
 
 mod channel;
@@ -24,7 +24,6 @@ mod config;
 mod environment;
 mod genutil;
 mod history;
-mod images;
 mod metrics;
 mod paver;
 mod reboot;
@@ -399,12 +398,23 @@ impl<'a> Attempt<'a> {
         mode: UpdateMode,
         current_configuration: paver::CurrentConfiguration,
     ) -> Result<(), Error> {
-        let image_list = images::load_image_list().await?;
+        let image_list = [
+            ImageType::Bootloader,
+            ImageType::Firmware,
+            ImageType::Zbi,
+            ImageType::ZbiSigned,
+            ImageType::FuchsiaVbmeta,
+            ImageType::Zedboot,
+            ImageType::ZedbootSigned,
+            ImageType::Recovery,
+            ImageType::RecoveryVbmeta,
+        ];
 
         let images = update_pkg
             .resolve_images(&image_list[..])
             .await
             .context("while determining which images to write")?;
+
         let images = images
             .verify(mode)
             .context("while ensuring the target images are compatible with this update mode")?
@@ -412,14 +422,15 @@ impl<'a> Attempt<'a> {
                 if self.config.should_write_recovery {
                     true
                 } else {
-                    if image.classify().map(|class| class.targets_recovery()).unwrap_or(false) {
-                        fx_log_info!("Skipping recovery image: {}", image.filename());
+                    if image.classify().targets_recovery() {
+                        fx_log_info!("Skipping recovery image: {}", image.name());
                         false
                     } else {
                         true
                     }
                 }
             });
+
         fx_log_info!("Images to write: {:?}", images);
 
         let desired_config = current_configuration.to_non_current_configuration();

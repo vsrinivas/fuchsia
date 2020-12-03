@@ -11,7 +11,7 @@ use fuchsia_hash::Hash;
 use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon as zx;
 use std::{cmp::min, convert::TryInto as _, io};
-use update_package::UpdatePackage;
+use update_package::{ImageType, UpdatePackage};
 
 const UPDATE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";
 
@@ -159,8 +159,9 @@ async fn is_vbmeta_up_to_date(
     update_package: &UpdatePackage,
     paver: &PaverProxy,
 ) -> Result<bool, anyhow::Error> {
-    let latest_vbmeta =
-        update_package.open_image(&update_package::Image::new("fuchsia.vbmeta")).await?;
+    let latest_vbmeta = update_package
+        .open_image(&update_package::Image::new(ImageType::FuchsiaVbmeta, None))
+        .await?;
 
     let (boot_manager, server_end) = fidl::endpoints::create_proxy::<BootManagerMarker>()?;
     let () = paver.find_boot_manager(server_end).context("connect to fuchsia.paver.BootManager")?;
