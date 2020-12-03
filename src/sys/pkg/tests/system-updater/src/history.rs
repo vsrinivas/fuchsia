@@ -327,7 +327,6 @@ async fn increments_attempts_counter_on_retry() {
                 "url": "fuchsia-pkg://fuchsia.com/not-found",
                 "state": {
                     "id": "fail_prepare",
-                    "reason": "internal",
                 },
             }
             ],

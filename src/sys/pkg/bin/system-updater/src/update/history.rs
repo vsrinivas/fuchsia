@@ -382,9 +382,7 @@ mod tests {
         super::{version::mock_pkgfs_system, *},
         crate::update::environment::NamespaceBuildInfo,
         anyhow::anyhow,
-        fidl_fuchsia_update_installer_ext::{
-            Initiator, PrepareFailureReason, UpdateInfo, UpdateInfoAndProgress,
-        },
+        fidl_fuchsia_update_installer_ext::{Initiator, UpdateInfo, UpdateInfoAndProgress},
         fuchsia_inspect::{assert_inspect_tree, Inspector},
         mock_paver::MockPaverServiceBuilder,
         pretty_assertions::assert_eq,
@@ -436,10 +434,9 @@ mod tests {
                 &Some(pkgfs_system),
             )
             .await;
-        history.record_update_attempt(update_attempt.finish(
-            Version::for_hash("new".to_owned()),
-            State::FailPrepare(PrepareFailureReason::Internal),
-        ));
+        history.record_update_attempt(
+            update_attempt.finish(Version::for_hash("new".to_owned()), State::FailPrepare),
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -514,7 +511,7 @@ mod tests {
             },
             update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
             start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
-            state: State::FailPrepare(PrepareFailureReason::Internal),
+            state: State::FailPrepare,
         };
         assert_eq!(history.update_attempts, VecDeque::from(vec![update_attempt]));
     }
@@ -825,7 +822,6 @@ mod tests {
                             "start_time": "1970-01-01T00:00:00.000000042+00:00",
                             "state": {
                                 "state": "fail_prepare",
-                                "reason": "Internal",
                             },
                         },
                     }
@@ -858,7 +854,7 @@ mod tests {
                     },
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
-                    state: State::FailPrepare(PrepareFailureReason::Internal),
+                    state: State::FailPrepare,
                 },
                 UpdateAttempt {
                     attempt_id: "id".to_owned(),
@@ -927,7 +923,7 @@ mod tests {
             options: opts,
             update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
             start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
-            state: State::FailPrepare(PrepareFailureReason::Internal),
+            state: State::FailPrepare,
         };
         assert_eq!(history.update_attempts, VecDeque::from(vec![update_attempt]));
 
@@ -966,7 +962,6 @@ mod tests {
                     "start": 42,
                     "state": {
                         "id": "fail_prepare",
-                        "reason": "internal",
                     }
                 }]
             }),
@@ -1003,7 +998,7 @@ mod tests {
                     },
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(i as u64),
-                    state: State::FailPrepare(PrepareFailureReason::Internal),
+                    state: State::FailPrepare,
                 })
                 .collect::<VecDeque<_>>()
         );

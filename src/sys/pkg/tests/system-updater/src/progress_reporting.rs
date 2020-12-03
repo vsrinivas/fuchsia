@@ -276,7 +276,7 @@ pub fn _assert_failure_monitor_states(states: Vec<State>, ordering: Vec<StateId>
 mod util {
     use {
         fidl_fuchsia_update_installer_ext::{
-            PrepareFailureReason, Progress, State, StateId, UpdateInfo, UpdateInfoAndProgress,
+            Progress, State, StateId, UpdateInfo, UpdateInfoAndProgress,
         },
         std::collections::HashSet,
         thiserror::Error,
@@ -384,7 +384,7 @@ mod util {
 
     #[test]
     fn fail_unexpected_state() {
-        let states = vec![State::Prepare, State::FailPrepare(PrepareFailureReason::Internal)];
+        let states = vec![State::Prepare, State::FailPrepare];
         let ordering = vec![StateId::Prepare];
 
         assert_eq!(
@@ -395,7 +395,7 @@ mod util {
 
     #[test]
     fn fail_out_of_order() {
-        let states = vec![State::Prepare, State::FailPrepare(PrepareFailureReason::Internal)];
+        let states = vec![State::Prepare, State::FailPrepare];
         let ordering = vec![StateId::FailPrepare, StateId::Prepare];
 
         assert_eq!(

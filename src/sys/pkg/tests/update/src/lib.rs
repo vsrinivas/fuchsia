@@ -302,10 +302,7 @@ async fn force_install_no_reboot() {
 #[fasync::run_singlethreaded(test)]
 async fn force_install_failure_state() {
     let env = TestEnv::builder()
-        .installer_states(vec![
-            installer::State::Prepare,
-            installer::State::FailPrepare(installer::PrepareFailureReason::Internal),
-        ])
+        .installer_states(vec![installer::State::Prepare, installer::State::FailPrepare])
         .build();
     let output = env.run_update(vec!["force-install", "fuchsia-pkg://fuchsia.com/update"]).await;
 
@@ -313,7 +310,7 @@ async fn force_install_failure_state() {
         &output,
         "Installing an update.\n\
         State: Prepare\n\
-        State: FailPrepare(Internal)\n",
+        State: FailPrepare\n",
         "Error: Encountered failure state\n",
         1,
     );

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{Context, Error},
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_pkg::{PackageResolverProxy, UpdatePolicy},
     fuchsia_url::pkg_url::PkgUrl,
@@ -16,22 +17,20 @@ const CONCURRENT_PACKAGE_RESOLVES: usize = 5;
 /// Error encountered while resolving a package.
 #[derive(Debug, Error)]
 pub enum ResolveError {
-    #[error("fidl error while resolving {1}")]
-    Fidl(#[source] fidl::Error, PkgUrl),
+    #[error("while performing resolve call")]
+    Fidl(#[source] fidl::Error),
 
-    #[error("bad status while resolving {1}")]
-    Status(#[source] fuchsia_zircon::Status, PkgUrl),
-
-    #[error("while creating fidl proxy and stream")]
-    CreateProxy(#[source] fidl::Error),
+    #[error("resolve responded with")]
+    Status(#[source] fuchsia_zircon::Status),
 }
 
 /// Resolves the update package given by `url` through the pkg_resolver.
 pub(super) async fn resolve_update_package(
     pkg_resolver: &PackageResolverProxy,
     url: &PkgUrl,
-) -> Result<UpdatePackage, ResolveError> {
-    let dir = resolve_package(pkg_resolver, &url).await?;
+) -> Result<UpdatePackage, Error> {
+    let dir =
+        resolve_package(pkg_resolver, &url).await.context("while resolving the update package")?;
     Ok(UpdatePackage::new(dir))
 }
 
@@ -41,7 +40,7 @@ pub(super) async fn resolve_update_package(
 pub(super) fn resolve_packages<'a, I>(
     pkg_resolver: &'a PackageResolverProxy,
     urls: I,
-) -> impl Stream<Item = Result<DirectoryProxy, ResolveError>> + 'a
+) -> impl Stream<Item = Result<DirectoryProxy, Error>> + 'a
 where
     I: 'a + Iterator<Item = &'a PkgUrl>,
 {
@@ -53,19 +52,20 @@ where
 async fn resolve_package(
     pkg_resolver: &PackageResolverProxy,
     url: &PkgUrl,
-) -> Result<DirectoryProxy, ResolveError> {
-    let (dir, dir_server_end) =
-        fidl::endpoints::create_proxy().map_err(ResolveError::CreateProxy)?;
+) -> Result<DirectoryProxy, Error> {
+    let (dir, dir_server_end) = fidl::endpoints::create_proxy()?;
     let res = pkg_resolver.resolve(
         &url.to_string(),
         &mut std::iter::empty(),
         &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
         dir_server_end,
     );
-    let res = res.await.map_err(|e| ResolveError::Fidl(e, url.clone()))?;
+    let res =
+        res.await.map_err(ResolveError::Fidl).with_context(|| format!("resolving {}", url))?;
 
     let () = res
-        .map_err(|raw| ResolveError::Status(fuchsia_zircon::Status::from_raw(raw), url.clone()))?;
+        .map_err(|raw| ResolveError::Status(fuchsia_zircon::Status::from_raw(raw)))
+        .with_context(|| format!("resolving {}", url))?;
 
     Ok(dir)
 }

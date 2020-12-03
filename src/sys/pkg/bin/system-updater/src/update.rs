@@ -9,17 +9,13 @@ use {
     fidl_fuchsia_paver::DataSinkProxy,
     fidl_fuchsia_pkg::PackageCacheProxy,
     fidl_fuchsia_space::ManagerProxy as SpaceManagerProxy,
-    fidl_fuchsia_update_installer_ext::{
-        FetchFailureReason, Options, PrepareFailureReason, State, UpdateInfo,
-    },
+    fidl_fuchsia_update_installer_ext::{Options, State, UpdateInfo},
     fuchsia_async::Task,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_url::pkg_url::PkgUrl,
-    fuchsia_zircon::Status,
     futures::{prelude::*, stream::FusedStream},
     parking_lot::Mutex,
     std::{pin::Pin, sync::Arc},
-    thiserror::Error,
     update_package::{Image, UpdateMode, UpdatePackage},
 };
 
@@ -52,63 +48,6 @@ pub(super) use {
     config::ConfigBuilder,
     environment::{NamespaceBuildInfo, NamespaceCobaltConnector},
 };
-
-/// Error encountered in the Prepare state.
-#[derive(Debug, Error)]
-enum PrepareError {
-    #[error("while determining packages to fetch")]
-    ParsePackages(#[source] update_package::ParsePackageError),
-
-    #[error("while determining update mode")]
-    ParseUpdateMode(#[source] update_package::ParseUpdateModeError),
-
-    #[error("while preparing partitions for update")]
-    PreparePartitionMetdata(#[source] paver::PreparePartitionMetadataError),
-
-    #[error("while resolving the update package")]
-    ResolveUpdate(#[source] ResolveError),
-
-    #[error("while verifying board name")]
-    VerifyBoard(#[source] anyhow::Error),
-
-    #[error("while verifying update package name")]
-    VerifyName(#[source] update_package::VerifyNameError),
-
-    #[error("force-recovery mode is incompatible with skip-recovery option")]
-    VerifyUpdateMode,
-}
-
-impl PrepareError {
-    fn reason(&self) -> PrepareFailureReason {
-        match self {
-            Self::ResolveUpdate(ResolveError::Status(Status::NO_SPACE, _)) => {
-                PrepareFailureReason::OutOfSpace
-            }
-            _ => PrepareFailureReason::Internal,
-        }
-    }
-}
-
-/// Error encountered in the Fetch state.
-#[derive(Debug, Error)]
-enum FetchError {
-    #[error("while resolving a package")]
-    Resolve(#[source] ResolveError),
-
-    #[error("while syncing pkg-cache")]
-    Sync(#[source] anyhow::Error),
-}
-
-impl FetchError {
-    fn reason(&self) -> FetchFailureReason {
-        match self {
-            Self::Resolve(ResolveError::Status(Status::NO_SPACE, _)) => {
-                FetchFailureReason::OutOfSpace
-            }
-            _ => FetchFailureReason::Internal,
-        }
-    }
-}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CommitAction {
@@ -309,8 +248,8 @@ impl<'a> Attempt<'a> {
                     (update_pkg, mode, packages_to_fetch, current_configuration)
                 }
                 Err(e) => {
-                    state.fail(co, e.reason()).await;
-                    bail!(e);
+                    state.fail(co).await;
+                    return Err(e);
                 }
             };
 
@@ -327,8 +266,8 @@ impl<'a> Attempt<'a> {
         let packages = match self.fetch_packages(co, &mut state, packages_to_fetch, mode).await {
             Ok(packages) => packages,
             Err(e) => {
-                state.fail(co, e.reason()).await;
-                bail!(e);
+                state.fail(co).await;
+                return Err(e);
             }
         };
 
@@ -342,7 +281,7 @@ impl<'a> Attempt<'a> {
                 Ok(()) => (),
                 Err(e) => {
                     state.fail(co).await;
-                    bail!(e);
+                    return Err(e);
                 }
             };
 
@@ -360,8 +299,7 @@ impl<'a> Attempt<'a> {
     async fn prepare(
         &mut self,
         target_version: &mut history::Version,
-    ) -> Result<(UpdatePackage, UpdateMode, Vec<PkgUrl>, paver::CurrentConfiguration), PrepareError>
-    {
+    ) -> Result<(UpdatePackage, UpdateMode, Vec<PkgUrl>, paver::CurrentConfiguration), Error> {
         // Ensure that the partition boot metadata is ready for the update to begin. Specifically:
         // - the current configuration must be Healthy and Active, and
         // - the non-current configuration must be Unbootable.
@@ -383,7 +321,7 @@ impl<'a> Attempt<'a> {
         // - System attempts to boot to B (version 2), but the packages are not all present anymore
         let current_config = paver::prepare_partition_metadata(&self.env.boot_manager)
             .await
-            .map_err(PrepareError::PreparePartitionMetdata)?;
+            .context("while preparing partitions for update")?;
 
         if let Err(e) = gc(&self.env.space_manager).await {
             fx_log_err!("unable to gc packages (1/2): {:#}", anyhow!(e));
@@ -391,30 +329,29 @@ impl<'a> Attempt<'a> {
 
         let update_pkg =
             resolver::resolve_update_package(&self.env.pkg_resolver, &self.config.update_url)
-                .await
-                .map_err(PrepareError::ResolveUpdate)?;
+                .await?;
         *target_version = history::Version::for_update_package(&update_pkg).await;
-        let () = update_pkg.verify_name().await.map_err(PrepareError::VerifyName)?;
+        let () = update_pkg.verify_name().await?;
 
         if let Err(e) = gc(&self.env.space_manager).await {
             fx_log_err!("unable to gc packages (2/2): {:#}", anyhow!(e));
         }
 
-        let mode = update_mode(&update_pkg).await.map_err(PrepareError::ParseUpdateMode)?;
+        let mode = update_mode(&update_pkg).await.context("while determining update mode")?;
         match mode {
             UpdateMode::Normal => {}
             UpdateMode::ForceRecovery => {
                 if !self.config.should_write_recovery {
-                    return Err(PrepareError::VerifyUpdateMode);
+                    bail!("force-recovery mode is incompatible with skip-recovery option");
                 }
             }
         }
 
-        verify_board(&self.env.build_info, &update_pkg).await.map_err(PrepareError::VerifyBoard)?;
+        verify_board(&self.env.build_info, &update_pkg).await?;
 
         let packages_to_fetch = match mode {
             UpdateMode::Normal => {
-                update_pkg.packages().await.map_err(PrepareError::ParsePackages)?
+                update_pkg.packages().await.context("while determining packages to fetch")?
             }
             UpdateMode::ForceRecovery => vec![],
         };
@@ -429,7 +366,7 @@ impl<'a> Attempt<'a> {
         state: &mut state::Fetch,
         packages_to_fetch: Vec<PkgUrl>,
         mode: UpdateMode,
-    ) -> Result<Vec<DirectoryProxy>, FetchError> {
+    ) -> Result<Vec<DirectoryProxy>, Error> {
         let mut packages = Vec::with_capacity(packages_to_fetch.len());
 
         let package_dir_futs =
@@ -437,7 +374,7 @@ impl<'a> Attempt<'a> {
         futures::pin_mut!(package_dir_futs);
 
         while let Some(package_dir) =
-            package_dir_futs.try_next().await.map_err(FetchError::Resolve)?
+            package_dir_futs.try_next().await.context("while fetching packages")?
         {
             packages.push(package_dir);
 
@@ -445,9 +382,7 @@ impl<'a> Attempt<'a> {
         }
 
         match mode {
-            UpdateMode::Normal => {
-                sync_package_cache(&self.env.pkg_cache).await.map_err(FetchError::Sync)?
-            }
+            UpdateMode::Normal => sync_package_cache(&self.env.pkg_cache).await?,
             UpdateMode::ForceRecovery => {}
         }
 
