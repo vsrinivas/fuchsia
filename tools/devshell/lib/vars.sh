@@ -19,6 +19,7 @@ export FUCHSIA_DIR="$(dirname $(dirname $(dirname "${devshell_lib_dir}")))"
 export FUCHSIA_OUT_DIR="${FUCHSIA_OUT_DIR:-${FUCHSIA_DIR}/out}"
 source "${devshell_lib_dir}/platform.sh"
 source "${devshell_lib_dir}/fx-cmd-locator.sh"
+source "${devshell_lib_dir}/fx-optional-features.sh"
 unset devshell_lib_dir
 
 if [[ "${FUCHSIA_DEVSHELL_VERBOSITY:-0}" -eq 1 ]]; then
@@ -330,38 +331,32 @@ function get-ssh-authkeys {
   _get-ssh-key auth
 }
 
-function is_macos {
-  [[ "$(uname -s)" == "Darwin" ]]
-}
-
-function firewall_cmd_macos {
-  /usr/libexec/ApplicationFirewall/socketfilterfw "$@"
-}
-
-function firewall_check {
-  if is_macos; then
-    if firewall_cmd_macos --getglobalstate | grep "disabled" > /dev/null; then
-      return 0
-    fi
-
-    if ! firewall_cmd_macos --getappblocked "$1" | grep "permitted" > /dev/null; then
-      fx-warn "Firewall rules are not configured, you may need to run \"fx setup-macos\""
-      return 1
-    fi
+function fx-target-finder-resolve {
+  if [[ $# -ne 1 ]]; then
+    fx-error "Invalid arguments to fx-target-finder-resolve: [$@]"
+    return 1
+  fi
+  if is_feature_enabled "legacy_discovery"; then
+    fx-command-run host-tool --check-firewall device-finder resolve -ipv4="$FX_ENABLE_IPV4" "$1"
+  else
+    fx-command-run host-tool --check-firewall ffx target list --format a "$1"
   fi
 }
 
-function fx-device-finder {
-  local -r finder="${FUCHSIA_BUILD_DIR}/host-tools/device-finder"
-  if [[ ! -f "${finder}" ]]; then
-    fx-error "Device finder binary not found."
-    fx-error "Run \"fx build\" to build host tools."
-    exit 1
+function fx-target-finder-list {
+  if is_feature_enabled "legacy_discovery"; then
+    fx-command-run host-tool --check-firewall device-finder list -ipv4="$FX_ENABLE_IPV4"
+  else
+    fx-command-run host-tool --check-firewall ffx target list --format a
   fi
+}
 
-  # This cmd only has side effects (printing a warning).
-  firewall_check "${finder}"
-  "${finder}" "$@"
+function fx-target-finder-info {
+  if is_feature_enabled "legacy_discovery"; then
+    fx-command-run host-tool --check-firewall device-finder list -ipv4="$FX_ENABLE_IPV4" --full
+  else
+    fx-command-run host-tool --check-firewall ffx target list --format s
+  fi
 }
 
 function get-fuchsia-device-addr {
@@ -386,7 +381,7 @@ function get-fuchsia-device-addr {
   local output devices
   case "$device" in
     "")
-        output="$(fx-device-finder list -ipv4="${FX_ENABLE_IPV4}" "$@")" || {
+        output="$(fx-target-finder-list)" || {
           code=$?
           fx-error "Device discovery failed with status: $code"
           exit $code
@@ -394,7 +389,7 @@ function get-fuchsia-device-addr {
         if [[ "$(echo "${output}" | wc -l)" -gt "1" ]]; then
           fx-error "Multiple devices found."
           fx-error "Please specify one of the following devices using either \`fx -d <device-name>\` or \`fx set-device <device-name>\`."
-          devices="$(fx-device-finder list -ipv4="${FX_ENABLE_IPV4}" -full)" || {
+          devices="$(fx-target-finder-info)" || {
             code=$?
             fx-error "Device discovery failed with status: $code"
             exit $code
@@ -405,7 +400,7 @@ function get-fuchsia-device-addr {
           exit 1
         fi
         echo "${output}" ;;
-     *) fx-device-finder resolve -ipv4="${FX_ENABLE_IPV4}" "$@" "$device" ;;
+     *) fx-target-finder-resolve "$device" ;;
   esac
 }
 

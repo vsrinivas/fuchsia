@@ -5,6 +5,7 @@
 
 BT_FILE_DEPS=(
   "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
   "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/platform.sh"
 )
@@ -157,33 +158,6 @@ TEST_fx-get-device-addr-url() {
   BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="[2001:db8:aaaa:bbbb:cccc:dddd:0:44f%enx44070ba0044e]" get-device-addr-url)" "[2001:db8:aaaa:bbbb:cccc:dddd:0:44f%25enx44070ba0044e]"
 }
 
-TEST_fx-firewall-check() {
-  unset is_macos
-  unset firewall_cmd_macos
-  is_macos() {
-    return 0
-  }
-  flag_check() {
-    BT_EXPECT_EQ "$1" "--getappblocked"
-    BT_EXPECT_EQ "$2" "firewall_cmd"
-  }
-
-  # Failure case.
-  firewall_cmd_macos() {
-    flag_check "$@"
-    echo "who knows"
-  }
-  BT_EXPECT_FAIL firewall_check "firewall_cmd"
-
-  # Success case.
-  unset firewall_cmd_macos
-  firewall_cmd_macos() {
-    flag_check "$@"
-    echo "firewall_cmd permitted"
-  }
-  BT_EXPECT firewall_check "firewall_cmd"
-}
-
 TEST_fx-export-device-address() {
   unset FUCHSIA_DEVICE_NAME
   unset FX_DEVICE_NAME
@@ -199,8 +173,8 @@ TEST_fx-export-device-address() {
   BT_EXPECT_EQ "${FX_SSH_ADDR}" "[::2%lo0]"
   BT_EXPECT_EQ "${FX_SSH_PORT}" "1234"
 
-  unset -f fx-device-finder
-  fx-device-finder() {
+  unset -f fx-target-finder-resolve
+  fx-target-finder-resolve() {
     echo "::3%lo0"
   }
 

@@ -36,7 +36,7 @@
 ##                `tools` -- returns the list of host tools
 ##                `zbi-tests`-- returns the list of ZBI tests
 ##                `generated-sources`-- returns the list of generated sources
-###                (e.g., FIDL and Banjo bindings).
+##                 (e.g., FIDL and Banjo bindings).
 ##
 
 set -o errexit

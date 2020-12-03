@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 function list_optional_features {
-  echo "incremental"
+  echo "incremental" "legacy_discovery"
 }
 
 function is_valid_feature {

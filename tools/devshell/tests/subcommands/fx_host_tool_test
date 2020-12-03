@@ -20,7 +20,7 @@ BT_MOCKED_TOOLS=(
   "tools/devshell/build"
 )
 
-declare fx devfinder
+declare fx devfinder macfw
 
 BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
@@ -32,6 +32,17 @@ BT_SET_UP() {
   cat >"${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" <<EOF
     [[ \$2 == "device-finder" ]] && echo ${devfinder_rel} && exit 0
     exit 1
+EOF
+  local uname="$(btf::make_mock_binary uname)"
+  btf::add_binary_to_path "$uname"
+
+  macfw="$(btf::make_mock_binary socketfilterfw)"
+  btf::add_binary_to_path "$macfw"
+
+  # Fake uname as MacOS
+  cat > "${uname}.mock_side_effects" <<'EOF'
+    [[ $1 == '-s' ]] && echo "Darwin"
+    [[ $1 == '-m' ]] && echo "x86_64"
 EOF
 
 }
@@ -77,5 +88,26 @@ TEST_no_build() {
   # ensure that build was not called
   BT_ASSERT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
 }
+
+TEST_firewall_disabled() {
+  echo "firewall disabled" > "${macfw}.mock_stdout"
+
+  BT_EXPECT ${fx} host-tool --check-firewall "device-finder" "--flag1" "arg1"
+  btf::expect-mock-args "${macfw}.mock_state" "--getglobalstate"
+}
+
+TEST_firewall_check_success() {
+  echo "${devfinder} permitted" > "${macfw}.mock_stdout"
+
+  BT_EXPECT ${fx} host-tool --check-firewall "device-finder" "--flag1" "arg1"
+  btf::expect-mock-args "${macfw}.mock_state.2" "--getappblocked" "${devfinder}"
+}
+
+TEST_firewall_check_fail() {
+  echo "device-finder cannot be allowed" > "${macfw}.mock_stdout"
+  BT_EXPECT ${fx} host-tool --check-firewall "device-finder" "--flag1" "arg1" >/dev/null 2>&1
+  btf::expect-mock-args "${macfw}.mock_state.2" "--getappblocked" "${devfinder}"
+}
+
 
 BT_RUN_TESTS "$@"

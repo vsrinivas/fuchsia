@@ -57,6 +57,11 @@ EOF
   }
 EOF
   fi
+  # If the host-tool command is not mocked, some code in vars.sh will
+  # not work well. If a custom mock of 'fx host-tool' is needed, mock it
+  # before calling 'setup_fx'
+  btf::_make_fx_host_tool_mock
+
   echo "${_FX}"
 }
 
@@ -68,6 +73,8 @@ btf::_make_buildtool_mock() {
   local rel_path="$1"
   local path="${BT_TEMP_DIR}/${rel_path}"
   btf::make_mock "${path}"
+
+  echo "${path}" >> "${BT_TEMP_DIR}/.mocked_tools"
   echo "${path}"
 }
 
@@ -97,6 +104,37 @@ btf::make_mock_binary() {
 btf::add_binary_to_path() {
   local tool_path="$(dirname "$1")"
   export PATH="${tool_path}:$PATH"
+}
+
+btf::_make_fx_host_tool_mock() {
+  local tool="${BT_TEMP_DIR}/tools/devshell/host-tool"
+  if [[ -f "${tool}" ]]; then
+    return 0
+  fi
+
+  btf::make_mock "${tool}"
+  cat > "${tool}.mock_side_effects" <<EOF
+    # remove host-tool args (like --check-firewall)
+    while [[ \$# -gt 0 && \$1 =~ ^- ]]; do
+      shift
+    done
+    if [[ \$# == 0 ]]; then
+      echo >&2 "Invalid state, cannot find host tool name"
+      return 1
+    fi
+    tool="\$1"
+    p="\$(grep "/\${tool}$" "${BT_TEMP_DIR}/.mocked_tools")"
+    if [[ -z "\$p" ]]; then
+      echo >&2 "Invalid state, cannot find path for \$tool." \
+      "Use a btf::make_*_mock() method from fuchsia-mock.sh to mock it."
+      return 1
+    fi
+    if [[ ! -x "\$p" ]]; then
+      echo >&2 "Invalid state, \$p is not executable."
+      return 1
+    fi
+    "\$p" "\$@"
+EOF
 }
 
 # Verifies that the arguments in BT_MOCK_ARGS match the arguments to this function.

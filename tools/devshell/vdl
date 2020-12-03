@@ -226,7 +226,7 @@ trap 'rm -Rf "${img_dir}" && kill_vdl' EXIT
 
 if [[ "${TUNTAP}" == true ]]; then
   fx-info "To support fx tools on emulator, please run \"fx set-device step-atom-yard-juicy\""
-  deviceaddr="$(fx-device-finder resolve -ipv4=false step-atom-yard-juicy)"
+  deviceaddr="$(fx-target-finder-resolve step-atom-yard-juicy)"
   fx-command-run ssh "${deviceaddr}"
 else
   fx-info "To support fx tools on emulator, please run \"fx set-device 127.0.0.1:${SSH_PORT}\""

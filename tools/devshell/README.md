@@ -95,12 +95,6 @@ that it ensures the address is correctly formatted for use by tools such as
 `get-device-addr-url` is the same as `get-device-addr-resource` except that
 it ensures that IPv6 scopes are appropriately percent-encoded.
 
-`fx-device-finder` invokes the `device-finder` program with the given
-arguments. It reports an error to the user and exits if the program is not
-present in the build output. Most scripts should prefer one of the
-aforementioned `get-*` functions to perform related operations instead, as
-`fx-device-finder` usage will not be `fx set-device` aware.
-
 The `vars.sh` script may define additional functions, however, they are
 considered internal and may change more often. Users can request additional
 helper functions by contacting the devshell owners, or by defining their own

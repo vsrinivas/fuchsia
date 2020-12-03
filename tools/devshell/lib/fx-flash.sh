@@ -8,6 +8,7 @@
 set -o errexit
 
 function fx-flash {
+  local enable_ipv4="${FX_ENABLE_IPV4:-false}"
   local serial="$1"
   local device="$2"
   # Process devices in gigaboot.
@@ -26,7 +27,7 @@ function fx-flash {
       let num_gb_devices=$num_gb_devices+1
       gb_device_ip=${elements[0]}
     fi
-  done < <(fx-device-finder list -netboot -full)
+  done < <(fx-command-run host-tool --check-firewall device-finder list -ipv4="${enable_ipv4}" -netboot -full)
 
   if [[ $num_gb_devices > 1 ]]; then
     echo "More than one device detected, please provide -device <device>"
