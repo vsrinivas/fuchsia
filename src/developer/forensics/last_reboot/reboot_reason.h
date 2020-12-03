@@ -33,6 +33,7 @@ enum class RebootReason {
   kBrownout,
   kUserRequest,
   kSystemUpdate,
+  kRetrySystemUpdate,
   kHighTemperature,
   kSessionFailure,
   kSysmgrFailure,

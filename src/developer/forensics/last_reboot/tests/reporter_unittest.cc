@@ -399,6 +399,13 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, GracefulWithCrashReporterTest,
                                  zx::msec(65487494),
                                  cobalt::LastRebootReason::kCriticalComponentFailure,
                              },
+                             {
+                                 "RetrySystemUpdate",
+                                 "RETRY SYSTEM UPDATE",
+                                 "fuchsia-retry-system-update",
+                                 zx::msec(65487494),
+                                 cobalt::LastRebootReason::kRetrySystemUpdate,
+                             },
                          })),
                          [](const testing::TestParamInfo<GracefulRebootWithCrashTestParam>& info) {
                            return info.param.test_name;

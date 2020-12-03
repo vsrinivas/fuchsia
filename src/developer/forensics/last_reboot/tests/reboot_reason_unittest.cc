@@ -156,6 +156,16 @@ TEST(RebootReasonTest, CriticalComponentFailure) {
             fuchsia::feedback::RebootReason::CRITICAL_COMPONENT_FAILURE);
 }
 
+TEST(RebootReasonTest, RetrySystemUpdate) {
+  const auto reason = RebootReason::kRetrySystemUpdate;
+
+  EXPECT_TRUE(IsCrash(reason));
+  EXPECT_EQ(ToCobaltLastRebootReason(reason), cobalt::LastRebootReason::kRetrySystemUpdate);
+  EXPECT_EQ(ToCrashSignature(reason), "fuchsia-retry-system-update");
+  EXPECT_EQ(ToCrashProgramName(reason), "system");
+  EXPECT_EQ(ToFidlRebootReason(reason), fuchsia::feedback::RebootReason::RETRY_SYSTEM_UPDATE);
+}
+
 TEST(RebootReasonTest, FDR) {
   const auto reason = RebootReason::kFdr;
 

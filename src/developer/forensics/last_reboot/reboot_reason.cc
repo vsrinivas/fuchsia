@@ -36,6 +36,8 @@ std::string ToString(const RebootReason reason) {
       return "RebootReason::kUserRequest";
     case RebootReason::kSystemUpdate:
       return "RebootReason::kSystemUpdate";
+    case RebootReason::kRetrySystemUpdate:
+      return "RebootReason::kRetrySystemUpdate";
     case RebootReason::kHighTemperature:
       return "RebootReason::kHighTemperature";
     case RebootReason::kSessionFailure:
@@ -63,6 +65,7 @@ bool IsCrash(const RebootReason reason) {
     case RebootReason::kSessionFailure:
     case RebootReason::kSysmgrFailure:
     case RebootReason::kCriticalComponentFailure:
+    case RebootReason::kRetrySystemUpdate:
       return true;
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
@@ -79,6 +82,7 @@ std::optional<bool> OptionallyGraceful(const RebootReason reason) {
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
+    case RebootReason::kRetrySystemUpdate:
     case RebootReason::kHighTemperature:
     case RebootReason::kSessionFailure:
     case RebootReason::kSysmgrFailure:
@@ -108,6 +112,8 @@ cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reason) {
       return cobalt::LastRebootReason::kUserRequest;
     case RebootReason::kSystemUpdate:
       return cobalt::LastRebootReason::kSystemUpdate;
+    case RebootReason::kRetrySystemUpdate:
+      return cobalt::LastRebootReason::kRetrySystemUpdate;
     case RebootReason::kHighTemperature:
       return cobalt::LastRebootReason::kHighTemperature;
     case RebootReason::kSessionFailure:
@@ -157,6 +163,8 @@ std::string ToCrashSignature(const RebootReason reason) {
       return "fuchsia-sysmgr-failure";
     case RebootReason::kCriticalComponentFailure:
       return "fuchsia-critical-component-failure";
+    case RebootReason::kRetrySystemUpdate:
+      return "fuchsia-retry-system-update";
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
@@ -183,6 +191,7 @@ std::string ToCrashProgramName(const RebootReason reason) {
     case RebootReason::kSessionFailure:
     case RebootReason::kSysmgrFailure:
     case RebootReason::kCriticalComponentFailure:
+    case RebootReason::kRetrySystemUpdate:
       return "system";
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
@@ -204,6 +213,8 @@ std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(const RebootRe
       return fuchsia::feedback::RebootReason::USER_REQUEST;
     case RebootReason::kSystemUpdate:
       return fuchsia::feedback::RebootReason::SYSTEM_UPDATE;
+    case RebootReason::kRetrySystemUpdate:
+      return fuchsia::feedback::RebootReason::RETRY_SYSTEM_UPDATE;
     case RebootReason::kHighTemperature:
       return fuchsia::feedback::RebootReason::HIGH_TEMPERATURE;
     case RebootReason::kSessionFailure:

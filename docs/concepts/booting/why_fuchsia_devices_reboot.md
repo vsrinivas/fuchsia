@@ -77,6 +77,11 @@ A component responsible for system updates must update a package, or multiple
 packages, that cannot be updated ephemerally. These packages are canonically
 know as base packages.
 
+### Retry system update
+
+A component responsible for system updates fails to apply an update, so the device
+reboots to try again (or possibly revert the update).
+
 ### High temperature
 
 A component responsible for power management detects that a device's temperature
@@ -135,6 +140,7 @@ Software watchdog timeout    | `SOFTWARE_WATCHDOG_TIMEOUT`   | `SoftwareWatchdog
 Brief power loss             | `BRIEF POWER LOSS`            | `BriefPowerLoss`           | `fuchsia-brief-power-loss`
 User request                 | `USER_REQUEST`                | `UserRequest`              | N/A\*
 System update                | `SYSTEM_UPDATE`               | `SystemUpdate`             | N/A\*
+Retry system update          | `RETRY_SYSTEM_UPDATE`         | `RetrySystemUpdate`        | `fuchsia-retry-system-update`
 High temperature             | `HIGH_TEMPERATURE`            | `HighTemperature`          | N/A\*
 Session failure              | `SESSION_FAILURE`             | `SessionFailure`           | `fuchsia-session-failure`
 Sysmgr failure               | `SYSMGR_FAILURE`              | `SysmgrFailure`            | `fuchsia-sysmgr-failure`

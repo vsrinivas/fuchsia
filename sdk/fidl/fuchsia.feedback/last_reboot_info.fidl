@@ -70,6 +70,9 @@ enum RebootReason : uint16 {
     /// The device rebooted because of an OTA.
     SYSTEM_UPDATE = 10;
 
+    /// The device rebooted because applying the OTA failed and we want to retry.
+    RETRY_SYSTEM_UPDATE = 17;
+
     /// The device rebooted because it was determined to be too hot.
     HIGH_TEMPERATURE = 11;
 

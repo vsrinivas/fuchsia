@@ -36,6 +36,7 @@ enum class GracefulRebootReason {
   kNone,
   kUserRequest,
   kSystemUpdate,
+  kRetrySystemUpdate,
   kHighTemperature,
   kSessionFailure,
   kSysmgrFailure,
@@ -76,6 +77,8 @@ GracefulRebootReason ExtractGracefulRebootReason(const std::string_view line) {
     return GracefulRebootReason::kUserRequest;
   } else if (line == "SYSTEM UPDATE") {
     return GracefulRebootReason::kSystemUpdate;
+  } else if (line == "RETRY SYSTEM UPDATE") {
+    return GracefulRebootReason::kRetrySystemUpdate;
   } else if (line == "HIGH TEMPERATURE") {
     return GracefulRebootReason::kHighTemperature;
   } else if (line == "SESSION FAILURE") {
@@ -185,6 +188,8 @@ RebootReason DetermineGracefulRebootReason(GracefulRebootReason graceful_reason)
       return RebootReason::kUserRequest;
     case GracefulRebootReason::kSystemUpdate:
       return RebootReason::kSystemUpdate;
+    case GracefulRebootReason::kRetrySystemUpdate:
+      return RebootReason::kRetrySystemUpdate;
     case GracefulRebootReason::kHighTemperature:
       return RebootReason::kHighTemperature;
     case GracefulRebootReason::kSessionFailure:
