@@ -5,48 +5,35 @@
 import 'dart:math';
 
 import 'package:flutter_driver/flutter_driver.dart';
-import 'package:flutter_driver_sl4f/flutter_driver_sl4f.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
+
+import 'ermine_driver.dart';
 
 /// Tests that the DUT running ermine can do the following:
 ///  - Connect to ermine using Flutter Driver.
 ///  - Ensure its screenshot is not all black.
 void main() {
   Sl4f sl4f;
-  FlutterDriverConnector connector;
-  FlutterDriver driver;
+  ErmineDriver ermine;
 
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
     await sl4f.startServer();
 
-    connector = FlutterDriverConnector(sl4f);
-    await connector.initialize();
-
-    // Check if ermine is running.
-    final isolate = await connector.isolate('ermine');
-    if (isolate == null) {
-      fail('could not find ermine.');
-    }
-
-    // Now connect to ermine.
-    driver = await connector.driverForIsolate('ermine');
-    if (driver == null) {
-      fail('unable to connect to ermine.');
-    }
+    ermine = ErmineDriver(sl4f);
+    await ermine.setUp();
   });
 
   tearDownAll(() async {
     // Any of these may end up being null if the test fails in setup.
-    await driver?.close();
-    await connector?.tearDown();
+    await ermine.tearDown();
     await sl4f?.stopServer();
     sl4f?.close();
   });
 
   test('Screen should not be black', () async {
-    await driver.waitUntilNoTransientCallbacks();
+    await ermine.driver.waitUntilNoTransientCallbacks();
 
     // Now take a screen shot and make sure it is not all black.
     final scenic = Scenic(sl4f);

@@ -12,38 +12,36 @@ import 'package:test/test.dart';
 /// future useful for testing.
 class ErmineDriver {
   final Sl4f sl4f;
-  FlutterDriverConnector connector;
+  final FlutterDriverConnector connector;
+  FlutterDriver driver;
 
-  ErmineDriver(this.sl4f);
+  /// Constructor.
+  ErmineDriver(this.sl4f) : connector = FlutterDriverConnector(sl4f);
 
-  /// Connect to the isolate for Ermine and returns the [FlutterDriver]
-  /// instance. The instance should be closed when done.
-  Future<FlutterDriver> connect() async {
-    connector = FlutterDriverConnector(sl4f);
-    await connector.initialize();
-
-    // Check if ermine is running.
-    final isolate = await connector.isolate('ermine');
-    if (isolate == null) {
-      // Use `sessionctl` to login as guest and start ermine.
-      await sl4f.ssh.run('sessionctl restart_session');
-      final result = await sl4f.ssh.run('sessionctl login_guest');
-      if (result.exitCode != 0) {
-        fail('unable to login guest - check user already logged in?');
-      }
+  /// Set up the test environment for Ermine.
+  ///
+  /// This restarts the workstation session and connects to the running instance
+  /// of Ermine using FlutterDriver.
+  Future<void> setUp() async {
+    // Restart the workstation session.
+    final result = await sl4f.ssh.run('session_control restart');
+    if (result.exitCode != 0) {
+      fail('failed to restart workstation session.');
     }
 
+    // Initialize flutter driver connector.
+    await connector.initialize();
+
     // Now connect to ermine.
-    final driver = await connector.driverForIsolate('ermine');
+    driver = await connector.driverForIsolate('ermine');
     if (driver == null) {
       fail('unable to connect to ermine.');
     }
-
-    return driver;
   }
 
   /// Closes [FlutterDriverConnector] and performs cleanup.
-  Future<void> close() async {
+  Future<void> tearDown() async {
+    await driver?.close();
     await connector.tearDown();
   }
 }
