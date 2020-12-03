@@ -16,6 +16,8 @@
 #include <variant>
 
 #include "checking.h"
+#include "decompress.h"
+#include "item.h"
 #include "storage_traits.h"
 
 namespace zbitl {
@@ -866,6 +868,73 @@ class View {
     return Copy(it.item_offset(), sizeof(zbi_header_t) + (*it).header->length);
   }
 
+  // Copy a single item's payload into supplied storage, including
+  // decompressing a ZBI_TYPE_STORAGE_* item if necessary.  This statically
+  // determines based on the input and output storage types whether it has to
+  // use streaming decompression or can use the one-shot mode (which is more
+  // efficient and requires less scratch memory).  So the unused part of the
+  // decompression library can be elided at link time.
+  //
+  // If decompression is necessary, then this calls `scratch(size_t{bytes})` to
+  // allocate scratch memory for the decompression engine.  This returns
+  // `fitx::result<std::string_view, T>` where T is any movable object that has
+  // a `get()` method returning a pointer (of any type implicitly converted to
+  // `void*`) to the scratch memory.  The returned object is destroyed after
+  // decompression is finished and the scratch memory is no longer needed.
+  //
+  // zbitl::decompress:DefaultAllocator is a default-constructible class that
+  // can serve as `scratch`.  The overloads below with fewer arguments use it.
+  template <typename CopyStorage, typename ScratchAllocator>
+  fitx::result<CopyError<CopyStorage>> CopyStorageItem(CopyStorage&& to, const iterator& it,
+                                                       ScratchAllocator&& scratch) {
+    if (auto compressed = IsCompressedStorage(*(*it).header)) {
+      return DecompressStorage(std::forward<CopyStorage>(to), it,
+                               std::forward<ScratchAllocator>(scratch));
+    }
+    return CopyRawItem(std::forward<CopyStorage>(to), it);
+  }
+
+  template <typename ScratchAllocator, typename T = Traits,
+            typename CreateStorage = std::decay_t<typename T::template CreateResult<>>>
+  fitx::result<CopyError<CreateStorage>, CreateStorage> CopyStorageItem(
+      const iterator& it, ScratchAllocator&& scratch) {
+    using ErrorType = CopyError<CreateStorage>;
+
+    if (auto compressed = IsCompressedStorage(*(*it).header)) {
+      // Create new storage to decompress the payload into.
+      auto to = Traits::Create(storage(), *compressed);
+      if (to.is_error()) {
+        // No read error because a "write" error happened first.
+        return fitx::error{ErrorType{
+            .zbi_error = "cannot create storage",
+            .write_offset = 0,
+            .write_error = std::move(to).error_value(),
+        }};
+      }
+      auto to_storage = std::move(to).value();
+      if (auto result = DecompressStorage(to_storage, it, std::forward<ScratchAllocator>(scratch));
+          result.is_error()) {
+        return result.take_error();
+      }
+      return fitx::ok(std::move(to_storage));
+    }
+    return CopyRawItem(it);
+  }
+
+  // These overloads have the effect of default arguments for the allocator
+  // arguments to the general versions above, but template argument deduction
+  // doesn't work with default arguments.
+
+  template <typename CopyStorage>
+  fitx::result<CopyError<CopyStorage>> CopyStorageItem(CopyStorage&& to, const iterator& it) {
+    return CopyStorageItem(std::forward<CopyStorage>(to), it, decompress::DefaultAllocator);
+  }
+
+  template <typename T = Traits, typename = std::enable_if_t<T::CanCreate()>>
+  auto CopyStorageItem(const iterator& it) {
+    return CopyStorageItem(it, decompress::DefaultAllocator);
+  }
+
   // Copy the subrange `[first,last)` of the ZBI into supplied storage.
   // The storage will contain a new ZBI container with only those items.
   template <typename CopyStorage>
@@ -1066,6 +1135,192 @@ class View {
       limit = last.item_offset();
     }
     return std::make_pair(offset, limit - offset);
+  }
+
+  static constexpr std::optional<uint32_t> IsCompressedStorage(const zbi_header_t& header) {
+    const bool compressible = TypeIsStorage(header.type);
+    const bool compressed = header.flags & ZBI_FLAG_STORAGE_COMPRESSED;
+    if (compressible && compressed) {
+      return header.extra;
+    }
+    return std::nullopt;
+  }
+
+  template <typename CopyStorage, typename ScratchAllocator>
+  fitx::result<CopyError<std::decay_t<CopyStorage>>> DecompressStorage(CopyStorage&& to,
+                                                                       const iterator& it,
+                                                                       ScratchAllocator&& scratch) {
+    using ErrorType = CopyError<std::decay_t<CopyStorage>>;
+    using ToTraits = typename View<std::decay_t<CopyStorage>, Check>::Traits;
+    constexpr bool bufferless_output = ToTraits::CanUnbufferedWrite();
+
+    const auto [header, payload] = *it;
+    const uint32_t compressed_size = header->length;
+    const uint32_t uncompressed_size = header->extra;
+
+    auto decompress_error = [&](auto&& result) {
+      return fitx::error{ErrorType{
+          .zbi_error = result.error_value(),
+          .read_offset = it.item_offset(),
+      }};
+    };
+
+    if constexpr (Traits::CanOneShotRead()) {
+      // All the data is on hand in one shot.  Fetch it first.
+      ByteView compressed_data;
+      if (auto result = Traits::Read(storage(), payload, compressed_size); result.is_error()) {
+        return fitx::error{ErrorType{
+            .zbi_error = "cannot read compressed payload",
+            .read_offset = it.item_offset(),
+            .read_error = std::move(result).error_value(),
+        }};
+      } else {
+        compressed_data = result.value();
+      }
+
+      if constexpr (bufferless_output) {
+        // Decompression can write directly into the output storage in memory.
+        // So this can use one-shot decompression.
+
+        auto mapped = ToTraits::Write(to, 0, uncompressed_size);
+        if (mapped.is_error()) {
+          // Read succeeded, but write failed.
+          return fitx::error{ErrorType{
+              .zbi_error = "cannot write to storage in-place",
+              .write_offset = 0,
+              .write_error = std::move(mapped).error_value(),
+          }};
+        }
+        const auto uncompressed_data = static_cast<std::byte*>(mapped.value());
+
+        auto result =
+            decompress::OneShot::Decompress({uncompressed_data, uncompressed_size}, compressed_data,
+                                            std::forward<ScratchAllocator>(scratch));
+        if (result.is_error()) {
+          return decompress_error(result);
+        }
+      } else {
+        // Writing to the output storage requires a temporary buffer.
+        auto create_result = decompress::Streaming::Create<true>(
+            compressed_data, std::forward<ScratchAllocator>(scratch));
+        if (create_result.is_error()) {
+          return decompress_error(create_result);
+        }
+        auto& decompress = create_result.value();
+        uint32_t outoffset = 0;
+        while (!compressed_data.empty()) {
+          // Decompress as much data as the decompressor wants to.
+          // It updates compressed_data to remove what it's consumed.
+          ByteView out;
+          if (auto result = decompress(compressed_data); result.is_error()) {
+            return decompress_error(result);
+          } else {
+            out = {result.value().data(), result.value().size()};
+          }
+          if (!out.empty()) {
+            // Flush the output buffer to the storage.
+            if (auto write = ToTraits::Write(to, outoffset, out); write.is_error()) {
+              // Read succeeded, but write failed.
+              return fitx::error{ErrorType{
+                  .zbi_error = "cannot write to storage",
+                  .write_offset = outoffset,
+                  .write_error = std::move(write).error_value(),
+              }};
+            }
+            outoffset += static_cast<uint32_t>(out.size());
+          }
+        }
+      }
+    } else {
+      std::byte* outptr = nullptr;
+      size_t outlen = 0;
+      uint32_t outoffset = 0;
+      if constexpr (bufferless_output) {
+        // Decompression can write directly into the output storage in memory.
+        auto mapped = ToTraits::Write(to, 0, uncompressed_size);
+        if (mapped.is_error()) {
+          // Read succeeded, but write failed.
+          return fitx::error{ErrorType{
+              .zbi_error = "cannot write to storage in-place",
+              .write_offset = 0,
+              .write_error = std::move(mapped).error_value(),
+          }};
+        }
+
+        outptr = static_cast<std::byte*>(mapped.value());
+        outlen = uncompressed_size;
+      }
+
+      auto create = [&](ByteView probe) {
+        return decompress::Streaming::Create<!bufferless_output>(
+            probe, std::forward<ScratchAllocator>(scratch));
+      };
+      std::optional<std::decay_t<decltype(create({}).value())>> decompressor;
+
+      // We have to read the first chunk just to decode its compression header.
+      auto read_chunk = [&](ByteView chunk) -> fitx::result<ErrorType> {
+        using ChunkError = fitx::error<ErrorType>;
+
+        if (!decompressor) {
+          // First chunk.  Set up the decompressor.
+          if (auto result = create(chunk); result.is_error()) {
+            return decompress_error(result);
+          } else {
+            decompressor.emplace(std::move(result).value());
+          }
+        }
+
+        // Decompress the chunk.
+        while (!chunk.empty()) {
+          if constexpr (bufferless_output) {
+            auto result = (*decompressor)({outptr, outlen}, chunk);
+            if (result.is_error()) {
+              return ChunkError(decompress_error(result));
+            }
+            outptr = result.value().data();
+            outlen = result.value().size();
+          } else {
+            ByteView out;
+            if (auto result = (*decompressor)(chunk); result.is_error()) {
+              return ChunkError(decompress_error(result));
+            } else {
+              out = {result.value().data(), result.value().size()};
+            }
+            if (!out.empty()) {
+              // Flush the output buffer to the storage.
+              auto write = ToTraits::Write(to, outoffset, out);
+              if (write.is_error()) {
+                // Read succeeded, but write failed.
+                return ChunkError(ErrorType{
+                    .zbi_error = "cannot write to storage",
+                    .write_offset = outoffset,
+                    .write_error = std::move(write).error_value(),
+                });
+              }
+              outoffset += static_cast<uint32_t>(out.size());
+            }
+          }
+        }
+
+        return fitx::ok();
+      };
+
+      auto result = Traits::Read(storage(), payload, compressed_size, read_chunk);
+      if (result.is_error()) {
+        return fitx::error{ErrorType{
+            .zbi_error = "cannot read compressed payload",
+            .read_offset = it.item_offset(),
+            .read_error = std::move(result).error_value(),
+        }};
+      }
+
+      auto read_chunk_result = std::move(result).value();
+      if (read_chunk_result.is_error()) {
+        return read_chunk_result.take_error();
+      }
+    }
+
+    return fitx::ok();
   }
 
   storage_type storage_;

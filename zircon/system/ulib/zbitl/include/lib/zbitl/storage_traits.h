@@ -204,6 +204,10 @@ struct StorageTraits {
   }
 };
 
+// The first chunk StorageTraits<...>::Read passes to its callback must be at
+// least as long as the minimum of kReadMinimum and header.length.
+inline constexpr uint32_t kReadMinimum = 32;
+
 // Specialization for std::basic_string_view<byte-size type> as Storage.  Its
 // payload_type is the same type as Storage, just yielding the substring of the
 // original whole-ZBI string_view.

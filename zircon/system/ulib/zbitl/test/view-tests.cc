@@ -73,6 +73,8 @@ TEST(ZbitlViewStringTests, TooSmallForNextHeader) {
 }
 
 TEST(ZbitlViewStringTests, TooSmallForNextPayload) {
+  constexpr uint32_t kItemType = ZBI_TYPE_IMAGE_ARGS;
+
   constexpr std::string_view kExpectedError = "container too short for next item payload";
 
   // Construct a ZBI of reported size 64, but whose last header reports that

@@ -43,10 +43,10 @@ class StorageTraits<FILE*> {
   template <typename Callback>
   static auto Read(FILE* f, payload_type payload, uint32_t length, Callback&& callback)
       -> fitx::result<error_type, decltype(callback(ByteView{}))> {
-    decltype(callback(ByteView{})) result = fitx::ok();
+    std::optional<decltype(callback(ByteView{}))> result;
     auto cb = [&](ByteView chunk) -> bool {
       result = callback(chunk);
-      return result.is_ok();
+      return result->is_ok();
     };
     using CbType = decltype(cb);
     if (auto read_error = DoRead(
@@ -55,7 +55,8 @@ class StorageTraits<FILE*> {
         read_error.is_error()) {
       return fitx::error{read_error.error_value()};
     } else {
-      return fitx::ok(result);
+      ZX_DEBUG_ASSERT(result);
+      return fitx::ok(*result);
     }
   }
 

@@ -31,6 +31,11 @@ config("zstd-config") {
     defines += [ "ZSTD_MULTITHREAD" ]
   }
 
+  if (is_gcc && toolchain.environment == "kernel.phys32") {
+    # Work around bad assumption that uint32_t == unsigned int.
+    cflags = [ "-Wno-incompatible-pointer-types" ]
+  }
+
   # TODO(41757): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   configs += [ "$zx_build_config:temporarily_disable_ubsan_do_not_use" ]
@@ -116,9 +121,12 @@ zx_library("zstd") {
 # The standalone varaint of this library supports only decompression and does
 # not depend malloc or free so it is suitable for use in userboot and physboot.
 zx_library("zstd-decompress-standalone") {
+  kernel = true
   static = true
+  host = true
+
   sdk = "static"
-  sdk_headers = []
+  sdk_headers = [ "zstd/zstd.h" ]
   sdk_migrated = true
 
   sources = zstd_common_sources + zstd_decompress_sources +
@@ -138,6 +146,10 @@ zx_library("zstd-decompress-standalone") {
 
   # This code doesn't use the annotation attribute.
   configs -= warn_implicit_fallthrough_configs
+
+  if (is_kernel) {
+    deps = [ "$zx/kernel/lib/libc" ]
+  }
 }
 
 config("zstd-seekable-config") {
@@ -185,19 +197,21 @@ zx_library("zstdseek") {
   configs -= warn_implicit_fallthrough_configs
 }
 
-zx_host_tool("zstdcli") {
-  output_name = "zstd"
-  sources = [
-    "$zstd/programs/benchfn.c",
-    "$zstd/programs/benchzstd.c",
-    "$zstd/programs/datagen.c",
-    "$zstd/programs/dibio.c",
-    "$zstd/programs/fileio.c",
-    "$zstd/programs/timefn.c",
-    "$zstd/programs/util.c",
-    "$zstd/programs/zstdcli.c",
-  ]
-  sdk_migrated = true
-  deps = [ ":zstd" ]
-  configs += [ ":zstd-config" ]
+if (!is_kernel) {
+  zx_host_tool("zstdcli") {
+    output_name = "zstd"
+    sources = [
+      "$zstd/programs/benchfn.c",
+      "$zstd/programs/benchzstd.c",
+      "$zstd/programs/datagen.c",
+      "$zstd/programs/dibio.c",
+      "$zstd/programs/fileio.c",
+      "$zstd/programs/timefn.c",
+      "$zstd/programs/util.c",
+      "$zstd/programs/zstdcli.c",
+    ]
+    sdk_migrated = true
+    deps = [ ":zstd" ]
+    configs += [ ":zstd-config" ]
+  }
 }

@@ -35,6 +35,8 @@ std::string_view ZbiName(TestDataZbiType type) {
       return "empty.zbi";
     case TestDataZbiType::kOneItem:
       return "one-item.zbi";
+    case TestDataZbiType::kCompressedItem:
+      return "compressed-item.zbi";
     case TestDataZbiType::kBadCrcItem:
       return "bad-crc-item.zbi";
     case TestDataZbiType::kMultipleSmallItems:
@@ -54,6 +56,9 @@ void GetExpectedPayloadCrc32(TestDataZbiType type, size_t idx, uint32_t* crc) {
       __UNREACHABLE;
     case TestDataZbiType::kOneItem:
       *crc = 3608077223;
+      break;
+    case TestDataZbiType::kCompressedItem:
+      *crc = 4242380983;
       break;
     case TestDataZbiType::kBadCrcItem:
       // This function should not be called for this type.
@@ -76,11 +81,38 @@ void GetExpectedPayloadCrc32(TestDataZbiType type, size_t idx, uint32_t* crc) {
 
 }  // namespace
 
+size_t GetExpectedItemType(TestDataZbiType type) {
+  switch (type) {
+    case TestDataZbiType::kEmpty:
+    case TestDataZbiType::kOneItem:
+    case TestDataZbiType::kBadCrcItem:
+    case TestDataZbiType::kMultipleSmallItems:
+    case TestDataZbiType::kSecondItemOnPageBoundary:
+      return ZBI_TYPE_IMAGE_ARGS;
+    case TestDataZbiType::kCompressedItem:
+      return ZBI_TYPE_STORAGE_RAMDISK;
+  }
+}
+
+bool ExpectItemsAreCompressed(TestDataZbiType type) {
+  switch (type) {
+    case TestDataZbiType::kEmpty:
+    case TestDataZbiType::kOneItem:
+    case TestDataZbiType::kBadCrcItem:
+    case TestDataZbiType::kMultipleSmallItems:
+    case TestDataZbiType::kSecondItemOnPageBoundary:
+      return false;
+    case TestDataZbiType::kCompressedItem:
+      return true;
+  }
+}
+
 size_t GetExpectedNumberOfItems(TestDataZbiType type) {
   switch (type) {
     case TestDataZbiType::kEmpty:
       return 0;
     case TestDataZbiType::kOneItem:
+    case TestDataZbiType::kCompressedItem:
     case TestDataZbiType::kBadCrcItem:
       return 1;
     case TestDataZbiType::kMultipleSmallItems:
@@ -100,6 +132,10 @@ void GetExpectedPayload(TestDataZbiType type, size_t idx, Bytes* contents) {
       __UNREACHABLE;
     case TestDataZbiType::kOneItem: {
       *contents = "hello world";
+      return;
+    }
+    case TestDataZbiType::kCompressedItem: {
+      *contents = "abcdefghijklmnopqrstuvwxyz";
       return;
     }
     case TestDataZbiType::kBadCrcItem: {
@@ -229,6 +265,21 @@ std::string GetExpectedJson(TestDataZbiType type) {
       "type": "IMAGE_ARGS",
       "size": 11,
       "crc32": 3608077223
+    }
+  ]
+})""";
+    case TestDataZbiType::kCompressedItem:
+      return R"""({
+  "offset": 0,
+  "type": "CONTAINER",
+  "size": 72,
+  "items": [
+    {
+      "offset": 32,
+      "type": "RAMDISK",
+      "size": 35,
+      "uncompressed_size": 26,
+      "crc32": 3369636288
     }
   ]
 })""";

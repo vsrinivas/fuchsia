@@ -7,12 +7,14 @@
 
 #include <lib/zbitl/error_string.h>
 #include <lib/zbitl/image.h>
+#include <lib/zbitl/item.h>
 #include <lib/zbitl/json.h>
 #include <lib/zbitl/view.h>
 
 #include <iterator>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
@@ -26,11 +28,10 @@ using Bytes = std::string;
 
 constexpr size_t kMaxZbiSize = 4192;
 
-constexpr uint32_t kItemType = ZBI_TYPE_IMAGE_ARGS;
-
 enum class TestDataZbiType {
   kEmpty,
   kOneItem,
+  kCompressedItem,
   kBadCrcItem,
   kMultipleSmallItems,
   kSecondItemOnPageBoundary,
@@ -42,11 +43,17 @@ enum class ItemCopyMode {
   kRaw,
   // Copy the header and payload.
   kWithHeader,
+  // Copy the payload and decompress it as necessary.
+  kStorage,
 };
 
 //
 // Helpers for accessing test data.
 //
+
+size_t GetExpectedItemType(TestDataZbiType type);
+
+bool ExpectItemsAreCompressed(TestDataZbiType type);
 
 size_t GetExpectedNumberOfItems(TestDataZbiType type);
 
@@ -58,6 +65,15 @@ std::string GetExpectedJson(TestDataZbiType type);
 
 void OpenTestDataZbi(TestDataZbiType type, std::string_view work_dir, fbl::unique_fd* fd,
                      size_t* num_bytes);
+
+struct TestAllocator {
+  fitx::result<std::string_view, std::unique_ptr<std::byte[]>> operator()(size_t bytes) {
+    allocated_.push_back(bytes);
+    return zbitl::decompress::DefaultAllocator(bytes);
+  }
+
+  std::vector<size_t> allocated_;
+};
 
 //
 // Each type of storage under test is expected to implement a "test traits"
@@ -153,7 +169,7 @@ inline void TestIteration(TestDataZbiType type) {
 
   size_t idx = 0;
   for (auto [header, payload] : view) {
-    EXPECT_EQ(kItemType, header->type);
+    EXPECT_EQ(GetExpectedItemType(type), header->type);
 
     Bytes actual;
     ASSERT_NO_FATAL_FAILURE(TestTraits::Read(view.storage(), payload, header->length, &actual));
@@ -260,7 +276,7 @@ void TestMutation(TestDataZbiType type) {
   for (auto it = view.begin(); it != view.end(); ++it, ++idx) {
     auto [header, payload] = *it;
 
-    EXPECT_EQ(kItemType, header->type);
+    EXPECT_EQ(GetExpectedItemType(type), header->type);
 
     Bytes actual;
     ASSERT_NO_FATAL_FAILURE(TestTraits::Read(view.storage(), payload, header->length, &actual));
@@ -304,11 +320,30 @@ void TestMutation(TestDataZbiType type) {
   TEST_MUTATION_BY_TYPE(suite_name, TestTraits, SecondItemOnPageBoundaryZbi,                 \
                         TestDataZbiType::kSecondItemOnPageBoundary)
 
+template <typename SrcTestTraits, typename DestTestTraits>
+constexpr bool kExpectOneShotDecompression =
+    SrcTestTraits::kExpectOneshotReads&& DestTestTraits::kExpectUnbufferedWrites;
+
+template <typename SrcTestTraits, typename DestTestTraits>
+constexpr bool kExpectZeroCopying = SrcTestTraits::kExpectOneshotReads ||
+                                    (SrcTestTraits::kExpectUnbufferedReads &&
+                                     DestTestTraits::kExpectUnbufferedWrites);
+
+inline size_t OneShotDecompressionScratchSize() {
+  return zbitl::decompress::OneShot::GetScratchSize();
+}
+
 template <typename TestTraits>
 void TestCopyCreation(TestDataZbiType type, ItemCopyMode mode) {
   using CreationTraits = typename TestTraits::creation_traits;
+  using Storage = typename TestTraits::storage_type;
+  using CreationStorage = typename CreationTraits::storage_type;
+
+  static_assert(zbitl::View<Storage>::template CanZeroCopy<CreationStorage>() ==
+                kExpectZeroCopying<TestTraits, CreationTraits>);
 
   files::ScopedTempDir dir;
+  TestAllocator allocator;
 
   fbl::unique_fd fd;
   size_t size = 0;
@@ -324,16 +359,24 @@ void TestCopyCreation(TestDataZbiType type, ItemCopyMode mode) {
         return header.length;
       case ItemCopyMode::kWithHeader:
         return header.length + sizeof(header);
+      case ItemCopyMode::kStorage:
+        // Though we are officially using the code-under-test here, the spec
+        // currently provides no way to determine whether a given type is a
+        // a storage type; once can only check whether it is among an
+        // exhaustive list of such types, which is what this utility does.
+        return zbitl::TypeIsStorage(header.type) ? header.extra : header.length;
     };
     __UNREACHABLE;
   };
 
-  auto do_copy = [&mode, &view ](auto it) -> auto {
+  auto do_copy = [&mode, &view, &allocator](auto it) {
     switch (mode) {
       case ItemCopyMode::kRaw:
         return view.CopyRawItem(it);
       case ItemCopyMode::kWithHeader:
         return view.CopyRawItemWithHeader(it);
+      case ItemCopyMode::kStorage:
+        return view.CopyStorageItem(it, allocator);
     };
     __UNREACHABLE;
   };
@@ -346,6 +389,20 @@ void TestCopyCreation(TestDataZbiType type, ItemCopyMode mode) {
     auto result = do_copy(it);
     ASSERT_TRUE(result.is_ok()) << "item " << idx << ": "
                                 << ViewCopyErrorString(result.error_value());
+    if (mode == ItemCopyMode::kStorage) {
+      if (ExpectItemsAreCompressed(type)) {
+        ASSERT_FALSE(allocator.allocated_.empty());
+        // The first allocated size is expected to be the scratch size.
+        if (kExpectOneShotDecompression<TestTraits, CreationTraits>) {
+          EXPECT_EQ(OneShotDecompressionScratchSize(), allocator.allocated_.front());
+          EXPECT_EQ(1u, allocator.allocated_.size());
+        } else {
+          EXPECT_GT(allocator.allocated_.front(), OneShotDecompressionScratchSize());
+        }
+      } else {
+        EXPECT_TRUE(allocator.allocated_.empty());
+      }
+    }
 
     auto created = std::move(result).value();
 
@@ -356,6 +413,7 @@ void TestCopyCreation(TestDataZbiType type, ItemCopyMode mode) {
     Bytes expected;
     switch (mode) {
       case ItemCopyMode::kRaw:
+      case ItemCopyMode::kStorage:
         ASSERT_NO_FATAL_FAILURE(GetExpectedPayload(type, idx, &expected));
         break;
       case ItemCopyMode::kWithHeader:
@@ -439,7 +497,7 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
 
     size_t idx = 0;
     for (auto [header, payload] : created_view) {
-      EXPECT_EQ(kItemType, header->type);
+      EXPECT_EQ(GetExpectedItemType(type), header->type);
 
       Bytes actual;
       ASSERT_NO_FATAL_FAILURE(
@@ -477,7 +535,7 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
     size_t idx = 1;  // Corresponding to begin() + 1.
     for (auto it = first; it != created_view.end(); ++it, ++idx) {
       auto [header, payload] = *it;
-      EXPECT_EQ(kItemType, header->type);
+      EXPECT_EQ(GetExpectedItemType(type), header->type);
 
       Bytes actual;
       ASSERT_NO_FATAL_FAILURE(
@@ -544,6 +602,8 @@ void TestCopyingIntoSmallStorage() {
                                       ItemCopyMode::kRaw, )                     \
   TEST_COPY_CREATION_BY_TYPE_AND_MODE(suite_name, TestTraits, type_name, type,  \
                                       ItemCopyMode::kWithHeader, WithHeader)    \
+  TEST_COPY_CREATION_BY_TYPE_AND_MODE(suite_name, TestTraits, type_name, type,  \
+                                      ItemCopyMode::kStorage, AsStorage)        \
   TEST(suite_name, type_name##CopyCreationByByteRange) {                        \
     ASSERT_NO_FATAL_FAILURE(TestCopyCreationByByteRange<TestTraits>(type));     \
   }                                                                             \
@@ -551,18 +611,28 @@ void TestCopyingIntoSmallStorage() {
     ASSERT_NO_FATAL_FAILURE(TestCopyCreationByIteratorRange<TestTraits>(type)); \
   }
 
-#define TEST_COPY_CREATION(suite_name, TestTraits)                                          \
-  TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, OneItemZbi, TestDataZbiType::kOneItem) \
-  TEST_COPY_CREATION_BY_TYPE_AND_MODE(suite_name, TestTraits, BadCrcItemZbi,                \
-                                      TestDataZbiType::kBadCrcItem, ItemCopyMode::kRaw, )   \
-  TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, MultipleSmallItemsZbi,                 \
-                             TestDataZbiType::kMultipleSmallItems)                          \
-  TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, SecondItemOnPageBoundaryZbi,           \
+#define TEST_COPY_CREATION(suite_name, TestTraits)                                              \
+  TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, OneItemZbi, TestDataZbiType::kOneItem)     \
+  TEST_COPY_CREATION_BY_TYPE_AND_MODE(suite_name, TestTraits, CompressedItemZbi,                \
+                                      TestDataZbiType::kCompressedItem, ItemCopyMode::kStorage, \
+                                      AsStorage)                                                \
+  TEST_COPY_CREATION_BY_TYPE_AND_MODE(suite_name, TestTraits, BadCrcItemZbi,                    \
+                                      TestDataZbiType::kBadCrcItem, ItemCopyMode::kRaw, )       \
+  TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, MultipleSmallItemsZbi,                     \
+                             TestDataZbiType::kMultipleSmallItems)                              \
+  TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, SecondItemOnPageBoundaryZbi,               \
                              TestDataZbiType::kSecondItemOnPageBoundary)
 
 template <typename SrcTestTraits, typename DestTestTraits>
 void TestCopying(TestDataZbiType type, ItemCopyMode mode) {
+  using SrcStorage = typename SrcTestTraits::storage_type;
+  using DestStorage = typename DestTestTraits::storage_type;
+
+  static_assert(zbitl::View<SrcStorage>::template CanZeroCopy<DestStorage>() ==
+                kExpectZeroCopying<SrcTestTraits, DestTestTraits>);
+
   files::ScopedTempDir dir;
+  TestAllocator allocator;
 
   fbl::unique_fd fd;
   size_t size = 0;
@@ -578,17 +648,21 @@ void TestCopying(TestDataZbiType type, ItemCopyMode mode) {
         return header.length;
       case ItemCopyMode::kWithHeader:
         return header.length + sizeof(header);
+      case ItemCopyMode::kStorage:
+        return zbitl::UncompressedLength(header);
     };
     __UNREACHABLE;
   };
 
-  auto do_copy = [&mode, &view ](auto&& storage, auto it) -> auto {
+  auto do_copy = [&mode, &view, &allocator ](auto&& storage, auto it) -> auto {
     using Storage = decltype(storage);
     switch (mode) {
       case ItemCopyMode::kRaw:
         return view.CopyRawItem(std::forward<Storage>(storage), it);
       case ItemCopyMode::kWithHeader:
         return view.CopyRawItemWithHeader(std::forward<Storage>(storage), it);
+      case ItemCopyMode::kStorage:
+        return view.CopyStorageItem(std::forward<Storage>(storage), it, allocator);
     };
     __UNREACHABLE;
   };
@@ -605,6 +679,21 @@ void TestCopying(TestDataZbiType type, ItemCopyMode mode) {
     ASSERT_TRUE(result.is_ok()) << "item " << idx << ": "
                                 << ViewCopyErrorString(result.error_value());
 
+    if (mode == ItemCopyMode::kStorage) {
+      if (ExpectItemsAreCompressed(type)) {
+        ASSERT_FALSE(allocator.allocated_.empty());
+        // The first allocated size is expected to be the scratch size.
+        if (kExpectOneShotDecompression<SrcTestTraits, DestTestTraits>) {
+          EXPECT_EQ(OneShotDecompressionScratchSize(), allocator.allocated_.front());
+          EXPECT_EQ(1u, allocator.allocated_.size());
+        } else {
+          EXPECT_GT(allocator.allocated_.front(), OneShotDecompressionScratchSize());
+        }
+      } else {
+        EXPECT_TRUE(allocator.allocated_.empty());
+      }
+    }
+
     Bytes actual;
     auto copy_payload = DestTestTraits::AsPayload(copy);
     ASSERT_NO_FATAL_FAILURE(DestTestTraits::Read(copy, copy_payload, copy_size, &actual));
@@ -612,6 +701,7 @@ void TestCopying(TestDataZbiType type, ItemCopyMode mode) {
     Bytes expected;
     switch (mode) {
       case ItemCopyMode::kRaw:
+      case ItemCopyMode::kStorage:
         ASSERT_NO_FATAL_FAILURE(GetExpectedPayload(type, idx, &expected));
         break;
       case ItemCopyMode::kWithHeader:
@@ -744,17 +834,6 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
   }
 }
 
-template <typename SrcTestTraits, typename DestTestTraits>
-void TestZeroCopying() {
-  using SrcStorage = typename SrcTestTraits::storage_type;
-  using DestStorage = typename DestTestTraits::storage_type;
-
-  constexpr bool kCanZeroCopy = zbitl::View<SrcStorage>::template CanZeroCopy<DestStorage>();
-  constexpr bool kExpectUnbufferedIo =
-      SrcTestTraits::kExpectUnbufferedReads && DestTestTraits::kExpectUnbufferedWrites;
-  static_assert(kCanZeroCopy == SrcTestTraits::kExpectOneshotReads || kExpectUnbufferedIo);
-}
-
 #define TEST_COPYING_BY_TYPE_AND_MODE(suite_name, SrcTestTraits, src_name, DestTestTraits, \
                                       dest_name, type_name, type, mode, mode_name)         \
   TEST(suite_name, type_name##Copy##src_name##To##dest_name##mode_name) {                  \
@@ -768,6 +847,8 @@ void TestZeroCopying() {
                                 type_name, type, ItemCopyMode::kRaw, )                          \
   TEST_COPYING_BY_TYPE_AND_MODE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, \
                                 type_name, type, ItemCopyMode::kWithHeader, WithHeader)         \
+  TEST_COPYING_BY_TYPE_AND_MODE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, \
+                                type_name, type, ItemCopyMode::kStorage, AsStorage)             \
   TEST(suite_name, type_name##Copy##src_name##To##dest_name##ByByteRange) {                     \
     auto test = TestCopyingByByteRange<SrcTestTraits, DestTestTraits>;                          \
     ASSERT_NO_FATAL_FAILURE(test(type));                                                        \
@@ -777,13 +858,6 @@ void TestZeroCopying() {
     ASSERT_NO_FATAL_FAILURE(test(type));                                                        \
   }
 
-// The macro indirection ensures that the relevant expansions in TEST_COPYING
-// and those of its arguments happen as expected.
-#define TEST_ZERO_COPYING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name) \
-  TEST(suite_name, ZeroCopying##src_name##To##dest_name) {                                \
-    auto test = TestZeroCopying<SrcTestTraits, DestTestTraits>;                           \
-    ASSERT_NO_FATAL_FAILURE(test());                                                      \
-  }
 #define TEST_COPYING_INTO_SMALL_STORAGE(suite_name, SrcTestTraits, src_name, DestTestTraits, \
                                         dest_name)                                           \
   TEST(suite_name, Copying##src_name##to##dest_name##SmallStorage) {                         \
@@ -795,12 +869,14 @@ void TestZeroCopying() {
   TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, OneItemZbi, \
                        TestDataZbiType::kOneItem)                                                  \
   TEST_COPYING_BY_TYPE_AND_MODE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,    \
+                                CompressedItemZbi, TestDataZbiType::kCompressedItem,               \
+                                ItemCopyMode::kStorage, AsStorage)                                 \
+  TEST_COPYING_BY_TYPE_AND_MODE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,    \
                                 BadCrcItemZbi, TestDataZbiType::kBadCrcItem, ItemCopyMode::kRaw, ) \
   TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,             \
                        MultipleSmallItemsZbi, TestDataZbiType::kMultipleSmallItems)                \
   TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,             \
                        SecondItemOnPageBoundaryZbi, TestDataZbiType::kSecondItemOnPageBoundary)    \
-  TEST_ZERO_COPYING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)                \
   TEST_COPYING_INTO_SMALL_STORAGE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)
 
 template <typename TestTraits>
@@ -820,6 +896,8 @@ void TestAppending() {
   // For extensible storage, we expect the capacity to increase as needed
   // during Image operations.
   constexpr size_t kInitialSize = TestTraits::kExpectExtensibility ? 0 : kExpectedFinalSize;
+
+  constexpr uint32_t kItemType = ZBI_TYPE_IMAGE_ARGS;
 
   typename TestTraits::Context context;
   ASSERT_NO_FATAL_FAILURE(TestTraits::Create(kInitialSize, &context));

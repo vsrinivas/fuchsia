@@ -22,6 +22,7 @@ zx_library("zbitl") {
     "mem_config.cc",
   ]
   deps = [
+    ":internal.decompress-zstd",
     "$zx/kernel/lib/efi",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",
@@ -67,6 +68,32 @@ zx_library("zbitl") {
         "$zx/system/ulib/zx:headers",
       ]
     }
+  }
+}
+
+source_set("internal.decompress-zstd") {
+  sources = [
+    "zstd-streaming.cc",
+    "zstd.cc",
+  ]
+  defines = [ "ZSTD_STATIC_LINKING_ONLY" ]
+  deps = [ "$zx/third_party/ulib/zstd:zstd-decompress-standalone" ]
+  public_deps = [
+    # <lib/zbitl/decompress.h> has #include <lib/fitx/result.h>.
+    "$zx/system/ulib/zxc",
+
+    # <lib/zbitl/decompress.h> has #include <fbl/span.h>.
+    "$zx/system/ulib/fbl",
+  ]
+  include_dirs = [ "include" ]
+
+  if (is_kernel) {
+    deps += [
+      "$zx/kernel/lib/ktl",
+      "$zx/kernel/lib/libc",
+    ]
+  } else {
+    sources += [ "default-allocator.cc" ]
   }
 }
 

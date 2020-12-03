@@ -40,6 +40,10 @@ TEST(ZbitlJsonTests, EmptyZbi) { ASSERT_NO_FATAL_FAILURE(TestJson(TestDataZbiTyp
 
 TEST(ZbitlJsonTests, OneItemZbi) { ASSERT_NO_FATAL_FAILURE(TestJson(TestDataZbiType::kOneItem)); }
 
+TEST(ZbitlJsonTests, CompressedItemZbi) {
+  ASSERT_NO_FATAL_FAILURE(TestJson(TestDataZbiType::kCompressedItem));
+}
+
 TEST(ZbitlJsonTests, MultipleSmallItemsZbi) {
   ASSERT_NO_FATAL_FAILURE(TestJson(TestDataZbiType::kMultipleSmallItems));
 }

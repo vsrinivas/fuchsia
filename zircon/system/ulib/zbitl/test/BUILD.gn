@@ -28,6 +28,7 @@ group("tests") {
 test_data_zbis = [
   "data/empty.zbi",
   "data/one-item.zbi",
+  "data/compressed-item.zbi",
   "data/bad-crc-item.zbi",
   "data/multiple-small-items.zbi",
   "data/second-item-on-page-boundary.zbi",

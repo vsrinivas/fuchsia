@@ -9,7 +9,8 @@ import os
 import subprocess
 
 ZBI_ALIGNMENT = 8
-ZBI_TYPE = "IMAGE_ARGS"
+DEFAULT_ITEM_TYPE = "IMAGE_ARGS"
+RAMDISK_ITEM_TYPE = "RAMDISK"
 
 TestDataZbi = collections.namedtuple(
     "TestDataZbi",
@@ -18,12 +19,21 @@ TestDataZbi = collections.namedtuple(
         "name",
         # (seq(str)): A list of text payloads, each to be of type |ZBI_TYPE|.
         "payloads",
+        # (str): The type of the ZBI items represented by the provided
+        # payloads.
+        "type",
     ],
+    defaults=["", [], DEFAULT_ITEM_TYPE],
 )
 
 TEST_DATA_ZBIS = (
-    TestDataZbi(name="empty", payloads=[]),
+    TestDataZbi(name="empty"),
     TestDataZbi(name="one-item", payloads=["hello world"]),
+    TestDataZbi(
+        # --compressed=zstd is the default for storage types.
+        name="compressed-item",
+        payloads=["abcdefghijklmnopqrstuvwxyz"],
+        type=RAMDISK_ITEM_TYPE),
     TestDataZbi(
         name="multiple-small-items",
         payloads=[
@@ -37,8 +47,7 @@ TEST_DATA_ZBIS = (
             "The world will little note, nor long remember what we say here, but it can never forget what they did here.",
             "It is for us the living, rather, to be dedicated here to the unfinished work which they who fought here have thus far so nobly advanced.",
             "It is rather for us to be here dedicated to the great task remaining before us -- that from these honored dead we take increased devotion to that cause for which they gave the last full measure of devotion -- that we here highly resolve that these dead shall not have died in vain -- that this nation, under God, shall have a new birth of freedom -- and that government of the people, by the people, for the people, shall not perish from the earth.",
-        ],
-    ),
+        ]),
     TestDataZbi(
         name="second-item-on-page-boundary",
         # Container header:    [0x0000, 0x0020)
@@ -67,8 +76,8 @@ def main():
         json_output = "%s.json" % output
         cmd = [zbi_tool, "--output", output, "--json-output", json_output]
         for payload in zbi.payloads:
-            cmd.extend(["--type", ZBI_TYPE, "--entry", payload])
-        subprocess.run(cmd, check=True, capture_output=True)
+            cmd.extend(["--type", zbi.type, "--entry", payload])
+        subprocess.run(cmd, check=True)
 
         # Fill in the last |ZBI_ALIGNMENT|-many bytes, as that is sure to
         # affect the payload (and so invalidate the CRC).
