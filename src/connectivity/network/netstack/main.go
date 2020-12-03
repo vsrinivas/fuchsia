@@ -544,17 +544,48 @@ func Main() {
 		)
 	}
 
-	if cobaltLogger, err := connectCobaltLogger(appCtx); err != nil {
-		syslog.Warnf("could not initialize cobalt client: %s", err)
-	} else {
-		go func() {
-			ticker := time.NewTicker(cobaltClientTimerPeriod)
-			defer ticker.Stop()
-			if err := cobaltClient.run(ctx, cobaltLogger, ticker.C); err != nil {
-				syslog.Errorf("cobalt client exited unexpectedly: %s", err)
-			}
+	// Do not hold up initialization on cobalt.
+	//
+	// We've seen instances of cobalt hanging. At the time of writing, the cause is not known.
+	//
+	// See https://fxbug.dev/61755.
+	go func() {
+		factoryReq, factory, err := cobalt.NewLoggerFactoryWithCtxInterfaceRequest()
+		if err != nil {
+			_ = syslog.Errorf("could not create the request to connect to the %s service: %s", cobalt.LoggerFactoryName, err)
+			return
+		}
+		defer func() {
+			_ = factory.Close()
 		}()
-	}
+		appCtx.ConnectToEnvService(factoryReq)
+
+		loggerReq, logger, err := cobalt.NewLoggerWithCtxInterfaceRequest()
+		if err != nil {
+			_ = syslog.Errorf("could not create the cobalt logger request: %s", err)
+			return
+		}
+		defer func() {
+			_ = logger.Close()
+		}()
+		result, err := factory.CreateLoggerFromProjectId(context.Background(), networking_metrics.ProjectId, loggerReq)
+		if err != nil {
+			_ = syslog.Warnf("CreateLoggerFromProjectId(%d, ...) = _, %s", networking_metrics.ProjectId, err)
+			return
+		}
+		if result != cobalt.StatusOk {
+			_ = syslog.Warnf("CreateLoggerFromProjectId(%d, ...) = %s, _", networking_metrics.ProjectId, result)
+			return
+		}
+		_ = factory.Close()
+
+		_ = syslog.Infof("starting cobalt client")
+		ticker := time.NewTicker(cobaltClientTimerPeriod)
+		defer ticker.Stop()
+		if err := cobaltClient.run(ctx, logger, ticker.C); err != nil {
+			_ = syslog.Errorf("cobalt client exited unexpectedly: %s", err)
+		}
+	}()
 
 	ns.filter = filter.New(stk.PortManager)
 	filter.AddOutgoingService(appCtx, ns.filter)
@@ -588,7 +619,9 @@ func getSecretKeyForOpaqueIID(appCtx *component.Context) ([]byte, error) {
 		syslog.Errorf("could not create the request to connect to the %s service: %s", stash.SecureStoreName, err)
 		return newSecretKeyForOpaqueIID()
 	}
-	defer store.Close()
+	defer func() {
+		_ = store.Close()
+	}()
 	appCtx.ConnectToEnvService(storeReq)
 
 	// Use our secure stash.
@@ -601,7 +634,9 @@ func getSecretKeyForOpaqueIID(appCtx *component.Context) ([]byte, error) {
 		syslog.Errorf("could not create the secure stash store accessor request: %s", err)
 		return newSecretKeyForOpaqueIID()
 	}
-	defer storeAccessor.Close()
+	defer func() {
+		_ = storeAccessor.Close()
+	}()
 	if err := store.CreateAccessor(context.Background(), false /* readOnly */, storeAccessorReq); err != nil {
 		syslog.Warnf("failed to create accessor to the secure stash store: %s", err)
 		return newSecretKeyForOpaqueIID()
@@ -667,30 +702,4 @@ func getSecretKeyForOpaqueIID(appCtx *component.Context) ([]byte, error) {
 	default:
 		panic(fmt.Sprintf("unexpected store accessor flush result type: %d", w))
 	}
-}
-
-func connectCobaltLogger(ctx *component.Context) (*cobalt.LoggerWithCtxInterface, error) {
-	freq, cobaltLoggerFactory, err := cobalt.NewLoggerFactoryWithCtxInterfaceRequest()
-	if err != nil {
-		return nil, fmt.Errorf("could not connect to cobalt logger factory service: %s", err)
-	}
-	defer func() {
-		_ = cobaltLoggerFactory.Close()
-	}()
-	ctx.ConnectToEnvService(freq)
-
-	lreq, cobaltLogger, err := cobalt.NewLoggerWithCtxInterfaceRequest()
-	if err != nil {
-		return nil, fmt.Errorf("could not connect to cobalt logger service: %s", err)
-	}
-	result, err := cobaltLoggerFactory.CreateLoggerFromProjectId(context.Background(), networking_metrics.ProjectId, lreq)
-	if err != nil {
-		return nil, fmt.Errorf("CreateLoggerFromProjectId(%d, ...) = _, %s", networking_metrics.ProjectId, err)
-	}
-	if result != cobalt.StatusOk {
-		_ = cobaltLogger.Close()
-		return nil, fmt.Errorf("could not create logger for project %s: result: %s", networking_metrics.ProjectName, result)
-	}
-
-	return cobaltLogger, nil
 }
