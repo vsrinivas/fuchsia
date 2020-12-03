@@ -417,7 +417,8 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
             return Err(FatfsError::InvalidClusterNumber);
         }
 
-        Ok(self.first_data_sector + self.bpb.sectors_from_clusters(cluster - RESERVED_FAT_ENTRIES))
+        Ok(self.first_data_sector
+            + self.bpb.sectors_from_clusters(cluster - RESERVED_FAT_ENTRIES)?)
     }
 
     pub fn cluster_size(&self) -> u32 {
@@ -428,8 +429,8 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
         Ok(self.offset_from_sector(self.sector_from_cluster(cluster)?))
     }
 
-    pub(crate) fn bytes_from_clusters(&self, clusters: u32) -> u64 {
-        self.bpb.bytes_from_sectors(self.bpb.sectors_from_clusters(clusters))
+    pub(crate) fn bytes_from_clusters(&self, clusters: u32) -> Result<u64, FatfsError> {
+        Ok(self.bpb.bytes_from_sectors(self.bpb.sectors_from_clusters(clusters)?))
     }
 
     pub(crate) fn clusters_from_bytes(&self, bytes: u64) -> u32 {
@@ -1101,7 +1102,7 @@ pub fn format_volume<IO: ReadWriteSeek>(
         assert!(root_dir_first_cluster == boot.bpb.root_dir_first_cluster);
         let first_data_sector = reserved_sectors + sectors_per_all_fats + root_dir_sectors;
         let root_dir_first_sector = first_data_sector
-            + boot.bpb.sectors_from_clusters(root_dir_first_cluster - RESERVED_FAT_ENTRIES);
+            + boot.bpb.sectors_from_clusters(root_dir_first_cluster - RESERVED_FAT_ENTRIES)?;
         let root_dir_pos = boot.bpb.bytes_from_sectors(root_dir_first_sector);
         disk.seek(SeekFrom::Start(root_dir_pos))?;
         write_zeros(&mut disk, boot.bpb.cluster_size() as u64)?;

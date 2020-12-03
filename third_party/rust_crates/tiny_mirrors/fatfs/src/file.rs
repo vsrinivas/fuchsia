@@ -220,7 +220,7 @@ impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
     fn is_dir(&self) -> bool {
         match self.entry {
             Some(ref e) => e.inner().is_dir(),
-            None => true,  // root directory
+            None => true, // root directory
         }
     }
 
@@ -447,7 +447,7 @@ impl<IO: ReadWriteSeek, TP, OCC> Seek for File<'_, IO, TP, OCC> {
                             Some(r) => r?,
                             None => {
                                 // chain ends before new position - seek to end of last cluster
-                                new_pos = self.fs.bytes_from_clusters((i + 1) as u32) as u32;
+                                new_pos = self.fs.bytes_from_clusters((i + 1) as u32)? as u32;
                                 break;
                             }
                         };

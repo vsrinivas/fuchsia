@@ -353,9 +353,13 @@ impl BiosParameterBlock {
         (sectors as u64) * self.bytes_per_sector as u64
     }
 
-    pub(crate) fn sectors_from_clusters(&self, clusters: u32) -> u32 {
-        // Note: total number of sectors is a 32 bit number so it should not overflow
-        clusters * (self.sectors_per_cluster as u32)
+    pub(crate) fn sectors_from_clusters(&self, clusters: u32) -> Result<u32, FatfsError> {
+        // sectors_per_cluster is an 8 bit number. This shouldn't overflow on a valid FAT disk, as
+        // FAT only supports up to a 32 bit sector count. The input to this function is not
+        // necessarily trusted, however, so we need to do a checked multiply.
+        clusters
+            .checked_mul(self.sectors_per_cluster as u32)
+            .ok_or(FatfsError::InvalidClusterNumber)
     }
 
     pub(crate) fn cluster_size(&self) -> u32 {
