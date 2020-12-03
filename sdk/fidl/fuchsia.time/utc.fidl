@@ -6,7 +6,7 @@ library fuchsia.time;
 using zx;
 
 /// Metadata about a device's approximation of UTC time, commonly referred to as "system time".
-[Discoverable]
+[Discoverable, Deprecated = "Wait for the ZX_CLOCK_STARTED signal on the UTC clock instead"]
 protocol Utc {
     /// Notifies clients of updates to the UTC timeline. The first call on a channel returns
     /// immediately, and subsequent calls on the same channel will return when the state
