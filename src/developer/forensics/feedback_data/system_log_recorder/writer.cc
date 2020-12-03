@@ -45,11 +45,6 @@ SystemLogWriter::SystemLogWriter(const std::string& logs_dir, size_t max_num_fil
 }
 
 void SystemLogWriter::StartNewFile() {
-  if (current_file_descriptor_ >= 0) {
-    close(current_file_descriptor_);
-    current_file_descriptor_ = -1;
-  }
-
   const size_t next_file_num = (file_queue_.empty()) ? 0u : file_queue_.back() + 1;
   if (file_queue_.size() >= max_num_files_) {
     TRACE_DURATION("feedback:io", "SystemLogWriter::RemoveFile");
@@ -60,7 +55,7 @@ void SystemLogWriter::StartNewFile() {
   file_queue_.push_back(next_file_num);
 
   TRACE_DURATION("feedback:io", "SystemLogWriter::OpenFile");
-  current_file_descriptor_ = open(Path(next_file_num).c_str(), O_WRONLY | O_CREAT | O_TRUNC);
+  current_file_descriptor_.reset(open(Path(next_file_num).c_str(), O_WRONLY | O_CREAT | O_TRUNC));
 }
 
 void SystemLogWriter::Write() {
@@ -69,10 +64,10 @@ void SystemLogWriter::Write() {
   const std::string str = store_->Consume(&end_of_block);
 
   // The file descriptor could be negative if the file failed to open.
-  if (current_file_descriptor_ >= 0) {
+  if (current_file_descriptor_.is_valid()) {
     // Overcommit, i.e. write everything we consumed before starting a new file for the next
     // block as we cannot have a block spanning multiple files.
-    write(current_file_descriptor_, str.c_str(), str.size());
+    write(current_file_descriptor_.get(), str.c_str(), str.size());
   }
 
   if (end_of_block) {

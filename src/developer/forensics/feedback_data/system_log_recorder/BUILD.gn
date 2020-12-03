@@ -52,6 +52,7 @@ source_set("src") {
     "//src/developer/forensics/feedback_data:constants",
     "//src/lib/diagnostics/stream/cpp",
     "//src/lib/fxl",
+    "//zircon/public/lib/fbl",
     "//zircon/system/ulib/trace",
   ]
 }

@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include <fbl/unique_fd.h>
+
 #include "src/developer/forensics/feedback_data/system_log_recorder/log_message_store.h"
 
 namespace forensics {
@@ -33,7 +35,7 @@ class SystemLogWriter {
   const size_t max_num_files_;
   std::deque<size_t> file_queue_;
 
-  int current_file_descriptor_ = -1;
+  fbl::unique_fd current_file_descriptor_;
   LogMessageStore* store_;
 };
 
