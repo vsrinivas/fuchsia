@@ -38,6 +38,22 @@ pub struct Daemon {
     target_collection: Arc<TargetCollection>,
 }
 
+// This is just for mocking config values for unit testing.
+#[async_trait]
+trait ConfigReader: Send + Sync {
+    async fn get(&self, q: &str) -> Result<ffx_config::Value, ffx_config::api::ConfigError>;
+}
+
+#[derive(Default)]
+struct DefaultConfigReader {}
+
+#[async_trait]
+impl ConfigReader for DefaultConfigReader {
+    async fn get(&self, q: &str) -> Result<ffx_config::Value, ffx_config::api::ConfigError> {
+        ffx_config::get(q).await
+    }
+}
+
 pub struct DaemonEventHandler {
     // This must be a weak ref or else it will cause a circular reference.
     // Generally this should be the common practice for any handler pointing
@@ -45,22 +61,50 @@ pub struct DaemonEventHandler {
     // holding the event queue itself (as is the case with the target collection
     // here).
     target_collection: Weak<TargetCollection>,
+    config_reader: Arc<dyn ConfigReader>,
 }
 
 impl DaemonEventHandler {
-    async fn handle_mdns(t: events::TargetInfo, tc: &TargetCollection) {
+    fn new(target_collection: Weak<TargetCollection>) -> Self {
+        Self { target_collection, config_reader: Arc::new(DefaultConfigReader::default()) }
+    }
+
+    async fn handle_mdns(t: events::TargetInfo, tc: &TargetCollection, cr: Weak<dyn ConfigReader>) {
         log::trace!("Found new target via mdns: {}", t.nodename);
         tc.merge_insert(t.into())
-            .then(|target| async move {
-                target
-                    .update_connection_state(|s| match s {
-                        ConnectionState::Disconnected | ConnectionState::Mdns(_) => {
-                            ConnectionState::Mdns(Utc::now())
+            .then(|target| {
+                async move {
+                    let nodename = target.nodename();
+
+                    let t_clone = target.clone();
+                    let autoconnect_fut = async move {
+                        if let Some(cr) = cr.upgrade() {
+                            let n = cr.get("target.default").await.ok();
+                            if let Some(n) = n {
+                                if n.as_str().map(|n| n == nodename).unwrap_or(false) {
+                                    log::trace!(
+                                        "Doing autoconnect for default target: {}",
+                                        nodename
+                                    );
+                                    t_clone.run_host_pipe().await;
+                                }
+                            }
                         }
-                        _ => s,
-                    })
-                    .await;
-                let _: ((), ()) = futures::join!(target.run_mdns_monitor(), target.run_host_pipe());
+                    };
+
+                    let _: ((), ()) = futures::join!(target.run_mdns_monitor(), autoconnect_fut);
+
+                    // Updates state last so that if tasks are waiting on this state, everything is
+                    // already running and there aren't any races.
+                    target
+                        .update_connection_state(|s| match s {
+                            ConnectionState::Disconnected | ConnectionState::Mdns(_) => {
+                                ConnectionState::Mdns(Utc::now())
+                            }
+                            _ => s,
+                        })
+                        .await;
+                }
             })
             .await;
     }
@@ -107,7 +151,7 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
         match event {
             DaemonEvent::WireTraffic(traffic) => match traffic {
                 WireTrafficType::Mdns(t) => {
-                    Self::handle_mdns(t, &tc).await;
+                    Self::handle_mdns(t, &tc, Arc::downgrade(&self.config_reader)).await;
                 }
                 WireTrafficType::Fastboot(t) => {
                     log::trace!("Found new target via fastboot: {}", t.nodename);
@@ -144,11 +188,8 @@ impl Daemon {
         log::info!("Starting daemon overnet server");
         let target_collection = Arc::new(TargetCollection::new());
         let queue = events::Queue::new(&target_collection);
-        queue
-            .add_handler(DaemonEventHandler {
-                target_collection: Arc::downgrade(&target_collection),
-            })
-            .await;
+        let daemon_event_handler = DaemonEventHandler::new(Arc::downgrade(&target_collection));
+        queue.add_handler(daemon_event_handler).await;
         target_collection.set_event_queue(queue.clone()).await;
         Daemon::spawn_onet_discovery(queue.clone());
         spawn_fastboot_discovery(queue.clone());
@@ -299,6 +340,8 @@ impl Daemon {
             DaemonRequest::GetRemoteControl { target, remote, responder } => {
                 let target =
                     default_target_or_err!(self, target, responder, DaemonError::TargetCacheError);
+                // Ensure auto-connect has at least started.
+                target.run_host_pipe().await;
                 match target.events.wait_for(None, |e| e == TargetEvent::RcsActivated).await {
                     Ok(()) => (),
                     Err(e) => {
@@ -693,6 +736,19 @@ mod test {
         Ok(())
     }
 
+    struct FakeConfigReader {
+        query_expected: String,
+        value: String,
+    }
+
+    #[async_trait]
+    impl ConfigReader for FakeConfigReader {
+        async fn get(&self, q: &str) -> Result<ffx_config::Value, ffx_config::api::ConfigError> {
+            assert_eq!(q, self.query_expected);
+            Ok(ffx_config::Value::String(self.value.clone()))
+        }
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_daemon_mdns_event_handler() {
         let t = Target::new("this-town-aint-big-enough-for-the-three-of-us");
@@ -700,8 +756,13 @@ mod test {
         let tc = Arc::new(TargetCollection::new());
         tc.merge_insert(t.clone()).await;
 
-        let wtc = Arc::downgrade(&tc);
-        let handler = DaemonEventHandler { target_collection: wtc };
+        let handler = DaemonEventHandler {
+            target_collection: Arc::downgrade(&tc),
+            config_reader: Arc::new(FakeConfigReader {
+                query_expected: "target.default".to_owned(),
+                value: "florp".to_owned(),
+            }),
+        };
         assert!(!handler
             .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(events::TargetInfo {
                 nodename: t.nodename(),
@@ -711,7 +772,8 @@ mod test {
             .unwrap());
 
         // This is a bit of a hack to check the target state without digging
-        // into internals.
+        // into internals. This also avoids running into a race waiting for an
+        // event to be propagated.
         t.update_connection_state(|s| {
             if let ConnectionState::Mdns(ref _t) = s {
                 s
@@ -720,6 +782,33 @@ mod test {
             }
         })
         .await;
+
+        assert_eq!(
+            t.task_manager.task_snapshot(crate::target::TargetTaskType::HostPipe).await,
+            crate::task::TaskSnapshot::NotRunning
+        );
+
+        // This handler will now return the value of the default target as
+        // intended.
+        let handler = DaemonEventHandler {
+            target_collection: Arc::downgrade(&tc),
+            config_reader: Arc::new(FakeConfigReader {
+                query_expected: "target.default".to_owned(),
+                value: "this-town-aint-big-enough-for-the-three-of-us".to_owned(),
+            }),
+        };
+        assert!(!handler
+            .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(events::TargetInfo {
+                nodename: t.nodename(),
+                ..Default::default()
+            })))
+            .await
+            .unwrap());
+
+        assert_eq!(
+            t.task_manager.task_snapshot(crate::target::TargetTaskType::HostPipe).await,
+            crate::task::TaskSnapshot::Running
+        );
 
         // TODO(awdavies): RCS, Fastboot, etc. events.
     }

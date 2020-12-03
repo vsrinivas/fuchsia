@@ -8,7 +8,6 @@ use {
     crate::fastboot::open_interface_with_serial,
     crate::net::IsLocalAddr,
     crate::onet::HostPipeConnection,
-    crate::target_task::*,
     crate::task::{SingleFlight, TaskSnapshot},
     anyhow::{anyhow, Context, Error, Result},
     async_std::sync::RwLock,
@@ -38,6 +37,8 @@ use {
     std::time::Duration,
     usb_bulk::Interface,
 };
+
+pub use crate::target_task::*;
 
 pub trait SshFormatter {
     fn ssh_fmt<W: Write>(&self, f: &mut W) -> std::io::Result<()>;
@@ -374,7 +375,8 @@ pub struct Target {
     // reason (probably something to do with the merge_insert function in the
     // TargetCollection struct?) this will drop all tasks immediately if this
     // isn't an Arc<>.
-    task_manager: Arc<SingleFlight<TargetTaskType, Result<(), String>>>,
+    pub task_manager: Arc<SingleFlight<TargetTaskType, Result<(), String>>>,
+
     inner: Arc<TargetInner>,
 }
 

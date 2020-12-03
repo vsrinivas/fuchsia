@@ -98,7 +98,7 @@ impl<
             Entry::Vacant(e) => {
                 let task = self.make_cleanup_task(t);
                 e.insert(task.clone());
-                fuchsia_async::Task::local(async move {
+                fuchsia_async::Task::spawn(async move {
                     let _ = task.await;
                 })
                 .detach();
