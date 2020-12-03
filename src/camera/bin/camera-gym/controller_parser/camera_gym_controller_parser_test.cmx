@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/camera_gym_controller_parser_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

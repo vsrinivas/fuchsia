@@ -5,6 +5,7 @@ import("//build/testing/environments.gni")
 
 camera_tests = {
   deps = [
+    "//src/camera/bin/camera-gym/controller_parser:camera_gym_controller_parser_test",
     "//src/camera/bin/camera-gym/test",
     "//src/camera/bin/device:unittests",
     "//src/camera/bin/device_watcher/test",
@@ -128,6 +129,11 @@ camera_tests = {
       name = "imx227_test"
       manifest = "//src/camera/drivers/sensors/imx227/test/meta/imx227_test.cmx"
       environments = [ sherlock_env ]
+    },
+    {
+      name = "camera_gym_controller_parser_test"
+      manifest = "//src/camera/bin/camera-gym/controller_parser/camera_gym_controller_parser_test.cmx"
+      environments = basic_envs
     },
     {
       name = "camera_gym_test"
