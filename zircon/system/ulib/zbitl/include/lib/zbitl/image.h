@@ -59,7 +59,10 @@ class Image : public View<Storage, Check> {
     const uint32_t size = sizeof(zbi_header_t) + current_length;
     const uint32_t new_item_offset = size;
     const uint32_t new_size = ZBI_ALIGN(new_item_offset + sizeof(new_header) + new_header.length);
-    if (new_size <= size) {
+    // Overflow would have happened if `new_size` is now less than or equal to
+    // any of the constituent elements in its defining sum, including
+    // `ZBI_ALIGNMENT`; this reduces to the following predicate.
+    if (new_size <= new_item_offset || new_size <= new_header.length) {
       return fitx::error(Error{"integer overflow; new size is too big", size});
     }
 

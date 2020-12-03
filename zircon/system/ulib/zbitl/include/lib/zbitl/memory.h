@@ -50,7 +50,10 @@ class StorageTraits<fbl::Span<T>> {
   static fitx::result<error_type, payload_type> Payload(const Storage& storage, uint32_t offset,
                                                         uint32_t length) {
     ZX_DEBUG_ASSERT(offset <= storage.size() - length);
-    auto payload = storage.subspan(offset, length);
+    // We use `storage.data() + offset` instead of subspan so as to include the
+    // length 0 corner case in which we conventionally permit
+    // `offset == size()` (disallowed by fbl::Span).
+    payload_type payload{storage.data() + offset, length};
     ZX_ASSERT_MSG(payload.size() % sizeof(T) == 0,
                   "payload size not a multiple of storage fbl::Span element_type size");
     return fitx::ok(payload);
@@ -76,7 +79,7 @@ class StorageTraits<fbl::Span<T>> {
     // The caller is supposed to maintain these invariants.
     ZX_DEBUG_ASSERT(offset <= storage.size());
     ZX_DEBUG_ASSERT(length <= storage.size() - offset);
-    return fitx::ok(&storage[offset]);
+    return fitx::ok(storage.data() + offset);
   }
 };
 
@@ -113,8 +116,9 @@ class StorageTraits<fbl::Array<T>> {
       if (!ac.check()) {
         return fitx::error{error_type{}};
       }
-
-      memcpy(new_storage.data(), storage.data(), current);
+      if (current) {
+        memcpy(new_storage.data(), storage.data(), current);
+      }
       storage.swap(new_storage);
     }
     return fitx::ok();

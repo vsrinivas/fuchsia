@@ -12,8 +12,17 @@ group("testing") {
 fuzzer_package("zbitl-fuzzers") {
   fuzz_host = true
   cpp_fuzzers = [
+    ":append-fuzzer",
     ":iteration-fuzzer",
     ":mem-config-fuzzer",
+  ]
+}
+
+cpp_fuzzer("append-fuzzer") {
+  sources = [ "append-fuzzer.cc" ]
+  deps = [
+    "..",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
