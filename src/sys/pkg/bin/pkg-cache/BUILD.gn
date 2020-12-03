@@ -7,13 +7,6 @@ import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 import("//src/sys/pkg/sysmgr_config.gni")
-import("//tools/fidl/measure-tape/measure_tape.gni")
-
-measure_tape("measure_fuchsia_pkg") {
-  fidls = [ "//sdk/fidl/fuchsia.pkg" ]
-  target_type = "fuchsia.pkg/PackageIndexEntry"
-  target_binding = "rust"
-}
 
 rustc_binary("bin") {
   name = "pkg_cache"
@@ -21,7 +14,6 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    ":measure_fuchsia_pkg",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
