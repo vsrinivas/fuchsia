@@ -11,7 +11,9 @@
 namespace zxdb {
 
 FileLine::FileLine() = default;
-FileLine::FileLine(std::string file, int line) : file_(std::move(file)), line_(line) {}
+
+FileLine::FileLine(std::string file, int line) : FileLine(std::move(file), std::string(), line) {}
+
 FileLine::FileLine(std::string file, std::string comp_dir, int line)
     : file_(std::move(file)), comp_dir_(std::move(comp_dir)), line_(line) {
   // For "line 0" entries there should be no file or compilation directory set. These entries
@@ -20,6 +22,7 @@ FileLine::FileLine(std::string file, std::string comp_dir, int line)
   // to "no code".
   FX_DCHECK(line_ > 0 || (file_.empty() && comp_dir_.empty()));
 }
+
 FileLine::~FileLine() = default;
 
 bool operator<(const FileLine& a, const FileLine& b) {

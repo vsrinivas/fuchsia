@@ -250,7 +250,7 @@ TEST_F(StepOverThreadControllerTest, OutToZeroLine) {
   // The function call returns to the next instruction which gives a "0" line number. Note that the
   // file name is still present because this is how DWARF usually encodes things.
   const uint64_t kReturnAddress = kFromAddress + 1;
-  const FileLine kZeroFileLine(kMiddleFileLine.file(), 0);
+  const FileLine kZeroFileLine;
   module_symbols()->AddLineDetails(
       kReturnAddress,
       LineDetails(kZeroFileLine,

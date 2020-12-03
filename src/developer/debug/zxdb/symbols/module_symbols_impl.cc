@@ -545,6 +545,10 @@ std::optional<Location> ModuleSymbolsImpl::DwarfLocationForAddress(
       if (row.Line)
         file_name = line_table.GetFileNameForRow(row);  // Could still return nullopt.
       if (file_name) {
+        // It's important this only gets called when row.Line > 0. FileLine will assert for line 0
+        // if a file name or build directory is given to ensure that all "no code" locations compare
+        // identically. This is guaranteed here because file_name will only be set when the line is
+        // nonzero.
         if (build_dir_.empty())
           file_line = FileLine(std::move(*file_name), unit->GetCompilationDir(), row.Line);
         else

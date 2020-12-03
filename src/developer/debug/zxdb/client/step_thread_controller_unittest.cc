@@ -87,7 +87,7 @@ TEST_F(StepThreadControllerTest, SofwareException) {
 // This test tests the case where the line table has 10, 0, 10 11. Stepping from the first "10" line
 // should end up on "11".
 TEST_F(StepThreadControllerTest, Line0) {
-  FileLine line0("/path/file.cc", 0);
+  FileLine line0;
   FileLine line10("/path/file.cc", 10);
   FileLine line11("/path/file.cc", 11);
 

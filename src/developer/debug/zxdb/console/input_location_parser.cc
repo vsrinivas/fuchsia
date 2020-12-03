@@ -83,13 +83,23 @@ Err ParseGlobalInputLocation(const Location& location, const std::string& input,
 
   // Check for one colon. Two colons is a C++ member function.
   size_t colon = input.find(':');
+  const char kMissingFileError[] =
+      "There is no current file name to use, you'll have to specify a file.";
   if (colon != std::string::npos && colon < input.size() - 1 && input[colon + 1] != ':') {
     // <file>:<line> format.
     std::string file = input.substr(0, colon);
+    if (file.empty()) {
+      // Empty file names take the current file name just like bare numbers.
+      if (location.file_line().file().empty())
+        return Err(kMissingFileError);
+      file = location.file_line().file();
+    }
 
     uint64_t line = 0;
     if (Err err = StringToUint64(input.substr(colon + 1), &line); err.has_error())
       return err;
+    if (line == 0)
+      return Err("Can't have a 0 line number.");
 
     *output = InputLocation(FileLine(std::move(file), static_cast<int>(line)));
     return Err();
@@ -109,7 +119,7 @@ Err ParseGlobalInputLocation(const Location& location, const std::string& input,
   Err err = StringToUint64(input, &line);
   if (!err.has_error()) {
     if (location.file_line().file().empty())
-      return Err("There is no current file name to use, you'll have to specify a file.");
+      return Err(kMissingFileError);
 
     *output = InputLocation(FileLine(location.file_line().file(), static_cast<int>(line)));
     return Err();

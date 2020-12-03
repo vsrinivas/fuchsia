@@ -113,9 +113,6 @@ TEST(FormatLocation, FormatFileLine) {
   FileLine fl("/path/to/foo.cc", 21);
   EXPECT_EQ("/path/to/foo.cc:21", FormatFileLine(fl).AsString());
 
-  // Missing line number.
-  EXPECT_EQ("/path/foo.cc:?", FormatFileLine(FileLine("/path/foo.cc", 0)).AsString());
-
   // Missing both.
   EXPECT_EQ("?:?", FormatFileLine(FileLine()).AsString());
 

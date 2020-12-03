@@ -85,6 +85,22 @@ TEST_F(InputLocationParserTest, EvalGlobalInputLocation) {
   result = SyncEvalGlobalInputLocation(eval_context, existing_location, "foo/bar.cc:123x");
   EXPECT_TRUE(result.loc.has_error());
 
+  // File and line empty.
+  result = SyncEvalGlobalInputLocation(eval_context, existing_location, ":");
+  EXPECT_TRUE(result.loc.has_error());
+  EXPECT_EQ(result.loc.err().msg(), "Unexpected token ':'.");
+
+  // Empty line number.
+  result = SyncEvalGlobalInputLocation(eval_context, existing_location, "foo/bar.cc:");
+  ASSERT_TRUE(result.loc.has_error());
+  // This message is a bit odd, it would be better if it described the missing number.
+  EXPECT_EQ(result.loc.err().msg(), "Unexpected input, did you forget an operator?");
+
+  // 0 line number.
+  result = SyncEvalGlobalInputLocation(eval_context, existing_location, "foo/bar.cc:0");
+  ASSERT_TRUE(result.loc.has_error());
+  EXPECT_EQ(result.loc.err().msg(), "Can't have a 0 line number.");
+
   // Valid hex address with *.
   result = SyncEvalGlobalInputLocation(eval_context, existing_location, "*0x12345f");
   ASSERT_TRUE(result.loc.ok()) << result.loc.err().msg();
@@ -123,6 +139,13 @@ TEST_F(InputLocationParserTest, EvalGlobalInputLocation) {
   EXPECT_FALSE(result.size);
   EXPECT_EQ(file, result.loc.value().line.file());
   EXPECT_EQ(21, result.loc.value().line.line());
+
+  // Empty file name with colon should be the same thing.
+  result = SyncEvalGlobalInputLocation(eval_context, existing_location_with_file, ":92");
+  ASSERT_TRUE(result.loc.ok()) << result.loc.err().msg();
+  EXPECT_FALSE(result.size);
+  EXPECT_EQ(file, result.loc.value().line.file());
+  EXPECT_EQ(92, result.loc.value().line.line());
 
   // Pointer to a double. This should give a valid expression size.
   result = SyncEvalGlobalInputLocation(eval_context, existing_location, "*(double*)0x123450");
