@@ -160,7 +160,7 @@ void HermeticFidelityTest::DisplaySummaryResults(
            test_case.test_name.c_str(), channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
       printf("%s%9.4f,", (freq_idx % 10 == 0 ? "\n" : ""),
-             floor(chan_level_results_db[freq_idx] * 10000.0) / 10000.0);
+             floor(chan_level_results_db[freq_idx] / kFidelityDbTolerance) * kFidelityDbTolerance);
     }
     printf("\n");
 
@@ -169,7 +169,7 @@ void HermeticFidelityTest::DisplaySummaryResults(
            test_case.test_name.c_str(), channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
       printf("%s%9.4f,", (freq_idx % 10 == 0 ? "\n" : ""),
-             floor(chan_sinad_results_db[freq_idx] * 10000.0) / 10000.0);
+             floor(chan_sinad_results_db[freq_idx] / kFidelityDbTolerance) * kFidelityDbTolerance);
     }
     printf("\n\n");
   }
@@ -181,20 +181,22 @@ void HermeticFidelityTest::VerifyResults(const TestCase<InputFormat, OutputForma
   for (const auto& channel_spec : test_case.channels_to_measure) {
     const auto& chan_level_results_db = level_results(test_case.path, channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
-      EXPECT_GE(chan_level_results_db[freq_idx], channel_spec.freq_resp_lower_limits_db[freq_idx])
+      EXPECT_GE(chan_level_results_db[freq_idx],
+                channel_spec.freq_resp_lower_limits_db[freq_idx] - kFidelityDbTolerance)
           << "  Channel " << channel_spec.channel << ", FreqResp [" << std::setw(2) << freq_idx
           << "]  (" << std::setw(5) << kReferenceFrequencies[freq_idx]
-          << " Hz):  " << std::setprecision(8)
-          << floor(chan_level_results_db[freq_idx] * 10000.0) / 10000.0;
+          << " Hz):  " << std::setprecision(7)
+          << floor(chan_level_results_db[freq_idx] / kFidelityDbTolerance) * kFidelityDbTolerance;
     }
 
     const auto& chan_sinad_results_db = sinad_results(test_case.path, channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
-      EXPECT_GE(chan_sinad_results_db[freq_idx], channel_spec.sinad_lower_limits_db[freq_idx])
+      EXPECT_GE(chan_sinad_results_db[freq_idx],
+                channel_spec.sinad_lower_limits_db[freq_idx] - kFidelityDbTolerance)
           << "  Channel " << channel_spec.channel << ", SINAD    [" << std::setw(2) << freq_idx
           << "]  (" << std::setw(5) << kReferenceFrequencies[freq_idx]
-          << " Hz):  " << std::setprecision(8)
-          << floor(chan_sinad_results_db[freq_idx] * 10000.0) / 10000.0;
+          << " Hz):  " << std::setprecision(7)
+          << floor(chan_sinad_results_db[freq_idx] / kFidelityDbTolerance) * kFidelityDbTolerance;
     }
   }
 }
@@ -231,7 +233,6 @@ void HermeticFidelityTest::Run(
   auto bookend_silence = GenerateSilentAudio(input_type_mono, input_signal_start);
   auto total_input_frames = input_signal_start + tc.pipeline.neg_filter_width +
                             input_signal_frames + tc.pipeline.pos_filter_width + input_signal_start;
-  auto input = AudioBuffer(tc.input_format, total_input_frames);
 
   // We create the AudioBuffer later. Ensure no out-of-range channels are requested to play.
   for (const auto& channel : tc.channels_to_play) {

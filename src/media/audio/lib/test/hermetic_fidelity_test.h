@@ -68,8 +68,10 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   void Run(const TestCase<InputFormat, OutputFormat>& tc);
 
  protected:
-  // Custom build-time flags (if needed, could be converted to cmdline flags)
-  // For normal operation in CQ, only kDisplayInProgressResults should be set.
+  // Custom build-time flags
+  //
+  // These could become cmdline flags.
+  // For normal CQ operation, only kDisplayInProgressResults should be set.
   //
   // Debug positioning and values of the renderer's input buffer, by showing certain locations.
   static constexpr bool kDebugInputBuffer = false;
@@ -86,12 +88,20 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   // Show results at test-end in tabular form, for copy/compare to hermetic_fidelity_result.cc.
   static constexpr bool kDisplaySummaryResults = false;
 
-  // Saving all input|output files (if --save-input-and-output specified) consumes too much
-  // on-device storage. These tests save only the input|output files for this specified frequency.
-  static constexpr uint32_t kFrequencyForSavedWavFiles = 1000;
+  // Consts related to fidelity testing
+  //
+  // When testing fidelity, we compare the actual measured value to an expected value. These tests
+  // are designed so that they pass if 'actual' is greater than or equal to 'expected' -- or if
+  // 'actual' is less than 'expected' by (at most) the following tolerance. This tolerance also
+  // determines the number of digits of precision for 'expected' values, when stored or displayed.
+  static constexpr double kFidelityDbTolerance = 0.001;
 
   // The power-of-two size of our spectrum analysis buffer.
   static constexpr size_t kFreqTestBufSize = 65536;
+
+  // Saving all input|output files (if --save-input-and-output specified) consumes too much
+  // on-device storage. These tests save only the input|output files for this specified frequency.
+  static constexpr uint32_t kFrequencyForSavedWavFiles = 1000;
 
   static inline double DoubleToDb(double val) { return std::log10(val) * 20.0; }
 
