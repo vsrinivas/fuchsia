@@ -20,7 +20,6 @@
         "services": [
             "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader"

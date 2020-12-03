@@ -22,7 +22,6 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.cobalt.test.LoggerQuerier",
             "fuchsia.diagnostics.ArchiveAccessor",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader"

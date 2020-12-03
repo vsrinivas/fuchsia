@@ -9,7 +9,6 @@
         "services": [
             "fuchsia.diagnostics.ArchiveAccessor",
             "fuchsia.logger.Log",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader"
         ]

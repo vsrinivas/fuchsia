@@ -17,8 +17,7 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.diagnostics.ArchiveAccessor",
-            "fuchsia.logger.Log",
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.Log"
         ]
     }
 }
