@@ -398,6 +398,109 @@ func TestServeAuto(t *testing.T) {
 		}
 		cli.verifyNoPendingEvents()
 	})
+
+}
+
+func TestServeAutoIncremental(t *testing.T) {
+	defer resetFlags()
+	defer resetServer()
+	defer pushPopMonitorPollInterval(20 * time.Millisecond)()
+	cfg := build.TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	portFileDir, err := ioutil.TempDir("", "pm-serve-test-port-file-dir")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(portFileDir)
+	portFile := fmt.Sprintf("%s/%s", portFileDir, "port-file")
+
+	repoDir, err := ioutil.TempDir("", "pm-serve-test-repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(repoDir)
+
+	manifestListPath := filepath.Join(cfg.OutputDir, "pkg-manifests.list")
+	pkgManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
+	if err := ioutil.WriteFile(manifestListPath, []byte(pkgManifestPath+"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	repo, err := repo.New(repoDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := repo.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := repo.AddTargets([]string{}, json.RawMessage{}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := repo.CommitUpdates(false); err != nil {
+		t.Fatal(err)
+	}
+
+	addrChan := make(chan string)
+	var w sync.WaitGroup
+	w.Add(1)
+	go func() {
+		defer w.Done()
+		err := Run(cfg, []string{"-l", "127.0.0.1:0", "-repo", repoDir, "-p", manifestListPath, "-f", portFile}, addrChan)
+		if err != nil && err != http.ErrServerClosed {
+			t.Fatal(err)
+		}
+	}()
+	defer func() {
+		server.Close()
+		w.Wait()
+	}()
+	addr := <-addrChan
+	baseURL := fmt.Sprintf("http://%s", addr)
+
+	t.Run("auto-publishes packages incrementally built", func(t *testing.T) {
+		if hasTarget(t, baseURL, "testpackage/0") {
+			t.Fatalf("prematurely found target package")
+		}
+
+		if _, err := os.Stat(pkgManifestPath); err == nil {
+			t.Fatalf("prematurely found target package manifest")
+		}
+
+		cli := newTestAutoClient(t, baseURL)
+		defer cli.close()
+
+		cli.verifyNoPendingEvents()
+
+		build.BuildTestPackage(cfg)
+
+		event := cli.readEvent()
+		if got, want := event.Event, "timestamp.json"; got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+
+		if !hasTarget(t, baseURL, "testpackage/0") {
+			t.Fatal("missing target package")
+		}
+
+		// Now delete the package manifest
+		if err := os.Remove(pkgManifestPath); err != nil {
+			t.Fatal(err)
+		}
+
+		cli.verifyNoPendingEvents()
+
+		// Build it again
+		build.BuildTestPackage(cfg)
+
+		event = cli.readEvent()
+		if got, want := event.Event, "timestamp.json"; got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
 }
 
 func hasTarget(t *testing.T, baseURL, target string) bool {
