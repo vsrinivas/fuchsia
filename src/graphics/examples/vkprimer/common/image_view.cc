@@ -8,10 +8,10 @@
 
 namespace vkp {
 
-ImageView::ImageView(std::shared_ptr<Device> vkp_device,
+ImageView::ImageView(std::shared_ptr<vk::Device> device,
                      std::shared_ptr<PhysicalDevice> vkp_phys_device, const vk::Extent2D &extent)
     : initialized_(false),
-      vkp_device_(std::move(vkp_device)),
+      device_(device),
       vkp_phys_device_(std::move(vkp_phys_device)),
       extent_(extent) {}
 
@@ -20,7 +20,6 @@ bool ImageView::Init() {
     RTN_MSG(false, "ImageView is already initialized.\n");
   }
 
-  const vk::Device &device = vkp_device_->get();
   format_ = vk::Format::eB8G8R8A8Unorm;
 
   // Create vk::Image.
@@ -36,22 +35,22 @@ bool ImageView::Init() {
   image_info.sharingMode = vk::SharingMode::eExclusive;
   image_info.usage =
       vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc;
-  auto [r_image, image] = device.createImageUnique(image_info);
+  auto [r_image, image] = device_->createImageUnique(image_info);
   RTN_IF_VKH_ERR(false, r_image, "Failed to create image.\n");
   image_ = std::move(image);
 
   // Allocate memory for |image_| and bind it.
-  auto image_memory_requirements = device.getImageMemoryRequirements(*image_);
+  auto image_memory_requirements = device_->getImageMemoryRequirements(*image_);
   vk::MemoryAllocateInfo alloc_info;
   alloc_info.allocationSize = image_memory_requirements.size;
   alloc_info.memoryTypeIndex = FindMemoryIndex(
       vkp_phys_device_->get(), image_memory_requirements.memoryTypeBits,
       vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-  auto [r_image_memory, image_memory] = device.allocateMemoryUnique(alloc_info);
+  auto [r_image_memory, image_memory] = device_->allocateMemoryUnique(alloc_info);
   RTN_IF_VKH_ERR(false, r_image_memory, "Failed to allocate device memory for image.\n");
   image_memory_ = std::move(image_memory);
 
-  RTN_IF_VKH_ERR(false, device.bindImageMemory(*image_, *image_memory_, 0),
+  RTN_IF_VKH_ERR(false, device_->bindImageMemory(*image_, *image_memory_, 0),
                  "Failed to bind device memory to image.\n");
 
   // Create vk::ImageView on |image_|.
@@ -65,7 +64,7 @@ bool ImageView::Init() {
   view_info.subresourceRange = range;
   view_info.viewType = vk::ImageViewType::e2D;
   view_info.image = *image_;
-  auto [r_image_view, image_view] = device.createImageViewUnique(view_info);
+  auto [r_image_view, image_view] = device_->createImageViewUnique(view_info);
   RTN_IF_VKH_ERR(false, r_image_view, "Failed to create image view.\n");
   view_ = std::move(image_view);
 

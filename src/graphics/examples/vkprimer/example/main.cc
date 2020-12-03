@@ -75,8 +75,8 @@ int main(int argc, char* argv[]) {
   RTN_IF_MSG(1, !vkp_physical_device->Init(), "Physical device initialization failed\n");
 
   // LOGICAL DEVICE
-  auto vkp_device = std::make_shared<vkp::Device>(vkp_physical_device->get(), vkp_surface->get());
-  RTN_IF_MSG(1, !vkp_device->Init(), "Logical device initialization failed\n");
+  auto vkp_device = vkp::Device(vkp_physical_device->get(), vkp_surface->get());
+  RTN_IF_MSG(1, !vkp_device.Init(), "Logical device initialization failed\n");
 
   vk::Format image_format;
   vk::Extent2D extent;
@@ -89,15 +89,16 @@ int main(int argc, char* argv[]) {
   std::shared_ptr<vkp::ImageView> vkp_offscreen_image_view;
   if (offscreen) {
     // IMAGE VIEW
-    vkp_offscreen_image_view = std::make_shared<vkp::ImageView>(vkp_device, vkp_physical_device);
+    vkp_offscreen_image_view =
+        std::make_shared<vkp::ImageView>(vkp_device.shared(), vkp_physical_device);
     RTN_IF_MSG(1, !vkp_offscreen_image_view->Init(), "Image View initialization failed\n");
     image_format = vkp_offscreen_image_view->format();
     extent = vkp_offscreen_image_view->extent();
     image_views.emplace_back(vkp_offscreen_image_view->get());
   } else {
     // SWAP CHAIN
-    vkp_swap_chain =
-        std::make_shared<vkp::Swapchain>(vkp_physical_device->get(), vkp_device, vkp_surface);
+    vkp_swap_chain = std::make_shared<vkp::Swapchain>(vkp_physical_device->get(),
+                                                      vkp_device.shared(), vkp_surface);
     RTN_IF_MSG(1, !vkp_swap_chain->Init(), "Swap chain initialization failed\n");
 
     image_format = vkp_swap_chain->image_format();
@@ -109,31 +110,32 @@ int main(int argc, char* argv[]) {
   }
 
   // RENDER PASS
-  auto vkp_render_pass = std::make_shared<vkp::RenderPass>(vkp_device, image_format, offscreen);
+  auto vkp_render_pass =
+      std::make_shared<vkp::RenderPass>(vkp_device.shared(), image_format, offscreen);
   RTN_IF_MSG(1, !vkp_render_pass->Init(), "Render pass initialization failed\n");
 
   // GRAPHICS PIPELINE
-  auto vkp_pipeline = std::make_unique<vkp::Pipeline>(vkp_device, extent, vkp_render_pass);
+  auto vkp_pipeline = std::make_unique<vkp::Pipeline>(vkp_device.shared(), extent, vkp_render_pass);
   RTN_IF_MSG(1, !vkp_pipeline->Init(), "Graphics pipeline initialization failed\n");
 
   // FRAMEBUFFER
-  auto vkp_framebuffers =
-      std::make_unique<vkp::Framebuffers>(vkp_device, extent, vkp_render_pass->get(), image_views);
+  auto vkp_framebuffers = std::make_unique<vkp::Framebuffers>(vkp_device.shared(), extent,
+                                                              vkp_render_pass->get(), image_views);
   RTN_IF_MSG(1, !vkp_framebuffers->Init(), "Framebuffer Initialization Failed.\n");
 
   // COMMAND POOL
-  auto vkp_command_pool = std::make_shared<vkp::CommandPool>(vkp_device, vkp_physical_device->get(),
-                                                             vkp_surface->get());
+  auto vkp_command_pool =
+      std::make_shared<vkp::CommandPool>(vkp_device.shared(), vkp_device.queue_family_index());
   RTN_IF_MSG(1, !vkp_command_pool->Init(), "Command Pool Initialization Failed.\n");
 
   // COMMAND BUFFER
   auto vkp_command_buffers = std::make_unique<vkp::CommandBuffers>(
-      vkp_device, vkp_command_pool, vkp_framebuffers->framebuffers(), extent,
+      vkp_device.shared(), vkp_command_pool, vkp_framebuffers->framebuffers(), extent,
       vkp_render_pass->get(), vkp_pipeline->get());
   RTN_IF_MSG(1, !vkp_command_buffers->Init(), "Command buffer initialization.\n");
 
   // Offscreen drawing submission fence.
-  const vk::Device& device = vkp_device->get();
+  const vk::Device& device = vkp_device.get();
   const vk::FenceCreateInfo fence_info(vk::FenceCreateFlagBits::eSignaled);
   auto [r_offscren_fence, offscreen_fence] = device.createFenceUnique(fence_info);
   RTN_IF_VKH_ERR(1, r_offscren_fence, "Offscreen submission fence.\n");
@@ -151,23 +153,23 @@ int main(int argc, char* argv[]) {
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
     if (offscreen) {
-      DrawOffscreenFrame(*vkp_device, *command_buffers, offscreen_fence.get());
+      DrawOffscreenFrame(vkp_device, *command_buffers, offscreen_fence.get());
     } else {
-      DrawFrame(*vkp_device, *vkp_swap_chain, *command_buffers, fences);
+      DrawFrame(vkp_device, *vkp_swap_chain, *command_buffers, fences);
     }
   }
 #else
   if (offscreen) {
-    DrawOffscreenFrame(*vkp_device, *vkp_command_buffers, offscreen_fence.get());
+    DrawOffscreenFrame(vkp_device, *vkp_command_buffers, offscreen_fence.get());
   } else {
-    DrawFrame(*vkp_device, *vkp_swap_chain, *vkp_command_buffers, fences);
+    DrawFrame(vkp_device, *vkp_swap_chain, *vkp_command_buffers, fences);
   }
   sleep(3);
 #endif
   device.waitIdle();
 
   if (offscreen) {
-    Readback(*vkp_device, *vkp_offscreen_image_view);
+    Readback(vkp_device, *vkp_offscreen_image_view);
   }
 
 #if USE_GLFW

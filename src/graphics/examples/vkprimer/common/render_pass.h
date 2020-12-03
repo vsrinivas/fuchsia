@@ -14,7 +14,7 @@ namespace vkp {
 
 class RenderPass {
  public:
-  RenderPass(std::shared_ptr<Device> vkp_device, const vk::Format &image_format, bool offscreen);
+  RenderPass(std::shared_ptr<vk::Device> device, const vk::Format &image_format, bool offscreen);
 
   void set_initial_layout(vk::ImageLayout initial_layout) { initial_layout_ = initial_layout; }
 
@@ -25,7 +25,7 @@ class RenderPass {
   FXL_DISALLOW_COPY_AND_ASSIGN(RenderPass);
 
   bool initialized_;
-  std::shared_ptr<Device> vkp_device_;
+  std::shared_ptr<vk::Device> device_;
   const vk::Format image_format_;
   bool offscreen_;
   vk::UniqueRenderPass render_pass_;

@@ -24,6 +24,7 @@ group("hw_tests") {
     ":vulkan-tests",
     "../examples/vkprimer",
     "../examples/vkprimer/cmd-buf-benchmark",
+    "../examples/vkprimer/test",
     "../examples/vkprimer/transaction-elimination-test",
     "benchmark",
     "vkvalidation:test-vk-validation",

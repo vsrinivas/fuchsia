@@ -17,7 +17,7 @@ namespace vkp {
 
 class PhysicalDevice {
  public:
-  PhysicalDevice(std::shared_ptr<Instance> vkp_instance, const VkSurfaceKHR &surface);
+  PhysicalDevice(std::shared_ptr<Instance> vkp_instance, VkSurfaceKHR surface = nullptr);
 
   bool Init();
   const vk::PhysicalDevice &get() const;
@@ -30,12 +30,7 @@ class PhysicalDevice {
 
   bool initialized_;
   std::shared_ptr<Instance> vkp_instance_;
-
-  struct InitParams {
-    InitParams(const VkSurfaceKHR &surface);
-    const VkSurfaceKHR surface_;
-  };
-  std::unique_ptr<InitParams> params_;
+  VkSurfaceKHR surface_ = nullptr;
 
   vk::PhysicalDevice phys_device_;
 };

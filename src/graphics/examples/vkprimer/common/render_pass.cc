@@ -8,12 +8,9 @@
 
 namespace vkp {
 
-RenderPass::RenderPass(std::shared_ptr<Device> vkp_device, const vk::Format &image_format,
+RenderPass::RenderPass(std::shared_ptr<vk::Device> device, const vk::Format &image_format,
                        bool offscreen)
-    : initialized_(false),
-      vkp_device_(std::move(vkp_device)),
-      image_format_(image_format),
-      offscreen_(offscreen) {}
+    : initialized_(false), device_(device), image_format_(image_format), offscreen_(offscreen) {}
 
 bool RenderPass::Init() {
   RTN_IF_MSG(false, initialized_, "RenderPass is already initialized.\n");
@@ -47,7 +44,7 @@ bool RenderPass::Init() {
   render_pass_info.pSubpasses = &subpass;
   render_pass_info.subpassCount = 1;
 
-  auto [r_render_pass, render_pass] = vkp_device_->get().createRenderPassUnique(render_pass_info);
+  auto [r_render_pass, render_pass] = device_->createRenderPassUnique(render_pass_info);
   RTN_IF_VKH_ERR(false, r_render_pass, "Failed to create render pass.\n");
   render_pass_ = std::move(render_pass);
 

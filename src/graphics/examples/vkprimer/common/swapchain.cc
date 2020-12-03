@@ -91,17 +91,14 @@ bool CreateImageViews(const vk::Device device, const vk::Format& image_format,
 
 namespace vkp {
 
-Swapchain::Swapchain(const vk::PhysicalDevice phys_device, std::shared_ptr<Device> vkp_device,
+Swapchain::Swapchain(const vk::PhysicalDevice phys_device, std::shared_ptr<vk::Device> device,
                      std::shared_ptr<Surface> vkp_surface)
-    : initialized_(false),
-      vkp_device_(std::move(vkp_device)),
-      vkp_surface_(std::move(vkp_surface)) {
+    : initialized_(false), device_(device), vkp_surface_(std::move(vkp_surface)) {
   phys_device_ = std::make_unique<vk::PhysicalDevice>(phys_device);
 }
 
 bool Swapchain::Init() {
   RTN_IF_MSG(false, initialized_, "Swapchain is already initialized.\n");
-  const vk::Device& device = vkp_device_->get();
 
   Swapchain::Info info;
   QuerySwapchainSupport(*phys_device_, vkp_surface_->get(), &info);
@@ -128,16 +125,16 @@ bool Swapchain::Init() {
   swapchain_info.preTransform = info.capabilities.currentTransform;
   swapchain_info.surface = vkp_surface_->get();
 
-  auto [r_swapchain, swapchain] = device.createSwapchainKHRUnique(swapchain_info);
+  auto [r_swapchain, swapchain] = device_->createSwapchainKHRUnique(swapchain_info);
   RTN_IF_VKH_ERR(false, r_swapchain, "Failed to create swap chain.\n");
   swap_chain_ = std::move(swapchain);
 
-  auto [r_images, images] = device.getSwapchainImagesKHR(*swap_chain_);
+  auto [r_images, images] = device_->getSwapchainImagesKHR(*swap_chain_);
   RTN_IF_VKH_ERR(false, r_images, "Failed to get swap chain images.\n");
 
   image_format_ = surface_format.format;
 
-  if (!CreateImageViews(device, image_format_, images, &image_views_)) {
+  if (!CreateImageViews(*device_, image_format_, images, &image_views_)) {
     RTN_MSG(false, "Failed to create image views.\n");
   }
 

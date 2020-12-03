@@ -16,7 +16,7 @@ namespace vkp {
 
 class Framebuffers {
  public:
-  Framebuffers(std::shared_ptr<Device> vkp_device, const vk::Extent2D &extent,
+  Framebuffers(std::shared_ptr<vk::Device> device, const vk::Extent2D &extent,
                vk::RenderPass render_pass, std::vector<vk::ImageView> image_views);
   bool Init();
   const std::vector<vk::UniqueFramebuffer> &framebuffers() const;
@@ -25,7 +25,7 @@ class Framebuffers {
   FXL_DISALLOW_COPY_AND_ASSIGN(Framebuffers);
 
   bool initialized_;
-  std::shared_ptr<Device> vkp_device_;
+  std::shared_ptr<vk::Device> device_;
   vk::Extent2D extent_;
   std::vector<vk::ImageView> image_views_;
   vk::RenderPass render_pass_;

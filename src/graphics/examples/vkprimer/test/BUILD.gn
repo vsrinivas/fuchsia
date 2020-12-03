@@ -17,15 +17,25 @@ resource("shaders") {
   outputs = [ "data/shaders/{{source_file_part}}" ]
 }
 
-fuchsia_component("cmd-buf-benchmark-component") {
+resource("layers") {
+  sources = []
+  foreach(resource, vulkan_validation_layers.resources) {
+    sources += [ resource.path ]
+  }
+  foreach(resource, image_pipe_swapchain_fb.resources) {
+    sources += [ resource.path ]
+  }
+  outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
+}
+
+fuchsia_component("vkprimer-test-component") {
   testonly = true
-  component_name = "cmd-buf-benchmark"
-  manifest = "meta/cmd-buf-benchmark.cmx"
+  component_name = "vkprimer-test"
+  manifest = "meta/vkprimer-test.cmx"
   deps = [
     ":bin",
+    ":layers",
     ":shaders",
-    "//src/lib/vulkan:image-pipe-swapchain-fb",
-    "//src/lib/vulkan:validation-layers",
     "//third_party/Vulkan-Loader:libvulkan",
   ]
 
@@ -45,7 +55,8 @@ config("vulkan_sdk_linux_config") {
 }
 
 executable("bin") {
-  output_name = "cmd-buf-benchmark"
+  output_name = "vkprimer-test"
+  testonly = true
   sources = common_sources
 
   sources += [ "main.cc" ]
@@ -54,7 +65,11 @@ executable("bin") {
 
   defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
 
-  deps = [ "//src/lib/fxl" ]
+  deps = [
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
 
   if (is_fuchsia) {
     include_dirs += [ "//src/graphics/examples/vkprimer/fuchsia" ]
@@ -113,12 +128,14 @@ copy("spirv_copy") {
 #
 # Linux / Mac Build
 #
-group("cmd-buf-benchmark-glfw") {
+group("vkprimer-test-glfw") {
+  testonly = true
   deps = [ ":bin($host_toolchain)" ]
 }
 
-fuchsia_test_package("cmd-buf-benchmark") {
-  test_components = [ ":cmd-buf-benchmark-component" ]
+fuchsia_test_package("test") {
+  package_name = "vkprimer-test"
+  test_components = [ ":vkprimer-test-component" ]
   test_specs = {
     environments = magma_hardware_envs
   }

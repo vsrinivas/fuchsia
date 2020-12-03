@@ -4,7 +4,6 @@
 
 #ifndef SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_DEVICE_H_
 #define SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_DEVICE_H_
-
 #include <vector>
 
 #include "src/graphics/examples/vkprimer/common/surface_phys_device_params.h"
@@ -16,9 +15,11 @@ namespace vkp {
 
 class Device {
  public:
-  Device(const vk::PhysicalDevice &phys_device, const VkSurfaceKHR &surface);
+  Device(const vk::PhysicalDevice &phys_device, VkSurfaceKHR surface = nullptr);
+  ~Device();
 
   bool Init();
+  std::shared_ptr<vk::Device> shared() { return device_; }
   const vk::Device &get() const;
   vk::Queue queue() const;
   uint32_t queue_family_index() const { return queue_family_index_; }
@@ -37,7 +38,7 @@ class Device {
 
   uint32_t queue_family_index_{};
 
-  vk::UniqueDevice device_;
+  std::shared_ptr<vk::Device> device_;
 };
 
 }  // namespace vkp

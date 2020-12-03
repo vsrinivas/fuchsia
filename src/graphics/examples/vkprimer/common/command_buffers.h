@@ -19,7 +19,7 @@ namespace vkp {
 
 class CommandBuffers {
  public:
-  CommandBuffers(std::shared_ptr<Device> vkp_device, std::shared_ptr<CommandPool> vkp_command_pool,
+  CommandBuffers(std::shared_ptr<vk::Device> device, std::shared_ptr<CommandPool> vkp_command_pool,
                  const std::vector<vk::UniqueFramebuffer> &framebuffers, const vk::Extent2D &extent,
                  const vk::RenderPass &render_pass, const vk::Pipeline &graphics_pipeline);
   // Allocated and initialize command buffers.  Mutually exclusive with Alloc().
@@ -40,8 +40,8 @@ class CommandBuffers {
 
   bool initialized_ = false;
   bool allocated_ = false;
-  std::shared_ptr<Device> vkp_device_;
-  std::shared_ptr<CommandPool> vkp_command_pool_;
+  std::shared_ptr<vk::Device> device_;
+  std::shared_ptr<vkp::CommandPool> vkp_command_pool_;
 
   struct InitParams {
     InitParams(const std::vector<vk::UniqueFramebuffer> &framebuffers, const vk::Extent2D &extent,

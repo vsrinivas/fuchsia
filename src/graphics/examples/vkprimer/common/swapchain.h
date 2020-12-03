@@ -28,7 +28,7 @@ class Swapchain {
     std::vector<vk::PresentModeKHR> present_modes;
   };
 
-  Swapchain(vk::PhysicalDevice phys_device, std::shared_ptr<Device> vkp_device,
+  Swapchain(vk::PhysicalDevice phys_device, std::shared_ptr<vk::Device> device,
             std::shared_ptr<Surface> vkp_surface);
   Swapchain() = delete;
 
@@ -48,7 +48,7 @@ class Swapchain {
   FXL_DISALLOW_COPY_AND_ASSIGN(Swapchain);
 
   bool initialized_;
-  std::shared_ptr<Device> vkp_device_;
+  std::shared_ptr<vk::Device> device_;
   vk::Extent2D extent_;
   vk::Format image_format_;
   std::vector<vk::UniqueImageView> image_views_;

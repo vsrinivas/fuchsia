@@ -8,10 +8,10 @@
 
 namespace vkp {
 
-Framebuffers::Framebuffers(std::shared_ptr<Device> vkp_device, const vk::Extent2D &extent,
+Framebuffers::Framebuffers(std::shared_ptr<vk::Device> device, const vk::Extent2D &extent,
                            vk::RenderPass render_pass, std::vector<vk::ImageView> image_views)
     : initialized_(false),
-      vkp_device_(std::move(vkp_device)),
+      device_(device),
       extent_(extent),
       image_views_(std::move(image_views)),
       render_pass_(render_pass) {}
@@ -27,8 +27,7 @@ bool Framebuffers::Init() {
   framebuffer_info.layers = 1;
   for (const auto &image_view : image_views_) {
     framebuffer_info.setPAttachments(&image_view);
-    auto [r_framebuffer, framebuffer] =
-        vkp_device_->get().createFramebufferUnique(framebuffer_info);
+    auto [r_framebuffer, framebuffer] = device_->createFramebufferUnique(framebuffer_info);
     RTN_IF_VKH_ERR(false, r_framebuffer, "Failed to create framebuffer.\n");
     framebuffers_.emplace_back(std::move(framebuffer));
   }

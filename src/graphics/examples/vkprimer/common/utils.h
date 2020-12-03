@@ -71,10 +71,11 @@ bool FindRequiredProperties(const std::vector<const char *> &required_props, Sea
                             vk::PhysicalDevice phys_device, const char *layer,
                             std::vector<std::string> *missing_props_out);
 
-// Find graphics queue families for |surface|.  Populate |queue_family_indices|
-// if it is non-null.  Returns true if a graphics queue family is found.
-bool FindGraphicsQueueFamilies(vk::PhysicalDevice phys_device, VkSurfaceKHR surface,
-                               std::vector<uint32_t> *queue_family_indices);
+// Find graphics queue family index from physical device.  If |surface| is not nullptr,
+// succeed only if queue family has present support.  If |queue_family_index| is not
+// nullptr, store the queue family index into it if found.
+bool FindGraphicsQueueFamilyIndex(vk::PhysicalDevice phys_device, VkSurfaceKHR surface = nullptr,
+                                  uint32_t *queue_family_index = nullptr);
 
 // Find physical device memory property index for |properties|.
 int FindMemoryIndex(const vk::PhysicalDevice &phys_dev, uint32_t memory_type_bits,

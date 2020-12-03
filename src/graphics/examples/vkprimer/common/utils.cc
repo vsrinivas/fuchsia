@@ -119,25 +119,26 @@ bool FindRequiredProperties(const std::vector<const char *> &required_props, Sea
   return (success && !has_missing_props);
 }
 
-bool FindGraphicsQueueFamilies(vk::PhysicalDevice phys_device, VkSurfaceKHR surface,
-                               std::vector<uint32_t> *queue_family_indices) {
+bool FindGraphicsQueueFamilyIndex(vk::PhysicalDevice phys_device, VkSurfaceKHR surface,
+                                  uint32_t *queue_family_index) {
   auto queue_families = phys_device.getQueueFamilyProperties();
-  int queue_family_index = 0;
-  for (const auto &queue_family : queue_families) {
-    auto [r_present_support, present_support] =
-        phys_device.getSurfaceSupportKHR(queue_family_index, surface);
-    RTN_IF_VKH_ERR(false, r_present_support, "Failed to get surface present support.\n");
+  for (uint32_t i = 0; i < queue_families.size(); ++i) {
+    if (surface) {
+      auto [r_present_support, present_support] = phys_device.getSurfaceSupportKHR(i, surface);
+      if (vk::Result::eSuccess != r_present_support) {
+        continue;
+      }
+    }
 
-    if ((queue_family.queueCount > 0) && (queue_family.queueFlags & vk::QueueFlagBits::eGraphics) &&
-        present_support) {
-      if (queue_family_indices) {
-        queue_family_indices->emplace_back(queue_family_index);
+    const auto &queue_family = queue_families[i];
+    if ((queue_family.queueCount > 0) && (queue_family.queueFlags & vk::QueueFlagBits::eGraphics)) {
+      if (queue_family_index) {
+        *queue_family_index = i;
       }
       return true;
     }
-    queue_family_index++;
   }
-  RTN_MSG(false, "No queue family indices found.\n");
+  RTN_MSG(false, "No graphics queue family index found.\n");
 }
 
 int FindMemoryIndex(const vk::PhysicalDevice &phys_dev, const uint32_t memory_type_bits,

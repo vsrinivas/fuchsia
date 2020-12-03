@@ -15,7 +15,7 @@ namespace vkp {
 
 class Pipeline {
  public:
-  Pipeline(std::shared_ptr<Device> vkp_device, const vk::Extent2D &extent,
+  Pipeline(std::shared_ptr<vk::Device> device, const vk::Extent2D &extent,
            std::shared_ptr<RenderPass> vkp_render_pass);
   ~Pipeline();
 
@@ -26,7 +26,7 @@ class Pipeline {
   FXL_DISALLOW_COPY_AND_ASSIGN(Pipeline);
 
   bool initialized_;
-  std::shared_ptr<Device> vkp_device_;
+  std::shared_ptr<vk::Device> device_;
   const vk::Extent2D extent_;
   std::shared_ptr<RenderPass> vkp_render_pass_;
 

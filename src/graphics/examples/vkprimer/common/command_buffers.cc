@@ -10,13 +10,13 @@
 
 namespace vkp {
 
-CommandBuffers::CommandBuffers(std::shared_ptr<Device> vkp_device,
-                               std::shared_ptr<CommandPool> vkp_command_pool,
+CommandBuffers::CommandBuffers(std::shared_ptr<vk::Device> device,
+                               std::shared_ptr<vkp::CommandPool> vkp_command_pool,
                                const std::vector<vk::UniqueFramebuffer> &framebuffers,
                                const vk::Extent2D &extent, const vk::RenderPass &render_pass,
                                const vk::Pipeline &graphics_pipeline)
-    : vkp_device_(std::move(vkp_device)),
-      vkp_command_pool_(std::move(vkp_command_pool)),
+    : device_(device),
+      vkp_command_pool_(vkp_command_pool),
       num_command_buffers_(framebuffers.size()) {
   params_ = std::make_unique<InitParams>(framebuffers, extent, render_pass, graphics_pipeline);
 }
@@ -26,7 +26,7 @@ bool CommandBuffers::Alloc() {
   alloc_info.setCommandBufferCount(static_cast<uint32_t>(num_command_buffers_));
   alloc_info.setCommandPool(vkp_command_pool_->get());
   alloc_info.level = vk::CommandBufferLevel::ePrimary;
-  auto [r_cmd_bufs, cmd_bufs] = vkp_device_->get().allocateCommandBuffersUnique(alloc_info);
+  auto [r_cmd_bufs, cmd_bufs] = device_->allocateCommandBuffersUnique(alloc_info);
   RTN_IF_VKH_ERR(false, r_cmd_bufs, "Failed to allocate command buffers.\n");
   command_buffers_ = std::move(cmd_bufs);
   allocated_ = true;

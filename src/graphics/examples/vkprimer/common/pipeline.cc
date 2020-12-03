@@ -14,18 +14,17 @@
 
 namespace vkp {
 
-Pipeline::Pipeline(std::shared_ptr<Device> vkp_device, const vk::Extent2D &extent,
+Pipeline::Pipeline(std::shared_ptr<vk::Device> device, const vk::Extent2D &extent,
                    std::shared_ptr<RenderPass> vkp_render_pass)
     : initialized_(false),
-      vkp_device_(std::move(vkp_device)),
+      device_(device),
       extent_(extent),
       vkp_render_pass_(std::move(vkp_render_pass)) {}
 
 Pipeline::~Pipeline() {
   if (initialized_) {
-    const vk::Device &device = vkp_device_->get();
-    device.destroyPipelineLayout(pipeline_layout_);
-    device.destroyPipeline(pipeline_);
+    device_->destroyPipelineLayout(pipeline_layout_);
+    device_->destroyPipeline(pipeline_);
     initialized_ = false;
   }
 }
@@ -59,13 +58,13 @@ bool Pipeline::Init() {
     RTN_MSG(false, "Can't read fragment spv file.\n");
   }
 
-  const vk::Device &device = vkp_device_->get();
-
-  auto [r_vshader_module, vshader_module] = Shader::CreateShaderModule(device, vert_shader_buffer);
+  auto [r_vshader_module, vshader_module] =
+      Shader::CreateShaderModule(*device_, vert_shader_buffer);
   RTN_IF_VKH_ERR(false, r_vshader_module, "Failed to create vtx shader module.\n");
   vk::UniqueShaderModule vert_shader_module = std::move(vshader_module);
 
-  auto [r_fshader_module, fshader_module] = Shader::CreateShaderModule(device, frag_shader_buffer);
+  auto [r_fshader_module, fshader_module] =
+      Shader::CreateShaderModule(*device_, frag_shader_buffer);
   RTN_IF_VKH_ERR(false, r_fshader_module, "Failed to create frag shader module.\n");
   vk::UniqueShaderModule frag_shader_module = std::move(fshader_module);
 
@@ -79,7 +78,7 @@ bool Pipeline::Init() {
   FixedFunctions fixed_functions(extent_);
 
   vk::PipelineLayoutCreateInfo pipeline_layout_info;
-  auto rv_layout = device.createPipelineLayout(pipeline_layout_info);
+  auto rv_layout = device_->createPipelineLayout(pipeline_layout_info);
   if (vk::Result::eSuccess != rv_layout.result) {
     RTN_MSG(false, "VK Error: 0x%x - Failed to create pipeline layout.\n", rv_layout.result);
   }
@@ -101,7 +100,7 @@ bool Pipeline::Init() {
   // TODO(fxbug.dev/62319): Use vk::Device::createGraphicsPipelinesUnique once
   // the invalid copy-ctor usage is fixed.
   auto [rv_pipelines, pipelines] =
-      device.createGraphicsPipelines(vk::PipelineCache(), {pipeline_info});
+      device_->createGraphicsPipelines(vk::PipelineCache(), {pipeline_info});
   if (vk::Result::eSuccess != rv_pipelines) {
     RTN_MSG(false, "VK Error: 0x%x - Failed to create pipelines.\n", rv_pipelines);
   }

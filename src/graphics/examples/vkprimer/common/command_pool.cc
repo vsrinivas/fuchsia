@@ -8,30 +8,20 @@
 
 namespace vkp {
 
-CommandPool::CommandPool(std::shared_ptr<Device> vkp_device, const vk::PhysicalDevice phys_device,
-                         const VkSurfaceKHR &surface)
-    : initialized_(false), vkp_device_(std::move(vkp_device)) {
-  params_ = std::make_unique<SurfacePhysDeviceParams>(phys_device, surface);
-}
+CommandPool::CommandPool(std::shared_ptr<vk::Device> device, uint32_t queue_family_index)
+    : initialized_(false), device_(device), queue_family_index_(queue_family_index) {}
 
 bool CommandPool::Init() {
   RTN_IF_MSG(false, initialized_, "CommandPool is already initialized.\n");
 
-  std::vector<uint32_t> graphics_queue_family_indices;
-  if (!FindGraphicsQueueFamilies(params_->phys_device_, params_->surface_,
-                                 &graphics_queue_family_indices)) {
-    RTN_MSG(false, "No graphics queue families found.\n");
-  }
+  vk::CommandPoolCreateInfo pool_info;
+  pool_info.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+  pool_info.queueFamilyIndex = queue_family_index_;
 
-  vk::CommandPoolCreateInfo info;
-  info.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-  info.queueFamilyIndex = graphics_queue_family_indices[0];
-
-  auto [r_command_pool, command_pool] = vkp_device_->get().createCommandPoolUnique(info);
+  auto [r_command_pool, command_pool] = device_->createCommandPoolUnique(pool_info);
   RTN_IF_VKH_ERR(false, r_command_pool, "Failed to create command pool.\n");
   command_pool_ = std::move(command_pool);
 
-  params_.reset();
   initialized_ = true;
   return true;
 }

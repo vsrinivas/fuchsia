@@ -1,0 +1,11 @@
+{
+    "include": [
+        "src/lib/vulkan/test-application.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "-offscreen"
+        ],
+        "binary": "bin/vkprimer-test"
+    }
+}

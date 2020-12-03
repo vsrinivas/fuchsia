@@ -28,13 +28,15 @@ bool ChooseGraphicsDevice(const vk::PhysicalDevice &phys_device, const VkSurface
     return false;
   }
 
-  vkp::Swapchain::Info swapchain_info;
-  if (!vkp::Swapchain::QuerySwapchainSupport(phys_device, surface, &swapchain_info)) {
-    return false;
+  if (surface) {
+    vkp::Swapchain::Info swapchain_info;
+    if (!vkp::Swapchain::QuerySwapchainSupport(phys_device, surface, &swapchain_info)) {
+      return false;
+    }
   }
 
-  if (!vkp::FindGraphicsQueueFamilies(phys_device, surface, nullptr)) {
-    RTN_MSG(false, "No graphics queue families.\n");
+  if (!vkp::FindGraphicsQueueFamilyIndex(phys_device, surface)) {
+    RTN_MSG(false, "No graphics queue families found%s.\n", surface ? " with present support" : "");
   }
   *phys_device_out = phys_device;
   return true;
@@ -44,12 +46,8 @@ bool ChooseGraphicsDevice(const vk::PhysicalDevice &phys_device, const VkSurface
 
 namespace vkp {
 
-PhysicalDevice::PhysicalDevice(std::shared_ptr<Instance> vkp_instance, const VkSurfaceKHR &surface)
-    : initialized_(false), vkp_instance_(std::move(vkp_instance)) {
-  params_ = std::make_unique<InitParams>(surface);
-}
-
-PhysicalDevice::InitParams::InitParams(const VkSurfaceKHR &surface) : surface_(surface) {}
+PhysicalDevice::PhysicalDevice(std::shared_ptr<Instance> vkp_instance, VkSurfaceKHR surface)
+    : initialized_(false), vkp_instance_(vkp_instance), surface_(surface) {}
 
 bool PhysicalDevice::Init() {
   if (initialized_) {
@@ -62,7 +60,7 @@ bool PhysicalDevice::Init() {
   }
 
   for (const auto &phys_device : phys_devices) {
-    if (ChooseGraphicsDevice(phys_device, params_->surface_, &phys_device_)) {
+    if (ChooseGraphicsDevice(phys_device, surface_, &phys_device_)) {
       LogMemoryProperties(phys_device_);
       initialized_ = true;
       break;
@@ -72,7 +70,6 @@ bool PhysicalDevice::Init() {
   if (!initialized_) {
     RTN_MSG(false, "Couldn't find graphics family device.\n");
   }
-  params_.reset();
   return initialized_;
 }
 
