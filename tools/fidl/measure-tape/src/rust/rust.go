@@ -44,6 +44,7 @@ func (cb *codeBuffer) writeMethod(m *measurer.Method) {
 		// TODO(fxbug.dev/51366): With improved locals handling, we could
 		// conditionally define the alias below. Of course, this would be
 		// superseded by fxbug.dev/51368 but both should happen.
+		cb.writef("#[inline]\n")
 		cb.writef("#[allow(unused_variables)]\n")
 		cb.writef("fn %s(&self, size_agg: &mut SizeAgg) {\n", methodName)
 		cb.indent(func() {
@@ -266,6 +267,7 @@ pub struct Size {
   pub num_handles: usize,
 }
 
+#[inline]
 pub fn measure(value: &{{ .TargetType }}) -> Size {
   let mut size_agg = SizeAgg { maxed_out: false, num_bytes: 0, num_handles: 0 };
   value.measure(&mut size_agg);
@@ -279,15 +281,18 @@ struct SizeAgg {
 }
 
 impl SizeAgg {
+  #[inline(always)]
   fn add_num_bytes(&mut self, num_bytes: usize) {
     self.num_bytes += num_bytes;
   }
 
+  #[inline(always)]
   #[allow(dead_code)]
   fn add_num_handles(&mut self, num_handles: usize) {
     self.num_handles += num_handles;
   }
 
+  #[inline(always)]
   fn to_size(&self) -> Size {
     if self.maxed_out {
       return Size {
