@@ -302,6 +302,9 @@ rustc_binary("bin") {
     "//third_party/rust_crates:parking_lot",
   ]
 
+  # TODO(fxbug.dev/61386): Fix the leaks and remove this
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   sources = [ "src/main.rs" ]
 }
 
