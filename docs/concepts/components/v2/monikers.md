@@ -2,8 +2,9 @@
 
 <<../_v2_banner.md>>
 
-A moniker identifies a specific component instance in the component tree
-using a topological path.
+
+A moniker identifies a specific component instance in the component tree using
+a topological path.
 
 Note: Use [component URLs][doc-component-urls] to identify the location from
 which the component's manifest and assets are retrieved; use monikers to
@@ -15,9 +16,9 @@ There are three types of monikers:
 
 - Child moniker: Denotes a child of a component instance relative to its parent.
 - Relative moniker: Denotes the path from a source component instance to a
-  target component instance, expressed as a sequence of child monikers.
+  target component instance. It is expressed as a sequence of child monikers.
 - Absolute moniker: Denotes the path from the root of the component instance
-  tree to a target component instance, expressed as a sequence of child
+  tree to a target component instance. It is expressed as a sequence of child
   monikers. Every component instance has a unique absolute moniker.
 
 ## Stability
@@ -54,8 +55,6 @@ ancestors.
 Monikers may be collected in system logs. They are also used to implement the
 component framework's persistence features.
 
-TODO: Describe obfuscation strategy.
-
 ## Notation
 
 This section describes the syntax used for displaying monikers to users.
@@ -72,8 +71,8 @@ See [component manifest][doc-manifests] documentation for more details.
 
 ### Instance Identifiers
 
-Instance identifiers ensure uniqueness of monikers over time whenever a parent
-destroys a component instance and creates a new one with the same name.
+Instance identifiers ensure the uniqueness of monikers over time whenever a
+parent destroys a component instance and creates a new one with the same name.
 
 Syntax: Decimal formatted 32-bit unsigned integer using characters: `0-9`.
 
@@ -84,12 +83,15 @@ identifier delimited by `:`.
 
 Syntax: `{name}:{id}` or `{collection}:{name}:{id}`
 
+The following diagram shows an example component topology,
+with the children of `alice` labeled with their child monikers.
+
+<br>![Diagram of Child Monikers](images/monikers_child.png)<br>
+
 Examples:
 
-- `truck:2`: child "truck" (instance id 2)
-- `animals:bear:1`: child "bear" (instance id 1) in collection "animals"
-
-TODO: Add a diagram to go along with the examples.
+- `carol:0`: child "carol" (instance id 0)
+- `support:dan:1`: child "dan" (instance id 1) in collection "support"
 
 ### Relative Monikers
 
@@ -102,25 +104,41 @@ an upwards traversal segment. `/` denotes a downwards traversal segment. There
 is no trailing `\` or `/`.
 
 Relative monikers are invertible; a path from source to target can be
-transformed into a path from target to source because information about
-both paths is fully encoded by the representation.
+transformed into a path from target to the source because information about
+both endpoints are fully encoded by the representation.
 
 In contrast, file system paths are not invertible because they use `..`
 to denote upwards traversal so some inverse traversal information is missing.
 
+To maintain invertibility, the syntax for denoting paths varies slightly
+for upward and downward traversals. A downward path segment is a child moniker
+of one of the current component instance's children: `./carol:2`. Conversely,
+an upward path segment *is* the child moniker of on the current component
+instance, according to its parent: `.\alice:2/bob:0`. The reason that the child
+moniker is explicitly specified in the upward path
+(instead of a generic "upward traversal" marker like `..`) is that otherwise the
+relative moniker would not be invertible, and would not uniquely identify a
+component instance. For downward traversals, the paths don't need to include
+the parent's name to be traceable because a child only has *one* parent.
+However, for upward traversals the source path can be one of many children of
+its parent path.
+
 Syntax: `.\{path from source to ancestor}/{path from ancestor to target}`
+
+The following diagram shows an example component topology, with all relative
+monikers that can be derived from the source component `alice` labeled. Note
+that `support` is not a component but rather a collection with two
+children: `dan` and `jan`.
+
+<br>![Diagram of Relative Monikers](images/monikers_relative.png)<br>
 
 Examples:
 
 - `.`: self - no traversal needed
-- `./truck:2`: a child - traverse down `truck:2`
-- `./truck:2/axle:1`: a grandchild - traverse down `truck:2` then down `axle:1`
-- `.\truck:2/animals:bear:1`: a cousin - traverse up `truck:2` then down
-  `animals:bear:1`
-- `.\animals:bear:1/truck:2`: a cousin - inverse of the prior example,
-  constructed by reversing the segments of the traversal
-
-TODO: Add a diagram to go along with the examples.
+- `./carol:2`: a child - traverse down `carol:2`
+- `./carol:2/sandy:1`: a grandchild - traverse down `carol:2` then down `sandy:1`
+- `.\alice:2/bob:0`: a cousin - traverse up `alice:2` then down `bob:0`
+- `./support:dan:1`: a child - traverse down into collection child `support:dan:1`
 
 ### Absolute Monikers
 
@@ -132,13 +150,21 @@ segments delimited by `/`. There is no trailing `/`.
 
 Syntax: `/{path from root to target}`
 
+The following diagram shows an example component topology, all absolute
+monikers that can be derived from the unnamed root component labeled. The root
+component is unnamed because it is inherently not the child of any other
+component and components are named by their parents, not by components
+themselves. Note that `support` is not a component but rather a collection with
+two children: `dan` and `jan`.
+
+<br>![Diagram of Absolute Monikers](images/monikers_absolute.png)<br>
+
 Examples:
 
 - `/`: the root itself (it has no name because it has no parent)
-- `/objects:2/animals:deer:1`: from root traverse down `objects:2` then down
-  `animals:deer:1`
+- `/alice:2/support:dan:1`: from root traverse down `alice:2` then down `support:dan:1`
+- `/alice:2/carol:1`: from root traverse down `alice:2` then down `carol:1`
 
-TODO: Add a diagram to go along with the examples.
 
 [doc-manifests]: component_manifests.md
 [doc-component-urls]: introduction.md#component-urls
