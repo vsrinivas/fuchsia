@@ -38,7 +38,7 @@ workflow to get you started is as follows:
 
 ```shell
 $ jiri update -gc
-# Start a new feature "myfeature" from the current stable commit
+# Start a new feature on a `myfeature` branch from the current stable commit
 $ git checkout -b myfeature JIRI_HEAD
 # Do work, making changes, etc.
 $ git commit
@@ -50,18 +50,21 @@ $ git push origin HEAD:refs/for/master
 
 Congratulations, you made your first Gerrit change!
 
-Suppose you want to start new work while you wait for review of "myfeature":
+Suppose you want to start new work on an `otherfeature` branch
+while you wait for review of the work located
+on your `myfeature` branch:
 
 ```shell
-# Start a new independent line of work while waiting for review:
+# Start a new independent line of work on the `otherfeature` branch
+# while waiting for review of `myfeature`:
 $ git checkout -b otherfeature JIRI_HEAD
 # OR
 # Start a derivative line of work while waiting for review:
 $ git checkout -b otherfeature
 ```
 
-When you want to update "myfeature" and you've been working on an
-"independent" line of work:
+When you want to update your `myfeature` branch but you've been working on an
+"independent" line of work on the `otherfeature` branch:
 
 ```shell
 # Commit any present dirty work, then, switch to "myfeature":
@@ -74,8 +77,8 @@ $ jiri upload
 $ git push origin HEAD:refs/for/master
 ```
 
-When you want to update "myfeature" because you got some review comments, and
-you are using a "derivative" line of work:
+When you want to update your `myfeature` branch because you got some review
+comments, and you are using a "derivative" line of work:
 
 ```shell
 # Now you get a review comment that needs a change in "myfeature"
@@ -99,7 +102,7 @@ $ git push origin HEAD:refs/for/master
 ```
 
 When you see "merge conflict" in Gerrit because your change can't cleanly be
-integrated with "master":
+integrated with the `master` branch:
 
 ```shell
 # Checkout the branch for the change you need to update (e.g. "myfeature"):
@@ -249,7 +252,7 @@ Example scenario: I have an interface defined in stem, and it is implemented in
 another petal. If I change the interface, am I doomed to break other petals?
 
 Yes. But you can "babysit" the rollers so that the breakage range is minimized.
-The gotcha with babysitting is that others may *also* be babysitting a breakage,
+The caveat with babysitting is that others may *also* be babysitting a breakage,
 and you may end up babysitting for longer than you had intended.
 
 Alternatively, you *could* do something as follows:
