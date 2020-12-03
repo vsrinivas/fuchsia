@@ -15,18 +15,27 @@ use log::warn;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 
+/// Maximum number of successful samples recorded.
+const SAMPLES_RECORDED: usize = 5;
+/// Empty sample with which the sample buffer is originally initialized.
+const EMPTY_SAMPLE: HttpsSample = HttpsSample {
+    utc: zx::Time::ZERO,
+    monotonic: zx::Time::ZERO,
+    standard_deviation: zx::Duration::from_nanos(0),
+    final_bound_size: zx::Duration::from_nanos(0),
+    round_trip_times: vec![],
+};
+
 /// Struct containing inspect metrics for HTTPSDate.
 pub struct InspectDiagnostics {
-    /// Top level Node for diagnostics.
-    root_node: Node,
-    /// Counter for samples successfully produced.
-    success_count: UintProperty,
     /// Node holding failure counts.
     failure_node: Node,
+    /// Monotonic time at which the last error occurred.
+    last_failure_time: IntProperty,
     /// Counters for failed attempts to produce samples, keyed by error type.
     failure_counts: Mutex<HashMap<HttpsDateError, UintProperty>>,
-    /// Diagnostic data for the last successful sample.
-    last_successful: Mutex<Option<SampleMetric>>,
+    /// Diagnostic data for the most recent successful samples.
+    recent_successes_buffer: Mutex<SampleMetricBuffer>,
     /// The current phase the algorithm is in.
     phase: StringProperty,
     /// Monotonic time at which the phase was last updated.
@@ -37,11 +46,13 @@ impl InspectDiagnostics {
     /// Create a new `InspectDiagnostics` that records diagnostics to the provided root node.
     pub fn new(root_node: &Node) -> Self {
         InspectDiagnostics {
-            root_node: root_node.clone_weak(),
-            success_count: root_node.create_uint("success_count", 0),
             failure_node: root_node.create_child("failure_counts"),
+            last_failure_time: root_node.create_int("last_failure_time", 0),
             failure_counts: Mutex::new(HashMap::new()),
-            last_successful: Mutex::new(None),
+            recent_successes_buffer: Mutex::new(SampleMetricBuffer::new(
+                root_node,
+                SAMPLES_RECORDED,
+            )),
             phase: root_node.create_string("phase", &format!("{:?}", Phase::Initial)),
             phase_update_time: root_node
                 .create_int("phase_update_time", zx::Time::get_monotonic().into_nanos()),
@@ -51,17 +62,7 @@ impl InspectDiagnostics {
 
 impl Diagnostics for InspectDiagnostics {
     fn success(&self, sample: &HttpsSample) {
-        self.success_count.add(1);
-        let mut last_successful_lock = self.last_successful.lock();
-        match &*last_successful_lock {
-            Some(last) => last.update(sample),
-            None => {
-                last_successful_lock.replace(SampleMetric::new(
-                    self.root_node.create_child("last_successful"),
-                    sample,
-                ));
-            }
-        }
+        self.recent_successes_buffer.lock().update(sample);
     }
 
     fn failure(&self, error: &HttpsDateError) {
@@ -73,11 +74,44 @@ impl Diagnostics for InspectDiagnostics {
                     .insert(*error, self.failure_node.create_uint(format!("{:?}", error), 1));
             }
         }
+        self.last_failure_time.set(zx::Time::get_monotonic().into_nanos());
     }
 
     fn phase_update(&self, phase: &Phase) {
         self.phase.set(&format!("{:?}", phase));
         self.phase_update_time.set(zx::Time::get_monotonic().into_nanos());
+    }
+}
+
+/// A circular buffer for inspect that records the last `count` samples.
+struct SampleMetricBuffer {
+    /// Number of samples processed.
+    count: usize,
+    /// Nodes containing sample diagnostic data.
+    sample_metrics: Vec<SampleMetric>,
+    /// Counters indicating the order of the samples.
+    counters: Vec<UintProperty>,
+}
+
+impl SampleMetricBuffer {
+    /// Create a new buffer containing `size` entries at `root_node`.
+    fn new(root_node: &Node, size: usize) -> Self {
+        let mut sample_metrics = Vec::with_capacity(size);
+        let mut counters = Vec::with_capacity(size);
+        for i in 0..size {
+            let node = root_node.create_child(format!("sample_{}", i));
+            counters.push(node.create_uint("counter", 0));
+            sample_metrics.push(SampleMetric::new(node, &EMPTY_SAMPLE));
+        }
+        Self { count: 0, sample_metrics, counters }
+    }
+
+    /// Add a new sample to the buffer, evicting the oldest if necessary.
+    fn update(&mut self, sample: &HttpsSample) {
+        let index = self.count % self.sample_metrics.len();
+        self.count += 1;
+        self.sample_metrics[index].update(sample);
+        self.counters[index].set(self.count as u64);
     }
 }
 
@@ -168,13 +202,12 @@ mod test {
     }
 
     #[test]
-    fn test_success() {
+    fn test_successes() {
         let inspector = Inspector::new();
         let inspect = InspectDiagnostics::new(inspector.root());
         assert_inspect_tree!(
             inspector,
             root: contains {
-                success_count: 0u64,
                 failure_counts: {}
             }
         );
@@ -188,8 +221,20 @@ mod test {
         assert_inspect_tree!(
             inspector,
             root: contains {
-                success_count: 2u64,
-                last_successful: {
+                sample_0: {
+                    counter: 1u64,
+                    round_trip_times: vec![
+                        TEST_ROUND_TRIP_1.into_nanos(),
+                        TEST_ROUND_TRIP_2.into_nanos(),
+                        0,
+                        0,
+                        0
+                    ],
+                    monotonic: TEST_MONOTONIC.into_nanos(),
+                    bound_size: TEST_BOUND_SIZE.into_nanos(),
+                },
+                sample_1: {
+                    counter: 2u64,
                     round_trip_times: vec![
                         TEST_ROUND_TRIP_1.into_nanos(),
                         TEST_ROUND_TRIP_2.into_nanos(),
@@ -205,31 +250,33 @@ mod test {
     }
 
     #[test]
-    fn test_success_overwrite_round_trip_times() {
+    fn test_success_overwrite_on_overflow() {
         let inspector = Inspector::new();
         let inspect = InspectDiagnostics::new(inspector.root());
         assert_inspect_tree!(
             inspector,
             root: contains {
-                success_count: 0u64,
                 failure_counts: {}
             }
         );
 
-        inspect.success(&sample_with_rtts(&[
-            TEST_ROUND_TRIP_1,
-            TEST_ROUND_TRIP_2,
-            TEST_ROUND_TRIP_3,
-            TEST_ROUND_TRIP_1,
-            TEST_ROUND_TRIP_2,
-        ]));
+        for _ in 0..SAMPLES_RECORDED {
+            inspect.success(&sample_with_rtts(&[
+                TEST_ROUND_TRIP_1,
+                TEST_ROUND_TRIP_2,
+                TEST_ROUND_TRIP_3,
+                TEST_ROUND_TRIP_1,
+                TEST_ROUND_TRIP_2,
+            ]));
+        }
 
-        // Recording a new success with less round trip times should zero out the unused entries.
+        // Recording a new success should wrap the buffer and zero out unused rtt entries.
         inspect.success(&sample_with_rtts(&[TEST_ROUND_TRIP_2]));
         assert_inspect_tree!(
             inspector,
             root: contains {
-                last_successful: contains {
+                sample_0: contains {
+                    counter: 6u64,
                     round_trip_times: vec![
                         TEST_ROUND_TRIP_2.into_nanos(),
                         0,
@@ -237,6 +284,16 @@ mod test {
                         0,
                         0,
                     ],
+                },
+                sample_1: contains {
+                    counter: 2u64,
+                    round_trip_times: vec![
+                        TEST_ROUND_TRIP_1.into_nanos(),
+                        TEST_ROUND_TRIP_2.into_nanos(),
+                        TEST_ROUND_TRIP_3.into_nanos(),
+                        TEST_ROUND_TRIP_1.into_nanos(),
+                        TEST_ROUND_TRIP_2.into_nanos(),
+                    ]
                 }
             }
         );
@@ -249,8 +306,8 @@ mod test {
         assert_inspect_tree!(
             inspector,
             root: contains {
-                success_count: 0u64,
-                failure_counts: {}
+                failure_counts: {},
+                last_failure_time: 0i64,
             }
         );
 
@@ -261,6 +318,7 @@ mod test {
                 failure_counts: {
                     NoCertificatesPresented: 1u64,
                 },
+                last_failure_time: AnyProperty,
             }
         );
 
@@ -273,6 +331,7 @@ mod test {
                     NoCertificatesPresented: 2u64,
                     NetworkError: 1u64,
                 },
+                last_failure_time: AnyProperty,
             }
         );
     }
