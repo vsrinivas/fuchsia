@@ -9,7 +9,7 @@
 
 pub mod state;
 pub use state::{
-    FetchFailureReason, PrepareFailureReason, Progress, State, StateId, UpdateInfo,
+    FailFetchData, FetchFailureReason, PrepareFailureReason, Progress, State, StateId, UpdateInfo,
     UpdateInfoAndProgress,
 };
 

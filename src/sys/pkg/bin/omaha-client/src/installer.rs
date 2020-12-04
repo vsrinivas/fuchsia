@@ -12,7 +12,8 @@ use fidl_fuchsia_update_installer::{
     InstallerMarker, InstallerProxy, RebootControllerMarker, RebootControllerProxy,
 };
 use fidl_fuchsia_update_installer_ext::{
-    start_update, Initiator, MonitorUpdateAttemptError, Options, StateId, UpdateAttemptError,
+    start_update, FetchFailureReason, Initiator, MonitorUpdateAttemptError, Options,
+    PrepareFailureReason, State, StateId, UpdateAttemptError,
 };
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
@@ -24,6 +25,38 @@ use omaha_client::{
     protocol::request::InstallSource,
 };
 use thiserror::Error;
+
+/// Represents possible reasons the installer could have ended in a failure state. Not exhaustive.
+#[derive(Debug)]
+pub enum InstallerFailureReason {
+    Internal,
+    OutOfSpace,
+}
+
+impl From<FetchFailureReason> for InstallerFailureReason {
+    fn from(r: FetchFailureReason) -> InstallerFailureReason {
+        match r {
+            FetchFailureReason::Internal => InstallerFailureReason::Internal,
+            FetchFailureReason::OutOfSpace => InstallerFailureReason::OutOfSpace,
+        }
+    }
+}
+
+impl From<PrepareFailureReason> for InstallerFailureReason {
+    fn from(r: PrepareFailureReason) -> InstallerFailureReason {
+        match r {
+            PrepareFailureReason::Internal => InstallerFailureReason::Internal,
+            PrepareFailureReason::OutOfSpace => InstallerFailureReason::OutOfSpace,
+        }
+    }
+}
+
+/// Information about a specific failure state that the installer ended in.
+#[derive(Debug)]
+pub struct InstallerFailure {
+    state_name: &'static str,
+    reason: InstallerFailureReason,
+}
 
 #[derive(Debug, Error)]
 pub enum FuchsiaInstallError {
@@ -40,8 +73,8 @@ pub enum FuchsiaInstallError {
     #[error("monitor update installer failed")]
     MonitorUpdate(#[from] MonitorUpdateAttemptError),
 
-    #[error("installer encountered failure state: {0}")]
-    InstallerFailureState(&'static str),
+    #[error("installer encountered failure state: {0:?}")]
+    InstallerFailureState(InstallerFailure),
 
     #[error("installation ended unexpectedly")]
     InstallationEndedUnexpectedly,
@@ -116,7 +149,32 @@ impl<C: Connect<Proxy = InstallerProxy> + Send> Installer for FuchsiaInstaller<C
                 if state.id() == StateId::WaitToReboot || state.is_success() {
                     return Ok(());
                 } else if state.is_failure() {
-                    return Err(FuchsiaInstallError::InstallerFailureState(state.name()));
+                    match state {
+                        State::FailFetch(fail_fetch_data) => {
+                            return Err(FuchsiaInstallError::InstallerFailureState(
+                                InstallerFailure {
+                                    state_name: state.name(),
+                                    reason: fail_fetch_data.reason().into(),
+                                },
+                            ));
+                        }
+                        State::FailPrepare(prepare_failure_reason) => {
+                            return Err(FuchsiaInstallError::InstallerFailureState(
+                                InstallerFailure {
+                                    state_name: state.name(),
+                                    reason: prepare_failure_reason.into(),
+                                },
+                            ));
+                        }
+                        _ => {
+                            return Err(FuchsiaInstallError::InstallerFailureState(
+                                InstallerFailure {
+                                    state_name: state.name(),
+                                    reason: InstallerFailureReason::Internal,
+                                },
+                            ))
+                        }
+                    }
                 }
             }
 
@@ -325,7 +383,10 @@ mod tests {
         let installer_fut = async move {
             assert_matches!(
                 installer.perform_install(&plan, None).await,
-                Err(FuchsiaInstallError::InstallerFailureState(_))
+                Err(FuchsiaInstallError::InstallerFailureState(InstallerFailure {
+                    state_name: "fail_prepare",
+                    reason: InstallerFailureReason::OutOfSpace
+                }))
             );
         };
         let stream_fut = async move {
@@ -339,7 +400,7 @@ mod tests {
                     let () = monitor
                         .on_state(&mut State::FailPrepare(FailPrepareData {
                             reason: Some(
-                                fidl_fuchsia_update_installer::PrepareFailureReason::Internal,
+                                fidl_fuchsia_update_installer::PrepareFailureReason::OutOfSpace,
                             ),
                             ..FailPrepareData::EMPTY
                         }))

@@ -12,7 +12,7 @@ use thiserror::Error;
 ///
 /// This is a placeholder stub implementation.
 ///
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Eq, PartialEq)]
 pub enum StubInstallErrors {
     #[error("Stub Installer Failure")]
     Failed,

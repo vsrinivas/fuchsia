@@ -93,7 +93,7 @@ pub struct ProgressBuilderWithFractionAndBytes {
 /// An UpdateInfo and Progress that are guaranteed to be consistent with each other.
 ///
 /// Specifically, `progress.bytes_downloaded <= info.download_size`.
-#[derive(Clone, Debug, Serialize, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Serialize, PartialEq, PartialOrd)]
 pub struct UpdateInfoAndProgress {
     info: UpdateInfo,
     progress: Progress,
@@ -116,7 +116,7 @@ pub struct UpdateInfoAndProgressBuilderWithInfoAndProgress {
     progress: Progress,
 }
 
-#[derive(Arbitrary, Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Arbitrary, Clone, Copy, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(tag = "reason", rename_all = "snake_case")]
 #[allow(missing_docs)]
 pub enum PrepareFailureReason {
@@ -124,7 +124,7 @@ pub enum PrepareFailureReason {
     OutOfSpace,
 }
 
-#[derive(Arbitrary, Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Arbitrary, Copy, Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 #[allow(missing_docs)]
 pub enum FetchFailureReason {
@@ -132,7 +132,7 @@ pub enum FetchFailureReason {
     OutOfSpace,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[allow(missing_docs)]
 pub struct FailFetchData {
     info_and_progress: UpdateInfoAndProgress,
@@ -430,6 +430,11 @@ impl FailFetchData {
     fn write_to_inspect(&self, node: &inspect::Node) {
         self.info_and_progress.write_to_inspect(node);
         self.reason.write_to_inspect(node);
+    }
+
+    /// Get the reason associated with this FetchFailData
+    pub fn reason(&self) -> FetchFailureReason {
+        self.reason
     }
 }
 

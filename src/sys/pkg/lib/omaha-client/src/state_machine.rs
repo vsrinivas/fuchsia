@@ -930,7 +930,7 @@ where
                 }
             };
             if let Err(e) = install_result {
-                warn!("Installation failed: {:#}", anyhow!(e));
+                co.yield_(StateMachineEvent::InstallerError(Some(Box::new(e)))).await;
                 self.set_state(State::InstallationError, co).await;
                 self.report_omaha_event_and_update_context(
                     &request_params,
@@ -1487,6 +1487,55 @@ mod tests {
                 .session_id(GUID::from_u128(0))
                 .request_id(GUID::from_u128(3));
             assert_request(state_machine.http, request_builder).await;
+        });
+    }
+
+    // Test that our observer can see when there's an installation error, and that it gets
+    // the right error type.
+    #[test]
+    fn test_observe_installation_error() {
+        block_on(async {
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "ok",
+                  "manifest": {
+                      "version": "5.6.7.8",
+                      "actions": {
+                          "action": [],
+                      },
+                      "packages": {
+                          "package": [],
+                      },
+                  }
+                }
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let http = MockHttpRequest::new(HttpResponse::new(response));
+
+            let actual_errors = StateMachineBuilder::new_stub()
+                .http(http)
+                .installer(StubInstaller { should_fail: true })
+                .oneshot_check()
+                .await
+                .filter_map(|event| {
+                    future::ready(match event {
+                        StateMachineEvent::InstallerError(Some(e)) => {
+                            Some(*e.downcast::<StubInstallErrors>().unwrap())
+                        }
+                        _ => None,
+                    })
+                })
+                .collect::<Vec<StubInstallErrors>>()
+                .await;
+
+            let expected_errors = vec![StubInstallErrors::Failed];
+            assert_eq!(actual_errors, expected_errors);
         });
     }
 

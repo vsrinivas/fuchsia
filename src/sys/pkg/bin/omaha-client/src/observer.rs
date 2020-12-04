@@ -8,6 +8,7 @@ use crate::{
     inspect::{LastResultsNode, ProtocolStateNode, ScheduleNode},
 };
 use fuchsia_inspect::Node;
+use log::warn;
 use omaha_client::{
     clock,
     common::{AppSet, ProtocolState, UpdateCheckSchedule},
@@ -76,6 +77,13 @@ where
                 self.on_progress_change(progress).await
             }
             StateMachineEvent::OmahaServerResponse(response) => self.on_omaha_response(response),
+
+            StateMachineEvent::InstallerError(e) => {
+                // TODO(fxbug.dev/65497): downcast this error, populate FidlServer's
+                // previous_out_of_space_failure field if this was an OUT_OF_SPACE error.
+                // Once we've downcast, it will be possible to properly log this error with anyhow.
+                warn!("Got installer error: {:?}", e);
+            }
         }
     }
 
