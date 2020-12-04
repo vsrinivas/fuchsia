@@ -30,7 +30,7 @@ pub struct Service {
 impl Service {
     pub async fn new(ime_service: ImeService) -> Result<Service, Error> {
         let keyboard2 = Arc::new(Mutex::new(keyboard2::Service::new().await?));
-        let keyboard3 = keyboard3::KeyboardService::new().await?;
+        let keyboard3 = keyboard3::KeyboardService::new();
         Ok(Service { ime_service, keyboard2, keyboard3 })
     }
 
