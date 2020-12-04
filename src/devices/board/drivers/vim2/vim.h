@@ -65,6 +65,7 @@ class Vim : public VimType {
   zx_status_t EnableWifi32K();
   zx_status_t SysmemInit();
   zx_status_t SdInit();
+  zx_status_t RegistersInit();
 
   int Thread();
 

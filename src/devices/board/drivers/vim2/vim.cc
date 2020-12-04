@@ -115,6 +115,11 @@ int Vim::Thread() {
     return -1;
   }
 
+  if ((status = RegistersInit()) != ZX_OK) {
+    zxlogf(ERROR, "Thread: RegistersInit failed: %d", status);
+    return -1;
+  }
+
   if ((status = ClkInit()) != ZX_OK) {
     zxlogf(ERROR, "Thread: ClkInit failed: %d", status);
     return -1;

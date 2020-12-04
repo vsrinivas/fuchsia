@@ -21,6 +21,7 @@ driver_module("vim2") {
     "vim-gpio.cc",
     "vim-i2c.cc",
     "vim-mali.cc",
+    "vim-registers.cc",
     "vim-sd.cc",
     "vim-sdio.cc",
     "vim-sysmem.cc",
@@ -46,6 +47,7 @@ driver_module("vim2") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/broadcom",
     "//src/devices/lib/driver",
+    "//src/devices/lib/metadata:llcpp",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
 

@@ -17,6 +17,7 @@ _common_bootfs_deps = [
   "//src/devices/clock/drivers/amlogic-clk",
   "//src/devices/gpio/drivers/aml-gxl-gpio",
   "//src/devices/i2c/drivers/aml-i2c",
+  "//src/devices/registers/drivers/registers",
   "//src/devices/rtc/drivers/nxp",
   "//src/devices/scpi/drivers/aml-scpi-s912:aml-scpi-s912.mailbox",
   "//src/devices/scpi/drivers/aml-scpi-s912:scpi",
