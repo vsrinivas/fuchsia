@@ -86,7 +86,6 @@ class FakeBootArgsServer final : public fboot::Arguments::Interface {
 class SystemInstanceForTest : public SystemInstance {
  public:
   using SystemInstance::launcher;
-  using SystemInstance::svc_job;
 };
 
 class SystemInstanceTest : public zxtest::Test {
@@ -110,50 +109,6 @@ class SystemInstanceTest : public zxtest::Test {
  private:
   async::Loop loop_;
 };
-
-// Verify that the svc_job which SystemInstance creates - and which it launches many processes
-// under, including svchost, netsvc, and so forth - does not have ZX_POL_AMBIENT_MARK_VMO_EXEC.
-TEST_F(SystemInstanceTest, SvcJobLacksAmbientVmex) {
-  zx::job root_job;
-  ASSERT_OK(get_root_job(&root_job));
-
-  ASSERT_OK(under_test_->CreateSvcJob(root_job));
-  ASSERT_TRUE(under_test_->svc_job().is_valid());
-
-  zx::process proc;
-  const char* args[] = {"/pkg/bin/ambient_vmex_test_util", nullptr};
-  ASSERT_OK(under_test_->launcher().Launch(under_test_->svc_job(), args[0], args, nullptr, -1,
-                                           zx::resource(), nullptr, nullptr, 0, &proc, 0));
-
-  ASSERT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
-  zx_info_process_t proc_info;
-  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
-  ASSERT_TRUE(proc_info.exited);
-  // A return code of 1 from the util process indicates the replace_as_executable call failed with
-  // ACCESS_DENIED.
-  ASSERT_EQ(proc_info.return_code, 1);
-}
-
-TEST_F(SystemInstanceTest, SvcJobLacksNewProcess) {
-  zx::job root_job;
-  ASSERT_OK(get_root_job(&root_job));
-
-  ASSERT_OK(under_test_->CreateSvcJob(root_job));
-  ASSERT_TRUE(under_test_->svc_job().is_valid());
-
-  zx::process proc;
-  const char* args[] = {"/pkg/bin/new_process_test_util", nullptr};
-  ASSERT_OK(under_test_->launcher().Launch(under_test_->svc_job(), args[0], args, nullptr, -1,
-                                           zx::resource(), nullptr, nullptr, 0, &proc, 0));
-
-  ASSERT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
-  zx_info_process_t proc_info;
-  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
-  ASSERT_TRUE(proc_info.exited);
-  // A return code of 1 from the util process indicates the process_create call failed with
-  // ACCESS_DENIED.
-  ASSERT_EQ(proc_info.return_code, 1);
-}
 
 // Verify the job that driver_hosts are launched under also lacks ZX_POL_AMBIENT_MARK_VMO_EXEC.
 TEST_F(SystemInstanceTest, DriverHostJobLacksAmbientVmex) {

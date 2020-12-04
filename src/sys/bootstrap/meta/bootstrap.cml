@@ -53,6 +53,14 @@
             url: "fuchsia-boot:///#meta/shutdown-shim.cm",
         },
         {
+            name: "svchost",
+            url: "fuchsia-boot:///#meta/svchost.cm",
+
+            // Start eager in order to register the crash handler as early as
+            // possible.
+            startup: "eager",
+        },
+        {
             name: "sysinfo",
             url: "fuchsia-boot:///#meta/sysinfo.cm",
         },
@@ -187,6 +195,18 @@
         {
             protocol: [
                 "fuchsia.boot.Arguments",
+                "fuchsia.boot.RootResource",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.exception.Handler",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.virtualconsole.SessionManager",
+            ],
+            from: "parent",
+            to: [ "#svchost" ],
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
                 "fuchsia.boot.WriteOnlyLog",
             ],
             from: "parent",
@@ -225,7 +245,7 @@
         },
         {
             protocol: [ "fuchsia.scheduler.ProfileProvider" ],
-            from: "#driver_manager",
+            from: "#svchost",
             to: [ "#fshost" ],
         },
         {
@@ -246,15 +266,48 @@
         },
         {
             protocol: [
+                "fuchsia.kernel.MexecBroker",
+                "fuchsia.tracing.kernel.Controller",
+                "fuchsia.tracing.kernel.Reader",
+            ],
+            from: "#svchost",
+            to: [
+                "#console-launcher",
+                "#netsvc",
+            ],
+        },
+        {
+            protocol: [
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.device.manager.BindDebugger",
                 "fuchsia.device.manager.DebugDumper",
+            ],
+            from: "#driver_manager",
+            to: [
+                "#console-launcher",
+                "#netsvc",
+                "#svchost",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+            ],
+            from: "#svchost",
+            to: [ "#driver_manager" ],
+
+            // This must be weak because svchost needs sysmem from driver_manager, which creates
+            // a cycle. Sysmem can be pulled out of svchost to break this cycle.
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
                 "fuchsia.kernel.DebugBroker",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.kernel.Controller",
             ],
-            from: "#driver_manager",
+            from: "#svchost",
             to: [
                 "#console-launcher",
                 "#netsvc",
@@ -262,7 +315,7 @@
         },
         {
             protocol: [ "fuchsia.sysmem.Allocator" ],
-            from: "#driver_manager",
+            from: "#svchost",
             to: [ "#virtual_console" ],
         },
         {
@@ -284,6 +337,13 @@
             as: "input-report",
             to: [ "#virtual_console" ],
             subdir: "class/input-report",
+        },
+        {
+            directory: "dev",
+            from: "#driver_manager",
+            as: "sysmem",
+            to: [ "#svchost" ],
+            subdir: "class/sysmem",
         },
         {
             directory: "dev",
@@ -483,6 +543,7 @@
                 "#driver_manager",
                 "#netsvc",
                 "#pwrbtn-monitor",
+                "#svchost",
                 "#virtual_console",
             ],
         },
@@ -565,10 +626,10 @@
             to: [
                 "#base_resolver",
                 "#console-launcher",
-                "#driver_manager",
                 "#fshost",
                 "#netsvc",
                 "#power_manager",
+                "#svchost",
             ],
         },
         {
@@ -728,10 +789,7 @@
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.device.manager.BindDebugger",
                 "fuchsia.device.manager.DebugDumper",
-                "fuchsia.kernel.DebugBroker",
-                "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.tracing.kernel.Controller",
-                "fuchsia.tracing.kernel.Reader",
+                "fuchsia.device.manager.SystemStateTransition",
             ],
             from: "#driver_manager",
         },
@@ -774,6 +832,15 @@
                 "fuchsia.logger.LogSink",
             ],
             from: "#archivist",
+        },
+        {
+            protocol: [
+                "fuchsia.kernel.DebugBroker",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.tracing.kernel.Controller",
+                "fuchsia.tracing.kernel.Reader",
+            ],
+            from: "#svchost",
         },
         {
             resolver: "base_resolver",

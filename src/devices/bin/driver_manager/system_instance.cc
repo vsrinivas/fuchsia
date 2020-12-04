@@ -104,35 +104,6 @@ zx_status_t wait_for_file(const char* path, zx::time deadline) {
 
 SystemInstance::SystemInstance() : launcher_(this) {}
 
-zx_status_t SystemInstance::CreateSvcJob(const zx::job& root_job) {
-  zx::job svc_job;
-  zx_status_t status = zx::job::create(root_job, 0u, &svc_job);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to create svc_job: %s", zx_status_get_string(status));
-    return status;
-  }
-  // TODO(fxbug.dev/53125): This currently manually restricts AMBIENT_MARK_VMO_EXEC and NEW_PROCESS
-  // since this job is created from the root job. The processes spawned under this job will
-  // eventually move out of driver_manager into their own components.
-  static const zx_policy_basic_v2_t policy[] = {
-      {ZX_POL_AMBIENT_MARK_VMO_EXEC, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY},
-      {ZX_POL_NEW_PROCESS, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY}};
-  status = svc_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy, std::size(policy));
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to set svc_job job policy: %s", zx_status_get_string(status));
-    return status;
-  }
-  status = svc_job.set_property(ZX_PROP_NAME, "zircon-services", 16);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to set svc_job job name: %s", zx_status_get_string(status));
-    return status;
-  }
-
-  // Set member variable now that we're sure all job creation steps succeeded.
-  svc_job_ = std::move(svc_job);
-  return ZX_OK;
-}
-
 zx_status_t SystemInstance::CreateDriverHostJob(const zx::job& root_job,
                                                 zx::job* driver_host_job_out) {
   zx::job driver_host_job;
@@ -165,203 +136,7 @@ zx_status_t SystemInstance::CreateDriverHostJob(const zx::job& root_job,
   return ZX_OK;
 }
 
-zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::channel& root_dir,
-                                         bool require_system, Coordinator* coordinator) {
-  zx::channel dir_request, svchost_local;
-  zx_status_t status = zx::channel::create(0, &dir_request, &svchost_local);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  zx::debuglog logger;
-  status = zx::debuglog::create(coordinator->root_resource(), 0, &logger);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  zx::job root_job_copy;
-  status =
-      root_job.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHTS_PROPERTY | ZX_RIGHT_ENUMERATE |
-                             ZX_RIGHT_MANAGE_PROCESS | ZX_RIGHT_MANAGE_THREAD,
-                         &root_job_copy);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // TODO(fxbug.dev/33324): svchost needs the root resource to talk to
-  // zx_debug_send_command. Remove this once zx_debug_send_command no longer
-  // requires the root resource.
-  zx::resource root_resource_copy;
-  if (coordinator->root_resource().is_valid()) {
-    status = coordinator->root_resource().duplicate(ZX_RIGHT_TRANSFER, &root_resource_copy);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  zx::channel coordinator_client;
-  {
-    zx::channel coordinator_server;
-    status = zx::channel::create(0, &coordinator_server, &coordinator_client);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    status = fdio_service_connect_at(root_dir.get(), "svc", coordinator_server.release());
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  zx::channel devcoordinator_svc;
-  {
-    zx::channel devcoordinator_svc_req;
-    status = zx::channel::create(0, &devcoordinator_svc_req, &devcoordinator_svc);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    // This connects to the /svc in devcoordinator's namespace.
-    status = fdio_service_connect("/svc", devcoordinator_svc_req.release());
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  zx::job svc_job_copy;
-  status = svc_job_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS,
-                              &svc_job_copy);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  const char* name = "svchost";
-  const char* argv[3] = {
-      "/boot/bin/svchost",
-      require_system ? "--require-system" : nullptr,
-      nullptr,
-  };
-
-  FdioSpawnActions fdio_spawn_actions;
-
-  fdio_spawn_actions.AddAction(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_SET_NAME,
-      .name = {.data = name},
-  });
-
-  fdio_spawn_actions.AddActionWithHandle(
-      fdio_spawn_action_t{
-          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-          .h = {.id = PA_DIRECTORY_REQUEST},
-      },
-      std::move(dir_request));
-  fdio_spawn_actions.AddActionWithHandle(
-      fdio_spawn_action_t{
-          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-          .h = {.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO)},
-      },
-      std::move(logger));
-
-  // Give svchost a restricted root job handle. svchost is already a privileged system service
-  // as it controls system-wide process launching. With the root job it can consolidate a few
-  // services such as crashsvc and the profile service.
-  fdio_spawn_actions.AddActionWithHandle(
-      fdio_spawn_action_t{
-          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-          .h = {.id = PA_HND(PA_USER0, 1)},
-      },
-      std::move(root_job_copy));
-
-  // Also give svchost a restricted root resource handle, this allows it to run the kernel-debug
-  // service.
-  if (root_resource_copy.is_valid()) {
-    fdio_spawn_actions.AddActionWithHandle(
-        fdio_spawn_action_t{
-            .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-            .h = {.id = PA_HND(PA_USER0, 2)},
-        },
-        std::move(root_resource_copy));
-  }
-
-  // Add handle to channel to allow svchost to proxy fidl services to us.
-  fdio_spawn_actions.AddActionWithHandle(
-      fdio_spawn_action_t{
-          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-          .h = {.id = PA_HND(PA_USER0, 3)},
-      },
-      std::move(coordinator_client));
-
-  // Add handle to channel to allow svchost to connect to services from devcoordinator's /svc, which
-  // is hosted by fragment_manager and includes services routed from other fragments; see
-  // "devcoordinator.cml".
-  fdio_spawn_actions.AddActionWithHandle(
-      fdio_spawn_action_t{
-          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-          .h = {.id = PA_HND(PA_USER0, 7)},
-      },
-      std::move(devcoordinator_svc));
-
-  // Give svchost access to /dev/class/sysmem, to enable svchost to forward sysmem service
-  // requests to the sysmem driver.  Create a namespace containing /dev/class/sysmem.
-  zx::channel fs_handle = CloneFs("dev/class/sysmem");
-  if (!fs_handle.is_valid()) {
-    LOGF(ERROR, "Failed to clone '/dev/class/sysmem'");
-    return ZX_ERR_BAD_STATE;
-  }
-  fdio_spawn_actions.AddActionWithNamespace(
-      fdio_spawn_action_t{
-          .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-          .ns = {.prefix = "/sysmem"},
-      },
-      std::move(fs_handle));
-
-  uint32_t spawn_flags =
-      FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_UTC_CLOCK;
-
-  char errmsg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  zx::process proc;
-  std::vector<fdio_spawn_action_t> actions = fdio_spawn_actions.GetActions();
-  status = fdio_spawn_etc(svc_job_copy.get(), spawn_flags, argv[0], argv, NULL, actions.size(),
-                          actions.data(), proc.reset_and_get_address(), errmsg);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to launch %s (%s): %s", argv[0], name, errmsg);
-    return status;
-  } else {
-    LOGF(INFO, "Launching %s (%s)", argv[0], name);
-  }
-
-  zx::channel svchost_public_remote;
-  status = zx::channel::create(0, &svchost_public_remote, &svchost_outgoing_);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  return fdio_service_connect_at(svchost_local.get(), "svc", svchost_public_remote.release());
-}
-
-zx_status_t SystemInstance::ReuseExistingSvchost() {
-  // This path is only used in integration tests that start an "isolated" devmgr/devcoordinator.
-  // Rather than start another svchost process - which won't work for a couple reasons - we
-  // clone the /svc in devcoordinator's namespace when devcoordinator launches other processes.
-  // This may or may not work well, depending on the services those processes require and whether
-  // they happen to be in the /svc exposed to this test instance of devcoordinator.
-  // TODO(bryanhenry): This can go away once we move the processes devcoordinator spawns today out
-  // into separate fragments.
-  zx::channel dir_request;
-  zx_status_t status = zx::channel::create(0, &dir_request, &svchost_outgoing_);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = fdio_service_connect("/svc", dir_request.release());
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to connect to '/svc': %s", zx_status_get_string(status));
-    return status;
-  }
-
-  return ZX_OK;
-}
-
-void SystemInstance::devmgr_vfs_init() {
+void SystemInstance::InstallDevFsIntoNamespace() {
   fdio_ns_t* ns;
   zx_status_t r;
   r = fdio_ns_get_installed(&ns);
@@ -371,31 +146,13 @@ void SystemInstance::devmgr_vfs_init() {
                 zx_status_get_string(r));
 }
 
-// Thread trampoline for ServiceStarter
-int service_starter(void* arg) {
-  auto args = std::unique_ptr<ServiceStarterArgs>(static_cast<ServiceStarterArgs*>(arg));
-  return args->instance->ServiceStarter(args->coordinator);
-}
-
-void SystemInstance::start_services(Coordinator& coordinator) {
-  thrd_t t;
-  auto service_starter_args = std::make_unique<ServiceStarterArgs>();
-  service_starter_args->instance = this;
-  service_starter_args->coordinator = &coordinator;
-  int ret =
-      thrd_create_with_name(&t, service_starter, service_starter_args.release(), "service-starter");
-  if (ret == thrd_success) {
-    thrd_detach(t);
-  }
-}
-
 // Thread trampoline for WaitForSystemAvailable, which ServiceStarter spawns
 int wait_for_system_available(void* arg) {
   auto args = std::unique_ptr<ServiceStarterArgs>(static_cast<ServiceStarterArgs*>(arg));
   return args->instance->WaitForSystemAvailable(args->coordinator);
 }
 
-int SystemInstance::ServiceStarter(Coordinator* coordinator) {
+void SystemInstance::ServiceStarter(Coordinator* coordinator) {
   auto params = GetServiceStarterParams(coordinator->boot_args());
   if (!params.clock_backstop.empty()) {
     auto offset = zx::sec(atoi(params.clock_backstop.data()));
@@ -417,8 +174,6 @@ int SystemInstance::ServiceStarter(Coordinator* coordinator) {
   if (ret == thrd_success) {
     thrd_detach(t);
   }
-
-  return 0;
 }
 
 int SystemInstance::WaitForSystemAvailable(Coordinator* coordinator) {
@@ -485,35 +240,19 @@ zx_status_t SystemInstance::clone_fshost_ldsvc(zx::channel* loader) {
   return fdio_service_connect("/svc/fuchsia.fshost.Loader", remote.release());
 }
 
-zx_status_t DirectoryFilter::Initialize(const zx::channel& forwarding_directory,
+zx_status_t DirectoryFilter::Initialize(zx::channel forwarding_directory,
                                         fbl::Span<const char*> allow_filter) {
+  forwarding_dir_ = std::move(forwarding_directory);
   for (const auto& name : allow_filter) {
     zx_status_t status = root_dir_->AddEntry(
-        name, fbl::MakeRefCounted<fs::Service>([&forwarding_directory, name](zx::channel request) {
-          return fdio_service_connect_at(forwarding_directory.get(), name, request.release());
+        name, fbl::MakeRefCounted<fs::Service>([this, name](zx::channel request) {
+          return fdio_service_connect_at(forwarding_dir_.get(), name, request.release());
         }));
     if (status != ZX_OK) {
       return status;
     }
   }
   return ZX_OK;
-}
-
-zx_status_t SystemInstance::InitializeDriverHostSvcDir() {
-  if (driver_host_svc_) {
-    return ZX_OK;
-  }
-  zx_status_t status = loop_.StartThread("driver_host_svc_loop");
-  if (status != ZX_OK) {
-    return status;
-  }
-  driver_host_svc_.emplace(loop_.dispatcher());
-  const char* kAllowedServices[] = {
-      "fuchsia.logger.LogSink",
-      "fuchsia.scheduler.ProfileProvider",
-      "fuchsia.tracing.provider.Registry",
-  };
-  return driver_host_svc_->Initialize(svchost_outgoing_, fbl::Span(kAllowedServices));
 }
 
 zx::channel SystemInstance::CloneFs(const char* path) {
@@ -526,8 +265,7 @@ zx::channel SystemInstance::CloneFs(const char* path) {
   }
   zx_status_t status = ZX_OK;
   if (!strcmp(path, "svc")) {
-    zx::unowned_channel fs = zx::unowned_channel(svchost_outgoing_);
-    status = fdio_service_clone_to(fs->get(), h1.release());
+    status = fdio_service_connect("/svc", h1.release());
   } else if (!strcmp(path, "driver_host_svc")) {
     status = InitializeDriverHostSvcDir();
     if (status == ZX_OK) {
@@ -543,4 +281,36 @@ zx::channel SystemInstance::CloneFs(const char* path) {
     return zx::channel();
   }
   return h0;
+}
+
+zx_status_t SystemInstance::InitializeDriverHostSvcDir() {
+  if (driver_host_svc_) {
+    return ZX_OK;
+  }
+  zx_status_t status = loop_.StartThread("driver_host_svc_loop");
+  if (status != ZX_OK) {
+    return status;
+  }
+  driver_host_svc_.emplace(loop_.dispatcher());
+
+  zx::channel incoming_services;
+  {
+    zx::channel server_side;
+    status = zx::channel::create(0, &incoming_services, &server_side);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    status = fdio_service_connect("/svc", server_side.release());
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  const char* kAllowedServices[] = {
+      "fuchsia.logger.LogSink",
+      "fuchsia.scheduler.ProfileProvider",
+      "fuchsia.tracing.provider.Registry",
+  };
+  return driver_host_svc_->Initialize(std::move(incoming_services), fbl::Span(kAllowedServices));
 }

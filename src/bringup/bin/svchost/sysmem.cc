@@ -10,7 +10,7 @@
 
 #include <cstring>
 
-const char* kSysmemSvchostPath = "/sysmem";
+const char* kSysmemSvchostPath = "/dev/class/sysmem";
 
 // We don't really need a service context, only a sysmem-connector context, so
 // we just directly use the sysmem-connector context as the only context.

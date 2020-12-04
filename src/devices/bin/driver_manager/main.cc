@@ -339,38 +339,8 @@ int main(int argc, char** argv) {
          "continuing");
   }
 
-  status = system_instance.CreateSvcJob(root_job);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  if (devmgr_args.start_svchost) {
-    zx::channel root_server, root_client;
-    status = zx::channel::create(0, &root_server, &root_client);
-    if (status != ZX_OK) {
-      return status;
-    }
-    status = outgoing.Serve(std::move(root_server));
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to bind outgoing services: %s", zx_status_get_string(status));
-      return status;
-    }
-    status = system_instance.StartSvchost(root_job, root_client,
-                                          driver_manager_params.require_system, &coordinator);
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to start svchost: %s", zx_status_get_string(status));
-      return status;
-    }
-  } else {
-    status = system_instance.ReuseExistingSvchost();
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to reuse existing svchost: %s", zx_status_get_string(status));
-      return status;
-    }
-  }
-
-  system_instance.devmgr_vfs_init();
-  system_instance.start_services(coordinator);
+  system_instance.InstallDevFsIntoNamespace();
+  system_instance.ServiceStarter(&coordinator);
 
   if (driver_manager_params.driver_host_strict_linking) {
     fbl::unique_fd lib_fd;
@@ -421,14 +391,9 @@ int main(int argc, char** argv) {
   // Initial bind attempt for drivers enumerated at startup.
   coordinator.BindDrivers();
 
-  // Expose /dev directory for use in sysinfo service; specifically to connect to /dev/sys/platform
-  auto outgoing_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  outgoing_dir->AddEntry("dev", fbl::MakeRefCounted<fs::RemoteDir>(system_instance.CloneFs("dev")));
-  outgoing_dir->AddEntry("svc", fbl::MakeRefCounted<fs::RemoteDir>(system_instance.CloneFs("svc")));
-
-  fs::ManagedVfs outgoing_vfs = fs::ManagedVfs(loop.dispatcher());
-  outgoing_vfs.ServeDirectory(outgoing_dir,
-                              zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)));
+  outgoing.root_dir()->AddEntry("dev",
+                                fbl::MakeRefCounted<fs::RemoteDir>(system_instance.CloneFs("dev")));
+  outgoing.ServeFromStartupInfo();
 
   coordinator.set_running(true);
   status = loop.Run();

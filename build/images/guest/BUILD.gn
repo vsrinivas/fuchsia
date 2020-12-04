@@ -39,7 +39,7 @@ assemble_system("guest") {
     "//src/bringup/bin/pwrbtn-monitor:bootfs",
     "//src/bringup/bin/pwrbtn-monitor",
     "//src/bringup/bin/run-vc",
-    "//src/bringup/bin/svchost",
+    "//src/bringup/bin/svchost:bootfs",
     "//src/bringup/bin/sysinfo:bootfs",
     "//src/bringup/bin/sysinfo",
     "//src/bringup/bin/trace-benchmark",

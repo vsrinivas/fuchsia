@@ -69,7 +69,7 @@ zbi_input("integration-test-deps") {
     "//src/bringup/bin/miscsvc",
     "//src/bringup/bin/netsvc",
     "//src/bringup/bin/pwrbtn-monitor",
-    "//src/bringup/bin/svchost",
+    "//src/bringup/bin/svchost:bootfs",
     "//src/devices/internal/drivers/fragment",
     "//src/devices/internal/drivers/fragment:fragment.proxy",
   ]

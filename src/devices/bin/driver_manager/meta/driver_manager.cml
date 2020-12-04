@@ -1,5 +1,4 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/driver_manager",
         lifecycle: { stop_event: "notify" },
@@ -19,22 +18,12 @@
             rights: [ "connect" ],
             path: "/dev/diagnostics",
         },
-
-        // Services proxied by svchost
         {
             protocol: [
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.device.manager.BindDebugger",
                 "fuchsia.device.manager.DebugDumper",
                 "fuchsia.device.manager.SystemStateTransition",
-                "fuchsia.device.NameProvider",
-                "fuchsia.kernel.Counter",
-                "fuchsia.kernel.DebugBroker",
-                "fuchsia.paver.Paver",
-                "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.kernel.Controller",
-                "fuchsia.tracing.kernel.Reader",
             ],
         },
     ],
@@ -171,14 +160,13 @@
                 // Builtin services
                 "fuchsia.process.Launcher",
                 "fuchsia.process.Resolver",
+                "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
 
                 // Services from sysinfo
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.tracing.controller.Controller",
-
-                // Services from appmgr
                 "fuchsia.tracing.provider.Registry",
             ],
         },
@@ -199,13 +187,9 @@
                 "fuchsia.device.manager.BindDebugger",
                 "fuchsia.device.manager.DebugDumper",
                 "fuchsia.device.manager.SystemStateTransition",
-                "fuchsia.kernel.DebugBroker",
-                "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.kernel.Controller",
-                "fuchsia.tracing.kernel.Reader",
             ],
             from: "self",
         },
     ],
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
 }

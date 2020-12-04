@@ -30,7 +30,7 @@ group("zedboot") {
     "//src/bringup/bin/ptysvc:bootfs",
     "//src/bringup/bin/pwrbtn-monitor",
     "//src/bringup/bin/pwrbtn-monitor:bootfs",
-    "//src/bringup/bin/svchost",
+    "//src/bringup/bin/svchost:bootfs",
     "//src/bringup/bin/sysinfo:bootfs",
     "//src/bringup/bin/waitfor",
   ]

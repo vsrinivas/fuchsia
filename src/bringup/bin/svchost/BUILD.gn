@@ -2,9 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/component_manifest_resources.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 import("//build/unification/zx_library.gni")
+
+group("bootfs") {
+  deps = [
+    ":meta",
+    ":svchost",
+  ]
+}
+
+component_manifest_resources("meta") {
+  sources = [ "meta/svchost.cml" ]
+}
 
 zx_library("crashsvc") {
   sdk = "source"
@@ -57,28 +69,17 @@ executable("svchost") {
   deps = [
     ":crashsvc",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
-    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_llcpp",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
-    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
-    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_c",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem_c",
-    "//sdk/fidl/fuchsia.net:fuchsia.net_llcpp",
-    "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
-    "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
-    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",
-    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//sdk/lib/fdio",
+    "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/kcounter",
     "//zircon/system/ulib/kernel-debug",

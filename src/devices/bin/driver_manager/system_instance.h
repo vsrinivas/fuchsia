@@ -29,14 +29,14 @@ class DirectoryFilter {
   DirectoryFilter(async_dispatcher_t* dispatcher)
       : root_dir_(fbl::MakeRefCounted<fs::PseudoDir>()), vfs_(dispatcher) {}
 
-  // |forwarding_dir| must outlive DirectoryFilter object.
-  zx_status_t Initialize(const zx::channel& forwarding_dir, fbl::Span<const char*> allow_filter);
+  zx_status_t Initialize(zx::channel forwarding_dir, fbl::Span<const char*> allow_filter);
 
   zx_status_t Serve(zx::channel request) {
     return vfs_.ServeDirectory(root_dir_, std::move(request));
   }
 
  private:
+  zx::channel forwarding_dir_;
   fbl::RefPtr<fs::PseudoDir> root_dir_;
   fs::SynchronousVfs vfs_;
 };
@@ -49,19 +49,10 @@ class SystemInstance : public FsProvider {
   // Implementation required to implement FsProvider
   zx::channel CloneFs(const char* path) override;
 
-  // The heart of the public API, in the order that things get called during
-  // startup.
   zx_status_t CreateDriverHostJob(const zx::job& root_job, zx::job* driver_host_job_out);
-  zx_status_t CreateSvcJob(const zx::job& root_job);
+  void InstallDevFsIntoNamespace();
 
-  zx_status_t StartSvchost(const zx::job& root_job, const zx::channel& root_dir,
-                           bool require_system, Coordinator* coordinator);
-  zx_status_t ReuseExistingSvchost();
-
-  void devmgr_vfs_init();
-
-  void start_services(Coordinator& coordinator);
-  int ServiceStarter(Coordinator* coordinator);
+  void ServiceStarter(Coordinator* coordinator);
   int WaitForSystemAvailable(Coordinator* coordinator);
 
   // TODO(fxbug.dev/34633): DEPRECATED. Do not add new dependencies on the fshost loader service!
@@ -69,16 +60,9 @@ class SystemInstance : public FsProvider {
 
  protected:
   DevmgrLauncher& launcher() { return launcher_; }
-  zx::job& svc_job() { return svc_job_; }
 
  private:
   zx_status_t InitializeDriverHostSvcDir();
-
-  // The outgoing (exposed) connection to the svchost.
-  zx::channel svchost_outgoing_;
-
-  // The job in which we run "svc" realm services, like svchost, netsvc, etc.
-  zx::job svc_job_;
 
   DevmgrLauncher launcher_;
 
