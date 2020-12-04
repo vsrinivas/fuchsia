@@ -80,6 +80,12 @@ package("pkg-cache") {
   ]
 }
 
+fuchsia_component("pkg-cache-v2") {
+  testonly = true
+  manifest = "meta/pkg-cache.cml"
+  deps = [ ":bin" ]
+}
+
 fuchsia_component("pkg-cache-test") {
   testonly = true
   manifest = "meta/pkg-cache-bin-test.cml"

@@ -1,0 +1,38 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        binary: "bin/pkg_cache",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.pkg.PackageCache",
+                "fuchsia.space.Manager",
+            ],
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            directory: "pkgfs",
+            rights: [ "rw*" ],
+            path: "/pkgfs",
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.update.CommitStatusProvider",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.pkg.PackageCache",
+                "fuchsia.space.Manager",
+            ],
+            from: "self",
+        },
+    ],
+}
