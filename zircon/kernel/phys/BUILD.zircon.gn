@@ -62,14 +62,6 @@ if (current_toolchain == default_toolchain) {
       configs += phys_configs
       tags += phys_tags
       exclude_variant_tags += phys_exclude_variant_tags
-
-      toolchain_args = {
-        # phys code doesn't stay sufficiently purely position-independent
-        # without optimization.
-        # TODO(fxbug.dev/64317): rationalize environment interplay with
-        # optimization.
-        optimize = "speed"
-      }
     }
   }
 } else if (toolchain.environment != "kernel.phys" &&

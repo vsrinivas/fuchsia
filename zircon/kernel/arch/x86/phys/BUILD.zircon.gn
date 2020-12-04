@@ -55,12 +55,6 @@ if (current_toolchain == default_toolchain) {
       # TOOD(51994): Remove this when profile is supported.
       "instrumented",
     ]
-
-    toolchain_args = {
-      # TODO(fxbug.dev/64317): rationalize environment interplay with
-      # optimization.
-      optimize = "speed"
-    }
   }
 } else {
   if (toolchain.environment == "kernel.phys") {

@@ -46,14 +46,6 @@ if (current_toolchain == default_toolchain) {
       import("$zx/kernel/arch/$kernel_cpu/phys/phys.gni")
       toolchain_variant_args.tags += phys_tags
       exclude_variant_tags += phys_exclude_variant_tags
-
-      toolchain_args = {
-        # phys code doesn't stay sufficiently purely position-independent
-        # without optimization.
-        # TODO(fxbug.dev/64317): rationalize environment interplay with
-        # optimization.
-        zircon_optimize = "speed"
-      }
     }
   }
 } else if (toolchain.environment == "kernel.phys") {
@@ -65,7 +57,6 @@ if (current_toolchain == default_toolchain) {
   config("phys_config") {
     configs = [
       "$zx/kernel:standalone",
-      "$zx_build_config:pure",
       "$zx/kernel:warnings",
       "$zx/kernel/arch/$kernel_cpu:abi",
       ":defines",
