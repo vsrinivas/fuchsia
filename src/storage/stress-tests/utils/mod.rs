@@ -43,7 +43,7 @@ extern "C" {
 
 async fn start_test() -> OpaqueTest {
     let test: OpaqueTest =
-        OpaqueTest::default("fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated_devmgr.cm")
+        OpaqueTest::default("fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated-devmgr.cm")
             .await
             .unwrap();
 
