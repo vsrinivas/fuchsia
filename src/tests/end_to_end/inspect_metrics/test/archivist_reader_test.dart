@@ -9,7 +9,7 @@ import 'package:sl4f/sl4f.dart' as sl4f;
 import 'util.dart';
 
 const String fshostPath = 'bootstrap/fshost:root/data_stats';
-const String memoryMonitorPath = 'memory_monitor.cmx:root';
+const String stashPath = 'stash_secure.cmx:root';
 
 void main() {
   sl4f.Sl4f sl4fDriver;
@@ -34,22 +34,10 @@ void main() {
           singleValue(greaterThan(0)));
       expect(await getInspectValues(inspect, '$fshostPath/stats:used_bytes'),
           singleValue(greaterThan(0)));
-      // Note: when memory monitor becomes a v2 component, pick a v1 component
-      // that starts early on.
       expect(
-          await getInspectValues(inspect, '$memoryMonitorPath:current_digest'),
-          allOf(
-              isNotNull,
-              contains(allOf([
-                contains('Archivist'),
-                contains('Audio'),
-                contains('Kernel'),
-                contains('Free'),
-                contains('Minfs'),
-                contains('Pkgfs'),
-                contains('Graphics'),
-                contains('Flutter')
-              ]))));
+          await getInspectValues(
+              inspect, '$stashPath/fuchsia.inspect.Health:status'),
+          singleValue('OK'));
     });
 
     test('read from the feedback accessor', () async {
