@@ -28,6 +28,7 @@ template("expect_includes") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "check_includes",
                              "includes",
                              "testonly",
                              "visibility",
@@ -69,6 +70,7 @@ template("collect_expected_includes") {
                            [
                              "deps",
                              "manifest",
+                             "metadata",
                              "testonly",
                              "visibility",
                            ])
@@ -102,6 +104,7 @@ template("cmc_check_includes") {
                            [
                              "deps",
                              "manifest",
+                             "metadata",
                              "testonly",
                              "visibility",
                            ])

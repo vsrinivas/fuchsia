@@ -34,9 +34,7 @@ zx_library("syslog") {
   deps = [
     ":helpers",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
-
-    # Uncomment the below once all syslog clients have the include
-    #"//sdk/lib/diagnostics/syslog:client_includes",
+    "//sdk/lib/diagnostics/syslog:client_includes",
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",

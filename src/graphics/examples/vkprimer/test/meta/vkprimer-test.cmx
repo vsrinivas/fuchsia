@@ -1,5 +1,6 @@
 {
     "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {

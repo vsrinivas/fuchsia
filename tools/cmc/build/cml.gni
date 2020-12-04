@@ -16,18 +16,30 @@ import("//tools/cmc/build/expect_includes.gni")
 #     [path] Name for the output.
 #     If not specified, the target name is used.
 #
+#   check_includes (optional)
+#     [boolean] Whether to check against expect_includes() in deps.
+#     Default: true
+#
 #   deps (optional)
 #   testonly (optional)
 #   visibility (optional)
 template("cm") {
-  cmc_check_includes("${target_name}_check_includes") {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "manifest",
-                             "testonly",
-                           ])
-    visibility = [ ":*" ]
+  if (!defined(invoker.check_includes) || invoker.check_includes) {
+    check_includes_target = "${target_name}_check_includes"
+    cmc_check_includes(check_includes_target) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "manifest",
+                               "testonly",
+                             ])
+      visibility = [ ":*" ]
+    }
+
+    if (!defined(invoker.deps)) {
+      invoker.deps = []
+    }
+    invoker.deps += [ ":" + check_includes_target ]
   }
 
   cmc(target_name) {
@@ -42,11 +54,6 @@ template("cm") {
     if (!defined(output_name)) {
       output_name = target_name
     }
-
-    if (!defined(deps)) {
-      deps = []
-    }
-    deps += [ ":${target_name}_check_includes" ]
 
     compiled_output = "${target_out_dir}/${output_name}"
     inputs = [ invoker.manifest ]

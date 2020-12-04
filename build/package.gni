@@ -287,6 +287,10 @@ template("package") {
       if (get_path_info(meta.dest, "extension") == "cmx") {
         cmx(manifest_target) {
           manifest = meta.path
+
+          # We don't know which deps are associated with which component manifest.
+          # Disable collecting expected includes to avoid false errors.
+          check_includes = false
           forward_variables_from(pkg,
                                  [
                                    "deps",
@@ -307,6 +311,10 @@ template("package") {
       } else if (get_path_info(meta.path, "extension") == "cml") {
         cm(manifest_target) {
           manifest = meta.path
+
+          # We don't know which deps are associated with which component manifest.
+          # Disable collecting expected includes to avoid false errors.
+          check_includes = false
           forward_variables_from(pkg,
                                  [
                                    "deps",
