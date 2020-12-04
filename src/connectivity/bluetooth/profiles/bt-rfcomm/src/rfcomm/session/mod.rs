@@ -959,7 +959,7 @@ impl Session {
 }
 
 impl SignaledTask for Session {
-    fn finished(&mut self) -> BoxFuture<'static, ()> {
+    fn finished(&self) -> BoxFuture<'static, ()> {
         self.terminated.clone().boxed()
     }
 }
@@ -1256,7 +1256,7 @@ mod tests {
         let id = PeerId(992);
         let (local, remote) = Channel::create();
         let channel_opened_fn = Box::new(|_server_channel, _channel| async { Ok(()) }.boxed());
-        let mut session = Session::create(id, local, channel_opened_fn);
+        let session = Session::create(id, local, channel_opened_fn);
 
         // Session should still be active.
         let mut closed_fut = session.finished();

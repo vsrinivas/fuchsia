@@ -273,7 +273,7 @@ impl CommandResponse {
 pub trait SignaledTask {
     /// Returns a Future that finishes when the running task finishes for any reason.
     /// If this task has already finished, the returned future should immediately resolve.
-    fn finished(&mut self) -> BoxFuture<'static, ()>;
+    fn finished(&self) -> BoxFuture<'static, ()>;
 }
 
 #[cfg(test)]

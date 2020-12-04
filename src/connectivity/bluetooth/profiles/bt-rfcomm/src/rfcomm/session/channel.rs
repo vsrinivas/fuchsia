@@ -8,7 +8,11 @@ use {
     fuchsia_bluetooth::types::Channel,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
-    futures::{channel::mpsc, select, FutureExt, SinkExt, StreamExt},
+    futures::{
+        channel::{mpsc, oneshot},
+        future::{BoxFuture, Shared},
+        select, FutureExt, SinkExt, StreamExt,
+    },
     log::{error, info, trace},
     std::convert::TryInto,
 };
@@ -16,7 +20,7 @@ use {
 use crate::rfcomm::{
     frame::{Frame, UserData},
     inspect::SessionChannelInspect,
-    types::{RfcommError, Role, DLCI},
+    types::{RfcommError, Role, SignaledTask, DLCI},
 };
 
 /// Upper bound for the number of credits we allow a remote device to have.
@@ -221,6 +225,16 @@ pub struct FlowControlledData {
     pub credits: Option<u8>,
 }
 
+/// The processing task associated with an established SessionChannel.
+struct SessionChannelTask {
+    /// The processing task.
+    _task: fasync::Task<()>,
+    /// The sender used to relay user data received from the peer to the `_task`.
+    user_data_queue: mpsc::Sender<FlowControlledData>,
+    /// Shared future indicating termination status of the `_task`.
+    terminated: Shared<BoxFuture<'static, ()>>,
+}
+
 /// The RFCOMM Channel associated with a DLCI for an RFCOMM Session. This channel is a client-
 /// interfacing channel - the remote end of the channel is held by a profile as an RFCOMM channel.
 ///
@@ -244,9 +258,7 @@ pub struct SessionChannel {
     /// The processing task associated with the channel. This is set through
     /// `self.establish()`, and indicates whether this SessionChannel is
     /// currently active.
-    processing_task: Option<fasync::Task<()>>,
-    /// The sender used to push user data to be written in the `processing_task`.
-    user_data_queue: Option<mpsc::Sender<FlowControlledData>>,
+    processing_task: Option<SessionChannelTask>,
     /// The inspect node for this channel.
     inspect: SessionChannelInspect,
 }
@@ -266,15 +278,14 @@ impl SessionChannel {
             role,
             flow_control: None,
             processing_task: None,
-            user_data_queue: None,
             inspect: SessionChannelInspect::default(),
         }
     }
 
     /// Returns true if this SessionChannel has been established. Namely, `self.establish()`
-    /// has been called, and a processing task started up.
+    /// has been called there is an active processing task.
     pub fn is_established(&self) -> bool {
-        self.processing_task.is_some()
+        self.finished().now_or_never().is_none()
     }
 
     /// Returns true if the parameters for this SessionChannel have been negotiated.
@@ -306,6 +317,7 @@ impl SessionChannel {
         dlci: DLCI,
         role: Role,
         flow_control: FlowControlMode,
+        termination_sender: oneshot::Sender<()>,
         mut channel: Channel,
         mut pending_writes: mpsc::Receiver<FlowControlledData>,
         mut frame_sender: mpsc::Sender<Frame>,
@@ -353,6 +365,8 @@ impl SessionChannel {
             }
         }
         info!("Profile-client processing task for DLCI {:?} finished", dlci);
+        // Client closed the `channel` - notify listener of termination.
+        let _ = termination_sender.send(());
     }
 
     /// Starts the processing task over the provided `channel`. The processing task will:
@@ -368,16 +382,18 @@ impl SessionChannel {
         let (user_data_queue, pending_writes) = mpsc::channel(0);
         self.flow_control =
             self.flow_control.or(Some(FlowControlMode::CreditBased(Credits::default())));
-        let processing_task = fasync::Task::local(Self::user_data_relay(
+        let (termination_sender, receiver) = oneshot::channel();
+        let _task = fasync::Task::local(Self::user_data_relay(
             self.dlci,
             self.role,
             self.flow_control.unwrap(),
+            termination_sender,
             channel,
             pending_writes,
             frame_sender,
         ));
-        self.user_data_queue = Some(user_data_queue);
-        self.processing_task = Some(processing_task);
+        let terminated = receiver.map(|_| ()).boxed().shared();
+        self.processing_task = Some(SessionChannelTask { _task, user_data_queue, terminated });
         trace!("Established SessionChannel for DLCI {:?}", self.dlci);
     }
 
@@ -388,10 +404,19 @@ impl SessionChannel {
             return Err(RfcommError::ChannelNotEstablished(self.dlci));
         }
 
-        // This unwrap is safe because the sender is guaranteed to be set if the channel
+        // This unwrap is safe because the task is guaranteed to be set if the channel
         // has been established.
-        let queue = self.user_data_queue.as_mut().unwrap();
+        let queue = &mut self.processing_task.as_mut().unwrap().user_data_queue;
         queue.try_send(data).map_err(|e| anyhow::format_err!("{:?}", e).into())
+    }
+}
+
+impl SignaledTask for SessionChannel {
+    fn finished(&self) -> BoxFuture<'static, ()> {
+        self.processing_task.as_ref().map_or_else(
+            || futures::future::ready(()).boxed(),
+            |task| task.terminated.clone().boxed(),
+        )
     }
 }
 
@@ -400,6 +425,7 @@ mod tests {
     use super::*;
 
     use futures::{channel::mpsc, pin_mut, task::Poll};
+    use matches::assert_matches;
     use std::convert::TryFrom;
 
     use crate::rfcomm::frame::FrameData;
@@ -478,6 +504,8 @@ mod tests {
         // Profile client no longer needs the RFCOMM channel - expect a Disc frame.
         drop(client);
         expect_frame(&mut exec, &mut outgoing_frames, FrameData::Disconnect, Some(dlci));
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        assert!(!session_channel.is_established());
     }
 
     /// Tests the SessionChannel relay with default flow control parameters (credit-based
@@ -707,5 +735,81 @@ mod tests {
             assert!(exec.run_until_stalled(&mut data_received_by_client).is_pending());
             assert!(exec.run_until_stalled(&mut receive_fut).is_ready());
         }
+    }
+
+    #[test]
+    fn finished_signal_resolves_when_session_channel_dropped() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let (session_channel, _client, _outgoing_frames) =
+            create_and_establish(Role::Initiator, DLCI::try_from(8).unwrap(), None);
+
+        // Finished signal is pending while the channel is active.
+        let mut finished = session_channel.finished();
+        assert_matches!(exec.run_until_stalled(&mut finished), Poll::Pending);
+
+        // SessionChannel is dropped (usually due to peer disconnection). Polling the finished
+        // signal thereafter is OK - should resolve immediately.
+        drop(session_channel);
+        assert_matches!(exec.run_until_stalled(&mut finished), Poll::Ready(_));
+    }
+
+    #[test]
+    fn finished_signal_resolves_when_client_disconnects() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let dlci = DLCI::try_from(19).unwrap();
+        let (session_channel, _client, mut outgoing_frames) =
+            create_and_establish(Role::Responder, dlci, None);
+
+        // Finished signal is pending while the channel is active.
+        let mut finished = session_channel.finished();
+        assert_matches!(exec.run_until_stalled(&mut finished), Poll::Pending);
+
+        // Client closes its end of the RFCOMM channel - expect the outgoing Disconnect frame.
+        drop(_client);
+        expect_frame(&mut exec, &mut outgoing_frames, FrameData::Disconnect, Some(dlci));
+        // Polling the finished signal thereafter is OK - should resolve.
+        assert_matches!(exec.run_until_stalled(&mut finished), Poll::Ready(_));
+        assert!(!session_channel.is_established());
+
+        // Checking again should resolve immediately.
+        let mut finished = session_channel.finished();
+        assert_matches!(exec.run_until_stalled(&mut finished), Poll::Ready(_));
+    }
+
+    #[test]
+    fn finished_signal_before_establishment_resolves_immediately() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let session_channel = SessionChannel::new(DLCI::try_from(19).unwrap(), Role::Initiator);
+        // Checking termination multiple times is OK.
+        assert!(!session_channel.is_established());
+        let mut finished = session_channel.finished();
+        assert_matches!(exec.run_until_stalled(&mut finished), Poll::Ready(_));
+        assert!(!session_channel.is_established());
+    }
+
+    #[test]
+    fn finish_signal_resolves_with_multiple_establishments() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let dlci = DLCI::try_from(19).unwrap();
+        let (mut session_channel, _client, _outgoing_frames) =
+            create_and_establish(Role::Responder, dlci, None);
+
+        let mut finished = session_channel.finished();
+        assert_matches!(exec.run_until_stalled(&mut finished), Poll::Pending);
+
+        // Establishment occurs again.
+        let (local, _remote) = Channel::create();
+        let (frame_sender, _frame_receiver) = mpsc::channel(0);
+        session_channel.establish(local, frame_sender);
+
+        // Finished signal from previous establishment should resolve.
+        assert_matches!(exec.run_until_stalled(&mut finished), Poll::Ready(_));
+        // New signal should be pending still.
+        let mut finished2 = session_channel.finished();
+        assert_matches!(exec.run_until_stalled(&mut finished2), Poll::Pending);
     }
 }
