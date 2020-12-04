@@ -25,7 +25,7 @@
 
 namespace {
 
-const int64_t kTestTimeout = 60;
+const int64_t kTestTimeout = 90;
 
 // Test fixture that sets up an environment suitable for Scenic pixel tests
 // and provides related utilities. The environment includes Scenic and

@@ -18,9 +18,9 @@ namespace gfx {
 
 namespace {
 
-// 15s is not enough time for some bots to launch Scenic, see fxbug.dev/52939.
+// 15s is not enough time for some bots to launch Scenic, see fxbug.dev/61751.
 constexpr zx::duration kScreenshotTimeout = zx::sec(15), kPresentTimeout = zx::sec(15),
-                       kIndirectPresentTimeout = zx::sec(30);
+                       kIndirectPresentTimeout = zx::sec(90);
 
 // These tests need Scenic and RootPresenter at minimum, which expand to the
 // dependencies below. Using |sys::testing::TestWithEnvironment|, we use
