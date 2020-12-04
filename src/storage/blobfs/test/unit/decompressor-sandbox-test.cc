@@ -49,7 +49,6 @@ void CompressData(std::unique_ptr<Compressor> compressor, void* input_data, size
   *size = compressor->Size();
 }
 
-
 class DecompressorSandboxTest : public ::testing::Test {
  public:
   void SetUp() override {
@@ -128,9 +127,9 @@ TEST_F(DecompressorSandboxTest, FullDecompression) {
                                    compressed_mapper_.start(), kMapSize, &compressor));
   CompressData(std::move(compressor), input_data_, &compressed_size);
   DecompressRequest request = {
-    {0, kDataSize},
-    {0, compressed_size},
-    ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::ZSTD),
+      {0, kDataSize},
+      {0, compressed_size},
+      ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::ZSTD),
   };
 
   DecompressResponse response;
@@ -180,8 +179,8 @@ TEST_F(DecompressorSandboxTest, ChunkedPartialDecompression) {
   size_t total_size = 0;
   size_t iterations = 0;
   while (total_size < kDataSize) {
-    zx::status<CompressionMapping> mapping_or =
-        local_decompressor->MappingForDecompressedRange(total_size, 1);
+    zx::status<CompressionMapping> mapping_or = local_decompressor->MappingForDecompressedRange(
+        total_size, 1, std::numeric_limits<size_t>::max());
     ASSERT_TRUE(mapping_or.is_ok());
     CompressionMapping mapping = mapping_or.value();
 
@@ -210,8 +209,7 @@ TEST_F(DecompressorSandboxTest, CorruptedInput) {
   DecompressRequest request = {
       {0, kDataSize},
       {0, kDataSize},
-      ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::ZSTD)
-  };
+      ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::ZSTD)};
   DecompressResponse response;
   SendRequest(&request, &response);
   // Error is really specific to the compression lib. Just verify that it failed.
@@ -220,8 +218,7 @@ TEST_F(DecompressorSandboxTest, CorruptedInput) {
   request = {
       {0, kDataSize},
       {0, kDataSize},
-      ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::ZSTD)
-  };
+      ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::ZSTD)};
   SendRequest(&request, &response);
   // Error is really specific to the compression lib. Just verify that it failed.
   ASSERT_NE(ZX_OK, response.status);
@@ -245,8 +242,7 @@ TEST_F(DecompressorSandboxTest, NonzeroOffsetsForFullDecompression) {
   DecompressRequest request = {
       {12, kDataSize},
       {0, kDataSize},
-      ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::ZSTD)
-  };
+      ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::ZSTD)};
   DecompressResponse response;
   SendRequest(&request, &response);
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, response.status);

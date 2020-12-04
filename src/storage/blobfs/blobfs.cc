@@ -135,11 +135,11 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   fs->block_info_ = block_info;
 
   auto fs_ptr = fs.get();
-  auto status_or_buffer = pager::StorageBackedTransferBuffer::Create(
+  auto status_or_uncompressed_buffer = pager::StorageBackedTransferBuffer::Create(
       pager::kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->Metrics());
-  if (!status_or_buffer.is_ok()) {
+  if (!status_or_uncompressed_buffer.is_ok()) {
     FX_LOGS(ERROR) << "Could not initialize uncompressed pager transfer buffer";
-    return status_or_buffer.status_value();
+    return status_or_uncompressed_buffer.status_value();
   }
   auto status_or_compressed_buffer = pager::StorageBackedTransferBuffer::Create(
       pager::kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->Metrics());
@@ -147,8 +147,9 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     FX_LOGS(ERROR) << "Could not initialize compressed pager transfer buffer";
     return status_or_compressed_buffer.status_value();
   }
-  auto status_or_pager = pager::UserPager::Create(std::move(status_or_buffer).value(),
+  auto status_or_pager = pager::UserPager::Create(std::move(status_or_uncompressed_buffer).value(),
                                                   std::move(status_or_compressed_buffer).value(),
+                                                  pager::kDecompressionBufferSize,
                                                   fs_ptr->Metrics(), options.sandbox_decompression);
   if (!status_or_pager.is_ok()) {
     FX_LOGS(ERROR) << "Could not initialize user pager";

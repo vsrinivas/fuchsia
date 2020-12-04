@@ -46,6 +46,9 @@ class TransferBuffer {
   // VMO are only defined up to |length| bytes (the value passed to the last call to
   // |TransferBuffer::Populate()|).
   virtual const zx::vmo& vmo() const = 0;
+
+  // Returns the size of the underlying VMO.
+  virtual size_t size() const = 0;
 };
 
 // StorageBackedTransferBuffer is an instance of |TransferBuffer| which can be loaded with data from
@@ -64,9 +67,10 @@ class StorageBackedTransferBuffer : public TransferBuffer {
                                       const UserPagerInfo& info) final;
 
   const zx::vmo& vmo() const final { return vmo_; }
+  size_t size() const final { return size_; }
 
  private:
-  StorageBackedTransferBuffer(zx::vmo vmo, storage::OwnedVmoid vmoid,
+  StorageBackedTransferBuffer(zx::vmo vmo, size_t size, storage::OwnedVmoid vmoid,
                               TransactionManager* txn_manager,
                               BlockIteratorProvider* block_iter_provider, BlobfsMetrics* metrics);
 
@@ -74,6 +78,7 @@ class StorageBackedTransferBuffer : public TransferBuffer {
   BlockIteratorProvider* block_iter_provider_ = nullptr;
 
   zx::vmo vmo_;
+  const size_t size_;
   storage::OwnedVmoid vmoid_;
   BlobfsMetrics* metrics_ = nullptr;
 };

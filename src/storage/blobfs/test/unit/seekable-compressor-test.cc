@@ -93,7 +93,9 @@ void DecompressionHelper(SeekableDecompressor* decompressor, unsigned* seed,
   // 1. Sequential decompression of each range
   size_t offset = 0;
   zx::status<CompressionMapping> mapping = zx::ok(CompressionMapping{});
-  while ((mapping = decompressor->MappingForDecompressedRange(offset, 1)).is_ok()) {
+  while ((mapping = decompressor->MappingForDecompressedRange(offset, 1,
+                                                              std::numeric_limits<size_t>::max()))
+             .is_ok()) {
     DecompressAndVerifyMapping(decompressor, static_cast<const uint8_t*>(compressed_buf),
                                compressed_size, static_cast<const uint8_t*>(expected),
                                expected_size, mapping.value());
@@ -102,18 +104,66 @@ void DecompressionHelper(SeekableDecompressor* decompressor, unsigned* seed,
   // 2. Random offsets
   for (int i = 0; i < 100; ++i) {
     offset = rand_r(seed) % expected_size;
-    mapping = decompressor->MappingForDecompressedRange(offset, 1);
+    mapping =
+        decompressor->MappingForDecompressedRange(offset, 1, std::numeric_limits<size_t>::max());
     ASSERT_TRUE(mapping.is_ok());
     DecompressAndVerifyMapping(decompressor, static_cast<const uint8_t*>(compressed_buf),
                                compressed_size, static_cast<const uint8_t*>(expected),
                                expected_size, mapping.value());
   }
   // 3. Full range
-  mapping = decompressor->MappingForDecompressedRange(0, expected_size);
+  mapping = decompressor->MappingForDecompressedRange(0, expected_size,
+                                                      std::numeric_limits<size_t>::max());
   ASSERT_TRUE(mapping.is_ok());
   DecompressAndVerifyMapping(decompressor, static_cast<const uint8_t*>(compressed_buf),
                              compressed_size, static_cast<const uint8_t*>(expected), expected_size,
                              mapping.value());
+}
+
+// Tests various input combinations for MappingForDecompressedRange(), focusing on the trimming
+// logic dictated by |max_decompressed_len|.
+void TestDecompressedRangeTrimming(SeekableDecompressor* decompressor, size_t chunk_size,
+                                   size_t total_size) {
+  // max_decompressed_len = 0
+  zx::status<CompressionMapping> mapping = decompressor->MappingForDecompressedRange(0, 1, 0);
+  ASSERT_TRUE(mapping.is_error());
+
+  // max_decomressed_len less than a single chunk
+  if (chunk_size > 1) {
+    mapping = decompressor->MappingForDecompressedRange(0, 1, chunk_size - 1);
+    if (chunk_size <= total_size) {
+      ASSERT_TRUE(mapping.is_error());
+    } else {
+      ASSERT_TRUE(mapping.is_ok());
+      EXPECT_EQ(mapping.value().decompressed_offset, 0ul);
+      EXPECT_EQ(mapping.value().decompressed_length, total_size);
+    }
+  }
+
+  // Trivial success case.
+  mapping = decompressor->MappingForDecompressedRange(0, 1, std::numeric_limits<size_t>::max());
+  ASSERT_TRUE(mapping.is_ok());
+  const size_t expected_decompressed_len = std::min(chunk_size, total_size);
+  EXPECT_EQ(mapping.value().decompressed_length, expected_decompressed_len);
+  EXPECT_EQ(mapping.value().decompressed_offset, 0ul);
+
+  // max_decompressed_len larger than a single chunk.
+  mapping = decompressor->MappingForDecompressedRange(0, 1, chunk_size + 1);
+  ASSERT_TRUE(mapping.is_ok());
+  EXPECT_LE(mapping.value().decompressed_length, chunk_size + 1);
+  EXPECT_EQ(mapping.value().decompressed_offset, 0ul);
+
+  // max_decompressed_len just large enough for a single chunk.
+  mapping = decompressor->MappingForDecompressedRange(0, 1, chunk_size);
+  ASSERT_TRUE(mapping.is_ok());
+  EXPECT_EQ(mapping.value().decompressed_length, expected_decompressed_len);
+  EXPECT_EQ(mapping.value().decompressed_offset, 0ul);
+
+  // max_decompressed_len just large enough for a single chunk. Requested length > 1.
+  mapping = decompressor->MappingForDecompressedRange(0, expected_decompressed_len, chunk_size);
+  ASSERT_TRUE(mapping.is_ok());
+  EXPECT_EQ(mapping.value().decompressed_length, expected_decompressed_len);
+  EXPECT_EQ(mapping.value().decompressed_offset, 0ul);
 }
 
 // Tests a contained case of compression and decompression.
@@ -148,6 +198,8 @@ void RunCompressDecompressTest(CompressionAlgorithm algorithm, DataType data_typ
   }
   DecompressionHelper(decompressor.get(), &seed, compressor->Data(), compressor->Size(),
                       input.get(), size);
+
+  TestDecompressedRangeTrimming(decompressor.get(), compressor->compressor().GetChunkSize(), size);
 }
 
 TEST(SeekableCompressorTest, CompressDecompressChunkCompressible1) {

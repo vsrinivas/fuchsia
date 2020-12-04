@@ -91,7 +91,8 @@ class ZSTDSeekableDecompressor : public Decompressor, public SeekableDecompresso
   zx_status_t DecompressRange(void* uncompressed_buf, size_t* uncompressed_size,
                               const void* compressed_buf, size_t max_compressed_size,
                               size_t offset) final;
-  zx::status<CompressionMapping> MappingForDecompressedRange(size_t offset, size_t len) final {
+  zx::status<CompressionMapping> MappingForDecompressedRange(size_t offset, size_t len,
+                                                             size_t max_decompressed_len) final {
     // TODO(markdittmer): Implement.
     ZX_ASSERT(false);
     return zx::error(ZX_ERR_INTERNAL);

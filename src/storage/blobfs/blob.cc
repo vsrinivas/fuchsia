@@ -229,8 +229,8 @@ class DecompressProducer : public Producer {
   // Decompress into the temporary buffer.
   zx_status_t Decompress() {
     size_t decompressed_length = std::min(buffer_size_, decompressed_remaining_);
-    auto mapping_or =
-        decompressor_->MappingForDecompressedRange(decompressed_offset_, decompressed_length);
+    auto mapping_or = decompressor_->MappingForDecompressedRange(
+        decompressed_offset_, decompressed_length, std::numeric_limits<size_t>::max());
     if (mapping_or.is_error()) {
       return mapping_or.error_value();
     }

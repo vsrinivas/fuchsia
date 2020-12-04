@@ -27,7 +27,7 @@
 namespace blobfs {
 namespace pager {
 
-// The size of a transfer buffer for reading from storage.
+// The size of the transfer buffer for reading from storage.
 //
 // The decision to use a single global transfer buffer is arbitrary; a pool of them could also be
 // available in the future for more fine-grained access. Moreover, the blobfs pager uses a single
@@ -37,7 +37,7 @@ namespace pager {
 // destination VMOS.
 constexpr uint64_t kTransferBufferSize = 256 * (1 << 20);
 
-// The size of a transfer buffer for reading from storage.
+// The size of the scratch buffer used for decompression.
 //
 // The decision to use a single global transfer buffer is arbitrary; a pool of them could also be
 // available in the future for more fine-grained access. Moreover, the blobfs pager uses a single
@@ -51,6 +51,11 @@ constexpr uint64_t kDecompressionBufferSize = 256 * (1 << 20);
 static_assert(kBlobfsBlockSize % PAGE_SIZE == 0);
 // Make sure the pager transfer buffer is block-aligned.
 static_assert(kTransferBufferSize % kBlobfsBlockSize == 0);
+// Make sure the decompression scratch buffer is block-aligned.
+static_assert(kDecompressionBufferSize % kBlobfsBlockSize == 0);
+// Make sure the pager transfer buffer and decompression buffer are sized per the worst case
+// compression ratio of 1.
+static_assert(kTransferBufferSize >= kDecompressionBufferSize);
 
 // Wrapper enum for error codes supported by the zx_pager_op_range(ZX_PAGER_OP_FAIL) syscall, used
 // to communicate userpager errors to the kernel, so that the error can be propagated to the
@@ -95,10 +100,13 @@ class UserPager {
 
   // Creates an instance of UserPager.
   // A new thread is created and started to process page fault requests.
-  // |buffer| is used to retrieve and buffer data from the underlying storage.
+  // |uncompressed_buffer| is used to retrieve and buffer uncompressed data from the underlying
+  // storage. |compressed_buffer| is used to retrieve and buffer compressed data from the underlying
+  // storage. |decompression_buffer_size| is the size of the scratch buffer to use for
+  // decompression.
   [[nodiscard]] static zx::status<std::unique_ptr<UserPager>> Create(
       std::unique_ptr<TransferBuffer> compressed_buffer, std::unique_ptr<TransferBuffer> buffer,
-      BlobfsMetrics* metrics, bool sandbox_decompression);
+      size_t decompression_buffer_size, BlobfsMetrics* metrics, bool sandbox_decompression);
 
   // Returns the pager handle.
   const zx::pager& Pager() const { return pager_; }
@@ -127,7 +135,7 @@ class UserPager {
   zx::pager pager_;
 
  private:
-  explicit UserPager(BlobfsMetrics* metrics);
+  UserPager(size_t decompression_buffer_size, BlobfsMetrics* metrics);
 
   // Helper function to apply a scheduling deadline profile to the pager |thread|. Called from
   // |UserPager::Create| after starting the pager thread.
@@ -153,23 +161,25 @@ class UserPager {
   //                  |...input_range...|
   // |..data_block..|..data_block..|..data_block..|
   //                |........output_range.........|
-  ReadRange GetBlockAlignedReadRange(const UserPagerInfo& info, uint64_t offset, uint64_t length);
+  ReadRange GetBlockAlignedReadRange(const UserPagerInfo& info, uint64_t offset,
+                                     uint64_t length) const;
   // Returns a range at least as big as GetBlockAlignedReadRange(), extended by an implementation
   // defined read-ahead algorithm.
   //
   // The same alignment guarantees for GetBlockAlignedReadRange() apply.
   ReadRange GetBlockAlignedExtendedRange(const UserPagerInfo& info, uint64_t offset,
-                                         uint64_t length);
+                                         uint64_t length) const;
 
   PagerErrorStatus TransferChunkedPagesToVmo(uint64_t offset, uint64_t length, const zx::vmo& vmo,
                                              const UserPagerInfo& info);
   PagerErrorStatus TransferUncompressedPagesToVmo(uint64_t offset, uint64_t length,
                                                   const zx::vmo& vmo, const UserPagerInfo& info);
 
-  // Scratch buffer for pager transfers.
+  // Scratch buffer for pager transfers of uncompressed data.
   // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, the VMO owned by this buffer
-  // needs to be unmapped before calling |zx_pager_supply_pages|. Map |transfer_buffer_.vmo()| only
-  // when an explicit address is required, e.g. for verification, and unmap it immediately after.
+  // needs to be unmapped before calling |zx_pager_supply_pages|. Map
+  // |uncompressed_transfer_buffer_.vmo()| only when an explicit address is required, e.g. for
+  // verification, and unmap it immediately after.
   std::unique_ptr<TransferBuffer> uncompressed_transfer_buffer_;
 
   // Scratch buffer for pager transfers of compressed data.
@@ -190,6 +200,10 @@ class UserPager {
   // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, this needs to be unmapped before
   // calling |zx_pager_supply_pages|.
   zx::vmo decompression_buffer_;
+
+  // Size of |decompression_buffer_|, stashed at vmo creation time to avoid a syscall each time the
+  // size needs to be queried.
+  const size_t decompression_buffer_size_;
 
   // Watchdog which triggers if any page faults exceed a threshold deadline.  This *must* come
   // before the loop below so that the loop, which might have references to the watchdog, is

@@ -39,6 +39,7 @@ namespace {
 constexpr size_t kDefaultPagedVmoSize = 100 * ZX_PAGE_SIZE;
 // kDefaultBlobSize is intentionally not page-aligned to exercise edge cases.
 constexpr size_t kDefaultBlobSize = kDefaultPagedVmoSize - 42;
+constexpr size_t kDefaultFrameSize = 32 * 1024;
 constexpr int kNumReadRequests = 100;
 constexpr int kNumThreads = 10;
 
@@ -61,7 +62,9 @@ class MockBlob {
 
     zx_info_vmo_t info;
     ZX_ASSERT(vmo_.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr) == ZX_OK);
-    ASSERT_EQ(info.committed_bytes, fbl::round_up(length, ZX_PAGE_SIZE));
+    // The exact range will be committed for uncompressed blobs, but for compressed blobs the
+    // committed range can be larger, depending on the frame size.
+    ASSERT_GE(info.committed_bytes, fbl::round_up(length, ZX_PAGE_SIZE));
   }
 
   void Read(uint64_t offset, uint64_t length) {
@@ -207,7 +210,7 @@ class MockTransferBuffer : public TransferBuffer {
     EXPECT_EQ(sz % ZX_PAGE_SIZE, 0ul);
     zx::vmo vmo;
     EXPECT_EQ(zx::vmo::create(sz, 0, &vmo), ZX_OK);
-    std::unique_ptr<MockTransferBuffer> buffer(new MockTransferBuffer(std::move(vmo)));
+    std::unique_ptr<MockTransferBuffer> buffer(new MockTransferBuffer(std::move(vmo), sz));
     buffer->blob_registry_ = registry;
     return buffer;
   }
@@ -273,11 +276,13 @@ class MockTransferBuffer : public TransferBuffer {
   }
 
   const zx::vmo& vmo() const final { return vmo_; }
+  size_t size() const final { return size_; }
 
  private:
-  explicit MockTransferBuffer(zx::vmo vmo) : vmo_(std::move(vmo)) {}
+  MockTransferBuffer(zx::vmo vmo, size_t size) : vmo_(std::move(vmo)), size_(size) {}
 
   zx::vmo vmo_;
+  const size_t size_;
   fzl::VmoMapper mapping_;
   BlobRegistry* blob_registry_;
   bool do_partial_transfer_ = false;
@@ -287,13 +292,15 @@ class MockTransferBuffer : public TransferBuffer {
 
 class BlobfsPagerTest : public testing::Test {
  protected:
-  void SetUp() override {
-    auto buffer = MockTransferBuffer::Create(kTransferBufferSize, &blob_registry_);
-    auto compressed_buffer = MockTransferBuffer::Create(kTransferBufferSize, &blob_registry_);
+  void SetUp() override { InitPager(); }
+  void InitPager(size_t transfer_buffer_size = kTransferBufferSize,
+                 size_t decompression_buffer_size = kDecompressionBufferSize) {
+    auto buffer = MockTransferBuffer::Create(transfer_buffer_size, &blob_registry_);
+    auto compressed_buffer = MockTransferBuffer::Create(transfer_buffer_size, &blob_registry_);
     buffer_ = buffer.get();
     compressed_buffer_ = compressed_buffer.get();
-    auto status_or_pager =
-        UserPager::Create(std::move(buffer), std::move(compressed_buffer), &metrics_, false);
+    auto status_or_pager = UserPager::Create(std::move(buffer), std::move(compressed_buffer),
+                                             decompression_buffer_size, &metrics_, false);
     ASSERT_TRUE(status_or_pager.is_ok());
     pager_ = std::move(status_or_pager).value();
     factory_ = std::make_unique<MockBlobFactory>(pager_.get(), &metrics_);
@@ -665,6 +672,102 @@ TEST_F(BlobfsPagerTest, ReadWithMerkleTreeSharingTheLastBlockWithData) {
   // will fail.
   buffer_->SetDoMerkleTreeAtEndOfData();
   blob->Read(0, blob_size);
+}
+
+TEST_F(BlobfsPagerTest, MultipleSupplies) {
+  // Create small transfer buffers, so that an entire blob cannot be committed at once.
+  // Large enough to hold an entire frame (32k), but do not align to the frame size.
+  InitPager(10 * kBlobfsBlockSize, 10 * kBlobfsBlockSize);
+
+  // Commit the entire blob.
+  MockBlob* blob1 = CreateBlob('a');
+  blob1->CommitRange(0, kDefaultBlobSize);
+
+  // Commit from a non-zero offset.
+  MockBlob* blob2 = CreateBlob('b');
+  size_t start = kDefaultFrameSize + 39;
+  blob2->CommitRange(start, kDefaultBlobSize - start);
+
+  // Read random offsets and lengths from the blob.
+  MockBlob* blob3 = CreateBlob('c');
+  RandomBlobReader reader;
+  reader(blob3);
+
+  // Commit a blob with size < target frame size (32k).
+  MockBlob* blob4 = CreateBlob('d', CompressionAlgorithm::UNCOMPRESSED, ZX_PAGE_SIZE + 27);
+  blob4->CommitRange(0, ZX_PAGE_SIZE + 27);
+}
+
+TEST_F(BlobfsPagerTest, MultipleSupplies_ZstdChunked) {
+  // Create small transfer buffers, so that an entire blob cannot be committed at once.
+  // Large enough to hold an entire frame (32k), but do not align to the frame size.
+  InitPager(10 * kBlobfsBlockSize, 10 * kBlobfsBlockSize);
+
+  // Commit the entire blob.
+  MockBlob* blob1 = CreateBlob('a', CompressionAlgorithm::CHUNKED);
+  blob1->CommitRange(0, kDefaultBlobSize);
+
+  // Commit from a non-zero offset.
+  MockBlob* blob2 = CreateBlob('b', CompressionAlgorithm::CHUNKED);
+  size_t start = kDefaultFrameSize + 39;
+  blob2->CommitRange(start, kDefaultBlobSize - start);
+
+  // Read random offsets and lengths from the blob.
+  MockBlob* blob3 = CreateBlob('c', CompressionAlgorithm::CHUNKED);
+  RandomBlobReader reader;
+  reader(blob3);
+
+  // Commit a blob with size < target frame size (32k).
+  MockBlob* blob4 = CreateBlob('d', CompressionAlgorithm::CHUNKED, ZX_PAGE_SIZE + 27);
+  blob4->CommitRange(0, ZX_PAGE_SIZE + 27);
+}
+
+TEST_F(BlobfsPagerTest, MultipleSuppliesFrameAligned) {
+  // Create small transfer buffers, so that the entire blob cannot be committed at once.
+  // Align the buffers to the default frame size.
+  InitPager(3 * kDefaultFrameSize, 3 * kDefaultFrameSize);
+
+  // Commit the entire blob.
+  MockBlob* blob1 = CreateBlob('a');
+  blob1->CommitRange(0, kDefaultBlobSize);
+
+  // Commit from a non-zero offset.
+  MockBlob* blob2 = CreateBlob('b');
+  size_t start = kDefaultFrameSize + 39;
+  blob2->CommitRange(start, kDefaultBlobSize - start);
+
+  // Read random offsets and lengths from the blob.
+  MockBlob* blob3 = CreateBlob('c');
+  RandomBlobReader reader;
+  reader(blob3);
+
+  // Commit a blob with size < target frame size (32k).
+  MockBlob* blob4 = CreateBlob('d', CompressionAlgorithm::UNCOMPRESSED, ZX_PAGE_SIZE + 27);
+  blob4->CommitRange(0, ZX_PAGE_SIZE + 27);
+}
+
+TEST_F(BlobfsPagerTest, MultipleSuppliesFrameAligned_ZstdChunked) {
+  // Create small transfer buffers, so that the entire blob cannot be committed at once.
+  // Align the buffers to the default frame size.
+  InitPager(3 * kDefaultFrameSize, 3 * kDefaultFrameSize);
+
+  // Commit the entire blob.
+  MockBlob* blob1 = CreateBlob('a', CompressionAlgorithm::CHUNKED);
+  blob1->CommitRange(0, kDefaultBlobSize);
+
+  // Commit from a non-zero offset.
+  MockBlob* blob2 = CreateBlob('b', CompressionAlgorithm::CHUNKED);
+  size_t start = kDefaultFrameSize + 39;
+  blob2->CommitRange(start, kDefaultBlobSize - start);
+
+  // Read random offsets and lengths from the blob.
+  MockBlob* blob3 = CreateBlob('c', CompressionAlgorithm::CHUNKED);
+  RandomBlobReader reader;
+  reader(blob3);
+
+  // Commit a blob with size < target frame size (32k).
+  MockBlob* blob4 = CreateBlob('d', CompressionAlgorithm::CHUNKED, ZX_PAGE_SIZE + 27);
+  blob4->CommitRange(0, ZX_PAGE_SIZE + 27);
 }
 
 }  // namespace

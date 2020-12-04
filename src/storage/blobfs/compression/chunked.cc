@@ -182,7 +182,11 @@ zx_status_t SeekableChunkedDecompressor::DecompressRange(void* uncompressed_buf,
 }
 
 zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompressedRange(
-    size_t offset, size_t len) {
+    size_t offset, size_t len, size_t max_decompressed_len) {
+  if (max_decompressed_len == 0) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
   std::optional<unsigned> first_idx = seek_table_.EntryForDecompressedOffset(offset);
   std::optional<unsigned> last_idx = seek_table_.EntryForDecompressedOffset(offset + len - 1);
   if (!first_idx || !last_idx) {
@@ -201,12 +205,54 @@ zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompress
     // parsing, but we defensively check it here as well to prevent underflow.
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
-  return zx::ok(CompressionMapping{
-      .compressed_offset = first_entry.compressed_offset,
-      .compressed_length = compressed_end - first_entry.compressed_offset,
-      .decompressed_offset = first_entry.decompressed_offset,
-      .decompressed_length = decompressed_end - first_entry.decompressed_offset,
-  });
+
+  // Return the computed range if its size falls within max_decompressed_len.
+  if (likely(decompressed_end - first_entry.decompressed_offset <= max_decompressed_len)) {
+    return zx::ok(CompressionMapping{
+        .compressed_offset = first_entry.compressed_offset,
+        .compressed_length = compressed_end - first_entry.compressed_offset,
+        .decompressed_offset = first_entry.decompressed_offset,
+        .decompressed_length = decompressed_end - first_entry.decompressed_offset,
+    });
+  }
+
+  size_t max_decompressed_end;
+  if (add_overflow(first_entry.decompressed_offset, max_decompressed_len, &max_decompressed_end)) {
+    // We're here because (decompressed_end - first_entry.decompressed_offset) is larger than
+    // max_decompressed_len. So by definition first_entry.decompressed_offset + max_decompressed_len
+    // cannot result in an overflow, as we know that decompressed_end is valid. This likely
+    // indicates some kind of corruption in the seek table.
+    return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
+  }
+
+  // Start at the entry that contains the offset (max_decompressed_end - 1) and work backwards until
+  // we hit the required size constraint.
+  std::optional<unsigned> max_idx =
+      seek_table_.EntryForDecompressedOffset(max_decompressed_end - 1);
+  if (!max_idx) {
+    // This again cannot happen for similar reasons as the overflow check above.
+    return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
+  }
+  unsigned idx = *max_idx;
+  while (idx >= first_idx) {
+    const chunked_compression::SeekTableEntry& max_entry = seek_table_.Entries()[idx];
+    compressed_end = max_entry.compressed_offset + max_entry.compressed_size;
+    decompressed_end = max_entry.decompressed_offset + max_entry.decompressed_size;
+    if (decompressed_end <= max_decompressed_end) {
+      return zx::ok(CompressionMapping{
+          .compressed_offset = first_entry.compressed_offset,
+          .compressed_length = compressed_end - first_entry.compressed_offset,
+          .decompressed_offset = first_entry.decompressed_offset,
+          .decompressed_length = decompressed_end - first_entry.decompressed_offset,
+      });
+    }
+    if (idx == 0) {
+      break;
+    }
+    --idx;
+  }
+  // We cannot accommodate even a single entry within max_decompressed_len.
+  return zx::error(ZX_ERR_OUT_OF_RANGE);
 }
 
 }  // namespace blobfs

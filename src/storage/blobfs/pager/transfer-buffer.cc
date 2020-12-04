@@ -11,13 +11,15 @@
 namespace blobfs {
 namespace pager {
 
-StorageBackedTransferBuffer::StorageBackedTransferBuffer(zx::vmo vmo, storage::OwnedVmoid vmoid,
+StorageBackedTransferBuffer::StorageBackedTransferBuffer(zx::vmo vmo, size_t size,
+                                                         storage::OwnedVmoid vmoid,
                                                          TransactionManager* txn_manager,
                                                          BlockIteratorProvider* block_iter_provider,
                                                          BlobfsMetrics* metrics)
     : txn_manager_(txn_manager),
       block_iter_provider_(block_iter_provider),
       vmo_(std::move(vmo)),
+      size_(size),
       vmoid_(std::move(vmoid)),
       metrics_(metrics) {}
 
@@ -42,7 +44,7 @@ zx::status<std::unique_ptr<StorageBackedTransferBuffer>> StorageBackedTransferBu
   }
 
   return zx::ok(std::unique_ptr<StorageBackedTransferBuffer>(new StorageBackedTransferBuffer(
-      std::move(vmo), std::move(vmoid), txn_manager, block_iter_provider, metrics)));
+      std::move(vmo), size, std::move(vmoid), txn_manager, block_iter_provider, metrics)));
 }
 
 zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t length,

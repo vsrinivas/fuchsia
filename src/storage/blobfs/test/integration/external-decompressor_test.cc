@@ -132,7 +132,7 @@ zx::status<std::vector<CompressionMapping>> GetMappings(SeekableDecompressor* de
   size_t current = 0;
   while (current < length) {
     zx::status<CompressionMapping> mapping_or =
-        decompressor->MappingForDecompressedRange(current, 1);
+        decompressor->MappingForDecompressedRange(current, 1, std::numeric_limits<size_t>::max());
     if (!mapping_or.is_ok()) {
       return mapping_or.take_error();
     }
