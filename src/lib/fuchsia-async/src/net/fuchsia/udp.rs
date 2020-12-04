@@ -47,6 +47,7 @@ impl UdpSocket {
         self.0.as_ref().local_addr()
     }
 
+    #[must_use]
     pub fn recv_from<'a>(&'a self, buf: &'a mut [u8]) -> RecvFrom<'a> {
         RecvFrom { socket: self, buf }
     }
@@ -70,6 +71,7 @@ impl UdpSocket {
         }
     }
 
+    #[must_use]
     pub fn send_to<'a>(&'a self, buf: &'a [u8], addr: SocketAddr) -> SendTo<'a> {
         SendTo { socket: self, buf, addr }
     }
