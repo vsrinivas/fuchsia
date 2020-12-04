@@ -4,6 +4,7 @@
 #ifndef SRC_GRAPHICS_DRIVERS_AML_GPU_AML_GPU_H_
 #define SRC_GRAPHICS_DRIVERS_AML_GPU_AML_GPU_H_
 
+#include <fuchsia/hardware/registers/llcpp/fidl.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 
@@ -13,7 +14,9 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/platform/device.h>
+#include <ddktl/protocol/registers.h>
 #include <ddktl/protocol/sysmem.h>
+#include <soc/aml-common/aml-registers.h>
 
 #define GPU_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define GPU_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -34,7 +37,6 @@ constexpr uint32_t kFinalMuxBitShift = 31;
 enum {
   MMIO_GPU,
   MMIO_HIU,
-  MMIO_PRESET,
 };
 
 typedef struct {
@@ -83,8 +85,9 @@ class AmlGpu final : public DdkDeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL
   ddk::PDev pdev_;
 
   std::optional<ddk::MmioBuffer> hiu_buffer_;
-  std::optional<ddk::MmioBuffer> preset_buffer_;
   std::optional<ddk::MmioBuffer> gpu_buffer_;
+
+  ::llcpp::fuchsia::hardware::registers::Device::SyncClient reset_register_;
 
   aml_gpu_block_t* gpu_block_;
   std::unique_ptr<aml_hiu_dev_t> hiu_dev_;

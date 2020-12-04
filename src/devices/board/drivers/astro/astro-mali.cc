@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <hw/reg.h>
+#include <soc/aml-common/aml-registers.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "astro.h"
@@ -20,10 +22,6 @@ static const pbus_mmio_t mali_mmios[] = {
     {
         .base = S905D2_HIU_BASE,
         .length = S905D2_HIU_LENGTH,
-    },
-    {
-        .base = S905D2_RESET_BASE,
-        .length = S905D2_RESET_LENGTH,
     },
 };
 
@@ -64,14 +62,30 @@ static const pbus_dev_t mali_dev = []() {
   return dev;
 }();
 
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+static const zx_bind_inst_t reset_register_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
+    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_MALI_RESET),
+};
+static const device_fragment_part_t reset_register_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(reset_register_match), reset_register_match},
+};
+static const device_fragment_t mali_fragments[] = {
+    {"register-reset", countof(reset_register_fragment), reset_register_fragment},
+};
+
 zx_status_t Astro::MaliInit() {
   // Populate the BTI information
   mali_btis[0].iommu_index = 0;
   mali_btis[0].bti_id = BTI_MALI;
 
-  zx_status_t status = pbus_.DeviceAdd(&mali_dev);
+  zx_status_t status =
+      pbus_.CompositeDeviceAdd(&mali_dev, mali_fragments, countof(mali_fragments), UINT32_MAX);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
+    zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;
   }
   return status;

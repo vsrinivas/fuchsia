@@ -8,7 +8,7 @@
     "sandbox": {
         "dev": [
             "class/gpu-performance-counters",
-            "sys"
+            "mali/aml-gpu"
         ],
         "features": [
             "isolated-temp",

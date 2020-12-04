@@ -120,33 +120,57 @@ zx_status_t AmlGpu::Gp0Init() {
 }
 
 void AmlGpu::InitClock() {
-  uint32_t temp;
+  {
+    auto result = reset_register_.WriteRegister32(gpu_block_->reset0_mask_offset,
+                                                  aml_registers::MALI_RESET0_MASK, 0);
+    if ((result.status() != ZX_OK) || result->result.is_err()) {
+      zxlogf(ERROR, "Reset0 Mask Clear failed\n");
+    }
+  }
 
-  temp = preset_buffer_->Read32(gpu_block_->reset0_mask_offset);
-  temp &= ~(1 << 20);
-  preset_buffer_->Write32(temp, gpu_block_->reset0_mask_offset);
+  {
+    auto result = reset_register_.WriteRegister32(gpu_block_->reset0_level_offset,
+                                                  aml_registers::MALI_RESET0_MASK, 0);
+    if ((result.status() != ZX_OK) || result->result.is_err()) {
+      zxlogf(ERROR, "Reset0 Level Clear failed\n");
+    }
+  }
 
-  temp = preset_buffer_->Read32(gpu_block_->reset0_level_offset);
-  temp &= ~(1 << 20);
-  preset_buffer_->Write32(temp, gpu_block_->reset0_level_offset);
+  {
+    auto result = reset_register_.WriteRegister32(gpu_block_->reset2_mask_offset,
+                                                  aml_registers::MALI_RESET2_MASK, 0);
+    if ((result.status() != ZX_OK) || result->result.is_err()) {
+      zxlogf(ERROR, "Reset2 Mask Clear failed\n");
+    }
+  }
 
-  temp = preset_buffer_->Read32(gpu_block_->reset2_mask_offset);
-  temp &= ~(1 << 14);
-  preset_buffer_->Write32(temp, gpu_block_->reset2_mask_offset);
-
-  temp = preset_buffer_->Read32(gpu_block_->reset2_level_offset);
-  temp &= ~(1 << 14);
-  preset_buffer_->Write32(temp, gpu_block_->reset2_level_offset);
+  {
+    auto result = reset_register_.WriteRegister32(gpu_block_->reset2_level_offset,
+                                                  aml_registers::MALI_RESET2_MASK, 0);
+    if ((result.status() != ZX_OK) || result->result.is_err()) {
+      zxlogf(ERROR, "Reset2 Level Clear failed\n");
+    }
+  }
 
   SetInitialClkFreqSource(gpu_block_->initial_clock_index);
 
-  temp = preset_buffer_->Read32(gpu_block_->reset0_level_offset);
-  temp |= 1 << 20;
-  preset_buffer_->Write32(temp, gpu_block_->reset0_level_offset);
+  {
+    auto result = reset_register_.WriteRegister32(gpu_block_->reset0_level_offset,
+                                                  aml_registers::MALI_RESET0_MASK,
+                                                  aml_registers::MALI_RESET0_MASK);
+    if ((result.status() != ZX_OK) || result->result.is_err()) {
+      zxlogf(ERROR, "Reset2 Level Set failed\n");
+    }
+  }
 
-  temp = preset_buffer_->Read32(gpu_block_->reset2_level_offset);
-  temp |= 1 << 14;
-  preset_buffer_->Write32(temp, gpu_block_->reset2_level_offset);
+  {
+    auto result = reset_register_.WriteRegister32(gpu_block_->reset2_level_offset,
+                                                  aml_registers::MALI_RESET2_MASK,
+                                                  aml_registers::MALI_RESET2_MASK);
+    if ((result.status() != ZX_OK) || result->result.is_err()) {
+      zxlogf(ERROR, "Reset2 Level Set failed\n");
+    }
+  }
 
   gpu_buffer_->Write32(0x2968A819, 4 * kPwrKey);
   gpu_buffer_->Write32(0xfff | (0x20 << 16), 4 * kPwrOverride1);
@@ -177,7 +201,17 @@ zx_status_t AmlGpu::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
 }
 
 zx_status_t AmlGpu::Bind() {
-  pdev_ = ddk::PDev(parent_);
+  ddk::CompositeProtocolClient composite(parent_);
+  if (!composite.is_valid()) {
+    GPU_ERROR("could not get composite protocol\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  pdev_ = ddk::PDev(composite);
+  if (!pdev_.is_valid()) {
+    GPU_ERROR("could not get platform device protocol\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   zx_status_t status = pdev_.MapMmio(MMIO_GPU, &gpu_buffer_);
   if (status != ZX_OK) {
@@ -186,12 +220,6 @@ zx_status_t AmlGpu::Bind() {
   }
 
   status = pdev_.MapMmio(MMIO_HIU, &hiu_buffer_);
-  if (status != ZX_OK) {
-    GPU_ERROR("pdev_map_mmio_buffer failed\n");
-    return status;
-  }
-
-  status = pdev_.MapMmio(MMIO_PRESET, &preset_buffer_);
   if (status != ZX_OK) {
     GPU_ERROR("pdev_map_mmio_buffer failed\n");
     return status;
@@ -218,6 +246,20 @@ zx_status_t AmlGpu::Bind() {
       GPU_ERROR("unsupported SOC PID %u\n", info.pid);
       return ZX_ERR_INVALID_ARGS;
   }
+
+  ddk::RegistersProtocolClient reset_register(composite, "register-reset");
+  if (!reset_register.is_valid()) {
+    GPU_ERROR("could not get reset_register fragment");
+    return ZX_ERR_NO_RESOURCES;
+  }
+  zx::channel register_client_end, register_server_end;
+  if ((status = zx::channel::create(0, &register_client_end, &register_server_end)) != ZX_OK) {
+    GPU_ERROR("could not create channel %d\n", status);
+    return status;
+  }
+  reset_register.Connect(std::move(register_server_end));
+  reset_register_ =
+      ::llcpp::fuchsia::hardware::registers::Device::SyncClient(std::move(register_client_end));
 
   if (info.pid == PDEV_PID_AMLOGIC_S905D2) {
     status = Gp0Init();
@@ -265,7 +307,7 @@ static zx_driver_ops_t aml_gpu_driver_ops = {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(aml_gpu, aml_gpu_driver_ops, "zircon", "0.1", 6)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_MALI_INIT),
     // we support multiple SOC variants

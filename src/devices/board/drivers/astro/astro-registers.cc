@@ -63,6 +63,31 @@ zx_status_t Astro::RegistersInit() {
                                    },
                                });
 
+  register_entries[aml_registers::REGISTER_MALI_RESET] =
+      registers::BuildMetadata(allocator, aml_registers::REGISTER_MALI_RESET, RESET_MMIO,
+                               std::vector<registers::MaskEntryBuilder<uint32_t>>{
+                                   {
+                                       .mask = aml_registers::MALI_RESET0_MASK,
+                                       .mmio_offset = S905D2_RESET0_MASK,
+                                       .reg_count = 1,
+                                   },
+                                   {
+                                       .mask = aml_registers::MALI_RESET0_MASK,
+                                       .mmio_offset = S905D2_RESET0_LEVEL,
+                                       .reg_count = 1,
+                                   },
+                                   {
+                                       .mask = aml_registers::MALI_RESET2_MASK,
+                                       .mmio_offset = S905D2_RESET2_MASK,
+                                       .reg_count = 1,
+                                   },
+                                   {
+                                       .mask = aml_registers::MALI_RESET2_MASK,
+                                       .mmio_offset = S905D2_RESET2_LEVEL,
+                                       .reg_count = 1,
+                                   },
+                               });
+
   auto metadata =
       registers::BuildMetadata(allocator, std::move(mmio_entries), std::move(register_entries));
   fidl::OwnedEncodedMessage<registers::Metadata> encoded_metadata(&metadata);

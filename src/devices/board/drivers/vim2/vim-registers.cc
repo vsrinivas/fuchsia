@@ -8,6 +8,7 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <soc/aml-common/aml-registers.h>
+#include <soc/aml-s912/s912-hw.h>
 
 #include "src/devices/lib/metadata/llcpp/registers.h"
 #include "vim.h"
@@ -17,23 +18,57 @@ namespace vim {
 namespace {
 
 enum MmioMetadataIdx {
+  RESET_MMIO,
+
   MMIO_COUNT,
 };
 
 }  // namespace
 
 zx_status_t Vim::RegistersInit() {
-  static const pbus_mmio_t registers_mmios[] = {};
+  static const pbus_mmio_t registers_mmios[] = {
+      {
+          .base = S912_PRESET_BASE,
+          .length = S912_PRESET_LENGTH,
+      },
+  };
 
   fidl::BufferThenHeapAllocator<2048> allocator;
   fidl::VectorView<registers::MmioMetadataEntry> mmio_entries;
   mmio_entries.set_data(allocator.make<registers::MmioMetadataEntry[]>(MMIO_COUNT));
   mmio_entries.set_count(MMIO_COUNT);
 
+  mmio_entries[RESET_MMIO] = registers::BuildMetadata(allocator, RESET_MMIO);
+
   fidl::VectorView<registers::RegistersMetadataEntry> register_entries;
   register_entries.set_data(
       allocator.make<registers::RegistersMetadataEntry[]>(aml_registers::REGISTER_ID_COUNT));
   register_entries.set_count(aml_registers::REGISTER_ID_COUNT);
+
+  register_entries[aml_registers::REGISTER_MALI_RESET] =
+      registers::BuildMetadata(allocator, aml_registers::REGISTER_MALI_RESET, RESET_MMIO,
+                               std::vector<registers::MaskEntryBuilder<uint32_t>>{
+                                   {
+                                       .mask = aml_registers::MALI_RESET0_MASK,
+                                       .mmio_offset = S912_RESET0_MASK * 4,
+                                       .reg_count = 1,
+                                   },
+                                   {
+                                       .mask = aml_registers::MALI_RESET0_MASK,
+                                       .mmio_offset = S912_RESET0_LEVEL * 4,
+                                       .reg_count = 1,
+                                   },
+                                   {
+                                       .mask = aml_registers::MALI_RESET2_MASK,
+                                       .mmio_offset = S912_RESET2_MASK * 4,
+                                       .reg_count = 1,
+                                   },
+                                   {
+                                       .mask = aml_registers::MALI_RESET2_MASK,
+                                       .mmio_offset = S912_RESET2_LEVEL * 4,
+                                       .reg_count = 1,
+                                   },
+                               });
 
   auto metadata =
       registers::BuildMetadata(allocator, std::move(mmio_entries), std::move(register_entries));

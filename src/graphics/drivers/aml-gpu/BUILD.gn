@@ -19,8 +19,10 @@ source_set("sources") {
     "//sdk/banjo/ddk.protocol.iommu",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.registers",
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.hardware.gpu.clock:fuchsia.hardware.gpu.clock_c",
+    "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_llcpp",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
@@ -47,7 +49,10 @@ executable("aml-gpu-test-bin") {
   sources = [ "aml-gpu-test.cc" ]
   deps = [
     ":sources",
+    "//src/devices/registers/testing/mock-registers",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

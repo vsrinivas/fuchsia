@@ -11,6 +11,9 @@
 
 namespace aml_usb_phy {
 
+constexpr uint32_t RESET1_REGISTER_OFFSET = 0x8;
+constexpr uint32_t RESET1_LEVEL_OFFSET = 0x84;
+
 // PHY register offsets
 constexpr uint32_t U2P_REGISTER_OFFSET = 32;
 constexpr uint32_t U2P_R0_OFFSET = 0x0;

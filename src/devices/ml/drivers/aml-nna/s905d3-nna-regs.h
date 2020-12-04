@@ -24,7 +24,7 @@ static aml_nna::AmlNnaDevice::NnaBlock S905d3NnaBlock{
     .hhi_mem_pd_reg1_offset = 0x47 << 2,
 
     // RESET2_LEVEL
-    .reset_level2_offset = aml_registers::RESET2_LEVEL_OFFSET,
+    .reset_level2_offset = 0x88,
 
     // HHI_NN_CLK_CNTL
     .clock_control_offset = 0x72 << 2,
