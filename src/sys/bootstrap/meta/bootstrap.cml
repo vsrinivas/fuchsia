@@ -626,9 +626,11 @@
             to: [
                 "#base_resolver",
                 "#console-launcher",
+                "#device_name_provider",
                 "#fshost",
                 "#netsvc",
                 "#power_manager",
+                "#pwrbtn-monitor",
                 "#svchost",
             ],
         },
