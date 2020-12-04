@@ -1,6 +1,7 @@
+include /src/dart/OWNERS
+
 pylaligand@google.com
 dworsham@google.com
-chaselatta@google.com
 
 per-file fidl_dart.gni = file: /src/fidl/OWNERS
 per-file fidlmerge_dart.gni = file: /src/fidl/OWNERS

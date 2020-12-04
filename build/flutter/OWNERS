@@ -1,4 +1,5 @@
-chaselatta@google.com
+include /src/dart/OWNERS
+
 kaushikiska@google.com
 pylaligand@google.com
 zra@google.com

@@ -1,4 +1,5 @@
-chaselatta@google.com
+include /src/dart/OWNERS
+
 dworsham@google.com
 
 # COMPONENT: FlutteronFuchsia
