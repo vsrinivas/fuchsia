@@ -106,7 +106,10 @@ pub fn check_includes(
         if !includes.contains(&expected) {
             return Err(Error::Validate {
                 schema_name: None,
-                err: format!("{:?} must include {}. See: {}", &file, &expected, CHECK_INCLUDES_URL),
+                err: format!(
+                    "{:?} must include {}.\nSee: {}",
+                    &file, &expected, CHECK_INCLUDES_URL
+                ),
                 filename: file.to_str().map(String::from),
             });
         }
