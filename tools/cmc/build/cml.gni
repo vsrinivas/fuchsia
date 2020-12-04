@@ -30,30 +30,6 @@ template("cm") {
     visibility = [ ":*" ]
   }
 
-  cmc("${target_name}_include") {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
-    visibility = [ ":*" ]
-    inputs = [ invoker.manifest ]
-    output = "${target_out_dir}/${target_name}.cml"
-    outputs = [ output ]
-    depfile = output + ".d"
-
-    args = [
-      "include",
-      rebase_path(invoker.manifest, root_build_dir),
-      "--output",
-      rebase_path(output, root_build_dir),
-      "--includepath",
-      rebase_path("//", root_build_dir),
-      "--depfile",
-      rebase_path(depfile, root_build_dir),
-    ]
-  }
-
   cmc(target_name) {
     forward_variables_from(invoker,
                            [
@@ -70,10 +46,7 @@ template("cm") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [
-      ":${target_name}_check_includes",
-      ":${target_name}_include",
-    ]
+    deps += [ ":${target_name}_check_includes" ]
 
     compiled_output = "${target_out_dir}/${output_name}"
     inputs = [ invoker.manifest ]
