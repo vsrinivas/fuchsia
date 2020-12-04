@@ -2,10 +2,6 @@
 // correctly working and that rights that are filtered are correctly being opened with lower
 // privileges in the use_dir_rights child.
 {
-    include: [
-        // http://fxbug.dev/65728 delete the below
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-    ],
     children: [
         {
             name: "use_dir_rights",

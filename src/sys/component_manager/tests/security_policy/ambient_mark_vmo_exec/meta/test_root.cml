@@ -1,8 +1,4 @@
 {
-    include: [
-        // http://fxbug.dev/65728 delete the below
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-    ],
     children: [
         // Three children which are all identical except for their identity (monikers) plus the
         // fact that #policy_not_requested does not ask for job_policy_ambient_mark_vmo_exec. The
