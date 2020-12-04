@@ -152,7 +152,7 @@ if (is_linux || is_mac) {
         tags = [ "e2e-isolated" ]
       },
     ]
-    pave_timeout = "5m"
+    pave_timeout = "10m"
     cycle_count = "1"
     cycle_timeout = "10m"
   }
@@ -170,7 +170,7 @@ if (is_linux || is_mac) {
       },
     ]
     timeout = "4h"
-    pave_timeout = "5m"
+    pave_timeout = "10m"
     cycle_count = "40"
     cycle_timeout = "10m"
   }
