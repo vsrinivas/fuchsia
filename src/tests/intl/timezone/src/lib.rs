@@ -189,7 +189,7 @@ async fn loop_until_matching_time(
     echo: &fecho::EchoProxy,
 ) -> Result<(), Error> {
     const MAX_ATTEMPTS: usize = 10;
-    let sleep = zx::Duration::from_millis(1000);
+    let sleep = zx::Duration::from_millis(3000);
     let utc_format = formatter_for_timezone(FULL_TIMESTAMP_FORMAT, "UTC");
 
     // Multiple attempts in case the test is run close to the turn of the hour.
