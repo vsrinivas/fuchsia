@@ -23,7 +23,8 @@ pub struct AppmgrMoniker {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct InstanceIdEntry {
     pub instance_id: Option<String>,
-    pub appmgr_moniker: AppmgrMoniker,
+    pub appmgr_moniker: Option<AppmgrMoniker>,
+    pub moniker: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -62,6 +63,8 @@ pub enum ValidationError {
     DuplicateIds { instance_id: String, source1: String, source2: String },
     #[error("Some entries do not specify an instance ID.")]
     MissingInstanceIds { entries: Vec<InstanceIdEntry> },
+    #[error("The following entry must contain atleast an appmgr_moniker or an moniker: {:?}", .entry)]
+    MissingMoniker { entry: InstanceIdEntry },
     #[error("The following entry's instance_id is invalid (must be 64 lower-cased hex chars): {:?}", .entry)]
     InvalidInstanceId { entry: InstanceIdEntry },
     #[error("appmgr_restrict_isolated_persistent_storage has already been set to {} and cannot be set twice.", .previous_val)]
@@ -121,6 +124,9 @@ impl MergeContext {
                     }
                 }
             }
+            if entry.appmgr_moniker.is_none() && entry.moniker.is_none() {
+                return Err(ValidationError::MissingMoniker { entry: entry.clone() });
+            }
             self.output_index.instances.push(entry.clone());
         }
         if let Some(val) = index.appmgr_restrict_isolated_persistent_storage {
@@ -172,14 +178,15 @@ mod tests {
             instances: (0..num_instances)
                 .map(|i| InstanceIdEntry {
                     instance_id: Some(gen_instance_id(&mut rand::thread_rng())),
-                    appmgr_moniker: AppmgrMoniker {
+                    appmgr_moniker: Some(AppmgrMoniker {
                         url: format!(
                             "fuchsia-pkg://example.com/fake_pkg#meta/fake_component_{}.cmx",
                             i
                         ),
                         realm_path: vec!["root".to_string(), "child".to_string(), i.to_string()],
                         transitional_realm_paths: None,
-                    },
+                    }),
+                    moniker: None,
                 })
                 .collect(),
         }
@@ -253,6 +260,30 @@ mod tests {
             merge_result.as_ref(),
             Err(ValidationError::MissingInstanceIds { entries: _ })
         ));
+    }
+
+    #[test]
+    fn missing_moniker() {
+        let mut index = gen_index(1);
+        index.instances[0].appmgr_moniker = None;
+        index.instances[0].moniker = None;
+
+        let mut ctx = MergeContext::new();
+        // this should be an error, since `index` has an entry without any monikers.
+        let merge_result: Result<(), ValidationError> = ctx.merge("/a/b/c", &index);
+        assert!(matches!(merge_result.as_ref(), Err(ValidationError::MissingMoniker { entry: _ })));
+    }
+
+    #[test]
+    fn abs_moniker_and_appmgr_moniker() {
+        let mut index = gen_index(1);
+        // this entry has both an `appmgr_moniker` *and* a `moniker`.
+        assert!(index.instances[0].appmgr_moniker.is_some());
+        index.instances[0].moniker = Some("/a/b/c".to_string());
+
+        let mut ctx = MergeContext::new();
+        let merge_result: Result<(), ValidationError> = ctx.merge("/a/b/c", &index);
+        assert!(merge_result.is_ok());
     }
 
     #[test]

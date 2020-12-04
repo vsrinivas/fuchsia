@@ -35,8 +35,14 @@ table InstanceIdEntry {
     /// instance IDs in the index.
     1: InstanceId instance_id;
 
-    /// A moniker identifying a component instance which is associated with `instance_id`.
+    /// An appmgr-based moniker identifying an appmgr component instance
+    /// associated with `instance_id`. Note that component manager ignores
+    /// this field; it is only consumed by appmgr.
     2: AppmgrMoniker appmgr_moniker;
+
+    /// The absolute moniker identifying the component instance. Note that
+    /// appmgr ignores thie field; it is only consumed by component manager.
+    3: string:fuchsia.component.MAX_MONIKER_LENGTH moniker;
 };
 
 table AppmgrMoniker {

@@ -13,14 +13,14 @@ pub enum FidlConversionError {
     MissingAppmgrRestrictIsolatedPersistentStorage,
     #[error("Missing instances")]
     MissingInstances,
-    #[error("Missing appmgr_moniker")]
-    MissingAppmgrMoniker,
     #[error("Missing appmgr_moniker.url")]
     MissingAppmgrMonikerUrl,
     #[error("Missing appmgr_moniker.realm_path")]
     MissingAppmgrMonikerRealmPath,
 }
 
+// This converter translates between different encodings but does not do any semantic validation.
+// To construct a validated Index, use a Index::from_*() constructor along with this converter.
 impl TryFrom<fcomponent_internal::ComponentIdIndex> for Index {
     type Error = FidlConversionError;
 
@@ -32,19 +32,23 @@ impl TryFrom<fcomponent_internal::ComponentIdIndex> for Index {
         );
         let mut instances: Vec<InstanceIdEntry> = vec![];
         for entry in index.instances.ok_or_else(|| FidlConversionError::MissingInstances)? {
-            let appmgr_moniker =
-                entry.appmgr_moniker.ok_or_else(|| FidlConversionError::MissingAppmgrMoniker)?;
             instances.push(InstanceIdEntry {
                 instance_id: entry.instance_id,
-                appmgr_moniker: AppmgrMoniker {
-                    url: appmgr_moniker
-                        .url
-                        .ok_or_else(|| FidlConversionError::MissingAppmgrMonikerUrl)?,
-                    realm_path: appmgr_moniker
-                        .realm_path
-                        .ok_or_else(|| FidlConversionError::MissingAppmgrMonikerRealmPath)?,
-                    transitional_realm_paths: appmgr_moniker.transitional_realm_paths,
-                },
+                appmgr_moniker: entry
+                    .appmgr_moniker
+                    .map(|appmgr_moniker| -> Result<AppmgrMoniker, Self::Error> {
+                        Ok(AppmgrMoniker {
+                            url: appmgr_moniker
+                                .url
+                                .ok_or_else(|| FidlConversionError::MissingAppmgrMonikerUrl)?,
+                            realm_path: appmgr_moniker.realm_path.ok_or_else(|| {
+                                FidlConversionError::MissingAppmgrMonikerRealmPath
+                            })?,
+                            transitional_realm_paths: appmgr_moniker.transitional_realm_paths,
+                        })
+                    })
+                    .transpose()?,
+                moniker: entry.moniker,
             });
         }
         Ok(Index { appmgr_restrict_isolated_persistent_storage, instances })
@@ -63,12 +67,15 @@ impl From<Index> for fcomponent_internal::ComponentIdIndex {
                     .into_iter()
                     .map(|entry| fcomponent_internal::InstanceIdEntry {
                         instance_id: entry.instance_id,
-                        appmgr_moniker: Some(fcomponent_internal::AppmgrMoniker {
-                            url: Some(entry.appmgr_moniker.url),
-                            realm_path: Some(entry.appmgr_moniker.realm_path),
-                            transitional_realm_paths: entry.appmgr_moniker.transitional_realm_paths,
-                            ..fcomponent_internal::AppmgrMoniker::empty()
+                        appmgr_moniker: entry.appmgr_moniker.map(|appmgr_moniker| {
+                            fcomponent_internal::AppmgrMoniker {
+                                url: Some(appmgr_moniker.url),
+                                realm_path: Some(appmgr_moniker.realm_path),
+                                transitional_realm_paths: appmgr_moniker.transitional_realm_paths,
+                                ..fcomponent_internal::AppmgrMoniker::empty()
+                            }
                         }),
+                        moniker: entry.moniker,
                         ..fcomponent_internal::InstanceIdEntry::empty()
                     })
                     .collect(),
@@ -98,6 +105,7 @@ mod tests {
                     ]]),
                     ..fcomponent_internal::AppmgrMoniker::empty()
                 }),
+                moniker: Some("/a/b/c".to_string()),
                 ..fcomponent_internal::InstanceIdEntry::empty()
             }]),
             ..fcomponent_internal::ComponentIdIndex::empty()
@@ -107,7 +115,7 @@ mod tests {
             appmgr_restrict_isolated_persistent_storage: Some(false),
             instances: vec![InstanceIdEntry {
                 instance_id: Some("abc".to_string()),
-                appmgr_moniker: AppmgrMoniker {
+                appmgr_moniker: Some(AppmgrMoniker {
                     url: "abc".to_string(),
                     realm_path: vec!["realm".to_string(), "path".to_string()],
                     transitional_realm_paths: Some(vec![vec![
@@ -115,7 +123,8 @@ mod tests {
                         "realm".to_string(),
                         "path".to_string(),
                     ]]),
-                },
+                }),
+                moniker: Some("/a/b/c".to_string()),
             }],
         };
 
@@ -137,23 +146,6 @@ mod tests {
             Some(FidlConversionError::MissingInstances),
             Index::try_from(fcomponent_internal::ComponentIdIndex {
                 appmgr_restrict_isolated_persistent_storage: Some(true),
-                ..fcomponent_internal::ComponentIdIndex::empty()
-            })
-            .err()
-        );
-    }
-
-    #[test]
-    fn missing_appmgr_moniker() {
-        assert_eq!(
-            Some(FidlConversionError::MissingAppmgrMoniker),
-            Index::try_from(fcomponent_internal::ComponentIdIndex {
-                appmgr_restrict_isolated_persistent_storage: Some(true),
-                instances: Some(vec![fcomponent_internal::InstanceIdEntry {
-                    instance_id: Some("abc".to_string()),
-                    appmgr_moniker: None,
-                    ..fcomponent_internal::InstanceIdEntry::empty()
-                }]),
                 ..fcomponent_internal::ComponentIdIndex::empty()
             })
             .err()

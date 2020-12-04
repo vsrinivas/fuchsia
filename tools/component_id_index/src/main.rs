@@ -118,14 +118,15 @@ mod tests {
             instances: (0..num_instances)
                 .map(|i| InstanceIdEntry {
                     instance_id: Some(gen_instance_id(&mut rand::thread_rng())),
-                    appmgr_moniker: AppmgrMoniker {
+                    appmgr_moniker: Some(AppmgrMoniker {
                         url: format!(
                             "fuchsia-pkg://example.com/fake_pkg#meta/fake_component_{}.cmx",
                             i
                         ),
                         realm_path: vec!["root".to_string(), "child".to_string(), i.to_string()],
                         transitional_realm_paths: None,
-                    },
+                    }),
+                    moniker: Some("/a/b/c".to_string()),
                 })
                 .collect(),
         }
@@ -162,7 +163,8 @@ mod tests {
         "1"
       ],
       "transitional_realm_paths": null
-    }
+    },
+    "moniker": "/a/b/c"
   },
   {
     "instance_id": "RANDOM_GENERATED_INSTANCE_ID",
@@ -174,7 +176,8 @@ mod tests {
         "3"
       ],
       "transitional_realm_paths": null
-    }
+    },
+    "moniker": "/a/b/c"
   }
 ]
 
