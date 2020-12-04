@@ -62,3 +62,19 @@ TEST(MemFDTest, Truncate) {
   EXPECT_EQ(3, pread(fd.get(), buffer, sizeof(buffer), 10540));
   EXPECT_EQ(0, memcmp(buffer, zeros, 3));
 }
+
+TEST(MemFDTest, MMap) {
+  const size_t kSize = 256;
+
+  fbl::unique_fd fd(memfd_create(nullptr, 0));
+  EXPECT_TRUE(fd.is_valid());
+  EXPECT_EQ(0, ftruncate(fd.get(), kSize));
+  EXPECT_EQ(3, write(fd.get(), "abc", 3));
+
+  void* ptr = mmap(nullptr, kSize, PROT_READ, MAP_SHARED, fd.get(), 0u);
+  EXPECT_NE(MAP_FAILED, ptr);
+  char buffer[kSize] = {};
+  memcpy(buffer, ptr, 15);
+  EXPECT_STR_EQ("abc", buffer);
+  ASSERT_EQ(0, munmap(ptr, kSize));
+}

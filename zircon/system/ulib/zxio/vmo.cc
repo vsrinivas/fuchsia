@@ -146,6 +146,20 @@ zx_status_t zxio_vmo_truncate(zxio_t* io, size_t length) {
   return ZX_OK;
 }
 
+static zx_status_t zxio_vmo_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
+                                    size_t* out_size) {
+  auto file = reinterpret_cast<zxio_vmo_t*>(io);
+
+  size_t content_size = 0u;
+  zx_status_t status =
+      file->vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return zxio_vmo_get_common(file->vmo, content_size, flags, out_vmo, out_size);
+}
+
 static constexpr zxio_ops_t zxio_vmo_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_vmo_close;
@@ -158,6 +172,7 @@ static constexpr zxio_ops_t zxio_vmo_ops = []() {
   ops.writev_at = zxio_vmo_writev_at;
   ops.seek = zxio_vmo_seek;
   ops.truncate = zxio_vmo_truncate;
+  ops.vmo_get = zxio_vmo_vmo_get;
   return ops;
 }();
 

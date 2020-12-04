@@ -160,25 +160,17 @@ static zx_status_t zxio_vmofile_seek(zxio_t* io, zxio_seek_origin_t start, int64
   return ZX_OK;
 }
 
-static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
-                                        size_t* out_size) {
+zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, uint32_t flags,
+                                zx_handle_t* out_vmo, size_t* out_size) {
   if (out_vmo == nullptr) {
     return ZX_ERR_INVALID_ARGS;
-  }
-
-  // Can't support Vmofiles with a non-zero start/offset, because we return just
-  // a VMO with no other data - like a starting offset - to the user.
-  // (Technically we could support any page aligned offset, but that's currently
-  // unneeded.)
-  auto file = reinterpret_cast<zxio_vmofile_t*>(io);
-  if (file->start != 0) {
-    return ZX_ERR_NOT_FOUND;
   }
 
   // Ensure that we return a VMO handle with only the rights requested by the
   // client. For Vmofiles, the server side does not ever see the VMO_FLAG_*
   // options from the client because the VMO is returned in NodeInfo/Vmofile
   // rather than from a File.GetBuffer call.
+
   zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
   rights |= flags & fio::VMO_FLAG_READ ? ZX_RIGHT_READ : 0;
   rights |= flags & fio::VMO_FLAG_WRITE ? ZX_RIGHT_WRITE : 0;
@@ -203,7 +195,7 @@ static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t*
     }
 
     zx::vmo child_vmo;
-    zx_status_t status = file->vmo.create_child(options, file->start, file->size, &child_vmo);
+    zx_status_t status = vmo.create_child(options, 0u, content_size, &child_vmo);
     if (status != ZX_OK) {
       return status;
     }
@@ -219,7 +211,7 @@ static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t*
     }
     *out_vmo = result.release();
     if (out_size) {
-      *out_size = file->size;
+      *out_size = content_size;
     }
     return ZX_OK;
   }
@@ -227,15 +219,29 @@ static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t*
   // For !VMO_FLAG_PRIVATE (including VMO_FLAG_EXACT), we just duplicate another
   // handle to the Vmofile's VMO with appropriately scoped rights.
   zx::vmo result;
-  zx_status_t status = file->vmo.duplicate(rights, &result);
+  zx_status_t status = vmo.duplicate(rights, &result);
   if (status != ZX_OK) {
     return status;
   }
   *out_vmo = result.release();
   if (out_size) {
-    *out_size = file->size;
+    *out_size = content_size;
   }
   return ZX_OK;
+}
+
+static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
+                                        size_t* out_size) {
+  // Can't support Vmofiles with a non-zero start/offset, because we return just
+  // a VMO with no other data - like a starting offset - to the user.
+  // (Technically we could support any page aligned offset, but that's currently
+  // unneeded.)
+  auto file = reinterpret_cast<zxio_vmofile_t*>(io);
+  if (file->start != 0) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  return zxio_vmo_get_common(file->vmo, file->size, flags, out_vmo, out_size);
 }
 
 static constexpr zxio_ops_t zxio_vmofile_ops = []() {

@@ -100,13 +100,17 @@ TEST_F(VmoTest, GetCopy) {
 TEST_F(VmoTest, GetClone) {
   zx::vmo vmo;
   size_t size = 0u;
-  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_clone(io, vmo.reset_and_get_address(), &size));
+  ASSERT_STATUS(ZX_OK, zxio_vmo_get_clone(io, vmo.reset_and_get_address(), &size));
+  EXPECT_NE(vmo.get(), ZX_HANDLE_INVALID);
+  EXPECT_EQ(size, kSize);
 }
 
 TEST_F(VmoTest, GetExact) {
   zx::vmo vmo;
   size_t size = 0u;
-  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_exact(io, vmo.reset_and_get_address(), &size));
+  ASSERT_STATUS(ZX_OK, zxio_vmo_get_exact(io, vmo.reset_and_get_address(), &size));
+  EXPECT_NE(vmo.get(), ZX_HANDLE_INVALID);
+  EXPECT_EQ(size, kSize);
 }
 
 TEST_F(VmoTest, SeekNegativeOverflow) {

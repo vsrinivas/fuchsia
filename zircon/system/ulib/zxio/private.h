@@ -135,6 +135,9 @@ zx_status_t zxio_datagram_pipe_writev(zxio_t* io, const zx_iovec_t* vector, size
 
 void zxio_node_init(zxio_node_t* node, zx_handle_t control, const zxio_extension_ops_t* ops);
 
+zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, uint32_t flags,
+                                zx_handle_t* out_vmo, size_t* out_size);
+
 // Common functionalities shared by the fuchsia.io v1 |node| and |remote| transports.
 // These operate on the raw FIDL channel directly, as |node| and |remote|
 // have different object layouts.
