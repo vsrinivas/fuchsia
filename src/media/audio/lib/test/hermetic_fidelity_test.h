@@ -135,20 +135,6 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   std::array<uint32_t, kNumReferenceFreqs> translated_ref_freqs_;
 
   bool save_fidelity_wav_files_;
-
- public:
-  // TODO(mpuryear): remove the below, once clients have moved to simpler names
-  using FidelityRenderPath = RenderPath;
-
-  template <fuchsia::media::AudioSampleFormat InputFormat,
-            fuchsia::media::AudioSampleFormat OutputFormat>
-  using FidelityTestCase = TestCase<InputFormat, OutputFormat>;
-
-  template <fuchsia::media::AudioSampleFormat InputFormat,
-            fuchsia::media::AudioSampleFormat OutputFormat>
-  void RunFidelityTest(const TestCase<InputFormat, OutputFormat>& tc) {
-    Run(tc);
-  }
 };
 
 inline bool operator<(const HermeticFidelityTest::ChannelMeasurement& lhs,
