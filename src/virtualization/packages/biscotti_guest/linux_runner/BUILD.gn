@@ -28,6 +28,9 @@ declare_args() {
   # be loaded as VOLATILE_WRITE. This is useful when working on changes to
   # the linux kernel as crashes and panics can sometimes corrupt the images.
   linux_runner_volatile_block = false
+
+  # Point this to the location of external files to be included as extras
+  linux_runner_user_extras = []
 }
 
 config("linux_runner_net_config") {
@@ -120,6 +123,8 @@ romfs_image("extras") {
       "${linux_exe_path}/cube-wayland",
       "${linux_exe_path}/vulkaninfo",
     ]
+
+    inputs += linux_runner_user_extras
   }
 
   if (current_cpu == "x64") {
