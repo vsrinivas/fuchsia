@@ -1897,6 +1897,18 @@ void Scheduler::UpdateDeadlineCommon(Thread* thread, int original_priority,
       state->time_slice_ns_ = ktl::min(state->time_slice_ns_, params.capacity_ns);
       current->UpdateTotalDeadlineUtilization(state->deadline_.utilization);
 
+      // The target preemption time orignially set when the thread was fair
+      // scheduled does not account for the performance scale applied to the
+      // time slice when computing the preemption time for a deadline scheduled
+      // thread. There is an assertion that the time slice is expired by the
+      // time the target preemption time is reached. Correct the value to avoid
+      // failing the consistency check.
+      if (thread->state() == THREAD_RUNNING) {
+        const SchedDuration scaled_time_slice_ns = current->ScaleUp(state->time_slice_ns_);
+        current->target_preemption_time_ns_ = ktl::min<SchedTime>(
+            current->start_of_current_time_slice_ns_ + scaled_time_slice_ns, state->finish_time_);
+      }
+
       // Adjust the position of the thread in the run queue based on the new
       // deadline.
       if (thread->state() == THREAD_READY) {
