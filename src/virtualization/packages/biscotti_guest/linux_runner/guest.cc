@@ -665,6 +665,25 @@ void Guest::DumpContainerDebugInfo() {
 
 void Guest::Launch(AppLaunchRequest request) {
   TRACE_DURATION("linux_runner", "Guest::Launch");
+
+  // TODO(fxbug.dev/65874): we use the empty URI to pick up a view that wasn't associated with an
+  // app launch request. For example, if you started a GUI application from the serial console, a
+  // wayland view will have been created without a fuchsia component to associate with it.
+  //
+  // We'll need to come up with a more proper solution, but this allows us to at least do some
+  // testing of these views for the time being.
+  if (request.application.resolved_url == kLinuxUriScheme) {
+    auto it = background_views_.begin();
+    if (it == background_views_.end()) {
+      FX_LOGS(INFO) << "No background views available";
+      return;
+    }
+    FX_LOGS(INFO) << "Found background view";
+    CreateComponent(std::move(request), it->Bind());
+    background_views_.erase(it);
+    return;
+  }
+
   // If we have a garcon connection we can request the launch immediately.
   // Otherwise we just retain the request and forward it along once the
   // container is started.
@@ -684,24 +703,6 @@ void Guest::LaunchApplication(AppLaunchRequest app) {
     return;
   }
   desktop_file_id.erase(0, strlen(kLinuxUriScheme));
-  if (desktop_file_id == "") {
-    // HACK: we use the empty URI to pick up a view that wasn't associated
-    // with an app launch request. For example, if you started a GUI
-    // application from the serial console, a wayland view will have been
-    // created without a fuchsia component to associate with it.
-    //
-    // We'll need to come up with a more proper solution, but this allows us to
-    // at least do some testing of these views for the time being.
-    auto it = background_views_.begin();
-    if (it == background_views_.end()) {
-      FX_LOGS(INFO) << "No background views available";
-      return;
-    }
-    CreateComponent(std::move(app), it->Bind());
-    background_views_.erase(it);
-    return;
-  }
-
   FX_LOGS(INFO) << "Launching: " << desktop_file_id;
   grpc::ClientContext context;
   vm_tools::container::LaunchApplicationRequest request;
