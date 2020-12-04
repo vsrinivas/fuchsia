@@ -56,6 +56,7 @@ impl ClientConfig {
             vht_cap: bss.vht_cap.as_ref().map(|cap| **cap),
             probe_resp_wsc,
             wmm_param,
+            bss_desc: Some(bss.clone()),
         }
     }
 
@@ -105,6 +106,7 @@ pub struct BssInfo {
     pub vht_cap: Option<fidl_internal::VhtCapabilities>,
     pub probe_resp_wsc: Option<wsc::ProbeRespWsc>,
     pub wmm_param: Option<ie::WmmParam>,
+    pub bss_desc: Option<fidl_internal::BssDescription>,
 }
 
 #[cfg(test)]
@@ -150,26 +152,24 @@ mod tests {
     #[test]
     fn convert_bss() {
         let cfg = ClientConfig::default();
-        let bss_info = cfg.convert_bss_description(
-            &fake_bss!(Wpa2,
-                       ssid: vec![],
-                       bssid: [0u8; 6],
-                       rssi_dbm: -30,
-                       snr_db: 0,
-                       chan: fidl_common::WlanChan {
-                           primary: 1,
-                           secondary80: 0,
-                           cbw: fidl_common::Cbw::Cbw20,
-                       },
-                       ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
-                           bytes: fake_ht_cap_bytes()
-                       })),
-                       vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
-                           bytes: fake_vht_cap_bytes()
-                       })),
-            ),
-            None,
+        let bss_desc = fake_bss!(Wpa2,
+                   ssid: vec![],
+                   bssid: [0u8; 6],
+                   rssi_dbm: -30,
+                   snr_db: 0,
+                   chan: fidl_common::WlanChan {
+                       primary: 1,
+                       secondary80: 0,
+                       cbw: fidl_common::Cbw::Cbw20,
+                   },
+                   ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
+                       bytes: fake_ht_cap_bytes()
+                   })),
+                   vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
+                       bytes: fake_vht_cap_bytes()
+                   })),
         );
+        let bss_info = cfg.convert_bss_description(&bss_desc, None);
 
         assert_eq!(
             bss_info,
@@ -186,31 +186,30 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
+                bss_desc: Some(bss_desc),
             }
         );
 
         let wmm_param = *ie::parse_wmm_param(&fake_wmm_param().bytes[..])
             .expect("expect WMM param to be parseable");
-        let bss_info = cfg.convert_bss_description(
-            &fake_bss!(Wpa2,
-                       ssid: vec![],
-                       bssid: [0u8; 6],
-                       rssi_dbm: -30,
-                       snr_db: 0,
-                       chan: fidl_common::WlanChan {
-                           primary: 1,
-                           secondary80: 0,
-                           cbw: fidl_common::Cbw::Cbw20,
-                       },
-                       ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
-                           bytes: fake_ht_cap_bytes()
-                       })),
-                       vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
-                           bytes: fake_vht_cap_bytes()
-                       })),
-            ),
-            Some(wmm_param),
+        let bss_desc = fake_bss!(Wpa2,
+                   ssid: vec![],
+                   bssid: [0u8; 6],
+                   rssi_dbm: -30,
+                   snr_db: 0,
+                   chan: fidl_common::WlanChan {
+                       primary: 1,
+                       secondary80: 0,
+                       cbw: fidl_common::Cbw::Cbw20,
+                   },
+                   ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
+                       bytes: fake_ht_cap_bytes()
+                   })),
+                   vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
+                       bytes: fake_vht_cap_bytes()
+                   })),
         );
+        let bss_info = cfg.convert_bss_description(&bss_desc, Some(wmm_param));
 
         assert_eq!(
             bss_info,
@@ -227,29 +226,28 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: Some(wmm_param),
+                bss_desc: Some(bss_desc),
             }
         );
 
-        let bss_info = cfg.convert_bss_description(
-            &fake_bss!(Wep,
-                       ssid: vec![],
-                       bssid: [0u8; 6],
-                       rssi_dbm: -30,
-                       snr_db: 0,
-                       chan: fidl_common::WlanChan {
-                           primary: 1,
-                           secondary80: 0,
-                           cbw: fidl_common::Cbw::Cbw20,
-                       },
-                       ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
-                           bytes: fake_ht_cap_bytes()
-                       })),
-                       vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
-                           bytes: fake_vht_cap_bytes()
-                       })),
-            ),
-            None,
+        let bss_desc = fake_bss!(Wep,
+                   ssid: vec![],
+                   bssid: [0u8; 6],
+                   rssi_dbm: -30,
+                   snr_db: 0,
+                   chan: fidl_common::WlanChan {
+                       primary: 1,
+                       secondary80: 0,
+                       cbw: fidl_common::Cbw::Cbw20,
+                   },
+                   ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
+                       bytes: fake_ht_cap_bytes()
+                   })),
+                   vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
+                       bytes: fake_vht_cap_bytes()
+                   })),
         );
+        let bss_info = cfg.convert_bss_description(&bss_desc, None);
         assert_eq!(
             bss_info,
             BssInfo {
@@ -265,30 +263,29 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
+                bss_desc: Some(bss_desc),
             },
         );
 
         let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
-        let bss_info = cfg.convert_bss_description(
-            &fake_bss!(Wep,
-                       ssid: vec![],
-                       bssid: [0u8; 6],
-                       rssi_dbm: -30,
-                       snr_db: 0,
-                       chan: fidl_common::WlanChan {
-                           primary: 1,
-                           secondary80: 0,
-                           cbw: fidl_common::Cbw::Cbw20,
-                       },
-                       ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
-                           bytes: fake_ht_cap_bytes()
-                       })),
-                       vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
-                           bytes: fake_vht_cap_bytes()
-                       })),
-            ),
-            None,
+        let bss_desc = fake_bss!(Wep,
+                   ssid: vec![],
+                   bssid: [0u8; 6],
+                   rssi_dbm: -30,
+                   snr_db: 0,
+                   chan: fidl_common::WlanChan {
+                       primary: 1,
+                       secondary80: 0,
+                       cbw: fidl_common::Cbw::Cbw20,
+                   },
+                   ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
+                       bytes: fake_ht_cap_bytes()
+                   })),
+                   vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
+                       bytes: fake_vht_cap_bytes()
+                   })),
         );
+        let bss_info = cfg.convert_bss_description(&bss_desc, None);
         assert_eq!(
             bss_info,
             BssInfo {
@@ -304,6 +301,7 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
+                bss_desc: Some(bss_desc),
             },
         );
     }

@@ -41,6 +41,7 @@ pub fn fake_bss_info() -> BssInfo {
         vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
         probe_resp_wsc: None,
         wmm_param: None,
+        bss_desc: None,
     }
 }
 

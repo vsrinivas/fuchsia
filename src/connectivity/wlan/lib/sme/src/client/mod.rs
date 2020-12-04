@@ -315,6 +315,35 @@ impl ClientSme {
         self.state = self.state.take().map(|state| state.cancel_ongoing_connect(&mut self.context));
 
         let ssid = req.ssid;
+
+        if let Some(bss_desc) = req.bss_desc {
+            // We can connect directly now.
+            let viable_bss = match get_protection(
+                &self.context.device_info,
+                &self.cfg,
+                &req.credential,
+                &bss_desc,
+                &self.context.inspect.hasher,
+            ) {
+                Err(e) => {
+                    warn!("{:?}", e);
+                    responder.respond(SelectNetworkFailure::IncompatibleConnectRequest.into());
+                    return receiver;
+                }
+                Ok(protection) => ViableBss { bss: &bss_desc, protection },
+            };
+            self.context.info.report_candidate_network(clone_bss_desc(&bss_desc));
+            let cmd = ConnectCommand {
+                bss: Box::new(clone_bss_desc(&bss_desc)),
+                responder: Some(responder),
+                protection: viable_bss.protection,
+                radio_cfg: RadioConfig::from_fidl(req.radio_cfg),
+            };
+
+            self.state = self.state.take().map(|state| state.connect(cmd, &mut self.context));
+            return receiver;
+        }
+
         // We want to default to Active scan so that for routers that support WSC, we can retrieve
         // AP metadata from the probe response. However, for SoftMAC, we default to passive scan
         // because we do not have a proper active scan implementation for DFS channels.
@@ -1184,19 +1213,7 @@ mod tests {
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
         // No join request should be sent to MLME
-        loop {
-            match mlme_stream.try_next() {
-                Ok(event) => match event {
-                    Some(MlmeRequest::Join(..)) => panic!("unexpected join request to MLME"),
-                    None => break,
-                    _ => (),
-                },
-                Err(e) => {
-                    assert_eq!(e.to_string(), "receiver channel is empty");
-                    break;
-                }
-            }
-        }
+        assert_no_join(&mut mlme_stream);
 
         // User should get a message that connection failed
         assert_variant!(
@@ -1230,19 +1247,7 @@ mod tests {
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
         // No join request should be sent to MLME
-        loop {
-            match mlme_stream.try_next() {
-                Ok(event) => match event {
-                    Some(MlmeRequest::Join(..)) => panic!("unexpected join request to MLME"),
-                    None => break,
-                    _ => (),
-                },
-                Err(e) => {
-                    assert_eq!(e.to_string(), "receiver channel is empty");
-                    break;
-                }
-            }
-        }
+        assert_no_join(&mut mlme_stream);
 
         // User should get a message that connection failed
         assert_variant!(
@@ -1274,19 +1279,87 @@ mod tests {
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
         // No join request should be sent to MLME
-        loop {
-            match mlme_stream.try_next() {
-                Ok(event) => match event {
-                    Some(MlmeRequest::Join(..)) => panic!("unexpected join request sent to MLME"),
-                    None => break,
-                    _ => (),
-                },
-                Err(e) => {
-                    assert_eq!(e.to_string(), "receiver channel is empty");
-                    break;
-                }
-            }
-        }
+        assert_no_join(&mut mlme_stream);
+
+        // User should get a message that connection failed
+        assert_variant!(
+            connect_fut.try_recv(),
+            Ok(Some(ConnectResult::Failed(ConnectFailure::SelectNetworkFailure(
+                SelectNetworkFailure::IncompatibleConnectRequest,
+            ),),),)
+        );
+    }
+
+    #[test]
+    fn connecting_bypass_join_scan_open() {
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
+
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let bss_desc = fake_bss!(Open, ssid: b"bssname".to_vec());
+        let req = connect_req_with_desc(bss_desc, credential);
+        let mut connect_fut = sme.on_connect_command(req);
+
+        assert_eq!(
+            Status { connected_to: None, connecting_to: Some(b"bssname".to_vec()) },
+            sme.status()
+        );
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
+        assert_variant!(connect_fut.try_recv(), Ok(None));
+    }
+
+    #[test]
+    fn connecting_bypass_join_scan_protected() {
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
+
+        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
+        let bss_desc = fake_bss!(Wpa2, ssid: b"bssname".to_vec());
+        let req = connect_req_with_desc(bss_desc, credential);
+        let mut connect_fut = sme.on_connect_command(req);
+
+        assert_eq!(
+            Status { connected_to: None, connecting_to: Some(b"bssname".to_vec()) },
+            sme.status()
+        );
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
+        assert_variant!(connect_fut.try_recv(), Ok(None));
+    }
+
+    #[test]
+    fn connecting_bypass_join_scan_mismatched_credential() {
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
+
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let bss_desc = fake_bss!(Wpa2, ssid: b"bssname".to_vec());
+        let req = connect_req_with_desc(bss_desc, credential);
+        let mut connect_fut = sme.on_connect_command(req);
+
+        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
+        assert_no_join(&mut mlme_stream);
+
+        // User should get a message that connection failed
+        assert_variant!(
+            connect_fut.try_recv(),
+            Ok(Some(ConnectResult::Failed(ConnectFailure::SelectNetworkFailure(
+                SelectNetworkFailure::IncompatibleConnectRequest,
+            ),),),)
+        );
+    }
+
+    #[test]
+    fn connecting_bypass_join_scan_unsupported_bss() {
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
+
+        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
+        let bss_desc = fake_bss!(Wpa3Enterprise, ssid: b"bssname".to_vec());
+        let req = connect_req_with_desc(bss_desc, credential);
+        let mut connect_fut = sme.on_connect_command(req);
+
+        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
+        assert_no_join(&mut mlme_stream);
 
         // User should get a message that connection failed
         assert_variant!(
@@ -1616,6 +1689,22 @@ mod tests {
         }
     }
 
+    fn assert_no_join(mlme_stream: &mut mpsc::UnboundedReceiver<MlmeRequest>) {
+        loop {
+            match mlme_stream.try_next() {
+                Ok(event) => match event {
+                    Some(MlmeRequest::Join(..)) => panic!("unexpected join request sent to MLME"),
+                    None => break,
+                    _ => (),
+                },
+                Err(e) => {
+                    assert_eq!(e.to_string(), "receiver channel is empty");
+                    break;
+                }
+            }
+        }
+    }
+
     fn assert_connect_result_failed(connect_fut: &mut oneshot::Receiver<ConnectResult>) {
         assert_variant!(connect_fut.try_recv(), Ok(Some(ConnectResult::Failed(..))));
     }
@@ -1624,6 +1713,19 @@ mod tests {
         fidl_sme::ConnectRequest {
             ssid,
             bss_desc: None,
+            credential,
+            radio_cfg: RadioConfig::default().to_fidl(),
+            deprecated_scan_type: fidl_common::ScanType::Passive,
+        }
+    }
+
+    fn connect_req_with_desc(
+        bss_desc: BssDescription,
+        credential: fidl_sme::Credential,
+    ) -> fidl_sme::ConnectRequest {
+        fidl_sme::ConnectRequest {
+            ssid: bss_desc.ssid.clone(),
+            bss_desc: Some(Box::new(bss_desc)),
             credential,
             radio_cfg: RadioConfig::default().to_fidl(),
             deprecated_scan_type: fidl_common::ScanType::Passive,

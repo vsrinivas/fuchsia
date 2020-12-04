@@ -236,7 +236,7 @@ fn convert_bss_info(bss: BssInfo) -> fidl_sme::BssInfo {
         channel: bss.channel.to_fidl(),
         protection: bss.protection.into(),
         compatible: bss.compatible,
-        bss_desc: None,
+        bss_desc: bss.bss_desc.map(Box::new),
     }
 }
 
