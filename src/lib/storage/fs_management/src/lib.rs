@@ -183,6 +183,9 @@ pub trait FSConfig {
     /// Arguments passed to the binary for all subcommands
     fn generic_args(&self) -> Vec<&CStr>;
 
+    /// Arguments passed to the binary for formatting
+    fn format_args(&self) -> Vec<&CStr>;
+
     /// Arguments passed to the binary for mounting
     fn mount_args(&self) -> Vec<&CStr>;
 }
@@ -249,6 +252,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
 
         let mut args = vec![self.config.binary_path(), cstr!("mkfs")];
         args.append(&mut self.config.generic_args());
+        args.append(&mut self.config.format_args());
 
         run_command_and_wait_for_clean_exit(args, block_device).context("failed to format device")
     }
@@ -359,6 +363,17 @@ impl FSConfig for Blobfs {
         }
         args
     }
+    fn format_args(&self) -> Vec<&CStr> {
+        let mut args = vec![];
+        if let Some(layout) = &self.blob_layout {
+            args.push(cstr!("--blob_layout_format"));
+            args.push(match layout {
+                BlobLayout::Padded => cstr!("padded"),
+                BlobLayout::Compact => cstr!("compact"),
+            });
+        }
+        args
+    }
     fn mount_args(&self) -> Vec<&CStr> {
         let mut args = vec![];
         if self.readonly {
@@ -366,13 +381,6 @@ impl FSConfig for Blobfs {
         }
         if self.metrics {
             args.push(cstr!("--metrics"));
-        }
-        if let Some(layout) = &self.blob_layout {
-            args.push(cstr!("--blob_layout_format"));
-            args.push(match layout {
-                BlobLayout::Padded => cstr!("padded"),
-                BlobLayout::Compact => cstr!("compact"),
-            });
         }
         if let Some(compression) = &self.blob_compression {
             args.push(cstr!("--compression"));
@@ -430,6 +438,9 @@ impl FSConfig for Minfs {
         }
         args
     }
+    fn format_args(&self) -> Vec<&CStr> {
+        vec![]
+    }
     fn mount_args(&self) -> Vec<&CStr> {
         let mut args = vec![];
         if self.readonly {
@@ -477,6 +488,9 @@ impl FSConfig for Factoryfs {
             args.push(cstr!("--verbose"));
         }
         args
+    }
+    fn format_args(&self) -> Vec<&CStr> {
+        vec![]
     }
     fn mount_args(&self) -> Vec<&CStr> {
         let mut args = vec![];
