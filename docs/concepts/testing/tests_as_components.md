@@ -249,4 +249,4 @@ For more examples on these templates, see [Test component][test-component].
 [fuchsia-package-gni]: /src/sys/build/fuchsia_package.gni
 [fuchsia-test-package-gni]: /src/sys/build/fuchsia_test_package.gni
 [fuchsia-unittest-package-gni]: /src/sys/build/fuchsia_unittest_package.gni
-[test-component]: /docs/concepts/testing/test_component.md
+[test-component]: /docs/concepts/testing/v1_test_component.md

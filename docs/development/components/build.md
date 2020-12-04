@@ -1284,7 +1284,7 @@ templates. These unsupported features include:
 [gn-get-target-outputs]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#func_get_target_outputs
 [package-name]: /docs/concepts/packages/package_url.md#package-name
 [pm]: /src/sys/pkg/bin/pm/README.md
-[restrict-log-severity]: /docs/concepts/testing/test_component.md#restricting_log_severity
+[restrict-log-severity]: /docs/concepts/testing/v1_test_component.md#restricting_log_severity
 [rustc-binary]: /build/rust/rustc_binary.gni
 [rustc-test]: /build/rust/rustc_test.gni
 [source-code-layout]: /docs/concepts/source_code/layout.md

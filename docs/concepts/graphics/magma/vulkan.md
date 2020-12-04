@@ -32,7 +32,7 @@ allow the client driver to report [trace events](/docs/concepts/tracing/README.m
 recommended to allow logs from the client driver to appear in the [system
 log](/docs/development/diagnostics/logs/viewing.md).
 
-A [test component](/docs/concepts/testing/test_component.md) must also have
+A [test component](/docs/concepts/testing/v1_test_component.md) must also have
 these lines in its .cmx:
 
 ```json

@@ -54,7 +54,7 @@ To add a test package to CQ, you need to:
 
 To add a new test package to CQ, you need to create a test component including source files,
 metadata and BUILD.gn file. See
-[Test component](/docs/concepts/testing/test_component.md).
+[Test component](/docs/concepts/testing/v1_test_component.md).
 You can include multiple test executables in one single test package, and all of them will be
 executed if you run `fx test <test_package>` on host.
 

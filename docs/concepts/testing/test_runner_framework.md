@@ -75,6 +75,8 @@ test runner in its [component manifest][manifests], you can write your test
 natively against the language-specific test library and do not need to manually
 export results under the test suite protocol.
 
+For a working example follow this [link][v2-driver-pattern].
+
 ## Hermeticity
 
 A test is *hermetic* if it [uses][manifests-use] or [offers][manifests-offer] no
@@ -113,3 +115,4 @@ the test, as follows:
 [realms]: /docs/concepts/components/v2/realms.md
 [realms-definitions]: /docs/concepts/components/v2/realms.md#definitions
 [test-suite-protocol]: /docs/concepts/components/v2/realms.md
+[v2-driver-pattern]: v2_test_component.md#driver_pattern_for_v2_component_tests

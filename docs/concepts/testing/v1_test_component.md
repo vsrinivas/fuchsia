@@ -1,4 +1,9 @@
-# Test Component
+# Test Components (Components v1)
+
+<<../components/_v1_banner.md>>
+
+Note: If looking for a guide to write v2 test component refer
+ [Fuchsia Test Runner Framework][trf].
 
 ## Create a test component
 
@@ -31,9 +36,6 @@ group("tests") {
   testonly = true
 }
 ```
-
-`test_package` will expect that there is a corresponding cmx file in the `meta`
-folder. So for above example there should be a `my_test.cmx` file in `meta/`.
 
 See also: [test packages][test-packages]
 
@@ -187,57 +189,6 @@ max_severity_fuchsia.json) and run `fx ota`.
 If the test is not removed from the legacy list, the configuration in legacy
 list would be preferred and you will see a warning when running the test.
 
-## Running test cases in parallel
-
-  [Test Runner Framework][trf] makes it easy to run test cases in parallel by
-  standardizing the option across various test runtimes. [Test runners][test-runner]
-  decide the default value for how many tests can run in parallel but developers can
-  override it using `BUILD.gn`.
-
-  * {Using fuchsia\_test\_package}
-
-  ```gn
-  fuchsia_component("my-package") {
-    testonly = true
-    manifest = "meta/my-test.cml"
-    deps = [ ":my_test" ]
-  }
-
-  fuchsia_test_package("my-package") {
-    test_specs = {
-        parallel = 1
-    }
-    test_components = [ ":my-test" ]
-  }
-  ```
-
-  * {Using test\_package}
-
-  ```gn
-  test_package("my-package") {
-    deps = [
-      ":my_test",
-    ]
-
-    meta = []
-      {
-        path = rebase_path("meta/my-test.cml")
-        dest = "my-test.cm"
-      },
-    ]
-
-    tests = [
-      {
-        parallel = 1
-        name = "my_test"
-        environments = basic_envs
-      },
-    ]
-  }
-  ```
-
-NOTE: This feature only works with v2 component tests.
-
 ### Running the test
 
 When running the test on development device, prefer `fx test` to run the test.
@@ -286,6 +237,6 @@ demonstrated above.
 [run-test-component]: /docs/development/testing/run_fuchsia_tests.md
 [syslogs]: /docs/development/diagnostics/logs/README.md
 [test-packages]: /docs/development/components/build.md#test-packages
-[legacy-restrict-logs]: https://fuchsia.googlesource.com/fuchsia/+/1529a885fa0b9ea4867aa8b71786a291158082b7/docs/concepts/testing/test_component.md#restricting-log-severity
+[legacy-restrict-logs]: https://fuchsia.googlesource.com/fuchsia/+/1529a885fa0b9ea4867aa8b71786a291158082b7/docs/concepts/testing/v1_test_component.md#restricting-log-severity
 [trf]: test_runner_framework.md
-[test-runner]: test_runner_framework.md#test-runner
+

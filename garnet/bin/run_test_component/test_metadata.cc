@@ -50,7 +50,7 @@ constexpr char kSystemServices[] = "system-services";
 // currently present.
 //
 // Please document the rationale for each entry added.  See also:
-// docs/concepts/testing/test_component.md
+// docs/concepts/testing/v1_test_component.md
 const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::boot::FactoryItems::Name_,
     fuchsia::boot::Items::Name_,

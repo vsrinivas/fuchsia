@@ -10,12 +10,14 @@ toc:
   path: /docs/concepts/testing/testability_rubric.md
 - title: "Tests as components"
   path: /docs/concepts/testing/tests_as_components.md
+- title: "Test components (Components v1)"
+  path: /docs/concepts/testing/v1_test_component.md
 - title: "Test Runner Framework"
   section:
   - title: "Introduction"
     path: /docs/concepts/testing/test_runner_framework.md
-  - title: "Test component"
-    path: /docs/concepts/testing/test_component.md
+  - title: "Test components (Components v2)"
+    path: /docs/concepts/testing/v2_test_component.md
   - title: "Test environments"
     path: /docs/concepts/testing/environments.md
 - title: "Scripting Layer for Fuchsia (SL4F)"
