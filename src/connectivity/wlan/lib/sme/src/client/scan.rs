@@ -428,13 +428,15 @@ fn get_channels_to_scan(device_info: &DeviceInfo, scan_request: &fidl_sme::ScanR
         .collect()
 }
 
+// TODO(65792): Evaluate options for where and how we select what channels to scan.
+// Firmware will reject channels if they are not allowed by the current regulatory region.
 const SUPPORTED_CHANNELS: &[u8] = &[
     // 5GHz UNII-1
     36, 40, 44, 48, // 5GHz UNII-2 Middle
     52, 56, 60, 64, // 5GHz UNII-2 Extended
     100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, // 5GHz UNII-3
-    149, 153, 157, 161, 165, // 2GHz
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+    149, 153, 157, 161, 165, // 5GHz
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, // 2GHz
 ];
 
 #[cfg(test)]
