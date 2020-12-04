@@ -76,6 +76,9 @@ if (is_host) {
       "src/toolkit/controller/package.rs",
       "src/toolkit/controller/zbi.rs",
       "src/toolkit/mod.rs",
+      "src/verify/controller/boot_options.rs",
+      "src/verify/controller/mod.rs",
+      "src/verify/mod.rs",
     ]
   }
 }

@@ -7,6 +7,7 @@ use {
     anyhow::Result,
     scrutiny_plugins::{
         core::CorePlugin, engine::EnginePlugin, search::SearchPlugin, toolkit::ToolkitPlugin,
+        verify::VerifyPlugin,
     },
 };
 
@@ -22,6 +23,7 @@ pub fn launch_from_config(config: Config) -> Result<()> {
         scrutiny.plugin_manager(),
     ))?;
     scrutiny.plugin(ToolkitPlugin::new())?;
+    scrutiny.plugin(VerifyPlugin::new())?;
     scrutiny.run()
 }
 
