@@ -1,0 +1,5 @@
+include /src/sys/component_manager/OWNERS
+
+# COMPONENT: ComponentFramework>Runtime
+
+benwright@google.com
