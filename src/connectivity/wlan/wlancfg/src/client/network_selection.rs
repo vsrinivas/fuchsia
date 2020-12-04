@@ -166,17 +166,17 @@ impl NetworkSelector {
     /// Only networks that are both saved and visible in the most recent scan results are eligible
     /// for consideration. Among those, the "best" network based on compatibility and quality (e.g.
     /// RSSI, recent failures) is selected.
-    pub(crate) async fn find_best_bss(
+    pub(crate) async fn find_best_connection_candidate(
         &self,
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
         ignore_list: &Vec<types::NetworkIdentifier>,
-    ) -> Option<(types::NetworkIdentifier, Credential, types::NetworkSelectionMetadata)> {
+    ) -> Option<types::ConnectRequest> {
         self.perform_scan(iface_manager).await;
         let saved_networks = load_saved_networks(Arc::clone(&self.saved_network_manager)).await;
         let scan_result_guard = self.scan_result_cache.lock().await;
         let networks =
             merge_saved_networks_and_scan_data(saved_networks, &scan_result_guard.results).await;
-        select_best_bss(&networks, ignore_list)
+        select_best_connection_candidate(networks, ignore_list)
     }
 }
 
@@ -280,12 +280,12 @@ impl ScanResultUpdate for NetworkSelectorScanUpdater {
     }
 }
 
-fn select_best_bss<'a>(
-    bss_list: &Vec<InternalBss<'a>>,
+fn select_best_connection_candidate<'a>(
+    bss_list: Vec<InternalBss<'a>>,
     ignore_list: &Vec<types::NetworkIdentifier>,
-) -> Option<(types::NetworkIdentifier, Credential, types::NetworkSelectionMetadata)> {
+) -> Option<types::ConnectRequest> {
     bss_list
-        .iter()
+        .into_iter()
         .filter(|bss| {
             // Filter out incompatible BSSs
             if !bss.bss_info.compatible {
@@ -315,14 +315,11 @@ fn select_best_bss<'a>(
             // Both networks have failures, compare their scores
             bss_a.score().partial_cmp(&bss_b.score()).unwrap()
         })
-        .map(|bss| {
-            (
-                bss.network_id.clone(),
-                bss.network_info.credential.clone(),
-                types::NetworkSelectionMetadata {
-                    observed_in_passive_scan: bss.bss_info.observed_in_passive_scan,
-                },
-            )
+        .map(|bss| types::ConnectRequest {
+            network: bss.network_id,
+            credential: bss.network_info.credential,
+            observed_in_passive_scan: Some(bss.bss_info.observed_in_passive_scan),
+            bss: bss.bss_info.bss_desc.clone(),
         })
 }
 
@@ -392,7 +389,6 @@ mod tests {
         super::*,
         crate::{
             access_point::state_machine as ap_fsm,
-            client::state_machine as client_fsm,
             util::{cobalt::create_mock_cobalt_sender_and_receiver, logger::set_logger_for_test},
         },
         anyhow::Error,
@@ -464,7 +460,7 @@ mod tests {
 
         async fn connect(
             &mut self,
-            _connect_req: client_fsm::ConnectRequest,
+            _connect_req: types::ConnectRequest,
         ) -> Result<oneshot::Receiver<()>, Error> {
             unimplemented!()
         }
@@ -778,7 +774,7 @@ mod tests {
     }
 
     #[test]
-    fn select_best_bss_sorts_by_score() {
+    fn select_best_connection_candidate_sorts_by_score() {
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: "foo".as_bytes().to_vec(),
@@ -843,38 +839,36 @@ mod tests {
 
         // there's a network on 5G, it should get a boost and be selected
         assert_eq!(
-            select_best_bss(&networks, &vec![]).unwrap(),
-            (
-                test_id_1.clone(),
-                credential_1.clone(),
-                types::NetworkSelectionMetadata {
-                    observed_in_passive_scan: networks[0].bss_info.observed_in_passive_scan
-                }
-            )
+            select_best_connection_candidate(networks.clone(), &vec![]),
+            Some(types::ConnectRequest {
+                network: test_id_1.clone(),
+                credential: credential_1.clone(),
+                bss: bss_info1.bss_desc.clone(),
+                observed_in_passive_scan: Some(bss_info1.observed_in_passive_scan),
+            })
         );
 
         // make the 5GHz network into a 2.4GHz network
         let mut modified_network = networks[0].clone();
         let modified_bss_info =
-            types::Bss { channel: generate_channel(6), ..*modified_network.bss_info };
+            types::Bss { channel: generate_channel(6), ..modified_network.bss_info.clone() };
         modified_network.bss_info = &modified_bss_info;
         networks[0] = modified_network;
 
         // all networks are 2.4GHz, strongest RSSI network returned
         assert_eq!(
-            select_best_bss(&networks, &vec![]).unwrap(),
-            (
-                test_id_2.clone(),
-                credential_2.clone(),
-                types::NetworkSelectionMetadata {
-                    observed_in_passive_scan: networks[2].bss_info.observed_in_passive_scan
-                }
-            )
+            select_best_connection_candidate(networks.clone(), &vec![]),
+            Some(types::ConnectRequest {
+                network: test_id_2.clone(),
+                credential: credential_2.clone(),
+                bss: networks[2].bss_info.bss_desc.clone(),
+                observed_in_passive_scan: Some(networks[2].bss_info.observed_in_passive_scan),
+            })
         );
     }
 
     #[test]
-    fn select_best_bss_sorts_by_failure_count() {
+    fn select_best_connection_candidate_sorts_by_failure_count() {
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: "foo".as_bytes().to_vec(),
@@ -913,14 +907,13 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_bss(&networks, &vec![]).unwrap(),
-            (
-                test_id_1.clone(),
-                credential_1.clone(),
-                types::NetworkSelectionMetadata {
-                    observed_in_passive_scan: networks[0].bss_info.observed_in_passive_scan
-                }
-            )
+            select_best_connection_candidate(networks.clone(), &vec![]),
+            Some(types::ConnectRequest {
+                network: test_id_1.clone(),
+                credential: credential_1.clone(),
+                bss: bss_info1.bss_desc.clone(),
+                observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan)
+            })
         );
 
         // mark the stronger network as having a failure
@@ -930,14 +923,13 @@ mod tests {
 
         // weaker network (with no failures) returned
         assert_eq!(
-            select_best_bss(&networks, &vec![]).unwrap(),
-            (
-                test_id_2.clone(),
-                credential_2.clone(),
-                types::NetworkSelectionMetadata {
-                    observed_in_passive_scan: networks[1].bss_info.observed_in_passive_scan
-                }
-            )
+            select_best_connection_candidate(networks.clone(), &vec![]),
+            Some(types::ConnectRequest {
+                network: test_id_2.clone(),
+                credential: credential_2.clone(),
+                bss: bss_info2.bss_desc.clone(),
+                observed_in_passive_scan: Some(networks[1].bss_info.observed_in_passive_scan)
+            })
         );
 
         // give them both the same number of failures
@@ -947,19 +939,18 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_bss(&networks, &vec![]).unwrap(),
-            (
-                test_id_1.clone(),
-                credential_1.clone(),
-                types::NetworkSelectionMetadata {
-                    observed_in_passive_scan: networks[0].bss_info.observed_in_passive_scan
-                }
-            )
+            select_best_connection_candidate(networks.clone(), &vec![]),
+            Some(types::ConnectRequest {
+                network: test_id_1.clone(),
+                credential: credential_1.clone(),
+                bss: bss_info1.bss_desc.clone(),
+                observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
+            })
         );
     }
 
     #[test]
-    fn select_best_bss_incompatible() {
+    fn select_best_connection_candidate_incompatible() {
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: "foo".as_bytes().to_vec(),
@@ -1024,37 +1015,36 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_bss(&networks, &vec![]).unwrap(),
-            (
-                test_id_2.clone(),
-                credential_2.clone(),
-                types::NetworkSelectionMetadata {
-                    observed_in_passive_scan: networks[2].bss_info.observed_in_passive_scan
-                }
-            )
+            select_best_connection_candidate(networks.clone(), &vec![]),
+            Some(types::ConnectRequest {
+                network: test_id_2.clone(),
+                credential: credential_2.clone(),
+                bss: bss_info3.bss_desc.clone(),
+                observed_in_passive_scan: Some(networks[2].bss_info.observed_in_passive_scan),
+            })
         );
 
         // mark the stronger network as incompatible
         let mut modified_network = networks[2].clone();
-        let modified_bss_info = types::Bss { compatible: false, ..*modified_network.bss_info };
+        let modified_bss_info =
+            types::Bss { compatible: false, ..modified_network.bss_info.clone() };
         modified_network.bss_info = &modified_bss_info;
         networks[2] = modified_network;
 
         // other network returned
         assert_eq!(
-            select_best_bss(&networks, &vec![]).unwrap(),
-            (
-                test_id_1.clone(),
-                credential_1.clone(),
-                types::NetworkSelectionMetadata {
-                    observed_in_passive_scan: networks[0].bss_info.observed_in_passive_scan
-                }
-            )
+            select_best_connection_candidate(networks.clone(), &vec![]),
+            Some(types::ConnectRequest {
+                network: test_id_1.clone(),
+                credential: credential_1.clone(),
+                bss: networks[0].bss_info.bss_desc.clone(),
+                observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
+            })
         );
     }
 
     #[test]
-    fn select_best_bss_ignore_list() {
+    fn select_best_connection_candidate_ignore_list() {
         // build networks list
         let test_id_1 = types::NetworkIdentifier {
             ssid: "foo".as_bytes().to_vec(),
@@ -1093,26 +1083,24 @@ mod tests {
 
         // stronger network returned
         assert_eq!(
-            select_best_bss(&networks, &vec![]).unwrap(),
-            (
-                test_id_2.clone(),
-                credential_2.clone(),
-                types::NetworkSelectionMetadata {
-                    observed_in_passive_scan: networks[1].bss_info.observed_in_passive_scan
-                }
-            )
+            select_best_connection_candidate(networks.clone(), &vec![]),
+            Some(types::ConnectRequest {
+                network: test_id_2.clone(),
+                credential: credential_2.clone(),
+                bss: bss_info2.bss_desc.clone(),
+                observed_in_passive_scan: Some(networks[1].bss_info.observed_in_passive_scan),
+            })
         );
 
         // ignore the stronger network, other network returned
         assert_eq!(
-            select_best_bss(&networks, &vec![test_id_2.clone()]).unwrap(),
-            (
-                test_id_1.clone(),
-                credential_1.clone(),
-                types::NetworkSelectionMetadata {
-                    observed_in_passive_scan: networks[0].bss_info.observed_in_passive_scan
-                }
-            )
+            select_best_connection_candidate(networks.clone(), &vec![test_id_2.clone()]),
+            Some(types::ConnectRequest {
+                network: test_id_1.clone(),
+                credential: credential_1.clone(),
+                bss: bss_info1.bss_desc.clone(),
+                observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
+            })
         );
     }
 
@@ -1214,7 +1202,7 @@ mod tests {
     }
 
     #[test]
-    fn find_best_bss_end_to_end() {
+    fn find_best_connection_candidate_end_to_end() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
@@ -1225,11 +1213,13 @@ mod tests {
             type_: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
+        let bss_desc1 = generate_random_bss_desc();
         let test_id_2 = types::NetworkIdentifier {
             ssid: "bar".as_bytes().to_vec(),
             type_: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
+        let bss_desc2 = generate_random_bss_desc();
 
         // insert some new saved networks
         exec.run_singlethreaded(
@@ -1257,8 +1247,8 @@ mod tests {
 
         // Kick off network selection
         let ignore_list = vec![];
-        let network_selection_fut =
-            network_selector.find_best_bss(test_values.iface_manager.clone(), &ignore_list);
+        let network_selection_fut = network_selector
+            .find_best_connection_candidate(test_values.iface_manager.clone(), &ignore_list);
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 
@@ -1285,7 +1275,7 @@ mod tests {
                         },
                         protection: fidl_sme::Protection::Wpa3Enterprise,
                         compatible: true,
-                        bss_desc: None,
+                        bss_desc: bss_desc1.clone(),
                     },
                     fidl_sme::BssInfo {
                         bssid: [0, 0, 0, 0, 0, 0],
@@ -1299,7 +1289,7 @@ mod tests {
                         },
                         protection: fidl_sme::Protection::Wpa1,
                         compatible: true,
-                        bss_desc: None,
+                        bss_desc: bss_desc2.clone(),
                     },
                 ];
                 // Send all the APs
@@ -1318,28 +1308,32 @@ mod tests {
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(
             results,
-            Some((
-                test_id_1.clone(),
-                credential_1.clone(),
-                types::NetworkSelectionMetadata { observed_in_passive_scan: true }
-            ))
+            Some(types::ConnectRequest {
+                network: test_id_1.clone(),
+                credential: credential_1.clone(),
+                bss: bss_desc1.clone(),
+                observed_in_passive_scan: Some(true)
+            })
         );
         // Ignore that network, check that we pick the other one
-        let results = exec.run_singlethreaded(
-            network_selector.find_best_bss(test_values.iface_manager, &vec![test_id_1.clone()]),
-        );
+        let results =
+            exec.run_singlethreaded(network_selector.find_best_connection_candidate(
+                test_values.iface_manager,
+                &vec![test_id_1.clone()],
+            ));
         assert_eq!(
             results,
-            Some((
-                test_id_2.clone(),
-                credential_2.clone(),
-                types::NetworkSelectionMetadata { observed_in_passive_scan: true }
-            ))
+            Some(types::ConnectRequest {
+                network: test_id_2.clone(),
+                credential: credential_2.clone(),
+                bss: bss_desc2.clone(),
+                observed_in_passive_scan: Some(true)
+            })
         );
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn find_best_bss_wpa_wpa2() {
+    async fn find_best_connection_candidate_wpa_wpa2() {
         // Check that if we see a WPA2 network and have WPA and WPA3 credentials saved for it, we
         // could choose the WPA credential but not the WPA3 credential. In other words we can
         // upgrade saved networks to higher security but not downgrade.
@@ -1361,9 +1355,29 @@ mod tests {
         let wpa3_credential = Credential::Password("wpa3_only_password".as_bytes().to_vec());
         test_values
             .saved_network_manager
-            .store(wpa3_network_id.into(), wpa3_credential)
+            .store(wpa3_network_id.clone().into(), wpa3_credential.clone())
             .await
             .expect("Failed to save network");
+
+        // Record passive connects so that the test will not active scan.
+        test_values
+            .saved_network_manager
+            .record_connect_result(
+                wpa_network_id.clone().into(),
+                &credential,
+                fidl_sme::ConnectResultCode::Success,
+                Some(fidl_common::ScanType::Passive),
+            )
+            .await;
+        test_values
+            .saved_network_manager
+            .record_connect_result(
+                wpa3_network_id.clone().into(),
+                &wpa3_credential,
+                fidl_sme::ConnectResultCode::Success,
+                Some(fidl_common::ScanType::Passive),
+            )
+            .await;
 
         // Feed scans with WPA2 and WPA3 results to network selector, as we should get if a
         // WPA2/WPA3 network was seen.
@@ -1378,20 +1392,55 @@ mod tests {
 
         // Check that we choose the config saved as WPA2
         assert_eq!(
-            network_selector.find_best_bss(test_values.iface_manager.clone(), &vec![]).await,
-            Some((
-                id.clone(),
+            network_selector
+                .find_best_connection_candidate(test_values.iface_manager.clone(), &vec![])
+                .await,
+            Some(types::ConnectRequest {
+                network: id.clone(),
                 credential,
-                types::NetworkSelectionMetadata {
-                    observed_in_passive_scan: mixed_scan_results[0].entries[0]
-                        .observed_in_passive_scan
-                }
-            ))
+                bss: mixed_scan_results[0].entries[0].bss_desc.clone(),
+                observed_in_passive_scan: Some(
+                    mixed_scan_results[0].entries[0].observed_in_passive_scan
+                ),
+            })
         );
         assert_eq!(
-            network_selector.find_best_bss(test_values.iface_manager, &vec![id]).await,
+            network_selector
+                .find_best_connection_candidate(test_values.iface_manager, &vec![id])
+                .await,
             None
         );
+    }
+
+    // Generate a random bss description for a test. If certain values should not be random, they
+    // should be set specifically and this can be used for the rest of the fields.
+    fn generate_random_bss_desc() -> Option<Box<fidl_fuchsia_wlan_internal::BssDescription>> {
+        let mut rng = rand::thread_rng();
+        Some(Box::new(fidl_fuchsia_wlan_internal::BssDescription {
+            bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
+            ssid: format!("bss desc rand {}", rng.gen::<i32>()).as_bytes().to_vec(),
+            bss_type: fidl_fuchsia_wlan_internal::BssTypes::Personal,
+            beacon_period: rng.gen::<u16>(),
+            dtim_period: rng.gen::<u8>(),
+            timestamp: rng.gen::<u64>(),
+            local_time: rng.gen::<u64>(),
+            cap: rng.gen::<u16>(),
+            rates: (0..4).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
+            country: None,
+            rsne: None,
+            vendor_ies: None,
+            ht_cap: None,
+            ht_op: None,
+            vht_cap: None,
+            vht_op: None,
+            rssi_dbm: rng.gen::<i8>(),
+            chan: fidl_common::WlanChan {
+                primary: rng.gen_range(1, 255),
+                cbw: fidl_common::Cbw::Cbw20,
+                secondary80: 0,
+            },
+            snr_db: rng.gen::<i8>(),
+        }))
     }
 
     fn generate_random_bss() -> types::Bss {
@@ -1410,6 +1459,7 @@ mod tests {
             snr_db: rng.gen_range(-20, 50),
             observed_in_passive_scan: rng.gen::<bool>(),
             compatible: rng.gen::<bool>(),
+            bss_desc: generate_random_bss_desc(),
         }
     }
 

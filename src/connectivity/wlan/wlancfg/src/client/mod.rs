@@ -5,7 +5,7 @@
 //! Serves Client policy services.
 use {
     crate::{
-        client::state_machine as client_fsm,
+        client::types as client_types,
         config_management::{
             self, Credential, NetworkConfigError, NetworkIdentifier, SaveError,
             SavedNetworksManager,
@@ -254,10 +254,11 @@ async fn handle_client_request_connect(
         ssid: network_config.ssid,
         type_: fidl_policy::SecurityType::from(network_config.security_type),
     };
-    let connect_req = client_fsm::ConnectRequest {
+    let connect_req = client_types::ConnectRequest {
         network: network_id,
         credential: network_config.credential.clone(),
-        metadata: None,
+        bss: None,
+        observed_in_passive_scan: None,
     };
 
     let mut iface_manager = iface_manager.lock().await;
@@ -322,8 +323,12 @@ async fn handle_client_request_save_network(
     }
 
     // Attempt to connect to the new network if there is an idle client interface.
-    let connect_req =
-        client_fsm::ConnectRequest { network: net_id, credential: credential, metadata: None };
+    let connect_req = client_types::ConnectRequest {
+        network: net_id,
+        credential: credential,
+        bss: None,
+        observed_in_passive_scan: None,
+    };
     match iface_manager.has_idle_client().await {
         Ok(true) => {
             info!("Idle interface available, will attempt connection to new saved network");
@@ -516,7 +521,7 @@ mod tests {
 
         async fn connect(
             &mut self,
-            connect_req: client_fsm::ConnectRequest,
+            connect_req: client_types::ConnectRequest,
         ) -> Result<oneshot::Receiver<()>, Error> {
             let _ = self.disconnected_ifaces.pop();
             let mut req = fidl_sme::ConnectRequest {
@@ -1889,7 +1894,7 @@ mod tests {
 
         async fn connect(
             &mut self,
-            _connect_req: client_fsm::ConnectRequest,
+            _connect_req: client_types::ConnectRequest,
         ) -> Result<oneshot::Receiver<()>, Error> {
             Err(format_err!("No ifaces"))
         }

@@ -5,7 +5,7 @@
 use {
     crate::{
         access_point::{state_machine as ap_fsm, types as ap_types},
-        client::state_machine as client_fsm,
+        client::types as client_types,
     },
     anyhow::Error,
     fidl_fuchsia_wlan_sme,
@@ -20,7 +20,7 @@ pub(crate) struct DisconnectRequest {
 
 #[derive(Debug)]
 pub(crate) struct ConnectRequest {
-    pub request: client_fsm::ConnectRequest,
+    pub request: client_types::ConnectRequest,
     pub responder: oneshot::Sender<Result<oneshot::Receiver<()>, Error>>,
 }
 

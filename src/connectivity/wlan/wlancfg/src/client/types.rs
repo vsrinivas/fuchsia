@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_wlan_common as fidl_common;
-use fidl_fuchsia_wlan_policy as fidl_policy;
+use {
+    crate::config_management, fidl_fuchsia_wlan_common as fidl_common,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_policy as fidl_policy,
+};
 
 pub type NetworkIdentifier = fidl_policy::NetworkIdentifier;
 pub type SecurityType = fidl_policy::SecurityType;
@@ -35,7 +37,7 @@ impl From<ScanResult> for fidl_policy::ScanResult {
 }
 
 // An internal version of fidl_policy::Bss with extended information
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Bss {
     /// MAC address for the AP interface.
     pub bssid: [u8; 6],
@@ -53,6 +55,8 @@ pub struct Bss {
     pub observed_in_passive_scan: bool,
     /// Compatible with this device's network stack.
     pub compatible: bool,
+    /// The BSS description with information that SME needs for connecting.
+    pub bss_desc: Option<Box<fidl_internal::BssDescription>>,
 }
 impl From<Bss> for fidl_policy::Bss {
     fn from(input: Bss) -> Self {
@@ -66,8 +70,14 @@ impl From<Bss> for fidl_policy::Bss {
     }
 }
 
-/// Additional data used during network selection and connection.
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct NetworkSelectionMetadata {
-    pub observed_in_passive_scan: bool,
+/// Data for connecting to a specific network and keeping track of what is connected to.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConnectRequest {
+    pub network: NetworkIdentifier,
+    pub credential: config_management::Credential,
+    pub bss: Option<Box<fidl_internal::BssDescription>>,
+    /// Temporarily an Option<>, since this information comes from a scan, and scans are not always
+    /// performed in the Policy layer right now. TODO(53899) Remove the optionality once all scans
+    /// are done at the Policy layer.
+    pub observed_in_passive_scan: Option<bool>,
 }

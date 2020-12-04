@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::{
-        client::state_machine as client_fsm,
+        client::types as client_types,
         config_management::{Credential, NetworkIdentifier, SavedNetworksManager, SecurityType},
         legacy::IfaceRef,
         util::clone::clone_bss_info,
@@ -212,10 +212,11 @@ async fn connect(
         Err(e) => return e,
     };
 
-    let connect_req = client_fsm::ConnectRequest {
+    let connect_req = client_types::ConnectRequest {
         network: fidl_policy::NetworkIdentifier::from(network_id),
         credential,
-        metadata: None,
+        bss: None,
+        observed_in_passive_scan: None,
     };
 
     // Get the state machine to begin connecting to the desired network.
@@ -569,7 +570,7 @@ mod tests {
 
         async fn connect(
             &mut self,
-            _connect_req: client_fsm::ConnectRequest,
+            _connect_req: client_types::ConnectRequest,
         ) -> Result<oneshot::Receiver<()>, anyhow::Error> {
             if !self.connect_succeeds {
                 return Err(anyhow::format_err!("failing to connect"));

@@ -94,7 +94,7 @@ mod tests {
         super::*,
         crate::{
             access_point::{state_machine as ap_fsm, types as ap_types},
-            client::state_machine as client_fsm,
+            client::types as client_types,
             legacy::Iface,
             mode_management::iface_manager_api::IfaceManagerApi,
         },
@@ -122,7 +122,7 @@ mod tests {
 
         async fn connect(
             &mut self,
-            _connect_req: client_fsm::ConnectRequest,
+            _connect_req: client_types::ConnectRequest,
         ) -> Result<oneshot::Receiver<()>, Error> {
             unimplemented!()
         }

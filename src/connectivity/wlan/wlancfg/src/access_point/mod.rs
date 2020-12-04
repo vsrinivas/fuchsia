@@ -357,7 +357,7 @@ fn log_ap_request(request: &fidl_policy::AccessPointControllerRequest) {
 mod tests {
     use {
         super::*,
-        crate::{client::state_machine as client_fsm, util::logger::set_logger_for_test},
+        crate::{client::types as client_types, util::logger::set_logger_for_test},
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream, Proxy},
         fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
@@ -392,7 +392,7 @@ mod tests {
 
         async fn connect(
             &mut self,
-            _connect_req: client_fsm::ConnectRequest,
+            _connect_req: client_types::ConnectRequest,
         ) -> Result<oneshot::Receiver<()>, Error> {
             unimplemented!()
         }

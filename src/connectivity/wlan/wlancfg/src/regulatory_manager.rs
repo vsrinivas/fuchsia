@@ -79,7 +79,7 @@ mod tests {
     use {
         super::{Arc, IfaceManagerApi, Mutex, PhyManagerApi, RegulatoryManager, SetCountryRequest},
         crate::{
-            access_point::state_machine as ap_fsm, client::state_machine as client_fsm,
+            access_point::state_machine as ap_fsm, client::types,
             mode_management::phy_manager::PhyManagerError,
         },
         anyhow::{format_err, Error},
@@ -881,7 +881,7 @@ mod tests {
 
         async fn connect(
             &mut self,
-            _connect_req: client_fsm::ConnectRequest,
+            _connect_req: types::ConnectRequest,
         ) -> Result<oneshot::Receiver<()>, Error> {
             unimplemented!();
         }

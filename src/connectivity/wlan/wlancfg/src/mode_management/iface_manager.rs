@@ -8,7 +8,7 @@ use {
         client::{
             network_selection::NetworkSelector, state_machine as client_fsm, types as client_types,
         },
-        config_management::{Credential, SavedNetworksManager},
+        config_management::SavedNetworksManager,
         mode_management::{
             iface_manager_api::IfaceManagerApi, iface_manager_types::*, phy_manager::PhyManagerApi,
         },
@@ -64,7 +64,7 @@ async fn create_client_state_machine(
     dev_svc_proxy: &mut fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
     client_update_sender: listener::ClientListenerMessageSender,
     saved_networks: Arc<SavedNetworksManager>,
-    connect_req: Option<(client_fsm::ConnectRequest, oneshot::Sender<()>)>,
+    connect_req: Option<(client_types::ConnectRequest, oneshot::Sender<()>)>,
 ) -> Result<
     (
         Box<dyn client_fsm::ClientApi + Send>,
@@ -329,7 +329,7 @@ impl IfaceManagerService {
 
     async fn connect(
         &mut self,
-        connect_req: client_fsm::ConnectRequest,
+        connect_req: client_types::ConnectRequest,
     ) -> Result<oneshot::Receiver<()>, Error> {
         // Get a ClientIfaceContainer.
         let mut client_iface = self.get_client(None).await?;
@@ -416,7 +416,7 @@ impl IfaceManagerService {
     async fn attempt_client_reconnect(
         &mut self,
         iface_id: u16,
-        connect_req: client_fsm::ConnectRequest,
+        connect_req: client_types::ConnectRequest,
     ) -> Result<(), Error> {
         for client in self.clients.iter_mut() {
             if client.iface_id == iface_id {
@@ -685,14 +685,7 @@ async fn initiate_network_selection(
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     network_selector: Arc<NetworkSelector>,
     network_selection_futures: &mut FuturesUnordered<
-        BoxFuture<
-            'static,
-            Option<(
-                client_types::NetworkIdentifier,
-                Credential,
-                client_types::NetworkSelectionMetadata,
-            )>,
-        >,
+        BoxFuture<'static, Option<client_types::ConnectRequest>>,
     >,
 ) {
     if !iface_manager.idle_clients().is_empty()
@@ -702,34 +695,26 @@ async fn initiate_network_selection(
         info!("Initiating network selection for idle client interface.");
         let fut = async move {
             let ignore_list = vec![];
-            network_selector.find_best_bss(iface_manager_client.clone(), &ignore_list).await
+            network_selector
+                .find_best_connection_candidate(iface_manager_client.clone(), &ignore_list)
+                .await
         };
         network_selection_futures.push(fut.boxed());
     }
 }
 
 async fn handle_network_selection_results(
-    network_selection_result: Option<(
-        client_types::NetworkIdentifier,
-        Credential,
-        client_types::NetworkSelectionMetadata,
-    )>,
+    network_selection_result: Option<client_types::ConnectRequest>,
     iface_manager: &mut IfaceManagerService,
     reconnect_monitor_interval: &mut i64,
     connectivity_monitor_timer: &mut fasync::Interval,
 ) {
-    if let Some((network_id, credential, network_metadata)) = network_selection_result {
+    if let Some(connect_req) = network_selection_result {
         *reconnect_monitor_interval = 1;
 
         let mut idle_clients = iface_manager.idle_clients();
 
         if !idle_clients.is_empty() {
-            let connect_req = client_fsm::ConnectRequest {
-                network: network_id,
-                credential: credential,
-                metadata: Some(network_metadata),
-            };
-
             // Any client interfaces that have recently presented as idle will be
             // reconnected.
             for iface_id in idle_clients.drain(..) {
@@ -756,14 +741,7 @@ async fn handle_terminated_state_machine(
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     selector: Arc<NetworkSelector>,
     network_selection_futures: &mut FuturesUnordered<
-        BoxFuture<
-            'static,
-            Option<(
-                client_types::NetworkIdentifier,
-                Credential,
-                client_types::NetworkSelectionMetadata,
-            )>,
-        >,
+        BoxFuture<'static, Option<client_types::ConnectRequest>>,
     >,
 ) {
     match terminated_fsm.role {
@@ -971,19 +949,18 @@ mod tests {
     pub static TEST_PASSWORD: &str = "test_password";
 
     /// Produces wlan network configuration objects to be used in tests.
-    pub fn create_connect_request(ssid: &str, password: &str) -> client_fsm::ConnectRequest {
+    pub fn create_connect_request(ssid: &str, password: &str) -> client_types::ConnectRequest {
         let network = ap_types::NetworkIdentifier {
             ssid: ssid.as_bytes().to_vec(),
             type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
         };
         let credential = Credential::Password(password.as_bytes().to_vec());
 
-        client_fsm::ConnectRequest {
+        client_types::ConnectRequest {
             network,
             credential,
-            metadata: Some(client_types::NetworkSelectionMetadata {
-                observed_in_passive_scan: true,
-            }),
+            observed_in_passive_scan: Some(true),
+            bss: None,
         }
     }
 
@@ -1133,7 +1110,7 @@ mod tests {
     struct FakeClient {
         disconnect_ok: bool,
         is_alive: bool,
-        expected_connect_request: Option<client_fsm::ConnectRequest>,
+        expected_connect_request: Option<client_types::ConnectRequest>,
     }
 
     impl FakeClient {
@@ -1146,7 +1123,7 @@ mod tests {
     impl client_fsm::ClientApi for FakeClient {
         fn connect(
             &mut self,
-            request: client_fsm::ConnectRequest,
+            request: client_types::ConnectRequest,
             responder: oneshot::Sender<()>,
         ) -> Result<(), Error> {
             assert_eq!(Some(request), self.expected_connect_request);
@@ -3069,7 +3046,7 @@ mod tests {
 
         async fn connect(
             &mut self,
-            _connect_req: client_fsm::ConnectRequest,
+            _connect_req: client_types::ConnectRequest,
         ) -> Result<oneshot::Receiver<()>, Error> {
             unimplemented!()
         }
@@ -3707,16 +3684,8 @@ mod tests {
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
 
         // Create an empty FuturesUnordered to hold the network selection request.
-        let mut network_selection_futures = FuturesUnordered::<
-            BoxFuture<
-                'static,
-                Option<(
-                    client_types::NetworkIdentifier,
-                    Credential,
-                    client_types::NetworkSelectionMetadata,
-                )>,
-            >,
-        >::new();
+        let mut network_selection_futures =
+            FuturesUnordered::<BoxFuture<'static, Option<client_types::ConnectRequest>>>::new();
 
         // Create a network selector to be used by the network selection request.
         let selector = Arc::new(NetworkSelector::new(
@@ -3870,6 +3839,7 @@ mod tests {
                         cbw: fidl_fuchsia_wlan_common::Cbw::Cbw20,
                         secondary80: 0,
                     },
+                    bss_desc: None,
                 }],
                 compatibility: client_types::Compatibility::Supported,
             }];
@@ -3893,8 +3863,9 @@ mod tests {
         let mut connectivity_monitor_timer =
             fasync::Interval::new(zx::Duration::from_seconds(reconnect_monitor_interval));
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
-        let network =
-            exec.run_singlethreaded(selector.find_best_bss(iface_manager_client, &vec![]));
+        let network = exec.run_singlethreaded(
+            selector.find_best_connection_candidate(iface_manager_client, &vec![]),
+        );
         assert!(network.is_some());
 
         {
@@ -3986,6 +3957,7 @@ mod tests {
                         cbw: fidl_fuchsia_wlan_common::Cbw::Cbw20,
                         secondary80: 0,
                     },
+                    bss_desc: None,
                 }],
                 compatibility: client_types::Compatibility::Supported,
             }];
@@ -4009,8 +3981,9 @@ mod tests {
         let mut connectivity_monitor_timer =
             fasync::Interval::new(zx::Duration::from_seconds(reconnect_monitor_interval));
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
-        let network =
-            exec.run_singlethreaded(selector.find_best_bss(iface_manager_client, &vec![]));
+        let network = exec.run_singlethreaded(
+            selector.find_best_connection_candidate(iface_manager_client, &vec![]),
+        );
         assert!(network.is_some());
 
         {

@@ -5,7 +5,7 @@
 use {
     crate::{
         access_point::{state_machine as ap_fsm, types as ap_types},
-        client::state_machine as client_fsm,
+        client::types as client_types,
         mode_management::iface_manager_types::*,
     },
     anyhow::Error,
@@ -25,7 +25,7 @@ pub(crate) trait IfaceManagerApi {
     /// machine.
     async fn connect(
         &mut self,
-        connect_req: client_fsm::ConnectRequest,
+        connect_req: client_types::ConnectRequest,
     ) -> Result<oneshot::Receiver<()>, Error>;
 
     /// Marks an existing client interface as unconfigured.
@@ -82,7 +82,7 @@ impl IfaceManagerApi for IfaceManager {
 
     async fn connect(
         &mut self,
-        connect_req: client_fsm::ConnectRequest,
+        connect_req: client_types::ConnectRequest,
     ) -> Result<oneshot::Receiver<()>, Error> {
         let (responder, receiver) = oneshot::channel();
         let req = ConnectRequest { request: connect_req, responder };
@@ -380,13 +380,14 @@ mod tests {
         let mut test_values = test_setup();
 
         // Issue a connect command and wait for the command to be sent.
-        let req = client_fsm::ConnectRequest {
+        let req = client_types::ConnectRequest {
             network: fidl_policy::NetworkIdentifier {
                 ssid: "foo".as_bytes().to_vec(),
                 type_: fidl_policy::SecurityType::None,
             },
             credential: Credential::None,
-            metadata: None,
+            bss: None,
+            observed_in_passive_scan: None,
         };
         let connect_fut = test_values.iface_manager.connect(req.clone());
         pin_mut!(connect_fut);
@@ -419,13 +420,14 @@ mod tests {
         let mut test_values = test_setup();
 
         // Issue a connect command and wait for the command to be sent.
-        let req = client_fsm::ConnectRequest {
+        let req = client_types::ConnectRequest {
             network: fidl_policy::NetworkIdentifier {
                 ssid: "foo".as_bytes().to_vec(),
                 type_: fidl_policy::SecurityType::None,
             },
             credential: Credential::None,
-            metadata: None,
+            bss: None,
+            observed_in_passive_scan: None,
         };
         let connect_fut = test_values.iface_manager.connect(req.clone());
         pin_mut!(connect_fut);
