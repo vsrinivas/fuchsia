@@ -126,7 +126,7 @@ func (q *QEMUCommandBuilder) SetInitrd(initrd string) {
 	q.initrd = initrd
 }
 
-func (q *QEMUCommandBuilder) SetTarget(target Target, kvm bool) {
+func (q *QEMUCommandBuilder) SetTarget(target Target, kvm bool) error {
 	switch target {
 	case TargetEnum.AArch64:
 		if kvm {
@@ -145,7 +145,10 @@ func (q *QEMUCommandBuilder) SetTarget(target Target, kvm bool) {
 		} else {
 			q.SetFlag("-cpu", "Haswell,+smap,-check,-fsgsbase")
 		}
+	default:
+		return fmt.Errorf("invalid target: %q", target)
 	}
+	return nil
 }
 
 func (q *QEMUCommandBuilder) SetMemory(memoryBytes int) {

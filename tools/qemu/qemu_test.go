@@ -31,6 +31,12 @@ func check(t *testing.T, e expected, cmd []string, err error) {
 func TestQEMUCommandBuilder(t *testing.T) {
 	b := &QEMUCommandBuilder{}
 
+	// Invalid Target
+	target := Target("badtarget")
+	if err := b.SetTarget(target, false); err == nil {
+		t.Errorf("SetTarget(%q, false) expected an error but got nil", target)
+	}
+
 	// No binary set.
 	cmd, err := b.Build()
 	check(t, expected{

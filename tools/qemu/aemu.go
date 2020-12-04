@@ -47,11 +47,11 @@ func (a *AEMUCommandBuilder) SetGPU(gpu string) {
 	a.SetAEMUFlag("-gpu", gpu)
 }
 
-func (a *AEMUCommandBuilder) SetTarget(target Target, kvm bool) {
+func (a *AEMUCommandBuilder) SetTarget(target Target, kvm bool) error {
 	if kvm {
 		a.SetFeature("KVM")
 	}
-	a.QEMUCommandBuilder.SetTarget(target, kvm)
+	return a.QEMUCommandBuilder.SetTarget(target, kvm)
 }
 
 func (a *AEMUCommandBuilder) Build() ([]string, error) {

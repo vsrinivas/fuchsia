@@ -122,7 +122,7 @@ type EMUCommandBuilder interface {
 	SetBinary(string)
 	SetKernel(string)
 	SetInitrd(string)
-	SetTarget(qemu.Target, bool)
+	SetTarget(qemu.Target, bool) error
 	SetMemory(int)
 	SetCPUCount(int)
 	AddVirtioBlkPciDrive(qemu.Drive)
@@ -195,7 +195,9 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	if !ok {
 		return fmt.Errorf("invalid target %q", t.config.Target)
 	}
-	qemuCmd.SetTarget(qemuTarget, t.config.KVM)
+	if err := qemuCmd.SetTarget(qemuTarget, t.config.KVM); err != nil {
+		return err
+	}
 
 	if t.config.Path == "" {
 		return fmt.Errorf("directory must be set")
