@@ -72,7 +72,7 @@ TEST_F(VmoTest, Basic) {
   actual = 0u;
   ASSERT_OK(zxio_read(io, buffer, 3, 0, &actual));
   EXPECT_STR_EQ("cde", buffer);
-  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_truncate(io, 0u));
+  ASSERT_STATUS(ZX_ERR_UNAVAILABLE, zxio_truncate(io, 0u));
   uint32_t flags = 0u;
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_flags_get(io, &flags));
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_flags_set(io, flags));

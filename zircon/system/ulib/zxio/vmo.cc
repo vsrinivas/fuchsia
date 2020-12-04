@@ -9,6 +9,8 @@
 #include <sys/stat.h>
 #include <zircon/syscalls.h>
 
+#include <fbl/algorithm.h>
+
 #include "private.h"
 
 typedef struct zxio_vmo {
@@ -111,6 +113,39 @@ static zx_status_t zxio_vmo_seek(zxio_t* io, zxio_seek_origin_t start, int64_t o
   return file->stream.seek(static_cast<zx_stream_seek_origin_t>(start), offset, out_offset);
 }
 
+zx_status_t zxio_vmo_truncate(zxio_t* io, size_t length) {
+  auto file = reinterpret_cast<zxio_vmo_t*>(io);
+
+  // TODO(65888): The work done by this function should really be done atomically. There is a
+  // similar issue in memfs::VnodeFile::Truncate. It's likely we'll need to add a new syscall to do
+  // this operation atomically.
+
+  size_t previous_content_size = 0u;
+  zx_status_t status = file->vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &previous_content_size,
+                                              sizeof(previous_content_size));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = file->vmo.set_size(length);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = file->vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &length, sizeof(length));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (length < previous_content_size) {
+    constexpr size_t kPageSize = static_cast<size_t>(ZX_PAGE_SIZE);
+    size_t remaining = kPageSize - (length % kPageSize);
+    file->vmo.op_range(ZX_VMO_OP_ZERO, length, remaining, nullptr, 0u);
+  }
+
+  return ZX_OK;
+}
+
 static constexpr zxio_ops_t zxio_vmo_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_vmo_close;
@@ -122,6 +157,7 @@ static constexpr zxio_ops_t zxio_vmo_ops = []() {
   ops.writev = zxio_vmo_writev;
   ops.writev_at = zxio_vmo_writev_at;
   ops.seek = zxio_vmo_seek;
+  ops.truncate = zxio_vmo_truncate;
   return ops;
 }();
 
