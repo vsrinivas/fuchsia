@@ -50,11 +50,14 @@ func TestConsoleIsLaunched(t *testing.T) {
 	// Wait for the system to finish booting.
 	i.WaitForLogMessage("usage: k <command>")
 
-	// Print a string
+	// Print a string and check for the string.
 	i.RunCommand("echo MY_TEST_STRING")
-
-	// See that it was printed.
 	i.WaitForLogMessage("MY_TEST_STRING")
+
+	// Check that 'ls' doesn't hang by running it and then another echo.
+	i.RunCommand("ls")
+	i.RunCommand("echo MY_TEST_STRING2")
+	i.WaitForLogMessage("MY_TEST_STRING2")
 
 	// Tell the shell to exit.
 	i.RunCommand("exit")
@@ -63,10 +66,10 @@ func TestConsoleIsLaunched(t *testing.T) {
 	i.WaitForLogMessage("console-launcher: console shell exited (started=1 exited=1, return_code=0)")
 
 	// Print another string to make sure the shell came back up.
-	i.RunCommand("echo MY_TEST_STRING2")
+	i.RunCommand("echo MY_TEST_STRING3")
 
 	// See that it was printed.
-	i.WaitForLogMessage("MY_TEST_STRING2")
+	i.WaitForLogMessage("MY_TEST_STRING3")
 
 	// Run the permissions test.
 	i.RunCommand("runtests -n shell-permissions-test")

@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
@@ -19,6 +20,7 @@
 #include <zircon/compiler.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 
 namespace console_launcher {
 
@@ -224,18 +226,49 @@ zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
   const char* argv[] = {ZX_SHELL_DEFAULT, nullptr};
   const char* environ[] = {args.term.data(), nullptr};
 
-  fdio_spawn_action_t actions[2] = {};
-  actions[0].action = FDIO_SPAWN_ACTION_SET_NAME;
-  actions[0].name.data = "sh:console";
-  actions[1].action = FDIO_SPAWN_ACTION_TRANSFER_FD;
-  actions[1].fd = {.local_fd = fd.release(), .target_fd = FDIO_FLAG_USE_FOR_STDIO};
+  std::vector<fdio_spawn_action_t> actions;
+  // Add an action to set the new process name.
+  {
+    fdio_spawn_action_t name = {};
+    name.action = FDIO_SPAWN_ACTION_SET_NAME;
+    name.name.data = "sh:console";
+    actions.push_back(std::move(name));
+  }
 
-  uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO;
+  // Get our current namespace so we can pass it to the shell process.
+  fdio_flat_namespace_t* flat = nullptr;
+  status = fdio_ns_export_root(&flat);
+  if (status != ZX_OK) {
+    return status;
+  }
+  auto free_flat = fbl::MakeAutoCall([&flat]() { fdio_ns_free_flat_ns(flat); });
+
+  // Go through each directory in our namespace and copy all of them except /system-delayed.
+  for (size_t i = 0; i < flat->count; i++) {
+    if (strcmp(flat->path[i], "/system-delayed") == 0) {
+      continue;
+    }
+    fdio_spawn_action_t add_dir = {};
+    add_dir.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY;
+    add_dir.ns.handle = flat->handle[i];
+    add_dir.ns.prefix = flat->path[i];
+    actions.push_back(std::move(add_dir));
+  }
+
+  // Add an action to transfer the STDIO handle.
+  {
+    fdio_spawn_action_t stdio = {};
+    stdio.action = FDIO_SPAWN_ACTION_TRANSFER_FD;
+    stdio.fd = {.local_fd = fd.release(), .target_fd = FDIO_FLAG_USE_FOR_STDIO};
+    actions.push_back(std::move(stdio));
+  }
+
+  uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO & ~FDIO_SPAWN_CLONE_NAMESPACE;
 
   FX_LOGF(INFO, nullptr, "Launching %s (%s)\n", argv[0], actions[0].name.data);
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  status = fdio_spawn_etc(shell_job_.get(), flags, argv[0], argv, environ, 2, actions,
-                          shell_process_.reset_and_get_address(), err_msg);
+  status = fdio_spawn_etc(shell_job_.get(), flags, argv[0], argv, environ, actions.size(),
+                          actions.data(), shell_process_.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
     printf("console-launcher: failed to launch console shell: %s: %d (%s)\n", err_msg, status,
            zx_status_get_string(status));
