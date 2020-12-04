@@ -4,15 +4,15 @@
 
 use {
     crate::{HyperConnectorFuture, TcpOptions, TcpStream},
-    async_std::net,
+    async_std::{
+        net,
+        task::{Context, Poll},
+    },
     futures::io,
     http::uri::{Scheme, Uri},
     hyper::service::Service,
     rustls::ClientConfig,
-    std::{
-        net::ToSocketAddrs,
-        task::{Context, Poll},
-    },
+    std::net::ToSocketAddrs,
 };
 
 pub(crate) fn configure_cert_store(tls: &mut ClientConfig) {
