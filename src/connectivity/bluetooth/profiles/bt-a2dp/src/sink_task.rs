@@ -299,20 +299,22 @@ fn report_stream_metrics(
     );
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "test_encoding"))]
 mod tests {
     use super::*;
 
-    use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_cobalt::{CobaltEvent, EventPayload};
-    use fidl_fuchsia_media::{
-        AudioConsumerRequest, AudioConsumerStatus, SessionAudioConsumerFactoryMarker,
-        StreamSinkRequest,
+    use {
+        fidl::endpoints::create_proxy_and_stream,
+        fidl_fuchsia_cobalt::{CobaltEvent, EventPayload},
+        fidl_fuchsia_media::{
+            AudioConsumerRequest, AudioConsumerStatus, SessionAudioConsumerFactoryMarker,
+            StreamSinkRequest,
+        },
+        fuchsia_inspect as inspect,
+        fuchsia_inspect_derive::WithInspect,
+        fuchsia_zircon::DurationNum,
+        futures::{channel::mpsc, pin_mut, task::Poll, StreamExt},
     };
-    use fuchsia_inspect as inspect;
-    use fuchsia_inspect_derive::WithInspect;
-    use fuchsia_zircon::DurationNum;
-    use futures::{channel::mpsc, pin_mut, task::Poll, StreamExt};
 
     use crate::tests::fake_cobalt_sender;
 
@@ -322,6 +324,29 @@ mod tests {
         let sbc_config = MediaCodecConfig::min_sbc();
         let inspect = Arc::new(Mutex::new(DataStreamInspect::default()));
         (exec, sbc_config, inspect)
+    }
+
+    #[test]
+    /// Test that cobalt metrics are sent after stream ends
+    fn test_cobalt_metrics() {
+        let (send, mut recv) = fake_cobalt_sender();
+        const TEST_DURATION: i64 = 1;
+
+        report_stream_metrics(send, &avdtp::MediaCodecType::AUDIO_AAC, TEST_DURATION);
+
+        let event = recv.try_next().expect("no stream error").expect("event present");
+
+        assert_eq!(
+            event,
+            CobaltEvent {
+                metric_id: metrics::A2DP_STREAM_DURATION_IN_SECONDS_METRIC_ID,
+                event_codes: vec![
+                    metrics::A2dpStreamDurationInSecondsMetricDimensionCodec::Aac as u32
+                ],
+                component: None,
+                payload: EventPayload::ElapsedMicros(TEST_DURATION),
+            }
+        );
     }
 
     #[test]
@@ -524,28 +549,5 @@ mod tests {
         drop(audio_consumer_request_stream);
 
         assert!(exec.run_until_stalled(&mut media_stream_fut).is_ready());
-    }
-
-    #[test]
-    /// Test that cobalt metrics are sent after stream ends
-    fn test_cobalt_metrics() {
-        let (send, mut recv) = fake_cobalt_sender();
-        const TEST_DURATION: i64 = 1;
-
-        report_stream_metrics(send, &avdtp::MediaCodecType::AUDIO_AAC, TEST_DURATION);
-
-        let event = recv.try_next().expect("no stream error").expect("event present");
-
-        assert_eq!(
-            event,
-            CobaltEvent {
-                metric_id: metrics::A2DP_STREAM_DURATION_IN_SECONDS_METRIC_ID,
-                event_codes: vec![
-                    metrics::A2dpStreamDurationInSecondsMetricDimensionCodec::Aac as u32
-                ],
-                component: None,
-                payload: EventPayload::ElapsedMicros(TEST_DURATION),
-            }
-        );
     }
 }

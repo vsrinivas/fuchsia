@@ -386,3 +386,58 @@ mod tests {
         };
     }
 }
+
+#[cfg(feature = "test_encoding")]
+mod encoder_tests {
+    use super::*;
+
+    use bt_avdtp as avdtp;
+    use fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat};
+    use std::convert::TryFrom;
+
+    pub async fn test_encoding_capability(
+        capability: &avdtp::ServiceCapability,
+    ) -> Result<(), Error> {
+        let config = a2dp::codec::MediaCodecConfig::try_from(capability)?;
+        let channel_map = match config.channel_count()? {
+            1 => vec![AudioChannelId::Lf],
+            2 => vec![AudioChannelId::Lf, AudioChannelId::Rf],
+            _ => panic!("More than 2 channels not supported"),
+        };
+        let input_format = PcmFormat {
+            pcm_mode: AudioPcmMode::Linear,
+            bits_per_sample: 16,
+            frames_per_second: 48000,
+            channel_map,
+        };
+        EncodedStream::test(input_format, &config).await
+    }
+
+    #[test]
+    fn test_sbc_encodes_correctly() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let sbc_capability = &avdtp::ServiceCapability::MediaCodec {
+            media_type: avdtp::MediaType::Audio,
+            codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+            codec_extra: vec![0x11, 0x15, 2, 53],
+        };
+        match exec.run_singlethreaded(test_encoding_capability(sbc_capability)) {
+            Ok(()) => {}
+            x => panic!("Expected encoding SBC to be Ok but got {:?}", x),
+        };
+    }
+
+    #[test]
+    fn test_aac_encodes_correctly() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let aac_capability = &avdtp::ServiceCapability::MediaCodec {
+            media_type: avdtp::MediaType::Audio,
+            codec_type: avdtp::MediaCodecType::AUDIO_AAC,
+            codec_extra: vec![128, 1, 4, 4, 226, 0],
+        };
+        match exec.run_singlethreaded(test_encoding_capability(aac_capability)) {
+            Ok(()) => {}
+            x => panic!("Expected encoding AAC to be Ok but got {:?}", x),
+        };
+    }
+}

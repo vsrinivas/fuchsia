@@ -842,6 +842,15 @@ mod tests {
         run_to_stalled(&mut exec);
     }
 
+    #[cfg(not(feature = "test_encoding"))]
+    #[test]
+    fn test_encoding_fails_in_test_environment() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+        let result = exec.run_singlethreaded(test_encode_sbc());
+
+        assert!(result.is_err());
+    }
+
     #[test]
     fn test_channel_mode_from_arg() {
         let channel_string = None;

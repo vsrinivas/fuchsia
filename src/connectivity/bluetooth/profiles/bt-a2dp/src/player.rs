@@ -905,6 +905,7 @@ pub(crate) mod tests {
     }
 
     #[test]
+    #[cfg(features = "test_encoding")]
     /// Test that bytes flow through to decoder when SBC is active
     fn test_sbc_decoder_write() {
         let mut exec = fasync::Executor::new().expect("executor should build");

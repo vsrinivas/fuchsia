@@ -11,7 +11,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/bt_a2dp_bin_test"
+        "binary": "bin/bt_a2dp_encoding_tests"
     },
     "sandbox": {
         "services": [
