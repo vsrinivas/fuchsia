@@ -95,6 +95,21 @@ TEST(ConvertTest, ToFidlBSSDescription_Country) {
   EXPECT_EQ(status, ZX_OK);
 }
 
+TEST(ConvertTest, ToFidlBSSDescription_SnrDb) {
+  wlanif_bss_description_t wlanif_desc = {};
+  wlanif_desc.bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE;
+  const int8_t expected_snr_db = 45;
+  wlanif_desc.snr_db = expected_snr_db;
+
+  wlan_internal::BssDescription fidl_desc = {};
+  ConvertBssDescription(&fidl_desc, wlanif_desc);
+
+  EXPECT_EQ(fidl_desc.snr_db, expected_snr_db);
+
+  auto status = ValidateMessage(&fidl_desc);
+  EXPECT_EQ(status, ZX_OK);
+}
+
 TEST(ConvertTest, ToVectorRateSets_InvalidRateCount) {
   wlanif_bss_description bss_desc{};
   std::vector<uint8_t> expected;
@@ -513,6 +528,17 @@ TEST(ConvertTest, ToWlanifBssDescription_Country) {
 
   EXPECT_EQ(wlanif_desc.country_len, sizeof(country));
   EXPECT_EQ(memcmp(wlanif_desc.country, country, sizeof(country)), 0);
+}
+
+TEST(ConvertTest, ToWlanifBssDescription_SnrDb) {
+  wlan_internal::BssDescription fidl_desc = {};
+  fidl_desc.bss_type = wlan_internal::BssTypes::INFRASTRUCTURE;
+  const int8_t expected_snr_db = 60;
+  fidl_desc.snr_db = expected_snr_db;
+  wlanif_bss_description_t wlanif_desc = {};
+  ConvertBssDescription(&wlanif_desc, fidl_desc);
+
+  EXPECT_EQ(wlanif_desc.snr_db, expected_snr_db);
 }
 
 TEST(ConvertTest, ToWlanifOrFidlSaeAuthFrame) {

@@ -175,6 +175,9 @@ void ConvertBssDescription(wlanif_bss_description_t* wlanif_desc,
 
   // rssi_dbm
   wlanif_desc->rssi_dbm = fidl_desc.rssi_dbm;
+
+  // snr_db
+  wlanif_desc->snr_db = fidl_desc.snr_db;
 }
 
 wlan_internal::BssTypes ConvertBssType(uint8_t bss_type) {
@@ -290,6 +293,9 @@ void ConvertBssDescription(wlan_internal::BssDescription* fidl_desc,
 
   // rssi_dbm
   fidl_desc->rssi_dbm = wlanif_desc.rssi_dbm;
+
+  // snr_db
+  fidl_desc->snr_db = wlanif_desc.snr_db;
 }
 
 void ConvertAssocInd(wlan_mlme::AssociateIndication* fidl_ind,
