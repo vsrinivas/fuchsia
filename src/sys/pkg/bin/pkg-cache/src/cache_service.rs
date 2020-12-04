@@ -262,6 +262,20 @@ async fn serve_write_blob(
         }
     }
 
+    // Allow the inner task to sometimes close the underlying blob early while also unconditionally
+    // calling close after the inner task completes.  Close closes the underlying blob the first
+    // time it is called and becomes a no-op on later calls.
+    let mut closer = Some(closer);
+    let mut close = || {
+        let closer = closer.take().map(|closer| closer.close());
+        async move {
+            match closer {
+                Some(closer) => closer.await,
+                None => {}
+            }
+        }
+    };
+
     let mut state = State::ExpectTruncate(blob);
 
     let task = async {
@@ -310,10 +324,12 @@ async fn serve_write_blob(
                 // Close is allowed in any state, but the blob is only written if we were expecting
                 // a close.
                 (FileRequest::Close { responder }, State::ExpectClose) => {
+                    close().await;
                     let _ = responder.send(Status::OK.into_raw());
                     return Ok(());
                 }
                 (FileRequest::Close { responder }, _) => {
+                    close().await;
                     let _ = responder.send(Status::OK.into_raw());
                     return Err(ServeWriteBlobError::UnexpectedClose);
                 }
@@ -336,7 +352,7 @@ async fn serve_write_blob(
     // Handle the request stream, then close the blob, then close the stream to avoid retry races
     // creating a blob that is still open.
     let res = task.await;
-    closer.close().await;
+    close().await;
     drop(stream);
 
     res
@@ -680,6 +696,7 @@ mod serve_write_blob_tests {
         super::*,
         crate::blobs::BlobKind,
         fidl_fuchsia_io::{FileMarker, FileProxy},
+        futures::task::Poll,
         matches::assert_matches,
         proptest::prelude::*,
         proptest_derive::Arbitrary,
@@ -913,6 +930,42 @@ mod serve_write_blob_tests {
         })
         .await;
         assert_matches!(res, Err(ServeWriteBlobError::Write(_)));
+    }
+
+    #[test]
+    fn close_closes_inner_blob_first() {
+        let mut executor = fuchsia_async::Executor::new().unwrap();
+
+        let (pkgfs_blob, mut pkgfs_blob_stream) = OpenBlob::new_test(BlobKind::Data);
+
+        let (pkg_cache_blob, pkg_cache_blob_stream) =
+            fidl::endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+
+        let task = serve_write_blob(pkg_cache_blob_stream, pkgfs_blob);
+        futures::pin_mut!(task);
+
+        let mut close_fut = pkg_cache_blob.close();
+        drop(pkg_cache_blob);
+
+        // Let the task process the close request, ensuring the close_future doesn't yet complete.
+        assert_matches!(executor.run_until_stalled(&mut task), Poll::Pending);
+        assert_matches!(executor.run_until_stalled(&mut close_fut), Poll::Pending);
+
+        // Verify the inner blob is bineg closed.
+        let () = executor.run_singlethreaded(async {
+            serve_fidl_request!(pkgfs_blob_stream, {
+                FileRequest::Close { responder } => {
+                    responder.send(Status::OK.into_raw()).unwrap();
+                },
+            })
+        });
+
+        // Now that the inner blob is closed, the proxy task and close request can complete
+        assert_matches!(
+            executor.run_until_stalled(&mut task),
+            Poll::Ready(Err(ServeWriteBlobError::UnexpectedClose))
+        );
+        assert_matches!(executor.run_until_stalled(&mut close_fut), Poll::Ready(Ok(0)));
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Arbitrary)]
