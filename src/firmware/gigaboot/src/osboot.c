@@ -435,7 +435,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   // Previously we requested 32MB but that caused issues. When the kernel
   // becomes relocatable this won't be an problem. See fxbug.dev/32223.
   kernel_zone_base = 0x100000;
-  kernel_zone_size = 6 * 1024 * 1024;
+  kernel_zone_size = 8 * 1024 * 1024;
 
   if (gBS->AllocatePages(AllocateAddress, EfiLoaderData, BYTES_TO_PAGES(kernel_zone_size),
                          &kernel_zone_base)) {
