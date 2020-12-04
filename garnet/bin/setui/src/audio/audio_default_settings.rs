@@ -5,11 +5,11 @@
 use {
     crate::config::default_settings::DefaultSetting,
     crate::handler::device_storage::DeviceStorageCompatible,
-    crate::internal::common::default_time,
     crate::switchboard::base::{
         AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType,
     },
     lazy_static::lazy_static,
+    serde::{Deserialize, Serialize},
     std::collections::HashMap,
     std::sync::Mutex,
 };
@@ -26,16 +26,15 @@ const DEFAULT_STREAMS: [AudioStream; 5] = [
     create_default_audio_stream(AudioStreamType::Communication),
 ];
 
-/// Structure for storing last modified timestamps for each audio stream.
-pub type ModifiedTimestamps = HashMap<AudioStreamType, String>;
+/// A mapping from stream type to an arbitrary numerical value. This number will
+/// change from the number sent in the previous update if the stream type's
+/// volume has changed.
+pub type ModifiedFlags = HashMap<AudioStreamType, usize>;
 
 const DEFAULT_AUDIO_INPUT_INFO: AudioInputInfo = AudioInputInfo { mic_mute: DEFAULT_MIC_MUTE };
 
-const DEFAULT_AUDIO_INFO: AudioInfo = AudioInfo {
-    streams: DEFAULT_STREAMS,
-    input: DEFAULT_AUDIO_INPUT_INFO,
-    modified_timestamps: None,
-};
+const DEFAULT_AUDIO_INFO: AudioInfo =
+    AudioInfo { streams: DEFAULT_STREAMS, input: DEFAULT_AUDIO_INPUT_INFO, modified_flags: None };
 
 lazy_static! {
     pub static ref AUDIO_DEFAULT_SETTINGS: Mutex<DefaultSetting<AudioInfo, &'static str>> =
@@ -45,8 +44,8 @@ lazy_static! {
         ));
 }
 
-pub fn create_default_modified_timestamps() -> ModifiedTimestamps {
-    let mut timestamps = HashMap::new();
+pub fn create_default_modified_flags() -> ModifiedFlags {
+    let mut flags = HashMap::new();
     let stream_types = [
         AudioStreamType::Background,
         AudioStreamType::Media,
@@ -54,10 +53,13 @@ pub fn create_default_modified_timestamps() -> ModifiedTimestamps {
         AudioStreamType::SystemAgent,
         AudioStreamType::Communication,
     ];
+
+    // The values inserted here are irrelevant. They are simply a starting
+    // point.
     for stream_type in stream_types.iter() {
-        timestamps.insert(*stream_type, default_time().to_string());
+        flags.insert(*stream_type, 0);
     }
-    timestamps
+    flags
 }
 
 pub const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioStream {
@@ -73,11 +75,54 @@ pub fn default_audio_info() -> AudioInfo {
     AUDIO_DEFAULT_SETTINGS.lock().unwrap().get_default_value().expect("no audio default settings")
 }
 
+/// The following struct should never be modified. It represents an old
+/// version of the audio settings.
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+pub struct AudioInfoV1 {
+    pub streams: [AudioStream; 5],
+    pub input: AudioInputInfo,
+    pub modified_timestamps: Option<HashMap<AudioStreamType, String>>,
+}
+
+impl DeviceStorageCompatible for AudioInfoV1 {
+    const KEY: &'static str = "audio_info";
+
+    fn default_value() -> Self {
+        let stream_types = [
+            create_default_audio_stream(AudioStreamType::Background),
+            create_default_audio_stream(AudioStreamType::Media),
+            create_default_audio_stream(AudioStreamType::Interruption),
+            create_default_audio_stream(AudioStreamType::SystemAgent),
+            create_default_audio_stream(AudioStreamType::Communication),
+        ];
+
+        AudioInfoV1 {
+            streams: stream_types,
+            input: AudioInputInfo { mic_mute: false },
+            modified_timestamps: None,
+        }
+    }
+}
+
 impl DeviceStorageCompatible for AudioInfo {
     const KEY: &'static str = "audio_info";
 
     fn default_value() -> Self {
         default_audio_info()
+    }
+
+    fn deserialize_from(value: &String) -> Self {
+        Self::extract(&value).unwrap_or_else(|_| Self::from(AudioInfoV1::deserialize_from(&value)))
+    }
+}
+
+impl From<AudioInfoV1> for AudioInfo {
+    fn from(v1: AudioInfoV1) -> Self {
+        AudioInfo {
+            streams: v1.streams,
+            input: v1.input,
+            modified_flags: Some(create_default_modified_flags()),
+        }
     }
 }
 
@@ -119,12 +164,25 @@ mod tests {
             },
         ],
         input: AudioInputInfo { mic_mute: true },
-        modified_timestamps: None,
+        modified_flags: None,
     };
 
     #[test]
     fn test_audio_config() {
         let settings = default_audio_info();
         assert_eq!(CONFIG_AUDIO_INFO, settings);
+    }
+
+    #[test]
+    fn test_audio_info_migration_v1_to_current() {
+        let mut v1 = AudioInfoV1::default_value();
+        let updated_mic_mute_val = !v1.input.mic_mute;
+        v1.input.mic_mute = updated_mic_mute_val;
+
+        let serialized_v1 = v1.serialize_to();
+
+        let current = AudioInfo::deserialize_from(&serialized_v1);
+
+        assert_eq!(current.input.mic_mute, updated_mic_mute_val);
     }
 }

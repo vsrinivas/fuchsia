@@ -5,7 +5,7 @@
 use crate::agent::earcons::agent::CommonEarconsParams;
 use crate::agent::earcons::sound_ids::{VOLUME_CHANGED_SOUND_ID, VOLUME_MAX_SOUND_ID};
 use crate::agent::earcons::utils::{connect_to_sound_player, play_sound};
-use crate::audio::{create_default_modified_timestamps, ModifiedTimestamps};
+use crate::audio::{create_default_modified_flags, ModifiedFlags};
 use crate::internal::event;
 use crate::internal::switchboard;
 use crate::message::base::Audience;
@@ -24,7 +24,7 @@ use std::collections::{HashMap, HashSet};
 pub struct VolumeChangeHandler {
     common_earcons_params: CommonEarconsParams,
     last_user_volumes: HashMap<AudioStreamType, f32>,
-    modified_timestamps: ModifiedTimestamps,
+    modified_flags: ModifiedFlags,
     switchboard_messenger: switchboard::message::Messenger,
     publisher: event::Publisher,
 }
@@ -82,7 +82,7 @@ impl VolumeChangeHandler {
             let mut handler = Self {
                 common_earcons_params: params,
                 last_user_volumes,
-                modified_timestamps: create_default_modified_timestamps(),
+                modified_flags: create_default_modified_flags(),
                 switchboard_messenger: switchboard_messenger.clone(),
                 publisher,
             };
@@ -155,13 +155,13 @@ impl VolumeChangeHandler {
     fn calculate_changed_streams(
         &mut self,
         all_streams: [AudioStream; 5],
-        new_modified_timestamps: ModifiedTimestamps,
+        new_modified_flags: ModifiedFlags,
     ) -> Vec<AudioStream> {
         let mut changed_stream_types = HashSet::new();
-        for (stream_type, timestamp) in new_modified_timestamps {
-            if self.modified_timestamps.get(&stream_type) != Some(&timestamp) {
+        for (stream_type, timestamp) in new_modified_flags {
+            if self.modified_flags.get(&stream_type) != Some(&timestamp) {
                 changed_stream_types.insert(stream_type);
-                self.modified_timestamps.insert(stream_type, timestamp);
+                self.modified_flags.insert(stream_type, timestamp);
             }
         }
 
@@ -214,13 +214,10 @@ impl VolumeChangeHandler {
     /// Invoked when a new `AudioInfo` is retrieved. Determines whether an
     /// earcon should be played and plays sound if necessary.
     async fn on_audio_info(&mut self, audio_info: AudioInfo) {
-        let changed_streams = if audio_info.modified_timestamps.is_none() {
+        let changed_streams = if audio_info.modified_flags.is_none() {
             Vec::new()
         } else {
-            self.calculate_changed_streams(
-                audio_info.streams,
-                audio_info.modified_timestamps.unwrap(),
-            )
+            self.calculate_changed_streams(audio_info.streams, audio_info.modified_flags.unwrap())
         };
 
         let media_user_volume =
@@ -290,26 +287,25 @@ impl VolumeChangeHandler {
 mod tests {
     use super::*;
     use crate::audio::default_audio_info;
-    use crate::internal::common::default_time;
     use crate::message::base::MessengerType;
     use crate::service_context::ServiceContext;
     use futures::lock::Mutex;
     use std::sync::Arc;
 
     fn fake_values() -> (
-        [AudioStream; 5],   // fake_streams
-        ModifiedTimestamps, // old_timestamps
-        ModifiedTimestamps, // new_timestamps
-        Vec<AudioStream>,   // expected_changed_streams
+        [AudioStream; 5], // fake_streams
+        ModifiedFlags,    // old_flags
+        ModifiedFlags,    // new_flags
+        Vec<AudioStream>, // expected_changed_streams
     ) {
         let fake_streams = default_audio_info().streams;
-        let old_timestamps = create_default_modified_timestamps();
+        let old_timestamps = create_default_modified_flags();
         let new_timestamps = [
-            (AudioStreamType::Background, default_time().to_string()),
-            (AudioStreamType::Media, "2020-05-29 02:25:00.604748666 UTC".to_string()),
-            (AudioStreamType::Interruption, default_time().to_string()),
-            (AudioStreamType::SystemAgent, "2020-05-29 02:25:00.813529234 UTC".to_string()),
-            (AudioStreamType::Communication, "2020-05-29 02:25:01.004947253 UTC".to_string()),
+            (AudioStreamType::Background, 0),
+            (AudioStreamType::Media, 1),
+            (AudioStreamType::Interruption, 0),
+            (AudioStreamType::SystemAgent, 2),
+            (AudioStreamType::Communication, 3),
         ]
         .iter()
         .cloned()
@@ -340,7 +336,7 @@ mod tests {
                 sound_player_connection: Arc::new(Mutex::new(None)),
             },
             last_user_volumes,
-            modified_timestamps: old_timestamps,
+            modified_flags: old_timestamps,
             publisher,
         };
         let changed_streams = handler.calculate_changed_streams(fake_streams, new_timestamps);

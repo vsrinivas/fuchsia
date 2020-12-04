@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::audio::{
-    create_default_modified_timestamps, default_audio_info, ModifiedTimestamps, StreamVolumeControl,
+    create_default_modified_flags, default_audio_info, ModifiedFlags, StreamVolumeControl,
 };
 use crate::handler::base::{Event, SettingHandlerResult, State};
 use crate::handler::setting_handler::persist::{
@@ -10,7 +10,6 @@ use crate::handler::setting_handler::persist::{
 };
 use crate::handler::setting_handler::{controller, ControllerError};
 use crate::input::ButtonType;
-use crate::internal::common::now;
 use crate::switchboard::base::*;
 use async_trait::async_trait;
 use fuchsia_async as fasync;
@@ -37,7 +36,7 @@ pub struct VolumeController {
     audio_service_connected: bool,
     stream_volume_controls: HashMap<AudioStreamType, StreamVolumeControl>,
     mic_mute_state: bool,
-    modified_timestamps: ModifiedTimestamps,
+    modified_flags: ModifiedFlags,
 }
 
 impl VolumeController {
@@ -47,7 +46,7 @@ impl VolumeController {
             stream_volume_controls: HashMap::new(),
             audio_service_connected: false,
             mic_mute_state: false,
-            modified_timestamps: create_default_modified_timestamps(),
+            modified_flags: create_default_modified_flags(),
         }));
 
         handle
@@ -72,16 +71,21 @@ impl VolumeController {
         let mut audio_info = self.client.read().await;
 
         audio_info.input = AudioInputInfo { mic_mute: self.mic_mute_state };
-        audio_info.modified_timestamps = Some(self.modified_timestamps.clone());
+        audio_info.modified_flags = Some(self.modified_flags.clone());
         Ok(audio_info)
     }
 
     async fn set_volume(&mut self, volume: Vec<AudioStream>) -> SettingHandlerResult {
         self.get_info().await?;
 
-        // Update timestamps for changed streams.
+        // Update flags for changed streams.
         for stream in volume.iter() {
-            self.modified_timestamps.insert(stream.stream_type, now().to_string());
+            // We only new two values to signify a change. Therefore, we
+            // restrict the flag to 0 and 1.
+            self.modified_flags.insert(
+                stream.stream_type,
+                self.modified_flags.get(&stream.stream_type).map_or(0, |flag| flag ^ 1),
+            );
         }
 
         if !(self.update_volume_streams(&volume, true).await?) {

@@ -4,7 +4,7 @@
 
 use {
     crate::agent::restore_agent,
-    crate::audio::{create_default_modified_timestamps, default_audio_info},
+    crate::audio::{create_default_modified_flags, default_audio_info},
     crate::handler::device_storage::testing::*,
     crate::handler::device_storage::DeviceStorage,
     crate::input::common::MediaButtonsEventBuilder,
@@ -470,7 +470,7 @@ async fn test_persisted_values_applied_at_start() {
             },
         ],
         input: AudioInputInfo { mic_mute: true },
-        modified_timestamps: Some(create_default_modified_timestamps()),
+        modified_flags: Some(create_default_modified_flags()),
     };
 
     // Write values in the store.
