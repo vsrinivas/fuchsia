@@ -50,6 +50,7 @@ const char* PartitionName(Partition partition, PartitionScheme scheme);
 enum class Arch {
   kX64,
   kArm64,
+  kRiscv64,
 };
 
 // Operations on a specific partition take two identifiers, a partition type
