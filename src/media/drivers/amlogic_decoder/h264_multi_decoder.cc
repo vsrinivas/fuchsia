@@ -433,41 +433,42 @@ constexpr uint32_t kAuxBufPrefixSize = 16 * 1024;
 constexpr uint32_t kAuxBufSuffixSize = 0;
 
 zx_status_t H264MultiDecoder::InitializeBuffers() {
-  // Don't use the TEE to load the firmware, since the version we're using on astro and sherlock
-  // doesn't support H264_Multi_Gxm.
-  FirmwareBlob::FirmwareType firmware_type = FirmwareBlob::FirmwareType::kDec_H264_Multi_Gxm;
-  uint8_t* data;
-  uint32_t firmware_size;
-  zx_status_t status =
-      owner_->firmware_blob()->GetFirmwareData(firmware_type, &data, &firmware_size);
-  if (status != ZX_OK)
-    return status;
-  static constexpr uint32_t kFirmwareSize = 4 * 4096;
-  const uint32_t kBufferAlignShift = 16;
-  if (firmware_size < kFirmwareSize) {
-    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FirmwareSizeError);
-    LOG(ERROR, "Firmware too small");
-    return ZX_ERR_INTERNAL;
-  }
-
-  {
-    auto create_result = InternalBuffer::CreateAligned(
-        "H264MultiFirmware", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kFirmwareSize,
-        1 << kBufferAlignShift, /*is_secure=*/false, /*is_writable=*/true,
-        /*is_mapping_needed=*/true);
-    if (!create_result.is_ok()) {
-      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
-      LOG(ERROR, "Failed to make firmware buffer - %d", create_result.error());
-      return {};
+  // If the TEE is available, we'll do secure loading of the firmware in InitializeHardware().
+  if (!owner_->is_tee_available()) {
+    FirmwareBlob::FirmwareType firmware_type = FirmwareBlob::FirmwareType::kDec_H264_Multi_Gxm;
+    uint8_t* data;
+    uint32_t firmware_size;
+    zx_status_t status =
+        owner_->firmware_blob()->GetFirmwareData(firmware_type, &data, &firmware_size);
+    if (status != ZX_OK)
+      return status;
+    static constexpr uint32_t kFirmwareSize = 4 * 4096;
+    const uint32_t kBufferAlignShift = 16;
+    if (firmware_size < kFirmwareSize) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FirmwareSizeError);
+      LOG(ERROR, "Firmware too small");
+      return ZX_ERR_INTERNAL;
     }
-    firmware_ = create_result.take_value();
-    memcpy(firmware_->virt_base(), data, kFirmwareSize);
-    firmware_->CacheFlush(0, kFirmwareSize);
-    BarrierAfterFlush();
-  }
-  status = LoadSecondaryFirmware(data, firmware_size);
-  if (status != ZX_OK) {
-    return status;
+
+    {
+      auto create_result = InternalBuffer::CreateAligned(
+          "H264MultiFirmware", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kFirmwareSize,
+          1 << kBufferAlignShift, /*is_secure=*/false, /*is_writable=*/true,
+          /*is_mapping_needed=*/true);
+      if (!create_result.is_ok()) {
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
+        LOG(ERROR, "Failed to make firmware buffer - %d", create_result.error());
+        return {};
+      }
+      firmware_ = create_result.take_value();
+      memcpy(firmware_->virt_base(), data, kFirmwareSize);
+      firmware_->CacheFlush(0, kFirmwareSize);
+      BarrierAfterFlush();
+    }
+    status = LoadSecondaryFirmware(data, firmware_size);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   constexpr uint32_t kBufferAlignment = 1 << 16;
@@ -557,14 +558,28 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
   if (status != ZX_OK)
     return status;
 
-  status = owner_->core()->LoadFirmware(*firmware_);
-  if (status != ZX_OK)
-    return status;
+  if (owner_->is_tee_available()) {
+    status = owner_->TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType::kDec_H264_Multi_Gxm,
+                                             FirmwareBlob::FirmwareVdecLoadMode::kCompatible);
+    if (status != ZX_OK) {
+      LOG(ERROR, "owner_->TeeSmcLoadVideoFirmware() failed - status: %d", status);
+      return status;
+    }
 
-  ResetHardware();
-  AvScratchG::Get()
-      .FromValue(truncate_to_32(secondary_firmware_->phys_base()))
-      .WriteTo(owner_->dosbus());
+    ResetHardware();
+  } else {
+    // If the tee is not available, the secondary firmware was already loaded during
+    // InitializeBuffers().
+    ZX_DEBUG_ASSERT(firmware_);
+    status = owner_->core()->LoadFirmware(*firmware_);
+    if (status != ZX_OK)
+      return status;
+
+    ResetHardware();
+    AvScratchG::Get()
+        .FromValue(truncate_to_32(secondary_firmware_->phys_base()))
+        .WriteTo(owner_->dosbus());
+  }
 
   PscaleCtrl::Get().FromValue(0).WriteTo(owner_->dosbus());
   VdecAssistMbox1ClrReg::Get().FromValue(1).WriteTo(owner_->dosbus());
