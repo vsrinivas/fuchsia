@@ -2,11 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("cts") {
+group("tests") {
   deps = [
-    "//sdk/cts/build/scripts:tests",
-    "//sdk/cts/examples/hello_world:tests",
-    "//sdk/cts/tests:tests",
+    "pkg:tests",
+    "tools:tests",
   ]
   testonly = true
 }

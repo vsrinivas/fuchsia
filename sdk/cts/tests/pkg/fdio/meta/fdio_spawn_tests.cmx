@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/fdio-spawn-tests-bin"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver"
+        ]
+    }
+}

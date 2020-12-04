@@ -2,11 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("cts") {
-  deps = [
-    "//sdk/cts/build/scripts:tests",
-    "//sdk/cts/examples/hello_world:tests",
-    "//sdk/cts/tests:tests",
-  ]
+group("tests") {
+  deps = [ "fdio:fdio-spawn-tests" ]
   testonly = true
 }

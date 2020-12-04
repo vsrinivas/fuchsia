@@ -74,7 +74,6 @@ group("all") {
     "//garnet/lib/trace_converters:trace_converter_tests",
     "//garnet/public/lib/fostr:tests_package",
     "//garnet/tests/acts_tests",
-    "//garnet/tests/fdio_spawn:fdio-spawn-tests",
     "//sdk/lib/fuzzing/cpp:fuzz_input_unittests($host_toolchain)",
     "//sdk/lib/fuzzing/cpp:fuzzing_traits_tests",
     "//sdk/lib/inspect/contrib/cpp:tests",
