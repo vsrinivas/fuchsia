@@ -37,14 +37,17 @@ type Image struct {
 	NetbootArgs []string `json:"bootserver_netboot"`
 }
 
+// ImageManifest is a JSON list of images produced by the Fuchsia build.
+type ImageManifest = []Image
+
 // LoadImages reads in the entries indexed in the given image manifest.
-func LoadImages(manifest string) ([]Image, error) {
+func LoadImages(manifest string) (ImageManifest, error) {
 	f, err := os.Open(manifest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open %s: %w", manifest, err)
 	}
 	defer f.Close()
-	var imgs []Image
+	var imgs ImageManifest
 	if err := json.NewDecoder(f).Decode(&imgs); err != nil {
 		return nil, fmt.Errorf("failed to decode %s: %w", manifest, err)
 	}
