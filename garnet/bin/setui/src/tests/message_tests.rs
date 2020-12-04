@@ -601,13 +601,13 @@ async fn test_message_timestamp() {
             let current_time = now();
             let send_time = client.get_timestamp();
             // Ensures the event timestamp was not taken before the event
-            assert!(init_time < send_time);
+            assert!(init_time <= send_time);
             // Compared against time right after message was sent to ensure that
             // timestamp was from the actual send time and not from when the
             // message was posted in the message hub.
-            assert!(send_time < post_send_time);
+            assert!(send_time <= post_send_time);
             // Make sure the time stamp was captured before the request for it.
-            assert!(post_send_time < current_time);
+            assert!(post_send_time <= current_time);
             return;
         } else {
             panic!("Should have received the broadcast first");
