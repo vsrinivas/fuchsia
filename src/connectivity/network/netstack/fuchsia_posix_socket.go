@@ -387,7 +387,7 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 
 	// Register a callback for error and closing events from gVisor to
 	// trigger a close of the endpoint.
-	eps.onHUp.Callback = callback(func(*waiter.Entry) {
+	eps.onHUp.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
 		eps.onHUpOnce.Do(func() {
 			eps.endpoint.ns.onRemoveEndpoint(eps.endpoint.key)
 			// Run this in a separate goroutine to avoid deadlock.
@@ -1348,10 +1348,10 @@ func toNetProto(domain socket.Domain) (posix.Errno, tcpip.NetworkProtocolNumber)
 	}
 }
 
-type callback func(*waiter.Entry)
+type callback func(*waiter.Entry, waiter.EventMask)
 
-func (cb callback) Callback(e *waiter.Entry) {
-	cb(e)
+func (cb callback) Callback(e *waiter.Entry, m waiter.EventMask) {
+	cb(e, m)
 }
 
 func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, proto socket.DatagramSocketProtocol) (socket.ProviderDatagramSocketResult, error) {
@@ -1392,7 +1392,7 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 		},
 	}
 
-	s.entry.Callback = callback(func(*waiter.Entry) {
+	s.entry.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
 		var err error
 		s.endpointWithEvent.incoming.mu.Lock()
 		if !s.endpointWithEvent.incoming.mu.asserted && s.endpoint.ep.Readiness(waiter.EventIn) != 0 {

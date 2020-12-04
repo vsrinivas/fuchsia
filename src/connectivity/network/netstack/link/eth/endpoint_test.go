@@ -334,9 +334,9 @@ func TestEndpoint(t *testing.T) {
 			const packetHeader = "foo"
 			const body = "bar"
 			route := stack.Route{
-				LocalLinkAddress:  localLinkAddress,
-				RemoteLinkAddress: remoteLinkAddress,
+				LocalLinkAddress: localLinkAddress,
 			}
+			route.ResolveWith(remoteLinkAddress)
 			want := DeliverNetworkPacketArgs{
 				SrcLinkAddr: localLinkAddress,
 				DstLinkAddr: remoteLinkAddress,

@@ -824,7 +824,7 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.Netw
 		fn(pkt)
 	}
 	// the "remote" address for `other` is our local address and vice versa.
-	e.linked.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress, protocol, packetbuffer.OutboundToInbound(pkt))
+	e.linked.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress(), protocol, packetbuffer.OutboundToInbound(pkt))
 	return nil
 }
 
