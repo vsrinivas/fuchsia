@@ -83,7 +83,8 @@ async fn check_use_work_scheduler(
     moniker: AbsoluteMoniker,
     should_succeed: bool,
 ) {
-    let component_name = routing_test.bind_instance(&moniker).await.expect("bind instance failed");
+    let component_name =
+        routing_test.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
     let component_resolved_url = RoutingTest::resolved_url(&component_name);
     let namespace = routing_test.mock_runner.get_namespace(&component_resolved_url).unwrap();
     call_work_scheduler_svc_from_namespace(&namespace, should_succeed).await;
@@ -126,7 +127,8 @@ async fn check_use_work_scheduler_control(
     path: CapabilityPath,
     should_succeed: bool,
 ) {
-    let component_name = routing_test.bind_instance(&moniker).await.expect("bind instance failed");
+    let component_name =
+        routing_test.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
     let component_resolved_url = RoutingTest::resolved_url(&component_name);
     let namespace = routing_test.mock_runner.get_namespace(&component_resolved_url).unwrap();
     call_work_scheduler_control_svc_from_namespace(&namespace, path.clone(), should_succeed).await;

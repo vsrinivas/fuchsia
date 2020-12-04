@@ -350,6 +350,8 @@ impl Hub {
         if instance.execution.is_none() {
             trace::duration!("component_manager", "hub:create_execution");
             let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
+            // TODO: Calling this under lock seems like it could be deadlock prone, consider
+            // passing an Arc<Realm> to the event instead
             let target_realm = model.look_up_realm(target_moniker).await?;
 
             let execution_directory = pfs::simple();

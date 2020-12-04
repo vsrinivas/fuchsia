@@ -91,7 +91,7 @@ pub async fn bind_at(realm: Arc<Realm>, reason: &BindReason) -> Result<(), Model
             return res;
         }
     }
-    ActionSet::register(realm.clone(), Action::Start(reason.clone())).await.await?;
+    ActionSet::register(realm.clone(), Action::Start(reason.clone())).await?;
 
     let eager_children: Vec<_> = {
         let mut state = realm.lock_state().await;
@@ -175,9 +175,7 @@ mod tests {
         let m: AbsoluteMoniker = AbsoluteMoniker::root();
         let res = model.bind(&m, &BindReason::Root).await;
         assert!(res.is_ok());
-        let actual_urls = mock_runner.urls_run();
-        let expected_urls = vec!["test:///root_resolved".to_string()];
-        assert_eq!(actual_urls, expected_urls);
+        mock_runner.wait_for_url("test:///root_resolved").await;
         let actual_children = get_live_children(&model.root_realm).await;
         assert!(actual_children.is_empty());
     }
@@ -191,9 +189,7 @@ mod tests {
         let expected_res: Result<Arc<Realm>, ModelError> =
             Err(ModelError::instance_not_found(vec!["no-such-instance:0"].into()));
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-        let actual_urls = mock_runner.urls_run();
-        let expected_urls: Vec<String> = vec!["test:///root_resolved".to_string()];
-        assert_eq!(actual_urls, expected_urls);
+        mock_runner.wait_for_url("test:///root_resolved").await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -235,26 +231,21 @@ mod tests {
             event.event.result,
             Ok(EventPayload::Started { bind_reason: BindReason::Root, .. })
         );
-        {
-            let expected_urls: Vec<String> = vec!["test:///root_resolved".to_string()];
-            assert_eq!(mock_runner.urls_run(), expected_urls);
-        }
+        mock_runner.wait_for_url("test:///root_resolved").await;
 
         // While the bind() is paused, simulate a second bind by explicitly scheduling a Start
         // action. Allow the original bind to proceed, then check the result of both bindings.
         let m: AbsoluteMoniker = vec!["system:0"].into();
         let realm = model.look_up_realm(&m).await.expect("failed realm lookup");
-        let nf = ActionSet::register(realm, Action::Start(BindReason::Eager)).await;
+        let f = ActionSet::register(realm, Action::Start(BindReason::Eager));
+        let (f, action_handle) = f.remote_handle();
+        fasync::Task::spawn(f).detach();
         event.resume();
         bind_handle.await;
-        nf.await.expect("failed to bind 2");
+        action_handle.await.expect("failed to bind 2");
 
         // Verify that the component was started only once.
-        {
-            let expected_urls: Vec<String> =
-                vec!["test:///root_resolved".to_string(), "test:///system_resolved".to_string()];
-            assert_eq!(mock_runner.urls_run(), expected_urls);
-        }
+        mock_runner.wait_for_urls(&["test:///root_resolved", "test:///system_resolved"]).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -278,9 +269,7 @@ mod tests {
         // bind to system
         let m: AbsoluteMoniker = vec!["system:0"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
-        let expected_urls =
-            vec!["test:///root_resolved".to_string(), "test:///system_resolved".to_string()];
-        assert_eq!(mock_runner.urls_run(), expected_urls);
+        mock_runner.wait_for_urls(&["test:///root_resolved", "test:///system_resolved"]).await;
 
         // Validate children. system is resolved, but not echo.
         let actual_children = get_live_children(&*model.root_realm).await;
@@ -297,12 +286,13 @@ mod tests {
         // bind to echo
         let m: AbsoluteMoniker = vec!["echo:0"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
-        let expected_urls = vec![
-            "test:///root_resolved".to_string(),
-            "test:///system_resolved".to_string(),
-            "test:///echo_resolved".to_string(),
-        ];
-        assert_eq!(mock_runner.urls_run(), expected_urls);
+        mock_runner
+            .wait_for_urls(&[
+                "test:///root_resolved",
+                "test:///system_resolved",
+                "test:///echo_resolved",
+            ])
+            .await;
 
         // Validate children. Now echo is resolved.
         let echo_realm = get_live_child(&*model.root_realm, "echo").await;
@@ -336,34 +326,37 @@ mod tests {
         // Bind to logger (before ever binding to system). Ancestors are bound first.
         let m: AbsoluteMoniker = vec!["system:0", "logger:0"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
-        let expected_urls = vec![
-            "test:///root_resolved".to_string(),
-            "test:///system_resolved".to_string(),
-            "test:///logger_resolved".to_string(),
-        ];
-        assert_eq!(mock_runner.urls_run(), expected_urls);
+        mock_runner
+            .wait_for_urls(&[
+                "test:///root_resolved",
+                "test:///system_resolved",
+                "test:///logger_resolved",
+            ])
+            .await;
 
         // Bind to netstack.
         let m: AbsoluteMoniker = vec!["system:0", "netstack:0"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
-        let expected_urls = vec![
-            "test:///root_resolved".to_string(),
-            "test:///system_resolved".to_string(),
-            "test:///logger_resolved".to_string(),
-            "test:///netstack_resolved".to_string(),
-        ];
-        assert_eq!(mock_runner.urls_run(), expected_urls);
+        mock_runner
+            .wait_for_urls(&[
+                "test:///root_resolved",
+                "test:///system_resolved",
+                "test:///logger_resolved",
+                "test:///netstack_resolved",
+            ])
+            .await;
 
         // finally, bind to system. Was already bound, so no new results.
         let m: AbsoluteMoniker = vec!["system:0"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
-        let expected_urls = vec![
-            "test:///root_resolved".to_string(),
-            "test:///system_resolved".to_string(),
-            "test:///logger_resolved".to_string(),
-            "test:///netstack_resolved".to_string(),
-        ];
-        assert_eq!(mock_runner.urls_run(), expected_urls);
+        mock_runner
+            .wait_for_urls(&[
+                "test:///root_resolved",
+                "test:///system_resolved",
+                "test:///logger_resolved",
+                "test:///netstack_resolved",
+            ])
+            .await;
 
         // validate the component topology.
         assert_eq!("(system(logger,netstack))", hook.print());
@@ -379,19 +372,14 @@ mod tests {
         // bind to system
         let m: AbsoluteMoniker = vec!["system:0"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
-        let expected_urls =
-            vec!["test:///root_resolved".to_string(), "test:///system_resolved".to_string()];
-        assert_eq!(mock_runner.urls_run(), expected_urls);
+        mock_runner.wait_for_urls(&["test:///root_resolved", "test:///system_resolved"]).await;
 
         // can't bind to logger: it does not exist
         let m: AbsoluteMoniker = vec!["system:0", "logger:0"].into();
         let res = model.bind(&m, &BindReason::Root).await;
         let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(m));
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-        let actual_urls = mock_runner.urls_run();
-        let expected_urls =
-            vec!["test:///root_resolved".to_string(), "test:///system_resolved".to_string()];
-        assert_eq!(actual_urls, expected_urls);
+        mock_runner.wait_for_urls(&["test:///root_resolved", "test:///system_resolved"]).await;
     }
 
     /// Create a hierarchy of children:
@@ -429,27 +417,15 @@ mod tests {
             let m = AbsoluteMoniker::new(vec!["a:0".into()]);
             let res = model.bind(&m, &BindReason::Root).await;
             assert!(res.is_ok());
-            let actual_urls = mock_runner.urls_run();
-            // Execution order of `b` and `c` is non-deterministic.
-            let expected_urls1 = vec![
-                "test:///root_resolved".to_string(),
-                "test:///a_resolved".to_string(),
-                "test:///b_resolved".to_string(),
-                "test:///c_resolved".to_string(),
-                "test:///d_resolved".to_string(),
-            ];
-            let expected_urls2 = vec![
-                "test:///root_resolved".to_string(),
-                "test:///a_resolved".to_string(),
-                "test:///c_resolved".to_string(),
-                "test:///b_resolved".to_string(),
-                "test:///d_resolved".to_string(),
-            ];
-            assert!(
-                actual_urls == expected_urls1 || actual_urls == expected_urls2,
-                "urls_run failed to match: {:?}",
-                actual_urls
-            );
+            mock_runner
+                .wait_for_urls(&[
+                    "test:///root_resolved",
+                    "test:///a_resolved",
+                    "test:///b_resolved",
+                    "test:///c_resolved",
+                    "test:///d_resolved",
+                ])
+                .await;
         }
         // Verify that the component topology matches expectations.
         assert_eq!("(a(b,c(d(e))))", hook.print());
@@ -520,11 +496,8 @@ mod tests {
                 Some("test:///b_resolved".to_string())
             );
             bind_handle.await.expect("bind to `a` failed");
-            let actual_urls = mock_runner.urls_run();
             // `root` and `a` use the test runner.
-            let expected_urls =
-                vec!["test:///root_resolved".to_string(), "test:///a_resolved".to_string()];
-            assert_eq!(actual_urls, expected_urls);
+            mock_runner.wait_for_urls(&["test:///root_resolved", "test:///a_resolved"]).await;
         }
         // Verify that the component topology matches expectations.
         assert_eq!("(a(b))", hook.print());
@@ -544,9 +517,6 @@ mod tests {
         // is non-executable so it is not run.
         let m: AbsoluteMoniker = vec!["a:0"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
-        let actual_urls = mock_runner.urls_run();
-        let expected_urls =
-            vec!["test:///root_resolved".to_string(), "test:///b_resolved".to_string()];
-        assert_eq!(actual_urls, expected_urls);
+        mock_runner.wait_for_urls(&["test:///root_resolved", "test:///b_resolved"]).await;
     }
 }
