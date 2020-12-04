@@ -370,7 +370,8 @@ impl Server {
     }
 
     fn handle_request_selecting(&mut self, req: Message) -> Result<ServerAction, ServerError> {
-        let requested_ip = req.ciaddr;
+        let requested_ip = *get_requested_ip_addr(&req)
+            .ok_or(ServerError::MissingRequiredDhcpOption(OptionCode::RequestedIpAddress))?;
         if !is_recipient(&self.params.server_ips, &req) {
             Err(ServerError::IncorrectDHCPServer(
                 *self.params.server_ips.first().ok_or(ServerError::ServerMissingIpAddr)?,
@@ -1145,21 +1146,37 @@ fn is_in_subnet(req: &Message, config: &ServerParameters) -> bool {
 }
 
 fn get_client_state(msg: &Message) -> Result<ClientState, ()> {
-    let have_server_id = get_server_id_from(&msg).is_some();
-    let have_requested_ip = get_requested_ip_addr(&msg).is_some();
+    let server_id = get_server_id_from(&msg);
+    let requested_ip = get_requested_ip_addr(&msg);
 
-    if msg.ciaddr.is_unspecified() {
-        if have_requested_ip {
-            Ok(ClientState::InitReboot)
-        } else {
-            Err(())
-        }
+    // State classification from: https://tools.ietf.org/html/rfc2131#section-4.3.2
+    //
+    // DHCPREQUEST generated during SELECTING state:
+    //
+    // Client inserts the address of the selected server in 'server identifier', 'ciaddr' MUST be
+    // zero, 'requested IP address' MUST be filled in with the yiaddr value from the chosen
+    // DHCPOFFER.
+    //
+    // DHCPREQUEST generated during INIT-REBOOT state:
+    //
+    // 'server identifier' MUST NOT be filled in, 'requested IP address' option MUST be
+    // filled in with client's notion of its previously assigned address. 'ciaddr' MUST be
+    // zero.
+    //
+    // DHCPREQUEST generated during RENEWING state:
+    //
+    // 'server identifier' MUST NOT be filled in, 'requested IP address' option MUST NOT be filled
+    // in, 'ciaddr' MUST be filled in with client's IP address.
+    //
+    // TODO(fxbug.dev/64978): Distinguish between clients in RENEWING and REBINDING states
+    if server_id.is_some() && msg.ciaddr.is_unspecified() && requested_ip.is_some() {
+        Ok(ClientState::Selecting)
+    } else if server_id.is_none() && requested_ip.is_some() && msg.ciaddr.is_unspecified() {
+        Ok(ClientState::InitReboot)
+    } else if server_id.is_none() && requested_ip.is_none() && !msg.ciaddr.is_unspecified() {
+        Ok(ClientState::Renewing)
     } else {
-        if have_server_id && !have_requested_ip {
-            Ok(ClientState::Selecting)
-        } else {
-            Ok(ClientState::Renewing)
-        }
+        Err(())
     }
 }
 
@@ -1380,8 +1397,9 @@ pub mod tests {
         new_client_message(MessageType::DHCPREQUEST)
     }
 
-    fn new_test_request_selecting_state(server: &Server) -> Message {
+    fn new_test_request_selecting_state(server: &Server, requested_ip: Ipv4Addr) -> Message {
         let mut req = new_test_request();
+        req.options.push(DhcpOption::RequestedIpAddress(requested_ip));
         req.options.push(DhcpOption::ServerIdentifier(
             server.get_server_ip(&req).unwrap_or(Ipv4Addr::UNSPECIFIED),
         ));
@@ -1924,14 +1942,10 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_dispatch_with_selecting_request_returns_correct_ack() -> Result<(), Error> {
         let mut server = new_test_minimal_server().await?;
-        let mut req = new_test_request_selecting_state(&server);
-
         let requested_ip = random_ipv4_generator();
+        let req = new_test_request_selecting_state(&server, requested_ip);
 
         server.pool.allocated_addrs.insert(requested_ip);
-
-        // Update message to request for ip previously offered by server.
-        req.ciaddr = requested_ip;
 
         let server_id = server.params.server_ips.first().unwrap();
         let router = get_router(&server)?;
@@ -1957,14 +1971,11 @@ pub mod tests {
         );
 
         let mut expected_ack = new_test_ack(&req, &server);
-        expected_ack.ciaddr = requested_ip;
         expected_ack.yiaddr = requested_ip;
-
-        let expected_dest = req.ciaddr;
 
         assert_eq!(
             server.dispatch(req),
-            Ok(ServerAction::SendResponse(expected_ack, Some(expected_dest)))
+            Ok(ServerAction::SendResponse(expected_ack, Some(Ipv4Addr::BROADCAST)))
         );
         Ok(())
     }
@@ -1973,13 +1984,12 @@ pub mod tests {
     async fn test_dispatch_with_selecting_request_maintains_server_invariants() -> Result<(), Error>
     {
         let mut server = new_test_minimal_server().await?;
-        let mut req = new_test_request_selecting_state(&server);
-
         let requested_ip = random_ipv4_generator();
+        let req = new_test_request_selecting_state(&server, requested_ip);
+
         let client_id = ClientIdentifier::from(&req);
 
         server.pool.allocated_addrs.insert(requested_ip);
-        req.ciaddr = requested_ip;
         server.cache.insert(
             client_id.clone(),
             CachedConfig::new(requested_ip, vec![], std::time::SystemTime::now(), std::u32::MAX)?,
@@ -1994,10 +2004,7 @@ pub mod tests {
     async fn test_dispatch_with_selecting_request_wrong_server_ip_returns_error(
     ) -> Result<(), Error> {
         let mut server = new_test_minimal_server().await?;
-        let mut req = new_test_request_selecting_state(&server);
-
-        // Update message to request for any ip.
-        req.ciaddr = random_ipv4_generator();
+        let mut req = new_test_request_selecting_state(&server, random_ipv4_generator());
 
         // Update request to have a server ip different from actual server ip.
         req.options.remove(req.options.len() - 1);
@@ -2013,12 +2020,10 @@ pub mod tests {
     async fn test_dispatch_with_selecting_request_unknown_client_mac_returns_error_maintains_server_invariants(
     ) -> Result<(), Error> {
         let mut server = new_test_minimal_server().await?;
-        let mut req = new_test_request_selecting_state(&server);
-
         let requested_ip = random_ipv4_generator();
-        let client_id = ClientIdentifier::from(&req);
+        let req = new_test_request_selecting_state(&server, requested_ip);
 
-        req.ciaddr = requested_ip;
+        let client_id = ClientIdentifier::from(&req);
 
         assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientId(client_id.clone())));
         assert!(!server.cache.contains_key(&client_id));
@@ -2030,13 +2035,12 @@ pub mod tests {
     async fn test_dispatch_with_selecting_request_mismatched_requested_addr_returns_error(
     ) -> Result<(), Error> {
         let mut server = new_test_minimal_server().await?;
-        let mut req = new_test_request_selecting_state(&server);
-
         let client_requested_ip = random_ipv4_generator();
+        let req = new_test_request_selecting_state(&server, client_requested_ip);
+
         let server_offered_ip = random_ipv4_generator();
 
         server.pool.allocated_addrs.insert(server_offered_ip);
-        req.ciaddr = client_requested_ip;
 
         server.cache.insert(
             ClientIdentifier::from(&req),
@@ -2059,13 +2063,10 @@ pub mod tests {
     async fn test_dispatch_with_selecting_request_expired_client_binding_returns_error(
     ) -> Result<(), Error> {
         let mut server = new_test_minimal_server().await?;
-        let mut req = new_test_request_selecting_state(&server);
-
         let requested_ip = random_ipv4_generator();
+        let req = new_test_request_selecting_state(&server, requested_ip);
 
         server.pool.allocated_addrs.insert(requested_ip);
-
-        req.ciaddr = requested_ip;
 
         server.cache.insert(
             ClientIdentifier::from(&req),
@@ -2080,11 +2081,8 @@ pub mod tests {
     async fn test_dispatch_with_selecting_request_no_reserved_addr_returns_error(
     ) -> Result<(), Error> {
         let mut server = new_test_minimal_server().await?;
-        let mut req = new_test_request_selecting_state(&server);
-
         let requested_ip = random_ipv4_generator();
-
-        req.ciaddr = requested_ip;
+        let req = new_test_request_selecting_state(&server, requested_ip);
 
         server.cache.insert(
             ClientIdentifier::from(&req),
@@ -2444,9 +2442,9 @@ pub mod tests {
     async fn test_get_client_state_with_selecting_returns_selecting() -> Result<(), Error> {
         let mut req = new_test_request();
 
-        // Selecting state request must have server id and ciaddr populated.
-        req.ciaddr = random_ipv4_generator();
+        // Selecting state request must have server id and requested ip populated.
         req.options.push(DhcpOption::ServerIdentifier(random_ipv4_generator()));
+        req.options.push(DhcpOption::RequestedIpAddress(random_ipv4_generator()));
 
         assert_eq!(get_client_state(&req), Ok(ClientState::Selecting));
         Ok(())
