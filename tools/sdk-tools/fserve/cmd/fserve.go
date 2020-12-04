@@ -366,7 +366,7 @@ func printValidImages(sdk sdkProvider, version string, bucket string) error {
 func downloadImageIfNeeded(ctx context.Context, sdk sdkProvider, version string, bucket string, srcPath string, imageFilename string, repoPath string) error {
 	// Validate the image is found
 	localImagePath := filepath.Join(sdk.GetSDKDataPath(), imageFilename)
-	packageDir := filepath.Join(sdk.GetSDKDataPath(), "packages")
+	packageDir := filepath.Dir(repoPath)
 	log := logger.LoggerFromContext(ctx)
 
 	if !sdkcommon.FileExists(localImagePath) {
@@ -434,7 +434,7 @@ func downloadImageIfNeeded(ctx context.Context, sdk sdkProvider, version string,
 	}
 
 	if !sdkcommon.DirectoryExists(filepath.Join(packageDir, "amber-files")) {
-		if err = extractTar(localImagePath, packageDir); err != nil {
+		if err = extractTar(ctx, localImagePath, packageDir); err != nil {
 			logger.Fatalf(ctx, "Could not create extract %v into %v: %v", localImagePath, packageDir, err)
 		}
 	}
@@ -509,8 +509,9 @@ func getHostIPAddressFromTarget(sdk sdkProvider, targetAddress string, sshConfig
 }
 
 // extractTar extracts the contents from the srcFile tarball into the destDir.
-func extractTar(srcFile string, destDir string) error {
+func extractTar(ctx context.Context, srcFile string, destDir string) error {
 
+	log := logger.LoggerFromContext(ctx)
 	f, err := os.Open(srcFile)
 	if err != nil {
 		return fmt.Errorf("Could not open %v: %v", srcFile, err)
@@ -536,11 +537,14 @@ func extractTar(srcFile string, destDir string) error {
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(filepath.Join(destDir, header.Name), 0755); err != nil {
+			dir := filepath.Join(destDir, header.Name)
+			log.Debugf("mkdir %v", dir)
+			if err := os.MkdirAll(dir, 0755); err != nil {
 				return fmt.Errorf("extractTar: Mkdir() failed: %v", err)
 			}
 		case tar.TypeReg:
 			newFile := filepath.Join(destDir, header.Name)
+			log.Debugf("extracting %v", newFile)
 			if err := os.MkdirAll(filepath.Dir(newFile), 0755); err != nil {
 				return fmt.Errorf("extractTar: MkdirAll in Create() failed: %v", err)
 			}
