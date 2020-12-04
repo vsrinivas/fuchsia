@@ -4854,15 +4854,16 @@ static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t 
           // Indicate the rssi soon after connection
           cfg80211_signal_ind(ndev);
         }
-        // Workaround to update SoftAP channel once client has associated.
-        // TODO(karthikrish): This check can be removed once the issue is fixed in FW.
+        // Workaround to update SoftAP channel to SME once client has associated. FW automatically
+        // switches the SoftAP's channel (if running) to that of the client IF.
+        // TODO(b/155092471): This check can be removed once the issue is fixed in FW.
         if (cfg->ap_started) {
           for (const auto& iface : cfg->pub->iflist) {
             if (!iface ||
                 !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &iface->vif->sme_state)) {
               continue;
             }
-            BRCMF_INFO("Updating SoftAP channel after client associated... (b/155092471)");
+            BRCMF_INFO("Sending SoftAP channel update to SME after client association");
             (void)brcmf_notify_channel_switch(iface, nullptr, nullptr);
           }
         }
