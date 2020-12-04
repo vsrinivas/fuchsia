@@ -137,7 +137,7 @@ config_package("config-data") {
   testonly = true
   visibility = [ ":*" ]
   deps = [
-    ":component_id_index_config_data",
+    ":component_id_index_config-config-data",
     ":universe_packages",
   ]
 }
@@ -2107,13 +2107,13 @@ generate_package_metadata("all_package_manifests.list") {
 # A component ID index maps component instance IDs to component monikers.
 # Indices are defined using the component_id_index() GN template. They are
 # merged together into a single index and supplied to appmgr using the
-# component_id_index_config_data() template, which produces a config_data().
+# component_id_index_config() template, which produces a config_data().
 #
 # If a system assembly contains components which use isolated storage, then it
-# needs include a component_id_index_config_data().
+# needs include a component_id_index_config().
 #
 # For more details, see //docs/development/components/component_id_index.md#system-assembly
-component_id_index_config_data("component_id_index_config_data") {
+component_id_index_config("component_id_index_config") {
   testonly = true
 
   # crawl for component_id_index()s in the base set.

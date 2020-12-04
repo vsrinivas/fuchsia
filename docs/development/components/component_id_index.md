@@ -196,30 +196,37 @@ build should now pass.
 
 ## Include a Component ID Index in a system assembly {#system-assembly}
 
-_The target audience for this section are product owners who are
-setting up a system assembly_
+_The target audience for this section are product owners who are setting up a
+system assembly_
 
 This section describes how to include the component ID index in a system
 assembly.
 
 A system assembly should include a component ID index if it contains components
-which use isolated storage. Any product which builds on top of the
-`core` product already includes a component ID index, so the following
-instructions are not necessary.
+which use isolated storage. Any product which builds on top of the `core`
+product already includes a component ID index in its assembly, so the following
+instructions may not be necessary.
 
-### `component_id_index_config_package()`
-All component_id_index()s in a system
-build are merged together using the `component_id_index_config_package()`
-template, which produces a `config_data(for_pkg=appmgr)`. `appmgr` then
-consumes the merged index using this mechanism.
+### `component_id_index_config()`
+All component_id_index()s in a system build are merged together using the
+`component_id_index_config()` template.
 
-To include a `component_id_index_config_package()` target in a system assembly:
+`component_id_index_config()` produces a `resource()` target containing a
+a FIDL-wireformat encoded index, along with a `config_data(for_pkg=appmgr)`
+sub-target with a "-config-data" suffix containing a JSON-encoded index.
 
-**a)** Define it with a dependency on any `component_id_index()` targets which you
-want included in the system. For example, //build/images:universe_packages is a
-good dependency candidate because it transitively includes all
+The `resource()` copy of the index is used by `component_manager`, while the
+`config_data()` copy is used by `appmgr`. Although they use different formats,
+they carry the same information.
+
+To include a `component_id_index_config()` target in a system assembly:
+
+**a)** Define it with a dependency on any `component_id_index()` targets which
+you want included in the system. For example, `//build/images:universe_packages`
+is a good dependency candidate because it transitively includes all
 `component_id_index()` specified in the build.
 
-**b)** Add your `component_id_index_config_package()` target to the system assembly.
-Currently, a good method is to include your `component_id_index_config_package()`
-target as a dependency to your system assembly's `config_package()`.
+**b)** Add both the `component_id_index_config()` target and the `-config-data`
+suffixed subtarget to the system assembly. Currently, a good method is to
+include the target in the bootfs_labels, and make the `-config-data` sub-target
+a dependency to your system assembly's `config_package()`.

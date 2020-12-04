@@ -38,12 +38,14 @@ template("component_id_index") {
   }
 }
 
-# Produce a config_data() for appmgr containing a merged component ID index.
-# All component ID indices are merged together by transitively traversing
-# `deps`, and a single merged index is supplied to the config_data().
+# Collect and merge component ID indices supplied from component_id_index()s.
 #
-# A target defined from this template must be a (transitive) dependency of
-# config_package().
+# This template results in a resource() which contains a FIDL-wireformat encoded
+# index supplied through a resource(). A "-config-data" suffixed sub-target
+# contains a JSON-encoded index supplied through config_data().
+#
+# A target defined from this template must take a (transitive) dependency on
+# targets defined from the component_id_index() template.
 #
 # For more details on how to include this target in a system assembly, see:
 # //docs/development/components/component_id_index.md
@@ -57,7 +59,7 @@ template("component_id_index") {
 #   public_deps (optional)
 #   testonly (optional)
 #     Usual GN meanings.
-template("component_id_index_config_data") {
+template("component_id_index_config") {
   # Step 1:  Collect a list of index file paths into intermediary file
   # `component_id_index_merge_input_manifest`.
   component_id_index_input_manifest_path =
@@ -69,9 +71,8 @@ template("component_id_index_config_data") {
                              "deps",
                              "public_deps",
                              "testonly",
-                             "visibility",
                            ])
-
+    visibility = [ ":*" ]
     data_keys = [ "component_id_index" ]
     outputs = [ component_id_index_input_manifest_path ]
   }
@@ -83,8 +84,10 @@ template("component_id_index_config_data") {
       "${target_out_dir}/${target_name}_merged_index.json"
   component_id_index_merged_index_fidl_path =
       "${target_out_dir}/${target_name}_merged_index.fidlbin"
+
   compiled_action(component_id_index_merge) {
     forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
     tool = "//tools/component_id_index"
     sources = [ component_id_index_input_manifest_path ]
     outputs = [
@@ -94,24 +97,43 @@ template("component_id_index_config_data") {
     depfile = "${target_out_dir}/${target_name}.d"
     args = [
       "--input_manifest",
-      rebase_path(component_id_index_input_manifest_path),
+      rebase_path(component_id_index_input_manifest_path, root_build_dir),
       "--output_index_json",
-      rebase_path(component_id_index_merged_index_json_path),
+      rebase_path(component_id_index_merged_index_json_path, root_build_dir),
       "--output_index_fidl",
-      rebase_path(component_id_index_merged_index_fidl_path),
+      rebase_path(component_id_index_merged_index_fidl_path, root_build_dir),
       "--depfile",
       rebase_path(depfile, root_build_dir),
     ]
     deps = [ ":${component_id_index_merged_inputs}" ]
   }
 
-  # Step 3: Supply the merged index file to appmgr as config data.
-  config_data(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+  # Supply the merged index file to appmgr as config data.
+  config_data("${target_name}-config-data") {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     for_pkg = "appmgr"
-    sources = [ rebase_path(component_id_index_merged_index_json_path) ]
+    sources = [ component_id_index_merged_index_json_path ]
     outputs = [ "component_id_index" ]
 
+    deps = [ ":${component_id_index_merge}" ]
+  }
+
+  # This target produces the component_id_index as a resource pathed under
+  # "config/component_id_index".  This resource can be used to place the index
+  # in bootfs so that it is available to `component_manager` even before pkgfs
+  # is available.
+  resource("${target_name}") {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    sources = [ component_id_index_merged_index_fidl_path ]
+    outputs = [ "config/component_id_index" ]
     deps = [ ":${component_id_index_merge}" ]
   }
 }

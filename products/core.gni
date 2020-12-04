@@ -107,4 +107,7 @@ universe_package_labels += [ "//bundles:tools" ]
 product_bootfs_labels += [
   # Core products have pkgfs, so include the base resolver.
   "//src/sys/base-resolver:bootfs",
+
+  # component manager gets a copy of the component ID index.
+  "//build/images:component_id_index_config",
 ]
