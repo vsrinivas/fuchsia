@@ -8,6 +8,8 @@ source_set("buffers") {
     "buffer_collection.h",
     "buffer_collection_importer.h",
     "mock_buffer_collection_importer.h",
+    "util.cc",
+    "util.h",
   ]
 
   public_deps = [
