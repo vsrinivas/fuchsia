@@ -153,12 +153,17 @@ class StorageTraits<fbl::Array<T>> {
     return SpanTraits::Write(span, offset, length).take_value();
   }
 
-  static fitx::result<error_type, Storage> Create(Storage& old, size_t size) {
+  static fitx::result<error_type, Storage> Create(Storage& old, uint32_t size,
+                                                  uint32_t initial_zero_size) {
     const size_t n = (size + sizeof(T) - 1) / sizeof(T);
     fbl::AllocChecker ac;
     Storage new_storage(new (&ac) T[n], n);
     if (!ac.check()) {
       return fitx::error{error_type{}};
+    }
+    if (initial_zero_size) {
+      ZX_DEBUG_ASSERT(initial_zero_size <= size);
+      memset(new_storage.data(), 0, initial_zero_size);
     }
     return fitx::ok(std::move(new_storage));
   }

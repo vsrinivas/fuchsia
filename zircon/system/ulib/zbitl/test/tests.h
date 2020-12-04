@@ -27,6 +27,7 @@
 using Bytes = std::string;
 
 constexpr size_t kMaxZbiSize = 4192;
+constexpr size_t kOneItemZbiSize = 80;
 
 enum class TestDataZbiType {
   kEmpty,
@@ -108,8 +109,8 @@ struct TestAllocator {
 // iteration.
 //
 // If the storage type is writable, it must also provide:
-//   * `static payload_type AsPayload(storage_type&)` that returns the payload
-//     value representing the entire storage object.
+//   * `static void ToPayload(storage_type&, uint32_t, payload_type&)` that
+//     populates a payload value given by an offset into a storage instance.
 //
 // If the storage type is writable, it must also provide:
 //   * `void Write(storage_type&, uint32_t offset, Bytes data)` that writes data
@@ -407,7 +408,8 @@ void TestCopyCreation(TestDataZbiType type, ItemCopyMode mode) {
     auto created = std::move(result).value();
 
     Bytes actual;
-    auto created_payload = CreationTraits::AsPayload(created);
+    typename CreationTraits::payload_type created_payload;
+    ASSERT_NO_FATAL_FAILURE(CreationTraits::ToPayload(created, 0, created_payload));
     ASSERT_NO_FATAL_FAILURE(CreationTraits::Read(created, created_payload, created_size, &actual));
 
     Bytes expected;
@@ -449,17 +451,25 @@ void TestCopyCreationByByteRange(TestDataZbiType type) {
   size_t idx = 0;
   for (auto it = view.begin(); it != view.end(); ++it, ++idx) {
     uint32_t payload_size = (*it).header->length;
-    auto result = view.Copy(it.payload_offset(), payload_size);
+    // We pick a `to_offset` of `idx` for want of a value of zero along with
+    // varying, non-zero, non-random values.
+    uint32_t to_offset = static_cast<uint32_t>(idx);
+    auto result = view.Copy(it.payload_offset(), payload_size, to_offset);
     EXPECT_FALSE(result.is_error()) << ViewCopyErrorString(result.error_value());
 
     auto created = std::move(result).value();
 
     Bytes actual;
-    auto created_payload = CreationTestTraits::AsPayload(created);
+    typename CreationTestTraits::payload_type created_payload;
+    ASSERT_NO_FATAL_FAILURE(CreationTestTraits::ToPayload(created, 0, created_payload));
     ASSERT_NO_FATAL_FAILURE(
-        CreationTestTraits::Read(created, created_payload, payload_size, &actual));
+        CreationTestTraits::Read(created, created_payload, to_offset + payload_size, &actual));
+
+    // We expect a head of `to_offset`-many zeroes.
     Bytes expected;
     ASSERT_NO_FATAL_FAILURE(GetExpectedPayload(type, idx, &expected));
+    expected = Bytes(to_offset, '\0').append(expected);
+
     EXPECT_EQ(expected, actual);
   }
   EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
@@ -582,8 +592,9 @@ void TestCopyingIntoSmallStorage() {
   ASSERT_NO_FATAL_FAILURE(SrcTestTraits::Read(view.storage(), payload, header->length, &expected));
 
   Bytes actual;
-  ASSERT_NO_FATAL_FAILURE(DestTestTraits::Read(
-      small_storage, DestTestTraits::AsPayload(small_storage), header->length, &actual));
+  typename DestTestTraits::payload_type as_payload;
+  ASSERT_NO_FATAL_FAILURE(DestTestTraits::ToPayload(small_storage, 0, as_payload));
+  ASSERT_NO_FATAL_FAILURE(DestTestTraits::Read(small_storage, as_payload, header->length, &actual));
 
   EXPECT_EQ(expected, actual);
 
@@ -695,7 +706,8 @@ void TestCopying(TestDataZbiType type, ItemCopyMode mode) {
     }
 
     Bytes actual;
-    auto copy_payload = DestTestTraits::AsPayload(copy);
+    typename DestTestTraits::payload_type copy_payload;
+    ASSERT_NO_FATAL_FAILURE(DestTestTraits::ToPayload(copy, 0, copy_payload));
     ASSERT_NO_FATAL_FAILURE(DestTestTraits::Read(copy, copy_payload, copy_size, &actual));
 
     Bytes expected;
@@ -733,17 +745,22 @@ void TestCopyingByByteRange(TestDataZbiType type) {
 
   size_t idx = 0;
   for (auto it = view.begin(); it != view.end(); ++it) {
+    // We pick a `to_offset` of `idx` for want of a value of zero along with
+    // varying, non-zero, non-random values.
+    uint32_t to_offset = static_cast<uint32_t>(idx);
+
     uint32_t payload_size = (*it).header->length;
 
     typename DestTestTraits::Context copy_context;
-    ASSERT_NO_FATAL_FAILURE(DestTestTraits::Create(payload_size, &copy_context));
+    ASSERT_NO_FATAL_FAILURE(DestTestTraits::Create(to_offset + payload_size, &copy_context));
     auto copy = copy_context.TakeStorage();
 
-    auto result = view.Copy(copy, it.payload_offset(), payload_size);
+    auto result = view.Copy(copy, it.payload_offset(), payload_size, to_offset);
     EXPECT_FALSE(result.is_error()) << ViewCopyErrorString(result.error_value());
 
     Bytes actual;
-    auto copy_payload = DestTestTraits::AsPayload(copy);
+    typename DestTestTraits::payload_type copy_payload;
+    ASSERT_NO_FATAL_FAILURE(DestTestTraits::ToPayload(copy, to_offset, copy_payload));
     ASSERT_NO_FATAL_FAILURE(DestTestTraits::Read(copy, copy_payload, payload_size, &actual));
 
     Bytes expected;

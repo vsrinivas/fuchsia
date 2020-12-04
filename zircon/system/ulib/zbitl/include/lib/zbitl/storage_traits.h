@@ -170,9 +170,11 @@ struct StorageTraits {
   // Its successful return value is whatever makes sense for returning a new,
   // owning object of a type akin to Storage (possibly Storage itself, possibly
   // another type).  The new object refers to new storage of at least the given
-  // capacity (in bytes) with nothing in it.  The old storage object might be
-  // used as a prototype in some sense, but the new object is distinct storage.
-  static fitx::result<error_type, Storage> Create(Storage& zbi, uint32_t capacity) {
+  // capacity (in bytes) with a provided zero-fill header size.  The old
+  // storage object might be used as a prototype in some sense, but the new
+  // object is distinct storage.
+  static fitx::result<error_type, Storage> Create(Storage& zbi, uint32_t capacity,
+                                                  uint32_t initial_zero_size) {
     return fitx::error<error_type>{};
   }
 

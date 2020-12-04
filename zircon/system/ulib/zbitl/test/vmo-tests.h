@@ -52,7 +52,9 @@ struct VmoTestTraits {
     ASSERT_EQ(ZX_OK, storage.write(data.data(), offset, data.size()));
   }
 
-  static payload_type AsPayload(const storage_type& storage) { return 0; }
+  static void ToPayload(const storage_type& storage, uint32_t offset, payload_type& payload) {
+    payload = static_cast<payload_type>(offset);
+  }
 
   static const zx::vmo& GetVmo(const storage_type& storage) { return storage; }
 };
@@ -98,7 +100,9 @@ struct UnownedVmoTestTraits {
     ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Write(*storage, offset, data));
   }
 
-  static payload_type AsPayload(const storage_type& storage) { return 0; }
+  static void ToPayload(const storage_type& storage, uint32_t offset, payload_type& payload) {
+    payload = static_cast<payload_type>(offset);
+  }
 
   static const zx::vmo& GetVmo(const storage_type& storage) { return *storage; }
 };
@@ -141,7 +145,9 @@ struct MapOwnedVmoTestTraits {
     ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Write(storage.vmo(), offset, data));
   }
 
-  static payload_type AsPayload(const storage_type& storage) { return 0; }
+  static void ToPayload(const storage_type& storage, uint32_t offset, payload_type& payload) {
+    payload = static_cast<payload_type>(offset);
+  }
 
   static const zx::vmo& GetVmo(const storage_type& storage) { return storage.vmo(); }
 };
@@ -188,7 +194,9 @@ struct MapUnownedVmoTestTraits {
     ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Write(storage.vmo(), offset, data));
   }
 
-  static payload_type AsPayload(const storage_type& storage) { return 0; }
+  static void ToPayload(const storage_type& storage, uint32_t offset, payload_type& payload) {
+    payload = static_cast<payload_type>(offset);
+  }
 
   static const zx::vmo& GetVmo(const storage_type& storage) { return storage.vmo(); }
 };

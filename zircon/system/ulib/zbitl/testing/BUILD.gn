@@ -6,13 +6,14 @@ import("//build/cpp/cpp_fuzzer.gni")
 
 group("testing") {
   testonly = true
-  deps = [ ":zbitl-fuzzers" ]
+  deps = [ ":zbitl-fuzzers($default_toolchain)" ]
 }
 
 fuzzer_package("zbitl-fuzzers") {
   fuzz_host = true
   cpp_fuzzers = [
     ":append-fuzzer",
+    ":copy-fuzzer",
     ":iteration-fuzzer",
     ":mem-config-fuzzer",
   ]
@@ -20,6 +21,14 @@ fuzzer_package("zbitl-fuzzers") {
 
 cpp_fuzzer("append-fuzzer") {
   sources = [ "append-fuzzer.cc" ]
+  deps = [
+    "..",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+cpp_fuzzer("copy-fuzzer") {
+  sources = [ "copy-fuzzer.cc" ]
   deps = [
     "..",
     "//zircon/system/ulib/fbl",

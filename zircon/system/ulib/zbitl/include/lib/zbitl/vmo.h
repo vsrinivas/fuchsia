@@ -153,7 +153,8 @@ struct StorageTraits<zx::vmo> {
 
   static fitx::result<error_type> Write(const zx::vmo&, uint32_t offset, ByteView);
 
-  static fitx::result<error_type, zx::vmo> Create(const zx::vmo&, size_t size);
+  static fitx::result<error_type, zx::vmo> Create(const zx::vmo&, uint32_t size,
+                                                  uint32_t initial_zero_size);
 
   template <typename SlopCheck>
   static fitx::result<error_type, std::optional<std::pair<zx::vmo, uint32_t>>> Clone(
@@ -211,7 +212,9 @@ struct StorageTraits<zx::unowned_vmo> {
     return Owned::Write(*vmo, offset, data);
   }
 
-  static auto Create(const zx::unowned_vmo& vmo, size_t size) { return Owned::Create(*vmo, size); }
+  static auto Create(const zx::unowned_vmo& vmo, uint32_t size, uint32_t initial_zero_size) {
+    return Owned::Create(*vmo, size, initial_zero_size);
+  }
 
   template <typename SlopCheck>
   static auto Clone(const zx::unowned_vmo& zbi, uint32_t offset, uint32_t length,
@@ -263,8 +266,9 @@ class StorageTraits<MapUnownedVmo> {
     return Map(zbi, offset, length, true);
   }
 
-  static fitx::result<error_type, MapOwnedVmo> Create(const MapUnownedVmo& proto, size_t size) {
-    auto result = Owned::Create(proto.vmo(), size);
+  static fitx::result<error_type, MapOwnedVmo> Create(const MapUnownedVmo& proto, uint32_t size,
+                                                      uint32_t initial_zero_size) {
+    auto result = Owned::Create(proto.vmo(), size, initial_zero_size);
     if (result.is_error()) {
       return result.take_error();
     }

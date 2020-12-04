@@ -4,23 +4,28 @@
 
 #include <lib/zbitl/vmo.h>
 
+#include <cstddef>
+#include <memory>
+
+#include <fbl/alloc_checker.h>
+
 namespace zbitl {
 
 fitx::result<zx_status_t, uint32_t> StorageTraits<zx::vmo>::Capacity(const zx::vmo& vmo) {
-  uint64_t vmo_size;
-  zx_status_t status = vmo.get_size(&vmo_size);
+  uint64_t size;
+  zx_status_t status = vmo.get_size(&size);
   if (status == ZX_OK) {
     uint64_t content_size;
     status = vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
     if (status == ZX_OK && content_size != 0) {
-      vmo_size = content_size;
+      size = content_size;
     }
   }
   if (status != ZX_OK) {
     return fitx::error{status};
   }
   return fitx::ok(static_cast<uint32_t>(
-      std::min(static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()), vmo_size)));
+      std::min(static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()), size)));
 }
 
 fitx::result<zx_status_t> StorageTraits<zx::vmo>::EnsureCapacity(const zx::vmo& vmo,
@@ -71,13 +76,19 @@ fitx::result<zx_status_t> StorageTraits<zx::vmo>::Write(const zx::vmo& vmo, uint
   return fitx::ok();
 }
 
-fitx::result<zx_status_t, zx::vmo> StorageTraits<zx::vmo>::Create(const zx::vmo&, size_t size) {
+fitx::result<zx_status_t, zx::vmo> StorageTraits<zx::vmo>::Create(const zx::vmo&, uint32_t size,
+                                                                  uint32_t initial_zero_size) {
+  // While `initial_zero_size` is a required parameter for the creation trait,
+  // it is unnecessary in the case of VMOs, as newly-created instances are
+  // always zero-filled.
   zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(size, ZX_VMO_RESIZABLE, &vmo);
-  if (status == ZX_OK) {
-    status = vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size));
+  if (zx_status_t status = zx::vmo::create(size, ZX_VMO_RESIZABLE, &vmo); status != ZX_OK) {
+    return fitx::error{status};
   }
-  if (status != ZX_OK) {
+  // Setting ZX_PROP_VMO_CONTENT_SIZE expectes a 64-bit user-pointer.
+  auto size64 = static_cast<uint64_t>(size);
+  if (zx_status_t status = vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &size64, sizeof(size64));
+      status != ZX_OK) {
     return fitx::error{status};
   }
   return fitx::ok(std::move(vmo));

@@ -65,7 +65,9 @@ struct FdTestTraits {
     ASSERT_EQ(data.size(), static_cast<size_t>(n)) << "did not fully write data";
   }
 
-  static payload_type AsPayload(const storage_type& storage) { return 0; }
+  static void ToPayload(const storage_type& storage, uint32_t offset, payload_type& payload) {
+    payload = static_cast<payload_type>(offset);
+  }
 };
 
 #endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_FD_TESTS_H_

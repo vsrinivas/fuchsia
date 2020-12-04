@@ -56,7 +56,10 @@ struct FblSpanTestTraits {
     memcpy(storage.data() + offset, data.data(), data.size());
   }
 
-  static payload_type AsPayload(const storage_type& storage) { return storage; }
+  static void ToPayload(const storage_type& storage, uint32_t offset, payload_type& payload) {
+    ASSERT_LT(offset, storage.size());
+    payload = storage.subspan(offset);
+  }
 };
 
 template <typename T>
@@ -101,8 +104,9 @@ struct FblArrayTestTraits {
     ASSERT_NO_FATAL_FAILURE(SpanTraits::Write(span, offset, data));
   }
 
-  static payload_type AsPayload(const storage_type& storage) {
-    return {storage.data(), storage.size()};
+  static void ToPayload(const storage_type& storage, uint32_t offset, payload_type& payload) {
+    ASSERT_LT(offset, storage.size());
+    payload = payload_type{storage.data() + offset, storage.size() - offset};
   }
 };
 

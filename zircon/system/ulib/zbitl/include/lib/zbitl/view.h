@@ -180,7 +180,7 @@ class View {
     // SFINAE context like a return value, argument type, or template parameter
     // default type.
     template <typename T = Base>
-    using CreateResult = std::decay_t<decltype(T::Create(storage_declval(), 0).value())>;
+    using CreateResult = std::decay_t<decltype(T::Create(storage_declval(), 0, 0).value())>;
 
     // This is the actual object returned by a successful Traits::Clone call.
     // This can be use as `typename Traits::template CreateResult<>` both to
@@ -202,7 +202,7 @@ class View {
     static constexpr bool SfinaeWrite(...) { return false; }
 
     // SFINAE check for a Traits::Create method.
-    template <typename T = Base, typename = decltype(T::Create(storage_declval(), 0))>
+    template <typename T = Base, typename = decltype(T::Create(storage_declval(), 0, 0))>
     static constexpr bool SfinaeCreate(int ignored) {
       return true;
     }
@@ -750,6 +750,12 @@ class View {
     using CopyTraits = typename View<std::decay_t<CopyStorage>>::Traits;
     using ErrorType = CopyError<std::decay_t<CopyStorage>>;
 
+    if (size_t size = size_bytes(); length > size || offset > size - length) {
+      return fitx::error{ErrorType{.zbi_error = "offset + length exceeds ZBI size"}};
+    } else if (to_offset + length < std::max(to_offset, length)) {
+      return fitx::error{ErrorType{.zbi_error = "to_offset + length overflows"}};
+    }
+
     if (auto result = CopyTraits::EnsureCapacity(to, to_offset + length); result.is_error()) {
       return fitx::error{ErrorType{
           .zbi_error = "cannot increase capacity",
@@ -902,7 +908,7 @@ class View {
 
     if (auto compressed = IsCompressedStorage(*(*it).header)) {
       // Create new storage to decompress the payload into.
-      auto to = Traits::Create(storage(), *compressed);
+      auto to = Traits::Create(storage(), *compressed, 0);
       if (to.is_error()) {
         // No read error because a "write" error happened first.
         return fitx::error{ErrorType{
@@ -1081,6 +1087,12 @@ class View {
       uint32_t offset, uint32_t length, uint32_t to_offset, SlopCheck&& slopcheck) {
     using ErrorType = CopyError<CreateStorage>;
 
+    if (size_t size = size_bytes(); length > size || offset > size - length) {
+      return fitx::error{ErrorType{.zbi_error = "offset + length exceeds ZBI size"}};
+    } else if (to_offset + length < std::max(to_offset, length)) {
+      return fitx::error{ErrorType{.zbi_error = "to_offset + length overflows"}};
+    }
+
     if (auto result = Clone(offset, length, to_offset, std::forward<SlopCheck>(slopcheck));
         result.is_error()) {
       return fitx::error{ErrorType{
@@ -1094,7 +1106,7 @@ class View {
     }
 
     // Fall back to Create and copy via Read and Write.
-    if (auto result = Traits::Create(storage(), to_offset + length); result.is_error()) {
+    if (auto result = Traits::Create(storage(), to_offset + length, to_offset); result.is_error()) {
       return fitx::error{ErrorType{
           .zbi_error = "cannot create storage",
           .read_offset = offset,
@@ -1109,7 +1121,7 @@ class View {
       if (copy_result.is_error()) {
         return std::move(copy_result).take_error();
       }
-      return fitx::ok(std::make_pair(std::move(copy), uint32_t{0}));
+      return fitx::ok(std::make_pair(std::move(copy), uint32_t{to_offset}));
     }
   }
 

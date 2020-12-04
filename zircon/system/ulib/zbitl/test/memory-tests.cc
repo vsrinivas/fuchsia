@@ -4,6 +4,8 @@
 
 #include "memory-tests.h"
 
+#include <limits>
+
 namespace {
 
 using FblByteSpanTestTraits = FblSpanTestTraits<std::byte>;
@@ -49,5 +51,52 @@ TEST(ZbitlViewFblUint64ArrayTests, DefaultConstructed) {
 
 // TODO(joshuaseaton): Use ZBIs with payload size divisible by eight so we can
 // further test FblUint64ArrayTestTraits.
+
+TEST(ZbitlViewFblByteArrayTests, BoundsChecking) {
+  using TestTraits = FblByteArrayTestTraits;
+
+  files::ScopedTempDir dir;
+  fbl::unique_fd fd;
+  size_t size = 0;
+  ASSERT_NO_FATAL_FAILURE(OpenTestDataZbi(TestDataZbiType::kOneItem, dir.path(), &fd, &size));
+
+  typename TestTraits::Context context;
+  ASSERT_NO_FATAL_FAILURE(TestTraits::Create(std::move(fd), size, &context));
+  zbitl::View view(context.TakeStorage());
+
+  ASSERT_EQ(kOneItemZbiSize, view.size_bytes());
+
+  // Byte-range, direct copy: offset + length exceeds ZBI size
+  {
+    std::byte buff[kOneItemZbiSize];
+    fbl::Span to{buff, kOneItemZbiSize};
+    auto result = view.Copy(to, kOneItemZbiSize, 1u);
+    ASSERT_TRUE(result.is_error());
+    EXPECT_EQ("offset + length exceeds ZBI size", std::move(result).error_value().zbi_error);
+  }
+
+  // Byte-range, direct copy: to_offset + length overflows
+  {
+    std::byte buff[kOneItemZbiSize];
+    fbl::Span to{buff, kOneItemZbiSize};
+    auto result = view.Copy(to, 0u, 1u, std::numeric_limits<uint32_t>::max());
+    ASSERT_TRUE(result.is_error());
+    EXPECT_EQ("to_offset + length overflows", std::move(result).error_value().zbi_error);
+  }
+
+  // Byte-range copy-creation: offset + length exceeds ZBI size.
+  {
+    auto result = view.Copy(kOneItemZbiSize, 1u);
+    ASSERT_TRUE(result.is_error());
+    EXPECT_EQ("offset + length exceeds ZBI size", std::move(result).error_value().zbi_error);
+  }
+
+  // Byte-range, copy-creation: to_offset + length overflows.
+  {
+    auto result = view.Copy(0u, 1u, std::numeric_limits<uint32_t>::max());
+    ASSERT_TRUE(result.is_error());
+    EXPECT_EQ("to_offset + length overflows", std::move(result).error_value().zbi_error);
+  }
+}
 
 }  // namespace
