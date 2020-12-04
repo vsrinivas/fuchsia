@@ -194,7 +194,8 @@ TEST(AddressManager, FlushAddressRange) {
   connection.reset();
 
   // Clear entire address range.
-  EXPECT_EQ(10u + (48 - PAGE_SHIFT) + 1, as_regs.LockAddress().ReadFrom(reg_io.get()).reg_value());
+  EXPECT_EQ(10u + (48 - kMaliPageShift) + 1,
+            as_regs.LockAddress().ReadFrom(reg_io.get()).reg_value());
   EXPECT_EQ(registers::AsCommand::kCmdUpdate, as_regs.Command().ReadFrom(reg_io.get()).reg_value());
 }
 }  // namespace

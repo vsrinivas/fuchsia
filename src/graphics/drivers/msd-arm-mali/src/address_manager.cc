@@ -283,8 +283,9 @@ void AddressManager::HardwareSlot::WaitForMmuIdle(magma::RegisterIo* io) {
 void AddressManager::HardwareSlot::FlushMmuRange(magma::RegisterIo* io, uint64_t start,
                                                  uint64_t length, bool synchronous) {
   DASSERT(magma::is_page_aligned(start));
+  DASSERT(AddressSpace::is_mali_page_aligned(start));
   uint64_t region = start;
-  uint64_t num_pages = length >> PAGE_SHIFT;
+  uint64_t num_pages = length >> kMaliPageShift;
   uint8_t log2_num_pages = 0;
   if (num_pages > 0) {
     log2_num_pages = static_cast<uint8_t>(63 - __builtin_clzl(num_pages));
@@ -299,7 +300,7 @@ void AddressManager::HardwareSlot::FlushMmuRange(magma::RegisterIo* io, uint64_t
 
   // The low 12 bits are used to specify how many pages are to be locked in
   // this operation.
-  static_assert(kRegionLengthOffset + 64 < PAGE_SIZE, "maximum region length is too large");
+  static_assert(kRegionLengthOffset + 64 < kMaliPageSize, "maximum region length is too large");
 
   uint8_t region_width = log2_num_pages + kRegionLengthOffset;
 

@@ -14,15 +14,10 @@
 #include "platform_bus_mapper.h"
 #include "types.h"
 
-#ifndef PAGE_SHIFT
-
-#if PAGE_SIZE == 4096
-#define PAGE_SHIFT 12
-#else
-#error PAGE_SHIFT not defined
-#endif
-
-#endif
+// This is the standard page size for Mali when using LPAE page tables. The CPU page size must be a
+// multiple of this size.
+constexpr uint32_t kMaliPageShift = 12;
+constexpr uint64_t kMaliPageSize = 1 << kMaliPageShift;
 
 class AddressSpace;
 class MsdArmConnection;
@@ -73,8 +68,12 @@ class AddressSpace {
 
   ~AddressSpace();
 
-  bool Insert(gpu_addr_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping, uint64_t offset,
-              uint64_t length, uint64_t flags);
+  static bool is_mali_page_aligned(uint64_t address) { return address % kMaliPageSize == 0; }
+
+  // offset_bytes and length_bytes must be multiples of both the CPU page size and the GPU page
+  // size.
+  bool Insert(gpu_addr_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
+              uint64_t offset_bytes, uint64_t length_bytes, uint64_t flags);
 
   bool Clear(gpu_addr_t start, uint64_t length);
   void Unlock() { owner_->GetAddressSpaceObserver()->UnlockAddressSpace(this); }
@@ -86,14 +85,14 @@ class AddressSpace {
   std::shared_ptr<Owner> owner() const { return owner_->GetSharedPtr(); }
 
  private:
-  static constexpr uint32_t kPageTableEntries = PAGE_SIZE / sizeof(mali_pte_t);
+  static constexpr uint32_t kPageTableEntries = kMaliPageSize / sizeof(mali_pte_t);
   static constexpr uint32_t kPageTableMask = kPageTableEntries - 1;
   static constexpr uint32_t kPageOffsetBits = 9;
   static_assert(kPageTableEntries == 1 << kPageOffsetBits, "incorrect page table entry count");
   // There are 3 levels of page directories, then an address table.
   static constexpr uint32_t kPageDirectoryLevels = 4;
 
-  static_assert(kPageOffsetBits * kPageDirectoryLevels + PAGE_SHIFT == kVirtualAddressSize,
+  static_assert(kPageOffsetBits * kPageDirectoryLevels + kMaliPageShift == kVirtualAddressSize,
                 "Incorrect virtual address size");
 
   struct PageTableGpu {

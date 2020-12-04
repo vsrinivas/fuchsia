@@ -37,7 +37,7 @@ class TestAddressSpace {
     ASSERT_NE(address_space, nullptr);
     auto page_directory = address_space->root_page_directory_.get();
     constexpr uint32_t kRootDirectoryShift =
-        AddressSpace::kPageOffsetBits * (AddressSpace::kPageDirectoryLevels - 1) + PAGE_SHIFT;
+        AddressSpace::kPageOffsetBits * (AddressSpace::kPageDirectoryLevels - 1) + kMaliPageShift;
     uint64_t offset = (gpu_addr >> kRootDirectoryShift) & AddressSpace::kPageTableMask;
 
     // This are no other buffers nearby, so levels 2, 1, and 0 should have
@@ -109,7 +109,7 @@ class TestAddressSpace {
 
     auto page_directory = address_space->root_page_directory_.get();
     for (int i = 3; i >= 0; i--) {
-      uint64_t offset = (addr[0] >> (9 * i + PAGE_SHIFT)) & AddressSpace::kPageTableMask;
+      uint64_t offset = (addr[0] >> (9 * i + kMaliPageShift)) & AddressSpace::kPageTableMask;
 
       uint64_t entry_flags = i > 0 ? 3u : 1u;
       EXPECT_EQ(entry_flags, page_directory->gpu()->entry[offset] & 3u);

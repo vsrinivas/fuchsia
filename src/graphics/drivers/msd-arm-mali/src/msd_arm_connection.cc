@@ -248,6 +248,8 @@ static bool access_flags_from_flags(uint64_t mapping_flags, bool cache_coherent,
 }
 
 bool MsdArmConnection::AddMapping(std::unique_ptr<GpuMapping> mapping) {
+  // The rest of this code assumes that the CPU page size is a multiple of the GPU page size.
+  DASSERT(AddressSpace::is_mali_page_aligned(PAGE_SIZE));
   std::lock_guard<std::mutex> lock(address_lock_);
   uint64_t gpu_va = mapping->gpu_va();
   if (!magma::is_page_aligned(gpu_va))
@@ -256,12 +258,12 @@ bool MsdArmConnection::AddMapping(std::unique_ptr<GpuMapping> mapping) {
   if (mapping->size() == 0)
     return DRETF(false, "empty mapping");
 
-  uint64_t start_page = gpu_va >> PAGE_SHIFT;
+  uint64_t start_page = gpu_va / PAGE_SIZE;
   if (mapping->size() > (1ul << AddressSpace::kVirtualAddressSize))
     return DRETF(false, "size too large");
 
-  uint64_t page_count = magma::round_up(mapping->size(), PAGE_SIZE) >> PAGE_SHIFT;
-  if (start_page + page_count > ((1ul << AddressSpace::kVirtualAddressSize) >> PAGE_SHIFT))
+  uint64_t page_count = magma::round_up(mapping->size(), PAGE_SIZE) / PAGE_SIZE;
+  if (start_page + page_count > ((1ul << AddressSpace::kVirtualAddressSize) / PAGE_SIZE))
     return DRETF(false, "virtual address too large");
 
   auto it = gpu_mappings_.upper_bound(gpu_va);

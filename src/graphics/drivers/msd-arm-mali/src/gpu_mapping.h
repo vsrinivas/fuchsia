@@ -42,7 +42,7 @@ class GpuMapping {
   ~GpuMapping();
 
   uint64_t gpu_va() const { return addr_; }
-  uint64_t page_offset() const { return page_offset_; }
+  uint64_t page_offset() const { return page_offset_; }  // In CPU pages.
   uint64_t size() const { return size_; }
   uint64_t flags() const { return flags_; }
 

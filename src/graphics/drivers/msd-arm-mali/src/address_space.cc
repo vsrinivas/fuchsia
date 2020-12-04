@@ -60,38 +60,49 @@ std::unique_ptr<AddressSpace> AddressSpace::Create(Owner* owner, bool cache_cohe
 
 AddressSpace::~AddressSpace() { owner_->GetAddressSpaceObserver()->ReleaseSpaceMappings(this); }
 
-bool AddressSpace::Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
+bool AddressSpace::Insert(gpu_addr_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
                           uint64_t offset, uint64_t length, uint64_t flags) {
+  DASSERT(is_mali_page_aligned(addr));
+  DASSERT(is_mali_page_aligned(offset));
+  DASSERT(is_mali_page_aligned(length));
   DASSERT(magma::is_page_aligned(addr));
   DASSERT(magma::is_page_aligned(offset));
   DASSERT(magma::is_page_aligned(length));
 
-  uint64_t start_page_index = offset / PAGE_SIZE;
-  uint64_t num_pages = length / PAGE_SIZE;
+  uint64_t start_page_index = offset / kMaliPageSize;
+  uint64_t num_pages = length / kMaliPageSize;
 
-  if ((addr / PAGE_SIZE) + num_pages > (1l << (kVirtualAddressSize - PAGE_SHIFT)))
+  DASSERT(is_mali_page_aligned(PAGE_SIZE));
+  const uint32_t cpu_pages_per_gpu_page = PAGE_SIZE / kMaliPageSize;
+
+  if ((addr / kMaliPageSize) + num_pages > (1l << (kVirtualAddressSize - kMaliPageShift)))
     return DRETF(false, "Virtual address too large");
 
   std::vector<uint64_t>& bus_addr_array = bus_mapping->Get();
 
-  if (start_page_index < bus_mapping->page_offset())
+  if (start_page_index * cpu_pages_per_gpu_page < bus_mapping->page_offset())
     return DRETF(false, "invalid bus mapping start_page_index %lu < bus_mapping page_offset %lu",
                  start_page_index, bus_mapping->page_offset());
 
-  if (start_page_index + num_pages > bus_mapping->page_offset() + bus_mapping->page_count())
+  if ((start_page_index + num_pages) * cpu_pages_per_gpu_page >
+      bus_mapping->page_offset() + bus_mapping->page_count())
     return DRETF(false, "invalid bus mapping");
 
   // TODO(fxbug.dev/12966): ensure the range isn't currently in use.
 
   for (uint64_t i = 0; i < num_pages; i++) {
     // TODO(fxbug.dev/12978): optimize walk to not get page table every time.
-    uint64_t page_index = i + addr / PAGE_SIZE;
+    uint64_t page_index = i + addr / kMaliPageSize;
     PageTable* page_table = root_page_directory_->GetPageTableLevel0(page_index, true);
     if (!page_table)
       return DRETF(false, "Faied to get page table");
 
-    mali_pte_t pte = bus_addr_array[start_page_index - bus_mapping->page_offset() + i] |
-                     get_mmu_flags(flags) | kLpaeEntryTypeAte;
+    uint64_t cpu_page_offset = (i % cpu_pages_per_gpu_page) * kMaliPageSize;
+    uint64_t bus_addr = bus_addr_array[(start_page_index - bus_mapping->page_offset() + i) /
+                                       cpu_pages_per_gpu_page] +
+                        cpu_page_offset;
+
+    mali_pte_t pte = bus_addr | get_mmu_flags(flags) | kLpaeEntryTypeAte;
     page_table->WritePte(page_index, pte);
   }
 
@@ -102,13 +113,13 @@ bool AddressSpace::Insert(uint64_t addr, magma::PlatformBusMapper::BusMapping* b
 }
 
 bool AddressSpace::Clear(uint64_t start, uint64_t length) {
-  DASSERT(magma::is_page_aligned(start));
-  DASSERT(magma::is_page_aligned(length));
+  DASSERT(is_mali_page_aligned(start));
+  DASSERT(is_mali_page_aligned(length));
 
-  uint64_t num_pages = length >> PAGE_SHIFT;
-  uint64_t start_page_index = start >> PAGE_SHIFT;
+  uint64_t num_pages = length >> kMaliPageShift;
+  uint64_t start_page_index = start >> kMaliPageShift;
 
-  if (start_page_index + num_pages > (1l << (kVirtualAddressSize - PAGE_SHIFT)))
+  if (start_page_index + num_pages > (1l << (kVirtualAddressSize - kMaliPageShift)))
     return DRETF(false, "Virtual address too large");
 
   std::vector<std::unique_ptr<PageTable>> empty_tables;
@@ -134,7 +145,7 @@ bool AddressSpace::Clear(uint64_t start, uint64_t length) {
 }
 
 bool AddressSpace::ReadPteForTesting(uint64_t addr, mali_pte_t* entry) {
-  uint64_t page_index = addr >> PAGE_SHIFT;
+  uint64_t page_index = addr >> kMaliPageShift;
 
   PageTable* page_table = root_page_directory_->GetPageTableLevel0(page_index, false);
   if (!page_table)
@@ -236,7 +247,7 @@ std::unique_ptr<AddressSpace::PageTable> AddressSpace::PageTable::Create(Owner* 
                                                                          bool cache_coherent) {
   constexpr uint32_t kPageCount = 1;
 
-  auto buffer = magma::PlatformBuffer::Create(kPageCount * PAGE_SIZE, "page-directory");
+  auto buffer = magma::PlatformBuffer::Create(kPageCount * kMaliPageSize, "page-directory");
   if (!buffer)
     return DRETP(nullptr, "couldn't create buffer");
 
