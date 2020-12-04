@@ -29,7 +29,9 @@
 #include "metrics.h"
 #include "registry.h"
 #include "registry_vnode.h"
+#include "src/storage/fshost/block-watcher.h"
 
+namespace devmgr {
 namespace {
 
 std::unique_ptr<cobalt_client::Collector> MakeCollector() {
@@ -42,9 +44,8 @@ std::unique_ptr<cobalt_client::Collector> MakeCollector() {
 TEST(VnodeTestCase, NoFilesystems) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-  auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-  auto fshost_vn = fbl::AdoptRef<devmgr::fshost::RegistryVnode>(
-      new devmgr::fshost::RegistryVnode(loop.dispatcher(), dir));
+  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto fshost_vn = fbl::MakeRefCounted<fshost::RegistryVnode>(loop.dispatcher(), dir);
 
   fbl::RefPtr<fs::Vnode> node;
   EXPECT_EQ(ZX_ERR_NOT_FOUND, dir->Lookup("0", &node));
@@ -55,9 +56,8 @@ TEST(VnodeTestCase, NoFilesystems) {
 TEST(VnodeTestCase, AddFilesystem) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-  auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-  auto fshost_vn = fbl::AdoptRef<devmgr::fshost::RegistryVnode>(
-      new devmgr::fshost::RegistryVnode(loop.dispatcher(), dir));
+  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto fshost_vn = fbl::MakeRefCounted<fshost::RegistryVnode>(loop.dispatcher(), dir);
 
   // Adds a new filesystem to the fshost service node.
   // This filesystem should appear as a new entry within |dir|.
@@ -78,8 +78,8 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   // set up registry service
   zx::channel registry_client, registry_server;
   ASSERT_OK(zx::channel::create(0, &registry_client, &registry_server));
-  auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-  auto fshost_vn = new devmgr::fshost::RegistryVnode(loop.dispatcher(), dir);
+  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto fshost_vn = new fshost::RegistryVnode(loop.dispatcher(), dir);
   fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(registry_server), fshost_vn);
 
   // make a new "vfs" "client" that doesn't really point anywhere.
@@ -107,16 +107,15 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
 
 // Test that the manager responds to external signals for unmounting.
 TEST(FsManagerTestCase, WatchExit) {
-  std::unique_ptr<devmgr::FsManager> manager;
   zx::channel dir_request, lifecycle_request;
-  zx_status_t status =
-      devmgr::FsManager::Create(nullptr, std::move(dir_request), std::move(lifecycle_request),
-                                std::make_unique<devmgr::FsHostMetrics>(MakeCollector()), &manager);
-  ASSERT_OK(status);
-  manager->WatchExit();
+  FsManager manager(nullptr, std::make_unique<FsHostMetrics>(MakeCollector()));
+  BlockWatcher watcher(manager, FshostOptions());
+  ASSERT_OK(
+      manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher));
+  manager.WatchExit();
 
   zx::event controller;
-  ASSERT_OK(manager->event()->duplicate(ZX_RIGHT_SAME_RIGHTS, &controller));
+  ASSERT_OK(manager.event()->duplicate(ZX_RIGHT_SAME_RIGHTS, &controller));
 
   // The manager should not have exited yet: No one has asked for an unmount.
   zx_signals_t pending;
@@ -132,19 +131,18 @@ TEST(FsManagerTestCase, WatchExit) {
 
 // Test that the manager shuts down the filesystems given a call on the lifecycle channel
 TEST(FsManagerTestCase, LifecycleStop) {
-  std::unique_ptr<devmgr::FsManager> manager;
   zx::channel dir_request, lifecycle_request, lifecycle;
   zx_status_t status = zx::channel::create(0, &lifecycle_request, &lifecycle);
   ASSERT_OK(status);
 
-  status =
-      devmgr::FsManager::Create(nullptr, std::move(dir_request), std::move(lifecycle_request),
-                                std::make_unique<devmgr::FsHostMetrics>(MakeCollector()), &manager);
-  ASSERT_OK(status);
-  manager->WatchExit();
+  FsManager manager(nullptr, std::make_unique<FsHostMetrics>(MakeCollector()));
+  BlockWatcher watcher(manager, FshostOptions());
+  ASSERT_OK(
+      manager.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr, watcher));
+  manager.WatchExit();
 
   zx::event controller;
-  ASSERT_OK(manager->event()->duplicate(ZX_RIGHT_SAME_RIGHTS, &controller));
+  ASSERT_OK(manager.event()->duplicate(ZX_RIGHT_SAME_RIGHTS, &controller));
 
   // The manager should not have exited yet: No one has asked for an unmount.
   zx_signals_t pending;
@@ -212,7 +210,7 @@ TEST(FshostFsProviderTestCase, CloneBlobExec) {
 
   // Verify that requesting blobexec gets you the handle at /fs/blob, with the
   // permissions expected.
-  devmgr::FshostFsProvider provider;
+  FshostFsProvider provider;
   zx::channel blobexec = provider.CloneFs("blobexec");
 
   // Force a describe call on the target of the Open, to resolve the Open.  We
@@ -231,3 +229,4 @@ TEST(FshostFsProviderTestCase, CloneBlobExec) {
 }
 
 }  // namespace
+}  // namespace devmgr

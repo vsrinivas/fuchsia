@@ -56,9 +56,8 @@ class DelayedOutdir {
   }
 
   fbl::RefPtr<fs::RemoteDir> Initialize(zx::channel filesystems_client) {
-    auto delayed_dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
-    delayed_dir->AddEntry(
-        "fs", fbl::AdoptRef<fs::RemoteDir>(new fs::RemoteDir(std::move(filesystems_client))));
+    auto delayed_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+    delayed_dir->AddEntry("fs", fbl::MakeRefCounted<fs::RemoteDir>(std::move(filesystems_client)));
 
     // Add the delayed vfs to the main one under /delayed
     zx::channel delayed_client, delayed_server;
@@ -69,7 +68,7 @@ class DelayedOutdir {
     }
     delayed_vfs_.ServeDirectory(delayed_dir, std::move(delayed_server));
 
-    return fbl::AdoptRef<fs::RemoteDir>(new fs::RemoteDir(std::move(delayed_client)));
+    return fbl::MakeRefCounted<fs::RemoteDir>(std::move(delayed_client));
   }
 
   void Start() {

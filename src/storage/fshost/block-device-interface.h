@@ -19,12 +19,12 @@
 
 namespace devmgr {
 
-constexpr char kFVMDriverPath[] = "/boot/driver/fvm.so";
-constexpr char kGPTDriverPath[] = "/boot/driver/gpt.so";
-constexpr char kMBRDriverPath[] = "/boot/driver/mbr.so";
-constexpr char kZxcryptDriverPath[] = "/boot/driver/zxcrypt.so";
-constexpr char kBootpartDriverPath[] = "/boot/driver/bootpart.so";
-constexpr char kBlockVerityDriverPath[] = "/boot/driver/block-verity.so";
+constexpr char kFVMDriverPath[] = "fvm.so";
+constexpr char kGPTDriverPath[] = "gpt.so";
+constexpr char kMBRDriverPath[] = "mbr.so";
+constexpr char kZxcryptDriverPath[] = "zxcrypt.so";
+constexpr char kBootpartDriverPath[] = "bootpart.so";
+constexpr char kBlockVerityDriverPath[] = "block-verity.so";
 
 // An abstract class representing the operations which may be performed
 // on a block device, from the perspective of fshost.

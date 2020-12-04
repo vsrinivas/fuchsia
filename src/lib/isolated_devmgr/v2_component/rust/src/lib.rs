@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
+    fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     lazy_static::lazy_static,
     std::sync::Mutex,
@@ -12,6 +13,8 @@ use {
 lazy_static! {
     static ref LAUNCHED: Mutex<bool> = Mutex::new(false);
 }
+
+const FVM_DRIVER_PATH: &str = "fvm.so";
 
 /// Launches the isolated driver manager component and binds /dev to the current namespace. This is
 /// safe to call multiple times; initialization will only take place once.
@@ -30,7 +33,7 @@ pub fn launch_isolated_driver_manager() -> Result<(), Error> {
     let (client, server) = zx::Channel::create()?;
     fuchsia_component::client::connect_channel_to_service::<fsys::RealmMarker>(server)?;
     let mut realm = fsys::RealmSynchronousProxy::new(client);
-    let mut child_ref = fsys::ChildRef { name: "isolated_devmgr".to_string(), collection: None };
+    let mut child_ref = fsys::ChildRef { name: "isolated-devmgr".to_string(), collection: None };
     let (client, server) = zx::Channel::create()?;
     realm
         .bind_child(
@@ -52,5 +55,15 @@ pub fn launch_isolated_driver_manager() -> Result<(), Error> {
     fdio::Namespace::installed()?.bind("/dev", client)?;
 
     *launched = true;
+    Ok(())
+}
+
+pub async fn bind_fvm(proxy: &ControllerProxy) -> Result<(), Error> {
+    proxy.bind(FVM_DRIVER_PATH).await?.map_err(|x| zx::Status::from_raw(x))?;
+    Ok(())
+}
+
+pub async fn rebind_fvm(proxy: &ControllerProxy) -> Result<(), Error> {
+    proxy.rebind(FVM_DRIVER_PATH).await?.map_err(|x| zx::Status::from_raw(x))?;
     Ok(())
 }

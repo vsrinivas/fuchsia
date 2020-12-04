@@ -13,10 +13,10 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 
-#include "block-watcher.h"
-#include "fs-manager.h"
-#include "fshost-boot-args.h"
-#include "metrics.h"
+#include "src/storage/fshost/fs-manager.h"
+#include "src/storage/fshost/fshost-boot-args.h"
+#include "src/storage/fshost/fshost-options.h"
+#include "src/storage/fshost/metrics.h"
 
 namespace devmgr {
 
@@ -24,15 +24,15 @@ namespace devmgr {
 // and helps clients mount filesystems within the fshost namespace.
 class FilesystemMounter {
  public:
-  FilesystemMounter(std::unique_ptr<FsManager> fshost, BlockWatcherOptions options)
-      : fshost_(std::move(fshost)), options_(options) {}
+  FilesystemMounter(FsManager& fshost, FshostOptions options)
+      : fshost_(fshost), options_(options) {}
 
   virtual ~FilesystemMounter() = default;
 
-  void FuchsiaStart() const { fshost_->FuchsiaStart(); }
+  void FuchsiaStart() const { fshost_.FuchsiaStart(); }
 
   zx_status_t InstallFs(const char* path, zx::channel h) {
-    return fshost_->InstallFs(path, std::move(h));
+    return fshost_.InstallFs(path, std::move(h));
   }
 
   bool Netbooting() const { return options_.netboot; }
@@ -65,11 +65,11 @@ class FilesystemMounter {
   void TryMountPkgfs();
 
   // Returns a pointer to the |FsHostMetrics| instance.
-  FsHostMetrics* mutable_metrics() { return fshost_->mutable_metrics(); }
+  FsHostMetrics* mutable_metrics() { return fshost_.mutable_metrics(); }
 
-  std::shared_ptr<devmgr::FshostBootArgs> boot_args() { return fshost_->boot_args(); }
+  std::shared_ptr<FshostBootArgs> boot_args() { return fshost_.boot_args(); }
 
-  void FlushMetrics() { fshost_->FlushMetrics(); }
+  void FlushMetrics() { fshost_.FlushMetrics(); }
 
   bool BlobMounted() const { return blob_mounted_; }
   bool DataMounted() const { return data_mounted_; }
@@ -92,8 +92,8 @@ class FilesystemMounter {
   virtual zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
                                size_t len, uint32_t fs_flags);
 
-  std::unique_ptr<FsManager> fshost_;
-  const BlockWatcherOptions options_;
+  FsManager& fshost_;
+  const FshostOptions options_;
   bool data_mounted_ = false;
   bool durable_mounted_ = false;
   bool install_mounted_ = false;

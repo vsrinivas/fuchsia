@@ -1,15 +1,17 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
-        binary: "bin/fs_management_lib_test",
+        binary: "test/block_watcher_test",
     },
     children: [
         {
-            name: "isolated_devmgr",
-            url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated_devmgr.cm",
+            name: "isolated-devmgr",
+            url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated-devmgr.cm",
+            startup: "eager",
+        },
+        {
+            name: "test-fshost",
+            url: "fuchsia-pkg://fuchsia.com/fshost-tests#meta/test-fshost.cm",
             startup: "eager",
         },
     ],
@@ -17,7 +19,7 @@
         { protocol: "fuchsia.test.Suite" },
     ],
     use: [
-        { runner: "rust_test_runner" },
+        { runner: "gtest_runner" },
         {
             protocol: [ "fuchsia.process.Launcher" ],
         },
@@ -34,7 +36,15 @@
                 "fuchsia.sys.Launcher",
             ],
             from: "parent",
-            to: [ "#isolated_devmgr" ],
+            to: [
+                "#isolated-devmgr",
+                "#test-fshost",
+            ],
+        },
+        {
+            directory: "dev",
+            from: "#isolated-devmgr",
+            to: [ "#test-fshost" ],
         },
     ],
     expose: [

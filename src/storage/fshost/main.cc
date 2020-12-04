@@ -18,7 +18,6 @@
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
-#include <stdio.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/vfs.h>
 #include <zircon/dlfcn.h>
@@ -39,7 +38,6 @@
 #include "fs-manager.h"
 #include "metrics.h"
 #include "src/storage/fshost/deprecated-loader-service.h"
-#include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 
@@ -136,21 +134,6 @@ int RamctlWatcher(void* arg) {
   return 0;
 }
 
-int BlockWatcher(std::unique_ptr<devmgr::FsManager> fs_manager) {
-  // Check relevant boot arguments
-  devmgr::BlockWatcherOptions options = {};
-  options.netboot = fs_manager->boot_args()->netboot();
-  options.check_filesystems = fs_manager->boot_args()->check_filesystems();
-  options.wait_for_data = fs_manager->boot_args()->wait_for_data();
-
-  if (options.netboot) {
-    FX_LOGS(INFO) << "disabling automount";
-  }
-
-  BlockDeviceWatcher(std::move(fs_manager), options);
-  return 0;
-}
-
 // Initialize the fshost namespace.
 //
 // |fs_root_client| is mapped to "/fs", and represents the filesystem of devmgr.
@@ -193,15 +176,12 @@ zx_status_t BindNamespace(zx::channel fs_root_client) {
 
 int main(int argc, char** argv) {
   bool disable_block_watcher = false;
-  bool log_to_debuglog = false;
 
   enum {
     kDisableBlockWatcher,
-    kLogToDebuglog,
   };
   option options[] = {
       {"disable-block-watcher", no_argument, nullptr, kDisableBlockWatcher},
-      {"log-to-debuglog", no_argument, nullptr, kLogToDebuglog},
   };
 
   int opt;
@@ -211,16 +191,6 @@ int main(int argc, char** argv) {
         FX_LOGS(INFO) << "received --disable-block-watcher";
         disable_block_watcher = true;
         break;
-      case kLogToDebuglog:
-        log_to_debuglog = true;
-        break;
-    }
-  }
-
-  if (log_to_debuglog) {
-    zx_status_t status = StdoutToDebuglog::Init();
-    if (status != ZX_OK) {
-      return status;
     }
   }
 
@@ -256,12 +226,26 @@ int main(int argc, char** argv) {
   // Initialize the local filesystem in isolation.
   zx::channel dir_request(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
   zx::channel lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
-  std::unique_ptr<devmgr::FsManager> fs_manager;
-  status =
-      devmgr::FsManager::Create(std::move(loader), std::move(dir_request),
-                                std::move(lifecycle_request), devmgr::MakeMetrics(), &fs_manager);
+
+  auto boot_args = devmgr::FshostBootArgs::Create();
+
+  devmgr::FsManager fs_manager(boot_args, devmgr::MakeMetrics());
+
+  // Check relevant boot arguments
+  devmgr::FshostOptions fshost_options = {.netboot = boot_args->netboot(),
+                                          .check_filesystems = boot_args->check_filesystems(),
+                                          .wait_for_data = boot_args->wait_for_data()};
+
+  if (fshost_options.netboot) {
+    FX_LOGS(INFO) << "disabling automount";
+  }
+
+  devmgr::BlockWatcher watcher(fs_manager, fshost_options);
+
+  status = fs_manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
+                                 std::move(loader), watcher);
   if (status != ZX_OK) {
-    printf("fshost: Cannot create FsManager: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Cannot initialize FsManager: " << zx_status_get_string(status);
     return status;
   }
 
@@ -271,27 +255,27 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     return ZX_OK;
   }
-  status = fs_manager->ServeRoot(std::move(fs_root_server));
+  status = fs_manager.ServeRoot(std::move(fs_root_server));
   if (status != ZX_OK) {
-    printf("fshost: Cannot serve devmgr's root filesystem\n");
+    FX_LOGS(ERROR) << "Cannot serve devmgr's root filesystem";
     return status;
   }
 
   // Initialize namespace, and begin monitoring for a termination event.
   status = devmgr::BindNamespace(std::move(fs_root_client));
   if (status != ZX_OK) {
-    printf("fshost: cannot bind namespace\n");
+    FX_LOGS(ERROR) << "cannot bind namespace";
     return status;
   }
   // TODO(dgonyeo): call WatchExit from inside FsManager, instead of doing it
   // here.
-  fs_manager->WatchExit();
+  fs_manager.WatchExit();
 
   // If there is a ramdisk, setup the ramctl filesystems.
   zx::vmo ramdisk_vmo;
   status = devmgr::get_ramdisk(&ramdisk_vmo);
   if (status != ZX_OK) {
-    printf("fshost: failed to get ramdisk: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "failed to get ramdisk" << zx_status_get_string(status);
   } else if (ramdisk_vmo.is_valid()) {
     thrd_t t;
 
@@ -300,18 +284,17 @@ int main(int argc, char** argv) {
         reinterpret_cast<void*>(static_cast<uintptr_t>(ramdisk_vmo.release())),
         "ramctl-filesystems");
     if (err != thrd_success) {
-      printf("fshost: failed to start ramctl-filesystems: %d\n", err);
+      FX_LOGS(ERROR) << "failed to start ramctl-filesystems: " << err;
     }
     thrd_detach(t);
   }
 
-  if (!disable_block_watcher) {
-    std::thread t(&devmgr::BlockWatcher, std::move(fs_manager));
-    t.detach();
+  if (disable_block_watcher) {
+    zx::nanosleep(zx::time::infinite());
+  } else {
+    watcher.Run();
   }
 
-  zx::nanosleep(zx::time::infinite());
-
-  printf("fshost: terminating (block device filesystems finished?)\n");
+  FX_LOGS(INFO) << "terminating";
   return 0;
 }

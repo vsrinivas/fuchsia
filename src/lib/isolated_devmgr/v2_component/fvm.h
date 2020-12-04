@@ -11,15 +11,18 @@
 
 namespace isolated_devmgr {
 
-// Format the given block device to be managed by FVM, and start up an FVM instance.
+// Formats the given block device to be managed by FVM, and start up an FVM instance.
 //
 // Returns that path to the FVM device.
 zx::status<std::string> CreateFvmInstance(const std::string& device_path, int slice_size);
 
-// Format the given block device to be FVM managed, and create a new partition on the device.
+// Formats the given block device to be FVM managed, and create a new partition on the device.
 //
 // Returns the path to the newly created block device.
 zx::status<std::string> CreateFvmPartition(const std::string& device_path, int slice_size);
+
+// Binds the FVM driver to the given device.
+zx::status<> BindFvm(int fd);
 
 }  // namespace isolated_devmgr
 

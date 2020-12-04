@@ -28,13 +28,19 @@ static zx::status<> WaitForRamctl(zx::duration time = kDefaultWaitTime) {
   return zx::ok();
 }
 
-zx::status<RamDisk> RamDisk::Create(int block_size, int block_count) {
+zx::status<RamDisk> RamDisk::Create(int block_size, int block_count,
+                                    const RamDisk::Options& options) {
   auto status = WaitForRamctl();
   if (status.is_error()) {
     return status.take_error();
   }
   ramdisk_client_t* client;
-  status = zx::make_status(ramdisk_create(block_size, block_count, &client));
+  if (options.type_guid) {
+    status = zx::make_status(ramdisk_create_with_guid(
+        block_size, block_count, options.type_guid->data(), options.type_guid->size(), &client));
+  } else {
+    status = zx::make_status(ramdisk_create(block_size, block_count, &client));
+  }
   if (status.is_error()) {
     FX_LOGS(ERROR) << "Could not create ramdisk for test: " << status.status_string();
     return status.take_error();

@@ -359,16 +359,18 @@ zx_status_t BlockDevice::CheckFilesystem() {
       if (status != ZX_OK) {
         mounter_->mutable_metrics()->LogMinfsCorruption();
         mounter_->FlushMetrics();
-        FX_LOGS(ERROR) << "--------------------------------------------------------------\n"
-                       << "|\n"
-                       << "|   WARNING: fshost fsck failure!\n"
-                       << "|   Corrupt " << disk_format_string_[format_] << " filesystem\n"
-                       << "|\n"
-                       << "|   If your system was shutdown cleanly (via 'dm poweroff'\n"
-                       << "|   or an OTA), report this device to the local-storage\n"
-                       << "|   team. Please file bugs with logs before and after reboot.\n"
-                       << "|\n"
-                       << "--------------------------------------------------------------";
+        FX_LOGS(ERROR) << "\n--------------------------------------------------------------\n"
+                          "|\n"
+                          "|   WARNING: fshost fsck failure!\n"
+                          "|   Corrupt "
+                       << disk_format_string_[format_]
+                       << " filesystem\n"
+                          "|\n"
+                          "|   If your system was shutdown cleanly (via 'dm poweroff'\n"
+                          "|   or an OTA), report this device to the local-storage\n"
+                          "|   team. Please file bugs with logs before and after reboot.\n"
+                          "|\n"
+                          "--------------------------------------------------------------";
       } else {
         FX_LOGS(INFO) << "fsck of " << disk_format_string_[format_] << " completed OK";
       }

@@ -7,8 +7,6 @@
             "--path-prefix",
             "/pkg/",
             "--use-default-loader",
-            "--driver-search-path",
-            "/pkg/bin/driver",
         ],
     },
     capabilities: [

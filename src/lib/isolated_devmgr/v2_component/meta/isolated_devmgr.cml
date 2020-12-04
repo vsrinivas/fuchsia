@@ -5,8 +5,8 @@
     },
     children: [
         {
-            name: "driver_manager_test",
-            url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/driver_manager_test.cm",
+            name: "driver-manager-test",
+            url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/driver-manager-test.cm",
         },
     ],
     capabilities: [
@@ -28,7 +28,7 @@
                 "fuchsia.sys.Launcher",
             ],
             from: "parent",
-            to: [ "#driver_manager_test" ],
+            to: [ "#driver-manager-test" ],
         },
         {
             protocol: [
@@ -36,13 +36,13 @@
                 "fuchsia.kernel.RootJob",
             ],
             from: "self",
-            to: [ "#driver_manager_test" ],
+            to: [ "#driver-manager-test" ],
         },
     ],
     expose: [
         {
             directory: "dev",
-            from: "#driver_manager_test",
+            from: "#driver-manager-test",
         },
     ],
 }

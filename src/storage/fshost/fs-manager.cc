@@ -47,12 +47,13 @@
 
 namespace devmgr {
 
-FsManager::FsManager(std::unique_ptr<FsHostMetrics> metrics)
+FsManager::FsManager(std::shared_ptr<FshostBootArgs> boot_args,
+                     std::unique_ptr<FsHostMetrics> metrics)
     : global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread)),
       outgoing_vfs_(fs::ManagedVfs(global_loop_->dispatcher())),
       registry_(global_loop_.get()),
       metrics_(std::move(metrics)),
-      boot_args_(FshostBootArgs::Create()) {
+      boot_args_(boot_args) {
   ZX_ASSERT(global_root_ == nullptr);
 }
 
@@ -64,37 +65,15 @@ FsManager::~FsManager() {
     zx_signals_t pending;
     event_.wait_one(FSHOST_SIGNAL_EXIT_DONE, deadline, &pending);
   }
+  sync_completion_t sync;
+  outgoing_vfs_.Shutdown([&](zx_status_t status) { sync_completion_signal(&sync); });
+  sync_completion_wait(&sync, ZX_TIME_INFINITE);
   // Ensure all asynchronous work on global_loop_ finishes.
   // Some of the asynchronous work references memory owned by this instance, so we need to ensure
   // the work is complete before destruction.
   // TODO(sdemos): Clean up ordering of fields to let the natural destructor ordering handle
   // shutdown.
   global_loop_->Shutdown();
-}
-
-zx_status_t FsManager::Create(std::shared_ptr<loader::LoaderServiceBase> loader,
-                              zx::channel dir_request, zx::channel lifecycle_request,
-                              std::unique_ptr<FsHostMetrics> metrics,
-                              std::unique_ptr<FsManager>* out) {
-  auto fs_manager = std::unique_ptr<FsManager>(new FsManager(std::move(metrics)));
-  zx_status_t status = fs_manager->Initialize();
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (dir_request.is_valid()) {
-    status = fs_manager->SetupOutgoingDirectory(std::move(dir_request), std::move(loader));
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-  if (lifecycle_request.is_valid()) {
-    status = fs_manager->SetupLifecycleServer(std::move(lifecycle_request));
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-  *out = std::move(fs_manager);
-  return ZX_OK;
 }
 
 zx_status_t FsManager::SetupLifecycleServer(zx::channel lifecycle_request) {
@@ -105,7 +84,8 @@ zx_status_t FsManager::SetupLifecycleServer(zx::channel lifecycle_request) {
 // Sets up the outgoing directory, and runs it on the PA_DIRECTORY_REQUEST
 // handle if it exists. See fshost.cml for a list of what's in the directory.
 zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
-                                              std::shared_ptr<loader::LoaderServiceBase> loader) {
+                                              std::shared_ptr<loader::LoaderServiceBase> loader,
+                                              BlockWatcher& watcher) {
   auto outgoing_dir = fbl::MakeRefCounted<fs::PseudoDir>();
 
   // TODO(unknown): fshost exposes two separate service directories, one here and one in
@@ -132,7 +112,7 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
                     AdminServer::Create(this, global_loop_->dispatcher()));
 
   svc_dir->AddEntry(llcpp::fuchsia::fshost::BlockWatcher::Name,
-                    BlockWatcherServer::Create(global_loop_->dispatcher()));
+                    BlockWatcherServer::Create(global_loop_->dispatcher(), watcher));
 
   outgoing_dir->AddEntry("svc", std::move(svc_dir));
 
@@ -189,7 +169,9 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
   return ZX_OK;
 }
 
-zx_status_t FsManager::Initialize() {
+zx_status_t FsManager::Initialize(zx::channel dir_request, zx::channel lifecycle_request,
+                                  std::shared_ptr<loader::LoaderServiceBase> loader,
+                                  BlockWatcher& watcher) {
   zx_status_t status = memfs::Vfs::Create("<root>", &root_vfs_, &global_root_);
   if (status != ZX_OK) {
     return status;
@@ -231,6 +213,18 @@ zx_status_t FsManager::Initialize() {
 
   global_loop_->StartThread("root-dispatcher");
   root_vfs_->SetDispatcher(global_loop_->dispatcher());
+  if (dir_request.is_valid()) {
+    status = SetupOutgoingDirectory(std::move(dir_request), std::move(loader), watcher);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  if (lifecycle_request.is_valid()) {
+    status = SetupLifecycleServer(std::move(lifecycle_request));
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
   return ZX_OK;
 }
 

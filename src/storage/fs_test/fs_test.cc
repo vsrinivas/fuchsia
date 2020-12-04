@@ -212,26 +212,10 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> OpenRamNand(
   auto [ram_nand, ftl_device_path] = std::move(ram_nand_or).value();
 
   // Now bind FVM to it.
-  zx::channel local, remote;
-  auto status = zx::make_status(zx::channel::create(0, &local, &remote));
-  if (status.is_error()) {
-    return status.take_error();
-  }
-
-  status = zx::make_status(fdio_service_connect(ftl_device_path.c_str(), remote.release()));
-  if (status.is_error()) {
-    return status.take_error();
-  }
-
-  fidl::StringView fvm_driver = fidl::StringView("/pkg/bin/driver/fvm.so");
-  auto resp = llcpp::fuchsia::device::Controller::Call::Bind(zx::unowned_channel(local),
-                                                             std::move(fvm_driver));
-  status = zx::make_status(resp.status());
-  if (status.is_ok()) {
-    if (resp->result.is_err()) {
-      status = zx::make_status(resp->result.err());
-    }
-  }
+  fbl::unique_fd ftl_device(open(ftl_device_path.c_str(), O_RDWR));
+  if (!ftl_device)
+    return zx::error(ZX_ERR_BAD_STATE);
+  auto status = isolated_devmgr::BindFvm(ftl_device.get());
   if (status.is_error()) {
     std::cout << "Unable to bind FVM: " << status.status_string() << std::endl;
     return status.take_error();

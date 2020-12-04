@@ -10,6 +10,8 @@
 #include <zircon/device/block.h>
 #include <zircon/hw/gpt.h>
 
+#include <set>
+
 #include <fs-management/format.h>
 
 namespace devmgr {

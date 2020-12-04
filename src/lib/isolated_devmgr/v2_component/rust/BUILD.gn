@@ -7,6 +7,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("isolated-driver-manager") {
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fdio/rust:fdio",

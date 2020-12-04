@@ -7,8 +7,8 @@
     // Start up an isolated devmgr.
     children: [
         {
-            name: "isolated_devmgr",
-            url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated_devmgr.cm",
+            name: "isolated-devmgr",
+            url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated-devmgr.cm",
             startup: "eager",
         },
     ],
@@ -44,7 +44,7 @@
                 "fuchsia.sys.Launcher",
             ],
             from: "parent",
-            to: [ "#isolated_devmgr" ],
+            to: [ "#isolated-devmgr" ],
         },
     ],
     expose: [

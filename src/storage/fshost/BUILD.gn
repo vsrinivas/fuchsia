@@ -4,8 +4,8 @@
 
 import("//build/dist/component_manifest_resources.gni")
 import("//build/test.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 import("//src/sys/build/components.gni")
-import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 declare_args() {
   # blobfs_maximum_runtime_bytes is an upper bound on the partition size on the device. Partitions
@@ -30,7 +30,10 @@ declare_args() {
 
 group("tests") {
   testonly = true
-  deps = [ ":fshost-tests" ]
+  deps = [
+    ":fshost-tests",
+    "//src/lib/isolated_devmgr/v2_component",
+  ]
 }
 
 source_set("launcher") {
@@ -72,6 +75,7 @@ source_set("fshost-registry") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/memfs",
   ]
   deps = [
@@ -203,7 +207,6 @@ executable("fshost") {
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_c",
-    "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fs-management",
@@ -318,9 +321,12 @@ test("block_watcher_test") {
     ":block-watcher",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.sys2",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/isolated_devmgr/v2_component:client",
     "//src/storage/blobfs",
     "//src/storage/minfs",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fs-management",
@@ -345,8 +351,15 @@ resource("block_watcher_test_config_resource") {
   outputs = [ "config/fshost" ]
 }
 
-isolated_devmgr_unittest_component("block-watcher-test") {
-  executable_path = "test/block_watcher_test"
+# This is a test version of fshost, not a component with fshost tests.
+fuchsia_component("test-fshost") {
+  testonly = true
+  manifest = "meta/fshost.cml"
+  deps = [ ":fshost" ]
+}
+
+isolated_devmgr_unittest_v2_component("block-watcher-test") {
+  manifest = "meta/block_watcher_test.cml"
   deps = [
     ":block_watcher_test",
     ":block_watcher_test_config_resource",
@@ -371,6 +384,7 @@ fuchsia_test_package("fshost-tests") {
     ":fshost-metrics-test",
     ":fshost-loader-service-test",
   ]
+  deps = [ ":test-fshost" ]
 }
 
 component_manifest_resources("meta") {

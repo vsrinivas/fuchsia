@@ -4,8 +4,7 @@
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/fshost/llcpp/fidl.h>
-#include <lib/devmgr-integration-test/fixture.h>
-#include <lib/driver-integration-test/fixture.h>
+#include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
@@ -15,19 +14,19 @@
 
 #include <string_view>
 
+#include <fbl/string_printf.h>
+#include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
-#include <zxtest/zxtest.h>
 
 #include "block-device-interface.h"
 #include "block-device-manager.h"
 #include "block-watcher-test-data.h"
 #include "encrypted-volume-interface.h"
+#include "src/lib/files/glob.h"
+#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 
 namespace devmgr {
 namespace {
-
-using ::devmgr_integration_test::RecursiveWaitForFile;
-using ::driver_integration_test::IsolatedDevmgr;
 
 class MockBlockDevice : public devmgr::BlockDeviceInterface {
  public:
@@ -76,7 +75,7 @@ class MockBlockDevice : public devmgr::BlockDeviceInterface {
     return ZX_OK;
   }
   const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
+    ADD_FAILURE() << "Test should not invoke function" << __FUNCTION__;
     static fuchsia_hardware_block_partition_GUID null_guid;
     return null_guid;
   }
@@ -87,39 +86,39 @@ class MockBlockDevice : public devmgr::BlockDeviceInterface {
     return ZX_OK;
   }
   zx_status_t UnsealZxcrypt() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
+    ADD_FAILURE() << "Test should not invoke function" << __FUNCTION__;
     return ZX_ERR_INTERNAL;
   }
   zx_status_t FormatZxcrypt() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
+    ADD_FAILURE() << "Test should not invoke function" << __FUNCTION__;
     return ZX_ERR_INTERNAL;
   }
   bool ShouldCheckFilesystems() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
+    ADD_FAILURE() << "Test should not invoke function" << __FUNCTION__;
     return false;
   }
   zx_status_t CheckFilesystem() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
+    ADD_FAILURE() << "Test should not invoke function" << __FUNCTION__;
     return ZX_ERR_INTERNAL;
   }
   zx_status_t FormatFilesystem() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
+    ADD_FAILURE() << "Test should not invoke function" << __FUNCTION__;
     return ZX_ERR_INTERNAL;
   }
   zx_status_t MountFilesystem() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
+    ADD_FAILURE() << "Test should not invoke function" << __FUNCTION__;
     return ZX_ERR_INTERNAL;
   }
   zx::status<std::string> VeritySeal() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
+    ADD_FAILURE() << "Test should not invoke function" << __FUNCTION__;
     return zx::error(ZX_ERR_INTERNAL);
   }
   zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
+    ADD_FAILURE() << "Test should not invoke function" << __FUNCTION__;
     return ZX_ERR_INTERNAL;
   }
   bool ShouldAllowAuthoringFactory() override {
-    ADD_FAILURE("Test should not invoke function %s\n", __FUNCTION__);
+    ADD_FAILURE() << "Test should not invoke function" << __FUNCTION__;
     return false;
   }
 
@@ -160,7 +159,7 @@ class SealedBlockVerityDevice : public BlockVerityDevice {
 
   zx::status<std::string> VeritySeal() final { return zx::ok(std::string(kFakeSeal)); }
   zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) final {
-    EXPECT_STR_EQ(kFakeSeal, seal_hex);
+    EXPECT_EQ(std::string_view(kFakeSeal), seal_hex);
     opened_ = true;
     return ZX_OK;
   }
@@ -349,7 +348,7 @@ TEST(AddDeviceTestCase, AddSmallDevice) {
 TEST(AddDeviceTestCase, AddGPTDevice) {
   MockBlockDevice device(MockBlockDevice::GptOptions());
   BlockDeviceManager manager(TestOptions());
-  EXPECT_OK(manager.AddDevice(device));
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(device.attached());
 }
 
@@ -357,7 +356,7 @@ TEST(AddDeviceTestCase, AddGPTDevice) {
 TEST(AddDeviceTestCase, AddFVMDevice) {
   BlockDeviceManager manager(TestOptions());
   MockBlockDevice device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(device));
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(device.attached());
 }
 
@@ -370,23 +369,23 @@ TEST(AddDeviceTestCase, AddMBRDevice) {
       .content_format = DISK_FORMAT_MBR,
       .driver_path = kMBRDriverPath,
   });
-  EXPECT_OK(manager.AddDevice(device));
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(device.attached());
 }
 
 TEST(AddDeviceTestCase, AddBlockVerityDevice) {
   BlockDeviceManager manager(FactoryOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
+  EXPECT_EQ(manager.AddDevice(gpt_device), ZX_OK);
   BlockVerityDevice device(/*allow_authoring=*/true);
-  EXPECT_OK(manager.AddDevice(device));
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(device.attached());
 }
 
 TEST(AddDeviceTestCase, NonFactoryBlockVerityDeviceNotAttached) {
   BlockDeviceManager manager(FactoryOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
+  EXPECT_EQ(manager.AddDevice(gpt_device), ZX_OK);
   MockBlockDevice::Options options = BlockVerityDevice::VerityOptions();
   options.partition_name = "not-factory";
   BlockVerityDevice device(/*allow_authoring=*/true, options);
@@ -398,9 +397,9 @@ TEST(AddDeviceTestCase, NonFactoryBlockVerityDeviceNotAttached) {
 TEST(AddDeviceTestCase, AddFormattedBlockVerityDevice) {
   BlockDeviceManager manager(FactoryOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
+  EXPECT_EQ(manager.AddDevice(gpt_device), ZX_OK);
   SealedBlockVerityDevice device;
-  EXPECT_OK(manager.AddDevice(device));
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(device.attached());
   EXPECT_TRUE(device.opened());
 }
@@ -417,7 +416,7 @@ TEST(AddDeviceTestCase, AddFormattedBlockVerityDeviceWithoutSeal) {
       return zx::error_status(ZX_ERR_NOT_FOUND);
     }
     zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) final {
-      ADD_FATAL_FAILURE("Should not call OpenBlockVerityForVerifiedRead");
+      ADD_FAILURE() << "Should not call OpenBlockVerityForVerifiedRead";
       return ZX_OK;
     }
     bool seal_read() const { return seal_read_; }
@@ -427,7 +426,7 @@ TEST(AddDeviceTestCase, AddFormattedBlockVerityDeviceWithoutSeal) {
   };
   BlockDeviceManager manager(FactoryOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
+  EXPECT_EQ(manager.AddDevice(gpt_device), ZX_OK);
   BlockVerityDeviceWithNoSeal device;
   EXPECT_EQ(ZX_ERR_NOT_FOUND, manager.AddDevice(device));
   EXPECT_TRUE(device.attached());
@@ -441,19 +440,19 @@ TEST(AddDeviceTestCase, AddFormattedBlockVerityDeviceInAuthoringMode) {
     BlockVerityDeviceInAuthoringMode() : BlockVerityDevice(/*allow_authoring=*/true) {}
 
     zx::status<std::string> VeritySeal() final {
-      ADD_FATAL_FAILURE("Should not call VeritySeal");
+      ADD_FAILURE() << "Should not call VeritySeal";
       return zx::error_status(ZX_ERR_NOT_FOUND);
     }
     zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) final {
-      ADD_FATAL_FAILURE("Should not call OpenBlockVerityForVerifiedRead");
+      ADD_FAILURE() << "Should not call OpenBlockVerityForVerifiedRead";
       return ZX_OK;
     }
   };
   BlockDeviceManager manager(FactoryOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
+  EXPECT_EQ(manager.AddDevice(gpt_device), ZX_OK);
   BlockVerityDeviceInAuthoringMode device;
-  EXPECT_OK(manager.AddDevice(device));
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(device.attached());
 }
 
@@ -469,7 +468,7 @@ TEST(AddDeviceTestCase, AddNoGUIDBlobDevice) {
 
   BlockDeviceManager manager(TestOptions());
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
+  EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   BlobDeviceWithInvalidTypeGuid device;
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, manager.AddDevice(device));
   EXPECT_FALSE(device.mounted());
@@ -486,7 +485,7 @@ TEST(AddDeviceTestCase, AddInvalidBlobDevice) {
   };
   BlockDeviceManager manager(TestOptions());
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
+  EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   BlobDeviceWithInvalidMetadata device;
   EXPECT_EQ(ZX_ERR_BAD_STATE, manager.AddDevice(device));
   EXPECT_TRUE(device.checked());
@@ -498,9 +497,9 @@ TEST(AddDeviceTestCase, AddInvalidBlobDevice) {
 TEST(AddDeviceTestCase, AddValidBlobDevice) {
   BlockDeviceManager manager(TestOptions());
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
+  EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   BlobDevice device;
-  EXPECT_OK(manager.AddDevice(device));
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(device.checked());
   EXPECT_FALSE(device.formatted());
   EXPECT_TRUE(device.mounted());
@@ -511,7 +510,7 @@ TEST(AddDeviceTestCase, NetbootingDoesNotMountBlobfs) {
   options.options[BlockDeviceManager::Options::kNetboot] = std::string();
   BlockDeviceManager manager(options);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
+  EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   BlobDevice device;
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, manager.AddDevice(device));
   EXPECT_FALSE(device.mounted());
@@ -530,7 +529,7 @@ TEST(AddDeviceTestCase, AddNoGUIDMinfsDevice) {
   };
   BlockDeviceManager manager(TestOptions());
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
+  EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   MinfsDeviceWithInvalidGuid device(ZxcryptDevice::ZxcryptOptions());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, manager.AddDevice(device));
   EXPECT_FALSE(device.attached());
@@ -550,11 +549,11 @@ TEST(AddDeviceTestCase, AddInvalidMinfsDeviceWithFormatOnCorruptionEnabled) {
   EXPECT_TRUE(options.is_set(BlockDeviceManager::Options::kFormatMinfsOnCorruption));
   BlockDeviceManager manager(options);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
+  EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   ZxcryptDevice zxcrypt_device;
-  EXPECT_OK(manager.AddDevice(zxcrypt_device));
+  EXPECT_EQ(manager.AddDevice(zxcrypt_device), ZX_OK);
   MinfsDeviceWithInvalidMetadata device;
-  EXPECT_OK(manager.AddDevice(device));
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(device.checked());
   EXPECT_TRUE(device.formatted());
   EXPECT_TRUE(device.mounted());
@@ -571,13 +570,13 @@ TEST(AddDeviceTestCase, AddInvalidMinfsDeviceWithFormatOnCorruptionDisabled) {
     }
   };
   auto options = TestOptions();
-  EXPECT_EQ(options.options.erase(BlockDeviceManager::Options::kFormatMinfsOnCorruption), 1);
+  EXPECT_EQ(options.options.erase(BlockDeviceManager::Options::kFormatMinfsOnCorruption), 1ul);
   EXPECT_FALSE(options.is_set(BlockDeviceManager::Options::kFormatMinfsOnCorruption));
   BlockDeviceManager manager(options);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
+  EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   ZxcryptDevice zxcrypt_device;
-  EXPECT_OK(manager.AddDevice(zxcrypt_device));
+  EXPECT_EQ(manager.AddDevice(zxcrypt_device), ZX_OK);
   MinfsDeviceWithInvalidMetadata device;
   EXPECT_EQ(ZX_ERR_BAD_STATE, manager.AddDevice(device));
 }
@@ -587,13 +586,13 @@ TEST(AddDeviceTestCase, AddInvalidMinfsDeviceWithFormatOnCorruptionDisabled) {
 TEST(AddDeviceTestCase, FormatZxcryptDevice) {
   BlockDeviceManager manager(TestOptions());
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
+  EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   MockBlockDevice::Options options = ZxcryptDevice::ZxcryptOptions();
   options.content_format = DISK_FORMAT_UNKNOWN;
   ZxcryptDevice zxcrypt_device(options);
-  EXPECT_OK(manager.AddDevice(zxcrypt_device));
+  EXPECT_EQ(manager.AddDevice(zxcrypt_device), ZX_OK);
   MinfsDevice device;
-  EXPECT_OK(manager.AddDevice(device));
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(zxcrypt_device.formatted_zxcrypt());
   EXPECT_TRUE(device.formatted());
   EXPECT_TRUE(device.mounted());
@@ -604,13 +603,13 @@ TEST(AddDeviceTestCase, FormatZxcryptDevice) {
 TEST(AddDeviceTestCase, FormatMinfsDeviceWithZxcrypt) {
   BlockDeviceManager manager(TestOptions());
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
+  EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   MockBlockDevice::Options options = ZxcryptDevice::ZxcryptOptions();
   options.content_format = DISK_FORMAT_MINFS;
   ZxcryptDevice zxcrypt_device(options);
-  EXPECT_OK(manager.AddDevice(zxcrypt_device));
+  EXPECT_EQ(manager.AddDevice(zxcrypt_device), ZX_OK);
   MinfsDevice device;
-  EXPECT_OK(manager.AddDevice(device));
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(zxcrypt_device.formatted_zxcrypt());
   EXPECT_TRUE(device.formatted());
   EXPECT_TRUE(device.mounted());
@@ -621,12 +620,12 @@ TEST(AddDeviceTestCase, MinfsWithNoZxcryptOptionMountsWithoutZxcrypt) {
   options.options["no-zxcrypt"] = std::string();
   BlockDeviceManager manager(options);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
+  EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   auto minfs_options = MinfsDevice::MinfsOptions();
   minfs_options.topological_path = MockBlockDevice::BaseTopologicalPath() + "/fvm/minfs-p-2/block";
   minfs_options.partition_name = "minfs";
   MinfsDevice device(minfs_options);
-  EXPECT_OK(manager.AddDevice(device));
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(device.mounted());
 }
 
@@ -640,12 +639,12 @@ TEST(AddDeviceTestCase, MinfsRamdiskMounts) {
   constexpr std::string_view kBasePath = "/dev/misc/ramctl/mock_device/block";
   options.topological_path = kBasePath;
   MockBlockDevice fvm_device(options);
-  EXPECT_OK(manager.AddDevice(fvm_device));
+  EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   options = MinfsDevice::MinfsOptions();
   options.topological_path = std::string(kBasePath) + "/fvm/minfs-p-2/block";
   options.partition_name = "minfs";
   MinfsDevice device(options);
-  EXPECT_OK(manager.AddDevice(device));
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(device.mounted());
 }
 
@@ -657,11 +656,11 @@ TEST(AddDeviceTestCase, MinfsRamdiskDeviceNotRamdiskDoesNotMount) {
   auto fvm_options = MockBlockDevice::FvmOptions();
   fvm_options.topological_path = "/dev/misc/ramctl/mock_device/block";
   MockBlockDevice ramdisk_fvm_device(fvm_options);
-  EXPECT_OK(manager.AddDevice(ramdisk_fvm_device));
+  EXPECT_EQ(manager.AddDevice(ramdisk_fvm_device), ZX_OK);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
+  EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   ZxcryptDevice zxcrypt_device;
-  EXPECT_OK(manager.AddDevice(zxcrypt_device));
+  EXPECT_EQ(manager.AddDevice(zxcrypt_device), ZX_OK);
   MinfsDevice device;
   EXPECT_EQ(manager.AddDevice(device), ZX_ERR_NOT_SUPPORTED);
   EXPECT_FALSE(device.mounted());
@@ -672,7 +671,7 @@ TEST(AddDeviceTestCase, MinfsRamdiskWithoutZxcryptAttachOption) {
   options.options[BlockDeviceManager::Options::kFvmRamdisk] = std::string();
   BlockDeviceManager manager(options);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_OK(manager.AddDevice(fvm_device));
+  EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   ZxcryptDevice zxcrypt_device;
   EXPECT_EQ(manager.AddDevice(zxcrypt_device), ZX_ERR_NOT_SUPPORTED);
 }
@@ -681,9 +680,9 @@ TEST(AddDeviceTestCase, MinfsWithAlternateNameMounts) {
   for (std::string name : {GUID_DATA_NAME, "data"}) {
     BlockDeviceManager manager(TestOptions());
     MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-    EXPECT_OK(manager.AddDevice(fvm_device));
+    EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
     ZxcryptDevice zxcrypt_device;
-    EXPECT_OK(manager.AddDevice(zxcrypt_device));
+    EXPECT_EQ(manager.AddDevice(zxcrypt_device), ZX_OK);
     auto minfs_options = MinfsDevice::MinfsOptions();
     minfs_options.partition_name = name;
     MinfsDevice device(minfs_options);
@@ -743,11 +742,11 @@ TEST(AddDeviceTestCase, AddValidDurableDevice) {
   };
   BlockDeviceManager manager(DurableOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
+  EXPECT_EQ(manager.AddDevice(gpt_device), ZX_OK);
   DurableZxcryptDevice zxcrypt_device;
-  EXPECT_OK(manager.AddDevice(zxcrypt_device));
+  EXPECT_EQ(manager.AddDevice(zxcrypt_device), ZX_OK);
   DurableDevice device(MockBlockDevice::DurableOptions());
-  EXPECT_OK(manager.AddDevice(device));
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(device.checked());
   EXPECT_FALSE(device.formatted());
   EXPECT_TRUE(device.mounted());
@@ -773,7 +772,7 @@ TEST(AddDeviceTestCase, AddUnknownFormatBootPartitionDevice) {
   };
   BootPartDevice device;
   BlockDeviceManager manager(TestOptions());
-  EXPECT_OK(manager.AddDevice(device));
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(device.attached());
 }
 
@@ -801,7 +800,7 @@ TEST(AddDeviceTestCase, AddPermanentlyMiskeyedZxcryptVolume) {
     bool formatted = false;
   };
   ZxcryptVolume volume;
-  EXPECT_OK(volume.EnsureUnsealedAndFormatIfNeeded());
+  EXPECT_EQ(volume.EnsureUnsealedAndFormatIfNeeded(), ZX_OK);
   EXPECT_TRUE(volume.preformat_unseal_attempt_count > 1);
   EXPECT_TRUE(volume.formatted);
   EXPECT_EQ(volume.postformat_unseal_attempt_count, 1);
@@ -831,7 +830,7 @@ TEST(AddDeviceTestCase, AddTransientlyMiskeyedZxcryptVolume) {
     bool formatted = false;
   };
   ZxcryptVolume volume;
-  EXPECT_OK(volume.EnsureUnsealedAndFormatIfNeeded());
+  EXPECT_EQ(volume.EnsureUnsealedAndFormatIfNeeded(), ZX_OK);
   EXPECT_FALSE(volume.formatted);
   EXPECT_EQ(volume.unseal_attempt_count, 2);
 }
@@ -868,9 +867,9 @@ TEST(AddDeviceTestCase, AddInvalidFactoryfsDevice) {
   };
   BlockDeviceManager manager(FactoryOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
+  EXPECT_EQ(manager.AddDevice(gpt_device), ZX_OK);
   SealedBlockVerityDevice verity_device;
-  EXPECT_OK(manager.AddDevice(verity_device));
+  EXPECT_EQ(manager.AddDevice(verity_device), ZX_OK);
   FactoryfsWithInvalidMetadata device;
   EXPECT_EQ(ZX_ERR_BAD_STATE, manager.AddDevice(device));
   EXPECT_TRUE(device.checked());
@@ -883,11 +882,11 @@ TEST(AddDeviceTestCase, AddInvalidFactoryfsDevice) {
 TEST(AddDeviceTestCase, AddValidFactoryfsDevice) {
   BlockDeviceManager manager(FactoryOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
+  EXPECT_EQ(manager.AddDevice(gpt_device), ZX_OK);
   SealedBlockVerityDevice verity_device;
-  EXPECT_OK(manager.AddDevice(verity_device));
+  EXPECT_EQ(manager.AddDevice(verity_device), ZX_OK);
   FactoryfsDevice device;
-  EXPECT_OK(manager.AddDevice(device));
+  EXPECT_EQ(manager.AddDevice(device), ZX_OK);
   EXPECT_TRUE(device.checked());
   EXPECT_FALSE(device.formatted());
   EXPECT_TRUE(device.mounted());
@@ -898,7 +897,7 @@ TEST(AddDeviceTestCase, AddValidFactoryfsDevice) {
 TEST(AddDeviceTestCase, AddUnverifiedFactoryFsDevice) {
   BlockDeviceManager manager(TestOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-  EXPECT_OK(manager.AddDevice(gpt_device));
+  EXPECT_EQ(manager.AddDevice(gpt_device), ZX_OK);
   FactoryfsDevice device;
   EXPECT_EQ(manager.AddDevice(device), ZX_ERR_NOT_SUPPORTED);
   EXPECT_FALSE(device.checked());
@@ -910,7 +909,7 @@ TEST(AddDeviceTestCase, MultipleFvmDevicesDoNotMatch) {
   BlockDeviceManager manager(TestOptions());
   {
     MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-    EXPECT_OK(manager.AddDevice(fvm_device));
+    EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   }
   // If another FVM device appears, it should fail.
   {
@@ -923,7 +922,7 @@ TEST(AddDeviceTestCase, MultipleGptDevicesDoNotMatch) {
   BlockDeviceManager manager(TestOptions());
   {
     MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-    EXPECT_OK(manager.AddDevice(gpt_device));
+    EXPECT_EQ(manager.AddDevice(gpt_device), ZX_OK);
   }
   // If another GPT device appears, it should fail.
   {
@@ -938,61 +937,69 @@ TEST(AddDeviceTestCase, MultipleGptDevicesWithGptAllOptionMatch) {
   BlockDeviceManager manager(options);
   {
     MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-    EXPECT_OK(manager.AddDevice(gpt_device));
+    EXPECT_EQ(manager.AddDevice(gpt_device), ZX_OK);
   }
   {
     MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
-    EXPECT_OK(manager.AddDevice(gpt_device));
+    EXPECT_EQ(manager.AddDevice(gpt_device), ZX_OK);
   }
 }
 
-class BlockWatcherTest : public zxtest::Test {
+class BlockWatcherTest : public testing::Test {
  protected:
-  BlockWatcherTest() {
-    // Launch the isolated devmgr.
-    IsolatedDevmgr::Args args;
-    args.driver_search_paths.push_back("/boot/driver");
+  void SetUp() override {
+    fidl::SynchronousInterfacePtr<fuchsia::sys2::Realm> realm;
+    std::string service_name = std::string("/svc/") + fuchsia::sys2::Realm::Name_;
+    auto status = zx::make_status(
+        fdio_service_connect(service_name.c_str(), realm.NewRequest().TakeChannel().get()));
+    ASSERT_TRUE(status.is_ok());
+    fidl::SynchronousInterfacePtr<fuchsia::io::Directory> exposed_dir;
+    fuchsia::sys2::Realm_BindChild_Result result;
+    status = zx::make_status(realm->BindChild(fuchsia::sys2::ChildRef{.name = "test-fshost"},
+                                              exposed_dir.NewRequest(), &result));
+    ASSERT_TRUE(status.is_ok() && !result.is_err());
 
-    args.disable_block_watcher = false;
-    ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
+    fuchsia::io::NodeInfo info;
+    ASSERT_EQ(exposed_dir->Describe(&info), ZX_OK);
 
-    fbl::unique_fd fd;
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
-
-    zx::channel remote;
-    ASSERT_OK(zx::channel::create(0, &watcher_chan_, &remote));
-    ASSERT_OK(fdio_service_connect_at(devmgr_.fshost_outgoing_dir().get(),
-                                      "/svc/fuchsia.fshost.BlockWatcher", remote.release()));
+    zx::channel request;
+    status = zx::make_status(zx::channel::create(0, &watcher_chan_, &request));
+    ASSERT_EQ(status.status_value(), ZX_OK);
+    service_name = std::string("svc/") + llcpp::fuchsia::fshost::BlockWatcher::Name;
+    status = zx::make_status(
+        exposed_dir->Open(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE, 0,
+                          llcpp::fuchsia::fshost::BlockWatcher::Name,
+                          fidl::InterfaceRequest<fuchsia::io::Node>(std::move(request))));
+    ASSERT_EQ(status.status_value(), ZX_OK);
   }
 
-  void CreateGptRamdisk(ramdisk_client** client) {
+  isolated_devmgr::RamDisk CreateGptRamdisk() {
     zx::vmo ramdisk_vmo;
-    ASSERT_OK(zx::vmo::create(kTestDiskSectors * kBlockSize, 0, &ramdisk_vmo));
+    EXPECT_EQ(zx::vmo::create(kTestDiskSectors * kBlockSize, 0, &ramdisk_vmo), ZX_OK);
     // Write the GPT into the VMO.
-    ASSERT_OK(ramdisk_vmo.write(kTestGptProtectiveMbr, 0, sizeof(kTestGptProtectiveMbr)));
-    ASSERT_OK(ramdisk_vmo.write(kTestGptBlock1, kBlockSize, sizeof(kTestGptBlock1)));
-    ASSERT_OK(ramdisk_vmo.write(kTestGptBlock2, 2 * kBlockSize, sizeof(kTestGptBlock2)));
+    EXPECT_EQ(ramdisk_vmo.write(kTestGptProtectiveMbr, 0, sizeof(kTestGptProtectiveMbr)), ZX_OK);
+    EXPECT_EQ(ramdisk_vmo.write(kTestGptBlock1, kBlockSize, sizeof(kTestGptBlock1)), ZX_OK);
+    EXPECT_EQ(ramdisk_vmo.write(kTestGptBlock2, 2 * kBlockSize, sizeof(kTestGptBlock2)), ZX_OK);
 
-    ASSERT_OK(
-        ramdisk_create_at_from_vmo(devmgr_.devfs_root().get(), ramdisk_vmo.release(), client));
+    return isolated_devmgr::RamDisk::CreateWithVmo(std::move(ramdisk_vmo), kBlockSize).value();
   }
 
   void PauseWatcher() {
     auto result = llcpp::fuchsia::fshost::BlockWatcher::Call::Pause(watcher_chan_.borrow());
-    ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_EQ(result.status(), ZX_OK);
+    ASSERT_EQ(result->status, ZX_OK);
   }
 
   void ResumeWatcher() {
     auto result = llcpp::fuchsia::fshost::BlockWatcher::Call::Resume(watcher_chan_.borrow());
-    ASSERT_OK(result.status());
-    ASSERT_OK(result->status);
+    ASSERT_EQ(result.status(), ZX_OK);
+    ASSERT_EQ(result->status, ZX_OK);
   }
 
-  void WaitForBlockDevice(int number) {
-    auto path = fbl::StringPrintf("class/block/%03d", number);
-    fbl::unique_fd fd;
-    ASSERT_NO_FATAL_FAILURES(RecursiveWaitForFile(devmgr_.devfs_root(), path.data(), &fd));
+  fbl::unique_fd WaitForBlockDevice(int number) {
+    auto path = fbl::StringPrintf("/dev/class/block/%03d", number);
+    EXPECT_EQ(wait_for_device(path.data(), ZX_TIME_INFINITE), ZX_OK);
+    return fbl::unique_fd(open(path.data(), O_RDWR));
   }
 
   // Check that the number of block devices bound by the block watcher
@@ -1005,161 +1012,161 @@ class BlockWatcherTest : public zxtest::Test {
   //
   // We make sure that this entry's toplogical path corresponds to it being the first partition
   // of the block device we added.
-  void CheckEventsDropped(int* next_device_number, ramdisk_client** client) {
-    ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(client));
+  void CheckEventsDropped(int& next_device_number, isolated_devmgr::RamDisk& ramdisk) {
+    ASSERT_NO_FATAL_FAILURE(ramdisk = CreateGptRamdisk());
 
     // Wait for the basic block driver to be bound
-    auto path = fbl::StringPrintf("class/block/%03d", *next_device_number);
-    *next_device_number += 1;
-    fbl::unique_fd fd;
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), path.data(), &fd));
+    WaitForBlockDevice(next_device_number);
+    next_device_number += 1;
 
     // And now, wait for the GPT driver to be bound, and the first
     // partition to appear.
-    path = fbl::StringPrintf("class/block/%03d", *next_device_number);
-    *next_device_number += 1;
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), path.data(), &fd));
+    fbl::unique_fd fd = WaitForBlockDevice(next_device_number);
+    next_device_number += 1;
 
     // Figure out the expected topological path of the last block device.
-    std::string expected_path(ramdisk_get_path(*client));
-    expected_path = "/dev/" + expected_path + "/part-000/block";
+    std::string expected_path = ramdisk.path() + "/part-000/block";
 
     zx_handle_t handle;
-    ASSERT_OK(fdio_get_service_handle(fd.release(), &handle));
+    ASSERT_EQ(fdio_get_service_handle(fd.release(), &handle), ZX_OK);
     zx::channel channel(handle);
     // Get the actual topological path of the block device.
     auto result = llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(channel.borrow());
-    ASSERT_OK(result.status());
+    ASSERT_EQ(result.status(), ZX_OK);
     ASSERT_FALSE(result->result.is_err());
 
     auto actual_path =
         std::string(result->result.response().path.begin(), result->result.response().path.size());
     // Make sure expected path matches the actual path.
-    ASSERT_EQ(expected_path, actual_path);
+    ASSERT_EQ(actual_path, expected_path);
   }
 
-  IsolatedDevmgr devmgr_;
   zx::channel watcher_chan_;
 };
 
 TEST_F(BlockWatcherTest, TestBlockWatcherDisable) {
-  ASSERT_NO_FATAL_FAILURES(PauseWatcher());
-  int next_device_number = 0;
+  ASSERT_NO_FATAL_FAILURE(PauseWatcher());
+
   // Add a block device.
-  ramdisk_client* client;
-  ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(&client));
-  ASSERT_NO_FATAL_FAILURES(WaitForBlockDevice(next_device_number));
+  isolated_devmgr::RamDisk client;
+  ASSERT_NO_FATAL_FAILURE(client = CreateGptRamdisk());
+
+  // Figure out what the next device number will be.
+  int next_device_number;
+  {
+    files::Glob glob("/dev/class/block/*");
+    ASSERT_GT(glob.size(), 0ul);
+    auto iterator = glob.end();
+    --iterator;
+    ASSERT_EQ(sscanf(*iterator, "/dev/class/block/%d", &next_device_number), 1);
+  }
   next_device_number++;
 
-  ASSERT_NO_FATAL_FAILURES(ResumeWatcher());
+  ASSERT_NO_FATAL_FAILURE(ResumeWatcher());
 
-  ramdisk_client* client2;
-  ASSERT_NO_FATAL_FAILURES(CheckEventsDropped(&next_device_number, &client2));
-
-  ASSERT_OK(ramdisk_destroy(client));
-  ASSERT_OK(ramdisk_destroy(client2));
+  isolated_devmgr::RamDisk client2;
+  ASSERT_NO_FATAL_FAILURE(CheckEventsDropped(next_device_number, client2));
 }
 
 TEST_F(BlockWatcherTest, TestBlockWatcherAdd) {
-  int next_device_number = 0;
   // Add a block device.
-  ramdisk_client* client;
-  ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(&client));
-  ASSERT_NO_FATAL_FAILURES(WaitForBlockDevice(next_device_number));
-  next_device_number++;
+  isolated_devmgr::RamDisk client;
+  ASSERT_NO_FATAL_FAILURE(client = CreateGptRamdisk());
 
-  fbl::unique_fd fd;
-  // Look for the first partition of the device we just added.
-  ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "class/block/001", &fd));
-
-  ASSERT_OK(ramdisk_destroy(client));
+  // Wait for fshost to bind the gpt driver.
+  EXPECT_EQ(wait_for_device((client.path() + "/part-000/block").c_str(), ZX_TIME_INFINITE), ZX_OK);
 }
 
 TEST_F(BlockWatcherTest, TestBlockWatcherUnmatchedResume) {
   auto result = llcpp::fuchsia::fshost::BlockWatcher::Call::Resume(watcher_chan_.borrow());
-  ASSERT_OK(result.status());
-  ASSERT_STATUS(result->status, ZX_ERR_BAD_STATE);
+  ASSERT_EQ(result.status(), ZX_OK);
+  ASSERT_EQ(result->status, ZX_ERR_BAD_STATE);
 }
 
 TEST_F(BlockWatcherTest, TestMultiplePause) {
-  ASSERT_NO_FATAL_FAILURES(PauseWatcher());
-  ASSERT_NO_FATAL_FAILURES(PauseWatcher());
+  ASSERT_NO_FATAL_FAILURE(PauseWatcher());
+  ASSERT_NO_FATAL_FAILURE(PauseWatcher());
   int next_device_number = 0;
 
   // Add a block device.
-  ramdisk_client* client;
-  ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(&client));
-  ASSERT_NO_FATAL_FAILURES(WaitForBlockDevice(next_device_number));
+  isolated_devmgr::RamDisk client;
+  ASSERT_NO_FATAL_FAILURE(client = CreateGptRamdisk());
+
+  // Figure out what the next device number will be.
+  {
+    files::Glob glob("/dev/class/block/*");
+    ASSERT_GT(glob.size(), 0ul);
+    auto iterator = glob.end();
+    --iterator;
+    ASSERT_EQ(sscanf(*iterator, "/dev/class/block/%d", &next_device_number), 1);
+  }
   next_device_number++;
 
   // Resume once.
-  ASSERT_NO_FATAL_FAILURES(ResumeWatcher());
+  ASSERT_NO_FATAL_FAILURE(ResumeWatcher());
 
-  ramdisk_client* client2;
-  ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(&client2));
-  ASSERT_NO_FATAL_FAILURES(WaitForBlockDevice(next_device_number));
+  isolated_devmgr::RamDisk client2;
+  ASSERT_NO_FATAL_FAILURE(client2 = CreateGptRamdisk());
+  ASSERT_NO_FATAL_FAILURE(WaitForBlockDevice(next_device_number));
   next_device_number++;
 
-  fbl::unique_fd fd;
-  RecursiveWaitForFile(devmgr_.devfs_root(), ramdisk_get_path(client2), &fd);
+  ASSERT_EQ(wait_for_device(client2.path().c_str(), ZX_TIME_INFINITE), ZX_OK);
   // Resume again. The block watcher should be running again.
-  ASSERT_NO_FATAL_FAILURES(ResumeWatcher());
+  ASSERT_NO_FATAL_FAILURE(ResumeWatcher());
 
   // Make sure neither device was seen by the watcher.
-  ramdisk_client* client3;
-  ASSERT_NO_FATAL_FAILURES(CheckEventsDropped(&next_device_number, &client3));
+  isolated_devmgr::RamDisk client3;
+  ASSERT_NO_FATAL_FAILURE(CheckEventsDropped(next_device_number, client3));
 
   // Pause again.
-  ASSERT_NO_FATAL_FAILURES(PauseWatcher());
-  ramdisk_client* client4;
-  ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(&client4));
-  ASSERT_NO_FATAL_FAILURES(WaitForBlockDevice(next_device_number));
+  ASSERT_NO_FATAL_FAILURE(PauseWatcher());
+  isolated_devmgr::RamDisk client4;
+  client4 = CreateGptRamdisk();
+  ASSERT_NO_FATAL_FAILURE(WaitForBlockDevice(next_device_number));
   next_device_number++;
   // Resume again.
-  ASSERT_NO_FATAL_FAILURES(ResumeWatcher());
+  ASSERT_NO_FATAL_FAILURE(ResumeWatcher());
 
   // Make sure the last device wasn't added.
-  ramdisk_client* client5;
-  ASSERT_NO_FATAL_FAILURES(CheckEventsDropped(&next_device_number, &client5));
-
-  ASSERT_OK(ramdisk_destroy(client));
-  ASSERT_OK(ramdisk_destroy(client2));
-  ASSERT_OK(ramdisk_destroy(client3));
-  ASSERT_OK(ramdisk_destroy(client4));
-  ASSERT_OK(ramdisk_destroy(client5));
+  isolated_devmgr::RamDisk client5;
+  ASSERT_NO_FATAL_FAILURE(CheckEventsDropped(next_device_number, client5));
 }
 
 TEST_F(BlockWatcherTest, TestResumeThenImmediatelyPause) {
-  ASSERT_NO_FATAL_FAILURES(PauseWatcher());
+  ASSERT_NO_FATAL_FAILURE(PauseWatcher());
   int next_device_number = 0;
 
   // Add a block device, which should be ignored.
-  ramdisk_client* client;
-  ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(&client));
-  ASSERT_NO_FATAL_FAILURES(WaitForBlockDevice(next_device_number));
+  isolated_devmgr::RamDisk client;
+  ASSERT_NO_FATAL_FAILURE(client = CreateGptRamdisk());
+
+  // Figure out what the next device number will be.
+  {
+    files::Glob glob("/dev/class/block/*");
+    ASSERT_GT(glob.size(), 0ul);
+    auto iterator = glob.end();
+    --iterator;
+    ASSERT_EQ(sscanf(*iterator, "/dev/class/block/%d", &next_device_number), 1);
+  }
   next_device_number++;
 
   // Resume.
-  ASSERT_NO_FATAL_FAILURES(ResumeWatcher());
+  ASSERT_NO_FATAL_FAILURE(ResumeWatcher());
   // Pause immediately.
-  ASSERT_NO_FATAL_FAILURES(PauseWatcher());
+  ASSERT_NO_FATAL_FAILURE(PauseWatcher());
 
   // Add another block device, which should also be ignored.
-  ramdisk_client* client2;
-  ASSERT_NO_FATAL_FAILURES(CreateGptRamdisk(&client2));
-  ASSERT_NO_FATAL_FAILURES(WaitForBlockDevice(next_device_number));
+  isolated_devmgr::RamDisk client2;
+  ASSERT_NO_FATAL_FAILURE(client2 = CreateGptRamdisk());
+  ASSERT_NO_FATAL_FAILURE(WaitForBlockDevice(next_device_number));
   next_device_number++;
 
   // Resume again.
-  ASSERT_NO_FATAL_FAILURES(ResumeWatcher());
+  ASSERT_NO_FATAL_FAILURE(ResumeWatcher());
 
   // Make sure the block watcher correctly resumed.
-  ramdisk_client* client3;
-  ASSERT_NO_FATAL_FAILURES(CheckEventsDropped(&next_device_number, &client3));
-
-  ASSERT_OK(ramdisk_destroy(client));
-  ASSERT_OK(ramdisk_destroy(client2));
-  ASSERT_OK(ramdisk_destroy(client3));
+  isolated_devmgr::RamDisk client3;
+  ASSERT_NO_FATAL_FAILURE(CheckEventsDropped(next_device_number, client3));
 }
 
 }  // namespace

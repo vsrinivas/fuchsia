@@ -6,9 +6,11 @@
 #define SRC_STORAGE_FSHOST_BLOCK_DEVICE_MANAGER_H_
 
 #include <istream>
+#include <map>
 #include <memory>
+#include <vector>
 
-#include "block-device.h"
+#include "src/storage/fshost/block-device-interface.h"
 
 namespace devmgr {
 

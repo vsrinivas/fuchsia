@@ -2,7 +2,6 @@
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/fshost",
-        args: [ "--log-to-debuglog" ],
         lifecycle: { stop_event: "notify" },
     },
     capabilities: [

@@ -14,6 +14,7 @@ use {
     fuchsia_component::client::connect_to_service_at_path,
     fuchsia_zircon::{sys::zx_status_t, AsHandleRef, Rights, Status, Vmo},
     io::Directory,
+    isolated_driver_manager::{bind_fvm, rebind_fvm},
     log::{info, set_logger, set_max_level, LevelFilter},
     ramdevice_client::{RamdiskClient, VmoRamdiskClientBuilder},
     rand::{rngs::SmallRng, FromEntropy, Rng, SeedableRng},
@@ -31,9 +32,6 @@ use {
         opaque_test::OpaqueTest,
     },
 };
-
-// Path to the fvm driver, from the perspective of isolated-devmgr's namespace
-const FVM_DRIVER_PATH: &str = "/pkg/bin/driver/fvm.so";
 
 #[link(name = "fs-management")]
 extern "C" {
@@ -85,9 +83,8 @@ fn init_fvm(ramdisk_path: &str, fvm_slice_size: u64) {
 }
 
 async fn start_fvm_driver(ramdisk_path: &str) -> (ControllerProxy, VolumeManagerProxy) {
-    // Start the FVM driver
     let controller = connect_to_service_at_path::<ControllerMarker>(ramdisk_path).unwrap();
-    controller.bind(FVM_DRIVER_PATH).await.unwrap().unwrap();
+    bind_fvm(&controller).await.unwrap();
 
     // Wait until the FVM driver is available
     let fvm_path = PathBuf::from(ramdisk_path).join("fvm");
@@ -154,7 +151,7 @@ impl TestInstance {
 
     /// Force rebind the FVM driver. This is similar to a device disconnect/reconnect.
     pub async fn rebind_fvm_driver(&mut self) {
-        self.controller.rebind(FVM_DRIVER_PATH).await.unwrap().unwrap();
+        rebind_fvm(&self.controller).await.unwrap();
     }
 
     /// Create a test instance from the given VMO. Assumes that the ramdisk already has

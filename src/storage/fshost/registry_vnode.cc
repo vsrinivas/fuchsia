@@ -28,8 +28,7 @@ zx_status_t RegistryVnode::AddFilesystem(zx::channel directory) {
   char buf[32];
   snprintf(buf, sizeof(buf), "%" PRIu64 "", filesystem_counter_++);
 
-  auto directory_vnode =
-      fbl::AdoptRef<fs::TrackedRemoteDir>(new fs::TrackedRemoteDir(std::move(directory)));
+  auto directory_vnode = fbl::MakeRefCounted<fs::TrackedRemoteDir>(std::move(directory));
 
   return directory_vnode->AddAsTrackedEntry(dispatcher_, filesystems_.get(), fbl::String(buf));
 }

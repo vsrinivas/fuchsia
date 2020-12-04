@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 import("//src/sys/build/fuchsia_component.gni")
 import("//src/sys/build/fuchsia_test_package.gni")
 
@@ -59,10 +60,10 @@ rustc_library("export_ffs") {
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_component("export-ffs-tests-component") {
+isolated_devmgr_unittest_v2_component("export-ffs-tests-component") {
   component_name = "export-ffs-tests"
-  testonly = true
-  manifest = "meta/export-ffs-tests.cml"
+  executable_path = "bin/export_ffs_lib_test"
+  runner = "rust_test_runner"
   deps = [ ":export_ffs_test" ]
 }
 

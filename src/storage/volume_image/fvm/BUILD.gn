@@ -4,6 +4,7 @@
 
 import("//build/images/fvm.gni")
 import("//build/test.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 import("//src/sys/build/fuchsia_component.gni")
 import("//src/sys/build/fuchsia_test_package.gni")
 
@@ -117,10 +118,10 @@ test("fvm_sparse_image_reader_test") {
   ]
 }
 
-fuchsia_component("fvm-sparse-image-reader-tests-component") {
+isolated_devmgr_unittest_v2_component(
+    "fvm-sparse-image-reader-tests-component") {
   component_name = "fvm-sparse-image-reader-tests"
-  testonly = true
-  manifest = "meta/fvm-sparse-image-reader-tests.cml"
+  executable_path = "test/fvm_sparse_image_reader_test"
   deps = [
     ":fvm_sparse_image_reader_test",
     ":test_fvm.sparse.blk-resource",

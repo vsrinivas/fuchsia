@@ -4,8 +4,8 @@
 {
     children: [
         {
-            name: "isolated_devmgr",
-            url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated_devmgr.cm",
+            name: "isolated-devmgr",
+            url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated-devmgr.cm",
 
             // Decrease the time the tests wait for /dev/misc/ramctl to be served
             startup: "eager",
@@ -19,7 +19,7 @@
         {
             runner: "elf",
             from: "parent",
-            to: [ "#isolated_devmgr" ],
+            to: [ "#isolated-devmgr" ],
         },
         {
             protocol: [
@@ -28,7 +28,7 @@
             ],
             from: "parent",
             to: [
-                "#isolated_devmgr",
+                "#isolated-devmgr",
                 "#test_driver",
             ],
         },
@@ -39,7 +39,7 @@
         },
         {
             directory: "dev",
-            from: "#isolated_devmgr",
+            from: "#isolated-devmgr",
             to: [ "#test_driver" ],
         },
     ],

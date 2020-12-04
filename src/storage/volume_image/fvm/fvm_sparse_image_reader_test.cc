@@ -18,6 +18,7 @@
 #include <fvm/fvm-sparse.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/isolated_devmgr/v2_component/fvm.h"
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 #include "src/storage/volume_image/ftl/ftl_image.h"
 #include "src/storage/volume_image/ftl/options.h"
@@ -29,36 +30,18 @@ namespace {
 
 constexpr std::string_view sparse_image_path = "/pkg/data/test_fvm.sparse.blk";
 
-static fidl::StringView FvmDriverLib() { return fidl::StringView("/pkg/bin/driver/fvm.so"); }
-
 zx::status<std::string> AttachFvm(const std::string& device_path) {
   fbl::unique_fd fd(open(device_path.c_str(), O_RDWR));
   if (!fd) {
     return zx::error(ZX_ERR_BAD_STATE);
   }
-  zx::channel fvm_channel;
-  auto status =
-      zx::make_status(fdio_get_service_handle(fd.get(), fvm_channel.reset_and_get_address()));
-  if (status.is_error()) {
+  if (auto status = isolated_devmgr::BindFvm(fd.get()); status.is_error())
     return status.take_error();
-  }
-  auto resp = llcpp::fuchsia::device::Controller::Call::Bind(zx::unowned_channel(fvm_channel.get()),
-                                                             FvmDriverLib());
-  status = zx::make_status(resp.status());
-  if (status.is_ok()) {
-    if (resp->result.is_err()) {
-      status = zx::make_status(resp->result.err());
-    }
-  }
-  if (status.is_error()) {
-    return status.take_error();
-  }
   std::string fvm_disk_path = device_path + "/fvm";
-  status = zx::make_status(wait_for_device(fvm_disk_path.c_str(), zx::sec(3).get()));
-  if (status.is_error()) {
+  if (auto status = zx::make_status(wait_for_device(fvm_disk_path.c_str(), zx::sec(3).get()));
+      status.is_error()) {
     return status.take_error();
   }
-
   return zx::ok(fvm_disk_path);
 }
 

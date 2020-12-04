@@ -5,7 +5,6 @@
 #include "block-device.h"
 
 #include <fcntl.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/namespace.h>
 #include <zircon/assert.h>
 #include <zircon/hw/gpt.h>
@@ -16,10 +15,11 @@
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <cobalt-client/cpp/metric_options.h>
 #include <fs/metrics/events.h>
-#include <ramdevice-client/ramdisk.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
+#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 #include "src/storage/fshost/block-device-manager.h"
+#include "src/storage/fshost/block-watcher.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/metrics.h"
@@ -27,8 +27,6 @@
 
 namespace devmgr {
 namespace {
-
-using devmgr_integration_test::IsolatedDevmgr;
 
 constexpr uint64_t kBlockSize = 512;
 constexpr uint64_t kBlockCount = 1 << 20;
@@ -41,88 +39,68 @@ std::unique_ptr<FsHostMetrics> MakeMetrics(cobalt_client::InMemoryLogger** logge
       std::make_unique<cobalt_client::Collector>(std::move(logger_ptr)));
 }
 
-class BlockDeviceHarness : public zxtest::Test {
+class BlockDeviceHarness : public testing::Test {
  public:
+  BlockDeviceHarness()
+      : manager_(nullptr, MakeMetrics(&logger_)), watcher_(manager_, FshostOptions()) {}
+
   void SetUp() override {
     // Initialize FilesystemMounter.
     zx::channel dir_request, lifecycle_request;
-    ASSERT_OK(FsManager::Create(nullptr, std::move(dir_request), std::move(lifecycle_request),
-                                MakeMetrics(&logger_), &manager_));
+    ASSERT_EQ(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request), nullptr,
+                                  watcher_),
+              ZX_OK);
 
     // Fshost really likes mounting filesystems at "/fs".
     // Let's make that available in our namespace.
     zx::channel client, server;
-    ASSERT_OK(zx::channel::create(0, &client, &server));
-    ASSERT_OK(manager_->ServeRoot(std::move(server)));
+    ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+    ASSERT_EQ(manager_.ServeRoot(std::move(server)), ZX_OK);
     fdio_ns_t* ns;
-    ASSERT_OK(fdio_ns_get_installed(&ns));
-    ASSERT_OK(fdio_ns_bind(ns, "/fs", client.release()));
-    manager_->WatchExit();
+    ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
+    ASSERT_EQ(fdio_ns_bind(ns, "/fs", client.release()), ZX_OK);
+    manager_.WatchExit();
 
     // fshost uses hardcoded /boot/bin paths to launch filesystems, but this test is packaged now.
     // Make /boot redirect to /pkg in our namespace, which contains the needed binaries.
     int pkg_fd = open("/pkg", O_DIRECTORY | O_RDONLY);
     ASSERT_GE(pkg_fd, 0);
-    ASSERT_OK(fdio_ns_bind_fd(ns, "/boot", pkg_fd));
-
-    devmgr_launcher::Args args;
-    args.disable_block_watcher = true;
-    args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
-    args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
-    args.driver_search_paths.push_back("/boot/driver");
-
-    ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
-    fbl::unique_fd ctl;
-    ASSERT_EQ(
-        devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &ctl),
-        ZX_OK);
+    ASSERT_EQ(fdio_ns_bind_fd(ns, "/boot", pkg_fd), ZX_OK);
   }
 
   void TearDown() override {
-    if (ramdisk_) {
-      ASSERT_OK(ramdisk_destroy(ramdisk_));
-    }
     fdio_ns_t* ns;
-    ASSERT_OK(fdio_ns_get_installed(&ns));
+    ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
     fdio_ns_unbind(ns, "/fs");
     fdio_ns_unbind(ns, "/boot");
   }
 
   void CreateRamdisk(bool use_guid = false) {
-    if (use_guid) {
-      const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
-      ASSERT_OK(ramdisk_create_at_with_guid(devfs_root().get(), kBlockSize, kBlockCount, data_guid,
-                                            sizeof(data_guid), &ramdisk_));
-    } else {
-      ASSERT_OK(ramdisk_create_at(devfs_root().get(), kBlockSize, kBlockCount, &ramdisk_));
-    }
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devfs_root(),
-                                                            ramdisk_get_path(ramdisk_), &fd_));
-    ASSERT_TRUE(fd_);
+    isolated_devmgr::RamDisk::Options options;
+    if (use_guid)
+      options.type_guid = std::array<uint8_t, GPT_GUID_LEN>(GUID_DATA_VALUE);
+    ramdisk_ = isolated_devmgr::RamDisk::Create(kBlockSize, kBlockCount, options).value();
+    ASSERT_EQ(wait_for_device(ramdisk_->path().c_str(), zx::sec(10).get()), ZX_OK);
   }
 
-  fbl::unique_fd GetRamdiskFd() { return std::move(fd_); }
+  fbl::unique_fd GetRamdiskFd() { return fbl::unique_fd(open(ramdisk_->path().c_str(), O_RDWR)); }
 
-  std::unique_ptr<FsManager> TakeManager() { return std::move(manager_); }
-
-  fbl::unique_fd devfs_root() { return devmgr_.devfs_root().duplicate(); }
+  fbl::unique_fd devfs_root() { return fbl::unique_fd(open("/dev", O_RDWR)); }
 
  protected:
   cobalt_client::InMemoryLogger* logger_ = nullptr;
-  ramdisk_client_t* ramdisk_ = nullptr;
+  FsManager manager_;
 
  private:
-  std::unique_ptr<FsManager> manager_;
-  IsolatedDevmgr devmgr_;
-  fbl::unique_fd fd_;
+  std::optional<isolated_devmgr::RamDisk> ramdisk_;
+  BlockWatcher watcher_;
 };
 
 TEST_F(BlockDeviceHarness, TestBadHandleDevice) {
-  std::unique_ptr<FsManager> manager = TakeManager();
-  BlockWatcherOptions options = {};
-  FilesystemMounter mounter(std::move(manager), options);
+  FshostOptions options;
+  FilesystemMounter mounter(manager_, options);
   fbl::unique_fd fd;
-  BlockDevice device(&mounter, GetRamdiskFd());
+  BlockDevice device(&mounter, {});
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_UNKNOWN);
   fuchsia_hardware_block_BlockInfo info;
   EXPECT_EQ(device.GetInfo(&info), ZX_ERR_BAD_HANDLE);
@@ -132,34 +110,33 @@ TEST_F(BlockDeviceHarness, TestBadHandleDevice) {
 
   // Returns ZX_OK because zxcrypt currently passes the empty fd to a background
   // thread without observing the results.
-  EXPECT_OK(device.UnsealZxcrypt());
+  EXPECT_EQ(device.UnsealZxcrypt(), ZX_OK);
 
   // Returns ZX_OK because filesystem checks are disabled.
-  EXPECT_OK(device.CheckFilesystem());
+  EXPECT_EQ(device.CheckFilesystem(), ZX_OK);
 
   EXPECT_EQ(device.FormatFilesystem(), ZX_ERR_BAD_HANDLE);
   EXPECT_EQ(device.MountFilesystem(), ZX_ERR_BAD_HANDLE);
 }
 
 TEST_F(BlockDeviceHarness, TestEmptyDevice) {
-  std::unique_ptr<FsManager> manager = TakeManager();
-  BlockWatcherOptions options = {};
-  FilesystemMounter mounter(std::move(manager), options);
+  FshostOptions options;
+  FilesystemMounter mounter(manager_, options);
 
   // Initialize Ramdisk.
-  ASSERT_NO_FAILURES(CreateRamdisk(/*use_guid=*/true));
+  ASSERT_NO_FATAL_FAILURE(CreateRamdisk(/*use_guid=*/true));
 
   BlockDevice device(&mounter, GetRamdiskFd());
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_UNKNOWN);
   fuchsia_hardware_block_BlockInfo info;
-  EXPECT_OK(device.GetInfo(&info));
+  EXPECT_EQ(device.GetInfo(&info), ZX_OK);
   EXPECT_EQ(info.block_count, kBlockCount);
   EXPECT_EQ(info.block_size, kBlockSize);
 
   // Black-box: Since we're caching info, double check that re-calling GetInfo
   // works correctly.
   memset(&info, 0, sizeof(info));
-  EXPECT_OK(device.GetInfo(&info));
+  EXPECT_EQ(device.GetInfo(&info), ZX_OK);
   EXPECT_EQ(info.block_count, kBlockCount);
   EXPECT_EQ(info.block_size, kBlockSize);
 
@@ -171,19 +148,18 @@ TEST_F(BlockDeviceHarness, TestEmptyDevice) {
 }
 
 TEST_F(BlockDeviceHarness, TestMinfsBadGUID) {
-  std::unique_ptr<FsManager> manager = TakeManager();
-  BlockWatcherOptions options = {};
-  FilesystemMounter mounter(std::move(manager), options);
+  FshostOptions options;
+  FilesystemMounter mounter(manager_, options);
 
   // Initialize Ramdisk with an empty GUID.
-  ASSERT_NO_FAILURES(CreateRamdisk());
+  ASSERT_NO_FATAL_FAILURE(CreateRamdisk());
 
   // We started with an empty block device, but let's lie and say it
   // should have been a minfs device.
   BlockDevice device(&mounter, GetRamdiskFd());
   device.SetFormat(DISK_FORMAT_MINFS);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
-  EXPECT_OK(device.FormatFilesystem());
+  EXPECT_EQ(device.FormatFilesystem(), ZX_OK);
 
   // Unlike earlier, where we received "ERR_NOT_SUPPORTED", we get "ERR_WRONG_TYPE"
   // because the ramdisk doesn't have a data GUID.
@@ -191,57 +167,51 @@ TEST_F(BlockDeviceHarness, TestMinfsBadGUID) {
 }
 
 TEST_F(BlockDeviceHarness, TestMinfsGoodGUID) {
-  std::unique_ptr<FsManager> manager = TakeManager();
-
-  BlockWatcherOptions options = {};
-  FilesystemMounter mounter(std::move(manager), options);
+  FshostOptions options;
+  FilesystemMounter mounter(manager_, options);
 
   // Initialize Ramdisk with a data GUID.
-  ASSERT_NO_FAILURES(CreateRamdisk(true));
+  ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
 
   BlockDevice device(&mounter, GetRamdiskFd());
   device.SetFormat(DISK_FORMAT_MINFS);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
-  EXPECT_OK(device.FormatFilesystem());
+  EXPECT_EQ(device.FormatFilesystem(), ZX_OK);
 
-  EXPECT_OK(device.MountFilesystem());
+  EXPECT_EQ(device.MountFilesystem(), ZX_OK);
   EXPECT_EQ(device.MountFilesystem(), ZX_ERR_ALREADY_BOUND);
 }
 
 TEST_F(BlockDeviceHarness, TestMinfsReformat) {
-  std::unique_ptr<FsManager> manager = TakeManager();
-
-  BlockWatcherOptions options = {};
+  FshostOptions options;
   options.check_filesystems = true;
-  FilesystemMounter mounter(std::move(manager), options);
+  FilesystemMounter mounter(manager_, options);
 
   // Initialize Ramdisk with a data GUID.
-  ASSERT_NO_FAILURES(CreateRamdisk(true));
+  ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
 
   BlockDevice device(&mounter, GetRamdiskFd());
   device.SetFormat(DISK_FORMAT_MINFS);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
 
   // Before formatting the device, this isn't a valid minfs partition.
-  EXPECT_NOT_OK(device.CheckFilesystem());
-  EXPECT_NOT_OK(device.MountFilesystem());
+  EXPECT_NE(device.CheckFilesystem(), ZX_OK);
+  EXPECT_NE(device.MountFilesystem(), ZX_OK);
 
   // After formatting the device, it is a valid partition. We can check the device,
   // and also mount it.
-  EXPECT_OK(device.FormatFilesystem());
-  EXPECT_OK(device.CheckFilesystem());
-  EXPECT_OK(device.MountFilesystem());
+  EXPECT_EQ(device.FormatFilesystem(), ZX_OK);
+  EXPECT_EQ(device.CheckFilesystem(), ZX_OK);
+  EXPECT_EQ(device.MountFilesystem(), ZX_OK);
 }
 
 TEST_F(BlockDeviceHarness, TestBlobfs) {
-  std::unique_ptr<FsManager> manager = TakeManager();
-
-  BlockWatcherOptions options = {};
+  FshostOptions options;
   options.check_filesystems = true;
-  FilesystemMounter mounter(std::move(manager), options);
+  FilesystemMounter mounter(manager_, options);
 
   // Initialize Ramdisk with a data GUID.
-  ASSERT_NO_FAILURES(CreateRamdisk(true));
+  ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
 
   BlockDevice device(&mounter, GetRamdiskFd());
   device.SetFormat(DISK_FORMAT_BLOBFS);
@@ -249,39 +219,37 @@ TEST_F(BlockDeviceHarness, TestBlobfs) {
 
   // Before formatting the device, this isn't a valid blobfs partition.
   // However, as implemented, we always validate the consistency of the filesystem.
-  EXPECT_OK(device.CheckFilesystem());
-  EXPECT_NOT_OK(device.MountFilesystem());
+  EXPECT_EQ(device.CheckFilesystem(), ZX_OK);
+  EXPECT_NE(device.MountFilesystem(), ZX_OK);
 
   // Additionally, blobfs does not yet support reformatting within fshost.
-  EXPECT_NOT_OK(device.FormatFilesystem());
-  EXPECT_OK(device.CheckFilesystem());
-  EXPECT_NOT_OK(device.MountFilesystem());
+  EXPECT_NE(device.FormatFilesystem(), ZX_OK);
+  EXPECT_EQ(device.CheckFilesystem(), ZX_OK);
+  EXPECT_NE(device.MountFilesystem(), ZX_OK);
 }
 
 TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
-  std::unique_ptr<FsManager> manager = TakeManager();
-
-  BlockWatcherOptions options = {};
+  FshostOptions options;
   options.check_filesystems = true;
-  FilesystemMounter mounter(std::move(manager), options);
+  FilesystemMounter mounter(manager_, options);
 
   // Initialize Ramdisk with a data GUID.
-  ASSERT_NO_FAILURES(CreateRamdisk(true));
+  ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
 
   BlockDevice device(&mounter, GetRamdiskFd());
   device.SetFormat(DISK_FORMAT_MINFS);
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
   // Format minfs.
-  EXPECT_OK(device.FormatFilesystem());
+  EXPECT_EQ(device.FormatFilesystem(), ZX_OK);
 
   // Corrupt minfs.
-  int ramdisk_fd = ramdisk_get_block_fd(ramdisk_);
   uint64_t buffer_size = minfs::kMinfsBlockSize * 8;
   std::unique_ptr<uint8_t[]> zeroed_buffer(new uint8_t[buffer_size]);
   memset(zeroed_buffer.get(), 0, buffer_size);
-  ASSERT_EQ(write(ramdisk_fd, zeroed_buffer.get(), buffer_size), buffer_size);
+  ASSERT_EQ(write(GetRamdiskFd().get(), zeroed_buffer.get(), buffer_size),
+            static_cast<ssize_t>(buffer_size));
 
-  EXPECT_NOT_OK(device.CheckFilesystem());
+  EXPECT_NE(device.CheckFilesystem(), ZX_OK);
 
   // Verify a corruption event was logged.
   cobalt_client::MetricOptions metric_options;
@@ -297,7 +265,7 @@ TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
   while (logger_->counters().find(metric_options) == logger_->counters().end()) {
     sleep(1);
   }
-  ASSERT_EQ(logger_->counters().at(metric_options), 1);
+  ASSERT_EQ(logger_->counters().at(metric_options), 1ul);
 }
 
 TEST(BlockDeviceManager, ReadOptions) {

@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_package.gni")
 
 executable("support") {
   testonly = true
@@ -21,60 +22,40 @@ executable("support") {
   ]
 }
 
-package("isolated-devmgr") {
+fuchsia_component("isolated-devmgr-component") {
   testonly = true
-  meta = [
-    {
-      path = rebase_path("meta/isolated_devmgr.cml")
-      dest = "isolated_devmgr.cm"
-    },
-    {
-      path = rebase_path("meta/driver_manager_test.cml")
-      dest = "driver_manager_test.cm"
-    },
-  ]
-  binaries = [
-    {
-      name = "support"
-    },
-    {
-      name = "driver_manager"
-    },
-    {
-      name = "driver_host"
-    },
+  component_name = "isolated-devmgr"
+  manifest = "meta/isolated_devmgr.cml"
+  deps = [ ":support" ]
+}
 
-    # -- Drivers --
-    {
-      name = "ramdisk.so"
-      dest = "driver/ramdisk.so"
-    },
-    {
-      name = "block.core.so"
-      dest = "driver/block.core.so"
-    },
-    {
-      name = "fvm.so"
-      dest = "driver/fvm.so"
-    },
-    {
-      name = "ram-nand.so"
-      dest = "driver/ram-nand.so"
-    },
-    {
-      name = "ftl.so"
-      dest = "driver/ftl.so"
-    },
-  ]
+fuchsia_component("driver-manager-test") {
+  testonly = true
+  manifest = "meta/driver_manager_test.cml"
   deps = [
-    ":support",
     "//src/devices/bin/driver_host:driver_host",
     "//src/devices/bin/driver_manager",
+  ]
+}
+
+group("storage_drivers") {
+  testonly = true
+  deps = [
     "//src/devices/block/drivers/core",
-    "//src/devices/block/drivers/ftl:ftl",
+    "//src/devices/block/drivers/ftl",
     "//src/devices/block/drivers/fvm",
+    "//src/devices/block/drivers/gpt",
     "//src/devices/block/drivers/ramdisk:ramdisk",
-    "//src/devices/nand/drivers/ram-nand:ram-nand",
+    "//src/devices/nand/drivers/ram-nand",
+  ]
+}
+
+fuchsia_package("isolated-devmgr") {
+  testonly = true
+  deps = [
+    ":driver-manager-test",
+    ":isolated-devmgr-component",
+    ":storage_drivers",
   ]
 }
 
@@ -95,6 +76,7 @@ source_set("client") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",
   ]
   public_deps = [

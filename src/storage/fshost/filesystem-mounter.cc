@@ -170,7 +170,7 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device, const mount_o
     return status;
   }
 
-  status = fshost_->AddFsDiagnosticsDirectory("blobfs", std::move(fs_diagnostics_dir_client));
+  status = fshost_.AddFsDiagnosticsDirectory("blobfs", std::move(fs_diagnostics_dir_client));
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to add diagnostic directory for blobfs: "
                    << zx_status_get_string(status);

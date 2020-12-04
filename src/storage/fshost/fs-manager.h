@@ -32,16 +32,18 @@
 
 namespace devmgr {
 
+class BlockWatcher;
+
 // FsManager owns multiple sub-filesystems, managing them within a top-level
 // in-memory filesystem.
 class FsManager {
  public:
-  static zx_status_t Create(std::shared_ptr<loader::LoaderServiceBase> loader,
-                            zx::channel dir_request, zx::channel lifecycle_request,
-                            std::unique_ptr<FsHostMetrics> metrics,
-                            std::unique_ptr<FsManager>* out);
-
+  explicit FsManager(std::shared_ptr<FshostBootArgs> boot_args,
+                     std::unique_ptr<FsHostMetrics> metrics);
   ~FsManager();
+
+  zx_status_t Initialize(zx::channel dir_request, zx::channel lifecycle_request,
+                         std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher);
 
   // TODO(fxbug.dev/39588): delete this
   // Starts servicing the delayed portion of the outgoing directory, called once
@@ -74,7 +76,7 @@ class FsManager {
   // Flushes FsHostMetrics to cobalt.
   void FlushMetrics();
 
-  std::shared_ptr<devmgr::FshostBootArgs> boot_args() { return boot_args_; }
+  std::shared_ptr<FshostBootArgs> boot_args() { return boot_args_; }
 
   zx::event* event() { return &event_; }
 
@@ -86,11 +88,10 @@ class FsManager {
                                         zx::channel fs_diagnostics_dir_client);
 
  private:
-  explicit FsManager(std::unique_ptr<FsHostMetrics> metrics);
   zx_status_t SetupOutgoingDirectory(zx::channel dir_request,
-                                     std::shared_ptr<loader::LoaderServiceBase> loader);
+                                     std::shared_ptr<loader::LoaderServiceBase> loader,
+                                     BlockWatcher& watcher);
   zx_status_t SetupLifecycleServer(zx::channel lifecycle_request);
-  zx_status_t Initialize();
 
   // Event on which "FSHOST_SIGNAL_XXX" signals are set.
   // Communicates state changes internal to FsManager.

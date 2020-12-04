@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 import("//src/sys/build/fuchsia_component.gni")
 import("//src/sys/build/fuchsia_test_package.gni")
 
@@ -57,13 +58,9 @@ test("access_tests") {
   ]
 }
 
-fuchsia_component("access-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/access-tests.cml"
-  deps = [
-    ":access_tests",
-    ":manifests",
-  ]
+isolated_devmgr_unittest_v2_component("access-tests") {
+  executable_path = "test/access_tests"
+  deps = [ ":access_tests" ]
 }
 
 test("append_tests") {
@@ -75,13 +72,9 @@ test("append_tests") {
   ]
 }
 
-fuchsia_component("append-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/append-tests.cml"
-  deps = [
-    ":append_tests",
-    ":manifests",
-  ]
+isolated_devmgr_unittest_v2_component("append-tests") {
+  executable_path = "test/append_tests"
+  deps = [ ":append_tests" ]
 }
 
 test("attr_tests") {
@@ -93,13 +86,9 @@ test("attr_tests") {
   ]
 }
 
-fuchsia_component("attr-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/attr-tests.cml"
-  deps = [
-    ":attr_tests",
-    ":manifests",
-  ]
+isolated_devmgr_unittest_v2_component("attr-tests") {
+  executable_path = "test/attr_tests"
+  deps = [ ":attr_tests" ]
 }
 
 test("basic_tests") {
@@ -110,13 +99,9 @@ test("basic_tests") {
   ]
 }
 
-fuchsia_component("basic-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/basic-tests.cml"
-  deps = [
-    ":basic_tests",
-    ":manifests",
-  ]
+isolated_devmgr_unittest_v2_component("basic-tests") {
+  executable_path = "test/basic_tests"
+  deps = [ ":basic_tests" ]
 }
 
 test("case_sensitivity_tests") {
@@ -127,13 +112,9 @@ test("case_sensitivity_tests") {
   ]
 }
 
-fuchsia_component("case-sensitivity-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/case-sensitivity-tests.cml"
-  deps = [
-    ":case_sensitivity_tests",
-    ":manifests",
-  ]
+isolated_devmgr_unittest_v2_component("case-sensitivity-tests") {
+  executable_path = "test/case_sensitivity_tests"
+  deps = [ ":case_sensitivity_tests" ]
 }
 
 test("clone_tests") {
@@ -145,13 +126,9 @@ test("clone_tests") {
   ]
 }
 
-fuchsia_component("clone-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/clone-tests.cml"
-  deps = [
-    ":clone_tests",
-    ":manifests",
-  ]
+isolated_devmgr_unittest_v2_component("clone-tests") {
+  executable_path = "test/clone_tests"
+  deps = [ ":clone_tests" ]
 }
 
 test("corrupt_tests") {
@@ -164,13 +141,9 @@ test("corrupt_tests") {
   ]
 }
 
-fuchsia_component("corrupt-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/corrupt-tests.cml"
-  deps = [
-    ":corrupt_tests",
-    ":manifests",
-  ]
+isolated_devmgr_unittest_v2_component("corrupt-tests") {
+  executable_path = "test/corrupt_tests"
+  deps = [ ":corrupt_tests" ]
 }
 
 test("directory_tests") {
@@ -182,13 +155,9 @@ test("directory_tests") {
   ]
 }
 
-fuchsia_component("directory-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/directory-tests.cml"
-  deps = [
-    ":directory_tests",
-    ":manifests",
-  ]
+isolated_devmgr_unittest_v2_component("directory-tests") {
+  executable_path = "test/directory_tests"
+  deps = [ ":directory_tests" ]
 }
 
 test("dot_dot_tests") {
@@ -202,13 +171,9 @@ test("dot_dot_tests") {
   ]
 }
 
-fuchsia_component("dot-dot-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/dot-dot-tests.cml"
-  deps = [
-    ":dot_dot_tests",
-    ":manifests",
-  ]
+isolated_devmgr_unittest_v2_component("dot-dot-tests") {
+  executable_path = "test/dot_dot_tests"
+  deps = [ ":dot_dot_tests" ]
 }
 
 test("fcntl_tests") {
@@ -220,13 +185,9 @@ test("fcntl_tests") {
   ]
 }
 
-fuchsia_component("fcntl-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/fcntl-tests.cml"
-  deps = [
-    ":fcntl_tests",
-    ":manifests",
-  ]
+isolated_devmgr_unittest_v2_component("fcntl-tests") {
+  executable_path = "test/fcntl_tests"
+  deps = [ ":fcntl_tests" ]
 }
 
 test("filename_tests") {
@@ -238,13 +199,9 @@ test("filename_tests") {
   ]
 }
 
-fuchsia_component("filename-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/filename-tests.cml"
-  deps = [
-    ":filename_tests",
-    ":manifests",
-  ]
+isolated_devmgr_unittest_v2_component("filename-tests") {
+  executable_path = "test/filename_tests"
+  deps = [ ":filename_tests" ]
 }
 
 test("link_tests") {
@@ -256,13 +213,9 @@ test("link_tests") {
   ]
 }
 
-fuchsia_component("link-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/link-tests.cml"
-  deps = [
-    ":link_tests",
-    ":manifests",
-  ]
+isolated_devmgr_unittest_v2_component("link-tests") {
+  executable_path = "test/link_tests"
+  deps = [ ":link_tests" ]
 }
 
 test("lseek_tests") {
@@ -274,13 +227,9 @@ test("lseek_tests") {
   ]
 }
 
-fuchsia_component("lseek-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/lseek-tests.cml"
-  deps = [
-    ":lseek_tests",
-    ":manifests",
-  ]
+isolated_devmgr_unittest_v2_component("lseek-tests") {
+  executable_path = "test/lseek_tests"
+  deps = [ ":lseek_tests" ]
 }
 
 test("minfs_tests") {
@@ -298,13 +247,9 @@ test("minfs_tests") {
   ]
 }
 
-fuchsia_component("minfs-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/minfs-tests.cml"
-  deps = [
-    ":manifests",
-    ":minfs_tests",
-  ]
+isolated_devmgr_unittest_v2_component("minfs-tests") {
+  executable_path = "test/minfs_tests"
+  deps = [ ":minfs_tests" ]
 }
 
 test("mmap_tests") {
@@ -317,13 +262,9 @@ test("mmap_tests") {
   ]
 }
 
-fuchsia_component("mmap-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/mmap-tests.cml"
-  deps = [
-    ":manifests",
-    ":mmap_tests",
-  ]
+isolated_devmgr_unittest_v2_component("mmap-tests") {
+  executable_path = "test/mmap_tests"
+  deps = [ ":mmap_tests" ]
 }
 
 test("overflow_tests") {
@@ -334,13 +275,9 @@ test("overflow_tests") {
   ]
 }
 
-fuchsia_component("overflow-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/overflow-tests.cml"
-  deps = [
-    ":manifests",
-    ":overflow_tests",
-  ]
+isolated_devmgr_unittest_v2_component("overflow-tests") {
+  executable_path = "test/overflow_tests"
+  deps = [ ":overflow_tests" ]
 }
 
 test("persist_tests") {
@@ -352,13 +289,9 @@ test("persist_tests") {
   ]
 }
 
-fuchsia_component("persist-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/persist-tests.cml"
-  deps = [
-    ":manifests",
-    ":persist_tests",
-  ]
+isolated_devmgr_unittest_v2_component("persist-tests") {
+  executable_path = "test/persist_tests"
+  deps = [ ":persist_tests" ]
 }
 
 test("random_op_tests") {
@@ -370,13 +303,9 @@ test("random_op_tests") {
   ]
 }
 
-fuchsia_component("random-op-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/random-op-tests.cml"
-  deps = [
-    ":manifests",
-    ":random_op_tests",
-  ]
+isolated_devmgr_unittest_v2_component("random-op-tests") {
+  executable_path = "test/random_op_tests"
+  deps = [ ":random_op_tests" ]
 }
 
 test("realpath_tests") {
@@ -388,13 +317,9 @@ test("realpath_tests") {
   ]
 }
 
-fuchsia_component("realpath-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/realpath-tests.cml"
-  deps = [
-    ":manifests",
-    ":realpath_tests",
-  ]
+isolated_devmgr_unittest_v2_component("realpath-tests") {
+  executable_path = "test/realpath_tests"
+  deps = [ ":realpath_tests" ]
 }
 
 test("rename_tests") {
@@ -408,13 +333,9 @@ test("rename_tests") {
   ]
 }
 
-fuchsia_component("rename-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/rename-tests.cml"
-  deps = [
-    ":manifests",
-    ":rename_tests",
-  ]
+isolated_devmgr_unittest_v2_component("rename-tests") {
+  executable_path = "test/rename_tests"
+  deps = [ ":rename_tests" ]
 }
 
 test("resize_tests") {
@@ -430,13 +351,9 @@ test("resize_tests") {
   ]
 }
 
-fuchsia_component("resize-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/resize-tests.cml"
-  deps = [
-    ":manifests",
-    ":resize_tests",
-  ]
+isolated_devmgr_unittest_v2_component("resize-tests") {
+  executable_path = "test/resize_tests"
+  deps = [ ":resize_tests" ]
 }
 
 test("rw_tests") {
@@ -448,13 +365,9 @@ test("rw_tests") {
   ]
 }
 
-fuchsia_component("rw-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/rw-tests.cml"
-  deps = [
-    ":manifests",
-    ":rw_tests",
-  ]
+isolated_devmgr_unittest_v2_component("rw-tests") {
+  executable_path = "test/rw_tests"
+  deps = [ ":rw_tests" ]
 }
 
 test("rw_workers_tests") {
@@ -466,13 +379,9 @@ test("rw_workers_tests") {
   ]
 }
 
-fuchsia_component("rw-workers-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/rw-workers-tests.cml"
-  deps = [
-    ":manifests",
-    ":rw_workers_tests",
-  ]
+isolated_devmgr_unittest_v2_component("rw-workers-tests") {
+  executable_path = "test/rw_workers_tests"
+  deps = [ ":rw_workers_tests" ]
 }
 
 test("sparse_tests") {
@@ -484,13 +393,9 @@ test("sparse_tests") {
   ]
 }
 
-fuchsia_component("sparse-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/sparse-tests.cml"
-  deps = [
-    ":manifests",
-    ":sparse_tests",
-  ]
+isolated_devmgr_unittest_v2_component("sparse-tests") {
+  executable_path = "test/sparse_tests"
+  deps = [ ":sparse_tests" ]
 }
 
 test("sync_tests") {
@@ -502,13 +407,9 @@ test("sync_tests") {
   ]
 }
 
-fuchsia_component("sync-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/sync-tests.cml"
-  deps = [
-    ":manifests",
-    ":sync_tests",
-  ]
+isolated_devmgr_unittest_v2_component("sync-tests") {
+  executable_path = "test/sync_tests"
+  deps = [ ":sync_tests" ]
 }
 
 test("threading_tests") {
@@ -520,13 +421,9 @@ test("threading_tests") {
   ]
 }
 
-fuchsia_component("threading-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/threading-tests.cml"
-  deps = [
-    ":manifests",
-    ":threading_tests",
-  ]
+isolated_devmgr_unittest_v2_component("threading-tests") {
+  executable_path = "test/threading_tests"
+  deps = [ ":threading_tests" ]
 }
 
 test("truncate_tests") {
@@ -541,13 +438,9 @@ test("truncate_tests") {
   ]
 }
 
-fuchsia_component("truncate-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/truncate-tests.cml"
-  deps = [
-    ":manifests",
-    ":truncate_tests",
-  ]
+isolated_devmgr_unittest_v2_component("truncate-tests") {
+  executable_path = "test/truncate_tests"
+  deps = [ ":truncate_tests" ]
 }
 
 test("unicode_tests") {
@@ -559,13 +452,9 @@ test("unicode_tests") {
   ]
 }
 
-fuchsia_component("unicode-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/unicode-tests.cml"
-  deps = [
-    ":manifests",
-    ":unicode_tests",
-  ]
+isolated_devmgr_unittest_v2_component("unicode-tests") {
+  executable_path = "test/unicode_tests"
+  deps = [ ":unicode_tests" ]
 }
 
 test("unlink_tests") {
@@ -577,13 +466,9 @@ test("unlink_tests") {
   ]
 }
 
-fuchsia_component("unlink-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/unlink-tests.cml"
-  deps = [
-    ":manifests",
-    ":unlink_tests",
-  ]
+isolated_devmgr_unittest_v2_component("unlink-tests") {
+  executable_path = "test/unlink_tests"
+  deps = [ ":unlink_tests" ]
 }
 
 test("watcher_tests") {
@@ -597,13 +482,9 @@ test("watcher_tests") {
   ]
 }
 
-fuchsia_component("watcher-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/watcher-tests.cml"
-  deps = [
-    ":manifests",
-    ":watcher_tests",
-  ]
+isolated_devmgr_unittest_v2_component("watcher-tests") {
+  executable_path = "test/watcher_tests"
+  deps = [ ":watcher_tests" ]
 }
 
 fuchsia_test_package("fs-tests") {
@@ -650,13 +531,9 @@ test("directory_large_tests") {
   ]
 }
 
-fuchsia_component("directory-large-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/directory-large-tests.cml"
-  deps = [
-    ":directory_large_tests",
-    ":manifests",
-  ]
+isolated_devmgr_unittest_v2_component("directory-large-tests") {
+  executable_path = "test/directory_large_tests"
+  deps = [ ":directory_large_tests" ]
 }
 
 test("max_file_tests") {
@@ -668,13 +545,9 @@ test("max_file_tests") {
   ]
 }
 
-fuchsia_component("max-file-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/max-file-tests.cml"
-  deps = [
-    ":manifests",
-    ":max_file_tests",
-  ]
+isolated_devmgr_unittest_v2_component("max-file-tests") {
+  executable_path = "test/max_file_tests"
+  deps = [ ":max_file_tests" ]
 }
 
 test("sparse_large_tests") {
@@ -686,13 +559,9 @@ test("sparse_large_tests") {
   ]
 }
 
-fuchsia_component("sparse-large-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/sparse-large-tests.cml"
-  deps = [
-    ":manifests",
-    ":sparse_large_tests",
-  ]
+isolated_devmgr_unittest_v2_component("sparse-large-tests") {
+  executable_path = "test/sparse_large_tests"
+  deps = [ ":sparse_large_tests" ]
 }
 
 test("truncate_large_tests") {
@@ -707,13 +576,9 @@ test("truncate_large_tests") {
   ]
 }
 
-fuchsia_component("truncate-large-tests") {
-  testonly = true
-  manifest = "$target_gen_dir/truncate-large-tests.cml"
-  deps = [
-    ":manifests",
-    ":truncate_large_tests",
-  ]
+isolated_devmgr_unittest_v2_component("truncate-large-tests") {
+  executable_path = "test/truncate_large_tests"
+  deps = [ ":truncate_large_tests" ]
 }
 
 fuchsia_test_package("large-fs-tests") {
@@ -731,47 +596,4 @@ fuchsia_test_package("large-fs-tests") {
       },
     ]
   }
-}
-
-action("manifests") {
-  script = "generate_manifests.py"
-  sources = [ "meta/fs_tests.cml" ]
-  outputs = [
-    "$target_gen_dir/access-tests.cml",
-    "$target_gen_dir/append-tests.cml",
-    "$target_gen_dir/attr-tests.cml",
-    "$target_gen_dir/basic-tests.cml",
-    "$target_gen_dir/case-sensitivity-tests.cml",
-    "$target_gen_dir/clone-tests.cml",
-    "$target_gen_dir/corrupt-tests.cml",
-    "$target_gen_dir/directory-large-tests.cml",
-    "$target_gen_dir/directory-tests.cml",
-    "$target_gen_dir/dot-dot-tests.cml",
-    "$target_gen_dir/fcntl-tests.cml",
-    "$target_gen_dir/filename-tests.cml",
-    "$target_gen_dir/link-tests.cml",
-    "$target_gen_dir/lseek-tests.cml",
-    "$target_gen_dir/max-file-tests.cml",
-    "$target_gen_dir/minfs-tests.cml",
-    "$target_gen_dir/mmap-tests.cml",
-    "$target_gen_dir/overflow-tests.cml",
-    "$target_gen_dir/persist-tests.cml",
-    "$target_gen_dir/random-op-tests.cml",
-    "$target_gen_dir/realpath-tests.cml",
-    "$target_gen_dir/rename-tests.cml",
-    "$target_gen_dir/resize-tests.cml",
-    "$target_gen_dir/rw-tests.cml",
-    "$target_gen_dir/rw-workers-tests.cml",
-    "$target_gen_dir/sparse-tests.cml",
-    "$target_gen_dir/sparse-large-tests.cml",
-    "$target_gen_dir/sync-tests.cml",
-    "$target_gen_dir/threading-tests.cml",
-    "$target_gen_dir/truncate-large-tests.cml",
-    "$target_gen_dir/truncate-tests.cml",
-    "$target_gen_dir/unicode-tests.cml",
-    "$target_gen_dir/unlink-tests.cml",
-    "$target_gen_dir/watcher-tests.cml",
-  ]
-  args = rebase_path(sources, root_build_dir) +
-         rebase_path(outputs, root_build_dir)
 }

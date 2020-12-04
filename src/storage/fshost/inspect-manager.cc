@@ -40,11 +40,11 @@ fbl::RefPtr<fs::PseudoDir> InspectManager::Initialize(async_dispatcher* dispatch
   auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   diagnostics_dir->AddEntry(
       fuchsia::inspect::Tree::Name_,
-      fbl::AdoptRef(new fs::Service([connector = inspect::MakeTreeHandler(&inspector_, dispatcher)](
-                                        zx::channel chan) mutable {
+      fbl::MakeRefCounted<fs::Service>([connector = inspect::MakeTreeHandler(
+                                            &inspector_, dispatcher)](zx::channel chan) mutable {
         connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
         return ZX_OK;
-      })));
+      }));
   return diagnostics_dir;
 }
 

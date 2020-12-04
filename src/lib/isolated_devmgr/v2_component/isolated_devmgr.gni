@@ -16,8 +16,8 @@ template("isolated_devmgr_unittest_v2_component") {
         }
         children = [
           {
-            name = "isolated_devmgr"
-            url = "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated_devmgr.cm"
+            name = "isolated-devmgr"
+            url = "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated-devmgr.cm"
             startup = "eager"
           },
         ]
@@ -28,7 +28,11 @@ template("isolated_devmgr_unittest_v2_component") {
         ]
         use = [
           {
-            runner = "gtest_runner"
+            if (defined(invoker.runner)) {
+              runner = invoker.runner
+            } else {
+              runner = "gtest_runner"
+            }
           },
           {
             protocol = [ "fuchsia.process.Launcher" ]
@@ -46,7 +50,7 @@ template("isolated_devmgr_unittest_v2_component") {
               "fuchsia.sys.Launcher",
             ]
             from = "parent"
-            to = [ "#isolated_devmgr" ]
+            to = [ "#isolated-devmgr" ]
           },
         ]
         expose = [
