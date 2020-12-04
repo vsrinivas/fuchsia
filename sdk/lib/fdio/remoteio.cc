@@ -332,28 +332,43 @@ zx_status_t fdio_from_channel(zx::channel channel, fdio_t** out_io) {
 }
 
 __EXPORT
-zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) {
-  zx_info_handle_basic_t info;
-  zx_status_t status =
-      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+zx_status_t fdio_create(zx_handle_t h, fdio_t** out_io) {
+  zx::handle handle(h);
+  zx_info_handle_basic_t info = {};
+  zx_status_t status = handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     return status;
   }
   fdio_t* io = nullptr;
   switch (info.type) {
     case ZX_OBJ_TYPE_CHANNEL:
-      return fdio_from_channel(zx::channel(handle), out_io);
+      return fdio_from_channel(zx::channel(handle.release()), out_io);
     case ZX_OBJ_TYPE_SOCKET:
-      io = fdio_pipe_create(zx::socket(handle));
+      io = fdio_pipe_create(zx::socket(handle.release()));
       break;
-    case ZX_OBJ_TYPE_VMO:
-      io = fdio_vmo_create(zx::vmo(handle), 0u);
+    case ZX_OBJ_TYPE_VMO: {
+      zx::vmo vmo(handle.release());
+      zx::stream stream;
+      uint32_t options = 0u;
+      if (info.rights & ZX_RIGHT_READ) {
+        options |= ZX_STREAM_MODE_READ;
+      }
+      if (info.rights & ZX_RIGHT_WRITE) {
+        options |= ZX_STREAM_MODE_WRITE;
+      }
+      // We pass 0 for the initial seek value because the |handle| we're given does not remember
+      // the seek value we had previously.
+      status = zx::stream::create(options, vmo, 0u, &stream);
+      if (status != ZX_OK) {
+        return status;
+      }
+      io = fdio_vmo_create(std::move(vmo), std::move(stream));
       break;
+    }
     case ZX_OBJ_TYPE_LOG:
-      io = fdio_logger_create(zx::debuglog(handle));
+      io = fdio_logger_create(zx::debuglog(handle.release()));
       break;
     default: {
-      zx_handle_close(handle);
       return ZX_ERR_INVALID_ARGS;
     }
   }

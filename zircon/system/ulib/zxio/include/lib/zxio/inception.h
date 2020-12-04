@@ -81,22 +81,6 @@ uint32_t zxio_abilities_to_posix_permissions_for_directory(zxio_abilities_t abil
 
 // vmo -------------------------------------------------------------------------
 
-typedef struct zxio_vmo {
-  // The |zxio_t| control structure for this object.
-  zxio_t io;
-
-  // The underlying VMO that stores the data.
-  zx::vmo vmo;
-
-  // The size of the file in bytes.
-  const zx_off_t size;
-
-  // The current seek offset within the file.
-  zx_off_t offset __TA_GUARDED(lock);
-
-  sync_mutex_t lock;
-} zxio_vmo_t;
-
 // Initialize |file| with from a VMO.
 //
 // The file will be sized to match the underlying VMO by reading the size of the
@@ -104,23 +88,9 @@ typedef struct zxio_vmo {
 // which means the size of the file will also be a multiple of the page size.
 //
 // The |offset| is the initial seek offset within the file.
-zx_status_t zxio_vmo_init(zxio_storage_t* file, zx::vmo vmo, zx_off_t offset);
+zx_status_t zxio_vmo_init(zxio_storage_t* file, zx::vmo vmo, zx::stream stream);
 
 // vmofile ---------------------------------------------------------------------
-
-typedef struct zxio_vmofile {
-  zxio_vmo_t vmo;
-
-  // The start of content within the VMO.
-  //
-  // This value is never changed.
-  zx_off_t start;
-
-  ::llcpp::fuchsia::io::File::SyncClient control;
-} zxio_vmofile_t;
-
-static_assert(sizeof(zxio_vmofile_t) <= sizeof(zxio_storage_t),
-              "zxio_vmofile_t must fit inside zxio_storage_t.");
 
 zx_status_t zxio_vmofile_init(zxio_storage_t* file, ::llcpp::fuchsia::io::File::SyncClient control,
                               zx::vmo vmo, zx_off_t offset, zx_off_t length, zx_off_t seek);

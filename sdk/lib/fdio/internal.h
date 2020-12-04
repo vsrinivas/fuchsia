@@ -227,10 +227,10 @@ fdio_t* fdio_pty_create(zx_handle_t control, zx_handle_t event);
 // Takes ownership of |socket|.
 fdio_t* fdio_pipe_create(zx::socket socket);
 
-// Creates an |fdio_t| from a VMO.
+// Creates an |fdio_t| from a VMO and a stream.
 //
-// Takes ownership of |vmo|.
-fdio_t* fdio_vmo_create(zx::vmo vmo, zx_off_t seek);
+// The stream should be backed by the given VMO.
+fdio_t* fdio_vmo_create(zx::vmo vmo, zx::stream stream);
 
 // Creates an |fdio_t| for a VMO file.
 //

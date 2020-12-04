@@ -11,6 +11,17 @@
 
 #include "private.h"
 
+typedef struct zxio_vmo {
+  // The |zxio_t| control structure for this object.
+  zxio_t io;
+
+  // The underlying VMO that stores the data.
+  zx::vmo vmo;
+
+  // The stream through which we will read and write the VMO.
+  zx::stream stream;
+} zxio_vmo_t;
+
 static_assert(sizeof(zxio_vmo_t) <= sizeof(zxio_storage_t),
               "zxio_vmo_t must fit inside zxio_storage_t.");
 
@@ -36,11 +47,17 @@ static zx_status_t zxio_vmo_clone(zxio_t* io, zx_handle_t* out_handle) {
 
 static zx_status_t zxio_vmo_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr) {
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
+  uint64_t content_size = 0u;
+  zx_status_t status =
+      file->vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
+  if (status != ZX_OK) {
+    return status;
+  }
   *out_attr = {};
   ZXIO_NODE_ATTR_SET(*out_attr, protocols, ZXIO_NODE_PROTOCOL_FILE | ZXIO_NODE_PROTOCOL_MEMORY);
   ZXIO_NODE_ATTR_SET(*out_attr, abilities,
                      ZXIO_OPERATION_READ_BYTES | ZXIO_OPERATION_GET_ATTRIBUTES);
-  ZXIO_NODE_ATTR_SET(*out_attr, content_size, file->size);
+  ZXIO_NODE_ATTR_SET(*out_attr, content_size, content_size);
   return ZX_OK;
 }
 
@@ -51,15 +68,7 @@ static zx_status_t zxio_vmo_readv(zxio_t* io, const zx_iovec_t* vector, size_t v
   }
 
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
-
-  sync_mutex_lock(&file->lock);
-  zx_status_t status =
-      zxio_vmo_do_vector(0, file->size, &file->offset, vector, vector_count, out_actual,
-                         [&](void* buffer, zx_off_t offset, size_t capacity) {
-                           return file->vmo.read(buffer, offset, capacity);
-                         });
-  sync_mutex_unlock(&file->lock);
-  return status;
+  return file->stream.readv(0, vector, vector_count, out_actual);
 }
 
 static zx_status_t zxio_vmo_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
@@ -69,11 +78,7 @@ static zx_status_t zxio_vmo_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec
   }
 
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
-
-  return zxio_vmo_do_vector(0, file->size, &offset, vector, vector_count, out_actual,
-                            [&](void* buffer, zx_off_t offset, size_t capacity) {
-                              return file->vmo.read(buffer, offset, capacity);
-                            });
+  return file->stream.readv_at(0, offset, vector, vector_count, out_actual);
 }
 
 static zx_status_t zxio_vmo_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
@@ -83,15 +88,7 @@ static zx_status_t zxio_vmo_writev(zxio_t* io, const zx_iovec_t* vector, size_t 
   }
 
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
-
-  sync_mutex_lock(&file->lock);
-  zx_status_t status =
-      zxio_vmo_do_vector(0, file->size, &file->offset, vector, vector_count, out_actual,
-                         [&](void* buffer, zx_off_t offset, size_t capacity) {
-                           return file->vmo.write(buffer, offset, capacity);
-                         });
-  sync_mutex_unlock(&file->lock);
-  return status;
+  return file->stream.writev(0, vector, vector_count, out_actual);
 }
 
 static zx_status_t zxio_vmo_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
@@ -101,47 +98,17 @@ static zx_status_t zxio_vmo_writev_at(zxio_t* io, zx_off_t offset, const zx_iove
   }
 
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
-
-  return zxio_vmo_do_vector(0, file->size, &offset, vector, vector_count, out_actual,
-                            [&](void* buffer, zx_off_t offset, size_t capacity) {
-                              return file->vmo.write(buffer, offset, capacity);
-                            });
+  return file->stream.writev_at(0, offset, vector, vector_count, out_actual);
 }
 
-zx_status_t zxio_vmo_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
-                          size_t* out_offset) {
+static_assert(ZXIO_SEEK_ORIGIN_START == ZX_STREAM_SEEK_ORIGIN_START, "ZXIO should match ZX");
+static_assert(ZXIO_SEEK_ORIGIN_CURRENT == ZX_STREAM_SEEK_ORIGIN_CURRENT, "ZXIO should match ZX");
+static_assert(ZXIO_SEEK_ORIGIN_END == ZX_STREAM_SEEK_ORIGIN_END, "ZXIO should match ZX");
+
+static zx_status_t zxio_vmo_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
+                                 size_t* out_offset) {
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
-
-  sync_mutex_lock(&file->lock);
-  zx_off_t origin;
-  switch (start) {
-    case ZXIO_SEEK_ORIGIN_START:
-      origin = 0;
-      break;
-    case ZXIO_SEEK_ORIGIN_CURRENT:
-      origin = file->offset;
-      break;
-    case ZXIO_SEEK_ORIGIN_END:
-      origin = file->size;
-      break;
-    default:
-      sync_mutex_unlock(&file->lock);
-      return ZX_ERR_INVALID_ARGS;
-  }
-  zx_off_t at;
-  if (add_overflow(origin, offset, &at)) {
-    sync_mutex_unlock(&file->lock);
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  if (at > file->size) {
-    sync_mutex_unlock(&file->lock);
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  file->offset = at;
-  sync_mutex_unlock(&file->lock);
-
-  *out_offset = at;
-  return ZX_OK;
+  return file->stream.seek(static_cast<zx_stream_seek_origin_t>(start), offset, out_offset);
 }
 
 static constexpr zxio_ops_t zxio_vmo_ops = []() {
@@ -158,19 +125,11 @@ static constexpr zxio_ops_t zxio_vmo_ops = []() {
   return ops;
 }();
 
-zx_status_t zxio_vmo_init(zxio_storage_t* storage, zx::vmo vmo, zx_off_t offset) {
-  uint64_t size;
-  zx_status_t status = vmo.get_size(&size);
-  if (status != ZX_OK) {
-    return status;
-  }
-
+zx_status_t zxio_vmo_init(zxio_storage_t* storage, zx::vmo vmo, zx::stream stream) {
   auto file = new (storage) zxio_vmo_t{
       .io = storage->io,
       .vmo = std::move(vmo),
-      .size = size,
-      .offset = std::min(offset, size),
-      .lock = {},
+      .stream = std::move(stream),
   };
   zxio_init(&file->io, &zxio_vmo_ops);
   return ZX_OK;

@@ -20,10 +20,13 @@ class VmoTest : public zxtest::Test {
  public:
   void SetUp() override {
     ASSERT_OK(zx::vmo::create(kSize, 0u, &backing));
+    ASSERT_OK(backing.set_property(ZX_PROP_VMO_CONTENT_SIZE, &kSize, sizeof(kSize)));
     ASSERT_OK(backing.write(ALPHABET, 0, len));
     ASSERT_OK(backing.write(ALPHABET, len, len + len));
-
-    ASSERT_OK(zxio_vmo_init(&storage, std::move(backing), kInitialSeek));
+    zx::stream stream;
+    ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, backing, kInitialSeek,
+                                 &stream));
+    ASSERT_OK(zxio_vmo_init(&storage, std::move(backing), std::move(stream)));
     io = &storage.io;
   }
 
@@ -47,7 +50,7 @@ TEST_F(VmoTest, Basic) {
 
   zxio_node_attributes_t attr = {};
   ASSERT_OK(zxio_attr_get(io, &attr));
-  EXPECT_EQ(PAGE_SIZE, attr.content_size);
+  EXPECT_EQ(kSize, attr.content_size);
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_attr_set(io, &attr));
 
   char buffer[1024];
@@ -90,8 +93,8 @@ TEST_F(VmoTest, GetCopy) {
   zx::vmo vmo;
   size_t size = 0u;
   ASSERT_OK(zxio_vmo_get_copy(io, vmo.reset_and_get_address(), &size));
-  EXPECT_NE(vmo, ZX_HANDLE_INVALID);
-  EXPECT_EQ(size, PAGE_SIZE);
+  EXPECT_NE(vmo.get(), ZX_HANDLE_INVALID);
+  EXPECT_EQ(size, kSize);
 }
 
 TEST_F(VmoTest, GetClone) {
@@ -118,7 +121,7 @@ TEST_F(VmoTest, SeekNegativeOverflow) {
   ASSERT_EQ(original_seek, new_seek);
 
   // Seeking backwards from the start past zero should fail, without moving the seek pointer.
-  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE,
+  ASSERT_STATUS(ZX_ERR_INVALID_ARGS,
                 zxio_seek(io, ZXIO_SEEK_ORIGIN_START, kTooFarBackwards, &new_seek));
   ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
   ASSERT_EQ(original_seek, new_seek);
@@ -126,7 +129,7 @@ TEST_F(VmoTest, SeekNegativeOverflow) {
   new_seek = 42;
 
   // Seeking backwards from the seek pointer past zero should fail, without moving the seek pointer.
-  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE,
+  ASSERT_STATUS(ZX_ERR_INVALID_ARGS,
                 zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, kTooFarBackwards, &new_seek));
   ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
   ASSERT_EQ(original_seek, new_seek);
@@ -134,7 +137,7 @@ TEST_F(VmoTest, SeekNegativeOverflow) {
   new_seek = 42;
 
   // Seeking backwards from the end past zero should fail, without moving the seek pointer.
-  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE,
+  ASSERT_STATUS(ZX_ERR_INVALID_ARGS,
                 zxio_seek(io, ZXIO_SEEK_ORIGIN_END, kTooFarBackwards, &new_seek));
   ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
   ASSERT_EQ(original_seek, new_seek);
@@ -152,10 +155,12 @@ class HugeVmoTest : public zxtest::Test {
  public:
   void SetUp() override {
     ASSERT_OK(zx::vmo::create(kHugeSize, 0u, &backing));
+    ASSERT_OK(backing.set_property(ZX_PROP_VMO_CONTENT_SIZE, &kHugeSize, sizeof(kHugeSize)));
     ASSERT_OK(backing.write(ALPHABET, 0, len));
     ASSERT_OK(backing.write(ALPHABET, len, len + len));
-
-    ASSERT_OK(zxio_vmo_init(&storage, std::move(backing), 0));
+    zx::stream stream;
+    ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, backing, 0u, &stream));
+    ASSERT_OK(zxio_vmo_init(&storage, std::move(backing), std::move(stream)));
     io = &storage.io;
   }
 
@@ -187,7 +192,7 @@ TEST_F(HugeVmoTest, SeekPositiveOverflow) {
 
   // Seeking forward from the seek pointer past past infinity should fail, without moving the seek
   // pointer.
-  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE,
+  ASSERT_STATUS(ZX_ERR_INVALID_ARGS,
                 zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, kTooFarForwards, &new_seek));
   ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
   ASSERT_EQ(original_seek, new_seek);
@@ -196,7 +201,7 @@ TEST_F(HugeVmoTest, SeekPositiveOverflow) {
 
   // Seeking forward from the end past past infinity should fail, without moving the seek
   // pointer.
-  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE,
+  ASSERT_STATUS(ZX_ERR_INVALID_ARGS,
                 zxio_seek(io, ZXIO_SEEK_ORIGIN_END, kTooFarForwards, &new_seek));
   ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
   ASSERT_EQ(original_seek, new_seek);

@@ -14,6 +14,32 @@
 
 namespace fio = ::llcpp::fuchsia::io;
 
+typedef struct zxio_vmofile {
+  // The |zxio_t| control structure for this object.
+  zxio_t io;
+
+  // The underlying VMO that stores the data.
+  zx::vmo vmo;
+
+  // The start of content within the VMO.
+  //
+  // This value is never changed.
+  const zx_off_t start;
+
+  // The size of the file in bytes.
+  const zx_off_t size;
+
+  // The current seek offset within the file.
+  zx_off_t offset __TA_GUARDED(lock);
+
+  sync_mutex_t lock;
+
+  fio::File::SyncClient control;
+} zxio_vmofile_t;
+
+static_assert(sizeof(zxio_vmofile_t) <= sizeof(zxio_storage_t),
+              "zxio_vmofile_t must fit inside zxio_storage_t.");
+
 static zx_status_t zxio_vmofile_close(zxio_t* io) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
   zx_status_t status = file->control.Close().status();
@@ -24,9 +50,9 @@ static zx_status_t zxio_vmofile_close(zxio_t* io) {
 static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
 
-  sync_mutex_lock(&file->vmo.lock);
-  uint64_t seek = file->vmo.offset;
-  sync_mutex_unlock(&file->vmo.lock);
+  sync_mutex_lock(&file->lock);
+  uint64_t seek = file->offset;
+  sync_mutex_unlock(&file->lock);
 
   auto result = file->control.Seek(seek, fio::SeekOrigin::START);
   if (result.status() != ZX_OK) {
@@ -61,7 +87,7 @@ static zx_status_t zxio_vmofile_attr_get(zxio_t* io, zxio_node_attributes_t* out
   ZXIO_NODE_ATTR_SET(*out_attr, protocols, ZXIO_NODE_PROTOCOL_FILE | ZXIO_NODE_PROTOCOL_MEMORY);
   ZXIO_NODE_ATTR_SET(*out_attr, abilities,
                      ZXIO_OPERATION_READ_BYTES | ZXIO_OPERATION_GET_ATTRIBUTES);
-  ZXIO_NODE_ATTR_SET(*out_attr, content_size, file->vmo.size);
+  ZXIO_NODE_ATTR_SET(*out_attr, content_size, file->size);
   return ZX_OK;
 }
 
@@ -73,13 +99,13 @@ static zx_status_t zxio_vmofile_readv(zxio_t* io, const zx_iovec_t* vector, size
 
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
 
-  sync_mutex_lock(&file->vmo.lock);
+  sync_mutex_lock(&file->lock);
   zx_status_t status =
-      zxio_vmo_do_vector(file->start, file->vmo.size, &file->vmo.offset, vector, vector_count,
-                         out_actual, [&](void* buffer, zx_off_t offset, size_t capacity) {
-                           return file->vmo.vmo.read(buffer, offset, capacity);
+      zxio_vmo_do_vector(file->start, file->size, &file->offset, vector, vector_count, out_actual,
+                         [&](void* buffer, zx_off_t offset, size_t capacity) {
+                           return file->vmo.read(buffer, offset, capacity);
                          });
-  sync_mutex_unlock(&file->vmo.lock);
+  sync_mutex_unlock(&file->lock);
   return status;
 }
 
@@ -92,10 +118,46 @@ static zx_status_t zxio_vmofile_readv_at(zxio_t* io, zx_off_t offset, const zx_i
 
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
 
-  return zxio_vmo_do_vector(file->start, file->vmo.size, &offset, vector, vector_count, out_actual,
+  return zxio_vmo_do_vector(file->start, file->size, &offset, vector, vector_count, out_actual,
                             [&](void* buffer, zx_off_t offset, size_t capacity) {
-                              return file->vmo.vmo.read(buffer, offset, capacity);
+                              return file->vmo.read(buffer, offset, capacity);
                             });
+}
+
+static zx_status_t zxio_vmofile_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
+                                     size_t* out_offset) {
+  auto file = reinterpret_cast<zxio_vmofile_t*>(io);
+
+  sync_mutex_lock(&file->lock);
+  zx_off_t origin;
+  switch (start) {
+    case ZXIO_SEEK_ORIGIN_START:
+      origin = 0;
+      break;
+    case ZXIO_SEEK_ORIGIN_CURRENT:
+      origin = file->offset;
+      break;
+    case ZXIO_SEEK_ORIGIN_END:
+      origin = file->size;
+      break;
+    default:
+      sync_mutex_unlock(&file->lock);
+      return ZX_ERR_INVALID_ARGS;
+  }
+  zx_off_t at;
+  if (add_overflow(origin, offset, &at)) {
+    sync_mutex_unlock(&file->lock);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (at > file->size) {
+    sync_mutex_unlock(&file->lock);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  file->offset = at;
+  sync_mutex_unlock(&file->lock);
+
+  *out_offset = at;
+  return ZX_OK;
 }
 
 static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
@@ -141,8 +203,7 @@ static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t*
     }
 
     zx::vmo child_vmo;
-    zx_status_t status =
-        file->vmo.vmo.create_child(options, file->start, file->vmo.size, &child_vmo);
+    zx_status_t status = file->vmo.create_child(options, file->start, file->size, &child_vmo);
     if (status != ZX_OK) {
       return status;
     }
@@ -158,7 +219,7 @@ static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t*
     }
     *out_vmo = result.release();
     if (out_size) {
-      *out_size = file->vmo.size;
+      *out_size = file->size;
     }
     return ZX_OK;
   }
@@ -166,13 +227,13 @@ static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t*
   // For !VMO_FLAG_PRIVATE (including VMO_FLAG_EXACT), we just duplicate another
   // handle to the Vmofile's VMO with appropriately scoped rights.
   zx::vmo result;
-  zx_status_t status = file->vmo.vmo.duplicate(rights, &result);
+  zx_status_t status = file->vmo.duplicate(rights, &result);
   if (status != ZX_OK) {
     return status;
   }
   *out_vmo = result.release();
   if (out_size) {
-    *out_size = file->vmo.size;
+    *out_size = file->size;
   }
   return ZX_OK;
 }
@@ -185,7 +246,7 @@ static constexpr zxio_ops_t zxio_vmofile_ops = []() {
   ops.attr_get = zxio_vmofile_attr_get;
   ops.readv = zxio_vmofile_readv;
   ops.readv_at = zxio_vmofile_readv_at;
-  ops.seek = zxio_vmo_seek;
+  ops.seek = zxio_vmofile_seek;
   ops.vmo_get = zxio_vmofile_vmo_get;
   return ops;
 }();
@@ -193,17 +254,14 @@ static constexpr zxio_ops_t zxio_vmofile_ops = []() {
 zx_status_t zxio_vmofile_init(zxio_storage_t* storage, fio::File::SyncClient control, zx::vmo vmo,
                               zx_off_t offset, zx_off_t length, zx_off_t seek) {
   auto file = new (storage) zxio_vmofile_t{
-      .vmo =
-          {
-              .io = storage->io,
-              .vmo = std::move(vmo),
-              .size = length,
-              .offset = std::min(seek, length),
-              .lock = {},
-          },
+      .io = storage->io,
+      .vmo = std::move(vmo),
       .start = offset,
+      .size = length,
+      .offset = std::min(seek, length),
+      .lock = {},
       .control = std::move(control),
   };
-  zxio_init(&file->vmo.io, &zxio_vmofile_ops);
+  zxio_init(&file->io, &zxio_vmofile_ops);
   return ZX_OK;
 }
