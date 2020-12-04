@@ -104,13 +104,25 @@ fn log_counters_to_inspect(
         },
         _ => return,
     };
-    inspect_log!(inspect_tree.client_stats.counters.lock(), {
-        iface: iface_id,
-        tx_total: current.tx_frame.in_.count - last.tx_frame.in_.count,
-        tx_drop: current.tx_frame.drop.count - last.tx_frame.drop.count,
-        rx_total: current.rx_frame.in_.count - last.rx_frame.in_.count,
-        rx_drop: current.rx_frame.drop.count - last.rx_frame.drop.count,
-    });
+
+    let overflow = current.tx_frame.in_.count < last.tx_frame.in_.count
+        || current.tx_frame.drop.count < last.tx_frame.drop.count
+        || current.rx_frame.in_.count < last.rx_frame.in_.count
+        || current.rx_frame.drop.count < last.rx_frame.drop.count;
+    if overflow {
+        inspect_log!(inspect_tree.client_stats.counters.lock(), {
+            iface: iface_id,
+            msg: "no diff (counters have likely been reset)",
+        })
+    } else {
+        inspect_log!(inspect_tree.client_stats.counters.lock(), {
+            iface: iface_id,
+            tx_total: current.tx_frame.in_.count - last.tx_frame.in_.count,
+            tx_drop: current.tx_frame.drop.count - last.tx_frame.drop.count,
+            rx_total: current.rx_frame.in_.count - last.rx_frame.in_.count,
+            rx_drop: current.rx_frame.drop.count - last.rx_frame.drop.count,
+        });
+    }
 }
 
 fn report_stats(
@@ -1167,6 +1179,49 @@ mod tests {
                 }
             }
         });
+    }
+
+    #[test]
+    fn test_inspect_log_counters() {
+        let inspect_tree = fake_inspect_tree();
+        let last = fake_iface_stats(10);
+        let current = fake_iface_stats(20);
+        log_counters_to_inspect(1, &last, &current, inspect_tree.clone());
+
+        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+            client_stats: contains {
+                counters: {
+                    "0": {
+                        "@time": AnyProperty,
+                        iface: 1u64,
+                        tx_total: 10u64,
+                        tx_drop: 30u64,
+                        rx_total: 10u64,
+                        rx_drop: 30u64,
+                    }
+                }
+            }
+        })
+    }
+
+    #[test]
+    fn test_inspect_log_counters_detects_overflow() {
+        let inspect_tree = fake_inspect_tree();
+        let last = fake_iface_stats(20);
+        let current = fake_iface_stats(10);
+        log_counters_to_inspect(1, &last, &current, inspect_tree.clone());
+
+        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+            client_stats: contains {
+                counters: {
+                    "0": {
+                        "@time": AnyProperty,
+                        iface: 1u64,
+                        msg: "no diff (counters have likely been reset)",
+                    }
+                }
+            }
+        })
     }
 
     fn test_metric_subset(
