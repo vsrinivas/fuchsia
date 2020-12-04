@@ -8,7 +8,9 @@
     "sandbox": {
         "services": [
             "fuchsia.accessibility.tts.EngineRegistry",
+            "fuchsia.feedback.LastRebootInfoProvider",
             "fuchsia.intl.PropertyProvider",
+            "fuchsia.logger.LogSink",
             "fuchsia.settings.Accessibility",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.annotation.Registry",

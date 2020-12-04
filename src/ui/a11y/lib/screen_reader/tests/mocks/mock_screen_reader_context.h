@@ -89,6 +89,25 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
   MockSpeaker* mock_speaker_ptr_;
 };
 
+class MockScreenReaderContextFactory : public a11y::ScreenReaderContextFactory {
+ public:
+  MockScreenReaderContextFactory() = default;
+  ~MockScreenReaderContextFactory() override = default;
+
+  std::unique_ptr<a11y::ScreenReaderContext> CreateScreenReaderContext(
+      std::unique_ptr<a11y::A11yFocusManager> a11y_focus_manager, a11y::TtsManager* tts_manager,
+      std::string locale_id) override {
+    auto mock_screen_reader_context = std::make_unique<MockScreenReaderContext>();
+    mock_screen_reader_context->set_locale_id(locale_id);
+    mock_screen_reader_context_ = mock_screen_reader_context.get();
+    return mock_screen_reader_context;
+  }
+
+  MockScreenReaderContext* mock_screen_reader_context() { return mock_screen_reader_context_; }
+
+ private:
+  MockScreenReaderContext* mock_screen_reader_context_;
+};
 }  // namespace accessibility_test
 
 #endif  // SRC_UI_A11Y_LIB_SCREEN_READER_TESTS_MOCKS_MOCK_SCREEN_READER_CONTEXT_H_

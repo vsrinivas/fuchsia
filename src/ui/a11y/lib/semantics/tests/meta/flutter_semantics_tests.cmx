@@ -12,8 +12,9 @@
                 "fuchsia.ui.pointerinjector.Registry": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
                 "fuchsia.ui.policy.Presenter": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
                 "fuchsia.ui.policy.accessibility.PointerEventRegistry": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
-                "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
-            },
+                "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
+                "fuchsia.feedback.LastRebootInfoProvider": "fuchsia-pkg://fuchsia.com/fake-last-reboot-info-provider#meta/fake_last_reboot_info_provider.cmx"
+},
             "system-services": [
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.vulkan.loader.Loader"
@@ -46,7 +47,8 @@
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.policy.accessibility.PointerEventRegistry",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.vulkan.loader.Loader"
-        ]
+            "fuchsia.vulkan.loader.Loader",
+        "fuchsia.feedback.LastRebootInfoProvider"
+	]
     }
 }
