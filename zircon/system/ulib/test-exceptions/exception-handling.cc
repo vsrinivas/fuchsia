@@ -32,6 +32,8 @@ zx_status_t ExitExceptionThread(zx::exception exception, uintptr_t task_exit_fn)
   regs.pc = task_exit_fn;
 #elif defined(__x86_64__)
   regs.rip = task_exit_fn;
+#elif defined(__riscv)
+  regs.placeholder = task_exit_fn;
 #else
 #error "what machine?"
 #endif
