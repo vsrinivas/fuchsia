@@ -195,6 +195,10 @@ class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Int
   }
   void FlowControl(uint64_t size = 0);
 
+  // The binding will be valid after a successful |fidl::BindServer| operation,
+  // and back to invalid after this class is unbound from the FIDL dispatcher.
+  fit::optional<fidl::ServerBindingRef<llcpp::fuchsia::gpu::magma::Primary>> server_binding_;
+
   std::unique_ptr<Delegate> delegate_;
   zx::channel client_endpoint_;
   magma_status_t error_{};
@@ -206,7 +210,6 @@ class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Int
 
   // Flow control
   bool flow_control_enabled_ = false;
-  zx_handle_t server_endpoint_unowned_;
   uint64_t messages_consumed_ = 0;
   uint64_t bytes_imported_ = 0;
 

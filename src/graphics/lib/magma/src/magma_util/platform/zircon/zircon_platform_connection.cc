@@ -4,8 +4,6 @@
 
 #include "zircon_platform_connection.h"
 
-#include <lib/fidl-async/cpp/bind.h>
-
 #include "magma_common_defs.h"
 
 namespace magma {
@@ -43,22 +41,30 @@ class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
 };
 
 bool ZirconPlatformConnection::Bind(zx::channel server_endpoint) {
-  fidl::OnChannelClosedFn<llcpp::fuchsia::gpu::magma::Primary::Interface> channel_closed_callback =
-      [](llcpp::fuchsia::gpu::magma::Primary::Interface* interface) {
-        static_cast<ZirconPlatformConnection*>(interface)->async_loop()->Quit();
+  fidl::OnUnboundFn<llcpp::fuchsia::gpu::magma::Primary::Interface> unbind_callback =
+      [](llcpp::fuchsia::gpu::magma::Primary::Interface* interface, fidl::UnbindInfo unbind_info,
+         zx::channel server_channel) {
+        // |kDispatcherError| indicates the async loop itself is shutting down,
+        // which could only happen when |interface| is being destructed.
+        // Therefore, we must avoid using the same object.
+        if (unbind_info.reason == fidl::UnbindInfo::Reason::kDispatcherError)
+          return;
+
+        auto* self = static_cast<ZirconPlatformConnection*>(interface);
+        self->server_binding_ = fit::nullopt;
+        self->async_loop()->Quit();
       };
 
-  // TODO(fxbug.dev/48671): don't store an unowned handle
-  server_endpoint_unowned_ = server_endpoint.get();
-
   llcpp::fuchsia::gpu::magma::Primary::Interface* interface = this;
-  zx_status_t status =
-      fidl::BindSingleInFlightOnly(async_loop()->dispatcher(), std::move(server_endpoint),
-                                   interface, std::move(channel_closed_callback));
+  fit::result<fidl::ServerBindingRef<llcpp::fuchsia::gpu::magma::Primary>, zx_status_t> result =
+      fidl::BindServer(async_loop()->dispatcher(), std::move(server_endpoint), interface,
+                       std::move(unbind_callback));
 
-  if (status != ZX_OK)
-    return DRETF(false, "fidl::BindSingleInFlightOnly failed: %d", status);
+  if (!result.is_ok())
+    return DRETF(false, "fidl::BindServer failed: %d", result.take_error());
 
+  // Note: the async loop should not be started until we assign |server_binding_|.
+  server_binding_ = result.take_value();
   return true;
 }
 
@@ -130,21 +136,19 @@ void ZirconPlatformConnection::FlowControl(uint64_t size) {
   bytes_imported_ += size;
 
   if (messages_consumed_ >= kMaxInflightMessages / 2) {
-    zx_status_t status = llcpp::fuchsia::gpu::magma::Primary::SendOnNotifyMessagesConsumedEvent(
-        zx::unowned_channel(server_endpoint_unowned_), messages_consumed_);
+    zx_status_t status = server_binding_.value()->OnNotifyMessagesConsumed(messages_consumed_);
     if (status == ZX_OK) {
       messages_consumed_ = 0;
-    } else if (status != ZX_ERR_PEER_CLOSED) {
+    } else if (status != ZX_ERR_PEER_CLOSED && status != ZX_ERR_CANCELED) {
       DMESSAGE("SendOnNotifyMessagesConsumedEvent failed: %d", status);
     }
   }
 
   if (bytes_imported_ >= kMaxInflightBytes / 2) {
-    zx_status_t status = llcpp::fuchsia::gpu::magma::Primary::SendOnNotifyMemoryImportedEvent(
-        zx::unowned_channel(server_endpoint_unowned_), bytes_imported_);
+    zx_status_t status = server_binding_.value()->OnNotifyMemoryImported(bytes_imported_);
     if (status == ZX_OK) {
       bytes_imported_ = 0;
-    } else if (status != ZX_ERR_PEER_CLOSED) {
+    } else if (status != ZX_ERR_PEER_CLOSED && status != ZX_ERR_CANCELED) {
       DMESSAGE("SendOnNotifyMemoryImportedEvent failed: %d", status);
     }
   }
