@@ -10,6 +10,7 @@ use {
     std::sync::{Arc, Mutex},
 };
 
+pub mod deprecated_client;
 pub mod deprecated_configuration;
 pub mod device;
 pub mod known_ess_store;

@@ -110,6 +110,12 @@ async fn serve_fidl(
         })
         .add_fidl_service(move |reqs| {
             fasync::Task::spawn(configurator.clone().serve_deprecated_configuration(reqs)).detach()
+        })
+        .add_fidl_service(|reqs| {
+            let fut =
+                legacy::deprecated_client::serve_deprecated_client(reqs, legacy_client_ref.clone())
+                    .unwrap_or_else(|e| error!("error serving deprecated client API: {}", e));
+            fasync::Task::spawn(fut).detach()
         });
     fs.take_and_serve_directory_handle()?;
     let service_fut = fs.collect::<()>().fuse();

@@ -29,6 +29,7 @@
     "fuchsia.wlan.policy.AccessPointProvider": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
     "fuchsia.wlan.policy.ClientListener": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
     "fuchsia.wlan.policy.ClientProvider": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
+    "fuchsia.wlan.product.deprecatedclient.DeprecatedClient": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
     "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
     "fuchsia.wlan.service.Wlan": "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
   },
@@ -38,6 +39,7 @@
     "fuchsia.wlan.policy.ClientListener",
     "fuchsia.wlan.policy.AccessPointProvider",
     "fuchsia.wlan.policy.AccessPointListener",
+    "fuchsia.wlan.product.deprecatedclient.DeprecatedClient",
     "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
     "fuchsia.time.Utc"
   ],
