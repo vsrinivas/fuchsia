@@ -36,11 +36,33 @@ impl TestEnvBuilder {
     fn manager_states(self, manager_states: Vec<State>) -> Self {
         Self { manager_states, ..self }
     }
+
     fn installer_states(self, installer_states: Vec<installer::State>) -> Self {
         Self { installer_states, ..self }
     }
+
     fn build(self) -> TestEnv {
-        TestEnv::with_states(self.manager_states, self.installer_states)
+        let mut fs = ServiceFs::new();
+
+        let update_manager = Arc::new(MockUpdateManagerService::new(self.manager_states));
+        let update_manager_clone = Arc::clone(&update_manager);
+        fs.add_fidl_service(move |stream| {
+            fasync::Task::spawn(Arc::clone(&update_manager_clone).run_service(stream)).detach()
+        });
+
+        let update_installer =
+            Arc::new(MockUpdateInstallerService::with_states(self.installer_states));
+        let update_installer_clone = Arc::clone(&update_installer);
+        fs.add_fidl_service(move |stream| {
+            fasync::Task::spawn(Arc::clone(&update_installer_clone).run_service(stream)).detach()
+        });
+
+        let env = fs
+            .create_salted_nested_environment("update_env")
+            .expect("nested environment to create successfully");
+        fasync::Task::spawn(fs.collect()).detach();
+
+        TestEnv { env, update_manager, update_installer }
     }
 }
 
@@ -61,29 +83,6 @@ impl TestEnv {
 
     fn new() -> Self {
         Self::builder().build()
-    }
-
-    fn with_states(states: Vec<State>, installer_states: Vec<installer::State>) -> Self {
-        let mut fs = ServiceFs::new();
-
-        let update_manager = Arc::new(MockUpdateManagerService::new(states));
-        let update_manager_clone = Arc::clone(&update_manager);
-        fs.add_fidl_service(move |stream| {
-            fasync::Task::spawn(Arc::clone(&update_manager_clone).run_service(stream)).detach()
-        });
-
-        let update_installer = Arc::new(MockUpdateInstallerService::with_states(installer_states));
-        let update_installer_clone = Arc::clone(&update_installer);
-        fs.add_fidl_service(move |stream| {
-            fasync::Task::spawn(Arc::clone(&update_installer_clone).run_service(stream)).detach()
-        });
-
-        let env = fs
-            .create_salted_nested_environment("update_env")
-            .expect("nested environment to create successfully");
-        fasync::Task::spawn(fs.collect()).detach();
-
-        Self { env, update_manager, update_installer }
     }
 
     async fn run_update<'a>(&'a self, args: Vec<&'a str>) -> Output {
