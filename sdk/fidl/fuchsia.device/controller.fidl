@@ -130,12 +130,15 @@ struct SystemPowerStateInfo {
 
 /// Interface for manipulating a device in a devhost
 protocol Controller {
-    /// Attempt to bind the requested driver to this device
+    /// Attempt to bind the requested driver to this device. This should just be the name of the
+    /// shared object for the driver e.g. "fvm.so". A full path can be specified but this is
+    /// deprecated.
     Bind(string:MAX_DRIVER_PATH_LEN driver) -> () error zx.status;
 
     /// This api will unbind all the children of this device and bind the
     /// requested driver. If the driver is empty, it will autobind.
-    /// The Rebind will not return until the bind completes.
+    /// The Rebind will not return until the bind completes. The name is the same as for the Bind
+    /// call.
     Rebind(string:MAX_DRIVER_PATH_LEN driver) -> () error zx.status;
 
     /// This api will unbind all the children of this device synchronously.

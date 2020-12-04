@@ -132,8 +132,10 @@ class DriverHostContext {
 
   DriverHostInspect& inspect() { return inspect_; }
 
- private:
+  const std::string& root_driver_path() const { return root_driver_path_; }
+  void set_root_driver_path(std::string_view path) { root_driver_path_ = path; }
 
+ private:
   void FinalizeDyingDevices() TA_REQ(api_lock_);
 
   // enum_lock_{acquire,release}() are used whenever we're iterating
@@ -169,6 +171,7 @@ class DriverHostContext {
 
   fbl::TaggedDoublyLinkedList<zx_device*, zx_device::ChildrenListTag> dead_devices_;
   unsigned int dead_devices_count_ = 0;
+  std::string root_driver_path_ = "/boot/driver/";
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST_DRIVER_HOST_CONTEXT_H_

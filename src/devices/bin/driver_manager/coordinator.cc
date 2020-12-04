@@ -405,6 +405,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
 
 zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out) {
   std::string binary = config_.path_prefix + kDriverHostPath;
+  std::string root_driver_path_arg;
   std::vector<const char*> env;
   if (config_.asan_drivers) {
     // If there are any ASan drivers, use the ASan-supporting driver_host for
@@ -456,6 +457,8 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
   if (config_.verbose) {
     env.push_back("devmgr.verbose=true");
   }
+  root_driver_path_arg = "devmgr.root_driver_path=" + config_.path_prefix + "driver/";
+  env.push_back(root_driver_path_arg.c_str());
 
   env.push_back(nullptr);
 

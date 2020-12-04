@@ -220,7 +220,7 @@ int main(int argc, char** argv) {
   }
   // Set up the default values for our arguments if they weren't given.
   if (devmgr_args.driver_search_paths.size() == 0) {
-    devmgr_args.driver_search_paths.push_back("/boot/driver");
+    devmgr_args.driver_search_paths.push_back(devmgr_args.path_prefix + "driver");
   }
   if (devmgr_args.sys_device_driver.empty()) {
     devmgr_args.sys_device_driver = devmgr_args.path_prefix + "driver/platform-bus.so";

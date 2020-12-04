@@ -704,6 +704,12 @@ int main(int argc, char** argv) {
   }
 
   DriverHostContext ctx(&kAsyncLoopConfigAttachToCurrentThread, std::move(root_resource));
+
+  const char* root_driver_path = getenv("devmgr.root_driver_path");
+  if (root_driver_path != nullptr) {
+    ctx.set_root_driver_path(root_driver_path);
+  }
+
   RegisterContextForApi(&ctx);
 
   status = connect_scheduler_profile_provider();
