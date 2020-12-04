@@ -26,15 +26,12 @@ use crate::internal::core::{self, Address, Payload};
 use crate::internal::event;
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
-use crate::message::receptor::Receptor as BaseReceptor;
 use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType,
 };
 
 const SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
 const SETTING_PROXY_TIMEOUT_MS: i64 = 1;
-
-pub type SwitchboardReceptor = BaseReceptor<Payload, Address>;
 
 struct SettingHandler {
     setting_type: SettingType,
@@ -1031,7 +1028,9 @@ fn verify_handler_event(
     panic!("should have matched the provided event");
 }
 
-async fn get_response(mut receptor: SwitchboardReceptor) -> Option<(u64, SettingHandlerResult)> {
+async fn get_response(
+    mut receptor: core::message::Receptor,
+) -> Option<(u64, SettingHandlerResult)> {
     while let Some(event) = receptor.next().await {
         if let MessageEvent::Message(
             Payload::Event(SettingEvent::Response(response_id, response)),

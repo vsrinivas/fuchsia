@@ -25,6 +25,13 @@ impl<T: Clone + Debug + Send + Sync> Payload for T {}
 pub trait Address: Clone + Debug + Eq + Hash + Send + Sync {}
 impl<T: Clone + Debug + Eq + Hash + Send + Sync> Address for T {}
 
+/// `NoAddress` provides a [`Address`] definition for message hubs not needing
+/// an address.
+///
+/// [`Address`]: trait.Address.html
+#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
+pub enum NoAddress {}
+
 /// A MessageEvent defines the data that can be returned through a message
 /// receptor.
 #[derive(Debug, PartialEq)]

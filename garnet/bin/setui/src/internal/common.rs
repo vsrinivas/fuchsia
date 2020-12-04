@@ -4,20 +4,12 @@
 
 use chrono::{offset::TimeZone, DateTime, Utc};
 
-#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
-pub enum Address {}
-
-/// Macro for defining a message hub with no addressable messengers
-#[macro_export]
-macro_rules! anonymous_message_hub_definition {
-    ($payload:ty) => {
-        crate::message_hub_definition!($payload, crate::internal::common::Address);
-    };
-}
-
 /// Macro for defining a standard message hub
 #[macro_export]
 macro_rules! message_hub_definition {
+    ($payload:ty) => {
+        crate::message_hub_definition!($payload, $crate::message::base::NoAddress);
+    };
     ($payload:ty, $address:ty) => {
         pub mod message {
             #[allow(unused_imports)]
