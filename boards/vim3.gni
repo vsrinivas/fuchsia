@@ -20,6 +20,7 @@ _common_bootfs_deps = [
   "//src/devices/ml/drivers/aml-nna",
   "//src/devices/registers/drivers/registers",
   "//src/devices/rtc/drivers/nxp",
+  "//src/devices/usb/drivers/aml-usb-phy-v2",
 ]
 
 board_bootfs_labels += _common_bootfs_deps

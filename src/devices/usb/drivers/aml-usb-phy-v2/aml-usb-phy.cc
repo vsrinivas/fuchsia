@@ -107,14 +107,18 @@ zx_status_t AmlUsbPhy::InitPhy() {
 
   // amlogic_new_usb2_init()
   for (int i = 0; i < 2; i++) {
-    auto u2p_r0 = U2P_R0_V2::Get(i).ReadFrom(usbctrl_mmio);
-    u2p_r0.set_por(1);
-    u2p_r0.set_host_device(1);
+    U2P_R0_V2::Get(i).ReadFrom(usbctrl_mmio).set_por(1).WriteTo(usbctrl_mmio);
     if (i == 1) {
-      u2p_r0.set_idpullup0(1);
-      u2p_r0.set_drvvbus0(1);
+      U2P_R0_V2::Get(i)
+          .ReadFrom(usbctrl_mmio)
+          .set_idpullup0(1)
+          .set_drvvbus0(1)
+          .set_host_device((dr_mode_ == USB_MODE_PERIPHERAL) ? 0 : 1)
+          .WriteTo(usbctrl_mmio);
+    } else {
+      U2P_R0_V2::Get(i).ReadFrom(usbctrl_mmio).set_host_device(1).WriteTo(usbctrl_mmio);
     }
-    u2p_r0.WriteTo(usbctrl_mmio);
+    U2P_R0_V2::Get(i).ReadFrom(usbctrl_mmio).set_por(0).WriteTo(usbctrl_mmio);
 
     zx::nanosleep(zx::deadline_after(zx::usec(10)));
 
@@ -168,7 +172,7 @@ void AmlUsbPhy::SetMode(UsbMode mode, SetModeCompletion completion) {
       completion();
   });
 
-  if (mode == mode_)
+  if (mode == phy_mode_)
     return;
 
   auto* usbctrl_mmio = &*usbctrl_mmio_;
@@ -195,8 +199,8 @@ void AmlUsbPhy::SetMode(UsbMode mode, SetModeCompletion completion) {
 
   zx::nanosleep(zx::deadline_after(zx::usec(500)));
 
-  auto old_mode = mode_;
-  mode_ = mode;
+  auto old_mode = phy_mode_;
+  phy_mode_ = mode;
 
   if (old_mode == UsbMode::UNKNOWN) {
     // One time PLL initialization
@@ -369,6 +373,13 @@ zx_status_t AmlUsbPhy::Init() {
     zxlogf(ERROR, "AmlUsbPhy::Init could not get metadata for PLL settings");
     return ZX_ERR_INTERNAL;
   }
+  status = DdkGetMetadata(DEVICE_METADATA_USB_MODE, &dr_mode_, sizeof(dr_mode_), &actual);
+  if (status == ZX_OK && actual != sizeof(dr_mode_)) {
+    zxlogf(ERROR, "AmlUsbPhy::Init could not get metadata for USB Mode");
+    return ZX_ERR_INTERNAL;
+  } else if (status != ZX_OK) {
+    dr_mode_ = USB_MODE_OTG;
+  }
 
   status = pdev_.MapMmio(0, &usbctrl_mmio_);
   if (status != ZX_OK) {
@@ -401,6 +412,22 @@ zx_status_t AmlUsbPhy::Init() {
 }
 
 void AmlUsbPhy::DdkInit(ddk::InitTxn txn) {
+  if (dr_mode_ != USB_MODE_OTG) {
+    sync_completion_t set_mode_sync;
+    auto completion = [&](void) { sync_completion_signal(&set_mode_sync); };
+    fbl::AutoLock lock(&lock_);
+    if (dr_mode_ == USB_MODE_PERIPHERAL) {
+      zxlogf(INFO, "Entering USB Peripheral Mode");
+      SetMode(UsbMode::PERIPHERAL, std::move(completion));
+    } else {
+      zxlogf(INFO, "Entering USB Host Mode");
+      SetMode(UsbMode::HOST, std::move(completion));
+    }
+    sync_completion_wait(&set_mode_sync, ZX_TIME_INFINITE);
+
+    return txn.Reply(ZX_OK);
+  }
+
   irq_thread_started_ = true;
   int rc = thrd_create_with_name(
       &irq_thread_, [](void* arg) -> int { return reinterpret_cast<AmlUsbPhy*>(arg)->IrqThread(); },

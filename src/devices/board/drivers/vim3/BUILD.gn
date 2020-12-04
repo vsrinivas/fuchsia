@@ -23,6 +23,7 @@ driver_module("vim3") {
     "vim3-sd.cc",
     "vim3-sdio.cc",
     "vim3-sysmem.cc",
+    "vim3-usb.cc",
     "vim3.cc",
   ]
   deps = [
@@ -36,6 +37,7 @@ driver_module("vim3") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.sdmmc",
     "//sdk/banjo/ddk.protocol.serial",
+    "//sdk/banjo/ddk.protocol.usb.modeswitch",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",

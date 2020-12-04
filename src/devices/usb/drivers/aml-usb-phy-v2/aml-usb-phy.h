@@ -13,6 +13,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/registers.h>
+#include <ddktl/protocol/usb/modeswitch.h>
 #include <ddktl/protocol/usb/phy.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -53,7 +54,7 @@ class AmlUsbPhy : public AmlUsbPhyType, public ddk::UsbPhyProtocol<AmlUsbPhy, dd
   // Public for testing.
   UsbMode mode() {
     fbl::AutoLock lock(&lock_);
-    return mode_;
+    return phy_mode_;
   }
 
  private:
@@ -94,7 +95,8 @@ class AmlUsbPhy : public AmlUsbPhyType, public ddk::UsbPhyProtocol<AmlUsbPhy, dd
   std::unique_ptr<XhciDevice> xhci_device_ __TA_GUARDED(lock_);
   std::unique_ptr<Dwc2Device> dwc2_device_ __TA_GUARDED(lock_);
 
-  UsbMode mode_ __TA_GUARDED(lock_) = UsbMode::UNKNOWN;
+  UsbMode phy_mode_ __TA_GUARDED(lock_) = UsbMode::UNKNOWN;  // Physical USB mode.
+  usb_mode_t dr_mode_ = USB_MODE_OTG;  // USB Controller Mode. Internal to Driver.
   bool dwc2_connected_ = false;
 
   // If set, indicates that the device has a pending SetMode which

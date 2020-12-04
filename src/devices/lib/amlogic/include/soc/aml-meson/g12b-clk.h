@@ -26,8 +26,12 @@ constexpr uint32_t G12B_CLK_DOS_GCLK_VDEC = AmlClkId(5, clk_type::kMesonGate);
 constexpr uint32_t G12B_CLK_DOS_GCLK_HCODEC = AmlClkId(6, clk_type::kMesonGate);
 constexpr uint32_t G12B_CLK_DOS = AmlClkId(7, clk_type::kMesonGate);
 
+// USB CLK
+constexpr uint32_t G12B_CLK_USB = AmlClkId(8, clk_type::kMesonGate);
+constexpr uint32_t G12B_CLK_USB1_TO_DDR = AmlClkId(9, clk_type::kMesonGate);
+
 // NB: This must be the last entry
-constexpr uint32_t CLK_G12B_COUNT = 8;
+constexpr uint32_t CLK_G12B_COUNT = 10;
 
 // kMesonPllClocks
 constexpr uint32_t CLK_GP0_PLL = AmlClkId(GP0_PLL, clk_type::kMesonPll);

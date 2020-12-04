@@ -212,6 +212,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "aml_sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
       "aml-nna",
       "sys/platform/00:00:29",  // registers device
+      "aml-usb-phy-v2",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

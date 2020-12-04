@@ -28,6 +28,8 @@ constexpr uint32_t kG12bHhiTsClkCntl = (0x64 << 2);
 constexpr uint32_t kG12bHhiXtalDivnCntl = (0x2f << 2);
 constexpr uint32_t kG12bDosGclkEn0 = (0x3f01 << 2);
 constexpr uint32_t kG12bHhiGclkMpeg0 = (0x50 << 2);
+constexpr uint32_t kG12bHhiGclkMpeg1 = (0x51 << 2);
+constexpr uint32_t kG12bHhiGclkMpeg2 = (0x52 << 2);
 
 // NOTE: This list only contains the clocks in use currently and
 //       not all available clocks.
@@ -51,6 +53,10 @@ static constexpr meson_clk_gate_t g12b_clk_gates[] = {
 
     // Mpeg0 DOS Clock gate
     {.reg = kG12bHhiGclkMpeg0, .bit = 1},  // G12B_CLK_DOS
+
+    // USB gates
+    {.reg = kG12bHhiGclkMpeg1, .bit = 26},  // G12B_CLK_USB
+    {.reg = kG12bHhiGclkMpeg2, .bit = 8},   // G12B_CLK_USB1_TO_DDR
 };
 
 static_assert(g12b_clk::CLK_G12B_COUNT == countof(g12b_clk_gates),
