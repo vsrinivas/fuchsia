@@ -475,6 +475,8 @@ zx_status_t SingleVmoTestInstance::Stop() {
         ZX_ASSERT(thrd.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)) == ZX_OK);
 #if defined(__x86_64__)
         regs.rip = reinterpret_cast<uintptr_t>(thrd_exit);
+#elif defined(__riscv)
+        regs.placeholder = reinterpret_cast<uintptr_t>(thrd_exit);
 #else
         regs.pc = reinterpret_cast<uintptr_t>(thrd_exit);
 #endif
