@@ -195,6 +195,8 @@ class Device : public PciDeviceType,
     return static_cast<uint32_t>((bdf.bus_id << 8) | (bdf.device_id << 3) | bdf.function_id);
   }
 
+  fbl::Mutex* dev_lock() __TA_RETURN_CAPABILITY(dev_lock_) { return &dev_lock_; }
+
   // Dump some information about the device
   virtual void Dump() const __TA_EXCLUDES(dev_lock_);
 
@@ -225,7 +227,7 @@ class Device : public PciDeviceType,
 
   zx_status_t Init() __TA_EXCLUDES(dev_lock_);
   zx_status_t InitLocked() __TA_REQUIRES(dev_lock_);
-  fbl::Mutex* dev_lock() { return &dev_lock_; }
+  zx_status_t InitInterrupts() __TA_REQUIRES(dev_lock_);
 
   // Read the value of the Command register, requires the dev_lock.
   uint16_t ReadCmdLocked() __TA_REQUIRES(dev_lock_) __TA_EXCLUDES(cmd_reg_lock_) {
@@ -239,7 +241,6 @@ class Device : public PciDeviceType,
   }
 
   bool IoEnabled() __TA_REQUIRES(dev_lock_) { return ReadCmdLocked() & PCI_CFG_COMMAND_IO_EN; }
-
   bool MmioEnabled() __TA_REQUIRES(dev_lock_) { return ReadCmdLocked() & PCI_CFG_COMMAND_MEM_EN; }
 
   zx_status_t ProbeCapabilities() __TA_REQUIRES(dev_lock_);

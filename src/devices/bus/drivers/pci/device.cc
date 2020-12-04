@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/zx/interrupt.h>
 #include <string.h>
 #include <zircon/compiler.h>
 #include <zircon/time.h>
@@ -24,6 +25,8 @@
 #include <pretty/sizes.h>
 
 #include "bus_device_interface.h"
+#include "capabilities/msi.h"
+#include "capabilities/msix.h"
 #include "common.h"
 #include "ref_counted.h"
 #include "upstream_node.h"
@@ -133,6 +136,26 @@ zx_status_t Device::Init() {
   return status;
 }
 
+zx_status_t Device::InitInterrupts() {
+  // Disable all interrupt modes, they will be re-enabled by device drivers.
+  ModifyCmdLocked(/*clr_bits=*/0, /*set_bits=*/PCIE_CFG_COMMAND_INT_DISABLE);
+  irqs_.mode = PCI_IRQ_MODE_DISABLED;
+
+  if (caps_.msi) {
+    MsiControlReg ctrl = {.value = cfg_->Read(caps_.msi->ctrl())};
+    ctrl.set_enable(false);
+    cfg_->Write(caps_.msi->ctrl(), ctrl.value);
+  }
+
+  if (caps_.msix) {
+    MsixControlReg ctrl = {.value = cfg_->Read(caps_.msix->ctrl())};
+    ctrl.set_enable(false);
+    cfg_->Write(caps_.msix->ctrl(), ctrl.value);
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t Device::InitLocked() {
   // Cache basic device info
   vendor_id_ = cfg_->Read(Config::kVendorId);
@@ -156,8 +179,11 @@ zx_status_t Device::InitLocked() {
   }
 
   // Now that we know what our capabilities are, initialize our internal IRQ
-  // bookkeeping
-  // TODO(cja): IRQ initialization
+  // bookkeeping and disable all interrupts until a driver requests them.
+  st = InitInterrupts();
+  if (st != ZX_OK) {
+    return st;
+  }
 
   st = CreateProxy();
   if (st != ZX_OK) {

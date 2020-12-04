@@ -249,7 +249,7 @@ TEST_F(PciDeviceTests, MsiCapabilityTest) {
   EXPECT_EQ(false, msi.supports_pvm());
 
   MsiControlReg ctrl = {.value = dev.config()->Read(msi.ctrl())};
-  EXPECT_EQ(1, ctrl.enable());
+  EXPECT_EQ(0, ctrl.enable());
 }
 
 // Ensure we parse MSIX capabilities properly in the Virtio-input device.
