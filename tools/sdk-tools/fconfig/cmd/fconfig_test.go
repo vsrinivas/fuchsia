@@ -211,10 +211,98 @@ func TestGet(t *testing.T) {
 func TestList(t *testing.T) {
 	testSDK := testSDKProperties{}
 
-	if err := doList(testSDK, "unknown-device"); err != nil {
+	if err := doList(testSDK); err != nil {
 		t.Fatal(err)
 	}
-	if err := doList(testSDK, ""); err != nil {
-		t.Fatal(err)
+}
+
+func TestGetAll(t *testing.T) {
+	output := []string{}
+	stdoutPrintln = func(value ...interface{}) (int, error) {
+		line := fmt.Sprintln(value...)
+		output = append(output, line)
+		return len(line), nil
+	}
+	defer func() {
+		stdoutPrintln = fmt.Println
+	}()
+	tests := []struct {
+		sdk        SDKProvider
+		deviceName string
+		expected   []string
+	}{
+		{
+			sdk:        testSDKProperties{},
+			deviceName: "",
+			expected: []string{
+				`{
+"device-name": "",
+"bucket": "",
+"image": "",
+"device-ip": "",
+"ssh-port": "",
+"package-repo": "",
+"package-port": "",
+"default": false
+}
+`,
+			},
+		},
+		{
+			sdk: testSDKProperties{currentConfigs: []sdkcommon.DeviceConfig{
+				{
+					DeviceName: "device1",
+				},
+			}},
+			deviceName: "",
+			expected: []string{
+				`{
+"device-name": "",
+"bucket": "",
+"image": "",
+"device-ip": "",
+"ssh-port": "",
+"package-repo": "",
+"package-port": "",
+"default": false
+}
+`,
+			},
+		},
+		{
+			sdk: testSDKProperties{currentConfigs: []sdkcommon.DeviceConfig{
+				{
+					DeviceName: "device1",
+				},
+			},
+				defaultDeviceName: "device1",
+			},
+			deviceName: "device1",
+			expected: []string{
+				`{
+"device-name": "device1",
+"bucket": "",
+"image": "",
+"device-ip": "",
+"ssh-port": "",
+"package-repo": "",
+"package-port": "",
+"default": false
+}
+`,
+			},
+		},
+	}
+	for _, test := range tests {
+		output = []string{}
+		handleGetAll(test.sdk, test.deviceName)
+		if len(output) != len(test.expected) {
+			t.Fatalf("Output length mismatch %v does not match expected %v", output, test.expected)
+		}
+		for i, line := range output {
+			if line != test.expected[i] {
+				t.Fatalf("Output %q does not match expected %q", output, test.expected)
+			}
+		}
 	}
 }

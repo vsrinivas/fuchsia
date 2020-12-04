@@ -25,6 +25,9 @@ type SDKProvider interface {
 	GetDeviceConfigurations() ([]sdkcommon.DeviceConfig, error)
 }
 
+// Allow capturing output in testing.
+var stdoutPrintln = fmt.Println
+
 func main() {
 	sdk, err := sdkcommon.New()
 	if err != nil {
@@ -85,7 +88,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(value)
+		stdoutPrintln(value)
 	case "get-all":
 		device := ""
 		// Use the device-name if specified on the command line,
@@ -98,13 +101,10 @@ func main() {
 				log.Fatal(err)
 			}
 		}
-		err := doList(sdk, device)
-		if err != nil {
-			log.Fatal(err)
-		}
+		handleGetAll(sdk, device)
 
 	case "list":
-		err := doList(sdk, "")
+		err := doList(sdk)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -127,10 +127,25 @@ func main() {
 	os.Exit(0)
 }
 
+func handleGetAll(sdk SDKProvider, deviceName string) {
+	// if there is no default, and no name given, print an empty config.
+	deviceConfig := sdkcommon.DeviceConfig{}
+	var err error
+	if deviceName != "" {
+		deviceConfig, err = sdk.GetDeviceConfiguration(deviceName)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	data, _ := json.MarshalIndent(deviceConfig, "", "")
+	stdoutPrintln(string(data))
+}
+
 const usageText = `
 	set-device <device-name>  Sets the device properties supplied in options for the device matching the name.
 	get [<device-name>.]<property-name>: Prints the value of the property or empty string if not found.
-	get-all [<device-name>] prints all settings for the default device, or the device-name if provided.
+	get-all [<device-name>] prints all settings for the default device, or the device-name if provided
+	   If there is no default device, an empty collection of settings is printed.
 	list: Lists all settings.
 	remove-device <device-name>  Removes the configuration for the given target device.
 
@@ -203,30 +218,24 @@ func doSetDevice(sdk SDKProvider, deviceName string, propertyMap map[string]stri
 	return sdk.SaveDeviceConfiguration(currentConfig)
 }
 
-func doList(sdk SDKProvider, deviceName string) error {
+func doList(sdk SDKProvider) error {
 	var (
 		configList []sdkcommon.DeviceConfig
 		err        error
 	)
-	if deviceName == "" {
-		configList, err = sdk.GetDeviceConfigurations()
-		if err != nil {
-			return err
-		}
-	} else {
-		config, err := sdk.GetDeviceConfiguration(deviceName)
-		if err != nil {
-			return err
-		}
-		configList = append(configList, config)
+
+	configList, err = sdk.GetDeviceConfigurations()
+	if err != nil {
+		return err
 	}
+
 	if len(configList) == 0 {
 		fmt.Fprintln(os.Stderr, "No configurations set")
 		return nil
 	}
 	for _, config := range configList {
 		data, _ := json.MarshalIndent(config, "", "")
-		fmt.Println(string(data))
+		stdoutPrintln(string(data))
 	}
 	return nil
 }
