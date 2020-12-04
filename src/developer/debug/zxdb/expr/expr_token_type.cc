@@ -101,6 +101,7 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     {ExprTokenType::kAs,              kLangRust, "as"},
     {ExprTokenType::kIf,              kLangAll,  "if"},
     {ExprTokenType::kElse,            kLangAll,  "else"},
+    {ExprTokenType::kOperator,        kLangC,    "operator"},
     // clang-format on
 };
 

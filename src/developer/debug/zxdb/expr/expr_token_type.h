@@ -70,6 +70,7 @@ enum class ExprTokenType : size_t {
   kAs,               // as
   kIf,               // if
   kElse,             // else
+  kOperator,         // operator
 
   // Keep last. Not a token, but the count of tokens.
   kNumTypes

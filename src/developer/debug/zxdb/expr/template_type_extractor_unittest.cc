@@ -83,7 +83,7 @@ TEST(TemplateTypeExtractor, Basic) {
 TEST(TemplateTypeExtractor, WeirdCommas) {
   // As in "Foo<operator,, 2>" -> "operator,"
   TemplateTypeResult result = ExtractTemplateType(
-      {ExprToken(ExprTokenType::kName, "operator", 0), ExprToken(ExprTokenType::kComma, ",", 8),
+      {ExprToken(ExprTokenType::kOperator, "operator", 0), ExprToken(ExprTokenType::kComma, ",", 8),
        ExprToken(ExprTokenType::kComma, ",", 9)},
       0);
   EXPECT_TRUE(result.success);
@@ -93,9 +93,10 @@ TEST(TemplateTypeExtractor, WeirdCommas) {
   // As in "Foo<Bar<operator,, 2>>"
   result = ExtractTemplateType(
       {ExprToken(ExprTokenType::kName, "Bar", 0), ExprToken(ExprTokenType::kLess, "<", 4),
-       ExprToken(ExprTokenType::kName, "operator", 5), ExprToken(ExprTokenType::kComma, ",", 13),
-       ExprToken(ExprTokenType::kComma, ",", 14), ExprToken(ExprTokenType::kInteger, "2", 15),
-       ExprToken(ExprTokenType::kGreater, ">", 16), ExprToken(ExprTokenType::kGreater, ">", 17)},
+       ExprToken(ExprTokenType::kOperator, "operator", 5),
+       ExprToken(ExprTokenType::kComma, ",", 13), ExprToken(ExprTokenType::kComma, ",", 14),
+       ExprToken(ExprTokenType::kInteger, "2", 15), ExprToken(ExprTokenType::kGreater, ">", 16),
+       ExprToken(ExprTokenType::kGreater, ">", 17)},
       0);
   EXPECT_TRUE(result.success);
   EXPECT_EQ(7u, result.end_token);
@@ -105,7 +106,7 @@ TEST(TemplateTypeExtractor, WeirdCommas) {
 TEST(TemplateTypeExtractor, WeirdAngleBrackets) {
   // As in "std::map<int, int, operator<>".
   TemplateTypeResult result = ExtractTemplateType(
-      {ExprToken(ExprTokenType::kName, "operator", 0), ExprToken(ExprTokenType::kLess, "<", 8),
+      {ExprToken(ExprTokenType::kOperator, "operator", 0), ExprToken(ExprTokenType::kLess, "<", 8),
        ExprToken(ExprTokenType::kGreater, ">", 9)},
       0);
   EXPECT_TRUE(result.success);
@@ -115,8 +116,8 @@ TEST(TemplateTypeExtractor, WeirdAngleBrackets) {
   // As in "std::map<int, int, operator> >". The > are non-adjacent so don't get treated as a single
   // operator.
   result = ExtractTemplateType(
-      {ExprToken(ExprTokenType::kName, "operator", 0), ExprToken(ExprTokenType::kGreater, ">", 8),
-       ExprToken(ExprTokenType::kGreater, ">", 10)},
+      {ExprToken(ExprTokenType::kOperator, "operator", 0),
+       ExprToken(ExprTokenType::kGreater, ">", 8), ExprToken(ExprTokenType::kGreater, ">", 10)},
       0);
   EXPECT_TRUE(result.success);
   EXPECT_EQ(2u, result.end_token);
@@ -125,8 +126,9 @@ TEST(TemplateTypeExtractor, WeirdAngleBrackets) {
   // As in "std::map<int, int, operator>>>". This is passing "operator>>" to a
   // template.
   result = ExtractTemplateType(
-      {ExprToken(ExprTokenType::kName, "operator", 0), ExprToken(ExprTokenType::kGreater, ">", 8),
-       ExprToken(ExprTokenType::kGreater, ">", 9), ExprToken(ExprTokenType::kGreater, ">", 10)},
+      {ExprToken(ExprTokenType::kOperator, "operator", 0),
+       ExprToken(ExprTokenType::kGreater, ">", 8), ExprToken(ExprTokenType::kGreater, ">", 9),
+       ExprToken(ExprTokenType::kGreater, ">", 10)},
       0);
   EXPECT_TRUE(result.success);
   EXPECT_EQ(3u, result.end_token);
@@ -136,7 +138,7 @@ TEST(TemplateTypeExtractor, WeirdAngleBrackets) {
 TEST(TemplateTypeExtractor, OtherOperator) {
   // As in "Foo<operator ++>
   TemplateTypeResult result = ExtractTemplateType(
-      {ExprToken(ExprTokenType::kName, "operator", 0), ExprToken(ExprTokenType::kPlus, "+", 9),
+      {ExprToken(ExprTokenType::kOperator, "operator", 0), ExprToken(ExprTokenType::kPlus, "+", 9),
        ExprToken(ExprTokenType::kPlus, "+", 10), ExprToken(ExprTokenType::kGreater, ">", 11)},
       0);
   EXPECT_TRUE(result.success);
@@ -145,7 +147,7 @@ TEST(TemplateTypeExtractor, OtherOperator) {
 
   // Malformed input with "operator" at end. Just returns the same thing since we're not trying to
   // validate proper C++, only validate that we found the extent of the declaration.
-  result = ExtractTemplateType({ExprToken(ExprTokenType::kName, "operator", 0)}, 0);
+  result = ExtractTemplateType({ExprToken(ExprTokenType::kOperator, "operator", 0)}, 0);
   EXPECT_TRUE(result.success);
   EXPECT_EQ(1u, result.end_token);
   EXPECT_EQ("operator", result.canonical_name);

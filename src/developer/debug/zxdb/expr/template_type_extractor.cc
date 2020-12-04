@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/debug/zxdb/expr/expr_token.h"
+#include "src/developer/debug/zxdb/expr/operator_keyword.h"
 
 namespace zxdb {
 
@@ -18,24 +19,6 @@ struct Nesting {
 
   size_t opening_index = 0;                     // Index of opening bracket.
   ExprTokenType end = ExprTokenType::kInvalid;  // Expected closing bracket.
-};
-
-// A table of operators that need special handling. These are ones that can interfere with the
-// parsing. Things like "operator+" are skipped fine using the normal code path of "word" +
-// "punctuation" so don't need to be here for the current limited use case.
-//
-// This is in order we should evaluate it, so if one is a subset of another (e.g. "operator+" is a
-// subset of "operator++"), the more specific one should be first.
-struct OperatorRecord {
-  ExprTokenType first;
-  ExprTokenType second;
-};
-const OperatorRecord kOperators[] = {
-    {ExprTokenType::kLess, ExprTokenType::kLess},        // <<
-    {ExprTokenType::kLess, ExprTokenType::kInvalid},     // <
-    {ExprTokenType::kGreater, ExprTokenType::kGreater},  // >>
-    {ExprTokenType::kGreater, ExprTokenType::kInvalid},  // >
-    {ExprTokenType::kComma, ExprTokenType::kInvalid},    // ,
 };
 
 bool IsNamelikeToken(const ExprToken& token) {
@@ -68,72 +51,12 @@ bool NeedsSpaceBefore(const std::vector<ExprToken>& tokens, size_t first_index, 
   return false;
 }
 
-// |*index| points to the index of the operator token. It will be updated to
-// point to the last token consumed.
-void HandleOperator(const std::vector<ExprToken>& tokens, size_t* index, std::string* result) {
-  // Always append "operator" itself.
-  result->append(tokens[*index].value());
-  if (tokens.size() - 1 == *index)
-    return;  // "operator" at end of stream, just append it.
-
-  // 0 when not found, otherwise # tokens matched after "operator".
-  int matched_tokens = 0;
-
-  // The second token we're looking for.
-  ExprTokenType second_type =
-      tokens.size() > *index + 2 ? tokens[*index + 2].type() : ExprTokenType::kInvalid;
-  for (const auto& cur_op : kOperators) {
-    if (cur_op.first == tokens[*index + 1].type()) {
-      // First character matched.
-      if (cur_op.second == ExprTokenType::kInvalid) {
-        // Anything matches, we found it.
-        matched_tokens = 1;
-        break;
-      }
-
-      // The following token should also match, and the two tokens should be
-      // adjacent in the input stream.
-      if (cur_op.second == second_type &&
-          tokens[*index + 1].byte_offset() + 1 == tokens[*index + 2].byte_offset()) {
-        matched_tokens = 2;
-        break;
-      }
-    }
-  }
-
-  // Append any matched tokens. If no token is matched, it's probably an invalid operator
-  // specification (doesn't matter since we're just identifying and canonicalizing).
-  if (matched_tokens >= 1) {
-    result->append(tokens[*index + 1].value());
-    if (matched_tokens == 2)
-      result->append(tokens[*index + 2].value());
-  }
-  *index += matched_tokens;
-}
-
 }  // namespace
 
-// This doesn't handle some evil things, mostly around "operator" keywords:
-//
-//   template<CmpOp a = operator> > void DoBar();
-//   template<CmpOp a = operator>>> void DoBar();
-//   template<CmpOp a = operator,> void DoBar();
-//
-//   auto foo = operator + + 1;
-//
 // Currently it assumes all operators can be put next to each other without affecting meaning. When
 // we're canonicalizing types for the purposes of string comparisons, this is almost certainly the
 // case. If we start using the output from this function for more things, we'll want to handle these
 // cases better.
-//
-// To address this, I'm thinking we should look for the "operator" keyword. Then look up the
-// following tokens in a table of valid C++ operator function names to consume those that are
-// actually part of the operator name (this needs some careful handling of spaces
-// (ExprToken.byte_offset), since "operator++" and "operator ++" are the same thing but "operator
-// ++" and "operator + +" are different).
-//
-// When we have this lookahead for "operator>" we can remove the "PreviousTokenIsOperatorKeyword"
-// code.
 TemplateTypeResult ExtractTemplateType(const std::vector<ExprToken>& tokens, size_t begin_token) {
   TemplateTypeResult result;
 
@@ -162,15 +85,18 @@ TemplateTypeResult ExtractTemplateType(const std::vector<ExprToken>& tokens, siz
     } else if (!nesting.empty() && type == nesting.back().end) {
       // Found the closing token for a previous opening one.
       nesting.pop_back();
-    } else if (type == ExprTokenType::kName && tokens[i].value() == "operator") {
+    } else if (type == ExprTokenType::kOperator) {
       // Possible space before "operator".
       if (NeedsSpaceBefore(tokens, begin_token, i))
         result.canonical_name.push_back(' ');
-      HandleOperator(tokens, &i, &result.canonical_name);
 
-      // This prevents adding a space after the "," that would normally go there for a normal comma.
-      inhibit_next_space = true;
-      continue;  // Skip the code at the bottom that appends the token.
+      if (OperatorKeywordResult op_result = ParseOperatorKeyword(tokens, i); op_result.success) {
+        result.canonical_name.append(op_result.canonical_name);
+        i = op_result.end_token - 1;
+        inhibit_next_space = true;
+        continue;  // Skip the code that appends the token at the bottom. We already did it.
+      }
+      // Otherwise the "operator" keyword is invalid. Fall through to append as a literal.
     }
 
     if (!inhibit_next_space && NeedsSpaceBefore(tokens, begin_token, i))

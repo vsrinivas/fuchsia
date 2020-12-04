@@ -1113,7 +1113,7 @@ TEST_F(ExprParserTest, If) {
   // Missing semicolons.
   result = Parse("if (1) foo else bar;", ExprLanguage::kC);
   EXPECT_FALSE(result);
-  EXPECT_EQ("Unexpected token 'else'.", parser().err().msg());
+  EXPECT_EQ("Expected ';'.", parser().err().msg());
   result = Parse("if (1) foo; else bar", ExprLanguage::kC);
   EXPECT_FALSE(result);
   EXPECT_EQ("Expected ';'. Hit the end of input instead.", parser().err().msg());

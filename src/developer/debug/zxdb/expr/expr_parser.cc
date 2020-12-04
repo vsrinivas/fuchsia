@@ -81,11 +81,6 @@ constexpr int kPrecedenceCallAccess = 160;            // () . -> []
 //constexpr int kPrecedenceScope = 170;               // ::  (Highest precedence)
 // clang-format on
 
-// Returns true if two tokens are adjacent (have no space between them).
-bool IsAdjacent(const ExprToken& a, const ExprToken& b) {
-  return a.byte_offset() + a.value().size() == b.byte_offset();
-}
-
 }  // namespace
 
 struct ExprParser::DispatchInfo {
@@ -97,7 +92,7 @@ struct ExprParser::DispatchInfo {
 // The table is more clear without line wrapping.
 // clang-format off
 ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
-    // Prefix handler              Infix handler                 Precedence for infix
+    // Prefix handler                Infix handler                 Precedence for infix
     {nullptr,                        nullptr,                      -1},                             // kInvalid
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kName
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kSpecialName
@@ -128,7 +123,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceComparison},          // kLess
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceComparison},          // kGreater
     {&ExprParser::UnaryPrefix,       &ExprParser::BinaryOpInfix,   kPrecedenceAddition},            // kMinus
-    {&ExprParser::UnaryPrefix,       nullptr,                      kPrecedenceUnary},               // kBang
+    {&ExprParser::UnaryPrefix,       nullptr,                      -1},                             // kBang
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAddition},            // kPlus
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kSlash
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseXor},          // kCaret
@@ -148,8 +143,9 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::CastPrefix,        nullptr,                      -1},                             // kStaticCast
     {&ExprParser::SizeofPrefix,      nullptr,                      -1},                             // kSizeof
     {nullptr,                        &ExprParser::RustCastInfix,   kPrecedenceRustCast},            // kAs
-    {&ExprParser::IfPrefix,          nullptr,                      kPrecedenceAssignment},          // kIf
-    {nullptr,                        nullptr,                      kPrecedenceAssignment},          // kElse
+    {&ExprParser::IfPrefix,          nullptr,                      -1},                             // kIf
+    {nullptr,                        nullptr,                      -1},                             // kElse
+    {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kOperator
 };
 // clang-format on
 
@@ -1109,6 +1105,7 @@ fxl::RefPtr<ExprNode> ExprParser::NamePrefix(const ExprToken& token) {
     return fxl::MakeRefCounted<TypeExprNode>(std::move(type));
   }
 
+  // All other names.
   ParseNameResult result = ParseName(true);
   if (has_error())
     return nullptr;
@@ -1353,7 +1350,7 @@ bool ExprParser::IsCurTokenShiftRight() const {
     return false;  // Not two ">" in a row.
 
   // They must also be next to each other with no space.
-  return IsAdjacent(tokens_[cur_], tokens_[cur_ + 1]);
+  return tokens_[cur_].ImmediatelyPrecedes(tokens_[cur_ + 1]);
 }
 
 int ExprParser::CurPrecedenceWithShiftTokenConversion() const {

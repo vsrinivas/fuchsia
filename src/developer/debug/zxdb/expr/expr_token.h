@@ -25,6 +25,11 @@ class ExprToken {
   // Offset into the input string where this token begins.
   size_t byte_offset() const { return byte_offset_; }
 
+  // Returns true if this token is immediate before the given token with no space between.
+  bool ImmediatelyPrecedes(const ExprToken& second) const {
+    return byte_offset() + value().size() == second.byte_offset();
+  }
+
  private:
   ExprTokenType type_ = ExprTokenType::kInvalid;
   std::string value_;
