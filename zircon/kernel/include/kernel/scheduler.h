@@ -454,11 +454,11 @@ class Scheduler {
   SchedTime start_of_current_time_slice_ns_{0};
 
   // The system time that the current thread should be preempted. Initialized to
-  // ZX_TIME_INFINITE to maintain the assertion that now < absolute_deadline_ns
-  // (or else the current time slice is expired) on the first entry into the
+  // ZX_TIME_INFINITE to pass the assertion now < target_preemption_time_ns_ (or
+  // else the current time slice is expired) on the first entry into the
   // scheduler.
   TA_GUARDED(thread_lock)
-  SchedTime absolute_deadline_ns_{ZX_TIME_INFINITE};
+  SchedTime target_preemption_time_ns_{ZX_TIME_INFINITE};
 
   // The sum of the expected runtimes of all active threads on this CPU. This
   // value is an estimate of the average queuimg time for this CPU, given the

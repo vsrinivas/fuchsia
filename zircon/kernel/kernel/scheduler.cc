@@ -943,9 +943,9 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
 
     // Update the preemption timer if necessary.
     if (timeslice_changed && timeslice_remaining) {
-      absolute_deadline_ns_ = start_of_current_time_slice_ns_ + remaining_time_slice_ns;
-      const SchedTime preemption_time_ns = ClampToDeadline(absolute_deadline_ns_);
-      DEBUG_ASSERT(preemption_time_ns <= absolute_deadline_ns_);
+      target_preemption_time_ns_ = start_of_current_time_slice_ns_ + remaining_time_slice_ns;
+      const SchedTime preemption_time_ns = ClampToDeadline(target_preemption_time_ns_);
+      DEBUG_ASSERT(preemption_time_ns <= target_preemption_time_ns_);
       percpu::Get(current_cpu).timer_queue.PreemptReset(preemption_time_ns.raw_value());
     }
 
@@ -969,16 +969,17 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
   const bool timeslice_expired =
       deadline_expired || scaled_total_runtime_ns >= current_state->time_slice_ns_;
 
-  // Check the consistency of the absolute deadline and the current time slice.
+  // Check the consistency of the target preemption time and the current time
+  // slice.
   DEBUG_ASSERT_MSG(
-      now < absolute_deadline_ns_ || timeslice_expired,
+      now < target_preemption_time_ns_ || timeslice_expired,
       "capacity_ns=%" PRId64 " deadline_ns=%" PRId64 " now=%" PRId64
-      " absolute_deadline_ns=%" PRId64 " total_runtime_ns=%" PRId64
+      " target_preemption_time_ns=%" PRId64 " total_runtime_ns=%" PRId64
       " scaled_total_runtime_ns=%" PRId64 " finish_time=%" PRId64 " time_slice_ns=%" PRId64
       " start_of_current_time_slice_ns=%" PRId64,
       IsDeadlineThread(current_thread) ? current_state->deadline_.capacity_ns.raw_value() : 0,
       IsDeadlineThread(current_thread) ? current_state->deadline_.deadline_ns.raw_value() : 0,
-      now.raw_value(), absolute_deadline_ns_.raw_value(), total_runtime_ns.raw_value(),
+      now.raw_value(), target_preemption_time_ns_.raw_value(), total_runtime_ns.raw_value(),
       scaled_total_runtime_ns.raw_value(), current_state->finish_time_.raw_value(),
       current_state->time_slice_ns_.raw_value(), start_of_current_time_slice_ns_.raw_value());
 
@@ -1070,14 +1071,14 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
 
     // If there are no tasks to run in the future, disable the preemption timer.
     // Otherwise, set the preemption time to the earliest eligible time.
-    absolute_deadline_ns_ = GetNextEligibleTime();
-    percpu::Get(current_cpu).timer_queue.PreemptReset(absolute_deadline_ns_.raw_value());
+    target_preemption_time_ns_ = GetNextEligibleTime();
+    percpu::Get(current_cpu).timer_queue.PreemptReset(target_preemption_time_ns_.raw_value());
   } else if (timeslice_expired || next_thread != current_thread) {
     LocalTraceDuration<KTRACE_DETAILED> trace_start_preemption{"next_slice: preempt,abs"_stringref};
 
     // Re-compute the time slice and deadline for the new thread based on the
     // latest state.
-    absolute_deadline_ns_ = NextThreadTimeslice(next_thread, now);
+    target_preemption_time_ns_ = NextThreadTimeslice(next_thread, now);
 
     // Compute the time the next thread spent in the run queue. The value of
     // last_started_running for the current thread is updated at the top of
@@ -1097,19 +1098,19 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
 
     SCHED_LTRACEF("Start preempt timer: current=%s next=%s now=%" PRId64 " deadline=%" PRId64 "\n",
                   current_thread->name(), next_thread->name(), now.raw_value(),
-                  absolute_deadline_ns_.raw_value());
+                  target_preemption_time_ns_.raw_value());
 
     // Adjust the preemption time to account for a deadline thread becoming
     // eligible before the current time slice expires.
     const SchedTime preemption_time_ns =
         IsFairThread(next_thread)
-            ? ClampToDeadline(absolute_deadline_ns_)
-            : ClampToEarlierDeadline(absolute_deadline_ns_, next_state->finish_time_);
-    DEBUG_ASSERT(preemption_time_ns <= absolute_deadline_ns_);
+            ? ClampToDeadline(target_preemption_time_ns_)
+            : ClampToEarlierDeadline(target_preemption_time_ns_, next_state->finish_time_);
+    DEBUG_ASSERT(preemption_time_ns <= target_preemption_time_ns_);
 
     percpu::Get(current_cpu).timer_queue.PreemptReset(preemption_time_ns.raw_value());
     trace_start_preemption.End(Round<uint64_t>(preemption_time_ns),
-                               Round<uint64_t>(absolute_deadline_ns_));
+                               Round<uint64_t>(target_preemption_time_ns_));
 
     // Emit a flow end event to match the flow begin event emitted when the
     // thread was enqueued. Emitting in this scope ensures that thread just
@@ -1129,18 +1130,20 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     //   * Current is a deadline thread and a deadline thread with an earlier
     //     deadline will become eligible before its time slice expires.
     //
-    // Note that the absolute deadline remains set to the ideal preemption time
-    // for the current task, even if the preemption timer is set earlier. If a
-    // task that becomes eligible is stolen before the early preemption is
-    // handled, this logic will reset to the original absolute deadline.
+    // Note that the target preemption time remains set to the ideal
+    // preemption time for the current task, even if the preemption timer is set
+    // earlier. If a task that becomes eligible is stolen before the early
+    // preemption is handled, this logic will reset to the original target
+    // preemption time.
     const SchedTime preemption_time_ns =
         IsFairThread(next_thread)
-            ? ClampToDeadline(absolute_deadline_ns_)
-            : ClampToEarlierDeadline(absolute_deadline_ns_, next_state->finish_time_);
-    DEBUG_ASSERT(preemption_time_ns <= absolute_deadline_ns_);
+            ? ClampToDeadline(target_preemption_time_ns_)
+            : ClampToEarlierDeadline(target_preemption_time_ns_, next_state->finish_time_);
+    DEBUG_ASSERT(preemption_time_ns <= target_preemption_time_ns_);
 
     percpu::Get(current_cpu).timer_queue.PreemptReset(preemption_time_ns.raw_value());
-    trace_continue.End(Round<uint64_t>(preemption_time_ns), Round<uint64_t>(absolute_deadline_ns_));
+    trace_continue.End(Round<uint64_t>(preemption_time_ns),
+                       Round<uint64_t>(target_preemption_time_ns_));
   }
 
   // Assert that there is no path beside running the idle thread can leave the
@@ -1234,7 +1237,7 @@ SchedTime Scheduler::NextThreadTimeslice(Thread* thread, SchedTime now) {
   LocalTraceDuration<KTRACE_DETAILED> trace{"next_timeslice: t,abs"_stringref};
 
   SchedulerState* const state = &thread->scheduler_state();
-  SchedTime absolute_deadline_ns;
+  SchedTime target_preemption_time_ns;
 
   if (IsFairThread(thread)) {
     // Calculate the next time slice and the deadline when the time slice is
@@ -1248,37 +1251,38 @@ SchedTime Scheduler::NextThreadTimeslice(Thread* thread, SchedTime now) {
 
     state->fair_.initial_time_slice_ns = time_slice_ns;
     state->time_slice_ns_ = remaining_time_slice_ns;
-    absolute_deadline_ns = now + remaining_time_slice_ns;
+    target_preemption_time_ns = now + remaining_time_slice_ns;
 
-    DEBUG_ASSERT_MSG(state->time_slice_ns_ > 0 && absolute_deadline_ns > now,
-                     "time_slice_ns=%" PRId64 " now=%" PRId64 " absolute_deadline_ns=%" PRId64,
+    DEBUG_ASSERT_MSG(state->time_slice_ns_ > 0 && target_preemption_time_ns > now,
+                     "time_slice_ns=%" PRId64 " now=%" PRId64 " target_preemption_time_ns=%" PRId64,
                      state->time_slice_ns_.raw_value(), now.raw_value(),
-                     absolute_deadline_ns.raw_value());
+                     target_preemption_time_ns.raw_value());
 
     SCHED_LTRACEF("name=%s weight_total=%#x weight=%#x time_slice_ns=%" PRId64 "\n", thread->name(),
                   static_cast<uint32_t>(weight_total_.raw_value()),
                   static_cast<uint32_t>(state->fair_.weight.raw_value()),
                   state->time_slice_ns_.raw_value());
-    trace.End(Round<uint64_t>(state->time_slice_ns_), Round<uint64_t>(absolute_deadline_ns));
+    trace.End(Round<uint64_t>(state->time_slice_ns_), Round<uint64_t>(target_preemption_time_ns));
   } else {
     // Calculate the deadline when the remaining time slice is completed. The
     // time slice is maintained by the deadline queuing logic, no need to update
-    // it here. The absolute deadline is based on the time slice scaled by the
-    // performance of the CPU and clamped to the deadline. This increases
+    // it here. The target preemption time is based on the time slice scaled by
+    // the performance of the CPU and clamped to the deadline. This increases
     // capacity on slower processors, however, bandwidth isolation is preserved
     // because CPU selection attempts to keep scaled total capacity below one.
     const SchedDuration scaled_time_slice_ns = ScaleUp(state->time_slice_ns_);
-    absolute_deadline_ns = ktl::min<SchedTime>(now + scaled_time_slice_ns, state->finish_time_);
+    target_preemption_time_ns =
+        ktl::min<SchedTime>(now + scaled_time_slice_ns, state->finish_time_);
 
     SCHED_LTRACEF("name=%s capacity=%" PRId64 " deadline=%" PRId64 " period=%" PRId64
                   " scaled_time_slice_ns=%" PRId64 "\n",
                   thread->name(), state->deadline_.capacity_ns.raw_value(),
                   state->deadline_.deadline_ns.raw_value(), state->deadline_.period_ns.raw_value(),
                   scaled_time_slice_ns.raw_value());
-    trace.End(Round<uint64_t>(scaled_time_slice_ns), Round<uint64_t>(absolute_deadline_ns));
+    trace.End(Round<uint64_t>(scaled_time_slice_ns), Round<uint64_t>(target_preemption_time_ns));
   }
 
-  return absolute_deadline_ns;
+  return target_preemption_time_ns;
 }
 
 void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
