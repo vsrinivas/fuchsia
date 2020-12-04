@@ -38,7 +38,6 @@ group("tests") {
     "//src/zircon/tests/handle-alias:handle-alias-bootfs-test",
     "//src/zircon/tests/job-policy:policy-bootfs-test",
     "//src/zircon/tests/kcounter:kcounter-bootfs-test",
-    "//src/zircon/tests/kernel-clocks:bootfs_tests",
     "//src/zircon/tests/kernel-cmdline:kernel-cmdline-bootfs-test",
     "//src/zircon/tests/processor:processor-bootfs-test",
     "//src/zircon/tests/profile:profile-bootfs-test",
