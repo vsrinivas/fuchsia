@@ -608,6 +608,46 @@ zbi("fuchsia") {
 }
 default_image_deps += [ ":fuchsia" ]
 
+if (dev_fuchsia_zbi_kernel_cmdline_golden != "") {
+  action("fuchsia_zbi_verify") {
+    testonly = true
+
+    script = "//build/zbi/verify_zbi_kernel_cmdline.py"
+    stamp_file = "$target_gen_dir/$target_name.verified"
+    scrutiny_target = "//src/security/scrutiny/bin($host_toolchain)"
+    scrutiny_tool =
+        get_label_info(scrutiny_target, "root_out_dir") + "/scrutiny"
+
+    inputs = [
+      scrutiny_tool,
+      dev_fuchsia_zbi_kernel_cmdline_golden,
+      "$root_out_dir/fuchsia.zbi",
+    ]
+
+    outputs = [ stamp_file ]
+
+    args = [
+      "--zbi-file",
+      "$root_out_dir/fuchsia.zbi",
+      "--kernel-cmdline-golden-file",
+      rebase_path(dev_fuchsia_zbi_kernel_cmdline_golden, root_build_dir),
+      "--scrutiny",
+      rebase_path(scrutiny_tool, root_build_dir),
+      "--fuchsia-dir",
+      rebase_path("//", root_build_dir),
+      "--stamp",
+      rebase_path(stamp_file),
+    ]
+
+    deps = [
+      ":fuchsia",
+      scrutiny_target,
+    ]
+  }
+
+  default_image_deps += [ ":fuchsia_zbi_verify" ]
+}
+
 if (!use_vboot && custom_signing_script == "") {
   update_manifest += [
     {

@@ -13,6 +13,7 @@ group("tests") {
     "sdk:tests",
     "tools:tests",
     "tracer:tests",
+    "zbi:tests",
   ]
 }
 

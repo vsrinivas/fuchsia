@@ -12,4 +12,9 @@ declare_args() {
   # List of labels for targets that should be built but not included in any
   # build outputs that are part of the build API (e.g. zbi's, package servers).
   dev_build_only_deps = []
+
+  # An optional golden file for fuchsia.zbi kernel cmdline args. If specified,
+  # this golden file would be compared against fuchsia.zbi kernel cmdline during
+  # build time.
+  dev_fuchsia_zbi_kernel_cmdline_golden = ""
 }
