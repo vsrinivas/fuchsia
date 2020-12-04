@@ -17,6 +17,7 @@ ffx_plugin("ffx_selftest") {
   ]
 
   deps = [
+    "//src/lib/analytics/rust:lib",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:async-std",
     "//third_party/rust_crates:libc",

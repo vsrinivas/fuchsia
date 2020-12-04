@@ -15,6 +15,7 @@ if (is_host) {
       "macro:config-macros",
       "//src/connectivity/overnet/lib/hoist",
       "//src/developer/ffx/core:lib",
+      "//src/lib/analytics/rust:lib",
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",

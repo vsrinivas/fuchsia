@@ -47,6 +47,7 @@ template("ffx") {
              "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
              "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
              "//src/connectivity/overnet/lib/hoist",
+             "//src/lib/analytics/rust:lib",
              "//src/lib/fidl/rust/fidl",
              "//src/lib/fuchsia-async",
              "//third_party/rust_crates:anyhow",

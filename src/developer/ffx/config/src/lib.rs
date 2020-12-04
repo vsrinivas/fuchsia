@@ -17,6 +17,7 @@ use {
         config::config, data::data, env_var::env_var, file_check::file_check, home::home,
         identity::identity,
     },
+    analytics::{is_opted_in, opt_in_status},
     anyhow::{anyhow, bail, Context, Result},
     std::{
         convert::{From, TryFrom, TryInto},
@@ -296,6 +297,19 @@ pub async fn get_sdk() -> Result<sdk::Sdk> {
              also run `ffx config set sdk.type in-tree`"
         );
     }
+}
+
+pub fn set_analytics(value: bool) -> Result<()> {
+    opt_in_status(&value)
+}
+
+pub fn show_analytics<W: Write>(mut writer: W) -> Result<()> {
+    let state = match is_opted_in() {
+        true => "enabled",
+        false => "disabled",
+    };
+    writeln!(&mut writer, "Analytics data collection is {}", state)?;
+    Ok(())
 }
 
 ////////////////////////////////////////////////////////////////////////////////

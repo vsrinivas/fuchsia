@@ -3,8 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::test::*, anyhow::*, ffx_core::ffx_plugin, ffx_selftest_args::SelftestCommand,
-    std::process::Stdio, std::time::Duration,
+    crate::test::*,
+    analytics::notice::{ANALYTICS_NOTICE_LINE_COUNT, FULL_NOTICE},
+    anyhow::*,
+    ffx_core::ffx_plugin,
+    ffx_selftest_args::SelftestCommand,
+    std::process::Stdio,
+    std::time::Duration,
 };
 
 mod test;
@@ -27,7 +32,8 @@ async fn test_isolated() -> Result<()> {
     let isolate = Isolate::new("isolated")?;
 
     let out = isolate.ffx(&["config", "get", "test.is-isolated"]).output()?;
-    assert_eq!(String::from_utf8(out.stdout)?, "test.is-isolated: true\n");
+    let want = FULL_NOTICE.to_owned() + "\ntest.is-isolated: true\n";
+    assert_eq!(String::from_utf8(out.stdout)?, want);
 
     Ok(())
 }
@@ -37,7 +43,7 @@ async fn test_daemon_echo() -> Result<()> {
     let out = isolate.ffx(&["daemon", "echo"]).output().context("failed to execute")?;
 
     let got = String::from_utf8(out.stdout)?;
-    let want = "SUCCESS: received \"Ffx\"\n";
+    let want = FULL_NOTICE.to_owned() + "\nSUCCESS: received \"Ffx\"\n";
     assert_eq!(got, want);
 
     Ok(())
@@ -65,7 +71,6 @@ async fn test_daemon_config_flag() -> Result<()> {
 
     let _out = isolate.ffx(&["daemon", "stop"]).output()?;
     daemon.wait()?;
-
     Ok(())
 }
 
@@ -73,7 +78,7 @@ async fn test_daemon_stop() -> Result<()> {
     let isolate = Isolate::new("daemon-stop")?;
     let out = isolate.ffx(&["daemon", "stop"]).output().context("failed to execute")?;
     let got = String::from_utf8(out.stdout)?;
-    let want = "Stopped daemon.\n";
+    let want = FULL_NOTICE.to_owned() + "\nStopped daemon.\n";
 
     assert_eq!(got, want);
 
@@ -103,9 +108,8 @@ async fn test_target_list() -> Result<()> {
     }
 
     ensure!(lines.len() >= 2, format!("expected more than one line of output, got:\n{:?}", lines));
-
     let headers = vec!["NAME", "TYPE", "STATE", "ADDRS/IP", "AGE", "RCS"];
-    let headerline = &lines[0];
+    let headerline = &lines[ANALYTICS_NOTICE_LINE_COUNT + 1];
     for (got, want) in headerline.split_whitespace().zip(headers) {
         ensure!(got == want, format!("assertion failed:\nLEFT: {:?}\nRIGHT: {:?}", got, want));
     }

@@ -28,6 +28,7 @@ pub enum SubCommand {
     Set(SetCommand),
     Remove(RemoveCommand),
     Add(AddCommand),
+    Analytics(AnalyticsCommand),
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -228,6 +229,33 @@ fn parse_output(value: &str) -> Result<OutputType, String> {
         )),
     }
 }
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "analytics", description = "enable or disable analytics")]
+pub struct AnalyticsCommand {
+    #[argh(subcommand)]
+    pub sub: AnalyticsControlCommand,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand)]
+pub enum AnalyticsControlCommand {
+    Enable(AnalyticsEnableCommand),
+    Disable(AnalyticsDisableCommand),
+    Show(AnalyticsShowCommand),
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "enable", description = "enable analytics")]
+pub struct AnalyticsEnableCommand {}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "disable", description = "disable analytics")]
+pub struct AnalyticsDisableCommand {}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "show", description = "show analytics")]
+pub struct AnalyticsShowCommand {}
 
 #[cfg(test)]
 mod tests {

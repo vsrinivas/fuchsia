@@ -3,19 +3,24 @@
 // found in the LICENSE file.
 
 use {
+    analytics::{add_crash_event, add_launch_event, show_analytics_notice},
     anyhow::{anyhow, Context, Result},
     async_std::future::timeout,
-    ffx_core::{ffx_error, FfxError},
+    ffx_core::{build_info, ffx_error, FfxError},
     ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
     ffx_lib_args::Ffx,
     ffx_lib_sub_command::Subcommand,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::{DaemonError, DaemonProxy, FastbootMarker, FastbootProxy},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
+    futures::try_join,
     lazy_static::lazy_static,
     std::sync::{Arc, Mutex},
     std::time::Duration,
 };
+
+// app name for analytics
+const APP_NAME: &str = "ffx";
 
 // Config key for event timeout.
 const PROXY_TIMEOUT_SECS: &str = "proxy.timeout_secs";
@@ -110,7 +115,7 @@ fn is_daemon(subcommand: &Option<Subcommand>) -> bool {
     false
 }
 
-async fn run() -> Result<()> {
+async fn run() -> Result<((), ())> {
     let app: Ffx = argh::from_env();
 
     // Configuration initialization must happen before ANY calls to the config (or the cache won't
@@ -126,26 +131,44 @@ async fn run() -> Result<()> {
         std::env::set_var("ASCENDD", sockpath);
     });
 
-    ffx_lib_suite::ffx_plugin_impl(
-        get_daemon_proxy,
-        get_remote_proxy,
-        get_fastboot_proxy,
-        is_experiment_subcommand_on,
-        app,
+    let writer = Box::new(std::io::stdout());
+    show_analytics_notice(writer);
+    let args: Vec<String> = std::env::args().collect();
+
+    // drop arg[0]: executable with hard path
+    // TODO do we want to break out subcommands for analytics?
+    let args_str = &args[1..].join(" ");
+    let launch_args = format!("{}", &args_str);
+    let build_info = build_info();
+    let build_version = build_info.build_version.as_deref();
+    try_join!(
+        add_launch_event(APP_NAME, build_version, Some(&launch_args)),
+        ffx_lib_suite::ffx_plugin_impl(
+            get_daemon_proxy,
+            get_remote_proxy,
+            get_fastboot_proxy,
+            is_experiment_subcommand_on,
+            app,
+        )
     )
-    .await
 }
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
     match run().await {
-        Ok(_) => std::process::exit(0),
+        Ok(_) => {
+            // TODO add event for timing here at end
+            std::process::exit(0)
+        }
         Err(err) => {
             if let Some(ffx_err) = err.downcast_ref::<FfxError>() {
                 eprintln!("{}", ffx_err);
             } else {
                 eprintln!("BUG: An internal command error occurred.\n{:?}", err);
             }
+            let err_msg = format!("{}", err);
+            add_crash_event(&err_msg).await.unwrap(); // unwrap because return is always empty and
+                                                      // users can't act on analytics failures
             std::process::exit(1);
         }
     }
