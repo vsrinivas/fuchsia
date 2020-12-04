@@ -98,13 +98,23 @@ TEST(ServiceProxyDirTest, Simple) {
                   0755, fidl::StringView(kProxyEchoString), std::move(h1))
                   .status());
 
-    fio::Directory::EventHandlers handlers{
-        .on_open = [&](fio::Directory::OnOpenResponse* message) -> zx_status_t {
-          return message->s;
-        },
-        .unknown = []() -> zx_status_t { return ZX_ERR_NOT_SUPPORTED; },
+    class EventHandler : public fio::Directory::EventHandler {
+     public:
+      EventHandler() = default;
+
+      zx_status_t status() const { return status_; }
+
+      void OnOpen(fio::Directory::OnOpenResponse* event) override { status_ = event->s; }
+
+      zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
+
+     private:
+      zx_status_t status_ = ZX_ERR_NOT_SUPPORTED;
     };
-    ASSERT_OK(fio::Directory::Call::HandleEvents(zx::unowned_channel(h2), handlers));
+
+    EventHandler event_handler;
+    ASSERT_OK(event_handler.HandleOneEvent(zx::unowned_channel(h2)));
+    ASSERT_OK(event_handler.status());
 
     char response_buffer[sizeof(kProxyEchoString)] = {};
     size_t response_size;
@@ -125,13 +135,24 @@ TEST(ServiceProxyDirTest, Simple) {
                   fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_DESCRIBE,
                   0755, fidl::StringView(kEchoString), std::move(h1))
                   .status());
-    fio::Directory::EventHandlers handlers{
-        .on_open = [&](fio::Directory::OnOpenResponse* message) -> zx_status_t {
-          return message->s;
-        },
-        .unknown = []() -> zx_status_t { return ZX_ERR_NOT_SUPPORTED; },
+
+    class EventHandler : public fio::Directory::EventHandler {
+     public:
+      EventHandler() = default;
+
+      zx_status_t status() const { return status_; }
+
+      void OnOpen(fio::Directory::OnOpenResponse* event) override { status_ = event->s; }
+
+      zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
+
+     private:
+      zx_status_t status_ = ZX_ERR_NOT_SUPPORTED;
     };
-    ASSERT_OK(fio::Directory::Call::HandleEvents(zx::unowned_channel(h2), handlers));
+
+    EventHandler event_handler;
+    ASSERT_OK(event_handler.HandleOneEvent(zx::unowned_channel(h2)));
+    ASSERT_OK(event_handler.status());
 
     char response_buffer[sizeof(kEchoString)] = {};
     size_t response_size;

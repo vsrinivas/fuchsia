@@ -46,25 +46,37 @@ void FidlOpenValidator(const zx::channel& directory, const char* path,
   zx::channel client;
   ASSERT_NO_FAILURES(OpenHelper(directory, path, &client));
 
-  fio::Node::EventHandlers event_handlers;
-  bool event_tag_ok = false;
-  bool status_ok = false;
-  bool node_info_ok = false;
-  event_handlers.on_open = [&](fio::Node::OnOpenResponse* message) -> zx_status_t {
-    event_tag_ok = true;
-    status_ok = message->s == ZX_OK;
-    node_info_ok = message->info.which() == expected_tag;
-    return ZX_OK;
-  };
-  event_handlers.unknown = []() -> zx_status_t {
-    EXPECT_TRUE(false);
-    return ZX_OK;
+  class EventHandler : public fio::Node::EventHandler {
+   public:
+    explicit EventHandler(fio::NodeInfo::Tag expected_tag) : expected_tag_(expected_tag) {}
+
+    bool event_tag_ok() const { return event_tag_ok_; }
+    bool status_ok() const { return status_ok_; }
+    bool node_info_ok() const { return node_info_ok_; }
+
+    void OnOpen(fio::Node::OnOpenResponse* event) override {
+      event_tag_ok_ = true;
+      status_ok_ = event->s == ZX_OK;
+      node_info_ok_ = event->info.which() == expected_tag_;
+    }
+
+    zx_status_t Unknown() override {
+      EXPECT_TRUE(false);
+      return ZX_OK;
+    }
+
+   private:
+    const fio::NodeInfo::Tag expected_tag_;
+    bool event_tag_ok_ = false;
+    bool status_ok_ = false;
+    bool node_info_ok_ = false;
   };
 
-  ASSERT_OK(fio::Node::Call::HandleEvents(zx::unowned_channel(client), event_handlers));
-  ASSERT_TRUE(event_tag_ok);
-  ASSERT_TRUE(status_ok);
-  ASSERT_TRUE(node_info_ok);
+  EventHandler event_handler(expected_tag);
+  ASSERT_OK(event_handler.HandleOneEvent(zx::unowned_channel(client)));
+  ASSERT_TRUE(event_handler.event_tag_ok());
+  ASSERT_TRUE(event_handler.status_ok());
+  ASSERT_TRUE(event_handler.node_info_ok());
 }
 
 // Validate some size information and expected fields without fully decoding the
@@ -73,25 +85,36 @@ void FidlOpenErrorValidator(const zx::channel& directory, const char* path) {
   zx::channel client;
   ASSERT_NO_FAILURES(OpenHelper(directory, path, &client));
 
-  fio::Node::EventHandlers event_handlers;
-  bool event_tag_ok = false;
-  bool status_ok = false;
-  bool node_info_ok = false;
-  event_handlers.on_open = [&](fio::Node::OnOpenResponse* message) -> zx_status_t {
-    event_tag_ok = true;
-    status_ok = static_cast<int>(message->s) == ZX_ERR_NOT_FOUND;
-    node_info_ok = message->info.has_invalid_tag();
-    return ZX_OK;
-  };
-  event_handlers.unknown = []() -> zx_status_t {
-    EXPECT_TRUE(false);
-    return ZX_OK;
+  class EventHandler : public fio::Node::EventHandler {
+   public:
+    EventHandler() = default;
+
+    bool event_tag_ok() const { return event_tag_ok_; }
+    bool status_ok() const { return status_ok_; }
+    bool node_info_ok() const { return node_info_ok_; }
+
+    void OnOpen(fio::Node::OnOpenResponse* event) override {
+      event_tag_ok_ = true;
+      status_ok_ = static_cast<int>(event->s) == ZX_ERR_NOT_FOUND;
+      node_info_ok_ = event->info.has_invalid_tag();
+    }
+
+    zx_status_t Unknown() override {
+      EXPECT_TRUE(false);
+      return ZX_OK;
+    }
+
+   private:
+    bool event_tag_ok_ = false;
+    bool status_ok_ = false;
+    bool node_info_ok_ = false;
   };
 
-  ASSERT_OK(fio::Node::Call::HandleEvents(zx::unowned_channel(client), event_handlers));
-  ASSERT_TRUE(event_tag_ok);
-  ASSERT_TRUE(status_ok);
-  ASSERT_TRUE(node_info_ok);
+  EventHandler event_handler;
+  ASSERT_OK(event_handler.HandleOneEvent(zx::unowned_channel(client)));
+  ASSERT_TRUE(event_handler.event_tag_ok());
+  ASSERT_TRUE(event_handler.status_ok());
+  ASSERT_TRUE(event_handler.node_info_ok());
 }
 
 // Ensure that our hand-rolled FIDL messages within devfs and memfs are acting correctly

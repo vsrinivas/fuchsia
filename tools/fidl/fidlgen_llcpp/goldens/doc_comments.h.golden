@@ -1164,15 +1164,23 @@ class Interface final {
     void _InitHeader();
   };
 
-  struct EventHandlers {
+  class EventHandler {
+   public:
+    EventHandler() = default;
+    virtual ~EventHandler() = default;
     // event comment #1
     //
     // event comment #3
-    fit::function<zx_status_t()> on_event;
+    virtual void OnEvent(OnEventResponse* event) = 0;
 
-    // Fallback handler when an unknown ordinal is received.
-    // Caller may put custom error handling logic here.
-    fit::function<zx_status_t()> unknown;
+    // Method called when an unknown event is found. This methods gives the
+    // status which, in this case, is returned by HandleOneEvent.
+    virtual zx_status_t Unknown() = 0;
+
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the
+    // corresponding virtual method.
+    ::fidl::Result HandleOneEvent(::zx::unowned_channel client_end);
   };
 
   // Collection of return types of FIDL calls in this protocol.
@@ -1226,14 +1234,6 @@ class Interface final {
     static ResultOf::Method Method(::zx::unowned_channel _client_end) {
       return ResultOf::Method(_client_end->get());
     }
-
-    // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the
-    // corresponding handler defined in |EventHandlers|. The return status of
-    // the handler function is folded with any transport-level errors and
-    // returned.
-    static ::fidl::Result HandleEvents(::zx::unowned_channel client_end,
-                                       EventHandlers& handlers);
   };
 
   class SyncClient final {
@@ -1259,11 +1259,11 @@ class Interface final {
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the
-    // corresponding handler defined in |EventHandlers|. The return status of
-    // the handler function is folded with any transport-level errors and
+    // corresponding virtual method defined in |EventHandler|. The return status
+    // of the handler function is folded with any transport-level errors and
     // returned.
-    ::fidl::Result HandleEvents(EventHandlers& handlers) {
-      return Call::HandleEvents(::zx::unowned_channel(channel_), handlers);
+    ::fidl::Result HandleOneEvent(EventHandler& event_handler) {
+      return event_handler.HandleOneEvent(::zx::unowned_channel(channel_));
     }
 
    private:

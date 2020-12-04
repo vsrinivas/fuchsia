@@ -127,15 +127,20 @@ TEST(Service, ServiceNodeIsNotDirectory) {
                                      fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                                  0755, fidl::StringView("abc"), std::move(abc_server_end));
   EXPECT_EQ(open_result.status(), ZX_OK);
-  fio::Node::EventHandlers handlers{.on_open =
-                                        [](fio::Node::OnOpenResponse* message) {
-                                          EXPECT_EQ(ZX_ERR_NOT_DIR, message->s);
-                                          EXPECT_TRUE(message->info.has_invalid_tag());
-                                          return ZX_OK;
-                                        },
-                                    .unknown = []() { return ZX_ERR_INVALID_ARGS; }};
-  fidl::Result handler_result =
-      fio::Node::Call::HandleEvents(zx::unowned_channel(abc_client_end), handlers);
+  class EventHandler : public fio::Node::EventHandler {
+   public:
+    EventHandler() = default;
+
+    void OnOpen(fio::Node::OnOpenResponse* event) override {
+      EXPECT_EQ(ZX_ERR_NOT_DIR, event->s);
+      EXPECT_TRUE(event->info.has_invalid_tag());
+    }
+
+    zx_status_t Unknown() override { return ZX_ERR_INVALID_ARGS; }
+  };
+
+  EventHandler event_handler;
+  fidl::Result handler_result = event_handler.HandleOneEvent(zx::unowned_channel(abc_client_end));
   // Expect that |on_open| was received
   EXPECT_TRUE(handler_result.ok());
 

@@ -67,19 +67,30 @@ class LifecycleTest : public zxtest::Test {
 };
 
 void LifecycleTest::WaitPreRelease(uint64_t child_id) {
-  bool removed = false;
-  uint64_t device_id = 0;
-  while (!removed) {
-    Lifecycle::EventHandlers event_handlers;
-    event_handlers.on_child_pre_release = [&](Lifecycle::OnChildPreReleaseResponse* message) {
-      device_id = message->child_id;
-      removed = true;
-      return ZX_OK;
-    };
-    ASSERT_OK(Lifecycle::Call::HandleEvents(zx::unowned_channel(lifecycle_chan_), event_handlers)
-                  .status());
+  class EventHandler : public Lifecycle::EventHandler {
+   public:
+    EventHandler() = default;
+
+    bool removed() const { return removed_; }
+    uint64_t device_id() const { return device_id_; }
+
+    void OnChildPreRelease(Lifecycle::OnChildPreReleaseResponse* event) override {
+      device_id_ = event->child_id;
+      removed_ = true;
+    }
+
+    zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
+
+   private:
+    bool removed_ = false;
+    uint64_t device_id_ = 0;
+  };
+
+  EventHandler event_handler;
+  while (!event_handler.removed()) {
+    ASSERT_OK(event_handler.HandleOneEvent(zx::unowned_channel(lifecycle_chan_)).status());
   }
-  ASSERT_EQ(device_id, child_id);
+  ASSERT_EQ(event_handler.device_id(), child_id);
 }
 
 TEST_F(LifecycleTest, ChildPreRelease) {

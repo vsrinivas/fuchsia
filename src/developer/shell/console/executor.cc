@@ -34,7 +34,6 @@ Err Executor::Execute(std::unique_ptr<Command> command,
   if (command->nodes().empty()) {
     return Err(ZX_ERR_NEXT, zx_status_get_string(ZX_ERR_NEXT));
   }
-  bool done = false;
   context_id_ += 1;
   llcpp::fuchsia::shell::Shell::ResultOf::CreateExecutionContext create_result =
       client_->CreateExecutionContext(context_id_);
@@ -56,35 +55,50 @@ Err Executor::Execute(std::unique_ptr<Command> command,
     return Err(execute_result.status(), execute_result.error());
   }
 
-  llcpp::fuchsia::shell::Shell::EventHandlers handlers;
-  handlers.on_text_result =
-      [&out_callback](llcpp::fuchsia::shell::Shell::OnTextResultResponse* message) {
-        out_callback(message->result.data());
-        return ZX_OK;
-      };
-  handlers.on_execution_done =
-      [&done](llcpp::fuchsia::shell::Shell::OnExecutionDoneResponse* message) {
-        done = true;
-        return ZX_OK;
-      };
-  handlers.on_error = [&err_callback](llcpp::fuchsia::shell::Shell::OnErrorResponse* message) {
-    err_callback(message->error_message.data());
-    return ZX_OK;
-  };
-  handlers.on_result = [&err_callback,
-                        &out_callback](llcpp::fuchsia::shell::Shell::OnResultResponse* message) {
-    if (message->partial_result) {
-      err_callback("Result too large: partial results not supported");
-      return ZX_OK;
+  class EventHandler : public llcpp::fuchsia::shell::Shell::EventHandler {
+   public:
+    EventHandler(fit::function<void(const std::string&)>& out_callback,
+                 fit::function<void(const std::string&)>& err_callback)
+        : out_callback_(out_callback), err_callback_(err_callback) {}
+
+    bool done() const { return done_; }
+
+    void OnTextResult(llcpp::fuchsia::shell::Shell::OnTextResultResponse* event) override {
+      out_callback_(event->result.data());
     }
-    std::stringstream ss;
-    shell::common::DeserializeResult deserialize;
-    deserialize.Deserialize(message->nodes)->Dump(ss);
-    out_callback(ss.str());
-    return ZX_OK;
+
+    void OnDumpDone(llcpp::fuchsia::shell::Shell::OnDumpDoneResponse* event) override {}
+
+    void OnExecutionDone(llcpp::fuchsia::shell::Shell::OnExecutionDoneResponse* event) override {
+      done_ = true;
+    }
+
+    void OnError(llcpp::fuchsia::shell::Shell::OnErrorResponse* event) override {
+      err_callback_(event->error_message.data());
+    }
+
+    void OnResult(llcpp::fuchsia::shell::Shell::OnResultResponse* event) override {
+      if (event->partial_result) {
+        err_callback_("Result too large: partial results not supported");
+      } else {
+        std::stringstream ss;
+        shell::common::DeserializeResult deserialize;
+        deserialize.Deserialize(event->nodes)->Dump(ss);
+        out_callback_(ss.str());
+      }
+    }
+
+    zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
+
+   private:
+    fit::function<void(const std::string&)>& out_callback_;
+    fit::function<void(const std::string&)>& err_callback_;
+    bool done_ = false;
   };
-  while (!done) {
-    ::fidl::Result result = client_->HandleEvents(handlers);
+
+  EventHandler event_handler(out_callback, err_callback);
+  while (!event_handler.done()) {
+    ::fidl::Result result = client_->HandleOneEvent(event_handler);
     if (!result.ok()) {
       return Err(result.status(), result.status_string());
     }

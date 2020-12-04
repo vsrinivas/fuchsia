@@ -265,33 +265,44 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
   sysmem_allocator = std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client));
   auto close_sysmem_handle = fit::defer([]() { sysmem_allocator.reset(); });
 
-  zx_pixel_format_t pixel_format;
-  bool has_display = false;
-  fhd::Mode mode;
+  class EventHandler : public fhd::Controller::EventHandler {
+   public:
+    EventHandler() = default;
 
-  fhd::Controller::EventHandlers event_handlers{
-      .on_displays_changed =
-          [&has_display, &pixel_format,
-           &mode](fhd::Controller::OnDisplaysChangedResponse* message) {
-            has_display = true;
-            display_id = message->added[0].id;
-            mode = message->added[0].modes[0];
-            pixel_format = message->added[0].pixel_format[0];
-            // We're guaranteed that added contains at least one display, since we haven't
-            // been notified of any displays to remove.
-            return ZX_OK;
-          },
-      .on_vsync = [](fhd::Controller::OnVsyncResponse* message) { return ZX_ERR_NEXT; },
-      .on_client_ownership_change =
-          [](fhd::Controller::OnClientOwnershipChangeResponse* message) { return ZX_ERR_NEXT; },
-      .unknown = []() { return ZX_ERR_STOP; }};
+    zx_pixel_format_t pixel_format() const { return pixel_format_; }
+    bool has_display() const { return has_display_; }
+    fhd::Mode mode() const { return mode_; }
+
+    void OnDisplaysChanged(fhd::Controller::OnDisplaysChangedResponse* event) override {
+      has_display_ = true;
+      // We're guaranteed that added contains at least one display, since we haven't
+      // been notified of any displays to remove.
+      display_id = event->added[0].id;
+      mode_ = event->added[0].modes[0];
+      pixel_format_ = event->added[0].pixel_format[0];
+    }
+
+    void OnVsync(fhd::Controller::OnVsyncResponse* event) override {}
+
+    void OnClientOwnershipChange(fhd::Controller::OnClientOwnershipChangeResponse* event) override {
+    }
+
+    zx_status_t Unknown() override { return ZX_ERR_STOP; }
+
+   private:
+    zx_pixel_format_t pixel_format_;
+    bool has_display_ = false;
+    fhd::Mode mode_;
+  };
+
+  EventHandler event_handler;
   do {
-    ::fidl::Result result = dc_client->HandleEvents(event_handlers);
+    ::fidl::Result result = dc_client->HandleOneEvent(event_handler);
 
-    if (!result.ok() && result.status() != ZX_ERR_NEXT) {
+    if (!result.ok()) {
       return result.status();
     }
-  } while (!has_display);
+  } while (!event_handler.has_display());
 
   auto create_layer_rsp = dc_client->CreateLayer();
   if (!create_layer_rsp.ok()) {
@@ -311,18 +322,19 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
     return layers_rsp.status();
   }
 
-  if ((status = set_layer_config(create_layer_rsp->layer_id, mode.horizontal_resolution,
-                                 mode.vertical_resolution, pixel_format, IMAGE_TYPE_SIMPLE)) !=
-      ZX_OK) {
+  if ((status =
+           set_layer_config(create_layer_rsp->layer_id, event_handler.mode().horizontal_resolution,
+                            event_handler.mode().vertical_resolution, event_handler.pixel_format(),
+                            IMAGE_TYPE_SIMPLE)) != ZX_OK) {
     *err_msg_out = "Failed to set layer config";
     return status;
   }
 
   layer_id = create_layer_rsp->layer_id;
 
-  width = mode.horizontal_resolution;
-  height = mode.vertical_resolution;
-  format = pixel_format;
+  width = event_handler.mode().horizontal_resolution;
+  height = event_handler.mode().vertical_resolution;
+  format = event_handler.pixel_format();
 
   type_set = false;
 
@@ -355,7 +367,7 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
     *err_msg_out = "Couldn't get stride";
     return ZX_ERR_INVALID_ARGS;
   }
-  stride = bytes_per_row / ZX_PIXEL_FORMAT_BYTES(pixel_format);
+  stride = bytes_per_row / ZX_PIXEL_FORMAT_BYTES(event_handler.pixel_format());
 
   // Ignore error.
   collection_client->Close();

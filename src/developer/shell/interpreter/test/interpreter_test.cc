@@ -105,113 +105,122 @@ void InterpreterTest::Finish(FinishAction action, const std::vector<std::string>
 }
 
 void InterpreterTest::Run(FinishAction action) {
-  std::string msg;
-  bool done = false;
-  enum Errs : zx_status_t { kNoContext = 1, kNoResult, kWrongAction };
-  llcpp::fuchsia::shell::Shell::EventHandlers handlers;
-  handlers.on_error = [this, &msg, &done, action](
-                          llcpp::fuchsia::shell::Shell::OnErrorResponse* message) -> zx_status_t {
-    if (action == kError) {
-      done = true;
-    }
-    if (message->context_id == 0) {
-      global_error_stream_ << std::string(message->error_message.data(),
-                                          message->error_message.size())
-                           << "\n";
-    } else {
-      InterpreterTestContext* context = GetContext(message->context_id);
-      if (context == nullptr) {
-        msg = "context == nullptr in on_error";
-        return kNoContext;
+  class EventHandler : public llcpp::fuchsia::shell::Shell::EventHandler {
+   public:
+    EventHandler(InterpreterTest* test, FinishAction action) : test_(test), action_(action) {}
+
+    const std::string& msg() const { return msg_; }
+    bool done() const { return done_; }
+    bool ok() const { return ok_; }
+
+    void OnError(llcpp::fuchsia::shell::Shell::OnErrorResponse* event) override {
+      if (action_ == kError) {
+        done_ = true;
       }
-      for (const auto& location : message->locations) {
-        if (location.has_node_id()) {
-          context->error_stream << "node " << location.node_id().file_id << ':'
-                                << location.node_id().node_id << ' ';
+      if (event->context_id == 0) {
+        test_->global_error_stream_
+            << std::string(event->error_message.data(), event->error_message.size()) << "\n";
+      } else {
+        InterpreterTestContext* context = test_->GetContext(event->context_id);
+        if (context == nullptr) {
+          msg_ = "context == nullptr in on_error";
+          ok_ = false;
+        } else {
+          for (const auto& location : event->locations) {
+            if (location.has_node_id()) {
+              context->error_stream << "node " << location.node_id().file_id << ':'
+                                    << location.node_id().node_id << ' ';
+            }
+          }
+          context->error_stream << std::string(event->error_message.data(),
+                                               event->error_message.size())
+                                << "\n";
         }
       }
-      context->error_stream << std::string(message->error_message.data(),
-                                           message->error_message.size())
-                            << "\n";
     }
-    return ZX_OK;
-  };
 
-  handlers.on_dump_done =
-      [this, &done, &msg,
-       action](llcpp::fuchsia::shell::Shell::OnDumpDoneResponse* message) -> zx_status_t {
-    if (action == kDump) {
-      done = true;
-    }
-    InterpreterTestContext* context = GetContext(message->context_id);
-    if (context == nullptr) {
-      msg = "context == nullptr in on_dump_done";
-      return kNoContext;
-    }
-    return ZX_OK;
-  };
-
-  handlers.on_execution_done =
-      [this, &msg, &done,
-       action](llcpp::fuchsia::shell::Shell::OnExecutionDoneResponse* message) -> zx_status_t {
-    if (action != kExecute) {
-      msg = "Expected action: kExecute was: " + std::to_string(action);
-      return kWrongAction;
-    }
-    done = true;
-
-    InterpreterTestContext* context = GetContext(message->context_id);
-    if (context == nullptr) {
-      msg = "context == nullptr in on_execution_done";
-      return kNoContext;
-    }
-    context->result = message->result;
-    return ZX_OK;
-  };
-
-  handlers.on_text_result =
-      [this, &msg, &done,
-       action](llcpp::fuchsia::shell::Shell::OnTextResultResponse* message) -> zx_status_t {
-    if (action == kTextResult) {
-      done = true;
-    }
-    InterpreterTestContext* context = GetContext(message->context_id);
-    if (context == nullptr) {
-      msg = "context == nullptr in on_text_result";
-      return kNoContext;
-    }
-    std::string result_string(message->result.data(), message->result.size());
-    if (last_text_result_partial_) {
-      if (text_results_.empty()) {
-        msg = "text results empty";
-        return kNoResult;
+    void OnDumpDone(llcpp::fuchsia::shell::Shell::OnDumpDoneResponse* event) override {
+      if (action_ == kDump) {
+        done_ = true;
       }
-      text_results_.back() += result_string;
-    } else {
-      text_results_.emplace_back(std::move(result_string));
+      InterpreterTestContext* context = test_->GetContext(event->context_id);
+      if (context == nullptr) {
+        msg_ = "context == nullptr in on_dump_done";
+        ok_ = false;
+      }
     }
-    last_text_result_partial_ = message->partial_result;
-    return ZX_OK;
+
+    void OnExecutionDone(llcpp::fuchsia::shell::Shell::OnExecutionDoneResponse* event) override {
+      if (action_ != kExecute) {
+        msg_ = "Expected action: kExecute was: " + std::to_string(action_);
+        ok_ = false;
+        return;
+      }
+      done_ = true;
+
+      InterpreterTestContext* context = test_->GetContext(event->context_id);
+      if (context == nullptr) {
+        msg_ = "context == nullptr in on_execution_done";
+        ok_ = false;
+        return;
+      }
+      context->result = event->result;
+    }
+
+    void OnTextResult(llcpp::fuchsia::shell::Shell::OnTextResultResponse* event) override {
+      if (action_ == kTextResult) {
+        done_ = true;
+      }
+      InterpreterTestContext* context = test_->GetContext(event->context_id);
+      if (context == nullptr) {
+        msg_ = "context == nullptr in on_text_result";
+        ok_ = false;
+        return;
+      }
+      std::string result_string(event->result.data(), event->result.size());
+      if (test_->last_text_result_partial_) {
+        if (test_->text_results_.empty()) {
+          msg_ = "text results empty";
+          ok_ = false;
+          return;
+        }
+        test_->text_results_.back() += result_string;
+      } else {
+        test_->text_results_.emplace_back(std::move(result_string));
+      }
+      test_->last_text_result_partial_ = event->partial_result;
+    }
+
+    void OnResult(llcpp::fuchsia::shell::Shell::OnResultResponse* event) override {
+      InterpreterTestContext* context = test_->GetContext(event->context_id);
+      if (context == nullptr) {
+        msg_ = "context == nullptr in on_text_result";
+        ok_ = false;
+        return;
+      }
+      if (event->partial_result) {
+        msg_ = " partial results not supported";
+        ok_ = false;
+        return;
+      }
+      shell::common::DeserializeResult deserialize;
+      test_->results_.emplace_back(deserialize.Deserialize(event->nodes));
+    }
+
+    zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
+
+   private:
+    InterpreterTest* const test_;
+    const FinishAction action_;
+    std::string msg_;
+    bool done_ = false;
+    bool ok_ = true;
   };
 
-  handlers.on_result =
-      [this, &msg](llcpp::fuchsia::shell::Shell::OnResultResponse* message) -> zx_status_t {
-    InterpreterTestContext* context = GetContext(message->context_id);
-    if (context == nullptr) {
-      msg = "context == nullptr in on_text_result";
-      return kNoContext;
-    }
-    if (message->partial_result) {
-      msg = " partial results not supported";
-      return kNoResult;
-    }
-    shell::common::DeserializeResult deserialize;
-    results_.emplace_back(deserialize.Deserialize(message->nodes));
-    return ZX_OK;
-  };
-  while (!done) {
-    ::fidl::Result result = shell_->HandleEvents(handlers);
-    ASSERT_TRUE(result.ok()) << msg;
+  EventHandler event_handler(this, action);
+  while (!event_handler.done()) {
+    ::fidl::Result result = shell_->HandleOneEvent(event_handler);
+    ASSERT_TRUE(result.ok() && event_handler.ok()) << event_handler.msg();
   }
 };
 

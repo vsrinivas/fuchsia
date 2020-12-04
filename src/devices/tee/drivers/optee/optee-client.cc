@@ -143,17 +143,31 @@ static std::filesystem::path GetPathFromRawMemory(void* mem, size_t max_size) {
 //
 // This is useful for synchronously awaiting the result of an `Open` request.
 static zx_status_t AwaitIoOnOpenStatus(const zx::unowned_channel channel) {
-  fuchsia_io::Node::EventHandlers event_handlers;
-  bool call_was_successful = false;
-  event_handlers.on_open = [&](fuchsia_io::Node::OnOpenResponse* message) {
-    call_was_successful = true;
-    return message->s;
+  class EventHandler : public fuchsia_io::Node::EventHandler {
+   public:
+    EventHandler() = default;
+
+    bool call_was_successful() const { return call_was_successful_; }
+    zx_status_t status() const { return status_; }
+
+    void OnOpen(fuchsia_io::Node::OnOpenResponse* event) override {
+      call_was_successful_ = true;
+      status_ = event->s;
+    }
+
+    zx_status_t Unknown() override { return ZX_ERR_PROTOCOL_NOT_SUPPORTED; }
+
+    bool call_was_successful_ = false;
+    zx_status_t status_ = ZX_OK;
   };
-  event_handlers.unknown = [] { return ZX_ERR_PROTOCOL_NOT_SUPPORTED; };
+
+  EventHandler event_handler;
   // TODO(godtamit): check for an epitaph here once `fuchsia.io` (and LLCPP) supports it.
-  auto status =
-      fuchsia_io::Node::Call::HandleEvents(zx::unowned_channel(channel), event_handlers).status();
-  if (!call_was_successful) {
+  auto status = event_handler.HandleOneEvent(zx::unowned_channel(channel)).status();
+  if (status == ZX_OK) {
+    status = event_handler.status();
+  }
+  if (!event_handler.call_was_successful()) {
     LOG(ERROR, "failed to wait for OnOpen event (status: %d)", status);
   }
   return status;

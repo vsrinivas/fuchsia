@@ -205,17 +205,20 @@ TEST(MagicNumberTest, EventRead) {
   encoded.Write(h1.get());
   ASSERT_TRUE(encoded.ok());
 
-  test::Frobinator::EventHandlers handlers;
-  handlers.hrob = [&](test::Frobinator::HrobResponse* message) {
-    EXPECT_TRUE(false);
-    return ZX_OK;
-  };
-  handlers.unknown = [&]() {
-    EXPECT_TRUE(false);
-    return ZX_OK;
+  class EventHandler : public test::Frobinator::EventHandler {
+   public:
+    EventHandler() = default;
+
+    void Hrob(test::Frobinator::HrobResponse* event) override { EXPECT_TRUE(false); }
+
+    zx_status_t Unknown() override {
+      EXPECT_TRUE(false);
+      return ZX_OK;
+    }
   };
 
-  ASSERT_EQ(test::Frobinator::Call::HandleEvents(zx::unowned_channel(h2), handlers).status(),
+  EventHandler event_handler;
+  ASSERT_EQ(event_handler.HandleOneEvent(zx::unowned_channel(h2)).status(),
             ZX_ERR_PROTOCOL_NOT_SUPPORTED);
 }
 

@@ -549,21 +549,32 @@ class {{ .Name }} final {
 
   {{- if .Events }}
 {{ "" }}
-  struct EventHandlers {
+  class EventHandler {
+   public:
+    EventHandler() = default;
+    virtual ~EventHandler() = default;
     {{- range .Events -}}
+
       {{- range .DocComments }}
     //{{ . }}
       {{- end }}
-    fit::function<zx_status_t (
-      {{- if .Response -}}
-        {{ .Name }}Response* message
-      {{- end -}}
-    )> {{ .NameInLowerSnakeCase }};
-{{ "" }}
+      {{- if .Transitional }}
+    virtual void {{ .Name }}({{ .Name }}Response* event) {
+      ZX_PANIC("Got event {{ .Name }} which is marked as [Transitional].");
+    }
+      {{- else }}
+    virtual void {{ .Name }}({{ .Name }}Response* event) = 0;
+      {{- end }}
     {{- end }}
-    // Fallback handler when an unknown ordinal is received.
-    // Caller may put custom error handling logic here.
-    fit::function<zx_status_t()> unknown;
+
+    // Method called when an unknown event is found. This methods gives the status which, in this
+    // case, is returned by HandleOneEvent.
+    virtual zx_status_t Unknown() = 0;
+
+    // Handle all possible events defined in this protocol.
+    // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+    // method.
+    ::fidl::Result HandleOneEvent(::zx::unowned_channel client_end);
   };
   {{- end }}
 
@@ -723,13 +734,6 @@ class {{ .Name }} final {
       {{- end }}
 {{ "" }}
     {{- end }}
-    {{- if .Events }}
-    // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the corresponding handler
-    // defined in |EventHandlers|. The return status of the handler function is folded with any
-    // transport-level errors and returned.
-    static ::fidl::Result HandleEvents(::zx::unowned_channel client_end, EventHandlers& handlers);
-    {{- end }}
   };
 
   class SyncClient final {
@@ -775,11 +779,11 @@ class {{ .Name }} final {
     {{- end }}
     {{- if .Events }}
     // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the corresponding handler
-    // defined in |EventHandlers|. The return status of the handler function is folded with any
-    // transport-level errors and returned.
-    ::fidl::Result HandleEvents(EventHandlers& handlers) {
-      return Call::HandleEvents(::zx::unowned_channel(channel_), handlers);
+    // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+    // method defined in |EventHandler|. The return status of the handler function is folded with
+    // any transport-level errors and returned.
+    ::fidl::Result HandleOneEvent(EventHandler& event_handler) {
+      return event_handler.HandleOneEvent(::zx::unowned_channel(channel_));
     }
     {{- end }}
    private:
@@ -974,7 +978,7 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{ "" }}
 
 {{- if .Events }}
-  {{- template "StaticCallSyncEventHandlerMethodDefinition" . }}
+  {{- template "EventHandlerHandleOneEventMethodDefinition" . }}
 {{- end }}
 
 {{- /* Server implementation */}}

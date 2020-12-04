@@ -214,15 +214,24 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
 
   // Helper method to monitor the OnOpen event, used by the tests below
   auto expect_on_open = [](zx::unowned_channel channel, fit::function<void(fio::NodeInfo)> cb) {
-    fio::Node::EventHandlers handlers{.on_open =
-                                          [&](fio::Node::OnOpenResponse* message) {
-                                            EXPECT_OK(message->s);
-                                            EXPECT_FALSE(message->info.has_invalid_tag());
-                                            cb(std::move(message->info));
-                                            return ZX_OK;
-                                          },
-                                      .unknown = []() { return ZX_ERR_INVALID_ARGS; }};
-    fidl::Result event_result = fio::Node::Call::HandleEvents(std::move(channel), handlers);
+    class EventHandler : public fio::Node::EventHandler {
+     public:
+      explicit EventHandler(fit::function<void(fio::NodeInfo)>& cb) : cb_(cb) {}
+
+      void OnOpen(fio::Node::OnOpenResponse* event) override {
+        EXPECT_OK(event->s);
+        EXPECT_FALSE(event->info.has_invalid_tag());
+        cb_(std::move(event->info));
+      }
+
+      zx_status_t Unknown() override { return ZX_ERR_INVALID_ARGS; }
+
+     private:
+      fit::function<void(fio::NodeInfo)>& cb_;
+    };
+
+    EventHandler event_handler(cb);
+    fidl::Result event_result = event_handler.HandleOneEvent(std::move(channel));
     // Expect that |on_open| was received
     EXPECT_TRUE(event_result.ok());
   };

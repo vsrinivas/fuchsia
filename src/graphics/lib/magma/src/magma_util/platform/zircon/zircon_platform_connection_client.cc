@@ -72,20 +72,40 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
       return DRET(MAGMA_STATUS_CONNECTION_LOST);
     }
 
-    llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::EventHandlers handlers;
-    handlers.on_performance_counter_read_completed =
-        [&](llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::
-                OnPerformanceCounterReadCompletedResponse* message) {
-          *trigger_id_out = message->trigger_id;
-          *buffer_id_out = message->buffer_id;
-          *buffer_offset_out = message->buffer_offset;
-          *time_out = message->timestamp;
-          *result_flags_out = static_cast<uint32_t>(message->flags);
-          return ZX_OK;
-        };
-    handlers.unknown = []() { return ZX_ERR_INTERNAL; };
+    class EventHandler : public llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::EventHandler {
+     public:
+      EventHandler(uint32_t* trigger_id_out, uint64_t* buffer_id_out, uint32_t* buffer_offset_out,
+                   uint64_t* time_out, uint32_t* result_flags_out)
+          : trigger_id_out_(trigger_id_out),
+            buffer_id_out_(buffer_id_out),
+            buffer_offset_out_(buffer_offset_out),
+            time_out_(time_out),
+            result_flags_out_(result_flags_out) {}
+
+      void OnPerformanceCounterReadCompleted(
+          llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::
+              OnPerformanceCounterReadCompletedResponse* event) override {
+        *trigger_id_out_ = event->trigger_id;
+        *buffer_id_out_ = event->buffer_id;
+        *buffer_offset_out_ = event->buffer_offset;
+        *time_out_ = event->timestamp;
+        *result_flags_out_ = static_cast<uint32_t>(event->flags);
+      }
+
+      zx_status_t Unknown() override { return ZX_ERR_INTERNAL; }
+
+     private:
+      uint32_t* const trigger_id_out_;
+      uint64_t* const buffer_id_out_;
+      uint32_t* const buffer_offset_out_;
+      uint64_t* const time_out_;
+      uint32_t* const result_flags_out_;
+    };
+
+    EventHandler event_handler(trigger_id_out, buffer_id_out, buffer_offset_out, time_out,
+                               result_flags_out);
     magma_status_t magma_status =
-        MagmaChannelStatus(perf_counter_events_.HandleEvents(handlers).status());
+        MagmaChannelStatus(perf_counter_events_.HandleOneEvent(event_handler).status());
     return DRET(magma_status);
   }
 
@@ -388,24 +408,31 @@ void PrimaryWrapper::FlowControl(uint64_t new_bytes) {
     if ((pending & ZX_CHANNEL_READABLE) == 0)
       return;
 
-    llcpp::fuchsia::gpu::magma::Primary::EventHandlers event_handlers = {
-        .on_notify_messages_consumed =
-            [this](llcpp::fuchsia::gpu::magma::Primary::OnNotifyMessagesConsumedResponse* message) {
-              inflight_count_ -= message->count;
-              return ZX_OK;
-            },
-        .on_notify_memory_imported =
-            [this](llcpp::fuchsia::gpu::magma::Primary::OnNotifyMemoryImportedResponse* message) {
-              inflight_bytes_ -= message->bytes;
-              return ZX_OK;
-            },
-        .unknown =
-            []() {
-              MAGMA_LOG(ERROR, "Flow control: bad event handler ordinal");
-              return ZX_ERR_INVALID_ARGS;
-            }};
+    class EventHandler : public llcpp::fuchsia::gpu::magma::Primary::EventHandler {
+     public:
+      explicit EventHandler(PrimaryWrapper* primary_wrapper) : primary_wrapper_(primary_wrapper) {}
 
-    status = client_.HandleEvents(event_handlers).status();
+      void OnNotifyMessagesConsumed(
+          llcpp::fuchsia::gpu::magma::Primary::OnNotifyMessagesConsumedResponse* event) override {
+        primary_wrapper_->inflight_count_ -= event->count;
+      }
+
+      void OnNotifyMemoryImported(
+          llcpp::fuchsia::gpu::magma::Primary::OnNotifyMemoryImportedResponse* event) override {
+        primary_wrapper_->inflight_bytes_ -= event->bytes;
+      }
+
+      zx_status_t Unknown() override {
+        MAGMA_LOG(ERROR, "Flow control: bad event handler ordinal");
+        return ZX_ERR_INVALID_ARGS;
+      }
+
+     private:
+      PrimaryWrapper* const primary_wrapper_;
+    };
+
+    EventHandler event_handler(this);
+    status = client_.HandleOneEvent(event_handler).status();
     if (status != ZX_OK) {
       DMESSAGE("Flow control: HandleEvents failed: %d", status);
       return;

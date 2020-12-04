@@ -105,26 +105,37 @@ void CoreDisplayTest::SetUp() {
 
   dc_client_ = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_client_channel_));
 
-  bool has_display = false;
-  fbl::Vector<fhd::Info> displays_tmp;
+  class EventHandler : public fhd::Controller::EventHandler {
+   public:
+    EventHandler() = default;
 
-  fhd::Controller::EventHandlers handlers{
-      .on_displays_changed =
-          [&displays_tmp, &has_display](fhd::Controller::OnDisplaysChangedResponse* message) {
-            for (unsigned i = 0; i < message->added.count(); i++) {
-              displays_tmp.push_back(std::move(message->added[i]));
-            }
-            has_display = true;
-            return ZX_OK;
-          },
-      .on_vsync = [](fhd::Controller::OnVsyncResponse* message) { return ZX_ERR_NEXT; },
-      .on_client_ownership_change =
-          [](fhd::Controller::OnClientOwnershipChangeResponse* message) { return ZX_ERR_NEXT; },
-      .unknown = []() { return ZX_ERR_STOP; }};
+    bool has_display() const { return has_display_; }
+    const fbl::Vector<fhd::Info>& displays_tmp() const { return displays_tmp_; }
+
+    void OnDisplaysChanged(fhd::Controller::OnDisplaysChangedResponse* event) override {
+      for (unsigned i = 0; i < event->added.count(); i++) {
+        displays_tmp_.push_back(std::move(event->added[i]));
+      }
+      has_display_ = true;
+    }
+
+    void OnVsync(fhd::Controller::OnVsyncResponse* event) override {}
+
+    void OnClientOwnershipChange(fhd::Controller::OnClientOwnershipChangeResponse* event) override {
+    }
+
+    zx_status_t Unknown() override { return ZX_ERR_STOP; }
+
+   private:
+    bool has_display_ = false;
+    fbl::Vector<fhd::Info> displays_tmp_;
+  };
+
+  EventHandler event_handler;
   do {
-    fidl::Result result = dc_client_->HandleEvents(handlers);
-    ASSERT_TRUE(result.ok() || result.status() == ZX_ERR_NEXT);
-  } while (!has_display);
+    fidl::Result result = dc_client_->HandleOneEvent(event_handler);
+    ASSERT_TRUE(result.ok());
+  } while (!event_handler.has_display());
 
   // get sysmem
   zx::channel sysmem_server_channel;

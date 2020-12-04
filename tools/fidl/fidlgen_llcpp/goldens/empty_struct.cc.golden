@@ -208,8 +208,8 @@ std::optional<::fidl::UnbindInfo> EmptyProtocol::ClientImpl::DispatchEvent(
   return {};
 }
 
-::fidl::Result EmptyProtocol::Call::HandleEvents(
-    ::zx::unowned_channel client_end, EmptyProtocol::EventHandlers& handlers) {
+::fidl::Result EmptyProtocol::EventHandler::HandleOneEvent(
+    ::zx::unowned_channel client_end) {
   zx_status_t status =
       client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                            ::zx::time::infinite(), nullptr);
@@ -248,7 +248,7 @@ std::optional<::fidl::UnbindInfo> EmptyProtocol::ClientImpl::DispatchEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result(handlers.unknown(), nullptr);
+    return ::fidl::Result(Unknown(), nullptr);
   }
   if (status != ZX_OK) {
     return ::fidl::Result(status, ::fidl::kErrorReadFailed);
@@ -273,13 +273,12 @@ std::optional<::fidl::UnbindInfo> EmptyProtocol::ClientImpl::DispatchEvent(
       if (status != ZX_OK) {
         return ::fidl::Result(status, error_message);
       }
-      return ::fidl::Result(
-          handlers.receive(reinterpret_cast<ReceiveResponse*>(read_bytes)),
-          nullptr);
+      Receive(reinterpret_cast<ReceiveResponse*>(read_bytes));
+      return ::fidl::Result(ZX_OK, nullptr);
     }
     default: {
       FidlHandleCloseMany(read_handles, actual_handles);
-      return ::fidl::Result(handlers.unknown(), nullptr);
+      return ::fidl::Result(Unknown(), nullptr);
     }
   }
 }

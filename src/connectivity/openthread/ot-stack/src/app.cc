@@ -536,29 +536,26 @@ void OtStackApp::EventLoopHandleInboundFrame(::fidl::VectorView<uint8_t> data) {
   FX_LOGS(INFO) << "signaled ot-stack-callbackform";
 }
 
+void OtStackApp::OnReadyForSendFrames(fidl_spinel::Device::OnReadyForSendFramesResponse* event) {
+  HandleRadioOnReadyForSendFrame(event->number_of_frames);
+}
+
+void OtStackApp::OnReceiveFrame(fidl_spinel::Device::OnReceiveFrameResponse* event) {
+  EventLoopHandleInboundFrame(std::move(event->data));
+  UpdateRadioInboundAllowance();
+}
+
+void OtStackApp::OnError(fidl_spinel::Device::OnErrorResponse* event) {
+  handler_status_ = (*binding_)->OnError(event->error, event->did_close);
+}
+
+zx_status_t OtStackApp::Unknown() {
+  (*binding_)->OnError(fidl_spinel::Error::IO_ERROR, true);
+  DisconnectDevice();
+  return ZX_ERR_IO;
+}
+
 void OtStackApp::EventThread() {
-  fidl_spinel::Device::EventHandlers event_handlers{
-      .on_ready_for_send_frames =
-          [this](fidl_spinel::Device::OnReadyForSendFramesResponse* message) {
-            this->HandleRadioOnReadyForSendFrame(message->number_of_frames);
-            return ZX_OK;
-          },
-      .on_receive_frame =
-          [this](fidl_spinel::Device::OnReceiveFrameResponse* message) {
-            EventLoopHandleInboundFrame(std::move(message->data));
-            UpdateRadioInboundAllowance();
-            return ZX_OK;
-          },
-      .on_error =
-          [this](fidl_spinel::Device::OnErrorResponse* message) {
-            return (*binding_)->OnError(message->error, message->did_close);
-          },
-      .unknown =
-          [this]() {
-            (*binding_)->OnError(fidl_spinel::Error::IO_ERROR, true);
-            DisconnectDevice();
-            return ZX_ERR_IO;
-          }};
   while (true) {
     zx_port_packet_t packet = {};
     port_.wait(zx::time::infinite(), &packet);
@@ -568,9 +565,9 @@ void OtStackApp::EventThread() {
           FX_LOGS(ERROR) << "ot-radio channel closed, terminating event thread";
           return;
         }
-        ::fidl::Result result = device_client_ptr_->HandleEvents(event_handlers);
-        if (!result.ok()) {
-          FX_PLOGS(ERROR, result.status())
+        ::fidl::Result result = HandleOneEvent(zx::unowned_channel(device_client_ptr_->channel()));
+        if (!result.ok() || (handler_status_ != ZX_OK)) {
+          FX_PLOGS(ERROR, result.ok() ? handler_status_ : result.status())
               << "error calling fidl_spinel::Device::SyncClient::HandleEvents(), terminating event "
                  "thread";
           DisconnectDevice();

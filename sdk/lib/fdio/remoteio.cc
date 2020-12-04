@@ -381,25 +381,35 @@ zx_status_t fdio_create(zx_handle_t h, fdio_t** out_io) {
 
 // Creates an |fdio_t| by waiting for a |fuchsia.io/Node.OnOpen| event on |channel|.
 zx_status_t fdio_from_on_open_event(zx::channel channel, fdio_t** out_io) {
-  // HandleEvents will read an event message from its first parameter, then call
-  // one of the callbacks in EventHandlers to handle the event data, so its first
-  // parameter is no longer needed once it gets to the callback. We need to extract
-  // the underlying handle from |channel|, then use it to create the unowned
-  // channel used by HandleEvents, since the handle may be moved out of |channel|
-  // before the first parameter to HandleEvents is evaluated.
-  zx_handle_t event_channel_handle = channel.get();
-  fio::Directory::EventHandlers event_handlers{
-      .on_open =
-          [channel = std::move(channel), out_io](fio::Directory::OnOpenResponse* message) mutable {
-            if (message->s != ZX_OK) {
-              return message->s;
-            }
-            return fdio_from_node_info(std::move(channel), std::move(message->info), out_io);
-          },
-      .unknown = [] { return ZX_ERR_IO; }};
-  return fio::Directory::Call::HandleEvents(zx::unowned_channel(event_channel_handle),
-                                            event_handlers)
-      .status();
+  class EventHandler : public fio::Directory::EventHandler {
+   public:
+    EventHandler(zx::channel channel, fdio_t** out_io)
+        : channel_(std::move(channel)), out_io_(out_io) {}
+
+    const zx::channel& channel() const { return channel_; }
+    zx_status_t open_status() const { return open_status_; }
+
+    void OnOpen(fio::Directory::OnOpenResponse* event) override {
+      open_status_ = (event->s != ZX_OK) ? event->s
+                                         : fdio_from_node_info(std::move(channel_),
+                                                               std::move(event->info), out_io_);
+    }
+
+    zx_status_t Unknown() override { return ZX_ERR_IO; }
+
+   private:
+    zx::channel channel_;
+    fdio_t** out_io_;
+    zx_status_t open_status_ = ZX_OK;
+  };
+
+  EventHandler event_handler(std::move(channel), out_io);
+  zx_status_t status =
+      event_handler.HandleOneEvent(zx::unowned_channel(event_handler.channel())).status();
+  if (status == ZX_OK) {
+    return event_handler.open_status();
+  }
+  return (status == ZX_ERR_NOT_SUPPORTED) ? ZX_ERR_IO : status;
 }
 
 zx_status_t fdio_remote_clone(zx_handle_t node, fdio_t** out_io) {

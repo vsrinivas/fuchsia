@@ -48,17 +48,22 @@ int main(int argc, const char** argv) {
     // Check that the request was sent succesfully
     ZX_ASSERT(result.ok());
 
-    llcpp::fuchsia::examples::Echo::EventHandlers handlers{
-        .on_string =
-            [](llcpp::fuchsia::examples::Echo::OnStringResponse* message) {
-              std::string reply_string(message->response.data(), message->response.size());
-              std::cout << "Got event: " << reply_string << std::endl;
-              return ZX_OK;
-            },
-        .unknown = []() { return ZX_ERR_INVALID_ARGS; }};
+    class EventHandler : public llcpp::fuchsia::examples::Echo::EventHandler {
+     public:
+      EventHandler() = default;
+
+      void OnString(llcpp::fuchsia::examples::Echo::OnStringResponse* event) override {
+        std::string reply_string(event->response.data(), event->response.size());
+        std::cout << "Got event: " << reply_string << std::endl;
+      }
+
+      zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
+    };
+
     // Block to receive exactly one event from the server, which is handled using
     // the event handlers defined above.
-    ZX_ASSERT(client.HandleEvents(handlers).ok());
+    EventHandler event_handler;
+    ZX_ASSERT(client.HandleOneEvent(event_handler).ok());
   }
 
   return 0;

@@ -5,8 +5,8 @@
 package codegen
 
 const fragmentSyncEventHandlerTmpl = `
-{{- define "StaticCallSyncEventHandlerMethodDefinition" }}
-::fidl::Result {{ .Name }}::Call::HandleEvents(::zx::unowned_channel client_end, {{ .Name }}::EventHandlers& handlers) {
+{{- define "EventHandlerHandleOneEventMethodDefinition" }}
+::fidl::Result {{ .Name }}::EventHandler::HandleOneEvent(::zx::unowned_channel client_end) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                             ::zx::time::infinite(),
                                             nullptr);
@@ -47,7 +47,7 @@ const fragmentSyncEventHandlerTmpl = `
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new event,
     // whose size exceeds the maximum of known events in the current protocol.
-    return ::fidl::Result(handlers.unknown(), nullptr);
+    return ::fidl::Result(Unknown(), nullptr);
   }
   if (status != ZX_OK) {
     return ::fidl::Result(status, ::fidl::kErrorReadFailed);
@@ -72,17 +72,14 @@ const fragmentSyncEventHandlerTmpl = `
       if (status != ZX_OK) {
         return ::fidl::Result(status, error_message);
       }
-      return ::fidl::Result(handlers.{{ .NameInLowerSnakeCase }}(
-        {{- if .Response -}}
-        reinterpret_cast<{{ .Name }}Response*>(read_bytes)
-        {{- end -}}
-      ), nullptr);
+      {{ .Name }}(reinterpret_cast<{{ .Name }}Response*>(read_bytes));
+      return ::fidl::Result(ZX_OK, nullptr);
     }
     {{- end }}
   {{- end }}
     default: {
       FidlHandleCloseMany(read_handles, actual_handles);
-      return ::fidl::Result(handlers.unknown(), nullptr);
+      return ::fidl::Result(Unknown(), nullptr);
     }
   }
 }

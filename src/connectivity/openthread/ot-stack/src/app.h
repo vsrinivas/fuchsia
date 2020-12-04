@@ -43,7 +43,7 @@ typedef enum {
   kOutbound,
 } packet_direction_e;
 
-class OtStackApp {
+class OtStackApp : public fidl_spinel::Device::EventHandler {
  public:
   OtStackApp(){};
 
@@ -63,6 +63,13 @@ class OtStackApp {
   zx_status_t SetDeviceSetupClientInIsolatedDevmgr(const std::string& path);
   zx_status_t SetupOtRadioDev();
   zx_status_t ConnectServiceByName(const char name[], zx::channel* out);
+
+  // Events.
+  void OnReadyForSendFrames(fidl_spinel::Device::OnReadyForSendFramesResponse* event) override;
+  void OnReceiveFrame(fidl_spinel::Device::OnReceiveFrameResponse* event) override;
+  void OnError(fidl_spinel::Device::OnErrorResponse* event) override;
+
+  zx_status_t Unknown() override;
 
   void ClientAllowanceInit();
   void RadioAllowanceInit();
@@ -147,6 +154,8 @@ class OtStackApp {
   std::optional<void*> ot_instance_ptr_ = nullptr;
   bool is_test_env_;
   zx::channel isolated_devfs_;
+
+  zx_status_t handler_status_ = ZX_OK;
 };
 
 }  // namespace otstack

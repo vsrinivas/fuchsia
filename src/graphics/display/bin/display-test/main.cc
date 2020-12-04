@@ -126,25 +126,37 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
   dc = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_client));
   device_handle = device_client.release();
 
-  fhd::Controller::EventHandlers event_handlers{
-      .on_displays_changed =
-          [&displays](fhd::Controller::OnDisplaysChangedResponse* message) {
-            for (size_t i = 0; i < message->added.count(); i++) {
-              displays->push_back(Display(message->added[i]));
-            }
-            return ZX_OK;
-          },
-      .on_vsync = [](fhd::Controller::OnVsyncResponse* message) { return ZX_ERR_INVALID_ARGS; },
-      .on_client_ownership_change =
-          [](bool owns) {
-            has_ownership = owns;
-            return ZX_OK;
-          },
-      .unknown = []() { return ZX_ERR_STOP; },
+  class EventHandler : public fhd::Controller::EventHandler {
+   public:
+    EventHandler(fbl::Vector<Display>* displays, bool& has_ownership)
+        : displays_(displays), has_ownership_(has_ownership) {}
+
+    bool invalid_message() const { return invalid_message_; }
+
+    void OnDisplaysChanged(fhd::Controller::OnDisplaysChangedResponse* event) override {
+      for (size_t i = 0; i < event->added.count(); i++) {
+        displays_->push_back(Display(event->added[i]));
+      }
+    }
+
+    void OnVsync(fhd::Controller::OnVsyncResponse* event) override { invalid_message_ = true; }
+
+    void OnClientOwnershipChange(fhd::Controller::OnClientOwnershipChangeResponse* event) override {
+      has_ownership_ = event->has_ownership;
+    }
+
+    zx_status_t Unknown() override { return ZX_ERR_STOP; }
+
+   private:
+    fbl::Vector<Display>* const displays_;
+    bool& has_ownership_;
+    bool invalid_message_ = false;
   };
+
+  EventHandler event_handler(displays, has_ownership);
   while (displays->is_empty()) {
     printf("Waiting for display\n");
-    if (!dc->HandleEvents(event_handlers).ok()) {
+    if (!dc->HandleOneEvent(event_handler).ok() || event_handler.invalid_message()) {
       printf("Got unexpected message\n");
       return false;
     }
@@ -237,46 +249,59 @@ bool apply_config() {
 }
 
 zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& layers) {
-  fhd::Controller::EventHandlers handlers = {
-      .on_displays_changed =
-          [](fhd::Controller::OnDisplaysChangedResponse* message) {
-            printf("Display disconnected\n");
-            return ZX_ERR_STOP;
-          },
-      .on_vsync =
-          [&layers](fhd::Controller::OnVsyncResponse* message) {
-            // Acknowledge cookie if non-zero
-            if (message->cookie) {
-              dc->AcknowledgeVsync(message->cookie);
-            }
+  class EventHandler : public fhd::Controller::EventHandler {
+   public:
+    explicit EventHandler(const fbl::Vector<std::unique_ptr<VirtualLayer>>& layers)
+        : layers_(layers) {}
 
-            for (auto& layer : layers) {
-              uint64_t id = layer->image_id(message->display_id);
-              if (id == 0) {
-                continue;
-              }
-              for (auto image_id : message->images) {
-                if (image_id == id) {
-                  layer->set_frame_done(message->display_id);
-                }
-              }
-            }
+    zx_status_t status() const { return status_; }
 
-            for (auto& layer : layers) {
-              if (!layer->is_done()) {
-                return ZX_ERR_NEXT;
-              }
-            }
-            return ZX_OK;
-          },
-      .on_client_ownership_change =
-          [](fhd::Controller::OnClientOwnershipChangeResponse* message) {
-            has_ownership = message->has_ownership;
-            return ZX_ERR_NEXT;
-          },
-      .unknown = []() { return ZX_ERR_STOP; },
+    void OnDisplaysChanged(fhd::Controller::OnDisplaysChangedResponse* event) override {
+      printf("Display disconnected\n");
+      status_ = ZX_ERR_STOP;
+    }
+
+    void OnVsync(fhd::Controller::OnVsyncResponse* event) override {
+      // Acknowledge cookie if non-zero
+      if (event->cookie) {
+        dc->AcknowledgeVsync(event->cookie);
+      }
+
+      for (auto& layer : layers_) {
+        uint64_t id = layer->image_id(event->display_id);
+        if (id == 0) {
+          continue;
+        }
+        for (auto image_id : event->images) {
+          if (image_id == id) {
+            layer->set_frame_done(event->display_id);
+          }
+        }
+      }
+
+      for (auto& layer : layers_) {
+        if (!layer->is_done()) {
+          status_ = ZX_ERR_NEXT;
+          return;
+        }
+      }
+    }
+
+    void OnClientOwnershipChange(fhd::Controller::OnClientOwnershipChangeResponse* event) override {
+      has_ownership = event->has_ownership;
+      status_ = ZX_ERR_NEXT;
+    }
+
+    zx_status_t Unknown() override { return ZX_ERR_STOP; }
+
+   private:
+    const fbl::Vector<std::unique_ptr<VirtualLayer>>& layers_;
+    zx_status_t status_ = ZX_OK;
   };
-  return dc->HandleEvents(handlers).status();
+
+  EventHandler event_handler(layers);
+  zx_status_t status = dc->HandleOneEvent(event_handler).status();
+  return (status == ZX_OK) ? event_handler.status() : status;
 }
 
 zx_status_t set_minimum_rgb(uint8_t min_rgb) {

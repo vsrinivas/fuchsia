@@ -63,33 +63,37 @@ class InstanceLifecycleTest : public zxtest::Test {
   IsolatedDevmgr devmgr_;
 };
 
-void InstanceLifecycleTest::WaitForEvent(const zx::channel& channel, Event event) {
-  Lifecycle::EventHandlers event_handlers;
-  event_handlers.on_open = [&]() -> zx_status_t {
-    if (event == Event::Open) {
-      return ZX_OK;
+void InstanceLifecycleTest::WaitForEvent(const zx::channel& channel, Event expected_event) {
+  class EventHandler : public Lifecycle::EventHandler {
+   public:
+    explicit EventHandler(Event expected_event) : expected_event_(expected_event) {}
+
+    bool ok() const { return ok_; }
+
+    void OnOpen(Lifecycle::OnOpenResponse* event) override { ok_ = expected_event_ == Event::Open; }
+
+    void OnClose(Lifecycle::OnCloseResponse* event) override {
+      ok_ = expected_event_ == Event::Close;
+    };
+
+    void OnUnbind(Lifecycle::OnUnbindResponse* event) override {
+      ok_ = expected_event_ == Event::Unbind;
     }
-    return ZX_ERR_BAD_STATE;
-  };
-  event_handlers.on_close = [&]() -> zx_status_t {
-    if (event == Event::Close) {
-      return ZX_OK;
+
+    void OnRelease(Lifecycle::OnReleaseResponse* event) override {
+      ok_ = expected_event_ == Event::Release;
     }
-    return ZX_ERR_BAD_STATE;
+
+    zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
+
+   private:
+    const Event expected_event_;
+    bool ok_ = false;
   };
-  event_handlers.on_unbind = [&]() -> zx_status_t {
-    if (event == Event::Unbind) {
-      return ZX_OK;
-    }
-    return ZX_ERR_BAD_STATE;
-  };
-  event_handlers.on_release = [&]() -> zx_status_t {
-    if (event == Event::Release) {
-      return ZX_OK;
-    }
-    return ZX_ERR_BAD_STATE;
-  };
-  ASSERT_OK(Lifecycle::Call::HandleEvents(zx::unowned_channel(channel), event_handlers).status());
+
+  EventHandler event_handler(expected_event);
+  ASSERT_OK(event_handler.HandleOneEvent(zx::unowned_channel(channel)).status());
+  ASSERT_TRUE(event_handler.ok());
 }
 
 void InstanceLifecycleTest::VerifyPostOpenLifecycleViaRemove(const zx::channel& lifecycle_chan,

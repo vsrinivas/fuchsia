@@ -534,24 +534,29 @@ zx_status_t dc_callback_handler(zx_signals_t signals) {
   }
 
   ZX_DEBUG_ASSERT(signals & ZX_CHANNEL_READABLE);
-  fhd::Controller::EventHandlers event_handlers{
-      .on_displays_changed =
-          [](fhd::Controller::OnDisplaysChangedResponse* message) {
-            handle_displays_changed(message->added, message->removed);
-            return ZX_OK;
-          },
-      .on_vsync = [](fhd::Controller::OnVsyncResponse* message) { return ZX_OK; },
-      .on_client_ownership_change =
-          [](fhd::Controller::OnClientOwnershipChangeResponse* message) {
-            handle_ownership_change(message->has_ownership);
-            return ZX_OK;
-          },
-      .unknown =
-          []() {
-            printf("vc: Unknown display callback message\n");
-            return ZX_OK;
-          }};
-  return dc_client->HandleEvents(event_handlers).status();
+
+  class EventHandler : public fhd::Controller::EventHandler {
+   public:
+    EventHandler() = default;
+
+    void OnDisplaysChanged(fhd::Controller::OnDisplaysChangedResponse* event) override {
+      handle_displays_changed(event->added, event->removed);
+    }
+
+    void OnVsync(fhd::Controller::OnVsyncResponse* event) override {}
+
+    void OnClientOwnershipChange(fhd::Controller::OnClientOwnershipChangeResponse* event) override {
+      handle_ownership_change(event->has_ownership);
+    }
+
+    zx_status_t Unknown() override {
+      printf("vc: Unknown display callback message\n");
+      return ZX_OK;
+    }
+  };
+
+  EventHandler event_handler;
+  return dc_client->HandleOneEvent(event_handler).status();
 }
 
 #if BUILD_FOR_DISPLAY_TEST

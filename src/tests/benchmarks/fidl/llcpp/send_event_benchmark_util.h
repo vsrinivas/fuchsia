@@ -30,25 +30,38 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   zx_status_t status = zx::channel::create(0, &sender, &receiver);
   ZX_ASSERT(status == ZX_OK);
 
+  class EventHandler : public ProtocolType::EventHandler {
+   public:
+    EventHandler(perftest::RepeatState* state, bool& ready, std::mutex& mu,
+                 std::condition_variable& cond)
+        : state_(state), ready_(ready), mu_(mu), cond_(cond) {}
+
+    void Send(typename ProtocolType::SendResponse* event) override {
+      state_->NextStep();  // End: SendEvent. Begin: Teardown.
+      {
+        std::lock_guard<std::mutex> guard(mu_);
+        ready_ = true;
+      }
+      cond_.notify_one();
+    }
+
+    zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
+
+   private:
+    perftest::RepeatState* state_;
+    bool& ready_;
+    std::mutex& mu_;
+    std::condition_variable& cond_;
+  };
+
   bool ready = false;
   std::mutex mu;
   std::condition_variable cond;
-  std::thread receiver_thread([channel = std::move(receiver), state, &ready, &mu, &cond]() {
-    auto send = [state, &ready, &mu, &cond](typename ProtocolType::SendResponse* message) {
-      state->NextStep();  // End: SendEvent. Begin: Teardown.
-      {
-        std::lock_guard<std::mutex> guard(mu);
-        ready = true;
-      }
-      cond.notify_one();
-      return ZX_OK;
-    };
-    typename ProtocolType::EventHandlers event_handlers{
-        .send = send,
-    };
 
-    while (ProtocolType::Call::HandleEvents(channel.borrow(), event_handlers).ok())
-      ;
+  std::thread receiver_thread([channel = std::move(receiver), state, &ready, &mu, &cond]() {
+    EventHandler event_handler(state, ready, mu, cond);
+    while (event_handler.HandleOneEvent(channel.borrow()).ok()) {
+    }
   });
 
   while (state->KeepRunning()) {
