@@ -19,10 +19,10 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 #include <zxtest/zxtest.h>
 
 #include <conformance/cpp/natural_types.h>
-#include <lib/fidl/cpp/test/test_util.h>
+#include <cts/tests/pkg/fidl/cpp/test/test_util.h>
 
 #ifdef __Fuchsia__
-#include <lib/fidl/cpp/test/handle_util.h>
+#include <cts/tests/pkg/fidl/cpp/test/handle_util.h>
 #include <zircon/syscalls.h>
 #endif
 

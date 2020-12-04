@@ -14,7 +14,7 @@ template("hlcpp_gidl_benchmark_suite") {
     inputs = invoker.gidl
     fidl = invoker.fidl_target
     deps = [
-      "//sdk/lib/fidl/cpp:handle_util",
+      "//sdk/cts/tests/pkg/fidl/cpp:handle_util",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/fidl",
       "//zircon/system/ulib/async-loop:async-loop-cpp",

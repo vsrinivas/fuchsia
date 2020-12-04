@@ -1,0 +1,200 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_source_set.gni")
+import("//build/fidl/fidl.gni")
+import("//build/package.gni")
+import("//build/test.gni")
+import("//sdk/cts/build/cts.gni")
+import("//src/sys/build/components.gni")
+import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
+import("//tools/fidl/gidl/gidl.gni")
+
+gidl_hlcpp_conformance("conformance_test_sources") {
+  testonly = true
+  inputs = conformance_suite_gidl_files
+  fidl = conformance_suite_fidl_target
+  deps = [
+    ":test_util",
+    "//zircon/public/lib/zxtest",
+  ]
+  if (is_fuchsia) {
+    deps += [ ":handle_util" ]
+  }
+}
+
+cts_source_set("host_test_sources") {
+  testonly = true
+
+  sources = [
+    "//sdk/lib/fidl/cpp/internal/bitset_unittest.cc",
+    "array_unittest.cc",
+    "bits_unittest.cc",
+    "clone_unittest.cc",
+    "comparison_unittest.cc",
+    "defaults_unittest.cc",
+    "enum_unittest.cc",
+    "fidl_test.cc",
+    "object_coding_unittest.cc",
+    "roundtrip_test.cc",
+    "string_unittest.cc",
+    "table_unittest.cc",
+    "vector_unittest.cc",
+    "xunion_unittest.cc",
+  ]
+
+  deps = [
+    ":test_util",
+    "//sdk/lib/fidl/cpp:cpp_base",
+    "//sdk/lib/fidl/cpp/test:fidl_test",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+cts_source_set("test_sources") {
+  testonly = true
+
+  # TODO(jamesr): Make this an sdk source set
+  # sdk_name = "fidl_cpp_tests"
+  # include_base = "//sdk"
+
+  sources = [
+    "//sdk/lib/fidl/cpp/internal/message_reader_unittest.cc",
+    "//sdk/lib/fidl/cpp/internal/proxy_controller_unittest.cc",
+    "//sdk/lib/fidl/cpp/internal/stub_controller_unittest.cc",
+    "binding_set_unittest.cc",
+    "binding_unittest.cc",
+    "collision_unittest.cc",
+    "encode_decode_unittest.cc",
+    "event_sender_unittest.cc",
+    "interface_handle_unittest.cc",
+    "interface_ptr_set_unittest.cc",
+    "interface_ptr_unittest.cc",
+    "interface_request_unittest.cc",
+    "synchronous_interface_ptr_unittest.cc",
+    "thread_safe_binding_set_unittest.cc",
+  ]
+
+  deps = [
+    ":test_util",
+    ":union_migration_test_fidl",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fidl/cpp:test_support",
+    "//sdk/lib/fidl/cpp/test",
+    "//sdk/lib/fidl/cpp/test:collision_test",
+    "//sdk/lib/fidl/cpp/test:fidl_test",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+
+  public_configs = [ "//sdk/config" ]
+}
+
+cts_executable("fidl_hlcpp_conformance_tests_bin") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  output_name = "fidl_hlcpp_conformance_tests"
+  sources = [ "//sdk/lib/fidl/cpp/test/async_loop_for_test.cc" ]
+
+  deps = [
+    ":conformance_test_sources",
+    "//sdk/lib/fidl/cpp:test_support",
+    "//sdk/lib/fidl/cpp/test",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+cts_fuchsia_unittest_component("fidl_hlcpp_conformance_tests") {
+  visibility = [ ":*" ]
+  executable_path = "bin/fidl_hlcpp_conformance_tests"
+  deps = [ ":fidl_hlcpp_conformance_tests_bin" ]
+}
+
+cts_executable("fidl_hlcpp_unit_tests_bin") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  output_name = "fidl_hlcpp_unit_tests"
+  sources = [ "//sdk/lib/fidl/cpp/test/async_loop_for_test.cc" ]
+
+  deps = [
+    ":host_test_sources",
+    ":test_sources",
+    "//sdk/lib/fidl/cpp:test_support",
+    "//sdk/lib/fidl/cpp/test",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+cts_fuchsia_unittest_component("fidl_hlcpp_unit_tests") {
+  visibility = [ ":*" ]
+  executable_path = "bin/fidl_hlcpp_unit_tests"
+  deps = [ ":fidl_hlcpp_unit_tests_bin" ]
+}
+
+cts_fuchsia_test_package("fidl-hlcpp-tests") {
+  test_components = [
+    ":fidl_hlcpp_conformance_tests",
+    ":fidl_hlcpp_unit_tests",
+  ]
+}
+
+if (is_host) {
+  test("fidl_hlcpp_unit_tests_host") {
+    output_name = "fidl_hlcpp_unit_tests"
+    deps = [
+      ":host_test_sources",
+      "//zircon/public/lib/zxtest",
+    ]
+  }
+
+  test("fidl_hlcpp_conformance_tests_host") {
+    output_name = "fidl_hlcpp_conformance_tests"
+    deps = [
+      ":conformance_test_sources",
+      "//zircon/public/lib/zxtest",
+    ]
+  }
+}
+
+fidl("union_migration_test_fidl") {
+  name = "fidl.test.unionmigration"
+
+  sources = [ "union_migration.test.fidl" ]
+}
+
+cts_source_set("test_util") {
+  testonly = true
+
+  sources = [ "test/test_util.h" ]
+
+  public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
+}
+
+cts_source_set("handle_util") {
+  testonly = true
+
+  sources = [
+    "test/handle_util.cc",
+    "test/handle_util.h",
+  ]
+
+  public_deps = [ "//zircon/public/lib/zx" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fidl-hlcpp-tests",
+    ":fidl_hlcpp_conformance_tests_host($host_toolchain)",
+    ":fidl_hlcpp_unit_tests_host($host_toolchain)",
+  ]
+}

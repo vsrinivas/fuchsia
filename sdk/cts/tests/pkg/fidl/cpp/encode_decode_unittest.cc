@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/cpp/test/test_util.h>
 #include <zircon/types.h>
 
 #include <string>
@@ -10,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include <cts/tests/pkg/fidl/cpp/test/test_util.h>
 #include <zxtest/zxtest.h>
 
 #include "fidl/test/unionmigration/cpp/fidl.h"

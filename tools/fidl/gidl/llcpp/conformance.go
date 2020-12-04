@@ -30,7 +30,7 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 
 #ifdef __Fuchsia__
 #include <zircon/syscalls.h>
-#include "sdk/lib/fidl/cpp/test/handle_util.h"
+#include "sdk/cts/tests/pkg/fidl/cpp/test/handle_util.h"
 #endif
 
 {{ range .EncodeSuccessCases }}

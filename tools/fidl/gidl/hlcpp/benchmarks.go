@@ -18,7 +18,7 @@ import (
 
 var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
 #include <{{ .FidlLibrary }}/cpp/fidl.h>
-#include <lib/fidl/cpp/test/handle_util.h>
+#include <cts/tests/pkg/fidl/cpp/test/handle_util.h>
 #include <perftest/perftest.h>
 
 #include "src/tests/benchmarks/fidl/hlcpp/builder_benchmark_util.h"

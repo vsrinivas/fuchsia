@@ -3,6 +3,6 @@
 # found in the LICENSE file.
 
 group("tests") {
-  deps = [ "fdio:fdio-spawn-tests" ]
+  deps = [ "fidl/cpp:tests" ]
   testonly = true
 }

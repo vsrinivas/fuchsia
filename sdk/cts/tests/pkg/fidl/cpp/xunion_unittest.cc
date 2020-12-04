@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/comparison.h>
-#include <lib/fidl/cpp/test/test_util.h>
 
 #include <vector>
 
+#include <cts/tests/pkg/fidl/cpp/test/test_util.h>
 #include <fidl/test/misc/cpp/fidl.h>
 #include <zxtest/zxtest.h>
 

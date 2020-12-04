@@ -18,8 +18,8 @@ foreach(suite, benchmark_suites) {
     inputs = suite.gidl
     fidl = suite.fidl_target
     deps = [
+      "//sdk/cts/tests/pkg/fidl/cpp:handle_util",
       "//sdk/lib/fidl/cpp",
-      "//sdk/lib/fidl/cpp:handle_util",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/fidl",
       "//zircon/system/ulib/async-loop:async-loop-cpp",

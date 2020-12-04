@@ -19,7 +19,7 @@ foreach(gidl_file, conformance_suite_gidl_files) {
     fidl = conformance_suite_fidl_target
     deps = [ "//third_party/googletest:gtest" ]
     if (is_fuchsia) {
-      deps += [ "//sdk/lib/fidl/cpp:handle_util" ]
+      deps += [ "//sdk/cts/tests/pkg/fidl/cpp:handle_util" ]
     }
   }
 }
