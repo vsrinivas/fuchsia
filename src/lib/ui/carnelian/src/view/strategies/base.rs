@@ -56,6 +56,13 @@ pub(crate) trait ViewStrategy {
         _: &fidl_fuchsia_ui_input::InputEvent,
     ) -> Vec<Message>;
 
+    fn handle_scenic_key_event(
+        &mut self,
+        _view_details: &ViewDetails,
+        _view_assistant: &mut ViewAssistantPtr,
+        _: &fidl_fuchsia_ui_input3::KeyEvent,
+    ) -> Vec<Message>;
+
     fn handle_input_event(
         &mut self,
         _view_details: &ViewDetails,

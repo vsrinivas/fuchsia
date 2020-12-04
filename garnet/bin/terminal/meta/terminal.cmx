@@ -36,6 +36,7 @@
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.input3.Keyboard",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.update.Manager",
             "fuchsia.virtualization.Manager"

@@ -273,6 +273,15 @@ impl ViewStrategy for FrameBufferViewStrategy {
         panic!("Scenic events should not be delivered when running under the frame buffer")
     }
 
+    fn handle_scenic_key_event(
+        &mut self,
+        _: &ViewDetails,
+        _: &mut ViewAssistantPtr,
+        _: &fidl_fuchsia_ui_input3::KeyEvent,
+    ) -> Vec<Message> {
+        panic!("Scenic key events should not be delivered when running under the frame buffer")
+    }
+
     fn handle_input_event(
         &mut self,
         view_details: &ViewDetails,

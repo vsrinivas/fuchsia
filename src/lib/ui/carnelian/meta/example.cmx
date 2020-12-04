@@ -20,6 +20,7 @@
             "fuchsia.sys.Launcher",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.input3.Keyboard",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.vulkan.loader.Loader"

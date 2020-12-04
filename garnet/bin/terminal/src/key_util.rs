@@ -116,58 +116,6 @@ impl From<HidUsage> for Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_ui_input::{self as scenic_input};
-
-    #[test]
-    fn is_control_only_true_for_left_control() {
-        let modifiers =
-            carnelian::input::Modifiers::from_scenic_modifiers(scenic_input::MODIFIER_LEFT_CONTROL);
-        assert!(modifiers.is_control_only());
-    }
-
-    #[test]
-    fn is_control_only_true_for_right_control() {
-        let modifiers = carnelian::input::Modifiers::from_scenic_modifiers(
-            scenic_input::MODIFIER_RIGHT_CONTROL,
-        );
-        assert!(modifiers.is_control_only());
-    }
-
-    #[test]
-    fn is_control_only_true_for_left_and_right_control() {
-        let modifiers =
-            carnelian::input::Modifiers::from_scenic_modifiers(scenic_input::MODIFIER_CONTROL);
-        assert!(modifiers.is_control_only());
-    }
-
-    #[test]
-    fn is_control_only_false() {
-        assert!(
-            carnelian::input::Modifiers::from_scenic_modifiers(scenic_input::MODIFIER_NONE)
-                .is_control_only()
-                == false
-        );
-        assert!(
-            carnelian::input::Modifiers::from_scenic_modifiers(scenic_input::MODIFIER_SHIFT)
-                .is_control_only()
-                == false
-        );
-        assert!(
-            carnelian::input::Modifiers::from_scenic_modifiers(scenic_input::MODIFIER_CAPS_LOCK)
-                .is_control_only()
-                == false
-        );
-        assert!(
-            carnelian::input::Modifiers::from_scenic_modifiers(scenic_input::MODIFIER_ALT)
-                .is_control_only()
-                == false
-        );
-        assert!(
-            carnelian::input::Modifiers::from_scenic_modifiers(scenic_input::MODIFIER_SUPER)
-                .is_control_only()
-                == false
-        );
-    }
 
     #[test]
     fn convert_from_code_point_unsupported_values() {

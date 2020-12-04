@@ -133,6 +133,7 @@ pub(crate) enum MessageInternal {
     MetricsChanged(ViewKey, Size),
     SizeChanged(ViewKey, Size),
     ScenicInputEvent(ViewKey, fidl_fuchsia_ui_input::InputEvent),
+    ScenicKeyEvent(ViewKey, fidl_fuchsia_ui_input3::KeyEvent),
     ScenicPresentSubmitted(ViewKey, fidl_fuchsia_scenic_scheduling::FuturePresentationTimes),
     ScenicPresentDone(ViewKey, fidl_fuchsia_scenic_scheduling::FramePresentedInfo),
     Focus(ViewKey),
@@ -208,6 +209,10 @@ impl App {
             MessageInternal::ScenicInputEvent(view_id, event) => {
                 let view = self.get_view(view_id);
                 view.handle_scenic_input_event(event);
+            }
+            MessageInternal::ScenicKeyEvent(view_id, event) => {
+                let view = self.get_view(view_id);
+                view.handle_scenic_key_event(event);
             }
             MessageInternal::ScenicPresentSubmitted(view_id, info) => {
                 let view = self.get_view(view_id);

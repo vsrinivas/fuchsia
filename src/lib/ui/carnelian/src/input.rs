@@ -15,7 +15,10 @@ use fidl_fuchsia_input_report as hid_input_report;
 use fuchsia_async::{self as fasync, Time, TimeoutExt};
 use fuchsia_zircon::{self as zx, Duration};
 use futures::TryFutureExt;
-use input_synthesis::{keymaps::QWERTY_MAP, usages::key_to_hid_usage};
+use input_synthesis::{
+    keymaps::QWERTY_MAP,
+    usages::{input3_key_to_hid_usage, key_to_hid_usage},
+};
 use std::{
     collections::{HashMap, HashSet},
     fs::{self, DirEntry},
@@ -72,7 +75,7 @@ pub struct Modifiers {
 }
 
 impl Modifiers {
-    pub fn from_pressed_keys(pressed_keys: &HashSet<fidl_fuchsia_ui_input2::Key>) -> Self {
+    pub(crate) fn from_pressed_keys(pressed_keys: &HashSet<fidl_fuchsia_ui_input2::Key>) -> Self {
         Self {
             shift: pressed_keys.contains(&fidl_fuchsia_ui_input2::Key::LeftShift)
                 || pressed_keys.contains(&fidl_fuchsia_ui_input2::Key::RightShift),
@@ -84,12 +87,15 @@ impl Modifiers {
         }
     }
 
-    pub fn from_scenic_modifiers(modifiers: u32) -> Self {
+    pub(crate) fn from_pressed_keys_3(pressed_keys: &HashSet<fidl_fuchsia_input::Key>) -> Self {
         Self {
-            shift: (modifiers & fidl_fuchsia_ui_input::MODIFIER_SHIFT) != 0,
-            alt: (modifiers & fidl_fuchsia_ui_input::MODIFIER_ALT) != 0,
-            control: (modifiers & fidl_fuchsia_ui_input::MODIFIER_CONTROL) != 0,
-            caps_lock: (modifiers & fidl_fuchsia_ui_input::MODIFIER_CAPS_LOCK) != 0,
+            shift: pressed_keys.contains(&fidl_fuchsia_input::Key::LeftShift)
+                || pressed_keys.contains(&fidl_fuchsia_input::Key::RightShift),
+            alt: pressed_keys.contains(&fidl_fuchsia_input::Key::LeftAlt)
+                || pressed_keys.contains(&fidl_fuchsia_input::Key::RightAlt),
+            control: pressed_keys.contains(&fidl_fuchsia_input::Key::LeftCtrl)
+                || pressed_keys.contains(&fidl_fuchsia_input::Key::RightCtrl),
+            caps_lock: pressed_keys.contains(&fidl_fuchsia_input::Key::CapsLock),
         }
     }
 }
@@ -127,6 +133,22 @@ mod mouse_tests {
             device_id: device_id_tests::create_test_device_id(),
             event_type: EventType::Mouse(mouse_event),
         }
+    }
+}
+
+fn code_point_from_usage(hid_usage: usize, shift: bool) -> Option<u32> {
+    if hid_usage < QWERTY_MAP.len() {
+        if let Some(map_entry) = QWERTY_MAP[hid_usage] {
+            if shift {
+                map_entry.1.and_then(|shifted_char| Some(shifted_char as u32))
+            } else {
+                Some(map_entry.0 as u32)
+            }
+        } else {
+            None
+        }
+    } else {
+        None
     }
 }
 
@@ -361,10 +383,6 @@ fn device_id_for_event(event: &fidl_fuchsia_ui_input::PointerEvent) -> DeviceId 
         fidl_fuchsia_ui_input::PointerEventType::InvertedStylus => "inverted-stylus",
     };
     DeviceId(format!("{}-{}", id_string, event.device_id))
-}
-
-fn device_id_for_keyboard_event(event: &fidl_fuchsia_ui_input::KeyboardEvent) -> DeviceId {
-    DeviceId(format!("keyboard-{}", event.device_id))
 }
 
 async fn listen_to_entry(
@@ -643,19 +661,7 @@ impl InputReportHandler {
         ) -> Event {
             let hid_usage = key_to_hid_usage(key);
             let hid_usage_size = hid_usage as usize;
-            let code_point = if hid_usage_size < QWERTY_MAP.len() {
-                if let Some(map_entry) = QWERTY_MAP[hid_usage_size] {
-                    if modifiers.shift {
-                        map_entry.1.and_then(|shifted_char| Some(shifted_char as u32))
-                    } else {
-                        Some(map_entry.0 as u32)
-                    }
-                } else {
-                    None
-                }
-            } else {
-                None
-            };
+            let code_point = code_point_from_usage(hid_usage_size, modifiers.shift);
             let keyboard_event =
                 keyboard::Event { phase, code_point, hid_usage, modifiers: Modifiers::default() };
             Event {
@@ -1033,11 +1039,17 @@ fn to_physical_point(x: f32, y: f32, metrics: &Size) -> IntPoint {
 #[derive(Default)]
 pub(crate) struct ScenicInputHandler {
     contacts: HashMap<u32, touch::Contact>,
+    keyboard_device_id: DeviceId,
+    pressed_keys: HashSet<fidl_fuchsia_input::Key>,
 }
 
 impl ScenicInputHandler {
     pub fn new() -> Self {
-        Self { contacts: HashMap::new() }
+        Self {
+            keyboard_device_id: DeviceId("scenic-keyboard".to_string()),
+            contacts: HashMap::new(),
+            pressed_keys: HashSet::new(),
+        }
     }
 
     fn convert_scenic_mouse_phase(
@@ -1137,30 +1149,6 @@ impl ScenicInputHandler {
         events
     }
 
-    fn handle_scenic_keyboard_event(
-        &mut self,
-        event: &fidl_fuchsia_ui_input::KeyboardEvent,
-    ) -> Vec<Event> {
-        let phase: keyboard::Phase = match event.phase {
-            fidl_fuchsia_ui_input::KeyboardEventPhase::Pressed => keyboard::Phase::Pressed,
-            fidl_fuchsia_ui_input::KeyboardEventPhase::Released => keyboard::Phase::Released,
-            fidl_fuchsia_ui_input::KeyboardEventPhase::Cancelled => keyboard::Phase::Cancelled,
-            fidl_fuchsia_ui_input::KeyboardEventPhase::Repeat => keyboard::Phase::Repeat,
-        };
-        let device_id = device_id_for_keyboard_event(event);
-        let code_point = if event.code_point != 0 { Some(event.code_point) } else { None };
-        let modifiers = Modifiers::from_scenic_modifiers(event.modifiers);
-        let keyboard_event =
-            keyboard::Event { code_point, hid_usage: event.hid_usage, modifiers, phase };
-
-        let event = Event {
-            event_time: event.event_time,
-            event_type: EventType::Keyboard(keyboard_event),
-            device_id,
-        };
-        vec![event]
-    }
-
     pub fn handle_scenic_input_event(
         &mut self,
         metrics: &Size,
@@ -1171,12 +1159,57 @@ impl ScenicInputHandler {
             fidl_fuchsia_ui_input::InputEvent::Pointer(pointer_event) => {
                 events.extend(self.handle_scenic_pointer_event(metrics, &pointer_event));
             }
-            fidl_fuchsia_ui_input::InputEvent::Keyboard(keyboard_event) => {
-                events.extend(self.handle_scenic_keyboard_event(&keyboard_event));
-            }
             _ => (),
         }
         events
+    }
+
+    pub fn handle_scenic_key_event(
+        &mut self,
+        event: &fidl_fuchsia_ui_input3::KeyEvent,
+    ) -> Vec<Event> {
+        if event.type_.is_none() || event.timestamp.is_none() || event.key.is_none() {
+            println!("Malformed scenic key event {:?}", event);
+            return vec![];
+        }
+        let event_type = event.type_.unwrap();
+        let timestamp = event.timestamp.unwrap() as u64;
+        let key = event.key.unwrap();
+        let phase: Option<keyboard::Phase> = match event_type {
+            fidl_fuchsia_ui_input3::KeyEventType::Pressed => Some(keyboard::Phase::Pressed),
+            fidl_fuchsia_ui_input3::KeyEventType::Released => Some(keyboard::Phase::Released),
+            fidl_fuchsia_ui_input3::KeyEventType::Cancel => Some(keyboard::Phase::Cancelled),
+            // The input3 sync feature is not supported
+            fidl_fuchsia_ui_input3::KeyEventType::Sync => None,
+        };
+        if phase.is_none() {
+            return vec![];
+        }
+        let phase = phase.unwrap();
+
+        match phase {
+            keyboard::Phase::Pressed => {
+                self.pressed_keys.insert(key);
+            }
+            keyboard::Phase::Released | keyboard::Phase::Cancelled => {
+                self.pressed_keys.remove(&key);
+            }
+            _ => (),
+        }
+
+        let device_id = self.keyboard_device_id.clone();
+        let hid_usage = input3_key_to_hid_usage(key);
+        let modifiers = Modifiers::from_pressed_keys_3(&self.pressed_keys);
+        let code_point = code_point_from_usage(hid_usage as usize, modifiers.shift);
+        let keyboard_event = keyboard::Event { code_point, hid_usage, modifiers, phase };
+
+        let event = Event {
+            event_time: timestamp,
+            event_type: EventType::Keyboard(keyboard_event),
+            device_id,
+        };
+
+        vec![event]
     }
 }
 
@@ -1190,10 +1223,9 @@ mod scenic_input_tests {
         let scenic_events = test_data::hello_world_scenic_input_events();
 
         let mut scenic_input_handler = ScenicInputHandler::new();
-        let metrics = Size::new(1.0, 1.0);
         let chars_from_events = scenic_events
             .iter()
-            .map(|event| scenic_input_handler.handle_scenic_input_event(&metrics, event))
+            .map(|event| scenic_input_handler.handle_scenic_key_event(event))
             .flatten()
             .filter_map(|event| match event.event_type {
                 EventType::Keyboard(keyboard_event) => match keyboard_event.phase {
@@ -1215,10 +1247,9 @@ mod scenic_input_tests {
         // make sure there's one and only one keydown even of the r
         // key with the control modifier set.
         let mut scenic_input_handler = ScenicInputHandler::new();
-        let metrics = Size::new(1.0, 1.0);
         let expected_event_count: usize = scenic_events
             .iter()
-            .map(|event| scenic_input_handler.handle_scenic_input_event(&metrics, event))
+            .map(|event| scenic_input_handler.handle_scenic_key_event(event))
             .flatten()
             .filter_map(|event| match event.event_type {
                 EventType::Keyboard(keyboard_event) => match keyboard_event.phase {
@@ -5639,263 +5670,233 @@ mod test_data {
         ]
     }
 
-    pub fn hello_world_scenic_input_events() -> Vec<fidl_fuchsia_ui_input::InputEvent> {
-        use fidl_fuchsia_ui_input::{
-            InputEvent::Keyboard,
-            KeyboardEvent,
-            KeyboardEventPhase::{Pressed, Released},
+    pub fn hello_world_scenic_input_events() -> Vec<fidl_fuchsia_ui_input3::KeyEvent> {
+        use fidl_fuchsia_input::Key::*;
+        use fidl_fuchsia_ui_input3::{
+            KeyEvent,
+            KeyEventType::{Pressed, Released},
         };
         vec![
-            Keyboard(KeyboardEvent {
-                event_time: 100730762699,
-                device_id: 1,
-                phase: Pressed,
-                hid_usage: 225,
-                code_point: 0,
-                modifiers: 3,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 101122737085,
-                device_id: 1,
-                phase: Pressed,
-                hid_usage: 11,
-                code_point: 72,
-                modifiers: 3,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 101228037494,
-                device_id: 1,
-                phase: Released,
-                hid_usage: 11,
-                code_point: 72,
-                modifiers: 3,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 101367387703,
-                device_id: 1,
-                phase: Released,
-                hid_usage: 225,
-                code_point: 0,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 102290831225,
-                device_id: 1,
-                phase: Pressed,
-                hid_usage: 8,
-                code_point: 101,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 102426847251,
-                device_id: 1,
-                phase: Released,
-                hid_usage: 8,
-                code_point: 101,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 102890730649,
-                device_id: 1,
-                phase: Pressed,
-                hid_usage: 15,
-                code_point: 108,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 103018719181,
-                device_id: 1,
-                phase: Released,
-                hid_usage: 15,
-                code_point: 108,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 103186767541,
-                device_id: 1,
-                phase: Pressed,
-                hid_usage: 15,
-                code_point: 108,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 103338729791,
-                device_id: 1,
-                phase: Released,
-                hid_usage: 15,
-                code_point: 108,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 103666784300,
-                device_id: 1,
-                phase: Pressed,
-                hid_usage: 18,
-                code_point: 111,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 103830938475,
-                device_id: 1,
-                phase: Released,
-                hid_usage: 18,
-                code_point: 111,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 104722745842,
-                device_id: 1,
-                phase: Pressed,
-                hid_usage: 44,
-                code_point: 32,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 104795060471,
-                device_id: 1,
-                phase: Released,
-                hid_usage: 44,
-                code_point: 32,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 105122735763,
-                device_id: 1,
-                phase: Pressed,
-                hid_usage: 225,
-                code_point: 0,
-                modifiers: 3,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 105413611359,
-                device_id: 1,
-                phase: Pressed,
-                hid_usage: 26,
-                code_point: 87,
-                modifiers: 3,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 105546728630,
-                device_id: 1,
-                phase: Released,
-                hid_usage: 225,
-                code_point: 0,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 105578780375,
-                device_id: 1,
-                phase: Released,
-                hid_usage: 26,
-                code_point: 119,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 105850739099,
-                device_id: 1,
-                phase: Pressed,
-                hid_usage: 18,
-                code_point: 111,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 106018774130,
-                device_id: 1,
-                phase: Released,
-                hid_usage: 18,
-                code_point: 111,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 106314731868,
-                device_id: 1,
-                phase: Pressed,
-                hid_usage: 21,
-                code_point: 114,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 106458816604,
-                device_id: 1,
-                phase: Released,
-                hid_usage: 21,
-                code_point: 114,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 106698776401,
-                device_id: 1,
-                phase: Pressed,
-                hid_usage: 15,
-                code_point: 108,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 106847298672,
-                device_id: 1,
-                phase: Released,
-                hid_usage: 15,
-                code_point: 108,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 107426741150,
-                device_id: 1,
-                phase: Pressed,
-                hid_usage: 7,
-                code_point: 100,
-                modifiers: 0,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 107613528820,
-                device_id: 1,
-                phase: Released,
-                hid_usage: 7,
-                code_point: 100,
-                modifiers: 0,
-            }),
+            KeyEvent {
+                timestamp: Some(3264387612285),
+                type_: Some(Pressed),
+                key: Some(LeftShift),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3265130500125),
+                type_: Some(Pressed),
+                key: Some(H),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3265266507731),
+                type_: Some(Released),
+                key: Some(H),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3265370503901),
+                type_: Some(Released),
+                key: Some(LeftShift),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3266834499940),
+                type_: Some(Pressed),
+                key: Some(E),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3266962508842),
+                type_: Some(Released),
+                key: Some(E),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3267154500453),
+                type_: Some(Pressed),
+                key: Some(L),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3267219444859),
+                type_: Some(Released),
+                key: Some(L),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3267346499392),
+                type_: Some(Pressed),
+                key: Some(L),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3267458502427),
+                type_: Some(Released),
+                key: Some(L),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3267690502669),
+                type_: Some(Pressed),
+                key: Some(O),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3267858501367),
+                type_: Some(Released),
+                key: Some(O),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3275178512511),
+                type_: Some(Pressed),
+                key: Some(Space),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3275274501635),
+                type_: Some(Pressed),
+                key: Some(LeftShift),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3275298499697),
+                type_: Some(Released),
+                key: Some(Space),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3275474504423),
+                type_: Some(Pressed),
+                key: Some(W),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3275586502431),
+                type_: Some(Released),
+                key: Some(LeftShift),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3275634500151),
+                type_: Some(Released),
+                key: Some(W),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3275714502408),
+                type_: Some(Pressed),
+                key: Some(O),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3275834561768),
+                type_: Some(Released),
+                key: Some(O),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3275858499854),
+                type_: Some(Pressed),
+                key: Some(R),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3276018509754),
+                type_: Some(Released),
+                key: Some(R),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3276114540325),
+                type_: Some(Pressed),
+                key: Some(L),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3276282504845),
+                type_: Some(Released),
+                key: Some(L),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3276578503737),
+                type_: Some(Pressed),
+                key: Some(D),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(3276706501366),
+                type_: Some(Released),
+                key: Some(D),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
         ]
     }
 
-    pub fn control_r_scenic_events() -> Vec<fidl_fuchsia_ui_input::InputEvent> {
-        use fidl_fuchsia_ui_input::{
-            InputEvent::Keyboard,
-            KeyboardEvent,
-            KeyboardEventPhase::{Pressed, Released},
+    pub fn control_r_scenic_events() -> Vec<fidl_fuchsia_ui_input3::KeyEvent> {
+        use fidl_fuchsia_input::Key::*;
+        use fidl_fuchsia_ui_input3::{
+            KeyEvent,
+            KeyEventType::{Pressed, Released},
         };
         vec![
-            Keyboard(KeyboardEvent {
-                event_time: 1437866732638,
-                device_id: 1,
-                phase: Pressed,
-                hid_usage: 224,
-                code_point: 0,
-                modifiers: 24,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 1438458959260,
-                device_id: 1,
-                phase: Pressed,
-                hid_usage: 21,
-                code_point: 114,
-                modifiers: 24,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 1438618749234,
-                device_id: 1,
-                phase: Released,
-                hid_usage: 21,
-                code_point: 114,
-                modifiers: 24,
-            }),
-            Keyboard(KeyboardEvent {
-                event_time: 1439010751992,
-                device_id: 1,
-                phase: Released,
-                hid_usage: 224,
-                code_point: 0,
-                modifiers: 0,
-            }),
+            KeyEvent {
+                timestamp: Some(4453530520711),
+                type_: Some(Pressed),
+                key: Some(LeftCtrl),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(4454138519645),
+                type_: Some(Pressed),
+                key: Some(R),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(4454730534107),
+                type_: Some(Released),
+                key: Some(R),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
+            KeyEvent {
+                timestamp: Some(4454738498944),
+                type_: Some(Released),
+                key: Some(LeftCtrl),
+                modifiers: None,
+                ..KeyEvent::empty()
+            },
         ]
     }
 

@@ -25,6 +25,7 @@
             "fuchsia.process.Resolver",
             "fuchsia.sys.Environment",
             "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.input3.Keyboard",
             "fuchsia.ui.scenic.Scenic"
         ]
     }

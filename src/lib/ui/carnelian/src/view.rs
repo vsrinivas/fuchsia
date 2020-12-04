@@ -452,7 +452,7 @@ impl ViewController {
         self.strategy.handle_focus(&self.make_view_details(), &mut self.assistant, focus);
     }
 
-    /// Handler for Events on this ViewController's Session.
+    /// Dispatch scenic input events
     pub fn handle_scenic_input_event(&mut self, event: fidl_fuchsia_ui_input::InputEvent) {
         match event {
             fidl_fuchsia_ui_input::InputEvent::Focus(focus_event) => {
@@ -471,7 +471,19 @@ impl ViewController {
         }
     }
 
-    /// Handler for Events on this ViewController's Session.
+    /// Dispatch scenic key events
+    pub fn handle_scenic_key_event(&mut self, event: fidl_fuchsia_ui_input3::KeyEvent) {
+        let messages = self.strategy.handle_scenic_key_event(
+            &self.make_view_details(),
+            &mut self.assistant,
+            &event,
+        );
+        for msg in messages {
+            self.send_message(msg);
+        }
+    }
+
+    /// Handle input events that have been converted to Carnelian's format
     pub fn handle_input_events(&mut self, events: Vec<input::Event>) {
         for event in events {
             let messages = self.strategy.handle_input_event(

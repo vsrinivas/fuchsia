@@ -19,10 +19,12 @@ use crate::{
 };
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
+use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_ui_gfx::{self as gfx};
 use fidl_fuchsia_ui_input::SetHardKeyboardDeliveryCmd;
 use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
 use fuchsia_async::{self as fasync, OnSignals};
+use fuchsia_component::client::connect_to_service;
 use fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameSet, FrameUsage, ImageId};
 use fuchsia_scenic::{EntityNode, Image2, Material, Rectangle, SessionPtr, ShapeNode};
 use fuchsia_trace::{self, duration, instant};
@@ -153,10 +155,12 @@ impl ScenicViewStrategy {
         view_ref: ViewRef,
         app_sender: UnboundedSender<MessageInternal>,
     ) -> Result<ViewStrategyPtr, Error> {
+        let view_ref_key = fuchsia_scenic::duplicate_view_ref(&view_ref)?;
         let (view, root_node, content_material, content_node) =
             Self::create_scenic_resources(session, view_token, control_ref, view_ref);
         Self::request_hard_keys(session);
         Self::listen_for_session_events(session, &app_sender, key);
+        Self::listen_for_key_events(view_ref_key, &app_sender, key)?;
 
         // This initial present is needed in order for session events to start flowing.
         Self::do_present(session, &app_sender, key, 0);
@@ -245,6 +249,48 @@ impl ScenicViewStrategy {
             }
         })
         .detach();
+    }
+
+    fn listen_for_key_events(
+        mut view_ref: ViewRef,
+        app_sender: &UnboundedSender<MessageInternal>,
+        key: ViewKey,
+    ) -> Result<(), Error> {
+        let keyboard = connect_to_service::<fidl_fuchsia_ui_input3::KeyboardMarker>()
+            .context("Failed to connect to Keyboard service")?;
+
+        let (listener_client_end, mut listener_stream) =
+            create_request_stream::<fidl_fuchsia_ui_input3::KeyboardListenerMarker>()?;
+
+        let event_sender = app_sender.clone();
+
+        fasync::Task::local(async move {
+            keyboard.add_listener(&mut view_ref, listener_client_end).await.expect("add_listener");
+
+            while let Some(event) =
+                listener_stream.try_next().await.expect("Failed to get next key event")
+            {
+                match event {
+                    fidl_fuchsia_ui_input3::KeyboardListenerRequest::OnKeyEvent {
+                        event,
+                        responder,
+                        ..
+                    } => {
+                        // Carnelian always considers key events handled. In the future, there
+                        // might be a use case that requires letting view assistants change
+                        // this behavior but none currently exists.
+                        responder
+                            .send(fidl_fuchsia_ui_input3::KeyEventStatus::Handled)
+                            .expect("send");
+                        event_sender
+                            .unbounded_send(MessageInternal::ScenicKeyEvent(key, event))
+                            .expect("unbounded_send");
+                    }
+                }
+            }
+        })
+        .detach();
+        Ok(())
     }
 
     fn do_present(
@@ -525,6 +571,29 @@ impl ViewStrategy for ScenicViewStrategy {
         event: &fidl_fuchsia_ui_input::InputEvent,
     ) -> Vec<Message> {
         let events = self.input_handler.handle_scenic_input_event(&view_details.metrics, &event);
+
+        let mut render_context = ScenicViewStrategy::make_view_assistant_context(
+            view_details,
+            0,
+            0,
+            self.app_sender.clone(),
+        );
+        for input_event in events {
+            view_assistant
+                .handle_input_event(&mut render_context, &input_event)
+                .unwrap_or_else(|e| eprintln!("handle_event: {:?}", e));
+        }
+
+        render_context.messages
+    }
+
+    fn handle_scenic_key_event(
+        &mut self,
+        view_details: &ViewDetails,
+        view_assistant: &mut ViewAssistantPtr,
+        event: &fidl_fuchsia_ui_input3::KeyEvent,
+    ) -> Vec<Message> {
+        let events = self.input_handler.handle_scenic_key_event(&event);
 
         let mut render_context = ScenicViewStrategy::make_view_assistant_context(
             view_details,
