@@ -777,7 +777,6 @@ async fn dedup_concurrent_content_blob_fetches() {
 }
 
 #[fasync::run_singlethreaded(test)]
-#[ignore] // TODO(fxbug.dev/49866) Flaking when system time is unknown.
 async fn https_endpoint() {
     let env = TestEnvBuilder::new().build().await;
 
