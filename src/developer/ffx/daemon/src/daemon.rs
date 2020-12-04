@@ -23,7 +23,7 @@ use {
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
-    fuchsia_async::Timer,
+    fuchsia_async::{Task, Timer},
     futures::prelude::*,
     std::convert::TryInto,
     std::sync::{Arc, Weak},
@@ -391,11 +391,24 @@ impl Daemon {
                     Err(e) => log::error!("failed to remove socket file: {}", e),
                 }
 
+                // It is desirable for the client to receive an ACK for the quit
+                // request. As Overnet has a potentially complicated routing
+                // path, it is tricky to implement some notion of a bounded
+                // "flush" for this response, however in practice it is only
+                // necessary here to wait long enough for the message to likely
+                // leave the local process before exiting. Enqueue a detached
+                // timer to shut down the daemon before sending the response.
+                // This is detached because once the client receives the
+                // response, the client will disconnect it's socket. If the
+                // local reactor observes this disconnection before the timer
+                // expires, an in-line timer wait would never fire, and the
+                // daemon would never exit.
+                Task::spawn(
+                    Timer::new(std::time::Duration::from_millis(20)).map(|_| std::process::exit(0)),
+                )
+                .detach();
+
                 responder.send(true).context("error sending response")?;
-
-                Timer::new(std::time::Duration::from_millis(20)).await;
-
-                std::process::exit(0);
             }
             DaemonRequest::GetSshAddress { responder, target, timeout } => {
                 let fut = async move {
