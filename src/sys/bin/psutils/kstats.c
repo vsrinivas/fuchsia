@@ -78,6 +78,22 @@ static zx_status_t gueststats(zx_handle_t root_resource, zx_duration_t delay) {
 
     old_stats[i] = stats[i];
   }
+#elif defined(__riscv)
+  printf(
+      "cpu   "
+      " vm_entry"
+      " vm_exit\n");
+
+  for (size_t i = 0; i < actual; i++) {
+    printf(
+        "%3zu"
+        " %7lu"
+        " %7lu",
+        i, stats[i].vm_entries - old_stats[i].vm_entries,
+	stats[i].vm_exits - old_stats[i].vm_exits);
+
+    old_stats[i] = stats[i];
+  }
 #else
   printf(
       "cpu   "
