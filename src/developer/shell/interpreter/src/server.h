@@ -5,18 +5,20 @@
 #ifndef SRC_DEVELOPER_SHELL_INTERPRETER_SRC_SERVER_H_
 #define SRC_DEVELOPER_SHELL_INTERPRETER_SRC_SERVER_H_
 
+#include <fuchsia/shell/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/optional.h>
+#include <zircon/status.h>
+
 #include <map>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include "fuchsia/shell/llcpp/fidl.h"
-#include "lib/async-loop/cpp/loop.h"
 #include "src/developer/shell/interpreter/src/expressions.h"
 #include "src/developer/shell/interpreter/src/interpreter.h"
 #include "src/developer/shell/interpreter/src/schema.h"
-#include "zircon/status.h"
 
 namespace shell {
 namespace interpreter {
@@ -157,10 +159,25 @@ class ServerInterpreter : public Interpreter {
 // Defines a connection from a client to the interpreter.
 class Service final : public llcpp::fuchsia::shell::Shell::Interface {
  public:
-  Service(Server* server, zx_handle_t handle)
-      : server_(server), handle_(handle), interpreter_(std::make_unique<ServerInterpreter>(this)) {}
+  explicit Service(Server* server)
+      : server_(server), interpreter_(std::make_unique<ServerInterpreter>(this)) {}
+
+  ~Service() final;
 
   Interpreter* interpreter() const { return interpreter_.get(); }
+
+  // Sets the binding related to this connection which allows sending events.
+  // It should be called right after message dispatching is scheduled
+  // to happen on this Service.
+  void set_binding(fidl::ServerBindingRef<llcpp::fuchsia::shell::Shell> binding) {
+    binding_.emplace(std::move(binding));
+  }
+
+  fidl::ServerBindingRef<llcpp::fuchsia::shell::Shell>& binding() { return binding_.value(); }
+
+  // Called by |Server| to notify that the |Server| object will be destroyed.
+  // The service should close its connection and schedule its destruction too.
+  void OnServerShutdown();
 
   void CreateExecutionContext(uint64_t context_id,
                               CreateExecutionContextCompleter::Sync& completer) override;
@@ -176,9 +193,8 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
   // Helpers to be able to send events to the client.
   zx_status_t OnError(uint64_t context_id, std::vector<llcpp::fuchsia::shell::Location>& locations,
                       const std::string& error_message) {
-    return llcpp::fuchsia::shell::Shell::SendOnErrorEvent(::zx::unowned_channel(handle_),
-                                                          context_id, fidl::unowned_vec(locations),
-                                                          fidl::unowned_str(error_message));
+    return binding_.value()->OnError(context_id, fidl::unowned_vec(locations),
+                                     fidl::unowned_str(error_message));
   }
 
   zx_status_t OnError(uint64_t context_id, const std::string& error_message) {
@@ -186,25 +202,19 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
     return OnError(context_id, locations, error_message);
   }
 
-  zx_status_t OnDumpDone(uint64_t context_id) {
-    return llcpp::fuchsia::shell::Shell::SendOnDumpDoneEvent(::zx::unowned_channel(handle_),
-                                                             context_id);
-  }
+  zx_status_t OnDumpDone(uint64_t context_id) { return binding_.value()->OnDumpDone(context_id); }
 
   zx_status_t OnExecutionDone(uint64_t context_id, llcpp::fuchsia::shell::ExecuteResult result) {
-    return llcpp::fuchsia::shell::Shell::SendOnExecutionDoneEvent(::zx::unowned_channel(handle_),
-                                                                  context_id, result);
+    return binding_.value()->OnExecutionDone(context_id, result);
   }
 
   zx_status_t OnTextResult(uint64_t context_id, const std::string& result, bool partial_result) {
-    return llcpp::fuchsia::shell::Shell::SendOnTextResultEvent(
-        ::zx::unowned_channel(handle_), context_id, fidl::unowned_str(result), partial_result);
+    return binding_.value()->OnTextResult(context_id, fidl::unowned_str(result), partial_result);
   }
 
   zx_status_t OnResult(uint64_t context_id, fidl::VectorView<llcpp::fuchsia::shell::Node>&& nodes,
                        bool partial_result) {
-    return llcpp::fuchsia::shell::Shell::SendOnResultEvent(
-        ::zx::unowned_channel(handle_), context_id, std::move(nodes), partial_result);
+    return binding_.value()->OnResult(context_id, std::move(nodes), partial_result);
   }
 
  private:
@@ -251,10 +261,11 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
   void AddAddition(ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
                    const llcpp::fuchsia::shell::Addition& node, bool root_node);
 
-  // The server which created this service and which owns it.
-  Server* const server_;
-  // The handle to communicate with the client.
-  zx_handle_t handle_;
+  // The server which created this service.
+  Server* server_;
+  // The binding reference which allows controlling the message dispatching
+  // of this connection and sending events.
+  fit::optional<fidl::ServerBindingRef<llcpp::fuchsia::shell::Shell>> binding_;
   // The interpreter associated with this service. An interpreter can only be associated to one
   // service.
   std::unique_ptr<ServerInterpreter> interpreter_;
@@ -268,22 +279,21 @@ class Server {
 
   Server() = delete;
 
-  // Erase a service previously created with AddConnection. This closes the connection.
-  void EraseService(Service* service) {
+  // Shuts down every service connection on this server, and eventually
+  // destroying the |Service| instances through unbinding them from the FIDL
+  // dispatcher.
+  ~Server();
+
+  // Unregisters a service previously created with IncomingConnection.
+  // This should be used when the service is being closed down.
+  void ForgetService(Service* service) {
     for (auto ref = services_.begin(); ref != services_.end(); ++ref) {
-      if ((*ref).get() == service) {
+      if ((*ref) == service) {
         services_.erase(ref);
         return;
       }
     }
-  }
-
-  // Create a Service for an incoming connection.
-  Service* AddConnection(zx_handle_t handle) {
-    auto service = std::make_unique<Service>(this, handle);
-    auto result = service.get();
-    services_.emplace_back(std::move(service));
-    return result;
+    ZX_PANIC("Invalid service passed to EraseService");
   }
 
   bool Listen();
@@ -298,7 +308,7 @@ class Server {
 
  private:
   async::Loop* loop_;
-  std::vector<std::unique_ptr<Service>> services_;
+  std::vector<Service*> services_;
 };
 
 }  // namespace server

@@ -99,10 +99,12 @@ executable("shell_server_test_bin") {
     "test/interpreter.cc",
     "test/interpreter_test.cc",
     "test/load.cc",
+    "test/server_unittests.cc",
   ]
 
   deps = [
     ":shell_server",
+    ":shell_server_lib",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/developer/shell/common",

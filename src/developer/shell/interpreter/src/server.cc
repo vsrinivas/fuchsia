@@ -375,6 +375,19 @@ void connect(void* untyped_context, const char* service_name, zx_handle_t servic
 
 // - Service ---------------------------------------------------------------------------------------
 
+Service::~Service() {
+  // If this |Service| object is destroyed before the |Server|,
+  // unregister it from the server.
+  if (server_) {
+    server_->ForgetService(this);
+  }
+}
+
+void Service::OnServerShutdown() {
+  server_ = nullptr;
+  binding_.value().Unbind();
+}
+
 void Service::CreateExecutionContext(uint64_t context_id,
                                      CreateExecutionContextCompleter::Sync& completer) {
   auto context = interpreter_->AddContext(context_id);
@@ -472,9 +485,10 @@ void Service::Shutdown(ShutdownCompleter::Sync& completer) {
     error_view.emplace_back(fidl::unowned_ptr(error.c_str()), error.size());
   }
   completer.Reply(fidl::unowned_vec(error_view));
-  // Erase the service. That also closes the handle which means that if the client sends a request
+  // Closes the handle which means that if the client sends a request
   // after the shutdown, it will receive a ZX_ERR_PEER_CLOSED.
-  server_->EraseService(this);
+  // This will also schedule the destruction of this |Service|.
+  binding().Unbind();
 }
 
 void Service::AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
@@ -661,8 +675,23 @@ bool Server::Listen() {
 }
 
 zx_status_t Server::IncomingConnection(zx_handle_t service_request) {
-  return fidl::BindSingleInFlightOnly(loop()->dispatcher(), zx::channel(service_request),
-                                      AddConnection(service_request));
+  auto service = std::make_unique<Service>(this);
+  auto* service_ptr = service.get();
+  auto result =
+      fidl::BindServer(loop()->dispatcher(), zx::channel(service_request), std::move(service));
+  if (result.is_error()) {
+    return result.error();
+  }
+  // Register the connection.
+  service_ptr->set_binding(result.take_value());
+  services_.emplace_back(service_ptr);
+  return ZX_OK;
+}
+
+Server::~Server() {
+  for (auto& service : services_) {
+    service->OnServerShutdown();
+  }
 }
 
 }  // namespace server
