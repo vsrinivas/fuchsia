@@ -419,15 +419,6 @@ impl Minfs {
     }
 }
 
-/// TODO(xbhatnag): This code is only required for a soft migration
-/// of this library. This code is used by our vendor repo, so we maintain
-/// compatibility until we can migrate the vendor code as well.
-impl Filesystem<Minfs> {
-    pub fn set_readonly(&mut self, readonly: bool) {
-        self.config.readonly = readonly;
-    }
-}
-
 impl FSConfig for Minfs {
     fn binary_path(&self) -> &CStr {
         cstr!("/pkg/bin/minfs")
