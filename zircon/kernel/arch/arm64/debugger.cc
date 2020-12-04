@@ -239,26 +239,6 @@ zx_status_t arch_set_debug_regs(Thread* thread, const zx_thread_state_debug_regs
   return ZX_OK;
 }
 
-zx_status_t arch_get_x86_register_fs(Thread* thread, uint64_t* out) {
-  // There is no FS register on ARM.
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t arch_set_x86_register_fs(Thread* thread, const uint64_t* in) {
-  // There is no FS register on ARM.
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t arch_get_x86_register_gs(Thread* thread, uint64_t* out) {
-  // There is no GS register on ARM.
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t arch_set_x86_register_gs(Thread* thread, const uint64_t* in) {
-  // There is no GS register on ARM.
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 uint8_t arch_get_hw_breakpoint_count() { return arm64_hw_breakpoint_count(); }
 
 uint8_t arch_get_hw_watchpoint_count() { return arm64_hw_watchpoint_count(); }

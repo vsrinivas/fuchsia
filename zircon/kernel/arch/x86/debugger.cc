@@ -425,38 +425,6 @@ zx_status_t arch_set_debug_regs(Thread* thread, const zx_thread_state_debug_regs
   return ZX_OK;
 }
 
-zx_status_t arch_get_x86_register_fs(Thread* thread, uint64_t* out) {
-  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
-
-  DEBUG_ASSERT(thread->IsUserStateSavedLocked());
-  *out = thread->arch().fs_base;
-  return ZX_OK;
-}
-
-zx_status_t arch_set_x86_register_fs(Thread* thread, const uint64_t* in) {
-  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
-
-  DEBUG_ASSERT(thread->IsUserStateSavedLocked());
-  thread->arch().fs_base = *in;
-  return ZX_OK;
-}
-
-zx_status_t arch_get_x86_register_gs(Thread* thread, uint64_t* out) {
-  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
-
-  DEBUG_ASSERT(thread->IsUserStateSavedLocked());
-  *out = thread->arch().gs_base;
-  return ZX_OK;
-}
-
-zx_status_t arch_set_x86_register_gs(Thread* thread, const uint64_t* in) {
-  Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
-
-  DEBUG_ASSERT(thread->IsUserStateSavedLocked());
-  thread->arch().gs_base = *in;
-  return ZX_OK;
-}
-
 // NOTE: While x86 supports up to 4 hw breakpoints/watchpoints, there is a catch:
 //       They are shared, so (breakpoints + watchpoints) <= HW_DEBUG_REGISTERS_COUNT.
 uint8_t arch_get_hw_breakpoint_count() { return HW_DEBUG_REGISTERS_COUNT; }

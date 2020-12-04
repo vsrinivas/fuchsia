@@ -160,10 +160,6 @@ typedef struct zx_thread_state_debug_regs {
 // (single-stepping). Other values will give ZX_ERR_INVALID_ARGS.
 typedef uint32_t zx_thread_state_single_step_t;
 
-// Values for ZX_THREAD_X86_REGISTER_FS and ZX_THREAD_X86_REGISTER_GS;
-typedef uint64_t zx_thread_x86_register_fs_t;
-typedef uint64_t zx_thread_x86_register_gs_t;
-
 // Possible values for "kind" in zx_thread_read_state and zx_thread_write_state.
 typedef uint32_t zx_thread_state_topic_t;
 #define ZX_THREAD_STATE_GENERAL_REGS ((uint32_t)0)  // zx_thread_state_general_regs_t value.
@@ -171,8 +167,6 @@ typedef uint32_t zx_thread_state_topic_t;
 #define ZX_THREAD_STATE_VECTOR_REGS ((uint32_t)2)   // zx_thread_state_vector_regs_t value.
 #define ZX_THREAD_STATE_DEBUG_REGS ((uint32_t)4)    // zx_thread_state_debug_regs_t value.
 #define ZX_THREAD_STATE_SINGLE_STEP ((uint32_t)5)   // zx_thread_state_single_step_t value.
-#define ZX_THREAD_X86_REGISTER_FS ((uint32_t)6)     // zx_thread_x86_register_fs_t value.
-#define ZX_THREAD_X86_REGISTER_GS ((uint32_t)7)     // zx_thread_x86_register_gs_t value.
 
 __END_CDECLS
 

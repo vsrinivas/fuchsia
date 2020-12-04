@@ -3850,8 +3850,6 @@ void SyscallDecoderDispatcher::Populate() {
     const uint8_t kZxThreadReadState_ZX_THREAD_STATE_VECTOR_REGS_X64 = 5;
     const uint8_t kZxThreadReadState_ZX_THREAD_STATE_DEBUG_REGS_Arm64 = 6;
     const uint8_t kZxThreadReadState_ZX_THREAD_STATE_DEBUG_REGS_X64 = 7;
-    const uint8_t kZxThreadReadState_ZX_THREAD_X86_REGISTER_FS_X64 = 8;
-    const uint8_t kZxThreadReadState_ZX_THREAD_X86_REGISTER_GS_X64 = 9;
     // Inputs
     zx_thread_read_state->Input<zx_handle_t>("handle",
                                              std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
@@ -3921,22 +3919,6 @@ void SyscallDecoderDispatcher::Populate() {
             std::make_unique<ArgumentAccess<uint8_t>>(buffer))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_SINGLE_STEP);
-    zx_thread_read_state
-        ->OutputIndirect<zx_thread_x86_register_fs_t, uint8_t>(
-            ZX_OK, "reg", SyscallType::kUint64Hexa,
-            std::make_unique<ArgumentAccess<uint8_t>>(buffer))
-        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
-                                   ZX_THREAD_X86_REGISTER_FS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64)
-        ->SetId(kZxThreadReadState_ZX_THREAD_X86_REGISTER_FS_X64);
-    zx_thread_read_state
-        ->OutputIndirect<zx_thread_x86_register_gs_t, uint8_t>(
-            ZX_OK, "reg", SyscallType::kUint64Hexa,
-            std::make_unique<ArgumentAccess<uint8_t>>(buffer))
-        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
-                                   ZX_THREAD_X86_REGISTER_GS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64)
-        ->SetId(kZxThreadReadState_ZX_THREAD_X86_REGISTER_GS_X64);
   }
 
   {
@@ -3954,8 +3936,6 @@ void SyscallDecoderDispatcher::Populate() {
     const uint8_t kZxThreadWriteState_ZX_THREAD_STATE_VECTOR_REGS_X64 = 5;
     const uint8_t kZxThreadWriteState_ZX_THREAD_STATE_DEBUG_REGS_Arm64 = 6;
     const uint8_t kZxThreadWriteState_ZX_THREAD_STATE_DEBUG_REGS_X64 = 7;
-    const uint8_t kZxThreadWriteState_ZX_THREAD_X86_REGISTER_FS_X64 = 8;
-    const uint8_t kZxThreadWriteState_ZX_THREAD_X86_REGISTER_GS_X64 = 9;
     // Inputs
     zx_thread_write_state->Input<zx_handle_t>(
         "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
@@ -4024,20 +4004,6 @@ void SyscallDecoderDispatcher::Populate() {
             "single_step", SyscallType::kUint32, std::make_unique<ArgumentAccess<uint8_t>>(buffer))
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_SINGLE_STEP);
-    zx_thread_write_state
-        ->InputIndirect<zx_thread_x86_register_fs_t, uint8_t>(
-            "reg", SyscallType::kUint64Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer))
-        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
-                                   ZX_THREAD_X86_REGISTER_FS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64)
-        ->SetId(kZxThreadWriteState_ZX_THREAD_X86_REGISTER_FS_X64);
-    zx_thread_write_state
-        ->InputIndirect<zx_thread_x86_register_gs_t, uint8_t>(
-            "reg", SyscallType::kUint64Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer))
-        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
-                                   ZX_THREAD_X86_REGISTER_GS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64)
-        ->SetId(kZxThreadWriteState_ZX_THREAD_X86_REGISTER_GS_X64);
   }
 
   {

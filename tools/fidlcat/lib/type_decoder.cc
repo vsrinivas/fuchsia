@@ -346,8 +346,6 @@ void ThreadStateTopicName(zx_thread_state_topic_t topic, fidl_codec::PrettyPrint
     ThreadStateTopicNameCase(ZX_THREAD_STATE_VECTOR_REGS);
     ThreadStateTopicNameCase(ZX_THREAD_STATE_DEBUG_REGS);
     ThreadStateTopicNameCase(ZX_THREAD_STATE_SINGLE_STEP);
-    ThreadStateTopicNameCase(ZX_THREAD_X86_REGISTER_FS);
-    ThreadStateTopicNameCase(ZX_THREAD_X86_REGISTER_GS);
     default:
       printer << static_cast<uint32_t>(topic);
       return;

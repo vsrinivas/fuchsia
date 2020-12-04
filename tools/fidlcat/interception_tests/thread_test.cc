@@ -826,32 +826,6 @@ THREAD_READ_STATE_SINGLE_STEP_DISPLAY_TEST(
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m4\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m (single_step: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m)\n");
 
-TEST_F(InterceptionWorkflowTestX64, ZxThreadReadStateX86RegisterFs) {
-  zx_thread_x86_register_fs_t reg = 0x123456789abcdef0UL;
-  THREAD_READ_STATE_DISPLAY_TEST_CONTENT(
-      ZX_OK, ZX_THREAD_X86_REGISTER_FS, reg,
-      "\n"
-      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-      "zx_thread_read_state("
-      "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-      "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_X86_REGISTER_FS\x1B[0m, "
-      "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m8\x1B[0m)\n"
-      "  -> \x1B[32mZX_OK\x1B[0m (reg: \x1B[32muint64\x1B[0m = \x1B[34m123456789abcdef0\x1B[0m)\n");
-}
-
-TEST_F(InterceptionWorkflowTestX64, ZxThreadReadStateX86RegisterGs) {
-  zx_thread_x86_register_fs_t reg = 0x123456789abcdef0UL;
-  THREAD_READ_STATE_DISPLAY_TEST_CONTENT(
-      ZX_OK, ZX_THREAD_X86_REGISTER_GS, reg,
-      "\n"
-      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-      "zx_thread_read_state("
-      "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-      "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_X86_REGISTER_GS\x1B[0m, "
-      "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m8\x1B[0m)\n"
-      "  -> \x1B[32mZX_OK\x1B[0m (reg: \x1B[32muint64\x1B[0m = \x1B[34m123456789abcdef0\x1B[0m)\n");
-}
-
 // zx_thread_write_state tests.
 
 std::unique_ptr<SystemCallTest> ZxThreadWriteState(int64_t result, std::string_view result_name,
@@ -1575,33 +1549,5 @@ THREAD_WRITE_STATE_SINGLE_STEP_DISPLAY_TEST(
     "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m4\x1B[0m, "
     "single_step: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n");
-
-TEST_F(InterceptionWorkflowTestX64, ZxThreadWriteStateX86RegisterFs) {
-  zx_thread_x86_register_fs_t reg = 0x123456789abcdef0UL;
-  THREAD_WRITE_STATE_DISPLAY_TEST_CONTENT(
-      ZX_OK, ZX_THREAD_X86_REGISTER_FS, reg,
-      "\n"
-      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-      "zx_thread_write_state("
-      "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-      "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_X86_REGISTER_FS\x1B[0m, "
-      "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m8\x1B[0m, "
-      "reg: \x1B[32muint64\x1B[0m = \x1B[34m123456789abcdef0\x1B[0m)\n"
-      "  -> \x1B[32mZX_OK\x1B[0m\n");
-}
-
-TEST_F(InterceptionWorkflowTestX64, ZxThreadWriteStateX86RegisterGs) {
-  zx_thread_x86_register_fs_t reg = 0x123456789abcdef0UL;
-  THREAD_WRITE_STATE_DISPLAY_TEST_CONTENT(
-      ZX_OK, ZX_THREAD_X86_REGISTER_GS, reg,
-      "\n"
-      "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-      "zx_thread_write_state("
-      "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-      "kind: \x1B[32mzx_thread_state_topic_t\x1B[0m = \x1B[34mZX_THREAD_X86_REGISTER_GS\x1B[0m, "
-      "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m8\x1B[0m, "
-      "reg: \x1B[32muint64\x1B[0m = \x1B[34m123456789abcdef0\x1B[0m)\n"
-      "  -> \x1B[32mZX_OK\x1B[0m\n");
-}
 
 }  // namespace fidlcat

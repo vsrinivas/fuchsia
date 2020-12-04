@@ -34,14 +34,6 @@ zx_status_t arch_set_debug_regs(Thread* thread, const zx_thread_state_debug_regs
 zx_status_t arch_get_single_step(Thread* thread, zx_thread_state_single_step_t* out);
 zx_status_t arch_set_single_step(Thread* thread, const zx_thread_state_single_step_t* in);
 
-// Only relevant on x86. Returns ZX_ERR_NOT_SUPPORTED on ARM.
-zx_status_t arch_get_x86_register_fs(Thread* thread, uint64_t* out);
-zx_status_t arch_set_x86_register_fs(Thread* thread, const uint64_t* in);
-
-// Only relevant on x86. Returns ZX_ERR_NOT_SUPPORTED on ARM.
-zx_status_t arch_get_x86_register_gs(Thread* thread, uint64_t* out);
-zx_status_t arch_set_x86_register_gs(Thread* thread, const uint64_t* in);
-
 __END_CDECLS
 
 #endif  // ZIRCON_KERNEL_INCLUDE_ARCH_DEBUGGER_H_
