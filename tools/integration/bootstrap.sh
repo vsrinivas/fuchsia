@@ -10,16 +10,13 @@ set -o pipefail   # error if the input command to a pipe fails
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 readonly FUCHSIA_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
-# Path to the fint main package, relative to fuchsia root.
-readonly FINT_PKG_PATH="tools/integration/cmd/fint"
 # The go repos that fint depends on, given an an array of pairs of the form
 # (<repo name>, <path in the tree to that vendored repo>).
+# Note: fint can use any packages in //tools without declaring them here,
+# because fint is part of the //tools Go module. If fint ever depends on
+# packages from other top-level directories from the Fuchsia root, the
+# modules corresponding to those top-level directories must be added here.
 readonly GO_DEPS=(
-  # Note: this assumes that all fuchsia packages to be used by fint have names
-  # that mirror their paths within fuchsia.git.
-  "go.fuchsia.dev/fuchsia"
-  "${FUCHSIA_ROOT}"
-
   "github.com/golang/protobuf"
   "${FUCHSIA_ROOT}/third_party/golibs/github.com/golang/protobuf"
 
@@ -63,7 +60,7 @@ print_usage_and_exit() {
 #   The host platform, if successful.
 ###############################################################################
 host_platform() {
-  readonly uname="$(uname --kernel-name --machine)"
+  readonly uname="$(uname -s -m)"
   case "${uname}" in
     "Linux x86_64") echo linux-x64 ;;
     "Darwin x86_64") echo mac-x64 ;;
@@ -91,8 +88,18 @@ symlink_go_deps() {
     src="${GO_DEPS[i+1]}"
     dest="${gopath}/src/${host}"
     mkdir -p "$(dirname "${dest}")"
-    ln --symbolic --no-target-directory "${src}" "${dest}"
+    if [[ -d "${dest}" ]]; then
+      echo "cannot symlink deps: ${dest} already exists"
+    fi
+    ln -s "${src}" "${dest}"
   done
+}
+
+# The `realpath` command is not available on all systems, so we reimplement it
+# here in pure bash. It converts relative paths to absolute, and leaves
+# absolute paths as-is.
+realpath() {
+    [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
 }
 
 main() {
@@ -101,14 +108,14 @@ main() {
   while getopts 'ho:' opt; do
     case "$opt" in
       h) print_usage_and_exit 0 ;;
-      o) output="${OPTARG}" ;;
+      o) output=$(realpath "${OPTARG}") ;;
       ?) print_usage_and_exit 1  ;;
     esac
   done
 
-  readonly GOPATH="$(mktemp --directory -t fint.XXXXX)"
+  readonly GOPATH=$(mktemp -d "${TMPDIR:-/tmp}/fint.XXXXX")
   rm_gopath() {
-    rm --recursive --force "${GOPATH}"
+    rm -r -f "${GOPATH}"
   }
   trap rm_gopath EXIT
   export GOPATH
@@ -116,8 +123,9 @@ main() {
   # Execute `go build` from the fuchsia root, as the package to build must be
   # supplied as a relative path.
   readonly go_bin="${FUCHSIA_ROOT}/prebuilt/third_party/go/$(host_platform)/bin/go"
-  cd "${FUCHSIA_ROOT}" && ${go_bin} build -o "${output}" "./${FINT_PKG_PATH}"
+  # Go commands must be run in //tools, because each top-level directory is its
+  # own Go module.
+  cd "${FUCHSIA_ROOT}/tools" && ${go_bin} build -o "${output}" "./integration/cmd/fint"
 }
 
 main "$@"
-
