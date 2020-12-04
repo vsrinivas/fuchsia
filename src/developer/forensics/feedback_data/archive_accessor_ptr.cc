@@ -44,7 +44,7 @@ ArchiveAccessor::ArchiveAccessor(async_dispatcher_t* dispatcher,
 
 void ArchiveAccessor::Collect(
     std::function<void(fuchsia::diagnostics::FormattedContent)> write_formatted_content) {
-  // We start the Inspect data collection.
+  // We start the Diagnostics data collection.
   archive_->StreamDiagnostics(std::move(stream_parameters_), snapshot_iterator_.NewRequest());
   AppendNextBatch(std::move(write_formatted_content));
 }
@@ -62,7 +62,7 @@ void ArchiveAccessor::AppendNextBatch(
         }
 
         if (result.is_err()) {
-          FX_LOGS(WARNING) << "Failed to retrieve next Inspect batch: " << result.err();
+          FX_LOGS(WARNING) << "Failed to retrieve next Diagnostics batch: " << result.err();
           // TODO(fxbug.dev/51658): don't complete the flow on an error. The API says we should
           // continue making calls instead.
           archive_.CompleteError(Error::kBadValue);
@@ -70,16 +70,12 @@ void ArchiveAccessor::AppendNextBatch(
         }
 
         std::vector<fuchsia::diagnostics::FormattedContent>& batch = result.response().batch;
-        if (batch.empty()) {  // We have gotten all the Inspect data.
+        if (batch.empty()) {  // We have gotten all the Diagnostics data.
           archive_.CompleteOk();
           return;
         }
 
         for (auto& chunk : batch) {
-          if (!chunk.is_json()) {
-            FX_LOGS(WARNING) << "Missing JSON Inspect chunk, skipping";
-            continue;
-          }
           write_formatted_content(std::move(chunk));
         }
 

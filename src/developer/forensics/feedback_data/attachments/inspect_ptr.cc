@@ -37,6 +37,11 @@ namespace feedback_data {
 
   // Start collecting data.
   inspect->Collect([inspect_vector](fuchsia::diagnostics::FormattedContent chunk) {
+    if (!chunk.is_json()) {
+      FX_LOGS(WARNING) << "Invalid JSON Inspect chunk, skipping";
+      return;
+    }
+
     std::string json;
     if (!fsl::StringFromVmo(chunk.json(), &json)) {
       FX_LOGS(WARNING) << "Failed to convert Inspect data chunk to string, skipping";
