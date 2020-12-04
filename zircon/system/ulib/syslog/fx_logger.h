@@ -57,7 +57,7 @@ struct fx_logger {
 
   zx_status_t LogWrite(fx_log_severity_t severity, const char* tag, const char* msg,
                        const char* file = nullptr, uint32_t line = 0) {
-    va_list empty_args;
+    va_list empty_args = nullptr;
     return VLogWrite(severity, tag, file, line, msg, empty_args, false);
   }
 
