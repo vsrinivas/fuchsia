@@ -16,6 +16,11 @@
 namespace fidl {
 namespace {
 
+static_assert(std::is_move_constructible<fidl::test::frobinator::FrobinatorSyncPtr>::value,
+              "fidl::SynchronousInterfacePtr should be move constructible");
+static_assert(std::is_move_assignable<fidl::test::frobinator::FrobinatorSyncPtr>::value,
+              "fidl::SynchronousInterfacePtr should be move assignable");
+
 TEST(SynchronousInterfacePtr, Trivial) { fidl::test::frobinator::FrobinatorSyncPtr ptr; }
 
 TEST(SynchronousInterfacePtr, Control) {
@@ -25,8 +30,17 @@ TEST(SynchronousInterfacePtr, Control) {
   std::thread client([ptr = std::move(ptr)]() mutable {
     ptr->Frob("one");
 
+    fidl::test::frobinator::FrobinatorSyncPtr ptr_move_constructed(std::move(ptr));
+
     std::string result;
-    ptr->Grob("two", &result);
+    ptr_move_constructed->Grob("two", &result);
+
+    EXPECT_EQ("response", result);
+
+    fidl::test::frobinator::FrobinatorSyncPtr ptr_move_assigned;
+    ptr_move_assigned = std::move(ptr_move_constructed);
+
+    ptr_move_assigned->Grob("three", &result);
 
     EXPECT_EQ("response", result);
   });
@@ -38,6 +52,7 @@ TEST(SynchronousInterfacePtr, Control) {
 
   EXPECT_EQ(ZX_OK, binding.Bind(std::move(request)));
 
+  binding.WaitForMessage();
   binding.WaitForMessage();
   binding.WaitForMessage();
 
