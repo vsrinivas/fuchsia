@@ -440,6 +440,7 @@ fn register_listener(
 fn reject_provider_request(req: fidl_policy::ClientProviderRequest) -> Result<(), fidl::Error> {
     match req {
         fidl_policy::ClientProviderRequest::GetController { requests, updates, .. } => {
+            info!("Rejecting new client controller request because a controller is in use");
             requests.into_channel().close_with_epitaph(zx::Status::ALREADY_BOUND)?;
             updates.into_channel().close_with_epitaph(zx::Status::ALREADY_BOUND)?;
             Ok(())
