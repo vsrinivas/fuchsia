@@ -216,6 +216,7 @@ fn function_name_parser<'a>(i: &'a str) -> IResult<&'a str, Function, VerboseErr
             function!("Map", Map),
             function!("Fold", Fold),
             function!("Filter", Filter),
+            function!("Apply", Apply),
             function!("Count", Count),
             function!("Nanos", Nanos),
             function!("Micros", Micros),
@@ -885,6 +886,9 @@ mod test {
 
     #[test]
     fn functional_programming() -> Result<(), Error> {
+        assert_eq!(eval!("Apply(Fn([], 5))"), i(5));
+        assert_eq!(eval!("Apply(Fn([a], a+5), 2)"), i(7));
+        assert_eq!(eval!("Apply(Fn([a, b], a*b+5), 2, 3)"), i(11));
         assert_eq!(eval!("Map(Fn([a], a*2), [1,2,3])"), v(&[i(2), i(4), i(6)]));
         assert_eq!(
             eval!("Map(Fn([a, b], [a, b]), [1, 2, 3], [4, 5, 6])"),
@@ -898,7 +902,7 @@ mod test {
         assert_eq!(eval!("Fold(Fn([a, b], a + b), [1, 2, 3])"), i(6));
         assert_eq!(eval!("Fold(Fn([a, b], a + 1), ['a', 'b', 'c', 'd'], 0)"), i(4));
         assert_eq!(eval!("Filter(Fn([a], a > 5), [2, 4, 6, 8])"), v(&[i(6), i(8)]));
-        assert_eq!(eval!("Count([1,'a', 3, 2])"), i(4));
+        assert_eq!(eval!("Count([1, 'a', 3, 2])"), i(4));
         Ok(())
     }
 

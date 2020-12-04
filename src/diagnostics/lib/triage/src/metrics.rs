@@ -89,6 +89,7 @@ pub enum Function {
     Missing,
     Annotation,
     Lambda,
+    Apply,
     Map,
     Fold,
     Filter,
@@ -432,6 +433,7 @@ impl<'a> MetricState<'a> {
             Function::Missing => self.is_missing(namespace, operands),
             Function::Annotation => self.annotation(namespace, operands),
             Function::Lambda => Lambda::as_metric_value(operands),
+            Function::Apply => self.apply(namespace, operands),
             Function::Map => self.map(namespace, operands),
             Function::Fold => self.fold(namespace, operands),
             Function::Filter => self.filter(namespace, operands),
@@ -531,6 +533,15 @@ impl<'a> MetricState<'a> {
         let arguments =
             operands[1..].iter().map(|expr| self.evaluate(namespace, expr)).collect::<Vec<_>>();
         Ok((lambda, arguments))
+    }
+
+    /// This implements the Apply() function.
+    fn apply(&self, namespace: &str, operands: &[Expression]) -> MetricValue {
+        let (lambda, arguments) = match self.unpack_lambda(namespace, operands) {
+            Ok((lambda, arguments)) => (lambda, arguments),
+            Err(()) => return missing("Apply needs a function in its first argument."),
+        };
+        self.apply_lambda(namespace, &lambda, &arguments.iter().collect::<Vec<_>>())
     }
 
     /// This implements the Map() function.
