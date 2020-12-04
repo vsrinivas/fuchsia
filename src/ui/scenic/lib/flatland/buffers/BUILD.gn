@@ -1,0 +1,20 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("buffers") {
+  sources = [
+    "buffer_collection.cc",
+    "buffer_collection.h",
+    "buffer_collection_importer.h",
+    "mock_buffer_collection_importer.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.images",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/ui/scenic/lib/sysmem",
+    "//zircon/public/lib/zxc",
+  ]
+}

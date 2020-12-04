@@ -29,7 +29,6 @@ executable("unittests") {
     "//src/lib/fsl:fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/scenic/lib/flatland",
-    "//src/ui/scenic/lib/flatland/renderer/mocks",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
     "//third_party/googletest:gmock",

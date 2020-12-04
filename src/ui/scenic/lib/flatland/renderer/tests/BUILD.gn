@@ -12,7 +12,6 @@ executable("unittests") {
   output_name = "flatland_renderer_unittests"
   testonly = true
   sources = [
-    "buffer_collection_unittest.cc",
     "display_unittest.cc",
     "gpu_mem_unittest.cc",
     "renderer_unittest.cc",

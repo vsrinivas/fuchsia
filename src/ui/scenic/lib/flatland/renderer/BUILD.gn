@@ -12,9 +12,6 @@ config("glm_config") {
 # due to its dependencies on Escher which we do not want exposed.
 source_set("renderer") {
   sources = [
-    "buffer_collection.cc",
-    "buffer_collection.h",
-    "buffer_collection_importer.h",
     "gpu_mem.cc",
     "gpu_mem.h",
     "null_renderer.cc",
@@ -29,8 +26,7 @@ source_set("renderer") {
   public_deps = [
     "//src/ui/lib/escher/geometry:escher_geometry",
     "//src/ui/lib/glm_workaround",
-    "//src/ui/scenic/lib/sysmem",
-    "//zircon/public/lib/zxc",
+    "//src/ui/scenic/lib/flatland/buffers",
   ]
 
   deps = [ "//src/ui/lib/escher" ]

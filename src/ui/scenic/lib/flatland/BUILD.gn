@@ -42,17 +42,17 @@ source_set("flatland") {
     "//sdk/fidl/fuchsia.ui.scenic.internal",
     "//src/lib/fxl",
 
-    # TODO(fxbug.dev/56879): this dependency should be broken down into smaller libraries, since it is
-    # currently only used for escher::FenceQueue.
+    # TODO(fxbug.dev/56879): this dependency should be broken down into smaller libraries,
+    # since it is currently only used for escher::FenceQueue.
     "//src/ui/lib/escher",
     "//src/ui/lib/glm_workaround",
+    "//src/ui/scenic/lib/flatland/buffers",
     "//zircon/public/lib/fit",
   ]
 
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/ui/scenic/lib/flatland/renderer",
     "//src/ui/scenic/lib/gfx:object_linker",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//zircon/system/ulib/trace",

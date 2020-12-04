@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_MOCKS_MOCK_BUFFER_COLLECTION_IMPORTER_H_
-#define SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_MOCKS_MOCK_BUFFER_COLLECTION_IMPORTER_H_
+#ifndef SRC_UI_SCENIC_LIB_FLATLAND_BUFFERS_MOCK_BUFFER_COLLECTION_IMPORTER_H_
+#define SRC_UI_SCENIC_LIB_FLATLAND_BUFFERS_MOCK_BUFFER_COLLECTION_IMPORTER_H_
 
 #include <gmock/gmock.h>
 
-#include "src/ui/scenic/lib/flatland/renderer/buffer_collection_importer.h"
+#include "src/ui/scenic/lib/flatland/buffers/buffer_collection_importer.h"
 
 namespace flatland {
 
@@ -27,4 +27,4 @@ class MockBufferCollectionImporter : public BufferCollectionImporter {
 
 }  // namespace flatland
 
-#endif  // SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_MOCKS_MOCK_BUFFER_COLLECTION_IMPORTER_H_
+#endif  // SRC_UI_SCENIC_LIB_FLATLAND_BUFFERS_MOCK_BUFFER_COLLECTION_IMPORTER_H_

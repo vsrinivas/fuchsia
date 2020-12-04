@@ -10,7 +10,7 @@
 
 #include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
-#include "src/ui/scenic/lib/flatland/renderer/buffer_collection.h"
+#include "src/ui/scenic/lib/flatland/buffers/buffer_collection.h"
 
 namespace flatland {
 

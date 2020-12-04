@@ -7,8 +7,8 @@
 
 #include <fuchsia/hardware/display/cpp/fidl.h>
 
+#include "src/ui/scenic/lib/flatland/buffers/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/link_system.h"
-#include "src/ui/scenic/lib/flatland/renderer/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 

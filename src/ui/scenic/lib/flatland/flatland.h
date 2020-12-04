@@ -25,7 +25,7 @@
 #include <glm/mat3x3.hpp>
 
 #include "src/ui/scenic/lib/flatland/link_system.h"
-#include "src/ui/scenic/lib/flatland/renderer/buffer_collection_importer.h"
+#include "src/ui/scenic/lib/flatland/buffers/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"

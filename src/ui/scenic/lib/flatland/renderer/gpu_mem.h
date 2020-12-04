@@ -8,7 +8,7 @@
 #include <optional>
 
 #include "src/ui/lib/escher/vk/gpu_mem.h"
-#include "src/ui/scenic/lib/flatland/renderer/buffer_collection.h"
+#include "src/ui/scenic/lib/flatland/buffers/buffer_collection.h"
 
 namespace flatland {
 

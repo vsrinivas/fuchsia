@@ -9,7 +9,7 @@
 
 #include <optional>
 
-#include "src/ui/scenic/lib/flatland/renderer/buffer_collection_importer.h"
+#include "src/ui/scenic/lib/flatland/buffers/buffer_collection_importer.h"
 
 // clang-format off
 #include "src/ui/lib/glm_workaround/glm_workaround.h"

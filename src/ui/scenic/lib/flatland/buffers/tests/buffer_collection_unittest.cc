@@ -2,23 +2,58 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/flatland/renderer/buffer_collection.h"
+#include "src/ui/scenic/lib/flatland/buffers/buffer_collection.h"
 
 #include <lib/fdio/directory.h>
 
-#include "src/ui/scenic/lib/flatland/renderer/tests/common.h"
+#include <gtest/gtest.h>
 
-namespace escher {
+namespace flatland {
 namespace test {
 
-using BufferCollectionTest = flatland::RendererTest;
+// Common testing base class to be used across different unittests that
+// require Vulkan and a SysmemAllocator.
+class BufferCollectionTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    ::testing::Test::SetUp();
+    // Create the SysmemAllocator.
+    zx_status_t status = fdio_service_connect(
+        "/svc/fuchsia.sysmem.Allocator", sysmem_allocator_.NewRequest().TakeChannel().release());
+    EXPECT_EQ(status, ZX_OK);
+  }
+
+  void TearDown() override {
+    sysmem_allocator_ = nullptr;
+    ::testing::Test::TearDown();
+  }
+
+  struct SysmemTokens {
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
+  };
+
+  SysmemTokens CreateSysmemTokens(fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
+    zx_status_t status = sysmem_allocator->AllocateSharedCollection(local_token.NewRequest());
+    EXPECT_EQ(status, ZX_OK);
+    fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
+    status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), dup_token.NewRequest());
+    EXPECT_EQ(status, ZX_OK);
+    status = local_token->Sync();
+    EXPECT_EQ(status, ZX_OK);
+
+    return {std::move(local_token), std::move(dup_token)};
+  }
+
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
+};
 
 // Test the creation of a buffer collection that doesn't have any additional vulkan
 // constraints to show that it doesn't need vulkan to be valid.
 TEST_F(BufferCollectionTest, CreateCollectionTest) {
-  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
-  auto result =
-      flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
+  auto tokens = CreateSysmemTokens(sysmem_allocator_.get());
+  auto result = BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
   EXPECT_TRUE(result.is_ok());
 }
 
@@ -30,9 +65,8 @@ TEST_F(BufferCollectionTest, CreateCollectionTest) {
 // out the dummy token inside the call to WaitUntilAllocated() that this is enough to ensure
 // that we can still allocate the buffer collection.
 TEST_F(BufferCollectionTest, AllocationWithoutExtraConstraints) {
-  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
-  auto result =
-      flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
+  auto tokens = CreateSysmemTokens(sysmem_allocator_.get());
+  auto result = BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
   EXPECT_TRUE(result.is_ok());
 
   auto collection = std::move(result.value());
@@ -93,8 +127,8 @@ TEST_F(BufferCollectionTest, AllocationWithoutExtraConstraints) {
 // Check to make sure |CreateBufferCollectionAndSetConstraints| returns false if
 // an invalid BufferCollectionHandle is provided by the user.
 TEST_F(BufferCollectionTest, NullTokenTest) {
-  auto result = flatland::BufferCollectionInfo::New(sysmem_allocator_.get(),
-                                                    /*token*/ nullptr);
+  auto result = BufferCollectionInfo::New(sysmem_allocator_.get(),
+                                          /*token*/ nullptr);
   EXPECT_TRUE(result.is_error());
 }
 
@@ -108,14 +142,14 @@ TEST_F(BufferCollectionTest, WrongTokenTypeTest) {
   // Here we inject a generic channel into a BufferCollectionHandle before passing the
   // handle into |CreateCollectionAndSetConstraints|. So the channel is valid,
   // but it is just not a BufferCollectionToken.
-  flatland::BufferCollectionHandle handle{std::move(remote_endpoint)};
+  BufferCollectionHandle handle{std::move(remote_endpoint)};
 
   // Make sure the handle is valid before passing it in.
   ASSERT_TRUE(handle.is_valid());
 
   // We should not be able to make a BufferCollectionInfon object with the wrong token type
   // passed in as a parameter.
-  auto result = flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(handle));
+  auto result = BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(handle));
   EXPECT_TRUE(result.is_error());
 }
 
@@ -123,9 +157,8 @@ TEST_F(BufferCollectionTest, WrongTokenTypeTest) {
 // with the constraints set on the server-side by the renderer, then waiting on
 // the buffers to be allocated should fail.
 TEST_F(BufferCollectionTest, IncompatibleConstraintsTest) {
-  auto tokens = flatland::CreateSysmemTokens(sysmem_allocator_.get());
-  auto result =
-      flatland::BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
+  auto tokens = CreateSysmemTokens(sysmem_allocator_.get());
+  auto result = BufferCollectionInfo::New(sysmem_allocator_.get(), std::move(tokens.dup_token));
   EXPECT_TRUE(result.is_ok());
 
   auto collection = std::move(result.value());
@@ -186,4 +219,4 @@ TEST_F(BufferCollectionTest, IncompatibleConstraintsTest) {
 }
 
 }  // namespace test
-}  // namespace escher
+}  // namespace flatland

@@ -8,7 +8,7 @@
 #include <mutex>
 #include <unordered_map>
 
-#include "src/ui/scenic/lib/flatland/renderer/buffer_collection.h"
+#include "src/ui/scenic/lib/flatland/buffers/buffer_collection.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
 namespace flatland {

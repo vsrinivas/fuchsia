@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/flatland/renderer/buffer_collection.h"
+#include "src/ui/scenic/lib/flatland/buffers/buffer_collection.h"
 
 #include <lib/zx/status.h>
 #include <zircon/errors.h>

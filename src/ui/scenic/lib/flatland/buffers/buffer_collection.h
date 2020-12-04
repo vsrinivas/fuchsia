@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_BUFFER_COLLECTION_H_
-#define SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_BUFFER_COLLECTION_H_
+#ifndef SRC_UI_SCENIC_LIB_FLATLAND_BUFFERS_BUFFER_COLLECTION_H_
+#define SRC_UI_SCENIC_LIB_FLATLAND_BUFFERS_BUFFER_COLLECTION_H_
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <lib/fitx/result.h>
@@ -22,8 +22,8 @@ class BufferCollectionInfo {
   // Creates a new |BufferCollectionInfo| instance. The return value is null if the buffer was
   // not created successfully. This function sets the server-side sysmem image constraints.
   //
-  // TODO(fxbug.dev/48210): Make this an asynchronous call. This function is currently thread safe as
-  // Allocator_Sync pointers are thread safe, but if this becomes async it may become unsafe.
+  // TODO(fxbug.dev/48210): Make this an asynchronous call. This function is currently thread safe
+  // as Allocator_Sync pointers are thread safe, but if this becomes async it may become unsafe.
   static fitx::result<fitx::failed, BufferCollectionInfo> New(
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       BufferCollectionHandle buffer_collection_token);
@@ -63,4 +63,4 @@ class BufferCollectionInfo {
 
 }  // namespace flatland
 
-#endif  // SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_BUFFER_COLLECTION_H_
+#endif  // SRC_UI_SCENIC_LIB_FLATLAND_BUFFERS_BUFFER_COLLECTION_H_

@@ -1,0 +1,18 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysmem.Allocator"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/flatland_buffers_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.intl.PropertyProvider",
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}

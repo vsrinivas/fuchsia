@@ -10,7 +10,7 @@
 
 #include "fuchsia/ui/scenic/internal/cpp/fidl.h"
 #include "lib/gtest/real_loop_fixture.h"
-#include "src/ui/scenic/lib/flatland/renderer/mocks/mock_buffer_collection_importer.h"
+#include "src/ui/scenic/lib/flatland/buffers/mock_buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/tests/mock_flatland_presenter.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"

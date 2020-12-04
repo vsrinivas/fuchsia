@@ -1,0 +1,22 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+
+  public_deps = [ ":unittests" ]
+}
+
+executable("unittests") {
+  output_name = "flatland_buffers_unittests"
+  testonly = true
+  sources = [ "buffer_collection_unittest.cc" ]
+
+  # TODO(fxbug.dev/58615): Fix the leaks and remove this.
+  deps = [
+    "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/ui/scenic/lib/flatland/buffers",
+  ]
+}
