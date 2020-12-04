@@ -40,6 +40,7 @@ driver_module("vim3") {
     "//sdk/banjo/ddk.protocol.usb.modeswitch",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/broadcom",
@@ -48,12 +49,14 @@ driver_module("vim3") {
     "//src/devices/lib/mmio",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
 }

@@ -31,6 +31,12 @@ enum {
   BTI_USB,
 };
 
+// MAC address metadata indices
+enum {
+  MACADDR_WIFI = 0,
+  MACADDR_BLUETOOTH = 1,
+};
+
 class Vim3;
 using Vim3Type = ddk::Device<Vim3, ddk::Initializable>;
 

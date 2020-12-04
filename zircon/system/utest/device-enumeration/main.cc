@@ -203,6 +203,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "aml-nna",
       "sys/platform/00:00:29",  // registers device
       "aml-usb-phy-v2",
+      "dwc2/dwc2/usb-peripheral/cdc-eth-function",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
