@@ -46,5 +46,5 @@ guest_package("termina_guest") {
       dest = "${rootfs_name}"
     },
   ]
-  block_devices = [ "/guest/data/${rootfs_name},ro" ]
+  block_devices = [ "data/${rootfs_name},ro" ]
 }
