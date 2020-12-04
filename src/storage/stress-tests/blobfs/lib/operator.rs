@@ -3,13 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    crate::blob::{Blob, BlobDataFactory, Compressibility},
+    crate::blob::Blob,
     crate::BLOBFS_MOUNT_PATH,
     fidl_fuchsia_io::{SeekOrigin, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fuchsia_zircon::Status,
     log::{debug, warn},
     rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
-    stress_test_utils::io::Directory,
+    stress_test_utils::{
+        data::{Compressibility, FileDataFactory},
+        io::Directory,
+    },
 };
 
 const BLOCK_SIZE: u64 = fuchsia_merkle::BLOCK_SIZE as u64;
@@ -38,7 +41,7 @@ pub struct BlobfsOperator {
     rng: SmallRng,
 
     // Factory for creating blob data that meets certain specifications
-    factory: BlobDataFactory,
+    factory: FileDataFactory,
 }
 
 async fn wait_for_blobfs_dir() -> Directory {
@@ -62,7 +65,7 @@ impl BlobfsOperator {
         let factory_rng = SmallRng::from_seed(initial_rng.gen());
         let state_rng = SmallRng::from_seed(initial_rng.gen());
 
-        let factory = BlobDataFactory::new(factory_rng);
+        let factory = FileDataFactory::new(factory_rng);
 
         Self { root_dir, blobs: vec![], rng: state_rng, factory }
     }

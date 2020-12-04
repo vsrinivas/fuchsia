@@ -6,6 +6,18 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
+fuchsia_component("minfs-crash") {
+  testonly = true
+  manifest = "minfs/meta/crash.cmx"
+  deps = [ "minfs:stressor-bin" ]
+}
+
+fuchsia_component("minfs-no-crash") {
+  testonly = true
+  manifest = "minfs/meta/no-crash.cmx"
+  deps = [ "minfs:stressor-bin" ]
+}
+
 fuchsia_component("blobfs-crash") {
   testonly = true
   manifest = "blobfs/meta/crash.cmx"
@@ -39,6 +51,8 @@ fuchsia_test_package("storage-stress-tests") {
     ":fvm-no-crash",
     ":blobfs-crash",
     ":blobfs-no-crash",
+    ":minfs-crash",
+    ":minfs-no-crash",
   ]
   test_specs = {
     log_settings = {
