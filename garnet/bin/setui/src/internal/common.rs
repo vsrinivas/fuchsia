@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use chrono::{DateTime, Utc};
+use fuchsia_zircon as zx;
 
 /// Macro for defining a standard message hub
 #[macro_export]
@@ -48,8 +48,8 @@ macro_rules! message_hub_definition {
 }
 
 /// Representation of time used for logging.
-pub type Timestamp = DateTime<Utc>;
+pub type Timestamp = zx::Time;
 
 pub fn now() -> Timestamp {
-    Utc::now()
+    zx::Time::get_monotonic()
 }
