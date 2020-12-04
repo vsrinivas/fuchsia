@@ -20,6 +20,7 @@
 #include <blobfs/common.h>
 #include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
+#include <digest/digest.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
 #include <fs/trace.h>
@@ -108,7 +109,7 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
   }
   if (inode->blob_size == 0) {
     // No data to load for the null blob.
-    return ZX_OK;
+    return VerifyNullBlob(digest::Digest(inode->merkle_root_hash), corruption_notifier);
   }
 
   fzl::OwnedVmoMapper merkle_mapper;
@@ -175,7 +176,7 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   }
   if (inode->blob_size == 0) {
     // No data to load for the null blob.
-    return ZX_OK;
+    return VerifyNullBlob(digest::Digest(inode->merkle_root_hash), corruption_notifier);
   }
 
   fzl::OwnedVmoMapper merkle_mapper;
@@ -500,5 +501,15 @@ void BlobLoader::ZeroMerkleTreeWithinDataVmo(const fzl::OwnedVmoMapper& vmo,
 }
 
 uint32_t BlobLoader::GetBlockSize() const { return txn_manager_->Info().block_size; }
+
+zx_status_t BlobLoader::VerifyNullBlob(Digest merkle_root, const BlobCorruptionNotifier* notifier) {
+  std::unique_ptr<BlobVerifier> verifier;
+  zx_status_t status;
+  if ((status = BlobVerifier::CreateWithoutTree(std::move(merkle_root), metrics_,
+                                                /*data_size=*/0, notifier, &verifier)) != ZX_OK) {
+    return status;
+  }
+  return verifier->Verify(/*data=*/nullptr, /*data_size=*/0, /*buffer_size=*/0);
+}
 
 }  // namespace blobfs

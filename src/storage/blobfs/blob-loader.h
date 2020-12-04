@@ -104,6 +104,9 @@ class BlobLoader {
                                     const BlobLayout& blob_layout,
                                     const fzl::OwnedVmoMapper& vmo) const;
 
+  // Verifies that |merkle_root| is the root hash of the null blob.
+  zx_status_t VerifyNullBlob(Digest merkle_root, const BlobCorruptionNotifier* notifier);
+
   // Reads |block_count| blocks starting at |block_offset| from the blob specified by |node_index|
   // into |vmo|.
   zx::status<uint64_t> LoadBlocks(uint32_t node_index, uint32_t block_offset, uint32_t block_count,

@@ -309,6 +309,46 @@ TEST_P(BlobLoaderTest, MediumBlobWithRoomForMerkleTree) {
   CheckMerkleTreeContents(merkle, *info);
 }
 
+TEST_P(BlobLoaderTest, NullBlobWithCorruptedMerkleRootFailsToLoad) {
+  size_t blob_len = 0;
+  std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
+  uint32_t inode_index = LookupInode(*info);
+
+  // Verify the null blob can be read back.
+  fzl::OwnedVmoMapper data, merkle;
+  ASSERT_EQ(loader().LoadBlob(inode_index, nullptr, &data, &merkle), ZX_OK);
+
+  uint8_t corrupt_merkle_root[digest::kSha256Length] = "-corrupt-null-blob-merkle-root-";
+  {
+    // Corrupt the null blob's merkle root.
+    // |inode| holds a pointer into |fs_| and needs to be destroyed before remounting.
+    auto inode = fs_->GetNode(inode_index);
+    memcpy(inode->merkle_root_hash, corrupt_merkle_root, sizeof(corrupt_merkle_root));
+    BlobTransaction transaction;
+    uint64_t block = (inode_index * kBlobfsInodeSize) / kBlobfsBlockSize;
+    transaction.AddOperation({.vmo = zx::unowned_vmo(fs_->GetAllocator()->GetNodeMapVmo().get()),
+                              .op = {
+                                  .type = storage::OperationType::kWrite,
+                                  .vmo_offset = block,
+                                  .dev_offset = NodeMapStartBlock(fs_->Info()) + block,
+                                  .length = 1,
+                              }});
+    transaction.Commit(*fs_->journal());
+  }
+
+  // Remount the filesystem so the node cache will pickup the new name for the blob.
+  ASSERT_EQ(Remount(), ZX_OK);
+
+  // Verify the empty blob can be found by the corrupt name.
+  BlobInfo corrupt_info;
+  Digest corrupt_digest(corrupt_merkle_root);
+  snprintf(corrupt_info.path, sizeof(info->path), "%s", corrupt_digest.ToString().c_str());
+  EXPECT_EQ(LookupInode(corrupt_info), inode_index);
+
+  // Verify the null blob with a corrupted Merkle root fails to load.
+  ASSERT_EQ(loader().LoadBlob(inode_index, nullptr, &data, &merkle), ZX_ERR_IO_DATA_INTEGRITY);
+}
+
 std::string GetCompressionAlgorithmName(CompressionAlgorithm compression_algorithm) {
   // CompressionAlgorithmToString can't be used because it contains underscores which aren't
   // allowed in test names.
