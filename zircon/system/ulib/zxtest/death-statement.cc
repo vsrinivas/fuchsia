@@ -170,6 +170,8 @@ zx_status_t ExitExceptionThread(zx::exception exception, std::string* error_mess
   regs.pc = reinterpret_cast<uintptr_t>(thrd_exit_success);
 #elif defined(__x86_64__)
   regs.rip = reinterpret_cast<uintptr_t>(thrd_exit_success);
+#elif defined(__riscv)
+  regs.placeholder = reinterpret_cast<uintptr_t>(thrd_exit_success);
 #else
 #error "what machine?"
 #endif
