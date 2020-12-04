@@ -35,10 +35,8 @@ source_set("zbi-test-main") {
   testonly = true
   sources = [ "zbi-test-main.cc" ]
   defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
-  deps = [
-    ":test-main",
-    "$zx/kernel/lib/libc",
-  ]
+  public_deps = [ ":test-main" ]
+  deps = [ "$zx/kernel/lib/libc" ]
 }
 
 source_set("test-main") {
@@ -199,10 +197,51 @@ source_set("phys-memory-test") {
   ]
 }
 
+zbi_executable("decompress-test") {
+  testonly = true
+  sources = [ "decompress-test.cc" ]
+  deps = [
+    ":zbi-test-main",
+    "$zx/kernel/lib/ktl",
+    "$zx/kernel/lib/libc",
+    "$zx/system/ulib/zbitl",
+    "$zx/system/ulib/zxc",
+  ]
+  data_deps = [ ":decompress-test-data" ]
+}
+
+zbi_input("decompress-test-data") {
+  testonly = true
+  type = "ramdisk"
+  args = [
+    "--compressed=zstd.max",
+    "--entry=abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz",
+  ]
+}
+
+zbi_test("phys-zbi-decompress-test") {
+  args = []
+
+  deps = [
+    ":decompress-test",
+    ":dummy.txt",
+  ]
+
+  # TODO(mcgrathr): enable on hardware too
+  device_types = [
+    "QEMU",
+    "AEMU",
+  ]
+
+  # Set a short timeout since the tests don't reliably reboot the machine.
+  timeout = qemu_short_timeout
+}
+
 group("test") {
   testonly = true
 
-  deps = []
+  deps = [ ":phys-zbi-decompress-test" ]
+
   foreach(test, common_tests) {
     deps += [
       ":qemu-$test",
