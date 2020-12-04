@@ -1,0 +1,41 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        binary: "bin/archive_reader_integration_test",
+    },
+    collections: [
+        {
+            name: "coll",
+            durability: "transient",
+        },
+    ],
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    use: [
+        { runner: "rust_test_runner" },
+        {
+            protocol: [
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.diagnostics.ArchiveAccessor",
+            ],
+        },
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#coll" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

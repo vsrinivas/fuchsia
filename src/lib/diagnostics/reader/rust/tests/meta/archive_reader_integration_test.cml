@@ -1,0 +1,70 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    children: [
+        {
+            name: "archivist",
+            url: "fuchsia-pkg://fuchsia.com/archive-reader-integration-tests#meta/archivist.cm",
+            startup: "eager",
+        },
+        {
+            name: "driver",
+            url: "fuchsia-pkg://fuchsia.com/archive-reader-integration-tests#meta/driver.cm",
+        },
+    ],
+    capabilities: [],
+    offer: [
+        {
+            protocol: "fuchsia.boot.WriteOnlyLog",
+            from: "parent",
+            to: [ "#driver" ],
+        },
+        {
+            protocol: "fuchsia.diagnostics.ArchiveAccessor",
+            from: "#archivist",
+            to: [ "#driver" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "#archivist",
+            to: [ "#driver" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#archivist" ],
+        },
+        {
+            protocol: "fuchsia.sys2.EventSource",
+            from: "parent",
+            to: [ "#archivist" ],
+        },
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "framework",
+            to: [ "#archivist" ],
+        },
+        {
+            event: "capability_ready",
+            from: "framework",
+            to: [ "#archivist" ],
+            filter: { name: "diagnostics" },
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            as: "config-data",
+            to: [ "#archivist" ],
+            subdir: "archivist",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#driver",
+        },
+    ],
+}

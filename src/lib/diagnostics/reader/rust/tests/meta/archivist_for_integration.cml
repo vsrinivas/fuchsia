@@ -1,0 +1,73 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        binary: "bin/archivist",
+        args: [
+            "--disable-klog",
+            "--config-path",
+            "/pkg/config/archivist_config.json",
+        ],
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+        },
+        {
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
+        },
+        {
+            directory: "diagnostics",
+            rights: [ "connect" ],
+            path: "/diagnostics",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [ "fuchsia.sys2.EventSource" ],
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "parent",
+        },
+        {
+            event: "capability_ready",
+            from: "parent",
+            as: "diagnostics_ready",
+            filter: { name: "diagnostics" },
+        },
+        {
+            event: "capability_requested",
+            from: "framework",
+            filter: { name: "fuchsia.logger.LogSink" },
+        },
+        {
+            event_stream: [ "capability_requested" ],
+            path: "/svc/fuchsia.sys2.EventStream",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "self",
+        },
+        {
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
+            from: "self",
+        },
+        {
+            directory: "diagnostics",
+            from: "self",
+            to: "framework",
+        },
+    ],
+}

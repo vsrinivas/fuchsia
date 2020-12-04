@@ -19,8 +19,11 @@ use pin_project::pin_project;
 use serde_json::Value as JsonValue;
 use std::{
     pin::Pin,
+    sync::Arc,
     task::{Context, Poll},
 };
+
+use parking_lot::Mutex;
 
 pub use diagnostics_data::{
     assert_data_tree, tree_assertion, Data, Inspect, Lifecycle, Logs, Severity,
@@ -91,7 +94,7 @@ impl ToSelectorArguments for ComponentSelector {
 /// Reader service.
 #[derive(Clone)]
 pub struct ArchiveReader {
-    archive: Option<ArchiveAccessorProxy>,
+    archive: Arc<Mutex<Option<ArchiveAccessorProxy>>>,
     selectors: Vec<String>,
     should_retry: bool,
     minimum_schema_count: usize,
@@ -108,14 +111,17 @@ impl ArchiveReader {
             timeout: None,
             selectors: vec![],
             should_retry: true,
-            archive: None,
+            archive: Arc::new(Mutex::new(None)),
             minimum_schema_count: 1,
             batch_retrieval_timeout_seconds: None,
         }
     }
 
-    pub fn with_archive(mut self, archive: ArchiveAccessorProxy) -> Self {
-        self.archive = Some(archive);
+    pub fn with_archive(self, archive: ArchiveAccessorProxy) -> Self {
+        {
+            let mut arc = self.archive.lock();
+            *arc = Some(archive);
+        }
         self
     }
 
@@ -224,12 +230,16 @@ impl ArchiveReader {
         data_type: DataType,
         mode: StreamMode,
     ) -> Result<BatchIteratorProxy, Error> {
-        let archive = if let Some(archive) = &self.archive {
-            archive.clone()
-        } else {
-            // TODO(fxbug.dev/58051) this should be done in an ArchiveReaderBuilder -> Reader init
-            client::connect_to_service::<ArchiveAccessorMarker>().context("connect to archive")?
-        };
+        // TODO(fxbug.dev/58051) this should be done in an ArchiveReaderBuilder -> Reader init
+        let mut archive = self.archive.lock();
+        if archive.is_none() {
+            *archive = Some(
+                client::connect_to_service::<ArchiveAccessorMarker>()
+                    .context("connect to archive")?,
+            )
+        }
+
+        let archive = archive.as_ref().unwrap();
 
         let (iterator, server_end) = fidl::endpoints::create_proxy::<BatchIteratorMarker>()
             .context("failed to create iterator proxy")?;

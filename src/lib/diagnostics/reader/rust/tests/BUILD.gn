@@ -1,0 +1,70 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+import("//src/sys/build/components.gni")
+
+rustc_test("integration_tests_bin") {
+  name = "archive_reader_integration_test"
+  edition = "2018"
+  deps = [
+    "//src/diagnostics/lib/selectors",
+    "//src/lib/diagnostics/data/rust",
+    "//src/lib/diagnostics/hierarchy/rust",
+    "//src/lib/diagnostics/inspect/contrib/rust",
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/diagnostics/testing/rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/stdout-to-debuglog/rust:stdout-to-debuglog",
+    "//src/sys/tools/cs:lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+fuchsia_component("driver") {
+  testonly = true
+  deps = [ ":integration_tests_bin" ]
+  manifest = "meta/driver.cml"
+}
+
+fuchsia_component("archive_reader_integration_test") {
+  testonly = true
+  deps = [ ":integration_tests_bin" ]
+  manifest = "meta/archive_reader_integration_test.cml"
+}
+
+resource("archivist_config") {
+  sources = [ "configs/archivist_config.json" ]
+  outputs = [ "config/{{source_file_part}}" ]
+}
+
+fuchsia_component("archivist") {
+  testonly = true
+  deps = [
+    ":archivist_config",
+    "//src/diagnostics/archivist:bin",
+  ]
+  manifest = "meta/archivist_for_integration.cml"
+}
+
+fuchsia_test_package("archive-reader-integration-tests") {
+  test_components = [ ":archive_reader_integration_test" ]
+  deps = [
+    ":archivist",
+    ":archivist_config",
+    ":driver",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":archive-reader-integration-tests" ]
+}
