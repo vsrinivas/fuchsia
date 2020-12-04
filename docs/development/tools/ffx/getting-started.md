@@ -1,7 +1,7 @@
 # Getting Started with ffx
 
 This doc will guide you through some of the features of `ffx`. For an overview
-of the design and components of `ffx`, see [this doc](ffx.md).
+of the design and components of `ffx`, see [this doc](/docs/development/tools/ffx/architecture/ffx.md).
 
 Warning: **`ffx` is currently in alpha. Its APIs, command-line surface, and
 documentation are subject to change.**
@@ -21,7 +21,7 @@ enabled (`-N`).
 Tip: To start a headless emulator, run `fx emu --headless --software-gpu -N`.
 
 Your device must be running a `core`
-[product configuration](https://fuchsia.dev/fuchsia-src/concepts/build_system/boards_and_products)
+[product configuration](/docs/concepts/build_system/boards_and_products.md)
 or a product configuration which extends `core` (such as `workstation`).
 
 Optionally, you can run `fx log`, which will provide some additional information
@@ -90,7 +90,7 @@ NOTE: Ignore the `TYPE` and `STATE` columns - they have no values besides
 A couple columns worth explanation:
 - `AGE`: this is the time since `ffx` was last able to reach the device.
 - `RCS`: Indicates whether there is a reachable instance of the
-  [Remote Control Service (RCS)](rcs.md) running on the device.
+  Remote Control Service (RCS) running on the device.
 
 If you wait 10 to 15 seconds and run the same command again, you should see the
 value in the `RCS` column change to `Y`.
@@ -153,9 +153,9 @@ Consider this example:
   `core/remote-control:out:fuchsia.developer.remotecontrol.RemoteControl`
 
 - `core/remote-control` is the
-  [component moniker](https://fuchsia.dev/fuchsia-src/concepts/components/monikers).
+  [component moniker](/docs/concepts/components/v2/monikers.md).
   This uniquely specifies a path in the
-  [component topology](https://fuchsia.dev/fuchsia-src/concepts/components/topology).
+  [component topology](/docs/concepts/components/v2/topology.md).
 
   Note: You can use `*` to wildcard a particular level in the topology, but *`*`
   is not recursive*. That is, `a/*/c` will match `a/b/c` but would not match
@@ -164,7 +164,7 @@ Consider this example:
 - `out` is the node selector. In `ffx`, this must be one of the following
   values, which correspond to the routing terminology used in the component
   manifest and defined
-  [here](https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests#routing-terminology).
+  [here](/docs/concepts/components/v2/component_manifests.md#routing-terminology).
   - `out`: services offered by the component. Corresponds to `offer` in the
     component manifest.
   - `expose`: services exposed by the component. Corresponds to `expose` in the
@@ -181,9 +181,9 @@ equivalent to `core/remote-control:out:*`.
 ### Inspecting the component topology
 
 You can use the `component select` command to inspect services in the
-[component topology](https://fuchsia.dev/fuchsia-src/concepts/components/topology).
+[component topology](/docs/concepts/components/v2/topology.md).
 For example, the following command will display all services offered by
-[v1 components](https://fuchsia.dev/fuchsia-src/glossary#components-v1):
+[v1 components](/docs/glossary.md#components-v1):
 
 ```sh
 $ fx ffx component select 'core/appmgr:out:*'`
@@ -245,11 +245,11 @@ host terminal.
 
 Only v1 components can be `run`: v2 components are only started on-demand by
 the framework. Learn more about the component lifecycle
-[here](https://fuchsia.dev/fuchsia-src/concepts/components/lifecycle).
+[here](/docs/concepts/components/v2/lifecycle.md).
 
 Note: `fx serve ` must be running in order to `component run` a package that is
 not
-[in base or cached](https://fuchsia.dev/fuchsia-src/concepts/build_system/boards_and_products#dependency_sets).
+[in base or cached](/docs/concepts/build_system/boards_and_products.md#dependency_sets).
 
 Here's an example of running the Rust hello-world component. First, you'll need
 the hello-world package in your universe:
@@ -269,9 +269,9 @@ you can use the `doctor` command to diagnose and attempt to resolve them. If you
 file a bug that involves a target device, we'll typically ask for the output
 from `ffx doctor` to provide information about where the problem is.
 
-`doctor` will attempt to communicate with the [ffx daemon](daemon.md), killing
+`doctor` will attempt to communicate with the ffx daemon, killing
 and restarting it if needed. If this is successful, it will attempt to SSH into
-a target device and start the [Remote Control Service](rcs.md).
+a target device and start the Remote Control Service.
 
 If you try running `ffx doctor` under normal circumstances, you should see:
 
@@ -326,4 +326,4 @@ above and 2) device syslog if available.Bug link: ...
 ## Next steps
 
 - Please provide feedback on this doc by [reaching out to us](#contacting-us)!
-- Learn how to [extend `ffx`](plugins.md).
+- Learn how to [extend `ffx`](/docs/development/tools/ffx/development/plugins.md).

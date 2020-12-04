@@ -1,9 +1,9 @@
 # Using FIDL proxies with plugins
 
 FFX plugins can communicate with a target device using FIDL through
-[Overnet](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/connectivity/overnet/).
+[Overnet](/src/connectivity/overnet/).
 
-The examples in this doc extend the example code from the [plugins](plugins.md) page.
+The examples in this doc extend the example code from the [plugins](/docs/development/tools/ffx/development/plugins.md) page.
 
 First we add a dependency to the plugin's `BUILD.gn` file:
 
@@ -50,7 +50,7 @@ pub async fn example(
 In order to correctly connect a proxy to the FIDL service on the
 target, you will need to map the proxy type to a component selector
 that can be used to find the FIDL service.  More about component
-selectors can be found on the [Component Select](component-select.md)
+selectors can be found on the [Component Select](/docs/development/tools/ffx/commands/component-select.md)
 page. This mapping is passed into the ffx_plugin annotation at the top
 of the function signature:
 
@@ -94,5 +94,5 @@ communicate with two proxies without mappings.  It's enough to just
 add these proxies to the parameter list without changing the
 ffx_plugin annotation:
 
-- [DaemonProxy](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.developer.bridge/daemon.fidl) - more info can be found [here](daemon.md)
-- [Remote Control Service (RCS)](https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.developer.remotecontrol/remote-control.fidl) - more info can be found [here](rcs.md)
+- [DaemonProxy](/sdk/fidl/fuchsia.developer.bridge/daemon.fidl)
+- [Remote Control Service (RCS)](/sdk/fidl/fuchsia.developer.remotecontrol/remote-control.fidl)

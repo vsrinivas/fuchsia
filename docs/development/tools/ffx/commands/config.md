@@ -44,10 +44,7 @@ $fx ffx --config "config-test=runtime" daemon
 ## Environment variables
 
 Keys can be tied to environment variables as well. This is currently done at
-compile time:
-
-- [Linux](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/developer/ffx/src/config/linux.rs)
-- [Not linux - PLACEHOLDER](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/developer/ffx/src/config/not_linux.rs)
+compile time.
 
 Keys can be tied to any number of environment variables and the first
 environment variable that resolves to a value is used (in the order that they
@@ -60,10 +57,7 @@ More to come.
 ## Heuristics
 
 Heuristic configurations use code that is executed at the time of query to
-resolve keys to values. This code is set at compile time:
-
-- [Linux](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/developer/ffx/src/config/linux.rs)
-- [Not linux - PLACEHOLDER](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/developer/ffx/src/config/not_linux.rs)
+resolve keys to values. This code is set at compile time.
 
 Keys are associated with functions that must match the signature:
 

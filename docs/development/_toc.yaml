@@ -23,6 +23,9 @@ toc:
 - title: "Configure editors"
   section:
   - include: /docs/development/editors/_toc.yaml
+- title: "ffx"
+  section:
+  - include: /docs/development/tools/ffx/_toc.yaml
 - title: "FIDL"
   section:
   - include: /docs/development/languages/fidl/_toc.yaml
