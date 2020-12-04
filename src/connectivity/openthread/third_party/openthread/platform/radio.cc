@@ -192,7 +192,7 @@ otError otPlatRadioSetTransmitPower(otInstance *a_instance, int8_t a_power) {
 
 #if OPENTHREAD_CONFIG_DIAG_ENABLE
 
-extern "C" otError otPlatDiagProcess(otInstance *a_instance, uint8_t *a_args_length, char *a_args[],
+extern "C" otError otPlatDiagProcess(otInstance *a_instance, uint8_t a_args_length, char *a_args[],
                                      char *a_output, size_t a_output_max_len) {
   OT_UNUSED_VARIABLE(a_instance);
   OT_UNUSED_VARIABLE(a_args_length);
