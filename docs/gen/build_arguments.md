@@ -2064,7 +2064,7 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:32
 ### product_bootfs_labels
 A list of binary labels to include in ZBIs built for this product.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//src/sys/base-resolver:bootfs"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//src/sys/base-resolver:bootfs", "//build/images:component_id_index_config"]`
 
 From //products/core.gni:107
 
@@ -2072,7 +2072,7 @@ From //products/core.gni:107
 
 From //build/product.gni:7
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//src/sys/base-resolver:bootfs"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//src/sys/base-resolver:bootfs", "//build/images:component_id_index_config"]`
 
 From //products/core.gni:107
 
@@ -2252,7 +2252,7 @@ Include the vulkan validation layers in scenic.
 
 **Current value (from the default):** `true`
 
-From //src/ui/scenic/BUILD.gn:138
+From //src/ui/scenic/BUILD.gn:146
 
 ### scenic_ignore_vsync
 
