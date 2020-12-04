@@ -50,9 +50,9 @@
 //! [`Builder`]: struct.Builder.html
 //! [`Category`]: trait.Category.html
 
-use chrono::{DateTime, Duration, Utc};
 use core::fmt::{Debug, Formatter};
 use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
 use futures::lock::Mutex;
 use futures::prelude::*;
 use futures::StreamExt;
@@ -93,9 +93,6 @@ impl IdGenerator {
     }
 }
 
-/// The timestamp tracking lifetime of a task.
-pub type Timestamp = DateTime<Utc>;
-
 /// The handle to a given [`Sink`] outlet which can receive task summary data.
 ///
 /// [`Sink`]: trait.Sink.html
@@ -132,7 +129,7 @@ pub struct Client<C: Category + 'static> {
     /// A sender to communicate changes back to the [`Manager`].
     ///
     /// [`Manager`]: struct.Manager.html
-    action_tx: futures::channel::mpsc::UnboundedSender<(Id, Action<C>, Timestamp)>,
+    action_tx: futures::channel::mpsc::UnboundedSender<(Id, Action<C>, zx::Time)>,
     /// A generator for retrieving an identifier to associate with a task.
     id_generator: Arc<IdGenerator>,
 }
@@ -146,7 +143,9 @@ impl<C: Category + 'static> Client<C> {
         let task_id = self.id_generator.generate();
 
         // We report the creation before spawning in case spawning fails.
-        self.action_tx.unbounded_send((task_id, Action::Create(category.clone()), Utc::now())).ok();
+        self.action_tx
+            .unbounded_send((task_id, Action::Create(category.clone()), zx::Time::get_monotonic()))
+            .ok();
 
         // Pass a clone of the action sender to the spawned task in order to
         // signal when the task completes.
@@ -155,7 +154,7 @@ impl<C: Category + 'static> Client<C> {
             future.await;
 
             // Report exit.
-            action_tx.unbounded_send((task_id, Action::Complete, Utc::now())).ok();
+            action_tx.unbounded_send((task_id, Action::Complete, zx::Time::get_monotonic())).ok();
         })
         .detach();
     }
@@ -186,7 +185,7 @@ impl<C: Category + 'static> Summary<C> {
     ///
     /// [`Manager`]: struct.Manager.html
     /// [`Action`]: enum.Action.html
-    fn ingest(&mut self, id: Id, action: Action<C>, timestamp: Timestamp) {
+    fn ingest(&mut self, id: Id, action: Action<C>, timestamp: zx::Time) {
         match action {
             Action::Create(category) => {
                 self.active_tasks.insert(id, category.clone());
@@ -214,13 +213,13 @@ impl<C: Category + 'static> Summary<C> {
     }
 
     /// Returns the longest running active task and its start time.
-    pub fn get_longest_active_task(&self) -> Option<(C, Timestamp)> {
+    pub fn get_longest_active_task(&self) -> Option<(C, zx::Time)> {
         let mut return_val = None;
         for statistics in self.statistics.values() {
             for timestamp in statistics.active_tasks.values() {
                 return_val = Some(return_val.map_or_else(
                     || (statistics.category.clone(), timestamp.clone()),
-                    |x: (C, Timestamp)| {
+                    |x: (C, zx::Time)| {
                         if timestamp < &x.1 {
                             (statistics.category.clone(), timestamp.clone())
                         } else {
@@ -265,13 +264,13 @@ impl<C: Category + 'static> Summary<C> {
     /// Returns the [`Category`] and duration of the longest completed task.
     ///
     /// [`Category`]: enum.Category.html
-    pub fn longest_completed_task(&self) -> Option<(C, Duration)> {
+    pub fn longest_completed_task(&self) -> Option<(C, zx::Duration)> {
         let mut return_val = None;
         while let Some(statistics) = self.statistics.values().next() {
             if let Some(duration) = statistics.longest_duration {
                 return_val = Some(return_val.map_or_else(
                     || (statistics.category.clone(), duration),
-                    |x: (C, Duration)| {
+                    |x: (C, zx::Duration)| {
                         if duration > x.1 {
                             (statistics.category.clone(), duration)
                         } else {
@@ -293,11 +292,11 @@ pub struct Statistics<C: Category + 'static> {
     /// The number of completed tasks.
     pub lifetime_count: i64,
     /// The average amount of time spent completing tasks.
-    pub average_duration: Option<Duration>,
+    pub average_duration: Option<zx::Duration>,
     /// The longest amount of time spent completing a task.
-    pub longest_duration: Option<Duration>,
+    pub longest_duration: Option<zx::Duration>,
     /// The id and start time for currently active tasks in this category.
-    pub active_tasks: HashMap<Id, Timestamp>,
+    pub active_tasks: HashMap<Id, zx::Time>,
 }
 
 #[allow(dead_code)]
@@ -314,7 +313,7 @@ impl<C: Category + 'static> Statistics<C> {
     }
 
     /// Returns the start time of the oldest actively running task.
-    pub fn get_oldest_active_start_time(&self) -> Option<Timestamp> {
+    pub fn get_oldest_active_start_time(&self) -> Option<zx::Time> {
         sorted(self.active_tasks.values().into_iter()).next().cloned()
     }
 
@@ -324,26 +323,23 @@ impl<C: Category + 'static> Statistics<C> {
     }
 
     /// Ingests data around the start of a task.
-    pub fn start(&mut self, id: Id, start_time: Timestamp) {
+    pub fn start(&mut self, id: Id, start_time: zx::Time) {
         self.active_tasks.insert(id, start_time);
     }
 
     /// Ingests data surrounding the end of a task.
-    pub fn complete(&mut self, id: Id, end_time: Timestamp) {
+    pub fn complete(&mut self, id: Id, end_time: zx::Time) {
         let start_time = self
             .active_tasks
             .remove(&id)
             .expect(&format!("timestamp for {:?} should be present", id));
-        let duration = end_time.signed_duration_since(start_time);
+        let duration = end_time - start_time;
 
         self.lifetime_count += 1;
 
         // Adjust the average duration of completed tasks.
         self.average_duration = Some(self.average_duration.map_or(duration, |x| {
-            Duration::milliseconds(
-                (x.num_milliseconds() * (self.lifetime_count - 1) + duration.num_milliseconds())
-                    / self.lifetime_count,
-            )
+            (x * (self.lifetime_count - 1) + duration) / self.lifetime_count
         }));
 
         // Update the longest duration of completed tasks if necessary.
@@ -420,7 +416,7 @@ impl<C: Category + 'static> Manager<C> {
         // Create an unbounded channel for clients to communicate with the task
         // manager.
         let (action_tx, mut action_rx) =
-            futures::channel::mpsc::unbounded::<(Id, Action<C>, Timestamp)>();
+            futures::channel::mpsc::unbounded::<(Id, Action<C>, zx::Time)>();
         let mut manager = Self { sinks, summary: Summary::<C>::new() };
 
         // This should be one of the only untracked async tasks in the codebase.
@@ -433,7 +429,7 @@ impl<C: Category + 'static> Manager<C> {
         (processing_future, Client { action_tx, id_generator: IdGenerator::create() })
     }
 
-    async fn handle(&mut self, id: Id, action: Action<C>, timestamp: Timestamp) {
+    async fn handle(&mut self, id: Id, action: Action<C>, timestamp: zx::Time) {
         self.summary.ingest(id, action, timestamp);
 
         for sink in &self.sinks {
@@ -482,7 +478,7 @@ mod tests {
 
         // Capture timestamp before spawning to verify any action is recorded
         // after this point.
-        let before_timestamp = Utc::now();
+        let before_timestamp = zx::Time::get_monotonic();
         client.spawn(&category, async move {});
 
         // After spawning a task, the manager should send an update indicating
