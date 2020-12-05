@@ -23,6 +23,7 @@ mod media_buttons_agent_tests;
 mod message_tests;
 mod message_utils;
 mod night_mode_tests;
+mod policy_handler_tests;
 mod policy_proxy_tests;
 mod privacy_tests;
 mod restore_agent_tests;

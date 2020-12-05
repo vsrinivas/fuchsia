@@ -12,6 +12,7 @@ use {
     crate::agent::base::{Authority, BlueprintHandle as AgentBlueprintHandle, Lifespan},
     crate::audio::audio_controller::AudioController,
     crate::audio::policy::audio_policy_handler::AudioPolicyHandler,
+    crate::audio::policy::State,
     crate::config::base::{AgentType, ControllerFlag},
     crate::device::device_controller::DeviceController,
     crate::display::display_controller::{DisplayController, ExternalBrightnessControl},
@@ -29,6 +30,8 @@ use {
     crate::intl::intl_controller::IntlController,
     crate::light::light_controller::LightController,
     crate::night_mode::night_mode_controller::NightModeController,
+    crate::policy::policy_handler,
+    crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl,
     crate::policy::policy_proxy::PolicyProxy,
     crate::power::power_controller::PowerController,
     crate::privacy::privacy_controller::PrivacyController,
@@ -320,6 +323,14 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             self.storage_factory.clone(),
         );
 
+        // Create the policy handler factory and register policy handlers.
+        let mut policy_handler_factory =
+            PolicyHandlerFactoryImpl::new(settings.clone(), self.storage_factory.clone());
+        policy_handler_factory.register(
+            SettingType::Audio,
+            Box::new(policy_handler::create_handler::<State, AudioPolicyHandler, _>),
+        );
+
         EnvironmentBuilder::get_configuration_handlers(&flags, &mut handler_factory);
 
         // Override the configuration handlers with any custom handlers specified
@@ -343,6 +354,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             service_context,
             event_messenger_factory,
             Arc::new(Mutex::new(handler_factory)),
+            Arc::new(Mutex::new(policy_handler_factory)),
         )
         .await
         .is_err()
@@ -500,6 +512,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     service_context_handle: ServiceContextHandle,
     event_messenger_factory: internal::event::message::Factory,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
+    policy_handler_factory: Arc<Mutex<PolicyHandlerFactoryImpl<T>>>,
 ) -> Result<(), Error> {
     let core_messenger_factory = internal::core::message::create_hub();
     let switchboard_messenger_factory = internal::switchboard::message::create_hub();
@@ -519,13 +532,12 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // TODO(fxbug.dev/60925): allow configuration of policy API, create proxies based on
     // configured policy types.
-    // TODO(fxbug.dev/59747): don't hardcode handler creation
     let mut policy_proxies = HashMap::new();
     policy_proxies.insert(
         SettingType::Audio,
         PolicyProxy::create(
             SettingType::Audio,
-            Box::new(AudioPolicyHandler::create()),
+            policy_handler_factory.clone(),
             core_messenger_factory.clone(),
             policy_messenger_factory.clone(),
         ),

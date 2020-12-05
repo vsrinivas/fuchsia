@@ -5,8 +5,9 @@
 use crate::audio::policy::{PolicyId, Request, Response, State, StateBuilder};
 use crate::internal::core::message::Messenger;
 use crate::policy::base as policy_base;
-use crate::policy::policy_handler::{PolicyHandler, Transform};
+use crate::policy::policy_handler::{ClientProxy, Create, PolicyHandler, Transform};
 use crate::switchboard::base::SettingRequest;
+use anyhow::Error;
 use async_trait::async_trait;
 
 /// `AudioPolicyHandler` controls the persistence and enforcement of audio policies set by
@@ -15,9 +16,10 @@ pub struct AudioPolicyHandler {
     state: State,
 }
 
-impl AudioPolicyHandler {
-    pub fn create() -> Self {
-        Self { state: StateBuilder::new().build() }
+#[async_trait]
+impl Create<State> for AudioPolicyHandler {
+    async fn create(_client_proxy: ClientProxy<State>) -> Result<Self, Error> {
+        Ok(Self { state: StateBuilder::new().build() })
     }
 }
 

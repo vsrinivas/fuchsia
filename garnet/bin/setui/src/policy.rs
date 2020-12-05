@@ -12,3 +12,6 @@ pub mod policy_handler;
 /// Defines a proxy between the policy FIDL handler and policy handler that is responsible for
 /// intercepting incoming setting requests and returning responses to the policy FIDL handler.
 pub mod policy_proxy;
+
+/// Defines a factory for creating policy handlers on demand.
+pub mod policy_handler_factory_impl;

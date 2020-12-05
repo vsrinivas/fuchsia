@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -11,6 +12,7 @@ use fidl_fuchsia_settings_policy::{Disable, Mute, PolicyParameters, Volume};
 
 use bitflags::bitflags;
 
+use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::switchboard::base::AudioStreamType;
 
 pub mod audio_policy_handler;
@@ -19,7 +21,7 @@ pub mod volume_policy_fidl_handler;
 pub type PropertyTarget = AudioStreamType;
 
 /// Unique identifier for a policy.
-#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PolicyId(u32);
 
 impl PolicyId {
@@ -62,7 +64,7 @@ impl StateBuilder {
 /// `State` defines the current configuration of the audio policy. This
 /// includes the available properties, which encompass the active transform
 /// policies and transforms available to be set.
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct State {
     properties: HashMap<PropertyTarget, Property>,
 }
@@ -73,9 +75,17 @@ impl State {
     }
 }
 
+impl DeviceStorageCompatible for State {
+    const KEY: &'static str = "audio_policy_state";
+
+    fn default_value() -> Self {
+        State { properties: Default::default() }
+    }
+}
+
 /// `Property` defines the current policy configuration over a given audio
 /// stream type.
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct Property {
     /// Identifier used to reference this type over other requests, such as
     /// setting a policy.
@@ -163,6 +173,7 @@ impl From<AudioStreamType> for fidl_fuchsia_settings_policy::Target {
 
 bitflags! {
     /// `TransformFlags` defines the available transform space.
+    #[derive(Serialize, Deserialize)]
     pub struct TransformFlags: u64 {
         const TRANSFORM_MAX = 1 << 0;
         const TRANSFORM_MIN = 1 << 1;
@@ -191,7 +202,7 @@ impl From<TransformFlags> for Vec<fidl_fuchsia_settings_policy::Transform> {
 }
 
 /// `Policy` captures a fully specified transform.
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct Policy {
     pub id: PolicyId,
     pub transform: Transform,
@@ -208,7 +219,7 @@ impl From<Policy> for fidl_fuchsia_settings_policy::Policy {
 }
 
 /// `Transform` provides the parameters for specifying a transform.
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Transform {
     // Limits the maximum volume an audio stream can be set to.
     Max(f32),

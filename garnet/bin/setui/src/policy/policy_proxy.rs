@@ -10,11 +10,12 @@ use crate::internal::core;
 use crate::internal::policy;
 use crate::internal::policy::Address;
 use crate::message::base::{filter, MessageEvent, MessengerType};
-use crate::policy::base::Request;
+use crate::policy::base::{PolicyHandlerFactory, Request};
 use crate::policy::policy_handler::{PolicyHandler, Transform};
 use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType,
 };
+use futures::lock::Mutex;
 use std::sync::Arc;
 
 /// `PolicyProxy` handles the routing of policy requests and the intercepting of setting requests to
@@ -29,7 +30,7 @@ pub struct PolicyProxy {
 impl PolicyProxy {
     pub async fn create(
         setting_type: SettingType,
-        policy_handler: Box<dyn PolicyHandler + Send + Sync + 'static>,
+        handler_factory: Arc<Mutex<dyn PolicyHandlerFactory + Send + Sync>>,
         core_messenger_factory: core::message::Factory,
         policy_messenger_factory: policy::message::Factory,
     ) -> Result<(), Error> {
@@ -55,6 +56,9 @@ impl PolicyProxy {
             .create(MessengerType::Addressable(Address::Policy(setting_type)))
             .await;
         let (_, policy_receptor) = policy_messenger_result.map_err(Error::new)?;
+
+        let policy_handler =
+            handler_factory.lock().await.generate(setting_type, core_messenger_factory).await?;
 
         let mut proxy = Self { policy_handler, core_messenger };
 

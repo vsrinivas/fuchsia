@@ -3,11 +3,20 @@
 // found in the LICENSE file.
 
 use crate::handler::base::SettingHandlerResult;
+use crate::handler::device_storage::DeviceStorage;
+use crate::handler::setting_handler::persist::Storage;
+use crate::handler::setting_handler::StorageFactory;
 use crate::internal::core;
 use crate::policy::base::response::Response;
-use crate::policy::base::Request;
-use crate::switchboard::base::SettingRequest;
+use crate::policy::base::{
+    BoxedHandler, Context, GenerateHandlerResult, PolicyHandlerError, Request,
+};
+use crate::switchboard::base::{SettingRequest, SettingType};
+use anyhow::Error;
 use async_trait::async_trait;
+use futures::future::BoxFuture;
+use futures::lock::Mutex;
+use std::sync::Arc;
 
 /// PolicyHandlers are in charge of applying and persisting policies set by clients.
 #[async_trait]
@@ -51,4 +60,75 @@ pub enum Transform {
 
     /// A result to return directly to the settings client.
     Result(SettingHandlerResult),
+}
+
+/// Trait used to create policy handlers.
+#[async_trait]
+pub trait Create<S: Storage>: Sized {
+    async fn create(handler: ClientProxy<S>) -> Result<Self, Error>;
+}
+
+/// Creates a [`PolicyHandler`] from the given [`Context`].
+///
+/// [`PolicyHandler`]: trait.PolicyHandler.html
+/// [`Context`]: ../base/struct.Context.html
+pub fn create_handler<S, C, T: StorageFactory + 'static>(
+    context: Context<T>,
+) -> BoxFuture<'static, GenerateHandlerResult>
+where
+    S: Storage + 'static,
+    C: Create<S> + PolicyHandler + Send + Sync + 'static,
+{
+    Box::pin(async move {
+        let storage = context.storage_factory_handle.lock().await.get_store::<S>(context.id);
+        let setting_type = context.setting_type;
+
+        let proxy = ClientProxy::<S>::new(context.messenger.clone(), storage, setting_type);
+        let handler_result = C::create(proxy).await;
+
+        match handler_result {
+            Err(err) => Err(err),
+            Ok(handler) => Ok(Box::new(handler) as BoxedHandler),
+        }
+    })
+}
+
+/// `ClientProxy` provides common functionality, like messaging and persistence to policy handlers.
+#[derive(Clone)]
+pub struct ClientProxy<S: Storage + 'static> {
+    messenger: core::message::Messenger,
+    storage: Arc<Mutex<DeviceStorage<S>>>,
+    setting_type: SettingType,
+}
+
+impl<S: Storage + 'static> ClientProxy<S> {
+    pub fn new(
+        messenger: core::message::Messenger,
+        storage: Arc<Mutex<DeviceStorage<S>>>,
+        setting_type: SettingType,
+    ) -> Self {
+        Self { messenger, storage, setting_type }
+    }
+
+    // TODO(fxbug.dev/65736): remove once used
+    #[allow(dead_code)]
+    pub async fn read(&self) -> S {
+        self.storage.lock().await.get().await
+    }
+
+    /// Returns Ok if the value was written, or an Error if the write failed. The argument
+    /// `write_through` will block returning until the value has been completely written to
+    /// persistent store, rather than any temporary in-memory caching.
+    // TODO(fxbug.dev/65736): remove once used
+    #[allow(dead_code)]
+    pub async fn write(&self, value: S, write_through: bool) -> Result<(), PolicyHandlerError> {
+        if value == self.read().await {
+            return Ok(());
+        }
+
+        match self.storage.lock().await.write(&value, write_through).await {
+            Ok(_) => Ok(()),
+            Err(_) => Err(PolicyHandlerError::WriteFailure(self.setting_type)),
+        }
+    }
 }
