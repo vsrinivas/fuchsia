@@ -4,47 +4,20 @@
 
 use {
     anyhow::{format_err, Error},
-    async_helpers::hanging_get::asynchronous as hanging_get,
-    fidl_fuchsia_bluetooth::Appearance,
     fidl_fuchsia_bluetooth_control::ControlMarker,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
-    fuchsia_bluetooth::inspect::placeholder_node,
     fuchsia_zircon::DurationNum,
-    futures::{channel::mpsc, FutureExt},
-    std::collections::HashMap,
+    futures::FutureExt,
 };
 
-use crate::{
-    host_dispatcher::HostDispatcher, services::start_control_service, store::stash::Stash,
-};
+use crate::services::start_control_service;
 
 // Open a channel, spawn the stream, queue a message and close the remote end before running the
 // loop and see if that halts within a timeout
 #[fuchsia_async::run_singlethreaded(test)]
 async fn close_channel_when_client_dropped() -> Result<(), Error> {
     let (client, server) = fidl::endpoints::create_proxy_and_stream::<ControlMarker>()?;
-    let (gas_channel_sender, _ignored_gas_task_req_stream) = mpsc::channel(0);
-    let watch_peers_broker = hanging_get::HangingGetBroker::new(
-        HashMap::new(),
-        |_, _| true,
-        hanging_get::DEFAULT_CHANNEL_SIZE,
-    );
-    let watch_hosts_broker = hanging_get::HangingGetBroker::new(
-        Vec::new(),
-        |_, _| true,
-        hanging_get::DEFAULT_CHANNEL_SIZE,
-    );
-    let hd = HostDispatcher::new(
-        "test".to_string(),
-        Appearance::Display,
-        Stash::stub()?,
-        placeholder_node(),
-        gas_channel_sender,
-        watch_peers_broker.new_publisher(),
-        watch_peers_broker.new_registrar(),
-        watch_hosts_broker.new_publisher(),
-        watch_hosts_broker.new_registrar(),
-    );
+    let hd = crate::host_dispatcher::test::make_simple_test_dispatcher();
     let serve_until_done = start_control_service(hd, server);
 
     // Send a FIDL request

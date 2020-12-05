@@ -69,6 +69,7 @@ rustc_binary("bin") {
     "src/services/pairing/mod.rs",
     "src/services/pairing/pairing_dispatcher.rs",
     "src/services/pairing/pairing_requests.rs",
+    "src/store/in_memory.rs",
     "src/store/keys.rs",
     "src/store/mod.rs",
     "src/store/serde.rs",

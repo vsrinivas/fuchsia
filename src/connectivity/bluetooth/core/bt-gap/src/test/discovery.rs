@@ -81,8 +81,7 @@ proptest! {
     #[test]
     fn test_discovery_invariants(execution in execution_sequences(MAX_NUM_MOCK_CLIENTS)) {
         let mut executor = fasync::Executor::new().expect("error creating executor");
-        let hd = host_dispatcher::test::make_simple_test_dispatcher()
-            .expect("Failed to create test dispatcher");
+        let hd = host_dispatcher::test::make_simple_test_dispatcher();
 
         // Add mock host to dispatcher and make active
         let host_id = HostId(1);

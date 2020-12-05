@@ -28,9 +28,7 @@ use {
 
 #[cfg(test)]
 use {
-    fidl::endpoints::Proxy,
     fuchsia_bluetooth::types::{LeBondData, OneOrBoth},
-    fuchsia_zircon as zx,
     std::collections::HashSet,
 };
 
@@ -43,10 +41,13 @@ use crate::store::{
     },
 };
 
+#[cfg(test)]
+use crate::store::in_memory::InMemoryStore;
+
 /// These requests define the API surface for Stash. Each request signifies an atomic transaction that
 /// the bt-gap stash can take
 #[derive(Debug)]
-enum Request {
+pub(crate) enum Request {
     /// Store 1 or more Bonds in the stash.
     StoreBonds(Vec<BondingData>, oneshot::Sender<Result<(), Error>>),
 
@@ -136,16 +137,14 @@ impl Stash {
     }
 
     #[cfg(test)]
-    pub fn stub() -> Result<Stash, Error> {
-        let inner = StashInner::stub()?;
+    pub fn in_memory_mock() -> Stash {
         let (sender, receiver) = mpsc::channel::<Request>(STASH_MSG_QUEUE_CAPACITY);
-        fasync::Task::spawn(run_stash(receiver, inner).map(|r| {
-            if let Err(e) = r {
-                error!("Error running stash: {}", e);
-            }
-        }))
+        let mut store = InMemoryStore::default();
+        fasync::Task::spawn(
+            receiver.for_each(move |request| futures::future::ready(store.handle_request(request))),
+        )
         .detach();
-        Ok(Stash(sender))
+        Stash(sender)
     }
 }
 
@@ -380,15 +379,6 @@ impl StashInner {
             }
         }
         Ok(host_data_map)
-    }
-
-    #[cfg(test)]
-    fn stub() -> Result<StashInner, Error> {
-        let (proxy, _server) = zx::Channel::create()?;
-        let proxy = fasync::Channel::from_channel(proxy)?;
-        let proxy = StoreAccessorProxy::from_channel(proxy);
-        let inspect = fuchsia_inspect::Inspector::new().root().create_child("stub inspect");
-        Ok(StashInner { proxy, bonding_data: HashMap::new(), host_data: HashMap::new(), inspect })
     }
 }
 

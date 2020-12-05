@@ -5,5 +5,9 @@
 /// These modules provide access to the component storage.
 pub mod stash;
 
+/// A test-only in-memory implementation of the bt-gap store
+#[cfg(test)]
+mod in_memory;
+
 mod keys;
 mod serde;

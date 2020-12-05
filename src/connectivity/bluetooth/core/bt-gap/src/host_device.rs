@@ -81,6 +81,15 @@ pub struct HostDeviceState {
     info: RwLock<Inspectable<HostInfo>>,
 }
 
+/// A type for easy debug printing of the main identifiers for the host device, namely: The device
+/// path, the host address and the host id.
+#[derive(Clone, Debug)]
+pub struct HostDebugIdentifiers {
+    id: HostId,
+    address: Address,
+    path: PathBuf,
+}
+
 // Many HostDevice methods return impl Future rather than being implemented as `async`. This has an
 // important behavioral difference in that the function body is triggered immediately when called.
 //
@@ -105,6 +114,16 @@ impl HostDevice {
 
     pub fn address(&self) -> Address {
         self.0.info.read().address
+    }
+
+    /// Convenience method to produce a type for easy debug printing of the main identifiers for the
+    /// host device, namely: The device path, the host address and the host id.
+    pub fn debug_identifiers(&self) -> HostDebugIdentifiers {
+        HostDebugIdentifiers {
+            id: self.id(),
+            address: self.address(),
+            path: self.path().to_path_buf(),
+        }
     }
 
     pub fn path(&self) -> &Path {

@@ -778,15 +778,29 @@ impl HostDispatcher {
     /// bonding data for any of the peers (as identified by address), the new bootstrapped data
     /// will override them.
     pub async fn commit_bootstrap(&self, identities: Vec<Identity>) -> types::Result<()> {
+        // Store all new bonds in our permanent Store. If we cannot successfully record the bonds
+        // in the store, then Bootstrap.Commit() has failed.
         let mut stash = self.state.read().stash.clone();
         for identity in identities {
             stash.store_bonds(identity.bonds).await?
         }
+
         // Notify all current hosts of any changes to their bonding data
         let host_devices: Vec<_> = self.state.read().host_devices.values().cloned().collect();
 
         for host in host_devices {
-            try_restore_bonds(host.clone(), self.clone(), &host.address()).await?;
+            // If we fail to restore bonds to a given host, that is not a failure on a part of
+            // Bootstrap.Commit(), but a failure on the host. So do not return error from this
+            // function, but instead log and continue.
+            // TODO(fxbug.dev/45325) - if a host fails we should close it and clean up after it
+            if let Err(error) = try_restore_bonds(host.clone(), self.clone(), &host.address()).await
+            {
+                error!(
+                    "Error restoring Bootstrapped bonds to host '{:?}': {}",
+                    host.debug_identifiers(),
+                    error
+                )
+            }
         }
         Ok(())
     }
@@ -1043,9 +1057,7 @@ async fn try_restore_bonds(
         Some(data) => data,
         None => return Ok(()),
     };
-    let fut = host_device.restore_bonds(data);
-    let result = fut.await;
-    match result {
+    match host_device.restore_bonds(data).await {
         Err(e) => {
             error!("failed to restore bonding data for host: {:?}", e);
             Err(e)
@@ -1111,7 +1123,7 @@ mod tests {
         fidl_fuchsia_bluetooth_host::HostRequest,
         fidl_fuchsia_bluetooth_sys::TechnologyType,
         fuchsia_async as fasync,
-        fuchsia_bluetooth::types::{Peer, PeerId},
+        fuchsia_bluetooth::types::{bonding_data::example, Peer, PeerId},
         fuchsia_component::fuchsia_single_component_package_url,
         fuchsia_inspect::{self as inspect, assert_inspect_tree},
         futures::stream::TryStreamExt,
@@ -1139,7 +1151,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn on_device_changed_inspect_state() {
         // test setup
-        let stash = Stash::stub().expect("Create stash stub");
+        let stash = Stash::in_memory_mock();
         let inspector = inspect::Inspector::new();
         let system_inspect = inspector.root().create_child("system");
         let (gas_channel_sender, _generic_access_req_stream) = mpsc::channel(0);
@@ -1200,33 +1212,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_change_name_no_deadlock() {
-        let stash = Stash::stub().expect("Create stash stub");
-        let inspector = inspect::Inspector::new();
-        let system_inspect = inspector.root().create_child("system");
-        let (gas_channel_sender, _generic_access_req_stream) = mpsc::channel(0);
-
-        let watch_peers_broker = hanging_get::HangingGetBroker::new(
-            HashMap::new(),
-            |_, _| true,
-            hanging_get::DEFAULT_CHANNEL_SIZE,
-        );
-        let watch_hosts_broker = hanging_get::HangingGetBroker::new(
-            Vec::new(),
-            |_, _| true,
-            hanging_get::DEFAULT_CHANNEL_SIZE,
-        );
-
-        let dispatcher = HostDispatcher::new(
-            "test".to_string(),
-            Appearance::Display,
-            stash,
-            system_inspect,
-            gas_channel_sender,
-            watch_peers_broker.new_publisher(),
-            watch_peers_broker.new_registrar(),
-            watch_hosts_broker.new_publisher(),
-            watch_hosts_broker.new_registrar(),
-        );
+        let dispatcher = hd_test::make_simple_test_dispatcher();
         // Call a function that used to use the self.state.write().gas_channel_sender.send().await
         // pattern, which caused a deadlock by yielding to the executor while holding onto a write
         // lock to the mutable gas_channel. We expect an error here because there's no active host
@@ -1242,7 +1228,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn apply_settings_fails_host_removed() {
-        let dispatcher = hd_test::make_simple_test_dispatcher().unwrap();
+        let dispatcher = hd_test::make_simple_test_dispatcher();
         let host_id = HostId(42);
         let mut host_server =
             hd_test::create_and_add_test_host_to_dispatcher(host_id, &dispatcher).unwrap();
@@ -1276,7 +1262,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_launch_profile_forwarding_component_success() {
         let rfcomm_url = fuchsia_single_component_package_url!("bt-rfcomm").to_string();
-        let host_dispatcher = hd_test::make_simple_test_dispatcher().unwrap();
+        let host_dispatcher = hd_test::make_simple_test_dispatcher();
 
         let host_id = HostId(43);
         let mut host_server =
@@ -1307,7 +1293,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_launch_profile_forwarding_component_invalid_component() {
         let rfcomm_url = fuchsia_single_component_package_url!("nonexistent-package").to_string();
-        let host_dispatcher = hd_test::make_simple_test_dispatcher().unwrap();
+        let host_dispatcher = hd_test::make_simple_test_dispatcher();
 
         let host_id = HostId(44);
         let mut host_server =
@@ -1326,7 +1312,7 @@ mod tests {
     /// the event that we don't have a launched profile forwarding component.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_relay_channel_without_component_is_relayed_to_host() {
-        let host_dispatcher = hd_test::make_simple_test_dispatcher().unwrap();
+        let host_dispatcher = hd_test::make_simple_test_dispatcher();
 
         let host_id = HostId(46);
         let mut host_server =
@@ -1344,6 +1330,42 @@ mod tests {
             Ok(Some(HostRequest::RequestProfile { .. })) => {}
             x => panic!("Expected Profile Request but got: {:?}", x),
         }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_commit_bootstrap_doesnt_fail_from_host_failure() {
+        // initiate test host-dispatcher
+        let host_dispatcher = hd_test::make_simple_test_dispatcher();
+
+        // add a test host with a channel we provide, which fails on restore_bonds()
+        let host_id = HostId(1);
+        let mut host_server =
+            hd_test::create_and_add_test_host_to_dispatcher(host_id, &host_dispatcher).unwrap();
+        assert!(host_is_in_dispatcher(&host_id, &host_dispatcher).await);
+
+        let run_host = async {
+            match host_server.try_next().await {
+                Ok(Some(HostRequest::RestoreBonds { bonds, responder })) => {
+                    // Fail by returning all bonds as errors
+                    let _ = responder.send(&mut bonds.into_iter());
+                }
+                x => panic!("Expected RestoreBonds Request but got: {:?}", x),
+            }
+        };
+
+        let identity = Identity {
+            host: HostData { irk: None },
+            bonds: vec![example::bond(
+                Address::Public([1, 1, 1, 1, 1, 1]),
+                Address::Public([0, 0, 0, 0, 0, 0]),
+            )],
+        };
+        // Call dispatcher.commit_bootstrap() & assert that the result is success
+        let result =
+            futures::future::join(host_dispatcher.commit_bootstrap(vec![identity]), run_host)
+                .await
+                .0;
+        assert_matches!(result, Ok(()));
     }
 }
 
@@ -1363,22 +1385,22 @@ pub(crate) mod test {
         watch_peers_registrar: hanging_get::SubscriptionRegistrar<PeerWatcher>,
         watch_hosts_publisher: hanging_get::Publisher<Vec<HostInfo>>,
         watch_hosts_registrar: hanging_get::SubscriptionRegistrar<sys::HostWatcherWatchResponder>,
-    ) -> Result<HostDispatcher, Error> {
+    ) -> HostDispatcher {
         let (gas_channel_sender, _ignored_gas_task_req_stream) = mpsc::channel(0);
-        Ok(HostDispatcher::new(
+        HostDispatcher::new(
             "test".to_string(),
             Appearance::Display,
-            Stash::stub()?,
+            Stash::in_memory_mock(),
             placeholder_node(),
             gas_channel_sender,
             watch_peers_publisher,
             watch_peers_registrar,
             watch_hosts_publisher,
             watch_hosts_registrar,
-        ))
+        )
     }
 
-    pub(crate) fn make_simple_test_dispatcher() -> Result<HostDispatcher, Error> {
+    pub(crate) fn make_simple_test_dispatcher() -> HostDispatcher {
         let watch_peers_broker = hanging_get::HangingGetBroker::new(
             HashMap::new(),
             |_, _| true,

@@ -4,11 +4,9 @@
 
 use {
     anyhow::Error,
-    async_helpers::hanging_get::asynchronous as hanging_get,
     fidl::endpoints,
     fidl_fuchsia_bluetooth_host::{HostMarker, HostRequest},
     fidl_fuchsia_bluetooth_sys::AccessMarker,
-    fuchsia_async as fasync,
     fuchsia_bluetooth::types::{
         pairing_options::{BondableMode, PairingOptions, SecurityLevel},
         Address, HostId, PeerId, Technology,
@@ -16,7 +14,7 @@ use {
     futures::{future, stream::TryStreamExt},
     matches::assert_matches,
     parking_lot::RwLock,
-    std::{collections::HashMap, path::Path, sync::Arc},
+    std::{path::Path, sync::Arc},
 };
 
 use crate::{
@@ -27,27 +25,7 @@ use crate::{
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_pair() -> Result<(), Error> {
-    let watch_peers_broker = hanging_get::HangingGetBroker::new(
-        HashMap::new(),
-        |_, _| true,
-        hanging_get::DEFAULT_CHANNEL_SIZE,
-    );
-    let watch_hosts_broker = hanging_get::HangingGetBroker::new(
-        Vec::new(),
-        |_, _| true,
-        hanging_get::DEFAULT_CHANNEL_SIZE,
-    );
-
-    let dispatcher = host_dispatcher::test::make_test_dispatcher(
-        watch_peers_broker.new_publisher(),
-        watch_peers_broker.new_registrar(),
-        watch_hosts_broker.new_publisher(),
-        watch_hosts_broker.new_registrar(),
-    )?;
-
-    // This needs to be processed so we can start up the Access service
-    fasync::Task::spawn(watch_peers_broker.run()).detach();
-
+    let dispatcher = host_dispatcher::test::make_simple_test_dispatcher();
     let (host_proxy, host_server) = endpoints::create_proxy_and_stream::<HostMarker>()?;
 
     let address = Address::Public([1, 2, 3, 4, 5, 6]);
@@ -97,7 +75,7 @@ async fn test_pair() -> Result<(), Error> {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_discovery_over_adapter_change() -> Result<(), Error> {
     // Create mock host dispatcher
-    let hd = host_dispatcher::test::make_simple_test_dispatcher()?;
+    let hd = host_dispatcher::test::make_simple_test_dispatcher();
 
     // Add Host #1 to dispatcher and make active
     let (host_proxy_1, host_server_1) = endpoints::create_proxy_and_stream::<HostMarker>()?;

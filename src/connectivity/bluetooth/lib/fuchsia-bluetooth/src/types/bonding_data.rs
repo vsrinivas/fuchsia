@@ -793,14 +793,10 @@ pub mod proptest_util {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use {
-        super::compat::*, super::*, fidl_fuchsia_bluetooth_control as control,
-        fidl_fuchsia_bluetooth_sys as sys,
-    };
+pub mod example {
+    use super::*;
 
-    fn peer_key() -> sys::PeerKey {
+    pub fn peer_key() -> sys::PeerKey {
         let data = sys::Key { value: [0; 16] };
         let security = sys::SecurityProperties {
             authenticated: false,
@@ -810,18 +806,14 @@ mod tests {
         sys::PeerKey { security, data }
     }
 
-    fn control_ltk() -> control::Ltk {
-        control::Ltk { key: compat::peer_key_to_control(peer_key()), key_size: 0, ediv: 0, rand: 0 }
-    }
-
-    fn new_bond() -> BondingData {
-        let remote_key = peer_key();
+    pub fn bond(host_addr: Address, peer_addr: Address) -> BondingData {
+        let remote_key = example::peer_key();
         let ltk = sys::Ltk { key: remote_key.clone(), ediv: 1, rand: 2 };
 
         BondingData {
             identifier: PeerId(42),
-            address: Address::Public([0, 0, 0, 0, 0, 0]),
-            local_address: Address::Public([0, 0, 0, 0, 0, 0]),
+            address: peer_addr,
+            local_address: host_addr,
             name: Some("name".into()),
             data: OneOrBoth::Both(
                 LeBondData {
@@ -842,6 +834,23 @@ mod tests {
                     link_key: Some(remote_key.clone()),
                 },
             ),
+        }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use {
+        super::compat::*, super::*, fidl_fuchsia_bluetooth_control as control,
+        fidl_fuchsia_bluetooth_sys as sys,
+    };
+
+    fn control_ltk() -> control::Ltk {
+        control::Ltk {
+            key: compat::peer_key_to_control(example::peer_key()),
+            key_size: 0,
+            ediv: 0,
+            rand: 0,
         }
     }
 
@@ -867,7 +876,8 @@ mod tests {
 
     #[test]
     fn bonding_data_conversion() {
-        let bond = new_bond();
+        let bond =
+            example::bond(Address::Public([0, 0, 0, 0, 0, 0]), Address::Public([0, 0, 0, 0, 0, 0]));
         assert_eq!(
             Ok(bond.clone()),
             BondingData::try_from(control::BondingData::from(bond.clone()))

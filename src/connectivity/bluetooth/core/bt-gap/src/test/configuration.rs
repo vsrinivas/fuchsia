@@ -27,7 +27,7 @@ fn setup_configuration_test() -> types::Result<(
     ConfigurationProxy,
     ConfigurationRequestStream,
 )> {
-    let dispatcher = hd_test::make_simple_test_dispatcher()?;
+    let dispatcher = hd_test::make_simple_test_dispatcher();
     let host_server = hd_test::create_and_add_test_host_to_dispatcher(HostId(42), &dispatcher)?;
     let (client, server) =
         fidl::endpoints::create_proxy_and_stream::<ConfigurationMarker>().unwrap();
