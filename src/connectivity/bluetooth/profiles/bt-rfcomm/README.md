@@ -62,6 +62,10 @@ the current state of the RFCOMM server, use `fx iquery show bt-rfcomm_*/bt-rfcom
             role = (Unassigned / Negotiating / Initiator / Responder)
             channel_#:
               dlci
+              initial_local_credits
+              initial_remote_credits
+              flow_controller:
+                controller_type = (simple / credit_flow)
 ```
 
 One peer child exists in the hierarchy for each RFCOMM Session between the local endpoint and remote

@@ -4,14 +4,15 @@
 
 use {
     fuchsia_inspect::{self as inspect, Property},
-    fuchsia_inspect_derive::{AttachError, Inspect},
+    fuchsia_inspect_derive::{AttachError, IValue, Inspect},
 };
 
 use crate::rfcomm::{
-    session::multiplexer::SessionParameters,
+    session::{channel::FlowControlMode, multiplexer::SessionParameters},
     types::{Role, DLCI},
 };
 
+pub(crate) const FLOW_CONTROLLER: &str = "flow_controller";
 pub(crate) const CREDIT_FLOW_CONTROL: &str = "Credit-Based";
 const NO_FLOW_CONTROL: &str = "None";
 
@@ -25,17 +26,32 @@ fn role_to_display_str(role: Role) -> &'static str {
     }
 }
 
+/// An inspect node that represents information about the current state of a Session Channel.
 #[derive(Default, Debug, Inspect)]
 pub struct SessionChannelInspect {
-    /// The DLCI of the channel. Managed manually.
-    #[inspect(skip)]
+    /// The DLCI of the channel.
     dlci: inspect::UintProperty,
+    /// The initial local credit amount (if applicable).
+    initial_local_credits: IValue<Option<u64>>,
+    /// The initial remote credit amount (if applicable).
+    initial_remote_credits: IValue<Option<u64>>,
     inspect_node: inspect::Node,
 }
 
 impl SessionChannelInspect {
+    pub fn node(&self) -> &inspect::Node {
+        &self.inspect_node
+    }
+
     pub fn set_dlci(&mut self, dlci: DLCI) {
-        self.dlci = self.inspect_node.create_uint("dlci", u8::from(dlci) as u64);
+        self.dlci.set(u8::from(dlci) as u64);
+    }
+
+    pub fn set_flow_control(&mut self, flow_control: FlowControlMode) {
+        if let FlowControlMode::CreditBased(credits) = flow_control {
+            self.initial_local_credits.iset(Some(credits.local as u64));
+            self.initial_remote_credits.iset(Some(credits.remote as u64));
+        }
     }
 }
 
@@ -111,6 +127,8 @@ mod tests {
     use fuchsia_inspect_derive::WithInspect;
     use std::convert::TryFrom;
 
+    use crate::rfcomm::session::channel::Credits;
+
     #[test]
     fn session_inspect_tree() {
         let inspect = inspect::Inspector::new();
@@ -165,13 +183,13 @@ mod tests {
     #[test]
     fn session_channel_inspect_tree() {
         let inspect = inspect::Inspector::new();
-
         let mut channel =
             SessionChannelInspect::default().with_inspect(inspect.root(), "channel").unwrap();
 
         // Default inspect tree.
         assert_inspect_tree!(inspect, root: {
             channel: {
+                dlci: 0u64,
             }
         });
 
@@ -180,6 +198,24 @@ mod tests {
         assert_inspect_tree!(inspect, root: {
             channel: {
                 dlci: 8u64,
+            }
+        });
+
+        // Flow control property set with a null flow control mode. No credits should be stored.
+        channel.set_flow_control(FlowControlMode::None);
+        assert_inspect_tree!(inspect, root: {
+            channel: {
+                dlci: 8u64,
+            }
+        });
+
+        // Flow control property set with a credit based flow control mode.
+        channel.set_flow_control(FlowControlMode::CreditBased(Credits::new(10, 19)));
+        assert_inspect_tree!(inspect, root: {
+            channel: {
+                dlci: 8u64,
+                initial_local_credits: 10u64,
+                initial_remote_credits: 19u64,
             }
         });
     }

@@ -298,7 +298,7 @@ mod tests {
 
     #[test]
     fn test_multiplexer_inspect() {
-        let _exec = fuchsia_async::Executor::new().unwrap();
+        let mut exec = fuchsia_async::Executor::new().unwrap();
         let inspect = inspect::Inspector::new();
 
         // Setup multiplexer with inspect.
@@ -317,7 +317,7 @@ mod tests {
         fuchsia_inspect::assert_inspect_tree!(inspect, root: {
             multiplexer: {
                 role: "Unassigned",
-                channel_0: {
+                channel_0: contains {
                     dlci: 9u64,
                 }
             },
@@ -326,17 +326,17 @@ mod tests {
         // Establishing a channel should add to the inspect tree. Multiplexer parameters are
         // negotiated to a default and updated in the inspect tree.
         let dlci2 = DLCI::try_from(20).unwrap();
-        let (sender, _receiver) = mpsc::channel(0);
-        let _channel = multiplexer.establish_session_channel(dlci2, sender);
+        let (sender2, _receiver2) = mpsc::channel(0);
+        let _channel2 = multiplexer.establish_session_channel(dlci2, sender2);
         fuchsia_inspect::assert_inspect_tree!(inspect, root: {
             multiplexer: {
                 role: "Unassigned",
                 flow_control: CREDIT_FLOW_CONTROL,
                 max_frame_size: 672u64,
-                channel_0: {
+                channel_0: contains {
                     dlci: 9u64,
                 },
-                channel_1: {
+                channel_1: contains {
                     dlci: 20u64,
                 }
             },
@@ -345,14 +345,20 @@ mod tests {
         // Removing a channel is OK. The lifetime of the `channel_*` node is tied to the
         // SessionChannel. This makes cleanup easy.
         assert!(multiplexer.close_session_channel(&dlci2));
+        // The multiplexer closing the SessionChannel results in dropping the fasync::Task<()>
+        // for the channel. In doing so, the RemoteHandle for the Task is dropped. The
+        // associated future will only then be _woken up_ to be dropped by the executor.
+        // This line of code runs the executor to complete the drop of the future. Only then
+        // will the `channel_1` inspect node be removed from the tree.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
         fuchsia_inspect::assert_inspect_tree!(inspect, root: {
             multiplexer: {
                 role: "Unassigned",
                 flow_control: CREDIT_FLOW_CONTROL,
                 max_frame_size: 672u64,
-                channel_0: {
+                channel_0: contains {
                     dlci: 9u64,
-                }
+                },
             },
         });
     }

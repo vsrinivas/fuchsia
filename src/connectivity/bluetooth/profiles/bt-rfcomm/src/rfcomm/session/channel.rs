@@ -19,7 +19,7 @@ use {
 
 use crate::rfcomm::{
     frame::{Frame, UserData},
-    inspect::SessionChannelInspect,
+    inspect::{SessionChannelInspect, FLOW_CONTROLLER},
     types::{RfcommError, Role, SignaledTask, DLCI},
 };
 
@@ -39,10 +39,10 @@ const LOW_CREDIT_WATER_MARK: usize = 10;
 pub struct Credits {
     /// The local credits that we currently have. Determines the number of frames
     /// we can send to the remote peer.
-    local: usize,
+    pub local: usize,
     /// The remote peer's current credit count. Determines the number of frames the
     /// remote may send to us.
-    remote: usize,
+    pub remote: usize,
 }
 
 impl Credits {
@@ -90,11 +90,21 @@ struct SimpleController {
     dlci: DLCI,
     /// Used to send frames to the remote peer.
     outgoing_sender: mpsc::Sender<Frame>,
+    /// The inspect node for this controller.
+    inspect: inspect::Node,
+}
+
+impl Inspect for &mut SimpleController {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect = parent.create_child(name);
+        self.inspect.record_string("controller_type", "simple");
+        Ok(())
+    }
 }
 
 impl SimpleController {
     fn new(role: Role, dlci: DLCI, outgoing_sender: mpsc::Sender<Frame>) -> Self {
-        Self { role, dlci, outgoing_sender }
+        Self { role, dlci, outgoing_sender, inspect: inspect::Node::default() }
     }
 }
 
@@ -131,6 +141,16 @@ struct CreditFlowController {
     outgoing_data_pending_credits: Vec<UserData>,
     /// The current credit count for this controller.
     credits: Credits,
+    /// The inspect node for this controller.
+    inspect: inspect::Node,
+}
+
+impl Inspect for &mut CreditFlowController {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect = parent.create_child(name);
+        self.inspect.record_string("controller_type", "credit_flow");
+        Ok(())
+    }
 }
 
 impl CreditFlowController {
@@ -147,6 +167,7 @@ impl CreditFlowController {
             outgoing_sender,
             outgoing_data_pending_credits: Vec::new(),
             credits: initial_credits,
+            inspect: inspect::Node::default(),
         }
     }
 
@@ -305,6 +326,7 @@ impl SessionChannel {
             return Err(RfcommError::ChannelAlreadyEstablished(self.dlci));
         }
         self.flow_control = Some(flow_control);
+        self.inspect.set_flow_control(flow_control);
         Ok(())
     }
 
@@ -316,20 +338,12 @@ impl SessionChannel {
     async fn user_data_relay(
         dlci: DLCI,
         role: Role,
-        flow_control: FlowControlMode,
         termination_sender: oneshot::Sender<()>,
+        mut flow_controller: Box<dyn FlowController>,
         mut channel: Channel,
         mut pending_writes: mpsc::Receiver<FlowControlledData>,
         mut frame_sender: mpsc::Sender<Frame>,
     ) {
-        let mut flow_controller: Box<dyn FlowController> = match flow_control {
-            FlowControlMode::CreditBased(credits) => {
-                Box::new(CreditFlowController::new(role, dlci, frame_sender.clone(), credits))
-            }
-            FlowControlMode::None => {
-                Box::new(SimpleController::new(role, dlci, frame_sender.clone()))
-            }
-        };
         loop {
             select! {
                 // The fuse() is within the loop because `channel` is both borrowed in its stream
@@ -380,14 +394,32 @@ impl SessionChannel {
     /// to using credit-based flow control.
     pub fn establish(&mut self, channel: Channel, frame_sender: mpsc::Sender<Frame>) {
         let (user_data_queue, pending_writes) = mpsc::channel(0);
-        self.flow_control =
-            self.flow_control.or(Some(FlowControlMode::CreditBased(Credits::default())));
+        let flow_controller: Box<dyn FlowController> =
+            match self.flow_control.get_or_insert(FlowControlMode::CreditBased(Credits::default()))
+            {
+                FlowControlMode::CreditBased(credits) => {
+                    let mut controller = CreditFlowController::new(
+                        self.role,
+                        self.dlci,
+                        frame_sender.clone(),
+                        credits.clone(),
+                    );
+                    let _ = controller.iattach(self.inspect.node(), FLOW_CONTROLLER);
+                    Box::new(controller)
+                }
+                FlowControlMode::None => {
+                    let mut controller =
+                        SimpleController::new(self.role, self.dlci, frame_sender.clone());
+                    let _ = controller.iattach(self.inspect.node(), FLOW_CONTROLLER);
+                    Box::new(controller)
+                }
+            };
         let (termination_sender, receiver) = oneshot::channel();
         let _task = fasync::Task::local(Self::user_data_relay(
             self.dlci,
             self.role,
-            self.flow_control.unwrap(),
             termination_sender,
+            flow_controller,
             channel,
             pending_writes,
             frame_sender,
@@ -811,5 +843,57 @@ mod tests {
         // New signal should be pending still.
         let mut finished2 = session_channel.finished();
         assert_matches!(exec.run_until_stalled(&mut finished2), Poll::Pending);
+    }
+
+    #[test]
+    fn session_channel_inspect_updates_when_established() {
+        let mut exec = fuchsia_async::Executor::new().unwrap();
+        let inspect = inspect::Inspector::new();
+
+        // Set up a channel with inspect.
+        let dlci = DLCI::try_from(8).unwrap();
+        let mut channel = SessionChannel::new(dlci, Role::Initiator);
+        channel.iattach(inspect.root(), "channel_").expect("should attach to inspect tree");
+        let flow_control = FlowControlMode::CreditBased(Credits {
+            local: 12,  // Arbitrary
+            remote: 15, // Arbitrary
+        });
+        assert!(channel.set_flow_control(flow_control).is_ok());
+        // Inspect tree should be updated with the initial credits.
+        fuchsia_inspect::assert_inspect_tree!(inspect, root: {
+            channel_: {
+                dlci: 8u64,
+                initial_local_credits: 12u64,
+                initial_remote_credits: 15u64,
+            },
+        });
+
+        // Upon establishment, the inspect tree should be updated with a flow controller node.
+        let (local, _client) = Channel::create();
+        let (frame_sender, mut outgoing_frames) = mpsc::channel(0);
+        channel.establish(local, frame_sender);
+        fuchsia_inspect::assert_inspect_tree!(inspect, root: {
+            channel_: {
+                dlci: 8u64,
+                initial_local_credits: 12u64,
+                initial_remote_credits: 15u64,
+                flow_controller: contains {
+                    controller_type: "credit_flow",
+                },
+            },
+        });
+
+        // Client closes its end of the RFCOMM channel - expect the outgoing Disconnect frame.
+        drop(_client);
+        expect_frame(&mut exec, &mut outgoing_frames, FrameData::Disconnect, Some(dlci));
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        // The flow controller node should be removed indicating the inactiveness of the channel.
+        fuchsia_inspect::assert_inspect_tree!(inspect, root: {
+            channel_: {
+                dlci: 8u64,
+                initial_local_credits: 12u64,
+                initial_remote_credits: 15u64,
+            },
+        });
     }
 }

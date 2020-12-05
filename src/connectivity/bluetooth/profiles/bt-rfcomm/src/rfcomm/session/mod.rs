@@ -24,7 +24,7 @@ use {
 };
 
 /// RFCOMM channels used to communicate with profile clients.
-mod channel;
+pub mod channel;
 
 /// The multiplexer that manages RFCOMM channels for this session.
 pub mod multiplexer;
