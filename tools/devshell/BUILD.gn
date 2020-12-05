@@ -67,7 +67,6 @@ test_scripts = [
   "tests/subcommands/fx_ssh_test",
   "tests/subcommands/fx_symbolize_test",
   "tests/subcommands/fx_vendor_test",
-  "tests/subcommands/fx_vdl_test",
 
   # tests that currently can't be included in automation.
   # use 'fx self-test' to run them manually:
