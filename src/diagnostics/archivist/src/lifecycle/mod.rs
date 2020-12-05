@@ -144,12 +144,7 @@ mod tests {
     }
 
     async fn verify_reader(path: PathBuf) {
-        let diagnostics_repo = Arc::new(RwLock::new(DataRepo::new(
-            crate::logs::LogManager::new(),
-            crate::logs::redact::Redactor::noop(),
-            None,
-        )));
-
+        let diagnostics_repo = Arc::new(RwLock::new(DataRepo::for_test(None)));
         let out_dir_proxy = InspectDataCollector::find_directory_proxy(&path).await.unwrap();
 
         // The absolute moniker here is made up since the selector is a glob

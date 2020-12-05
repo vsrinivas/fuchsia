@@ -329,7 +329,6 @@ mod tests {
             accessor::BatchIterator,
             diagnostics,
             events::types::{ComponentIdentifier, InspectData, LegacyIdentifier, RealmPath},
-            logs::LogManager,
         },
         anyhow::format_err,
         diagnostics_hierarchy::{trie::TrieIterableNode, DiagnosticsHierarchy},
@@ -631,8 +630,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn inspect_repo_disallows_duplicated_dirs() {
-        let mut inspect_repo =
-            DataRepo::new(LogManager::new(), crate::logs::redact::Redactor::noop(), None);
+        let mut inspect_repo = DataRepo::for_test(None);
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -704,7 +702,6 @@ mod tests {
         // Make a ServiceFs that will host inspect vmos under each
         // of the new diagnostics directories.
         let mut fs = ServiceFs::new();
-        let log_manager = LogManager::new();
 
         let inspector = inspector_for_reader_test();
 
@@ -763,11 +760,7 @@ mod tests {
                     }))
                     .await;
 
-                let inspect_repo = Arc::new(RwLock::new(DataRepo::new(
-                    log_manager.clone(),
-                    crate::logs::redact::Redactor::noop(),
-                    None,
-                )));
+                let inspect_repo = Arc::new(RwLock::new(DataRepo::for_test(None)));
 
                 for (cid, proxy) in id_and_directory_proxy {
                     inspect_repo
@@ -835,11 +828,10 @@ mod tests {
         let child_1_1_selector = selectors::parse_selector(r#"*:root/child_1/*:some-int"#).unwrap();
         let child_2_selector =
             selectors::parse_selector(r#"test_component.cmx:root/child_2:*"#).unwrap();
-        let inspect_repo = Arc::new(RwLock::new(DataRepo::new(
-            LogManager::new(),
-            crate::logs::redact::Redactor::noop(),
-            Some(vec![Arc::new(child_1_1_selector), Arc::new(child_2_selector)]),
-        )));
+        let inspect_repo = Arc::new(RwLock::new(DataRepo::for_test(Some(vec![
+            Arc::new(child_1_1_selector),
+            Arc::new(child_2_selector),
+        ]))));
 
         let out_dir_proxy = InspectDataCollector::find_directory_proxy(&path).await.unwrap();
 
