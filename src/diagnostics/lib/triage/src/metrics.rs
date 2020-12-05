@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub(crate) mod arithmetic;
 pub(crate) mod fetch;
 pub(crate) mod metric_value;
 pub(crate) mod parse;
@@ -66,7 +67,7 @@ pub struct MetricState<'a> {
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
-pub enum Function {
+pub enum MathFunction {
     Add,
     Sub,
     Mul,
@@ -76,10 +77,17 @@ pub enum Function {
     Less,
     GreaterEq,
     LessEq,
-    Equals,
-    NotEq,
     Max,
     Min,
+}
+
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+pub enum Function {
+    Math(MathFunction),
+    // Equals and NotEq can apply to bools and strings, and handle int/float without needing
+    // the mechanisms in mod arithmetic.
+    Equals,
+    NotEq,
     And,
     Or,
     Not,
@@ -165,66 +173,6 @@ enum ShortCircuitBehavior {
     False,
 }
 
-fn demand_numeric(value: &MetricValue) -> MetricValue {
-    match value {
-        MetricValue::Int(_) | MetricValue::Float(_) => {
-            MetricValue::Missing("Internal bug - numeric passed to demand_numeric".to_string())
-        }
-        MetricValue::Missing(message) => MetricValue::Missing(message.clone()),
-        other => MetricValue::Missing(format!("{} not numeric", other)),
-    }
-}
-
-fn demand_both_numeric(value1: &MetricValue, value2: &MetricValue) -> MetricValue {
-    match value1 {
-        MetricValue::Float(_) | MetricValue::Int(_) => return demand_numeric(value2),
-        _ => (),
-    }
-    match value2 {
-        MetricValue::Float(_) | MetricValue::Int(_) => return demand_numeric(value1),
-        _ => (),
-    }
-    let value1 = demand_numeric(value1);
-    let value2 = demand_numeric(value2);
-    MetricValue::Missing(format!("{} and {} not numeric", value1, value2))
-}
-
-/// Macro which handles applying a function to 2 operands and returns a
-/// MetricValue.
-///
-/// The macro handles type promotion and promotion to the specified type.
-macro_rules! apply_math_operands {
-    ($left:expr, $right:expr, $function:expr, $ty:ty) => {
-        match (unwrap_for_math(&$left), unwrap_for_math(&$right)) {
-            (MetricValue::Int(int1), MetricValue::Int(int2)) => {
-                // TODO(cphoenix): Instead of converting to float, use int functions.
-                ($function(*int1 as f64, *int2 as f64) as $ty).into()
-            }
-            (MetricValue::Int(int1), MetricValue::Float(float2)) => {
-                $function(*int1 as f64, *float2).into()
-            }
-            (MetricValue::Float(float1), MetricValue::Int(int2)) => {
-                $function(*float1, *int2 as f64).into()
-            }
-            (MetricValue::Float(float1), MetricValue::Float(float2)) => {
-                $function(*float1, *float2).into()
-            }
-            (value1, value2) => demand_both_numeric(value1, value2),
-        }
-    };
-}
-
-/// A macro which extracts two binary operands from a vec of operands and
-/// applies the given function.
-macro_rules! extract_and_apply_math_operands {
-    ($self:ident, $namespace:expr, $function:expr, $operands:expr, $ty:ty) => {
-        match MetricState::extract_binary_operands($self, $namespace, $operands) {
-            Ok((left, right)) => apply_math_operands!(left, right, $function, $ty),
-            Err(value) => value,
-        }
-    };
-}
-
 /// Expression represents the parsed body of an Eval Metric. It applies
 /// a function to sub-expressions, or stores a Missing error, the name of a
 /// Metric, a vector of expressions, or a basic Value.
@@ -269,6 +217,19 @@ where
 // Construct Missing() metric from a message
 fn missing(message: &str) -> MetricValue {
     MetricValue::Missing(message.to_string())
+}
+
+pub fn safe_float_to_int(float: f64) -> Option<i64> {
+    if !float.is_finite() {
+        return None;
+    }
+    if float > i64::MAX as f64 {
+        return Some(i64::MAX);
+    }
+    if float < i64::MIN as f64 {
+        return Some(i64::MIN);
+    }
+    Some(float as i64)
 }
 
 impl<'a> MetricState<'a> {
@@ -407,19 +368,12 @@ impl<'a> MetricState<'a> {
         operands: &Vec<Expression>,
     ) -> MetricValue {
         match function {
-            Function::Add => self.fold_math(namespace, &|a, b| a + b, operands),
-            Function::Sub => self.apply_math(namespace, &|a, b| a - b, operands),
-            Function::Mul => self.fold_math(namespace, &|a, b| a * b, operands),
-            Function::FloatDiv => self.apply_math_f(namespace, &|a, b| a / b, operands),
-            Function::IntDiv => self.apply_math(namespace, &|a, b| f64::trunc(a / b), operands),
-            Function::Greater => self.apply_cmp(namespace, &|a, b| a > b, operands),
-            Function::Less => self.apply_cmp(namespace, &|a, b| a < b, operands),
-            Function::GreaterEq => self.apply_cmp(namespace, &|a, b| a >= b, operands),
-            Function::LessEq => self.apply_cmp(namespace, &|a, b| a <= b, operands),
-            Function::Equals => self.apply_metric_cmp(namespace, &|a, b| a == b, operands),
-            Function::NotEq => self.apply_metric_cmp(namespace, &|a, b| a != b, operands),
-            Function::Max => self.fold_math(namespace, &|a, b| if a > b { a } else { b }, operands),
-            Function::Min => self.fold_math(namespace, &|a, b| if a < b { a } else { b }, operands),
+            Function::Math(operation) => arithmetic::calculate(
+                operation,
+                &map_vec(operands, |o| self.evaluate(namespace, o)),
+            ),
+            Function::Equals => self.apply_boolean_function(namespace, &|a, b| a == b, operands),
+            Function::NotEq => self.apply_boolean_function(namespace, &|a, b| a != b, operands),
             Function::And => {
                 self.fold_bool(namespace, &|a, b| a && b, operands, ShortCircuitBehavior::False)
             }
@@ -655,19 +609,6 @@ impl<'a> MetricState<'a> {
         }
     }
 
-    pub fn safe_float_to_int(float: f64) -> Option<i64> {
-        if !float.is_finite() {
-            return None;
-        }
-        if float > i64::MAX as f64 {
-            return Some(i64::MAX);
-        }
-        if float < i64::MIN as f64 {
-            return Some(i64::MIN);
-        }
-        Some(float as i64)
-    }
-
     /// This implements the time-conversion functions.
     fn time(&self, namespace: &str, operands: &[Expression], multiplier: i64) -> MetricValue {
         if operands.len() != 1 {
@@ -675,12 +616,10 @@ impl<'a> MetricState<'a> {
         }
         match self.evaluate(namespace, &operands[0]) {
             MetricValue::Int(value) => MetricValue::Int(value * multiplier),
-            MetricValue::Float(value) => {
-                match Self::safe_float_to_int(value * (multiplier as f64)) {
-                    None => missing("Time conversion needs 1 numeric argument"),
-                    Some(value) => MetricValue::Int(value),
-                }
-            }
+            MetricValue::Float(value) => match safe_float_to_int(value * (multiplier as f64)) {
+                None => missing("Time conversion needs 1 numeric argument"),
+                Some(value) => MetricValue::Int(value),
+            },
             _ => missing("Time conversion needs 1 numeric argument"),
         }
     }
@@ -749,96 +688,7 @@ impl<'a> MetricState<'a> {
         }
     }
 
-    // Applies an operator (which should be associative and commutative) to a list of operands.
-    fn fold_math(
-        &self,
-        namespace: &str,
-        function: &dyn (Fn(f64, f64) -> f64),
-        operands: &Vec<Expression>,
-    ) -> MetricValue {
-        if operands.len() == 0 {
-            return MetricValue::Missing("No operands in math expression".into());
-        }
-        let mut result: MetricValue = self.evaluate(namespace, &operands[0]);
-        for operand in operands[1..].iter() {
-            result = self.apply_math(
-                namespace,
-                function,
-                &vec![Expression::Value(result), operand.clone()],
-            );
-        }
-        result
-    }
-
-    // Applies a given function to two values, handling type-promotion.
-    // This function will return a MetricValue::Int if all values are ints
-    // and a MetricValue::Float if any argument is a float.
-    fn apply_math(
-        &self,
-        namespace: &str,
-        function: &dyn (Fn(f64, f64) -> f64),
-        operands: &Vec<Expression>,
-    ) -> MetricValue {
-        extract_and_apply_math_operands!(self, namespace, function, operands, i64)
-    }
-
-    // Applies a given function to two values, handling type-promotion.
-    // This function will always return a MetricValue::Float
-    fn apply_math_f(
-        &self,
-        namespace: &str,
-        function: &dyn (Fn(f64, f64) -> f64),
-        operands: &Vec<Expression>,
-    ) -> MetricValue {
-        extract_and_apply_math_operands!(self, namespace, function, operands, f64)
-    }
-
-    fn extract_binary_operands(
-        &self,
-        namespace: &str,
-        operands: &Vec<Expression>,
-    ) -> Result<(MetricValue, MetricValue), MetricValue> {
-        if operands.len() != 2 {
-            return Err(MetricValue::Missing(format!(
-                "Bad arg list {:?} for binary operator",
-                operands
-            )));
-        }
-        Ok((self.evaluate(namespace, &operands[0]), self.evaluate(namespace, &operands[1])))
-    }
-
-    // Applies an ord operator to two numbers. (>, >=, <, <=)
-    fn apply_cmp(
-        &self,
-        namespace: &str,
-        function: &dyn (Fn(f64, f64) -> bool),
-        operands: &Vec<Expression>,
-    ) -> MetricValue {
-        if operands.len() != 2 {
-            return MetricValue::Missing(format!(
-                "Bad arg list {:?} for binary operator",
-                operands
-            ));
-        }
-        let operand_values = map_vec(&operands, |operand| self.evaluate(namespace, operand));
-        let numbers = map_vec_r(&operand_values, |operand| unwrap_for_math(operand));
-        let result = match (numbers[0], numbers[1]) {
-            // TODO(cphoenix): Instead of converting two ints to float, use int functions.
-            (MetricValue::Int(int1), MetricValue::Int(int2)) => {
-                function(*int1 as f64, *int2 as f64)
-            }
-            (MetricValue::Int(int1), MetricValue::Float(float2)) => function(*int1 as f64, *float2),
-            (MetricValue::Float(float1), MetricValue::Int(int2)) => function(*float1, *int2 as f64),
-            (MetricValue::Float(float1), MetricValue::Float(float2)) => function(*float1, *float2),
-            (value1, value2) => return demand_both_numeric(value1, value2),
-        };
-        MetricValue::Bool(result)
-    }
-
-    // Transitional Function to allow for string equality comparisons.
-    // This function will eventually replace the apply_cmp function once MetricValue
-    // implements the std::cmp::PartialOrd trait
-    fn apply_metric_cmp(
+    fn apply_boolean_function(
         &self,
         namespace: &str,
         function: &dyn (Fn(&MetricValue, &MetricValue) -> bool),
@@ -851,12 +701,12 @@ impl<'a> MetricState<'a> {
             ));
         }
         let operand_values = map_vec(&operands, |operand| self.evaluate(namespace, operand));
-        let bools = map_vec_r(&operand_values, |operand| unwrap_for_math(operand));
-        match (bools[0], bools[1]) {
+        let args = map_vec_r(&operand_values, |operand| unwrap_for_math(operand));
+        match (args[0], args[1]) {
             // We forward ::Missing for better error messaging.
             (MetricValue::Missing(reason), _) => MetricValue::Missing(reason.to_string()),
             (_, MetricValue::Missing(reason)) => MetricValue::Missing(reason.to_string()),
-            _ => MetricValue::Bool(function(bools[0], bools[1])),
+            _ => MetricValue::Bool(function(args[0], args[1])),
         }
     }
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::metrics::{variable::VariableName, Expression, Function, MetricValue},
+    crate::metrics::{variable::VariableName, Expression, Function, MathFunction, MetricValue},
     anyhow::{format_err, Error},
     nom::{
         branch::alt,
@@ -192,6 +192,12 @@ macro_rules! function {
     };
 }
 
+macro_rules! math {
+    ($tag:expr, $function:ident) => {
+        (map(spaced(tag($tag)), move |_| Function::Math(MathFunction::$function)))
+    };
+}
+
 fn function_name_parser<'a>(i: &'a str) -> IResult<&'a str, Function, VerboseError<&'a str>> {
     // alt has a limited number of args, so must be nested.
     // At some point, worry about efficiency.
@@ -202,9 +208,9 @@ fn function_name_parser<'a>(i: &'a str) -> IResult<&'a str, Function, VerboseErr
             function!("And", And),
             function!("Or", Or),
             function!("Not", Not),
-            function!("Max", Max),
+            math!("Max", Max),
             function!("Minutes", Minutes), // Parser must try "Minutes" before "Min"
-            function!("Min", Min),
+            math!("Min", Min),
             function!("SyslogHas", SyslogHas),
             function!("KlogHas", KlogHas),
             function!("BootlogHas", BootlogHas),
@@ -387,7 +393,7 @@ fn build_expression<'a>(mut items: Vec<Expression>, mut operators: Vec<Function>
 fn expression_muldiv<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
     let (remainder, (items, operators)) = items_and_separators(
         expression_primitive,
-        alt((function!("*", Mul), function!("//", IntDiv), function!("/", FloatDiv))),
+        alt((math!("*", Mul), math!("//", IntDiv), math!("/", FloatDiv))),
         i,
     )?;
     Ok((remainder, build_expression(items, operators)))
@@ -396,11 +402,8 @@ fn expression_muldiv<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseErro
 // Scans for muldiv expressions (which may be a single primitive expression)
 // separated by + and -. Remember unary + and - will be recognized by number().
 fn expression_addsub<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
-    let (remainder, (items, operators)) = items_and_separators(
-        expression_muldiv,
-        alt((function!("+", Add), function!("-", Sub))),
-        i,
-    )?;
+    let (remainder, (items, operators)) =
+        items_and_separators(expression_muldiv, alt((math!("+", Add), math!("-", Sub))), i)?;
     Ok((remainder, build_expression(items, operators)))
 }
 
@@ -410,12 +413,12 @@ fn expression_top<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&
     // Note: alt() is not BNF - it's sequential. It's important to put the longer strings first.
     // If a shorter substring succeeds where it shouldn't, the alt() may not get another chance.
     let comparison = alt((
-        function!(">=", GreaterEq),
-        function!("<=", LessEq),
+        math!(">=", GreaterEq),
+        math!("<=", LessEq),
         function!("==", Equals),
         function!("!=", NotEq),
-        function!(">", Greater),
-        function!("<", Less),
+        math!(">", Greater),
+        math!("<", Less),
     ));
     alt((
         map(tuple((expression_addsub, comparison, expression_addsub)), move |(left, op, right)| {
@@ -446,7 +449,7 @@ mod test {
         super::*,
         crate::{
             assert_missing,
-            metrics::{Expression, Fetcher, MetricState, TrialDataFetcher},
+            metrics::{Expression, Fetcher, MathFunction, MetricState, TrialDataFetcher},
         },
         std::collections::HashMap,
     };
@@ -510,8 +513,8 @@ mod test {
             get_parse!(expression_primitive, "[]"),
             Res::Ok("", Expression::Vector(Vec::new()))
         );
-        let first = Expression::Function(Function::Add, vec![v(1), v(2)]);
-        let second = Expression::Function(Function::Sub, vec![v(2), v(1)]);
+        let first = Expression::Function(Function::Math(MathFunction::Add), vec![v(1), v(2)]);
+        let second = Expression::Function(Function::Math(MathFunction::Sub), vec![v(2), v(1)]);
         assert_eq!(
             get_parse!(expression_primitive, "[1+2, 2-1]"),
             Res::Ok("", Expression::Vector(vec![first, second]))
@@ -773,7 +776,7 @@ mod test {
     fn parser_comparisons() -> Result<(), Error> {
         assert_eq!(
             format!("{:?}", parse_expression("2>1")),
-            "Ok(Function(Greater, [Value(Int(2)), Value(Int(1))]))"
+            "Ok(Function(Math(Greater), [Value(Int(2)), Value(Int(1))]))"
         );
         assert_eq!(eval!("2>2"), MetricValue::Bool(false));
         assert_eq!(eval!("2>=2"), MetricValue::Bool(true));
@@ -800,7 +803,7 @@ mod test {
     fn parser_boolean_functions_value() -> Result<(), Error> {
         assert_eq!(
             format!("{:?}", parse_expression("Not(2>1)")),
-            "Ok(Function(Not, [Function(Greater, [Value(Int(2)), Value(Int(1))])]))"
+            "Ok(Function(Not, [Function(Math(Greater), [Value(Int(2)), Value(Int(1))])]))"
         );
         assert_eq!(eval!("And(2>1, 2>2)"), MetricValue::Bool(false));
         assert_eq!(eval!("And(2>2, 2>1)"), MetricValue::Bool(false));

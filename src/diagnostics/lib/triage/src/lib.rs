@@ -74,7 +74,7 @@ pub fn all_selectors(parse: &ParseResult) -> Vec<String> {
 pub fn evaluate_int_math(expression: &str) -> Result<i64, Error> {
     match MetricState::evaluate_math(expression) {
         MetricValue::Int(i) => Ok(i),
-        MetricValue::Float(f) => match MetricState::safe_float_to_int(f) {
+        MetricValue::Float(f) => match metrics::safe_float_to_int(f) {
             Some(i) => Ok(i),
             None => bail!("Non-numeric float result {}", f),
         },
