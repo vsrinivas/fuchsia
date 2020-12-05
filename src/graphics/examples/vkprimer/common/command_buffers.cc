@@ -49,6 +49,7 @@ bool CommandBuffers::Init() {
   RTN_IF_MSG(false, allocated_,
              "CommandBuffers already allocated.  Custom intialization required.\n");
   RTN_IF_MSG(false, initialized_, "CommandBuffers already initialized.\n");
+  RTN_IF_MSG(false, !device_, "Device must be initialized.\n");
   RTN_IF_MSG(false, !Alloc(), "Couldn't allocate command buffers.\n");
 
   vk::ClearValue clear_color;

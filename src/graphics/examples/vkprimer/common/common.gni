@@ -9,6 +9,8 @@ common_files = [
   "command_buffers.h",
   "command_pool.cc",
   "command_pool.h",
+  "debug_utils_messenger.cc",
+  "debug_utils_messenger.h",
   "device.cc",
   "device.h",
   "fixed_functions.cc",

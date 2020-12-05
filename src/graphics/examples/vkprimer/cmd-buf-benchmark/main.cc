@@ -9,6 +9,7 @@
 
 #include "src/graphics/examples/vkprimer/common/command_buffers.h"
 #include "src/graphics/examples/vkprimer/common/command_pool.h"
+#include "src/graphics/examples/vkprimer/common/debug_utils_messenger.h"
 #include "src/graphics/examples/vkprimer/common/device.h"
 #include "src/graphics/examples/vkprimer/common/framebuffers.h"
 #include "src/graphics/examples/vkprimer/common/image_view.h"
@@ -32,22 +33,23 @@ int main(int argc, char* argv[]) {
 #else
   const bool kEnableValidation = false;
 #endif
-  auto vkp_instance = std::make_shared<vkp::Instance>(kEnableValidation);
-  if (!vkp_instance->Init()) {
-    RTN_MSG(1, "Instance Initialization Failed.\n");
+  vkp::Instance vkp_instance(kEnableValidation);
+  RTN_IF_MSG(1, !vkp_instance.Init(), "Instance Initialization Failed.\n");
+
+  // DEBUG UTILS MESSENGER
+  if (kEnableValidation) {
+    vkp::DebugUtilsMessenger vkp_debug_messenger(vkp_instance.shared());
+    RTN_IF_MSG(1, !vkp_debug_messenger.Init(), "Debug Messenger Initialization Failed.\n");
   }
 
   // PHYSICAL DEVICE
-  auto vkp_physical_device = std::make_shared<vkp::PhysicalDevice>(vkp_instance);
-  if (!vkp_physical_device->Init()) {
-    RTN_MSG(1, "Phys Device Initialization Failed.\n");
-  }
+  vkp::PhysicalDevice vkp_physical_device(vkp_instance.shared());
+  RTN_IF_MSG(1, !vkp_physical_device.Init(), "Phys Device Initialization Failed.\n");
 
   // LOGICAL DEVICE
-  vkp::Device vkp_device(vkp_physical_device->get());
-  if (!vkp_device.Init()) {
-    RTN_MSG(1, "Logical Device Initialization Failed.\n");
-  }
+  vkp::Device vkp_device(vkp_physical_device.get());
+  RTN_IF_MSG(1, !vkp_device.Init(), "Logical Device Initialization Failed.\n");
+  std::shared_ptr<vk::Device> device = vkp_device.shared();
 
   vk::Format image_format;
   vk::Extent2D extent;
@@ -55,57 +57,44 @@ int main(int argc, char* argv[]) {
   // The number of image views added in either the offscreen or onscreen logic blocks
   // below controls the number of framebuffers, command buffers, fences and signalling
   // semaphores created subsequently.
+  std::vector<std::shared_ptr<vkp::ImageView>> vkp_image_views;
   std::vector<vk::ImageView> image_views;
-  std::shared_ptr<vkp::ImageView> offscreen_image_view;
-  std::vector<std::shared_ptr<vkp::ImageView>> vkp_offscreen_image_views;
   constexpr uint32_t kCommandBufferCount = 100;
   for (uint32_t i = 0; i < kCommandBufferCount; i++) {
-    std::shared_ptr<vkp::ImageView> offscreen_image_view;
     // IMAGE VIEW
-    offscreen_image_view = std::make_shared<vkp::ImageView>(
-        vkp_device.shared(), vkp_physical_device, vk::Extent2D{64, 64});
-    if (!offscreen_image_view->Init()) {
-      RTN_MSG(1, "Image View Initialization Failed.\n");
-    }
-    image_format = offscreen_image_view->format();
-    extent = offscreen_image_view->extent();
-    image_views.emplace_back(offscreen_image_view->get());
-    vkp_offscreen_image_views.push_back(std::move(offscreen_image_view));
+    auto vkp_offscreen_image_view =
+        std::make_shared<vkp::ImageView>(device, vkp_physical_device.get(), vk::Extent2D{64, 64});
+
+    RTN_IF_MSG(1, !vkp_offscreen_image_view->Init(), "Image View Initialization Failed.\n");
+    image_format = vkp_offscreen_image_view->format();
+    extent = vkp_offscreen_image_view->extent();
+    image_views.emplace_back(vkp_offscreen_image_view->get());
+    vkp_image_views.emplace_back(std::move(vkp_offscreen_image_view));
   }
 
   // RENDER PASS
-  auto vkp_render_pass = std::make_shared<vkp::RenderPass>(vkp_device.shared(), image_format, true);
-  if (!vkp_render_pass->Init()) {
-    RTN_MSG(1, "Render Pass Initialization Failed.\n");
-  }
+  auto vkp_render_pass = std::make_shared<vkp::RenderPass>(device, image_format, true);
+  RTN_IF_MSG(1, !vkp_render_pass->Init(), "Render Pass Initialization Failed.\n");
 
   // GRAPHICS PIPELINE
-  auto vkp_pipeline = std::make_unique<vkp::Pipeline>(vkp_device.shared(), extent, vkp_render_pass);
-  if (!vkp_pipeline->Init()) {
-    RTN_MSG(1, "Graphics Pipeline Initialization Failed.\n");
-  }
+  auto vkp_pipeline = std::make_unique<vkp::Pipeline>(device, extent, vkp_render_pass);
+  RTN_IF_MSG(1, !vkp_pipeline->Init(), "Graphics Pipeline Initialization Failed.\n");
 
   // FRAMEBUFFER
-  auto vkp_framebuffer = std::make_unique<vkp::Framebuffers>(vkp_device.shared(), extent,
-                                                             vkp_render_pass->get(), image_views);
-  if (!vkp_framebuffer->Init()) {
-    RTN_MSG(1, "Framebuffers Initialization Failed.\n");
-  }
+  auto vkp_framebuffer =
+      std::make_unique<vkp::Framebuffers>(device, extent, vkp_render_pass->get(), image_views);
+  RTN_IF_MSG(1, !vkp_framebuffer->Init(), "Framebuffers Initialization Failed.\n");
 
   // COMMAND POOL
   auto vkp_command_pool =
-      std::make_shared<vkp::CommandPool>(vkp_device.shared(), vkp_device.queue_family_index());
-  if (!vkp_command_pool->Init()) {
-    RTN_MSG(1, "Command Pool Initialization Failed.\n");
-  }
+      std::make_shared<vkp::CommandPool>(device, vkp_device.queue_family_index());
+  RTN_IF_MSG(1, !vkp_command_pool->Init(), "Command Pool Initialization Failed.\n");
 
   // COMMAND BUFFER
   auto vkp_command_buffers = std::make_unique<vkp::CommandBuffers>(
-      vkp_device.shared(), vkp_command_pool, vkp_framebuffer->framebuffers(), extent,
-      vkp_render_pass->get(), vkp_pipeline->get());
-  if (!vkp_command_buffers->Init()) {
-    RTN_MSG(1, "Command Buffer Initialization Failed.\n");
-  }
+      device, vkp_command_pool, vkp_framebuffer->framebuffers(), extent, vkp_render_pass->get(),
+      vkp_pipeline->get());
+  RTN_IF_MSG(1, !vkp_command_buffers->Init(), "Command Buffer Initialization Failed.\n");
 
   sleep(1);
 
@@ -114,14 +103,14 @@ int main(int argc, char* argv[]) {
     RTN_MSG(1, "First DrawAllFrames Failed.\n");
   }
 
-  vkp_device.get().waitIdle();
+  device->waitIdle();
 
   auto start_time = std::chrono::steady_clock::now();
 
   if (!DrawAllFrames(vkp_device, *vkp_command_buffers)) {
     RTN_MSG(1, "Second DrawAllFrames Failed.\n");
   }
-  vkp_device.get().waitIdle();
+  device->waitIdle();
   auto end_time = std::chrono::steady_clock::now();
 
   fprintf(stderr, "End time: %lld\n",

@@ -19,7 +19,7 @@ namespace vkp {
 
 class Surface {
  public:
-  Surface(const std::shared_ptr<Instance> &vkp_instance, GLFWwindow *window);
+  Surface(std::shared_ptr<vk::Instance> instance, GLFWwindow *window);
   ~Surface();
 
   bool Init();
@@ -27,7 +27,7 @@ class Surface {
 
  private:
   bool initialized_;
-  std::shared_ptr<Instance> vkp_instance_;
+  std::shared_ptr<vk::Instance> instance_;
   GLFWwindow *window_;
   VkSurfaceKHR surface_;
 };

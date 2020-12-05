@@ -99,6 +99,7 @@ Swapchain::Swapchain(const vk::PhysicalDevice phys_device, std::shared_ptr<vk::D
 
 bool Swapchain::Init() {
   RTN_IF_MSG(false, initialized_, "Swapchain is already initialized.\n");
+  RTN_IF_MSG(false, !device_, "Device must be initialized.\n");
 
   Swapchain::Info info;
   QuerySwapchainSupport(*phys_device_, vkp_surface_->get(), &info);

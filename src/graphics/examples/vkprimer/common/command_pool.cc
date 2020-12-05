@@ -13,6 +13,7 @@ CommandPool::CommandPool(std::shared_ptr<vk::Device> device, uint32_t queue_fami
 
 bool CommandPool::Init() {
   RTN_IF_MSG(false, initialized_, "CommandPool is already initialized.\n");
+  RTN_IF_MSG(false, !device_, "Device must be initialized.\n");
 
   vk::CommandPoolCreateInfo pool_info;
   pool_info.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;

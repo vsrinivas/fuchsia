@@ -7,11 +7,13 @@
 #include "src/graphics/examples/vkprimer/common/swapchain.h"
 #include "src/graphics/examples/vkprimer/common/utils.h"
 
+#include <vulkan/vulkan.hpp>
+
 namespace {
 
 const char *kMagmaLayer = "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb";
 
-const std::vector<const char *> s_required_phys_device_props = {
+const std::vector<const char *> s_required_physical_device_props = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 #ifdef __Fuchsia__
     VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME,
@@ -21,24 +23,24 @@ const std::vector<const char *> s_required_phys_device_props = {
 #endif
 };
 
-bool ChooseGraphicsDevice(const vk::PhysicalDevice &phys_device, const VkSurfaceKHR &surface,
-                          vk::PhysicalDevice *phys_device_out) {
-  if (!FindRequiredProperties(s_required_phys_device_props, vkp::PHYS_DEVICE_EXT_PROP, phys_device,
-                              kMagmaLayer, nullptr /* missing_props */)) {
+bool ChooseGraphicsDevice(const vk::PhysicalDevice &physical_device_in, const VkSurfaceKHR &surface,
+                          vk::PhysicalDevice *physical_device_out) {
+  if (!FindRequiredProperties(s_required_physical_device_props, vkp::PHYS_DEVICE_EXT_PROP,
+                              kMagmaLayer, physical_device_in)) {
     return false;
   }
 
   if (surface) {
     vkp::Swapchain::Info swapchain_info;
-    if (!vkp::Swapchain::QuerySwapchainSupport(phys_device, surface, &swapchain_info)) {
+    if (!vkp::Swapchain::QuerySwapchainSupport(physical_device_in, surface, &swapchain_info)) {
       return false;
     }
   }
 
-  if (!vkp::FindGraphicsQueueFamilyIndex(phys_device, surface)) {
+  if (!vkp::FindGraphicsQueueFamilyIndex(physical_device_in, surface)) {
     RTN_MSG(false, "No graphics queue families found%s.\n", surface ? " with present support" : "");
   }
-  *phys_device_out = phys_device;
+  *physical_device_out = physical_device_in;
   return true;
 }
 
@@ -46,43 +48,40 @@ bool ChooseGraphicsDevice(const vk::PhysicalDevice &phys_device, const VkSurface
 
 namespace vkp {
 
-PhysicalDevice::PhysicalDevice(std::shared_ptr<Instance> vkp_instance, VkSurfaceKHR surface)
-    : initialized_(false), vkp_instance_(vkp_instance), surface_(surface) {}
+PhysicalDevice::PhysicalDevice(std::shared_ptr<vk::Instance> instance, VkSurfaceKHR surface)
+    : initialized_(false), instance_(instance), surface_(surface) {}
 
 bool PhysicalDevice::Init() {
-  if (initialized_) {
-    RTN_MSG(false, "PhysicalDevice already initialized.\n");
-  }
+  RTN_IF_MSG(false, initialized_, "PhysicalDevice already initialized.\n");
+  RTN_IF_MSG(false, !instance_, "Instance must be initialized.\n");
 
-  auto [result, phys_devices] = vkp_instance_->get().enumeratePhysicalDevices();
-  if (vk::Result::eSuccess != result || phys_devices.empty()) {
-    RTN_MSG(false, "VK Error: 0x%x - No physical device found.\n", result);
+  auto [r_phys_devices, phys_devices] = instance_->enumeratePhysicalDevices();
+  if (vk::Result::eSuccess != r_phys_devices || phys_devices.empty()) {
+    RTN_MSG(false, "VK Error: 0x%x - No physical device found.\n", r_phys_devices);
   }
 
   for (const auto &phys_device : phys_devices) {
-    if (ChooseGraphicsDevice(phys_device, surface_, &phys_device_)) {
-      LogMemoryProperties(phys_device_);
+    if (ChooseGraphicsDevice(phys_device, surface_, &physical_device_)) {
+      LogMemoryProperties(physical_device_);
       initialized_ = true;
       break;
     }
   }
 
-  if (!initialized_) {
-    RTN_MSG(false, "Couldn't find graphics family device.\n");
-  }
+  RTN_IF_MSG(false, !initialized_, "Couldn't find graphics family device.\n");
   return initialized_;
 }
 
 void PhysicalDevice::AppendRequiredPhysDeviceExts(std::vector<const char *> *exts) {
-  exts->insert(exts->end(), s_required_phys_device_props.begin(),
-               s_required_phys_device_props.end());
+  exts->insert(exts->end(), s_required_physical_device_props.begin(),
+               s_required_physical_device_props.end());
 }
 
 const vk::PhysicalDevice &PhysicalDevice::get() const {
   if (!initialized_) {
-    RTN_MSG(phys_device_, "%s", "Request for uninitialized instance.\n");
+    RTN_MSG(physical_device_, "%s", "Request for uninitialized instance.\n");
   }
-  return phys_device_;
+  return physical_device_;
 }
 
 }  // namespace vkp

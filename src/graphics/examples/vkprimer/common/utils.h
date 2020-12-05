@@ -65,11 +65,15 @@ enum SearchProp { INSTANCE_EXT_PROP, INSTANCE_LAYER_PROP, PHYS_DEVICE_EXT_PROP }
 //
 //   vk::enumerateInstanceExtensionProperties
 //   vk::enumerateInstanceLayerProperties
-//   vk::enumerateDeviceExtensionProperties
+//   physical_device::enumerateDeviceExtensionProperties
+//
+//  |physical_device| must be specified for PHYS_DEVICE_EXT_PROP,
+//  otherwise it should be nullptr.
 //
 bool FindRequiredProperties(const std::vector<const char *> &required_props, SearchProp search_prop,
-                            vk::PhysicalDevice phys_device, const char *layer,
-                            std::vector<std::string> *missing_props_out);
+                            const char *layer = nullptr,
+                            vk::PhysicalDevice physical_device = nullptr,
+                            std::vector<std::string> *missing_props_out = nullptr);
 
 // Find graphics queue family index from physical device.  If |surface| is not nullptr,
 // succeed only if queue family has present support.  If |queue_family_index| is not

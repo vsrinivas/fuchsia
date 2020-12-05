@@ -28,8 +28,9 @@ class RenderPass {
   std::shared_ptr<vk::Device> device_;
   const vk::Format image_format_;
   bool offscreen_;
-  vk::UniqueRenderPass render_pass_;
   vk::ImageLayout initial_layout_ = vk::ImageLayout::eUndefined;
+
+  vk::UniqueRenderPass render_pass_;
 };
 
 }  // namespace vkp

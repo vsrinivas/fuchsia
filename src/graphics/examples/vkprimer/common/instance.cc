@@ -10,6 +10,8 @@
 
 #include "src/graphics/examples/vkprimer/common/utils.h"
 
+#include <vulkan/vulkan.hpp>
+
 namespace {
 
 const std::vector<const char *> s_required_props = {
@@ -43,65 +45,25 @@ std::vector<const char *> GetExtensionsGLFW(bool enable_validation) {
 }
 #else
 std::vector<const char *> GetExtensionsPrivate(bool validation_layers_enabled) {
-  std::vector<const char *> required_props = s_required_props;
   std::vector<const char *> extensions;
-  std::vector<std::string> missing_props;
-
 #ifdef __Fuchsia__
   const char *kMagmaLayer = "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb";
 #else
   const char *kMagmaLayer = nullptr;
 #endif
 
+  std::vector<const char *> required_props = s_required_props;
   if (validation_layers_enabled) {
     required_props.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
   }
 
-  if (FindRequiredProperties(s_required_props, vkp::INSTANCE_EXT_PROP, nullptr /* phys_device */,
-                             kMagmaLayer, &missing_props)) {
-    extensions.insert(extensions.end(), s_required_props.begin(), s_required_props.end());
+  if (FindRequiredProperties(s_required_props, vkp::INSTANCE_EXT_PROP, kMagmaLayer)) {
+    extensions.insert(extensions.end(), required_props.begin(), required_props.end());
   }
 
   return extensions;
 }
 #endif
-
-VKAPI_ATTR VkBool32 VKAPI_CALL
-DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT type,
-              const VkDebugUtilsMessengerCallbackDataEXT *callback_data, void *user_data) {
-  std::string severity_str{};
-  if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
-    severity_str = "VERBOSE";
-  } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-    severity_str = "INFO";
-  } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-    severity_str = "WARNING";
-  } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-    severity_str = "ERROR";
-  }
-
-  std::string type_str{};
-  if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
-    type_str = "General";
-  } else if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
-    type_str = "Validation";
-  } else if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
-    type_str = "Performance";
-  } else {
-    type_str = "Unknown";
-  }
-
-  if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-    std::cerr << "VK[" << severity_str << "]\tType: " << type_str << "\tMessage:\n\t"
-              << callback_data->pMessage << std::endl
-              << std::endl;
-  } else {
-    std::cout << "VK[" << severity_str << "]\tType: " << type_str << "\tMessage:\n\t"
-              << callback_data->pMessage << std::endl
-              << std::endl;
-  }
-  return VK_FALSE;
-}
 
 }  // namespace
 
@@ -115,7 +77,6 @@ Instance::Instance(const vk::InstanceCreateInfo &instance_info, bool validation_
 
 Instance::~Instance() {
   if (initialized_) {
-    debug_messenger_.reset();
     initialized_ = false;
   }
 }
@@ -143,8 +104,10 @@ bool Instance::Init() {
 
   if (validation_layers_enabled_) {
     layers_.emplace_back("VK_LAYER_KHRONOS_validation");
-    extensions_.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
   }
+
+  if (!FindRequiredProperties(layers_, vkp::INSTANCE_LAYER_PROP))
+    return false;
 
   if (instance_info_.ppEnabledLayerNames && instance_info_.enabledLayerCount) {
     // Tack on custom layers.
@@ -164,17 +127,26 @@ bool Instance::Init() {
   instance_info_.enabledExtensionCount = static_cast<uint32_t>(extensions_.size());
   instance_info_.ppEnabledExtensionNames = extensions_.data();
 
-  PrintProps(extensions_, "Enabled Instance Extensions");
   PrintProps(layers_, "Enabled Layers");
+  PrintProps(extensions_, "Enabled Instance Extensions");
 
-  auto [r_instance, instance] = vk::createInstanceUnique(instance_info_);
+  vk::Instance *instance = new vk::Instance;
+  vk::Result r_instance = vk::createInstance(&instance_info_, nullptr /* pAllocator */, instance);
   RTN_IF_VKH_ERR(false, r_instance, "Failed to create instance\n");
-  instance_ = std::move(instance);
-  if (validation_layers_enabled_) {
-    ConfigureDebugMessenger(instance_.get());
-  }
+  instance_.reset(instance, [](vk::Instance *instance) {
+    if (instance) {
+      instance->destroy();
+      delete instance;
+    }
+  });
+
   initialized_ = true;
   return true;
+}
+
+std::shared_ptr<vk::Instance> Instance::shared() {
+  RTN_IF_MSG(nullptr, !initialized_, "Instance hasn't been initialized");
+  return instance_;
 }
 
 std::vector<const char *> Instance::GetExtensions() {
@@ -187,32 +159,7 @@ std::vector<const char *> Instance::GetExtensions() {
   return extensions_;
 }
 
-bool Instance::ConfigureDebugMessenger(const vk::Instance &instance) {
-  dispatch_loader_ = vk::DispatchLoaderDynamic();
-  dispatch_loader_.init(instance, vkGetInstanceProcAddr);
-
-  vk::DebugUtilsMessengerCreateInfoEXT info;
-  info.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
-                         vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-                         vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
-
-#if VERBOSE_LOGGING
-  info.messageSeverity |= vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose;
-#endif
-
-  info.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-                     vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
-                     vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation;
-  info.pfnUserCallback = DebugCallback;
-
-  auto [r_messenger, messenger] =
-      instance.createDebugUtilsMessengerEXTUnique(info, nullptr, dispatch_loader_);
-  RTN_IF_VKH_ERR(false, r_messenger, "Failed to create debug messenger.\n");
-  debug_messenger_ = std::move(messenger);
-  return true;
-}
-
-const vk::Instance &Instance::get() const { return instance_.get(); }
+const vk::Instance &Instance::get() const { return *instance_; }
 
 Instance::Builder::Builder() : allocator_(nullptr) {}
 

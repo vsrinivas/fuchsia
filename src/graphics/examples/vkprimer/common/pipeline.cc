@@ -30,9 +30,8 @@ Pipeline::~Pipeline() {
 }
 
 bool Pipeline::Init() {
-  if (initialized_) {
-    RTN_MSG(false, "Pipeline is already initialized.\n");
-  }
+  RTN_IF_MSG(false, initialized_, "Pipeline is already initialized.\n");
+  RTN_IF_MSG(false, !device_, "Device must be initialized.\n");
 
   std::vector<char> vert_shader_buffer;
   std::vector<char> frag_shader_buffer;

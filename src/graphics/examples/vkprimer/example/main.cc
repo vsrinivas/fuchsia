@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "src/graphics/examples/vkprimer/common/command_buffers.h"
+#include "src/graphics/examples/vkprimer/common/debug_utils_messenger.h"
 #include "src/graphics/examples/vkprimer/common/image_view.h"
 #include "src/graphics/examples/vkprimer/common/instance.h"
 #include "src/graphics/examples/vkprimer/common/physical_device.h"
@@ -50,7 +51,14 @@ int main(int argc, char* argv[]) {
 
   // INSTANCE
   const bool kEnableValidation = true;
-  auto vkp_instance = std::make_shared<vkp::Instance>(kEnableValidation);
+  vkp::Instance vkp_instance(kEnableValidation);
+  RTN_IF_MSG(1, !vkp_instance.Init(), "Instance Initialization Failed.\n");
+  std::shared_ptr<vk::Instance> instance = vkp_instance.shared();
+
+  // DEBUG UTILS MESSENGER
+  vkp::DebugUtilsMessenger vkp_debug_messenger(instance);
+  RTN_IF_MSG(1, !vkp_debug_messenger.Init(), "Debug messenger initialization failed");
+
 #if USE_GLFW
   glfwInit();
   glfwSetErrorCallback(glfwErrorCallback);
@@ -59,24 +67,24 @@ int main(int argc, char* argv[]) {
   GLFWwindow* window = glfwCreateWindow(1024, 768, "VkPrimer", nullptr, nullptr);
   RTN_IF_MSG(1, !window, "glfwCreateWindow failed.\n");
 #endif
-  RTN_IF_MSG(1, !vkp_instance->Init(), "Instance Initialization Failed.\n");
 
 // SURFACE
 #if USE_GLFW
   auto vkp_surface = std::make_shared<vkp::Surface>(instance, window);
 #else
-  auto vkp_surface = std::make_shared<vkp::Surface>(vkp_instance);
+  auto vkp_surface = std::make_shared<vkp::Surface>(instance);
 #endif
   RTN_IF_MSG(1, !vkp_surface->Init(), "Surface initialization failed\n");
 
   // PHYSICAL DEVICE
-  auto vkp_physical_device =
-      std::make_shared<vkp::PhysicalDevice>(vkp_instance, vkp_surface->get());
-  RTN_IF_MSG(1, !vkp_physical_device->Init(), "Physical device initialization failed\n");
+  vkp::PhysicalDevice vkp_physical_device(instance, vkp_surface->get());
+  RTN_IF_MSG(1, !vkp_physical_device.Init(), "Physical device initialization failed\n");
+  const vk::PhysicalDevice& physical_device = vkp_physical_device.get();
 
   // LOGICAL DEVICE
-  auto vkp_device = vkp::Device(vkp_physical_device->get(), vkp_surface->get());
+  auto vkp_device = vkp::Device(physical_device, vkp_surface->get());
   RTN_IF_MSG(1, !vkp_device.Init(), "Logical device initialization failed\n");
+  std::shared_ptr<vk::Device> device = vkp_device.shared();
 
   vk::Format image_format;
   vk::Extent2D extent;
@@ -89,16 +97,14 @@ int main(int argc, char* argv[]) {
   std::shared_ptr<vkp::ImageView> vkp_offscreen_image_view;
   if (offscreen) {
     // IMAGE VIEW
-    vkp_offscreen_image_view =
-        std::make_shared<vkp::ImageView>(vkp_device.shared(), vkp_physical_device);
+    vkp_offscreen_image_view = std::make_shared<vkp::ImageView>(device, physical_device);
     RTN_IF_MSG(1, !vkp_offscreen_image_view->Init(), "Image View initialization failed\n");
     image_format = vkp_offscreen_image_view->format();
     extent = vkp_offscreen_image_view->extent();
     image_views.emplace_back(vkp_offscreen_image_view->get());
   } else {
     // SWAP CHAIN
-    vkp_swap_chain = std::make_shared<vkp::Swapchain>(vkp_physical_device->get(),
-                                                      vkp_device.shared(), vkp_surface);
+    vkp_swap_chain = std::make_shared<vkp::Swapchain>(physical_device, device, vkp_surface);
     RTN_IF_MSG(1, !vkp_swap_chain->Init(), "Swap chain initialization failed\n");
 
     image_format = vkp_swap_chain->image_format();
@@ -110,22 +116,21 @@ int main(int argc, char* argv[]) {
   }
 
   // RENDER PASS
-  auto vkp_render_pass =
-      std::make_shared<vkp::RenderPass>(vkp_device.shared(), image_format, offscreen);
+  auto vkp_render_pass = std::make_shared<vkp::RenderPass>(device, image_format, offscreen);
   RTN_IF_MSG(1, !vkp_render_pass->Init(), "Render pass initialization failed\n");
 
   // GRAPHICS PIPELINE
-  auto vkp_pipeline = std::make_unique<vkp::Pipeline>(vkp_device.shared(), extent, vkp_render_pass);
+  auto vkp_pipeline = std::make_unique<vkp::Pipeline>(device, extent, vkp_render_pass);
   RTN_IF_MSG(1, !vkp_pipeline->Init(), "Graphics pipeline initialization failed\n");
 
   // FRAMEBUFFER
-  auto vkp_framebuffers = std::make_unique<vkp::Framebuffers>(vkp_device.shared(), extent,
-                                                              vkp_render_pass->get(), image_views);
+  auto vkp_framebuffers =
+      std::make_unique<vkp::Framebuffers>(device, extent, vkp_render_pass->get(), image_views);
   RTN_IF_MSG(1, !vkp_framebuffers->Init(), "Framebuffer Initialization Failed.\n");
 
   // COMMAND POOL
   auto vkp_command_pool =
-      std::make_shared<vkp::CommandPool>(vkp_device.shared(), vkp_device.queue_family_index());
+      std::make_shared<vkp::CommandPool>(device, vkp_device.queue_family_index());
   RTN_IF_MSG(1, !vkp_command_pool->Init(), "Command Pool Initialization Failed.\n");
 
   // COMMAND BUFFER
@@ -135,16 +140,15 @@ int main(int argc, char* argv[]) {
   RTN_IF_MSG(1, !vkp_command_buffers->Init(), "Command buffer initialization.\n");
 
   // Offscreen drawing submission fence.
-  const vk::Device& device = vkp_device.get();
   const vk::FenceCreateInfo fence_info(vk::FenceCreateFlagBits::eSignaled);
-  auto [r_offscren_fence, offscreen_fence] = device.createFenceUnique(fence_info);
+  auto [r_offscren_fence, offscreen_fence] = device->createFenceUnique(fence_info);
   RTN_IF_VKH_ERR(1, r_offscren_fence, "Offscreen submission fence.\n");
 
   // Onscreen drawing submission fences.
   // There is a 1/1/1 mapping between swapchain image view / command buffer / fence.
   std::vector<vk::UniqueFence> fences;
   for (size_t i = 0; i < image_views.size(); i++) {
-    auto [r_fence, fence] = device.createFenceUnique(fence_info);
+    auto [r_fence, fence] = device->createFenceUnique(fence_info);
     RTN_IF_VKH_ERR(1, r_fence, "Onscreen submission fence.\n");
     fences.emplace_back(std::move(fence));
   }
@@ -166,7 +170,7 @@ int main(int argc, char* argv[]) {
   }
   sleep(3);
 #endif
-  device.waitIdle();
+  device->waitIdle();
 
   if (offscreen) {
     Readback(vkp_device, *vkp_offscreen_image_view);

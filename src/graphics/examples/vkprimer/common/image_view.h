@@ -19,7 +19,7 @@ namespace vkp {
 //
 class ImageView {
  public:
-  ImageView(std::shared_ptr<vk::Device> device, std::shared_ptr<PhysicalDevice> vkp_phys_device,
+  ImageView(std::shared_ptr<vk::Device> device, const vk::PhysicalDevice &physical_device,
             const vk::Extent2D &extent = {1024, 768});
   ImageView() = delete;
 
@@ -29,19 +29,20 @@ class ImageView {
   const vk::Format &format() const { return format_; }
   const vk::UniqueDeviceMemory &image_memory() const { return image_memory_; }
   const vk::UniqueImage &image() const { return image_; }
-  const vk::ImageView &get() const { return view_.get(); }
+  const vk::ImageView &get() const { return image_view_.get(); }
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(ImageView);
 
   bool initialized_;
   std::shared_ptr<vk::Device> device_;
-  std::shared_ptr<PhysicalDevice> vkp_phys_device_;
+  vk::PhysicalDevice physical_device_;
   vk::UniqueImage image_;
   vk::UniqueDeviceMemory image_memory_;
   vk::Extent2D extent_;
   vk::Format format_;
-  vk::UniqueImageView view_;
+
+  vk::UniqueImageView image_view_;
 };
 
 }  // namespace vkp

@@ -8,17 +8,13 @@
 
 namespace vkp {
 
-ImageView::ImageView(std::shared_ptr<vk::Device> device,
-                     std::shared_ptr<PhysicalDevice> vkp_phys_device, const vk::Extent2D &extent)
-    : initialized_(false),
-      device_(device),
-      vkp_phys_device_(std::move(vkp_phys_device)),
-      extent_(extent) {}
+ImageView::ImageView(std::shared_ptr<vk::Device> device, const vk::PhysicalDevice &physical_device,
+                     const vk::Extent2D &extent)
+    : initialized_(false), device_(device), physical_device_(physical_device), extent_(extent) {}
 
 bool ImageView::Init() {
-  if (initialized_ == true) {
-    RTN_MSG(false, "ImageView is already initialized.\n");
-  }
+  RTN_IF_MSG(false, initialized_, "ImageView is already initialized.\n");
+  RTN_IF_MSG(false, !device_, "Device must be initialized.\n");
 
   format_ = vk::Format::eB8G8R8A8Unorm;
 
@@ -44,7 +40,7 @@ bool ImageView::Init() {
   vk::MemoryAllocateInfo alloc_info;
   alloc_info.allocationSize = image_memory_requirements.size;
   alloc_info.memoryTypeIndex = FindMemoryIndex(
-      vkp_phys_device_->get(), image_memory_requirements.memoryTypeBits,
+      physical_device_, image_memory_requirements.memoryTypeBits,
       vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
   auto [r_image_memory, image_memory] = device_->allocateMemoryUnique(alloc_info);
   RTN_IF_VKH_ERR(false, r_image_memory, "Failed to allocate device memory for image.\n");
@@ -66,7 +62,7 @@ bool ImageView::Init() {
   view_info.image = *image_;
   auto [r_image_view, image_view] = device_->createImageViewUnique(view_info);
   RTN_IF_VKH_ERR(false, r_image_view, "Failed to create image view.\n");
-  view_ = std::move(image_view);
+  image_view_ = std::move(image_view);
 
   initialized_ = true;
 

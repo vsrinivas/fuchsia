@@ -12,6 +12,7 @@
 #include "hwcpipe.h"
 #include "src/graphics/examples/vkprimer/common/command_buffers.h"
 #include "src/graphics/examples/vkprimer/common/command_pool.h"
+#include "src/graphics/examples/vkprimer/common/debug_utils_messenger.h"
 #include "src/graphics/examples/vkprimer/common/device.h"
 #include "src/graphics/examples/vkprimer/common/framebuffers.h"
 #include "src/graphics/examples/vkprimer/common/image_view.h"
@@ -96,46 +97,50 @@ static void InitCommandBuffers(const vk::Image* image_for_foreign_transition, ui
 // elimination from working.
 TEST(TransactionElimination, ForeignQueue) {
   const bool kEnableValidation = true;
-  auto vkp_instance = std::make_shared<vkp::Instance>(kEnableValidation);
-  ASSERT_TRUE(vkp_instance->Init());
+  vkp::Instance vkp_instance(kEnableValidation);
+  ASSERT_TRUE(vkp_instance.Init());
 
-  auto vkp_physical_device = std::make_shared<vkp::PhysicalDevice>(vkp_instance);
-  ASSERT_TRUE(vkp_physical_device->Init());
+  vkp::DebugUtilsMessenger vkp_debug_messenger(vkp_instance.shared());
+  ASSERT_TRUE(vkp_debug_messenger.Init());
 
-  vkp::Device vkp_device(vkp_physical_device->get());
+  vkp::PhysicalDevice vkp_physical_device(vkp_instance.shared());
+  ASSERT_TRUE(vkp_physical_device.Init());
+
+  vkp::Device vkp_device(vkp_physical_device.get());
   ASSERT_TRUE(vkp_device.Init());
+  std::shared_ptr<vk::Device> device = vkp_device.shared();
 
   vk::Format image_format;
   vk::Extent2D extent;
 
   std::vector<vk::ImageView> image_views;
   std::shared_ptr<vkp::ImageView> vkp_offscreen_image_view;
-  vkp_offscreen_image_view = std::make_shared<vkp::ImageView>(
-      vkp_device.shared(), vkp_physical_device, vk::Extent2D{64, 64});
+  vkp_offscreen_image_view =
+      std::make_shared<vkp::ImageView>(device, vkp_physical_device.get(), vk::Extent2D{64, 64});
   ASSERT_TRUE(vkp_offscreen_image_view->Init());
 
   image_format = vkp_offscreen_image_view->format();
   extent = vkp_offscreen_image_view->extent();
   image_views.emplace_back(vkp_offscreen_image_view->get());
 
-  auto vkp_render_pass = std::make_shared<vkp::RenderPass>(vkp_device.shared(), image_format, true);
+  auto vkp_render_pass = std::make_shared<vkp::RenderPass>(device, image_format, true);
   ASSERT_TRUE(vkp_render_pass->Init());
 
-  auto vkp_pipeline = std::make_unique<vkp::Pipeline>(vkp_device.shared(), extent, vkp_render_pass);
+  auto vkp_pipeline = std::make_unique<vkp::Pipeline>(device, extent, vkp_render_pass);
   ASSERT_TRUE(vkp_pipeline->Init());
 
-  auto vkp_framebuffer = std::make_unique<vkp::Framebuffers>(vkp_device.shared(), extent,
-                                                             vkp_render_pass->get(), image_views);
+  auto vkp_framebuffer =
+      std::make_unique<vkp::Framebuffers>(device, extent, vkp_render_pass->get(), image_views);
   ASSERT_TRUE(vkp_framebuffer->Init());
 
   auto vkp_command_pool =
-      std::make_shared<vkp::CommandPool>(vkp_device.shared(), vkp_device.queue_family_index());
+      std::make_shared<vkp::CommandPool>(device, vkp_device.queue_family_index());
   ASSERT_TRUE(vkp_command_pool->Init());
 
   // First command buffer does a transition to queue family foreign and back.
   auto vkp_command_buffers = std::make_unique<vkp::CommandBuffers>(
-      vkp_device.shared(), vkp_command_pool, vkp_framebuffer->framebuffers(), extent,
-      vkp_render_pass->get(), vkp_pipeline->get());
+      device, vkp_command_pool, vkp_framebuffer->framebuffers(), extent, vkp_render_pass->get(),
+      vkp_pipeline->get());
   ASSERT_TRUE(vkp_command_buffers->Alloc());
   InitCommandBuffers(&(vkp_offscreen_image_view->image().get()), vkp_device.queue_family_index(),
                      vkp_command_buffers);
@@ -151,14 +156,13 @@ TEST(TransactionElimination, ForeignQueue) {
 
   // Second render pass and command buffers do a transition from eTransferSrcOptimal instead of
   // eUndefined, since otherwise transaction elimination would be disabled.
-  auto vkp_render_pass2 =
-      std::make_shared<vkp::RenderPass>(vkp_device.shared(), image_format, true);
+  auto vkp_render_pass2 = std::make_shared<vkp::RenderPass>(device, image_format, true);
   vkp_render_pass2->set_initial_layout(vk::ImageLayout::eTransferSrcOptimal);
   ASSERT_TRUE(vkp_render_pass2->Init());
 
   auto vkp_command_buffers2 = std::make_unique<vkp::CommandBuffers>(
-      vkp_device.shared(), vkp_command_pool, vkp_framebuffer->framebuffers(), extent,
-      vkp_render_pass2->get(), vkp_pipeline->get());
+      device, vkp_command_pool, vkp_framebuffer->framebuffers(), extent, vkp_render_pass2->get(),
+      vkp_pipeline->get());
   ASSERT_TRUE(vkp_command_buffers2->Alloc());
   InitCommandBuffers({} /* image_for_foreign_transition */, {} /* queue_family */,
                      vkp_command_buffers2);

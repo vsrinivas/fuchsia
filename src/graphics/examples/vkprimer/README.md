@@ -1,8 +1,9 @@
 # VkPrimer
+A cross platform vulkan prototyping template for validation of
+[Magma](/docs/the-book/magma/overview.md) drivers and prototyping vulkan
+logic.
 
-A cross platform test template for validation of [Magma](/docs/the-book/magma/overview.md) drivers.
 ## Overview
-
 vkprimer is a template application for vulkan development on Fuchsia.  It serves:
 
   - As an easy way to do Vulkan-based code prototyping.
@@ -67,12 +68,18 @@ and vk::Pipeline.  Initialization of a command buffer requiring references
 to all of these dependencies is messy and adds little value over just
 defining the raw vk::CommandBuffers outside of vkp:: conventions.
 
-#### Constructor Dependencies
+#### Class Dependencies
 Further motivation for defining and exposing underlying vk:: types
 as std::shared_ptrs is to allow better customization of the vulkan
 pipeline.  Anywhere a std::shared_ptr type is used as a dependency
 during construction provides orthogonality from vkp:: types and
 simplifies customization of the vulkan pipeline.
+
+Note that vkp::PhysicalDevice and its underlying vk::PhysicalDevice
+ivar is derived from and requires the existence of the vk::Instance that
+was required to instantiate it.  Undefined behavior will result if
+the vk::PhysicalDevice is referenced after the vk::Instance required
+to create is destroyed.
 
 ### Platform Specifics
 When presentable (onscreen) surfaces are required, platform specifics

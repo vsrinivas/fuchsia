@@ -17,7 +17,7 @@ namespace vkp {
 
 class PhysicalDevice {
  public:
-  PhysicalDevice(std::shared_ptr<Instance> vkp_instance, VkSurfaceKHR surface = nullptr);
+  PhysicalDevice(std::shared_ptr<vk::Instance> instance, VkSurfaceKHR surface = nullptr);
 
   bool Init();
   const vk::PhysicalDevice &get() const;
@@ -29,10 +29,10 @@ class PhysicalDevice {
   FXL_DISALLOW_COPY_AND_ASSIGN(PhysicalDevice);
 
   bool initialized_;
-  std::shared_ptr<Instance> vkp_instance_;
+  std::shared_ptr<vk::Instance> instance_;
   VkSurfaceKHR surface_ = nullptr;
 
-  vk::PhysicalDevice phys_device_;
+  vk::PhysicalDevice physical_device_;
 };
 
 }  // namespace vkp

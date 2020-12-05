@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include "src/graphics/examples/vkprimer/common/command_buffers.h"
+#include "src/graphics/examples/vkprimer/common/debug_utils_messenger.h"
 #include "src/graphics/examples/vkprimer/common/image_view.h"
 #include "src/graphics/examples/vkprimer/common/instance.h"
 #include "src/graphics/examples/vkprimer/common/physical_device.h"
@@ -51,10 +52,10 @@ void Readback(const vk::Device& device, const vk::DeviceMemory& device_memory) {
   device.unmapMemory(device_memory);
 }
 
-void TestCommon(std::shared_ptr<vkp::PhysicalDevice>& vkp_physical_device,
-                std::shared_ptr<vk::Device> device, uint32_t queue_family_index) {
+void TestCommon(const vk::PhysicalDevice& physical_device, std::shared_ptr<vk::Device> device,
+                uint32_t queue_family_index) {
   // IMAGE VIEW
-  vkp::ImageView vkp_image_view(device, vkp_physical_device);
+  vkp::ImageView vkp_image_view(device, physical_device);
   ASSERT_TRUE(vkp_image_view.Init()) << "Image View initialization failed\n";
   vk::Format image_format = vkp_image_view.format();
   vk::Extent2D extent = vkp_image_view.extent();
@@ -101,17 +102,21 @@ void TestCommon(std::shared_ptr<vkp::PhysicalDevice>& vkp_physical_device,
 TEST(VkPrimer, DisposableVKPContainer) {
   // INSTANCE
   const bool kEnableValidation = true;
-  auto vkp_instance = std::make_shared<vkp::Instance>(kEnableValidation);
-  ASSERT_TRUE(vkp_instance->Init()) << "Instance Initialization Failed.\n";
+  vkp::Instance vkp_instance(kEnableValidation);
+  ASSERT_TRUE(vkp_instance.Init()) << "Instance Initialization Failed.\n";
+
+  // DEBUG MESSENGER
+  vkp::DebugUtilsMessenger vkp_debug_messenger(vkp_instance.shared());
+  ASSERT_TRUE(vkp_debug_messenger.Init());
 
   // PHYSICAL DEVICE
-  auto vkp_physical_device = std::make_shared<vkp::PhysicalDevice>(vkp_instance);
-  ASSERT_TRUE(vkp_physical_device->Init()) << "Physical device initialization failed\n";
+  vkp::PhysicalDevice vkp_physical_device(vkp_instance.shared());
+  ASSERT_TRUE(vkp_physical_device.Init()) << "Physical device initialization failed\n";
 
   // LOGICAL DEVICE
   uint32_t queue_family_index = 0;
   std::shared_ptr<vk::Device> device =
-      MakeSharedDevice(vkp_physical_device->get(), &queue_family_index);
+      MakeSharedDevice(vkp_physical_device.get(), &queue_family_index);
 
-  TestCommon(vkp_physical_device, device, queue_family_index);
+  TestCommon(vkp_physical_device.get(), device, queue_family_index);
 }

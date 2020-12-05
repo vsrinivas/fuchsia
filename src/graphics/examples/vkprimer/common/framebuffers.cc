@@ -18,6 +18,7 @@ Framebuffers::Framebuffers(std::shared_ptr<vk::Device> device, const vk::Extent2
 
 bool Framebuffers::Init() {
   RTN_IF_MSG(false, initialized_, "Framebuffers is already initialized.\n");
+  RTN_IF_MSG(false, !device_, "Device must be initialized.\n");
 
   vk::FramebufferCreateInfo framebuffer_info;
   framebuffer_info.attachmentCount = 1;

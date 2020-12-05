@@ -24,23 +24,22 @@ class Instance {
 
   bool Init();
 
+  std::shared_ptr<vk::Instance> shared();
   const vk::Instance &get() const;
+  bool initialized() const { return initialized_; }
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Instance);
-  bool ConfigureDebugMessenger(const vk::Instance &instance);
   std::vector<const char *> GetExtensions();
 
   bool initialized_ = false;
   std::vector<const char *> extensions_;
   std::vector<const char *> layers_;
-  vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::DispatchLoaderDynamic> debug_messenger_;
-  vk::DispatchLoaderDynamic dispatch_loader_{};
   vk::InstanceCreateInfo instance_info_{};
   bool validation_layers_enabled_ = true;
   vk::Optional<const vk::AllocationCallbacks> allocator_ = nullptr;
 
-  vk::UniqueInstance instance_;
+  std::shared_ptr<vk::Instance> instance_;
 };
 
 class Instance::Builder {

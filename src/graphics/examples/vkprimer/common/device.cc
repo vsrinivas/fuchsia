@@ -49,8 +49,9 @@ bool Device::Init() {
   device_info.enabledLayerCount = 0;
 
   vk::Device *device = new vk::Device;
-  auto rv = params_->phys_device_.createDevice(&device_info, nullptr /* pAllocator */, device);
-  if (vk::Result::eSuccess != rv) {
+  auto r_device =
+      params_->phys_device_.createDevice(&device_info, nullptr /* pAllocator */, device);
+  if (vk::Result::eSuccess != r_device) {
     delete device;
     RTN_MSG(false, "Failed to create logical device.\n");
   }
@@ -66,6 +67,11 @@ bool Device::Init() {
   initialized_ = true;
 
   return true;
+}
+
+std::shared_ptr<vk::Device> Device::shared() {
+  RTN_IF_MSG(nullptr, !initialized_, "Device hasn't been initialized");
+  return device_;
 }
 
 const vk::Device &Device::get() const {

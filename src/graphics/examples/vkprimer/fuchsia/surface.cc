@@ -8,12 +8,12 @@
 
 namespace vkp {
 
-Surface::Surface(std::shared_ptr<Instance> vkp_instance)
-    : initialized_(false), vkp_instance_(std::move(vkp_instance)) {}
+Surface::Surface(std::shared_ptr<vk::Instance> instance)
+    : initialized_(false), instance_(instance) {}
 
 Surface::~Surface() {
   if (initialized_) {
-    vkDestroySurfaceKHR(vkp_instance_->get(), surface_, nullptr);
+    vkDestroySurfaceKHR(*instance_, surface_, nullptr);
   }
 }
 
@@ -28,7 +28,7 @@ bool Surface::Init() {
       .pNext = nullptr,
   };
 
-  auto rv = vkCreateImagePipeSurfaceFUCHSIA(vkp_instance_->get(), &info, nullptr, &surface_);
+  auto rv = vkCreateImagePipeSurfaceFUCHSIA(*instance_, &info, nullptr, &surface_);
 
   if (rv != VK_SUCCESS) {
     RTN_MSG(false, "Surface creation failed.\n");

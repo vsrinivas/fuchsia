@@ -14,6 +14,7 @@ RenderPass::RenderPass(std::shared_ptr<vk::Device> device, const vk::Format &ima
 
 bool RenderPass::Init() {
   RTN_IF_MSG(false, initialized_, "RenderPass is already initialized.\n");
+  RTN_IF_MSG(false, !device_, "Device must be initialized.\n");
 
   vk::AttachmentDescription color_attachment;
   if (offscreen_) {

@@ -8,17 +8,17 @@
 
 namespace vkp {
 
-Surface::Surface(const std::shared_ptr<vkp::Instance> &vkp_instance, GLFWwindow *window)
-    : initialized_(false), vkp_instance_(vkp_instance), window_(window) {}
+Surface::Surface(std::shared_ptr<vk::Instance> instance, GLFWwindow *window)
+    : initialized_(false), instance_(instance), window_(window) {}
 
 Surface::~Surface() {
   if (initialized_) {
-    vkDestroySurfaceKHR(vkp_instance_->get(), surface_, nullptr);
+    vkDestroySurfaceKHR(*instance_, surface_, nullptr);
   }
 }
 
 bool Surface::Init() {
-  auto rv = glfwCreateWindowSurface(vkp_instance_->get(), window_, nullptr, &surface_);
+  auto rv = glfwCreateWindowSurface(*instance_, window_, nullptr, &surface_);
 
   if (rv != VK_SUCCESS) {
     RTN_MSG(false, "GLFW surface creation failed.\n");

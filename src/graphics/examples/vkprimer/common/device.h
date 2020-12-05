@@ -19,10 +19,11 @@ class Device {
   ~Device();
 
   bool Init();
-  std::shared_ptr<vk::Device> shared() { return device_; }
+  std::shared_ptr<vk::Device> shared();
   const vk::Device &get() const;
   vk::Queue queue() const;
   uint32_t queue_family_index() const { return queue_family_index_; }
+  bool initialized() const { return initialized_; }
 
  private:
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Device);

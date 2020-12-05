@@ -26,7 +26,7 @@ namespace vkp {
 // Enumerate properties categorically using |search_prop| and populate |props_found_set|
 // with the results.  Returns false if no properties are enumerated.
 //
-static bool EnumerateProperties(SearchProp search_prop, vk::PhysicalDevice phys_device,
+static bool EnumerateProperties(SearchProp search_prop, vk::PhysicalDevice physical_device,
                                 const char *layer,
                                 std::unordered_set<std::string> *enumerated_props) {
   std::optional<vk::ResultValue<std::vector<vk::ExtensionProperties>>> rv_ext_props;
@@ -51,14 +51,14 @@ static bool EnumerateProperties(SearchProp search_prop, vk::PhysicalDevice phys_
       layer_props = rv_layer_props->value;
       break;
     case PHYS_DEVICE_EXT_PROP:
-      assert(phys_device && "Null phys device used for phys device property query.");
+      assert(physical_device && "Null physical device used for phys device property query.");
       if (layer) {
-        rv_ext_props = phys_device.enumerateDeviceExtensionProperties(std::string(layer));
+        rv_ext_props = physical_device.enumerateDeviceExtensionProperties(std::string(layer));
       } else {
-        rv_ext_props = phys_device.enumerateDeviceExtensionProperties(nullptr);
+        rv_ext_props = physical_device.enumerateDeviceExtensionProperties(nullptr);
       }
       RTN_IF_VKH_ERR(false, rv_ext_props->result,
-                     "Failed to enumerate device extension properties.\n");
+                     "Failed to enumerate physical device extension properties.\n");
       ext_props = rv_ext_props->value;
       break;
   }
@@ -77,13 +77,13 @@ static bool EnumerateProperties(SearchProp search_prop, vk::PhysicalDevice phys_
 }
 
 bool FindRequiredProperties(const std::vector<const char *> &required_props, SearchProp search_prop,
-                            vk::PhysicalDevice phys_device, const char *layer,
+                            const char *layer, vk::PhysicalDevice physical_device,
                             std::vector<std::string> *missing_props_out) {
   std::unordered_set<std::string> enumerated_props_set;
 
-  // Match Vulkan properties.  "Vulkan properties" are those
-  // found when the layer argument is set to null.
-  bool success = EnumerateProperties(search_prop, phys_device, nullptr, &enumerated_props_set);
+  // Match Vulkan properties.  "Vulkan properties" are those found when the
+  // layer argument is set to null.
+  bool success = EnumerateProperties(search_prop, physical_device, nullptr, &enumerated_props_set);
 
   if (!success) {
     if (missing_props_out) {
@@ -96,7 +96,7 @@ bool FindRequiredProperties(const std::vector<const char *> &required_props, Sea
   // Match layer properties.
   if (search_prop != INSTANCE_LAYER_PROP && layer &&
       enumerated_props_set.size() != required_props.size()) {
-    success = EnumerateProperties(search_prop, phys_device, layer, &enumerated_props_set);
+    success = EnumerateProperties(search_prop, physical_device, layer, &enumerated_props_set);
   }
 
   bool has_missing_props = false;
@@ -113,18 +113,31 @@ bool FindRequiredProperties(const std::vector<const char *> &required_props, Sea
   }
 
   if (has_missing_props) {
+    std::string category{};
+    switch (search_prop) {
+      case INSTANCE_EXT_PROP:
+        category = "instance extension";
+        break;
+      case INSTANCE_LAYER_PROP:
+        category = "instance layer";
+        break;
+      case PHYS_DEVICE_EXT_PROP:
+        category = "pysical device extension";
+        break;
+    }
+    fprintf(stderr, "Missing %s properties\n", category.c_str());
     PrintProps(*missing_props_out);
   }
 
   return (success && !has_missing_props);
 }
 
-bool FindGraphicsQueueFamilyIndex(vk::PhysicalDevice phys_device, VkSurfaceKHR surface,
+bool FindGraphicsQueueFamilyIndex(vk::PhysicalDevice physical_device, VkSurfaceKHR surface,
                                   uint32_t *queue_family_index) {
-  auto queue_families = phys_device.getQueueFamilyProperties();
+  auto queue_families = physical_device.getQueueFamilyProperties();
   for (uint32_t i = 0; i < queue_families.size(); ++i) {
     if (surface) {
-      auto [r_present_support, present_support] = phys_device.getSurfaceSupportKHR(i, surface);
+      auto [r_present_support, present_support] = physical_device.getSurfaceSupportKHR(i, surface);
       if (vk::Result::eSuccess != r_present_support) {
         continue;
       }
