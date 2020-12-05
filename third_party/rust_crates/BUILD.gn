@@ -263,7 +263,7 @@ if (current_os == "fuchsia") {
 }
 
 group("log") {
-  deps = [ ":log-v0_4_8" ]
+  deps = [ ":log-v0_4_11" ]
 }
 
 group("maplit") {
@@ -588,7 +588,7 @@ if (!(current_os == "fuchsia")) {
 
 if (!(current_os == "fuchsia")) {
   group("simplelog") {
-    deps = [ ":simplelog-v0_7_5" ]
+    deps = [ ":simplelog-v0_8_0" ]
   }
 }
 
@@ -1135,7 +1135,7 @@ rust_library("async-std-v1_6_0") {
   deps += [ ":futures-core-v0_3_5" ]
   deps += [ ":futures-io-v0_3_5" ]
   deps += [ ":kv-log-macro-v1_0_4" ]
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":memchr-v2_3_3" ]
   deps += [ ":num_cpus-v1_12_0" ]
   deps += [ ":once_cell-v1_4_0" ]
@@ -2732,7 +2732,7 @@ rust_library("fatfs-v0_4_0") {
   deps += [ ":bitflags-v1_2_1" ]
   deps += [ ":byteorder-v1_3_1" ]
   deps += [ ":chrono-v0_4_11" ]
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
 
   rustenv = []
 
@@ -3326,7 +3326,7 @@ rust_library("h2-v0_2_5") {
   deps += [ ":futures-util-v0_3_5" ]
   deps += [ ":http-v0_2_1" ]
   deps += [ ":indexmap-v1_0_2" ]
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":slab-v0_4_2" ]
   deps += [ ":tokio-v0_2_21" ]
   deps += [ ":tokio-util-v0_3_1" ]
@@ -3374,7 +3374,7 @@ rust_library("handlebars-v2_0_0-beta_2") {
   deps = []
   deps += [ ":hashbrown-v0_2_2" ]
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":pest-v2_1_0" ]
   deps += [ ":pest_derive-v2_1_0($host_toolchain)" ]
   deps += [ ":quick-error-v1_2_2" ]
@@ -3603,7 +3603,7 @@ rust_library("hyper-v0_13_6") {
   deps += [ ":http-body-v0_3_1" ]
   deps += [ ":httparse-v1_3_3" ]
   deps += [ ":itoa-v0_4_3" ]
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":pin-project-v0_4_26" ]
   deps += [ ":time-v0_1_42" ]
   deps += [ ":tokio-v0_2_21" ]
@@ -3634,7 +3634,7 @@ rust_library("hyper-rustls-v0_20_0") {
   deps += [ ":bytes-v0_5_4" ]
   deps += [ ":futures-util-v0_3_5" ]
   deps += [ ":hyper-v0_13_6" ]
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":rustls-v0_17_0" ]
   deps += [ ":rustls-native-certs-v0_3_0" ]
   deps += [ ":tokio-v0_2_21" ]
@@ -3918,7 +3918,7 @@ rust_library("kv-log-macro-v1_0_4") {
   ]
 
   deps = []
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
 
   rustenv = []
 
@@ -4100,7 +4100,7 @@ rust_library("log-v0_3_9") {
   ]
 
   deps = []
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
 
   rustenv = []
 
@@ -4114,10 +4114,10 @@ rust_library("log-v0_3_9") {
   ]
 }
 
-rust_library("log-v0_4_8") {
+rust_library("log-v0_4_11") {
   crate_name = "log"
   crate_root = "//third_party/rust_crates/vendor/log/src/lib.rs"
-  output_name = "log-51a8548556518bd3"
+  output_name = "log-f850217d8dbd0f9a"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -4131,8 +4131,8 @@ rust_library("log-v0_4_8") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=51a8548556518bd3",
-    "-Cextra-filename=-51a8548556518bd3",
+    "-Cmetadata=f850217d8dbd0f9a",
+    "-Cextra-filename=-f850217d8dbd0f9a",
     "--cfg=feature=\"kv_unstable\"",
     "--cfg=feature=\"std\"",
     "--cfg=atomic_cas",
@@ -4375,7 +4375,7 @@ rust_library("mio-v0_7_0") {
   ]
 
   deps = []
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   if (true) {
     deps += [ ":libc-v0_2_74" ]
   }
@@ -4432,7 +4432,7 @@ rust_library("multipart-v0_15_4") {
   deps = []
   deps += [ ":buf_redux-v0_8_1" ]
   deps += [ ":httparse-v1_3_3" ]
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":mime-v0_2_6" ]
   deps += [ ":mime_guess-v1_8_6" ]
   deps += [ ":quick-error-v1_2_2" ]
@@ -6856,7 +6856,7 @@ rust_library("rust_icu_ucal-v0_4_1") {
   ]
 
   deps = []
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":paste-v1_0_0($host_toolchain)" ]
   deps += [ ":rust_icu_common-v0_4_1" ]
   deps += [ ":rust_icu_sys-v0_4_1" ]
@@ -6886,7 +6886,7 @@ rust_library("rust_icu_udat-v0_4_1") {
   ]
 
   deps = []
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":paste-v1_0_0($host_toolchain)" ]
   deps += [ ":rust_icu_common-v0_4_1" ]
   deps += [ ":rust_icu_sys-v0_4_1" ]
@@ -6918,7 +6918,7 @@ rust_library("rust_icu_udata-v0_4_1") {
   ]
 
   deps = []
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":paste-v1_0_0($host_toolchain)" ]
   deps += [ ":rust_icu_common-v0_4_1" ]
   deps += [ ":rust_icu_sys-v0_4_1" ]
@@ -6974,7 +6974,7 @@ rust_library("rust_icu_uloc-v0_4_1") {
   ]
 
   deps = []
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":paste-v1_0_0($host_toolchain)" ]
   deps += [ ":rust_icu_common-v0_4_1" ]
   deps += [ ":rust_icu_sys-v0_4_1" ]
@@ -7005,7 +7005,7 @@ rust_library("rust_icu_ustring-v0_4_1") {
   ]
 
   deps = []
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":paste-v1_0_0($host_toolchain)" ]
   deps += [ ":rust_icu_common-v0_4_1" ]
   deps += [ ":rust_icu_sys-v0_4_1" ]
@@ -7125,7 +7125,7 @@ rust_library("rustls-v0_17_0") {
 
   deps = []
   deps += [ ":base64-v0_11_0" ]
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":ring-v0_16_12" ]
   deps += [ ":sct-v0_6_0" ]
   deps += [ ":webpki-v0_21_0" ]
@@ -7811,10 +7811,10 @@ rust_library("signal-hook-registry-v1_2_0") {
   ]
 }
 
-rust_library("simplelog-v0_7_5") {
+rust_library("simplelog-v0_8_0") {
   crate_name = "simplelog"
   crate_root = "//third_party/rust_crates/vendor/simplelog/src/lib.rs"
-  output_name = "simplelog-b68b3dad32069c38"
+  output_name = "simplelog-9ab6e681583324e0"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -7822,18 +7822,18 @@ rust_library("simplelog-v0_7_5") {
 
   deps = []
   deps += [ ":chrono-v0_4_11" ]
-  deps += [ ":log-v0_4_8" ]
-  deps += [ ":term-v0_5_1" ]
+  deps += [ ":log-v0_4_11" ]
+  deps += [ ":termcolor-v1_1_0" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=b68b3dad32069c38",
-    "-Cextra-filename=-b68b3dad32069c38",
+    "-Cmetadata=9ab6e681583324e0",
+    "-Cextra-filename=-9ab6e681583324e0",
     "--cfg=feature=\"default\"",
-    "--cfg=feature=\"term\"",
+    "--cfg=feature=\"termcolor\"",
   ]
 }
 
@@ -8701,7 +8701,7 @@ rust_library("tiny_http-v0_6_2") {
   deps += [ ":ascii-v0_8_7" ]
   deps += [ ":chrono-v0_4_11" ]
   deps += [ ":chunked_transfer-v0_3_1" ]
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":url-v1_7_2" ]
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
   rustenv = []
@@ -8786,7 +8786,7 @@ rust_library("tokio-util-v0_3_1") {
   deps += [ ":bytes-v0_5_4" ]
   deps += [ ":futures-core-v0_3_5" ]
   deps += [ ":futures-sink-v0_3_5" ]
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":pin-project-lite-v0_1_4" ]
   deps += [ ":tokio-v0_2_21" ]
 
@@ -8857,7 +8857,7 @@ rust_library("tracing-v0_1_15") {
 
   deps = []
   deps += [ ":cfg-if-v0_1_10" ]
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":tracing-attributes-v0_1_9($host_toolchain)" ]
   deps += [ ":tracing-core-v0_1_10" ]
 
@@ -8963,7 +8963,7 @@ rust_library("tracing-log-v0_1_1") {
 
   deps = []
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":tracing-core-v0_1_10" ]
 
   rustenv = []
@@ -9023,7 +9023,7 @@ rust_library("trust-dns-proto-v0_19_2") {
   deps += [ ":futures-v0_3_5" ]
   deps += [ ":idna-v0_2_0" ]
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":rand-v0_7_2" ]
   deps += [ ":smallvec-v1_1_0" ]
   deps += [ ":thiserror-v1_0_9" ]
@@ -9054,7 +9054,7 @@ rust_library("trust-dns-resolver-v0_19_2") {
   deps += [ ":cfg-if-v0_1_10" ]
   deps += [ ":futures-v0_3_5" ]
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":lru-cache-v0_1_2" ]
   deps += [ ":smallvec-v1_1_0" ]
   deps += [ ":thiserror-v1_0_9" ]
@@ -9839,7 +9839,7 @@ rust_library("want-v0_3_0") {
   ]
 
   deps = []
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":try-lock-v0_2_2" ]
 
   rustenv = []
@@ -9914,7 +9914,7 @@ rust_library("wasm-bindgen-backend-v0_2_60") {
   deps = []
   deps += [ ":bumpalo-v3_2_1" ]
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":log-v0_4_8" ]
+  deps += [ ":log-v0_4_11" ]
   deps += [ ":proc-macro2-v1_0_19" ]
   deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_41" ]

@@ -63,7 +63,7 @@ pub struct Config {
     pub(crate) filter_ignore: Cow<'static, [Cow<'static, str>]>,
 }
 
-/// Builder for the Logger Confogurations (`Config`)
+/// Builder for the Logger Configurations (`Config`)
 ///
 /// All loggers print the message in the following form:
 /// `00:00:00 [LEVEL] crate::module: [lib.rs::100] your_message`
@@ -133,7 +133,9 @@ impl ConfigBuilder {
         self
     }
 
-    /// Set time chrono strftime format string. See: https://docs.rs/chrono/0.4.0/chrono/format/strftime/index.html#specifiers
+    /// Set time chrono [strftime] format string.
+    ///
+    /// [strftime]: https://docs.rs/chrono/0.4.0/chrono/format/strftime/index.html#specifiers
     pub fn set_time_format_str<'a>(
         &'a mut self,
         time_format: &'static str,
@@ -142,7 +144,9 @@ impl ConfigBuilder {
         self
     }
 
-    /// Set time chrono strftime format string. See: https://docs.rs/chrono/0.4.0/chrono/format/strftime/index.html#specifiers
+    /// Set time chrono [strftime] format string.
+    ///
+    /// [strftime]: https://docs.rs/chrono/0.4.0/chrono/format/strftime/index.html#specifiers
     pub fn set_time_format<'a>(&'a mut self, time_format: String) -> &'a mut ConfigBuilder {
         self.0.time_format = Cow::Owned(time_format);
         self
@@ -235,7 +239,7 @@ impl Default for Config {
         Config {
             time: LevelFilter::Error,
             level: LevelFilter::Error,
-            level_padding: LevelPadding::Left,
+            level_padding: LevelPadding::Off,
             thread: LevelFilter::Debug,
             thread_log_mode: ThreadLogMode::IDs,
             thread_padding: ThreadPadding::Off,

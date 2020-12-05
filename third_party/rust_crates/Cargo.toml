@@ -65,7 +65,7 @@ lazy_static = "1.4"
 libc = "0.2"
 libm = "0.2.1"
 linked-hash-map = "0.5.3"
-log = { version = "0.4.4", features = ["std"] }
+log = { version = "0.4.11", features = ["std"] }
 maplit = "1.0"
 matches = "0.1.8"
 maybe-owned = "0.3.2"
@@ -203,7 +203,7 @@ proc-macro2 = "1.0.9"
 pulldown-cmark = "0.6.0"
 quote = "1.0.2"
 signal-hook = "0.1.16"
-simplelog = "0.7.5"
+simplelog = "0.8.0"
 smol = "0.1.11"
 syn = { version = "1.0.5", features = ["full", "visit-mut", "extra-traits"] }
 synstructure = "0.12.1"
@@ -308,7 +308,7 @@ rustflags = ["--cfg=httparse_simd"]
 [gn.package.libc."0.2.74"]
 rustflags = ["--cfg=freebsd11", "--cfg=libc_priv_mod_use", "--cfg=libc_union", "--cfg=libc_const_size_of", "--cfg=libc_align", "--cfg=libc_core_cvoid", "--cfg=libc_packedN"]
 
-[gn.package.log."0.4.8"]
+[gn.package.log."0.4.11"]
 rustflags = ["--cfg=atomic_cas"]
 
 [gn.package.memchr."2.3.3"]

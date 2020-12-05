@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "simplelog"
-version = "0.7.5"
+version = "0.8.0"
 authors = ["Drakulix <github@drakulix.de>"]
 include = ["**/*.rs", "Cargo.toml", "CHANGELOG.md", "README.md", "LICENSE.APACHE2", "LICENSE.MIT"]
 description = "A simple and easy-to-use logging facility for Rust's log crate"
@@ -29,10 +29,10 @@ version = "0.4.*"
 version = "0.4.*"
 features = ["std"]
 
-[dependencies.term]
-version = ">=0.5.1, <0.7.0"
+[dependencies.termcolor]
+version = "1.1.*"
 optional = true
 
 [features]
-default = ["term"]
+default = ["termcolor"]
 test = []

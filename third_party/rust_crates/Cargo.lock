@@ -128,7 +128,7 @@ dependencies = [
  "futures-io",
  "futures-timer",
  "kv-log-macro",
- "log 0.4.8",
+ "log 0.4.11",
  "memchr",
  "num_cpus",
  "once_cell",
@@ -781,7 +781,7 @@ dependencies = [
  "bitflags",
  "byteorder",
  "chrono",
- "log 0.4.8",
+ "log 0.4.11",
 ]
 
 [[package]]
@@ -893,7 +893,7 @@ dependencies = [
  "libm",
  "linked-hash-map",
  "lipsum",
- "log 0.4.8",
+ "log 0.4.11",
  "maplit",
  "matches",
  "maybe-owned",
@@ -1189,7 +1189,7 @@ dependencies = [
  "futures-util",
  "http",
  "indexmap",
- "log 0.4.8",
+ "log 0.4.11",
  "slab",
  "tokio",
  "tokio-util",
@@ -1209,7 +1209,7 @@ checksum = "cfcc4c7d5274ebfa5c5c1d9464b5bfa7a15c784a9f016d7c43b8aa71ad2631d2"
 dependencies = [
  "hashbrown",
  "lazy_static",
- "log 0.4.8",
+ "log 0.4.11",
  "pest",
  "pest_derive",
  "quick-error",
@@ -1303,7 +1303,7 @@ dependencies = [
  "http-body",
  "httparse",
  "itoa",
- "log 0.4.8",
+ "log 0.4.11",
  "pin-project",
  "time",
  "tokio",
@@ -1320,7 +1320,7 @@ dependencies = [
  "bytes",
  "futures-util",
  "hyper",
- "log 0.4.8",
+ "log 0.4.11",
  "rustls",
  "rustls-native-certs",
  "tokio",
@@ -1438,7 +1438,7 @@ version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c54d9f465d530a752e6ebdc217e081a7a614b48cb200f6f0aee21ba6bc9aabb"
 dependencies = [
- "log 0.4.8",
+ "log 0.4.11",
 ]
 
 [[package]]
@@ -1496,14 +1496,14 @@ version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e19e8d5c34a3e0e2223db8e060f9e8264aeeb5c5fc64a4ee9965c062211c024b"
 dependencies = [
- "log 0.4.8",
+ "log 0.4.11",
 ]
 
 [[package]]
 name = "log"
-version = "0.4.8"
+version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14b6052be84e6b71ab17edffc2eeabf5c2c3ae1fdb464aae35ac50c67a44e1f7"
+checksum = "4fabed175da42fed1fa0746b0ea71f412aa9d35e76e95e59b192c64b9dc2bf8b"
 dependencies = [
  "cfg-if",
 ]
@@ -1592,7 +1592,7 @@ checksum = "6e9971bc8349a361217a8f2a41f5d011274686bd4436465ba51730921039d7fb"
 dependencies = [
  "lazy_static",
  "libc",
- "log 0.4.8",
+ "log 0.4.11",
  "miow",
  "ntapi",
  "winapi",
@@ -1610,7 +1610,7 @@ checksum = "adba94490a79baf2d6a23eac897157047008272fa3eecb3373ae6377b91eca28"
 dependencies = [
  "buf_redux",
  "httparse",
- "log 0.4.8",
+ "log 0.4.11",
  "mime",
  "mime_guess",
  "quick-error",
@@ -2565,7 +2565,7 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c38082e25c97f4cd908caf07e15f5eff1cea1ac82c9c207d37cbe592b4d9a8c3"
 dependencies = [
- "log 0.4.8",
+ "log 0.4.11",
  "paste",
  "rust_icu_common",
  "rust_icu_sys",
@@ -2580,7 +2580,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b8fb9b2a34ac1f56873b70fc02520ef9678612acd48bc4914a43db8eff8ec67"
 dependencies = [
  "anyhow",
- "log 0.4.8",
+ "log 0.4.11",
  "paste",
  "rust_icu_common",
  "rust_icu_sys",
@@ -2596,7 +2596,7 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b382fa97216a611c568aa39f46d8f1de792d360bd9813070609f4500a49f79d"
 dependencies = [
- "log 0.4.8",
+ "log 0.4.11",
  "paste",
  "rust_icu_common",
  "rust_icu_sys",
@@ -2620,7 +2620,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "127ed943113e2728e05d0847976ec44383bc1416f189d9d86729a490df37c10a"
 dependencies = [
  "anyhow",
- "log 0.4.8",
+ "log 0.4.11",
  "paste",
  "rust_icu_common",
  "rust_icu_sys",
@@ -2634,7 +2634,7 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1364683d94544dc995e502790179e9455ca3d5f25e005001eefd7f2df0ea1335"
 dependencies = [
- "log 0.4.8",
+ "log 0.4.11",
  "paste",
  "rust_icu_common",
  "rust_icu_sys",
@@ -2688,7 +2688,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0d4a31f5d68413404705d6982529b0e11a9aacd4839d1d6222ee3b8cb4015e1"
 dependencies = [
  "base64 0.11.0",
- "log 0.4.8",
+ "log 0.4.11",
  "ring",
  "sct",
  "webpki",
@@ -2947,13 +2947,13 @@ dependencies = [
 
 [[package]]
 name = "simplelog"
-version = "0.7.5"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bcacac97349a890d437921dfb23cbec52ab5b4752551cb637df2721371acd467"
+checksum = "2b2736f58087298a448859961d3f4a0850b832e72619d75adc69da7993c2cd3c"
 dependencies = [
  "chrono",
- "log 0.4.8",
- "term",
+ "log 0.4.11",
+ "termcolor",
 ]
 
 [[package]]
@@ -3280,7 +3280,7 @@ dependencies = [
  "ascii",
  "chrono",
  "chunked_transfer",
- "log 0.4.8",
+ "log 0.4.11",
  "url 1.7.2",
 ]
 
@@ -3318,7 +3318,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
- "log 0.4.8",
+ "log 0.4.11",
  "pin-project-lite",
  "tokio",
 ]
@@ -3345,7 +3345,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a41f40ed0e162c911ac6fcb53ecdc8134c46905fdbbae8c50add462a538b495f"
 dependencies = [
  "cfg-if",
- "log 0.4.8",
+ "log 0.4.11",
  "tracing-attributes",
  "tracing-core",
 ]
@@ -3385,7 +3385,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e0f8c7178e13481ff6765bd169b33e8d554c5d2bbede5e32c356194be02b9b9"
 dependencies = [
  "lazy_static",
- "log 0.4.8",
+ "log 0.4.11",
  "tracing-core",
 ]
 
@@ -3413,7 +3413,7 @@ dependencies = [
  "futures",
  "idna 0.2.0",
  "lazy_static",
- "log 0.4.8",
+ "log 0.4.11",
  "rand 0.7.2",
  "smallvec 1.1.0",
  "thiserror",
@@ -3430,7 +3430,7 @@ dependencies = [
  "cfg-if",
  "futures",
  "lazy_static",
- "log 0.4.8",
+ "log 0.4.11",
  "lru-cache",
  "smallvec 1.1.0",
  "thiserror",
@@ -3721,7 +3721,7 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ce8a968cb1cd110d136ff8b819a556d6fb6d919363c61534f6860c7eb172ba0"
 dependencies = [
- "log 0.4.8",
+ "log 0.4.11",
  "try-lock",
 ]
 
@@ -3749,7 +3749,7 @@ checksum = "d967d37bf6c16cca2973ca3af071d0a2523392e4a594548155d89a678f4237cd"
 dependencies = [
  "bumpalo",
  "lazy_static",
- "log 0.4.8",
+ "log 0.4.11",
  "proc-macro2 1.0.19",
  "quote 1.0.7",
  "syn 1.0.41",

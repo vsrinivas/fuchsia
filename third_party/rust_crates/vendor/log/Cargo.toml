@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -12,7 +12,7 @@
 
 [package]
 name = "log"
-version = "0.4.8"
+version = "0.4.11"
 authors = ["The Rust Project Developers"]
 build = "build.rs"
 exclude = ["rfcs/**/*", "/.travis.yml", "/appveyor.yml"]
@@ -29,6 +29,10 @@ features = ["std", "serde", "kv_unstable_sval"]
 [[test]]
 name = "filters"
 harness = false
+
+[[test]]
+name = "macros"
+harness = true
 [dependencies.cfg-if]
 version = "0.1.2"
 
@@ -38,14 +42,14 @@ optional = true
 default-features = false
 
 [dependencies.sval]
-version = "0.4.2"
+version = "0.5.2"
 optional = true
 default-features = false
 [dev-dependencies.serde_test]
 version = "1.0"
 
 [dev-dependencies.sval]
-version = "0.4.2"
+version = "0.5.2"
 features = ["test"]
 
 [features]
@@ -64,8 +68,3 @@ release_max_level_off = []
 release_max_level_trace = []
 release_max_level_warn = []
 std = []
-[badges.appveyor]
-repository = "alexcrichton/log"
-
-[badges.travis-ci]
-repository = "rust-lang-nursery/log"
