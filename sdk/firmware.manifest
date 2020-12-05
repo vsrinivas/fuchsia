@@ -1,4 +1,5 @@
 sdk://docs/metadata_schemas
 sdk://pkg/abr
+sdk://pkg/avb
 sdk://pkg/sysroot
 sdk://pkg/zbi

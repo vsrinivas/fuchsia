@@ -460,6 +460,7 @@ sdk("firmware") {
   deps = [
     "//src/firmware/lib/abr:abr_sdk",
     "//src/firmware/lib/zbi:zbi_sdk",
+    "//third_party/android/platform/external/avb:avb_sdk",
     "//zircon/public/sysroot/sdk:sysroot_sdk",
   ]
 }
