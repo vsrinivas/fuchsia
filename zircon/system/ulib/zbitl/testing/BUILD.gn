@@ -33,6 +33,9 @@ cpp_fuzzer("copy-fuzzer") {
     "..",
     "//zircon/system/ulib/fbl",
   ]
+  if (is_fuchsia) {
+    deps += [ "//zircon/system/ulib/zx" ]
+  }
 }
 
 cpp_fuzzer("iteration-fuzzer") {
