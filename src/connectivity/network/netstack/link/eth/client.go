@@ -422,7 +422,10 @@ func (c *Client) ListenTX() error {
 	return nil
 }
 
-func (*Client) DeviceClass() network.DeviceClass {
+func (c *Client) DeviceClass() network.DeviceClass {
+	if c.Info.Features&ethernet.FeaturesWlan != 0 {
+		return network.DeviceClassWlan
+	}
 	return network.DeviceClassEthernet
 }
 

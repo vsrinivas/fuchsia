@@ -24,6 +24,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/testutil"
 
 	"fidl/fuchsia/hardware/ethernet"
+	"fidl/fuchsia/hardware/network"
 
 	"github.com/google/go-cmp/cmp"
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -479,5 +480,31 @@ func TestEndpoint(t *testing.T) {
 				}
 			})
 		})
+	}
+}
+
+func TestDeviceClass(t *testing.T) {
+	tests := []struct {
+		features    ethernet.Features
+		expectClass network.DeviceClass
+	}{
+		{
+			features:    0,
+			expectClass: network.DeviceClassEthernet,
+		},
+		{
+			features:    ethernet.FeaturesWlan,
+			expectClass: network.DeviceClassWlan,
+		},
+	}
+	for _, test := range tests {
+		c := eth.Client{
+			Info: ethernet.Info{
+				Features: test.features,
+			},
+		}
+		if got := c.DeviceClass(); got != test.expectClass {
+			t.Errorf("got c.DeviceClass() = %s, want = %s", got, test.expectClass)
+		}
 	}
 }
