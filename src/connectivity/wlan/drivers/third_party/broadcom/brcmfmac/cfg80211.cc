@@ -1119,6 +1119,16 @@ scan_out:
 
 static void brcmf_init_prof(struct brcmf_cfg80211_profile* prof) { memset(prof, 0, sizeof(*prof)); }
 
+static void brcmf_clear_profile_on_client_disconnect(struct brcmf_cfg80211_profile* prof) {
+  // Bssid needs to be preserved for disconnects due to disassoc ind. SME will
+  // skip the join and auth steps, and so this will not get repopulated.
+  uint8_t bssid[ETH_ALEN];
+
+  memcpy(bssid, prof->bssid, ETH_ALEN);
+  brcmf_init_prof(prof);
+  memcpy(prof->bssid, bssid, ETH_ALEN);
+}
+
 static zx_status_t brcmf_set_pmk(struct brcmf_if* ifp, const uint8_t* pmk_data, uint16_t pmk_len) {
   struct brcmf_wsec_pmk_le pmk;
   int i;
@@ -5118,7 +5128,7 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
   brcmf_bss_connect_done(ifp, connect_status);
   brcmf_disconnect_done(cfg);
   brcmf_link_down(ifp->vif, e->reason, e->event_code);
-  brcmf_init_prof(ndev_to_prof(ndev));
+  brcmf_clear_profile_on_client_disconnect(ndev_to_prof(ndev));
   if (ndev != cfg_to_ndev(cfg)) {
     sync_completion_signal(&cfg->vif_disabled);
   }

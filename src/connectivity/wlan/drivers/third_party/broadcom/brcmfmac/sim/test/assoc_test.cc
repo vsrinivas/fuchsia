@@ -53,6 +53,9 @@ class AssocTest : public SimTest {
   void StartDisassoc();
   void DisassocFromAp();
 
+  // Re-association, skips join => auth steps.
+  void ReAssoc();
+
   // Send bad association responses
   void SendBadResp();
 
@@ -308,6 +311,14 @@ void AssocTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
 
 void AssocTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   // Send assoc request
+  wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
+  memcpy(assoc_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
+  client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
+}
+
+void AssocTest::ReAssoc(void) {
+  // Start directly with assoc request (skipping join -> auth).
+  // This is what SME does on a disassoc ind.
   wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
   memcpy(assoc_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
   client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
@@ -1132,6 +1143,56 @@ TEST_F(AssocTest, deauth_from_self_then_from_ap) {
   EXPECT_EQ(context_.disassoc_conf_count, 0U);
   EXPECT_EQ(context_.disassoc_ind_count, 0U);
   EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
+}
+
+TEST_F(AssocTest, simple_reassoc) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  SCHEDULE_CALL(zx::sec(2), &AssocTest::DisassocFromAp, this);
+  SCHEDULE_CALL(zx::sec(3), &AssocTest::ReAssoc, this);
+
+  env_->Run(kTestDuration);
+
+  EXPECT_EQ(context_.assoc_resp_count, 2U);
+  EXPECT_EQ(context_.disassoc_ind_count, 1U);
+  EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
+}
+
+TEST_F(AssocTest, deauth_during_reassoc) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  SCHEDULE_CALL(zx::sec(2), &AssocTest::DisassocFromAp, this);
+  SCHEDULE_CALL(zx::sec(3), &AssocTest::ReAssoc, this);
+  // Schedule a deauth immediately, before the above assoc can complete.
+  SCHEDULE_CALL(zx::sec(3) + zx::usec(500), &AssocTest::DeauthClient, this);
+
+  env_->Run(kTestDuration);
+
+  // If the deauth is successful, we will not get the second assoc response.
+  // If it fails for some reason (e.g. profile->bssid mismatch), then the
+  // assoc response count will be 2.
+  EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.disassoc_ind_count, 1U);
+  EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
+  EXPECT_EQ(context_.deauth_conf_count, 1U);
 }
 
 // Verify that association is retried as per the setting
