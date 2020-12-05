@@ -94,11 +94,6 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
       .local_aggregate_store_strategy = StorageStrategy::Delayed,
 
       .upload_schedule_cfg = upload_schedule_cfg,
-      // TODO(jaredweinstein): remove once these values are no longer in use.
-      .target_interval = upload_schedule_cfg.target_interval,
-      .min_interval = upload_schedule_cfg.min_interval,
-      .initial_interval = upload_schedule_cfg.initial_interval,
-      .upload_jitter = upload_schedule_cfg.jitter,
 
       .target_pipeline = std::move(target_pipeline),
 
