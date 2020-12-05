@@ -25,35 +25,7 @@ const String _optionLocalLinksOnly = 'local-links-only';
 const String _docsDir = 'docs';
 
 void reportError(Error error) {
-  String errorToString(ErrorType type) {
-    switch (type) {
-      case ErrorType.unknownLocalFile:
-        return 'Linking to unknown file';
-      case ErrorType.convertHttpToPath:
-        return 'Convert http to path';
-      case ErrorType.brokenLink:
-        return 'Http link is broken';
-      case ErrorType.unreachablePage:
-        return 'Page should be reachable';
-      case ErrorType.obsoleteProject:
-        return 'Project or repo that this URL refers to is obsolete (not in validProjects list)';
-      case ErrorType.invalidMenu:
-        return 'Invalid Menu Entry';
-      case ErrorType.invalidUri:
-        return 'Invalid URI';
-      case ErrorType.missingAltText:
-        return 'Missing Alt text on image';
-      case ErrorType.invalidRelativePath:
-        return 'Relative paths cannot go past //docs. Use a path starting with /';
-      case ErrorType.invalidLinkToDirectory:
-        return 'Invalid link to directory. Directory must have a README.md file';
-      default:
-        throw UnsupportedError('Unknown error type $type');
-    }
-  }
-
-  final String location = error.hasLocation ? ' (${error.location})' : '';
-  print('${errorToString(error.type).padRight(25)}: ${error.content}$location');
+  print(error);
 }
 
 Future<Null> main(List<String> args) async {
@@ -165,7 +137,7 @@ Future<Null> main(List<String> args) async {
 
   errors
     ..sort((Error a, Error b) => a.type.index - b.type.index)
-    ..forEach(reportError);
+    ..forEach(print);
 
   if (options[_optionDotFile].isNotEmpty) {
     graph.export('fuchsia_docs', File(options[_optionDotFile]).openWrite());

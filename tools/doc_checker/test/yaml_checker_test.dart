@@ -6,13 +6,14 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:doc_checker/yaml_checker.dart';
+import 'package:doc_checker/errors.dart';
 
 void main() {
   // Clean up the yaml files after every test
   tearDown(() {
     List<File> files = [
-      File('${Directory.systemTemp.path}/contents.yaml'),
-      File('${Directory.systemTemp.path}/docs/contents.yaml'),
+      File('${Directory.systemTemp.path}/_toc.yaml'),
+      File('${Directory.systemTemp.path}/docs/_toc.yaml'),
       File('${Directory.systemTemp.path}/docs/_included.yaml'),
       File('${Directory.systemTemp.path}/docs/hello.md'),
       File('${Directory.systemTemp.path}/docs/world.md'),
@@ -64,7 +65,7 @@ void main() {
 - title: "World"
   path: /docs/world.md
 ''';
-      File file = File('${Directory.systemTemp.path}/docs/contents.yaml')
+      File file = File('${Directory.systemTemp.path}/docs/_toc.yaml')
         ..createSync(recursive: true)
         ..writeAsStringSync(contents);
       File('${Directory.systemTemp.path}/docs/hello.md')
@@ -91,7 +92,7 @@ void main() {
   filepath: /docs/world.md
 ''';
 
-      File file = File('${Directory.systemTemp.path}/contents.yaml')
+      File file = File('${Directory.systemTemp.path}/_toc.yaml')
         ..writeAsStringSync(contents);
       File('${Directory.systemTemp.path}/docs/hello.md')
         ..createSync(recursive: true)
@@ -123,7 +124,7 @@ void main() {
   path: https://google.com
 ''';
 
-      File file = File('${Directory.systemTemp.path}/contents.yaml')
+      File file = File('${Directory.systemTemp.path}/_toc.yaml')
         ..writeAsStringSync(content);
       File('${Directory.systemTemp.path}/docs/hello.md')
         ..createSync(recursive: true)
@@ -144,7 +145,7 @@ void main() {
       const String content = '''toc:
 - title: Hello
   section:
-  - include: /docs/_included.yaml
+  - include: /docs/included/_toc.yaml
 ''';
 
       const String includedContent = '''toc:
@@ -152,10 +153,10 @@ void main() {
   path: /docs/world.md
 ''';
 
-      File file = File('${Directory.systemTemp.path}/contents.yaml')
+      File file = File('${Directory.systemTemp.path}/_toc.yaml')
         ..writeAsStringSync(content);
 
-      File('${Directory.systemTemp.path}/docs/_included.yaml')
+      File('${Directory.systemTemp.path}/docs/included/_toc.yaml')
         ..createSync(recursive: true)
         ..writeAsStringSync(includedContent);
       File('${Directory.systemTemp.path}/docs/world.md')
@@ -171,7 +172,7 @@ void main() {
       const String content = '''toc:
 - title: Hello
   section:
-  - include: /docs/_included.yaml
+  - include: /docs/included/_toc.yaml
 ''';
 
       const String includedContent = '''toc:
@@ -179,9 +180,9 @@ void main() {
   path: /src/sample/1.c
 ''';
 
-      File file = File('${Directory.systemTemp.path}/contents.yaml')
+      File file = File('${Directory.systemTemp.path}/_toc.yaml')
         ..writeAsStringSync(content);
-      File('${Directory.systemTemp.path}/docs/_included.yaml')
+      File('${Directory.systemTemp.path}/docs/included/_toc.yaml')
         ..createSync(recursive: true)
         ..writeAsStringSync(includedContent);
       YamlChecker checker = YamlChecker(Directory.systemTemp.path,
@@ -196,10 +197,10 @@ void main() {
       const String content = '''toc:
 - title: Hello
   section:
-  - include: /docs/_included_notfound.yaml
+  - include: /docs/included_notfound/_toc.yaml
 ''';
 
-      File file = File('${Directory.systemTemp.path}/contents.yaml')
+      File file = File('${Directory.systemTemp.path}/_toc.yaml')
         ..writeAsStringSync(content);
       YamlChecker checker = YamlChecker(Directory.systemTemp.path,
           file.absolute.path, [file.absolute.path], []);
@@ -209,7 +210,7 @@ void main() {
       expect(
           checker.errors[0].content,
           startsWith(
-              'FileSystemException: Cannot open file, path = \'${Directory.systemTemp.path}/docs/_included_notfound.yaml\''));
+              'FileSystemException: Cannot open file, path = \'${Directory.systemTemp.path}/docs/included_notfound/_toc.yaml\''));
     });
 
     // Test when there is a directory with the same name and there is a README.md in that
@@ -227,7 +228,7 @@ void main() {
   path: /docs/objects/hello.md
 ''';
 
-      File file = File('${Directory.systemTemp.path}/contents.yaml')
+      File file = File('${Directory.systemTemp.path}/_toc.yaml')
         ..writeAsStringSync(content);
       File('${Directory.systemTemp.path}/docs/objects/README.md')
         ..createSync(recursive: true)
@@ -245,6 +246,68 @@ void main() {
         print('Unexpected failure: ${checker.errors}');
       }
       expect(ret, equals(true));
+    });
+
+    test('non-fuchsia.dev yaml files', () async {
+      const String tocYaml = '''toc:
+- title: Objects
+  path: /docs/objects.md
+''';
+
+      const String otherYaml = '''rfcs:
+- name: "RFC-0001"
+  path: /docs/rfc001.md
+''';
+
+      File tocFile = File('${Directory.systemTemp.path}/_toc.yaml')
+        ..writeAsStringSync(tocYaml);
+      File('${Directory.systemTemp.path}/docs/objects.md')
+        ..createSync(recursive: true)
+        ..writeAsStringSync('objects');
+      File otherFile =
+          File('${Directory.systemTemp.path}/docs/contribute/_rfcs.yaml')
+            ..createSync(recursive: true)
+            ..writeAsStringSync(otherYaml);
+      YamlChecker checker = YamlChecker(
+          Directory.systemTemp.path,
+          tocFile.absolute.path,
+          [tocFile.absolute.path, otherFile.absolute.path],
+          []);
+      bool ret = await checker.check();
+      if (!ret) {
+        print('Unexpected failure: ${checker.errors}');
+      }
+      expect(ret, equals(true));
+    });
+
+    test('non-fuchsia.dev yaml file with invalid syntax', () async {
+      const String otherYaml = '''rfcs:
+X name "RFC-0001"
+  path /docs/rfc001.md
+''';
+
+      File otherFile =
+          File('${Directory.systemTemp.path}/docs/contribute/_rfcs.yaml')
+            ..createSync(recursive: true)
+            ..writeAsStringSync(otherYaml);
+      YamlChecker checker = YamlChecker(
+          Directory.systemTemp.path, null, [otherFile.absolute.path], []);
+      bool ret = await checker.check();
+      expect(ret, equals(false));
+      expect(checker.errors.length, equals(1));
+      expect(checker.errors[0].type, ErrorType.unparseableYaml);
+    });
+
+    test('root yaml is not a _toc.yaml', () async {
+      File otherFile =
+          File('${Directory.systemTemp.path}/docs/contribute/_rfcs.yaml')
+            ..createSync(recursive: true)
+            ..writeAsStringSync('');
+
+      expect(
+          () => YamlChecker(
+              Directory.systemTemp.path, otherFile.absolute.path, [], []),
+          throwsA(isA<AssertionError>()));
     });
   }); // group
 }

@@ -11,10 +11,12 @@ import 'package:yaml/yaml.dart';
 import 'package:doc_checker/errors.dart';
 import 'package:doc_checker/link_verifier.dart';
 
-/// Loads yaml files to verify they are
-/// compatible with fuchsia.dev hosting.
+/// Verify yaml files.
+/// _toc.yaml files are verified for fuchsia.dev hosting compliance,
+/// while other yaml files are just checked for regular yaml syntax.
 class YamlChecker {
-  Set<String> _yamlSet;
+  Set<String> _tocYamlSet;
+  Set<String> _otherYamlSet;
   Set<String> _mdSet;
   String _rootYaml;
   String _rootDir;
@@ -37,7 +39,8 @@ class YamlChecker {
   ///
   /// [rootDir] is the parent directory of 'docs'. This is used
   ///           to locate the files on the filesystem.
-  /// [rootYaml] is the yaml file to start the checking from.
+  /// [rootYaml] is the fuchsia.dev compliant yaml file to start the
+  ///            checking from.
   /// [yamls] is the list of .yaml files to check.
   /// [mdFiles] is the list of .md files to make sure they are
   ///           referenced in the yaml files.
@@ -45,8 +48,18 @@ class YamlChecker {
       List<String> mdFiles) {
     _rootYaml = rootYaml;
     _rootDir = rootDir;
-    _yamlSet = <String>{}
-      ..addAll(yamls)
+
+    if (rootYaml != null && !_isFuchsiaDevYaml(rootYaml)) {
+      throw AssertionError(
+          'If specified, root YAML file needs to be named "_toc.yaml": $rootYaml');
+    }
+
+    _tocYamlSet = <String>{}
+      ..addAll(yamls.where(_isFuchsiaDevYaml))
+      ..remove(_rootYaml);
+
+    _otherYamlSet = <String>{}
+      ..addAll(yamls.where((yaml) => !_isFuchsiaDevYaml(yaml)))
       ..remove(_rootYaml);
 
     _mdSet = <String>{}
@@ -57,6 +70,10 @@ class YamlChecker {
       // accessed as a source file and not published.
       ..remove('$_rootDir/docs/gen/build_arguments.md')
       ..remove('$_rootDir/docs/gen/zircon_build_arguments.md');
+  }
+
+  static bool _isFuchsiaDevYaml(String filename) {
+    return path.basename(filename) == '_toc.yaml';
   }
 
   /// Filters out paths that are hidden names according to
@@ -75,14 +92,13 @@ class YamlChecker {
   /// Errors can be retrieved via the [errors]
   /// property.
   Future<bool> check() {
-    Completer<bool> completer = Completer<bool>();
-    // the first yaml file is the root yaml.
+    var checks = <Future>[];
 
     if (_rootYaml != null) {
       File f = File(_rootYaml);
-      f.readAsString().then((String data) {
+      checks.add(f.readAsString().then((String data) {
         parse(loadYamlDocuments(data), _rootYaml);
-        for (String s in _yamlSet) {
+        for (String s in _tocYamlSet) {
           errors
               .add(Error(ErrorType.invalidMenu, null, 'unreferenced yaml $s'));
         }
@@ -90,13 +106,20 @@ class YamlChecker {
           errors.add(Error(ErrorType.unreachablePage, null,
               'File $s not referenced in any yaml file'));
         }
-        completer.complete(errors.isEmpty);
-      });
-    } else {
-      completer.complete(true);
+      }));
+    }
+    for (String s in _otherYamlSet) {
+      File f = File(s);
+      checks.add(f.readAsString().then((String data) {
+        try {
+          loadYamlDocuments(data);
+        } on YamlException catch (e) {
+          errors.add(Error(ErrorType.unparseableYaml, null, '$s: $e'));
+        }
+      }));
     }
 
-    return completer.future;
+    return Future.wait(checks).then((value) => errors.isEmpty);
   }
 
   /// Parses the yaml structure.
@@ -270,7 +293,7 @@ class YamlChecker {
       // parse in a try/catch to handle any syntax errors reading the included file.
       try {
         parse(loadYamlDocuments(File(filePath).readAsStringSync()), menuPath);
-        _yamlSet.remove(filePath);
+        _tocYamlSet.remove(filePath);
       } on Exception catch (exception) {
         errors.add(
             Error(ErrorType.invalidMenu, parentFilename, exception.toString()));
