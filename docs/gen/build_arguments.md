@@ -697,12 +697,6 @@ is actually parsed.
 
 From //build/images/custom_signing.gni:23
 
-### dart_default_app
-
-**Current value (from the default):** `"dart_jit_app"`
-
-From [//topaz/runtime/dart/dart_component.gni:25](https://fuchsia.googlesource.com/topaz/+/3a1f1be31857948a34f18f0f7543d6d9e6c98043/runtime/dart/dart_component.gni#25)
-
 ### dart_default_build_cfg
 TODO(fxbug.dev/64153) renable aot builds
  if (dart_force_product) {
@@ -731,14 +725,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/3a1f1be31857948a34f18f0f7543d6d9e6c98043/runtime/dart/config.gni#10)
-
-### dart_space_dart
-Whether experimental space dart mode is enabled for Dart applications.
-
-**Current value (from the default):** `false`
-
-From [//topaz/runtime/dart/dart_component.gni:44](https://fuchsia.googlesource.com/topaz/+/3a1f1be31857948a34f18f0f7543d6d9e6c98043/runtime/dart/dart_component.gni#44)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/3cf0b1b8a0e197a8d31e25f978eeca334f0d1848/runtime/dart/config.gni#10)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -777,6 +764,15 @@ build outputs that are part of the build API (e.g. zbi's, package servers).
 **Current value (from the default):** `[]`
 
 From //build/dev.gni:14
+
+### dev_fuchsia_zbi_kernel_cmdline_golden
+An optional golden file for fuchsia.zbi kernel cmdline args. If specified,
+this golden file would be compared against fuchsia.zbi kernel cmdline during
+build time.
+
+**Current value (from the default):** `""`
+
+From //build/dev.gni:19
 
 ### dev_system_image_deps
 List of labels for binaries to include in the system image.
@@ -984,12 +980,6 @@ that users can easily switch revisions using a single arg.
 
 From //build/images/args.gni:52
 
-### flutter_default_app
-
-**Current value (from the default):** `"flutter_jit_app"`
-
-From [//topaz/runtime/dart/dart_component.gni:14](https://fuchsia.googlesource.com/topaz/+/3a1f1be31857948a34f18f0f7543d6d9e6c98043/runtime/dart/dart_component.gni#14)
-
 ### flutter_default_build_cfg
 Non-product JIT
 
@@ -1023,19 +1013,6 @@ product mode which means they will not have an exposed vm service
 **Current value (from the default):** `false`
 
 From //build/flutter/config.gni:10
-
-### flutter_profile
-
-**Current value (from the default):** `true`
-
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/3a1f1be31857948a34f18f0f7543d6d9e6c98043/runtime/dart/dart_component.gni#35)
-
-### flutter_space_dart
-Whether experimental space dart mode is enabled for Flutter applications.
-
-**Current value (from the default):** `false`
-
-From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/3a1f1be31857948a34f18f0f7543d6d9e6c98043/runtime/dart/dart_component.gni#41)
 
 ### font_catalog_paths
 
@@ -1686,6 +1663,13 @@ From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:19
 **Current value (from the default):** `"255.255.255.0"`
 
 From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:21
+
+### linux_runner_user_extras
+Point this to the location of external files to be included as extras
+
+**Current value (from the default):** `[]`
+
+From //src/virtualization/packages/biscotti_guest/linux_runner/BUILD.gn:33
 
 ### linux_runner_volatile_block
 If `true`, all block devices that would normally load as READ_WRITE will
@@ -2942,7 +2926,7 @@ From //src/lib/vulkan/build/config.gni:16
 
 **Current value (from the default):** `""`
 
-From //src/graphics/examples/vkprimer/common/common.gni:44
+From //src/graphics/examples/vkproto/common/common.gni:46
 
 ### warn_on_sdk_changes
 Whether to only warn when an SDK has been modified.
