@@ -225,12 +225,12 @@ zx_status_t CreateSoftAPTest::StartSoftAP() {
 
 void CreateSoftAPTest::InjectStartAPError() {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_ERR_IO, softap_ifc_.iface_id_);
+  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_ERR_IO, BCME_OK, softap_ifc_.iface_id_);
 }
 
 void CreateSoftAPTest::InjectStopAPError() {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->err_inj_.AddErrInjIovar("bss", ZX_ERR_IO, softap_ifc_.iface_id_);
+  sim->sim_fw->err_inj_.AddErrInjIovar("bss", ZX_ERR_IO, BCME_OK, softap_ifc_.iface_id_);
 }
 
 void CreateSoftAPTest::SetExpectMacForInds(common::MacAddr set_mac) { ind_expect_mac_ = set_mac; }

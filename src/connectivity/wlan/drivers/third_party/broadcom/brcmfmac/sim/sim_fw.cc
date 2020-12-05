@@ -137,7 +137,7 @@ zx_status_t SimFirmware::BcdcVarOp(uint16_t ifidx, brcmf_proto_bcdc_dcmd* dcmd, 
     std::memcpy(value_buffer.get(), value_begin, value_size);
 
     // IovarsSet returns the input unchanged
-    status = IovarsSet(ifidx, name_begin, value_buffer.get(), value_size);
+    status = IovarsSet(ifidx, name_begin, value_buffer.get(), value_size, &dcmd->status);
   } else {
     // IovarsGet modifies the buffer in-place
     status = IovarsGet(ifidx, reinterpret_cast<const char*>(data), data, dcmd->len, &dcmd->status);
@@ -149,6 +149,8 @@ zx_status_t SimFirmware::BcdcVarOp(uint16_t ifidx, brcmf_proto_bcdc_dcmd* dcmd, 
   }
 
   if (status == ZX_OK) {
+    if (dcmd->status != BCME_OK)
+      dcmd->flags |= BCDC_DCMD_ERROR;
     bcdc_response_.Set(reinterpret_cast<uint8_t*>(dcmd), len);
   } else {
     // Return empty message on failure
@@ -194,10 +196,17 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
   }
 
   zx_status_t status;
-  if (err_inj_.CheckIfErrInjCmdEnabled(dcmd->cmd, &status, ifidx)) {
+  bcme_status_t fw_err;
+  if (err_inj_.CheckIfErrInjCmdEnabled(dcmd->cmd, &status, &fw_err, ifidx)) {
     if (status == ZX_OK) {
+      // If the transmission status is ZX_OK, customize the firmware error code which will be
+      // sent back through bcdc response.
+      if (fw_err != BCME_OK)
+        dcmd->flags |= BCDC_DCMD_ERROR;
+      dcmd->status = fw_err;
       bcdc_response_.Set(msg, len);
     }
+    // If the transmission status is not ZX_OK, return the error for this command transmission.
     return status;
   }
   status = ZX_OK;
@@ -1714,7 +1723,7 @@ zx_status_t SimFirmware::StopInterface(const int32_t bsscfgidx) {
 }
 
 zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name_buf, const void* value_buf,
-                                   size_t value_len) {
+                                   size_t value_len, bcme_status_t* fw_err) {
   uint8_t* value = (uint8_t*)value_buf;
   int32_t bsscfgidx = 0;
   char* name = (char*)name_buf;
@@ -1733,7 +1742,7 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name_buf, const v
   }
   // If Error Injection is enabled return with the appropriate status right away
   zx_status_t status;
-  if (err_inj_.CheckIfErrInjIovarEnabled(name, &status, nullptr, ifidx)) {
+  if (err_inj_.CheckIfErrInjIovarEnabled(name, &status, fw_err, nullptr, ifidx)) {
     return status;
   }
 
@@ -1986,7 +1995,7 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
   }
 
   const std::vector<uint8_t>* err_inj_alt_value;
-  if (err_inj_.CheckIfErrInjIovarEnabled(name, &status, &err_inj_alt_value, ifidx)) {
+  if (err_inj_.CheckIfErrInjIovarEnabled(name, &status, fw_err, &err_inj_alt_value, ifidx)) {
     if (err_inj_alt_value != nullptr) {
       // Use provided replacement data
       size_t alt_data_size = err_inj_alt_value->size();

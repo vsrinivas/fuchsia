@@ -52,7 +52,7 @@ TEST_F(SimTest, BadNchainIovar) {
   // data structures
   const std::vector<uint8_t> alt_rxchain_data = {0xff, 0xff, 0xff, 0xff};
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->err_inj_.AddErrInjIovar("rxstreams_cap", ZX_OK, client_ifc.iface_id_,
+  sim->sim_fw->err_inj_.AddErrInjIovar("rxstreams_cap", ZX_OK, BCME_OK, client_ifc.iface_id_,
                                        &alt_rxchain_data);
 
   wlanif_query_info_t ifc_query_result;

@@ -179,7 +179,7 @@ void AuthTest::VerifyAuthFrames() {
 
 void AuthTest::SecErrorInject() {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->err_inj_.AddErrInjIovar("wsec", ZX_ERR_IO, client_ifc_.iface_id_);
+  sim->sim_fw->err_inj_.AddErrInjIovar("wsec", ZX_ERR_IO, BCME_OK, client_ifc_.iface_id_);
 }
 
 wlanif_set_keys_req AuthTest::CreateKeyReq(const uint8_t key[WLAN_MAX_KEY_LEN],
@@ -632,7 +632,7 @@ TEST_F(AuthTest, AuthFailTest) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_OPEN});
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->err_inj_.AddErrInjIovar("auth", ZX_ERR_IO, client_ifc_.iface_id_);
+  sim->sim_fw->err_inj_.AddErrInjIovar("auth", ZX_ERR_IO, BCME_OK, client_ifc_.iface_id_);
   SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
 
   env_->Run(kTestDuration);
@@ -689,7 +689,7 @@ TEST_F(AuthTest, WPA1FailTest) {
   ap_.SetSecurity({.auth_handling_mode = simulation::AUTH_TYPE_OPEN,
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA1});
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->err_inj_.AddErrInjIovar("wpaie", ZX_ERR_IO, client_ifc_.iface_id_);
+  sim->sim_fw->err_inj_.AddErrInjIovar("wpaie", ZX_ERR_IO, BCME_OK, client_ifc_.iface_id_);
   SCHEDULE_CALL(zx::msec(10), &AuthTest::StartAuth, this);
 
   env_->Run(kTestDuration);

@@ -91,12 +91,12 @@ uint32_t DynamicIfTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
 
 void DynamicIfTest::InjectStopAPError() {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->err_inj_.AddErrInjIovar("bss", ZX_ERR_IO, softap_ifc_.iface_id_);
+  sim->sim_fw->err_inj_.AddErrInjIovar("bss", ZX_ERR_IO, BCME_OK, softap_ifc_.iface_id_);
 }
 
 void DynamicIfTest::InjectStartAPIgnore() {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, softap_ifc_.iface_id_);
+  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, BCME_OK, softap_ifc_.iface_id_);
 }
 
 void DynamicIfTest::DelInjectedStartAPIgnore() {

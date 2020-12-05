@@ -213,7 +213,8 @@ class SimFirmware {
   uint16_t GetNumClients(uint16_t ifidx);
 
   // Firmware iovar accessors
-  zx_status_t IovarsSet(uint16_t ifidx, const char* name, const void* value, size_t value_len);
+  zx_status_t IovarsSet(uint16_t ifidx, const char* name, const void* value, size_t value_len,
+                        bcme_status_t* fw_err);
   zx_status_t IovarsGet(uint16_t ifidx, const char* name, void* value_out, size_t value_len,
                         bcme_status_t* fw_err);
 

@@ -26,7 +26,7 @@ namespace wlan::brcmfmac {
 SimErrorInjector::SimErrorInjector() = default;
 SimErrorInjector::~SimErrorInjector() = default;
 
-void SimErrorInjector::AddErrInjCmd(uint32_t cmd, zx_status_t status,
+void SimErrorInjector::AddErrInjCmd(uint32_t cmd, zx_status_t status, bcme_status_t fw_err,
                                     std::optional<uint16_t> ifidx) {
   for (auto& existing_cmd : cmds_) {
     if (existing_cmd.cmd == cmd) {
@@ -38,7 +38,7 @@ void SimErrorInjector::AddErrInjCmd(uint32_t cmd, zx_status_t status,
       return;
     }
   }
-  ErrInjCmd err_inj_cmd(cmd, status, ifidx);
+  ErrInjCmd err_inj_cmd(cmd, status, fw_err, ifidx);
   cmds_.push_back(err_inj_cmd);
   BRCMF_DBG(SIMERRINJ, "Num entries in list: %lu\n", cmds_.size());
 }
@@ -55,7 +55,7 @@ void SimErrorInjector::DelErrInjCmd(uint32_t cmd) {
   BRCMF_DBG(SIMERRINJ, "Cmd: %d not found", cmd);
 }
 
-void SimErrorInjector::AddErrInjIovar(const char* iovar, zx_status_t status,
+void SimErrorInjector::AddErrInjIovar(const char* iovar, zx_status_t status, bcme_status_t fw_err,
                                       std::optional<uint16_t> ifidx,
                                       const std::vector<uint8_t>* alt_data) {
   for (auto& existing_iovar : iovars_) {
@@ -69,7 +69,7 @@ void SimErrorInjector::AddErrInjIovar(const char* iovar, zx_status_t status,
       return;
     }
   }
-  ErrInjIovar err_inj_iovar(iovar, status, ifidx, alt_data);
+  ErrInjIovar err_inj_iovar(iovar, status, fw_err, ifidx, alt_data);
   iovars_.push_back(err_inj_iovar);
   BRCMF_DBG(SIMERRINJ, "Num entries in list: %lu\n", iovars_.size());
 }
@@ -87,7 +87,7 @@ void SimErrorInjector::DelErrInjIovar(const char* iovar) {
 }
 
 bool SimErrorInjector::CheckIfErrInjCmdEnabled(uint32_t cmd, zx_status_t* ret_status,
-                                               uint16_t ifidx) {
+                                               bcme_status_t* ret_fw_err, uint16_t ifidx) {
   for (auto& existing_cmd : cmds_) {
     if (((existing_cmd.ifidx.has_value() && existing_cmd.ifidx == ifidx) ||
          !existing_cmd.ifidx.has_value()) &&
@@ -97,6 +97,9 @@ bool SimErrorInjector::CheckIfErrInjCmdEnabled(uint32_t cmd, zx_status_t* ret_st
       if (ret_status) {
         *ret_status = existing_cmd.ret_status;
       }
+      if (ret_fw_err) {
+        *ret_fw_err = existing_cmd.ret_fw_err;
+      }
       return true;
     }
   }
@@ -105,6 +108,7 @@ bool SimErrorInjector::CheckIfErrInjCmdEnabled(uint32_t cmd, zx_status_t* ret_st
 }
 
 bool SimErrorInjector::CheckIfErrInjIovarEnabled(const char* iovar, zx_status_t* ret_status,
+                                                 bcme_status_t* ret_fw_err,
                                                  const std::vector<uint8_t>** alt_value_out,
                                                  uint16_t ifidx) {
   for (auto& existing_iovar : iovars_) {
@@ -119,6 +123,9 @@ bool SimErrorInjector::CheckIfErrInjIovarEnabled(const char* iovar, zx_status_t*
       }
       if (ret_status) {
         *ret_status = existing_iovar.ret_status;
+      }
+      if (ret_fw_err) {
+        *ret_fw_err = existing_iovar.ret_fw_err;
       }
       return true;
     }
