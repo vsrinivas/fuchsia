@@ -40,17 +40,18 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
         self.assertEqual(
             0,
             verify_kernel_cmdline(
-                'key1=v1 key2=v2 key3=v3', b'"key1=v1 key2=v2 key3=v3"\n'))
+                'key1=v1\nkey2=v2\nkey3=v3', b'"key1=v1 key2=v2 key3=v3"\n'))
 
     def test_verify_kernel_cmdline_success_order_diff(self):
         self.assertEqual(
             0,
             verify_kernel_cmdline(
-                'key1=v1 key2=v2 key3=v3', b'"key2=v2 key1=v1 key3=v3"\n'))
+                'key1=v1\nkey2=v2\nkey3=v3', b'"key2=v2 key1=v1 key3=v3"\n'))
 
     def test_verify_kernel_cmdline_success_no_value_option(self):
         self.assertEqual(
-            0, verify_kernel_cmdline('option1 option2', b'"option1 option2"\n'))
+            0,
+            verify_kernel_cmdline('option1\noption2', b'"option1 option2"\n'))
 
     def test_verify_kernel_cmdline_fail_golden_empty(self):
         self.assertEqual(
@@ -58,41 +59,43 @@ class RunVerifyZbiKernelCmdlineTest(unittest.TestCase):
 
     def test_verify_kernel_cmdline_fail_missing_key2(self):
         self.assertEqual(
-            -1, verify_kernel_cmdline('key1=v1 key2=v2', b'"key1=v1"\n'))
+            -1, verify_kernel_cmdline('key1=v1\nkey2=v2', b'"key1=v1"\n'))
 
     def test_verify_kernel_cmdline_fail_key1_mismatch(self):
         self.assertEqual(
             -1,
-            verify_kernel_cmdline('key1=v1 key2=v2', b'"key1=v2 key2=v2"\n'))
+            verify_kernel_cmdline('key1=v1\nkey2=v2', b'"key1=v2 key2=v2"\n'))
 
     def test_verify_kernel_cmdline_fail_key2_mismatch(self):
         self.assertEqual(
             -1,
-            verify_kernel_cmdline('key1=v1 key2=v2', b'"key1=v1 key2=v1"\n'))
+            verify_kernel_cmdline('key1=v1\nkey2=v2', b'"key1=v1 key2=v1"\n'))
 
     def test_verify_kernel_cmdline_fail_additional_key3(self):
         self.assertEqual(
             -1,
             verify_kernel_cmdline(
-                'key1=v1 key2=v2', b'"key1=v1 key2=v2 key3=v3"\n'))
+                'key1=v1\nkey2=v2', b'"key1=v1 key2=v2 key3=v3"\n'))
 
     def test_verify_kernel_cmdline_fail_invalid_format(self):
         self.assertEqual(
-            -1, verify_kernel_cmdline('key1=v1 key2=v2', b'"invalid=format=1"'))
+            -1,
+            verify_kernel_cmdline('key1=v1\nkey2=v2', b'"invalid=format=1"'))
 
     def test_verify_kernel_cmdline_fail_option1_missing(self):
         self.assertEqual(
-            -1, verify_kernel_cmdline('option1 option2', b'"option2"\n'))
+            -1, verify_kernel_cmdline('option1\noption2', b'"option2"\n'))
 
     def test_verify_kernel_cmdline_fail_additional_option3(self):
         self.assertEqual(
             -1,
             verify_kernel_cmdline(
-                'option1 option2', b'"option1 option2 option3"\n'))
+                'option1\noption2', b'"option1 option2 option3"\n'))
 
     def test_verify_kernel_cmdline_fail_missing_quotes(self):
         self.assertEqual(
-            -1, verify_kernel_cmdline('option1 option2', b'option2 option3"\n'))
+            -1,
+            verify_kernel_cmdline('option1\noption2', b'option2 option3"\n'))
 
 
 if __name__ == '__main__':

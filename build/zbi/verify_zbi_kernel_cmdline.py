@@ -68,8 +68,8 @@ class CmdlineFormatException(Exception):
 
 def compare_cmdline(actual_cmdline, golden_cmdline, golden_file):
     try:
-        golden_entries = parse_cmdline(golden_cmdline)
-        actual_entries = parse_cmdline(actual_cmdline)
+        golden_entries = parse_cmdline(golden_cmdline, '\n')
+        actual_entries = parse_cmdline(actual_cmdline, ' ')
     except CmdlineFormatException:
         return False
     golden_cmd = generate_sorted_cmdline(golden_entries)
@@ -91,9 +91,9 @@ def compare_cmdline(actual_cmdline, golden_cmdline, golden_file):
     return True
 
 
-def parse_cmdline(cmdline):
+def parse_cmdline(cmdline, splitter):
     cmdline_entries = {}
-    entries = cmdline.split(' ')
+    entries = cmdline.split(splitter)
     for entry in entries:
         key_value = entry.split('=')
         if len(key_value) == 1:
@@ -115,7 +115,7 @@ def generate_sorted_cmdline(entries):
             items.append(key)
         else:
             items.append(key + '=' + entries[key])
-    return ' '.join(items)
+    return '\n'.join(items)
 
 
 if __name__ == '__main__':
