@@ -59,6 +59,17 @@ class FidlMessenger {
         : binding_(std::move(binding)) {}
     std::weak_ptr<fidl::internal::AsyncBinding> binding_;
   };
+  class EventSender {
+   public:
+    explicit EventSender(::zx::channel server_channel)
+        : server_channel_(std::move(server_channel)) {}
+
+    const ::zx::channel& channel() const { return server_channel_; }
+    ::zx::channel& channel() { return server_channel_; }
+
+   private:
+    ::zx::channel server_channel_;
+  };
 
   explicit FidlMessenger() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   explicit FidlMessenger(const async_loop_config_t* config) : loop_(config) {}

@@ -7549,6 +7549,10 @@ class Transitional::EventSender {
   explicit EventSender(::zx::channel server_end)
       : server_end_(std::move(server_end)) {}
 
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::zx::channel& channel() const { return server_end_; }
+  ::zx::channel& channel() { return server_end_; }
+
   zx_status_t Event(int64_t x) const {
     return SendEventEvent(::zx::unowned_channel(server_end_), std::move(x));
   }
@@ -7566,15 +7570,14 @@ class Transitional::WeakEventSender {
  public:
   zx_status_t Event(int64_t x) const {
     if (auto _binding = binding_.lock()) {
-      return SendEventEvent(_binding->channel(), std::move(x));
+      return _binding->event_sender().Event(std::move(x));
     }
     return ZX_ERR_CANCELED;
   }
 
   zx_status_t Event(::fidl::BufferSpan _buffer, int64_t x) const {
     if (auto _binding = binding_.lock()) {
-      return SendEventEvent(_binding->channel(), std::move(_buffer),
-                            std::move(x));
+      return _binding->event_sender().Event(std::move(_buffer), std::move(x));
     }
     return ZX_ERR_CANCELED;
   }
@@ -7583,10 +7586,10 @@ class Transitional::WeakEventSender {
   friend class ::fidl::ServerBindingRef<Transitional>;
 
   explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<Transitional>> binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<Transitional>> binding_;
 };
 
 struct ChannelProtocol::AsyncEventHandlers {
@@ -7691,6 +7694,10 @@ class ChannelProtocol::EventSender {
   explicit EventSender(::zx::channel server_end)
       : server_end_(std::move(server_end)) {}
 
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::zx::channel& channel() const { return server_end_; }
+  ::zx::channel& channel() { return server_end_; }
+
   zx_status_t EventA(int64_t a, int64_t b) const {
     return SendEventAEvent(::zx::unowned_channel(server_end_), std::move(a),
                            std::move(b));
@@ -7709,15 +7716,15 @@ class ChannelProtocol::WeakEventSender {
  public:
   zx_status_t EventA(int64_t a, int64_t b) const {
     if (auto _binding = binding_.lock()) {
-      return SendEventAEvent(_binding->channel(), std::move(a), std::move(b));
+      return _binding->event_sender().EventA(std::move(a), std::move(b));
     }
     return ZX_ERR_CANCELED;
   }
 
   zx_status_t EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const {
     if (auto _binding = binding_.lock()) {
-      return SendEventAEvent(_binding->channel(), std::move(_buffer),
-                             std::move(a), std::move(b));
+      return _binding->event_sender().EventA(std::move(_buffer), std::move(a),
+                                             std::move(b));
     }
     return ZX_ERR_CANCELED;
   }
@@ -7726,10 +7733,11 @@ class ChannelProtocol::WeakEventSender {
   friend class ::fidl::ServerBindingRef<ChannelProtocol>;
 
   explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<ChannelProtocol>>
+          binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<ChannelProtocol>> binding_;
 };
 
 struct WithAndWithoutRequestResponse::AsyncEventHandlers {
@@ -7923,6 +7931,10 @@ class WithAndWithoutRequestResponse::EventSender {
   explicit EventSender(::zx::channel server_end)
       : server_end_(std::move(server_end)) {}
 
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::zx::channel& channel() const { return server_end_; }
+  ::zx::channel& channel() { return server_end_; }
+
   zx_status_t OnEmptyResponse() const {
     return SendOnEmptyResponseEvent(::zx::unowned_channel(server_end_));
   }
@@ -7946,14 +7958,14 @@ class WithAndWithoutRequestResponse::WeakEventSender {
  public:
   zx_status_t OnEmptyResponse() const {
     if (auto _binding = binding_.lock()) {
-      return SendOnEmptyResponseEvent(_binding->channel());
+      return _binding->event_sender().OnEmptyResponse();
     }
     return ZX_ERR_CANCELED;
   }
 
   zx_status_t OnWithResponse(::fidl::StringView ret) const {
     if (auto _binding = binding_.lock()) {
-      return SendOnWithResponseEvent(_binding->channel(), std::move(ret));
+      return _binding->event_sender().OnWithResponse(std::move(ret));
     }
     return ZX_ERR_CANCELED;
   }
@@ -7961,8 +7973,8 @@ class WithAndWithoutRequestResponse::WeakEventSender {
   zx_status_t OnWithResponse(::fidl::BufferSpan _buffer,
                              ::fidl::StringView ret) const {
     if (auto _binding = binding_.lock()) {
-      return SendOnWithResponseEvent(_binding->channel(), std::move(_buffer),
-                                     std::move(ret));
+      return _binding->event_sender().OnWithResponse(std::move(_buffer),
+                                                     std::move(ret));
     }
     return ZX_ERR_CANCELED;
   }
@@ -7971,10 +7983,14 @@ class WithAndWithoutRequestResponse::WeakEventSender {
   friend class ::fidl::ServerBindingRef<WithAndWithoutRequestResponse>;
 
   explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
+      std::weak_ptr<
+          ::fidl::internal::AsyncServerBinding<WithAndWithoutRequestResponse>>
+          binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
+  std::weak_ptr<
+      ::fidl::internal::AsyncServerBinding<WithAndWithoutRequestResponse>>
+      binding_;
 };
 
 struct WithErrorSyntax::AsyncEventHandlers {};
@@ -8093,6 +8109,10 @@ class WithErrorSyntax::EventSender {
   explicit EventSender(::zx::channel server_end)
       : server_end_(std::move(server_end)) {}
 
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::zx::channel& channel() const { return server_end_; }
+  ::zx::channel& channel() { return server_end_; }
+
  private:
   ::zx::channel server_end_;
 };
@@ -8103,10 +8123,11 @@ class WithErrorSyntax::WeakEventSender {
   friend class ::fidl::ServerBindingRef<WithErrorSyntax>;
 
   explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<WithErrorSyntax>>
+          binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<WithErrorSyntax>> binding_;
 };
 
 }  // namespace protocols

@@ -897,6 +897,10 @@ class Example::EventSender {
   explicit EventSender(::zx::channel server_end)
       : server_end_(std::move(server_end)) {}
 
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::zx::channel& channel() const { return server_end_; }
+  ::zx::channel& channel() { return server_end_; }
+
  private:
   ::zx::channel server_end_;
 };
@@ -907,10 +911,10 @@ class Example::WeakEventSender {
   friend class ::fidl::ServerBindingRef<Example>;
 
   explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<Example>> binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<Example>> binding_;
 };
 
 }  // namespace error

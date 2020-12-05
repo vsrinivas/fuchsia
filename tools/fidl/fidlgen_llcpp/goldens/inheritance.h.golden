@@ -1148,6 +1148,10 @@ class super::EventSender {
   explicit EventSender(::zx::channel server_end)
       : server_end_(std::move(server_end)) {}
 
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::zx::channel& channel() const { return server_end_; }
+  ::zx::channel& channel() { return server_end_; }
+
  private:
   ::zx::channel server_end_;
 };
@@ -1158,10 +1162,10 @@ class super::WeakEventSender {
   friend class ::fidl::ServerBindingRef<super>;
 
   explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<super>> binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<super>> binding_;
 };
 
 struct sub::AsyncEventHandlers {};
@@ -1220,6 +1224,10 @@ class sub::EventSender {
   explicit EventSender(::zx::channel server_end)
       : server_end_(std::move(server_end)) {}
 
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::zx::channel& channel() const { return server_end_; }
+  ::zx::channel& channel() { return server_end_; }
+
  private:
   ::zx::channel server_end_;
 };
@@ -1230,10 +1238,10 @@ class sub::WeakEventSender {
   friend class ::fidl::ServerBindingRef<sub>;
 
   explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<sub>> binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<sub>> binding_;
 };
 
 }  // namespace inheritance

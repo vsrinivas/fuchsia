@@ -16,7 +16,7 @@
 namespace fidl {
 namespace internal {
 
-AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, zx::unowned_channel channel)
+AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, const zx::unowned_channel& channel)
     : async_wait_t({{ASYNC_STATE_INIT},
                     &AsyncBinding::OnMessage,
                     channel->get(),
@@ -179,39 +179,20 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref, U
   canceled_ = async_cancel_wait(dispatcher_, this) == ZX_OK;
 }
 
-std::shared_ptr<AsyncServerBinding> AsyncServerBinding::Create(
-    async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-    TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn) {
-  auto ret = std::shared_ptr<AsyncServerBinding>(new AsyncServerBinding(
-      dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_unbound_fn)));
-  ret->keep_alive_ = ret;  // We keep the binding alive until somebody decides to close the channel.
-  return ret;
-}
-
-AsyncServerBinding::AsyncServerBinding(async_dispatcher_t* dispatcher, zx::channel channel,
-                                       void* impl, TypeErasedServerDispatchFn dispatch_fn,
-                                       TypeErasedOnUnboundFn on_unbound_fn)
-    : AsyncBinding(dispatcher, channel.borrow()),
-      channel_(std::move(channel)),
-      interface_(impl),
-      dispatch_fn_(dispatch_fn),
-      on_unbound_fn_(std::move(on_unbound_fn)) {}
-
-std::optional<UnbindInfo> AsyncServerBinding::Dispatch(fidl_incoming_msg_t* msg,
-                                                       bool* binding_released) {
+std::optional<UnbindInfo> AnyAsyncServerBinding::Dispatch(fidl_incoming_msg_t* msg,
+                                                          bool* binding_released) {
   auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   AsyncTransaction txn(hdr->txid, dispatch_fn_, binding_released);
   return txn.Dispatch(std::move(keep_alive_), msg);
 }
 
-void AsyncServerBinding::FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_ref,
-                                      UnbindInfo info) {
+void AnyAsyncServerBinding::FinishUnbindHelper(std::shared_ptr<AsyncBinding>&& calling_ref,
+                                               UnbindInfo info, zx::channel channel) {
   auto binding = std::move(calling_ref);  // Move binding into scope.
 
   // Stash state required after deleting the binding.
   auto on_unbound_fn = std::move(on_unbound_fn_);
   auto* intf = interface_;
-  auto channel = std::move(channel_);
 
   sync_completion_t on_delete;
   on_delete_ = &on_delete;
@@ -232,7 +213,7 @@ void AsyncServerBinding::FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_re
 std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(async_dispatcher_t* dispatcher,
                                                                std::shared_ptr<ChannelRef> channel,
                                                                std::shared_ptr<ClientBase> client,
-                                                               OnClientUnboundFn on_unbound_fn) {
+                                                               OnClientUnboundFn&& on_unbound_fn) {
   auto ret = std::shared_ptr<AsyncClientBinding>(new AsyncClientBinding(
       dispatcher, std::move(channel), std::move(client), std::move(on_unbound_fn)));
   ret->keep_alive_ = ret;  // Keep the binding alive until an unbind operation or channel error.
@@ -242,7 +223,7 @@ std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(async_dispatcher_
 AsyncClientBinding::AsyncClientBinding(async_dispatcher_t* dispatcher,
                                        std::shared_ptr<ChannelRef> channel,
                                        std::shared_ptr<ClientBase> client,
-                                       OnClientUnboundFn on_unbound_fn)
+                                       OnClientUnboundFn&& on_unbound_fn)
     : AsyncBinding(dispatcher, zx::unowned_channel(channel->handle())),
       channel_(std::move(channel)),
       client_(std::move(client)),

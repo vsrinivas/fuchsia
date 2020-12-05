@@ -100,7 +100,7 @@ class ServerBindingRef {
                                            internal::TypeErasedServerDispatchFn dispatch_fn,
                                            internal::TypeErasedOnUnboundFn on_unbound);
 
-  explicit ServerBindingRef(std::weak_ptr<internal::AsyncServerBinding> internal_binding)
+  explicit ServerBindingRef(std::weak_ptr<internal::AsyncServerBinding<Protocol>> internal_binding)
       : event_sender_(std::move(internal_binding)) {}
 
   typename Protocol::WeakEventSender event_sender_;
@@ -221,8 +221,8 @@ template <typename Protocol>
 fit::result<ServerBindingRef<Protocol>, zx_status_t> TypeErasedBindServer(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
     internal::TypeErasedServerDispatchFn dispatch_fn, internal::TypeErasedOnUnboundFn on_unbound) {
-  auto internal_binding = internal::AsyncServerBinding::Create(dispatcher, std::move(channel), impl,
-                                                               dispatch_fn, std::move(on_unbound));
+  auto internal_binding = internal::AsyncServerBinding<Protocol>::Create(
+      dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_unbound));
   auto status = internal_binding->BeginWait();
   if (status == ZX_OK) {
     return fit::ok(fidl::ServerBindingRef<Protocol>(std::move(internal_binding)));

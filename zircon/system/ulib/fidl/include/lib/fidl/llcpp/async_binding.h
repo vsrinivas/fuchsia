@@ -43,6 +43,11 @@ class AsyncTransaction;
 class ChannelRef;
 class ClientBase;
 
+// |AsyncBinding| objects implement the common logic for registering waits
+// on channels, and unbinding. |AsyncBinding| itself composes |async_wait_t|
+// which borrows the channel to wait for messages. The actual responsibilities
+// of managing channel ownership falls on the various subclasses, which must
+// ensure the channel is not destroyed while there are outstanding waits.
 class AsyncBinding : private async_wait_t {
  public:
   ~AsyncBinding() __TA_EXCLUDES(lock_);
@@ -85,7 +90,7 @@ class AsyncBinding : private async_wait_t {
     delete unbind_task;
   }
 
-  AsyncBinding(async_dispatcher_t* dispatcher, zx::unowned_channel channel);
+  AsyncBinding(async_dispatcher_t* dispatcher, const zx::unowned_channel& borrowed_channel);
 
   void MessageHandler(zx_status_t status, const zx_packet_signal_t* signal) __TA_EXCLUDES(lock_);
 
@@ -120,48 +125,93 @@ class AsyncBinding : private async_wait_t {
   bool canceled_ __TA_GUARDED(lock_) = false;
 };
 
-class AsyncServerBinding final : public AsyncBinding {
+// Base implementation shared by various specializations of
+// |AsyncServerBinding<Protocol>|.
+class AnyAsyncServerBinding : public AsyncBinding {
  public:
-  static std::shared_ptr<AsyncServerBinding> Create(async_dispatcher_t* dispatcher,
-                                                    zx::channel channel, void* impl,
-                                                    TypeErasedServerDispatchFn dispatch_fn,
-                                                    TypeErasedOnUnboundFn on_unbound_fn);
+  AnyAsyncServerBinding(async_dispatcher_t* dispatcher, const zx::unowned_channel& borrowed_channel,
+                        void* impl, TypeErasedServerDispatchFn dispatch_fn,
+                        TypeErasedOnUnboundFn&& on_unbound_fn)
+      : AsyncBinding(dispatcher, borrowed_channel),
+        interface_(impl),
+        dispatch_fn_(dispatch_fn),
+        on_unbound_fn_(std::move(on_unbound_fn)) {}
 
-  virtual ~AsyncServerBinding() = default;
+  std::optional<UnbindInfo> Dispatch(fidl_incoming_msg_t* msg, bool* binding_released) override;
 
   void Close(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t epitaph)
       __TA_EXCLUDES(lock_) {
     UnbindInternal(std::move(calling_ref), {UnbindInfo::kClose, epitaph});
   }
 
+ protected:
+  void FinishUnbindHelper(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info,
+                          zx::channel channel);
+
  private:
   friend fidl::internal::AsyncTransaction;
 
-  AsyncServerBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-                     TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn);
-
-  std::optional<UnbindInfo> Dispatch(fidl_incoming_msg_t* msg, bool* binding_released) override;
-
-  void FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) override;
-
-  zx::channel channel_;  // The channel is owned by AsyncServerBinding.
   void* interface_ = nullptr;
   TypeErasedServerDispatchFn dispatch_fn_ = nullptr;
   TypeErasedOnUnboundFn on_unbound_fn_ = {};
 };
 
+// The async server binding for |Protocol|.
+// Contains an event sender for that protocol, which directly owns the channel.
+template <typename Protocol>
+class AsyncServerBinding final : public AnyAsyncServerBinding {
+ public:
+  static std::shared_ptr<AsyncServerBinding> Create(async_dispatcher_t* dispatcher,
+                                                    zx::channel&& channel, void* impl,
+                                                    TypeErasedServerDispatchFn dispatch_fn,
+                                                    TypeErasedOnUnboundFn&& on_unbound_fn) {
+    auto ret = std::shared_ptr<AsyncServerBinding>(new AsyncServerBinding(
+        dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_unbound_fn)));
+    // We keep the binding alive until somebody decides to close the channel.
+    ret->keep_alive_ = ret;
+    return ret;
+  }
+
+  virtual ~AsyncServerBinding() = default;
+
+  const typename Protocol::EventSender& event_sender() const { return event_sender_; }
+
+  zx::unowned_channel channel() const { return zx::unowned_channel(event_sender_.channel()); }
+
+ private:
+  AsyncServerBinding(async_dispatcher_t* dispatcher, zx::channel&& channel, void* impl,
+                     TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn&& on_unbound_fn)
+      : AnyAsyncServerBinding(dispatcher, channel.borrow(), impl, dispatch_fn,
+                              std::move(on_unbound_fn)),
+        event_sender_(std::move(channel)) {}
+
+  void FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) override {
+    AnyAsyncServerBinding::FinishUnbindHelper(std::move(calling_ref), info,
+                                              std::move(event_sender_.channel()));
+  }
+
+  // The channel is owned by AsyncServerBinding.
+  typename Protocol::EventSender event_sender_;
+};
+
+// The async client binding. The client supports both synchronous and
+// asynchronous calls. Because the channel lifetime must outlast the duration
+// of any synchronous calls, and that synchronous calls do not yet support
+// cancellation, the client binding does not own the channel directly.
+// Rather, it co-owns the channel between itself and any in-flight sync
+// calls, using shared pointers.
 class AsyncClientBinding final : public AsyncBinding {
  public:
   static std::shared_ptr<AsyncClientBinding> Create(async_dispatcher_t* dispatcher,
                                                     std::shared_ptr<ChannelRef> channel,
                                                     std::shared_ptr<ClientBase> client,
-                                                    OnClientUnboundFn on_unbound_fn);
+                                                    OnClientUnboundFn&& on_unbound_fn);
 
   virtual ~AsyncClientBinding() = default;
 
  private:
   AsyncClientBinding(async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
-                     std::shared_ptr<ClientBase> client, OnClientUnboundFn on_unbound_fn);
+                     std::shared_ptr<ClientBase> client, OnClientUnboundFn&& on_unbound_fn);
 
   std::optional<UnbindInfo> Dispatch(fidl_incoming_msg_t* msg, bool* binding_released) override;
 

@@ -1224,6 +1224,10 @@ class EmptyProtocol::EventSender {
   explicit EventSender(::zx::channel server_end)
       : server_end_(std::move(server_end)) {}
 
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::zx::channel& channel() const { return server_end_; }
+  ::zx::channel& channel() { return server_end_; }
+
   zx_status_t Receive(::llcpp::fidl::test::emptystruct::Empty e) const {
     return SendReceiveEvent(::zx::unowned_channel(server_end_), std::move(e));
   }
@@ -1242,7 +1246,7 @@ class EmptyProtocol::WeakEventSender {
  public:
   zx_status_t Receive(::llcpp::fidl::test::emptystruct::Empty e) const {
     if (auto _binding = binding_.lock()) {
-      return SendReceiveEvent(_binding->channel(), std::move(e));
+      return _binding->event_sender().Receive(std::move(e));
     }
     return ZX_ERR_CANCELED;
   }
@@ -1250,8 +1254,7 @@ class EmptyProtocol::WeakEventSender {
   zx_status_t Receive(::fidl::BufferSpan _buffer,
                       ::llcpp::fidl::test::emptystruct::Empty e) const {
     if (auto _binding = binding_.lock()) {
-      return SendReceiveEvent(_binding->channel(), std::move(_buffer),
-                              std::move(e));
+      return _binding->event_sender().Receive(std::move(_buffer), std::move(e));
     }
     return ZX_ERR_CANCELED;
   }
@@ -1260,10 +1263,11 @@ class EmptyProtocol::WeakEventSender {
   friend class ::fidl::ServerBindingRef<EmptyProtocol>;
 
   explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding> binding)
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<EmptyProtocol>>
+          binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<EmptyProtocol>> binding_;
 };
 
 }  // namespace emptystruct
