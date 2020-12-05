@@ -157,8 +157,17 @@ class AudioResult {
   // this tolerance, then the test case fails.
   static constexpr double kPrevLevelToleranceInterpolation = 5.4428201e-02;
 
-  // Frequency Response
+  // Response (Frequency Response, Sinad, Phase Response)
   //
+  // Frequency Response, Sinad and Phase testing uses expected values and tolerances. The expected
+  // values are set by previous runs. For freq response and sinad, measured can always exceed
+  // expected, but can also be less than expected if the delta is less than the tolerance.
+  // For phase, measured must be within this tolerance of expected.
+  static constexpr double kFreqRespTolerance = 0.001;
+  static constexpr double kSinadTolerance = 0.001;
+  static constexpr double kPhaseTolerance = 5e-06;
+
+  // Frequency Response
   // What is our received level (in dBFS), when sending sinusoids through our mixer at certain
   // resampling ratios. Each resampler is specifically targeted with precise resampling ratios that
   // represent various ways that the system uses them. A more exhaustive set is available for
@@ -244,8 +253,10 @@ class AudioResult {
   static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespPointNxN;
   static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespLinearNxN;
 
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespPointNxN;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespLinearNxN;
+
   // Signal-to-Noise-And-Distortion (SINAD)
-  //
   // Sinad (signal-to-noise-and-distortion) is the ratio (in dBr) of received reference frequency
   // (nominally 1kHz), compared to power of all OTHER frequencies (combined via root-sum-square).
   //
@@ -323,9 +334,10 @@ class AudioResult {
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointNxN;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearNxN;
 
-  //
-  // Phase
-  //
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointNxN;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearNxN;
+
+  // Phase Response
   // What is the delay, from input to output, of various frequencies as signals go through our
   // resamplers? This characteristic of a system is called its phase response. Zero delay (phase
   // response 0) is ideal; constant delay (constant phase response) is excellent; linear response
@@ -334,7 +346,6 @@ class AudioResult {
   // We display phase response within the range of (-PI, PI]. If a value lies outside that range,
   // 2PI is added to, or subtracted from, that value until it is within this range. Keeping this
   // "wraparound" in mind, we allow a certain phase tolerance when comparing to previous values.
-  static constexpr double kPhaseTolerance = 5e-06;
 
   static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhasePointUnity;
   static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhasePointDown0;
@@ -394,6 +405,9 @@ class AudioResult {
   // Phase results measured for a few frequencies during the NxN tests.
   static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhasePointNxN;
   static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseLinearNxN;
+
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhasePointNxN;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseLinearNxN;
 
   //
   //

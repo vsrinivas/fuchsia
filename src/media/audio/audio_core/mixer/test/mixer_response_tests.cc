@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <iomanip>
+#include <ios>
 
 #include "src/media/audio/audio_core/mixer/test/audio_result.h"
 #include "src/media/audio/audio_core/mixer/test/frequency_set.h"
@@ -356,16 +357,18 @@ void EvaluateFreqRespResults(double* freq_resp_results, const double* freq_resp_
       use_full_set ? FrequencySet::kFirstOutBandRefFreqIdx : FrequencySet::kSummaryIdxs.size();
 
   for (auto idx = first_idx; idx < last_idx; ++idx) {
-    uint32_t freq = use_full_set ? idx : FrequencySet::kSummaryIdxs[idx];
+    uint32_t freq_idx = use_full_set ? idx : FrequencySet::kSummaryIdxs[idx];
 
-    EXPECT_GE(freq_resp_results[freq], freq_resp_limits[freq])
-        << " [" << freq << "]  " << std::scientific << std::setprecision(9)
-        << freq_resp_results[freq];
-    EXPECT_LE(freq_resp_results[freq], 0.0 + AudioResult::kPrevLevelToleranceInterpolation)
-        << " [" << freq << "]  " << std::scientific << std::setprecision(9)
-        << freq_resp_results[freq];
+    EXPECT_GE(freq_resp_results[freq_idx],
+              freq_resp_limits[freq_idx] - AudioResult::kFreqRespTolerance)
+        << " [" << freq_idx << "]  " << std::fixed << std::setprecision(3)
+        << std::floor(freq_resp_results[freq_idx] / AudioResult::kFreqRespTolerance) *
+               AudioResult::kFreqRespTolerance;
+    EXPECT_LE(freq_resp_results[freq_idx], 0.0 + AudioResult::kPrevLevelToleranceInterpolation)
+        << " [" << freq_idx << "]  " << std::scientific << std::setprecision(9)
+        << freq_resp_results[freq_idx];
     AudioResult::LevelToleranceInterpolation =
-        fmax(AudioResult::LevelToleranceInterpolation, freq_resp_results[freq]);
+        fmax(AudioResult::LevelToleranceInterpolation, freq_resp_results[freq_idx]);
   }
 }
 
@@ -379,10 +382,12 @@ void EvaluateSinadResults(double* sinad_results, const double* sinad_limits,
       use_full_set ? FrequencySet::kFirstOutBandRefFreqIdx : FrequencySet::kSummaryIdxs.size();
 
   for (auto idx = first_idx; idx < last_idx; ++idx) {
-    uint32_t freq = use_full_set ? idx : FrequencySet::kSummaryIdxs[idx];
+    uint32_t freq_idx = use_full_set ? idx : FrequencySet::kSummaryIdxs[idx];
 
-    EXPECT_GE(sinad_results[freq], sinad_limits[freq])
-        << " [" << freq << "]  " << std::scientific << std::setprecision(9) << sinad_results[freq];
+    EXPECT_GE(sinad_results[freq_idx], sinad_limits[freq_idx] - AudioResult::kSinadTolerance)
+        << " [" << freq_idx << "]  " << std::fixed << std::setprecision(3)
+        << std::floor(sinad_results[freq_idx] / AudioResult::kSinadTolerance) *
+               AudioResult::kSinadTolerance;
   }
 }
 
@@ -398,9 +403,11 @@ void EvaluateRejectionResults(double* rejection_results, const double* rejection
   for (uint32_t freq_idx = 0u; freq_idx < FrequencySet::kNumReferenceFreqs; ++freq_idx) {
     if (freq_idx < FrequencySet::kFirstInBandRefFreqIdx ||
         freq_idx >= FrequencySet::kFirstOutBandRefFreqIdx) {
-      EXPECT_GE(rejection_results[freq_idx], rejection_limits[freq_idx])
-          << " [" << freq_idx << "]  " << std::scientific << std::setprecision(9)
-          << rejection_results[freq_idx];
+      EXPECT_GE(rejection_results[freq_idx],
+                rejection_limits[freq_idx] - AudioResult::kSinadTolerance)
+          << " [" << freq_idx << "]  " << std::fixed << std::setprecision(3)
+          << std::floor(rejection_results[freq_idx] / AudioResult::kSinadTolerance) *
+                 AudioResult::kSinadTolerance;
     }
   }
 }
@@ -415,23 +422,26 @@ void EvaluatePhaseResults(double* phase_results, const double* phase_limits,
       use_full_set ? FrequencySet::kFirstOutBandRefFreqIdx : FrequencySet::kSummaryIdxs.size();
 
   for (auto idx = first_idx; idx < last_idx; ++idx) {
-    auto freq = use_full_set ? idx : FrequencySet::kSummaryIdxs[idx];
+    auto freq_idx = use_full_set ? idx : FrequencySet::kSummaryIdxs[idx];
 
-    if (phase_limits[freq] == -INFINITY) {
+    if (phase_limits[freq_idx] == -INFINITY) {
       continue;
     }
 
-    if ((phase_results[freq] - phase_limits[freq]) >= M_PI) {
-      EXPECT_NEAR(phase_results[freq], phase_limits[freq] + (2.0 * M_PI),
+    if ((phase_results[freq_idx] - phase_limits[freq_idx]) >= M_PI) {
+      EXPECT_NEAR(phase_results[freq_idx], phase_limits[freq_idx] + (2.0 * M_PI),
                   AudioResult::kPhaseTolerance)
-          << " [" << freq << "]  " << std::fixed << std::setprecision(5) << phase_results[freq];
-    } else if ((phase_results[freq] - phase_limits[freq]) <= -M_PI) {
-      EXPECT_NEAR(phase_results[freq], phase_limits[freq] - (2.0 * M_PI),
+          << " [" << freq_idx << "]  " << std::fixed << std::setprecision(5)
+          << phase_results[freq_idx];
+    } else if ((phase_results[freq_idx] - phase_limits[freq_idx]) <= -M_PI) {
+      EXPECT_NEAR(phase_results[freq_idx], phase_limits[freq_idx] - (2.0 * M_PI),
                   AudioResult::kPhaseTolerance)
-          << " [" << freq << "]  " << std::fixed << std::setprecision(5) << phase_results[freq];
+          << " [" << freq_idx << "]  " << std::fixed << std::setprecision(5)
+          << phase_results[freq_idx];
     } else {
-      EXPECT_NEAR(phase_results[freq], phase_limits[freq], AudioResult::kPhaseTolerance)
-          << " [" << freq << "]  " << std::fixed << std::setprecision(5) << phase_results[freq];
+      EXPECT_NEAR(phase_results[freq_idx], phase_limits[freq_idx], AudioResult::kPhaseTolerance)
+          << " [" << freq_idx << "]  " << std::fixed << std::setprecision(5)
+          << phase_results[freq_idx];
     }
   }
 }
