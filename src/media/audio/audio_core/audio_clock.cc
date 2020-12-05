@@ -9,6 +9,7 @@
 
 #include <cmath>
 #include <iomanip>
+#include <string>
 
 #include "src/media/audio/audio_core/audio_clock_coefficients.h"
 #include "src/media/audio/lib/clock/pid_control.h"
@@ -134,6 +135,60 @@ int32_t AudioClock::SynchronizeClocks(AudioClock& source_clock, AudioClock& dest
       }
       return client_clock->TuneForError(monotonic_time, src_pos_error);
   }
+}
+
+std::string AudioClock::SyncModeToString(SyncMode mode) {
+  switch (mode) {
+    case SyncMode::None:
+      // Same clock, or device clocks in same domain. No need to adjust anything (or micro-SRC).
+      return "'None'";
+
+      // Return the clock to monotonic rate if it isn't already, and stop checking for divergence.
+    case SyncMode::ResetSourceClock:
+      return "'Sync Source to match MONOTONIC Dest'";
+    case SyncMode::ResetDestClock:
+      return "'Sync Dest to match MONOTONIC Source'";
+
+      // Adjust the clock's underlying zx::clock. No micro-SRC needed.
+    case SyncMode::AdjustSourceClock:
+      return "'Adjust Source to match non-MONOTONIC Dest'";
+    case SyncMode::AdjustDestClock:
+      return "'Adjust Dest to match non-MONOTONIC Source'";
+
+      // No clock is adjustable; use micro-SRC (tracked by the client-side clock object).
+    case SyncMode::MicroSrc:
+      return "'Micro-SRC'";
+  }
+  // No default: clause, so newly-added enums get caught and added here.
+}
+
+void AudioClock::DisplaySyncInfo(AudioClock& source_clock, AudioClock& dest_clock) {
+  auto sync_mode = SyncModeForClocks(source_clock, dest_clock);
+
+  auto mono_to_source_ref = source_clock.ref_clock_to_clock_mono().Inverse();
+  double source_ppm =
+      1'000'000.0 * mono_to_source_ref.subject_delta() / mono_to_source_ref.reference_delta() -
+      1'000'000.0;
+
+  auto mono_to_dest_ref = dest_clock.ref_clock_to_clock_mono().Inverse();
+  double dest_ppm =
+      1'000'000.0 * mono_to_dest_ref.subject_delta() / mono_to_dest_ref.reference_delta() -
+      1'000'000.0;
+
+  std::string micro_src_str;
+  if (sync_mode == SyncMode::MicroSrc) {
+    auto micro_src_ppm =
+        (source_clock.is_client_clock() ? source_clock : dest_clock).previous_adjustment_ppm_;
+    micro_src_str += " Latest micro-src " + std::to_string(micro_src_ppm) + " ppm.";
+  }
+
+  FX_LOGS(INFO) << "Sync mode " << SyncModeToString(sync_mode) << " ("
+                << static_cast<size_t>(sync_mode) <<
+      // sync_mode <<
+      //
+      "). Source (" << (source_clock.is_client_clock() ? "client" : "device") << ") " << source_ppm
+                << " ppm. Dest (" << (dest_clock.is_client_clock() ? "client" : "device") << ") "
+                << dest_ppm << " ppm." << micro_src_str;
 }
 
 //

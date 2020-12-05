@@ -621,21 +621,24 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   FX_LOGS(TRACE) << "mono_now_from_src " << mono_now_from_src.get() << ", mono_now_from_dest "
                  << mono_now_from_dest.get() << ", src_pos_err " << info.src_pos_error.get();
 
-  // For start dest frame, measure [predicted - actual] error (in frac_src) since last mix. Do so
-  // even if clocks are same on both sides, as this allows us to perform an initial sync-up between
+  // For start dest frame, measure [predicted - actual] error (in monotonic) since last mix,
+  // even if clocks are same on both sides. This allows us to perform an initial sync-up between
   // running position accounting and the initial clock transforms -- even those with offsets.
   auto abs_pos_err = std::abs(info.src_pos_error.get());
   if (abs_pos_err > kMaxErrorThresholdDuration.get()) {
     Reporter::Singleton().MixerClockSkewDiscontinuity(info.src_pos_error);
 
+    FX_LOGS(INFO) << "Stream " << static_cast<void*>(&stream) << " is out of sync by "
+                  << (static_cast<double>(info.src_pos_error.get()) / ZX_MSEC(1))
+                  << " msec (limit: "
+                  << (static_cast<double>(kMaxErrorThresholdDuration.get()) / ZX_MSEC(1))
+                  << " msec); resetting stream position.";
+    AudioClock::DisplaySyncInfo(source_clock, dest_clock);
+
     // Source error exceeds our threshold; reset rate adjustment altogether; allow a discontinuity
     auto src_frac_pos = Fixed::FromRaw(info.dest_frames_to_frac_source_frames(dest_frame));
     info.next_frac_source_frame = src_frac_pos;
     info.src_pos_error = zx::duration(0);
-
-    FX_LOGS(INFO) << "src_pos_err: out of bounds (" << abs_pos_err << " vs. limit +/-"
-                  << kMaxErrorThresholdDuration.get() << "), resetting next_frac_src to "
-                  << info.next_frac_source_frame.raw_value();
 
     // Reset PID controls in the relevant clocks.
     source_clock.ResetRateAdjustment(mono_now_from_dest);

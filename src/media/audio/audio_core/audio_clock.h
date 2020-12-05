@@ -9,6 +9,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 
+#include <string>
+
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/lib/clock/pid_control.h"
 #include "src/media/audio/lib/clock/utils.h"
@@ -103,6 +105,8 @@ class AudioClock {
   // The return value is the PPM value of any micro-SRC that should subsequently be applied.
   static int32_t SynchronizeClocks(AudioClock& source_clock, AudioClock& dest_clock,
                                    zx::time monotonic_time, zx::duration src_pos_error);
+  // For debugging purposes, dump the sync mode and current clock/micro-src rates.
+  static void DisplaySyncInfo(AudioClock& source_clock, AudioClock& dest_clock);
 
   // Clear internal running state and restart the feedback loop at the given time.
   void ResetRateAdjustment(zx::time reset_time);
@@ -117,7 +121,7 @@ class AudioClock {
   enum class Source { Client, Device };
   enum class SyncMode {
     // If two clocks are identical or in the same clock domain, no synchronization is needed.
-    None,
+    None = 0,
 
     // Immediately return an adjustable clock to monotonic rate (its sync target is now monotonic)
     ResetSourceClock,
@@ -128,11 +132,12 @@ class AudioClock {
     AdjustSourceClock,
     AdjustDestClock,
 
-    // If the client clock is not adjustable, we error-correct by slightly adjusting the sample-rate
+    // If neither clock is adjustable, we error-correct by slightly adjusting the sample-rate
     // conversion ratio (referred to as "micro-SRC").
     MicroSrc,
   };
   static SyncMode SyncModeForClocks(AudioClock& source_clock, AudioClock& dest_clock);
+  static std::string SyncModeToString(SyncMode mode);
 
   static constexpr int32_t kMicroSrcAdjustmentPpmMax = 2500;
 
