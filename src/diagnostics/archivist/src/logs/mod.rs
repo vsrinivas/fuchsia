@@ -299,65 +299,11 @@ impl LogManager {
         event: fsys::Event,
         sender: mpsc::UnboundedSender<Task<()>>,
     ) -> Result<(), LogsError> {
-        let identity = Self::source_identity_from_event(&event)?;
-        let stream = Self::log_sink_request_stream_from_event(event)?;
+        let identity = source_identity_from_event(&event)?;
+        let stream = log_sink_request_stream_from_event(event)?;
         let task = Task::spawn(self.clone().handle_log_sink(stream, identity, sender.clone()));
         sender.unbounded_send(task).expect("channel is alive for whole program");
         Ok(())
-    }
-
-    /// Extract the SourceIdentity from a components v2 event.
-    // TODO(fxbug.dev/54330): LogManager should have its own error type.
-    fn source_identity_from_event(event: &fsys::Event) -> Result<Arc<SourceIdentity>, LogsError> {
-        let target_moniker = event
-            .header
-            .as_ref()
-            .and_then(|header| header.moniker.clone())
-            .ok_or(EventError::MissingField("moniker"))?;
-
-        let component_url = event
-            .header
-            .as_ref()
-            .and_then(|header| header.component_url.clone())
-            .ok_or(EventError::MissingField("component_url"))?;
-
-        let mut source = SourceIdentity::EMPTY;
-        source.component_url = Some(component_url.clone());
-        source.component_name = Some(target_moniker.clone());
-        Ok(Arc::new(source))
-    }
-
-    /// Extract the LogSinkRequestStream from a CapabilityRequested v2 event.
-    // TODO(fxbug.dev/54330): LogManager should have its own error type.
-    fn log_sink_request_stream_from_event(
-        event: fsys::Event,
-    ) -> Result<LogSinkRequestStream, LogsError> {
-        let payload = event.event_result.ok_or(EventError::MissingField("event_result")).and_then(
-            |result| match result {
-                fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(payload)) => {
-                    Ok(payload)
-                }
-                fsys::EventResult::Error(fsys::EventError {
-                    description: Some(description),
-                    ..
-                }) => Err(EventError::ReceivedError { description }),
-                _ => Err(EventError::InvalidEventType),
-            },
-        )?;
-
-        let capability_name = payload.name.ok_or(EventError::MissingField("name"))?;
-        if &capability_name != LogSinkMarker::NAME {
-            Err(EventError::IncorrectName {
-                received: capability_name,
-                expected: LogSinkMarker::NAME,
-            })?;
-        }
-
-        let capability = payload.capability.ok_or(EventError::MissingField("capability"))?;
-        let server_end = ServerEnd::<LogSinkMarker>::new(capability)
-            .into_stream()
-            .map_err(|source| EventError::InvalidServerEnd { source })?;
-        Ok(server_end)
     }
 
     /// Spawn a task to handle requests from components reading the shared log.
@@ -478,6 +424,59 @@ impl LogManager {
 
         Ok(())
     }
+}
+
+/// Extract the SourceIdentity from a components v2 event.
+fn source_identity_from_event(event: &fsys::Event) -> Result<Arc<SourceIdentity>, LogsError> {
+    let target_moniker = event
+        .header
+        .as_ref()
+        .and_then(|header| header.moniker.clone())
+        .ok_or(EventError::MissingField("moniker"))?;
+
+    let component_url = event
+        .header
+        .as_ref()
+        .and_then(|header| header.component_url.clone())
+        .ok_or(EventError::MissingField("component_url"))?;
+
+    let mut source = SourceIdentity::EMPTY;
+    source.component_url = Some(component_url.clone());
+    source.component_name = Some(target_moniker.clone());
+    Ok(Arc::new(source))
+}
+
+/// Extract the LogSinkRequestStream from a CapabilityRequested v2 event.
+fn log_sink_request_stream_from_event(
+    event: fsys::Event,
+) -> Result<LogSinkRequestStream, LogsError> {
+    let payload =
+        event.event_result.ok_or(EventError::MissingField("event_result")).and_then(|result| {
+            match result {
+                fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(payload)) => {
+                    Ok(payload)
+                }
+                fsys::EventResult::Error(fsys::EventError {
+                    description: Some(description),
+                    ..
+                }) => Err(EventError::ReceivedError { description }),
+                _ => Err(EventError::InvalidEventType),
+            }
+        })?;
+
+    let capability_name = payload.name.ok_or(EventError::MissingField("name"))?;
+    if &capability_name != LogSinkMarker::NAME {
+        Err(EventError::IncorrectName {
+            received: capability_name,
+            expected: LogSinkMarker::NAME,
+        })?;
+    }
+
+    let capability = payload.capability.ok_or(EventError::MissingField("capability"))?;
+    let server_end = ServerEnd::<LogSinkMarker>::new(capability)
+        .into_stream()
+        .map_err(|source| EventError::InvalidServerEnd { source })?;
+    Ok(server_end)
 }
 
 #[cfg(test)]
@@ -726,7 +725,7 @@ mod tests {
             target_url.clone(),
             log_sink_server_end.into_channel(),
         );
-        let identity = LogManager::source_identity_from_event(&event).unwrap();
+        let identity = source_identity_from_event(&event).unwrap();
         assert_matches!(&identity.component_name,
                         Some(component_name) if *component_name == target_moniker);
         assert_matches!(&identity.component_url,
@@ -744,7 +743,7 @@ mod tests {
             target_url.clone(),
             log_sink_server_end.into_channel(),
         );
-        LogManager::log_sink_request_stream_from_event(event).unwrap();
+        log_sink_request_stream_from_event(event).unwrap();
     }
 
     async fn attributed_inspect_two_streams_same_identity_by_reader(
