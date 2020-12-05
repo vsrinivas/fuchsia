@@ -1,0 +1,47 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+common_path = "//src/graphics/examples/vkproto/common/"
+
+common_files = [
+  "command_buffers.cc",
+  "command_buffers.h",
+  "command_pool.cc",
+  "command_pool.h",
+  "debug_utils_messenger.cc",
+  "debug_utils_messenger.h",
+  "device.cc",
+  "device.h",
+  "fixed_functions.cc",
+  "fixed_functions.h",
+  "framebuffers.cc",
+  "framebuffers.h",
+  "image_view.cc",
+  "image_view.h",
+  "instance.cc",
+  "instance.h",
+  "physical_device.cc",
+  "physical_device.h",
+  "pipeline.cc",
+  "pipeline.h",
+  "render_pass.cc",
+  "render_pass.h",
+  "shader.cc",
+  "shader.h",
+  "surface_phys_device_params.h",
+  "swapchain.cc",
+  "swapchain.h",
+  "utils.cc",
+  "utils.h",
+]
+
+common_sources = []
+
+foreach(file, common_files) {
+  common_sources += [ "${common_path}${file}" ]
+}
+
+declare_args() {
+  vulkan_sdk = ""
+}

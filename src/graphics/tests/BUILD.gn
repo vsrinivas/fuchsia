@@ -22,10 +22,10 @@ group("hw_tests") {
 
   deps = [
     ":vulkan-tests",
-    "../examples/vkprimer",
-    "../examples/vkprimer/cmd-buf-benchmark",
-    "../examples/vkprimer/test",
-    "../examples/vkprimer/transaction-elimination-test",
+    "../examples/vkproto",
+    "../examples/vkproto/cmd-buf-benchmark",
+    "../examples/vkproto/test",
+    "../examples/vkproto/transaction-elimination-test",
     "benchmark",
     "vkvalidation:test-vk-validation",
     "//src/lib/vulkan/tests:image-pipe-swapchain-tests",

@@ -1,0 +1,125 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//src/graphics/examples/vkproto/common/common.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/lib/vulkan/image_pipe_swapchain.gni")
+import("//src/lib/vulkan/layers.gni")
+import("//src/sys/build/components.gni")
+
+resource("shaders") {
+  sources = [
+    "../common/shaders/frag.spv",
+    "../common/shaders/vert.spv",
+  ]
+  outputs = [ "data/shaders/{{source_file_part}}" ]
+}
+
+fuchsia_component("cmd-buf-benchmark-component") {
+  testonly = true
+  component_name = "cmd-buf-benchmark"
+  manifest = "meta/cmd-buf-benchmark.cmx"
+  deps = [
+    ":bin",
+    ":shaders",
+    "//src/lib/vulkan:image-pipe-swapchain-fb",
+    "//src/lib/vulkan:validation-layers",
+    "//third_party/Vulkan-Loader:libvulkan",
+  ]
+
+  if (is_fuchsia) {
+    deps += vulkan_validation_layers.public_deps +
+            image_pipe_swapchain_fb.public_deps
+  }
+}
+
+config("vulkan_sdk_linux_config") {
+  # Specify the include/lib dirs and linked libraries for use with the
+  # downloaded LunarG Vulkan SDK.
+  vulkan_sdk = "//prebuilt/third_party/vulkansdk/linux/x86_64"
+  include_dirs = [ "$vulkan_sdk/include" ]
+  lib_dirs = [ "$vulkan_sdk/lib" ]
+  libs = [ "vulkan" ]
+}
+
+executable("bin") {
+  output_name = "cmd-buf-benchmark"
+  sources = common_sources
+
+  sources += [ "main.cc" ]
+
+  include_dirs = [ "//src/graphics/examples/vkproto/common" ]
+
+  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+
+  deps = [ "//src/lib/fxl" ]
+
+  if (is_fuchsia) {
+    include_dirs += [ "//src/graphics/examples/vkproto/fuchsia" ]
+
+    deps += [
+      "//src/lib/vulkan",
+      "//src/lib/vulkan/swapchain",
+    ]
+
+    sources += [
+      "../fuchsia/surface.cc",
+      "../fuchsia/surface.h",
+    ]
+  } else {
+    include_dirs += [ "//src/graphics/examples/vkproto/glfw" ]
+
+    sources += [
+      "../glfw/surface.cc",
+      "../glfw/surface.h",
+    ]
+
+    deps += [
+      "..:spirv_copy",
+      "//third_party/glfw",
+    ]
+
+    if (is_linux) {
+      configs += [ ":vulkan_sdk_linux_config($host_toolchain)" ]
+    } else if (is_mac) {
+      include_dirs += [ "${vulkan_sdk}/include" ]
+
+      lib_dirs = [ "${vulkan_sdk}/lib" ]
+
+      libs = [ "vulkan" ]
+    }
+  }
+
+  # TODO(fxbug.dev/58615): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
+  data = [
+    "../common/shaders/frag.spv",
+    "../common/shaders/vert.spv",
+  ]
+}
+
+copy("spirv_copy") {
+  sources = [
+    "../common/shaders/frag.spv",
+    "../common/shaders/vert.spv",
+  ]
+
+  outputs = [ "$target_out_dir/{{source_file_part}}" ]
+}
+
+#
+# Linux / Mac Build
+#
+group("cmd-buf-benchmark-glfw") {
+  deps = [ ":bin($host_toolchain)" ]
+}
+
+fuchsia_test_package("cmd-buf-benchmark") {
+  test_components = [ ":cmd-buf-benchmark-component" ]
+  test_specs = {
+    environments = magma_hardware_envs
+  }
+}

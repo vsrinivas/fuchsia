@@ -1,0 +1,17 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "-offscreen"
+        ],
+        "binary": "test/vkproto"
+    },
+    "sandbox": {
+        "dev": [
+            "class/display-controller"
+        ]
+    }
+}

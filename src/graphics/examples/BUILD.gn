@@ -8,7 +8,7 @@ group("examples") {
     ":vkcube-on-fb",
     ":vkcube-on-scenic",
     ":vkcube-skip-present",
-    ":vkprimer",
+    ":vkproto",
     ":vulkaninfo",
   ]
 }
@@ -33,9 +33,9 @@ group("vkcube-on-wayland") {
   public_deps = [ "//third_party/Vulkan-Tools/cube:cube-wayland" ]
 }
 
-group("vkprimer") {
+group("vkproto") {
   testonly = true
-  public_deps = [ "vkprimer" ]
+  public_deps = [ "vkproto" ]
 }
 
 group("vulkaninfo") {
