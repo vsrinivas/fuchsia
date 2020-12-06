@@ -178,7 +178,7 @@ zx_status_t Allocator::Grow() {
   // layer needs to know details like what is fvm slice size is. We decided
   // against that route.
   if (status != ZX_OK) {
-    fprintf(stderr, "blobfs: Failed to grow bitmap for inodes\n");
+    FX_LOGS(ERROR) << "Failed to grow bitmap for inodes";
   }
   return status;
 }

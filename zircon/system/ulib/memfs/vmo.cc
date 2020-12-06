@@ -17,6 +17,7 @@
 #include <fbl/ref_ptr.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "dnode.h"
 
@@ -42,7 +43,7 @@ VnodeVmo::VnodeVmo(Vfs* vfs, zx_handle_t vmo, zx_off_t offset, zx_off_t length)
   zx_status_t status =
       zx_object_get_info(vmo_, ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info), NULL, NULL);
   if (status != ZX_OK) {
-    fprintf(stderr, "zx_object_get_info failed in VnodeVmo constructor: %d\n", status);
+    FX_LOGS(ERROR) << "zx_object_get_info failed in VnodeVmo constructor: " << status;
     return;
   }
   executable_ = ((handle_info.rights & ZX_RIGHT_EXECUTE) != 0);

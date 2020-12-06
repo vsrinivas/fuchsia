@@ -1657,23 +1657,23 @@ zx_status_t CreateBcacheFromFd(fbl::unique_fd fd, off_t start, off_t end,
                                const fbl::Vector<size_t>& extent_lengths,
                                std::unique_ptr<minfs::Bcache>* out) {
   if (start >= end) {
-    fprintf(stderr, "error: Insufficient space allocated\n");
+    FX_LOGS(ERROR) << "Insufficient space allocated";
     return ZX_ERR_INVALID_ARGS;
   }
 
   if (extent_lengths.size() != kExtentCount) {
-    FX_LOGS(ERROR) << "error: invalid number of extents : " << extent_lengths.size();
+    FX_LOGS(ERROR) << "invalid number of extents : " << extent_lengths.size();
     return ZX_ERR_INVALID_ARGS;
   }
 
   struct stat s;
   if (fstat(fd.get(), &s) < 0) {
-    FX_LOGS(ERROR) << "error: minfs could not find end of file/device";
+    FX_LOGS(ERROR) << "minfs could not find end of file/device";
     return ZX_ERR_IO;
   }
 
   if (s.st_size < end) {
-    FX_LOGS(ERROR) << "error: invalid file size";
+    FX_LOGS(ERROR) << "invalid file size";
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -1682,7 +1682,7 @@ zx_status_t CreateBcacheFromFd(fbl::unique_fd fd, off_t start, off_t end,
   std::unique_ptr<minfs::Bcache> bc;
   zx_status_t status = minfs::Bcache::Create(std::move(fd), static_cast<uint32_t>(size), &bc);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "error: cannot create block cache: " << status;
+    FX_LOGS(ERROR) << "cannot create block cache: " << status;
     return status;
   }
 

@@ -9,6 +9,7 @@
 #include <memory>
 #include <utility>
 
+#include <lib/syslog/cpp/macros.h>
 #include <bitmap/raw-bitmap.h>
 
 #include "src/storage/minfs/allocator/allocator.h"
@@ -182,7 +183,7 @@ zx_status_t Allocator::GrowMapLocked(size_t new_size, size_t* old_size) {
   // of kMinfsBlockSize.
   zx_status_t status;
   if ((status = map_.Grow(fbl::round_up(new_size, kMinfsBlockBits))) != ZX_OK) {
-    fprintf(stderr, "minfs::Allocator failed to Grow (in memory): %d\n", status);
+    FX_LOGS(ERROR) << "Allocator::GrowMapLocked: failed to Grow (in memory): " << status;
     return ZX_ERR_NO_SPACE;
   }
 

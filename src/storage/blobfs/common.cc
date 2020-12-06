@@ -26,51 +26,26 @@
 #include <blobfs/common.h>
 
 namespace blobfs {
-
 namespace {
 
-// Dumps the content of superblock to |out|. Does nothing if |out| is nullptr.
-void DumpSuperblock(const Superblock& info, FILE* out) {
-  if (out == nullptr) {
-    return;
-  }
-
-  fprintf(out,
-          "info.magic0: %" PRIu64
-          "\n"
-          "info.magic1: %" PRIu64
-          "\n"
-          "info.format_version: %" PRIu32
-          "\n"
-          "info.flags: %" PRIu32
-          "\n"
-          "info.block_size: %" PRIu32
-          "\n"
-          "info.data_block_count: %" PRIu64
-          "\n"
-          "info.journal_block_count: %" PRIu64
-          "\n"
-          "info.inode_count: %" PRIu64
-          "\n"
-          "info.alloc_block_count: %" PRIu64
-          "\n"
-          "info.alloc_inode_count: %" PRIu64
-          "\n"
-          "info.slice_size: %" PRIu64
-          "\n"
-          "info.abm_slices: %" PRIu32
-          "\n"
-          "info.ino_slices: %" PRIu32
-          "\n"
-          "info.dat_slices: %" PRIu32
-          "\n"
-          "info.journal_slices: %" PRIu32
-          "\n"
-          "info.oldest_revision: %" PRIu64 "\n",
-          info.magic0, info.magic1, info.format_version, info.flags, info.block_size,
-          info.data_block_count, info.journal_block_count, info.inode_count, info.alloc_block_count,
-          info.alloc_inode_count, info.slice_size, info.abm_slices, info.ino_slices,
-          info.dat_slices, info.journal_slices, info.oldest_revision);
+// Dumps the content of superblock.
+std::ostream& operator<<(std::ostream& stream, const Superblock& info) {
+  return stream << "\ninfo.magic0: " << info.magic0
+      << "\ninfo.magic1: " << info.magic1
+      << "\ninfo.format_version: " << info.format_version
+      << "\ninfo.flags: " << info.flags
+      << "\ninfo.block_size: " << info.block_size
+      << "\ninfo.data_block_count: " << info.data_block_count
+      << "\ninfo.journal_block_count: " << info.journal_block_count
+      << "\ninfo.inode_count: " << info.inode_count
+      << "\ninfo.alloc_block_count: " << info.alloc_block_count
+      << "\ninfo.alloc_inode_count: " << info.alloc_inode_count
+      << "\ninfo.slice_size: " << info.slice_size
+      << "\ninfo.abm_slices: " << info.abm_slices
+      << "\ninfo.ino_slices: " << info.ino_slices
+      << "\ninfo.dat_slices: " << info.dat_slices
+      << "\ninfo.journal_slices: " << info.journal_slices
+      << "\ninfo.oldest_revision: " << info.oldest_revision;
 }
 
 uint32_t GetBlobfsFormatVersionFromOptions(const FilesystemOptions& options) {
@@ -104,12 +79,11 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
     return ZX_ERR_INVALID_ARGS;
   }
   if (!CheckFilesystemAndDriverCompatibility(info->format_version)) {
-    DumpSuperblock(*info, stderr);
+    FX_LOGS(ERROR) << *info;
     return ZX_ERR_INVALID_ARGS;
   }
   if (info->block_size != kBlobfsBlockSize) {
-    FX_LOGS(ERROR) << "bsz " << info->block_size << " unsupported";
-    DumpSuperblock(*info, stderr);
+    FX_LOGS(ERROR) << "bsz " << info->block_size << " unsupported" << *info;
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -151,8 +125,7 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
 
   if ((info->flags & kBlobFlagFVM) == 0) {
     if (TotalBlocks(*info) > max) {
-      FX_LOGS(ERROR) << "too large for device";
-      DumpSuperblock(*info, stderr);
+      FX_LOGS(ERROR) << "too large for device" << *info;
       return ZX_ERR_INVALID_ARGS;
     }
   } else {
@@ -161,41 +134,34 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
     size_t abm_blocks_needed = BlockMapBlocks(*info);
     size_t abm_blocks_allocated = info->abm_slices * blocks_per_slice;
     if (abm_blocks_needed > abm_blocks_allocated) {
-      FX_LOGS(ERROR) << "Not enough slices for block bitmap";
-      DumpSuperblock(*info, stderr);
+      FX_LOGS(ERROR) << "Not enough slices for block bitmap" << *info;
       return ZX_ERR_INVALID_ARGS;
     } else if (abm_blocks_allocated + BlockMapStartBlock(*info) >= NodeMapStartBlock(*info)) {
-      FX_LOGS(ERROR) << "Block bitmap collides into node map";
-      DumpSuperblock(*info, stderr);
+      FX_LOGS(ERROR) << "Block bitmap collides into node map" << *info;
       return ZX_ERR_INVALID_ARGS;
     }
 
     size_t ino_blocks_needed = NodeMapBlocks(*info);
     size_t ino_blocks_allocated = info->ino_slices * blocks_per_slice;
     if (ino_blocks_needed > ino_blocks_allocated) {
-      FX_LOGS(ERROR) << "Not enough slices for node map";
-      DumpSuperblock(*info, stderr);
+      FX_LOGS(ERROR) << "Not enough slices for node map" << *info;
       return ZX_ERR_INVALID_ARGS;
     } else if (ino_blocks_allocated + NodeMapStartBlock(*info) >= DataStartBlock(*info)) {
-      FX_LOGS(ERROR) << "Node bitmap collides into data blocks";
-      DumpSuperblock(*info, stderr);
+      FX_LOGS(ERROR) << "Node bitmap collides into data blocks" << *info;
       return ZX_ERR_INVALID_ARGS;
     }
 
     size_t dat_blocks_needed = DataBlocks(*info);
     size_t dat_blocks_allocated = info->dat_slices * blocks_per_slice;
     if (dat_blocks_needed < kStartBlockMinimum) {
-      FX_LOGS(ERROR) << "Partition too small; no space left for data blocks";
-      DumpSuperblock(*info, stderr);
+      FX_LOGS(ERROR) << "Partition too small; no space left for data blocks" << *info;
       return ZX_ERR_INVALID_ARGS;
     } else if (dat_blocks_needed > dat_blocks_allocated) {
-      FX_LOGS(ERROR) << "Not enough slices for data blocks";
-      DumpSuperblock(*info, stderr);
+      FX_LOGS(ERROR) << "Not enough slices for data blocks" << *info;
       return ZX_ERR_INVALID_ARGS;
     } else if (dat_blocks_allocated + DataStartBlock(*info) >
                std::numeric_limits<uint32_t>::max()) {
-      FX_LOGS(ERROR) << "Data blocks overflow uint32";
-      DumpSuperblock(*info, stderr);
+      FX_LOGS(ERROR) << "Data blocks overflow uint32" << *info;
       return ZX_ERR_INVALID_ARGS;
     }
   }

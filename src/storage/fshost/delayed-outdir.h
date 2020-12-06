@@ -63,7 +63,7 @@ class DelayedOutdir {
     zx::channel delayed_client, delayed_server;
     zx_status_t status = zx::channel::create(0, &delayed_client, &delayed_server);
     if (status != ZX_OK) {
-      printf("fshost: delayed outdir failed to create channel\n");
+      FX_LOGS(ERROR) << "delayed outdir failed to create channel";
       return fbl::RefPtr<fs::RemoteDir>();
     }
     delayed_vfs_.ServeDirectory(delayed_dir, std::move(delayed_server));

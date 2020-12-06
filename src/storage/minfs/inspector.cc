@@ -44,13 +44,13 @@ zx_status_t Inspector::GetRoot(std::unique_ptr<disk_inspector::DiskObject>* out)
   bool readonly_device = false;
   zx_status_t status = CreateBcache(std::move(device_), &readonly_device, &bc);
   if (status != ZX_OK) {
-    fprintf(stderr, "minfsInspector: cannot create block cache\n");
+    FX_LOGS(ERROR) << "cannot create block cache";
     return status;
   }
 
   status = CreateRoot(std::move(bc), out);
   if (status != ZX_OK) {
-    fprintf(stderr, "minfsInspector: cannot create root object\n");
+    FX_LOGS(ERROR) << "cannot create root object";
     return status;
   }
   return ZX_OK;

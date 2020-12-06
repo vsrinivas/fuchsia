@@ -44,6 +44,7 @@ zx_library("memfs-cpp") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/sync",

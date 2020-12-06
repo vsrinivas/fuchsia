@@ -76,10 +76,10 @@ zx_status_t EncryptedVolumeInterface::EnsureUnsealedAndFormatIfNeeded() {
   // have.  Otherwise, just return the error we got from the last Unseal()
   // attempt.
   if (rc == ZX_ERR_ACCESS_DENIED) {
-    fprintf(stderr,
-            "fshost: Failed repeatedly to unseal zxcrypt device with all available keys.  "
+    FX_LOGS(ERROR) <<
+            "Failed repeatedly to unseal zxcrypt device with all available keys.  "
             "Destructively reformatting with new key to attempt to bring up an empty block volume "
-            "rather than none at all.  Expect factory-reset-like behavior.\n");
+            "rather than none at all.  Expect factory-reset-like behavior.";
     rc = Format();
     if (rc != ZX_OK) {
       FX_LOGS(ERROR) << "couldn't format encrypted volume: " << zx_status_get_string(rc);
