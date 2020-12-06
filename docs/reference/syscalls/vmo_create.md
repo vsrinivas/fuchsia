@@ -18,9 +18,9 @@ zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out);
 
 ## DESCRIPTION
 
-`zx_vmo_create()` creates a new virtual memory object (VMO), which represents
-a container of zero to *size* bytes of memory managed by the operating
-system.
+`zx_vmo_create()` creates a new, zero-filled, virtual memory object (VMO),
+which represents a container of zero to *size* bytes of memory managed by the
+operating system.
 
 The size of the VMO will be rounded up to the next page size boundary.
 Use [`zx_vmo_get_size()`] to return the current size of the VMO.
