@@ -152,9 +152,9 @@ void GuestEthernet::SetIOBuffer(zx::vmo vmo, SetIOBufferCallback callback) {
     callback(status);
     return;
   }
-  status = zx::vmar::root_self()->map(
-      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE, 0, vmo, 0, vmo_size,
-      &io_addr_);
+  status =
+      zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
+                                 0, vmo, 0, vmo_size, &io_addr_);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to map io buffer";
     callback(status);
@@ -172,8 +172,8 @@ void GuestEthernet::Start(StartCallback callback) {
     return;
   }
 
-  // Send a signal to netstack so that it knows to bring the link up.
-  tx_fifo_.signal(0, ZX_USER_SIGNAL_0);
+  // Send a signal to the netstack to bring the link up.
+  rx_fifo_.signal_peer(0, fuchsia::hardware::ethernet::SIGNAL_STATUS);
 
   tx_fifo_wait_.set_object(tx_fifo_.get());
   tx_fifo_wait_.set_trigger(ZX_FIFO_READABLE);
@@ -200,6 +200,8 @@ void GuestEthernet::SetClientName(std::string name, SetClientNameCallback callba
 }
 
 void GuestEthernet::GetStatus(GetStatusCallback callback) {
+  // Clear the signal to the netstack to complete bringing the link up.
+  rx_fifo_.signal_peer(fuchsia::hardware::ethernet::SIGNAL_STATUS, 0);
   callback(fuchsia::hardware::ethernet::DeviceStatus::ONLINE);
 }
 
