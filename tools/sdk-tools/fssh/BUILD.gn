@@ -9,7 +9,10 @@ import("//build/go/go_test.gni")
 go_library("main") {
   source_dir = "cmd"
   deps = [ "//tools/sdk-tools/sdkcommon" ]
-  sources = [ "main.go" ]
+  sources = [
+    "fssh.go",
+    "fssh_test.go",
+  ]
 }
 
 go_binary("fssh") {
@@ -17,6 +20,10 @@ go_binary("fssh") {
   deps = [ ":main" ]
 }
 
+go_test("fssh-test") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/fssh/cmd" ]
+  deps = [ ":main" ]
+}
 install_host_tools("fssh-host") {
   deps = [
     ":fssh",

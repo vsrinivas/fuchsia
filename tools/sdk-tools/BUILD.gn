@@ -20,6 +20,7 @@ group("tests") {
     "//tools/sdk-tools/fconfig:fconfig-test($host_toolchain)",
     "//tools/sdk-tools/fpublish:fpublish-test($host_toolchain)",
     "//tools/sdk-tools/fserve:fserve-test($host_toolchain)",
+    "//tools/sdk-tools/fssh:fssh-test($host_toolchain)",
     "//tools/sdk-tools/sdkcommon:sdkcommon-test($host_toolchain)",
   ]
 }
