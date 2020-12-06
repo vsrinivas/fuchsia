@@ -25,10 +25,7 @@
 #include "src/virtualization/bin/vmm/device/device_base.h"
 #include "src/virtualization/bin/vmm/device/stream_base.h"
 
-static constexpr char kInterfacePath[] = "/dev/class/ethernet/virtio";
 static constexpr char kInterfaceName[] = "ethv0";
-static constexpr uint8_t kIpv4Address[4] = {10, 0, 0, 1};
-static constexpr uint8_t kPrefixLength = 24;
 
 enum class Queue : uint16_t {
   RECEIVE = 0,
@@ -139,9 +136,8 @@ class TxStream : public StreamBase {
       if (desc_.has_next) {
         // Section 5.1.6.2  Packet Transmission: The header and packet are added
         // as one output descriptor to the transmitq.
-        static bool warned = false;
-        if (!warned) {
-          warned = true;
+        if (!warned_) {
+          warned_ = true;
           FX_LOGS(WARNING) << "Transmit packet and header must be on a single descriptor";
         }
         continue;
@@ -163,6 +159,7 @@ class TxStream : public StreamBase {
  private:
   GuestEthernet* guest_ethernet_ = nullptr;
   const PhysMem* phys_mem_ = nullptr;
+  bool warned_ = false;
 };
 
 class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
@@ -210,65 +207,84 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
 
     mac_address_ = std::move(mac_address);
 
-    fuchsia::net::Ipv4Address ipv4;
-    memcpy(ipv4.addr.data(), kIpv4Address, 4);
-
-    fuchsia::net::IpAddress addr;
-    addr.set_ipv4(ipv4);
-
-    fuchsia::net::Subnet subnet;
-    subnet.addr.set_ipv4(ipv4);
-    subnet.prefix_len = kPrefixLength;
-
-    fuchsia::netstack::InterfaceConfig config;
-    config.name = kInterfaceName;
+    auto guest_interface =
+        CreateGuestInterface().and_then(fit::bind_member(this, &VirtioNetImpl::EnableInterface));
 
     executor_.schedule_task(
-        AddEthernetDevice(kInterfacePath, std::move(config))
-            .and_then([this, addr = std::move(addr)](const uint32_t& nic_id) mutable {
-              return SetInterfaceAddress(nic_id, std::move(addr));
-            })
-            .and_then([this](const uint32_t& nic_id) mutable {
-              netstack_->SetInterfaceStatus(nic_id, true);
-            })
-            .or_else([]() mutable { FX_CHECK(false) << "Failed to set ethernet IP address."; })
-            .and_then(std::move(callback))
+        fit::join_promises(FindHostInterface(), std::move(guest_interface))
+            .and_then(fit::bind_member(this, &VirtioNetImpl::CreateBridgeInterface))
+            .and_then(fit::bind_member(this, &VirtioNetImpl::EnableInterface))
+            .and_then([callback = std::move(callback)](const uint32_t& nic_id) { callback(); })
+            .or_else([] { FX_LOGS(FATAL) << "Failed to setup guest ethernet"; })
             .wrap_with(scope_));
   }
 
-  fit::promise<uint32_t> AddEthernetDevice(const char* interface_path,
-                                           fuchsia::netstack::InterfaceConfig config) {
+  fit::promise<uint32_t> CreateGuestInterface() {
     fit::bridge<uint32_t> bridge;
 
-    netstack_->AddEthernetDevice(
-        interface_path, std::move(config), device_binding_.NewBinding(),
-        [completer = std::move(bridge.completer)](
-            fuchsia::netstack::Netstack_AddEthernetDevice_Result result) mutable {
-          if (result.is_err()) {
-            FX_LOGS(WARNING) << "Failed to add to Netstack: " << zx_status_get_string(result.err());
-            completer.complete_error();
-          } else {
-            completer.complete_ok(result.response().ResultValue_());
-          }
-        });
+    fuchsia::netstack::InterfaceConfig config;
+    config.name = kInterfaceName;
+    auto callback = [completer = std::move(bridge.completer)](
+                        fuchsia::netstack::Netstack_AddEthernetDevice_Result result) mutable {
+      if (result.is_err()) {
+        FX_LOGS(ERROR) << "Failed to create guest interface";
+        completer.complete_error();
+      } else {
+        completer.complete_ok(result.response().nicid);
+      }
+    };
+    netstack_->AddEthernetDevice("", std::move(config), device_binding_.NewBinding(),
+                                 std::move(callback));
 
     return bridge.consumer.promise();
   }
 
-  fit::promise<uint32_t> SetInterfaceAddress(uint32_t nic_id, fuchsia::net::IpAddress addr) {
+  fit::promise<uint32_t> EnableInterface(const uint32_t& nic_id) {
+    netstack_->SetInterfaceStatus(nic_id, true);
+    return fit::make_ok_promise(nic_id);
+  }
+
+  fit::promise<uint32_t> FindHostInterface() {
     fit::bridge<uint32_t> bridge;
 
-    netstack_->SetInterfaceAddress(
-        nic_id, std::move(addr), kPrefixLength,
-        [nic_id, completer = std::move(bridge.completer)](fuchsia::netstack::NetErr err) mutable {
-          if (err.status == fuchsia::netstack::Status::OK) {
-            completer.complete_ok(nic_id);
-          } else {
-            FX_LOGS(ERROR) << "Failed to set interface address with "
-                           << static_cast<uint32_t>(err.status) << " " << err.message;
-            completer.complete_error();
-          }
-        });
+    auto callback = [completer = std::move(bridge.completer)](
+                        std::vector<fuchsia::netstack::NetInterface> interfaces) mutable {
+      for (auto& interface : interfaces) {
+        if (!(static_cast<uint32_t>(interface.flags) &
+              static_cast<uint32_t>(fuchsia::netstack::Flags::UP)) ||
+            static_cast<uint32_t>(interface.features) != 0) {
+          continue;
+        }
+        completer.complete_ok(interface.id);
+        return;
+      }
+      FX_LOGS(ERROR) << "Failed to find host interface";
+      completer.complete_error();
+    };
+    netstack_->GetInterfaces(std::move(callback));
+
+    return bridge.consumer.promise();
+  }
+
+  fit::promise<uint32_t> CreateBridgeInterface(
+      const std::tuple<fit::result<uint32_t>, fit::result<uint32_t>>& nic_ids) {
+    auto& [host_id, guest_id] = nic_ids;
+    if (host_id.is_error() || guest_id.is_error()) {
+      return fit::make_result_promise<uint32_t>(fit::error());
+    }
+    fit::bridge<uint32_t> bridge;
+
+    auto callback = [completer = std::move(bridge.completer)](fuchsia::netstack::NetErr result,
+                                                              uint32_t nic_id) mutable {
+      if (result.status != fuchsia::netstack::Status::OK) {
+        FX_LOGS(ERROR) << "Failed to create bridge interface";
+        completer.complete_error();
+      } else {
+        completer.complete_ok(nic_id);
+      }
+    };
+    netstack_->BridgeInterfaces({host_id.value(), guest_id.value()}, std::move(callback));
+
     return bridge.consumer.promise();
   }
 
