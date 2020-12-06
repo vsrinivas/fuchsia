@@ -30,8 +30,11 @@
 #include <explicit-memory/bytes.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
+#include <kernel/cpu_distance_map.h>
 #include <kernel/dpc.h>
 #include <kernel/spinlock.h>
+#include <kernel/topology.h>
+#include <ktl/algorithm.h>
 #include <ktl/atomic.h>
 #include <lk/init.h>
 #include <object/resource_dispatcher.h>
@@ -515,6 +518,17 @@ static void riscv64_resource_dispatcher_init_hook(unsigned int rl) {
 LK_INIT_HOOK(riscv64_resource_init, riscv64_resource_dispatcher_init_hook, LK_INIT_LEVEL_HEAP)
 
 void topology_init() {
+  // Setup the CPU distance map with the already initialized topology.
+  const auto processor_count =
+      static_cast<uint>(system_topology::GetSystemTopology().processor_count());
+  CpuDistanceMap::Initialize(processor_count, [](cpu_num_t from_id, cpu_num_t to_id) {
+    return 0;
+  });
+
+  const CpuDistanceMap::Distance kDistanceThreshold = 2u;
+  CpuDistanceMap::Get().set_distance_threshold(kDistanceThreshold);
+
+  CpuDistanceMap::Get().Dump();
 }
 
 zx_status_t platform_mp_prep_cpu_unplug(cpu_num_t cpu_id) {
