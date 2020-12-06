@@ -513,6 +513,22 @@ bool platform_early_console_enabled() { return false; }
 
 // Initialize Resource system after the heap is initialized.
 static void riscv64_resource_dispatcher_init_hook(unsigned int rl) {
+  // 64 bit address space for MMIO on RISCV64
+  zx_status_t status = ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_MMIO, 0, UINT64_MAX);
+  if (status != ZX_OK) {
+    printf("Resources: Failed to initialize MMIO allocator: %d\n", status);
+  }
+  // Set up IRQs based on values from the PLIC
+  status = ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IRQ, interrupt_get_base_vector(),
+                                                   interrupt_get_max_vector());
+  if (status != ZX_OK) {
+    printf("Resources: Failed to initialize IRQ allocator: %d\n", status);
+  }
+  // Set up range of valid system resources.
+  status = ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_SYSTEM, 0, ZX_RSRC_SYSTEM_COUNT);
+  if (status != ZX_OK) {
+    printf("Resources: Failed to initialize system allocator: %d\n", status);
+  }
 }
 
 LK_INIT_HOOK(riscv64_resource_init, riscv64_resource_dispatcher_init_hook, LK_INIT_LEVEL_HEAP)
