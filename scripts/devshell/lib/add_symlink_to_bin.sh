@@ -9,4 +9,7 @@ FUCHSIA_DIR="$(dirname $(dirname $(dirname "${devshell_lib_dir}")))"
 if [[ -d "${FUCHSIA_DIR}/.jiri_root/bin" ]]; then
   rm -f "${FUCHSIA_DIR}/.jiri_root/bin/fx"
   ln -s "../../scripts/fx" "${FUCHSIA_DIR}/.jiri_root/bin/fx"
+
+  rm -f "${FUCHSIA_DIR}/.jiri_root/bin/ffx"
+  ln -s "../../src/developer/ffx/scripts/ffx" "${FUCHSIA_DIR}/.jiri_root/bin/ffx"
 fi

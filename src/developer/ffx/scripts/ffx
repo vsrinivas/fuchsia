@@ -1,0 +1,29 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+fuchsia_dir="${FUCHSIA_DIR}"
+if [[ -z "${fuchsia_dir}" ]]; then
+  # We walk the parent directories looking for .jiri_root rather than using
+  # BASH_SOURCE so that we find the fuchsia_dir enclosing the current working
+  # directory instead of the one containing this file in case the user has
+  # multiple source trees and is picking up this file from another one.
+  fuchsia_dir="$(pwd)"
+  while [[ ! -d "${fuchsia_dir}/.jiri_root" ]]; do
+    fuchsia_dir="$(dirname "${fuchsia_dir}")"
+    if [[ "${fuchsia_dir}" == "/" ]]; then
+      echo "Cannot find Platform Source Tree containing $(pwd)"
+      exit 1
+    fi
+  done
+fi
+
+build_dir="$(<"${fuchsia_dir}"/.fx-build-dir)" || exit $?
+
+if ! [[ -x "${build_dir}/host-tools/ffx" ]]; then
+  echo >&2 "ffx is missing! Building ffx!"
+  "${fuchsia_dir}/.jiri_root/bin/fx" build --no-zircon ffx || exit $?
+fi
+
+exec "${build_dir}"/host-tools/ffx "$@"
