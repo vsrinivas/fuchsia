@@ -96,6 +96,8 @@ class X86PageTableBase {
   zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count,
                               const HarvestCallback& accessed_callback);
 
+  zx_status_t FreeUnaccessed(vaddr_t vaddr, size_t count);
+
  protected:
   using page_alloc_fn_t = ArchVmAspaceInterface::page_alloc_fn_t;
 
@@ -177,6 +179,10 @@ class X86PageTableBase {
   zx_status_t HarvestMappingL0(volatile pt_entry_t* table, const MappingCursor& start_cursor,
                                MappingCursor* new_cursor, ConsistencyManager* cm,
                                const HarvestCallback& accessed_callback) TA_REQ(lock_);
+
+  bool FreeUnaccessedPageTable(volatile pt_entry_t* table, PageTableLevel level,
+                               const MappingCursor& start_cursor, MappingCursor* new_cursor,
+                               ConsistencyManager* cm) TA_REQ(lock_);
 
   zx_status_t GetMapping(volatile pt_entry_t* table, vaddr_t vaddr, PageTableLevel level,
                          PageTableLevel* ret_level, volatile pt_entry_t** mapping) TA_REQ(lock_);

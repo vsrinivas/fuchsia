@@ -721,6 +721,13 @@ zx_status_t X86ArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
   return pt_->HarvestAccessed(vaddr, count, accessed_callback);
 }
 
+zx_status_t X86ArchVmAspace::FreeUnaccessed(vaddr_t vaddr, size_t count) {
+  if (!IsValidVaddr(vaddr)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return pt_->FreeUnaccessed(vaddr, count);
+}
+
 void x86_mmu_percpu_init(void) {
   ulong cr0 = x86_get_cr0();
   /* Set write protect bit in CR0*/
