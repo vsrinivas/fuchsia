@@ -315,7 +315,7 @@ fuchsia_test_package("my-integration-test") {
   test_components = [ ":my-test-component" ]
   deps = [ ":my-other-component-under-test" ]
   test_specs = {
-    environments = [ vim2_env ]
+    environments = [ vim3_env ]
   }
 }
 
