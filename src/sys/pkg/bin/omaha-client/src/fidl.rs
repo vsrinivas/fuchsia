@@ -177,6 +177,8 @@ where
     metrics_reporter: Box<dyn ApiMetricsReporter>,
 
     current_channel: Option<String>,
+
+    previous_out_of_space_failure: bool,
 }
 
 pub enum IncomingServices {
@@ -219,6 +221,7 @@ where
             monitor_queue,
             metrics_reporter,
             current_channel,
+            previous_out_of_space_failure: false,
         }
     }
 
@@ -564,6 +567,22 @@ where
     ) {
         server.borrow_mut().state.install_progress = Some(progress.progress);
         Self::send_state_to_queue(server).await;
+    }
+
+    /// Alert the `FidlServer` that a previous update attempt on this boot failed with an
+    /// OUT_OF_SPACE error.
+    ///
+    /// TODO(fxbug.dev/65498): If this function is called (thus setting the latch) and a subsequent
+    /// request to PerformPendingReboot comes in, immediately reboot to clear the dynamic index and
+    /// allow subsequent update attempts to proceed without running out of space.
+    pub fn set_previous_out_of_space_failure(server: Rc<RefCell<Self>>) {
+        server.borrow_mut().previous_out_of_space_failure = true;
+    }
+
+    /// Get the state of the `previous_out_of_space_failure` latch.
+    #[cfg(test)]
+    pub fn previous_out_of_space_failure(server: Rc<RefCell<Self>>) -> bool {
+        server.borrow().previous_out_of_space_failure
     }
 }
 

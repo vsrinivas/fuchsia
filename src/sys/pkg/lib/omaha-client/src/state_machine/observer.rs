@@ -19,7 +19,7 @@ pub enum StateMachineEvent {
     UpdateCheckResult(Result<update_check::Response, UpdateCheckError>),
     InstallProgressChange(InstallProgress),
     OmahaServerResponse(Response),
-    InstallerError(Option<Box<dyn std::error::Error + Send>>),
+    InstallerError(Option<Box<dyn std::error::Error + Send + 'static>>),
 }
 
 #[derive(Debug)]

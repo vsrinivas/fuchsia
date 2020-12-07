@@ -6,9 +6,11 @@ use crate::{
     cobalt::notify_cobalt_current_software_distribution,
     fidl::{FidlServer, StateMachineController},
     inspect::{LastResultsNode, ProtocolStateNode, ScheduleNode},
+    installer::{FuchsiaInstallError, InstallerFailureReason},
 };
+use anyhow::anyhow;
 use fuchsia_inspect::Node;
-use log::warn;
+use log::{error, warn};
 use omaha_client::{
     clock,
     common::{AppSet, ProtocolState, UpdateCheckSchedule},
@@ -78,11 +80,39 @@ where
             }
             StateMachineEvent::OmahaServerResponse(response) => self.on_omaha_response(response),
 
-            StateMachineEvent::InstallerError(e) => {
-                // TODO(fxbug.dev/65497): downcast this error, populate FidlServer's
-                // previous_out_of_space_failure field if this was an OUT_OF_SPACE error.
-                // Once we've downcast, it will be possible to properly log this error with anyhow.
-                warn!("Got installer error: {:?}", e);
+            StateMachineEvent::InstallerError(e) => self.handle_installer_error(e),
+        }
+    }
+
+    fn handle_installer_error(&mut self, e: Option<Box<dyn std::error::Error + Send + 'static>>) {
+        if let Some(err) = e {
+            // We only know how to handle Fuchsia Install errors, others will just be logged.
+            let downcast_err = err.downcast::<FuchsiaInstallError>();
+            if let Ok(fuchsia_install_error) = downcast_err {
+                match *fuchsia_install_error {
+                    // We got an OUT_OF_SPACE error from system updater, inform the FIDL server so
+                    // that it can later trigger a reboot and hopefully clear the error.
+                    FuchsiaInstallError::InstallerFailureState(installer_failure) => {
+                        warn!(
+                            "Got installer error in state {}: {:#}",
+                            installer_failure.state_name(),
+                            anyhow!(fuchsia_install_error)
+                        );
+                        if installer_failure.reason() == InstallerFailureReason::OutOfSpace {
+                            FidlServer::set_previous_out_of_space_failure(Rc::clone(
+                                &self.fidl_server,
+                            ));
+                        }
+                    }
+                    other_error => {
+                        warn!("Got installer error: {:#}", anyhow!(other_error));
+                    }
+                }
+            } else {
+                // This isn't a Fuchsia install error, and we don't know what it is, so we
+                // don't know its size. Since it's unsized, it's not possible to wrap with
+                // anyhow, so just log at [ERROR].
+                error!("Got an unknown installer error: {:?}", downcast_err);
             }
         }
     }
@@ -176,6 +206,7 @@ where
 mod tests {
     use super::*;
     use crate::fidl::{FidlServerBuilder, MockOrRealStateMachineController};
+    use crate::installer::InstallerFailure;
     use anyhow::anyhow;
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
@@ -265,5 +296,36 @@ mod tests {
         };
         observer.on_omaha_response(response);
         assert_eq!(observer.target_version, None);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_out_of_space_notifies_fidl_server() {
+        let mut observer = new_test_observer().await;
+
+        // The previous_out_of_space_failure latch should start false
+        assert!(!FidlServer::previous_out_of_space_failure(Rc::clone(&observer.fidl_server)));
+
+        // If observer doesn't get an out of space error, the latch should stay false
+        observer
+            .on_event(StateMachineEvent::InstallerError(Some(Box::new(
+                FuchsiaInstallError::InstallerFailureState(InstallerFailure::new(
+                    "foo",
+                    InstallerFailureReason::Internal,
+                )),
+            ))))
+            .await;
+        assert!(!FidlServer::previous_out_of_space_failure(Rc::clone(&observer.fidl_server)));
+
+        observer
+            .on_event(StateMachineEvent::InstallerError(Some(Box::new(
+                FuchsiaInstallError::InstallerFailureState(InstallerFailure::new(
+                    "fail_fetch",
+                    InstallerFailureReason::OutOfSpace,
+                )),
+            ))))
+            .await;
+
+        // The observer should have called the FIDL server's function to set the latch.
+        assert!(FidlServer::previous_out_of_space_failure(Rc::clone(&observer.fidl_server)));
     }
 }

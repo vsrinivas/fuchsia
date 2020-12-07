@@ -27,7 +27,7 @@ use omaha_client::{
 use thiserror::Error;
 
 /// Represents possible reasons the installer could have ended in a failure state. Not exhaustive.
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum InstallerFailureReason {
     Internal,
     OutOfSpace,
@@ -52,10 +52,27 @@ impl From<PrepareFailureReason> for InstallerFailureReason {
 }
 
 /// Information about a specific failure state that the installer ended in.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct InstallerFailure {
     state_name: &'static str,
     reason: InstallerFailureReason,
+}
+
+impl InstallerFailure {
+    /// Returns the name of the system-updater state this failure occurred in
+    pub fn state_name(self) -> &'static str {
+        self.state_name
+    }
+
+    /// Returns the reason this failure occurred
+    pub fn reason(self) -> InstallerFailureReason {
+        self.reason
+    }
+
+    #[cfg(test)]
+    pub fn new(state_name: &'static str, reason: InstallerFailureReason) -> Self {
+        Self { state_name, reason }
+    }
 }
 
 #[derive(Debug, Error)]
