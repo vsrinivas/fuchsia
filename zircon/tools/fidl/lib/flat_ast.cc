@@ -555,6 +555,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
         // inlined).
         break;
 
+      case Decl::Kind::kBits:
       case Decl::Kind::kEnum:
       case Decl::Kind::kTable:
         if (args.nullability == types::Nullability::kNullable)

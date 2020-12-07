@@ -181,4 +181,23 @@ bits Life {
   EXPECT_EQ(bits->mask, 42);
 }
 
+TEST(EnumsTests, BadBitsShantBeNullable) {
+  TestLibrary library(R"FIDL(
+library example;
+
+bits NotNullable {
+    MEMBER = 1;
+};
+
+struct Struct {
+    NotNullable? not_nullable;
+};
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_GE(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrCannotBeNullable);
+  ASSERT_SUBSTR(errors[0]->msg.c_str(), "NotNullable");
+}
+
 }  // namespace
