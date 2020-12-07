@@ -22,6 +22,9 @@ pub enum Command {
 
     // fuchsia.update.installer protocol:
     ForceInstall(ForceInstall),
+
+    // fuchsia.update CommitStatusProvider protocol:
+    WaitForCommit(WaitForCommit),
 }
 
 #[derive(Debug, Eq, FromArgs, PartialEq)]
@@ -98,6 +101,11 @@ pub struct ForceInstall {
     #[argh(switch)]
     pub service_initiated: bool,
 }
+
+#[derive(Debug, Eq, FromArgs, PartialEq)]
+#[argh(subcommand, name = "wait-for-commit")]
+/// Wait for the update to be committed.
+pub struct WaitForCommit {}
 
 #[cfg(test)]
 mod tests {
@@ -241,5 +249,11 @@ mod tests {
                 })
             }
         );
+    }
+
+    #[test]
+    fn test_wait_for_commit() {
+        let update = Update::from_args(&["update"], &["wait-for-commit"]).unwrap();
+        assert_eq!(update, Update { cmd: Command::WaitForCommit(WaitForCommit {}) });
     }
 }

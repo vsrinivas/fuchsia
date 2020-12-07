@@ -16,6 +16,7 @@ use {
         client::{AppBuilder, Output},
         server::{NestedEnvironment, ServiceFs},
     },
+    fuchsia_zircon::{self as zx, EventPair, HandleBased, Peered},
     futures::prelude::*,
     matches::assert_matches,
     mock_installer::{
@@ -26,10 +27,22 @@ use {
     std::sync::Arc,
 };
 
+async fn run_commit_status_provider_service(
+    mut stream: fidl_update::CommitStatusProviderRequestStream,
+    p: Arc<EventPair>,
+) {
+    while let Some(req) = stream.try_next().await.unwrap() {
+        let fidl_update::CommitStatusProviderRequest::IsCurrentSystemCommitted { responder } = req;
+        let pair = p.duplicate_handle(zx::Rights::BASIC).unwrap();
+        let () = responder.send(pair).unwrap();
+    }
+}
+
 #[derive(Default)]
 struct TestEnvBuilder {
     manager_states: Vec<State>,
     installer_states: Vec<installer::State>,
+    commit_status_provider_response: Option<EventPair>,
 }
 
 impl TestEnvBuilder {
@@ -39,6 +52,10 @@ impl TestEnvBuilder {
 
     fn installer_states(self, installer_states: Vec<installer::State>) -> Self {
         Self { installer_states, ..self }
+    }
+
+    fn commit_status_provider_response(self, response: EventPair) -> Self {
+        Self { commit_status_provider_response: Some(response), ..self }
     }
 
     fn build(self) -> TestEnv {
@@ -56,6 +73,17 @@ impl TestEnvBuilder {
         fs.add_fidl_service(move |stream| {
             fasync::Task::spawn(Arc::clone(&update_installer_clone).run_service(stream)).detach()
         });
+
+        if let Some(response) = self.commit_status_provider_response {
+            let response = Arc::new(response);
+            fs.add_fidl_service(move |stream| {
+                fasync::Task::spawn(run_commit_status_provider_service(
+                    stream,
+                    Arc::clone(&response),
+                ))
+                .detach()
+            });
+        }
 
         let env = fs
             .create_salted_nested_environment("update_env")
@@ -518,4 +546,22 @@ async fn check_now_monitor_error_installing() {
         },
         monitor_present: true,
     }]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn wait_for_commit_success() {
+    let (p0, p1) = EventPair::create().unwrap();
+    let env = TestEnv::builder().commit_status_provider_response(p1).build();
+
+    let () = p0.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).unwrap();
+
+    let output = env.run_update(vec!["wait-for-commit"]).await;
+
+    assert_output(
+        &output,
+        "Waiting for commit.\n\
+         Committed!\n",
+        "",
+        0,
+    );
 }

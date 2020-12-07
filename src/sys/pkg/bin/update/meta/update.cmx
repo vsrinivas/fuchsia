@@ -7,6 +7,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.update.CommitStatusProvider",
             "fuchsia.update.Manager",
             "fuchsia.update.channelcontrol.ChannelControl",
             "fuchsia.update.installer.Installer"
