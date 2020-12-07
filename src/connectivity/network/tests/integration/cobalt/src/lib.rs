@@ -112,11 +112,18 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     // The stack sees both the client and server side of the TCP connection.
     // Hence we see the TCP stats below accounting for both sides.
     matches::assert_matches!(
-        events_with_id(
-            &events_post_accept,
-            networking_metrics::TCP_CONNECTIONS_ESTABLISHED_TOTAL_METRIC_ID,
-        )
-        .collect::<Vec<_>>()
+        {
+            let mut events = events_with_id(
+                &events_post_accept,
+                networking_metrics::TCP_CONNECTIONS_ESTABLISHED_TOTAL_METRIC_ID,
+            )
+            .collect::<Vec<_>>();
+            // Permit multiple identical events since this is a total metric.
+            //
+            // We sometimes observed multiple of these events (see https://fxbug.dev/56382).
+            let () = events.dedup();
+            events
+        }
         .as_slice(),
         &[fidl_fuchsia_cobalt::CountEvent { count: 2, period_duration_micros: _ }]
     );
