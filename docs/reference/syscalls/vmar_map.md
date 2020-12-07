@@ -76,9 +76,6 @@ In addition one of the following power-of-two alignment flags can added:
 and continues up to
 - **ZX_VM_ALIGN_4GB** aligns *child_addr* to a power-of-2 at least 4G bytes.
 
-TODO(fxbug.dev/33764): Currently, alignment flags greater than 4KB cannot be used when
-mapping a VMO into a compact VMAR.
-
 Using **ZX_VM_ALIGN** flags with **ZX_VM_SPECIFIC** will fail if the vmar
 base address + *vmo_offset* are not aligned to the requested value.
 
