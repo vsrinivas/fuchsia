@@ -62,9 +62,6 @@ test("fs-test-utils") {
     "//src/storage/bin/minfs",
     "//src/storage/blobfs",
   ]
-
-  # TODO(fxbug.dev/46861): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 isolated_devmgr_unittest_package("fs-test-utils-test") {
