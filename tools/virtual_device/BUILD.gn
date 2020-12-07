@@ -19,6 +19,7 @@ go_library("fvd_lib") {
     "//third_party/golibs:github.com/golang/protobuf",
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:google.golang.org/protobuf",
+    "//tools/build",
   ]
 }
 
@@ -51,8 +52,8 @@ action("default") {
     rebase_path("$root_build_dir/images.json", root_build_dir),
     "--output",
     rebase_path(outputs[0], root_build_dir),
-    "--name",
-    "default",
+    "--buildinfo_cpu",
+    target_cpu,
   ]
   deps = [ ":fvd($host_toolchain)" ]
 }

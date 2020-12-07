@@ -26,18 +26,22 @@ message VirtualDevice {
   // Metadata indicating how to run QEMU.
   QEMU qemu = 2;
 
-  // The following fields specify the set of system images used to boot Fuchsia.
-  // Each field's value is the name of the JSON object in images.json whose
-  // "path" property points to the corresponding image file.
-
-  // The system kernel image.
+  // The name of the system kernel image in images.json.
   string kernel = 3;
 
-  // The initial ramdisk image.
+  // The name of the initial ramdisk image in images.json.
   string initrd = 4;
 
-  // The primary Fuchsia volume.
-  string fvm = 5;
+  // Optional. The primary disk drive for this device.
+  Drive drive = 5;
+
+  // The device characterics.
+  HardwareProfile hw = 6;
+
+  // An optional device nodename.
+  //
+  // Defaults to fuchsia-virtual-device.
+  string nodename = 7;
 }
 
 // QEMU describes how to run a VirtualDevice in QEMU.
@@ -48,3 +52,68 @@ message QEMU {
   // The minimum supported QEMU version.
   string min_version = 2;
 }
+
+// A PCI disk drive.
+message Drive {
+  // The name of the drive.
+  string id = 1;
+
+  // A pointer to the image to use as a basis for the drive.
+  string image = 2;
+
+  // If true, image is the name of a file to use for this drive. This is useful
+  // if the drive is, for example, a MinFS image. The path may be relative or
+  // absolute, depending on the use case.
+  //
+  // If false, image is the name of an image in images.json whose path attribute
+  // points to the file backing this device.
+  //
+  // Defaults to false.
+  bool is_filename = 3;
+
+  // The PCI address for the device.
+  //
+  // Defaults to the empty string.
+  string pci_address = 4;
+}
+
+message HardwareProfile {
+  // The CPU architecture.
+  //
+  // This must be one of:
+  // - arm64
+  // - x64
+  string arch = 1;
+
+  // The number of CPUs.
+  //
+  // Defaults to 1.
+  uint32 cpu_count = 2;
+
+  // The amount of RAM expressed as a string like "5M".
+  //
+  // The number must be a positive 64-bit integer in base 10.
+  // The unit must be any of:
+  // - b|B for bytes
+  // - k|K for kilobytes
+  // - m|M for megabytes
+  // - g|G for gigabytes.
+  string ram = 3;
+
+  // The optional MAC address to use for the device.
+  //
+  // If this is unset, an address is randomly generated at runtime.
+  string mac = 4;
+
+  // Optional Tap device.
+  //
+  // If set, user networking is disabled. If unset, user networking is enabled.
+  TapDevice tap = 5;
+
+  // Whether to enable KVM.
+  //
+  // Defaults to false.
+  bool enable_kvm = 100;
+}
+
+message TapDevice { string name = 1; }
