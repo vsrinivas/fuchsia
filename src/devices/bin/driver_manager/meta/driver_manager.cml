@@ -30,68 +30,14 @@
     use: [
         { runner: "elf" },
         {
-            directory: "bin",
-            rights: [ "rx*" ],
-            path: "/bin",
-        },
-        {
-            directory: "blob",
-            rights: [ "rw*" ],
-            path: "/blob",
-        },
-        {
             directory: "boot",
             rights: [ "rx*" ],
             path: "/boot",
         },
         {
-            directory: "hub",
-            rights: [ "rw*" ],
-            path: "/hub",
-        },
-        {
-            directory: "minfs",
-            rights: [ "rw*" ],
-            path: "/data",
-        },
-        {
-            directory: "pkgfs",
-            rights: [ "rx*" ],
-            path: "/pkgfs",
-        },
-        {
             directory: "system",
             rights: [ "rx*" ],
             path: "/system",
-        },
-
-        // NOTE: /tmp needs admin rights because the bringup bots invoke a shell
-        // script via zircon.system.autorun that mounts a volume under /tmp to
-        // exfiltrate test results.
-        {
-            directory: "tmp",
-            rights: [
-                "admin",
-                "rw*",
-            ],
-            path: "/tmp",
-        },
-
-        // TODO: this directory is unused and can likely be deleted
-        {
-            directory: "install",
-            rights: [ "rw*" ],
-            path: "/install",
-        },
-        {
-            directory: "durable",
-            rights: [ "rw*" ],
-            path: "/durable",
-        },
-        {
-            directory: "factory",
-            rights: [ "r*" ],
-            path: "/factory",
         },
         {
             directory: "system-delayed",
@@ -100,73 +46,19 @@
         },
         {
             protocol: [
-                "console",
-
-                // Services for serial console, not used by driver_manager or
-                // drivers.
-
-                // TODO(fxbug.dev/51234) Split serial console into separate component
-                // Amber control is thought to be used by serial console (fxbug.dev/50992)
-                "fuchsia.amber.Control",
-
-                // The following are non-Zircon services that some zircon tests assume they
-                // can reach, and thus are proxied through svchost. This should mirror the
-                // list in //src/bringup/bin/svchost/svchost.cc
-
-                // Services from bootsvc
                 "fuchsia.boot.Arguments",
-                "fuchsia.boot.FactoryItems",
                 "fuchsia.boot.Items",
-                "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.RootResource",
                 "fuchsia.boot.WriteOnlyLog",
-
-                // Used by a test (fxbug.dev/50992)
-                "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.device.NameProvider",
-
-                // Used by crashsvc to report exceptions (fxbug.dev/50992)
-                "fuchsia.exception.Handler",
-
-                // These are services from fshost that driver_manager uses directly
                 "fuchsia.fshost.Admin",
-
-                // These are services from fshost that show up in svchost
-                "fuchsia.fshost.BlockWatcher",
-                "fuchsia.fshost.Filesystems",
                 "fuchsia.fshost.Loader",
-                "fuchsia.fshost.Registry",
-                "fuchsia.hardware.pci.Bus",
-                "fuchsia.hardware.power.statecontrol.Admin",
-                "fuchsia.hardware.pty.Device",
-                "fuchsia.kernel.Counter",
                 "fuchsia.kernel.RootJob",
-                "fuchsia.kernel.RootJobForInspect",
-                "fuchsia.kernel.Stats",
-                "fuchsia.logger.Log",
-                "fuchsia.net.NameLookup",
-                "fuchsia.net.stack.Log",
-                "fuchsia.net.stack.Stack",
-                "fuchsia.netstack.Netstack",
-                "fuchsia.paver.Paver",
-                "fuchsia.pkg.PackageResolver",
-                "fuchsia.pkg.RepositoryManager",
-                "fuchsia.pkg.rewrite.Engine",
-                "fuchsia.posix.socket.Provider",
-
-                // Service from power_manager
                 "fuchsia.power.manager.DriverManagerRegistration",
-
-                // Builtin services
                 "fuchsia.process.Launcher",
                 "fuchsia.process.Resolver",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
-
-                // Services from sysinfo
-                "fuchsia.sysinfo.SysInfo",
-                "fuchsia.tracing.controller.Controller",
                 "fuchsia.tracing.provider.Registry",
             ],
         },

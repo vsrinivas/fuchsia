@@ -141,10 +141,16 @@
         },
         {
             protocol: [
-                "fuchsia.boot.FactoryItems",
-                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.Items",
+                "fuchsia.boot.RootResource",
+                "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.kernel.RootJob",
-                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.process.Launcher",
+                "fuchsia.process.Resolver",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Launcher",
+                "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
             to: [ "#driver_manager" ],
@@ -157,17 +163,13 @@
         {
             protocol: [ "fuchsia.kernel.Stats" ],
             from: "parent",
-            to: [
-                "#driver_manager",
-                "#power_manager",
-            ],
+            to: [ "#power_manager" ],
         },
         {
             protocol: "fuchsia.boot.RootResource",
             from: "parent",
             to: [
                 "#console",
-                "#driver_manager",
                 "#sysinfo",
             ],
         },
@@ -178,10 +180,7 @@
                 "fuchsia.process.Launcher",
             ],
             from: "parent",
-            to: [
-                "#driver_manager",
-                "#fshost",
-            ],
+            to: [ "#fshost" ],
         },
         {
             protocol: [
@@ -217,7 +216,6 @@
             from: "parent",
             to: [
                 "#console",
-                "#driver_manager",
                 "#fshost",
                 "#ptysvc",
                 "#pwrbtn-monitor",
@@ -233,7 +231,6 @@
             ],
             from: "parent",
             to: [
-                "#driver_manager",
                 "#fshost",
                 "#power_manager",
             ],
@@ -357,7 +354,6 @@
             from: "#fshost",
             to: [
                 "#console-launcher",
-                "#driver_manager",
                 "#netsvc",
             ],
             dependency: "weak_for_migration",
@@ -367,7 +363,6 @@
             from: "#fshost",
             to: [
                 "#console-launcher",
-                "#driver_manager",
                 "#netsvc",
             ],
             dependency: "weak_for_migration",
@@ -397,7 +392,6 @@
             from: "#fshost",
             to: [
                 "#console-launcher",
-                "#driver_manager",
                 "#netsvc",
             ],
             dependency: "weak_for_migration",
@@ -407,21 +401,8 @@
             from: "#fshost",
             to: [
                 "#console-launcher",
-                "#driver_manager",
                 "#netsvc",
             ],
-            dependency: "weak_for_migration",
-        },
-        {
-            directory: "durable",
-            from: "#fshost",
-            to: [ "#driver_manager" ],
-            dependency: "weak_for_migration",
-        },
-        {
-            directory: "factory",
-            from: "#fshost",
-            to: [ "#driver_manager" ],
             dependency: "weak_for_migration",
         },
         {
@@ -429,7 +410,6 @@
             from: "#fshost",
             to: [
                 "#console-launcher",
-                "#driver_manager",
                 "#netsvc",
             ],
             dependency: "weak_for_migration",
@@ -439,10 +419,8 @@
             from: "#fshost",
             to: [
                 "#console-launcher",
-                "#driver_manager",
                 "#netsvc",
             ],
-            dependency: "weak_for_migration",
         },
         {
             directory: "volume",
@@ -466,22 +444,18 @@
             dependency: "weak_for_migration",
         },
 
-        // Offer the kernel serial console to the driver_manager
+        // Offer the kernel serial console to the console-launcher
         {
             protocol: "fuchsia.hardware.pty.Device",
             from: "#console",
             as: "console",
-            to: [
-                "#console-launcher",
-                "#driver_manager",
-            ],
+            to: [ "#console-launcher" ],
         },
         {
             protocol: "fuchsia.device.NameProvider",
             from: "#device_name_provider",
             to: [
                 "#console-launcher",
-                "#driver_manager",
                 "#netsvc",
             ],
 
@@ -489,39 +463,22 @@
             // remove this.
             dependency: "weak_for_migration",
         },
-
-        // Offer the misc service to the driver_manager
-        {
-            protocol: [
-                "fuchsia.kernel.Counter",
-                "fuchsia.paver.Paver",
-            ],
-            from: "#miscsvc",
-            to: [ "#driver_manager" ],
-
-            // TODO: Once netsvc is spawned by component manager, we can remove this.
-            dependency: "weak_for_migration",
-        },
-
-        // Offer the pty service to the driver_manager
         {
             protocol: "fuchsia.hardware.pty.Device",
             from: "#ptysvc",
             to: [
                 "#console-launcher",
-                "#driver_manager",
                 "#netsvc",
                 "#virtual_console",
             ],
         },
 
-        // driver_manager needs the v1 hub for the serial console
+        // The v1 hub is needed for the serial console.
         {
             directory: "hub",
             from: "parent",
             to: [
                 "#console-launcher",
-                "#driver_manager",
                 "#netsvc",
             ],
         },
@@ -530,17 +487,29 @@
             from: "#sysinfo",
             to: [
                 "#console-launcher",
-                "#driver_manager",
                 "#netsvc",
             ],
-            dependency: "weak_for_migration",
+        },
+        {
+            // TODO(fxb/65708) This is only needed for an ordered shutdown.
+            // Driver_manager has to shut down before shutdown_shim.
+            protocol: "fuchsia.hardware.power.statecontrol.Admin",
+            from: "#shutdown_shim",
+            to: [ "#driver_manager" ],
+        },
+        {
+            // TODO(fxb/65708) This is only needed for an ordered shutdown.
+            // Console should outlive driver_manager so that logs at the end of the boot process
+            // can still be seen.
+            protocol: "fuchsia.hardware.pty.Device",
+            from: "#console",
+            to: [ "#driver_manager" ],
         },
         {
             protocol: "fuchsia.hardware.power.statecontrol.Admin",
             from: "#shutdown_shim",
             to: [
                 "#console-launcher",
-                "#driver_manager",
                 "#netsvc",
                 "#pwrbtn-monitor",
                 "#svchost",
@@ -561,6 +530,8 @@
             protocol: [ "fuchsia.device.manager.SystemStateTransition" ],
             from: "#driver_manager",
             to: [ "#shutdown_shim" ],
+
+            // TODO(fxb/65708) When this bug is complete, this can be a strong dependency.
             dependency: "weak_for_migration",
         },
         {
@@ -590,33 +561,11 @@
                 "#netsvc",
             ],
         },
-
-        // Non-zircon services for svchost
-        {
-            protocol: [
-                "fuchsia.exception.Handler",
-                "fuchsia.net.NameLookup",
-                "fuchsia.net.stack.Log",
-                "fuchsia.net.stack.Stack",
-                "fuchsia.netstack.Netstack",
-                "fuchsia.pkg.PackageResolver",
-                "fuchsia.pkg.RepositoryManager",
-                "fuchsia.pkg.rewrite.Engine",
-                "fuchsia.posix.socket.Provider",
-                "fuchsia.process.Resolver",
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Launcher",
-                "fuchsia.tracing.controller.Controller",
-            ],
-            from: "parent",
-            to: [ "#driver_manager" ],
-        },
         {
             protocol: "fuchsia.logger.Log",
             from: "#archivist",
             to: [
                 "#console-launcher",
-                "#driver_manager",
                 "#netsvc",
             ],
         },
@@ -643,10 +592,8 @@
             from: "#fshost",
             to: [
                 "#console-launcher",
-                "#driver_manager",
                 "#netsvc",
             ],
-            dependency: "weak_for_migration",
         },
         {
             protocol: [ "fuchsia.fshost.Admin" ],
