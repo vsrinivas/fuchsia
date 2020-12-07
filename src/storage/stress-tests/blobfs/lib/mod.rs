@@ -7,7 +7,7 @@ pub mod operator;
 
 use {
     fidl_fuchsia_hardware_block_partition::Guid,
-    fs_management::Blobfs,
+    fs_management::{BlobLayout, Blobfs, Filesystem},
     fuchsia_async::{Task, TimeoutExt},
     fuchsia_zircon::Vmo,
     log::debug,
@@ -25,6 +25,15 @@ const TYPE_GUID: Guid = Guid {
 
 // The path to the blobfs filesystem in the test's namespace
 const BLOBFS_MOUNT_PATH: &str = "/blobfs";
+
+fn get_blobfs(volume_path: &str) -> Filesystem<Blobfs> {
+    let config = Blobfs {
+        /// Use the compact merkle layout for stress tests
+        blob_layout: Some(BlobLayout::Compact),
+        ..Blobfs::default()
+    };
+    Filesystem::from_path(volume_path, config).unwrap()
+}
 
 pub async fn run_test(
     rng: SmallRng,
@@ -50,7 +59,7 @@ pub async fn run_test(
     let mut volume_path = get_volume_path(block_path, &volume_instance_guid).await;
 
     // Initialize blobfs for the first time
-    let mut blobfs = Blobfs::new(volume_path.to_str().unwrap()).unwrap();
+    let mut blobfs = get_blobfs(volume_path.to_str().unwrap());
     blobfs.format().unwrap();
 
     if disconnect_secs > 0 {
@@ -59,7 +68,7 @@ pub async fn run_test(
             loop {
                 {
                     // Start up blobfs
-                    let mut blobfs = Blobfs::new(volume_path.to_str().unwrap()).unwrap();
+                    let mut blobfs = get_blobfs(volume_path.to_str().unwrap());
                     blobfs.fsck().unwrap();
                     blobfs.mount(BLOBFS_MOUNT_PATH).unwrap();
 
