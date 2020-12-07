@@ -202,13 +202,35 @@ extern "C" otError otPlatDiagProcess(otInstance *a_instance, uint8_t a_args_leng
   return OT_ERROR_NOT_IMPLEMENTED;
 }
 
-extern "C" void otPlatDiagModeSet(bool a_mode) { OT_UNUSED_VARIABLE(a_mode); }
+extern "C" void otPlatDiagModeSet(bool a_mode) {
+  SuccessOrExit(sRadioSpinel.PlatDiagProcess(a_mode ? "start" : "stop", nullptr, 0));
+  sRadioSpinel.SetDiagEnabled(a_mode);
 
-extern "C" bool otPlatDiagModeGet(void) { return false; }
+exit:
+  return;
+}
 
-extern "C" void otPlatDiagTxPowerSet(int8_t a_tx_power) { OT_UNUSED_VARIABLE(a_tx_power); }
+bool otPlatDiagModeGet(void) { return sRadioSpinel.IsDiagEnabled(); }
 
-extern "C" void otPlatDiagChannelSet(uint8_t a_channel) { OT_UNUSED_VARIABLE(a_channel); }
+extern "C" void otPlatDiagTxPowerSet(int8_t a_tx_power) {
+  char cmd[OPENTHREAD_CONFIG_DIAG_CMD_LINE_BUFFER_SIZE];
+
+  snprintf(cmd, sizeof(cmd), "power %d", a_tx_power);
+  SuccessOrExit(sRadioSpinel.PlatDiagProcess(cmd, nullptr, 0));
+
+exit:
+  return;
+}
+
+extern "C" void otPlatDiagChannelSet(uint8_t a_channel) {
+  char cmd[OPENTHREAD_CONFIG_DIAG_CMD_LINE_BUFFER_SIZE];
+
+  snprintf(cmd, sizeof(cmd), "channel %d", a_channel);
+  SuccessOrExit(sRadioSpinel.PlatDiagProcess(cmd, nullptr, 0));
+
+exit:
+  return;
+}
 
 extern "C" void otPlatDiagRadioReceived(otInstance *a_instance, otRadioFrame *a_frame,
                                         otError a_error) {
