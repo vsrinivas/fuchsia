@@ -51,7 +51,7 @@ async fn record_trace<W: Write>(
     let trace_config = TraceConfig {
         buffer_size_megabytes_hint: Some(opts.buffer_size),
         categories: Some(opts.categories),
-        ..TraceConfig::empty()
+        ..TraceConfig::EMPTY
     };
 
     write!(writer, "initialize tracing\n")?;
@@ -61,7 +61,7 @@ async fn record_trace<W: Write>(
     write!(writer, "starting trace\n")?;
 
     controller_proxy
-        .start_tracing(StartOptions::empty())
+        .start_tracing(StartOptions::EMPTY)
         .await?
         .map_err(|e| anyhow!("Failed to start trace: {:?}", e))?;
 
@@ -71,7 +71,7 @@ async fn record_trace<W: Write>(
     write!(writer, "stopping trace\n")?;
 
     controller_proxy
-        .stop_tracing(StopOptions { write_results: Some(true), ..StopOptions::empty() })
+        .stop_tracing(StopOptions { write_results: Some(true), ..StopOptions::EMPTY })
         .await?;
 
     write!(writer, "terminating tracing\n")?;
@@ -79,7 +79,7 @@ async fn record_trace<W: Write>(
     controller_proxy
         .terminate_tracing(TerminateOptions {
             write_results: Some(true),
-            ..TerminateOptions::empty()
+            ..TerminateOptions::EMPTY
         })
         .await?;
 
@@ -144,7 +144,7 @@ mod tests {
                     state.output = Some(output);
                 }
                 ControllerRequest::TerminateTracing { options: _, responder } => {
-                    responder.send(TerminateResult::empty()).unwrap();
+                    responder.send(TerminateResult::EMPTY).unwrap();
                 }
                 ControllerRequest::StartTracing { options: _, responder } => {
                     responder.send(&mut Ok(())).unwrap();

@@ -647,7 +647,7 @@ fn test_slew_clock() {
                 utc: Some(sample_1_utc.into_nanos()),
                 monotonic: Some(sample_1_monotonic.into_nanos()),
                 standard_deviation: Some(STD_DEV.into_nanos()),
-                ..TimeSample::empty()
+                ..TimeSample::EMPTY
             })
             .await;
 
@@ -666,7 +666,7 @@ fn test_slew_clock() {
                 utc: Some(sample_2_utc.into_nanos()),
                 monotonic: Some(sample_2_monotonic.into_nanos()),
                 standard_deviation: Some(STD_DEV.into_nanos()),
-                ..TimeSample::empty()
+                ..TimeSample::EMPTY
             })
             .await;
 
@@ -694,7 +694,7 @@ fn test_step_clock() {
                 utc: Some(sample_1_utc.into_nanos()),
                 monotonic: Some(sample_1_monotonic.into_nanos()),
                 standard_deviation: Some(STD_DEV.into_nanos()),
-                ..TimeSample::empty()
+                ..TimeSample::EMPTY
             })
             .await;
 
@@ -715,7 +715,7 @@ fn test_step_clock() {
                 utc: Some(sample_2_utc.into_nanos()),
                 monotonic: Some(sample_2_monotonic.into_nanos()),
                 standard_deviation: Some(STD_DEV.into_nanos()),
-                ..TimeSample::empty()
+                ..TimeSample::EMPTY
             })
             .await;
         wait_until(|| clock.get_details().unwrap().last_value_update_ticks != clock_last_set_ticks)

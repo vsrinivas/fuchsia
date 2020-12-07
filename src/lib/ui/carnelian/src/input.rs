@@ -5682,182 +5682,182 @@ mod test_data {
                 type_: Some(Pressed),
                 key: Some(LeftShift),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3265130500125),
                 type_: Some(Pressed),
                 key: Some(H),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3265266507731),
                 type_: Some(Released),
                 key: Some(H),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3265370503901),
                 type_: Some(Released),
                 key: Some(LeftShift),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3266834499940),
                 type_: Some(Pressed),
                 key: Some(E),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3266962508842),
                 type_: Some(Released),
                 key: Some(E),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3267154500453),
                 type_: Some(Pressed),
                 key: Some(L),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3267219444859),
                 type_: Some(Released),
                 key: Some(L),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3267346499392),
                 type_: Some(Pressed),
                 key: Some(L),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3267458502427),
                 type_: Some(Released),
                 key: Some(L),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3267690502669),
                 type_: Some(Pressed),
                 key: Some(O),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3267858501367),
                 type_: Some(Released),
                 key: Some(O),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3275178512511),
                 type_: Some(Pressed),
                 key: Some(Space),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3275274501635),
                 type_: Some(Pressed),
                 key: Some(LeftShift),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3275298499697),
                 type_: Some(Released),
                 key: Some(Space),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3275474504423),
                 type_: Some(Pressed),
                 key: Some(W),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3275586502431),
                 type_: Some(Released),
                 key: Some(LeftShift),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3275634500151),
                 type_: Some(Released),
                 key: Some(W),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3275714502408),
                 type_: Some(Pressed),
                 key: Some(O),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3275834561768),
                 type_: Some(Released),
                 key: Some(O),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3275858499854),
                 type_: Some(Pressed),
                 key: Some(R),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3276018509754),
                 type_: Some(Released),
                 key: Some(R),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3276114540325),
                 type_: Some(Pressed),
                 key: Some(L),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3276282504845),
                 type_: Some(Released),
                 key: Some(L),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3276578503737),
                 type_: Some(Pressed),
                 key: Some(D),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(3276706501366),
                 type_: Some(Released),
                 key: Some(D),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
         ]
     }
@@ -5874,28 +5874,28 @@ mod test_data {
                 type_: Some(Pressed),
                 key: Some(LeftCtrl),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(4454138519645),
                 type_: Some(Pressed),
                 key: Some(R),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(4454730534107),
                 type_: Some(Released),
                 key: Some(R),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
             KeyEvent {
                 timestamp: Some(4454738498944),
                 type_: Some(Released),
                 key: Some(LeftCtrl),
                 modifiers: None,
-                ..KeyEvent::empty()
+                ..KeyEvent::EMPTY
             },
         ]
     }

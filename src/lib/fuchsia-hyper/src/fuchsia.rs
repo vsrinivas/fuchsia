@@ -166,7 +166,7 @@ async fn resolve_ip_addr(
                 ipv4_lookup: Some(true),
                 ipv6_lookup: Some(true),
                 sort_addresses: Some(true),
-                ..fidl_fuchsia_net::LookupIpOptions2::empty()
+                ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
             },
         )
         .await
@@ -505,7 +505,7 @@ mod test {
                         ipv4_lookup: Some(true),
                         ipv6_lookup: Some(true),
                         sort_addresses: Some(true),
-                        ..fidl_fuchsia_net::LookupIpOptions2::empty()
+                        ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
                     }
                 );
                 futures::future::ready(
@@ -537,7 +537,7 @@ mod test {
                                 .map(|std| fidl_fuchsia_net_ext::IpAddress(std).into())
                                 .collect(),
                         ),
-                        ..fidl_fuchsia_net::LookupResult::empty()
+                        ..fidl_fuchsia_net::LookupResult::EMPTY
                     })
                     .map_err(|(fidl_err, _io_err)| fidl_err);
                 let expect = expect

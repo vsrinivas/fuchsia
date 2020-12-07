@@ -72,15 +72,15 @@ impl From<Index> for fcomponent_internal::ComponentIdIndex {
                                 url: Some(appmgr_moniker.url),
                                 realm_path: Some(appmgr_moniker.realm_path),
                                 transitional_realm_paths: appmgr_moniker.transitional_realm_paths,
-                                ..fcomponent_internal::AppmgrMoniker::empty()
+                                ..fcomponent_internal::AppmgrMoniker::EMPTY
                             }
                         }),
                         moniker: entry.moniker,
-                        ..fcomponent_internal::InstanceIdEntry::empty()
+                        ..fcomponent_internal::InstanceIdEntry::EMPTY
                     })
                     .collect(),
             ),
-            ..fcomponent_internal::ComponentIdIndex::empty()
+            ..fcomponent_internal::ComponentIdIndex::EMPTY
         }
     }
 }
@@ -103,12 +103,12 @@ mod tests {
                         "realm".to_string(),
                         "path".to_string(),
                     ]]),
-                    ..fcomponent_internal::AppmgrMoniker::empty()
+                    ..fcomponent_internal::AppmgrMoniker::EMPTY
                 }),
                 moniker: Some("/a/b/c".to_string()),
-                ..fcomponent_internal::InstanceIdEntry::empty()
+                ..fcomponent_internal::InstanceIdEntry::EMPTY
             }]),
-            ..fcomponent_internal::ComponentIdIndex::empty()
+            ..fcomponent_internal::ComponentIdIndex::EMPTY
         };
 
         let native_index = Index {
@@ -136,7 +136,7 @@ mod tests {
     fn missing_appmgr_restrict_isolated_persistent_storage() {
         assert_eq!(
             Some(FidlConversionError::MissingAppmgrRestrictIsolatedPersistentStorage),
-            Index::try_from(fcomponent_internal::ComponentIdIndex::empty()).err()
+            Index::try_from(fcomponent_internal::ComponentIdIndex::EMPTY).err()
         );
     }
 
@@ -146,7 +146,7 @@ mod tests {
             Some(FidlConversionError::MissingInstances),
             Index::try_from(fcomponent_internal::ComponentIdIndex {
                 appmgr_restrict_isolated_persistent_storage: Some(true),
-                ..fcomponent_internal::ComponentIdIndex::empty()
+                ..fcomponent_internal::ComponentIdIndex::EMPTY
             })
             .err()
         );
@@ -162,11 +162,11 @@ mod tests {
                     instance_id: Some("abc".to_string()),
                     appmgr_moniker: Some(fcomponent_internal::AppmgrMoniker {
                         url: None,
-                        ..fcomponent_internal::AppmgrMoniker::empty()
+                        ..fcomponent_internal::AppmgrMoniker::EMPTY
                     }),
-                    ..fcomponent_internal::InstanceIdEntry::empty()
+                    ..fcomponent_internal::InstanceIdEntry::EMPTY
                 }]),
-                ..fcomponent_internal::ComponentIdIndex::empty()
+                ..fcomponent_internal::ComponentIdIndex::EMPTY
             })
             .err()
         );
@@ -182,11 +182,11 @@ mod tests {
                     instance_id: Some("abc".to_string()),
                     appmgr_moniker: Some(fcomponent_internal::AppmgrMoniker {
                         url: Some("abc".to_string()),
-                        ..fcomponent_internal::AppmgrMoniker::empty()
+                        ..fcomponent_internal::AppmgrMoniker::EMPTY
                     }),
-                    ..fcomponent_internal::InstanceIdEntry::empty()
+                    ..fcomponent_internal::InstanceIdEntry::EMPTY
                 }]),
-                ..fcomponent_internal::ComponentIdIndex::empty()
+                ..fcomponent_internal::ComponentIdIndex::EMPTY
             })
             .err()
         );

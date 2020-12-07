@@ -2824,17 +2824,6 @@ macro_rules! fidl_table {
                 __non_exhaustive: (),
             };
 
-            #[inline]
-            pub const fn empty() -> Self {
-                #[allow(deprecated)]
-                Self {
-                    $(
-                        $member_name: None,
-                    )*
-                    __non_exhaustive: (),
-                }
-            }
-
             #[inline(always)]
             fn find_max_ordinal(&self) -> u64 {
                 $crate::fidl_reverse_blocks!{$({

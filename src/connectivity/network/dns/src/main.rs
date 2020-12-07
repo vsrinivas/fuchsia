@@ -1605,14 +1605,14 @@ mod tests {
                     let lookup_ip = |hostname, options| async move {
                         proxy.lookup_ip2(hostname, options).await.expect("FIDL error")
                     };
-                    let empty_options = fidl_fuchsia_net::LookupIpOptions2::EMPTY;
-                    let empty_result = fidl_fuchsia_net::LookupResult::EMPTY;
 
                     // All arguments unset.
                     assert_eq!(
                         lookup_ip(
                             REMOTE_IPV4_HOST,
-                            fidl_fuchsia_net::LookupIpOptions2 { ..empty_options }
+                            fidl_fuchsia_net::LookupIpOptions2 {
+                                ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
+                            }
                         )
                         .await,
                         Err(fidl_fuchsia_net::LookupError::InvalidArgs)
@@ -1624,7 +1624,7 @@ mod tests {
                             fidl_fuchsia_net::LookupIpOptions2 {
                                 ipv4_lookup: Some(false),
                                 ipv6_lookup: Some(false),
-                                ..empty_options
+                                ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
                             }
                         )
                         .await,
@@ -1637,7 +1637,7 @@ mod tests {
                             fidl_fuchsia_net::LookupIpOptions2 {
                                 ipv4_lookup: Some(false),
                                 ipv6_lookup: Some(true),
-                                ..empty_options
+                                ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
                             }
                         )
                         .await,
@@ -1650,13 +1650,13 @@ mod tests {
                             fidl_fuchsia_net::LookupIpOptions2 {
                                 ipv4_lookup: Some(true),
                                 ipv6_lookup: Some(true),
-                                ..empty_options
+                                ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
                             }
                         )
                         .await,
                         Ok(fidl_fuchsia_net::LookupResult {
                             addresses: Some(vec![map_ip(IPV4_HOST)]),
-                            ..empty_result
+                            ..fidl_fuchsia_net::LookupResult::EMPTY
                         })
                     );
                     // Successfully resolve IPv4 + IPv6 (no sorting).
@@ -1666,13 +1666,13 @@ mod tests {
                             fidl_fuchsia_net::LookupIpOptions2 {
                                 ipv4_lookup: Some(true),
                                 ipv6_lookup: Some(true),
-                                ..empty_options
+                                ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
                             }
                         )
                         .await,
                         Ok(fidl_fuchsia_net::LookupResult {
                             addresses: Some(vec![map_ip(IPV4_HOST), map_ip(IPV6_HOST)]),
-                            ..empty_result
+                            ..fidl_fuchsia_net::LookupResult::EMPTY
                         })
                     );
                     // Successfully resolve IPv4 + IPv6 (with sorting).
@@ -1683,13 +1683,13 @@ mod tests {
                                 ipv4_lookup: Some(true),
                                 ipv6_lookup: Some(true),
                                 sort_addresses: Some(true),
-                                ..empty_options
+                                ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
                             }
                         )
                         .await,
                         Ok(fidl_fuchsia_net::LookupResult {
                             addresses: Some(vec![map_ip(IPV6_HOST), map_ip(IPV4_HOST)]),
-                            ..empty_result
+                            ..fidl_fuchsia_net::LookupResult::EMPTY
                         })
                     );
                 },
