@@ -1032,6 +1032,9 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 				return nil, err
 			}
 		}
+		if err := ifs.ns.stack.DisableNIC(ifs.nicid); err != nil {
+			syslog.Errorf("error disabling NIC %d in stack.Stack while bridging endpoint: %s", ifs.nicid, err)
+		}
 		links = append(links, ifs.bridgeable)
 	}
 
