@@ -1,4 +1,4 @@
-# Introduction to the Fuchsia Testing Framework
+# Introduction to the Fuchsia Test Runner Framework
 
 This document introduces the Fuchsia Test Runner Framework along with
 fundamental concepts and terminology around testing in Fuchsia.
