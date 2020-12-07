@@ -458,7 +458,7 @@ of the dispatcher being shutdown, you can expect that all hooks provided to the
 client APIs will be executed on a dispatcher thread (and not nested within other
 user code).
 
-NOTE: If you shutdown the dispatcher while there are any active bindings, the
+Note: If you shutdown the dispatcher while there are any active bindings, the
 unbound hook may be executed on the thread executing shutdown. As such, you must
 not take any locks which could be taken by hooks provided to `fidl::Client` APIs
 while executing `async::Loop::Shutdown()/async_loop_shutdown()`. (You should
@@ -727,9 +727,6 @@ Simultaneous access from multiple threads will result in a crash.
 
 ##### Parallel message handling
 
-NOTE: This use-case is currently possible only using the
-[lib/fidl](/zircon/system/ulib/fidl) bindings.
-
 By default, messages from a single binding are handled sequentially, i.e. a
 single thread attached to the dispatcher (run loop) is woken up if necessary,
 reads the message, executes the handler, and returns back to the dispatcher. The
@@ -738,6 +735,9 @@ be used to selectively break this restriction. Specifically, a call to this API
 will enable another thread waiting on the dispatcher to handle the next message
 on the binding while the first thread is still in the handler. Note that
 repeated calls to `EnableNextDispatch()` on the same `Completer` are idempotent.
+
+Note: This use-case is currently possible only using the
+[lib/fidl](/zircon/system/ulib/fidl) bindings.
 
 ```cpp
 void DirectedScan(int16_t heading, ScanForPlanetsCompleter::Sync completer) override {
