@@ -302,8 +302,6 @@ int test_dyn_break_on_load() {
     EXPECT_EQ(dlclose(h), 0, "dlclose failed");
   }
 
-  ASSERT_EQ(zx_handle_close(self_handle), ZX_OK);
-
   return kInferiorReturnCode;
 
   END_HELPER;

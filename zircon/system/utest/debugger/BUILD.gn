@@ -56,9 +56,6 @@ test("debugger") {
   ]
 
   deps += [ "//zircon/system/utest/dlopen-indirect-deps:dlopen-indirect-deps-test-module" ]
-
-  # TODO(fxbug.dev/46869): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 bootfs_test("debugger-bootfs-test") {

@@ -236,6 +236,8 @@ bool DebuggerThreadListTest() {
     EXPECT_EQ(info.type, ZX_OBJ_TYPE_THREAD, "not a thread");
   }
 
+  free(threads);
+
   if (!shutdown_inferior(channel, inferior))
     return false;
 
