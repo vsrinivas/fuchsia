@@ -16,32 +16,6 @@
 
 namespace fidl {
 
-Message::Message() = default;
-
-Message::Message(BytePart bytes, HandlePart handles)
-    : bytes_(std::move(bytes)), handles_(std::move(handles)) {}
-
-Message::~Message() {
-#ifdef __Fuchsia__
-  if (handles_.actual() > 0) {
-    zx_handle_close_many(handles_.data(), handles_.actual());
-  }
-#endif
-  ClearHandlesUnsafe();
-}
-
-Message::Message(Message&& other)
-    : bytes_(std::move(other.bytes_)),
-      handles_(std::move(other.handles_)) {}
-
-Message& Message::operator=(Message&& other) {
-  bytes_ = std::move(other.bytes_);
-  handles_ = std::move(other.handles_);
-  return *this;
-}
-
-void Message::ClearHandlesUnsafe() { handles_.set_actual(0u); }
-
 HLCPPIncomingMessage::HLCPPIncomingMessage() = default;
 
 HLCPPIncomingMessage::HLCPPIncomingMessage(BytePart bytes, HandlePart handles)
@@ -63,16 +37,6 @@ HLCPPIncomingMessage::HLCPPIncomingMessage(HLCPPIncomingMessage&& other)
 HLCPPIncomingMessage& HLCPPIncomingMessage::operator=(HLCPPIncomingMessage&& other) {
   bytes_ = std::move(other.bytes_);
   handles_ = std::move(other.handles_);
-  return *this;
-}
-
-HLCPPIncomingMessage::HLCPPIncomingMessage(Message&& other)
-    : bytes_(std::move(other.bytes())),
-      handles_(std::move(other.handles())) {}
-
-HLCPPIncomingMessage& HLCPPIncomingMessage::operator=(Message&& other) {
-  bytes_ = std::move(other.bytes());
-  handles_ = std::move(other.handles());
   return *this;
 }
 
@@ -133,16 +97,6 @@ HLCPPOutgoingMessage::HLCPPOutgoingMessage(HLCPPOutgoingMessage&& other)
 HLCPPOutgoingMessage& HLCPPOutgoingMessage::operator=(HLCPPOutgoingMessage&& other) {
   bytes_ = std::move(other.bytes_);
   handles_ = std::move(other.handles_);
-  return *this;
-}
-
-HLCPPOutgoingMessage::HLCPPOutgoingMessage(Message&& other)
-    : bytes_(std::move(other.bytes())),
-      handles_(std::move(other.handles())) {}
-
-HLCPPOutgoingMessage& HLCPPOutgoingMessage::operator=(Message&& other) {
-  bytes_ = std::move(other.bytes());
-  handles_ = std::move(other.handles());
   return *this;
 }
 

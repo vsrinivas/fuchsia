@@ -14,42 +14,6 @@
 
 namespace fidl {
 
-// A FIDL message.
-//
-// Deprecated in favor of HLCPPIncomingMessage and HLCPPOutgoingMessage
-// and soon to be deleted.
-class [[deprecated]] Message {
- public:
-  // Creates a message without any storage.
-  Message();
-
-  // Creates a message whose storage is backed by |bytes| and |handles|.
-  Message(BytePart bytes, HandlePart handles);
-
-  ~Message();
-
-  Message(const Message& other) = delete;
-  Message& operator=(const Message& other) = delete;
-
-  Message(Message&& other);
-  Message& operator=(Message&& other);
-
-  // The storage for the bytes of the message.
-  BytePart& bytes() { return bytes_; }
-  const BytePart& bytes() const { return bytes_; }
-
-  // The storage for the handles of the message.
-  HandlePart& handles() { return handles_; }
-  const HandlePart& handles() const { return handles_; }
-
-  // Stop tracking the handles in stored in handles(), without closing them.
-  void ClearHandlesUnsafe();
-
- private:
-  BytePart bytes_;
-  HandlePart handles_;
-};
-
 // An incoming FIDL message.
 //
 // A FIDL message has two parts: the bytes and the handles. The bytes are
@@ -76,9 +40,6 @@ class HLCPPIncomingMessage {
 
   HLCPPIncomingMessage(HLCPPIncomingMessage&& other);
   HLCPPIncomingMessage& operator=(HLCPPIncomingMessage&& other);
-
-  [[deprecated]] HLCPPIncomingMessage(Message&& other);
-  [[deprecated]] HLCPPIncomingMessage& operator=(Message&& other);
 
   // The header at the start of the message.
   const fidl_message_header_t& header() const {
@@ -184,9 +145,6 @@ class HLCPPOutgoingMessage {
 
   HLCPPOutgoingMessage(HLCPPOutgoingMessage&& other);
   HLCPPOutgoingMessage& operator=(HLCPPOutgoingMessage&& other);
-
-  [[deprecated]] HLCPPOutgoingMessage(Message&& other);
-  [[deprecated]] HLCPPOutgoingMessage& operator=(Message&& other);
 
   // The header at the start of the message.
   const fidl_message_header_t& header() const {
