@@ -1445,7 +1445,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
     switch (Peek().combined()) {
       default:
-        Fail(ErrExpectedDeclaration);
+        Fail(ErrExpectedDeclaration, last_token_.data());
         return More;
 
       case CASE_TOKEN(Token::Kind::kEndOfFile):

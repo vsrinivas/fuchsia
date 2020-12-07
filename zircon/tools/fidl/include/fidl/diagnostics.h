@@ -18,7 +18,7 @@ constexpr ErrorDef<std::string_view> ErrInvalidCharacter("invalid character '{}'
 // ---------------------------------------------------------------------------
 // Parser
 // ---------------------------------------------------------------------------
-constexpr ErrorDef ErrExpectedDeclaration("expected start of declaration");
+constexpr ErrorDef<std::basic_string_view<char>> ErrExpectedDeclaration("invalid declaration type {}");
 constexpr ErrorDef ErrUnexpectedToken("found unexpected token");
 constexpr ErrorDef<Token::KindAndSubkind, Token::KindAndSubkind> ErrUnexpectedTokenOfKind(
     "unexpected token {}, was expecting {}");
