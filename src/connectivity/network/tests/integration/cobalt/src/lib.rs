@@ -121,6 +121,17 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
         &[fidl_fuchsia_cobalt::CountEvent { count: 2, period_duration_micros: _ }]
     );
 
+    assert_eq!(
+        events_with_id(&events_post_first_drop, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
+            .iter()
+            .map(|ev| ev.count)
+            .sum::<i64>(),
+        2,
+        "events: {:?}",
+        MultilineSlice(&events_post_first_drop),
+    );
+
+    // TODO(fxbug.dev/43242): This is currently FIN-ACK, ACK but should be FIN-ACK, FIN-ACK.
     const EXPECTED_PACKET_COUNT: i64 = 2;
 
     // TCP payload size (12) + TCP headers (20) + IP minimum size (20)
@@ -159,13 +170,11 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
         MultilineSlice(&events_post_first_drop),
     );
 
-    // In case of active-close, this metric is updated only on reaching
-    // TIME_WAIT, after receiving FIN from the peer.
     assert_eq!(
         events_with_id(&events_post_first_drop, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
             .map(|fidl_fuchsia_cobalt::CountEvent { period_duration_micros: _, count }| *count)
             .sum::<i64>(),
-        1,
+        2,
         "sockets destroyed. events: {:?}",
         MultilineSlice(&events_post_first_drop),
     );
@@ -183,7 +192,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
         events_with_id(&events_post_final_drop, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
             .map(|fidl_fuchsia_cobalt::CountEvent { period_duration_micros: _, count }| *count)
             .sum::<i64>(),
-        2,
+        1,
         "sockets destroyed. events: {:?}",
         MultilineSlice(&events_post_final_drop)
     );
