@@ -14,7 +14,7 @@ toc:
   path: /CODE_OF_CONDUCT.md
 - title: "Community"
   section:
-  - include: /docs/contribute/_toc.yaml
+  - include: /docs/contribute/community/_toc.yaml
 - title: "Respectful code"
   path: /docs/contribute/respectful_code.md
 - title: "Contributing to Zircon"
