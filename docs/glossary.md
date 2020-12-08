@@ -138,7 +138,7 @@ datagram-like transport that can transfer small messages including
 underlying transport.
 
 -   [Channel Overview](/docs/reference/kernel_objects/channel.md)
--   [Update Channel Usage Policy](/docs/contribute/best-practices/update_channel_usage_policy.md)
+-   [Update Channel Usage Policy](/docs/contribute/governance/policy/update_channel_usage_policy.md)
 
 ### **Component** {#component}
 

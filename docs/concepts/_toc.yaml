@@ -2,16 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Please, read https://fuchsia.dev/fuchsia-src/community/contribute/docs/documentation_navigation_toc
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/docs/documentation-navigation-toc
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /docs/concepts
+  path: /docs/concepts/index.md
 - title: "API"
   section:
   - include: /docs/concepts/api/_toc.yaml
-- title: "Architecture"
+- title: "Architecture principles"
+  section:
+  - include: /docs/concepts/principles/_toc.yaml
+- title: "Architecture support"
   section:
   - include: /docs/concepts/architecture/_toc.yaml
 - title: "Bluetooth"

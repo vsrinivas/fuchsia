@@ -44,7 +44,7 @@ Most documentation can be divided into the following categories:
     - Guides - Task-oriented documentation
 - [Conceptual](documentation-types.md#conceptual-documentation) - Foundational
   documentation focused on teaching more about Fuchsia, Fuchsia architecture, and Fuchsia components
-- [Reference](documentation-types.md#reference-documentation) - Documentation focused on 
+- [Reference](documentation-types.md#reference-documentation) - Documentation focused on
   detailing the syntax and parameters of Fuchsia APIs and tools. This documentation is usually
   auto-generated.
 
@@ -90,7 +90,7 @@ contains a command with an underscore, then you can include the underscore.
   complicated words when you describe something. It's ok to use contractions like "it's" or
   "don't".
 
-- **Be respectful** Follow the guidelines set forth in [Respectful Code](/docs/contribute/best-practices/respectful_code.md).
+- **Be respectful** Follow the guidelines set forth in [Respectful Code](/docs/contribute/respectful_code.md).
 
 - **Write in second-person ("you")**: Fuchsia documentation is written to the user ("you"). When
   For example, "You can install Fuchsia by doing the following...". Do not refer to the reader in the
@@ -100,7 +100,7 @@ contains a command with an underscore, then you can include the underscore.
 - **Write in present tense.** Always document the system as it is, not as it will be. Words such
   as "will" are very ambiguous. For example "you will see" leads to questions like "when will I see
   this?". In 1 minute or in 20 minutes? In addition, do not refer to future product features unless
-  necessary.  Mentioning future plans that might not happen becomes a maintenence burden. 
+  necessary.  Mentioning future plans that might not happen becomes a maintenence burden.
 
 - **Keep sentences short and concrete.** Using punctuation allows your reader to follow
   instructions or and understand concepts. Also, short sentences are much easier
@@ -129,9 +129,9 @@ contains a command with an underscore, then you can include the underscore.
   the [glossary](/docs/glossary.md).
 
 - **Avoid coloquial phrases or regional idioms** Keep in mind that a lot of users are non-native
-  English speakers interested in Fucshia. Avoid difficult to translate idioms, like 
+  English speakers interested in Fuchsia. Avoid difficult to translate idioms, like
   "that's the way the cookie crumbles". While it might make sense to you, it doesn't translate
-  well into other languages. 
+  well into other languages.
 
 - **Avoid referencing proprietary information.** This can refer to any potential terminology or
   product names that may be trademarked or any internal information (API keys, machine names, etc…)

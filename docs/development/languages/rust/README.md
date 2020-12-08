@@ -92,7 +92,7 @@ change with one of the above as the reviewer).
 
 ## Communication channels
 
-Public discussion happens on the [rust-fuchsia@fuchsia.com] mailing list.
+Public discussion happens on the [rust-users@fuchsia.dev] mailing list.
 
 {% dynamic if user.is_googler %}
 
@@ -127,6 +127,6 @@ Public discussion happens on the [rust-fuchsia@fuchsia.com] mailing list.
 [rustfmt-install]: https://github.com/rust-lang-nursery/rustfmt#quick-start
 [rustfmt-toml]: /rustfmt.toml
 [fidl-tutorial]: /docs/development/languages/fidl/tutorials/rust
-[rust-fuchsia@fuchsia.com]: https://groups.google.com/a/fuchsia.com/forum/#!forum/rust-fuchsia
+[rust-users@fuchsia.dev]: https://groups.google.com/a/fuchsia.dev/g/rust-users
 [go/fuchsia-rust-googlers]: https://goto.google.com/fuchsia-rust-googlers
 [rust-proc-macros]: https://doc.rust-lang.org/reference/procedural-macros.html

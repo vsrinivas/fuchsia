@@ -7,11 +7,17 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /docs/contribute/governance/README.md
+  path: /docs/contribute/governance/index.md
+- title: "Governance"
+  path: /docs/contribute/governance/governance.md
 - title: "Eng Council"
   path: /docs/contribute/governance/eng_council.md
-- title: "API Council"
-  path: /docs/contribute/governance/api_council.md
+- title: "API"
+  section:
+  - title: "API Council"
+    path: /docs/contribute/governance/api_council.md
+  - title: "API Design Document template"
+    path: /docs/contribute/governance/api-design-template.md
 - title: "Project policy"
   section:
   - include: /docs/contribute/governance/policy/_toc.yaml

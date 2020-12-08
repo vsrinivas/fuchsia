@@ -6,7 +6,9 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Respectful code"
-  path: /docs/contribute/best-practices/respectful_code.md
-- title: "Update channel usage policy"
-  path: /docs/contribute/best-practices/update_channel_usage_policy.md
+- title: "Overview"
+  path: /docs/contribute/community/index.md
+- title: "Get involved"
+  path: /docs/contribute/community/get-involved.md
+- title: "Contributor roles"
+  path: /docs/contribute/community/contributor-roles.md

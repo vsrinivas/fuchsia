@@ -8,16 +8,22 @@
 toc:
 - title: "Contributing to Fuchsia"
   path: /CONTRIBUTING.md
+- title: "Fuchsia roadmap"
+  path: /docs/contribute/roadmap.md
 - title: "Code of conduct"
   path: /CODE_OF_CONDUCT.md
+- title: "Community"
+  section:
+  - include: /docs/contribute/contribute/_toc.yaml
+- title: "Respectful code"
+  path: /docs/contribute/respectful_code.md
 - title: "Contributing to Zircon"
   path: /docs/contribute/contributing_to_zircon.md
 - title: "Contributing to FIDL"
   section:
   - include: /docs/contribute/contributing-to-fidl/_toc.yaml
-- title: "Best practices"
-  section:
-  - include: /docs/contribute/best-practices/_toc.yaml
 - title: "Documentation"
   section:
   - include: /docs/contribute/docs/_toc.yaml
+- title: "Report an issue"
+  path: /docs/contribute/report-issue.md

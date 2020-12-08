@@ -8,7 +8,7 @@
 toc:
 - title: "Overview"
   path: /docs/get-started/README.md
-- heading: "Get Started with Fuchsia OS"
+- heading: "Get Started with Fuchsia"
 - title: "Get source code"
   path: /docs/get-started/get_fuchsia_source.md
 - title: "Configure and build Fuchsia"

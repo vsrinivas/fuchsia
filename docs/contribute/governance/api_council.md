@@ -195,7 +195,7 @@ council member responsible for that area, but any council member can approve the
 change if the responsible council member is unavailable.
 
 Before being merged, every change that modifies the Fuchsia API Surface must receive
-an API-Review+1 from a member of [api-council@fuchsia.com][api-council-group] in
+an API-Review+1 from a member of [api-council@fuchsia.dev][api-council-group] in
 addition to the usual Code-Review+2. The same person can provide both
 API-Review+1 and Code-Review+2 for a given change, but someone cannot give their
 own CLs API-Review+1. See [Review Labels][review-labels] for documentation about
@@ -316,8 +316,7 @@ on early drafts of this document.
 <!-- Reference links -->
 
 [api-council-group]: https://groups.google.com/a/fuchsia.com/forum/#!forum/api-council
-<!-- TODO(fxb/62922): Publish the Fuchsia API Design Template -->
-[api-design-template]: http://go.corp.google.com/fuchsia-api-design-template
+[api-design-template]: /docs/contribute/governance/api-design-template.md
 [eng-council]: /docs/contribute/governance/eng_council.md
 [review-labels]: https://gerrit-review.googlesource.com/Documentation/config-labels.html
 [rough-consensus]: https://en.wikipedia.org/wiki/Rough_consensus

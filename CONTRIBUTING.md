@@ -1,31 +1,34 @@
 # Contributing to Fuchsia
 
-We'd love to accept your patches and contributions to the Fuchsia project. There are
-just a few small guidelines you need to follow.
-
-For the detailed instructions on how to contribute changes,
-see the [Contribute changes](/docs/development/source_code/contribute_changes.md) page.
+Fuchsia lets anyone contribute to the project, regardless of their employer.
+The Fuchsia project reviews and encourages well-tested, high-quality
+contributions from anyone who wants to contribute to Fuchsia.
 
 ## Contributor License Agreement
 
 Contributions to this project must be accompanied by a Contributor License
-Agreement. You (or your employer) retain the copyright to your contribution;
-this simply gives us permission to use and redistribute your contributions as
-part of the project. Head over to <https://cla.developers.google.com/> to see
-your current agreements on file or to sign a new one.
+Agreement (CLA).
 
-You generally only need to submit a CLA once, so if you've already submitted one
-(even if it was for a different project), you probably don't need to do it
-again.
+To see any Contributor License Agreements on file or to sign a CLA, go to <https://cla.developers.google.com/>.
 
-## Code reviews
+For more information about the Google CLA, see [Contributor License Agreements](https://cla.developers.google.com/about).
 
-All submissions, including submissions by project members, require review. We
-use [Gerrit](https://fuchsia-review.googlesource.com/) for this purpose. Consult
-[Gerrit User Guide](https://gerrit-review.googlesource.com/Documentation/intro-user.html) for more
-information on using Gerrit.
+## Contributing changes and submitting code reviews
 
-## Community Guidelines
+All changes require review, including changes by project members.
 
-This project follows
-[Google's Open Source Community Guidelines](https://opensource.google/conduct/).
+For detailed instructions on how to contribute changes,
+see [Contribute changes](/docs/development/source_code/contribute_changes.md).
+
+## Community guidelines
+
+This project observes the following community guidelines:
+
+  * [Google's Open Source Community Guidelines](https://opensource.google/conduct/)
+
+  * [Fuchsia Code of Conduct](/docs/CODE_OF_CONDUCT.md)
+
+## Governance
+
+Review Fuchsia's [Governance](/docs/contribute/governance/governance.md)
+statement.

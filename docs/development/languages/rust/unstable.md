@@ -41,7 +41,7 @@ of them helps to prove them out and move them further along the path to stabiliz
 
 ## The Process
 
-Unstable feature requests should be sent to the rust-fuchsia@fuchsia.com mailing list.
+Unstable feature requests should be sent to the [rust-users@fuchsia.dev] mailing list.
 They should be hosted on docs.google.com to allow for comments and suggestion on the
 document itself. Proposals should include the following information:
 
@@ -86,3 +86,5 @@ There are no longer any unstable features used in Fuchsia! The last one was
 [rust builder]: https://ci.chromium.org/p/fuchsia/g/rust/console
 [third_party/rust]: https://fuchsia.googlesource.com/third_party/rust/
 [tracking issues]: https://github.com/rust-lang/rust/issues?q=is%3Aopen+is%3Aissue+label%3AC-tracking-issue
+
+[rust-users@fuchsia.dev]: https://groups.google.com/a/fuchsia.dev/g/rust-users

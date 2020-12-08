@@ -72,7 +72,7 @@ with multiple entries:
   An expandable section is an expandable group of multiple entries in a table
   of contents. For example, see the expandable sections, such as Networking
   and Graphics, in the
-  [Concepts section](/docs/concepts/README.md). Each expandable
+  [Concepts section](/docs/concepts/index.md). Each expandable
   section has an arrow to the left of the section name.
 
   You can create a group of entries with a `section` element. Each section must

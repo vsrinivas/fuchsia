@@ -1,6 +1,6 @@
 # Zircon
 
-Zircon is the core platform that powers the Fuchsia OS. Zircon is
+Zircon is the core platform that powers the Fuchsia. Zircon is
 composed of a microkernel (source in [/zircon/kernel](/zircon/kernel)
 as well as a small set of userspace services, drivers, and libraries
 (source in [/zircon/system/](/zircon/system) necessary for the system
