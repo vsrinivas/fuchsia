@@ -122,13 +122,13 @@ To become an Owner you must do the following:
 
 ### Global Approver {:#global-approver}
 
-A Global Approver is an Owner in the [root `OWNERS` file](https://fuchsia.googlesource.com/fuchsia/+/master/OWNERS){:.external}.
+A Global Approver is an Owner in the [root `OWNERS` file](/OWNERS){:.external}.
 A Global Approver often makes large-scale changes that affect the entire Fuchsia
 codebase. For example, Global Approvers are people who tend to maintain
 various languages, toolchains, and other build system components.
 
 For the full set of Global Approver expectations as well as the list of current
-Global Approvers, see [the root `OWNERS` file](https://fuchsia.googlesource.com/fuchsia/+/master/OWNERS){:.external}.
+Global Approvers, see [the root `OWNERS` file](/OWNERS){:.external}.
 
 While Global Approvers are empowered to provide a [Code-Review +2](https://gerrit-review.googlesource.com/Documentation/config-labels.html){:.external}
 to large-scale changes, Global Approvers are not expected to have comprehensive
@@ -152,10 +152,10 @@ To become a Global Approver you must do the following:
 *   Self-nominate or get nominated by another Committer.
     *  To self-nominate, do the following:
         * [Submit a Gerrit change](/docs/development/source_code/contribute_changes.md)
-          that adds yourself to the [root `OWNERS` file](https://fuchsia.googlesource.com/fuchsia/+/master/OWNERS){:.external}.
+          that adds yourself to the [root `OWNERS` file](/OWNERS){:.external}.
           Current Owners will evaluate your change and either accept or reject your
           request.
-        * Email all [existing Global Approvers](https://fuchsia.googlesource.com/fuchsia/+/master/OWNERS){:.external}
+        * Email all [existing Global Approvers](/OWNERS){:.external}
           with your associated Gerrit change and wait one business day for discussion
           and approval. If you are being nominated, existing Global Approvers will be
           emailed by the individual nominating you.

@@ -9,10 +9,10 @@ Fuchsia Project file headers will list `Copyright <year> The Fuchsia Authors`.
 
 Fuchsia is subject to multiple licenses:
 
-  *   The Fuchsia kernel is released under the following MIT-style license: [https://fuchsia.googlesource.com/fuchsia/+/master/zircon/kernel/LICENSE](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/kernel/LICENSE).
-  *   All Fuchsia user space components are released under a BSD-style license: [https://fuchsia.googlesource.com/fuchsia/+/master/LICENSE](https://fuchsia.googlesource.com/fuchsia/+/master/LICENSE)
+  *   The Fuchsia kernel is released under the following MIT-style license: [https://fuchsia.googlesource.com/fuchsia/+/master/zircon/kernel/LICENSE](/zircon/kernel/LICENSE).
+  *   All Fuchsia user space components are released under a BSD-style license: [https://fuchsia.googlesource.com/fuchsia/+/master/LICENSE](/LICENSE)
       or an Apache 2.0 license: [https://fuchsia.googlesource.com/infra/+/master/LICENSE](https://fuchsia.googlesource.com/infra/+/master/LICENSE).
-  *   All code that is BSD-licensed has an additional IP grant: [https://fuchsia.googlesource.com/fuchsia/+/master/PATENTS](https://fuchsia.googlesource.com/fuchsia/+/master/PATENTS).
+  *   All code that is BSD-licensed has an additional IP grant: [https://fuchsia.googlesource.com/fuchsia/+/master/PATENTS](/PATENTS).
 
 Any code that has a different copyright holder or that is released under a
 different license is considered external code per this policy and must adhere
@@ -97,11 +97,11 @@ portion of code.
 
 The following are the approved licenses for production target devices:
 
-  * BSD 3-clause license, specifically the text at [https://fuchsia.googlesource.com/fuchsia/+/master/LICENSE](https://fuchsia.googlesource.com/fuchsia/+/master/LICENSE)
+  * BSD 3-clause license, specifically the text at [https://fuchsia.googlesource.com/fuchsia/+/master/LICENSE](/LICENSE)
 
   * BSD 2-clause license, specifically the text at [https://opensource.org/licenses/BSD-2-Clause](https://opensource.org/licenses/BSD-2-Clause)
 
-  *   MIT license, specifically the text at [https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/kernel/LICENSE](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/kernel/LICENSE)
+  *   MIT license, specifically the text at [https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/kernel/LICENSE](/zircon/kernel/LICENSE)
 
   *   Zlib license, specifically the text at [https://fuchsia.googlesource.com/third\_party/zlib/+/master/README#85](https://fuchsia.googlesource.com/third\_party/zlib/+/master/README#85)
 
