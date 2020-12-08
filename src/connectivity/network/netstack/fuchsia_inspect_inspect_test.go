@@ -205,8 +205,8 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 	}
 
 	// Empty the endpoints.
-	ns.endpoints.Range(func(key uint64, _ tcpip.Endpoint) bool {
-		ns.endpoints.Delete(key)
+	ns.endpoints.Range(func(handle zx.Handle, _ tcpip.Endpoint) bool {
+		ns.endpoints.Delete(handle)
 		return true
 	})
 	children = v.ListChildren()
