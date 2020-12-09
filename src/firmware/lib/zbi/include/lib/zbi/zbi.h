@@ -20,8 +20,8 @@
 // (3) Tested
 //     Tests for this library can be found at zircon/system/utest/zbi/*
 
-#ifndef LIB_ZBI_ZBI_H_
-#define LIB_ZBI_ZBI_H_
+#ifndef SRC_FIRMWARE_LIB_ZBI_INCLUDE_LIB_ZBI_ZBI_H_
+#define SRC_FIRMWARE_LIB_ZBI_INCLUDE_LIB_ZBI_ZBI_H_
 
 #include <stddef.h>
 #include <zircon/boot/image.h>
@@ -131,11 +131,13 @@ zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t callback, voi
 //     extra - The new entry's type-specific data.
 //     flags - The new entry's flags.
 //     payload_length - The length of the new entry's payload.
-//     payload - Set to the address of the entry's payload.
+//     payload - Set to the address of the entry's payload. May be NULL if
+//               |payload_length| is 0 or the payload has been previously
+//               filled via zbi_get_next_entry_payload().
 //
 // Returns:
 //     ZBI_RESULT_OK - On success.
-//     ZBI_RESULT_ERROR - If base or payload is NULL or if the CRC32 flag is used.
+//     ZBI_RESULT_ERROR - If base is NULL or if the CRC32 flag is used.
 //     ZBI_RESULT_BAD_TYPE - If the base ZBI is not a valid ZBI container.
 //     ZBI_RESULT_TOO_BIG - If the base ZBI is too small.
 zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32_t extra,
@@ -169,6 +171,36 @@ zbi_result_t zbi_create_entry_with_payload(void* base, size_t capacity, uint32_t
                                            uint32_t extra, uint32_t flags, const void* payload,
                                            uint32_t payload_length);
 
+// Returns the payload buffer for the next ZBI entry to add.
+//
+// This is useful when it's non-trivial to determine the length of a payload
+// ahead of time - for example, loading a variable-length string from persistent
+// storage.
+//
+// Rather than loading the payload into a temporary buffer, determining the
+// length, then copying it into the ZBI, this function allows loading data
+// directly into the ZBI. Since this buffer is currently unused area, loading
+// data here does not affect the ZBI until zbi_create_entry() is called.
+//
+// Expected usage:
+//   1. Get payload buffer and max size from zbi_get_next_entry_payload()
+//   2. Fill payload with data
+//   3. Call zbi_create_entry() to add the new ZBI entry to the container.
+//
+// Parameters:
+//     base - The base ZBI.
+//     capacity - The max potential size of the base ZBI.
+//     payload - Set to the address of the next entry's payload.
+//     max_payload_length - Set to the max length the next payload can have.
+//
+// Returns:
+//     ZBI_RESULT_OK - On success.
+//     ZBI_RESULT_ERROR - If required args are NULL or the CRC32 flag is used.
+//     ZBI_RESULT_BAD_TYPE - If the base ZBI is not a valid ZBI container.
+//     ZBI_RESULT_TOO_BIG - If the ZBI capacity is too small to add a new item.
+zbi_result_t zbi_get_next_entry_payload(void* base, size_t capacity, void** payload,
+                                        uint32_t* max_payload_length);
+
 // Extends a ZBI container with another container's payload.
 //
 // Both dst and src must be ZBI containers.
@@ -187,4 +219,4 @@ zbi_result_t zbi_extend(void* dst, size_t capacity, const void* src);
 
 __END_CDECLS
 
-#endif  // LIB_ZBI_ZBI_H_
+#endif  // SRC_FIRMWARE_LIB_ZBI_INCLUDE_LIB_ZBI_ZBI_H_

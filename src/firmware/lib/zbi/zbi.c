@@ -6,6 +6,9 @@
 #include <stdbool.h>
 #include <string.h>
 
+// At most, a ZBI container can be the header + 32 bytes of length.
+#define MAX_CONTAINER_SIZE (sizeof(zbi_header_t) + 0xFFFFFFFFull)
+
 struct check_state {
   zbi_header_t** err;
   bool seen_bootfs;
@@ -190,7 +193,7 @@ zbi_result_t zbi_create_entry_with_payload(void* base, const size_t capacity, ui
 
 zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32_t extra,
                               uint32_t flags, uint32_t payload_length, void** payload) {
-  if (!base || !payload) {
+  if (!base) {
     return ZBI_RESULT_ERROR;
   }
 
@@ -201,17 +204,16 @@ zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32
 
   zbi_header_t* hdr = (zbi_header_t*)base;
 
-  // Make sure we were actually passed a bootdata container.
-  if (!is_zbi_container(hdr)) {
-    return ZBI_RESULT_BAD_TYPE;
+  // Find the payload entry point and make sure we have enough room.
+  void* next_payload = NULL;
+  uint32_t max_payload_length = 0;
+  zbi_result_t result =
+      zbi_get_next_entry_payload(base, capacity, &next_payload, &max_payload_length);
+  if (result != ZBI_RESULT_OK) {
+    return result;
   }
 
-  // Make sure we have enough space in the buffer to append the new section.
-  if (capacity < sizeof(*hdr) || capacity - sizeof(*hdr) < hdr->length) {
-    return ZBI_RESULT_TOO_BIG;
-  }
-  const size_t available = capacity - sizeof(*hdr) - hdr->length;
-  if (available < sizeof(*hdr) || available - sizeof(*hdr) < ZBI_ALIGN(payload_length)) {
+  if (max_payload_length < payload_length) {
     return ZBI_RESULT_TOO_BIG;
   }
 
@@ -226,8 +228,11 @@ zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32
       .crc32 = ZBI_ITEM_NO_CRC32,
   };
 
-  // Tell the caller where to fill in the payload.
-  *payload = new_header + 1;
+  // Tell the caller where to fill in the payload. They may not need this if
+  // the payload has already been loaded or the length is 0.
+  if (payload) {
+    *payload = next_payload;
+  }
 
   // Update the container header, always keeping the length aligned.
   hdr->length += sizeof(*new_header) + new_header->length;
@@ -238,6 +243,40 @@ zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32
     hdr->length = aligned_length;
   }
 
+  return ZBI_RESULT_OK;
+}
+
+zbi_result_t zbi_get_next_entry_payload(void* base, size_t capacity, void** payload,
+                                        uint32_t* max_payload_length) {
+  if (!base || !payload || !max_payload_length) {
+    return ZBI_RESULT_ERROR;
+  }
+
+  zbi_header_t* hdr = (zbi_header_t*)base;
+
+  // Make sure we were actually passed a bootdata container.
+  if (!is_zbi_container(hdr)) {
+    return ZBI_RESULT_BAD_TYPE;
+  }
+
+  // Determine the maximum payload size available.
+  // It's OK if the caller has more capacity available than the ZBI can actually
+  // take, e.g. a bootloader may just supply whatever leftover memory it has.
+  // Just truncate to the max ZBI size and ignore any extra capacity.
+  if (capacity > MAX_CONTAINER_SIZE) {
+    capacity = MAX_CONTAINER_SIZE;
+  }
+  if (capacity < sizeof(*hdr) || capacity - sizeof(*hdr) < hdr->length) {
+    return ZBI_RESULT_TOO_BIG;
+  }
+  const uint32_t available = (capacity - sizeof(*hdr) - hdr->length) & ~(ZBI_ALIGNMENT - 1);
+  if (available < sizeof(*hdr)) {
+    return ZBI_RESULT_TOO_BIG;
+  }
+
+  // The next payload starts after the current container + the next header.
+  *payload = (uint8_t*)(hdr + 2) + hdr->length;
+  *max_payload_length = available - sizeof(*hdr);
   return ZBI_RESULT_OK;
 }
 

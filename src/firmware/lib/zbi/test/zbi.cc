@@ -510,28 +510,31 @@ TEST(ZbiTests, ZbiTestCreateEntryTestZbi) {
 TEST(ZbiTests, ZbiTestCreateEntryTestZbiNull) {
   void* payload = nullptr;
 
-  ASSERT_EQ(zbi_create_entry(nullptr, 0, 0, 0, 0, 0, &payload), ZBI_RESULT_ERROR);
+  ASSERT_EQ(zbi_create_entry(nullptr, sizeof(single_entry_test_zbi_t), 0, 0, 0, 0, &payload),
+            ZBI_RESULT_ERROR);
 }
 
 TEST(ZbiTests, ZbiTestCreateEntryTestZbiNullPayload) {
-  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  single_entry_test_zbi_t zbi;
 
-  ASSERT_EQ(zbi_create_entry(&container, 0, 0, 0, 0, 0, nullptr), ZBI_RESULT_ERROR);
+  ASSERT_EQ(zbi_create_entry(&zbi, sizeof(zbi), ZBI_TYPE_DISCARD, 0, 0, 0, nullptr), ZBI_RESULT_OK);
+  ASSERT_EQ(zbi.entry_header.type, ZBI_TYPE_DISCARD);
 }
 
 TEST(ZbiTests, ZbiTestCreateEntryTestZbiCrc32NotSupported) {
-  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  single_entry_test_zbi_t zbi;
   void* payload = nullptr;
 
-  ASSERT_EQ(zbi_create_entry(&container, 0, 0, 0, ZBI_FLAG_CRC32, 0, &payload), ZBI_RESULT_ERROR);
+  ASSERT_EQ(zbi_create_entry(&zbi, sizeof(zbi), 0, 0, ZBI_FLAG_CRC32, 0, &payload),
+            ZBI_RESULT_ERROR);
 }
 
 TEST(ZbiTests, ZbiTestCreateEntryTestZbiNotContainer) {
-  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
-  container.type = 0;
+  single_entry_test_zbi_t zbi;
+  zbi.container.type = 0;
   void* payload = nullptr;
 
-  ASSERT_EQ(zbi_create_entry(&container, 0, 0, 0, 0, 0, &payload), ZBI_RESULT_BAD_TYPE);
+  ASSERT_EQ(zbi_create_entry(&zbi, sizeof(zbi), 0, 0, 0, 0, &payload), ZBI_RESULT_BAD_TYPE);
 }
 
 // create entry tests
@@ -622,6 +625,140 @@ TEST(ZbiTests, ZbiTestCreateEntryWithPayloadTestZbiSectionTooLarge) {
   ASSERT_EQ(zbi_create_entry_with_payload(&container, /*capacity=*/1, 0, 0, 0, &payload,
                                           /*payload_length=*/2),
             ZBI_RESULT_TOO_BIG);
+}
+
+TEST(ZbiTests, GetNextEntryPayload) {
+  void* payload = nullptr;
+  uint32_t max_payload_length = 0;
+  single_entry_test_zbi_t zbi;
+  ASSERT_EQ(zbi_get_next_entry_payload(&zbi, sizeof(zbi), &payload, &max_payload_length),
+            ZBI_RESULT_OK);
+
+  ASSERT_EQ(payload, &zbi.entry_payload);
+  ASSERT_EQ(max_payload_length, sizeof(zbi.entry_payload));
+}
+
+TEST(ZbiTests, GetNextEntryPayloadZeroLength) {
+  void* payload = nullptr;
+  uint32_t max_payload_length = 0;
+  single_entry_test_zbi_t zbi;
+  ASSERT_EQ(
+      zbi_get_next_entry_payload(&zbi, 2 * sizeof(zbi_header_t), &payload, &max_payload_length),
+      ZBI_RESULT_OK);
+
+  // Zero-length payload is OK, as long as we can fit the header.
+  ASSERT_EQ(payload, &zbi.entry_payload);
+  ASSERT_EQ(max_payload_length, 0);
+}
+
+TEST(ZbiTests, GetNextEntryPayloadUnalignedCapacity) {
+  void* payload = nullptr;
+  uint32_t max_payload_length = 0;
+  single_entry_test_zbi_t zbi;
+  ASSERT_EQ(zbi_get_next_entry_payload(&zbi, sizeof(zbi) + 1, &payload, &max_payload_length),
+            ZBI_RESULT_OK);
+
+  // Max payload length should ignore the extra unaligned byte.
+  ASSERT_EQ(payload, &zbi.entry_payload);
+  ASSERT_EQ(max_payload_length, sizeof(zbi.entry_payload));
+}
+
+TEST(ZbiTests, GetNextEntryPayloadMaxZbiCapacity) {
+  void* payload = nullptr;
+  uint32_t max_payload_length = 0;
+  single_entry_test_zbi_t zbi;
+  ASSERT_EQ(zbi_get_next_entry_payload(&zbi, SIZE_MAX, &payload, &max_payload_length),
+            ZBI_RESULT_OK);
+
+  // ZBI contents (in this case, 1 header + 1 payload) must fit in a uint32_t.
+  // Masking out 0x07 bits is for proper ZBI alignment.
+  ASSERT_EQ(payload, &zbi.entry_payload);
+  ASSERT_EQ(sizeof(zbi_header_t) + max_payload_length, UINT32_MAX & ~0x07);
+}
+
+TEST(ZbiTests, GetNextEntryPayloadAndCreate) {
+  void* payload = nullptr;
+  uint32_t max_payload_length = 0;
+  single_entry_test_zbi_t zbi;
+  ASSERT_EQ(zbi_get_next_entry_payload(&zbi, sizeof(zbi), &payload, &max_payload_length),
+            ZBI_RESULT_OK);
+
+  const uint32_t data = 0x0123ABCD;
+  memcpy(payload, &data, sizeof(data));
+
+  ASSERT_EQ(zbi_create_entry(&zbi, sizeof(zbi), ZBI_TYPE_DISCARD, 0, 0, sizeof(data), nullptr),
+            ZBI_RESULT_OK);
+
+  // Make sure zbi_create_entry() left the pre-loaded payload intact.
+  ASSERT_BYTES_EQ(reinterpret_cast<uint8_t*>(zbi.entry_payload),
+                  reinterpret_cast<const uint8_t*>(&data), sizeof(data));
+}
+
+TEST(ZbiTests, GetNextEntryPayloadWithNullZbi) {
+  void* payload = nullptr;
+  uint32_t max_payload_length = 0;
+  ASSERT_EQ(zbi_get_next_entry_payload(nullptr, sizeof(single_entry_test_zbi_t), &payload,
+                                       &max_payload_length),
+            ZBI_RESULT_ERROR);
+}
+
+TEST(ZbiTests, GetNextEntryPayloadWithNullPayload) {
+  uint32_t max_payload_length = 0;
+  single_entry_test_zbi_t zbi;
+  ASSERT_EQ(zbi_get_next_entry_payload(&zbi, sizeof(zbi), nullptr, &max_payload_length),
+            ZBI_RESULT_ERROR);
+}
+
+TEST(ZbiTests, GetNextEntryPayloadWithNullMaxPayloadLength) {
+  void* payload = nullptr;
+  single_entry_test_zbi_t zbi;
+  ASSERT_EQ(zbi_get_next_entry_payload(&zbi, sizeof(zbi), &payload, nullptr), ZBI_RESULT_ERROR);
+}
+
+TEST(ZbiTests, GetNextEntryPayloadMissingZbiContainer) {
+  void* payload = nullptr;
+  uint32_t max_payload_length = 0;
+  single_entry_test_zbi_t zbi;
+
+  zbi.container.type = 0;
+  ASSERT_EQ(zbi_get_next_entry_payload(&zbi, sizeof(zbi), &payload, &max_payload_length),
+            ZBI_RESULT_BAD_TYPE);
+}
+
+// Should never happen, but make sure we can handle if the capacity is smaller
+// than the container header.
+TEST(ZbiTests, GetNextEntryPayloadCapacitySmallerThanHeaderSize) {
+  void* payload = nullptr;
+  uint32_t max_payload_length = 0;
+  single_entry_test_zbi_t zbi;
+  ASSERT_EQ(
+      zbi_get_next_entry_payload(&zbi, sizeof(zbi_header_t) - 1, &payload, &max_payload_length),
+      ZBI_RESULT_TOO_BIG);
+}
+
+// Should never happen, but make sure we can handle if the capacity is smaller
+// than the container length.
+TEST(ZbiTests, GetNextEntryPayloadCapacitySmallerThanCurrentSize) {
+  void* payload = nullptr;
+  uint32_t max_payload_length = 0;
+  single_entry_test_zbi_t zbi;
+
+  zbi.container.length = 100;
+  ASSERT_EQ(
+      zbi_get_next_entry_payload(&zbi, sizeof(zbi_header_t) + 99, &payload, &max_payload_length),
+      ZBI_RESULT_TOO_BIG);
+}
+
+// Can't fit another header into the ZBI.
+TEST(ZbiTests, GetNextEntryPayloadHeaderTooLarge) {
+  void* payload = nullptr;
+  uint32_t max_payload_length = 0;
+  single_entry_test_zbi_t zbi;
+
+  zbi.container.length = 100;
+  ASSERT_EQ(
+      zbi_get_next_entry_payload(&zbi, sizeof(zbi_header_t) + 101, &payload, &max_payload_length),
+      ZBI_RESULT_TOO_BIG);
 }
 
 TEST(ZbiTests, ZbiTestExtendTestZbi) {
