@@ -63,7 +63,7 @@ static fx_log_severity_t get_severity(PlatformLogger::LogLevel level) {
 
 void PlatformLogger::LogVa(LogLevel level, const char* file, int line, const char* msg,
                            va_list args) {
-  _FX_LOGVF2(get_severity(level), "magma", file, line, msg, args);
+  _FX_LOGVF(get_severity(level), "magma", file, line, msg, args);
 }
 
 }  // namespace magma
