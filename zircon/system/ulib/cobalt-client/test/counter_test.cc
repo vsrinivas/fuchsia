@@ -244,12 +244,10 @@ TEST(CounterTest, InitializeWithOptionsAndCollectorIsOk) {
 }
 
 TEST(CounterTest, InitilizeAlreadyInitializedCounterIsAssertionError) {
-  ASSERT_DEATH([]() {
-    std::unique_ptr<InMemoryLogger> logger = std::make_unique<InMemoryLogger>();
-    Collector collector(std::move(logger));
-    Counter counter(MakeMetricOptions(), &collector);
-    counter.Initialize(MakeMetricOptions(), &collector);
-  });
+  std::unique_ptr<InMemoryLogger> logger = std::make_unique<InMemoryLogger>();
+  Collector collector(std::move(logger));
+  Counter counter(MakeMetricOptions(), &collector);
+  ASSERT_DEATH([&]() { counter.Initialize(MakeMetricOptions(), &collector); });
 }
 
 TEST(CounterTest, IncrementIncreasesCountByOne) {

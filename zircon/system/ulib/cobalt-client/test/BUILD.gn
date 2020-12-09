@@ -90,9 +90,6 @@ test("cobalt-client-unit") {
     ":in-memory-logger-test",
     ":metrics-test",
   ]
-
-  # TODO(fxbug.dev/46868): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 bootfs_test("cobalt-client-unit-bootfs-test") {

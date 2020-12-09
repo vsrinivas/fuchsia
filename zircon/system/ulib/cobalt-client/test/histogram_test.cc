@@ -221,12 +221,11 @@ TEST(HistogramTest, ConstructFromOptionsWithCollectorIsOk) {
 }
 
 TEST(HistogramTest, InitilizeAlreadyInitializedHistogramIsAssertionError) {
-  ASSERT_DEATH([]() {
-    std::unique_ptr<InMemoryLogger> logger = std::make_unique<InMemoryLogger>();
-    Collector collector(std::move(logger));
-    [[maybe_unused]] TestHistogram histogram(MakeHistogramOptions(), &collector);
-    histogram.Initialize(MakeHistogramOptions(), &collector);
-  });
+  std::unique_ptr<InMemoryLogger> logger = std::make_unique<InMemoryLogger>();
+  Collector collector(std::move(logger));
+  HistogramOptions histogram_options = MakeHistogramOptions();
+  [[maybe_unused]] TestHistogram histogram(histogram_options, &collector);
+  ASSERT_DEATH([&]() { histogram.Initialize(histogram_options, &collector); });
 }
 
 void InMemoryLoggerContainsHistogramWithBucketCount(const TestHistogram& histogram,
