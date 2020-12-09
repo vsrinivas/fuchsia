@@ -105,3 +105,10 @@ tables_generator_tests_*.txt
 # vscode) that is aware of submodules. This generated .gitmodules file
 # shouldn't be tracked in source control.
 /.gitmodules
+
+# Running `fx check-licenses` will generate a NOTICE file at the root of the fuchsia repository. The
+# file represents the license state of the entire repository.
+# We automatically run this command during some user/userdebug builds, so it can be included in the
+# Fuchsia images.
+/NOTICE.html
+/NOTICE.html.gz
