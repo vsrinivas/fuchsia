@@ -1135,38 +1135,16 @@ zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t coun
     Guard<Mutex> a{&lock_};
     DEBUG_ASSERT(virt_);
 
-    // TODO(teisenbe): Improve performance of this function by integrating deeper into
-    // the algorithm (e.g. make the cursors aware of the page array).
-    size_t idx = 0;
-    auto undo = fbl::MakeAutoCall([&]() {
-      AssertHeld(lock_);
-      if (idx > 0) {
-        MappingCursor start(/*vaddr=*/vaddr, /*size=*/idx * PAGE_SIZE);
-
-        MappingCursor result;
-        RemoveMapping(virt_, top, start, &result, &cm);
-        DEBUG_ASSERT(result.size() == 0);
-      }
-      cm.Finish();
-    });
-
-    vaddr_t v = vaddr;
-    for (; idx < count; ++idx) {
-      MappingCursor start(/*paddrs=*/&phys[idx], /*paddr_count=*/1, /*page_size=*/PAGE_SIZE,
-                          /*vaddr=*/v, /*size=*/PAGE_SIZE);
-      MappingCursor result;
-      zx_status_t status = AddMapping(virt_, mmu_flags, top, start, &result, &cm);
-      if (status != ZX_OK) {
-        dprintf(SPEW, "Add mapping failed with err=%d\n", status);
-        return status;
-      }
-      DEBUG_ASSERT(result.size() == 0);
-
-      v += PAGE_SIZE;
-    }
-
-    undo.cancel();
+    MappingCursor start(/*paddrs=*/phys, /*paddr_count=*/count, /*page_size=*/PAGE_SIZE,
+                        /*vaddr=*/vaddr, /*size=*/count * PAGE_SIZE);
+    MappingCursor result;
+    zx_status_t status = AddMapping(virt_, mmu_flags, top, start, &result, &cm);
     cm.Finish();
+    if (status != ZX_OK) {
+      dprintf(SPEW, "Add mapping failed with err=%d\n", status);
+      return status;
+    }
+    DEBUG_ASSERT(result.size() == 0);
   }
 
   if (mapped) {
