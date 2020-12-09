@@ -7,7 +7,7 @@ use crate::message::action_fuse::ActionFuseHandle;
 use crate::message::base::{
     filter::Filter, ActionSender, Address, Audience, Fingerprint, Message, MessageAction,
     MessageClientId, MessageError, MessageType, MessengerAction, MessengerId, MessengerType,
-    Payload, Signature, Status,
+    Payload, Role, Signature, Status,
 };
 use crate::message::beacon::{Beacon, BeaconBuilder};
 use crate::message::messenger::{Messenger, MessengerClient, MessengerFactory};
@@ -21,7 +21,7 @@ use std::sync::Arc;
 
 /// Type definition for a handle to the MessageHub. There is a single instance
 /// of a hub per communication ecosystem and therefore held behind an Arc mutex.
-pub type MessageHubHandle<P, A> = Arc<Mutex<MessageHub<P, A>>>;
+pub type MessageHubHandle<P, A, R> = Arc<Mutex<MessageHub<P, A, R>>>;
 
 /// Type definition for exit message sender.
 type ExitSender = futures::channel::mpsc::UnboundedSender<()>;
@@ -32,25 +32,25 @@ type ExitSender = futures::channel::mpsc::UnboundedSender<()>;
 /// filter:       A condition that is applied to a message to determine whether
 ///               it should be directed to the broker.
 #[derive(Clone)]
-struct Broker<P: Payload + 'static, A: Address + 'static> {
+struct Broker<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
     messenger_id: MessengerId,
-    filter: Option<Filter<P, A>>,
+    filter: Option<Filter<P, A, R>>,
 }
 
 /// The MessageHub controls the message flow for a set of messengers. It
 /// processes actions upon messages, incorporates brokers, and signals receipt
 /// of messages.
-pub struct MessageHub<P: Payload + 'static, A: Address + 'static> {
+pub struct MessageHub<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
     /// A sender given to messengers to signal actions upon the MessageHub.
-    action_tx: ActionSender<P, A>,
+    action_tx: ActionSender<P, A, R>,
     /// Address mapping for looking up messengers. Used for sending messages
     /// to an addressable recipient.
     addresses: HashMap<A, MessengerId>,
     /// Mapping of registered messengers (including brokers) to beacons. Used for
     /// delivering messages from a resolved address or a list of participants.
-    beacons: HashMap<MessengerId, Beacon<P, A>>,
+    beacons: HashMap<MessengerId, Beacon<P, A, R>>,
     /// An ordered set of messengers who will be forwarded messages.
-    brokers: Vec<Broker<P, A>>,
+    brokers: Vec<Broker<P, A, R>>,
     /// The next id to be given to a messenger.
     next_id: MessengerId,
     /// The next id to be given to a `MessageClient`.
@@ -61,16 +61,16 @@ pub struct MessageHub<P: Payload + 'static, A: Address + 'static> {
     exit_tx: ExitSender,
 }
 
-impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
+impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P, A, R> {
     /// Returns a new MessageHub for the given types.
-    pub fn create(fuse: Option<ActionFuseHandle>) -> MessengerFactory<P, A> {
+    pub fn create(fuse: Option<ActionFuseHandle>) -> MessengerFactory<P, A, R> {
         let (action_tx, mut action_rx) = futures::channel::mpsc::unbounded::<(
             Fingerprint<A>,
-            MessageAction<P, A>,
-            Option<Beacon<P, A>>,
+            MessageAction<P, A, R>,
+            Option<Beacon<P, A, R>>,
         )>();
         let (messenger_tx, mut messenger_rx) =
-            futures::channel::mpsc::unbounded::<MessengerAction<P, A>>();
+            futures::channel::mpsc::unbounded::<MessengerAction<P, A, R>>();
 
         let (exit_tx, mut exit_rx) = futures::channel::mpsc::unbounded::<()>();
 
@@ -147,7 +147,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
     /// return path of the source message. The provided sender id represents the
     /// id of the current messenger possessing the message and not necessarily
     /// the original author.
-    async fn send_to_next(&mut self, sender_id: MessengerId, mut message: Message<P, A>) {
+    async fn send_to_next(&mut self, sender_id: MessengerId, mut message: Message<P, A, R>) {
         let mut recipients = vec![];
 
         let message_type = message.get_message_type();
@@ -283,7 +283,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
     fn resolve_audience(
         &self,
         sender_id: MessengerId,
-        audience: &Audience<A>,
+        audience: &Audience<A, R>,
     ) -> Result<(HashSet<MessengerId>, bool), Error> {
         let mut return_set = HashSet::new();
         let mut delivery_required = false;
@@ -296,6 +296,10 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
                 } else {
                     return Err(format_err!("could not resolve address"));
                 }
+            }
+            Audience::Role(_) => {
+                // TODO(fxb/64977): Add Role resolution
+                return Err(format_err!("not implemented"));
             }
             Audience::Group(group) => {
                 for audience in &group.audiences {
@@ -332,7 +336,7 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
         Ok((return_set, delivery_required))
     }
 
-    async fn process_messenger_request(&mut self, action: MessengerAction<P, A>) {
+    async fn process_messenger_request(&mut self, action: MessengerAction<P, A, R>) {
         match action {
             MessengerAction::Create(messenger_type, responder, messenger_tx) => {
                 let mut optional_address = None;
@@ -409,8 +413,8 @@ impl<P: Payload + 'static, A: Address + 'static> MessageHub<P, A> {
     async fn process_request(
         &mut self,
         fingerprint: Fingerprint<A>,
-        action: MessageAction<P, A>,
-        beacon: Option<Beacon<P, A>>,
+        action: MessageAction<P, A, R>,
+        beacon: Option<Beacon<P, A, R>>,
     ) {
         let message;
 

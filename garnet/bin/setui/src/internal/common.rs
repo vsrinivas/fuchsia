@@ -8,9 +8,12 @@ use fuchsia_zircon as zx;
 #[macro_export]
 macro_rules! message_hub_definition {
     ($payload:ty) => {
-        crate::message_hub_definition!($payload, $crate::message::base::NoAddress);
+        crate::message_hub_definition!($payload, $crate::message::base::default::Address);
     };
     ($payload:ty, $address:ty) => {
+        crate::message_hub_definition!($payload, $address, $crate::message::base::default::Role);
+    };
+    ($payload:ty, $address:ty, $role:ty) => {
         pub mod message {
             #[allow(unused_imports)]
             use super::*;
@@ -23,25 +26,25 @@ macro_rules! message_hub_definition {
             };
             use crate::message::receptor::Receptor as BaseReceptor;
 
-            pub type Factory = BaseFactory<$payload, $address>;
+            pub type Factory = BaseFactory<$payload, $address, $role>;
 
             #[allow(dead_code)]
-            pub type Messenger = BaseMessengerClient<$payload, $address>;
+            pub type Messenger = BaseMessengerClient<$payload, $address, $role>;
 
             #[allow(dead_code)]
             pub type MessageError = BaseMessageError<$address>;
 
             #[allow(dead_code)]
-            pub type Client = BaseMessageClient<$payload, $address>;
+            pub type Client = BaseMessageClient<$payload, $address, $role>;
 
             #[allow(dead_code)]
-            pub type Receptor = BaseReceptor<$payload, $address>;
+            pub type Receptor = BaseReceptor<$payload, $address, $role>;
 
             #[allow(dead_code)]
             pub type Signature = BaseSignature<$address>;
 
             pub fn create_hub() -> Factory {
-                MessageHub::<$payload, $address>::create(None)
+                MessageHub::<$payload, $address, $role>::create(None)
             }
         }
     };

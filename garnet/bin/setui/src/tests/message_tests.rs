@@ -5,7 +5,7 @@
 use crate::internal::common::now;
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{
-    filter, group, Address, Audience, MessageEvent, MessengerType, Payload, Status,
+    filter, group, Address, Audience, MessageEvent, MessengerType, Payload, Role, Status,
 };
 use crate::message::receptor::Receptor;
 use crate::tests::message_utils::verify_payload;
@@ -34,9 +34,13 @@ pub enum TestAddress {
 }
 
 /// Ensures the delivery result matches expected value.
-async fn verify_result<P: Payload + PartialEq + 'static, A: Address + PartialEq + 'static>(
+async fn verify_result<
+    P: Payload + PartialEq + 'static,
+    A: Address + PartialEq + 'static,
+    R: Role + PartialEq + 'static,
+>(
     expected: Status,
-    receptor: &mut Receptor<P, A>,
+    receptor: &mut Receptor<P, A, R>,
 ) {
     while let Some(message_event) = receptor.next().await {
         if let MessageEvent::Status(status) = message_event {
@@ -1144,7 +1148,7 @@ async fn test_group_message_redundant_targets() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_audience_matching() {
-    let target_audience = Audience::Address(TestAddress::Foo(1));
+    let target_audience: Audience<TestAddress> = Audience::Address(TestAddress::Foo(1));
     // An audience should contain itself.
     assert!(target_audience.contains(&target_audience));
     // An audience with only broadcast should not match.

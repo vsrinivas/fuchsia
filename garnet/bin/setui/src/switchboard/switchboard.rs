@@ -480,7 +480,6 @@ mod tests {
     use super::*;
     use crate::internal::core;
     use crate::message::base::Audience;
-    use crate::message::receptor::Receptor;
     use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
     use fuchsia_inspect::{
         assert_inspect_tree,
@@ -488,7 +487,7 @@ mod tests {
     };
 
     async fn retrieve_and_verify_action(
-        receptor: &mut Receptor<core::Payload, core::Address>,
+        receptor: &mut core::message::Receptor,
         setting_type: SettingType,
         setting_data: SettingActionData,
     ) -> (core::message::Client, SettingAction) {

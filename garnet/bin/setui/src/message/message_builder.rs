@@ -4,7 +4,9 @@
 
 use crate::internal::common::now;
 use crate::message::action_fuse::{ActionFuse, ActionFuseHandle};
-use crate::message::base::{Address, Attribution, Message, MessageAction, MessageType, Payload};
+use crate::message::base::{
+    Address, Attribution, Message, MessageAction, MessageType, Payload, Role,
+};
 use crate::message::beacon::BeaconBuilder;
 use crate::message::messenger::Messenger;
 use crate::message::receptor::Receptor;
@@ -12,22 +14,22 @@ use fuchsia_zircon::Duration;
 
 /// MessageBuilder allows constructing a message or reply with optional signals.
 #[derive(Clone)]
-pub struct MessageBuilder<P: Payload + 'static, A: Address + 'static> {
+pub struct MessageBuilder<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
     payload: P,
-    attribution: Attribution<P, A>,
-    messenger: Messenger<P, A>,
+    attribution: Attribution<P, A, R>,
+    messenger: Messenger<P, A, R>,
     forwarder: Option<ActionFuseHandle>,
     timeout: Option<Duration>,
 }
 
-impl<P: Payload + 'static, A: Address + 'static> MessageBuilder<P, A> {
+impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageBuilder<P, A, R> {
     /// Returns a new MessageBuilder. Note that this is private as clients should
     /// retrieve builders through either a Messenger or MessageClient.
     pub(super) fn new(
         payload: P,
-        message_type: MessageType<P, A>,
-        messenger: Messenger<P, A>,
-    ) -> MessageBuilder<P, A> {
+        message_type: MessageType<P, A, R>,
+        messenger: Messenger<P, A, R>,
+    ) -> MessageBuilder<P, A, R> {
         MessageBuilder {
             payload,
             attribution: Attribution::Source(message_type),
@@ -42,9 +44,9 @@ impl<P: Payload + 'static, A: Address + 'static> MessageBuilder<P, A> {
     /// message.
     pub(super) fn derive(
         payload: P,
-        source: Message<P, A>,
-        messenger: Messenger<P, A>,
-    ) -> MessageBuilder<P, A> {
+        source: Message<P, A, R>,
+        messenger: Messenger<P, A, R>,
+    ) -> MessageBuilder<P, A, R> {
         MessageBuilder {
             payload,
             attribution: Attribution::Derived(Box::new(source)),
@@ -59,18 +61,18 @@ impl<P: Payload + 'static, A: Address + 'static> MessageBuilder<P, A> {
     pub(super) fn auto_forwarder(
         mut self,
         forwarder_handle: ActionFuseHandle,
-    ) -> MessageBuilder<P, A> {
+    ) -> MessageBuilder<P, A, R> {
         self.forwarder = Some(forwarder_handle);
         self
     }
 
-    pub fn set_timeout(mut self, duration: Option<Duration>) -> MessageBuilder<P, A> {
+    pub fn set_timeout(mut self, duration: Option<Duration>) -> MessageBuilder<P, A, R> {
         self.timeout = duration;
         self
     }
 
     /// Consumes the MessageBuilder and sends the message to the MessageHub.
-    pub fn send(self) -> Receptor<P, A> {
+    pub fn send(self) -> Receptor<P, A, R> {
         let (beacon, receptor) =
             BeaconBuilder::new(self.messenger.clone()).set_timeout(self.timeout).build();
         self.messenger

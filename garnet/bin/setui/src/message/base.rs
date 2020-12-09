@@ -25,24 +25,41 @@ impl<T: Clone + Debug + Send + Sync> Payload for T {}
 pub trait Address: Clone + Debug + Eq + Hash + Send + Sync {}
 impl<T: Clone + Debug + Eq + Hash + Send + Sync> Address for T {}
 
-/// `NoAddress` provides a [`Address`] definition for message hubs not needing
-/// an address.
-///
-/// [`Address`]: trait.Address.html
-#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
-pub enum NoAddress {}
+/// Trait alias for types of data that can be used as a role in a
+/// MessageHub.
+pub trait Role: Clone + Debug + Eq + Hash + Send + Sync {}
+impl<T: Clone + Debug + Eq + Hash + Send + Sync> Role for T {}
 
 /// A MessageEvent defines the data that can be returned through a message
 /// receptor.
 #[derive(Debug, PartialEq)]
-pub enum MessageEvent<P: Payload + 'static, A: Address + 'static> {
+pub enum MessageEvent<P: Payload + 'static, A: Address + 'static, R: Role + 'static = default::Role>
+{
     /// A message that has been delivered, either as a new message directed at to
     /// the recipient's address or a reply to a previously sent message
     /// (dependent on the receptor's context).
-    Message(P, MessageClient<P, A>),
+    Message(P, MessageClient<P, A, R>),
     /// A status update for the message that spawned the receptor delivering this
     /// update.
     Status(Status),
+}
+
+/// This mod contains the default type definitions for the MessageHub's type
+/// parameters when not specified.
+pub mod default {
+    /// `Address` provides a [`Address`] definition for message hubs not needing
+    /// an address.
+    ///
+    /// [`Address`]: trait.Address.html
+    #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
+    pub enum Address {}
+
+    /// `Role` provides a [`Role`] definition for message hubs not needing
+    /// roles.
+    ///
+    /// [`Role`]: trait.Role.html
+    #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
+    pub enum Role {}
 }
 
 #[derive(Error, Debug, Clone)]
@@ -70,18 +87,20 @@ pub enum Status {
 
 /// The intended recipients for a message.
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
-pub enum Audience<A: Address + 'static> {
+pub enum Audience<A: Address + 'static, R: Role + 'static = default::Role> {
     // All non-broker messengers outside of the sender.
     Broadcast,
     // A Audience Group.
-    Group(group::Group<A>),
+    Group(group::Group<A, R>),
     // The messenger at the specified address.
     Address(A),
     // The messenger with the specified signature.
     Messenger(Signature<A>),
+    // A messenger who has the specified role.
+    Role(R),
 }
 
-impl<A: Address + 'static> Audience<A> {
+impl<A: Address + 'static, R: Role + 'static> Audience<A, R> {
     /// Indicates whether a message directed towards this `Audience` must match
     /// to a messenger or if it's okay for the message to be delivered to no
     /// one. For example, broadcasts are meant to be delivered to any
@@ -89,6 +108,7 @@ impl<A: Address + 'static> Audience<A> {
     pub fn requires_delivery(&self) -> bool {
         match self {
             Audience::Broadcast => false,
+            Audience::Role(_) => false,
             Audience::Group(group) => {
                 group.audiences.iter().any(|audience| audience.requires_delivery())
             }
@@ -96,11 +116,11 @@ impl<A: Address + 'static> Audience<A> {
         }
     }
 
-    pub fn contains(&self, audience: &Audience<A>) -> bool {
+    pub fn contains(&self, audience: &Audience<A, R>) -> bool {
         audience.flatten().is_subset(&self.flatten())
     }
 
-    fn flatten(&self) -> HashSet<Audience<A>> {
+    fn flatten(&self) -> HashSet<Audience<A, R>> {
         match self {
             Audience::Group(group) => {
                 group.audiences.iter().map(|audience| audience.flatten()).flatten().collect()
@@ -111,14 +131,14 @@ impl<A: Address + 'static> Audience<A> {
 }
 
 pub mod group {
-    use super::{Address, Audience};
+    use super::{Address, Audience, Role};
     #[derive(Clone, Debug, PartialEq, Hash, Eq)]
-    pub struct Group<A: Address + 'static> {
-        pub audiences: Vec<Audience<A>>,
+    pub struct Group<A: Address + 'static, R: Role + 'static> {
+        pub audiences: Vec<Audience<A, R>>,
     }
 
-    impl<A: Address + 'static> Group<A> {
-        pub fn contains(&self, audience: &Audience<A>) -> bool {
+    impl<A: Address + 'static, R: Role + 'static> Group<A, R> {
+        pub fn contains(&self, audience: &Audience<A, R>) -> bool {
             for target in &self.audiences {
                 if target == audience {
                     return true;
@@ -132,21 +152,21 @@ pub mod group {
         }
     }
 
-    pub struct Builder<A: Address + 'static> {
-        audiences: Vec<Audience<A>>,
+    pub struct Builder<A: Address + 'static, R: Role + 'static> {
+        audiences: Vec<Audience<A, R>>,
     }
 
-    impl<A: Address + 'static> Builder<A> {
+    impl<A: Address + 'static, R: Role + 'static> Builder<A, R> {
         pub fn new() -> Self {
             Self { audiences: vec![] }
         }
 
-        pub fn add(mut self, audience: Audience<A>) -> Self {
+        pub fn add(mut self, audience: Audience<A, R>) -> Self {
             self.audiences.push(audience);
             self
         }
 
-        pub fn build(self) -> Group<A> {
+        pub fn build(self) -> Group<A, R> {
             Group { audiences: self.audiences }
         }
     }
@@ -170,7 +190,11 @@ pub struct Fingerprint<A> {
 
 /// The messengers that can participate in messaging
 #[derive(Clone, Debug)]
-pub enum MessengerType<P: Payload + 'static, A: Address + 'static> {
+pub enum MessengerType<
+    P: Payload + 'static,
+    A: Address + 'static,
+    R: Role + 'static = default::Role,
+> {
     /// An endpoint in the messenger graph. Can have messages specifically
     /// addressed to it and can author new messages.
     Addressable(A),
@@ -178,32 +202,32 @@ pub enum MessengerType<P: Payload + 'static, A: Address + 'static> {
     /// are able to send and reply to messages, but the main purpose is to observe
     /// messages. An optional filter may be specified, which limits the messages
     /// directed to this broker.
-    Broker(Option<filter::Filter<P, A>>),
+    Broker(Option<filter::Filter<P, A, R>>),
     /// A messenger that cannot be reached by an address.
     Unbound,
 }
 
 pub mod filter {
-    use super::{Address, Audience, Message, MessageType, Payload};
+    use super::{Address, Audience, Message, MessageType, Payload, Role};
     use core::fmt::{Debug, Formatter};
     use std::sync::Arc;
 
     /// `Condition` allows specifying a filter condition that must be true
     /// for a filter to match.
     #[derive(Clone)]
-    pub enum Condition<P: Payload + 'static, A: Address + 'static> {
+    pub enum Condition<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
         /// Matches on the message's intended audience as specified by the
         /// sender.
-        Audience(Audience<A>),
+        Audience(Audience<A, R>),
         /// Matches on a custom closure that may evaluate the sent message.
-        Custom(Arc<dyn Fn(&Message<P, A>) -> bool + Send + Sync>),
+        Custom(Arc<dyn Fn(&Message<P, A, R>) -> bool + Send + Sync>),
         /// Matches on another filter and its conditions.
-        Filter(Filter<P, A>),
+        Filter(Filter<P, A, R>),
     }
 
     /// We must implement Debug since the `Condition::Custom` does not provide
     /// a `Debug` implementation.
-    impl<P: Payload + 'static, A: Address + 'static> Debug for Condition<P, A> {
+    impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Debug for Condition<P, A, R> {
         fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
             let condition = match self {
                 Condition::Audience(audience) => format!("audience:{:?}", audience),
@@ -229,29 +253,29 @@ pub mod filter {
     /// a number of conditions.
     ///
     /// [`Filter`]: struct.Filter.html
-    pub struct Builder<P: Payload + 'static, A: Address + 'static> {
+    pub struct Builder<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
         conjugation: Conjugation,
-        conditions: Vec<Condition<P, A>>,
+        conditions: Vec<Condition<P, A, R>>,
     }
 
-    impl<P: Payload + 'static, A: Address + 'static> Builder<P, A> {
-        pub fn new(condition: Condition<P, A>, conjugation: Conjugation) -> Self {
+    impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Builder<P, A, R> {
+        pub fn new(condition: Condition<P, A, R>, conjugation: Conjugation) -> Self {
             Self { conjugation, conditions: vec![condition] }
         }
 
         /// Shorthand method to create a filter based on a single condition.
-        pub fn single(condition: Condition<P, A>) -> Filter<P, A> {
+        pub fn single(condition: Condition<P, A, R>) -> Filter<P, A, R> {
             Builder::new(condition, Conjugation::All).build()
         }
 
         /// Adds an additional condition to the filter under construction.
-        pub fn append(mut self, condition: Condition<P, A>) -> Self {
+        pub fn append(mut self, condition: Condition<P, A, R>) -> Self {
             self.conditions.push(condition);
 
             self
         }
 
-        pub fn build(self) -> Filter<P, A> {
+        pub fn build(self) -> Filter<P, A, R> {
             Filter { conjugation: self.conjugation, conditions: self.conditions }
         }
     }
@@ -259,13 +283,13 @@ pub mod filter {
     /// `Filter` is used by the `MessageHub` to determine whether an incoming
     /// message should be directed to associated broker.
     #[derive(Clone, Debug)]
-    pub struct Filter<P: Payload + 'static, A: Address + 'static> {
+    pub struct Filter<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
         conjugation: Conjugation,
-        conditions: Vec<Condition<P, A>>,
+        conditions: Vec<Condition<P, A, R>>,
     }
 
-    impl<P: Payload + 'static, A: Address + 'static> Filter<P, A> {
-        pub fn matches(&self, message: &Message<P, A>) -> bool {
+    impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Filter<P, A, R> {
+        pub fn matches(&self, message: &Message<P, A, R>) -> bool {
             for condition in &self.conditions {
                 let match_found = match condition {
                     Condition::Audience(audience) => matches!(
@@ -290,55 +314,55 @@ pub mod filter {
 
 /// MessageType captures details about the Message's source.
 #[derive(Clone, Debug)]
-pub enum MessageType<P: Payload + 'static, A: Address + 'static> {
+pub enum MessageType<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
     /// A completely new message that is intended for the specified audience.
-    Origin(Audience<A>),
+    Origin(Audience<A, R>),
     /// A response to a previously received message. Note that the value must
     /// be boxed to mitigate recursive sizing issues as MessageType is held by
     /// Message.
-    Reply(Box<Message<P, A>>),
+    Reply(Box<Message<P, A, R>>),
 }
 
 /// `Attribution` describes the relationship of the message path in relation
 /// to the author.
 #[derive(Clone, Debug)]
-pub enum Attribution<P: Payload + 'static, A: Address + 'static> {
+pub enum Attribution<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
     /// `Source` attributed messages are the original messages to be sent on a
     /// path. For example, a source attribution for an origin message type will
     /// be authored by the original sender. In a reply message type, a source
     /// attribution means the reply was authored by the original message's
     /// intended target.
-    Source(MessageType<P, A>),
+    Source(MessageType<P, A, R>),
     /// `Derived` attributed messages are messages that have been modified by
     /// someone in the message path. They follow the same trajectory (audience
     /// or return path), but their message has been altered.
-    Derived(Box<Message<P, A>>),
+    Derived(Box<Message<P, A, R>>),
 }
 
 /// The core messaging unit. A Message may be annotated by messengers, but is
 /// not associated with a particular Messenger instance.
 #[derive(Clone, Debug)]
-pub struct Message<P: Payload + 'static, A: Address + 'static> {
+pub struct Message<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
     author: Fingerprint<A>,
     timestamp: Timestamp,
     payload: P,
-    attribution: Attribution<P, A>,
+    attribution: Attribution<P, A, R>,
     // The return path is generated while the message is passed from messenger
     // to messenger on the way to the intended recipient. It indicates the
     // messengers that would like to be informed of replies to this message.
     // The message author is always the last element in this vector. New
     // participants are pushed to the front.
-    return_path: Vec<Beacon<P, A>>,
+    return_path: Vec<Beacon<P, A, R>>,
 }
 
-impl<P: Payload + 'static, A: Address + 'static> Message<P, A> {
+impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A, R> {
     /// Returns a new Message instance. Only the MessageHub can mint new messages.
     pub(super) fn new(
         author: Fingerprint<A>,
         timestamp: Timestamp,
         payload: P,
-        attribution: Attribution<P, A>,
-    ) -> Message<P, A> {
+        attribution: Attribution<P, A, R>,
+    ) -> Message<P, A, R> {
         let mut return_path = vec![];
 
         // A derived message adopts the return path of the original message.
@@ -350,7 +374,7 @@ impl<P: Payload + 'static, A: Address + 'static> Message<P, A> {
     }
 
     /// Adds an entity to be notified on any replies.
-    pub(super) fn add_participant(&mut self, participant: Beacon<P, A>) {
+    pub(super) fn add_participant(&mut self, participant: Beacon<P, A, R>) {
         self.return_path.insert(0, participant);
     }
 
@@ -371,12 +395,12 @@ impl<P: Payload + 'static, A: Address + 'static> Message<P, A> {
     }
 
     /// Returns the list of participants for the reply return path.
-    pub(super) fn get_return_path(&self) -> Vec<Beacon<P, A>> {
+    pub(super) fn get_return_path(&self) -> Vec<Beacon<P, A, R>> {
         return self.return_path.clone();
     }
 
     /// Returns the message's type.
-    pub(super) fn get_message_type(&self) -> MessageType<P, A> {
+    pub(super) fn get_message_type(&self) -> MessageType<P, A, R> {
         match &self.attribution {
             Attribution::Source(message_type) => message_type.clone(),
             Attribution::Derived(message) => message.get_message_type(),
@@ -398,8 +422,8 @@ impl<P: Payload + 'static, A: Address + 'static> Message<P, A> {
 
 /// Type definition for a sender handed by the MessageHub to messengers to
 /// send actions.
-pub(super) type ActionSender<P, A> =
-    UnboundedSender<(Fingerprint<A>, MessageAction<P, A>, Option<Beacon<P, A>>)>;
+pub(super) type ActionSender<P, A, R> =
+    UnboundedSender<(Fingerprint<A>, MessageAction<P, A, R>, Option<Beacon<P, A, R>>)>;
 
 /// An internal identifier used by the MessageHub to identify messengers.
 pub(super) type MessengerId = usize;
@@ -407,31 +431,31 @@ pub(super) type MessengerId = usize;
 /// An internal identifier used by the `MessageHub` to identify `MessageClient`.
 pub(super) type MessageClientId = usize;
 
-pub(super) type CreateMessengerResult<P, A> =
-    Result<(MessengerClient<P, A>, Receptor<P, A>), MessageError<A>>;
+pub(super) type CreateMessengerResult<P, A, R> =
+    Result<(MessengerClient<P, A, R>, Receptor<P, A, R>), MessageError<A>>;
 
 /// Callback for handing back a messenger
-pub(super) type MessengerSender<P, A> = Sender<CreateMessengerResult<P, A>>;
+pub(super) type MessengerSender<P, A, R> = Sender<CreateMessengerResult<P, A, R>>;
 
 /// Type definition for a sender handed by the MessageHub to spawned components
 /// (messenger factories and messengers) to control messengers.
-pub(super) type MessengerActionSender<P, A> = UnboundedSender<MessengerAction<P, A>>;
+pub(super) type MessengerActionSender<P, A, R> = UnboundedSender<MessengerAction<P, A, R>>;
 
 /// Internal representation of possible actions around a messenger.
-pub(super) enum MessengerAction<P: Payload + 'static, A: Address + 'static> {
+pub(super) enum MessengerAction<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
     /// Creates a top level messenger
-    Create(MessengerType<P, A>, MessengerSender<P, A>, MessengerActionSender<P, A>),
+    Create(MessengerType<P, A, R>, MessengerSender<P, A, R>, MessengerActionSender<P, A, R>),
     /// Deletes a given messenger
-    Delete(Messenger<P, A>),
+    Delete(Messenger<P, A, R>),
     /// Deletes a messenger by its `Signature`
     DeleteBySignature(Signature<A>),
 }
 
 /// Internal representation for possible actions on a message.
 #[derive(Debug)]
-pub(super) enum MessageAction<P: Payload + 'static, A: Address + 'static> {
+pub(super) enum MessageAction<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
     // A new message sent to the specified audience.
-    Send(P, Attribution<P, A>, Timestamp),
+    Send(P, Attribution<P, A, R>, Timestamp),
     // The message has been forwarded by the current holder.
-    Forward(Message<P, A>),
+    Forward(Message<P, A, R>),
 }
