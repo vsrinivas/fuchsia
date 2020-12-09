@@ -379,29 +379,46 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 		linger:        make(chan struct{}),
 	}
 
-	// Add the endpoint before registering for an EventHUp callback and starting
-	// the loop{read,Write} go-routines. We remove the endpoint from the map on
-	// EventHUp which can be trigerred soon-after the callback registration or
-	// starting of the loop{Read,Write}.
-	ns.onAddEndpoint(&eps.endpoint)
+	// Handle the case where the endpoint has already seen an error state.
+	// For ex: Accepted endpoints that get a RST by the time we come here.
+	// In such case, we would skip registering for EventHUp as we are
+	// looking at the endpoint post HUp.
+	//
+	// Acquire hard error lock across ep calls to avoid races and store the
+	// hard error deterministically.
+	eps.endpoint.hardErrorMu.Lock()
+	hardError := eps.endpoint.storeAndRetrieveHardErrorLocked(eps.ep.LastError())
+	eps.endpoint.hardErrorMu.Unlock()
+	if hardError != nil {
+		// Run this in a separate goroutine to avoid deadlock.
+		//
+		// close() blocks on completions of `loop*` routines.
+		go eps.close()
+	} else {
+		// Add the endpoint before registering for an EventHUp callback and starting
+		// the loop{read,Write} go-routines. We remove the endpoint from the map on
+		// EventHUp which can be trigerred soon-after the callback registration or
+		// starting of the loop{Read,Write}.
+		ns.onAddEndpoint(&eps.endpoint)
 
-	// Register a callback for error and closing events from gVisor to
-	// trigger a close of the endpoint.
-	eps.onHUp.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
-		eps.onHUpOnce.Do(func() {
-			eps.endpoint.ns.onRemoveEndpoint(eps.endpoint.key)
-			// Run this in a separate goroutine to avoid deadlock.
-			//
-			// The waiter.Queue lock is held by the caller of this callback.
-			// close() blocks on completions of `loop*`, which
-			// depend on acquiring waiter.Queue lock to unregister events.
-			go func() {
-				eps.wq.EventUnregister(&eps.onHUp)
-				eps.close()
-			}()
+		// Register a callback for error and closing events from gVisor to
+		// trigger a close of the endpoint.
+		eps.onHUp.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
+			eps.onHUpOnce.Do(func() {
+				eps.endpoint.ns.onRemoveEndpoint(eps.endpoint.key)
+				// Run this in a separate goroutine to avoid deadlock.
+				//
+				// The waiter.Queue lock is held by the caller of this callback.
+				// close() blocks on completions of `loop*`, which
+				// depend on acquiring waiter.Queue lock to unregister events.
+				go func() {
+					eps.wq.EventUnregister(&eps.onHUp)
+					eps.close()
+				}()
+			})
 		})
-	})
-	eps.wq.EventRegister(&eps.onHUp, waiter.EventHUp)
+		eps.wq.EventRegister(&eps.onHUp, waiter.EventHUp)
+	}
 
 	go func() {
 		defer close(eps.loopPollDone)

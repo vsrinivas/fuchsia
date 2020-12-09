@@ -396,6 +396,85 @@ func TestEndpoint_Close(t *testing.T) {
 	}
 }
 
+// TestTCPEndpointMapAcceptAfterReset tests that an already-reset endpoint
+// isn't added to the endpoints map, since such an endpoint wouldn't receive a
+// hangup notification and its reference in the map would leak.
+func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
+	ns := newNetstack(t)
+	if err := ns.addLoopback(); err != nil {
+		t.Fatalf("ns.addLoopback() = %s", err)
+	}
+
+	createEP := func() (tcpip.Endpoint, *waiter.Queue) {
+		var wq waiter.Queue
+		ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, &wq)
+		if err != nil {
+			t.Fatalf("NewEndpoint() = %s", err)
+		}
+		return ep, &wq
+	}
+
+	listener, listenerWQ := createEP()
+	if err := listener.Bind(tcpip.FullAddress{}); err != nil {
+		t.Fatalf("Bind({}) = %s", err)
+	}
+	if err := listener.Listen(1); err != nil {
+		t.Fatalf("Listen(1) = %s", err)
+	}
+
+	client, _ := createEP()
+
+	// Connect and wait for the incoming connection.
+	func() {
+		connectAddr, err := listener.GetLocalAddress()
+		if err != nil {
+			t.Fatalf("GetLocalAddress() = %s", err)
+		}
+
+		waitEntry, notifyCh := waiter.NewChannelEntry(nil)
+		listenerWQ.EventRegister(&waitEntry, waiter.EventIn)
+		defer listenerWQ.EventUnregister(&waitEntry)
+
+		if err := client.Connect(connectAddr); err != tcpip.ErrConnectStarted {
+			t.Fatalf("Connect(%#v) = %s", connectAddr, err)
+		}
+		<-notifyCh
+	}()
+
+	// Hang up and wait for RST. We need an already-reset endpoint to test with.
+	accepted, acceptedWQ := func() (tcpip.Endpoint, *waiter.Queue) {
+		server, wq, err := listener.Accept(nil)
+		if err != nil {
+			t.Fatalf("Accept(nil) = %s", err)
+		}
+
+		listener.Close()
+
+		waitEntry, notifyCh := waiter.NewChannelEntry(nil)
+		wq.EventRegister(&waitEntry, waiter.EventHUp)
+		defer wq.EventUnregister(&waitEntry)
+
+		v := tcpip.LingerOption{Enabled: true, Timeout: 0}
+		if err := client.SetSockOpt(&v); err != nil {
+			t.Fatalf("SetSockOpt(%v) = %s", v, err)
+		}
+		client.Close()
+		<-notifyCh
+
+		return server, wq
+	}()
+
+	eps, err := newEndpointWithSocket(accepted, acceptedWQ, tcp.ProtocolNumber, ipv4.ProtocolNumber, ns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer eps.close()
+
+	if _, ok := ns.endpoints.Load(eps.key); ok {
+		t.Fatalf("got endpoints.Load(%d) = (_, true)", eps.key)
+	}
+}
+
 // TestTCPEndpointMapClosing validates the endpoint in a closing state like
 // FIN_WAIT2 to be present in the endpoints map and is deleted when the
 // endpoint transitions to CLOSED state.
