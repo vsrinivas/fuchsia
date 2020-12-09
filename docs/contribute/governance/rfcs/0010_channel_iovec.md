@@ -114,8 +114,7 @@ If the `ZX_CHANNEL_WRITE_USE_IOVEC` option is specified,
 ### Alignment
 
 There are no alignment restrictions on the bytes specified in a
-`zx_channel_iovec_t`. Each `zx_channel_iovec_t` will be copied in order without
-padding.
+`zx_channel_iovec_t`. Each `zx_channel_iovec_t` will be copied without padding.
 
 ### Limits
 
@@ -139,10 +138,11 @@ potentially using a `zx_channel_iovec_t` entry.
 
 ### Kernel
 
-After receiving the `ZX_CHANNEL_WRITE_USE_IOVEC` option, the kernel will
-iterate through each of the `zx_channel_iovec_t` iovec objects:
-- For each `zx_channel_iovec_t`, copy the pointed data in from user space to
-  the message buffer in order.
+After receiving the `ZX_CHANNEL_WRITE_USE_IOVEC` option, the kernel will:
+- Copy the data pointed to by the `zx_channel_iovec_t` objects to the message
+  buffer.  While the copy operations will typically also be performed in order
+  of the `zx_channel_iovec_t` inputs, it is not mandatory. However, the final
+  message must be laid out in the order of the `zx_channel_iovec_t` entries.
 - Write the message to the channel.
 
 ### FIDL
