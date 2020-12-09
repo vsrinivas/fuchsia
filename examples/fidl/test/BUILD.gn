@@ -68,3 +68,8 @@ group("test") {
     "//examples/fidl/rust:all",
   ]
 }
+
+group("all") {
+  testonly = true
+  deps = [ ":echo-launcher" ]
+}

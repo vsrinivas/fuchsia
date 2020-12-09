@@ -11,6 +11,7 @@ group("fidl") {
     "hlcpp:all",
     "llcpp:all",
     "rust:all",
+    "test:all",
   ]
 }
 
