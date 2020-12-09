@@ -29,7 +29,9 @@
 #include "tftp.h"
 
 #ifndef ENABLE_SLAAC
-#define ENABLE_SLAAC 1
+// SLAAC RA's are disabled by default as they intefere with tests in environments where there are
+// many devices on the same LAN.
+#define ENABLE_SLAAC 0
 #endif
 
 static bool g_netbootloader = false;
