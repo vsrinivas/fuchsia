@@ -5,11 +5,11 @@
     "program": {
         "args": [
             "--disconnect-secs",
-            "1800",
+            "600",
             "--rebind-probability",
             "0.1",
             "--time-limit-secs",
-            "19800"
+            "79200"
         ],
         "binary": "bin/fvm_stressor"
     },

@@ -42,9 +42,27 @@ fuchsia_component("fvm-crash") {
   deps = [ "fvm:stressor-bin" ]
 }
 
-# This test package is designed to run on infra bots.
-# Infra bots have a time limit of 23 hours. There are 4 tests
-# in this package, each running for exactly 5.5 hours.
+fuchsia_component("blobfs-short") {
+  testonly = true
+  manifest = "blobfs/meta/short.cmx"
+  deps = [ "blobfs:stressor-bin" ]
+}
+
+fuchsia_component("fvm-short") {
+  testonly = true
+  manifest = "fvm/meta/short.cmx"
+  deps = [ "fvm:stressor-bin" ]
+}
+
+fuchsia_component("minfs-short") {
+  testonly = true
+  manifest = "minfs/meta/short.cmx"
+  deps = [ "minfs:stressor-bin" ]
+}
+
+# This test package is designed to run on `core.qemu-x64-stress`.
+# These bots have a time limit of 23 hours. There are 6 tests
+# in this package, each running for exactly 22 hours.
 fuchsia_test_package("storage-stress-tests") {
   test_components = [
     ":fvm-crash",
@@ -69,10 +87,33 @@ fuchsia_test_package("storage-stress-tests") {
   }
 }
 
+# This test package is designed to run a small number of operations on CQ bots.
+# This ensures that these tests cannot break due to CL changes.
+fuchsia_test_package("storage-stress-tests-short") {
+  test_components = [
+    ":fvm-short",
+    ":blobfs-short",
+    ":minfs-short",
+  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          device_type = "QEMU"
+        }
+      },
+    ]
+  }
+}
+
 group("stress-tests") {
   testonly = true
   deps = [
     ":storage-stress-tests",
+    ":storage-stress-tests-short",
     "//src/lib/isolated_devmgr/v2_component:isolated-devmgr",
     "//src/sys/component_manager:component-manager",
   ]

@@ -4,12 +4,10 @@
     ],
     "program": {
         "args": [
-            "--disconnect-secs",
-            "600",
-            "--time-limit-secs",
-            "79200"
+            "--num-operations",
+            "10"
         ],
-        "binary": "bin/blobfs_stressor"
+        "binary": "bin/fvm_stressor"
     },
     "sandbox": {
         "features": [

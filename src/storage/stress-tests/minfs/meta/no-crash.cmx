@@ -5,7 +5,7 @@
     "program": {
         "args": [
             "--time-limit-secs",
-            "19800"
+            "79200"
         ],
         "binary": "bin/minfs_stressor"
     },
