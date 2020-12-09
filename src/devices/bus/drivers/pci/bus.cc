@@ -4,6 +4,7 @@
 
 #include "bus.h"
 
+#include <zircon/hw/pci.h>
 #include <zircon/status.h>
 
 #include <list>
@@ -12,6 +13,8 @@
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/pciroot.h>
+#include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
@@ -25,26 +28,24 @@ namespace pci {
 
 // Creates the PCI bus driver instance and attempts initialization.
 zx_status_t Bus::Create(zx_device_t* parent) {
-  zx_status_t status;
-  pciroot_protocol_t pciroot;
-  if ((status = device_get_protocol(parent, ZX_PROTOCOL_PCIROOT, &pciroot)) != ZX_OK) {
+  pciroot_protocol_t pciroot = {};
+  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PCIROOT, &pciroot);
+  if (status != ZX_OK) {
     zxlogf(ERROR, "failed to obtain pciroot protocol: %d!", status);
     return status;
   }
 
-  Bus* bus = new Bus(parent, &pciroot);
-  if (!bus) {
-    zxlogf(ERROR, "failed to allocate bus object.");
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  // Grab the info beforehand so we can get segment/bus information from it
-  // and appropriately name our DDK device.
-  pci_platform_info_t info;
-  status = bus->pciroot().GetPciPlatformInfo(&info);
+  pci_platform_info_t info = {};
+  status = pciroot_get_pci_platform_info(&pciroot, &info);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to obtain platform information: %d!", status);
     return status;
+  }
+
+  Bus* bus = new Bus(parent, info, &pciroot);
+  if (!bus) {
+    zxlogf(ERROR, "failed to allocate bus object.");
+    return ZX_ERR_NO_MEMORY;
   }
 
   // Name the bus instance with segment group and bus range, for example:
@@ -64,12 +65,7 @@ zx_status_t Bus::Create(zx_device_t* parent) {
 }
 
 zx_status_t Bus::Initialize() {
-  zx_status_t status = pciroot_.GetPciPlatformInfo(&info_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to obtain platform information: %d!", status);
-    return status;
-  }
-
+  zx_status_t status = ZX_OK;
   if (info_.ecam_vmo != ZX_HANDLE_INVALID) {
     if ((status = MapEcam()) != ZX_OK) {
       zxlogf(ERROR, "failed to map ecam: %d!", status);
@@ -93,7 +89,7 @@ zx_status_t Bus::Initialize() {
 
 // Maps a vmo as an mmio_buffer to be used as this Bus driver's ECAM region
 // for config space access.
-zx_status_t Bus::MapEcam(void) {
+zx_status_t Bus::MapEcam() {
   ZX_DEBUG_ASSERT(info_.ecam_vmo != ZX_HANDLE_INVALID);
 
   size_t size;
@@ -135,7 +131,7 @@ zx_status_t Bus::MakeConfig(pci_bdf_t bdf, std::unique_ptr<Config>* out_config) 
 // In the process of scanning, take note of bridges found and configure any that are
 // unconfigured. In the end the Bus should have a list of all devides, and all bridges
 // should have a list of pointers to their own downstream devices.
-zx_status_t Bus::ScanDownstream(void) {
+zx_status_t Bus::ScanDownstream() {
   std::list<BusScanEntry> scan_list;
   // First scan the bus id associated with our root.
   BusScanEntry entry = {{static_cast<uint8_t>(root_->managed_bus_id()), 0, 0}, root_.get()};

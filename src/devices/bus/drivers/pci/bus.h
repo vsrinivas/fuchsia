@@ -79,8 +79,9 @@ class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceI
 
  private:
   // Our constructor exists to fulfill the mixin constructors
-  Bus(zx_device_t* parent, const pciroot_protocol_t* proto)
+  Bus(zx_device_t* parent, const pci_platform_info_t info, const pciroot_protocol_t* proto)
       : PciBusType(parent),  // fulfills the DDK mixins
+        info_(info),
         pciroot_(proto) {}
 
   // Utility methods for the bus driver
@@ -97,8 +98,8 @@ class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceI
   zx_status_t MakeConfig(pci_bdf_t bdf, std::unique_ptr<Config>* config);
 
   // members
+  const pci_platform_info_t info_;
   ddk::PcirootProtocolClient pciroot_;
-  pci_platform_info_t info_;
   std::optional<ddk::MmioBuffer> ecam_;
   std::unique_ptr<PciRoot> root_;
   fbl::Mutex devices_lock_;
