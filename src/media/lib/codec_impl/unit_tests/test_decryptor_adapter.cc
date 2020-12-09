@@ -623,8 +623,10 @@ TEST_F(ClearDecryptorAdapterTest, InspectValues) {
   ASSERT_TRUE(HasFreePackets());
   decryptor_->QueueInputPacket(CreateInputPacket(*input_iter_++));
 
-  // Wait until the output collection has been allocated.
-  RunLoopUntil([this]() { return output_buffer_info_.has_value(); });
+  // Wait until output packet received to ensure the input format details have definitely been
+  // processed
+  RunLoopUntil([this]() { return !output_data_.empty(); });
+  AssertNoChannelErrors();
 
   async::Executor executor(dispatcher());
   fit::result<inspect::Hierarchy> hierarchy;
