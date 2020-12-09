@@ -35,6 +35,7 @@ group("tests") {
     "async-generator:tests",
     "bounded-node:tests",
     "event-queue:tests",
+    "far:tests",
     "fidl-fuchsia-amber-ext:tests",
     "fidl-fuchsia-update-ext:tests",
     "fidl-fuchsia-update-installer-ext:tests",
