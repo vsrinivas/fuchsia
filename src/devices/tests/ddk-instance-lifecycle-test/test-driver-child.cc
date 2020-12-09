@@ -13,7 +13,7 @@
 using llcpp::fuchsia::device::instancelifecycle::test::Lifecycle;
 
 void TestLifecycleDriverChild::DdkRelease() {
-  zx_status_t status = Lifecycle::SendOnReleaseEvent(zx::unowned(lifecycle_));
+  zx_status_t status = lifecycle_.OnRelease();
   ZX_ASSERT(status == ZX_OK);
   delete this;
 }
@@ -32,13 +32,13 @@ zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent, zx::channel li
 }
 
 void TestLifecycleDriverChild::DdkUnbind(ddk::UnbindTxn txn) {
-  zx_status_t status = Lifecycle::SendOnUnbindEvent(zx::unowned(lifecycle_));
+  zx_status_t status = lifecycle_.OnUnbind();
   ZX_ASSERT(status == ZX_OK);
   txn.Reply();
 }
 
 zx_status_t TestLifecycleDriverChild::DdkOpen(zx_device_t** out, uint32_t flags) {
-  zx_status_t status = Lifecycle::SendOnOpenEvent(zx::unowned(lifecycle_));
+  zx_status_t status = lifecycle_.OnOpen();
   ZX_ASSERT(status == ZX_OK);
 
   auto device = std::make_unique<TestLifecycleDriverChildInstance>(zxdev(), this);
@@ -56,16 +56,16 @@ zx_status_t TestLifecycleDriverChild::DdkOpen(zx_device_t** out, uint32_t flags)
 // Implementation of the instance devices
 
 zx_status_t TestLifecycleDriverChildInstance::DdkClose(uint32_t flags) {
-  if (lifecycle_) {
-    zx_status_t status = Lifecycle::SendOnCloseEvent(zx::unowned(lifecycle_));
+  if (lifecycle_.is_valid()) {
+    zx_status_t status = lifecycle_.OnClose();
     ZX_ASSERT(status == ZX_OK);
   }
   return ZX_OK;
 }
 
 void TestLifecycleDriverChildInstance::DdkRelease() {
-  if (lifecycle_) {
-    zx_status_t status = Lifecycle::SendOnReleaseEvent(zx::unowned(lifecycle_));
+  if (lifecycle_.is_valid()) {
+    zx_status_t status = lifecycle_.OnRelease();
     ZX_ASSERT(status == ZX_OK);
   }
   delete this;
@@ -78,10 +78,10 @@ void TestLifecycleDriverChildInstance::RemoveDevice(RemoveDeviceCompleter::Sync&
 void TestLifecycleDriverChildInstance::SubscribeToLifecycle(
     zx::channel client, SubscribeToLifecycleCompleter::Sync& completer) {
   // Currently we only care about supporting one client.
-  if (lifecycle_) {
+  if (lifecycle_.is_valid()) {
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);
   } else {
-    lifecycle_ = std::move(client);
+    lifecycle_ = Lifecycle::EventSender(std::move(client));
     completer.ReplySuccess();
   }
 }

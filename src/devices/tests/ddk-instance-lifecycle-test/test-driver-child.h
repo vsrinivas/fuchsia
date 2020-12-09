@@ -19,7 +19,7 @@ class TestLifecycleDriverChild : public DeviceType {
 
   explicit TestLifecycleDriverChild(zx_device_t* parent, zx::channel lifecycle_client)
       : DeviceType(parent), lifecycle_(std::move(lifecycle_client)) {}
-  ~TestLifecycleDriverChild() {}
+  ~TestLifecycleDriverChild() = default;
 
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
@@ -35,7 +35,7 @@ class TestLifecycleDriverChild : public DeviceType {
 
  private:
   // Connection to a Lifecycle client
-  zx::channel lifecycle_;
+  llcpp::fuchsia::device::instancelifecycle::test::Lifecycle::EventSender lifecycle_;
 };
 
 class TestLifecycleDriverChildInstance;
@@ -72,5 +72,5 @@ class TestLifecycleDriverChildInstance : public InstanceDeviceType,
   TestLifecycleDriverChild* parent_ctx_;
 
   // Connection to a Lifecycle client
-  zx::channel lifecycle_;
+  llcpp::fuchsia::device::instancelifecycle::test::Lifecycle::EventSender lifecycle_;
 };

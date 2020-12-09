@@ -7553,6 +7553,9 @@ class Transitional::EventSender {
   const ::zx::channel& channel() const { return server_end_; }
   ::zx::channel& channel() { return server_end_; }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return server_end_.is_valid(); }
+
   zx_status_t Event(int64_t x) const {
     return SendEventEvent(::zx::unowned_channel(server_end_), std::move(x));
   }
@@ -7697,6 +7700,9 @@ class ChannelProtocol::EventSender {
   // The underlying server channel endpoint, which may be replaced at run-time.
   const ::zx::channel& channel() const { return server_end_; }
   ::zx::channel& channel() { return server_end_; }
+
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return server_end_.is_valid(); }
 
   zx_status_t EventA(int64_t a, int64_t b) const {
     return SendEventAEvent(::zx::unowned_channel(server_end_), std::move(a),
@@ -7935,6 +7941,9 @@ class WithAndWithoutRequestResponse::EventSender {
   const ::zx::channel& channel() const { return server_end_; }
   ::zx::channel& channel() { return server_end_; }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return server_end_.is_valid(); }
+
   zx_status_t OnEmptyResponse() const {
     return SendOnEmptyResponseEvent(::zx::unowned_channel(server_end_));
   }
@@ -8112,6 +8121,9 @@ class WithErrorSyntax::EventSender {
   // The underlying server channel endpoint, which may be replaced at run-time.
   const ::zx::channel& channel() const { return server_end_; }
   ::zx::channel& channel() { return server_end_; }
+
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return server_end_.is_valid(); }
 
  private:
   ::zx::channel server_end_;

@@ -20,6 +20,9 @@ class {{ .Name }}::EventSender {
   // The underlying server channel endpoint, which may be replaced at run-time.
   const ::zx::channel& channel() const { return server_end_; }
   ::zx::channel& channel() { return server_end_; }
+
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return server_end_.is_valid(); }
 {{ "" }}
   {{- range .Events }}
   zx_status_t {{ .Name }}({{ template "Params" .Response }}) const {

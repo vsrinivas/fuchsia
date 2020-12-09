@@ -1547,6 +1547,9 @@ class Interface::EventSender {
   const ::zx::channel& channel() const { return server_end_; }
   ::zx::channel& channel() { return server_end_; }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return server_end_.is_valid(); }
+
   zx_status_t OnEvent() const {
     return SendOnEventEvent(::zx::unowned_channel(server_end_));
   }
