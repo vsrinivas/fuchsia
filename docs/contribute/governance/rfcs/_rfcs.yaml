@@ -152,9 +152,9 @@
   file: '0011_getinfo_kmemstats_extended.md'
   area: ['Zircon']
   issue: []
-  gerrit_change_id: []
+  gerrit_change_id: ['446786']
   status: 'Accepted'
-  reviewers: []
+  reviewers: ['cpu@google.com','adanis@google.com','maniscalco@google.com']
   submitted: '2020-11-04'
   reviewed: '2020-11-20'
 
@@ -165,8 +165,8 @@
   file: '0012_zircon_discardable_memory.md'
   area: ['Zircon']
   issue: ['60237']
-  gerrit_change_id: []
+  gerrit_change_id: ['441994']
   status: 'Accepted'
-  reviewers: []
+  reviewers: ['maniscalco@google.com','cpu@google.com','jamesr@google.com','adanis@google.com']
   submitted: '2020-10-27'
   reviewed: '2020-12-02'
