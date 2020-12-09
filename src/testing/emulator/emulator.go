@@ -561,15 +561,34 @@ func (i *Instance) Kill() error {
 	return err
 }
 
+func printWhileWait(r *bufio.Reader, proc *os.Process) (*os.ProcessState, error) {
+	stop := make(chan struct{})
+	defer close(stop)
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				if line, err := r.ReadString('\n'); err == nil {
+					fmt.Print(line)
+				}
+			}
+		}
+	}()
+
+	ps, err := proc.Wait()
+	return ps, err
+}
+
 // Wait for the emulator instance to terminate
 func (i *Instance) Wait() (*os.ProcessState, error) {
 	if i.piped != nil {
-		if ps, err := i.piped.Process.Wait(); err != nil {
+		if ps, err := printWhileWait(i.stdout, i.piped.Process); err != nil {
 			return ps, err
 		}
 	}
-	ps, err := i.cmd.Process.Wait()
-	return ps, err
+	return printWhileWait(i.stdout, i.cmd.Process)
 }
 
 // RunCommand runs the given command in the serial console for the emulator
