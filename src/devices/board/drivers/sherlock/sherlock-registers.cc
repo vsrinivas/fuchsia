@@ -103,6 +103,17 @@ zx_status_t Sherlock::RegistersInit() {
                                        .reg_count = 1,
                                    },
                                });
+
+  register_entries[aml_registers::REGISTER_ISP_RESET] =
+      registers::BuildMetadata(allocator, aml_registers::REGISTER_ISP_RESET, RESET_MMIO,
+                               std::vector<registers::MaskEntryBuilder<uint32_t>>{
+                                   {
+                                       .mask = aml_registers::ISP_RESET4_MASK,
+                                       .mmio_offset = T931_RESET4_LEVEL,
+                                       .reg_count = 1,
+                                   },
+                               });
+
 #ifdef FACTORY_BUILD
   mmio_entries[USB_FACTORY_MMIO] = registers::BuildMetadata(allocator, USB_FACTORY_MMIO);
 

@@ -37,7 +37,7 @@ class MockRegisters : public ::llcpp::fuchsia::hardware::registers::Device::Inte
     GetExpectWrite<T>()[offset].push(std::pair<T, T>(mask, value));
   }
 
-  zx_status_t VerifyAll();
+  inline zx_status_t VerifyAll();
 
  private:
   // Implement Registers FIDL Protocol.

@@ -9,6 +9,7 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/clockimpl.h>
 #include <ddktl/protocol/gpioimpl.h>
+#include <soc/aml-common/aml-registers.h>
 #include <soc/aml-meson/g12b-clk.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
@@ -174,12 +175,23 @@ static pbus_dev_t isp_dev = []() {
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
+
+static const zx_bind_inst_t reset_register_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
+    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_ISP_RESET),
+};
+
 static const zx_bind_inst_t camera_sensor_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_CAMERA_SENSOR2),
 };
 
 static const zx_bind_inst_t amlogiccanvas_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
+};
+
+static const device_fragment_part_t reset_register_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(reset_register_match), reset_register_match},
 };
 
 static const device_fragment_part_t camera_sensor_fragment[] = {
@@ -189,6 +201,7 @@ static const device_fragment_part_t camera_sensor_fragment[] = {
 
 static const device_fragment_t isp_fragments[] = {
     {"camera-sensor", countof(camera_sensor_fragment), camera_sensor_fragment},
+    {"register-reset", countof(reset_register_fragment), reset_register_fragment},
 };
 
 // Compisite binding rules for GDC

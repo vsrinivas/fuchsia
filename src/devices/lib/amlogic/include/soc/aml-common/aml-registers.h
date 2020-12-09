@@ -11,6 +11,7 @@ enum RegisterId : uint32_t {
   REGISTER_USB_PHY_V2_RESET,
   REGISTER_NNA_RESET_LEVEL2,
   REGISTER_MALI_RESET,
+  REGISTER_ISP_RESET,
 #ifdef FACTORY_BUILD
   REGISTER_USB_PHY_FACTORY,
 #endif  // FACTORY_BUILD
@@ -29,6 +30,9 @@ constexpr uint32_t NNA_RESET2_LEVEL_MASK = 0x1000;
 // REGISTER_MALI_RESET constants
 constexpr uint32_t MALI_RESET0_MASK = 0x100000;
 constexpr uint32_t MALI_RESET2_MASK = 0x4000;
+
+// REGISTER_ISP_RESET constants
+constexpr uint32_t ISP_RESET4_MASK = 0x2;
 
 }  // namespace aml_registers
 
