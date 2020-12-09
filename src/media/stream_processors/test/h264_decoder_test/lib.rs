@@ -172,3 +172,42 @@ fn bear_with_large_sei_itu_t35() -> Result<(), anyhow::Error> {
         fuchsia_async::Executor::new()?.run_singlethreaded(spec.run())
     })
 }
+
+#[test]
+fn bear_with_gaps() -> Result<(), anyhow::Error> {
+    with_large_stack(|| {
+        *LOGGER;
+
+        let mut nal_stream = Vec::new();
+        let mut bear = Vec::new();
+        File::open(BEAR_TEST_FILE)?.read_to_end(&mut bear)?;
+
+        // Append bear up till somewhere in middle, but then drop a NonIDR frame. Index of NonIDR in bear found by adding logging to H264NalIter.
+        nal_stream.extend_from_slice(&bear[0..7635]);
+        nal_stream.extend(&bear[8858..]);
+
+        let stream =
+            Rc::new(TimestampedStream { source: H264Stream::from(nal_stream), timestamps: 0.. });
+
+        let frame_count_validator =
+            Rc::new(OutputPacketCountValidator { expected_output_packet_count: 29 });
+
+        let spec = TestSpec {
+            cases: vec![TestCase {
+                name: "Bear with gaps",
+                stream: stream,
+                validators: vec![
+                    Rc::new(TerminatesWithValidator {
+                        expected_terminal_output: Output::Eos { stream_lifetime_ordinal: 1 },
+                    }),
+                    frame_count_validator,
+                ],
+                stream_options: None,
+            }],
+            relation: CaseRelation::Serial,
+            stream_processor_factory: Rc::new(DecoderFactory),
+        };
+
+        fuchsia_async::Executor::new()?.run_singlethreaded(spec.run())
+    })
+}

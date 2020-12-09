@@ -927,6 +927,7 @@ void H264MultiDecoder::ConfigureDpb() {
 bool H264MultiDecoder::InitializeRefPics(
     const std::vector<std::shared_ptr<media::H264Picture>>& ref_pic_list, uint32_t reg_offset) {
   uint32_t ref_list[8] = {};
+  uint32_t ref_index = 0;
   ZX_DEBUG_ASSERT(ref_pic_list.size() <= sizeof(ref_list));
   for (uint32_t i = 0; i < ref_pic_list.size(); i++) {
     DLOG("Getting pic list (for reg_offset %d) %d of %lu\n", reg_offset, i, ref_pic_list.size());
@@ -939,9 +940,10 @@ bool H264MultiDecoder::InitializeRefPics(
     auto internal_picture = amlogic_picture->internal_picture.lock();
     if (!internal_picture) {
       LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_MissingPictureError);
-      LOG(ERROR, "InitializeRefPics reg_offset %d missing internal picture %d", reg_offset, i);
-      frame_data_provider_->AsyncResetStreamAfterCurrentFrame();
-      return false;
+      LOG(WARNING, "InitializeRefPics reg_offset %d missing internal picture %d", reg_offset, i);
+      // internal_picture could be null if input data has gaps. Make best effort to continue without
+      // error till next IDR is received.
+      continue;
     }
 
     // Offset into AncNCanvasAddr registers.
@@ -950,8 +952,10 @@ bool H264MultiDecoder::InitializeRefPics(
     constexpr uint32_t kFieldTypeBitOffset = 5;
     uint32_t cfg = canvas_index | (kFrameFlag << kFieldTypeBitOffset);
     // Every dword stores 4 reference pics, lowest index in the highest bits.
-    uint32_t offset_into_dword = 8 * (3 - (i % 4));
-    ref_list[i / 4] |= (cfg << offset_into_dword);
+    uint32_t offset_into_dword = 8 * (3 - (ref_index % 4));
+    ref_list[ref_index / 4] |= (cfg << offset_into_dword);
+
+    ++ref_index;
   }
 
   H264BufferInfoIndex::Get().FromValue(reg_offset).WriteTo(owner_->dosbus());
