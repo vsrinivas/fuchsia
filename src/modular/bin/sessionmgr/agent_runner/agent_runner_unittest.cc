@@ -682,4 +682,41 @@ TEST_F(AgentRunnerTest, CriticalAgents_SessionRestartOnCrash) {
   RunLoopUntil([&is_torn_down] { return is_torn_down; });
 }
 
+// Tests that AgentContext terminates an agent when it cannot connect to an agent's outgoing
+// directory. The agent is marked critical, so this causes the session to restart.
+TEST_F(AgentRunnerTest, SessionRestartOnBrokenAgentOutgoingDir) {
+  bool is_agent_launch_called{false};
+
+  std::unique_ptr<TestAgent> test_agent;
+  launcher()->RegisterComponent(
+      kTestAgentUrl, [&](fuchsia::sys::LaunchInfo launch_info,
+                         fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        // Close the request to the agent's outging directory. AgentContext will be unable to
+        // clone the directory, and will terminate the agent as a result.
+        launch_info.directory_request.reset();
+
+        is_agent_launch_called = true;
+      });
+
+  // The session should be restarted when the agent terminates.
+  set_restart_session_on_agent_crash({kTestAgentUrl});
+
+  auto is_restart_called = false;
+  set_on_session_restart_callback([&is_restart_called] { is_restart_called = true; });
+
+  auto agent_runner = GetOrCreateAgentRunner();
+
+  fuchsia::modular::session::AppConfig agent_app_config;
+  agent_app_config.set_url(kTestAgentUrl);
+  auto agent_app_client = std::make_unique<modular::AppClient<fuchsia::modular::Lifecycle>>(
+      launcher(), std::move(agent_app_config), /*data_origin=*/"");
+
+  agent_runner->AddRunningAgent(kTestAgentUrl, std::move(agent_app_client));
+
+  RunLoopUntil([&] { return is_agent_launch_called; });
+
+  // The session should be restarted because the agent was terminated.
+  RunLoopUntil([&] { return is_restart_called; });
+}
+
 }  // namespace modular_testing

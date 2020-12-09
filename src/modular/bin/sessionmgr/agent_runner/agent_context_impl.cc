@@ -67,6 +67,9 @@ class AgentContextImpl::FinishInitializeCall : public Operation<> {
     FX_CHECK(agent_context_impl_->state_ == State::INITIALIZING);
     FlowToken flow{this};
 
+    agent_context_impl_->state_ = State::RUNNING;
+
+    // Connect to the fuchsia.modular.Agent protocol.
     agent_context_impl_->app_client_->services().ConnectToService(
         agent_context_impl_->agent_.NewRequest());
     agent_context_impl_->agent_.set_error_handler(
@@ -77,11 +80,17 @@ class AgentContextImpl::FinishInitializeCall : public Operation<> {
         });
 
     // Enumerate the services that the agent has published in its outgoing directory.
-    auto agent_outgoing_dir_handle =
-        fdio_service_clone(agent_context_impl_->app_client_->services().directory().get());
-    FX_CHECK(agent_outgoing_dir_handle != ZX_HANDLE_INVALID);
-    zx::channel agent_outgoing_dir_chan(agent_outgoing_dir_handle);
-    outgoing_dir_ptr_.Bind(std::move(agent_outgoing_dir_chan));
+    if (auto status =
+            fdio_service_clone_to(agent_context_impl_->app_client_->services().directory().get(),
+                                  outgoing_dir_ptr_.NewRequest().TakeChannel().release());
+        status != ZX_OK) {
+      FX_PLOGS(ERROR, status)
+          << "Could not clone agent's outgoing directory handle. "
+          << "This probably means the agent crashed before exposing its outgoing dir: "
+          << agent_context_impl_->url_;
+      agent_context_impl_->StopOnAppError();
+      return;
+    }
 
     GetFidlDirectoryEntries(outgoing_dir_ptr_.get(), [this, flow](auto entries) {
       agent_context_impl_->agent_outgoing_services_ = std::set<std::string>(
@@ -91,8 +100,6 @@ class AgentContextImpl::FinishInitializeCall : public Operation<> {
     // When the agent component dies, clean up.
     agent_context_impl_->app_client_->SetAppErrorHandler(
         [agent_context_impl = agent_context_impl_] { agent_context_impl->StopOnAppError(); });
-
-    agent_context_impl_->state_ = State::RUNNING;
   }
 
   AgentContextImpl* const agent_context_impl_;
