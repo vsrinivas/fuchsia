@@ -122,6 +122,21 @@ std::string EscapeComponent(const std::string& name, bool force_escape_parens = 
   return output;
 }
 
+bool NeedsEscaping(const std::string& name) {
+  // For now assume the language is C. It would be nice if the current language was piped through to
+  // this spot so we could make language-specific escaping determinations.
+  if (ExprTokenizer::IsNameToken(ExprLanguage::kC, name))
+    return false;  // Normal simple name.
+
+  // Assume anything with "operator" doesn't need escaping. We could actually parse the operator
+  // declaration to make sure it's valid. But this only needs to deal with names the compiler
+  // actually generates and not escaping something in the UI isn't a huge deal if we're wrong.
+  if (StringBeginsWith(name, "operator"))
+    return false;
+
+  return true;
+}
+
 }  // namespace
 
 OutputBuffer FormatFunctionName(const Function* function,
@@ -186,9 +201,7 @@ OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier,
         // Provide names for anonymous components.
         result.Append(Syntax::kComment, kAnonIdentifierComponentName);
       } else {
-        // For now assume the language is C. It would be nice if the current language was piped
-        // through to this spot so we could make language-specific escaping determinations.
-        bool needs_escaping = !ExprTokenizer::IsNameToken(ExprLanguage::kC, name);
+        bool needs_escaping = NeedsEscaping(name);
         if (needs_escaping)
           result.Append(Syntax::kComment, "$(");
 

@@ -424,9 +424,7 @@ TEST_F(ExprParserTest, UnaryMath) {
       "  IDENTIFIER(\"foo\")\n",
       GetParseString("-*foo"));
 
-  EXPECT_EQ(
-      "IDENTIFIER(\"~foo\")\n",
-      GetParseString("~foo"));
+  EXPECT_EQ("IDENTIFIER(\"~foo\")\n", GetParseString("~foo"));
   EXPECT_EQ(
       "UNARY(~)\n"
       " LITERAL(21)\n",
@@ -521,6 +519,31 @@ TEST_F(ExprParserTest, SpecialIdentifiers) {
   // output only.
   EXPECT_EQ("IDENTIFIER(\"{{impl}}\"; ::\"some(crazyness)$here)\")\n",
             GetParseString("$({{impl}})::$(some(crazyness)$here\\))"));
+}
+
+TEST_F(ExprParserTest, CppOperators) {
+  EXPECT_EQ("IDENTIFIER(\"Class\"; ::\"operator>>\")\n", GetParseString("Class::operator>>"));
+  EXPECT_EQ("IDENTIFIER(\"Class\"; ::\"operator()\")\n", GetParseString("Class :: operator ()"));
+  EXPECT_EQ(
+      "BINARY_OP(>)\n"
+      " IDENTIFIER(\"Class\"; ::\"operator>>\")\n"
+      " IDENTIFIER(\"operator<<\")\n",
+      GetParseString("Class::operator>>>operator<<"));
+
+  // Type conversion operator. To parse this correctly both the class name and the destination
+  // type name must be known as types to the parser.
+  EXPECT_EQ("IDENTIFIER(\"Type\"; ::\"operator const Type*\")\n",
+            GetParseString("Type::operator   const  Type *", &TestLookupName));
+
+  // We allow invalid operator names and just treat them as a literal "operator" identifier to allow
+  // C variables using that name.
+  EXPECT_EQ("IDENTIFIER(\"operator\")\n", GetParseString("operator"));
+  EXPECT_EQ("IDENTIFIER(\"operator\")\n", GetParseString("(operator)"));
+  EXPECT_EQ(
+      "ACCESSOR(.)\n"
+      " IDENTIFIER(\"foo\")\n"
+      " operator\n",
+      GetParseString("foo.operator"));
 }
 
 // Tests << and >> operators. They are challenging because this can also appear in template

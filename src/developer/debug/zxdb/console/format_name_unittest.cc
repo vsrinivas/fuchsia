@@ -158,6 +158,16 @@ TEST(FormatName, FormatIdentifier) {
       FormatIdentifier(anon, bold_no_global_opts).GetDebugString());
 }
 
+TEST(FormatName, Operators) {
+  FormatIdentifierOptions opts;
+
+  // C++ operator functions shouldn't be escaped.
+  ParsedIdentifier op_ident;
+  op_ident.AppendComponent(ParsedIdentifierComponent("MyClass"));
+  op_ident.AppendComponent(ParsedIdentifierComponent("operator++"));
+  EXPECT_EQ("MyClass::operator++", FormatIdentifier(op_ident, opts).AsString());
+}
+
 TEST(FormatName, FormatSpecialIdentifier) {
   FormatIdentifierOptions global_opts;
   global_opts.show_global_qual = true;

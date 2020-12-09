@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
 #include "src/developer/debug/zxdb/expr/number_parser.h"
+#include "src/developer/debug/zxdb/expr/operator_keyword.h"
 #include "src/developer/debug/zxdb/expr/parse_special_identifier.h"
 #include "src/developer/debug/zxdb/expr/template_type_extractor.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
@@ -493,6 +494,43 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
           mode = kAnything;
         }
         continue;  // Don't Consume() since we already ate the token.
+      }
+
+      case ExprTokenType::kOperator: {
+        if (OperatorKeywordResult op_result = ParseOperatorKeyword(tokens_, cur_);
+            op_result.success) {
+          // Standard C++ "operator+" or similar opeator.
+          result.ident.AppendComponent(ParsedIdentifierComponent(op_result.canonical_name));
+          mode = kOtherName;
+          cur_ = op_result.end_token - 1;  // Point to last token in the operator name.
+          break;
+        }
+
+        // Here the operator is either invalid or it's a type conversion like
+        // "MyClass::operator bool()". We don't currently differentiate between C and C++ so use
+        // some heuristics to determine if the user is trying to type a conversion operator function
+        // name in C++ or a variable or class member name called "operator" in C. This heuristic
+        // expects anything with a "::" before the operator definition.
+        //
+        // TODO: differentiate between C and C++ in the parser. Then we can remove this condition.
+        // C++ would always expect a type name, and C wouldn't have even generated the special
+        // "operator" token (it would be a normal name).
+        if (mode != kBegin) {
+          Consume();  // Eat the "operator" keyword.
+          if (auto conv_type = ParseType(nullptr)) {
+            // Found a type conversion operator.
+            result.ident.AppendComponent(
+                ParsedIdentifierComponent("operator " + conv_type->GetFullName()));
+            mode = kOtherName;
+            break;
+          } else {
+            // Can't parse as a type. We can't fall through to the name case below since we already
+            // advanced arbitrarily forward in the parsing. The error should be already be set.
+            return ParseNameResult();
+          }
+        }
+
+        // Fall-through to regular name parsing to treat "operator" as a normal name as per C.
       }
 
       case ExprTokenType::kName:
