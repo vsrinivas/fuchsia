@@ -146,7 +146,6 @@ pub(crate) async fn perform_scan<F>(
 }
 
 /// Perform a directed active scan for a given network on given channels.
-#[allow(unused)]
 pub(crate) async fn perform_directed_active_scan(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     ssid: &Vec<u8>,

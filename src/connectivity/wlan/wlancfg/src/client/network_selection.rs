@@ -15,7 +15,7 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
-    log::{error, info, trace},
+    log::{debug, error, info, trace},
     std::{cmp::Ordering, collections::HashMap, convert::TryInto, sync::Arc},
     wlan_common::channel::Channel,
     wlan_metrics_registry::{
@@ -171,12 +171,18 @@ impl NetworkSelector {
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
         ignore_list: &Vec<types::NetworkIdentifier>,
     ) -> Option<types::ConnectRequest> {
-        self.perform_scan(iface_manager).await;
+        self.perform_scan(iface_manager.clone()).await;
         let saved_networks = load_saved_networks(Arc::clone(&self.saved_network_manager)).await;
         let scan_result_guard = self.scan_result_cache.lock().await;
         let networks =
             merge_saved_networks_and_scan_data(saved_networks, &scan_result_guard.results).await;
-        select_best_connection_candidate(networks, ignore_list)
+
+        match select_best_connection_candidate(networks, ignore_list) {
+            Some((selected, channel, bssid)) => {
+                Some(augment_bss_with_active_scan(selected, channel, bssid, iface_manager).await)
+            }
+            None => None,
+        }
     }
 }
 
@@ -283,7 +289,7 @@ impl ScanResultUpdate for NetworkSelectorScanUpdater {
 fn select_best_connection_candidate<'a>(
     bss_list: Vec<InternalBss<'a>>,
     ignore_list: &Vec<types::NetworkIdentifier>,
-) -> Option<types::ConnectRequest> {
+) -> Option<(types::ConnectRequest, types::WlanChan, types::Bssid)> {
     bss_list
         .into_iter()
         .filter(|bss| {
@@ -315,12 +321,58 @@ fn select_best_connection_candidate<'a>(
             // Both networks have failures, compare their scores
             bss_a.score().partial_cmp(&bss_b.score()).unwrap()
         })
-        .map(|bss| types::ConnectRequest {
-            network: bss.network_id,
-            credential: bss.network_info.credential,
-            observed_in_passive_scan: Some(bss.bss_info.observed_in_passive_scan),
-            bss: bss.bss_info.bss_desc.clone(),
+        .map(|bss| {
+            (
+                types::ConnectRequest {
+                    network: bss.network_id,
+                    credential: bss.network_info.credential,
+                    observed_in_passive_scan: Some(bss.bss_info.observed_in_passive_scan),
+                    bss: bss.bss_info.bss_desc.clone(),
+                },
+                bss.bss_info.channel,
+                bss.bss_info.bssid,
+            )
         })
+}
+
+/// If a BSS was discovered via a passive scan, we need to perform an active scan on it to discover
+/// all the information potentially needed by the SME layer.
+async fn augment_bss_with_active_scan(
+    selected_network: types::ConnectRequest,
+    channel: types::WlanChan,
+    bssid: types::Bssid,
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+) -> types::ConnectRequest {
+    match selected_network.observed_in_passive_scan {
+        Some(true) => {
+            info!("Performing directed active scan on selected network");
+            let directed_scan_result = scan::perform_directed_active_scan(
+                iface_manager,
+                &selected_network.network.ssid,
+                Some(vec![channel.primary]),
+            )
+            .await;
+            match directed_scan_result {
+                Ok(mut results) => {
+                    if let Some(mut network) =
+                        results.drain(..).find(|n| n.id == selected_network.network)
+                    {
+                        if let Some(bss) = network.entries.drain(..).find(|bss| bss.bssid == bssid)
+                        {
+                            return types::ConnectRequest { bss: bss.bss_desc, ..selected_network };
+                        }
+                    }
+                    info!("BSS info will lack active scan augmentation, proceeding anyway.");
+                }
+                Err(()) => info!("Failed to perform active scan to augment BSS info."),
+            };
+        }
+        Some(false) => debug!("Network already discovered via active scan."),
+        None => error!("Unexpected 'None' value for 'observed_in_passive_scan'."),
+    }
+
+    // fallback to returning the selected network with no change.
+    selected_network
 }
 
 fn record_metrics_on_scan(
@@ -396,7 +448,7 @@ mod tests {
         fidl::endpoints::create_proxy,
         fidl_fuchsia_cobalt::CobaltEvent,
         fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
-        fuchsia_async as fasync,
+        fuchsia_async::{self as fasync, DurationExt},
         fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
         futures::{
             channel::{mpsc, oneshot},
@@ -840,12 +892,16 @@ mod tests {
         // there's a network on 5G, it should get a boost and be selected
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
-            Some(types::ConnectRequest {
-                network: test_id_1.clone(),
-                credential: credential_1.clone(),
-                bss: bss_info1.bss_desc.clone(),
-                observed_in_passive_scan: Some(bss_info1.observed_in_passive_scan),
-            })
+            Some((
+                types::ConnectRequest {
+                    network: test_id_1.clone(),
+                    credential: credential_1.clone(),
+                    bss: bss_info1.bss_desc.clone(),
+                    observed_in_passive_scan: Some(bss_info1.observed_in_passive_scan),
+                },
+                bss_info1.channel,
+                bss_info1.bssid
+            ))
         );
 
         // make the 5GHz network into a 2.4GHz network
@@ -858,12 +914,16 @@ mod tests {
         // all networks are 2.4GHz, strongest RSSI network returned
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
-            Some(types::ConnectRequest {
-                network: test_id_2.clone(),
-                credential: credential_2.clone(),
-                bss: networks[2].bss_info.bss_desc.clone(),
-                observed_in_passive_scan: Some(networks[2].bss_info.observed_in_passive_scan),
-            })
+            Some((
+                types::ConnectRequest {
+                    network: test_id_2.clone(),
+                    credential: credential_2.clone(),
+                    bss: networks[2].bss_info.bss_desc.clone(),
+                    observed_in_passive_scan: Some(networks[2].bss_info.observed_in_passive_scan),
+                },
+                networks[2].bss_info.channel,
+                networks[2].bss_info.bssid
+            ))
         );
     }
 
@@ -908,12 +968,16 @@ mod tests {
         // stronger network returned
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
-            Some(types::ConnectRequest {
-                network: test_id_1.clone(),
-                credential: credential_1.clone(),
-                bss: bss_info1.bss_desc.clone(),
-                observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan)
-            })
+            Some((
+                types::ConnectRequest {
+                    network: test_id_1.clone(),
+                    credential: credential_1.clone(),
+                    bss: bss_info1.bss_desc.clone(),
+                    observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan)
+                },
+                bss_info1.channel,
+                bss_info1.bssid
+            ))
         );
 
         // mark the stronger network as having a failure
@@ -924,12 +988,16 @@ mod tests {
         // weaker network (with no failures) returned
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
-            Some(types::ConnectRequest {
-                network: test_id_2.clone(),
-                credential: credential_2.clone(),
-                bss: bss_info2.bss_desc.clone(),
-                observed_in_passive_scan: Some(networks[1].bss_info.observed_in_passive_scan)
-            })
+            Some((
+                types::ConnectRequest {
+                    network: test_id_2.clone(),
+                    credential: credential_2.clone(),
+                    bss: bss_info2.bss_desc.clone(),
+                    observed_in_passive_scan: Some(networks[1].bss_info.observed_in_passive_scan)
+                },
+                bss_info2.channel,
+                bss_info2.bssid
+            ))
         );
 
         // give them both the same number of failures
@@ -940,12 +1008,16 @@ mod tests {
         // stronger network returned
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
-            Some(types::ConnectRequest {
-                network: test_id_1.clone(),
-                credential: credential_1.clone(),
-                bss: bss_info1.bss_desc.clone(),
-                observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
-            })
+            Some((
+                types::ConnectRequest {
+                    network: test_id_1.clone(),
+                    credential: credential_1.clone(),
+                    bss: bss_info1.bss_desc.clone(),
+                    observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan)
+                },
+                bss_info1.channel,
+                bss_info1.bssid
+            ))
         );
     }
 
@@ -1016,12 +1088,16 @@ mod tests {
         // stronger network returned
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
-            Some(types::ConnectRequest {
-                network: test_id_2.clone(),
-                credential: credential_2.clone(),
-                bss: bss_info3.bss_desc.clone(),
-                observed_in_passive_scan: Some(networks[2].bss_info.observed_in_passive_scan),
-            })
+            Some((
+                types::ConnectRequest {
+                    network: test_id_2.clone(),
+                    credential: credential_2.clone(),
+                    bss: bss_info3.bss_desc.clone(),
+                    observed_in_passive_scan: Some(networks[2].bss_info.observed_in_passive_scan),
+                },
+                bss_info3.channel,
+                bss_info3.bssid
+            ))
         );
 
         // mark the stronger network as incompatible
@@ -1034,12 +1110,16 @@ mod tests {
         // other network returned
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
-            Some(types::ConnectRequest {
-                network: test_id_1.clone(),
-                credential: credential_1.clone(),
-                bss: networks[0].bss_info.bss_desc.clone(),
-                observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
-            })
+            Some((
+                types::ConnectRequest {
+                    network: test_id_1.clone(),
+                    credential: credential_1.clone(),
+                    bss: networks[0].bss_info.bss_desc.clone(),
+                    observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
+                },
+                networks[0].bss_info.channel,
+                networks[0].bss_info.bssid
+            ))
         );
     }
 
@@ -1084,23 +1164,31 @@ mod tests {
         // stronger network returned
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
-            Some(types::ConnectRequest {
-                network: test_id_2.clone(),
-                credential: credential_2.clone(),
-                bss: bss_info2.bss_desc.clone(),
-                observed_in_passive_scan: Some(networks[1].bss_info.observed_in_passive_scan),
-            })
+            Some((
+                types::ConnectRequest {
+                    network: test_id_2.clone(),
+                    credential: credential_2.clone(),
+                    bss: bss_info2.bss_desc.clone(),
+                    observed_in_passive_scan: Some(networks[1].bss_info.observed_in_passive_scan),
+                },
+                bss_info2.channel,
+                bss_info2.bssid
+            ))
         );
 
         // ignore the stronger network, other network returned
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![test_id_2.clone()]),
-            Some(types::ConnectRequest {
-                network: test_id_1.clone(),
-                credential: credential_1.clone(),
-                bss: bss_info1.bss_desc.clone(),
-                observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
-            })
+            Some((
+                types::ConnectRequest {
+                    network: test_id_1.clone(),
+                    credential: credential_1.clone(),
+                    bss: bss_info1.bss_desc.clone(),
+                    observed_in_passive_scan: Some(networks[0].bss_info.observed_in_passive_scan),
+                },
+                bss_info1.channel,
+                bss_info1.bssid
+            ))
         );
     }
 
@@ -1202,6 +1290,143 @@ mod tests {
     }
 
     #[test]
+    fn augment_bss_with_active_scan_doesnt_run_on_actively_found_networks() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = exec.run_singlethreaded(test_setup());
+
+        let test_id_1 = types::NetworkIdentifier {
+            ssid: "foo".as_bytes().to_vec(),
+            type_: types::SecurityType::Wpa3,
+        };
+        let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
+        let bss_info1 = types::Bss {
+            compatible: true,
+            rssi: -14,
+            channel: generate_channel(36),
+            ..generate_random_bss()
+        };
+        let connect_req = types::ConnectRequest {
+            network: test_id_1.clone(),
+            credential: credential_1.clone(),
+            bss: bss_info1.bss_desc.clone(),
+            observed_in_passive_scan: Some(false), // was actively scanned
+        };
+
+        let fut = augment_bss_with_active_scan(
+            connect_req.clone(),
+            bss_info1.channel,
+            bss_info1.bssid,
+            test_values.iface_manager.clone(),
+        );
+        pin_mut!(fut);
+
+        // The connect_req comes out the other side with no change
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(req) => {
+            assert_eq!(req, connect_req)}
+        );
+    }
+
+    #[test]
+    fn augment_bss_with_active_scan_runs_on_passively_found_networks() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = exec.run_singlethreaded(test_setup());
+
+        let test_id_1 = types::NetworkIdentifier {
+            ssid: "foo".as_bytes().to_vec(),
+            type_: types::SecurityType::Wpa3,
+        };
+        let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
+        let bss_info1 = types::Bss {
+            compatible: true,
+            rssi: -14,
+            channel: generate_channel(36),
+            ..generate_random_bss()
+        };
+        let connect_req = types::ConnectRequest {
+            network: test_id_1.clone(),
+            credential: credential_1.clone(),
+            bss: bss_info1.bss_desc.clone(),
+            observed_in_passive_scan: Some(true), // was passively scanned
+        };
+
+        let fut = augment_bss_with_active_scan(
+            connect_req.clone(),
+            bss_info1.channel,
+            bss_info1.bssid,
+            test_values.iface_manager.clone(),
+        );
+        pin_mut!(fut);
+
+        // Progress the future until a scan request is sent
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Check that a scan request was sent to the sme and send back results
+        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: vec![test_id_1.ssid.clone()],
+            channels: vec![36],
+        });
+        let new_bss_desc = generate_random_bss_desc();
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, req, control_handle: _
+            }))) => {
+                // Validate the request
+                assert_eq!(req, expected_scan_request);
+
+                let mut mock_scan_results = vec![
+                    fidl_sme::BssInfo {
+                        bssid: [0, 0, 0, 0, 0, 0], // Not the same BSSID
+                        ssid: test_id_1.ssid.clone(),
+                        rssi_dbm: 10,
+                        snr_db: 10,
+                        channel: fidl_common::WlanChan {
+                            primary: 1,
+                            cbw: fidl_common::Cbw::Cbw20,
+                            secondary80: 0,
+                        },
+                        protection: fidl_sme::Protection::Wpa3Enterprise,
+                        compatible: true,
+                        bss_desc: generate_random_bss_desc(),
+                    },
+                    fidl_sme::BssInfo {
+                        bssid: bss_info1.bssid.clone(),
+                        ssid: test_id_1.ssid.clone(),
+                        rssi_dbm: 0,
+                        snr_db: 0,
+                        channel: fidl_common::WlanChan {
+                            primary: 1,
+                            cbw: fidl_common::Cbw::Cbw20,
+                            secondary80: 0,
+                        },
+                        protection: fidl_sme::Protection::Wpa3Enterprise,
+                        compatible: true,
+                        bss_desc: new_bss_desc.clone(),
+                    },
+                ];
+                // Send all the APs
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_result(&mut mock_scan_results.iter_mut())
+                    .expect("failed to send scan data");
+
+                // Send the end of data
+                ctrl.send_on_finished()
+                    .expect("failed to send scan data");
+            }
+        );
+
+        // The connect_req comes out the other side with the new bss_desc
+        assert_eq!(exec.run_singlethreaded(fut), types::ConnectRequest{
+            bss: new_bss_desc,
+            // observed_in_passive_scan should still be true, since the network was found in a
+            // passive scan prior to the directed active scan augmentation.
+            observed_in_passive_scan: Some(true),
+            ..connect_req
+        });
+    }
+
+    #[test]
     fn find_best_connection_candidate_end_to_end() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
@@ -1214,12 +1439,14 @@ mod tests {
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let bss_desc1 = generate_random_bss_desc();
+        let bss_desc1_active = generate_random_bss_desc();
         let test_id_2 = types::NetworkIdentifier {
             ssid: "bar".as_bytes().to_vec(),
             type_: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
         let bss_desc2 = generate_random_bss_desc();
+        let bss_desc2_active = generate_random_bss_desc();
 
         // insert some new saved networks
         exec.run_singlethreaded(
@@ -1304,6 +1531,57 @@ mod tests {
             }
         );
 
+        // Process scan results
+        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
+        // Sleep very briefly to allow the scan module to finish. The fact that the location
+        // sensor is non existent and its channel for receiving scan results doesn't work seems
+        // to take a brief moment to propagate, and allow the scan process to finish.
+        // TODO(fxbug.dev/65923): This is a hack but I'm not sure how else to handle it.
+        let sleep_duration = zx::Duration::from_millis(10);
+        exec.run_singlethreaded(fasync::Timer::new(sleep_duration.after_now()));
+        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
+
+        // An additional directed active scan should be made for the selected network
+        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: vec![test_id_1.ssid.clone()],
+            channels: vec![1],
+        });
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, req, control_handle: _
+            }))) => {
+                // Validate the request
+                assert_eq!(req, expected_scan_request);
+
+                let mut mock_scan_results = vec![
+                    fidl_sme::BssInfo {
+                        bssid: [0, 0, 0, 0, 0, 0],
+                        ssid: test_id_1.ssid.clone(),
+                        rssi_dbm: 10,
+                        snr_db: 10,
+                        channel: fidl_common::WlanChan {
+                            primary: 1,
+                            cbw: fidl_common::Cbw::Cbw20,
+                            secondary80: 0,
+                        },
+                        protection: fidl_sme::Protection::Wpa3Enterprise,
+                        compatible: true,
+                        bss_desc: bss_desc1_active.clone(),
+                    },
+                ];
+                // Send all the APs
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_result(&mut mock_scan_results.iter_mut())
+                    .expect("failed to send scan data");
+
+                // Send the end of data
+                ctrl.send_on_finished()
+                    .expect("failed to send scan data");
+            }
+        );
+
         // Check that we pick a network
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(
@@ -1311,22 +1589,66 @@ mod tests {
             Some(types::ConnectRequest {
                 network: test_id_1.clone(),
                 credential: credential_1.clone(),
-                bss: bss_desc1.clone(),
+                bss: bss_desc1_active.clone(),
                 observed_in_passive_scan: Some(true)
             })
         );
+
         // Ignore that network, check that we pick the other one
-        let results =
-            exec.run_singlethreaded(network_selector.find_best_connection_candidate(
-                test_values.iface_manager,
-                &vec![test_id_1.clone()],
-            ));
+        let ignore_list = vec![test_id_1.clone()];
+        let network_selection_fut = network_selector
+            .find_best_connection_candidate(test_values.iface_manager.clone(), &ignore_list);
+        pin_mut!(network_selection_fut);
+        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
+
+        // An additional directed active scan should be made for the selected network
+        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: vec![test_id_2.ssid.clone()],
+            channels: vec![1],
+        });
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, req, control_handle: _
+            }))) => {
+                // Validate the request
+                assert_eq!(req, expected_scan_request);
+
+                let mut mock_scan_results = vec![
+                    fidl_sme::BssInfo {
+                        bssid: [0, 0, 0, 0, 0, 0],
+                        ssid: test_id_2.ssid.clone(),
+                        rssi_dbm: 10,
+                        snr_db: 10,
+                        channel: fidl_common::WlanChan {
+                            primary: 1,
+                            cbw: fidl_common::Cbw::Cbw20,
+                            secondary80: 0,
+                        },
+                        protection: fidl_sme::Protection::Wpa1,
+                        compatible: true,
+                        bss_desc: bss_desc2_active.clone(),
+                    },
+                ];
+                // Send all the APs
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_result(&mut mock_scan_results.iter_mut())
+                    .expect("failed to send scan data");
+
+                // Send the end of data
+                ctrl.send_on_finished()
+                    .expect("failed to send scan data");
+            }
+        );
+
+        let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(
             results,
             Some(types::ConnectRequest {
                 network: test_id_2.clone(),
                 credential: credential_2.clone(),
-                bss: bss_desc2.clone(),
+                bss: bss_desc2_active.clone(),
                 observed_in_passive_scan: Some(true)
             })
         );
@@ -1384,7 +1706,11 @@ mod tests {
         let id = types::NetworkIdentifier { ssid: ssid, type_: types::SecurityType::Wpa2 };
         let mixed_scan_results = vec![types::ScanResult {
             id: id.clone(),
-            entries: vec![types::Bss { compatible: true, ..generate_random_bss() }],
+            entries: vec![types::Bss {
+                compatible: true,
+                observed_in_passive_scan: false, // mark this as active, to avoid an additional scan
+                ..generate_random_bss()
+            }],
             compatibility: types::Compatibility::Supported,
         }];
         let mut updater = network_selector.generate_scan_result_updater();

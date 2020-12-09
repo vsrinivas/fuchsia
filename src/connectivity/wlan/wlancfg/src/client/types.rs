@@ -13,6 +13,7 @@ pub type ConnectionState = fidl_policy::ConnectionState;
 pub type DisconnectStatus = fidl_policy::DisconnectStatus;
 pub type Compatibility = fidl_policy::Compatibility;
 pub type WlanChan = fidl_common::WlanChan;
+pub type Bssid = [u8; 6];
 
 // An internal version of fidl_policy::ScanResult that can be cloned
 #[derive(Debug, Clone, PartialEq)]
@@ -40,7 +41,7 @@ impl From<ScanResult> for fidl_policy::ScanResult {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bss {
     /// MAC address for the AP interface.
-    pub bssid: [u8; 6],
+    pub bssid: Bssid,
     /// Calculated received signal strength for the beacon/probe response.
     pub rssi: i8,
     /// Signal to noise ratio  for the beacon/probe response.
