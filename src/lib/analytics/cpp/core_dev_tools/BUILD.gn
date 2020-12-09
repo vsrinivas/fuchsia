@@ -11,6 +11,7 @@ static_library("core_dev_tools") {
     "analytics.h",
     "general_parameters.h",
     "system_info.h",
+    "user_agent.h",
   ]
 
   sources = [
@@ -26,6 +27,8 @@ static_library("core_dev_tools") {
     "persistent_status.h",
     "system_info.cc",
     "system_info.h",
+    "user_agent.cc",
+    "user_agent.h",
   ]
 
   deps = [
@@ -38,7 +41,10 @@ static_library("core_dev_tools") {
 }
 
 test("analytics_cpp_core_dev_tools_unittests") {
-  sources = [ "persistent_status_unittest.cc" ]
+  sources = [
+    "persistent_status_unittest.cc",
+    "user_agent_unittest.cc",
+  ]
 
   deps = [
     ":core_dev_tools",

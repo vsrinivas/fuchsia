@@ -5,13 +5,13 @@
 #include "src/lib/analytics/cpp/core_dev_tools/analytics_internal.h"
 
 #include "src/lib/analytics/cpp/core_dev_tools/persistent_status.h"
-#include "src/lib/fxl/strings/substitute.h"
+#include "src/lib/analytics/cpp/core_dev_tools/user_agent.h"
 
 namespace analytics::core_dev_tools::internal {
 
 void PrepareGoogleAnalyticsClient(google_analytics::Client& client, std::string_view tool_name,
                                   std::string_view tracking_id) {
-  client.SetUserAgent(fxl::Substitute("Fuchsia $0", tool_name));
+  client.SetUserAgent(GenerateUserAgent(tool_name));
   client.SetClientId(internal::PersistentStatus::GetUuid());
   client.SetTrackingId(tracking_id);
 }
