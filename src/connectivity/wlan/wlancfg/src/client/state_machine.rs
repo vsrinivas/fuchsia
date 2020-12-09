@@ -294,7 +294,7 @@ async fn connecting_state(
         .map_err(|e| ExitReason(Err(format_err!("Failed to create proxy: {:?}", e))))?;
     let mut sme_connect_request = fidl_sme::ConnectRequest {
         ssid: options.connect_request.target.network.ssid.clone(),
-        bss_desc: None,
+        bss_desc: options.connect_request.target.bss.clone(),
         credential: sme_credential_from_policy(&options.connect_request.target.credential),
         radio_cfg: RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl(),
         deprecated_scan_type: fidl_fuchsia_wlan_common::ScanType::Active,
@@ -597,7 +597,8 @@ mod tests {
                 listener,
                 logger::set_logger_for_test,
                 testing::{
-                    create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver, poll_sme_req,
+                    create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
+                    generate_random_bss_desc, poll_sme_req,
                 },
             },
             validate_cobalt_events, validate_no_cobalt_events,
@@ -698,6 +699,7 @@ mod tests {
         let saved_networks_manager = Arc::new(saved_networks);
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let next_network_ssid = "bar";
+        let bss_desc = generate_random_bss_desc();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -705,8 +707,8 @@ mod tests {
                     type_: types::SecurityType::Wep,
                 },
                 credential: Credential::Password("Anything".as_bytes().to_vec()),
-                bss: None,
                 observed_in_passive_scan: Some(true),
+                bss: bss_desc.clone(),
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
@@ -756,6 +758,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(req.bss_desc, bss_desc);
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                  // Send connection response.
@@ -840,6 +843,7 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let next_network_ssid = "bar";
+        let bss_desc = generate_random_bss_desc();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -848,7 +852,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss: bss_desc.clone(),
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
@@ -920,6 +924,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
+                assert_eq!(req.bss_desc, bss_desc);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -1017,6 +1022,7 @@ mod tests {
         };
         let config_net_id =
             network_config::NetworkIdentifier::from(next_network_identifier.clone());
+        let bss_desc = generate_random_bss_desc();
         // save network to check that failed connect is recorded
         exec.run_singlethreaded(
             saved_networks_manager.store(config_net_id.clone(), next_credential.clone()),
@@ -1029,7 +1035,7 @@ mod tests {
                 network: next_network_identifier,
                 credential: next_credential,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss: bss_desc.clone(),
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
@@ -1057,6 +1063,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(req.bss_desc, bss_desc.clone());
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                  // Send connection response.
@@ -1152,12 +1159,13 @@ mod tests {
         .expect("Failed to save network");
         let before_recording = zx::Time::get_monotonic();
 
+        let bss_desc = generate_random_bss_desc();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: next_network_identifier,
                 credential: next_credential,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss: bss_desc.clone(),
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
         };
@@ -1185,6 +1193,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(req.bss_desc, bss_desc.clone());
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                  // Send connection response.
@@ -1359,6 +1368,7 @@ mod tests {
 
         let first_network_ssid = "foo";
         let second_network_ssid = "bar";
+        let bss_desc = generate_random_bss_desc();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1367,7 +1377,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss: bss_desc.clone(),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
@@ -1410,6 +1420,7 @@ mod tests {
         // Send a different connect request
         let mut client = Client::new(test_values.client_req_sender);
         let (connect_sender2, mut connect_receiver2) = oneshot::channel();
+        let bss_desc2 = generate_random_bss_desc();
         let connect_request2 = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1418,7 +1429,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss: bss_desc2.clone(),
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
@@ -1451,6 +1462,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn: _, control_handle: _ }) => {
                 assert_eq!(req.ssid, first_network_ssid.as_bytes().to_vec());
+                assert_eq!(req.bss_desc, bss_desc.clone());
                 // Don't bother sending response, listener is gone
             }
         );
@@ -1469,6 +1481,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, second_network_ssid.as_bytes().to_vec());
+                assert_eq!(req.bss_desc, bss_desc2.clone());
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -1551,6 +1564,7 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let first_network_ssid = "foo";
+        let bss_desc = generate_random_bss_desc();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1559,7 +1573,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss: bss_desc.clone(),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
@@ -1633,6 +1647,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn: _, control_handle: _ }) => {
                 assert_eq!(req.ssid, first_network_ssid.as_bytes().to_vec());
+                assert_eq!(req.bss_desc, bss_desc.clone());
                 // Don't bother sending response, listener is gone
             }
         );
@@ -1705,6 +1720,7 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let network_ssid = "test";
+        let bss_desc = generate_random_bss_desc();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1713,7 +1729,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss: bss_desc.clone(),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
@@ -1744,7 +1760,7 @@ mod tests {
                         },
                         protection: fidl_sme::Protection::Unknown,
                         compatible: true,
-                        bss_desc: None,
+                        bss_desc: bss_desc,
                     }))
                 }).expect("could not send sme response");
             }
@@ -1804,6 +1820,7 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let network_ssid = "test";
+        let bss_desc = generate_random_bss_desc();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1812,7 +1829,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss: bss_desc.clone(),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
@@ -1843,7 +1860,7 @@ mod tests {
                         },
                         protection: fidl_sme::Protection::Unknown,
                         compatible: true,
-                        bss_desc: None,
+                        bss_desc,
                     }))
                 }).expect("could not send sme response");
             }
@@ -1874,6 +1891,7 @@ mod tests {
 
         let first_network_ssid = "foo";
         let second_network_ssid = "bar";
+        let bss_desc = generate_random_bss_desc();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1882,7 +1900,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss: bss_desc.clone(),
             },
             reason: types::ConnectReason::IdleInterfaceAutoconnect,
         };
@@ -1913,13 +1931,14 @@ mod tests {
                         },
                         protection: fidl_sme::Protection::Unknown,
                         compatible: true,
-                        bss_desc: None,
+                        bss_desc: bss_desc.clone(),
                     }))
                 }).expect("could not send sme response");
             }
         );
 
         // Send a different connect request
+        let second_bss_desc = generate_random_bss_desc();
         let mut client = Client::new(test_values.client_req_sender);
         let (connect_sender2, mut connect_receiver2) = oneshot::channel();
         let connect_request2 = types::ConnectRequest {
@@ -1930,7 +1949,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss: second_bss_desc.clone(),
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
         };
@@ -1955,6 +1974,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, second_network_ssid.as_bytes().to_vec());
+                assert_eq!(req.bss_desc, second_bss_desc.clone());
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -2049,6 +2069,7 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let network_ssid = "foo";
+        let bss_desc = generate_random_bss_desc();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2057,7 +2078,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss: bss_desc.clone(),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
@@ -2118,6 +2139,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, network_ssid.as_bytes().to_vec());
+                assert_eq!(req.bss_desc, bss_desc.clone());
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -2207,6 +2229,7 @@ mod tests {
 
         let previous_network_ssid = "foo";
         let next_network_ssid = "bar";
+        let bss_desc = generate_random_bss_desc();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2215,7 +2238,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss: bss_desc.clone(),
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
         };
@@ -2286,6 +2309,7 @@ mod tests {
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
+                assert_eq!(req.bss_desc, bss_desc.clone());
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -2457,6 +2481,7 @@ mod tests {
         pin_mut!(sme_fut);
 
         // Create a connect request so that the state machine does not immediately exit.
+        let bss_desc = generate_random_bss_desc();
         let connect_req = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2465,7 +2490,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss: bss_desc.clone(),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
@@ -2526,7 +2551,7 @@ mod tests {
                         },
                         protection: fidl_sme::Protection::Unknown,
                         compatible: true,
-                        bss_desc: None,
+                        bss_desc,
                     }))
                 }).expect("could not send sme response");
             }
