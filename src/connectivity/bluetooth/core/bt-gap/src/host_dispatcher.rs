@@ -156,16 +156,16 @@ struct HostDispatcherState {
     active_id: Option<HostId>,
 
     // Component storage.
-    pub stash: Stash,
+    stash: Stash,
 
     // GAP state
     name: String,
     appearance: Appearance,
     discovery: DiscoveryState,
     discoverable: Option<Weak<HostDiscoverableSession>>,
-    pub input: InputCapability,
-    pub output: OutputCapability,
-    pub config_settings: build_config::Config,
+    input: InputCapability,
+    output: OutputCapability,
+    config_settings: build_config::Config,
     peers: HashMap<PeerId, Inspectable<Peer>>,
 
     // Sender end of a futures::mpsc channel to send LocalServiceDelegateRequests
@@ -177,7 +177,7 @@ struct HostDispatcherState {
     pairing_delegate: Option<PairingDelegate>,
     pairing_dispatcher: Option<PairingDispatcherHandle>,
 
-    pub event_listeners: Vec<Weak<ControlControlHandle>>,
+    event_listeners: Vec<Weak<ControlControlHandle>>,
 
     watch_peers_publisher: hanging_get::Publisher<HashMap<PeerId, Peer>>,
     watch_peers_registrar: hanging_get::SubscriptionRegistrar<PeerWatcher>,
