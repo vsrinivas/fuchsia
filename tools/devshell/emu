@@ -317,11 +317,20 @@ esac
 
 if [[ "$ACCEL" == "kvm" ]]; then
   if [[ ! -w "/dev/kvm" ]]; then
+    echo "Error: No write permission on /dev/kvm."
     echo "To use KVM acceleration, adjust permissions to /dev/kvm using:"
     echo
     echo "sudo usermod -a -G kvm $USER"
     echo
-    echo "Log out and back in for the change to take effect."
+    echo "Exit the current ssh session.  From the remote host:"
+    echo
+    echo "exit"
+    echo
+    echo "On the local host:"
+    echo
+    echo "ssh <remote_host_name> -O exit"
+    echo
+    echo "Log back in to remote host and run the emulator again."
     exit 1
   fi
   ARGS+=("-enable-kvm" "-cpu" "host,migratable=no,+invtsc")
