@@ -17,7 +17,7 @@ class OneFingerNTapRecognizer : public GestureRecognizer {
   static constexpr zx::duration kTapTimeout = zx::msec(300);
 
   // Default value for maximum time under which the next tap should start.
-  static constexpr zx::duration kTimeoutBetweenTaps = zx::msec(250);
+  static constexpr zx::duration kTimeoutBetweenTaps = zx::msec(300);
 
   // Callback which will be invoked when gesture has been recognized.
   using OnFingerTapGesture = fit::function<void(GestureContext)>;
