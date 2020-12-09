@@ -784,21 +784,9 @@ config("temporarily_disable_ubsan_do_not_use") {
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx/system/ulib/zxtest:*",
 
-    # TODO(fxbug.dev/42496): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx_build/system/utest/fidl-simple:*",
-
-    # TODO(fxbug.dev/41897): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx_build/system/utest/fidl:*",
-
     # TODO(fxbug.dev/41900): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/utest/trace:*",
-
-    # TODO(fxbug.dev/41663): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx_build/third_party/lib/acpica:*",
 
     # TODO(fxbug.dev/41901): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
@@ -823,18 +811,6 @@ config("temporarily_disable_ubsan_do_not_use") {
     # TODO(fxbug.dev/41904): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/third_party/ulib/boringssl:*",
-
-    # TODO(fxbug.dev/43658): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx_build/system/dev/block/sdmcc:*",
-
-    # TODO(fxbug.dev/46944): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx_build/system/ulib/perftest:*",
-
-    # TODO(fxbug.dev/60442): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until is is migrated into CI/CQ.
-    "$zx/tools/fidl:*",
   ]
 
   if (!is_gcc) {

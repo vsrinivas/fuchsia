@@ -999,14 +999,6 @@ config("temporarily_disable_ubsan_do_not_use") {
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/ulib/zxtest:*",
 
-    # TODO(fxbug.dev/42496): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx_build/system/utest/fidl-simple:*",
-
-    # TODO(fxbug.dev/41897): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx_build/system/utest/fidl:*",
-
     # TODO(fxbug.dev/41900): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/utest/trace:*",
@@ -1034,14 +1026,6 @@ config("temporarily_disable_ubsan_do_not_use") {
     # TODO(fxbug.dev/41904): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/third_party/ulib/boringssl:*",
-
-    # TODO(fxbug.dev/43658): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx_build/system/dev/block/sdmcc:*",
-
-    # TODO(fxbug.dev/46944): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx_build/system/ulib/perftest:*",
   ]
 
   if (!is_gcc) {
