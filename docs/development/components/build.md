@@ -99,9 +99,7 @@ Note the following details:
 *   The destination path for the manifest is not specified, but rather
     inferred from the component's name. In this example, the manifest path will
     be `meta/my-component.cmx`.
-*   [By convention][package-name] package names contain dashes (`-`) but not
-    underscores (`_`), and the component name above follows suit. \
-    Both the component and package names are derived from their target names.
+*   Both the component and package names are derived from their target names.
     They both take an optional `component_name` and `package_name` parameter
     respectively as an override. \
     In the example above, these names come together to form the URL for
@@ -1282,7 +1280,6 @@ templates. These unsupported features include:
 [glossary-gn]: /docs/glossary.md#gn
 [glossary-package]: /docs/glossary.md#fuchsia-package
 [gn-get-target-outputs]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#func_get_target_outputs
-[package-name]: /docs/concepts/packages/package_url.md#package-name
 [pm]: /src/sys/pkg/bin/pm/README.md
 [restrict-log-severity]: /docs/concepts/testing/v1_test_component.md#restricting_log_severity
 [rustc-binary]: /build/rust/rustc_binary.gni

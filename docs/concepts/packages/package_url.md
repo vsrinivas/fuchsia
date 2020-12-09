@@ -98,7 +98,8 @@ the repository root.
 
 A package name consists of a sequence of up to 100 of the following latin-1
 characters in any order: digits (`0` to `9`), lower-case letters (`a` to `z`),
-hyphen (`-`), and period (`.`).  No other characters are permitted.
+hyphen (`-`), underscore (`_`), and period (`.`).
+No other characters are permitted.
 
 A package's name must be unique among all packages in a repository.
 Conversely, packages within different repositories are considered distinct even
