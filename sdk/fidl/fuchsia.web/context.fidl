@@ -19,6 +19,7 @@ protocol ContextProvider {
     /// Creates a new browser [`Context`] whose state is wholly independent and isolated from other
     /// [`Context`](`Contexts`).
     ///
+    /// - `params`: The configuration used to create the [`Context`].
     /// - `context`: An interface request which will receive a bound [`Context`]
     ///   service.
     Create(CreateContextParams params, request<Context> context);
@@ -96,6 +97,7 @@ bits ContextFeatureFlags : uint64 {
     LEGACYMETRICS = 0x80;
 };
 
+/// Parameters specifying the configuration for a new [`Context`].
 resource table CreateContextParams {
     /// Service directory to be used by the context. The following services must be present in the
     /// directory:
@@ -199,6 +201,12 @@ protocol Context {
     CreateFrame(request<Frame> frame);
 
     /// Similar to [`Context.CreateFrame`], with extra parameters.
+    ///
+    /// - `params`: The configuration used to create the [`Frame`].
+    ///   This method will fail with `ZX_ERR_INVALID_ARGS` if the table is not clonable.
+    /// - `frame`: An interface request that will be bound to the created [`Frame`].
+    // TODO(fxbug.dev/65750): Consider removing the clonable params restriction if clients
+    // become responsible for providing parameters for [each] popup.
     CreateFrameWithParams(CreateFrameParams params, request<Frame> frame);
 
     /// Used to observe cookies for sites hosted under this Context.
@@ -213,6 +221,7 @@ protocol Context {
     GetRemoteDebuggingPort() -> (uint16 port) error ContextError;
 };
 
+/// Parameters specifying the configuration for a new [`Frame`].
 resource table CreateFrameParams {
     /// Set to true to enable remote debugging. The [`Frame`] will be closed with
     /// `ERR_INVALID_ARGS` if `remote_debugging_port` was not set in
