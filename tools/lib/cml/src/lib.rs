@@ -276,7 +276,7 @@ impl fmt::Display for CapabilityId {
 }
 
 /// A list of offer targets.
-#[derive(CheckedVec, Debug)]
+#[derive(CheckedVec, Debug, PartialEq)]
 #[checked_vec(
     expected = "a nonempty array of offer targets, with unique elements",
     min_length = 1,
@@ -285,7 +285,7 @@ impl fmt::Display for CapabilityId {
 pub struct OfferTo(pub Vec<OfferToRef>);
 
 /// A list of rights.
-#[derive(CheckedVec, Debug)]
+#[derive(CheckedVec, Debug, PartialEq)]
 #[checked_vec(
     expected = "a nonempty array of rights, with unique elements",
     min_length = 1,
@@ -334,7 +334,7 @@ pub struct OneOrManyExposeFromRefs;
 pub struct OneOrManyOfferFromRefs;
 
 /// The stop timeout configured in an environment.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct StopTimeoutMs(pub u32);
 
 impl<'de> de::Deserialize<'de> for StopTimeoutMs {
@@ -633,8 +633,13 @@ pub struct Document {
 macro_rules! merge_from_field {
     ($self:ident, $other:ident, $field_name:ident) => {
         if let Some(ref mut ours) = $self.$field_name {
-            if let Some(theirs) = &mut $other.$field_name {
-                ours.append(theirs);
+            if let Some(theirs) = $other.$field_name.take() {
+                // Add their elements, ignoring dupes with ours
+                for t in theirs {
+                    if !ours.contains(&t) {
+                        ours.push(t);
+                    }
+                }
             }
         } else if let Some(theirs) = $other.$field_name.take() {
             $self.$field_name.replace(theirs);
@@ -652,7 +657,7 @@ impl Document {
         merge_from_field!(self, other, capabilities);
         merge_from_field!(self, other, children);
         merge_from_field!(self, other, collections);
-        merge_from_field!(self, other, facets);
+        // Note: intentionally don't merge `facets`.
         merge_from_field!(self, other, environments);
     }
 
@@ -779,7 +784,7 @@ impl Document {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum EnvironmentExtends {
     Realm,
@@ -788,7 +793,7 @@ pub enum EnvironmentExtends {
 
 /// An Environment defines properties which affect the behavior of components within a realm, such
 /// as its resolver.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Environment {
     /// This name is used to reference the environment assigned to the component's children
@@ -802,7 +807,7 @@ pub struct Environment {
     pub stop_timeout_ms: Option<StopTimeoutMs>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct RunnerRegistration {
     pub runner: Name,
@@ -810,7 +815,7 @@ pub struct RunnerRegistration {
     pub r#as: Option<Name>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct ResolverRegistration {
     pub resolver: Name,
@@ -818,7 +823,7 @@ pub struct ResolverRegistration {
     pub scheme: cm_types::UrlScheme,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Capability {
     pub service: Option<Name>,
@@ -834,7 +839,7 @@ pub struct Capability {
     pub subdir: Option<RelativePath>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Use {
     pub service: Option<Name>,
@@ -852,7 +857,7 @@ pub struct Use {
     pub filter: Option<Map<String, Value>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Expose {
     pub service: Option<Name>,
@@ -867,7 +872,7 @@ pub struct Expose {
     pub subdir: Option<RelativePath>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Offer {
     pub service: Option<Name>,
@@ -886,7 +891,7 @@ pub struct Offer {
     pub filter: Option<Map<String, Value>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Child {
     pub name: Name,
@@ -896,7 +901,7 @@ pub struct Child {
     pub environment: Option<EnvironmentRef>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Collection {
     pub name: Name,

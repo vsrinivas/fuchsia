@@ -2763,6 +2763,7 @@ mod tests {
             .unwrap()
             .write_all(format!("{}", json!({ "use": [ { "runner": "elf" } ] })).as_bytes())
             .unwrap();
+
         let in_path = tmp_dir.path().join("test.cml");
         let out_path = tmp_dir.path().join("test.cm");
         compile_test(
@@ -2799,11 +2800,13 @@ mod tests {
             .unwrap()
             .write_all(format!("{}", json!({ "include": [ "bar.cml" ] })).as_bytes())
             .unwrap();
+
         let bar_path = tmp_dir.path().join("bar.cml");
         fs::File::create(&bar_path)
             .unwrap()
             .write_all(format!("{}", json!({ "use": [ { "runner": "elf" } ] })).as_bytes())
             .unwrap();
+
         let in_path = tmp_dir.path().join("test.cml");
         let out_path = tmp_dir.path().join("test.cm");
         compile_test(
@@ -2840,11 +2843,13 @@ mod tests {
             .unwrap()
             .write_all(format!("{}", json!({ "include": [ "bar.cml" ] })).as_bytes())
             .unwrap();
+
         let bar_path = tmp_dir.path().join("bar.cml");
         fs::File::create(&bar_path)
             .unwrap()
             .write_all(format!("{}", json!({ "include": [ "foo.cml" ] })).as_bytes())
             .unwrap();
+
         let in_path = tmp_dir.path().join("test.cml");
         let out_path = tmp_dir.path().join("test.cm");
         let result = compile_test(
@@ -2854,6 +2859,7 @@ mod tests {
             json!({
                 "include": [ "foo.cml" ],
                 "program": { "binary": "bin/test" },
+                "use": [ { "runner": "elf" } ],
             }),
             default_component_decl(),
         );
@@ -2872,6 +2878,7 @@ mod tests {
             )
             .unwrap();
         let bar_path = tmp_dir.path().join("bar.cml");
+
         // Try to mount protocol "bar" under the same path "/svc/foo".
         fs::File::create(&bar_path)
             .unwrap()
@@ -2880,6 +2887,7 @@ mod tests {
                     .as_bytes(),
             )
             .unwrap();
+
         let in_path = tmp_dir.path().join("test.cml");
         let out_path = tmp_dir.path().join("test.cm");
         let result = compile_test(
@@ -2889,11 +2897,67 @@ mod tests {
             json!({
                 "include": [ "foo.cml", "bar.cml" ],
                 "program": { "binary": "bin/test" },
+                "use": [ { "runner": "elf" } ],
             }),
             default_component_decl(),
         );
         // Including both foo.cml and bar.cml should fail to validate because of an incoming
         // namespace collision.
         assert_matches!(result, Err(Error::Validate { err, .. }) if err.contains("is a duplicate \"use\""));
+    }
+
+    #[test]
+    fn test_overlapping_includes() {
+        let tmp_dir = TempDir::new().unwrap();
+        let foo1_path = tmp_dir.path().join("foo1.cml");
+        fs::File::create(&foo1_path)
+            .unwrap()
+            .write_all(format!("{}", json!({ "use": [ { "protocol": "foo" } ] })).as_bytes())
+            .unwrap();
+
+        let foo2_path = tmp_dir.path().join("foo2.cml");
+        // Include protocol "foo" again
+        fs::File::create(&foo2_path)
+            .unwrap()
+            .write_all(format!("{}", json!({ "use": [ { "protocol": "foo" } ] })).as_bytes())
+            .unwrap();
+
+        let in_path = tmp_dir.path().join("test.cml");
+        let out_path = tmp_dir.path().join("test.cm");
+        let result = compile_test(
+            in_path,
+            out_path,
+            Some(tmp_dir.into_path()),
+            json!({
+                "include": [ "foo1.cml", "foo2.cml" ],
+                "program": { "binary": "bin/test" },
+                "use": [ { "runner": "elf" } ],
+            }),
+            fsys::ComponentDecl {
+                program: Some(fdata::Dictionary {
+                    entries: Some(vec![fdata::DictionaryEntry {
+                        key: "binary".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str("bin/test".to_string()))),
+                    }]),
+                    ..fdata::Dictionary::EMPTY
+                }),
+                uses: Some(vec![
+                    fsys::UseDecl::Runner(fsys::UseRunnerDecl {
+                        source_name: Some("elf".to_string()),
+                        ..fsys::UseRunnerDecl::EMPTY
+                    }),
+                    fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        source_name: Some("foo".to_string()),
+                        target_path: Some("/svc/foo".to_string()),
+                        ..fsys::UseProtocolDecl::EMPTY
+                    }),
+                ]),
+                ..default_component_decl()
+            },
+        );
+        // Including both foo1.cml and foo2.cml is fine because they overlap,
+        // so merging foo2.cml after having merged foo1.cml is a no-op.
+        assert_matches!(result, Ok(()));
     }
 }

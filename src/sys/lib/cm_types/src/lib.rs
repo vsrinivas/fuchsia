@@ -534,7 +534,7 @@ impl<'de> de::Deserialize<'de> for UrlScheme {
 /// The duration of child components in a collection. See [`Durability`].
 ///
 /// [`Durability`]: ../../fidl_fuchsia_sys2/enum.Durability.html
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum Durability {
     /// The instance exists until it is explicitly destroyed.
@@ -549,7 +549,7 @@ symmetrical_enums!(Durability, fsys::Durability, Persistent, Transient);
 /// A component instance's startup mode. See [`StartupMode`].
 ///
 /// [`StartupMode`]: ../../fidl_fuchsia_sys2/enum.StartupMode.html
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum StartupMode {
     /// Start the component instance only if another component instance binds to

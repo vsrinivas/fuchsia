@@ -9,7 +9,7 @@ use std::{
 
 /// Represents either a single value, or multiple values of T.
 /// Useful for differentiating between an array of length 1 and a single value.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum OneOrMany<T> {
     /// A single instance of T.
     One(T),
