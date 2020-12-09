@@ -285,49 +285,59 @@ func TestSetPackageSource(t *testing.T) {
 		sdkcommon.GetUsername = sdkcommon.DefaultGetUsername
 		sdkcommon.GetHostname = sdkcommon.DefaultGetHostname
 	}()
-	repoPort := "8083"
-	deviceName := ""
-	deviceIP := resolvedAddr
-	sshConfig := ""
-	privateKey := ""
-	name := "devhost"
-	testSDK.expectedSSHArgs = [][]string{
-		{"echo", "$SSH_CONNECTION"},
-		{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
-	}
-	if err := setPackageSource(ctx, testSDK, repoPort, name, deviceName, deviceIP, sshConfig, privateKey); err != nil {
-		t.Fatal(err)
-	}
-	deviceIP = "10.10.0.1"
-	if err := setPackageSource(ctx, testSDK, repoPort, name, deviceName, deviceIP, sshConfig, privateKey); err != nil {
-		t.Fatal(err)
+
+	tests := []struct {
+		repoPort        string
+		targetAddress   string
+		sshConfig       string
+		name            string
+		privateKey      string
+		expectedSSHArgs [][]string
+	}{
+		{
+			repoPort:      "8083",
+			targetAddress: resolvedAddr,
+			sshConfig:     "",
+			privateKey:    "",
+			name:          "devhost",
+			expectedSSHArgs: [][]string{
+				{"echo", "$SSH_CONNECTION"},
+				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
+			},
+		},
+		{
+			repoPort:      "8083",
+			targetAddress: resolvedAddr,
+			sshConfig:     "custom-sshconfig",
+			privateKey:    "",
+			name:          "devhost",
+			expectedSSHArgs: [][]string{
+				{"echo", "$SSH_CONNECTION"},
+				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
+			},
+		},
+		{
+			repoPort:      "8083",
+			targetAddress: resolvedAddr,
+			sshConfig:     "",
+			privateKey:    "private-key",
+			name:          "devhost",
+			expectedSSHArgs: [][]string{
+				{"echo", "$SSH_CONNECTION"},
+				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
+			},
+		},
 	}
 
-	deviceIP = ""
-	deviceName = "test-device"
-	if err := setPackageSource(ctx, testSDK, repoPort, name, deviceName, deviceIP, sshConfig, privateKey); err != nil {
-		t.Fatal(err)
-	}
+	for _, test := range tests {
+		testSDK := testSDKProperties{expectedSSHArgs: test.expectedSSHArgs,
+			expectCustomSSHConfig: test.sshConfig != "",
+			expectPrivateKey:      test.privateKey != ""}
 
-	deviceIP = ""
-	deviceName = "test-device"
-	sshConfig = "custom-sshconfig"
-	testSDK.expectCustomSSHConfig = true
-	testSDK.expectPrivateKey = false
-	if err := setPackageSource(ctx, testSDK, repoPort, name, deviceName, deviceIP, sshConfig, privateKey); err != nil {
-		t.Fatal(err)
+		if err := setPackageSource(ctx, testSDK, test.repoPort, test.name, test.targetAddress, test.sshConfig, test.privateKey); err != nil {
+			t.Fatal(err)
+		}
 	}
-
-	deviceIP = ""
-	deviceName = "test-device"
-	sshConfig = ""
-	privateKey = "private-key"
-	testSDK.expectCustomSSHConfig = false
-	testSDK.expectPrivateKey = true
-	if err := setPackageSource(ctx, testSDK, repoPort, name, deviceName, deviceIP, sshConfig, privateKey); err != nil {
-		t.Fatal(err)
-	}
-
 }
 
 /*

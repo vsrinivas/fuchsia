@@ -139,30 +139,12 @@ func main() {
 	if *versionFlag == "" {
 		flag.Set("version", sdk.GetSDKVersion())
 	}
-	// Handle device name & device IP. If both are given, use name.
-	deviceName := *deviceNameFlag
-	deviceIP := ""
-	if deviceName == "" {
-		deviceIP = *deviceIPFlag
-	}
 
-	if deviceName == "" && deviceIP == "" {
-		if deviceIP, err = sdk.GetDefaultDeviceIPAddress(); err != nil {
-			log.Fatalf("Could not determine default device IP address: %v\n", err)
-		}
-		if deviceIP == "" {
-			if deviceName, err = sdk.GetDefaultDeviceName(); err != nil {
-				log.Fatalf("Could not determine default device name: %v\n", err)
-			}
-		}
+	targetAddress, err := sdk.ResolveTargetAddress(*deviceIPFlag, *deviceNameFlag)
+	if err != nil {
+		log.Fatalf("Could not determine target address with specified device-ip: %v, device-name: %v: %v", *deviceIPFlag, *deviceNameFlag, err)
 	}
-	if deviceIP == "" && deviceName == "" {
-		log.Fatalf("--device-name or --device-ip needs to be set.\n")
-	} else if deviceIP != "" {
-		log.Debugf("Using device address %v. Use --device-ip or fconfig to use another device.\n", deviceIP)
-	} else {
-		log.Debugf("Using device name %v. Use --device-name or fconfig to use another device.\n", deviceName)
-	}
+	log.Debugf("Using target address: %v", targetAddress)
 
 	if *versionFlag == "" {
 		log.Fatalf("SDK version not known. Use --version to specify it manually.\n")
@@ -194,7 +176,7 @@ func main() {
 	}
 
 	// connect the device to the package server
-	if err := setPackageSource(ctx, sdk, *repoPortFlag, *nameFlag, deviceName, deviceIP, *sshConfigFlag, *privateKeyFlag); err != nil {
+	if err := setPackageSource(ctx, sdk, *repoPortFlag, *nameFlag, targetAddress, *sshConfigFlag, *privateKeyFlag); err != nil {
 		log.Fatalf("Could set package server source on device: %v\n", err)
 	}
 
@@ -450,24 +432,18 @@ func downloadImageIfNeeded(ctx context.Context, sdk sdkProvider, version string,
 
 // setPackageSource sets the URL for the package server on the target device.
 func setPackageSource(ctx context.Context, sdk sdkProvider, repoPort string, name string,
-	deviceName string, deviceIP string, sshConfig string, privateKey string) error {
+	targetAddress string, sshConfig string, privateKey string) error {
 
 	var (
-		err           error
-		targetAddress string = deviceIP
-		log                  = logger.LoggerFromContext(ctx)
+		err error
+		log = logger.LoggerFromContext(ctx)
 	)
+
 	if targetAddress == "" {
-		targetAddress, err = sdk.GetAddressByName(deviceName)
-		if err != nil {
-			return fmt.Errorf("Cannot get target address for %v: %v", deviceName, err)
-		}
-	}
-	if targetAddress == "" {
-		return errors.New("Could not get target device IP address")
+		return errors.New("target address required")
 	}
 
-	log.Debugf("Using target address %v\n", targetAddress)
+	log.Debugf("Using target address %v", targetAddress)
 
 	hostIP, err := getHostIPAddressFromTarget(sdk, targetAddress, sshConfig, privateKey)
 	if err != nil {

@@ -412,6 +412,78 @@ func TestInitProperties(t *testing.T) {
 	}
 }
 
+func TestResolveTargetAddress(t *testing.T) {
+	sdk := SDKProperties{}
+
+	ExecCommand = nil
+	defer func() { ExecCommand = exec.Command }()
+
+	tests := []struct {
+		defaultDeviceName string
+		deviceIP          string
+		deviceName        string
+		expectedAddress   string
+		expectedError     string
+		execHelper        func(command string, s ...string) (cmd *exec.Cmd)
+	}{
+		{
+			deviceIP:        "",
+			deviceName:      "",
+			expectedAddress: "",
+			expectedError:   "invalid arguments. Need to specify --device-ip or --device-name or use fconfig to configure a default device",
+			execHelper:      helperCommandForNoDefaultDevice,
+		},
+		{
+			deviceIP:        resolvedAddr,
+			deviceName:      "",
+			expectedAddress: resolvedAddr,
+			expectedError:   "",
+			execHelper:      helperCommandForNoDefaultDevice,
+		},
+		{
+			defaultDeviceName: "test-device",
+			deviceIP:          "",
+			deviceName:        "",
+			expectedAddress:   resolvedAddr,
+			expectedError:     "",
+			execHelper:        helperCommandForGetFuchsiaProperty,
+		},
+		{
+			defaultDeviceName: "another-test-device",
+			deviceIP:          "",
+			deviceName:        "test-device",
+			expectedAddress:   resolvedAddr,
+			expectedError:     "",
+			execHelper:        helperCommandForGetFuchsiaProperty,
+		},
+		{
+			defaultDeviceName: "test-device",
+			deviceIP:          "",
+			deviceName:        "unknown-test-device",
+			expectedAddress:   "",
+			expectedError:     "cannot get target address for unknown-test-device: resolve.go:76: no devices found for domains: [unknown-test-device]: exit status 2",
+			execHelper:        helperCommandForGetFuchsiaProperty,
+		},
+	}
+	for i, test := range tests {
+		os.Setenv("TEST_DEFAULT_DEVICE_NAME", test.defaultDeviceName)
+		ExecCommand = test.execHelper
+
+		target, err := sdk.ResolveTargetAddress(test.deviceIP, test.deviceName)
+		if err != nil {
+			message := fmt.Sprintf("%v", err)
+			if message != test.expectedError {
+				t.Fatalf("Error '%v' did not match expected error '%v'", message, test.expectedError)
+			}
+		} else if test.expectedError != "" {
+			t.Fatalf("Expected error '%v', but got no error", test.expectedError)
+		}
+		if target != test.expectedAddress {
+			t.Fatalf("test case %v: target address '%v' did not match expected '%v'", i, target, test.expectedAddress)
+		}
+	}
+}
+
 func helperCommandForInitEnv(command string, s ...string) (cmd *exec.Cmd) {
 	cs := []string{"-test.run=TestFakeFfx", "--"}
 	cs = append(cs, command)
@@ -618,6 +690,10 @@ func TestFakeFfx(*testing.T) {
 		fmt.Fprintf(os.Stderr, "No command\n")
 		os.Exit(2)
 	}
+	if strings.HasSuffix(args[0], "device-finder") {
+		fakeDeviceFinder(args[1:])
+		os.Exit(0)
+	}
 	if args[1] != "config" {
 		fmt.Fprintf(os.Stderr, "Unexpected command %v, expected `config`", args[1])
 		os.Exit(2)
@@ -668,15 +744,19 @@ func handleEnvFake(args []string) {
 }
 
 func handleGetFake(args []string) {
+	deviceName := os.Getenv("TEST_DEFAULT_DEVICE_NAME")
+	if deviceName == "" {
+		deviceName = "fake-target-device-name"
+	}
 	switch args[0] {
 	case "DeviceConfiguration._DEFAULT_DEVICE_":
 		if os.Getenv("NO_DEFAULT_DEVICE") != "1" {
-			fmt.Println("DeviceConfiguration._DEFAULT_DEVICE_: \"fake-target-device-name\"")
+			fmt.Printf("DeviceConfiguration._DEFAULT_DEVICE_: \"%v\"\n", deviceName)
 		} else {
 			fmt.Println("DeviceConfiguration._DEFAULT_DEVICE_: none")
 		}
-	case "DeviceConfiguration.fake-target-device-name.device-name":
-		fmt.Printf("DeviceConfiguration.fake-target-device-name.device-name: \"fake-target-device-name\"\n")
+	case fmt.Sprintf("DeviceConfiguration.%v.device-name", deviceName):
+		fmt.Printf("DeviceConfiguration.%v.device-name: \"%v\"\n", deviceName, deviceName)
 	case "DeviceConfiguration":
 		fmt.Printf(`DeviceConfiguration: {
 			"_DEFAULT_DEVICE_":"atom-slaw-cozy-rigor",

@@ -12,18 +12,21 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/sdk-tools/sdkcommon"
 )
 
 var (
 	// ExecCommand exports exec.Command as a variable so it can be mocked.
 	ExecCommand = exec.Command
+	// Logger level.
+	level = logger.InfoLevel
 )
 
+const logFlags = log.Ltime
+
 type sdkProvider interface {
-	GetDefaultDeviceName() (string, error)
-	GetFuchsiaProperty(deviceName string, property string) (string, error)
-	GetAddressByName(deviceName string) (string, error)
 	RunSSHShell(targetAddress string, sshConfig string, privateKey string, verbose bool, sshArgs []string) error
 }
 
@@ -46,15 +49,25 @@ func main() {
 	deviceIPFlag := flag.String("device-ip", "", `Serves packages to a device with the given device ip address. Cannot be used with --device-name."
 		  If neither --device-name nor --device-ip are specified, the device-name configured using fconfig.sh is used.`)
 	sshConfigFlag := flag.String("sshconfig", "", "Use the specified sshconfig file instead of fssh's version.")
+	flag.Var(&level, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
 
 	flag.Parse()
+
+	log := logger.NewLogger(level, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "fserve ")
+	log.SetFlags(logFlags)
 
 	if *helpFlag {
 		usage()
 		os.Exit(0)
 	}
 
-	if err := ssh(sdk, *verboseFlag, *deviceNameFlag, *deviceIPFlag, *sshConfigFlag, *privateKeyFlag, flag.Args()); err != nil {
+	targetAddress, err := sdk.ResolveTargetAddress(*deviceIPFlag, *deviceNameFlag)
+	if err != nil {
+		log.Fatalf("Could not determine target address with specified device-ip: %v, device-name: %v: %v", *deviceIPFlag, *deviceNameFlag, err)
+	}
+	log.Debugf("Using target address: %v", targetAddress)
+
+	if err := ssh(sdk, *verboseFlag, targetAddress, *sshConfigFlag, *privateKeyFlag, flag.Args()); err != nil {
 		var exitError *exec.ExitError
 		if errors.As(err, &exitError) {
 			os.Exit(exitError.ExitCode())
@@ -70,46 +83,7 @@ func usage() {
 	flag.PrintDefaults()
 }
 
-func ssh(sdk sdkProvider, verbose bool, deviceName string, deviceIP string, sshConfig string, privateKey string, args []string) error {
-	var (
-		err           error
-		targetAddress string
-	)
-
-	// If  there is a deviceIP address, use it.
-	if deviceIP != "" {
-		targetAddress = deviceIP
-		fmt.Fprintf(os.Stderr, "Using device address %v. Use --device-ip or fconfig to use another device.\n", targetAddress)
-	} else {
-		// No explicit address, use the name
-		if deviceName == "" {
-			// No name passed in, use the default name.
-			if deviceName, err = sdk.GetDefaultDeviceName(); err != nil {
-				return fmt.Errorf("could not determine default device name: %v", err)
-			}
-		}
-		if deviceName == "" {
-			// No address specified, no device name specified, and no device configured as the default.
-			return errors.New("invalid arguments. Need to specify --device-ip or --device-name or use fconfig to configure a default device")
-		}
-
-		fmt.Fprintf(os.Stderr, "Using device name %v. Use --device-name or fconfig to use another device.\n", deviceName)
-
-		// look up a configured address by devicename
-		targetAddress, err = sdk.GetFuchsiaProperty(deviceName, sdkcommon.DeviceIPKey)
-		if err != nil {
-			return fmt.Errorf("could not read configuration information for  %v: %v", deviceName, err)
-		}
-		// if still nothing, resolve the device address by name
-		if targetAddress == "" {
-			if targetAddress, err = sdk.GetAddressByName(deviceName); err != nil {
-				return fmt.Errorf("cannot get target address for %v: %v", deviceName, err)
-			}
-		}
-		if targetAddress == "" {
-			return fmt.Errorf("could not get target device IP address for %v", deviceName)
-		}
-	}
-
+// ssh wraps sdk.RunSSHShell to enable testing by injecting an sdkProvider
+func ssh(sdk sdkProvider, verbose bool, targetAddress string, sshConfig string, privateKey string, args []string) error {
 	return sdk.RunSSHShell(targetAddress, sshConfig, privateKey, verbose, args)
 }

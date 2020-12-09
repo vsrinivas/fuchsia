@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -11,37 +12,14 @@ import (
 )
 
 type testSDKProperties struct {
-	properties            map[string]string
 	err                   error
-	ipAddress             string
-	deviceName            string
 	expectedTargetAddress string
 }
 
-func (testSDK testSDKProperties) GetDefaultDeviceName() (string, error) {
-	if testSDK.err != nil {
-		return "", testSDK.err
-	}
-	return testSDK.deviceName, nil
-}
-
-func (testSDK testSDKProperties) GetFuchsiaProperty(deviceName string, property string) (string, error) {
-	if testSDK.err != nil {
-		return "", testSDK.err
-	}
-	var key = property
-	if deviceName != "" {
-		key = fmt.Sprintf("%s.%s", deviceName, property)
-	}
-	return testSDK.properties[key], nil
-}
-func (testSDK testSDKProperties) GetAddressByName(deviceName string) (string, error) {
-	if testSDK.err != nil {
-		return "", testSDK.err
-	}
-	return testSDK.ipAddress, nil
-}
 func (testSDK testSDKProperties) RunSSHShell(targetAddress string, sshConfig string, privateKey string, verbose bool, sshArgs []string) error {
+	if targetAddress == "" {
+		return errors.New("target address must be specified")
+	}
 	if targetAddress != testSDK.expectedTargetAddress {
 		return fmt.Errorf("target address %v did not match expected %v", targetAddress, testSDK.expectedTargetAddress)
 	}
@@ -49,18 +27,15 @@ func (testSDK testSDKProperties) RunSSHShell(targetAddress string, sshConfig str
 }
 
 const defaultIPAddress = "e80::c00f:f0f0:eeee:cccc"
-const anotherIPAddress = "e80::f00f:c0c0:cccc:1010"
 
 func TestSSH(t *testing.T) {
 
 	defaultDeviceProperties := make(map[string]string)
 	defaultDeviceProperties[fmt.Sprintf("test-device.%v", sdkcommon.DeviceIPKey)] = defaultIPAddress
-	defaultDeviceProperties[fmt.Sprintf("another-device.%v", sdkcommon.DeviceIPKey)] = anotherIPAddress
 	tests := []struct {
 		sdk           sdkProvider
 		verbose       bool
-		deviceName    string
-		deviceIP      string
+		targetAddress string
 		sshConfig     string
 		privateKey    string
 		args          []string
@@ -68,78 +43,48 @@ func TestSSH(t *testing.T) {
 	}{
 		{
 			sdk:           testSDKProperties{},
-			expectedError: "invalid arguments. Need to specify --device-ip or --device-name or use fconfig to configure a default device",
+			expectedError: "target address must be specified",
 		},
 		{
-			sdk:           testSDKProperties{deviceName: "test-device"},
-			expectedError: "could not get target device IP address for test-device",
-		},
-		{
-			sdk: testSDKProperties{deviceName: "test-device",
-				properties:            defaultDeviceProperties,
-				expectedTargetAddress: defaultIPAddress,
-			},
-			expectedError: "",
-		},
-		{
-			sdk: testSDKProperties{deviceName: "test-device",
-				ipAddress:             defaultIPAddress,
-				expectedTargetAddress: defaultIPAddress,
-			},
-			expectedError: "",
-		},
-		{
-			sdk:           testSDKProperties{deviceName: "another-device"},
-			deviceName:    "test-device",
-			expectedError: "could not get target device IP address for test-device",
-		},
-		{
-			sdk: testSDKProperties{
-				expectedTargetAddress: defaultIPAddress,
-			},
-			deviceIP:      defaultIPAddress,
+			sdk:           testSDKProperties{expectedTargetAddress: defaultIPAddress},
+			targetAddress: defaultIPAddress,
 			expectedError: "",
 		},
 		{
 			sdk: testSDKProperties{
 				expectedTargetAddress: defaultIPAddress,
-				properties:            defaultDeviceProperties,
-				deviceName:            "another-device",
 			},
-			deviceIP:      defaultIPAddress,
+			targetAddress: defaultIPAddress,
 			expectedError: "",
 		},
 		{
 			sdk: testSDKProperties{
 				expectedTargetAddress: defaultIPAddress,
-				properties:            defaultDeviceProperties,
-				deviceName:            "another-device",
 			},
-			deviceIP:      defaultIPAddress,
-			deviceName:    "another-device",
+			targetAddress: defaultIPAddress,
+			verbose:       true,
 			expectedError: "",
 		},
 		{
 			sdk: testSDKProperties{
 				expectedTargetAddress: defaultIPAddress,
-				properties:            defaultDeviceProperties,
-				deviceName:            "target-device",
 			},
-			deviceIP:      defaultIPAddress,
-			deviceName:    "another-device",
+			targetAddress: defaultIPAddress,
+			sshConfig:     "custom-config",
+			privateKey:    "private-key",
 			expectedError: "",
 		},
 	}
 
 	for _, test := range tests {
-		err := ssh(test.sdk, test.verbose, test.deviceName, test.deviceIP, test.sshConfig, test.privateKey, test.args)
+		err := ssh(test.sdk, test.verbose, test.targetAddress, test.sshConfig, test.privateKey, test.args)
 		if err != nil {
 			message := fmt.Sprintf("%v", err)
 			if message != test.expectedError {
 				t.Fatalf("Unexpected error %v does not match %v", message, test.expectedError)
 			}
 		} else if test.expectedError != "" {
-			t.Fatal("Expected error, but got no error")
+			t.Fatalf("Expected error '%v', but got no error", test.expectedError)
 		}
 	}
 }

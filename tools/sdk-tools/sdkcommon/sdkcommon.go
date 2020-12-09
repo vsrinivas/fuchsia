@@ -424,6 +424,9 @@ func buildSSHArgs(sdk SDKProperties, targetAddress string, customSSHConfig strin
 		cmdArgs = append(cmdArgs, "-v")
 	}
 
+	if targetAddress == "" {
+		return cmdArgs, errors.New("target address must be specified")
+	}
 	cmdArgs = append(cmdArgs, targetAddress)
 
 	cmdArgs = append(cmdArgs, args...)
@@ -816,6 +819,49 @@ func (sdk SDKProperties) RemoveDeviceConfiguration(deviceName string) error {
 		}
 	}
 	return nil
+}
+
+// ResolveTargetAddress evaulates the deviceIP and deviceName  passed in
+// to determine the target IP address. This include consulting the configuration
+// information set via `fconfig`.
+func (sdk SDKProperties) ResolveTargetAddress(deviceIP string, deviceName string) (string, error) {
+	var (
+		targetAddress string
+		err           error
+	)
+
+	// If  there is a deviceIP address, use it.
+	if deviceIP != "" {
+		targetAddress = deviceIP
+	} else {
+		// No explicit address, use the name
+		if deviceName == "" {
+			// No name passed in, use the default name.
+			if deviceName, err = sdk.GetDefaultDeviceName(); err != nil {
+				return "", fmt.Errorf("could not determine default device name: %v", err)
+			}
+		}
+		if deviceName == "" {
+			// No address specified, no device name specified, and no device configured as the default.
+			return "", errors.New("invalid arguments. Need to specify --device-ip or --device-name or use fconfig to configure a default device")
+		}
+
+		// look up a configured address by devicename
+		targetAddress, err = sdk.GetFuchsiaProperty(deviceName, DeviceIPKey)
+		if err != nil {
+			return "", fmt.Errorf("could not read configuration information for  %v: %v", deviceName, err)
+		}
+		// if still nothing, resolve the device address by name
+		if targetAddress == "" {
+			if targetAddress, err = sdk.GetAddressByName(deviceName); err != nil {
+				return "", fmt.Errorf("cannot get target address for %v: %v", deviceName, err)
+			}
+		}
+	}
+	if targetAddress == "" {
+		return "", fmt.Errorf("could not get target device IP address for %v", deviceName)
+	}
+	return targetAddress, nil
 }
 
 func initFFXGlobalConfig(sdk SDKProperties) error {
