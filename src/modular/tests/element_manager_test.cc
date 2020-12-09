@@ -149,7 +149,15 @@ TEST_F(ElementManagerTest, ProposeStartsStory) {
       has_story_started = true;
     }
   });
-  watcher.Watch(story_provider, /*on_get_stories=*/nullptr);
+
+  bool is_watcher_added{false};
+  fit::function<void(std::vector<fuchsia::modular::StoryInfo2>)> on_get_stories =
+      [&](const std::vector<fuchsia::modular::StoryInfo2>& story_infos) {
+        ASSERT_TRUE(story_infos.empty());
+        is_watcher_added = true;
+      };
+  watcher.Watch(story_provider, &on_get_stories);
+  RunLoopUntil([&]() { return is_watcher_added; });
 
   // Propose the element.
   bool is_proposed{false};
@@ -187,7 +195,15 @@ TEST_F(ElementManagerTest, ClosingElementControllerDeletesStory) {
           has_story_stopped = true;
         }
       });
-  watcher.Watch(story_provider, /*on_get_stories=*/nullptr);
+
+  bool is_watcher_added{false};
+  fit::function<void(std::vector<fuchsia::modular::StoryInfo2>)> on_get_stories =
+      [&](const std::vector<fuchsia::modular::StoryInfo2>& story_infos) {
+        ASSERT_TRUE(story_infos.empty());
+        is_watcher_added = true;
+      };
+  watcher.Watch(story_provider, &on_get_stories);
+  RunLoopUntil([&]() { return is_watcher_added; });
 
   fuchsia::element::ControllerPtr element_controller;
 
