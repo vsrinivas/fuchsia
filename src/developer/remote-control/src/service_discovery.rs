@@ -151,6 +151,21 @@ impl Into<ServiceMatch> for &PathEntry {
     }
 }
 
+fn selector_matches_string(selector: &StringSelector, str: &str) -> bool {
+    let re = regex::Regex::new(
+        // The Regex library will insert implicit ".*" on both sides of a regex.
+        // We don't want that behavior - users can insert * if they want
+        // fuzzy matches.
+        &format!(
+            "^{}$",
+            convert_string_selector_to_regex(selector, WILDCARD_REGEX_EQUIVALENT).unwrap()
+        ),
+    )
+    .unwrap();
+
+    re.is_match(&sanitize_string_for_selectors(&str))
+}
+
 pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<PathEntry>, Error> {
     let segments = selector.component_selector.as_ref().unwrap().moniker_segments.as_ref().unwrap();
     let mut selectors = segments
@@ -162,13 +177,13 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
 
     let node_path: StringSelector;
     let prop_path: StringSelector;
+
     match selector.tree_selector.as_ref().unwrap() {
         TreeSelector::SubtreeSelector(s) => {
             if s.node_path.is_empty() {}
             node_path = clone_selector(s.node_path.get(0).unwrap());
             selectors.extend(vec![
                 SelectorEntry::new(&node_path, EntryType::ComponentSubdir),
-                SelectorEntry::new(&SVC_SELECTOR, EntryType::HubPath),
                 SelectorEntry::new(&WILDCARD_SELECTOR, EntryType::ServiceName),
             ]);
         }
@@ -177,7 +192,6 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
             prop_path = clone_selector(&s.target_properties);
             selectors.extend(vec![
                 SelectorEntry::new(&node_path, EntryType::ComponentSubdir),
-                SelectorEntry::new(&SVC_SELECTOR, EntryType::HubPath),
                 SelectorEntry::new(&prop_path, EntryType::ServiceName),
             ]);
         }
@@ -193,18 +207,6 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
             if selector.selector_type == EntryType::Moniker {
                 path.push_hub_dir("children");
             }
-
-            let re = regex::Regex::new(
-                // The Regex library will insert implicit ".*" on both sides of a regex.
-                // We don't want that behavior - users can insert * if they want
-                // fuzzy matches.
-                &format!(
-                    "^{}$",
-                    convert_string_selector_to_regex(selector.selector, WILDCARD_REGEX_EQUIVALENT)
-                        .unwrap()
-                ),
-            )
-            .unwrap();
 
             let path_str = path.hub_path.to_string_lossy();
             let proxy = match io_util::open_directory_in_namespace(
@@ -226,8 +228,14 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
             };
 
             for entry in entries {
-                if re.is_match(&sanitize_string_for_selectors(&entry.name)) {
-                    new_paths.push(path.clone_push(&entry.name, selector.selector_type));
+                if selector_matches_string(selector.selector, &entry.name) {
+                    let mut new_path = path.clone_push(&entry.name, selector.selector_type);
+                    if selector.selector_type == EntryType::ComponentSubdir
+                        && new_path.component_subdir != "expose"
+                    {
+                        new_path.push_hub_dir("svc");
+                    }
+                    new_paths.push(new_path);
                 }
             }
         }
@@ -374,7 +382,7 @@ mod test {
         let temp = tempfile::tempdir().unwrap().into_path();
         let base = temp.join("children");
         let first_match = base.join("a/children/b/exec/out/svc/myservice");
-        let second_match = base.join("a/children/b/exec/exposed/svc/myservice");
+        let second_match = base.join("a/children/b/exec/expose/myservice");
         let third_match = base.join("a/children/b/exec/in/svc/myservice");
         create_files(vec![
             &base.join("b/children/b/exec/in/svc/myservice"),
@@ -392,7 +400,7 @@ mod test {
                 PathEntry::new_with_service(
                     second_match,
                     PathBuf::from("/a/b"),
-                    "exposed",
+                    "expose",
                     "myservice",
                 ),
                 PathEntry::new_with_service(third_match, PathBuf::from("/a/b"), "in", "myservice"),
