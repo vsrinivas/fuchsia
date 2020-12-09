@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/image.h>
+#include <lib/zbitl/items/mem_config.h>
 #include <lib/zbitl/memory.h>
 #include <lib/zircon-internal/macros.h>
 
@@ -100,11 +101,50 @@ static unsigned pixel_format_fixup(unsigned pf) {
 static bool early_console_disabled;
 
 const zbi_header_t* platform_get_zbi(void) {
-  return reinterpret_cast<zbi_header_t*>(X86_PHYS_TO_VIRT(_zbi_base));
+  return reinterpret_cast<const zbi_header_t*>(X86_PHYS_TO_VIRT(_zbi_base));
+}
+
+// Copy ranges in the given ZBI into a newly-allocated array of zbi_mem_range_t structs.
+//
+// Allocation takes place from early booth memory, which cannot be released.
+static ktl::span<zbi_mem_range_t> get_memory_ranges(ktl::span<std::byte> zbi) {
+  zbitl::MemRangeTable range_table{zbitl::View(zbitl::ByteView(zbi.data(), zbi.size()))};
+
+  // Get the total number of memory ranges in the ZBI.
+  size_t num_ranges = 0;
+  if (auto result = range_table.size(); result.is_error()) {
+    printf("get_memory_ranges: failed to get number of memory ranges: ");
+    zbitl::PrintViewError(result.error_value());
+    panic("Failed to count memory ranges in ZBI.");
+  } else {
+    num_ranges = result.value();
+  }
+
+  // Allocate memory for the ranges.
+  zbi_mem_range_t* ranges =
+      reinterpret_cast<zbi_mem_range_t*>(boot_alloc_mem(sizeof(zbi_mem_range_t) * num_ranges));
+  ZX_ASSERT(ranges != nullptr);
+
+  // Itereate over the the range table (which converts the various memory range formats into
+  // zbi_mem_range_t), and make a copy.
+  size_t n = 0;
+  for (const zbi_mem_range_t& range : range_table) {
+    ranges[n++] = range;
+  }
+  ZX_ASSERT(n == num_ranges);
+  if (auto result = range_table.take_error(); result.is_error()) {
+    printf("get_memory_ranges: failed to enumerate memory ranges: ");
+    zbitl::PrintViewError(result.error_value());
+    panic("Failed to iterate over memory ranges in ZBI.");
+  }
+
+  return {ranges, num_ranges};
 }
 
 static void platform_save_bootloader_data(void) {
-  // Drop constness, as we will need to edit CMDLINE items (see below).
+  // Get the ZBI location and size.
+  //
+  // We drop constness, as we will need to edit CMDLINE items (see below).
   zbi_header_t* data_zbi = const_cast<zbi_header_t*>(platform_get_zbi());
   if (data_zbi == nullptr) {
     return;
@@ -112,7 +152,9 @@ static void platform_save_bootloader_data(void) {
   size_t size = sizeof(*data_zbi) + data_zbi->length;
   printf("Data ZBI: @ %p (%zu bytes)\n", data_zbi, size);
 
-  zbitl::View view(zbitl::AsWritableBytes(data_zbi, size));
+  // Handle individual ZBI items.
+  ktl::span<std::byte> zbi = zbitl::AsWritableBytes(data_zbi, size);
+  zbitl::View view(zbi);
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
     switch (header->type) {
@@ -164,16 +206,6 @@ static void platform_save_bootloader_data(void) {
         mandatory_memset(payload.data(), 0, payload.size());
         break;
       }
-      case ZBI_TYPE_EFI_MEMORY_MAP: {
-        bootloader.efi_mmap = payload.data();
-        bootloader.efi_mmap_size = payload.size();
-        break;
-      }
-      case ZBI_TYPE_E820_TABLE: {
-        bootloader.e820_table = payload.data();
-        bootloader.e820_count = payload.size() / sizeof(e820entry_t);
-        break;
-      }
       case ZBI_TYPE_NVRAM_DEPRECATED:
       case ZBI_TYPE_NVRAM: {
         if (payload.size() >= sizeof(zbi_nvram_t)) {
@@ -221,17 +253,21 @@ static void platform_save_bootloader_data(void) {
       }
     };
   }
-
   if (auto result = view.take_error(); result.is_error()) {
     printf("process_zbi: error occurred during iteration: ");
     zbitl::PrintViewError(result.error_value());
     return;
   }
 
+  // Save the location of the ZBI, and prevent the early boot allocator from
+  // handing out the memory the ZBI data is located in.
   auto phys = reinterpret_cast<uintptr_t>(_zbi_base);
   boot_alloc_reserve(phys, view.size_bytes());
   bootloader.ramdisk_base = phys;
   bootloader.ramdisk_size = view.size_bytes();
+
+  // Save memory range information from the ZBI.
+  bootloader.memory_ranges = get_memory_ranges(zbi);
 }
 
 static void* ramdisk_base;
@@ -698,7 +734,7 @@ void platform_early_init(void) {
   platform_preserve_ramdisk();
 
   /* initialize physical memory arenas */
-  pc_mem_init();
+  pc_mem_init(bootloader.memory_ranges);
 
   /* wire all of the reserved boot sections */
   boot_reserve_wire();

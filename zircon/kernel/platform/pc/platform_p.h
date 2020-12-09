@@ -13,9 +13,9 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-extern Cbuf console_input_buf;
+#include <ktl/span.h>
 
-__BEGIN_CDECLS
+extern Cbuf console_input_buf;
 
 /* Do not use anything above this address for PCIe stuff.  A bunch of
  * architectural devices often occupy this area */
@@ -30,7 +30,7 @@ extern uint16_t pcie_pio_size;
 void pc_init_debug_early(void);
 void pc_init_debug(void);
 void pc_init_timer_percpu(void);
-void pc_mem_init(void);
+void pc_mem_init(ktl::span<zbi_mem_range_t> ranges);
 
 void pc_prep_suspend_timer(void);
 void pc_resume_timer(void);
@@ -39,7 +39,5 @@ void pc_suspend_debug(void);
 
 typedef void (*enumerate_e820_callback)(uint64_t base, uint64_t size, bool is_mem, void* ctx);
 zx_status_t enumerate_e820(enumerate_e820_callback callback, void* ctx);
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_PLATFORM_PC_PLATFORM_P_H_

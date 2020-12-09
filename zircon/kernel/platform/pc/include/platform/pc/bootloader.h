@@ -11,6 +11,7 @@
 #include <zircon/boot/driver-config.h>
 #include <zircon/boot/image.h>
 
+#include <ktl/span.h>
 #include <ktl/variant.h>
 
 // Data passed in by the bootloader
@@ -22,11 +23,7 @@ struct pc_bootloader_info_t {
 
   void* efi_system_table;
 
-  void* efi_mmap;
-  size_t efi_mmap_size;
-
-  void* e820_table;
-  size_t e820_count;
+  ktl::span<zbi_mem_range_t> memory_ranges;
 
   uint64_t ramdisk_base;
   size_t ramdisk_size;
