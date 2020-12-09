@@ -62,9 +62,6 @@ executable("unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-cpp",
   ]
-
-  # TODO(fxbug.dev/46726): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("grpc_vsock_tests") {
