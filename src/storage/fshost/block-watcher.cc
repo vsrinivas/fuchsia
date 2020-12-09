@@ -103,6 +103,10 @@ void BlockWatcher::Run() {
     return;
   }
   fdio_cpp::FdioCaller caller(std::move(dirfd));
+  auto cleanup = fbl::MakeAutoCall([this] {
+    pause_event_.reset();
+    pause_condition_.notify_all();
+  });
 
   bool ignore_existing = false;
   while (true) {
@@ -127,6 +131,15 @@ void BlockWatcher::Run() {
       return;
     }
 
+    {
+      std::scoped_lock guard(lock_);
+      if (is_paused_) {
+        FX_LOGS(INFO) << "block watcher resumed";
+        is_paused_ = false;
+        pause_condition_.notify_all();
+      }
+    }
+
     // +1 for the NUL terminator at the end of the last name.
     uint8_t buf[fio::MAX_BUF + 1];
     fbl::Span buf_span(buf, std::size(buf) - 1);
@@ -145,14 +158,14 @@ void BlockWatcher::Run() {
       buf_span = fbl::Span(buf, std::size(buf) - 1);
     }
     if (signals == kSignalWatcherPaused) {
-      std::scoped_lock<std::mutex> guard(lock_);
+      std::scoped_lock guard(lock_);
       is_paused_ = true;
+      FX_LOGS(INFO) << "block watcher paused";
       pause_condition_.notify_all();
       // We were told to pause. Wait until we're resumed before re-starting the watch.
       while (pause_count_ > 0) {
         pause_condition_.wait(lock_);
       }
-      is_paused_ = false;
     } else {
       FX_LOGS(ERROR) << "watch failed with signal " << signals;
       break;
@@ -165,7 +178,12 @@ void BlockWatcher::Run() {
 // is no longer running.
 // The block watcher will not receive any new device events while paused.
 zx_status_t BlockWatcher::Pause() {
-  auto guard = std::lock_guard<std::mutex>{lock_};
+  auto guard = std::lock_guard(lock_);
+
+  // Wait to resume before continuing.
+  while (pause_count_ == 0 && is_paused_ && pause_event_)
+    pause_condition_.wait(lock_);
+
   if (pause_count_ == std::numeric_limits<unsigned int>::max()) {
     return ZX_ERR_UNAVAILABLE;
   }
@@ -174,7 +192,7 @@ zx_status_t BlockWatcher::Pause() {
     return ZX_ERR_BAD_STATE;
   }
   if (pause_count_ == 0) {
-    // Indicate that the watcher is paused.
+    // Tell the watcher to pause.
     zx_status_t status = pause_event_.signal(0, kSignalWatcherPaused);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "failed to set paused signal: " << zx_status_get_string(status);
@@ -187,6 +205,8 @@ zx_status_t BlockWatcher::Pause() {
   }
 
   while (!is_paused_) {
+    if (!pause_event_)
+      return ZX_ERR_BAD_STATE;
     pause_condition_.wait(lock_);
   }
 
@@ -194,14 +214,30 @@ zx_status_t BlockWatcher::Pause() {
 }
 
 zx_status_t BlockWatcher::Resume() {
-  auto guard = std::lock_guard<std::mutex>{lock_};
-  if (pause_count_ == 0) {
+  auto guard = std::lock_guard(lock_);
+
+  // Wait to pause before continuing.
+  while (pause_count_ > 0 && !is_paused_ && pause_event_)
+    pause_condition_.wait(lock_);
+
+  if (pause_count_ == 0 || !pause_event_) {
     return ZX_ERR_BAD_STATE;
   }
+
   pause_count_--;
-  if (pause_count_ == 0 && pause_event_) {
+  if (pause_count_ == 0) {
+    // Clear the pause signal.
     pause_event_.signal(kSignalWatcherPaused, 0);
     pause_condition_.notify_all();
+  }
+
+  // If this resume would cause the watcher to resume, wait until the watcher has actually resumed.
+  // This helps avoid races in tests where they immediately create devices after resuming and
+  // expecting fshost to have noticed.
+  while (pause_count_ == 0 && is_paused_) {
+    if (!pause_event_)
+      return ZX_ERR_BAD_STATE;
+    pause_condition_.wait(lock_);
   }
   return ZX_OK;
 }
