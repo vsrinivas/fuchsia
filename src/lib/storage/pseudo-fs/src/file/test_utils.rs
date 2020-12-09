@@ -9,7 +9,7 @@ use {
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io::{FileMarker, FileProxy},
     fuchsia_async::Executor,
-    futures::{channel::mpsc, future::join, select, StreamExt},
+    futures::{channel::mpsc, future::FutureExt, select, StreamExt},
     std::{future::Future, iter, task::Poll},
     void::unreachable,
 };
@@ -18,8 +18,7 @@ use {
 /// function will create a channel and will pass the client side to `get_client`, while the server
 /// side will be passed into an `open()` method on the server.  The server and the client will then
 /// be executed on the same single threaded executor until they both stall, then it is asserted that
-/// execution is complete and the future has returned. The server is wrapped in a wrapper that will
-/// return if `is_terminated` returns true.
+/// execution is complete and the future has returned.
 ///
 /// `flags` is passed into the `open()` call.
 ///
@@ -109,20 +108,13 @@ fn run_server_client_with_mode_and_executor_dyn<'a>(
 
     server.open(flags, mode, &mut iter::empty(), server_end.into_channel().into());
 
-    let client = get_client(client_proxy);
-
-    // This wrapper lets us poll the server while also completing the server future if it's
-    // is_terminated returns true, even though it's poll will never return Ready.
-    let server_wrapper = async move {
-        loop {
-            select! {
-                x = server => unreachable(x),
-                complete => break,
-            }
+    let mut client = get_client(client_proxy).fuse();
+    let mut future = Box::pin(async move {
+        select! {
+            _ = client => {},
+            x = server => unreachable(x),
         }
-    };
-
-    let mut future = Box::pin(join(server_wrapper, client));
+    });
 
     // TODO: How to limit the execution time?  run_until_stalled() does not trigger timers, so
     // I can not do this:
@@ -136,7 +128,7 @@ fn run_server_client_with_mode_and_executor_dyn<'a>(
         if should_complete {
             assert_eq!(
                 exec.run_until_stalled(&mut future),
-                Poll::Ready(((), ())),
+                Poll::Ready(()),
                 "future did not complete"
             );
         } else {
@@ -191,8 +183,6 @@ pub fn run_server_client_with_open_requests_channel<GetClientRes>(
 /// For example, a client that wants to make sure that it receives a particular response from the
 /// server by certain point, in case the response is asynchronous.
 ///
-/// The server is wrapped in an async block that returns if it's `is_terminated` method returns true.
-///
 /// See [`file::simple::mock_directory_with_one_file_and_two_connections`] for a usage example.
 pub fn run_server_client_with_open_requests_channel_and_executor<GetClientRes>(
     exec: Executor,
@@ -217,10 +207,9 @@ fn run_server_client_with_open_requests_channel_and_executor_dyn<'a>(
     get_client: AsyncFnOnce<'a, OpenRequestSender, ()>,
     executor: Box<dyn FnOnce(&mut dyn FnMut(bool)) + 'a>,
 ) {
-    let (open_requests_tx, open_requests_rx) = mpsc::channel::<OpenRequestArgs>(0);
-
-    let server_wrapper = async move {
-        let mut open_requests_rx = open_requests_rx.fuse();
+    let (open_requests_tx, mut open_requests_rx) = mpsc::channel::<OpenRequestArgs>(0);
+    let mut client = get_client(open_requests_tx).fuse();
+    let mut future = Box::pin(async move {
         loop {
             select! {
                 x = server => unreachable(x),
@@ -228,22 +217,19 @@ fn run_server_client_with_open_requests_channel_and_executor_dyn<'a>(
                     if let Some((flags, mode, server_end)) = open_req {
                         server
                             .open(flags, mode, &mut iter::empty(),
-                                    ServerEnd::new(server_end.into_channel()));
+                                  ServerEnd::new(server_end.into_channel()));
                     }
                 },
-                complete => return,
+                _ = client => break,
             }
         }
-    };
-
-    let client = get_client(open_requests_tx);
-    let mut future = Box::pin(join(server_wrapper, client));
+    });
 
     executor(&mut |should_complete| {
         if should_complete {
             assert_eq!(
                 exec.run_until_stalled(&mut future),
-                Poll::Ready(((), ())),
+                Poll::Ready(()),
                 "future did not complete"
             );
         } else {
