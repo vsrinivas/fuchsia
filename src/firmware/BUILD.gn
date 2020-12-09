@@ -7,5 +7,6 @@ group("tests") {
   deps = [
     "lib/abr/test",
     "lib/zbi/test",
+    "lib/zircon_boot/test",
   ]
 }

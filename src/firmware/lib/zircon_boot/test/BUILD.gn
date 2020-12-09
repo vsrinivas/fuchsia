@@ -1,0 +1,26 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+group("test") {
+  testonly = true
+  deps = [ ":firmware_zircon_boot_test($host_toolchain)" ]
+}
+
+test("firmware_zircon_boot_test") {
+  sources = [
+    "mock_zircon_boot_ops.cc",
+    "zircon_boot.cc",
+  ]
+  deps = [
+    "//src/firmware/lib/abr:in_tree",
+    "//src/firmware/lib/zbi:in_tree",
+    "//src/firmware/lib/zircon_boot:in_tree",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zxc",
+    "//zircon/public/lib/zxtest",
+    "//zircon/third_party/ulib/cksum",
+  ]
+}
