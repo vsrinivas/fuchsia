@@ -73,7 +73,8 @@ TEST_F(DebugAdapterServerTest, ConnectionTest) {
   EXPECT_TRUE(server().IsConnected());
 }
 
-TEST_F(DebugAdapterServerTest, ConnectDisconnectTest) {
+// TODO(bug 66134): Re-enable this test when it's not flaky.
+TEST_F(DebugAdapterServerTest, DISABLED_ConnectDisconnectTest) {
   server().Init();
   TestClient client;
   EXPECT_TRUE(client.Connect(kServerPort));
