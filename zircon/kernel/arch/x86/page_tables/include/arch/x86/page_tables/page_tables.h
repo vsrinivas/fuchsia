@@ -68,7 +68,7 @@ using PtFlags = uint64_t;
 // entries.
 using IntermediatePtFlags = uint64_t;
 
-struct MappingCursor;
+class MappingCursor;
 
 class X86PageTableBase {
  public:
