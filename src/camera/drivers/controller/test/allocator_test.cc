@@ -16,6 +16,20 @@
 #include "src/camera/lib/format_conversion/buffer_collection_helper.h"
 #include "src/camera/lib/format_conversion/format_conversion.h"
 
+// Relaxes memory placement constraints to be more permissive. This improves the reliability of
+// allocation as it is no longer competing with other components in the system for fixed
+// allocations of e.g. contiguous memory.
+void RelaxMemoryConstraints(
+    std::vector<fuchsia::sysmem::BufferCollectionConstraints>& constraints) {
+  for (auto& c : constraints) {
+    c.buffer_memory_constraints.cpu_domain_supported = true;
+    c.buffer_memory_constraints.ram_domain_supported = true;
+    c.buffer_memory_constraints.inaccessible_domain_supported = true;
+    c.buffer_memory_constraints.secure_required = false;
+    c.buffer_memory_constraints.physically_contiguous_required = false;
+  }
+}
+
 // NOTE: In this test, we are actually just unit testing
 // the sysmem allocation using different constraints.
 namespace camera {
@@ -62,10 +76,10 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigFR) {
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
   constraints.push_back(fr_constraints);
   constraints.push_back(gdc1_constraints);
-  EXPECT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints,
+  RelaxMemoryConstraints(constraints);
+  ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints,
                                                                       &buffer_collection_info));
   EXPECT_EQ(buffer_collection_info.buffer_count, kOutputStreamMlDSMinBufferForCamping);
-  EXPECT_TRUE(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
   EXPECT_GT(buffer_collection_info.settings.buffer_settings.size_bytes,
             kOutputStreamMlFRHeight * kOutputStreamMlFRWidth);
   EXPECT_TRUE(buffer_collection_info.settings.has_image_format_constraints);
@@ -93,10 +107,10 @@ TEST_F(ControllerMemoryAllocatorTest, VideoConfigFRGDC1) {
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
   constraints.push_back(fr_constraints);
   constraints.push_back(gdc1_constraints);
-  EXPECT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints,
+  RelaxMemoryConstraints(constraints);
+  ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints,
                                                                       &buffer_collection_info));
   EXPECT_EQ(buffer_collection_info.buffer_count, kMlFRMinBufferForCamping + kGdcBufferForCamping);
-  EXPECT_TRUE(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
   EXPECT_GT(buffer_collection_info.settings.buffer_settings.size_bytes, kIspFRWidth * kIspFRHeight);
   EXPECT_TRUE(buffer_collection_info.settings.has_image_format_constraints);
   EXPECT_EQ(fuchsia::sysmem::PixelFormatType::NV12,
@@ -130,11 +144,11 @@ TEST_F(ControllerMemoryAllocatorTest, VideoConfigGDC1GDC2) {
   constraints.push_back(gdc1_constraints);
   constraints.push_back(gdc2_constraints);
   constraints.push_back(ge2d_constraints);
-  EXPECT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints,
+  RelaxMemoryConstraints(constraints);
+  ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints,
                                                                       &buffer_collection_info));
   EXPECT_EQ(buffer_collection_info.buffer_count,
             kVideoMinBufferForCamping + kVideoMinBufferForCamping);
-  EXPECT_TRUE(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
   EXPECT_GT(buffer_collection_info.settings.buffer_settings.size_bytes, kGdcFRWidth * kGdcFRHeight);
   EXPECT_TRUE(buffer_collection_info.settings.has_image_format_constraints);
   EXPECT_EQ(fuchsia::sysmem::PixelFormatType::NV12,
@@ -163,10 +177,10 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigDS) {
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
   constraints.push_back(ds_constraints);
   constraints.push_back(gdc2_constraints);
-  EXPECT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints,
+  RelaxMemoryConstraints(constraints);
+  ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints,
                                                                       &buffer_collection_info));
   EXPECT_EQ(buffer_collection_info.buffer_count, kOutputStreamMonitoringMinBufferForCamping);
-  EXPECT_TRUE(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
   EXPECT_GT(buffer_collection_info.settings.buffer_settings.size_bytes,
             kOutputStreamDSHeight * kOutputStreamDSWidth);
   EXPECT_TRUE(buffer_collection_info.settings.has_image_format_constraints);
@@ -191,8 +205,9 @@ TEST_F(ControllerMemoryAllocatorTest, ConvertBufferCollectionInfo2TypeTest) {
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
   constraints.push_back(fr_constraints);
   constraints.push_back(gdc1_constraints);
+  RelaxMemoryConstraints(constraints);
   // Allocating some buffer collection
-  EXPECT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints, &hlcpp_buffer));
+  ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints, &hlcpp_buffer));
   EXPECT_EQ(hlcpp_buffer.buffer_count, kOutputStreamMlDSMinBufferForCamping);
 
   BufferCollectionHelper buffer_collection_helper(hlcpp_buffer);
@@ -204,12 +219,6 @@ TEST_F(ControllerMemoryAllocatorTest, ConvertBufferCollectionInfo2TypeTest) {
   auto& hlcpp_buffer_settings = hlcpp_buffer.settings.buffer_settings;
 
   EXPECT_EQ(c_buffer_settings.size_bytes, hlcpp_buffer_settings.size_bytes);
-  EXPECT_EQ(c_buffer_settings.is_physically_contiguous,
-            hlcpp_buffer_settings.is_physically_contiguous);
-  EXPECT_EQ(c_buffer_settings.is_secure, hlcpp_buffer_settings.is_secure);
-  EXPECT_EQ(c_buffer_settings.coherency_domain,
-            *reinterpret_cast<const fuchsia_sysmem_CoherencyDomain*>(
-                &hlcpp_buffer_settings.coherency_domain));
   EXPECT_EQ(c_buffer_settings.heap,
             *reinterpret_cast<const fuchsia_sysmem_HeapType*>(&hlcpp_buffer_settings.heap));
   EXPECT_EQ(c_buffer.settings.has_image_format_constraints,
