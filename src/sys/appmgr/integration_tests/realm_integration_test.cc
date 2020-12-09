@@ -586,8 +586,14 @@ TEST_F(RealmCrashIntrospectTest, DISABLED_ComponentUrlForNewComponentInEnclosing
   EXPECT_EQ(response.component_name(), "crashing_component.cmx");
 }
 
-class EnvironmentOptionsTest : public RealmTest,
-                               public component::testing::DataFileReaderWriterUtil {};
+// Create a test environment that includes additional functions for
+// reading/writing data.
+//
+// We use virtual inheritance here to work around the LLVM compiler bug
+// https://bugs.llvm.org/show_bug.cgi?id=35902 which generates
+// a false-positive alignment alert.
+class EnvironmentOptionsTest : public virtual RealmTest,
+                               public virtual component::testing::DataFileReaderWriterUtil {};
 
 TEST_F(EnvironmentOptionsTest, DeleteStorageOnDeath) {
   constexpr char kTestFileName[] = "some-test-file";
