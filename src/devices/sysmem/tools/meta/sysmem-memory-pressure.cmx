@@ -1,0 +1,13 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/sysmem-memory-pressure"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}

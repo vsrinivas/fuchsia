@@ -12,5 +12,10 @@ group("tests") {
   deps = [
     "drivers/sysmem:tests",
     "tests/sysmem/fuzz",
+    "tools:tests",
   ]
+}
+
+group("tools") {
+  deps = [ "tools" ]
 }
