@@ -93,12 +93,16 @@ static void InitCommandBuffers(const vk::Image* image_for_foreign_transition, ui
   }
 }
 
-// Test that transfering an image to a foreign queue and back doesn't prevent transaction
+// Test that transferring an image to a foreign queue and back doesn't prevent transaction
 // elimination from working.
 TEST(TransactionElimination, ForeignQueue) {
-  const bool kEnableValidation = true;
-  vkp::Instance vkp_instance(kEnableValidation);
-  ASSERT_TRUE(vkp_instance.Init());
+  vkp::Instance vkp_instance(vkp::Instance::Builder()
+                                 .set_validation_layers_enabled(true)
+                                 .set_extensions({
+                                     VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
+                                     VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
+                                 })
+                                 .Build());
 
   vkp::DebugUtilsMessenger vkp_debug_messenger(vkp_instance.shared());
   ASSERT_TRUE(vkp_debug_messenger.Init());

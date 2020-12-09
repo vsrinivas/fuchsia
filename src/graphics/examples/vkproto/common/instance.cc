@@ -15,8 +15,6 @@
 namespace {
 
 const std::vector<const char *> s_required_props = {
-    VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
-    VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
     VK_KHR_SURFACE_EXTENSION_NAME,
 #ifdef __Fuchsia__
     VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME,
@@ -65,15 +63,38 @@ std::vector<const char *> GetExtensionsPrivate(bool validation_layers_enabled) {
 }
 #endif
 
+void AddRequiredExtensions(bool validation_layers_enabled, std::vector<const char *> *extensions) {
+  std::vector<const char *> required_extensions;
+#if USE_GLFW
+  required_extensions = GetExtensionsGLFW(validation_layers_enabled_);
+#else
+  required_extensions = GetExtensionsPrivate(validation_layers_enabled);
+#endif
+
+  if (!required_extensions.empty())
+    extensions->insert(extensions->end(), required_extensions.begin(), required_extensions.end());
+}
+
 }  // namespace
 
 namespace vkp {
 
 Instance::Instance(const vk::InstanceCreateInfo &instance_info, bool validation_layers_enabled,
+                   std::vector<const char *> extensions, std::vector<const char *> layers,
                    vk::Optional<const vk::AllocationCallbacks> allocator)
     : instance_info_(instance_info),
       validation_layers_enabled_(validation_layers_enabled),
+      extensions_(std::move(extensions)),
+      layers_(std::move(layers)),
       allocator_(allocator) {}
+
+Instance::Instance(Instance &&other) noexcept
+    : initialized_(other.initialized_),
+      instance_info_(other.instance_info_),
+      validation_layers_enabled_(other.validation_layers_enabled_),
+      extensions_(std::move(other.extensions_)),
+      layers_(std::move(other.layers_)),
+      allocator_(other.allocator_) {}
 
 Instance::~Instance() {
   if (initialized_) {
@@ -85,7 +106,7 @@ bool Instance::Init() {
   RTN_IF_MSG(false, (initialized_ == true), "Already initialized.\n");
 
   // Extensions
-  extensions_ = GetExtensions();
+  AddRequiredExtensions(validation_layers_enabled_, &extensions_);
 
   // Require api version 1.1 if it hasn't been set.
   vk::ApplicationInfo app_info;
@@ -149,16 +170,6 @@ std::shared_ptr<vk::Instance> Instance::shared() {
   return instance_;
 }
 
-std::vector<const char *> Instance::GetExtensions() {
-#if USE_GLFW
-  extensions_ = GetExtensionsGLFW(validation_layers_enabled_);
-#else
-  extensions_ = GetExtensionsPrivate(validation_layers_enabled_);
-#endif
-
-  return extensions_;
-}
-
 const vk::Instance &Instance::get() const { return *instance_; }
 
 Instance::Builder::Builder() : allocator_(nullptr) {}
@@ -179,9 +190,19 @@ Instance::Builder &Instance::Builder::set_validation_layers_enabled(bool v) {
   return *this;
 }
 
+Instance::Builder &Instance::Builder::set_extensions(std::vector<const char *> v) {
+  extensions_ = std::move(v);
+  return *this;
+}
+
+Instance::Builder &Instance::Builder::set_layers(std::vector<const char *> v) {
+  layers_ = std::move(v);
+  return *this;
+}
+
 std::unique_ptr<Instance> Instance::Builder::Unique() const {
-  auto instance =
-      std::make_unique<Instance>(instance_info_, validation_layers_enabled_, allocator_);
+  auto instance = std::make_unique<Instance>(instance_info_, validation_layers_enabled_,
+                                             extensions_, layers_, allocator_);
   if (!instance->Init()) {
     RTN_MSG(nullptr, "Failed to initialize Instance.\n")
   }
@@ -189,10 +210,19 @@ std::unique_ptr<Instance> Instance::Builder::Unique() const {
 }
 
 std::shared_ptr<Instance> Instance::Builder::Shared() const {
-  auto instance =
-      std::make_shared<Instance>(instance_info_, validation_layers_enabled_, allocator_);
+  auto instance = std::make_shared<Instance>(instance_info_, validation_layers_enabled_,
+                                             extensions_, layers_, allocator_);
   if (!instance->Init()) {
     RTN_MSG(nullptr, "Failed to initialize Instance.\n")
+  }
+  return instance;
+}
+
+Instance Instance::Builder::Build() const {
+  vkp::Instance instance(instance_info_, validation_layers_enabled_, extensions_, layers_,
+                         allocator_);
+  if (!instance.Init()) {
+    RTN_MSG(instance, "Failed to initialize Instance.\n")
   }
   return instance;
 }
