@@ -38,15 +38,14 @@ void test_case(const char* url, const char* value, bool daemonize) {
 
   // Spawn "run run_test_exiter <value>"
   uint32_t flags = FDIO_SPAWN_CLONE_ALL;
-  const char** argv;
+  std::vector<const char*> argv{kRunPath, url, value, NULL};
   if (daemonize) {
-    argv = new const char* [] { kRunPath, "-d", url, value, NULL };
-  } else {
-    argv = new const char* [] { kRunPath, url, value, NULL };
+    argv.insert(argv.begin() + 1, "-d");
   }
+
   zx_handle_t process = ZX_HANDLE_INVALID;
-  zx_status_t status =
-      fdio_spawn_etc(ZX_HANDLE_INVALID, flags, kRunPath, argv, NULL, 2, actions, &process, nullptr);
+  zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, kRunPath, argv.data(), NULL, 2,
+                                      actions, &process, nullptr);
   ASSERT_EQ(ZX_OK, status);
 
   // Wait for `run` to terminate
