@@ -25,9 +25,6 @@ executable("logs_integration_cpp_tests") {
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/syslog",
   ]
-
-  # TODO(fxbug.dev/46532): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 fuchsia_component("cpp-logs-test") {
