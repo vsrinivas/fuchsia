@@ -174,42 +174,6 @@ TEST_F(CollectLogDataTest, Succeed_FormattingErrors) {
 )");
 }
 
-TEST_F(CollectLogDataTest, Succeed_NoLogs) {
-  SetupLogServer(std::make_unique<stubs::DiagnosticsArchive>(
-      std::make_unique<stubs::DiagnosticsBatchIterator>(std::vector<std::vector<std::string>>({{}}))));
-
-  ::fit::result<AttachmentValue> result = CollectSystemLog();
-  ASSERT_TRUE(result.is_ok());
-  EXPECT_EQ(result.value(), AttachmentValue(Error::kMissingValue));
-}
-
-TEST_F(CollectLogDataTest, Fail_BatchIteratorReturnsError) {
-  SetupLogServer(std::make_unique<stubs::DiagnosticsArchive>(
-      std::make_unique<stubs::DiagnosticsBatchIteratorReturnsError>()));
-
-  ::fit::result<AttachmentValue> result = CollectSystemLog();
-  ASSERT_TRUE(result.is_ok());
-
-  EXPECT_EQ(result.value(), AttachmentValue(Error::kBadValue));
-}
-
-TEST_F(CollectLogDataTest, Fail_BatchIteratorNeverResponds) {
-  SetupLogServer(std::make_unique<stubs::DiagnosticsArchive>(
-      std::make_unique<stubs::DiagnosticsBatchIteratorNeverResponds>()));
-
-  ::fit::result<AttachmentValue> result = CollectSystemLog();
-  ASSERT_TRUE(result.is_ok());
-  EXPECT_EQ(result.value(), AttachmentValue(Error::kTimeout));
-}
-
-TEST_F(CollectLogDataTest, Fail_ArchiveClosesIteratorClosesConnection) {
-  SetupLogServer(std::make_unique<stubs::DiagnosticsArchiveClosesIteratorConnection>());
-
-  ::fit::result<AttachmentValue> result = CollectSystemLog();
-  ASSERT_TRUE(result.is_ok());
-  EXPECT_EQ(result.value(), AttachmentValue(Error::kConnectionError));
-}
-
 }  // namespace
 }  // namespace feedback_data
 }  // namespace forensics

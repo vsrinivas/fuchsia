@@ -60,7 +60,6 @@ class CollectInspectDataTest : public UnitTestFixture {
   std::unique_ptr<stubs::DiagnosticsArchiveBase> inspect_server_;
 };
 
-// TODO(fxbug.dev/65226): Factor out ArchiveAccessor tests.
 TEST_F(CollectInspectDataTest, Succeed_AllInspectData) {
   SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
       std::make_unique<stubs::DiagnosticsBatchIterator>(std::vector<std::vector<std::string>>({
@@ -96,43 +95,6 @@ foo1,
 foo2
 ])");
   EXPECT_EQ(inspect.Error(), Error::kTimeout);
-}
-
-TEST_F(CollectInspectDataTest, Succeed_NoInspectData) {
-  SetUpInspectServer(
-      std::make_unique<stubs::DiagnosticsArchive>(std::make_unique<stubs::DiagnosticsBatchIterator>(
-          std::vector<std::vector<std::string>>({{}}))));
-
-  ::fit::result<AttachmentValue> result = CollectInspectData();
-  ASSERT_TRUE(result.is_ok());
-  EXPECT_EQ(result.value(), AttachmentValue(Error::kMissingValue));
-}
-
-TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
-  SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
-      std::make_unique<stubs::DiagnosticsBatchIteratorReturnsError>()));
-
-  ::fit::result<AttachmentValue> result = CollectInspectData();
-  ASSERT_TRUE(result.is_ok());
-
-  EXPECT_EQ(result.value(), AttachmentValue(Error::kBadValue));
-}
-
-TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
-  SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
-      std::make_unique<stubs::DiagnosticsBatchIteratorNeverResponds>()));
-
-  ::fit::result<AttachmentValue> result = CollectInspectData();
-  ASSERT_TRUE(result.is_ok());
-  EXPECT_EQ(result.value(), AttachmentValue(Error::kTimeout));
-}
-
-TEST_F(CollectInspectDataTest, Fail_ArchiveClosesIteratorClosesConnection) {
-  SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchiveClosesIteratorConnection>());
-
-  ::fit::result<AttachmentValue> result = CollectInspectData();
-  ASSERT_TRUE(result.is_ok());
-  EXPECT_EQ(result.value(), AttachmentValue(Error::kConnectionError));
 }
 
 }  // namespace

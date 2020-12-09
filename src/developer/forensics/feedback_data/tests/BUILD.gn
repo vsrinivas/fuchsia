@@ -11,6 +11,25 @@ visibility = [ ":*" ]
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
+executable("archive_accessor_ptr_unittest_exe") {
+  testonly = true
+
+  sources = [ "archive_accessor_ptr_unittest.cc" ]
+
+  deps = [
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/developer/forensics/feedback_data/attachments:attachment_providers",
+    "//src/developer/forensics/feedback_data/attachments:types",
+    "//src/developer/forensics/testing:gpretty_printers",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:diagnostics",
+    "//src/developer/forensics/utils:errors",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("board_info_provider_unittest_exe") {
   testonly = true
 
@@ -489,6 +508,14 @@ config_data("fake_hwinfo_factory_config") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
+fuchsia_component("archive_accessor_ptr_unittest") {
+  testonly = true
+
+  manifest = "meta/archive_accessor_ptr_unittest.cmx"
+
+  deps = [ ":archive_accessor_ptr_unittest_exe" ]
+}
+
 fuchsia_component("board_info_provider_unittest") {
   testonly = true
 
@@ -639,6 +666,7 @@ fuchsia_component("system_log_ptr_unittest") {
 ###############################################################################
 fuchsia_test_package("feedback-data-tests") {
   test_components = [
+    ":archive_accessor_ptr_unittest",
     ":board_info_provider_unittest",
     ":channel_provider_unittest",
     ":config_unittest",
