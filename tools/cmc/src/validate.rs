@@ -64,29 +64,13 @@ pub fn parse_cml(file: &Path, includepath: Option<&PathBuf>) -> Result<cml::Docu
         }
     }
 
-    let mut ctx = ValidationContext {
-        document: &document,
-        all_children: HashMap::new(),
-        all_collections: HashSet::new(),
-        all_storage_and_sources: HashMap::new(),
-        all_services: HashSet::new(),
-        all_protocols: HashSet::new(),
-        all_directories: HashSet::new(),
-        all_runners: HashSet::new(),
-        all_resolvers: HashSet::new(),
-        all_environment_names: HashSet::new(),
-        all_event_names: HashSet::new(),
-        all_capability_names: HashSet::new(),
-    };
-
     // Validate
+    let mut ctx = ValidationContext::new(&document);
     let mut res = ctx.validate();
     if let Err(Error::Validate { filename, .. }) = &mut res {
         *filename = Some(file.to_string_lossy().into_owned());
     }
-    res?;
-
-    Ok(document)
+    res.and(Ok(document))
 }
 
 fn read_cml(file: &Path) -> Result<cml::Document, Error> {
@@ -107,11 +91,6 @@ fn read_cml(file: &Path) -> Result<cml::Document, Error> {
 }
 
 /// Read in and parse a single manifest file, and return an Error if the given file is not valid.
-/// If the file is a .cml file and is valid, will return Some(cml::Document), and for other valid
-/// files returns None.
-///
-/// Internal single manifest file validation function, used to implement the two public validate
-/// functions.
 fn validate_file<P: AsRef<Path>>(
     file: &Path,
     extra_schemas: &[(P, Option<String>)],
@@ -199,6 +178,23 @@ struct ValidationContext<'a> {
 }
 
 impl<'a> ValidationContext<'a> {
+    fn new(document: &cml::Document) -> ValidationContext {
+        ValidationContext {
+            document: &document,
+            all_children: HashMap::new(),
+            all_collections: HashSet::new(),
+            all_storage_and_sources: HashMap::new(),
+            all_services: HashSet::new(),
+            all_protocols: HashSet::new(),
+            all_directories: HashSet::new(),
+            all_runners: HashSet::new(),
+            all_resolvers: HashSet::new(),
+            all_environment_names: HashSet::new(),
+            all_event_names: HashSet::new(),
+            all_capability_names: HashSet::new(),
+        }
+    }
+
     fn validate(&mut self) -> Result<(), Error> {
         // Ensure child components, collections, and storage don't use the
         // same name.

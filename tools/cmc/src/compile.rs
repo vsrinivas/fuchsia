@@ -2893,7 +2893,7 @@ mod tests {
             default_component_decl(),
         );
         // Including both foo.cml and bar.cml should fail to validate because of an incoming
-        // namespace collission
-        assert_matches!(result, Err(Error::Validate { .. }));
+        // namespace collision.
+        assert_matches!(result, Err(Error::Validate { err, .. }) if err.contains("is a duplicate \"use\""));
     }
 }
