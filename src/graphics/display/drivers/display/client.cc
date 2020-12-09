@@ -1167,8 +1167,8 @@ void Client::SetOwnership(bool is_owner) {
   ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
   is_owner_ = is_owner;
 
-  zx_status_t status = fhd::Controller::SendOnClientOwnershipChangeEvent(
-      zx::unowned_channel(server_handle_), is_owner);
+  zx_status_t status = binding_state_.SendEvents(
+      [&](auto&& event_sender) { return event_sender.OnClientOwnershipChange(is_owner); });
   if (status != ZX_OK) {
     zxlogf(ERROR, "Error writing remove message %d", status);
   }
@@ -1337,9 +1337,10 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
   }
 
   if (!coded_configs.empty() || !removed_ids.empty()) {
-    zx_status_t status = fhd::Controller::SendOnDisplaysChangedEvent(
-        zx::unowned_channel(server_handle_), fidl::unowned_vec(coded_configs),
-        fidl::unowned_vec(removed_ids));
+    zx_status_t status = binding_state_.SendEvents([&](auto&& event_sender) {
+      return event_sender.OnDisplaysChanged(fidl::unowned_vec(coded_configs),
+                                            fidl::unowned_vec(removed_ids));
+    });
     if (status != ZX_OK) {
       zxlogf(ERROR, "Error writing remove message %d", status);
     }
@@ -1466,7 +1467,8 @@ void Client::AcknowledgeVsync(uint64_t cookie, AcknowledgeVsyncCompleter::Sync& 
   zxlogf(TRACE, "Cookie %ld Acked\n", cookie);
 }
 
-zx_status_t Client::Init(zx::channel server_channel) {
+fit::result<fidl::ServerBindingRef<llcpp::fuchsia::hardware::display::Controller>, zx_status_t>
+Client::Init(zx::channel server_channel) {
   zx_status_t status;
 
   server_handle_ = server_channel.get();
@@ -1482,19 +1484,19 @@ zx_status_t Client::Init(zx::channel server_channel) {
       default:
         client->TearDown();
     }
-    // fidl_channel_ is the zx::channel alias of server_channel_. Hold on to it so that
-    // OnDisplayVsync works until this client is destroyed.
-    client->fidl_channel_ = std::move(ch);
+    // Recapture the channel as an event sender so that OnDisplayVsync works
+    // until this client is destroyed.
+    client->binding_state_.SetEventSender(std::move(ch));
   };
 
   auto res = fidl::BindServer(controller_->loop().dispatcher(), std::move(server_channel), this,
                               std::move(cb));
   if (!res.is_ok()) {
     zxlogf(ERROR, "%s: Failed to bind to FIDL Server (%d)", __func__, res.error());
-    return res.error();
+    return res;
   }
-  // keep a copy of fidl binding so we can safely unbind from it during shutdown
-  fidl_binding_ = res.take_value();
+  // Keep a copy of fidl binding so we can safely unbind from it during shutdown
+  binding_state_.SetBound(res.value());
 
   zx::channel sysmem_allocator_request, sysmem_allocator_client;
   zx::channel::create(0, &sysmem_allocator_request, &sysmem_allocator_client);
@@ -1509,7 +1511,7 @@ zx_status_t Client::Init(zx::channel server_channel) {
                                          fsl::GetCurrentProcessKoid());
   }
 
-  return ZX_OK;
+  return res;
 }
 
 Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t client_id)
@@ -1525,9 +1527,9 @@ Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t 
       proxy_(proxy),
       is_vc_(is_vc),
       id_(client_id),
-      server_channel_(std::move(server_channel)),
-      server_handle_(server_channel_.get()),
-      fences_(controller->loop().dispatcher(), fit::bind_member(this, &Client::OnFenceFired)) {}
+      server_handle_(server_channel.get()),
+      fences_(controller->loop().dispatcher(), fit::bind_member(this, &Client::OnFenceFired)),
+      binding_state_(fhd::Controller::EventSender(std::move(server_channel))) {}
 
 Client::~Client() { ZX_DEBUG_ASSERT(server_handle_ == ZX_HANDLE_INVALID); }
 
@@ -1692,9 +1694,10 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
   while (!buffered_vsync_messages_.empty()) {
     vsync_msg_t v = buffered_vsync_messages_.front();
     buffered_vsync_messages_.pop();
-    status = fhd::Controller::SendOnVsyncEvent(
-        zx::unowned_channel(server_channel_), v.display_id, v.timestamp,
-        fidl::VectorView(fidl::unowned_ptr(v.image_ids), v.count), 0);
+    status = handler_.binding_state().SendEvents([&](auto&& event_sender) {
+      return event_sender.OnVsync(v.display_id, v.timestamp,
+                                  fidl::VectorView(fidl::unowned_ptr(v.image_ids), v.count), 0);
+    });
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to send all buffered vsync messages %d\n", status);
       return status;
@@ -1703,9 +1706,10 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
   }
 
   // Send the latest vsync event
-  status = fhd::Controller::SendOnVsyncEvent(
-      zx::unowned_channel(server_channel_), display_id, timestamp,
-      fidl::VectorView(fidl::unowned_ptr(image_ids), count), cookie);
+  status = handler_.binding_state().SendEvents([&](auto&& event_sender) {
+    return event_sender.OnVsync(display_id, timestamp,
+                                fidl::VectorView(fidl::unowned_ptr(image_ids), count), cookie);
+  });
   if (status != ZX_OK) {
     return status;
   }
@@ -1802,10 +1806,13 @@ void ClientProxy::DdkRelease() {
 
 zx_status_t ClientProxy::Init(zx::channel server_channel) {
   mtx_init(&task_mtx_, mtx_plain);
-  server_channel_ = zx::unowned_channel(server_channel);
   auto seed = static_cast<uint32_t>(zx::clock::get_monotonic().get());
   initial_cookie_ = rand_r(&seed);
-  return handler_.Init(std::move(server_channel));
+  auto result = handler_.Init(std::move(server_channel));
+  if (result.is_error()) {
+    return result.error();
+  }
+  return ZX_OK;
 }
 
 ClientProxy::ClientProxy(Controller* controller, bool is_vc, uint32_t client_id,
@@ -1823,7 +1830,6 @@ ClientProxy::ClientProxy(Controller* controller, bool is_vc, uint32_t client_id,
     : ClientParent(nullptr),
       controller_(controller),
       is_vc_(is_vc),
-      server_channel_(zx::unowned_channel(server_channel)),
       handler_(controller_, this, is_vc_, client_id, std::move(server_channel)) {
   mtx_init(&mtx_, mtx_plain);
 }

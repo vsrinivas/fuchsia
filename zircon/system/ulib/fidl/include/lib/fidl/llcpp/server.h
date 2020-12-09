@@ -57,11 +57,11 @@ class ServerBindingRef {
  public:
   ~ServerBindingRef() = default;
 
-  // Move only.
   ServerBindingRef(ServerBindingRef&&) = default;
   ServerBindingRef& operator=(ServerBindingRef&&) = default;
-  ServerBindingRef(const ServerBindingRef&) = delete;
-  ServerBindingRef& operator=(const ServerBindingRef&) = delete;
+
+  ServerBindingRef(const ServerBindingRef&) = default;
+  ServerBindingRef& operator=(const ServerBindingRef&) = default;
 
   // Triggers an asynchronous unbind operation. If specified, |on_unbound| will be invoked on a
   // dispatcher thread, passing in the channel and the unbind reason. On return, the dispatcher

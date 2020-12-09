@@ -56,7 +56,6 @@ source_set("shared") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/edid",
-    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format:image-format-llcpp",
     "//zircon/system/ulib/trace:trace-driver",
