@@ -25,6 +25,7 @@
 #include "src/developer/debug/zxdb/console/console_impl.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
+#include "src/developer/debug/zxdb/debug_adapter/server.h"
 #include "src/developer/debug/zxdb/symbols/system_symbols.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -250,6 +251,16 @@ int ConsoleMain(int argc, const char* argv[]) {
     ConsoleImpl console(&session);
     if (options.quit_agent_on_quit) {
       session.system().settings().SetBool(ClientSettings::System::kQuitAgentOnExit, true);
+    }
+
+    std::unique_ptr<DebugAdapterServer> debug_adapter;
+    if (options.enable_debug_adapter) {
+      int port = options.debug_adapter_port;
+      debug_adapter = std::make_unique<DebugAdapterServer>(&session, port);
+      err = debug_adapter->Init();
+      if (err.has_error()) {
+        fprintf(stderr, "Failed to initialize debug adapter: %s\n", err.msg().c_str());
+      }
     }
 
     SetupCommandLineOptions(options, &session);

@@ -33,3 +33,6 @@ point "up" in this list.
 
   * `console`: Frontend for the client that provides a console UI on Linux and
     Mac.
+
+  * `debug_adapter` : Debug Adapter Protocol server to support IDE debugger
+    clients.

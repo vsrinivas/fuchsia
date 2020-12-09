@@ -123,6 +123,14 @@ const char kVersionHelp[] = R"(  --version
   -v
       Prints the version.)";
 
+const char kEnableDebugAdapterHelp[] = R"( --enable-debug-adapter
+      Starts the debug adapter that serves debug adapter protocol.
+      This is useful for connecting the debugger with an IDE.)";
+
+const char kDebugAdapterPortHelp[] = R"( --debug-adapter-port=<port>
+      Uses this port number to serve debug adapter protocol. By default 15678 is used.
+      )";
+
 }  // namespace
 
 cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
@@ -172,6 +180,10 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
     return cmdline::Status::Ok();
   });
   parser.AddSwitch("show-analytics", 0, kShowAnalyticsHelp, &CommandLineOptions::show_analytics);
+  parser.AddSwitch("enable-debug-adapter", 0, kEnableDebugAdapterHelp,
+                   &CommandLineOptions::enable_debug_adapter);
+  parser.AddSwitch("debug-adapter-port", 0, kDebugAdapterPortHelp,
+                   &CommandLineOptions::debug_adapter_port);
 
   // Special --help switch which doesn't exist in the options structure.
   bool requested_help = false;

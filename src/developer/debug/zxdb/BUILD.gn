@@ -27,6 +27,7 @@ if (is_host) {
       "//src/developer/debug/ipc:client",
       "//src/developer/debug/zxdb/client",
       "//src/developer/debug/zxdb/console",
+      "//src/developer/debug/zxdb/debug_adapter",
     ]
   }
 
@@ -53,6 +54,7 @@ if (is_host) {
       "//src/developer/debug/zxdb/client:tests",
       "//src/developer/debug/zxdb/common:tests",
       "//src/developer/debug/zxdb/console:tests",
+      "//src/developer/debug/zxdb/debug_adapter:tests",
       "//src/developer/debug/zxdb/expr:tests",
       "//src/developer/debug/zxdb/symbols:tests",
       "//src/lib/fxl/test:gtest_main",

@@ -1,0 +1,39 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+static_library("debug_adapter") {
+  sources = [
+    "context.cc",
+    "context.h",
+    "handlers/request_breakpoint.cc",
+    "handlers/request_breakpoint.h",
+    "server.cc",
+    "server.h",
+  ]
+
+  deps = []
+  public_deps = [
+    "//src/developer/debug/zxdb/client",
+    "//third_party/github.com/google/cppdap",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+  sources = [
+    "context_test.cc",
+    "context_test.h",
+    "context_unittest.cc",
+    "handlers/request_breakpoint_unittest.cc",
+    "server_unittest.cc",
+  ]
+  deps = [
+    ":debug_adapter",
+    "//src/developer/debug/zxdb/client:test_support",
+    "//src/developer/debug/zxdb/common:test_support",
+    "//third_party/googletest:gtest",
+  ]
+}

@@ -34,6 +34,8 @@ struct CommandLineOptions {
   AnalyticsMode analytics = AnalyticsMode::kUnspecified;
   bool show_analytics = false;
   bool requested_version = false;
+  bool enable_debug_adapter = false;
+  uint16_t debug_adapter_port = 15678;
 };
 
 // Parses the given command line into options and params.

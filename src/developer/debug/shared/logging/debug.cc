@@ -287,6 +287,8 @@ const char* LogCategoryToString(LogCategory category) {
       return "Watchpoint";
     case LogCategory::kWorkerPool:
       return "WorkerPool";
+    case LogCategory::kDebugAdapter:
+      return "DebugAdapter";
     case LogCategory::kAll:
       return "All";
     case LogCategory::kNone:

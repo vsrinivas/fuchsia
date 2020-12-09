@@ -192,6 +192,7 @@ static_library("console") {
   deps = []
   public_deps = [
     "//src/developer/debug/zxdb/client",
+    "//src/developer/debug/zxdb/debug_adapter",
     "//src/developer/debug/zxdb/expr",
     "//src/lib/fxl",
     "//src/lib/line_input",

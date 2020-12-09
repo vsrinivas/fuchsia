@@ -73,6 +73,9 @@ enum class LogCategory {
   // Associated with the multithreaded work pool.
   kWorkerPool,
 
+  // Associated with debug adapter.
+  kDebugAdapter,
+
   // All the previous categories are enabled.
   // Log statements in this category will always be outputting if debug logging is enabled.
   kAll,
