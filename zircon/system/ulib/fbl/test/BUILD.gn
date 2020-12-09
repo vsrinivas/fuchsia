@@ -17,7 +17,10 @@ import("//build/testing/bootfs_test.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":fbl($host_toolchain)" ]
+  deps = [
+    ":fbl($host_toolchain)",
+    ":fbl-gmock-test($host_toolchain)",
+  ]
 }
 
 test("fbl") {
@@ -101,4 +104,25 @@ test("fbl") {
 bootfs_test("fbl-bootfs-test") {
   name = "fbl-test"
   deps = [ ":fbl" ]
+}
+
+# Generic main entry point target for GTest executables.
+source_set("gtest_main") {
+  testonly = true
+  sources = [ "run_all_unittests.cc" ]
+  public_deps = [ "//third_party/googletest:gtest" ]
+}
+
+# These tests test compatibility with GMock. As such, they must use the GTest
+# runner instead of zxtest.
+test("fbl-gmock-test") {
+  output_name = "fbl-gmock-test"
+  include_dirs = [ "include" ]
+  sources = [ "ref_ptr_gmock_tests.cc" ]
+  deps = [
+    ":gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fbl",
+  ]
 }

@@ -7,11 +7,12 @@
 
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
+
+#include <type_traits>
+#include <utility>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/recycler.h>
-
-#include <utility>
-#include <type_traits>
 
 namespace fbl {
 
@@ -43,6 +44,8 @@ T* LeakToRawPtr(RefPtr<T>* ptr) __WARN_UNUSED_RESULT;
 // type does not support vending weak pointers, introspecting the reference
 // count, or any operations that would result in allocating memory (unless
 // T::AddRef or T::Release allocate memory).
+// TODO(fxbug.dev/65796): Align RefPtr more closely with standard library smart
+// pointers.
 //
 // Construction:  To create a RefPtr around a freshly created object, use the
 // AdoptRef free function at the bottom of this header. To construct a RefPtr
@@ -51,7 +54,7 @@ T* LeakToRawPtr(RefPtr<T>* ptr) __WARN_UNUSED_RESULT;
 template <typename T>
 class RefPtr final {
  public:
-  using ObjType = T;
+  using element_type = T;
 
   // Constructors
   constexpr RefPtr() : ptr_(nullptr) {}
@@ -135,12 +138,11 @@ class RefPtr final {
   template <typename BaseRefPtr>
   static RefPtr Downcast(BaseRefPtr base) {
     // Make certain that BaseRefPtr is some form of RefPtr<T>
-    static_assert(std::is_same_v<BaseRefPtr, RefPtr<typename BaseRefPtr::ObjType>>,
+    static_assert(std::is_same_v<BaseRefPtr, RefPtr<typename BaseRefPtr::element_type>>,
                   "BaseRefPtr must be a RefPtr<T>!");
 
     if (base != nullptr)
-      return ImportFromRawPtr<T>(
-          static_cast<T*>(internal::LeakToRawPtr(&base)));
+      return ImportFromRawPtr<T>(static_cast<T*>(internal::LeakToRawPtr(&base)));
 
     return nullptr;
   }
@@ -158,7 +160,6 @@ class RefPtr final {
     ptr_ = r.ptr_;
     r.ptr_ = p;
   }
-
 
   T* get() const { return ptr_; }
   T& operator*() const { return *ptr_; }
@@ -261,7 +262,6 @@ inline T* LeakToRawPtr(RefPtr<T>* ptr) {
   ptr->ptr_ = nullptr;
   return ret;
 }
-
 
 // This is a wrapper class that can be friended for a particular |T|, if you
 // want to make |T|'s constructor private, but still use |MakeRefCounted()|
