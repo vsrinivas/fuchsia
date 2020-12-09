@@ -58,7 +58,9 @@ struct FakeTRB : TRB {
   zx::time deadline;
   std::optional<HubInfo> hub_info;
   bool bsr;
-  static FakeTRB* FromTRB(TRB* trb) { return static_cast<FakeTRB*>(trb); }
+  static std::unique_ptr<FakeTRB> FromTRB(TRB* trb) {
+    return std::unique_ptr<FakeTRB>(static_cast<FakeTRB*>(trb));
+  }
 };
 
 struct TestState {
@@ -375,9 +377,9 @@ TEST_F(EnumerationTests, EnableSlotCommandReturnsIOErrorOnFailure) {
   auto enable_slot_task = state().pending_operations.pop_front();
   auto enum_slot_trb = FakeTRB::FromTRB(enable_slot_task->trb);
   ASSERT_EQ(enum_slot_trb->Op, FakeTRB::Op::EnableSlot);
-  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb)
+  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())
       ->set_CompletionCode(CommandCompletionEvent::UndefinedError);
-  enable_slot_task->completer->complete_ok(enum_slot_trb);
+  enable_slot_task->completer->complete_ok(enum_slot_trb.get());
   ASSERT_EQ(controller().RunSynchronously(std::move(enumeration_task)), ZX_ERR_IO);
 }
 
@@ -396,10 +398,10 @@ TEST_F(EnumerationTests, EnableSlotCommandSetsDeviceInformationOnSuccess) {
   auto enable_slot_task = state().pending_operations.pop_front();
   auto enum_slot_trb = FakeTRB::FromTRB(enable_slot_task->trb);
   ASSERT_EQ(enum_slot_trb->Op, FakeTRB::Op::EnableSlot);
-  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb)
+  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
-  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb)->set_SlotID(1);
-  enable_slot_task->completer->complete_ok(enum_slot_trb);
+  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())->set_SlotID(1);
+  enable_slot_task->completer->complete_ok(enum_slot_trb.get());
   controller().ScheduleTask(std::move(enumeration_task));
   controller().RunUntilIdle();
   auto device_information = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
@@ -446,10 +448,10 @@ TEST_F(EnumerationTests, AddressDeviceCommandPassesThroughFailureCode) {
   auto enable_slot_task = state().pending_operations.pop_front();
   auto enum_slot_trb = FakeTRB::FromTRB(enable_slot_task->trb);
   ASSERT_EQ(enum_slot_trb->Op, FakeTRB::Op::EnableSlot);
-  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb)
+  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
-  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb)->set_SlotID(1);
-  enable_slot_task->completer->complete_ok(enum_slot_trb);
+  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())->set_SlotID(1);
+  enable_slot_task->completer->complete_ok(enum_slot_trb.get());
   controller().ScheduleTask(std::move(enumeration_task));
   controller().RunUntilIdle();
   auto device_information = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
@@ -507,10 +509,10 @@ TEST_F(EnumerationTests, AddressDeviceCommandReturnsErrorOnFailure) {
   auto enable_slot_task = state().pending_operations.pop_front();
   auto enum_slot_trb = FakeTRB::FromTRB(enable_slot_task->trb);
   ASSERT_EQ(enum_slot_trb->Op, FakeTRB::Op::EnableSlot);
-  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb)
+  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
-  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb)->set_SlotID(1);
-  enable_slot_task->completer->complete_ok(enum_slot_trb);
+  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())->set_SlotID(1);
+  enable_slot_task->completer->complete_ok(enum_slot_trb.get());
   controller().ScheduleTask(std::move(enumeration_task));
   controller().RunUntilIdle();
   auto device_information = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
@@ -533,9 +535,9 @@ TEST_F(EnumerationTests, AddressDeviceCommandReturnsErrorOnFailure) {
   ASSERT_EQ(address_device_op->hub_info->hub_id, hub_info->hub_id);
   ASSERT_EQ(address_device_op->hub_info->hub_speed, hub_info->hub_speed);
   ASSERT_EQ(address_device_op->hub_info->multi_tt, hub_info->multi_tt);
-  reinterpret_cast<CommandCompletionEvent*>(address_device_op)
+  reinterpret_cast<CommandCompletionEvent*>(address_device_op.get())
       ->set_CompletionCode(CommandCompletionEvent::Stopped);
-  address_device->completer->complete_ok(address_device_op);
+  address_device->completer->complete_ok(address_device_op.get());
   controller().RunUntilIdle();
   auto disable_trb = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
   ASSERT_EQ(disable_trb->Op, FakeTRB::Op::DisableSlot);
@@ -571,10 +573,10 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceUponCompletion) {
   auto enable_slot_task = state().pending_operations.pop_front();
   auto enum_slot_trb = FakeTRB::FromTRB(enable_slot_task->trb);
   ASSERT_EQ(enum_slot_trb->Op, FakeTRB::Op::EnableSlot);
-  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb)
+  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
-  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb)->set_SlotID(1);
-  enable_slot_task->completer->complete_ok(enum_slot_trb);
+  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())->set_SlotID(1);
+  enable_slot_task->completer->complete_ok(enum_slot_trb.get());
   controller().ScheduleTask(std::move(enumeration_task));
   controller().RunUntilIdle();
   auto device_information = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
@@ -596,14 +598,14 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceUponCompletion) {
   ASSERT_EQ(address_device_op->hub_info->hub_id, hub_info->hub_id);
   ASSERT_EQ(address_device_op->hub_info->hub_speed, hub_info->hub_speed);
   ASSERT_EQ(address_device_op->hub_info->multi_tt, hub_info->multi_tt);
-  reinterpret_cast<CommandCompletionEvent*>(address_device_op)
+  reinterpret_cast<CommandCompletionEvent*>(address_device_op.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
-  address_device->completer->complete_ok(address_device_op);
+  address_device->completer->complete_ok(address_device_op.get());
   controller().RunUntilIdle();
   // Timeout
   auto timeout = state().pending_operations.pop_front();
   ASSERT_TRUE(FakeTRB::FromTRB(timeout->trb)->deadline.get());
-  timeout->completer->complete_ok(address_device_op);
+  timeout->completer->complete_ok(address_device_op.get());
   controller().RunUntilIdle();
   // GetMaxPacketSize
   auto get_max_packet_size = state().pending_operations.pop_front();
@@ -664,10 +666,10 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   auto enable_slot_task = state().pending_operations.pop_front();
   auto enum_slot_trb = FakeTRB::FromTRB(enable_slot_task->trb);
   ASSERT_EQ(enum_slot_trb->Op, FakeTRB::Op::EnableSlot);
-  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb)
+  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
-  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb)->set_SlotID(1);
-  enable_slot_task->completer->complete_ok(enum_slot_trb);
+  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())->set_SlotID(1);
+  enable_slot_task->completer->complete_ok(enum_slot_trb.get());
   controller().ScheduleTask(std::move(enumeration_task));
   controller().RunUntilIdle();
   auto device_information = FakeTRB::FromTRB(state().pending_operations.pop_front()->trb);
@@ -689,9 +691,9 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   ASSERT_EQ(address_device_op->hub_info->hub_id, hub_info->hub_id);
   ASSERT_EQ(address_device_op->hub_info->hub_speed, hub_info->hub_speed);
   ASSERT_EQ(address_device_op->hub_info->multi_tt, hub_info->multi_tt);
-  reinterpret_cast<CommandCompletionEvent*>(address_device_op)
+  reinterpret_cast<CommandCompletionEvent*>(address_device_op.get())
       ->set_CompletionCode(CommandCompletionEvent::UsbTransactionError);
-  address_device->completer->complete_ok(address_device_op);
+  address_device->completer->complete_ok(address_device_op.get());
   controller().RunUntilIdle();
 
   // DisableSlot
@@ -699,19 +701,19 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   auto disable_trb = FakeTRB::FromTRB(disable_op->trb);
   ASSERT_EQ(disable_trb->Op, FakeTRB::Op::DisableSlot);
   ASSERT_EQ(disable_trb->slot, 1);
-  reinterpret_cast<CommandCompletionEvent*>(disable_trb)
+  reinterpret_cast<CommandCompletionEvent*>(disable_trb.get())
       ->set_CompletionCode(CommandCompletionEvent::UsbTransactionError);
-  disable_op->completer->complete_ok(disable_trb);
+  disable_op->completer->complete_ok(disable_trb.get());
   controller().RunUntilIdle();
 
   // EnableSlot
   enable_slot_task = state().pending_operations.pop_front();
   enum_slot_trb = FakeTRB::FromTRB(enable_slot_task->trb);
   ASSERT_EQ(enum_slot_trb->Op, FakeTRB::Op::EnableSlot);
-  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb)
+  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
-  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb)->set_SlotID(2);
-  enable_slot_task->completer->complete_ok(enum_slot_trb);
+  reinterpret_cast<CommandCompletionEvent*>(enum_slot_trb.get())->set_SlotID(2);
+  enable_slot_task->completer->complete_ok(enum_slot_trb.get());
   controller().RunUntilIdle();
 
   // Set device information
@@ -736,9 +738,9 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   ASSERT_EQ(address_device_op->hub_info->hub_id, hub_info->hub_id);
   ASSERT_EQ(address_device_op->hub_info->hub_speed, hub_info->hub_speed);
   ASSERT_EQ(address_device_op->hub_info->multi_tt, hub_info->multi_tt);
-  reinterpret_cast<CommandCompletionEvent*>(address_device_op)
+  reinterpret_cast<CommandCompletionEvent*>(address_device_op.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
-  address_device->completer->complete_ok(address_device_op);
+  address_device->completer->complete_ok(address_device_op.get());
   controller().RunUntilIdle();
 
   // GetMaxPacketSize
@@ -767,9 +769,9 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   ASSERT_EQ(set_max_packet_size_trb->Op, FakeTRB::Op::SetMaxPacketSize);
   ASSERT_EQ(set_max_packet_size_trb->slot, 2);
   ASSERT_EQ(set_max_packet_size_trb->max_packet_size, 42);
-  reinterpret_cast<CommandCompletionEvent*>(set_max_packet_size_trb)
+  reinterpret_cast<CommandCompletionEvent*>(set_max_packet_size_trb.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
-  set_max_packet_size->completer->complete_ok(set_max_packet_size_trb);
+  set_max_packet_size->completer->complete_ok(set_max_packet_size_trb.get());
   controller().RunUntilIdle();
 
   // AddressDevice with BSR = 0
@@ -778,15 +780,15 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   ASSERT_EQ(address_device_op->Op, FakeTRB::Op::AddressDevice);
   ASSERT_FALSE(address_device_op->bsr);
   ASSERT_EQ(address_device_op->slot, 2);
-  reinterpret_cast<CommandCompletionEvent*>(address_device_op)
+  reinterpret_cast<CommandCompletionEvent*>(address_device_op.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
-  address_device->completer->complete_ok(address_device_op);
+  address_device->completer->complete_ok(address_device_op.get());
   controller().RunUntilIdle();
 
   // Timeout
   auto timeout = state().pending_operations.pop_front();
   ASSERT_TRUE(FakeTRB::FromTRB(timeout->trb)->deadline.get());
-  timeout->completer->complete_ok(address_device_op);
+  timeout->completer->complete_ok(address_device_op.get());
   controller().RunUntilIdle();
 
   // GetMaxPacketSize
@@ -814,9 +816,9 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   ASSERT_EQ(set_max_packet_size_trb->Op, FakeTRB::Op::SetMaxPacketSize);
   ASSERT_EQ(set_max_packet_size_trb->slot, 2);
   ASSERT_EQ(set_max_packet_size_trb->max_packet_size, 32);
-  reinterpret_cast<CommandCompletionEvent*>(set_max_packet_size_trb)
+  reinterpret_cast<CommandCompletionEvent*>(set_max_packet_size_trb.get())
       ->set_CompletionCode(CommandCompletionEvent::Success);
-  set_max_packet_size->completer->complete_ok(set_max_packet_size_trb);
+  set_max_packet_size->completer->complete_ok(set_max_packet_size_trb.get());
   controller().RunUntilIdle();
 
   // Online Device
