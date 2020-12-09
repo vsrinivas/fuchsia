@@ -6,6 +6,7 @@ use {
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
     futures::channel::mpsc,
     log::trace,
+    packet_encoding::Decodable,
     std::convert::{TryFrom, TryInto},
 };
 
@@ -13,7 +14,7 @@ use crate::packets::{
     player_application_settings::{
         PlayerApplicationSettingAttributeId, SetPlayerApplicationSettingValueCommand,
     },
-    Decodable, SONG_LENGTH_NOT_SUPPORTED, SONG_POSITION_NOT_SUPPORTED,
+    SONG_LENGTH_NOT_SUPPORTED, SONG_POSITION_NOT_SUPPORTED,
 };
 use crate::peer::*;
 use crate::types::PeerError as Error;

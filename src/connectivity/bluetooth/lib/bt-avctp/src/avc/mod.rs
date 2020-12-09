@@ -8,6 +8,7 @@ use {
     fuchsia_zircon::Duration,
     futures::{future, future::Ready, stream::FilterMap, Stream, StreamExt},
     log::{info, trace},
+    packet_encoding::{Decodable, Encodable},
     std::convert::TryFrom,
 };
 
@@ -21,7 +22,7 @@ use crate::{
         Command as AvctpCommand, CommandStream as AvctpCommandStream, Header as AvctpHeader,
         Packet as AvctpPacket, Peer as AvctpPeer,
     },
-    Decodable, Encodable, Error, Result,
+    Error, Result,
 };
 
 use self::types::BT_SIG_COMPANY_ID;

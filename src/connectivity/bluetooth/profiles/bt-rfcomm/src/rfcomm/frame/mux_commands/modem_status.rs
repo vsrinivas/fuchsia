@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {bitfield::bitfield, std::convert::TryFrom};
-
-use crate::rfcomm::{
-    frame::{
-        mux_commands::{Decodable, Encodable},
-        FrameParseError,
-    },
-    types::DLCI,
+use {
+    bitfield::bitfield,
+    packet_encoding::{Decodable, Encodable},
+    std::convert::TryFrom,
 };
+
+use crate::rfcomm::{frame::FrameParseError, types::DLCI};
 
 /// Length (in bytes) of a Modem Status Command with no break value.
 const MODEM_STATUS_COMMAND_WITHOUT_BREAK_LENGTH: usize = 2;
@@ -103,6 +101,8 @@ impl ModemStatusParams {
 }
 
 impl Decodable for ModemStatusParams {
+    type Error = FrameParseError;
+
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         if buf.len() != MODEM_STATUS_COMMAND_WITH_BREAK_LENGTH
             && buf.len() != MODEM_STATUS_COMMAND_WITHOUT_BREAK_LENGTH
@@ -134,6 +134,8 @@ impl Decodable for ModemStatusParams {
 }
 
 impl Encodable for ModemStatusParams {
+    type Error = FrameParseError;
+
     fn encoded_len(&self) -> usize {
         if self.break_value.is_some() {
             MODEM_STATUS_COMMAND_WITH_BREAK_LENGTH

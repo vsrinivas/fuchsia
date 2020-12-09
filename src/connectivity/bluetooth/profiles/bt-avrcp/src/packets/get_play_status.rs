@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{convert::TryFrom, u32};
+use {
+    packet_encoding::{Decodable, Encodable},
+    std::{convert::TryFrom, u32},
+};
 
 use crate::packets::{
-    AvcCommandType, Decodable, Encodable, Error, PacketResult, PduId, PlaybackStatus,
-    VendorCommand, VendorDependentPdu,
+    AvcCommandType, Error, PacketResult, PduId, PlaybackStatus, VendorCommand, VendorDependentPdu,
 };
 
 #[derive(Debug)]
@@ -34,12 +36,16 @@ impl VendorCommand for GetPlayStatusCommand {
 }
 
 impl Decodable for GetPlayStatusCommand {
+    type Error = Error;
+
     fn decode(_buf: &[u8]) -> PacketResult<Self> {
         Ok(Self {})
     }
 }
 
 impl Encodable for GetPlayStatusCommand {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         0
     }
@@ -90,6 +96,8 @@ impl VendorDependentPdu for GetPlayStatusResponse {
 }
 
 impl Decodable for GetPlayStatusResponse {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < RESPONSE_LEN {
             return Err(Error::InvalidMessageLength);
@@ -110,6 +118,8 @@ impl Decodable for GetPlayStatusResponse {
 }
 
 impl Encodable for GetPlayStatusResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         RESPONSE_LEN
     }

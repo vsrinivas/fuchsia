@@ -11,6 +11,7 @@ use {
         Stream,
     },
     log::trace,
+    packet_encoding::{Decodable, Encodable},
     parking_lot::RwLock,
     std::{
         convert::TryFrom,
@@ -20,7 +21,7 @@ use {
     },
 };
 
-use crate::packets::{Decodable, Encodable, PacketEncodable};
+use crate::packets::PacketEncodable;
 use crate::peer::{
     NotificationEventId, RegisterNotificationCommand, RemotePeer, StatusCode,
     VendorDependentPreamble,

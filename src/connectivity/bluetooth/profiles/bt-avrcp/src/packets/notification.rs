@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
-    fuchsia_bluetooth::pub_decodable_enum,
+    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
     std::{
         convert::TryFrom,
         {u32, u64},
@@ -12,7 +12,7 @@ use {
 };
 
 use crate::packets::{
-    AvcCommandType, Decodable, Encodable, Error, PacketResult, PduId, PlaybackStatus,
+    AvcCommandType, Error, PacketResult, PduId, PlaybackStatus,
     PlayerApplicationSettingAttributeId, PlayerApplicationSettings, VendorCommand,
     VendorDependentPdu,
 };
@@ -168,6 +168,8 @@ impl VendorCommand for RegisterNotificationCommand {
 }
 
 impl Decodable for RegisterNotificationCommand {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < Self::EVENT_ID_LEN + Self::PLAYBACK_INTERVAL_LEN {
             return Err(Error::InvalidMessage);
@@ -185,6 +187,8 @@ impl Decodable for RegisterNotificationCommand {
 }
 
 impl Encodable for RegisterNotificationCommand {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         Self::EVENT_ID_LEN + Self::PLAYBACK_INTERVAL_LEN
     }
@@ -227,6 +231,8 @@ impl VendorDependentPdu for VolumeChangedNotificationResponse {
 }
 
 impl Decodable for VolumeChangedNotificationResponse {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 2 {
             return Err(Error::InvalidMessage);
@@ -241,6 +247,8 @@ impl Decodable for VolumeChangedNotificationResponse {
 }
 
 impl Encodable for VolumeChangedNotificationResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         2
     }
@@ -281,6 +289,8 @@ impl VendorDependentPdu for PlaybackStatusChangedNotificationResponse {
 }
 
 impl Decodable for PlaybackStatusChangedNotificationResponse {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 2 {
             return Err(Error::InvalidMessageLength);
@@ -295,6 +305,8 @@ impl Decodable for PlaybackStatusChangedNotificationResponse {
 }
 
 impl Encodable for PlaybackStatusChangedNotificationResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         2
     }
@@ -345,6 +357,8 @@ impl VendorDependentPdu for TrackChangedNotificationResponse {
 }
 
 impl Decodable for TrackChangedNotificationResponse {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 9 {
             return Err(Error::InvalidMessage);
@@ -363,6 +377,8 @@ impl Decodable for TrackChangedNotificationResponse {
 }
 
 impl Encodable for TrackChangedNotificationResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         9
     }
@@ -408,6 +424,8 @@ impl VendorDependentPdu for PlaybackPosChangedNotificationResponse {
 }
 
 impl Decodable for PlaybackPosChangedNotificationResponse {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 5 {
             return Err(Error::InvalidMessage);
@@ -426,6 +444,8 @@ impl Decodable for PlaybackPosChangedNotificationResponse {
 }
 
 impl Encodable for PlaybackPosChangedNotificationResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         5
     }
@@ -471,6 +491,8 @@ impl VendorDependentPdu for AddressedPlayerChangedNotificationResponse {
 }
 
 impl Decodable for AddressedPlayerChangedNotificationResponse {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 5 {
             return Err(Error::InvalidMessage);
@@ -497,6 +519,8 @@ impl Decodable for AddressedPlayerChangedNotificationResponse {
 }
 
 impl Encodable for AddressedPlayerChangedNotificationResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         5
     }
@@ -534,6 +558,8 @@ impl VendorDependentPdu for PlayerApplicationSettingChangedResponse {
 }
 
 impl Decodable for PlayerApplicationSettingChangedResponse {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 2 {
             return Err(Error::InvalidMessage);
@@ -570,6 +596,8 @@ impl Decodable for PlayerApplicationSettingChangedResponse {
 }
 
 impl Encodable for PlayerApplicationSettingChangedResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         2 + (2 * self.attribute_values.len()) as usize
     }

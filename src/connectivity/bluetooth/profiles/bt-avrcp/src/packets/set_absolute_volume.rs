@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use packet_encoding::{Decodable, Encodable};
+
 use crate::packets::{
-    AvcCommandType, Decodable, Encodable, Error, PacketResult, PduId, VendorCommand,
-    VendorDependentPdu,
+    AvcCommandType, Error, PacketResult, PduId, VendorCommand, VendorDependentPdu,
 };
 
 /// AVRCP 1.6.1 SetAbsoluteVolume. Command encodes a requested volume. Response returns the volume
@@ -44,6 +45,8 @@ impl VendorCommand for SetAbsoluteVolumeCommand {
 }
 
 impl Decodable for SetAbsoluteVolumeCommand {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
             return Err(Error::InvalidMessage);
@@ -54,6 +57,8 @@ impl Decodable for SetAbsoluteVolumeCommand {
 }
 
 impl Encodable for SetAbsoluteVolumeCommand {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         1
     }
@@ -103,6 +108,8 @@ impl VendorDependentPdu for SetAbsoluteVolumeResponse {
 }
 
 impl Decodable for SetAbsoluteVolumeResponse {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
             return Err(Error::InvalidMessageLength);
@@ -113,6 +120,8 @@ impl Decodable for SetAbsoluteVolumeResponse {
 }
 
 impl Encodable for SetAbsoluteVolumeResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         1
     }

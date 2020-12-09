@@ -6,6 +6,7 @@ use {
     bt_avctp::{self as avctp, AvctpCommand},
     futures::{self, Future},
     log::{error, trace},
+    packet_encoding::{Decodable, Encodable},
     std::{convert::TryFrom, sync::Arc},
 };
 

@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fuchsia_bluetooth::pub_decodable_enum, std::convert::TryFrom};
+use {
+    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
+    std::convert::TryFrom,
+};
 
 use crate::packets::{
-    AvcCommandType, Decodable, Encodable, Error, PacketResult, PduId, VendorCommand,
-    VendorDependentPdu,
+    AvcCommandType, Error, PacketResult, PduId, VendorCommand, VendorDependentPdu,
 };
 
 pub_decodable_enum!(
@@ -48,6 +50,8 @@ impl VendorCommand for GetCapabilitiesCommand {
 }
 
 impl Decodable for GetCapabilitiesCommand {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
             return Err(Error::InvalidMessageLength);
@@ -60,6 +64,8 @@ impl Decodable for GetCapabilitiesCommand {
 }
 
 impl Encodable for GetCapabilitiesCommand {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         1
     }
@@ -136,6 +142,8 @@ impl VendorDependentPdu for GetCapabilitiesResponse {
 }
 
 impl Decodable for GetCapabilitiesResponse {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 2 {
             return Err(Error::InvalidMessageLength);
@@ -175,6 +183,8 @@ impl Decodable for GetCapabilitiesResponse {
 }
 
 impl Encodable for GetCapabilitiesResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         const PREFIX_LENGTH: usize = 2; // capability_id + count
         match self.capability_id {

@@ -1,9 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use {fuchsia_bluetooth::pub_decodable_enum, std::convert::TryFrom};
 
-use crate::{Decodable, Encodable, Error, Result};
+use {
+    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
+    std::convert::TryFrom,
+};
+
+use crate::{Error, Result};
 
 pub_decodable_enum! {
     /// AV/C Command and Response types.
@@ -148,6 +152,8 @@ impl Header {
 }
 
 impl Encodable for Header {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         if self.op_code == OpCode::VendorDependent {
             6
@@ -175,6 +181,8 @@ impl Encodable for Header {
 }
 
 impl Decodable for Header {
+    type Error = Error;
+
     fn decode(bytes: &[u8]) -> Result<Header> {
         if bytes.len() < 3 {
             return Err(Error::InvalidHeader);

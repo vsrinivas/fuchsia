@@ -11,6 +11,7 @@ use {
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::FutureExt, stream::StreamExt, Future},
     log::{error, info, trace},
+    packet_encoding::{Decodable, Encodable},
     parking_lot::RwLock,
     pin_utils::pin_mut,
     std::{

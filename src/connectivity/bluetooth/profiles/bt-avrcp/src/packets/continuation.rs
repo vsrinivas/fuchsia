@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use packet_encoding::{Decodable, Encodable};
+
 use crate::packets::{
-    AvcCommandType, Decodable, Encodable, Error, PacketResult, PduId, VendorCommand,
-    VendorDependentPdu,
+    AvcCommandType, Error, PacketResult, PduId, VendorCommand, VendorDependentPdu,
 };
 
 #[derive(Debug)]
@@ -39,6 +40,8 @@ impl VendorCommand for RequestContinuingResponseCommand {
 }
 
 impl Decodable for RequestContinuingResponseCommand {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
             return Err(Error::InvalidMessageLength);
@@ -49,6 +52,8 @@ impl Decodable for RequestContinuingResponseCommand {
 }
 
 impl Encodable for RequestContinuingResponseCommand {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         1
     }
@@ -97,6 +102,8 @@ impl VendorCommand for AbortContinuingResponseCommand {
 }
 
 impl Decodable for AbortContinuingResponseCommand {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
             return Err(Error::InvalidMessageLength);
@@ -107,6 +114,8 @@ impl Decodable for AbortContinuingResponseCommand {
 }
 
 impl Encodable for AbortContinuingResponseCommand {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         1
     }
@@ -141,12 +150,16 @@ impl VendorDependentPdu for AbortContinuingResponseResponse {
 }
 
 impl Decodable for AbortContinuingResponseResponse {
+    type Error = Error;
+
     fn decode(_buf: &[u8]) -> PacketResult<Self> {
         Ok(Self {})
     }
 }
 
 impl Encodable for AbortContinuingResponseResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         0
     }

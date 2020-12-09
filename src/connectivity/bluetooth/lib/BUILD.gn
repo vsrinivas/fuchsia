@@ -24,6 +24,8 @@ group("lib") {
     "fuchsia-audio-device-output:fuchsia-audio-device-output-tests",
     "fuchsia-bluetooth",
     "fuchsia-bluetooth:tests",
+    "packet-encoding",
+    "packet-encoding:tests",
     "test-harness",
   ]
 }

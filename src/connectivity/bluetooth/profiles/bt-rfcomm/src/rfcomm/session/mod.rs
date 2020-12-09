@@ -16,6 +16,7 @@ use {
         select, FutureExt, SinkExt, StreamExt,
     },
     log::{error, info, trace, warn},
+    packet_encoding::Encodable,
     std::{
         collections::{hash_map::Entry, HashMap},
         convert::TryInto,
@@ -39,7 +40,7 @@ use crate::rfcomm::frame::{
         MuxCommandMarker, MuxCommandParams, NonSupportedCommandParams, ParameterNegotiationParams,
         DEFAULT_INITIAL_CREDITS,
     },
-    Encodable, Frame, FrameData, FrameParseError, UIHData, UserData,
+    Frame, FrameData, FrameParseError, UIHData, UserData,
 };
 use crate::rfcomm::inspect::SessionInspect;
 use crate::rfcomm::types::{CommandResponse, RfcommError, Role, ServerChannel, SignaledTask, DLCI};

@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {bitfield::bitfield, std::convert::TryFrom};
-
-use crate::rfcomm::{
-    frame::{
-        mux_commands::{Decodable, Encodable},
-        FrameParseError,
-    },
-    types::DLCI,
+use {
+    bitfield::bitfield,
+    packet_encoding::{Decodable, Encodable},
+    std::convert::TryFrom,
 };
+
+use crate::rfcomm::{frame::FrameParseError, types::DLCI};
 
 /// The length (in bytes) of the RLS command.
 /// Defined in GSM 7.10 Section 5.4.6.3.10.
@@ -63,6 +61,8 @@ pub struct RemoteLineStatusParams {
 }
 
 impl Decodable for RemoteLineStatusParams {
+    type Error = FrameParseError;
+
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         if buf.len() != REMOTE_LINE_STATUS_COMMAND_LENGTH {
             return Err(FrameParseError::InvalidBufferLength(
@@ -83,6 +83,8 @@ impl Decodable for RemoteLineStatusParams {
 }
 
 impl Encodable for RemoteLineStatusParams {
+    type Error = FrameParseError;
+
     fn encoded_len(&self) -> usize {
         REMOTE_LINE_STATUS_COMMAND_LENGTH
     }

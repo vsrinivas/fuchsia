@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::convert::TryFrom;
+use {
+    packet_encoding::{Decodable, Encodable},
+    std::convert::TryFrom,
+};
 
 use crate::packets::{
-    AvcCommandType, CharsetId, Decodable, Encodable, Error, FillExt, MediaAttributeId,
-    PacketResult, PduId, VendorCommand, VendorDependentPdu, ATTRIBUTE_ID_LEN,
+    AvcCommandType, CharsetId, Error, FillExt, MediaAttributeId, PacketResult, PduId,
+    VendorCommand, VendorDependentPdu, ATTRIBUTE_ID_LEN,
 };
 
 // See AVRCP 1.6.1 section 6.6 Media Information PDUs - GetElementAttributes for format.
@@ -58,6 +61,8 @@ impl VendorCommand for GetElementAttributesCommand {
 }
 
 impl Decodable for GetElementAttributesCommand {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < IDENTIFIER_LEN + ATTRIBUTE_COUNT_LEN {
             // 8 byte identifier + 1 byte attribute count
@@ -97,6 +102,8 @@ impl Decodable for GetElementAttributesCommand {
 }
 
 impl Encodable for GetElementAttributesCommand {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         let mut len = IDENTIFIER_LEN + ATTRIBUTE_COUNT_LEN;
         if self.attributes != MediaAttributeId::VARIANTS {
@@ -159,6 +166,8 @@ impl VendorDependentPdu for GetElementAttributesResponse {
 }
 
 impl Decodable for GetElementAttributesResponse {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
             return Err(Error::InvalidMessageLength);
@@ -220,6 +229,8 @@ impl Decodable for GetElementAttributesResponse {
 }
 
 impl Encodable for GetElementAttributesResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         let mut len = ATTRIBUTE_COUNT_LEN;
         let mut count = |os: &Option<String>| {

@@ -13,6 +13,7 @@ use {
         task::{Context, Poll, Waker},
     },
     log::{info, trace, warn},
+    packet_encoding::{Decodable, Encodable},
     parking_lot::Mutex,
     slab::Slab,
     std::{collections::VecDeque, convert::TryFrom, marker::Unpin, mem, pin::Pin, sync::Arc},
@@ -25,9 +26,7 @@ mod rtp;
 mod stream_endpoint;
 mod types;
 
-use crate::types::{
-    Decodable, Encodable, SignalIdentifier, SignalingHeader, SignalingMessageType, TxLabel,
-};
+use crate::types::{SignalIdentifier, SignalingHeader, SignalingMessageType, TxLabel};
 
 pub use crate::{
     rtp::{RtpError, RtpHeader},
@@ -292,7 +291,7 @@ impl Peer {
 
     /// Sends a signal on the channel and receive a future that will complete
     /// when we get the expected response.
-    async fn send_command<'a, D: Decodable>(
+    async fn send_command<'a, D: Decodable<Error = Error>>(
         &'a self,
         signal: SignalIdentifier,
         payload: &'a [u8],
@@ -565,6 +564,8 @@ impl Drop for RequestStream {
 pub struct SimpleResponse {}
 
 impl Decodable for SimpleResponse {
+    type Error = Error;
+
     fn decode(from: &[u8]) -> Result<Self> {
         if from.len() > 0 {
             return Err(Error::InvalidMessage);
@@ -579,6 +580,8 @@ struct DiscoverResponse {
 }
 
 impl Decodable for DiscoverResponse {
+    type Error = Error;
+
     fn decode(from: &[u8]) -> Result<Self> {
         let mut endpoints = Vec::<StreamInformation>::new();
         let mut idx = 0;
@@ -652,6 +655,8 @@ struct GetCapabilitiesResponse {
 }
 
 impl Decodable for GetCapabilitiesResponse {
+    type Error = Error;
+
     fn decode(from: &[u8]) -> Result<Self> {
         let mut capabilities = Vec::<ServiceCapability>::new();
         let mut idx = 0;
@@ -803,7 +808,7 @@ impl ResponseWaiter {
     }
 }
 
-fn decode_signaling_response<D: Decodable>(
+fn decode_signaling_response<D: Decodable<Error = Error>>(
     expected_signal: SignalIdentifier,
     buf: Vec<u8>,
 ) -> Result<D> {

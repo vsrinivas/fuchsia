@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {bitfield::bitfield, std::convert::TryFrom};
-
-use crate::rfcomm::{
-    frame::{
-        mux_commands::{Decodable, Encodable},
-        FrameParseError,
-    },
-    types::DLCI,
+use {
+    bitfield::bitfield,
+    packet_encoding::{Decodable, Encodable},
+    std::convert::TryFrom,
 };
+
+use crate::rfcomm::{frame::FrameParseError, types::DLCI};
 
 /// The length (in bytes) of a "short" RPN command - contains only 1 octet for the DLCI.
 /// A short RPN command is used to request the remote port settings.
@@ -119,6 +117,8 @@ impl RemotePortNegotiationParams {
 }
 
 impl Decodable for RemotePortNegotiationParams {
+    type Error = FrameParseError;
+
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         if buf.len() != REMOTE_PORT_NEGOTIATION_SHORT_LENGTH
             && buf.len() != REMOTE_PORT_NEGOTIATION_LONG_LENGTH
@@ -147,6 +147,8 @@ impl Decodable for RemotePortNegotiationParams {
 }
 
 impl Encodable for RemotePortNegotiationParams {
+    type Error = FrameParseError;
+
     fn encoded_len(&self) -> usize {
         if self.port_values.is_some() {
             REMOTE_PORT_NEGOTIATION_LONG_LENGTH

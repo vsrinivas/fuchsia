@@ -17,6 +17,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//src/connectivity/bluetooth/lib/bt-avctp",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/connectivity/bluetooth/lib/packet-encoding",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/derive",
     "//src/lib/diagnostics/inspect/rust",

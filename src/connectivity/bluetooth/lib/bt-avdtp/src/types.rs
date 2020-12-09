@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_bluetooth::{decodable_enum, pub_decodable_enum},
     fuchsia_zircon as zx,
+    packet_encoding::{decodable_enum, pub_decodable_enum, Decodable, Encodable},
     std::{
         convert::TryFrom,
         fmt,
@@ -132,23 +132,6 @@ pub_decodable_enum! {
         // Procedure Error Codes
         BadState => 0x31,
     }
-}
-
-/// A decodable type can be created from a byte buffer.
-/// The type returned is separate (copied) from the buffer once decoded.
-pub(crate) trait Decodable: Sized {
-    /// Decodes into a new object, or returns an error.
-    fn decode(buf: &[u8]) -> Result<Self>;
-}
-
-/// A encodable type can write itself into a byte buffer.
-pub(crate) trait Encodable: Sized {
-    /// Returns the number of bytes necessary to encode |self|
-    fn encoded_len(&self) -> usize;
-
-    /// Writes the encoded version of |self| at the start of |buf|
-    /// |buf| must be at least size() length.
-    fn encode(&self, buf: &mut [u8]) -> Result<()>;
 }
 
 /// An AVDTP Transaction Label
@@ -302,6 +285,8 @@ impl SignalingHeader {
 }
 
 impl Decodable for SignalingHeader {
+    type Error = Error;
+
     fn decode(bytes: &[u8]) -> Result<SignalingHeader> {
         if bytes.len() < 2 {
             return Err(Error::OutOfRange);
@@ -332,6 +317,8 @@ impl Decodable for SignalingHeader {
 }
 
 impl Encodable for SignalingHeader {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         if self.num_packets > 1 {
             3
@@ -579,6 +566,8 @@ impl ServiceCapability {
 }
 
 impl Decodable for ServiceCapability {
+    type Error = Error;
+
     fn decode(from: &[u8]) -> Result<Self> {
         if from.len() < 2 {
             return Err(Error::Encoding);
@@ -670,6 +659,8 @@ impl Decodable for ServiceCapability {
 }
 
 impl Encodable for ServiceCapability {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         2 + self.length_of_service_capabilities() as usize
     }
@@ -746,6 +737,8 @@ impl StreamInformation {
 }
 
 impl Decodable for StreamInformation {
+    type Error = Error;
+
     fn decode(from: &[u8]) -> Result<Self> {
         if from.len() < 2 {
             return Err(Error::InvalidMessage);
@@ -759,6 +752,8 @@ impl Decodable for StreamInformation {
 }
 
 impl Encodable for StreamInformation {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         2
     }

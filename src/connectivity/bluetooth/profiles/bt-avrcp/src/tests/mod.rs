@@ -14,6 +14,7 @@ use {
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::FutureExt, stream::StreamExt, task::Poll},
     matches::assert_matches,
+    packet_encoding::{Decodable, Encodable},
     pin_utils::pin_mut,
     std::convert::TryFrom,
 };

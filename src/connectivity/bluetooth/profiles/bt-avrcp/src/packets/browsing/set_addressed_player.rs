@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::convert::TryFrom;
+use {
+    packet_encoding::{Decodable, Encodable},
+    std::convert::TryFrom,
+};
 
 use crate::packets::{
-    AvcCommandType, Decodable, Encodable, Error, PacketResult, PduId, StatusCode, VendorCommand,
-    VendorDependentPdu,
+    AvcCommandType, Error, PacketResult, PduId, StatusCode, VendorCommand, VendorDependentPdu,
 };
 
 /// AVRCP 1.6.1 section 6.9.1 SetAddressedPlayer.
@@ -41,6 +43,8 @@ impl VendorCommand for SetAddressedPlayerCommand {
 }
 
 impl Decodable for SetAddressedPlayerCommand {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 2 {
             return Err(Error::InvalidMessage);
@@ -55,6 +59,8 @@ impl Decodable for SetAddressedPlayerCommand {
 }
 
 impl Encodable for SetAddressedPlayerCommand {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         2
     }
@@ -89,6 +95,8 @@ impl VendorDependentPdu for SetAddressedPlayerResponse {
 }
 
 impl Decodable for SetAddressedPlayerResponse {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
             return Err(Error::InvalidMessage);
@@ -101,6 +109,8 @@ impl Decodable for SetAddressedPlayerResponse {
 }
 
 impl Encodable for SetAddressedPlayerResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         1
     }

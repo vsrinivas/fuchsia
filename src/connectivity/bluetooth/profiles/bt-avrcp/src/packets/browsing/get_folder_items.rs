@@ -4,12 +4,13 @@
 
 use {
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
+    packet_encoding::{Decodable, Encodable},
     std::convert::{TryFrom, TryInto},
 };
 
 use crate::packets::{
-    CharsetId, Decodable, Encodable, Error, MediaAttributeId, PacketResult, PlaybackStatus, Scope,
-    StatusCode, ATTRIBUTE_ID_LEN,
+    CharsetId, Error, MediaAttributeId, PacketResult, PlaybackStatus, Scope, StatusCode,
+    ATTRIBUTE_ID_LEN,
 };
 
 /// The smallest packet size of a GetFolderItemsCommand.
@@ -45,6 +46,8 @@ impl GetFolderItemsCommand {
 }
 
 impl Decodable for GetFolderItemsCommand {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < MIN_FOLDER_ITEMS_COMMAND_SIZE {
             return Err(Error::InvalidMessage);
@@ -97,6 +100,8 @@ impl Decodable for GetFolderItemsCommand {
 }
 
 impl Encodable for GetFolderItemsCommand {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         MIN_FOLDER_ITEMS_COMMAND_SIZE
             + 4 * self.attribute_list.as_ref().map_or(MediaAttributeId::VARIANTS.len(), |a| a.len())
@@ -160,6 +165,8 @@ pub struct MediaPlayerItem {
 }
 
 impl Encodable for MediaPlayerItem {
+    type Error = Error;
+
     /// The size of `MediaPlayerItem` in bytes.
     /// Only variable length field is `name`, which can be calculated by taking
     /// the length of the array.
@@ -252,6 +259,8 @@ impl GetFolderItemsResponse {
 }
 
 impl Encodable for GetFolderItemsResponse {
+    type Error = Error;
+
     /// 5 bytes for the fixed values: `status`, `uid_counter`, and `num_items`.
     /// Each item in `item_list` has variable size, so iterate and update total size.
     /// Each item in `item_list` also contains a header, which is not part of the object.

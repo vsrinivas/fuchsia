@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::rfcomm::frame::{
-    mux_commands::{Decodable, Encodable},
-    FrameParseError,
-};
+use packet_encoding::{Decodable, Encodable};
+
+use crate::rfcomm::frame::FrameParseError;
 
 /// The length (in bytes) of a Flow Control Command. Both Flow Control On and Off commands
 /// contain no parameters.
@@ -19,6 +18,8 @@ const FLOW_CONTROL_COMMAND_LENGTH: usize = 0;
 pub struct FlowControlParams {}
 
 impl Decodable for FlowControlParams {
+    type Error = FrameParseError;
+
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         if buf.len() != FLOW_CONTROL_COMMAND_LENGTH {
             return Err(FrameParseError::InvalidBufferLength(
@@ -31,6 +32,8 @@ impl Decodable for FlowControlParams {
 }
 
 impl Encodable for FlowControlParams {
+    type Error = FrameParseError;
+
     fn encoded_len(&self) -> usize {
         FLOW_CONTROL_COMMAND_LENGTH
     }

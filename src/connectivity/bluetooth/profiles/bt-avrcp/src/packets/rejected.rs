@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::packets::{Encodable, Error, PacketResult, StatusCode, VendorDependentRawPdu};
+use packet_encoding::Encodable;
+
+use crate::packets::{Error, PacketResult, StatusCode, VendorDependentRawPdu};
 
 #[derive(Debug)]
 /// For rejection packets. This packets operates differently from most vendor dependant packets in
@@ -30,6 +32,8 @@ impl VendorDependentRawPdu for RejectResponse {
 }
 
 impl Encodable for RejectResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         1
     }

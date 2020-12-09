@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{convert::TryFrom, u8};
+use {
+    packet_encoding::{Decodable, Encodable},
+    std::{convert::TryFrom, u8},
+};
 
 use crate::packets::player_application_settings::{
     PlayerApplicationSettingAttributeId, PlayerApplicationSettings,
 };
 use crate::packets::{
-    AvcCommandType, Decodable, Encodable, Equalizer, Error, PacketResult, PduId, RepeatStatusMode,
-    ScanMode, ShuffleMode, VendorCommand, VendorDependentPdu,
+    AvcCommandType, Equalizer, Error, PacketResult, PduId, RepeatStatusMode, ScanMode, ShuffleMode,
+    VendorCommand, VendorDependentPdu,
 };
 
 /// Packet format for a SetPlayerApplicationSettingValue command.
@@ -45,6 +48,8 @@ impl VendorCommand for SetPlayerApplicationSettingValueCommand {
 }
 
 impl Decodable for SetPlayerApplicationSettingValueCommand {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
             return Err(Error::InvalidMessage);
@@ -72,6 +77,8 @@ impl Decodable for SetPlayerApplicationSettingValueCommand {
 }
 
 impl Encodable for SetPlayerApplicationSettingValueCommand {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         1 + 2 * self.num_player_application_setting_attributes as usize
     }
@@ -158,12 +165,16 @@ impl VendorDependentPdu for SetPlayerApplicationSettingValueResponse {
 }
 
 impl Decodable for SetPlayerApplicationSettingValueResponse {
+    type Error = Error;
+
     fn decode(_buf: &[u8]) -> PacketResult<Self> {
         Ok(Self {})
     }
 }
 
 impl Encodable for SetPlayerApplicationSettingValueResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         0
     }

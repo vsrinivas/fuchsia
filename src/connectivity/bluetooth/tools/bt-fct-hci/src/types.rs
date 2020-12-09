@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fuchsia_bluetooth::pub_decodable_enum,
+    packet_encoding::pub_decodable_enum,
     std::convert::{TryFrom, TryInto},
     std::ops::Range,
     std::u16,

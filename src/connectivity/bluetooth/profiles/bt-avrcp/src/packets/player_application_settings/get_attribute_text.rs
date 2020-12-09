@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{convert::TryFrom, u8};
+use {
+    packet_encoding::{Decodable, Encodable},
+    std::{convert::TryFrom, u8},
+};
 
 use crate::packets::player_application_settings::PlayerApplicationSettingAttributeId;
 use crate::packets::{
-    AvcCommandType, CharsetId, Decodable, Encodable, Error, PacketResult, PduId, VendorCommand,
-    VendorDependentPdu,
+    AvcCommandType, CharsetId, Error, PacketResult, PduId, VendorCommand, VendorDependentPdu,
 };
 
 #[derive(Debug)]
@@ -40,6 +42,8 @@ impl VendorCommand for GetPlayerApplicationSettingAttributeTextCommand {
 }
 
 impl Decodable for GetPlayerApplicationSettingAttributeTextCommand {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
             return Err(Error::InvalidMessage);
@@ -66,6 +70,8 @@ impl Decodable for GetPlayerApplicationSettingAttributeTextCommand {
 }
 
 impl Encodable for GetPlayerApplicationSettingAttributeTextCommand {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         1 + self.num_attributes as usize
     }
@@ -140,6 +146,8 @@ impl VendorCommand for GetPlayerApplicationSettingAttributeTextResponse {
 }
 
 impl Decodable for GetPlayerApplicationSettingAttributeTextResponse {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
             return Err(Error::InvalidMessage);
@@ -185,6 +193,8 @@ impl Decodable for GetPlayerApplicationSettingAttributeTextResponse {
 }
 
 impl Encodable for GetPlayerApplicationSettingAttributeTextResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         let mut len: usize = 1;
         for attr_info in &self.attribute_infos {

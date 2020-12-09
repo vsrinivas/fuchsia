@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fuchsia_bluetooth::pub_decodable_enum, std::convert::TryInto};
+use {
+    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
+    std::convert::TryInto,
+};
 
 mod get_folder_items;
 mod get_total_items;
 mod set_addressed_player;
 
 pub use self::{get_folder_items::*, get_total_items::*, set_addressed_player::*};
-use crate::packets::{Decodable, Encodable, Error, PacketResult, PduId, StatusCode};
+use crate::packets::{Error, PacketResult, PduId, StatusCode};
 
 pub_decodable_enum!(
     Scope <u8, Error, OutOfRange> {
@@ -42,6 +45,8 @@ impl BrowsePreamble {
 }
 
 impl Decodable for BrowsePreamble {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 3 {
             return Err(Error::InvalidMessage);
@@ -60,6 +65,8 @@ impl Decodable for BrowsePreamble {
 }
 
 impl Encodable for BrowsePreamble {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         3 + self.parameter_length as usize
     }

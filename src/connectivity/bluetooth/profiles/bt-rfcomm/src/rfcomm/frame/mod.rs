@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    bitfield::bitfield, fuchsia_bluetooth::pub_decodable_enum, log::trace, std::convert::TryFrom,
+    bitfield::bitfield,
+    log::trace,
+    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
+    std::convert::TryFrom,
     thiserror::Error,
 };
 
@@ -20,22 +23,6 @@ use crate::rfcomm::{
     },
     types::{CommandResponse, Role, DLCI},
 };
-
-/// A decodable type can be created from a byte buffer.
-/// The type returned is separate (copied) from the buffer once decoded.
-pub(crate) trait Decodable: Sized {
-    /// Decodes into a new object, or returns an error.
-    fn decode(buf: &[u8]) -> Result<Self, FrameParseError>;
-}
-
-/// A encodable type can write itself into a byte buffer.
-pub(crate) trait Encodable: Sized {
-    /// Returns the number of bytes necessary to encode |self|
-    fn encoded_len(&self) -> usize;
-    /// Writes the encoded version of |self| at the start of |buf|
-    /// |buf| must be at least size() length.
-    fn encode(&self, buf: &mut [u8]) -> Result<(), FrameParseError>;
-}
 
 /// Errors associated with parsing an RFCOMM Frame.
 #[derive(Error, Debug)]
@@ -125,12 +112,16 @@ impl UserData {
 }
 
 impl Decodable for UserData {
+    type Error = FrameParseError;
+
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         Ok(Self { information: buf.to_vec() })
     }
 }
 
 impl Encodable for UserData {
+    type Error = FrameParseError;
+
     fn encoded_len(&self) -> usize {
         self.information.len()
     }
@@ -154,6 +145,8 @@ pub enum UIHData {
 }
 
 impl Encodable for UIHData {
+    type Error = FrameParseError;
+
     fn encoded_len(&self) -> usize {
         match self {
             UIHData::User(data) => data.encoded_len(),
@@ -219,6 +212,8 @@ impl FrameData {
 }
 
 impl Encodable for FrameData {
+    type Error = FrameParseError;
+
     fn encoded_len(&self) -> usize {
         match self {
             FrameData::SetAsynchronousBalancedMode
@@ -479,6 +474,8 @@ impl Frame {
 }
 
 impl Encodable for Frame {
+    type Error = FrameParseError;
+
     fn encoded_len(&self) -> usize {
         // Address + Control + FCS + (optional) Credits + 1 or 2 octets for Length + Frame data.
         3 + self.credits.map_or(0, |_| 1)

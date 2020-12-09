@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{convert::TryFrom, u8};
+use {
+    packet_encoding::{Decodable, Encodable},
+    std::{convert::TryFrom, u8},
+};
 
 use crate::packets::player_application_settings::PlayerApplicationSettingAttributeId;
 use crate::packets::{
-    AvcCommandType, Decodable, Encodable, Error, PacketResult, PduId, VendorCommand,
-    VendorDependentPdu,
+    AvcCommandType, Error, PacketResult, PduId, VendorCommand, VendorDependentPdu,
 };
 
 /// Packet format for a ListPlayerApplicationSettingAttributes command.
@@ -36,12 +38,16 @@ impl VendorCommand for ListPlayerApplicationSettingAttributesCommand {
 }
 
 impl Decodable for ListPlayerApplicationSettingAttributesCommand {
+    type Error = Error;
+
     fn decode(_buf: &[u8]) -> PacketResult<Self> {
         Ok(Self {})
     }
 }
 
 impl Encodable for ListPlayerApplicationSettingAttributesCommand {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         0
     }
@@ -87,6 +93,8 @@ impl VendorDependentPdu for ListPlayerApplicationSettingAttributesResponse {
 }
 
 impl Decodable for ListPlayerApplicationSettingAttributesResponse {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
             return Err(Error::InvalidMessage);
@@ -113,6 +121,8 @@ impl Decodable for ListPlayerApplicationSettingAttributesResponse {
 }
 
 impl Encodable for ListPlayerApplicationSettingAttributesResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         1 + self.num_player_application_setting_attributes as usize
     }
@@ -158,6 +168,8 @@ impl VendorCommand for ListPlayerApplicationSettingValuesCommand {
 }
 
 impl Decodable for ListPlayerApplicationSettingValuesCommand {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
             return Err(Error::InvalidMessage);
@@ -169,6 +181,8 @@ impl Decodable for ListPlayerApplicationSettingValuesCommand {
 }
 
 impl Encodable for ListPlayerApplicationSettingValuesCommand {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         1
     }
@@ -210,6 +224,8 @@ impl VendorDependentPdu for ListPlayerApplicationSettingValuesResponse {
 }
 
 impl Decodable for ListPlayerApplicationSettingValuesResponse {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
             return Err(Error::InvalidMessage);
@@ -234,6 +250,8 @@ impl Decodable for ListPlayerApplicationSettingValuesResponse {
 }
 
 impl Encodable for ListPlayerApplicationSettingValuesResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         1 + self.num_player_application_setting_values as usize
     }

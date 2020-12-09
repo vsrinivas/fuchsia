@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    bitfield::bitfield, fuchsia_bluetooth::pub_decodable_enum, log::trace, std::convert::TryFrom,
+    bitfield::bitfield,
+    log::trace,
+    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
+    std::convert::TryFrom,
 };
 
 mod dlc_parameter_negotiation;
@@ -26,7 +29,7 @@ pub use self::{
     test_command::TestCommandParams,
 };
 use crate::rfcomm::{
-    frame::{Decodable, Encodable, FrameParseError},
+    frame::FrameParseError,
     types::{CommandResponse, DLCI},
 };
 
@@ -145,6 +148,8 @@ impl MuxCommandParams {
 }
 
 impl Encodable for MuxCommandParams {
+    type Error = FrameParseError;
+
     fn encoded_len(&self) -> usize {
         match self {
             Self::ParameterNegotiation(cmd) => cmd.encoded_len(),
@@ -241,6 +246,8 @@ impl MuxCommand {
 }
 
 impl Decodable for MuxCommand {
+    type Error = FrameParseError;
+
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         if buf.len() < MIN_MUX_COMMAND_SIZE {
             return Err(FrameParseError::BufferTooSmall);
@@ -292,6 +299,8 @@ impl Decodable for MuxCommand {
 }
 
 impl Encodable for MuxCommand {
+    type Error = FrameParseError;
+
     /// Returns the encoded length of the command.
     /// - 1 Byte for Type field + n bytes to encode the length + `length` bytes for the payload.
     fn encoded_len(&self) -> usize {

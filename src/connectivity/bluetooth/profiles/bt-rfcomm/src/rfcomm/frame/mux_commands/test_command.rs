@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_bluetooth::types::Channel;
-
-use crate::rfcomm::frame::{
-    mux_commands::{Decodable, Encodable},
-    FrameParseError,
+use {
+    fuchsia_bluetooth::types::Channel,
+    packet_encoding::{Decodable, Encodable},
 };
+
+use crate::rfcomm::frame::FrameParseError;
 
 /// The maximum size (in bytes) of a Test Command pattern.
 /// This is an arbitrarily chosen constant, and is not defined in the RFCOMM/GSM specs.
@@ -25,6 +25,8 @@ pub struct TestCommandParams {
 }
 
 impl Decodable for TestCommandParams {
+    type Error = FrameParseError;
+
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         if buf.len() > TEST_COMMAND_MAX_PATTERN_LENGTH {
             return Err(FrameParseError::InvalidFrame);
@@ -34,6 +36,8 @@ impl Decodable for TestCommandParams {
 }
 
 impl Encodable for TestCommandParams {
+    type Error = FrameParseError;
+
     fn encoded_len(&self) -> usize {
         self.test_pattern.len()
     }

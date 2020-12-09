@@ -11,6 +11,7 @@ use {
         task::{Context, Poll, Waker},
     },
     log::{info, trace, warn},
+    packet_encoding::{Decodable, Encodable},
     parking_lot::Mutex,
     slab::Slab,
     std::{collections::VecDeque, convert::TryFrom, marker::Unpin, mem, pin::Pin, sync::Arc},
@@ -21,7 +22,7 @@ mod tests;
 
 mod types;
 
-use crate::{Decodable, Encodable, Error, Result};
+use crate::{Error, Result};
 
 use self::types::AV_REMOTE_PROFILE;
 

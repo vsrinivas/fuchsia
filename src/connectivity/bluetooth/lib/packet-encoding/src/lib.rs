@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Generic utilities for encoding/decoding packets.
+
 /// Generates an enum value where each variant can be converted into a constant in the given
 /// raw_type. The visibility of the generated enum is limited to the crate its defined in.
 /// For example:
@@ -110,6 +112,26 @@ macro_rules! tofrom_decodable_enum {
             }
         }
     }
+}
+
+/// A decodable type can be created from a byte buffer.
+/// The type returned is separate (copied) from the buffer once decoded.
+pub trait Decodable: ::core::marker::Sized {
+    type Error;
+
+    /// Decodes into a new object, or returns an error.
+    fn decode(buf: &[u8]) -> ::core::result::Result<Self, Self::Error>;
+}
+
+/// An encodable type can write itself into a byte buffer.
+pub trait Encodable: ::core::marker::Sized {
+    type Error;
+
+    /// Returns the number of bytes necessary to encode |self|.
+    fn encoded_len(&self) -> ::core::primitive::usize;
+    /// Writes the encoded version of |self| at the start of |buf|.
+    /// |buf| must be at least |self.encoded_len()| length.
+    fn encode(&self, buf: &mut [u8]) -> ::core::result::Result<(), Self::Error>;
 }
 
 #[cfg(test)]

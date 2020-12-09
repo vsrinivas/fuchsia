@@ -5,7 +5,7 @@
 use {
     bt_avctp::AvcCommandType,
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
-    fuchsia_bluetooth::pub_decodable_enum,
+    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
     std::{convert::TryFrom, result},
     thiserror::Error,
 };
@@ -255,24 +255,6 @@ impl From<PlayerApplicationSettingAttributeId> for fidl_avrcp::PlayerApplication
     }
 }
 
-// Copied from the AVCTP crate. They need to be local types so that the impls work.
-/// A decodable type can be created from a byte buffer.
-/// The type returned is separate (copied) from the buffer once decoded.
-pub trait Decodable<E = Error>: Sized {
-    /// Decodes into a new object, or returns an error.
-    fn decode(buf: &[u8]) -> result::Result<Self, E>;
-}
-
-/// A encodable type can write itself into a byte buffer.
-pub trait Encodable<E = Error> {
-    /// Returns the number of bytes necessary to encode |self|
-    fn encoded_len(&self) -> usize;
-
-    /// Writes the encoded version of |self| at the start of |buf|
-    /// |buf| must be at least size() length.
-    fn encode(&self, buf: &mut [u8]) -> result::Result<(), E>;
-}
-
 /// The preamble at the start of all vendor dependent commands, responses, and rejections.
 pub struct VendorDependentPreamble {
     pub pdu_id: u8,
@@ -299,6 +281,8 @@ impl VendorDependentPreamble {
 }
 
 impl Decodable for VendorDependentPreamble {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 4 {
             return Err(Error::InvalidMessage);
@@ -312,6 +296,8 @@ impl Decodable for VendorDependentPreamble {
 }
 
 impl Encodable for VendorDependentPreamble {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         4
     }
@@ -352,7 +338,7 @@ pub trait PacketEncodable {
 }
 
 /// Provides methods to encode one or more vendor dependent packets with their preambles.
-impl<T: VendorDependentRawPdu + Encodable> PacketEncodable for T {
+impl<T: VendorDependentRawPdu + Encodable<Error = Error>> PacketEncodable for T {
     // This default trait impl is tested in rejected.rs.
     /// Encode packet for single command/response.
     fn encode_packet(&self) -> Result<Vec<u8>, Error> {
@@ -423,6 +409,8 @@ impl RawVendorDependentPacket {
 }
 
 impl Encodable for RawVendorDependentPacket {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         self.payload.len()
     }

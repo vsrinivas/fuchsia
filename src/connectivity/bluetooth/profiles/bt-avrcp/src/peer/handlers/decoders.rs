@@ -6,11 +6,11 @@ use {
     bt_avctp::{AvcOpCode, AvcPacketType},
     fidl_fuchsia_bluetooth_avrcp::AvcPanelCommand,
     log::{error, trace},
+    packet_encoding::{Decodable, Encodable},
     std::convert::TryFrom,
     thiserror::Error,
 };
 
-use crate::packets::{Decodable, Encodable};
 use crate::peer::*;
 
 /// The error types during decode

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {bitfield::bitfield, fuchsia_bluetooth::pub_decodable_enum, std::convert::TryFrom};
+use {
+    bitfield::bitfield,
+    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
+    std::convert::TryFrom,
+};
 
 use crate::rfcomm::{
-    frame::{
-        mux_commands::{Decodable, Encodable},
-        FrameParseError,
-    },
+    frame::FrameParseError,
     types::{DLCI, MAX_RFCOMM_FRAME_SIZE},
 };
 
@@ -80,6 +81,8 @@ impl ParameterNegotiationParams {
 }
 
 impl Decodable for ParameterNegotiationParams {
+    type Error = FrameParseError;
+
     fn decode(buf: &[u8]) -> Result<Self, FrameParseError> {
         if buf.len() != DLC_PARAMETER_NEGOTIATION_LENGTH {
             return Err(FrameParseError::InvalidBufferLength(
@@ -109,6 +112,8 @@ impl Decodable for ParameterNegotiationParams {
 }
 
 impl Encodable for ParameterNegotiationParams {
+    type Error = FrameParseError;
+
     fn encoded_len(&self) -> usize {
         DLC_PARAMETER_NEGOTIATION_LENGTH
     }

@@ -68,7 +68,6 @@ rustc_library("fuchsia-bluetooth") {
     "src/host.rs",
     "src/inspect.rs",
     "src/lib.rs",
-    "src/packet_parsing.rs",
     "src/profile.rs",
     "src/types.rs",
     "src/types/adapter_info.rs",

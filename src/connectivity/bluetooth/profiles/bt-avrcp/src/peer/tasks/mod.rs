@@ -14,6 +14,7 @@ use {
     },
     log::{error, info, trace},
     notification_stream::NotificationStream,
+    packet_encoding::{Decodable, Encodable},
     parking_lot::RwLock,
     pin_utils::pin_mut,
     rand::Rng,
@@ -22,7 +23,6 @@ use {
 
 mod notification_stream;
 
-use crate::packets::{Decodable, Encodable};
 use crate::peer::*;
 use crate::types::PeerError as Error;
 

@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::convert::TryFrom;
+use {
+    packet_encoding::{Decodable, Encodable},
+    std::convert::TryFrom,
+};
 
-use crate::packets::{Decodable, Encodable, Error, PacketResult, Scope, StatusCode};
+use crate::packets::{Error, PacketResult, Scope, StatusCode};
 
 /// GetTotalNumberOfItemsCommand used for retrieving the number of items in a folder.
 /// Defined in AVRCP 1.6.2, Section 6.10.4.4.
@@ -25,6 +28,8 @@ impl GetTotalNumberOfItemsCommand {
 }
 
 impl Decodable for GetTotalNumberOfItemsCommand {
+    type Error = Error;
+
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
             return Err(Error::InvalidMessage);
@@ -37,6 +42,8 @@ impl Decodable for GetTotalNumberOfItemsCommand {
 }
 
 impl Encodable for GetTotalNumberOfItemsCommand {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         1
     }
@@ -72,6 +79,8 @@ impl GetTotalNumberOfItemsResponse {
 }
 
 impl Encodable for GetTotalNumberOfItemsResponse {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         TOTAL_NUMBER_OF_ITEMS_RESPONSE_SIZE
     }

@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fuchsia_bluetooth::pub_decodable_enum, std::convert::TryFrom};
+use {
+    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
+    std::convert::TryFrom,
+};
 
-use crate::{Decodable, Encodable, Error, Result};
+use crate::{Error, Result};
 
 /// An AVCTP Transaction Label
 /// Not used outside the library. Public as part of some internal Error variants.
@@ -157,6 +160,8 @@ impl Header {
 }
 
 impl Decodable for Header {
+    type Error = Error;
+
     fn decode(bytes: &[u8]) -> Result<Header> {
         if bytes.len() < 3 {
             return Err(Error::OutOfRange);
@@ -188,6 +193,8 @@ impl Decodable for Header {
 }
 
 impl Encodable for Header {
+    type Error = Error;
+
     fn encoded_len(&self) -> usize {
         match self.packet_type {
             PacketType::Start => 4,
