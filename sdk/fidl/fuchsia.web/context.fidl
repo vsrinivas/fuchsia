@@ -107,8 +107,8 @@ resource table CreateContextParams {
     /// - [`fuchsia.process/Launcher`]
     /// - [`fuchsia.sysmem/Allocator`]
     ///
-    /// The following services must be present in order to present web content in a Scenic view
-    /// using [`Frame.CreateView`]:
+    /// The following services must be present in order to render web content in a Scenic view
+    /// using [`Frame.CreateView`] or [`Frame.CreateViewWithViewRef`]:
     /// - [`fuchsia.accessibility.semantics/SemanticsManager`]
     /// - [`fuchsia.ui.input/ImeService`]
     /// - [`fuchsia.ui.input/ImeVisibilityService`]

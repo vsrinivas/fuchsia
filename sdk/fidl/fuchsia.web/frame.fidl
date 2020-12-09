@@ -111,7 +111,8 @@ protocol Frame {
     /// Creates a new view using the specified `view_token`. Caller should pass the other end of
     /// the token to [`fuchsia.ui.gfx/ViewHolderArgs`] to attach the new view to a view tree.
     ///
-    /// - `view_token`: Token for the new view.
+    /// See the description of [`CreateContextParams.service_directory`] for additional services
+    /// that must be present when using this method.
     CreateView(fuchsia.ui.views.ViewToken view_token);
 
     /// Creates a new view using the specified `view_token`. Caller should pass the other end of
@@ -121,6 +122,9 @@ protocol Frame {
     ///
     /// `view_ref_control` must not have the `ZX_RIGHT_DUPLICATE` set, or view creation will fail
     /// and `view_token` will be closed.
+    ///
+    /// See the description of [`CreateContextParams.service_directory`] for additional services
+    /// that must be present when using this method.
     CreateViewWithViewRef(fuchsia.ui.views.ViewToken view_token,
                           fuchsia.ui.views.ViewRefControl view_ref_control,
                           fuchsia.ui.views.ViewRef view_ref);
