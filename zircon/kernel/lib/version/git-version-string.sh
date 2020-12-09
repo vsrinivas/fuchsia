@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # Copyright 2016 The Fuchsia Authors
 # Copyright (c) 2015 Travis Geiselbrecht
