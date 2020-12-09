@@ -35,7 +35,7 @@ static void event_signal_from_dpc_check_cpu(Dpc* dpc) {
   DEBUG_ASSERT(!arch_blocking_disallowed());
   DEBUG_ASSERT(context->expected_cpu == arch_curr_cpu_num());
 
-  context->event.SignalNoResched();
+  context->event.Signal();
 }
 
 static bool test_dpc_queue() {
