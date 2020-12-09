@@ -93,6 +93,9 @@ void HandOffException(zx::exception exception, const zx_exception_info_t& info,
   fprintf(stdout, "crashsvc: exception received, processing\n");
   inspector_print_debug_info(stdout, process.get(), thread.get());
 
+  // Print one last reset to clear all symbolizer contextual state for the process.
+  fprintf(stdout, "{{{reset}}}\n");
+
   // If the process serving fuchsia.exception.Handler crashes, the system will still send future
   // fuchsia.exception.Handler/OnException requests to that process as it is still alive and
   // therefore the exception will be stuck in the underlying channel, never terminating the process.
