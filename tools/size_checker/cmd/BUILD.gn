@@ -58,6 +58,14 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
 
+group("cmd") {
+  testonly = true
+  public_deps = [
+    ":host",
+    ":tests",
+  ]
+}
+
 generated_file("size_checker_json") {
   outputs = [ "$root_build_dir/size_checker.json" ]
   contents = size_checker_input
