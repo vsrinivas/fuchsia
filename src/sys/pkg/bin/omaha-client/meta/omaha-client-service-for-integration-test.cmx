@@ -11,6 +11,7 @@
             "root-ssl-certificates"
         ],
         "services": [
+            "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.update.installer.Installer"
         ]
     }

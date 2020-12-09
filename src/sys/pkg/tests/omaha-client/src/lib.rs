@@ -292,6 +292,14 @@ impl TestEnv {
         stream
     }
 
+    async fn perform_pending_reboot(&self) -> bool {
+        self.proxies
+            .update_manager
+            .perform_pending_reboot()
+            .await
+            .expect("make perform_pending_reboot call")
+    }
+
     async fn inspect_hierarchy(&self) -> DiagnosticsHierarchy {
         get_inspect_hierarchy(
             &self.nested_environment_label,
@@ -755,4 +763,72 @@ async fn test_omaha_client_policy_config_inspect() {
             }
         }
     );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_perform_pending_reboot_after_out_of_space() {
+    let env = TestEnvBuilder::new().response(OmahaResponse::Update).build();
+
+    // We should be able to get the update package just fine
+    env.proxies
+        .resolver
+        .url("fuchsia-pkg://integration.test.fuchsia.com/update?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+        .resolve(
+        &env.proxies
+            .resolver
+            .package("update", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+            .add_file(
+                "packages.json",
+                make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"]),
+            )
+            .add_file("zbi", "fake zbi"),
+    );
+
+    // ...but the system image package should fail with NO_SPACE
+    env.proxies
+        .resolver.url("fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead")
+        .fail(zx::Status::NO_SPACE);
+
+    let mut stream = env.check_now().await;
+
+    // Consume the initial states
+    expect_states(
+        &mut stream,
+        &[
+            State::CheckingForUpdates(CheckingForUpdatesData::EMPTY),
+            State::InstallingUpdate(InstallingData {
+                update: update_info(),
+                installation_progress: progress(None),
+                ..InstallingData::EMPTY
+            }),
+        ],
+    )
+    .await;
+
+    // Monitor the installation until we get an installation error.
+    let mut installation_error = false;
+    while let Some(request) = stream.try_next().await.unwrap() {
+        let MonitorRequest::OnState { state, responder } = request;
+        match state {
+            State::InstallingUpdate(InstallingData { update, .. }) => {
+                assert_eq!(update, update_info());
+            }
+            State::InstallationError(InstallationErrorData { update, .. }) => {
+                assert_eq!(update, update_info());
+                assert!(!installation_error);
+                installation_error = true;
+            }
+            state => {
+                panic!("Unexpected state: {:?}", state);
+            }
+        }
+        responder.send().unwrap();
+    }
+    assert!(installation_error);
+
+    // Simulate an incoming call to PerformPendingReboot. It returns true if we're rebooting.
+    assert!(env.perform_pending_reboot().await);
+
+    // This will hang if reboot was not triggered.
+    env.reboot_called.await.unwrap();
 }

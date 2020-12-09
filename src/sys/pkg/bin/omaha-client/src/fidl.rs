@@ -293,13 +293,37 @@ where
             }
 
             ManagerRequest::PerformPendingReboot { responder } => {
+                // We should reboot if either we're in a WaitingForReboot state or we've previously
+                // received an error for OUT_OF_SPACE. In the second condition, a reboot will clear
+                // the dynamic index in pkgfs and allow subsequent OTAs to continue after a garbage
+                // collection.
+                //
+                // TODO(fxbug.dev/65571): remove previous_out_of_space_failure and this
+                // rebooting behavior when pkg-cache can clear previous OTA packages on its own
+                let server_ref = server.borrow();
+                let state_machine_state = server_ref.state.manager_state;
+                let previous_out_of_space_failure = server_ref.previous_out_of_space_failure;
+
+                // Drop to prevent holding the borrowed ref across an await.
+                drop(server_ref);
+
                 info!("Received PerformPendingRebootRequest");
-                if server.borrow().state.manager_state == state_machine::State::WaitingForReboot {
+                if previous_out_of_space_failure {
+                    error!(
+                        "Received request for PerformPendingReboot, and have OUT_OF_SPACE from \
+                        a previous install attempt. Rebooting immediately."
+                    )
+                }
+
+                if state_machine_state == state_machine::State::WaitingForReboot
+                    || previous_out_of_space_failure
+                {
                     connect_to_service::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()?
                         .reboot(RebootReason::SystemUpdate)
                         .await?
                         .map_err(zx::Status::from_raw)
                         .context("reboot error")?;
+
                     responder.send(true)?;
                 } else {
                     responder.send(false)?;
@@ -571,10 +595,6 @@ where
 
     /// Alert the `FidlServer` that a previous update attempt on this boot failed with an
     /// OUT_OF_SPACE error.
-    ///
-    /// TODO(fxbug.dev/65498): If this function is called (thus setting the latch) and a subsequent
-    /// request to PerformPendingReboot comes in, immediately reboot to clear the dynamic index and
-    /// allow subsequent update attempts to proceed without running out of space.
     pub fn set_previous_out_of_space_failure(server: Rc<RefCell<Self>>) {
         server.borrow_mut().previous_out_of_space_failure = true;
     }
@@ -1319,6 +1339,46 @@ mod tests {
         assert_eq!(result, false);
     }
 
+    async fn assert_fidl_server_calls_reboot(
+        fidl: Rc<
+            RefCell<
+                FidlServer<omaha_client::storage::MemStorage, MockOrRealStateMachineController>,
+            >,
+        >,
+    ) {
+        let (proxy, stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
+        // Handling this request should fail because unit test can't access the Admin FIDL.
+        // Don't use spawn_fidl_server to run this task, since that will panic on any errors.
+
+        // Also, be very careful to assign the result of Task::local to a named variable
+        // (i.e. not `_`). Results assigned to `_` are immediately dropped. In the case of a task,
+        // that means the task might never run or might be canceled.
+        let _task = fasync::Task::local(async move {
+            let error = FidlServer::handle_client(fidl, IncomingServices::Manager(stream))
+                .await
+                .unwrap_err();
+
+            // The only reason OMCL should have attempted to talk to this FIDL service was for a
+            // reboot call, so this shows we actually attempted to call reboot.
+            assert_matches!(
+                error.downcast::<fidl::Error>().unwrap(),
+                fidl::Error::ClientChannelClosed {
+                    status: zx::Status::PEER_CLOSED,
+                    service_name: "fuchsia.hardware.power.statecontrol.Admin"
+                }
+            );
+        });
+        assert_matches!(
+            proxy.perform_pending_reboot().await,
+            Err(fidl::Error::ClientChannelClosed {
+                status: zx::Status::PEER_CLOSED,
+                service_name: "fuchsia.update.Manager"
+            })
+        );
+    }
+
+    // When the state machine is in WaitingForReboot, a call to PerformPendingReboot should call
+    // reboot
     #[fasync::run_singlethreaded(test)]
     async fn test_perform_pending_reboot_waiting_for_reboot() {
         let fidl = FidlServerBuilder::new().build().await;
@@ -1327,14 +1387,22 @@ mod tests {
             version_available: None,
             install_progress: None,
         };
-        let (proxy, stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
-        // It will fail because unit test can't access the Admin FIDL.
-        let _ = fasync::Task::local(async move {
-            assert_matches!(
-                FidlServer::handle_client(fidl, IncomingServices::Manager(stream)).await,
-                Err(_)
-            );
-        });
-        assert_matches!(proxy.perform_pending_reboot().await, Err(_));
+
+        assert_fidl_server_calls_reboot(fidl).await;
+    }
+
+    // When the FidlServer has previous_out_of_space_error set to true, a call to
+    // PerformPendingReboot should call reboot, even if StateMachine state is not WaitingForReboot
+    #[fasync::run_singlethreaded(test)]
+    async fn test_perform_pending_reboot_with_previous_out_of_space_error() {
+        let fidl = FidlServerBuilder::new().build().await;
+        fidl.borrow_mut().state = State {
+            manager_state: state_machine::State::Idle,
+            version_available: None,
+            install_progress: None,
+        };
+        fidl.borrow_mut().previous_out_of_space_failure = true;
+
+        assert_fidl_server_calls_reboot(fidl).await;
     }
 }
