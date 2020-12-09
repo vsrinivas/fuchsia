@@ -59,27 +59,43 @@ async fn main() -> Result<(), Error> {
         Command::Launch(LaunchCommand { session_url }) => {
             let launcher = connect_to_service::<LauncherMarker>()?;
             match launch_session(&session_url, launcher).await {
-                Ok(_) => println!("Launched session: {:?}", session_url),
-                Err(err) => println!("Failed to launch session: {:?}, {:?}", session_url, err),
-            };
+                Ok(_) => {
+                    println!("Launched session: {:?}", session_url);
+                    Ok(())
+                }
+                Err(err) => {
+                    println!("Failed to launch session: {:?}, {:?}", session_url, err);
+                    Err(err)
+                }
+            }
         }
         Command::Restart(RestartCommand {}) => {
             let restarter = connect_to_service::<RestarterMarker>()?;
             match restart_session(restarter).await {
-                Ok(_) => println!("Restarted the session."),
-                Err(err) => println!("Failed to restart session: {:?}", err),
-            };
+                Ok(_) => {
+                    println!("Restarted the session.");
+                    Ok(())
+                }
+                Err(err) => {
+                    println!("Failed to restart session: {:?}", err);
+                    Err(err)
+                }
+            }
         }
         Command::Add(AddCommand { element_url }) => {
             let element_manager = connect_to_service::<ElementManagerMarker>()?;
             match add_element(&element_url, element_manager).await {
-                Ok(_) => println!("Added element: {:?}", element_url),
-                Err(err) => println!("Failed to add element: {:?}, {:?}", element_url, err),
+                Ok(_) => {
+                    println!("Added element: {:?}", element_url);
+                    Ok(())
+                }
+                Err(err) => {
+                    println!("Failed to add element: {:?}, {:?}", element_url, err);
+                    Err(err)
+                }
             }
         }
-    };
-
-    Ok(())
+    }
 }
 
 /// Launches a session.
