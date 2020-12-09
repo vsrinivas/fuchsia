@@ -55,6 +55,11 @@ void UsbMassStorageDevice::QueueTransaction(Transaction* txn) {
 }
 
 void UsbMassStorageDevice::DdkRelease() {
+  Release();
+  delete this;
+}
+
+void UsbMassStorageDevice::Release() {
   if (cbw_req_) {
     usb_request_release(cbw_req_);
   }
@@ -65,12 +70,14 @@ void UsbMassStorageDevice::DdkRelease() {
     usb_request_release(csw_req_);
   }
   if (data_transfer_req_) {
+    // release_frees is indirectly cleared by DataTransfer; set it again here so that
+    // data_transfer_req_ is freed by usb_request_release.
+    data_transfer_req_->release_frees = true;
     usb_request_release(data_transfer_req_);
   }
   if (worker_thread_.has_value() && worker_thread_->joinable()) {
     worker_thread_->join();
   }
-  delete this;
 }
 
 void UsbMassStorageDevice::DdkUnbind(ddk::UnbindTxn txn) {

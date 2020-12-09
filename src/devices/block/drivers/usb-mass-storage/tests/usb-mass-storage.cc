@@ -103,6 +103,11 @@ class Binder : public fake_ddk::Bind {
   }
   zx_status_t DeviceRemove(zx_device_t* device) {
     Context* ctx = reinterpret_cast<Context*>(device);
+    if (ctx->parent) {
+      for (size_t i = 0; i < ctx->parent->block_devs; i++) {
+        ctx->parent->devices[i]->DdkRelease();
+      }
+    }
     delete ctx;
     return ZX_OK;
   }
@@ -563,6 +568,7 @@ TEST(Ums, TestRead) {
   dev.DdkUnbind(ddk::UnbindTxn(dev.zxdev()));
   EXPECT_EQ(4, parent_dev.block_devs);
   ASSERT_FALSE(has_zero_duration);
+  dev.Release();
 }
 
 // This test validates the write functionality on multiple LUNS
@@ -624,6 +630,7 @@ TEST(Ums, TestWrite) {
   dev.DdkUnbind(ddk::UnbindTxn(dev.zxdev()));
   ASSERT_FALSE(has_zero_duration);
   EXPECT_EQ(4, parent_dev.block_devs);
+  dev.Release();
 }
 
 // This test validates the flush functionality on multiple LUNS
@@ -667,6 +674,7 @@ TEST(Ums, TestFlush) {
   dev.DdkUnbind(ddk::UnbindTxn(dev.zxdev()));
   ASSERT_FALSE(has_zero_duration);
   EXPECT_EQ(4, parent_dev.block_devs);
+  dev.Release();
 }
 
 TEST(Ums, CbwStallDoesNotFreezeDriver) {
@@ -693,6 +701,7 @@ TEST(Ums, CbwStallDoesNotFreezeDriver) {
   dev.DdkUnbind(ddk::UnbindTxn(dev.zxdev()));
   ASSERT_FALSE(has_zero_duration);
   EXPECT_EQ(4, parent_dev.block_devs);
+  dev.Release();
 }
 
 TEST(Ums, DataStageStallDoesNotFreezeDriver) {
@@ -719,6 +728,7 @@ TEST(Ums, DataStageStallDoesNotFreezeDriver) {
   dev.DdkUnbind(ddk::UnbindTxn(dev.zxdev()));
   ASSERT_FALSE(has_zero_duration);
   EXPECT_EQ(4, parent_dev.block_devs);
+  dev.Release();
 }
 
 }  // namespace

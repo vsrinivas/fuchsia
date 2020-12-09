@@ -90,6 +90,7 @@ class UsbMassStorageDevice : public MassStorageDeviceType {
 
   // Performs the object initialization.
   zx_status_t Init(bool is_test_mode);
+  void Release();  // Visible for testing.
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(UsbMassStorageDevice);
 
