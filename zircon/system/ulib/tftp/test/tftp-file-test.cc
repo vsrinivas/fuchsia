@@ -5,6 +5,7 @@
 #include <limits.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -63,6 +64,11 @@ int initialize_files(struct test_params* tp) {
 }
 
 int compare_files(size_t filesz) { return memcmp(src_file, dst_file, filesz); }
+
+void destroy_files(void) {
+  free(src_file);
+  free(dst_file);
+}
 
 const char* file_get_filename(file_info_t* file_info) { return file_info->filename; }
 
@@ -263,9 +269,9 @@ void run_client_test(struct test_params* tp) {
 
   // Allocate intermediate buffers
   size_t buf_sz = tp->blksz > PATH_MAX ? tp->blksz + 2 : PATH_MAX + 2;
-  char* msg_in_buf = reinterpret_cast<char*>(malloc(buf_sz));
+  std::unique_ptr<char[]> msg_in_buf = std::make_unique<char[]>(buf_sz);
   ASSERT_NOT_NULL(msg_in_buf, "memory allocation failure");
-  char* msg_out_buf = reinterpret_cast<char*>(malloc(buf_sz));
+  std::unique_ptr<char[]> msg_out_buf = std::make_unique<char[]>(buf_sz);
   ASSERT_NOT_NULL(msg_out_buf, "memory allocation failure");
 
   char err_msg_buf[128];
@@ -274,9 +280,9 @@ void run_client_test(struct test_params* tp) {
   tftp_set_options(session, &tp->blksz, NULL, &tp->winsz);
 
   tftp_request_opts opts = {};
-  opts.inbuf = msg_in_buf;
+  opts.inbuf = msg_in_buf.get();
   opts.inbuf_sz = buf_sz;
-  opts.outbuf = msg_out_buf;
+  opts.outbuf = msg_out_buf.get();
   opts.outbuf_sz = buf_sz;
   opts.err_msg = err_msg_buf;
   opts.err_msg_sz = sizeof(err_msg_buf);
@@ -328,15 +334,15 @@ void run_server_test(struct test_params* tp) {
 
   // Allocate intermediate buffers
   size_t buf_sz = tp->blksz > PATH_MAX ? tp->blksz + 2 : PATH_MAX + 2;
-  char* msg_in_buf = reinterpret_cast<char*>(malloc(buf_sz));
+  std::unique_ptr<char[]> msg_in_buf = std::make_unique<char[]>(buf_sz);
   ASSERT_NOT_NULL(msg_in_buf, "memory allocation failure");
-  char* msg_out_buf = reinterpret_cast<char*>(malloc(buf_sz));
+  std::unique_ptr<char[]> msg_out_buf = std::make_unique<char[]>(buf_sz);
   ASSERT_NOT_NULL(msg_out_buf, "memory allocation failure");
 
   char err_msg_buf[128];
-  tftp_handler_opts opts = {.inbuf = msg_in_buf,
+  tftp_handler_opts opts = {.inbuf = msg_in_buf.get(),
                             .inbuf_sz = buf_sz,
-                            .outbuf = msg_out_buf,
+                            .outbuf = msg_out_buf.get(),
                             .outbuf_sz = &buf_sz,
                             .err_msg = err_msg_buf,
                             .err_msg_sz = sizeof(err_msg_buf)};
@@ -368,6 +374,7 @@ void run_one_test(struct test_params* tp) {
 
   int compare_result = compare_files(tp->filesz);
   EXPECT_EQ(compare_result, 0, "output file mismatch");
+  destroy_files();
 }
 
 TEST(TftpTransferFile, test_tftp_send_file) {

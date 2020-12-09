@@ -43,9 +43,6 @@ test("tftp-test") {
     "//zircon/system/ulib/tftp",
   ]
   include_dirs = [ ".." ]
-
-  # TODO(fxbug.dev/47447): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 bootfs_test("tftp-test-bootfs-test") {
