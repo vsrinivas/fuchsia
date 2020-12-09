@@ -2,16 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# [START imports]
 import("//build/intl/intl_strings.gni")
 import("//build/package.gni")
 
+# [END imports]
+
+# [START canonical_targets]
 group("example") {
   testonly = true
   deps = [ ":pkg" ]
 }
 
+# [END canonical_targets]
+
+# [START exec]
 executable("src_intl_example_bin") {
   sources = [ "main.cc" ]
+
+  # [START deps]
   deps = [
     # This is the underlying generated FIDL code, must be included so that
     # its settings make it to the -I flag for compiler invocation.
@@ -19,10 +28,17 @@ executable("src_intl_example_bin") {
     ":fuchsia.intl.l10n",
     ":l10n",
   ]
+
+  # [END deps]
 }
 
+# [START exec]
+
+# [START pkg]
 package("pkg") {
   package_name = "src-intl-example"
+
+  # [START pkg_deps]
   deps = [
     # The binary to bundle in the package
     ":src_intl_example_bin",
@@ -31,6 +47,8 @@ package("pkg") {
     ":l10n",
     ":l10n_l10n_assets",
   ]
+
+  # [END pkg_deps]
   binaries = [
     {
       name = "src_intl_example_bin"
@@ -48,6 +66,7 @@ package("pkg") {
   # This declaration works, but needs to be maintained manually.  Work is
   # underway to make the "package" target collect and apply this information
   # automatically.
+  # [START resources]
   resources = [
     {
       path = rebase_path("$target_gen_dir/en/l10n.json")
@@ -62,8 +81,13 @@ package("pkg") {
       dest = "assets/locales/es/l10n.json"
     },
   ]
+
+  # [END resources]
 }
 
+# [END pkg]
+
+# [START strings]
 intl_strings("l10n") {
   source = "strings.xml"
   source_locale = "en"
@@ -74,3 +98,4 @@ intl_strings("l10n") {
   ]
   library = "fuchsia.intl.l10n"
 }
+# [END strings]
