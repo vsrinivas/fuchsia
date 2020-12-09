@@ -74,10 +74,7 @@ test_package("sampler-tests") {
 # as well as the resource rule used by the configuration
 # verification test.
 lapis_configuration("production_lapis") {
-  configs = [
-    "config/archivist.json",
-    "config/ftl.json",
-  ]
+  configs = [ "config/archivist.json" ]
 }
 
 # Rules defining the V1 and V2 Lapis components.
