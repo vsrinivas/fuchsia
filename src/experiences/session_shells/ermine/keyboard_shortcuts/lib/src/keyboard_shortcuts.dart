@@ -76,7 +76,8 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
   String helpText() {
     final result = <String, List<String>>{};
     for (final binding in shortcuts) {
-      if (result.containsKey(binding.description)) {
+      if (result.containsKey(binding.description) &&
+          !result[binding.description].contains(binding.chord)) {
         result[binding.description].add(binding.chord);
       } else {
         result[binding.description] = [binding.chord];

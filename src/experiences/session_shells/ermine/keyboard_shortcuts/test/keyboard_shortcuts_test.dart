@@ -53,6 +53,34 @@ void main() async {
     expect(shortcuts.shortcuts.first.key3, Key.escape);
   });
 
+  test('Left and right modifier key provide single description', () {
+    final registry = MockRegistry();
+    final shortcuts = KeyboardShortcuts(
+      registry: registry,
+      actions: {'cancel': () {}},
+      bindings: json.encode(<String, dynamic>{
+        'cancel': [
+          {
+            'char': 'escape',
+            'modifier': 'alt',
+            'chord': 'Escape + Alt',
+            'description': 'Cancel Operation'
+          }
+        ],
+      }),
+      listenerBinding: MockListenerBinding(),
+      viewRef: MockViewRef(),
+    );
+
+    // Just `alt` modifier registers 2 shortcuts for `leftAlt` and `rightAlt`.
+    verify(registry.registerShortcut(any)).called(2);
+    expect(shortcuts.shortcuts.length, 2);
+    expect(
+      RegExp(r'Escape\ \+\ Alt').allMatches(shortcuts.helpText()).length,
+      1,
+    );
+  });
+
   test('meta key shortcuts', () {
     final registry = MockRegistry();
     final shortcuts = KeyboardShortcuts(
