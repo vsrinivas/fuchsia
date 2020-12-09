@@ -218,53 +218,6 @@ VK_TEST_F(HostImageTest, BgraImport) {
   EXPECT_EQ(1u, listener->images_created_);
 }
 
-VK_TEST_F(HostImageTest, YuvImportOnUmaPlatform) {
-  auto vulkan_queues = CreateVulkanDeviceQueues();
-  auto device = vulkan_queues->vk_device();
-  auto physical_device = vulkan_queues->vk_physical_device();
-
-  if (!Memory::HasSharedMemoryPools(device, physical_device)) {
-    FX_LOGS(INFO) << "Could not find UMA compatible memory pool, aborting test.";
-    return;
-  }
-
-  zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(kVmoSize, 0u, &vmo);
-  ASSERT_EQ(ZX_OK, status);
-
-  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(vmo), kVmoSize,
-                                               fuchsia::images::MemoryType::HOST_MEMORY)));
-
-  fuchsia::images::ImageInfo image_info{
-      .width = kSize,
-      .height = kSize,
-      .stride = static_cast<uint32_t>(
-          kSize * images::StrideBytesPerWidthPixel(fuchsia::images::PixelFormat::NV12)),
-      .pixel_format = fuchsia::images::PixelFormat::NV12,
-  };
-
-  ASSERT_TRUE(Apply(scenic::NewCreateImageCmd(kImageId, kMemoryId, 0, image_info)));
-
-  auto image_resource = FindResource<HostImage>(kImageId);
-  ASSERT_TRUE(image_resource);
-
-  EXPECT_TRUE(image_resource->IsDirectlyMapped());
-  // For direct mapped images, when we create the image, the Escher image will
-  // be created as well.
-  EXPECT_TRUE(image_resource->GetEscherImage());
-  // Updating should be a no-op, so it shouldn't crash when passesd a null
-  // gpu_uploader, but it should also remove the dirty bit, meaning there is no
-  // additional work to do.
-  image_resource->UpdateEscherImage(/* gpu_uploader */ nullptr,
-                                    /* image_layout_uploader */ nullptr);
-  // Despite not updating, the resource should have a valid Escher image, since
-  // we mapped it directly with zero copies.
-  EXPECT_TRUE(image_resource->GetEscherImage());
-  // The images should have been constructed directly, not through the image
-  // factory.
-  EXPECT_EQ(0u, listener->images_created_);
-}
-
 VK_TEST_F(HostImageTest, RgbaImportFails) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(kVmoSize, 0u, &vmo);

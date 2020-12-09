@@ -100,47 +100,6 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
     return nullptr;
   }
 
-  // TODO(fxbug.dev/43039): Directly mapped images actually work as GpuImage, and they
-  // should be created as GpuImage as well.
-  if (image_info.pixel_format == fuchsia::images::PixelFormat::NV12 &&
-      image_info.stride % kYuvStrideRequirement == 0) {
-    // If we are not on a UMA platform, GetGpuMem will return a null pointer.
-    auto gpu_memory = memory->GetGpuMem(error_reporter);
-    if (gpu_memory) {
-      escher::ImageInfo escher_image_info;
-      escher_image_info.format = vk::Format::eG8B8R82Plane420Unorm;
-      escher_image_info.width = image_info.width;
-      escher_image_info.height = image_info.height;
-      escher_image_info.sample_count = 1;
-      escher_image_info.usage = vk::ImageUsageFlagBits::eSampled;
-      escher_image_info.tiling = vk::ImageTiling::eLinear;
-      escher_image_info.is_mutable = false;
-      escher_image_info.is_external = true;
-      // TODO(fxbug.dev/24225): This code assumes that Memory::GetGpuMem() will only
-      // return device local memory.
-      escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
-
-      constexpr auto kInitialLayout = vk::ImageLayout::ePreinitialized;
-      vk::Image vk_image = escher::image_utils::CreateVkImage(session->resource_context().vk_device,
-                                                              escher_image_info, kInitialLayout);
-      auto escher_image = escher::impl::NaiveImage::AdoptVkImage(
-          session->resource_context().escher_resource_recycler, escher_image_info, vk_image,
-          gpu_memory, kInitialLayout);
-
-      if (!escher_image) {
-        error_reporter->ERROR() << "Image::CreateFromMemory(): cannot create NaiveImage.";
-        return nullptr;
-      }
-
-      auto host_image = fxl::AdoptRef(new HostImage(
-          session, id, std::move(memory), std::move(escher_image), memory_offset, image_info));
-      host_image->is_directly_mapped_ = true;
-      // Directly-mapped images are never dirty.
-      host_image->dirty_ = false;
-      return host_image;
-    }
-  }
-
   // TODO(fxbug.dev/23396): Support non-minimal strides for all formats.  For now, NV12
   // is ok because it will have image_conversion_function_ and for formats with
   // image_conversion_function_, the stride is really only the input data stride
