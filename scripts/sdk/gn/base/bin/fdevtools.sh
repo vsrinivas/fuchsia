@@ -72,19 +72,28 @@ LABEL_DEVTOOLS="$(echo "${VER_DEVTOOLS}" | tr ':/' '_')"
 
 # Can download Fuchsia DevTools from CIPD with either "latest" or a CIPD hash
 echo "Downloading Fuchsia DevTools ${VER_DEVTOOLS} with CIPD"
+TEMP_ENSURE_INTERNAL=$(mktemp /tmp/fuchsia_devtools_cipd.ensure.XXXXXX)
+cat << end > "${TEMP_ENSURE_INTERNAL}"
+\$ServiceURL https://chrome-infra-packages.appspot.com/
+fuchsia_internal/gui_tools/fuchsia_devtools/\${platform} $VER_DEVTOOLS
+end
 TEMP_ENSURE=$(mktemp /tmp/fuchsia_devtools_cipd.ensure.XXXXXX)
 cat << end > "${TEMP_ENSURE}"
 \$ServiceURL https://chrome-infra-packages.appspot.com/
-fuchsia_internal/gui_tools/fuchsia_devtools/\${platform} $VER_DEVTOOLS
+fuchsia/gui_tools/fuchsia_devtools/\${platform} $VER_DEVTOOLS
 end
 
 FDT_DIR="${FUCHSIA_IMAGE_WORK_DIR}/fuchsia_devtools-${LABEL_DEVTOOLS}"
 if ! run-cipd ensure -ensure-file "${TEMP_ENSURE}" -root "${FDT_DIR}"; then
-  rm "$TEMP_ENSURE"
-  echo "Failed to download Fuchsia DevTools ${VER_DEVTOOLS}."
-  exit 1
+  if ! run-cipd ensure -ensure-file "${TEMP_ENSURE_INTERNAL}" -root "${FDT_DIR}"; then
+    rm "${TEMP_ENSURE}"
+    rm "${TEMP_ENSURE_INTERNAL}"
+    echo "Failed to download Fuchsia DevTools ${VER_DEVTOOLS}."
+    exit 1
+  fi
 fi
 rm "${TEMP_ENSURE}"
+rm "${TEMP_ENSURE_INTERNAL}"
 
 export FDT_TOOLCHAIN="GN"
 FDT_GN_SSH="$(command -v ssh)"
@@ -101,9 +110,10 @@ fi
 echo "Starting Fuchsia DevTools with FDT_ARGS=[${FDT_ARGS[*]}] and environment:"
 env | grep FDT_
 
-LINUX_BINARY="fuchsia_devtools/linux/fuchsia_devtools"
-LINUX_BINARY_OLD="system_monitor/linux/fuchsia_devtools"
-MAC_ZIP="fuchsia_devtools/macos/macos.zip"
+LINUX_BINARY="linux/fuchsia_devtools"
+LINUX_BINARY_OLD="fuchsia_devtools/linux/fuchsia_devtools"
+MAC_ZIP="macos/macos.zip"
+MAC_ZIP_OLD="fuchsia_devtools/macos/macos.zip"
 MAC_UNZIP_DIR="fuchsia_devtools/macos-extracted"
 MAC_BINARY="fuchsia_devtools/macos-extracted/Fuchsia DevTools.app"
 
@@ -111,8 +121,11 @@ if is-mac; then
   if [[ ! -d "${FDT_DIR}/${MAC_UNZIP_DIR}" ]]; then
     if ! unzip -qq "${FDT_DIR}/${MAC_ZIP}" -d "${FDT_DIR}/${MAC_UNZIP_DIR}-temp"; then
       rm -rf "${FDT_DIR}/${MAC_UNZIP_DIR}-temp"
-      fx-error "Downloaded archive for ${LABEL_DEVTOOLS} failed to extract"
-      exit 1
+      if ! unzip -qq "${FDT_DIR}/${MAC_ZIP_OLD}" -d "${FDT_DIR}/${MAC_UNZIP_DIR}-temp"; then
+        rm -rf "${FDT_DIR}/${MAC_UNZIP_DIR}-temp"
+        fx-error "Downloaded archive for ${LABEL_DEVTOOLS} failed to extract"
+        exit 1
+      fi
     fi
     mv "${FDT_DIR}/${MAC_UNZIP_DIR}-temp" "${FDT_DIR}/${MAC_UNZIP_DIR}"
   fi

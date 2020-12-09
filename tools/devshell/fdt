@@ -12,6 +12,7 @@
 ##             in //prebuilt will be used.
 ##             VERSION is either a CIPD hash or "latest".
 
+# shellcheck source=/dev/null
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 set -e
 
@@ -22,26 +23,24 @@ fx-export-device-address
 PREBUILT_DIR="$FUCHSIA_DIR/prebuilt/gui_tools"
 DOWNLOAD_DIR="$FUCHSIA_DIR/prebuilt/gui_tools/download"
 
-# This is an old directory that was used for downloading CIPD files that we
-# don't want to use anymore. This script attempts to delete this directory if it
-# exists to cleanup old usage. This can be removed eventually.
-OLD_DOWNLOAD_DIR="$FUCHSIA_DIR/prebuilt/gui_tools/test_fuchsia_devtools"
-
 if [[ $HOST_PLATFORM == "mac-x64" ]]; then
   BINARY="Fuchsia DevTools.app"
-  ZIP="fuchsia_devtools/macos/macos.zip"
+  ZIP="macos/macos.zip"
+  ZIP_OLD="fuchsia_devtools/macos/macos.zip"
   DOWNLOAD_ZIP="$DOWNLOAD_DIR/$ZIP"
+  DOWNLOAD_ZIP_OLD="$DOWNLOAD_DIR/$ZIP_OLD"
   DOWNLOAD_UNZIP_DIR="$DOWNLOAD_DIR/fuchsia_devtools/macos-extracted"
   DOWNLOAD="$DOWNLOAD_UNZIP_DIR/$BINARY"
   PREBUILT_ZIP="$PREBUILT_DIR/$ZIP"
+  PREBUILT_ZIP_OLD="$PREBUILT_DIR/$ZIP_OLD"
   PREBUILT_UNZIP_DIR="$PREBUILT_DIR/fuchsia_devtools/macos-extracted"
   PREBUILT="$PREBUILT_UNZIP_DIR/$BINARY"
 else
-  BINARY_OLD="system_monitor/linux/fuchsia_devtools"
+  BINARY_OLD="fuchsia_devtools/linux/fuchsia_devtools"
   PREBUILT_OLD="$PREBUILT_DIR/$BINARY_OLD"
   DOWNLOAD_OLD="$DOWNLOAD_DIR/$BINARY_OLD"
 
-  BINARY="fuchsia_devtools/linux/fuchsia_devtools"
+  BINARY="linux/fuchsia_devtools"
   PREBUILT="$PREBUILT_DIR/$BINARY"
   DOWNLOAD="$DOWNLOAD_DIR/$BINARY"
 fi
@@ -50,9 +49,19 @@ fi
 if [[ $# == 0 ]]; then
   if [[ $HOST_PLATFORM == "mac-x64" ]]; then
     # On the mac if we have a prebuilt zip then we are good to go.
-    if [[ -e "$PREBUILT_ZIP" ]]; then
+    if [[ -e "${PREBUILT_ZIP}" ]]; then
       rm -rf "${PREBUILT_UNZIP_DIR}"
       if ! unzip -qq "${PREBUILT_ZIP}" -d "${PREBUILT_UNZIP_DIR}-temp"; then
+        rm -rf "${PREBUILT_UNZIP_DIR}-temp"
+        echo "Prebuilt archive failed to extract."
+        exit 1
+      fi
+      mv "${PREBUILT_UNZIP_DIR}-temp" "${PREBUILT_UNZIP_DIR}"
+      open "$PREBUILT"
+      exit 0
+    elif [[ -e "${PREBUILT_ZIP_OLD}" ]]; then
+      rm -rf "${PREBUILT_UNZIP_DIR}"
+      if ! unzip -qq "${PREBUILT_ZIP_OLD}" -d "${PREBUILT_UNZIP_DIR}-temp"; then
         rm -rf "${PREBUILT_UNZIP_DIR}-temp"
         echo "Prebuilt archive failed to extract."
         exit 1
@@ -91,25 +100,36 @@ fi
 version="$1"
 shift
 
-# Clean up the old location for downloading CIPD packages if it exists.
-if [[ -d "$OLD_DOWNLOAD_DIR" ]]; then
-  rm -rf "$OLD_DOWNLOAD_DIR"
-fi
-
-if ! echo 'fuchsia_internal/gui_tools/fuchsia_devtools/${platform}' "$version" | cipd ensure -ensure-file - -root "$DOWNLOAD_DIR"; then
-  echo "Failed to download $version."
-  exit 1
+# Check fuchsia/gui_tools/... first as that is the new location
+# shellcheck disable=SC2016
+if ! echo 'fuchsia/gui_tools/fuchsia_devtools/${platform}' "$version" | cipd ensure -ensure-file - -root "$DOWNLOAD_DIR"; then
+  # Fallback to checking fuchsia_internal/gui_tools...
+  # shellcheck disable=SC2016
+  if ! echo 'fuchsia_internal/gui_tools/fuchsia_devtools/${platform}' "$version" | cipd ensure -ensure-file - -root "$DOWNLOAD_DIR"; then
+    echo "Failed to download $version."
+    exit 1
+  fi
 fi
 
 if [[ $HOST_PLATFORM == "mac-x64" ]]; then
   rm -rf "${DOWNLOAD_UNZIP_DIR}"
-  if ! unzip -qq "${DOWNLOAD_ZIP}" -d "${DOWNLOAD_UNZIP_DIR}-temp"; then
-    rm -rf "${DOWNLOAD_UNZIP_DIR}-temp"
-    echo "Downloaded archive for $version failed to extract."
-    exit 1
+  if [[ -e "${DOWNLOAD_ZIP}" ]]; then
+    if ! unzip -qq "${DOWNLOAD_ZIP}" -d "${DOWNLOAD_UNZIP_DIR}-temp"; then
+      rm -rf "${DOWNLOAD_UNZIP_DIR}-temp"
+      echo "Downloaded archive for $version failed to extract."
+      exit 1
+    fi
+    mv "${DOWNLOAD_UNZIP_DIR}-temp" "${DOWNLOAD_UNZIP_DIR}"
+    open "$DOWNLOAD"
+  elif [[ -e "${DOWNLOAD_ZIP_OLD}" ]]; then
+    if ! unzip -qq "${DOWNLOAD_ZIP_OLD}" -d "${DOWNLOAD_UNZIP_DIR}-temp"; then
+      rm -rf "${DOWNLOAD_UNZIP_DIR}-temp"
+      echo "Downloaded archive for $version failed to extract."
+      exit 1
+    fi
+    mv "${DOWNLOAD_UNZIP_DIR}-temp" "${DOWNLOAD_UNZIP_DIR}"
+    open "$DOWNLOAD"
   fi
-  mv "${DOWNLOAD_UNZIP_DIR}-temp" "${DOWNLOAD_UNZIP_DIR}"
-  open "$DOWNLOAD"
 else
   # In the future, we should add the following to eliminate the terminal spam:
   #   > /dev/null 2>&1 &

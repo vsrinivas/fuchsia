@@ -30,7 +30,6 @@ BT_MKDIR_DEPS=(
 declare fx
 
 BT_SET_UP() {
-  #FUCHSIA_DIR="${BT_TEMP_DIR}"
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
   devfinder="$(btf::make_installed_hosttools_mock device-finder)"
@@ -47,9 +46,9 @@ BT_SET_UP() {
 
 # Test that prebuilt is run with no args works with new binary.
 TEST_noargs_uses_prebuilt_new_binary() {
-  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos/macos.zip"
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/macos/macos.zip"
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos-extracted-temp"
-  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/linux/fuchsia_devtools"
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/linux/fuchsia_devtools"
 
   BT_EXPECT ${fx} fdt
 
@@ -62,7 +61,7 @@ TEST_noargs_uses_prebuilt_new_binary() {
 TEST_noargs_uses_prebuilt_old_binary() {
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos/macos.zip"
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos-extracted-temp"
-  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/system_monitor/linux/fuchsia_devtools"
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/linux/fuchsia_devtools"
 
   BT_EXPECT ${fx} fdt
 
@@ -81,9 +80,9 @@ TEST_prebuilt_unavailable() {
 
 # Test that CIPD is used to fetch "latest" with the new binary.
 TEST_uses_cipd_for_latest_new_binary() {
-  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos/macos.zip"
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/macos/macos.zip"
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos-extracted-temp"
-  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/linux/fuchsia_devtools"
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/linux/fuchsia_devtools"
 
   BT_EXPECT ${fx} fdt latest
 
@@ -97,7 +96,7 @@ TEST_uses_cipd_for_latest_new_binary() {
 TEST_uses_cipd_for_latest_old_binary() {
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos/macos.zip"
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos-extracted-temp"
-  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/system_monitor/linux/fuchsia_devtools"
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/linux/fuchsia_devtools"
 
   BT_EXPECT ${fx} fdt latest
 
@@ -112,7 +111,7 @@ TEST_uses_fx_export_device_address() {
   if [[ $HOST_PLATFORM == "mac-x64" ]]; then
     FDT="${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos-extracted-temp/Fuchsia DevTools.app"
     FDT_MOVED="${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos-extracted/Fuchsia DevTools.app"
-    btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos/macos.zip"
+    btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/macos/macos.zip"
     btf::make_mock "${FDT}"
 
     cat > "${BT_TEMP_DIR}/bin/open.mock_side_effects" <<EOF
@@ -125,7 +124,7 @@ EOF
     echo "\${FX_SSH_PORT}" >> "${FDT_MOVED}.fx_ssh_port"
 EOF
   else
-    FDT="${BT_TEMP_DIR}/prebuilt/gui_tools/system_monitor/linux/fuchsia_devtools"
+    FDT="${BT_TEMP_DIR}/prebuilt/gui_tools/linux/fuchsia_devtools"
     btf::make_mock "${FDT}"
 
     cat > "${FDT}.mock_side_effects" <<EOF
