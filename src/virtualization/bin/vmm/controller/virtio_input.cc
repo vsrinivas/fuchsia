@@ -55,7 +55,7 @@ uint8_t VirtioInput::Keyboard(uint8_t subsel, uint8_t* bitmap) {
 }
 
 uint8_t VirtioInput::Pointer(uint8_t subsel, uint8_t* bitmap) {
-  if (subsel == VIRTIO_INPUT_EV_ABS) {
+  if (subsel != VIRTIO_INPUT_EV_ABS) {
     return 0;
   }
   set_config_bit(bitmap, VIRTIO_INPUT_EV_ABS_X);
