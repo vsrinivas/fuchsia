@@ -243,7 +243,7 @@ should:
 1. Justify that any behavior changes or additions are thoroughly tested.
 1. Describe how to run new/affected test cases.
 
-For example: ``Test: Added new unit tests. `fx test netstack_gotests` ``.
+For example: ``Test: Added new unit tests. `fx test netstack-gotests` ``.
 
 ## Tips & Tricks
 

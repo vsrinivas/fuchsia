@@ -48,6 +48,6 @@ group("tests") {
   testonly = true
   deps = [
     ":overnet-examples-tests",
-    "//src/connectivity/network/testing/netemul/runner/runner:netemul_runner",
+    "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
   ]
 }

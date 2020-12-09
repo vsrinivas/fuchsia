@@ -3,8 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_package.gni")
 
-rustc_binary("enclosed_runner") {
+rustc_binary("bin") {
   name = "enclosed_runner"
   edition = "2018"
   testonly = true
@@ -28,4 +30,21 @@ rustc_binary("enclosed_runner") {
   ]
 
   sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("component") {
+  testonly = true
+  component_name = "enclosed-runner"
+  deps = [ ":bin" ]
+  manifest = "meta/enclosed_runner.cmx"
+}
+
+fuchsia_package("netstack3-enclosed-runner") {
+  testonly = true
+  deps = [ ":component" ]
+}
+
+group("enclosed_runner") {
+  testonly = true
+  deps = [ ":netstack3-enclosed-runner" ]
 }

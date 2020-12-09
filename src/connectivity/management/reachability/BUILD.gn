@@ -3,10 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_package.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 rustc_binary("bin") {
   name = "reachability"
@@ -49,62 +49,26 @@ rustc_binary("bin") {
   ]
 }
 
-package("reachability") {
-  deps = [
-    ":bin",
-    "core:lib",
-  ]
-
-  binaries = [
-    {
-      name = "reachability"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/reachability.cmx")
-      dest = "reachability.cmx"
-    },
-  ]
+fuchsia_component("component") {
+  component_name = "reachability"
+  manifest = "meta/reachability.cmx"
+  deps = [ ":bin" ]
 }
 
-test_package("reachability-tests") {
-  deps = [
-    ":bin_test",
-    "core:lib_test",
-  ]
-
-  tests = [
-    {
-      name = "reachability_bin_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "reachability_core_lib_test"
-      environments = [ emu_env ]
-    },
-  ]
+fuchsia_package("reachability") {
+  deps = [ ":component" ]
 }
 
-test_package("reachability-integration-tests") {
-  deps = [ "tests:reachability_integration_test" ]
-
-  tests = [
-    {
-      name = "reachability_integration_test"
-      environments = [ emu_env ]
-    },
-  ]
+fuchsia_unittest_package("reachability-tests") {
+  deps = [ ":bin_test" ]
+  manifest = "meta/reachability_bin_test.cmx"
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":reachability",
-    ":reachability-integration-tests",
     ":reachability-tests",
-    "//src/connectivity/network/testing/netemul",
+    "core:tests",
   ]
 }
 

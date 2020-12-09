@@ -76,5 +76,5 @@
     "program": {
         "binary": "test/easy_netstack_cfg_test"
     },
-    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+    "runner": "fuchsia-pkg://fuchsia.com/netemul-runner#meta/netemul-runner.cmx"
 }

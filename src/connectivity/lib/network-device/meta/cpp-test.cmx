@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.net.tun.Control": "fuchsia-pkg://fuchsia.com/network-tun#meta/network-tun.cmx"
+                "fuchsia.net.tun.Control": "fuchsia-pkg://fuchsia.com/netdev-client-tests#meta/network-tun.cmx"
             }
         }
     },
@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/cpp-test"
+        "binary": "bin/cpp-test"
     },
     "sandbox": {
         "services": [

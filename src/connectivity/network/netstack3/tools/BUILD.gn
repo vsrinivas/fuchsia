@@ -6,24 +6,5 @@ import("//build/package.gni")
 
 group("tools") {
   testonly = true
-  deps = [ ":netstack3-tools" ]
-}
-
-package("netstack3-tools") {
-  testonly = true
-
-  deps = [ "//src/connectivity/network/netstack3/tools/enclosed_runner" ]
-
-  binaries = [
-    {
-      name = "enclosed_runner"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/enclosed_runner.cmx")
-      dest = "enclosed_runner.cmx"
-    },
-  ]
+  deps = [ "enclosed_runner" ]
 }

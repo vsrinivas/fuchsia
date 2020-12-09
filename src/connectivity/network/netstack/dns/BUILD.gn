@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/go/go_test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 go_test("netstack_dns_test") {
   gopackages =
@@ -13,13 +12,7 @@ go_test("netstack_dns_test") {
   deps = [ "../:netstack_lib" ]
 }
 
-test_package("netstack_dns_gotests") {
+fuchsia_unittest_package("netstack-dns-gotests") {
   deps = [ ":netstack_dns_test" ]
-
-  tests = [
-    {
-      name = "netstack_dns_test"
-      environments = basic_envs
-    },
-  ]
+  manifest = "meta/netstack_dns_test.cmx"
 }

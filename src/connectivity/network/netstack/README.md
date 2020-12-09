@@ -35,8 +35,8 @@ netstack microbenchmarks are in package netstack/bench; they can be run via the 
 To run the benchmarks and obtain profiling data:
 
     REALM=bench
-    PROFILE_PATH=/data/r/sys/r/$REALM/fuchsia.com:netstack_gotests:0#meta:netstack_bench_test.cmx/profile
-    fx build netstack_gotests \
+    PROFILE_PATH=/data/r/sys/r/$REALM/fuchsia.com:netstack-gotests:0#meta:netstack_bench_test.cmx/profile
+    fx build netstack-gotests \
       && fx test -o -R=$REALM netstack_bench_test \
       && fx scp "[$(fx get-device-addr)]:$PROFILE_PATH" out/profile \
       && go tool pprof -http=:8080 out/profile

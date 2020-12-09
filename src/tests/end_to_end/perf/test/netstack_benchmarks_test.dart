@@ -10,7 +10,7 @@ import 'helpers.dart';
 
 const _testName = 'fuchsia.netstack.udp_micro_benchmarks';
 const _appPath =
-    'fuchsia-pkg://fuchsia.com/netstack_benchmarks#meta/udp_benchmark.cmx';
+    'fuchsia-pkg://fuchsia.com/netstack-benchmarks#meta/udp-benchmark.cmx';
 const _catapultConverterPath = 'runtime_deps/catapult_converter';
 const _trace2jsonPath = 'runtime_deps/trace2json';
 

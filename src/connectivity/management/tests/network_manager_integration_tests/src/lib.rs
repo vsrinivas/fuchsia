@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 #![cfg(test)]
 
-extern crate network_manager_cli_lib as network_manager_cli;
-
 use anyhow::{Context as _, Error};
 use fidl::endpoints::{create_proxy, ServiceMarker};
 use fidl_fuchsia_netemul_environment::{

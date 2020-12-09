@@ -9,7 +9,7 @@ group("dhcp_integration_tests") {
   public_deps = [
     ":netemul-dhcp-tests",
     "//src/connectivity/network/testing/netemul:guest",
-    "//src/connectivity/network/testing/netemul/runner/runner:netemul_runner",
+    "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
     "//src/virtualization/packages/debian_guest",
   ]
 }

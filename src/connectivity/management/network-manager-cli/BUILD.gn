@@ -5,8 +5,8 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+import("//src/sys/build/fuchsia_unittest_component.gni")
 
 rustc_binary("bin") {
   name = "network_manager_cli"
@@ -42,7 +42,7 @@ rustc_binary("bin") {
 }
 
 rustc_library("lib") {
-  name = "network_manager_cli_lib"
+  name = "network_manager_cli"
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
@@ -80,10 +80,7 @@ rustc_library("lib") {
 }
 
 package("network-manager-cli") {
-  deps = [
-    ":bin",
-    ":lib",
-  ]
+  deps = [ ":bin" ]
   binaries = [
     {
       name = "network_manager_cli"
@@ -98,21 +95,20 @@ package("network-manager-cli") {
   ]
 }
 
-test_package("network-manager-cli-tests") {
-  deps = [
-    ":bin_test",
-    ":lib_test",
-  ]
+fuchsia_unittest_component("network-manager-cli-bin-test") {
+  deps = [ ":bin_test" ]
+  executable_path = "bin/network_manager_cli_bin_test"
+}
 
-  tests = [
-    {
-      name = "network_manager_cli_bin_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "network_manager_cli_lib_lib_test"
-      environments = [ emu_env ]
-    },
+fuchsia_unittest_component("network-manager-cli-lib-test") {
+  deps = [ ":lib_test" ]
+  executable_path = "bin/network_manager_cli_lib_test"
+}
+
+fuchsia_test_package("network-manager-cli-tests") {
+  test_components = [
+    ":network-manager-cli-bin-test",
+    ":network-manager-cli-lib-test",
   ]
 }
 

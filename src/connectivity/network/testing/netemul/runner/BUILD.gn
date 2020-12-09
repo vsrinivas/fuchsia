@@ -155,7 +155,7 @@ executable("sandbox_unittest") {
 fuchsia_component("netemul-sandbox-component") {
   testonly = true
   component_name = "netemul-sandbox"
-  manifest = "meta/netemul_sandbox.cmx"
+  manifest = "meta/netemul-sandbox.cmx"
   deps = [
     ":bin",
     ":netemul-devmgr",

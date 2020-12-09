@@ -170,12 +170,12 @@ async fn main() -> Result<(), Error> {
     println!("chrealm /hub/r/netstack3-env/[koid]");
     println!("to shell into the tailored environment (you can use tab completions for koid)");
     println!("to stop the netstack and this environment, run:");
-    println!("killall enclosed_runner.cmx");
+    println!("killall enclosed-runner.cmx");
     println!("or CTRL^C out.");
 
     // Await forever on an empty future.
-    // This will cause enclosed_runner to never exit, unless it's killed
-    // from outside. We want enclosed_runner to keep alive so we will have
+    // This will cause enclosed-runner to never exit, unless it's killed
+    // from outside. We want enclosed-runner to keep alive so we will have
     // the test environment alive as well so we can chrealm into it, or just
     // observe netstack3.
     let () = futures::future::pending().await;

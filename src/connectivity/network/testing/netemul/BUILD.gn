@@ -6,7 +6,7 @@ group("netemul") {
   testonly = true
   public_deps = [
     "runner:netemul-sandbox",
-    "runner/runner:netemul_runner",
+    "runner/runner:netemul-runner",
 
     # Netemul uses network-tun to create virtual devices
     "//src/connectivity/network/tun/network-tun",

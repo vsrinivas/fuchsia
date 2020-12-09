@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/puppet"
+        "binary": "bin/puppet_bin"
     }
 }

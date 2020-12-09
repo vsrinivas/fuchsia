@@ -48,5 +48,5 @@
     "program": {
         "binary": "test/inheritance_test"
     },
-    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+    "runner": "fuchsia-pkg://fuchsia.com/netemul-runner#meta/netemul-runner.cmx"
 }

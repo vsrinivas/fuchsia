@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/netemul_runner"
+        "binary": "bin/netemul-runner"
     },
     "sandbox": {
         "services": [

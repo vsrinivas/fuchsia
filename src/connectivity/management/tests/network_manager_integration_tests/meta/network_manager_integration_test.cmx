@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.netemul.sandbox.Sandbox": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netemul-sandbox.cmx"
+                "fuchsia.netemul.sandbox.Sandbox": "fuchsia-pkg://fuchsia.com/network-manager-integration-tests#meta/netemul-sandbox.cmx"
             }
         }
     },
@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/network_manager_integration_test"
+        "binary": "bin/network_manager_integration_test"
     },
     "sandbox": {
         "services": [

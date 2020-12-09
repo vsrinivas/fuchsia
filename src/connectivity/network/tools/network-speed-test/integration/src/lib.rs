@@ -7,13 +7,13 @@
 use {
     anyhow::Error,
     fuchsia_async as fasync,
-    fuchsia_component::{client, fuchsia_single_component_package_url, server::ServiceFs},
+    fuchsia_component::{client, server::ServiceFs},
     fuchsia_zircon as zx,
     futures::prelude::*,
 };
 
 const NETWORK_SPEED_TEST_URL: &'static str =
-    fuchsia_single_component_package_url!("network-speed-test");
+    "fuchsia-pkg://fuchsia.com/network-speed-test-test#meta/network-speed-test.cmx";
 
 fn start_fake_loader(stream: fidl_fuchsia_net_http::LoaderRequestStream) {
     fasync::Task::spawn(async move {

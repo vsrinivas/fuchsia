@@ -11,31 +11,31 @@ networks and, thus, allows for self-contained integration tests.
 
 ## Layout
 
-Two components are provided `netemul_runner` and `netemul_sandbox`:
+Two components are provided `netemul-runner` and `netemul-sandbox`:
 
-`netemul_runner` can be used as a runner, as defined by the component framework,
+`netemul-runner` can be used as a runner, as defined by the component framework,
 and provides the FIDL service *fuchsia.sys.Runner*. It expects the `program.data` field of your
 test component's `cmx` manifest to point to another `cmx` file within the same component package.
 
-`netemul_sandbox` is responsible for creating sandboxed environments that can be configured to
-run integration tests. `netemul_sandbox` has two modes of operation: enclosing process or service
+`netemul-sandbox` is responsible for creating sandboxed environments that can be configured to
+run integration tests. `netemul-sandbox` has two modes of operation: enclosing process or service
 provider, and it is selected based on its command-line arguments.
 
-In enclosing process mode, `netemul_sandbox` receives a component as a fuchsia package url as a
+In enclosing process mode, `netemul-sandbox` receives a component as a fuchsia package url as a
 command-line argument and proceeds to create a hermetic environment and then launch the provided
-component within it. The exit code of the `netemul_sandbox` process will mimic the component's. When
+component within it. The exit code of the `netemul-sandbox` process will mimic the component's. When
 using enclosing process, clients will typically setup a layout for the test using the netemul
 [facet](#facet) in the component-under-test's cmx manifest.
 
-In service provider mode, `netemul_sandbox` will expose the
+In service provider mode, `netemul-sandbox` will expose the
 [fuchsia.netemul.sandbox.Sandbox](lib/fidl/sandbox.fidl) protocol that allows
 users to create netemul's managed environments or run full sandboxes from components.
 
 In sum, users have two options to use netemul for a given component under test:
-* use `netemul_runner`, which will use `netemul_sandbox` in enclosing process mode and spawn the
+* use `netemul-runner`, which will use `netemul-sandbox` in enclosing process mode and spawn the
 component under test *within* a netemul environment. See [Runner sample setup](#runner-sample-setup)
 for an example of how to run a component like this.
-* use `netemul_sandbox` as a service provider injected into the component under test's environment
+* use `netemul-sandbox` as a service provider injected into the component under test's environment
 by using the standard `fuchsia.test` facet. The component under test can then simply use the provided
 [fuchsia.netemul.sandbox.Sandbox](lib/fidl/sandbox.fidl) service to spawn and
 control hermetic environments and emulated networks.
@@ -58,7 +58,7 @@ run it:
     "program": {
         "binary": "bin/app"
     },
-    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx",
+    "runner": "fuchsia-pkg://fuchsia.com/netemul-runner#meta/netemul-runner.cmx",
     "facets" : {
       "fuchsia.netemul" : {
         "environment" : {
@@ -69,7 +69,7 @@ run it:
 }
 ```
 
-`netemul_sandbox`'s [tests](runner/test)
+`netemul-sandbox`'s [tests](runner/test)
 use the pattern thoroughly and can be a good source of examples.
 
 *Note 1*: the `bin/app` entry is just there to match the manifest schema, it is not used nor points
@@ -113,13 +113,13 @@ A rust example of how to use the sandbox service can be found [here](runner/test
 
 ## Services
 
-The sandboxed environments created by `netemul_sandbox` will always contain the following FIDL services
+The sandboxed environments created by `netemul-sandbox` will always contain the following FIDL services
 that can be used to manipulate and configure the environment. Just don't forget to add them to your
 `.cmx`'s *sandbox* parameters to have access.
 
 ### NetworkContext
 
-`netemul_sandbox` creates a **single** *NetworkContext* instance (see
+`netemul-sandbox` creates a **single** *NetworkContext* instance (see
 [fuchsia.netemul.network](lib/fidl/network.fidl))
 and makes it available to **all** environments that are created under it. That is to say, *NetworkContext*
 intentionally breaks hermeticity. This service is the core motivator behind *Netemul Runner*, as it
@@ -157,7 +157,7 @@ for configuration information.
 
 ### SyncManager
 
-Along the same lines as *NetworkContext*, `netemul_sandbox` creates a **single** *Syncmanager* instance
+Along the same lines as *NetworkContext*, `netemul-sandbox` creates a **single** *Syncmanager* instance
 (see [fuchsia.netemul.sync](lib/fidl/sync.fidl))
 that is shared between all created environments. Clients can (and are encouraged to) use the *Bus*
 service or the other provided primitives to synchronize multiple test agents that are spawned
@@ -171,7 +171,7 @@ actually ready to listen for incoming connections.
 
 ## Facet
 
-`netemul_sandbox` will look for the facet *fuchsia.netemul* on the `.cmx` file your provide to it.
+`netemul-sandbox` will look for the facet *fuchsia.netemul* on the `.cmx` file your provide to it.
 The facet can be used to build and configure the testing environment before your code gets called,
 thus decreasing the amount of boilerplate setup for every test.
 
@@ -278,7 +278,7 @@ In that case, it's as if only the *url* field had been specified.
 
 ## Helpers
 
-`netemul_sandbox` provides helpers that can be launched in sandboxed environments to perform common
+`netemul-sandbox` provides helpers that can be launched in sandboxed environments to perform common
 operations.
 
 ### netstack_cfg

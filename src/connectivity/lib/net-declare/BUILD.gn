@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_macro.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 rustc_macro("net-declare-macros") {
   source_root = "src/macros.rs"
@@ -31,14 +31,9 @@ rustc_library("net-declare") {
   sources = [ "src/lib.rs" ]
 }
 
-unittest_package("net-declare-tests") {
+fuchsia_unittest_package("net-declare-tests") {
   deps = [ ":net-declare_test" ]
-  tests = [
-    {
-      name = "net_declare_lib_test"
-      environments = [ emu_env ]
-    },
-  ]
+  executable_path = "bin/net_declare_lib_test"
 }
 
 group("tests") {

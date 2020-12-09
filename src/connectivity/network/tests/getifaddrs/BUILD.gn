@@ -40,6 +40,6 @@ group("tests") {
     ":getifaddrs-tests",
 
     # TODO(brunodalbo): move this to component level when netemul can handle it.
-    "//src/connectivity/network/testing/netemul/runner/runner:netemul_runner",
+    "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
   ]
 }

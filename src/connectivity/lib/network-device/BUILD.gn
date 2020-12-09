@@ -2,31 +2,30 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+import("//src/sys/build/fuchsia_unittest_component.gni")
 
 group("network-device") {
   deps = [ "cpp" ]
 }
 
-test_package("netdev-client-tests") {
+fuchsia_unittest_component("netdev-client-cpp-test") {
   deps = [ "cpp:tests" ]
-  tests = [
-    {
-      name = "cpp-test"
-      environments = [ emu_env ]
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
+  manifest = "meta/cpp-test.cmx"
+}
+
+fuchsia_test_package("netdev-client-tests") {
+  deps = [ "//src/connectivity/network/tun/network-tun:component" ]
+  test_components = [ ":netdev-client-cpp-test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {
   testonly = true
 
-  deps = [
-    ":netdev-client-tests",
-    "//src/connectivity/network/tun/network-tun",
-  ]
+  deps = [ ":netdev-client-tests" ]
 }

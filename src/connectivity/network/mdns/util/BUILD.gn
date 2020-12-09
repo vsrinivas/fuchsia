@@ -6,10 +6,7 @@ import("//build/package.gni")
 
 group("util") {
   testonly = true
-  deps = [
-    ":bin",
-    ":mdns-util",
-  ]
+  deps = [ ":mdns-util" ]
 }
 
 package("mdns-util") {

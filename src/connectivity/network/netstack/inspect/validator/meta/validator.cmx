@@ -12,12 +12,12 @@
     "program": {
         "args": [
             "--url",
-            "fuchsia-pkg://fuchsia.com/inspect-validator-test-go#meta/puppet.cmx",
+            "fuchsia-pkg://fuchsia.com/inspect-validator-tests-go#meta/puppet.cmx",
             "--output",
             "text",
             "--test-archive"
         ],
-        "binary": "test/validator"
+        "binary": "bin/validator"
     },
     "sandbox": {
         "services": [

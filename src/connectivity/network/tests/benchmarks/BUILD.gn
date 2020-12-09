@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_package.gni")
 
-executable("udp_benchmark") {
+executable("udp_benchmark_bin") {
   testonly = true
   output_name = "udp_benchmark"
   sources = [
@@ -27,25 +27,18 @@ executable("udp_benchmark") {
   ]
 }
 
-package("netstack_benchmarks") {
+fuchsia_component("udp-benchmark") {
   testonly = true
-  deps = [ ":udp_benchmark" ]
+  deps = [ ":udp_benchmark_bin" ]
+  manifest = "meta/udp_benchmark.cmx"
+}
 
-  binaries = [
-    {
-      name = "udp_benchmark"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/udp_benchmark.cmx")
-      dest = "udp_benchmark.cmx"
-    },
-  ]
+fuchsia_package("netstack-benchmarks") {
+  testonly = true
+  deps = [ ":udp-benchmark" ]
 }
 
 group("benchmarks") {
   testonly = true
-  deps = [ ":netstack_benchmarks" ]
+  deps = [ ":netstack-benchmarks" ]
 }

@@ -11,6 +11,7 @@ fuchsia_component("network-test") {
   deps = [
     "network:network_test_bin",
     "//src/connectivity/network/testing/netemul/runner:netemul-devmgr",
+    "//src/connectivity/network/tun/network-tun:component",
   ]
 }
 

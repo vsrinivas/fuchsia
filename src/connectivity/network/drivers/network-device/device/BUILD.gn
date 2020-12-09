@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
 import("//src/connectivity/network/drivers/network-device/ddk_source_split.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 ddk_source_split("device") {
   sources = [
@@ -60,12 +60,7 @@ executable("test_bin") {
   ]
 }
 
-unittest_package("network-device-lib-test") {
+fuchsia_unittest_package("network-device-lib-test") {
   deps = [ ":test_bin" ]
-  tests = [
-    {
-      name = "network-device-lib-test"
-      environments = [ emu_env ]
-    },
-  ]
+  executable_path = "bin/network-device-lib-test"
 }

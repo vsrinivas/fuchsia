@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 bind_rules("bind") {
   rules = "rndis_function.bind"
@@ -67,14 +67,9 @@ test("rndis-function-test") {
   ]
 }
 
-unittest_package("rndis-function-test-package") {
+fuchsia_unittest_package("rndis-function-test-package") {
   package_name = "rndis-function-test"
   deps = [ ":rndis-function-test" ]
 
-  tests = [
-    {
-      name = "rndis-function-test"
-      dest = "rndis-function-test"
-    },
-  ]
+  executable_path = "test/rndis-function-test"
 }

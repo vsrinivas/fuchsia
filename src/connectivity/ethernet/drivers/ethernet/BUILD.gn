@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 bind_rules("ethernet_bind") {
@@ -63,16 +63,11 @@ test("ethernet-unittest") {
   ]
 }
 
-unittest_package("ethernet-unittest-package") {
+fuchsia_unittest_package("ethernet-unittest-package") {
   package_name = "ethernet-unittest"
   deps = [ ":ethernet-unittest" ]
 
-  tests = [
-    {
-      name = "ethernet-unittest"
-      environments = basic_envs
-    },
-  ]
+  executable_path = "test/ethernet-unittest"
 }
 
 test("ethernet-integration") {

@@ -20,7 +20,7 @@ using namespace netemul;
 
 void PrintUsage() {
   fprintf(stderr, R"(
-Usage: netemul_sandbox [--help] [--definition=path_to_cmx] [-- [arguments...]]
+Usage: netemul-sandbox [--help] [--definition=path_to_cmx] [-- [arguments...]]
 
        if *definition* is provided, will start a sandbox and run the provided environment definition.
        It'll parse the cmx file pointed and create the sandbox following the fuchsia.netemul facet.

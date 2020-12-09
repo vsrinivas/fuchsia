@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 bind_rules("ethertap_bind") {
   rules = "ethertap.bind"
@@ -63,16 +63,11 @@ test("ethertap-unittest") {
   ]
 }
 
-unittest_package("ethertap-unittest-package") {
+fuchsia_unittest_package("ethertap-unittest-package") {
   package_name = "ethertap-unittest"
   deps = [ ":ethertap-unittest" ]
 
-  tests = [
-    {
-      name = "ethertap-unittest"
-      environments = basic_envs
-    },
-  ]
+  executable_path = "test/ethertap-unittest"
 }
 
 group("tests") {

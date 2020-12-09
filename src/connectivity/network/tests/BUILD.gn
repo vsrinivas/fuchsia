@@ -103,8 +103,8 @@ group("netstack-c-api-tests") {
   deps = [
     ":netstack-c-api-tests-inner",
 
-    # netemul_runner is used to create hermetic test environments.
-    "//src/connectivity/network/testing/netemul/runner/runner:netemul_runner",
+    # netemul-runner is used to create hermetic test environments.
+    "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
 
     # cat is used to test FD passing.
     "//third_party/sbase:cat",

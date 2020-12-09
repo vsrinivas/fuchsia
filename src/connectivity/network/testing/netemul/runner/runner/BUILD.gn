@@ -2,19 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_package.gni")
 
 group("runner") {
   testonly = true
-  deps = [
-    ":bin",
-    ":netemul_runner",
-  ]
+  deps = [ ":netemul-runner" ]
 }
 
 executable("bin") {
   testonly = true
-  output_name = "netemul_runner"
+  output_name = "netemul-runner"
   sources = [
     "main.cc",
     "runner.cc",
@@ -38,20 +36,14 @@ executable("bin") {
   ]
 }
 
-package("netemul_runner") {
+fuchsia_component("component") {
   testonly = true
-
+  component_name = "netemul-runner"
   deps = [ ":bin" ]
+  manifest = "meta/netemul_runner.cmx"
+}
 
-  binaries = [
-    {
-      name = "netemul_runner"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/netemul_runner.cmx")
-      dest = "netemul_runner.cmx"
-    },
-  ]
+fuchsia_package("netemul-runner") {
+  testonly = true
+  deps = [ ":component" ]
 }

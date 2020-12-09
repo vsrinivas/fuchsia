@@ -6,8 +6,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 import("gentool/generated.gni")
@@ -57,62 +55,31 @@ metrics_registry("networking_metrics") {
   generate_binarypb = false
 }
 
-test_package("netstack_gotests") {
-  deps = [
-    ":netstack_bench_test",
-    ":netstack_fidlconv_test",
-    ":netstack_filter_test",
-    ":netstack_link_bridge_test",
-    ":netstack_link_eth_test",
-    ":netstack_link_fifo_test",
-    ":netstack_link_netdevice_test",
-    ":netstack_test",
-    "ifconfig:netstack_ifconfig_test",
-    "util:netstack_util_test",
-  ]
+tests = []
+foreach(name,
+        [
+          "netstack_bench_test",
+          "netstack_fidlconv_test",
+          "netstack_filter_test",
+          "netstack_link_bridge_test",
+          "netstack_link_eth_test",
+          "netstack_link_fifo_test",
+          "netstack_link_netdevice_test",
+          "netstack_test",
+        ]) {
+  component_name = "$name-component"
+  fuchsia_unittest_component(component_name) {
+    component_name = name
+    deps = [ ":$name" ]
+    manifest = "meta/$name.cmx"
+  }
+  tests += [ ":$component_name" ]
+}
 
-  tests = [
-    {
-      name = "netstack_bench_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_fidlconv_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_filter_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_link_bridge_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_link_eth_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_link_netdevice_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_link_fifo_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_util_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_ifconfig_test"
-      environments = [ emu_env ]
-    },
-  ]
+fuchsia_test_package("netstack-gotests") {
+  deps = [ "//src/connectivity/network/tun/network-tun:component" ]
+
+  test_components = tests
 }
 
 generated_go("gen/netstack") {
@@ -328,13 +295,13 @@ go_test("netstack_test") {
 group("tests") {
   testonly = true
   deps = [
-    ":netstack_gotests",
-    "dhcp:netstack_dhcp_gotests",
-    "dns:netstack_dns_gotests",
+    ":netstack-gotests",
+    "dhcp:netstack-dhcp-gotests",
+    "dns:netstack-dns-gotests",
+    "ifconfig:netstack-ifconfig-gotests",
     "inspect/validator:tests",
-    "routes:netstack_routes_gotests",
+    "routes:netstack-routes-gotests",
     "tests",
-    "util:netstack_util_test($host_toolchain)",
-    "//src/connectivity/network/tun/network-tun",
+    "util:tests",
   ]
 }

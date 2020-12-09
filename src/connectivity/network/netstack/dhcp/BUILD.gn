@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/go/go_test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//build/go/toolchain.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 go_test("netstack_dhcp_test") {
   gopackages =
@@ -13,13 +13,7 @@ go_test("netstack_dhcp_test") {
   deps = [ "../:netstack_lib" ]
 }
 
-test_package("netstack_dhcp_gotests") {
+fuchsia_unittest_package("netstack-dhcp-gotests") {
   deps = [ ":netstack_dhcp_test" ]
-
-  tests = [
-    {
-      name = "netstack_dhcp_test"
-      environments = [ emu_env ]
-    },
-  ]
+  manifest = "meta/netstack_dhcp_test.cmx"
 }
