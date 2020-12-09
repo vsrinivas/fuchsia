@@ -10,7 +10,7 @@ import '../render/ast.dart';
 import '../types.dart';
 import 'index.dart';
 
-enum SourceLang { cpp, rust, go }
+enum SourceLang { cpp, rust, go, unknown }
 
 extension on SourceLang {
   String toUnqualifiedName() =>
@@ -27,24 +27,8 @@ class SourceLangContextMixin {
 
   SourceLang get lang => _lang(this);
 
-  final _lang = Lazy<SourceLang, ProgramContext>((ProgramContext self) {
-    final result = _fuzzyDetectLang(self._report);
-    if (result == null) {
-      print('Warning: ${self.name} unknown language');
-      _debugDumpReport(self._report);
-      throw Exception('Unable to detect language for ${self.name}');
-    }
-    return result;
-  });
-
-  static void _debugDumpReport(Report report) {
-    for (final compileUnit in report.compileUnits) {
-      print(compileUnit.name);
-      for (final symbol in compileUnit.symbols) {
-        print('  $symbol');
-      }
-    }
-  }
+  final _lang = Lazy<SourceLang, ProgramContext>(
+      (ProgramContext self) => _fuzzyDetectLang(self._report));
 }
 
 class SourceLangCompileContextMixin {
@@ -210,5 +194,5 @@ SourceLang _fuzzyDetectLang(Report report) {
     return SourceLang.cpp;
   }
 
-  return null;
+  return SourceLang.unknown;
 }
