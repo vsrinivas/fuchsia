@@ -1,6 +1,3 @@
-fmil@google.com
-kpozin@google.com
-shayba@google.com
-viktard@google.com
+include /src/intl/OWNERS
 
 # COMPONENT: I18N>Libraries
