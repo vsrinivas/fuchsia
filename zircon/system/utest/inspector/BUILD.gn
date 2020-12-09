@@ -29,9 +29,6 @@ test("inspector") {
     "//zircon/system/ulib/backtrace-request",
     "//zircon/system/ulib/inspector",
   ]
-
-  # TODO(fxbug.dev/47869): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 bootfs_test("inspector-bootfs-test") {
