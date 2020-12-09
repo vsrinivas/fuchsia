@@ -3,7 +3,7 @@
 This guide provides instructions on how to run an end-to-end test for testing a
 Fuchsia product.
 
-This guide uses the Fuchsia emulator ([FEMU](/docs/development/run/femu.md)) to
+This guide uses the Fuchsia emulator ([FEMU](/docs/get-started/set_up_femu.md)) to
 emulate a device that runs Fuchsia. As for the end-to-end test, the guide uses
 the
 <code>[screen_is_not_black](/src/tests/end_to_end/screen_is_not_black/)</code>
@@ -28,7 +28,7 @@ Also, to run any end-to-end test, see the
 Verify the following requirements:
 
 *   [Set up your Fuchsia development environment](/docs/get-started/get_fuchsia_source.md).
-*   [Run the Fuchsia emulator](/docs/development/run/femu.md).
+*   [Set up and start the Fuchsia emulator](/docs/get-started/set_up_femu.md).
 
 ## Build a Fuchsia image to include the end-to-end test {#build-a-fuchsia-image-to-include-the-end-to-end-test}
 

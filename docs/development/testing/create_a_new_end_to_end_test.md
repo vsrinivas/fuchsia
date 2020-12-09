@@ -23,7 +23,7 @@ To create a new end-to-end test, the steps are:
 This guide requires that you’re familiar with the following tasks:
 
 *   Configure and build a Fuchsia image to include an end-to-end test.
-*   Start the emulator ([FEMU](/docs/development/run/femu.md)) with a Fuchsia
+*   Start the emulator ([FEMU](/docs/get-started/set_up_femu.md)) with a Fuchsia
     image.
 *   Run an end-to-end test.
 

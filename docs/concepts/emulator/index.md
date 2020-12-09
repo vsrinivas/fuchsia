@@ -4,8 +4,8 @@ The Fuchsia emulator (FEMU) allows you to test Fuchsia components and applicatio
 FEMU is included in Fuchsia source, and it’s downloaded by `jiri` as part of `jiri update` or `jiri run-hooks`.
 It’s fetched into the Fuchsia directory `/prebuilt/third_party/aemu`.
 
-You can call FEMU with `fx` using the `fx emu` command, or from the Fuchsia IDK using `femu.sh`.
-
+You can call FEMU with `fx` using `fx emu` (Linux) or `fx vdl` (macOS). Alternatively, 
+you can call FEMU from the Fuchsia IDK using `femu.sh`.
 
 ## FEMU and other emulators {#femu-and-other-emulators}
 
@@ -23,7 +23,8 @@ FEMU looks and behaves like a Fuchsia device, with the exception that no paving 
 FEMU features include:
 
 *   **GUI Support:** You can run Fuchsia with the GUI (by default) or without the GUI
-    (using the `--headless` argument with the [fx emu](https://fuchsia.dev/reference/tools/fx/cmd/emu) command)
+    (using the `--headless` argument with [fx emu](https://fuchsia.dev/reference/tools/fx/cmd/emu)
+    or [fx vdl](https://fuchsia.dev/reference/tools/fx/cmd/vdl) commands).
 *   **GPU Support:** You can run with the host’s GPU (by default) with full
     [Vulkan](/docs/concepts/graphics/magma/vulkan.md) support, or you can choose
     software rendering using [SwiftShader](https://swiftshader.googlesource.com/SwiftShader/).
@@ -31,8 +32,12 @@ FEMU features include:
      or from the command line using [fx emu-remote](https://fuchsia.dev/reference/tools/fx/cmd/emu-remote)
      command or `femu.sh` with the Fuchsia IDK.
 
-To configure these features, see the [Running Fuchsia Emulator](/docs/development/run/femu.md)
-page. Additional features are listed in the [fx emu](https://fuchsia.dev/reference/tools/fx/cmd/emu) reference page.
+To configure these features, see the [Set up and start FEMU](/docs/get-started/set_up_femu.md)
+page.
+
+Additional features are listed in the [fx emu](https://fuchsia.dev/reference/tools/fx/cmd/emu)
+and [fx vdl](https://fuchsia.dev/reference/tools/fx/cmd/vdl) reference pages.
+
 If you’re using the Fuchsia IDK, `femu.sh` supports the same flags as `fx emu`.
 
 
@@ -40,7 +45,7 @@ If you’re using the Fuchsia IDK, `femu.sh` supports the same flags as `fx emu`
 
 ### FEMU image and board support {#femu-image-and-board-support}
 
-When setting up FEMU using `fx emu`, FEMU only supports the following boards:
+When setting up FEMU using `fx set`, FEMU only supports the following boards:
 
 *   `qemu-x64`
 *   `qemu-arm64`
@@ -51,6 +56,7 @@ When using the Fuchsia IDK to set up FEMU, you are limited to the following pre-
 *   `workstation.qemu-x64-release`
 *   `qemu-arm64`
 
+Note: ARM64 support (`qemu-arm64`) is very limited and not recommended.
 
 ### FEMU networking  {#femu-networking}
 
@@ -80,7 +86,6 @@ Alternatively, you can use the Fuchsia IDK and use pre-built system images.
 
 Then you can use FEMU to do the following:
 
-*   [Set up and configure FEMU](/docs/get-started/set_up_femu.md)
-*   [Run FEMU](/docs/development/run/femu.md)
+*   [Set up and start FEMU](/docs/get-started/set_up_femu.md)
 *   [Test components](/docs/development/run/run-test-component.md)
 *   [Run end-to-end tests](/docs/development/testing/run_an_end_to_end_test.md)
