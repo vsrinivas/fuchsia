@@ -74,9 +74,6 @@ executable("a11y_manager_apptests") {
     "//zircon/third_party/rapidjson",
   ]
 
-  # TODO(fxbug.dev/46528): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   # This is a dependency of the semantic tree to perform certain matrix transform operations.
   include_dirs = [ "//third_party/glm" ]
 }

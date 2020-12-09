@@ -27,7 +27,4 @@ executable("focus_chain_manager_tests") {
     "//src/ui/a11y/lib/semantics/tests/mocks/",
     "//src/ui/a11y/lib/testing",
   ]
-
-  # TODO(fxbug.dev/47893): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
