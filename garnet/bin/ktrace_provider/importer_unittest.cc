@@ -223,7 +223,7 @@ class TestImporter : public ::testing::Test {
 
   size_t KtraceAvailableBytes() { return std::distance(ktrace_buffer_next_, ktrace_buffer_end_); }
 
-  char ktrace_buffer_[kKtraceBufferSize];
+  char ktrace_buffer_[kKtraceBufferSize] __ALIGNED(alignof(ktrace_header_t));
   char* ktrace_buffer_next_ = ktrace_buffer_;
   char* ktrace_buffer_end_ = ktrace_buffer_ + kKtraceBufferSize;
   trace_context_t* context_ = nullptr;

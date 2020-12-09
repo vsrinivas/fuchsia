@@ -6,11 +6,15 @@
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/ktrace.h>
+#include <zircon/assert.h>
 
 namespace ktrace_provider {
 
 Reader::Reader(const char* buffer, size_t buffer_size)
-    : current_(buffer), marker_(buffer), end_(buffer + buffer_size) {}
+    : current_(buffer), marker_(buffer), end_(buffer + buffer_size) {
+  // Ensure initial buffer is correctly aligned.
+  ZX_ASSERT(reinterpret_cast<uintptr_t>(buffer) % alignof(ktrace_header_t) == 0);
+}
 
 const ktrace_header_t* Reader::ReadNextRecord() {
   if (AvailableBytes() < sizeof(ktrace_header_t)) {
