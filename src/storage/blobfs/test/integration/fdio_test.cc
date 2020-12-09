@@ -4,9 +4,13 @@
 
 #include "src/storage/blobfs/test/integration/fdio_test.h"
 
+#include <fuchsia/inspect/cpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
+#include <lib/inspect/cpp/hierarchy.h>
+#include <lib/inspect/service/cpp/reader.h>
 
 #include <blobfs/mkfs.h>
 
@@ -48,6 +52,66 @@ void FdioTest::TearDown() {
   ASSERT_EQ(
       llcpp::fuchsia::io::DirectoryAdmin::Call::Unmount(zx::unowned_channel(root_client)).status(),
       ZX_OK);
+}
+
+fit::result<inspect::Hierarchy> FdioTest::TakeSnapshot() {
+  async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  loop.StartThread("metric-collection-thread");
+  async::Executor executor(loop.dispatcher());
+
+  fuchsia::inspect::TreePtr tree;
+  async_dispatcher_t* dispatcher = executor.dispatcher();
+  zx_status_t status = fdio_service_connect_at(diagnostics_dir(), "fuchsia.inspect.Tree",
+                                               tree.NewRequest(dispatcher).TakeChannel().release());
+  if (status != ZX_OK) {
+    return fit::error();
+  }
+
+  std::condition_variable cv;
+  std::mutex m;
+  bool done = false;
+  fit::result<inspect::Hierarchy> hierarchy_or_error;
+
+  auto promise =
+      inspect::ReadFromTree(std::move(tree)).then([&](fit::result<inspect::Hierarchy>& result) {
+        {
+          std::unique_lock<std::mutex> lock(m);
+          hierarchy_or_error = std::move(result);
+          done = true;
+        }
+        cv.notify_all();
+      });
+
+  executor.schedule_task(std::move(promise));
+
+  std::unique_lock<std::mutex> lock(m);
+  cv.wait(lock, [&done]() { return done; });
+
+  loop.Quit();
+  loop.JoinThreads();
+
+  return hierarchy_or_error;
+}
+
+void FdioTest::GetUintMetricFromHierarchy(const inspect::Hierarchy* hierarchy,
+                                          std::vector<std::string> path, std::string property,
+                                          uint64_t* value) {
+  ASSERT_NE(value, nullptr);
+  ASSERT_NE(hierarchy, nullptr);
+  const inspect::Hierarchy* direct_parent = hierarchy->GetByPath(path);
+  ASSERT_NE(direct_parent, nullptr);
+
+  const inspect::UintPropertyValue* property_node =
+      direct_parent->node().get_property<inspect::UintPropertyValue>(property);
+  ASSERT_NE(property_node, nullptr);
+
+  *value = property_node->value();
+}
+
+void FdioTest::GetUintMetric(std::vector<std::string> path, std::string property, uint64_t* value) {
+  fit::result<inspect::Hierarchy> hierarchy_or_error = TakeSnapshot();
+  ASSERT_TRUE(hierarchy_or_error.is_ok());
+  GetUintMetricFromHierarchy(&(hierarchy_or_error.value()), path, property, value);
 }
 
 }  // namespace blobfs

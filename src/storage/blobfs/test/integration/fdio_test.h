@@ -7,6 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/inspect/cpp/hierarchy.h>
 
 #include <blobfs/mount.h>
 #include <block-client/cpp/fake-device.h>
@@ -43,6 +44,19 @@ class FdioTest : public testing::Test {
 
   // Returns a handle to the client side of the Inspect diagnostics directory
   zx_handle_t diagnostics_dir() { return diagnostics_dir_client_.get(); }
+
+  // Fetches a fresh Inspect snapshot from the running blobfs instance.
+  fit::result<inspect::Hierarchy> TakeSnapshot();
+
+  // Takes an inspect snapshot `hierarchy` and navigates through the nodes using
+  // the `path` given and fetches the `property` there to be stored in `value`.
+  static void GetUintMetricFromHierarchy(const inspect::Hierarchy* hierarchy,
+                                         std::vector<std::string> path, std::string property,
+                                         uint64_t* value);
+
+  // Strings together `TakeSnapshot` and `GetUintMetricFromHierarchy` to fetch a
+  // single value from a fresh snapshot.
+  void GetUintMetric(std::vector<std::string> path, std::string property, uint64_t* value);
 
  private:
   block_client::FakeBlockDevice* block_device_ = nullptr;  // Owned by the runner_.

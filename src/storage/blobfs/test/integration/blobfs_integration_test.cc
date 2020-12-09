@@ -33,6 +33,7 @@
 
 #include <block-client/cpp/remote-block-device.h>
 #include <digest/digest.h>
+#include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fs-management/launch.h>
@@ -1437,79 +1438,59 @@ TEST_P(BlobfsIntegrationTest, VmoCloneWatchingTest) {
   clone_thread.join();
 }
 
-fit::result<inspect::Hierarchy> TakeSnapshot(fuchsia::inspect::TreePtr tree,
-                                             async::Executor* executor) {
-  std::condition_variable cv;
-  std::mutex m;
-  bool done = false;
-  fit::result<inspect::Hierarchy> hierarchy_or_error;
+class BlobfsMetricIntegrationTest : public FdioTest {
+ protected:
+  void GetReadBytes(uint64_t* total_read_bytes) {
+    const std::array<std::string, 5> algorithms = {"uncompressed", "lz4", "zstd", "zstd_seekable",
+                                                   "chunked"};
+    const std::array<std::string, 2> read_methods = {"paged_read_stats", "unpaged_read_stats"};
+    fit::result<inspect::Hierarchy> hierarchy_or_error = TakeSnapshot();
+    ASSERT_TRUE(hierarchy_or_error.is_ok());
+    inspect::Hierarchy hierarchy = std::move(hierarchy_or_error.value());
+    *total_read_bytes = 0;
+    for (const std::string algorithm : algorithms) {
+      for (const std::string stat : read_methods) {
+        uint64_t read_bytes;
+        ASSERT_NO_FATAL_FAILURE(
+            GetUintMetricFromHierarchy(&hierarchy, {stat, algorithm}, "read_bytes", &read_bytes));
+        *total_read_bytes += read_bytes;
+      }
+    }
+  }
+};
 
-  auto promise =
-      inspect::ReadFromTree(std::move(tree)).then([&](fit::result<inspect::Hierarchy>& result) {
-        {
-          std::unique_lock<std::mutex> lock(m);
-          hierarchy_or_error = std::move(result);
-          done = true;
-        }
-        cv.notify_all();
-      });
-
-  executor->schedule_task(std::move(promise));
-
-  std::unique_lock<std::mutex> lock(m);
-  cv.wait(lock, [&done]() { return done; });
-
-  return hierarchy_or_error;
-}
-
-void GetBlobsCreated(async::Executor* executor, zx_handle_t diagnostics_dir,
-                     uint64_t* blobs_created) {
-  ASSERT_NE(executor, nullptr);
-  ASSERT_NE(blobs_created, nullptr);
-
-  fuchsia::inspect::TreePtr tree;
-  async_dispatcher_t* dispatcher = executor->dispatcher();
-  ASSERT_EQ(fdio_service_connect_at(diagnostics_dir, "fuchsia.inspect.Tree",
-                                    tree.NewRequest(dispatcher).TakeChannel().release()),
-            ZX_OK);
-
-  fit::result<inspect::Hierarchy> hierarchy_or_error = TakeSnapshot(std::move(tree), executor);
-  ASSERT_TRUE(hierarchy_or_error.is_ok());
-  inspect::Hierarchy hierarchy = std::move(hierarchy_or_error.value());
-
-  const inspect::Hierarchy* allocation_stats = hierarchy.GetByPath({"allocation_stats"});
-  ASSERT_NE(allocation_stats, nullptr);
-
-  const inspect::UintPropertyValue* blobs_created_value =
-      allocation_stats->node().get_property<inspect::UintPropertyValue>("blobs_created");
-  ASSERT_NE(blobs_created_value, nullptr);
-
-  *blobs_created = blobs_created_value->value();
-}
-
-TEST_F(FdioTest, AllocateIncrementsMetricTest) {
-  async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  loop.StartThread("allocate-increments-metric-thread");
-  async::Executor executor(loop.dispatcher());
-
+TEST_F(BlobfsMetricIntegrationTest, CreateAndRead) {
   uint64_t blobs_created;
-  ASSERT_NO_FATAL_FAILURE(GetBlobsCreated(&executor, diagnostics_dir(), &blobs_created));
+  ASSERT_NO_FATAL_FAILURE(GetUintMetric({"allocation_stats"}, "blobs_created", &blobs_created));
   ASSERT_EQ(blobs_created, 0ul);
 
-  // Create a new blob with random contents on the mounted filesystem.
+  // Create a new blob with random contents on the mounted filesystem. This is
+  // both random and small enough that it should not get compressed.
   std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(".", 1 << 8, &info));
-  fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
-  ASSERT_TRUE(fd.is_valid());
-  ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
-  ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0)
-      << "Failed to write Data";
+  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(".", 1 << 10, &info));
+  {
+    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd.is_valid());
+    ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
+    ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0)
+        << "Failed to write Data";
+  }
 
-  ASSERT_NO_FATAL_FAILURE(GetBlobsCreated(&executor, diagnostics_dir(), &blobs_created));
+  ASSERT_NO_FATAL_FAILURE(GetUintMetric({"allocation_stats"}, "blobs_created", &blobs_created));
   ASSERT_EQ(blobs_created, 1ul);
 
-  loop.Quit();
-  loop.JoinThreads();
+  uint64_t read_bytes = 0;
+  ASSERT_NO_FATAL_FAILURE(GetReadBytes(&read_bytes));
+  ASSERT_EQ(read_bytes, 0ul);
+
+  {
+    fbl::unique_fd fd(openat(root_fd(), info->path, O_RDONLY));
+    ASSERT_TRUE(fd.is_valid());
+    ASSERT_NO_FATAL_FAILURE(VerifyContents(fd.get(), info->data.get(), info->size_data));
+  }
+
+  ASSERT_NO_FATAL_FAILURE(GetReadBytes(&read_bytes));
+  ASSERT_EQ(read_bytes, fbl::round_up(info->size_data, kBlobfsBlockSize));
 }
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobfsIntegrationTest,

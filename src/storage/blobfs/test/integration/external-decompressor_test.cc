@@ -173,57 +173,6 @@ TEST_F(ExternalDecompressorTest, ChunkedPartialDecompression) {
   }
 }
 
-fit::result<inspect::Hierarchy> TakeSnapshot(fuchsia::inspect::TreePtr tree,
-                                             async::Executor* executor) {
-  std::condition_variable cv;
-  std::mutex m;
-  bool done = false;
-  fit::result<inspect::Hierarchy> hierarchy_or_error;
-
-  auto promise =
-      inspect::ReadFromTree(std::move(tree)).then([&](fit::result<inspect::Hierarchy>& result) {
-        {
-          std::unique_lock<std::mutex> lock(m);
-          hierarchy_or_error = std::move(result);
-          done = true;
-        }
-        cv.notify_all();
-      });
-
-  executor->schedule_task(std::move(promise));
-
-  std::unique_lock<std::mutex> lock(m);
-  cv.wait(lock, [&done]() { return done; });
-
-  return hierarchy_or_error;
-}
-
-void GetRemoteDecompressions(async::Executor* executor, zx_handle_t diagnostics_dir,
-                             const std::string& node_name, uint64_t* value) {
-  ASSERT_NE(executor, nullptr);
-  ASSERT_NE(value, nullptr);
-
-  fuchsia::inspect::TreePtr tree;
-  async_dispatcher_t* dispatcher = executor->dispatcher();
-  ASSERT_EQ(fdio_service_connect_at(diagnostics_dir, "fuchsia.inspect.Tree",
-                                    tree.NewRequest(dispatcher).TakeChannel().release()),
-            ZX_OK);
-
-  fit::result<inspect::Hierarchy> hierarchy_or_error = TakeSnapshot(std::move(tree), executor);
-  ASSERT_TRUE(hierarchy_or_error.is_ok());
-  inspect::Hierarchy hierarchy = std::move(hierarchy_or_error.value());
-
-  const inspect::Hierarchy* direct_parent = &hierarchy;
-  direct_parent = direct_parent->GetByPath({node_name});
-  ASSERT_NE(direct_parent, nullptr);
-
-  const inspect::UintPropertyValue* node =
-      direct_parent->node().get_property<inspect::UintPropertyValue>("remote_decompressions");
-  ASSERT_NE(node, nullptr);
-
-  *value = node->value();
-}
-
 class ExternalDecompressorE2ePagedTest : public FdioTest {
  public:
   ExternalDecompressorE2ePagedTest() {
@@ -237,10 +186,6 @@ class ExternalDecompressorE2ePagedTest : public FdioTest {
 };
 
 TEST_F(ExternalDecompressorE2ePagedTest, VerifyRemoteDecompression) {
-  async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  loop.StartThread("metrics-thread");
-  async::Executor executor(loop.dispatcher());
-
   // Create a new blob on the mounted filesystem.
   std::unique_ptr<BlobInfo> info;
   ASSERT_NO_FATAL_FAILURE(
@@ -254,8 +199,8 @@ TEST_F(ExternalDecompressorE2ePagedTest, VerifyRemoteDecompression) {
   }
 
   uint64_t before_decompressions;
-  ASSERT_NO_FATAL_FAILURE(GetRemoteDecompressions(&executor, diagnostics_dir(), "paged_read_stats",
-                                                  &before_decompressions));
+  ASSERT_NO_FATAL_FAILURE(
+      GetUintMetric({"paged_read_stats"}, "remote_decompressions", &before_decompressions));
 
   {
     fbl::unique_fd fd(openat(root_fd(), info->path, O_RDONLY));
@@ -264,12 +209,9 @@ TEST_F(ExternalDecompressorE2ePagedTest, VerifyRemoteDecompression) {
   }
 
   uint64_t after_decompressions;
-  ASSERT_NO_FATAL_FAILURE(GetRemoteDecompressions(&executor, diagnostics_dir(), "paged_read_stats",
-                                                  &after_decompressions));
+  ASSERT_NO_FATAL_FAILURE(
+      GetUintMetric({"paged_read_stats"}, "remote_decompressions", &after_decompressions));
   ASSERT_GT(after_decompressions, before_decompressions);
-
-  loop.Quit();
-  loop.JoinThreads();
 }
 
 class ExternalDecompressorE2eUnpagedTest : public FdioTest {
@@ -284,10 +226,6 @@ class ExternalDecompressorE2eUnpagedTest : public FdioTest {
 };
 
 TEST_F(ExternalDecompressorE2eUnpagedTest, VerifyRemoteDecompression) {
-  async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  loop.StartThread("metrics-thread");
-  async::Executor executor(loop.dispatcher());
-
   // Create a new blob on the mounted filesystem.
   std::unique_ptr<BlobInfo> info;
   ASSERT_NO_FATAL_FAILURE(
@@ -301,8 +239,8 @@ TEST_F(ExternalDecompressorE2eUnpagedTest, VerifyRemoteDecompression) {
   }
 
   uint64_t before_decompressions;
-  ASSERT_NO_FATAL_FAILURE(GetRemoteDecompressions(&executor, diagnostics_dir(),
-                                                  "unpaged_read_stats", &before_decompressions));
+  ASSERT_NO_FATAL_FAILURE(
+      GetUintMetric({"unpaged_read_stats"}, "remote_decompressions", &before_decompressions));
 
   {
     fbl::unique_fd fd(openat(root_fd(), info->path, O_RDONLY));
@@ -311,12 +249,9 @@ TEST_F(ExternalDecompressorE2eUnpagedTest, VerifyRemoteDecompression) {
   }
 
   uint64_t after_decompressions;
-  ASSERT_NO_FATAL_FAILURE(GetRemoteDecompressions(&executor, diagnostics_dir(),
-                                                  "unpaged_read_stats", &after_decompressions));
+  ASSERT_NO_FATAL_FAILURE(
+      GetUintMetric({"unpaged_read_stats"}, "remote_decompressions", &after_decompressions));
   ASSERT_GT(after_decompressions, before_decompressions);
-
-  loop.Quit();
-  loop.JoinThreads();
 }
 
 }  // namespace
