@@ -8,6 +8,7 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstdint>
@@ -325,8 +326,10 @@ TEST(HistogramTest, AddOnMultipleThreadsWithSynchronizedFlushingIsConsistent) {
   std::array<std::thread, kThreadCount> spamming_threads = {};
 
   auto get_value_for_bucket = [&histogram](uint32_t bucket_index) {
-    return static_cast<int64_t>(histogram.GetOptions().reverse_map_fn(
-        bucket_index, histogram.size(), histogram.GetOptions()));
+    const double bucket_value = histogram.GetOptions().reverse_map_fn(
+        bucket_index, histogram.size(), histogram.GetOptions());
+    return static_cast<int64_t>(
+        std::max<double>(std::numeric_limits<int64_t>::min(), bucket_value));
   };
 
   auto increment_fn = [&histogram, &start_signal, &get_value_for_bucket]() {

@@ -60,10 +60,6 @@ source_set("metrics-test") {
     "//zircon/system/ulib/cobalt-client:cobalt-types-internal",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
   ]
-
-  # TODO(fxbug.dev/42493): UBSan has found an instance of undefined behavior in this target.
-  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 source_set("in-memory-logger-test") {
