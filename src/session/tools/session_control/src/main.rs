@@ -5,6 +5,8 @@
 use {
     anyhow::{format_err, Error},
     argh::FromArgs,
+    fidl::encoding::Decodable,
+    fidl_fuchsia_session::{ElementManagerMarker, ElementManagerProxy, ElementSpec},
     fidl_fuchsia_session::{
         LaunchConfiguration, LauncherMarker, LauncherProxy, RestarterMarker, RestarterProxy,
     },
@@ -24,6 +26,7 @@ pub struct Args {
 pub enum Command {
     Launch(LaunchCommand),
     Restart(RestartCommand),
+    Add(AddCommand),
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -40,10 +43,18 @@ pub struct LaunchCommand {
 /// Restart the current session.
 pub struct RestartCommand {}
 
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "add")]
+/// Add an element to the current session.
+pub struct AddCommand {
+    /// the URL for the element to add.
+    #[argh(positional)]
+    pub element_url: String,
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let Args { command } = argh::from_env();
-
     match command {
         Command::Launch(LaunchCommand { session_url }) => {
             let launcher = connect_to_service::<LauncherMarker>()?;
@@ -58,6 +69,13 @@ async fn main() -> Result<(), Error> {
                 Ok(_) => println!("Restarted the session."),
                 Err(err) => println!("Failed to restart session: {:?}", err),
             };
+        }
+        Command::Add(AddCommand { element_url }) => {
+            let element_manager = connect_to_service::<ElementManagerMarker>()?;
+            match add_element(&element_url, element_manager).await {
+                Ok(_) => println!("Added element: {:?}", element_url),
+                Err(err) => println!("Failed to add element: {:?}, {:?}", element_url, err),
+            }
         }
     };
 
@@ -97,12 +115,31 @@ async fn restart_session(restarter: RestarterProxy) -> Result<(), Error> {
     Ok(())
 }
 
+/// Adds an element to the current session.
+///
+/// # Parameters
+/// - `element_url`: The URL of the element to add.
+/// - `element_manager`: The ElementManager to use when proposing the element.
+///
+/// # Errors
+/// Returns an error if there is an issue adding the element.
+async fn add_element(element_url: &str, element_manager: ElementManagerProxy) -> Result<(), Error> {
+    let spec =
+        ElementSpec { component_url: Some(element_url.to_string()), ..ElementSpec::new_empty() };
+    let result = element_manager.propose_element(spec, None).await?;
+    result.map_err(|err: fidl_fuchsia_session::ProposeElementError| format_err!("{:?}", err))?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*,
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_session::{LaunchError, LauncherMarker, RestartError, RestarterMarker},
+        fidl_fuchsia_session::{
+            ElementManagerRequest, LaunchError, LauncherMarker, ProposeElementError, RestartError,
+            RestarterMarker,
+        },
         // fidl_fuchsia.sys2::EventType, TODO(fxbug.dev/47730): re-enable the tests.
         fuchsia_async as fasync,
         futures::TryStreamExt,
@@ -199,6 +236,47 @@ mod tests {
         .detach();
 
         assert!(restart_session(restarter).await.is_err());
+    }
+
+    /// Tests that an element is added to the session
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_element() {
+        let (proxy, mut server) = create_proxy_and_stream::<ElementManagerMarker>()
+            .expect("Failed to create ElementManager FIDL.");
+        let element_url = "test_element";
+
+        fasync::Task::spawn(async move {
+            if let Some(propose_request) = server.try_next().await.unwrap() {
+                let ElementManagerRequest::ProposeElement { spec, responder, .. } = propose_request;
+                assert_eq!(spec.component_url, Some(element_url.to_string()));
+                let _ = responder.send(&mut Ok(()));
+            } else {
+                assert!(false);
+            }
+        })
+        .detach();
+
+        assert!(add_element(element_url, proxy).await.is_ok());
+    }
+
+    /// Tests that an element is added to the session
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_element_error() {
+        let (proxy, mut server) = create_proxy_and_stream::<ElementManagerMarker>()
+            .expect("Failed to create ElementManager FIDL.");
+        let element_url = "test_element";
+
+        fasync::Task::spawn(async move {
+            if let Some(propose_request) = server.try_next().await.unwrap() {
+                let ElementManagerRequest::ProposeElement { responder, .. } = propose_request;
+                let _ = responder.send(&mut Err(ProposeElementError::Rejected));
+            } else {
+                assert!(false);
+            }
+        })
+        .detach();
+
+        assert!(add_element(element_url, proxy).await.is_err());
     }
 
     // TODO(fxbug.dev/47730): re-enable these tests.

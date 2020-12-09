@@ -15,18 +15,11 @@
     use: [
         { runner: "rust_test_runner" },
         {
-            protocol: [
-                "fuchsia.sys2.BlockingEventSource",
-                "fuchsia.sys2.Realm",
-            ],
+            protocol: [ "fuchsia.sys2.Realm" ],
             from: "framework",
         },
         {
             protocol: [ "fuchsia.cobalt.LoggerFactory" ],
-        },
-        {
-            event: "resolved",
-            from: "framework",
         },
     ],
     offer: [

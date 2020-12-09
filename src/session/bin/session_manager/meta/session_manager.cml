@@ -15,6 +15,7 @@
         {
             protocol: [
                 "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.session.ElementManager",
                 "fuchsia.session.Launcher",
                 "fuchsia.session.Restarter",
                 "fuchsia.ui.lifecycle.LifecycleController",
@@ -163,6 +164,7 @@
         {
             protocol: [
                 "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.session.ElementManager",
                 "fuchsia.session.Launcher",
                 "fuchsia.session.Restarter",
             ],
