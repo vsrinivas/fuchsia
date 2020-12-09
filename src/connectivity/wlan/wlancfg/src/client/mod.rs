@@ -184,7 +184,12 @@ async fn handle_client_requests(
             }
             fidl_policy::ClientControllerRequest::StopClientConnections { responder } => {
                 let mut iface_manager = iface_manager.lock().await;
-                let status = match iface_manager.stop_client_connections().await {
+                let status = match iface_manager
+                    .stop_client_connections(
+                        client_types::DisconnectReason::FidlStopClientConnectionsRequest,
+                    )
+                    .await
+                {
                     Ok(()) => fidl_common::RequestStatus::Acknowledged,
                     Err(_) => fidl_common::RequestStatus::RejectedIncompatibleMode,
                 };
@@ -255,10 +260,13 @@ async fn handle_client_request_connect(
         type_: fidl_policy::SecurityType::from(network_config.security_type),
     };
     let connect_req = client_types::ConnectRequest {
-        network: network_id,
-        credential: network_config.credential.clone(),
-        bss: None,
-        observed_in_passive_scan: None,
+        target: client_types::ConnectionCandidate {
+            network: network_id,
+            credential: network_config.credential.clone(),
+            bss: None,
+            observed_in_passive_scan: None,
+        },
+        reason: client_types::ConnectReason::FidlConnectRequest,
     };
 
     let mut iface_manager = iface_manager.lock().await;
@@ -316,7 +324,10 @@ async fn handle_client_request_save_network(
             ssid: config.ssid,
             type_: config.security_type.into(),
         };
-        match iface_manager.disconnect(net_id).await {
+        match iface_manager
+            .disconnect(net_id, client_types::DisconnectReason::NetworkConfigUpdated)
+            .await
+        {
             Ok(()) => {}
             Err(e) => error!("failed to disconnect from network: {}", e),
         }
@@ -324,10 +335,13 @@ async fn handle_client_request_save_network(
 
     // Attempt to connect to the new network if there is an idle client interface.
     let connect_req = client_types::ConnectRequest {
-        network: net_id,
-        credential: credential,
-        bss: None,
-        observed_in_passive_scan: None,
+        target: client_types::ConnectionCandidate {
+            network: net_id,
+            credential: credential,
+            bss: None,
+            observed_in_passive_scan: None,
+        },
+        reason: client_types::ConnectReason::NewSavedNetworkAutoconnect,
     };
     match iface_manager.has_idle_client().await {
         Ok(true) => {
@@ -362,7 +376,10 @@ async fn handle_client_request_remove_network(
         match iface_manager
             .lock()
             .await
-            .disconnect(fidl_policy::NetworkIdentifier::from(net_id))
+            .disconnect(
+                fidl_policy::NetworkIdentifier::from(net_id),
+                client_types::DisconnectReason::NetworkUnsaved,
+            )
             .await
         {
             Ok(()) => {}
@@ -476,7 +493,7 @@ mod tests {
     /// don't need to worry about the implementation logic in the FakeIfaceManager.
     #[derive(Debug)]
     enum IfaceManagerRequest {
-        Disconnect(fidl_policy::NetworkIdentifier),
+        Disconnect(fidl_policy::NetworkIdentifier, client_types::DisconnectReason),
     }
 
     struct FakeIfaceManager {
@@ -507,16 +524,19 @@ mod tests {
         async fn disconnect(
             &mut self,
             network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+            reason: client_types::DisconnectReason,
         ) -> Result<(), Error> {
-            self.command_sender.try_send(IfaceManagerRequest::Disconnect(network_id)).map_err(|e| {
-                error!(
-                    "Failed to send disconnect: commands_sender's reciever may have
+            self.command_sender
+                .try_send(IfaceManagerRequest::Disconnect(network_id, reason))
+                .map_err(|e| {
+                    error!(
+                        "Failed to send disconnect: commands_sender's reciever may have
                         been dropped. FakeIfaceManager should be created manually with a sender
                         assigned: {:?}",
-                    e
-                );
-                format_err!("failed to send disconnect: {:?}", e)
-            })
+                        e
+                    );
+                    format_err!("failed to send disconnect: {:?}", e)
+                })
         }
 
         async fn connect(
@@ -525,9 +545,9 @@ mod tests {
         ) -> Result<oneshot::Receiver<()>, Error> {
             let _ = self.disconnected_ifaces.pop();
             let mut req = fidl_sme::ConnectRequest {
-                ssid: connect_req.network.ssid,
+                ssid: connect_req.target.network.ssid,
                 bss_desc: None,
-                credential: sme_credential_from_policy(&connect_req.credential),
+                credential: sme_credential_from_policy(&connect_req.target.credential),
                 radio_cfg: fidl_sme::RadioConfig {
                     override_phy: false,
                     phy: fidl_common::Phy::Ht,
@@ -574,7 +594,10 @@ mod tests {
             Ok(local)
         }
 
-        async fn stop_client_connections(&mut self) -> Result<(), Error> {
+        async fn stop_client_connections(
+            &mut self,
+            _reason: client_types::DisconnectReason,
+        ) -> Result<(), Error> {
             self.client_connections_enabled = false;
             Ok(())
         }
@@ -1378,8 +1401,9 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Check that the iface manager was asked to disconnect from some network
-        assert_variant!(exec.run_until_stalled(&mut req_recvr.next()), Poll::Ready(Some(IfaceManagerRequest::Disconnect(net_id))) => {
+        assert_variant!(exec.run_until_stalled(&mut req_recvr.next()), Poll::Ready(Some(IfaceManagerRequest::Disconnect(net_id, reason))) => {
             assert_eq!(net_id,fidl_policy::NetworkIdentifier::from(network_id.clone()));
+            assert_eq!(reason, client_types::DisconnectReason::NetworkConfigUpdated);
         });
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(Ok(()))));
@@ -1535,8 +1559,9 @@ mod tests {
         // Successfully removing a network should always request a disconnect from IfaceManager,
         // which will know whether we are connected to the network to disconnect from. This checks
         // that the IfaceManager is told to disconnect (if connected).
-        assert_variant!(exec.run_until_stalled(&mut req_recvr.next()), Poll::Ready(Some(IfaceManagerRequest::Disconnect(net_id))) => {
+        assert_variant!(exec.run_until_stalled(&mut req_recvr.next()), Poll::Ready(Some(IfaceManagerRequest::Disconnect(net_id, reason))) => {
             assert_eq!(net_id,fidl_policy::NetworkIdentifier::from(network_id.clone()));
+            assert_eq!(reason, client_types::DisconnectReason::NetworkUnsaved);
         });
         assert_variant!(exec.run_until_stalled(&mut remove_fut), Poll::Ready(Ok(Ok(()))));
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
@@ -1888,6 +1913,7 @@ mod tests {
         async fn disconnect(
             &mut self,
             _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+            _reason: client_types::DisconnectReason,
         ) -> Result<(), Error> {
             Err(format_err!("No ifaces"))
         }
@@ -1922,7 +1948,10 @@ mod tests {
             Err(format_err!("No ifaces"))
         }
 
-        async fn stop_client_connections(&mut self) -> Result<(), Error> {
+        async fn stop_client_connections(
+            &mut self,
+            _reason: client_types::DisconnectReason,
+        ) -> Result<(), Error> {
             unimplemented!()
         }
 

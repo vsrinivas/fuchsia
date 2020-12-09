@@ -17,7 +17,9 @@ use {
     anyhow::format_err,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync,
+    fuchsia_cobalt::CobaltSender,
+    fuchsia_zircon as zx,
     futures::{
         channel::{mpsc, oneshot},
         future::FutureExt,
@@ -29,9 +31,11 @@ use {
     std::sync::Arc,
     void::ResultVoidErrExt,
     wlan_common::RadioConfig,
+    wlan_metrics_registry::{
+        POLICY_CONNECTION_ATTEMPT_METRIC_ID as CONNECTION_ATTEMPT_METRIC_ID,
+        POLICY_DISCONNECTION_METRIC_ID as DISCONNECTION_METRIC_ID,
+    },
 };
-
-// TODO(fxbug.dev/53513): add Cobalt metrics
 
 const SME_STATUS_INTERVAL_SEC: i64 = 1; // this poll is very cheap, so we can do it frequently
 const MAX_CONNECTION_ATTEMPTS: u8 = 4; // arbitrarily chosen until we have some data
@@ -45,7 +49,11 @@ pub trait ClientApi {
         request: types::ConnectRequest,
         responder: oneshot::Sender<()>,
     ) -> Result<(), anyhow::Error>;
-    fn disconnect(&mut self, responder: oneshot::Sender<()>) -> Result<(), anyhow::Error>;
+    fn disconnect(
+        &mut self,
+        reason: types::DisconnectReason,
+        responder: oneshot::Sender<()>,
+    ) -> Result<(), anyhow::Error>;
 
     /// Queries the liveness of the channel used to control the client state machine.  If the
     /// channel is not alive, this indicates that the client state machine has exited.
@@ -73,9 +81,13 @@ impl ClientApi for Client {
             .map_err(|e| format_err!("failed to send connect request: {:?}", e))
     }
 
-    fn disconnect(&mut self, responder: oneshot::Sender<()>) -> Result<(), anyhow::Error> {
+    fn disconnect(
+        &mut self,
+        reason: types::DisconnectReason,
+        responder: oneshot::Sender<()>,
+    ) -> Result<(), anyhow::Error> {
         self.req_sender
-            .try_send(ManualRequest::Disconnect(responder))
+            .try_send(ManualRequest::Disconnect((reason, responder)))
             .map_err(|e| format_err!("failed to send disconnect request: {:?}", e))
     }
 
@@ -86,7 +98,7 @@ impl ClientApi for Client {
 
 pub enum ManualRequest {
     Connect((types::ConnectRequest, oneshot::Sender<()>)),
-    Disconnect(oneshot::Sender<()>),
+    Disconnect((types::DisconnectReason, oneshot::Sender<()>)),
 }
 
 fn send_listener_state_update(
@@ -108,6 +120,7 @@ pub async fn serve(
     update_sender: ClientListenerMessageSender,
     saved_networks_manager: Arc<SavedNetworksManager>,
     connect_request: Option<(types::ConnectRequest, oneshot::Sender<()>)>,
+    cobalt_api: CobaltSender,
 ) {
     let next_network = match connect_request {
         Some((req, sender)) => Some(ConnectingOptions {
@@ -117,13 +130,18 @@ pub async fn serve(
         }),
         None => None,
     };
-    let disconnect_options =
-        DisconnectingOptions { disconnect_responder: None, previous_network: None, next_network };
+    let disconnect_options = DisconnectingOptions {
+        disconnect_responder: None,
+        previous_network: None,
+        next_network,
+        reason: types::DisconnectReason::Startup,
+    };
     let common_options = CommonStateOptions {
         proxy: proxy,
         req_stream: req_stream.fuse(),
         update_sender: update_sender,
         saved_networks_manager: saved_networks_manager,
+        cobalt_api,
     };
     let state_machine =
         disconnecting_state(common_options, disconnect_options).into_state_machine();
@@ -150,6 +168,7 @@ struct CommonStateOptions {
     req_stream: ReqStream,
     update_sender: ClientListenerMessageSender,
     saved_networks_manager: Arc<SavedNetworksManager>,
+    cobalt_api: CobaltSender,
 }
 
 fn handle_none_request() -> Result<State, ExitReason> {
@@ -185,12 +204,13 @@ struct DisconnectingOptions {
     /// Configuration for the next network to connect to, after the disconnect is complete. If not
     /// present, the state machine will proceed to IDLE.
     next_network: Option<ConnectingOptions>,
+    reason: types::DisconnectReason,
 }
 /// The DISCONNECTING state requests an SME disconnect, then transitions to either:
 /// - the CONNECTING state if options.next_network is present
 /// - exit otherwise
 async fn disconnecting_state(
-    common_options: CommonStateOptions,
+    mut common_options: CommonStateOptions,
     options: DisconnectingOptions,
 ) -> Result<State, ExitReason> {
     debug!("Entering disconnecting state");
@@ -206,6 +226,7 @@ async fn disconnecting_state(
         Some(responder) => responder.send(()).unwrap_or_else(|_| ()),
         None => (),
     }
+
     // Notify listeners of disconnection
     match options.previous_network {
         Some((network_identifier, status)) => send_listener_state_update(
@@ -218,6 +239,9 @@ async fn disconnecting_state(
         ),
         None => (),
     }
+
+    // Log a disconnect in Cobalt
+    common_options.cobalt_api.log_event(DISCONNECTION_METRIC_ID, options.reason);
 
     // Transition to next state
     match options.next_network {
@@ -269,9 +293,9 @@ async fn connecting_state(
     let (connect_txn, remote) = create_proxy()
         .map_err(|e| ExitReason(Err(format_err!("Failed to create proxy: {:?}", e))))?;
     let mut sme_connect_request = fidl_sme::ConnectRequest {
-        ssid: options.connect_request.network.ssid.clone(),
+        ssid: options.connect_request.target.network.ssid.clone(),
         bss_desc: None,
-        credential: sme_credential_from_policy(&options.connect_request.credential),
+        credential: sme_credential_from_policy(&options.connect_request.target.credential),
         radio_cfg: RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl(),
         deprecated_scan_type: fidl_fuchsia_wlan_common::ScanType::Active,
     };
@@ -286,12 +310,17 @@ async fn connecting_state(
         send_listener_state_update(
             &common_options.update_sender,
             ClientNetworkState {
-                id: options.connect_request.network.clone(),
+                id: options.connect_request.target.network.clone(),
                 state: types::ConnectionState::Connecting,
                 status: None,
             },
         );
     };
+
+    // Log a connect attempt in Cobalt
+    common_options
+        .cobalt_api
+        .log_event(CONNECTION_ATTEMPT_METRIC_ID, options.connect_request.reason);
 
     // Let the responder know we've successfully started this connection attempt
     match options.connect_responder {
@@ -309,13 +338,13 @@ async fn connecting_state(
                 // Notify the saved networks manager. observed_in_passive_scan will be false if
                 // network was seen in active scan, or None if no scan was performed.
                 let scan_type =
-                    options.connect_request.observed_in_passive_scan.map(|observed_in_passive_scan| {
+                    options.connect_request.target.observed_in_passive_scan.map(|observed_in_passive_scan| {
                         if observed_in_passive_scan {fidl_common::ScanType::Passive}
                         else {fidl_common::ScanType::Active}
                     });
                 common_options.saved_networks_manager.record_connect_result(
-                    options.connect_request.network.clone().into(),
-                    &options.connect_request.credential,
+                    options.connect_request.target.network.clone().into(),
+                    &options.connect_request.target.credential,
                     code,
                     scan_type
                 ).await;
@@ -325,7 +354,7 @@ async fn connecting_state(
                         send_listener_state_update(
                             &common_options.update_sender,
                             ClientNetworkState {
-                                id: options.connect_request.network.clone(),
+                                id: options.connect_request.target.network.clone(),
                                 state: types::ConnectionState::Connected,
                                 status: None
                             },
@@ -339,7 +368,7 @@ async fn connecting_state(
                         send_listener_state_update(
                             &common_options.update_sender,
                             ClientNetworkState {
-                                id: options.connect_request.network,
+                                id: options.connect_request.target.network,
                                 state: types::ConnectionState::Failed,
                                 status: Some(types::DisconnectStatus::CredentialsFailed),
                             },
@@ -356,7 +385,7 @@ async fn connecting_state(
                             send_listener_state_update(
                                 &common_options.update_sender,
                                 ClientNetworkState {
-                                    id: options.connect_request.network,
+                                    id: options.connect_request.target.network,
                                     state: types::ConnectionState::Failed,
                                     status: Some(types::DisconnectStatus::ConnectionFailed)
                                 },
@@ -368,13 +397,17 @@ async fn connecting_state(
                             // Limit not exceeded, retry.
                             let next_connecting_options = ConnectingOptions {
                                 connect_responder: None,
-                                connect_request: options.connect_request,
+                                connect_request: types::ConnectRequest {
+                                    reason: types::ConnectReason::RetryAfterFailedConnectAttempt,
+                                    ..options.connect_request
+                                },
                                 attempt_counter: new_attempt_count,
                             };
                             let disconnecting_options = DisconnectingOptions {
                                 disconnect_responder: None,
                                 previous_network: None,
-                                next_network: Some(next_connecting_options)
+                                next_network: Some(next_connecting_options),
+                                reason: types::DisconnectReason::FailedToConnect
                             };
                             return Ok(to_disconnecting_state(common_options, disconnecting_options));
                         }
@@ -384,12 +417,12 @@ async fn connecting_state(
             // Monitor incoming ManualRequests
             new_req = common_options.req_stream.next() => {
                 match new_req {
-                    Some(ManualRequest::Disconnect(responder)) => {
+                    Some(ManualRequest::Disconnect((reason, responder))) => {
                         info!("Cancelling pending connect due to disconnect request");
                         send_listener_state_update(
                             &common_options.update_sender,
                             ClientNetworkState {
-                                id: options.connect_request.network,
+                                id: options.connect_request.target.network,
                                 state: types::ConnectionState::Disconnected,
                                 status: Some(types::DisconnectStatus::ConnectionStopped)
                             },
@@ -398,13 +431,14 @@ async fn connecting_state(
                             disconnect_responder: Some(responder),
                             previous_network: None,
                             next_network: None,
+                            reason
                         };
                         return Ok(to_disconnecting_state(common_options, options));
                     }
                     Some(ManualRequest::Connect((new_connect_request, new_responder))) => {
                         // Check if it's the same network as we're currently connected to.
                         // If yes, dedupe the request.
-                        if (new_connect_request.network == options.connect_request.network) {
+                        if (new_connect_request.target.network == options.connect_request.target.network) {
                             info!("Received duplicate connection request, deduping");
                             new_responder.send(()).unwrap_or_else(|_| ());
                         } else {
@@ -412,20 +446,28 @@ async fn connecting_state(
                             send_listener_state_update(
                                 &common_options.update_sender,
                                 ClientNetworkState {
-                                    id: options.connect_request.network,
+                                    id: options.connect_request.target.network,
                                     state: types::ConnectionState::Disconnected,
                                     status: Some(types::DisconnectStatus::ConnectionStopped)
                                 },
                             );
                             let next_connecting_options = ConnectingOptions {
                                 connect_responder: Some(new_responder),
-                                connect_request: new_connect_request,
+                                connect_request: new_connect_request.clone(),
                                 attempt_counter: 0,
                             };
                             let disconnecting_options = DisconnectingOptions {
                                 disconnect_responder: None,
                                 previous_network: None,
                                 next_network: Some(next_connecting_options),
+                                reason: match new_connect_request.reason {
+                                    types::ConnectReason::ProactiveNetworkSwitch => types::DisconnectReason::ProactiveNetworkSwitch,
+                                    types::ConnectReason::FidlConnectRequest => types::DisconnectReason::FidlConnectRequest,
+                                    _ => {
+                                        error!("Unexpected connection reason: {:?}", new_connect_request.reason);
+                                        types::DisconnectReason::Unknown
+                                    }
+                                }
                             };
                             return Ok(to_disconnecting_state(common_options, disconnecting_options));
                         }
@@ -447,7 +489,7 @@ async fn connecting_state(
 /// - disconnect requests cause a transition to DISCONNECTING state
 async fn connected_state(
     mut common_options: CommonStateOptions,
-    current_network: types::ConnectRequest,
+    currently_fulfilled_request: types::ConnectRequest,
 ) -> Result<State, ExitReason> {
     debug!("Entering connected state");
 
@@ -468,7 +510,7 @@ async fn connected_state(
                 match status_response.connected_to {
                     Some(bss_info) => {
                         // TODO(fxbug.dev/53545): send some stats to the saved network manager
-                        if (bss_info.ssid != current_network.network.ssid) {
+                        if (bss_info.ssid != currently_fulfilled_request.target.network.ssid) {
                             error!("Currently connected SSID changed unexpectedly");
                             return Err(ExitReason(Err(format_err!("Currently connected SSID changed unexpectedly"))));
                         }
@@ -476,13 +518,17 @@ async fn connected_state(
                     None => {
                         let next_connecting_options = ConnectingOptions {
                             connect_responder: None,
-                            connect_request: current_network.clone(),
+                            connect_request: types::ConnectRequest {
+                                reason: types::ConnectReason::RetryAfterDisconnectDetected,
+                                ..currently_fulfilled_request.clone()
+                            },
                             attempt_counter: 0,
                         };
                         let options = DisconnectingOptions {
                             disconnect_responder: None,
-                            previous_network: Some((current_network.clone().network, types::DisconnectStatus::ConnectionFailed)),
-                            next_network: Some(next_connecting_options)
+                            previous_network: Some((currently_fulfilled_request.target.network.clone(), types::DisconnectStatus::ConnectionFailed)),
+                            next_network: Some(next_connecting_options),
+                            reason: types::DisconnectReason::DisconnectDetectedFromSme
                         };
                         info!("Detected disconnection from network, will attempt reconnection");
                         return Ok(disconnecting_state(common_options, options).into_state());
@@ -496,33 +542,42 @@ async fn connected_state(
             },
             req = common_options.req_stream.next() => {
                 match req {
-                    Some(ManualRequest::Disconnect(responder)) => {
+                    Some(ManualRequest::Disconnect((reason, responder))) => {
                         debug!("Disconnect requested");
                         let options = DisconnectingOptions {
                             disconnect_responder: Some(responder),
-                            previous_network: Some((current_network.network, types::DisconnectStatus::ConnectionStopped)),
-                            next_network: None
+                            previous_network: Some((currently_fulfilled_request.target.network, types::DisconnectStatus::ConnectionStopped)),
+                            next_network: None,
+                            reason
                         };
                         return Ok(disconnecting_state(common_options, options).into_state());
                     }
                     Some(ManualRequest::Connect((new_connect_request, new_responder))) => {
                         // Check if it's the same network as we're currently connected to. If yes, reply immediately
-                        if (new_connect_request.network == current_network.network) {
+                        if (new_connect_request.target.network == currently_fulfilled_request.target.network) {
                             info!("Received connection request for current network, deduping");
                             new_responder.send(()).unwrap_or_else(|_| ());
                         } else {
                             let next_connecting_options = ConnectingOptions {
                                 connect_responder: Some(new_responder),
-                                connect_request: new_connect_request,
+                                connect_request: new_connect_request.clone(),
                                 attempt_counter: 0,
                             };
                             let options = DisconnectingOptions {
                                 disconnect_responder: None,
-                                previous_network: Some((current_network.network, types::DisconnectStatus::ConnectionStopped)),
-                                next_network: Some(next_connecting_options)
+                                previous_network: Some((currently_fulfilled_request.target.network, types::DisconnectStatus::ConnectionStopped)),
+                                next_network: Some(next_connecting_options),
+                                reason: match new_connect_request.reason {
+                                    types::ConnectReason::ProactiveNetworkSwitch => types::DisconnectReason::ProactiveNetworkSwitch,
+                                    types::ConnectReason::FidlConnectRequest => types::DisconnectReason::FidlConnectRequest,
+                                    _ => {
+                                        error!("Unexpected connection reason: {:?}", new_connect_request.reason);
+                                        types::DisconnectReason::Unknown
+                                    }
+                                }
                             };
                             info!("Connection to new network requested, disconnecting from current network");
-                            return Ok(disconnecting_state(common_options,options).into_state())
+                            return Ok(disconnecting_state(common_options, options).into_state())
                         }
                     }
                     None => return handle_none_request(),
@@ -538,10 +593,19 @@ mod tests {
         super::*,
         crate::{
             config_management::network_config::{self, Credential, FailureReason},
-            util::{cobalt::create_mock_cobalt_sender, listener, logger::set_logger_for_test},
+            util::{
+                cobalt::{create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver},
+                listener,
+                logger::set_logger_for_test,
+            },
+            validate_cobalt_events, validate_no_cobalt_events,
         },
+        cobalt_client::traits::AsEventCode,
+        fidl_fuchsia_cobalt::CobaltEvent,
         fidl_fuchsia_stash as fidl_stash, fidl_fuchsia_wlan_common as fidl_common,
-        fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_zircon,
+        fidl_fuchsia_wlan_policy as fidl_policy,
+        fuchsia_cobalt::CobaltEventExt,
+        fuchsia_zircon,
         futures::{stream::StreamFuture, task::Poll, Future},
         rand::{distributions::Alphanumeric, thread_rng, Rng},
         wlan_common::assert_variant,
@@ -552,6 +616,7 @@ mod tests {
         sme_req_stream: fidl_sme::ClientSmeRequestStream,
         client_req_sender: mpsc::Sender<ManualRequest>,
         update_receiver: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
+        cobalt_events: mpsc::Receiver<CobaltEvent>,
     }
 
     async fn test_setup() -> TestValues {
@@ -566,6 +631,7 @@ mod tests {
                 .await
                 .expect("Failed to create saved networks manager"),
         );
+        let (cobalt_api, cobalt_events) = create_mock_cobalt_sender_and_receiver();
 
         TestValues {
             common_options: CommonStateOptions {
@@ -573,10 +639,12 @@ mod tests {
                 req_stream: client_req_stream.fuse(),
                 update_sender: update_sender,
                 saved_networks_manager: saved_networks_manager,
+                cobalt_api,
             },
             sme_req_stream,
             client_req_sender,
             update_receiver,
+            cobalt_events,
         }
     }
 
@@ -637,20 +705,26 @@ mod tests {
         let (saved_networks, mut stash_server) =
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks_manager = Arc::new(saved_networks);
+        let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let next_network_ssid = "bar";
         let connect_request = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: next_network_ssid.as_bytes().to_vec(),
-                type_: types::SecurityType::Wep,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: next_network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wep,
+                },
+                credential: Credential::Password("Anything".as_bytes().to_vec()),
+                bss: None,
+                observed_in_passive_scan: Some(true),
             },
-            credential: Credential::Password("Anything".as_bytes().to_vec()),
-            bss: None,
-            observed_in_passive_scan: Some(true),
+            reason: types::ConnectReason::FidlConnectRequest,
         };
 
         // Store the network in the saved_networks_manager, so we can record connection success
-        let save_fut = saved_networks_manager
-            .store(connect_request.network.clone().into(), connect_request.credential.clone());
+        let save_fut = saved_networks_manager.store(
+            connect_request.target.network.clone().into(),
+            connect_request.target.credential.clone(),
+        );
         pin_mut!(save_fut);
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
         process_stash_write(&mut exec, &mut stash_server);
@@ -658,7 +732,7 @@ mod tests {
 
         // Check that the saved networks manager has the expected initial data
         let saved_networks = exec.run_singlethreaded(
-            saved_networks_manager.lookup(connect_request.network.clone().into()),
+            saved_networks_manager.lookup(connect_request.target.network.clone().into()),
         );
         assert_eq!(false, saved_networks[0].has_ever_connected);
         assert!(saved_networks[0].hidden_probability > 0.0);
@@ -674,6 +748,7 @@ mod tests {
             req_stream: client_req_stream.fuse(),
             update_sender: update_sender,
             saved_networks_manager: saved_networks_manager.clone(),
+            cobalt_api: cobalt_api,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -689,7 +764,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.credential));
+                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                  // Send connection response.
@@ -746,7 +821,7 @@ mod tests {
 
         // Check that the saved networks manager has the connection recorded
         let saved_networks = exec.run_singlethreaded(
-            saved_networks_manager.lookup(connect_request.network.clone().into()),
+            saved_networks_manager.lookup(connect_request.target.network.clone().into()),
         );
         assert_eq!(true, saved_networks[0].has_ever_connected);
         assert_eq!(
@@ -759,6 +834,13 @@ mod tests {
 
         // Ensure no further updates were sent to listeners
         assert_variant!(exec.run_until_stalled(&mut update_receiver.into_future()), Poll::Pending);
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::FidlConnectRequest
+        );
     }
 
     #[test]
@@ -768,13 +850,16 @@ mod tests {
 
         let next_network_ssid = "bar";
         let connect_request = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: next_network_ssid.as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa2,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: next_network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::FidlConnectRequest,
         };
         let (connect_sender, mut connect_receiver) = oneshot::channel();
         let connecting_options = ConnectingOptions {
@@ -881,6 +966,23 @@ mod tests {
             exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
             Poll::Pending
         );
+
+        // Three cobalt metrics logged
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::FidlConnectRequest
+        );
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            DISCONNECTION_METRIC_ID,
+            types::DisconnectReason::FailedToConnect
+        );
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::RetryAfterFailedConnectAttempt
+        );
     }
 
     #[test]
@@ -906,11 +1008,13 @@ mod tests {
             .expect("Failed to create saved networks manager"),
         );
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
+        let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let common_options = CommonStateOptions {
             proxy: sme_proxy,
             req_stream: client_req_stream.fuse(),
             update_sender: update_sender,
             saved_networks_manager: saved_networks_manager.clone(),
+            cobalt_api: cobalt_api,
         };
 
         let next_network_ssid = "bar";
@@ -930,10 +1034,13 @@ mod tests {
         let before_recording = zx::Time::get_monotonic();
 
         let connect_request = types::ConnectRequest {
-            network: next_network_identifier,
-            credential: next_credential,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            target: types::ConnectionCandidate {
+                network: next_network_identifier,
+                credential: next_credential,
+                observed_in_passive_scan: Some(true),
+                bss: None,
+            },
+            reason: types::ConnectReason::FidlConnectRequest,
         };
         let (connect_sender, mut connect_receiver) = oneshot::channel();
         let connecting_options = ConnectingOptions {
@@ -958,7 +1065,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.credential));
+                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                  // Send connection response.
@@ -997,6 +1104,13 @@ mod tests {
         let mut failures = network_config.perf_stats.failure_list.get_recent(before_recording);
         let connect_failure = failures.pop().expect("Saved network is missing failure reason");
         assert_eq!(connect_failure.reason, FailureReason::GeneralFailure);
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::FidlConnectRequest
+        );
     }
 
     #[test]
@@ -1022,11 +1136,13 @@ mod tests {
             .expect("Failed to create saved networks manager"),
         );
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
+        let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let common_options = CommonStateOptions {
             proxy: sme_proxy,
             req_stream: client_req_stream.fuse(),
             update_sender: update_sender,
             saved_networks_manager: saved_networks_manager.clone(),
+            cobalt_api: cobalt_api,
         };
 
         let next_network_ssid = "bar";
@@ -1046,10 +1162,13 @@ mod tests {
         let before_recording = zx::Time::get_monotonic();
 
         let connect_request = types::ConnectRequest {
-            network: next_network_identifier,
-            credential: next_credential,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            target: types::ConnectionCandidate {
+                network: next_network_identifier,
+                credential: next_credential,
+                observed_in_passive_scan: Some(true),
+                bss: None,
+            },
+            reason: types::ConnectReason::ProactiveNetworkSwitch,
         };
         let (connect_sender, mut connect_receiver) = oneshot::channel();
         let connecting_options = ConnectingOptions {
@@ -1074,7 +1193,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.credential));
+                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                  // Send connection response.
@@ -1113,6 +1232,13 @@ mod tests {
         let mut failures = network_config.perf_stats.failure_list.get_recent(before_recording);
         let connect_failure = failures.pop().expect("Saved network is missing failure reason");
         assert_eq!(connect_failure.reason, FailureReason::CredentialRejected);
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::ProactiveNetworkSwitch
+        );
     }
 
     #[test]
@@ -1122,13 +1248,16 @@ mod tests {
 
         let next_network_ssid = "bar";
         let connect_request = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: next_network_ssid.as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa2,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: next_network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
         let (connect_sender, mut connect_receiver) = oneshot::channel();
         let connecting_options = ConnectingOptions {
@@ -1182,7 +1311,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.clone().credential));
+                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential.clone()));
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                  // Send connection response.
@@ -1222,6 +1351,14 @@ mod tests {
             exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
             Poll::Pending
         );
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::RegulatoryChangeReconnect
+        );
+        validate_no_cobalt_events!(test_values.cobalt_events);
     }
 
     #[test]
@@ -1232,13 +1369,16 @@ mod tests {
         let first_network_ssid = "foo";
         let second_network_ssid = "bar";
         let connect_request = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: first_network_ssid.as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa2,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: first_network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
         let (connect_sender, mut connect_receiver) = oneshot::channel();
         let connecting_options = ConnectingOptions {
@@ -1280,13 +1420,16 @@ mod tests {
         let mut client = Client::new(test_values.client_req_sender);
         let (connect_sender2, mut connect_receiver2) = oneshot::channel();
         let connect_request2 = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: second_network_ssid.as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa2,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: second_network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::FidlConnectRequest,
         };
         client.connect(connect_request2.clone(), connect_sender2).expect("failed to make request");
 
@@ -1392,6 +1535,23 @@ mod tests {
             exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
             Poll::Pending
         );
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::RegulatoryChangeReconnect
+        );
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            DISCONNECTION_METRIC_ID,
+            types::DisconnectReason::FidlConnectRequest
+        );
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::FidlConnectRequest
+        );
     }
 
     #[test]
@@ -1401,13 +1561,16 @@ mod tests {
 
         let first_network_ssid = "foo";
         let connect_request = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: first_network_ssid.as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa2,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: first_network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
         let (connect_sender, mut connect_receiver) = oneshot::channel();
         let connecting_options = ConnectingOptions {
@@ -1448,7 +1611,9 @@ mod tests {
         // Send a disconnect request
         let mut client = Client::new(test_values.client_req_sender);
         let (disconnect_sender, mut disconnect_receiver) = oneshot::channel();
-        client.disconnect(disconnect_sender).expect("failed to make request");
+        client
+            .disconnect(types::DisconnectReason::NetworkUnsaved, disconnect_sender)
+            .expect("failed to make request");
 
         // Progress the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -1491,6 +1656,18 @@ mod tests {
 
         // Check the disconnect responder
         assert_variant!(exec.run_until_stalled(&mut disconnect_receiver), Poll::Ready(Ok(())));
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::RegulatoryChangeReconnect
+        );
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            DISCONNECTION_METRIC_ID,
+            types::DisconnectReason::NetworkUnsaved
+        );
     }
 
     #[test]
@@ -1500,13 +1677,16 @@ mod tests {
 
         let first_network_ssid = "foo";
         let connect_request = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: first_network_ssid.as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa2,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: first_network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
         let (connect_sender, mut connect_receiver) = oneshot::channel();
         let connecting_options = ConnectingOptions {
@@ -1535,13 +1715,16 @@ mod tests {
 
         let network_ssid = "test";
         let connect_request = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: network_ssid.as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa2,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
         let initial_state = connected_state(test_values.common_options, connect_request);
         let fut = run_state_machine(initial_state);
@@ -1579,7 +1762,9 @@ mod tests {
         // Send a disconnect request
         let mut client = Client::new(test_values.client_req_sender);
         let (sender, mut receiver) = oneshot::channel();
-        client.disconnect(sender).expect("failed to make request");
+        client
+            .disconnect(types::DisconnectReason::FidlStopClientConnectionsRequest, sender)
+            .expect("failed to make request");
 
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -1613,22 +1798,32 @@ mod tests {
             assert_eq!(updates, client_state_update);
         });
         assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            DISCONNECTION_METRIC_ID,
+            types::DisconnectReason::FidlStopClientConnectionsRequest
+        );
     }
 
     #[test]
     fn connected_state_gets_duplicate_connect_request() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = exec.run_singlethreaded(test_setup());
+        let mut test_values = exec.run_singlethreaded(test_setup());
 
         let network_ssid = "test";
         let connect_request = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: network_ssid.as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa2,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
         let initial_state = connected_state(test_values.common_options, connect_request.clone());
         let fut = run_state_machine(initial_state);
@@ -1676,6 +1871,9 @@ mod tests {
 
         // Check the responder was acknowledged
         assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
+
+        // No cobalt metrics logged
+        validate_no_cobalt_events!(test_values.cobalt_events);
     }
 
     #[test]
@@ -1686,13 +1884,16 @@ mod tests {
         let first_network_ssid = "foo";
         let second_network_ssid = "bar";
         let connect_request = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: first_network_ssid.as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa2,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: first_network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::IdleInterfaceAutoconnect,
         };
         let initial_state = connected_state(test_values.common_options, connect_request.clone());
         let fut = run_state_machine(initial_state);
@@ -1731,13 +1932,16 @@ mod tests {
         let mut client = Client::new(test_values.client_req_sender);
         let (connect_sender2, mut connect_receiver2) = oneshot::channel();
         let connect_request2 = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: second_network_ssid.as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa2,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: second_network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::ProactiveNetworkSwitch,
         };
         client.connect(connect_request2.clone(), connect_sender2).expect("failed to make request");
 
@@ -1834,6 +2038,18 @@ mod tests {
             exec.run_until_stalled(&mut test_values.update_receiver.into_future()),
             Poll::Pending
         );
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            DISCONNECTION_METRIC_ID,
+            types::DisconnectReason::ProactiveNetworkSwitch
+        );
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::ProactiveNetworkSwitch
+        );
     }
 
     #[test]
@@ -1843,13 +2059,16 @@ mod tests {
 
         let network_ssid = "foo";
         let connect_request = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: network_ssid.as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa2,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
         let initial_state = connected_state(test_values.common_options, connect_request.clone());
         let fut = run_state_machine(initial_state);
@@ -1933,18 +2152,31 @@ mod tests {
             Ok(Some(listener::Message::NotifyListeners(updates))) => {
             assert_eq!(updates, client_state_update);
         });
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            DISCONNECTION_METRIC_ID,
+            types::DisconnectReason::DisconnectDetectedFromSme
+        );
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::RetryAfterDisconnectDetected
+        );
     }
 
     #[test]
     fn disconnecting_state_completes_and_exits() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = exec.run_singlethreaded(test_setup());
+        let mut test_values = exec.run_singlethreaded(test_setup());
 
         let (sender, mut receiver) = oneshot::channel();
         let disconnecting_options = DisconnectingOptions {
             disconnect_responder: Some(sender),
             previous_network: None,
             next_network: None,
+            reason: types::DisconnectReason::RegulatoryRegionChange,
         };
         let initial_state = disconnecting_state(test_values.common_options, disconnecting_options);
         let fut = run_state_machine(initial_state);
@@ -1968,6 +2200,13 @@ mod tests {
 
         // Expect the responder to be acknowledged
         assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            DISCONNECTION_METRIC_ID,
+            types::DisconnectReason::RegulatoryRegionChange
+        );
     }
 
     #[test]
@@ -1978,13 +2217,16 @@ mod tests {
         let previous_network_ssid = "foo";
         let next_network_ssid = "bar";
         let connect_request = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: next_network_ssid.as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa2,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: next_network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::ProactiveNetworkSwitch,
         };
         let (connect_sender, _connect_receiver) = oneshot::channel();
         let connecting_options = ConnectingOptions {
@@ -2004,6 +2246,7 @@ mod tests {
                 fidl_policy::DisconnectStatus::ConnectionStopped,
             )),
             next_network: Some(connecting_options),
+            reason: types::DisconnectReason::ProactiveNetworkSwitch,
         };
         let initial_state = disconnecting_state(test_values.common_options, disconnecting_options);
         let fut = run_state_machine(initial_state);
@@ -2049,7 +2292,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.credential));
+                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                  // Send connection response.
@@ -2058,6 +2301,18 @@ mod tests {
                 ctrl.send_on_finished(fidl_sme::ConnectResultCode::Success)
                     .expect("failed to send connection completion");
             }
+        );
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            DISCONNECTION_METRIC_ID,
+            types::DisconnectReason::ProactiveNetworkSwitch
+        );
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::ProactiveNetworkSwitch
         );
     }
 
@@ -2071,6 +2326,7 @@ mod tests {
             disconnect_responder: Some(sender),
             previous_network: None,
             next_network: None,
+            reason: types::DisconnectReason::NetworkConfigUpdated,
         };
         let initial_state = disconnecting_state(test_values.common_options, disconnecting_options);
         let fut = run_state_machine(initial_state);
@@ -2098,13 +2354,16 @@ mod tests {
 
         // Create a connect request so that the state machine does not immediately exit.
         let connect_req = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: "no_password".as_bytes().to_vec(),
-                type_: types::SecurityType::None,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: "no_password".as_bytes().to_vec(),
+                    type_: types::SecurityType::None,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::IdleInterfaceAutoconnect,
         };
         let (sender, _receiver) = oneshot::channel();
 
@@ -2116,6 +2375,7 @@ mod tests {
             test_values.common_options.update_sender,
             test_values.common_options.saved_networks_manager,
             Some((connect_req, sender)),
+            test_values.common_options.cobalt_api,
         );
         pin_mut!(fut);
 
@@ -2152,13 +2412,16 @@ mod tests {
 
         // Create a connect request so that the state machine does not immediately exit.
         let connect_req = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: "no_password".as_bytes().to_vec(),
-                type_: types::SecurityType::None,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: "no_password".as_bytes().to_vec(),
+                    type_: types::SecurityType::None,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::FidlConnectRequest,
         };
         let (sender, _receiver) = oneshot::channel();
 
@@ -2170,6 +2433,7 @@ mod tests {
             test_values.common_options.update_sender,
             test_values.common_options.saved_networks_manager,
             Some((connect_req, sender)),
+            test_values.common_options.cobalt_api,
         );
         pin_mut!(fut);
 
@@ -2194,7 +2458,7 @@ mod tests {
     #[test]
     fn serve_loop_handles_disconnect() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let test_values = exec.run_singlethreaded(test_setup());
+        let mut test_values = exec.run_singlethreaded(test_setup());
         let sme_proxy = test_values.common_options.proxy;
         let sme_event_stream = sme_proxy.take_event_stream();
         let (client_req_sender, client_req_stream) = mpsc::channel(1);
@@ -2203,13 +2467,16 @@ mod tests {
 
         // Create a connect request so that the state machine does not immediately exit.
         let connect_req = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: "no_password".as_bytes().to_vec(),
-                type_: types::SecurityType::None,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: "no_password".as_bytes().to_vec(),
+                    type_: types::SecurityType::None,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
         let (sender, _receiver) = oneshot::channel();
 
@@ -2221,6 +2488,7 @@ mod tests {
             test_values.common_options.update_sender,
             test_values.common_options.saved_networks_manager,
             Some((connect_req, sender)),
+            test_values.common_options.cobalt_api,
         );
         pin_mut!(fut);
 
@@ -2276,7 +2544,9 @@ mod tests {
         // Send a disconnect request
         let mut client = Client::new(client_req_sender);
         let (sender, mut receiver) = oneshot::channel();
-        client.disconnect(sender).expect("failed to make request");
+        client
+            .disconnect(types::DisconnectReason::NetworkConfigUpdated, sender)
+            .expect("failed to make request");
 
         // Run the state machine so that it handles the disconnect message.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -2292,6 +2562,23 @@ mod tests {
 
         // Expect the responder to be acknowledged
         assert_variant!(exec.run_until_stalled(&mut receiver), Poll::Ready(Ok(())));
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            DISCONNECTION_METRIC_ID,
+            types::DisconnectReason::Startup
+        );
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::RegulatoryChangeReconnect
+        );
+        validate_cobalt_events!(
+            test_values.cobalt_events,
+            DISCONNECTION_METRIC_ID,
+            types::DisconnectReason::NetworkConfigUpdated
+        );
     }
 
     #[test]
@@ -2304,13 +2591,16 @@ mod tests {
 
         // Create a connect request so that the state machine does not immediately exit.
         let connect_req = types::ConnectRequest {
-            network: types::NetworkIdentifier {
-                ssid: "no_password".as_bytes().to_vec(),
-                type_: types::SecurityType::None,
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: "no_password".as_bytes().to_vec(),
+                    type_: types::SecurityType::None,
+                },
+                credential: Credential::None,
+                observed_in_passive_scan: Some(true),
+                bss: None,
             },
-            credential: Credential::None,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            reason: types::ConnectReason::FidlConnectRequest,
         };
         let (sender, _receiver) = oneshot::channel();
 
@@ -2322,6 +2612,7 @@ mod tests {
             test_values.common_options.update_sender,
             test_values.common_options.saved_networks_manager,
             Some((connect_req, sender)),
+            test_values.common_options.cobalt_api,
         );
         pin_mut!(fut);
 

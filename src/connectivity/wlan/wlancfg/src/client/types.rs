@@ -3,8 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::config_management, fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_policy as fidl_policy,
+    crate::config_management,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_policy as fidl_policy,
+    wlan_metrics_registry::{
+        PolicyConnectionAttemptMetricDimensionReason, PolicyDisconnectionMetricDimensionReason,
+    },
 };
 
 pub type NetworkIdentifier = fidl_policy::NetworkIdentifier;
@@ -14,6 +18,8 @@ pub type DisconnectStatus = fidl_policy::DisconnectStatus;
 pub type Compatibility = fidl_policy::Compatibility;
 pub type WlanChan = fidl_common::WlanChan;
 pub type Bssid = [u8; 6];
+pub type DisconnectReason = PolicyDisconnectionMetricDimensionReason;
+pub type ConnectReason = PolicyConnectionAttemptMetricDimensionReason;
 
 // An internal version of fidl_policy::ScanResult that can be cloned
 #[derive(Debug, Clone, PartialEq)]
@@ -73,7 +79,7 @@ impl From<Bss> for fidl_policy::Bss {
 
 /// Data for connecting to a specific network and keeping track of what is connected to.
 #[derive(Clone, Debug, PartialEq)]
-pub struct ConnectRequest {
+pub struct ConnectionCandidate {
     pub network: NetworkIdentifier,
     pub credential: config_management::Credential,
     pub bss: Option<Box<fidl_internal::BssDescription>>,
@@ -81,4 +87,10 @@ pub struct ConnectRequest {
     /// performed in the Policy layer right now. TODO(53899) Remove the optionality once all scans
     /// are done at the Policy layer.
     pub observed_in_passive_scan: Option<bool>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConnectRequest {
+    pub target: ConnectionCandidate,
+    pub reason: ConnectReason,
 }

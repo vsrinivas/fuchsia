@@ -17,7 +17,9 @@ use {
     anyhow::{format_err, Error},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_wlan_device, fidl_fuchsia_wlan_policy, fidl_fuchsia_wlan_sme,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync,
+    fuchsia_cobalt::CobaltSender,
+    fuchsia_zircon as zx,
     futures::{
         channel::{mpsc, oneshot},
         future::{ready, BoxFuture},
@@ -65,6 +67,7 @@ async fn create_client_state_machine(
     client_update_sender: listener::ClientListenerMessageSender,
     saved_networks: Arc<SavedNetworksManager>,
     connect_req: Option<(client_types::ConnectRequest, oneshot::Sender<()>)>,
+    cobalt_api: CobaltSender,
 ) -> Result<
     (
         Box<dyn client_fsm::ClientApi + Send>,
@@ -92,6 +95,7 @@ async fn create_client_state_machine(
         client_update_sender,
         saved_networks,
         connect_req,
+        cobalt_api,
     );
 
     let metadata =
@@ -113,6 +117,7 @@ pub(crate) struct IfaceManagerService {
     saved_networks: Arc<SavedNetworksManager>,
     fsm_futures:
         FuturesUnordered<future_with_metadata::FutureWithMetadata<(), StateMachineMetadata>>,
+    cobalt_api: CobaltSender,
 }
 
 impl IfaceManagerService {
@@ -122,6 +127,7 @@ impl IfaceManagerService {
         ap_update_sender: listener::ApListenerMessageSender,
         dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
         saved_networks: Arc<SavedNetworksManager>,
+        cobalt_api: CobaltSender,
     ) -> Self {
         IfaceManagerService {
             phy_manager: phy_manager.clone(),
@@ -132,6 +138,7 @@ impl IfaceManagerService {
             aps: Vec::new(),
             saved_networks: saved_networks,
             fsm_futures: FuturesUnordered::new(),
+            cobalt_api,
         }
     }
 
@@ -270,6 +277,7 @@ impl IfaceManagerService {
     fn disconnect(
         &mut self,
         network_id: ap_types::NetworkIdentifier,
+        reason: client_types::DisconnectReason,
     ) -> BoxFuture<'static, Result<(), Error>> {
         // Find the client interface associated with the given network config and disconnect from
         // the network.
@@ -285,7 +293,7 @@ impl IfaceManagerService {
 
                 let (responder, receiver) = oneshot::channel();
                 match client.client_state_machine.as_mut() {
-                    Some(state_machine) => match state_machine.disconnect(responder) {
+                    Some(state_machine) => match state_machine.disconnect(reason, responder) {
                         Ok(()) => {}
                         Err(e) => {
                             client.client_state_machine = None;
@@ -335,7 +343,7 @@ impl IfaceManagerService {
         let mut client_iface = self.get_client(None).await?;
 
         // Set the new config on this client
-        client_iface.config = Some(connect_req.network.clone());
+        client_iface.config = Some(connect_req.target.network.clone());
 
         // Create the connection request
         let (sender, receiver) = oneshot::channel();
@@ -353,6 +361,7 @@ impl IfaceManagerService {
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
                     Some((connect_req, sender)),
+                    self.cobalt_api.clone(),
                 )
                 .await?;
                 client_iface.client_state_machine = Some(new_client);
@@ -437,11 +446,12 @@ impl IfaceManagerService {
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
                     Some((connect_req.clone(), sender)),
+                    self.cobalt_api.clone(),
                 )
                 .await?;
 
                 self.fsm_futures.push(fut);
-                client.config = Some(connect_req.network);
+                client.config = Some(connect_req.target.network);
                 client.client_state_machine = Some(new_client);
                 break;
             }
@@ -478,6 +488,7 @@ impl IfaceManagerService {
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
                     None,
+                    self.cobalt_api.clone(),
                 )
                 .await?;
 
@@ -523,7 +534,10 @@ impl IfaceManagerService {
         }
     }
 
-    fn stop_client_connections(&mut self) -> BoxFuture<'static, Result<(), Error>> {
+    fn stop_client_connections(
+        &mut self,
+        reason: client_types::DisconnectReason,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         let client_ifaces: Vec<ClientIfaceContainer> = self.clients.drain(..).collect();
         let phy_manager = self.phy_manager.clone();
         let update_sender = self.client_update_sender.clone();
@@ -536,7 +550,7 @@ impl IfaceManagerService {
                     None => continue,
                 };
                 let (responder, receiver) = oneshot::channel();
-                match client.disconnect(responder) {
+                match client.disconnect(reason, responder) {
                     Ok(()) => {}
                     Err(e) => error!("failed to issue disconnect: {:?}", e),
                 }
@@ -685,7 +699,7 @@ async fn initiate_network_selection(
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     network_selector: Arc<NetworkSelector>,
     network_selection_futures: &mut FuturesUnordered<
-        BoxFuture<'static, Option<client_types::ConnectRequest>>,
+        BoxFuture<'static, Option<client_types::ConnectionCandidate>>,
     >,
 ) {
     if !iface_manager.idle_clients().is_empty()
@@ -704,16 +718,20 @@ async fn initiate_network_selection(
 }
 
 async fn handle_network_selection_results(
-    network_selection_result: Option<client_types::ConnectRequest>,
+    network_selection_result: Option<client_types::ConnectionCandidate>,
     iface_manager: &mut IfaceManagerService,
     reconnect_monitor_interval: &mut i64,
     connectivity_monitor_timer: &mut fasync::Interval,
 ) {
-    if let Some(connect_req) = network_selection_result {
+    if let Some(connection_candidate) = network_selection_result {
         *reconnect_monitor_interval = 1;
 
-        let mut idle_clients = iface_manager.idle_clients();
+        let connect_req = client_types::ConnectRequest {
+            target: connection_candidate,
+            reason: client_types::ConnectReason::IdleInterfaceAutoconnect,
+        };
 
+        let mut idle_clients = iface_manager.idle_clients();
         if !idle_clients.is_empty() {
             // Any client interfaces that have recently presented as idle will be
             // reconnected.
@@ -741,7 +759,7 @@ async fn handle_terminated_state_machine(
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     selector: Arc<NetworkSelector>,
     network_selection_futures: &mut FuturesUnordered<
-        BoxFuture<'static, Option<client_types::ConnectRequest>>,
+        BoxFuture<'static, Option<client_types::ConnectionCandidate>>,
     >,
 ) {
     match terminated_fsm.role {
@@ -821,8 +839,8 @@ pub(crate) async fn serve_iface_manager_requests(
             },
             req = requests.select_next_some() => {
                 match req {
-                    IfaceManagerRequest::Disconnect(DisconnectRequest { network_id, responder }) => {
-                        let fut = iface_manager.disconnect(network_id);
+                    IfaceManagerRequest::Disconnect(DisconnectRequest { network_id, responder, reason }) => {
+                        let fut = iface_manager.disconnect(network_id, reason);
                         let disconnect_fut = async move {
                             if responder.send(fut.await).is_err() {
                                 error!("could not respond to DisconnectRequest");
@@ -863,8 +881,8 @@ pub(crate) async fn serve_iface_manager_requests(
                             error!("could not respond to ScanRequest");
                         }
                     }
-                    IfaceManagerRequest::StopClientConnections(StopClientConnectionsRequest { responder }) => {
-                        let fut = iface_manager.stop_client_connections();
+                    IfaceManagerRequest::StopClientConnections(StopClientConnectionsRequest { reason, responder }) => {
+                        let fut = iface_manager.stop_client_connections(reason);
                         let stop_client_connections_fut = async move {
                             if responder.send(fut.await).is_err() {
                                 error!("could not respond to StopClientConnectionsRequest");
@@ -915,11 +933,15 @@ mod tests {
             client::{scan::ScanResultUpdate, types as client_types},
             config_management::{Credential, NetworkIdentifier, SecurityType},
             mode_management::phy_manager::{self, PhyManagerError},
-            util::{cobalt::create_mock_cobalt_sender, logger::set_logger_for_test},
+            util::{
+                cobalt::{create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver},
+                logger::set_logger_for_test,
+            },
         },
         async_trait::async_trait,
         eui48::MacAddress,
         fidl::endpoints::create_proxy,
+        fidl_fuchsia_cobalt::CobaltEvent,
         fidl_fuchsia_stash as fidl_stash,
         fuchsia_async::Executor,
         fuchsia_inspect::{self as inspect},
@@ -957,10 +979,13 @@ mod tests {
         let credential = Credential::Password(password.as_bytes().to_vec());
 
         client_types::ConnectRequest {
-            network,
-            credential,
-            observed_in_passive_scan: Some(true),
-            bss: None,
+            target: client_types::ConnectionCandidate {
+                network,
+                credential,
+                observed_in_passive_scan: Some(true),
+                bss: None,
+            },
+            reason: client_types::ConnectReason::FidlConnectRequest,
         }
     }
 
@@ -985,6 +1010,8 @@ mod tests {
         pub ap_update_receiver: mpsc::UnboundedReceiver<listener::ApMessage>,
         pub saved_networks: Arc<SavedNetworksManager>,
         pub node: inspect::Node,
+        pub cobalt_api: CobaltSender,
+        pub cobalt_receiver: mpsc::Receiver<CobaltEvent>,
     }
 
     fn rand_string() -> String {
@@ -1008,6 +1035,7 @@ mod tests {
         let saved_networks = Arc::new(saved_networks);
         let inspector = inspect::Inspector::new();
         let node = inspector.root().create_child("phy_manager");
+        let (cobalt_api, cobalt_receiver) = create_mock_cobalt_sender_and_receiver();
 
         TestValues {
             device_service_proxy: proxy,
@@ -1018,6 +1046,8 @@ mod tests {
             ap_update_receiver: ap_receiver,
             saved_networks: saved_networks,
             node: node,
+            cobalt_api,
+            cobalt_receiver,
         }
     }
 
@@ -1130,7 +1160,11 @@ mod tests {
             let _ = responder.send(());
             Ok(())
         }
-        fn disconnect(&mut self, responder: oneshot::Sender<()>) -> Result<(), Error> {
+        fn disconnect(
+            &mut self,
+            _reason: client_types::DisconnectReason,
+            responder: oneshot::Sender<()>,
+        ) -> Result<(), Error> {
             if self.disconnect_ok {
                 let _ = responder.send(());
                 Ok(())
@@ -1202,6 +1236,7 @@ mod tests {
             test_values.ap_update_sender.clone(),
             test_values.device_service_proxy.clone(),
             test_values.saved_networks.clone(),
+            test_values.cobalt_api.clone(),
         );
 
         if configured {
@@ -1257,6 +1292,7 @@ mod tests {
             test_values.ap_update_sender.clone(),
             test_values.device_service_proxy.clone(),
             test_values.saved_networks.clone(),
+            test_values.cobalt_api.clone(),
         );
 
         iface_manager.aps.push(ap_container);
@@ -1327,6 +1363,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.cobalt_api,
         );
         let scan_fut = iface_manager.scan(fidl_fuchsia_wlan_sme::ScanRequest::Passive(
             fidl_fuchsia_wlan_sme::PassiveScanRequest {},
@@ -1593,6 +1630,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.cobalt_api,
         );
 
         // Call connect on the IfaceManager
@@ -1653,7 +1691,8 @@ mod tests {
                 ssid: TEST_SSID.as_bytes().to_vec(),
                 type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
             };
-            let disconnect_fut = iface_manager.disconnect(network_id);
+            let disconnect_fut = iface_manager
+                .disconnect(network_id, client_types::DisconnectReason::NetworkUnsaved);
 
             // Ensure that disconnect returns a successful response.
             pin_mut!(disconnect_fut);
@@ -1687,7 +1726,8 @@ mod tests {
                 ssid: "nonexistent_ssid".as_bytes().to_vec(),
                 type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
             };
-            let disconnect_fut = iface_manager.disconnect(network_id);
+            let disconnect_fut = iface_manager
+                .disconnect(network_id, client_types::DisconnectReason::NetworkUnsaved);
 
             // Ensure that the request returns immediately.
             pin_mut!(disconnect_fut);
@@ -1716,6 +1756,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.cobalt_api,
         );
 
         // Call disconnect on the IfaceManager
@@ -1723,7 +1764,8 @@ mod tests {
             ssid: "nonexistent_ssid".as_bytes().to_vec(),
             type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
         };
-        let disconnect_fut = iface_manager.disconnect(network_id);
+        let disconnect_fut =
+            iface_manager.disconnect(network_id, client_types::DisconnectReason::NetworkUnsaved);
 
         // Verify that disconnect returns immediately.
         pin_mut!(disconnect_fut);
@@ -1751,7 +1793,8 @@ mod tests {
             ssid: TEST_SSID.as_bytes().to_vec(),
             type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
         };
-        let disconnect_fut = iface_manager.disconnect(network_id);
+        let disconnect_fut =
+            iface_manager.disconnect(network_id, client_types::DisconnectReason::NetworkUnsaved);
 
         pin_mut!(disconnect_fut);
         assert_variant!(exec.run_until_stalled(&mut disconnect_fut), Poll::Ready(Err(_)));
@@ -1774,7 +1817,9 @@ mod tests {
 
         {
             // Stop all client connections.
-            let stop_fut = iface_manager.stop_client_connections();
+            let stop_fut = iface_manager.stop_client_connections(
+                client_types::DisconnectReason::FidlStopClientConnectionsRequest,
+            );
             pin_mut!(stop_fut);
             assert_variant!(exec.run_until_stalled(&mut stop_fut), Poll::Ready(Ok(_)));
         }
@@ -1811,7 +1856,9 @@ mod tests {
 
         {
             // Call stop_client_connections.
-            let stop_fut = iface_manager.stop_client_connections();
+            let stop_fut = iface_manager.stop_client_connections(
+                client_types::DisconnectReason::FidlStopClientConnectionsRequest,
+            );
             pin_mut!(stop_fut);
             assert_variant!(exec.run_until_stalled(&mut stop_fut), Poll::Ready(Ok(_)));
         }
@@ -1837,10 +1884,13 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.cobalt_api,
         );
 
         // Call stop_client_connections.
-        let stop_fut = iface_manager.stop_client_connections();
+        let stop_fut = iface_manager.stop_client_connections(
+            client_types::DisconnectReason::FidlStopClientConnectionsRequest,
+        );
 
         // Ensure stop_client_connections returns immediately and is successful.
         pin_mut!(stop_fut);
@@ -1870,7 +1920,9 @@ mod tests {
 
         {
             // Stop all client connections.
-            let stop_fut = iface_manager.stop_client_connections();
+            let stop_fut = iface_manager.stop_client_connections(
+                client_types::DisconnectReason::FidlStopClientConnectionsRequest,
+            );
             pin_mut!(stop_fut);
             assert_variant!(exec.run_until_stalled(&mut stop_fut), Poll::Ready(Ok(_)));
         }
@@ -1898,7 +1950,9 @@ mod tests {
 
         {
             // Stop all client connections.
-            let stop_fut = iface_manager.stop_client_connections();
+            let stop_fut = iface_manager.stop_client_connections(
+                client_types::DisconnectReason::FidlStopClientConnectionsRequest,
+            );
             pin_mut!(stop_fut);
             assert_variant!(exec.run_until_stalled(&mut stop_fut), Poll::Ready(Err(_)));
         }
@@ -2015,6 +2069,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.cobalt_api,
         );
 
         let start_fut = iface_manager.start_client_connections();
@@ -2100,6 +2155,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.cobalt_api,
         );
 
         // Call start_ap.
@@ -2206,6 +2262,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.cobalt_api,
         );
         let fut =
             iface_manager.stop_ap(TEST_SSID.as_bytes().to_vec(), TEST_PASSWORD.as_bytes().to_vec());
@@ -2315,6 +2372,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.cobalt_api,
         );
 
         let fut = iface_manager.stop_all_aps();
@@ -2443,6 +2501,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.cobalt_api,
         );
 
         {
@@ -2521,6 +2580,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.cobalt_api,
         );
 
         {
@@ -2587,6 +2647,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.cobalt_api,
         );
 
         {
@@ -2851,6 +2912,7 @@ mod tests {
                 ssid: TEST_SSID.as_bytes().to_vec(),
                 type_: fidl_fuchsia_wlan_policy::SecurityType::Wpa,
             },
+            reason: client_types::DisconnectReason::NetworkUnsaved,
             responder: ack_sender,
         };
         let req = IfaceManagerRequest::Disconnect(req);
@@ -3040,7 +3102,11 @@ mod tests {
 
     #[async_trait]
     impl IfaceManagerApi for FakeIfaceManagerRequester {
-        async fn disconnect(&mut self, _network_id: types::NetworkIdentifier) -> Result<(), Error> {
+        async fn disconnect(
+            &mut self,
+            _network_id: types::NetworkIdentifier,
+            _reason: client_types::DisconnectReason,
+        ) -> Result<(), Error> {
             unimplemented!()
         }
 
@@ -3075,7 +3141,10 @@ mod tests {
             Err(format_err!("scan failed"))
         }
 
-        async fn stop_client_connections(&mut self) -> Result<(), Error> {
+        async fn stop_client_connections(
+            &mut self,
+            _reason: client_types::DisconnectReason,
+        ) -> Result<(), Error> {
             unimplemented!()
         }
 
@@ -3115,6 +3184,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks.clone(),
+            test_values.cobalt_api,
         );
 
         // Create other components to run the service.
@@ -3209,6 +3279,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks.clone(),
+            test_values.cobalt_api,
         );
 
         // Report a new interface.
@@ -3278,6 +3349,7 @@ mod tests {
                     test_values.ap_update_sender,
                     test_values.device_service_proxy,
                     test_values.saved_networks.clone(),
+                    test_values.cobalt_api,
                 );
                 (iface_manager, None)
             }
@@ -3320,6 +3392,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks.clone(),
+            test_values.cobalt_api,
         );
 
         // Make start client connections request
@@ -3354,11 +3427,15 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks.clone(),
+            test_values.cobalt_api,
         );
 
         // Make stop client connections request
         let (stop_sender, stop_receiver) = oneshot::channel();
-        let req = StopClientConnectionsRequest { responder: stop_sender };
+        let req = StopClientConnectionsRequest {
+            responder: stop_sender,
+            reason: client_types::DisconnectReason::FidlStopClientConnectionsRequest,
+        };
         let req = IfaceManagerRequest::StopClientConnections(req);
 
         run_service_test(
@@ -3565,6 +3642,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks.clone(),
+            test_values.cobalt_api,
         );
 
         // Update the saved networks with knowledge of the test SSID and credentials.
@@ -3684,8 +3762,9 @@ mod tests {
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
 
         // Create an empty FuturesUnordered to hold the network selection request.
-        let mut network_selection_futures =
-            FuturesUnordered::<BoxFuture<'static, Option<client_types::ConnectRequest>>>::new();
+        let mut network_selection_futures = FuturesUnordered::<
+            BoxFuture<'static, Option<client_types::ConnectionCandidate>>,
+        >::new();
 
         // Create a network selector to be used by the network selection request.
         let selector = Arc::new(NetworkSelector::new(

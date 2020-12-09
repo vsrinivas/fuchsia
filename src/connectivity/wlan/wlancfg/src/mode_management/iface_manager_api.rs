@@ -18,7 +18,11 @@ use {
 pub(crate) trait IfaceManagerApi {
     /// Finds the client iface with the given network configuration, disconnects from the network,
     /// and removes the client's network configuration information.
-    async fn disconnect(&mut self, network_id: ap_types::NetworkIdentifier) -> Result<(), Error>;
+    async fn disconnect(
+        &mut self,
+        network_id: ap_types::NetworkIdentifier,
+        reason: client_types::DisconnectReason,
+    ) -> Result<(), Error>;
 
     /// Selects a client iface, ensures that a ClientSmeProxy and client connectivity state machine
     /// exists for the iface, and then issues a connect request to the client connectivity state
@@ -50,7 +54,10 @@ pub(crate) trait IfaceManagerApi {
 
     /// Disconnects all configured clients and disposes of all client ifaces before instructing
     /// the PhyManager to stop client connections.
-    async fn stop_client_connections(&mut self) -> Result<(), Error>;
+    async fn stop_client_connections(
+        &mut self,
+        reason: client_types::DisconnectReason,
+    ) -> Result<(), Error>;
 
     /// Passes the call to start client connections through to the PhyManager.
     async fn start_client_connections(&mut self) -> Result<(), Error>;
@@ -72,9 +79,13 @@ pub(crate) struct IfaceManager {
 
 #[async_trait]
 impl IfaceManagerApi for IfaceManager {
-    async fn disconnect(&mut self, network_id: ap_types::NetworkIdentifier) -> Result<(), Error> {
+    async fn disconnect(
+        &mut self,
+        network_id: ap_types::NetworkIdentifier,
+        reason: client_types::DisconnectReason,
+    ) -> Result<(), Error> {
         let (responder, receiver) = oneshot::channel();
-        let req = DisconnectRequest { network_id, responder };
+        let req = DisconnectRequest { network_id, responder, reason };
         self.sender.try_send(IfaceManagerRequest::Disconnect(req))?;
 
         receiver.await?
@@ -132,9 +143,12 @@ impl IfaceManagerApi for IfaceManager {
         receiver.await?
     }
 
-    async fn stop_client_connections(&mut self) -> Result<(), Error> {
+    async fn stop_client_connections(
+        &mut self,
+        reason: client_types::DisconnectReason,
+    ) -> Result<(), Error> {
         let (responder, receiver) = oneshot::channel();
-        let req = StopClientConnectionsRequest { responder };
+        let req = StopClientConnectionsRequest { responder, reason };
         self.sender.try_send(IfaceManagerRequest::StopClientConnections(req))?;
         receiver.await?
     }
@@ -268,6 +282,7 @@ mod tests {
                 IfaceManagerRequest::Disconnect(DisconnectRequest { responder, .. })
                 | IfaceManagerRequest::StopClientConnections(StopClientConnectionsRequest {
                     responder,
+                    ..
                 })
                 | IfaceManagerRequest::StartClientConnections(StartClientConnectionsRequest {
                     responder,
@@ -309,7 +324,8 @@ mod tests {
             ssid: "foo".as_bytes().to_vec(),
             type_: fidl_policy::SecurityType::None,
         };
-        let disconnect_fut = test_values.iface_manager.disconnect(req.clone());
+        let req_reason = client_types::DisconnectReason::NetworkUnsaved;
+        let disconnect_fut = test_values.iface_manager.disconnect(req.clone(), req_reason);
         pin_mut!(disconnect_fut);
 
         assert_variant!(test_values.exec.run_until_stalled(&mut disconnect_fut), Poll::Pending);
@@ -321,9 +337,10 @@ mod tests {
         assert_variant!(
             test_values.exec.run_until_stalled(&mut next_message),
             Poll::Ready(Some(IfaceManagerRequest::Disconnect(DisconnectRequest {
-                network_id, responder
+                network_id, responder, reason
             }))) => {
                 assert_eq!(network_id, req);
+                assert_eq!(reason, req_reason);
                 responder.send(Ok(())).expect("failed to send disconnect response");
             }
         );
@@ -346,7 +363,9 @@ mod tests {
             ssid: "foo".as_bytes().to_vec(),
             type_: fidl_policy::SecurityType::None,
         };
-        let disconnect_fut = test_values.iface_manager.disconnect(req.clone());
+        let disconnect_fut = test_values
+            .iface_manager
+            .disconnect(req.clone(), client_types::DisconnectReason::NetworkUnsaved);
         pin_mut!(disconnect_fut);
 
         let service_fut =
@@ -381,13 +400,16 @@ mod tests {
 
         // Issue a connect command and wait for the command to be sent.
         let req = client_types::ConnectRequest {
-            network: fidl_policy::NetworkIdentifier {
-                ssid: "foo".as_bytes().to_vec(),
-                type_: fidl_policy::SecurityType::None,
+            target: client_types::ConnectionCandidate {
+                network: fidl_policy::NetworkIdentifier {
+                    ssid: "foo".as_bytes().to_vec(),
+                    type_: fidl_policy::SecurityType::None,
+                },
+                credential: Credential::None,
+                bss: None,
+                observed_in_passive_scan: None,
             },
-            credential: Credential::None,
-            bss: None,
-            observed_in_passive_scan: None,
+            reason: client_types::ConnectReason::FidlConnectRequest,
         };
         let connect_fut = test_values.iface_manager.connect(req.clone());
         pin_mut!(connect_fut);
@@ -421,13 +443,16 @@ mod tests {
 
         // Issue a connect command and wait for the command to be sent.
         let req = client_types::ConnectRequest {
-            network: fidl_policy::NetworkIdentifier {
-                ssid: "foo".as_bytes().to_vec(),
-                type_: fidl_policy::SecurityType::None,
+            target: client_types::ConnectionCandidate {
+                network: fidl_policy::NetworkIdentifier {
+                    ssid: "foo".as_bytes().to_vec(),
+                    type_: fidl_policy::SecurityType::None,
+                },
+                credential: Credential::None,
+                bss: None,
+                observed_in_passive_scan: None,
             },
-            credential: Credential::None,
-            bss: None,
-            observed_in_passive_scan: None,
+            reason: client_types::ConnectReason::FidlConnectRequest,
         };
         let connect_fut = test_values.iface_manager.connect(req.clone());
         pin_mut!(connect_fut);
@@ -783,7 +808,9 @@ mod tests {
         let mut test_values = test_setup();
 
         // Request a scan
-        let stop_fut = test_values.iface_manager.stop_client_connections();
+        let stop_fut = test_values.iface_manager.stop_client_connections(
+            client_types::DisconnectReason::FidlStopClientConnectionsRequest,
+        );
         pin_mut!(stop_fut);
         assert_variant!(test_values.exec.run_until_stalled(&mut stop_fut), Poll::Pending);
 
@@ -794,8 +821,9 @@ mod tests {
         assert_variant!(
             test_values.exec.run_until_stalled(&mut next_message),
             Poll::Ready(Some(IfaceManagerRequest::StopClientConnections(StopClientConnectionsRequest{
-                responder
+                responder, reason
             }))) => {
+                assert_eq!(reason, client_types::DisconnectReason::FidlStopClientConnectionsRequest);
                 responder.send(Ok(())).expect("failed sending stop client connections response");
             }
         );
@@ -811,7 +839,9 @@ mod tests {
         let mut test_values = test_setup();
 
         // Request a scan
-        let stop_fut = test_values.iface_manager.stop_client_connections();
+        let stop_fut = test_values.iface_manager.stop_client_connections(
+            client_types::DisconnectReason::FidlStopClientConnectionsRequest,
+        );
         pin_mut!(stop_fut);
         assert_variant!(test_values.exec.run_until_stalled(&mut stop_fut), Poll::Pending);
 

@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::mode_management::{iface_manager_api::IfaceManagerApi, phy_manager::PhyManagerApi},
+    crate::{
+        client::types as client_types,
+        mode_management::{iface_manager_api::IfaceManagerApi, phy_manager::PhyManagerApi},
+    },
     anyhow::{bail, Context, Error},
     fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherProxy,
     fidl_fuchsia_wlan_device_service::{DeviceServiceProxy, SetCountryRequest},
@@ -47,7 +50,9 @@ impl<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> RegulatoryManager<I, P> {
 
             // Stop all clients and APs in preparation for setting the country code.
             let mut iface_manager = self.iface_manager.lock().await;
-            iface_manager.stop_client_connections().await?;
+            iface_manager
+                .stop_client_connections(client_types::DisconnectReason::RegulatoryRegionChange)
+                .await?;
             iface_manager.stop_all_aps().await?;
 
             let phy_ids = self.phy_manager.lock().await.get_phy_ids();
@@ -875,6 +880,7 @@ mod tests {
         async fn disconnect(
             &mut self,
             _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+            _reason: types::DisconnectReason,
         ) -> Result<(), Error> {
             unimplemented!();
         }
@@ -909,7 +915,10 @@ mod tests {
             unimplemented!();
         }
 
-        async fn stop_client_connections(&mut self) -> Result<(), Error> {
+        async fn stop_client_connections(
+            &mut self,
+            _reason: types::DisconnectReason,
+        ) -> Result<(), Error> {
             self.stop_client_connections_response_stream
                 .next()
                 .await

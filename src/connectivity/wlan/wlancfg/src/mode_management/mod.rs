@@ -8,6 +8,7 @@ use {
         util::listener,
     },
     anyhow::Error,
+    fuchsia_cobalt::CobaltSender,
     futures::{channel::mpsc, lock::Mutex, Future},
     std::sync::Arc,
     void::Void,
@@ -25,6 +26,7 @@ pub(crate) fn create_iface_manager(
     dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
     saved_networks: Arc<SavedNetworksManager>,
     network_selector: Arc<NetworkSelector>,
+    cobalt_api: CobaltSender,
 ) -> (Arc<Mutex<iface_manager_api::IfaceManager>>, impl Future<Output = Result<Void, Error>>) {
     let (sender, receiver) = mpsc::channel(0);
     let iface_manager_sender = Arc::new(Mutex::new(iface_manager_api::IfaceManager { sender }));
@@ -34,6 +36,7 @@ pub(crate) fn create_iface_manager(
         ap_update_sender,
         dev_svc_proxy,
         saved_networks,
+        cobalt_api,
     );
     let iface_manager_service = iface_manager::serve_iface_manager_requests(
         iface_manager,

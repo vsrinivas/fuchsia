@@ -15,6 +15,7 @@ use {
 #[derive(Debug)]
 pub(crate) struct DisconnectRequest {
     pub network_id: ap_types::NetworkIdentifier,
+    pub reason: client_types::DisconnectReason,
     pub responder: oneshot::Sender<Result<(), Error>>,
 }
 
@@ -55,6 +56,7 @@ pub(crate) struct ScanRequest {
 
 #[derive(Debug)]
 pub(crate) struct StopClientConnectionsRequest {
+    pub reason: client_types::DisconnectReason,
     pub responder: oneshot::Sender<Result<(), Error>>,
 }
 

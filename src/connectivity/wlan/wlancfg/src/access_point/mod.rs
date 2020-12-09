@@ -386,7 +386,11 @@ mod tests {
 
     #[async_trait]
     impl IfaceManagerApi for FakeIfaceManager {
-        async fn disconnect(&mut self, _network_id: types::NetworkIdentifier) -> Result<(), Error> {
+        async fn disconnect(
+            &mut self,
+            _network_id: types::NetworkIdentifier,
+            _reason: client_types::DisconnectReason,
+        ) -> Result<(), Error> {
             unimplemented!()
         }
 
@@ -420,7 +424,10 @@ mod tests {
             unimplemented!()
         }
 
-        async fn stop_client_connections(&mut self) -> Result<(), Error> {
+        async fn stop_client_connections(
+            &mut self,
+            _reason: client_types::DisconnectReason,
+        ) -> Result<(), Error> {
             unimplemented!()
         }
 

@@ -355,6 +355,7 @@ mod tests {
         async fn disconnect(
             &mut self,
             _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+            _reason: types::DisconnectReason,
         ) -> Result<(), Error> {
             unimplemented!()
         }
@@ -391,7 +392,10 @@ mod tests {
             Ok(local)
         }
 
-        async fn stop_client_connections(&mut self) -> Result<(), Error> {
+        async fn stop_client_connections(
+            &mut self,
+            _reason: types::DisconnectReason,
+        ) -> Result<(), Error> {
             unimplemented!()
         }
 

@@ -202,7 +202,8 @@ fn main() -> Result<(), Error> {
 
     let saved_networks =
         Arc::new(executor.run_singlethreaded(SavedNetworksManager::new(cobalt_api.clone()))?);
-    let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks), cobalt_api));
+    let network_selector =
+        Arc::new(NetworkSelector::new(Arc::clone(&saved_networks), cobalt_api.clone()));
 
     let phy_manager = Arc::new(Mutex::new(PhyManager::new(
         wlan_svc.clone(),
@@ -223,6 +224,7 @@ fn main() -> Result<(), Error> {
         wlan_svc.clone(),
         saved_networks.clone(),
         network_selector.clone(),
+        cobalt_api.clone(),
     );
 
     let legacy_client = IfaceRef::new();

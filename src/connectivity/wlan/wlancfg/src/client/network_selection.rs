@@ -170,7 +170,7 @@ impl NetworkSelector {
         &self,
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
         ignore_list: &Vec<types::NetworkIdentifier>,
-    ) -> Option<types::ConnectRequest> {
+    ) -> Option<types::ConnectionCandidate> {
         self.perform_scan(iface_manager.clone()).await;
         let saved_networks = load_saved_networks(Arc::clone(&self.saved_network_manager)).await;
         let scan_result_guard = self.scan_result_cache.lock().await;
@@ -289,7 +289,7 @@ impl ScanResultUpdate for NetworkSelectorScanUpdater {
 fn select_best_connection_candidate<'a>(
     bss_list: Vec<InternalBss<'a>>,
     ignore_list: &Vec<types::NetworkIdentifier>,
-) -> Option<(types::ConnectRequest, types::WlanChan, types::Bssid)> {
+) -> Option<(types::ConnectionCandidate, types::WlanChan, types::Bssid)> {
     bss_list
         .into_iter()
         .filter(|bss| {
@@ -323,7 +323,7 @@ fn select_best_connection_candidate<'a>(
         })
         .map(|bss| {
             (
-                types::ConnectRequest {
+                types::ConnectionCandidate {
                     network: bss.network_id,
                     credential: bss.network_info.credential,
                     observed_in_passive_scan: Some(bss.bss_info.observed_in_passive_scan),
@@ -338,11 +338,11 @@ fn select_best_connection_candidate<'a>(
 /// If a BSS was discovered via a passive scan, we need to perform an active scan on it to discover
 /// all the information potentially needed by the SME layer.
 async fn augment_bss_with_active_scan(
-    selected_network: types::ConnectRequest,
+    selected_network: types::ConnectionCandidate,
     channel: types::WlanChan,
     bssid: types::Bssid,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-) -> types::ConnectRequest {
+) -> types::ConnectionCandidate {
     match selected_network.observed_in_passive_scan {
         Some(true) => {
             info!("Performing directed active scan on selected network");
@@ -359,7 +359,10 @@ async fn augment_bss_with_active_scan(
                     {
                         if let Some(bss) = network.entries.drain(..).find(|bss| bss.bssid == bssid)
                         {
-                            return types::ConnectRequest { bss: bss.bss_desc, ..selected_network };
+                            return types::ConnectionCandidate {
+                                bss: bss.bss_desc,
+                                ..selected_network
+                            };
                         }
                     }
                     info!("BSS info will lack active scan augmentation, proceeding anyway.");
@@ -506,6 +509,7 @@ mod tests {
         async fn disconnect(
             &mut self,
             _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+            _reason: types::DisconnectReason,
         ) -> Result<(), Error> {
             unimplemented!()
         }
@@ -542,7 +546,10 @@ mod tests {
             Ok(local)
         }
 
-        async fn stop_client_connections(&mut self) -> Result<(), Error> {
+        async fn stop_client_connections(
+            &mut self,
+            _reason: types::DisconnectReason,
+        ) -> Result<(), Error> {
             unimplemented!()
         }
 
@@ -893,7 +900,7 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
             Some((
-                types::ConnectRequest {
+                types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
                     bss: bss_info1.bss_desc.clone(),
@@ -915,7 +922,7 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
             Some((
-                types::ConnectRequest {
+                types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
                     bss: networks[2].bss_info.bss_desc.clone(),
@@ -969,7 +976,7 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
             Some((
-                types::ConnectRequest {
+                types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
                     bss: bss_info1.bss_desc.clone(),
@@ -989,7 +996,7 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
             Some((
-                types::ConnectRequest {
+                types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
                     bss: bss_info2.bss_desc.clone(),
@@ -1009,7 +1016,7 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
             Some((
-                types::ConnectRequest {
+                types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
                     bss: bss_info1.bss_desc.clone(),
@@ -1089,7 +1096,7 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
             Some((
-                types::ConnectRequest {
+                types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
                     bss: bss_info3.bss_desc.clone(),
@@ -1111,7 +1118,7 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
             Some((
-                types::ConnectRequest {
+                types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
                     bss: networks[0].bss_info.bss_desc.clone(),
@@ -1165,7 +1172,7 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![]),
             Some((
-                types::ConnectRequest {
+                types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
                     bss: bss_info2.bss_desc.clone(),
@@ -1180,7 +1187,7 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![test_id_2.clone()]),
             Some((
-                types::ConnectRequest {
+                types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
                     bss: bss_info1.bss_desc.clone(),
@@ -1305,7 +1312,7 @@ mod tests {
             channel: generate_channel(36),
             ..generate_random_bss()
         };
-        let connect_req = types::ConnectRequest {
+        let connect_req = types::ConnectionCandidate {
             network: test_id_1.clone(),
             credential: credential_1.clone(),
             bss: bss_info1.bss_desc.clone(),
@@ -1342,7 +1349,7 @@ mod tests {
             channel: generate_channel(36),
             ..generate_random_bss()
         };
-        let connect_req = types::ConnectRequest {
+        let connect_req = types::ConnectionCandidate {
             network: test_id_1.clone(),
             credential: credential_1.clone(),
             bss: bss_info1.bss_desc.clone(),
@@ -1417,7 +1424,7 @@ mod tests {
         );
 
         // The connect_req comes out the other side with the new bss_desc
-        assert_eq!(exec.run_singlethreaded(fut), types::ConnectRequest{
+        assert_eq!(exec.run_singlethreaded(fut), types::ConnectionCandidate{
             bss: new_bss_desc,
             // observed_in_passive_scan should still be true, since the network was found in a
             // passive scan prior to the directed active scan augmentation.
@@ -1586,7 +1593,7 @@ mod tests {
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(
             results,
-            Some(types::ConnectRequest {
+            Some(types::ConnectionCandidate {
                 network: test_id_1.clone(),
                 credential: credential_1.clone(),
                 bss: bss_desc1_active.clone(),
@@ -1645,7 +1652,7 @@ mod tests {
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(
             results,
-            Some(types::ConnectRequest {
+            Some(types::ConnectionCandidate {
                 network: test_id_2.clone(),
                 credential: credential_2.clone(),
                 bss: bss_desc2_active.clone(),
@@ -1721,7 +1728,7 @@ mod tests {
             network_selector
                 .find_best_connection_candidate(test_values.iface_manager.clone(), &vec![])
                 .await,
-            Some(types::ConnectRequest {
+            Some(types::ConnectionCandidate {
                 network: id.clone(),
                 credential,
                 bss: mixed_scan_results[0].entries[0].bss_desc.clone(),

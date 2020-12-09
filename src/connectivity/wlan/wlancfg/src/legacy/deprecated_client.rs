@@ -116,6 +116,7 @@ mod tests {
         async fn disconnect(
             &mut self,
             _network_id: ap_types::NetworkIdentifier,
+            _reason: client_types::DisconnectReason,
         ) -> Result<(), Error> {
             unimplemented!()
         }
@@ -150,7 +151,10 @@ mod tests {
             unimplemented!()
         }
 
-        async fn stop_client_connections(&mut self) -> Result<(), Error> {
+        async fn stop_client_connections(
+            &mut self,
+            _reason: client_types::DisconnectReason,
+        ) -> Result<(), Error> {
             unimplemented!()
         }
 

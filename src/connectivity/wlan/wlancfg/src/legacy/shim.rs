@@ -213,10 +213,13 @@ async fn connect(
     };
 
     let connect_req = client_types::ConnectRequest {
-        network: fidl_policy::NetworkIdentifier::from(network_id),
-        credential,
-        bss: None,
-        observed_in_passive_scan: None,
+        target: client_types::ConnectionCandidate {
+            network: fidl_policy::NetworkIdentifier::from(network_id),
+            credential,
+            bss: None,
+            observed_in_passive_scan: None,
+        },
+        reason: client_types::ConnectReason::FidlConnectRequest,
     };
 
     // Get the state machine to begin connecting to the desired network.
@@ -260,7 +263,10 @@ async fn disconnect(iface: IfaceRef) -> legacy::Error {
         Err(e) => return e,
     };
     let mut iface_manager = iface.iface_manager.lock().await;
-    match iface_manager.stop_client_connections().await {
+    match iface_manager
+        .stop_client_connections(client_types::DisconnectReason::FidlStopClientConnectionsRequest)
+        .await
+    {
         Ok(()) => {}
         Err(e) => return error_message(&e.to_string()),
     }
@@ -561,6 +567,7 @@ mod tests {
         async fn disconnect(
             &mut self,
             _network_id: fidl_fuchsia_wlan_policy::NetworkIdentifier,
+            _reason: client_types::DisconnectReason,
         ) -> Result<(), anyhow::Error> {
             if !self.disconnect_succeeds {
                 return Err(anyhow::format_err!("failing to disconnect"));
@@ -610,7 +617,10 @@ mod tests {
             Ok(local)
         }
 
-        async fn stop_client_connections(&mut self) -> Result<(), anyhow::Error> {
+        async fn stop_client_connections(
+            &mut self,
+            _reason: client_types::DisconnectReason,
+        ) -> Result<(), anyhow::Error> {
             if !self.disconnect_succeeds {
                 return Err(anyhow::format_err!("failing to disconnect"));
             }
