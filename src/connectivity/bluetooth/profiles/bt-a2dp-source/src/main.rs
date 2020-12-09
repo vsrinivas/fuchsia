@@ -263,10 +263,10 @@ async fn main() -> Result<(), Error> {
     profile_svc.search(bredr::ServiceClassProfileIdentifier::AudioSink, &ATTRS, results_client)?;
 
     let streams = build_local_streams(opts.source)?;
-    let negotiation = CodecNegotiation::build(vec![
-        build_aac_capability(PREFERRED_BITRATE_AAC)?,
-        build_sbc_capability()?,
-    ])?;
+    let negotiation = CodecNegotiation::build(
+        vec![build_aac_capability(PREFERRED_BITRATE_AAC)?, build_sbc_capability()?],
+        avdtp::EndpointType::Sink,
+    )?;
 
     let mut peers = ConnectedPeers::new(streams, negotiation, profile_svc.clone(), None);
     if let Err(e) = peers.iattach(inspect.root(), "connected") {
@@ -417,7 +417,7 @@ mod tests {
 
         let peers = ConnectedPeers::new(
             stream::Streams::new(),
-            CodecNegotiation::build(vec![]).unwrap(),
+            CodecNegotiation::build(vec![], avdtp::EndpointType::Sink).unwrap(),
             profile_proxy.clone(),
             None,
         );

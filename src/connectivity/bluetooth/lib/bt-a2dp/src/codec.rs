@@ -340,20 +340,25 @@ impl TryFrom<&ServiceCapability> for MediaCodecConfig {
 #[derive(Debug, Clone)]
 pub struct CodecNegotiation {
     preferred_codecs: Vec<MediaCodecConfig>,
+    preferred_direction: avdtp::EndpointType,
 }
 
 impl CodecNegotiation {
     /// Make a new codec negotation set using `codecs` as an ordered list "ideal" capabilities.
     /// Capabilities earlier in the list are preferred if compatable when selecting.
+    /// When selcting endpoings, ones of `direction` are chosen over ones other directions.
     /// Returns an error if any of the capabilities provided can't be negotiated, or aren't codecs.
-    pub fn build(codecs: Vec<ServiceCapability>) -> avdtp::Result<Self> {
+    pub fn build(
+        codecs: Vec<ServiceCapability>,
+        direction: avdtp::EndpointType,
+    ) -> avdtp::Result<Self> {
         let expected = codecs.len();
         let preferred_codecs: Vec<_> =
             codecs.iter().filter_map(|c| MediaCodecConfig::try_from(c).ok()).collect();
         if preferred_codecs.len() != expected {
             return Err(format_err!("Unsupported capability used in CodecNegotiation").into());
         }
-        Ok(Self { preferred_codecs })
+        Ok(Self { preferred_codecs, preferred_direction: direction })
     }
 
     /// Given a set of endpoints, return the endpoint id, and a ServiceCapability representing the
@@ -363,8 +368,12 @@ impl CodecNegotiation {
         &self,
         endpoints: &[avdtp::StreamEndpoint],
     ) -> Option<(ServiceCapability, StreamEndpointId)> {
-        let codecs_with_ids: Vec<_> = endpoints
+        let (preferred_dir, others): (Vec<_>, Vec<_>) = endpoints
             .iter()
+            .partition(|e| e.information().endpoint_type() == &self.preferred_direction);
+        let codecs_with_ids: Vec<_> = preferred_dir
+            .iter()
+            .chain(others.iter())
             .filter_map(|e| Self::get_codec_cap(e).map(|cap| (cap, e.local_id())))
             .collect();
         for preferred in &self.preferred_codecs {
@@ -501,11 +510,15 @@ mod tests {
     }
 
     /// Build an endpoint with the specified type, and local id.
-    fn test_codec_endpoint(id: u8, codec_cap: ServiceCapability) -> StreamEndpoint {
+    fn test_codec_endpoint(
+        id: u8,
+        codec_cap: ServiceCapability,
+        direction: avdtp::EndpointType,
+    ) -> StreamEndpoint {
         avdtp::StreamEndpoint::new(
             id,
             avdtp::MediaType::Audio,
-            avdtp::EndpointType::Sink,
+            direction,
             vec![ServiceCapability::MediaTransport, codec_cap],
         )
         .expect("media endpoint")
@@ -514,16 +527,24 @@ mod tests {
     #[test]
     fn test_codec_negotiation() {
         // It should choose nothing if there aren't any local priorities (there aren't any streams)
-        // of if there is no endpoint to choose from.
-
-        let empty_negotiation = CodecNegotiation::build(vec![]).expect("builds okay");
+        // or if there is no endpoint to choose from.
+        let empty_negotiation =
+            CodecNegotiation::build(vec![], avdtp::EndpointType::Sink).expect("builds okay");
 
         let sbc_seid = 1u8;
         let aac_seid = 2u8;
 
         let remote_endpoints = vec![
-            test_codec_endpoint(aac_seid, test_codec_cap(MediaCodecType::AUDIO_AAC)),
-            test_codec_endpoint(sbc_seid, test_codec_cap(MediaCodecType::AUDIO_SBC)),
+            test_codec_endpoint(
+                aac_seid,
+                test_codec_cap(MediaCodecType::AUDIO_AAC),
+                avdtp::EndpointType::Sink,
+            ),
+            test_codec_endpoint(
+                sbc_seid,
+                test_codec_cap(MediaCodecType::AUDIO_SBC),
+                avdtp::EndpointType::Sink,
+            ),
         ];
 
         assert!(empty_negotiation.select(&remote_endpoints).is_none());
@@ -532,7 +553,8 @@ mod tests {
             test_codec_cap(MediaCodecType::AUDIO_AAC),
             test_codec_cap(MediaCodecType::AUDIO_SBC),
         ];
-        let negotiation = CodecNegotiation::build(priority_order).expect("builds");
+        let negotiation =
+            CodecNegotiation::build(priority_order, avdtp::EndpointType::Sink).expect("builds");
 
         assert!(negotiation.select(&Vec::new()).is_none());
 
@@ -576,6 +598,7 @@ mod tests {
             )
             .expect("aac codec builds")
             .into(),
+            avdtp::EndpointType::Sink,
         );
         let incompatible_aac_endpoints =
             vec![incompatible_aac_endpoint, remote_endpoints[1].as_new()];
@@ -583,6 +606,101 @@ mod tests {
         assert_eq!(
             negotiation.select(&incompatible_aac_endpoints),
             Some((sbc_negotiated.capability(), sbc_seid.try_into().unwrap()))
+        );
+    }
+
+    #[test]
+    fn test_codec_negotiation_none_match() {
+        let priority_order = vec![test_codec_cap(MediaCodecType::AUDIO_SBC)];
+        let negotiation =
+            CodecNegotiation::build(priority_order, avdtp::EndpointType::Sink).expect("builds");
+
+        let aac_seid = 2u8;
+        // When none of the remote endpoints match, it should refuse to choose.
+        let remote_endpoints = vec![test_codec_endpoint(
+            aac_seid,
+            test_codec_cap(MediaCodecType::AUDIO_AAC),
+            avdtp::EndpointType::Sink,
+        )];
+
+        assert_eq!(negotiation.select(&remote_endpoints), None);
+    }
+
+    #[test]
+    fn test_codec_negotiation_prefers_direction() {
+        let priority_order = vec![
+            test_codec_cap(MediaCodecType::AUDIO_AAC),
+            test_codec_cap(MediaCodecType::AUDIO_SBC),
+        ];
+        let negotiation =
+            CodecNegotiation::build(priority_order, avdtp::EndpointType::Sink).expect("builds");
+
+        assert!(negotiation.select(&Vec::new()).is_none());
+
+        let sbc_sink_seid = 1u8;
+        let aac_sink_seid = 2u8;
+        let sbc_source_seid = 3u8;
+        let aac_source_seid = 4u8;
+        // Should pick Sink endpoints over Source Endpoints, even if they are later and do match.
+        let remote_endpoints = vec![
+            test_codec_endpoint(
+                aac_source_seid,
+                test_codec_cap(MediaCodecType::AUDIO_AAC),
+                avdtp::EndpointType::Source,
+            ),
+            test_codec_endpoint(
+                sbc_source_seid,
+                test_codec_cap(MediaCodecType::AUDIO_SBC),
+                avdtp::EndpointType::Source,
+            ),
+            test_codec_endpoint(
+                aac_sink_seid,
+                test_codec_cap(MediaCodecType::AUDIO_AAC),
+                avdtp::EndpointType::Sink,
+            ),
+            test_codec_endpoint(
+                sbc_sink_seid,
+                test_codec_cap(MediaCodecType::AUDIO_SBC),
+                avdtp::EndpointType::Sink,
+            ),
+        ];
+
+        let aac_config = MediaCodecConfig::try_from(&test_codec_cap(MediaCodecType::AUDIO_AAC))
+            .expect("codec_config");
+        let aac_negotiated =
+            MediaCodecConfig::negotiate(&aac_config, &aac_config).expect("negotiated config");
+
+        assert_eq!(
+            negotiation.select(&remote_endpoints),
+            Some((aac_negotiated.capability(), aac_sink_seid.try_into().unwrap()))
+        );
+
+        // Order of the endpoints shouldn't matter.
+        let mut reversed_endpoints: Vec<_> = remote_endpoints.iter().map(|e| e.as_new()).collect();
+        reversed_endpoints.reverse();
+
+        assert_eq!(
+            negotiation.select(&reversed_endpoints),
+            Some((aac_negotiated.capability(), aac_sink_seid.try_into().unwrap()))
+        );
+
+        // Direction is a preference, so if there aren't any that match the preferred direction,
+        // it will pick one that is supported and the other direction.
+        let oops_all_sources = vec![
+            test_codec_endpoint(
+                aac_source_seid,
+                test_codec_cap(MediaCodecType::AUDIO_AAC),
+                avdtp::EndpointType::Source,
+            ),
+            test_codec_endpoint(
+                sbc_source_seid,
+                test_codec_cap(MediaCodecType::AUDIO_SBC),
+                avdtp::EndpointType::Source,
+            ),
+        ];
+        assert_eq!(
+            negotiation.select(&oops_all_sources),
+            Some((aac_negotiated.capability(), aac_source_seid.try_into().unwrap()))
         );
     }
 

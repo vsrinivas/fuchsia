@@ -278,7 +278,7 @@ mod tests {
 
         let peers = ConnectedPeers::new(
             Streams::new(),
-            CodecNegotiation::build(vec![]).unwrap(),
+            CodecNegotiation::build(vec![], avdtp::EndpointType::Sink).unwrap(),
             proxy,
             Some(cobalt_sender),
         );
@@ -386,8 +386,11 @@ mod tests {
         .into();
         let remote_sbc_seid: avdtp::StreamEndpointId = 1u8.try_into().unwrap();
 
-        let negotiation =
-            CodecNegotiation::build(vec![aac_codec.clone(), sbc_codec.clone()]).unwrap();
+        let negotiation = CodecNegotiation::build(
+            vec![aac_codec.clone(), sbc_codec.clone()],
+            avdtp::EndpointType::Sink,
+        )
+        .unwrap();
 
         let mut streams = Streams::new();
         streams.insert(build_test_stream(SBC_SEID, sbc_codec.clone()));

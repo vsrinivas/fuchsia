@@ -142,7 +142,7 @@ impl StreamsBuilder {
             ];
         }
 
-        let codec_negotiation = CodecNegotiation::build(caps_available)?;
+        let codec_negotiation = CodecNegotiation::build(caps_available, avdtp::EndpointType::Sink)?;
 
         Ok(Self { cobalt_sender, codec_negotiation, domain, aac_available, source_type })
     }
@@ -631,7 +631,7 @@ mod tests {
         let (cobalt_sender, _) = fake_cobalt_sender();
         let peers = Arc::new(Mutex::new(ConnectedPeers::new(
             stream::Streams::new(),
-            CodecNegotiation::build(vec![]).unwrap(),
+            CodecNegotiation::build(vec![], avdtp::EndpointType::Sink).unwrap(),
             proxy.clone(),
             Some(cobalt_sender),
         )));
