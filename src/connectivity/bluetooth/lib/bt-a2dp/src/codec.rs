@@ -368,9 +368,8 @@ impl CodecNegotiation {
         &self,
         endpoints: &[avdtp::StreamEndpoint],
     ) -> Option<(ServiceCapability, StreamEndpointId)> {
-        let (preferred_dir, others): (Vec<_>, Vec<_>) = endpoints
-            .iter()
-            .partition(|e| e.information().endpoint_type() == &self.preferred_direction);
+        let (preferred_dir, others): (Vec<_>, Vec<_>) =
+            endpoints.iter().partition(|e| e.endpoint_type() == &self.preferred_direction);
         let codecs_with_ids: Vec<_> = preferred_dir
             .iter()
             .chain(others.iter())

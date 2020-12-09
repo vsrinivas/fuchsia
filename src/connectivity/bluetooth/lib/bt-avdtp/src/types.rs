@@ -207,6 +207,15 @@ pub_decodable_enum! {
     }
 }
 
+impl EndpointType {
+    pub fn opposite(&self) -> Self {
+        match self {
+            Self::Source => Self::Sink,
+            Self::Sink => Self::Source,
+        }
+    }
+}
+
 decodable_enum! {
     /// Indicated whether this packet is part of a fragmented packet set.
     /// See Section 8.4.2

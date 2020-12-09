@@ -381,6 +381,11 @@ impl StreamEndpoint {
         self.remote_id.as_ref()
     }
 
+    /// Returns the EndpointType of this endpoint
+    pub fn endpoint_type(&self) -> &EndpointType {
+        &self.endpoint_type
+    }
+
     /// Make a StreamInformation which represents the current state of this stream.
     pub fn information(&self) -> StreamInformation {
         StreamInformation::new(
