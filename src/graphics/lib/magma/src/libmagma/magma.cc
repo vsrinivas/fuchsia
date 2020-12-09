@@ -214,15 +214,6 @@ magma_status_t magma_get_buffer_cache_policy(magma_buffer_t buffer,
   return platform_buffer->GetCachePolicy(cache_policy_out);
 }
 
-magma_status_t magma_get_buffer_is_mappable(magma_buffer_t buffer, uint32_t flags,
-                                            magma_bool_t* is_mappable_out) {
-  if (flags) {
-    return DRET(MAGMA_STATUS_INVALID_ARGS);
-  }
-  auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
-  return platform_buffer->GetIsMappable(is_mappable_out);
-}
-
 void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer, uint64_t gpu_va) {
   auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
   uint64_t buffer_id = platform_buffer->id();

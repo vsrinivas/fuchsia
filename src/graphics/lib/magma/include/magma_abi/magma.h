@@ -138,17 +138,6 @@ magma_status_t magma_get_buffer_cache_policy(
     magma_cache_policy_t* cache_policy_out);
 
 ///
-/// \brief Queries whether a buffer is mappable with magma_map or magma_map_aligned
-/// \param buffer The given buffer.
-/// \param flags Reserved for future use. Must be 0.
-/// \param is_mappable_out The returned mappability value.
-///
-magma_status_t magma_get_buffer_is_mappable(
-    magma_buffer_t buffer,
-    uint32_t flags,
-    magma_bool_t* is_mappable_out);
-
-///
 /// \brief Maps a number of pages from the given buffer onto the GPU in the connection's address
 ///        space at the given address. Depending on the MSD this may automatically commit and
 ///        populate that range.

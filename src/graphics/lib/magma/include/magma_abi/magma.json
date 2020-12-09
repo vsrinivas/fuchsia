@@ -232,29 +232,6 @@
         ]
       },
       {
-        "ordinal": 17,
-        "name": "magma_get_buffer_is_mappable",
-        "type": "magma_status_t",
-        "description": "Queries whether a buffer is mappable with magma_map or magma_map_aligned",
-        "arguments": [
-          {
-            "name": "buffer",
-            "type": "magma_buffer_t",
-            "description": "The given buffer."
-          },
-          {
-            "name": "flags",
-            "type": "uint32_t",
-            "description": "Reserved for future use. Must be 0."
-          },
-          {
-            "name": "is_mappable_out",
-            "type": "magma_bool_t*",
-            "description": "The returned mappability value."
-          }
-        ]
-      },
-      {
         "ordinal": 23,
         "name": "magma_map_buffer_gpu",
         "type": "void",
