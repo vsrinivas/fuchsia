@@ -424,6 +424,18 @@ TEST_F(ExprParserTest, UnaryMath) {
       "  IDENTIFIER(\"foo\")\n",
       GetParseString("-*foo"));
 
+  EXPECT_EQ(
+      "IDENTIFIER(\"~foo\")\n",
+      GetParseString("~foo"));
+  EXPECT_EQ(
+      "UNARY(~)\n"
+      " LITERAL(21)\n",
+      GetParseString("~21"));
+  EXPECT_EQ(
+      "UNARY(~)\n"
+      " IDENTIFIER(\"foo\")\n",
+      GetParseString("~ foo"));
+
   // "-" by itself is an error.
   auto result = Parse("-");
   ASSERT_FALSE(result);
@@ -466,7 +478,7 @@ TEST_F(ExprParserTest, AndOr) {
 TEST_F(ExprParserTest, Identifiers) {
   EXPECT_EQ("IDENTIFIER(\"foo\")\n", GetParseString("foo"));
   EXPECT_EQ("IDENTIFIER(::\"foo\")\n", GetParseString("::foo"));
-  EXPECT_EQ("IDENTIFIER(::\"foo\"; ::\"bar\")\n", GetParseString("::foo :: bar"));
+  EXPECT_EQ("IDENTIFIER(::\"foo\"; ::\"~bar\")\n", GetParseString("::foo :: ~bar"));
 
   auto result = Parse("::");
   ASSERT_FALSE(result);
@@ -529,6 +541,27 @@ TEST_F(ExprParserTest, Shift) {
       "   LITERAL(2)\n"
       " LITERAL(2)\n",
       GetParseString("2<<2<static_cast<Template<int>>(2)>>2>2", &TestLookupName));
+
+  EXPECT_EQ(
+      "BINARY_OP(>>=)\n"
+      " BINARY_OP(<<=)\n"
+      "  IDENTIFIER(\"i\")\n"
+      "  LITERAL(5)\n"
+      " LITERAL(6)\n",
+      GetParseString("i <<= 5 >>= 6", &TestLookupName));
+
+  // Some invalid shift combinations.
+  auto result = Parse("a << = 2");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Unexpected token '='.", parser().err().msg());
+
+  result = Parse("a > >= 2");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Unexpected token '>='.", parser().err().msg());
+
+  result = Parse("a>>>2");
+  ASSERT_FALSE(result);
+  EXPECT_EQ("Unexpected token '>'.", parser().err().msg());
 }
 
 TEST_F(ExprParserTest, FunctionCall) {

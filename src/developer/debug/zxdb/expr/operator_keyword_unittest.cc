@@ -37,11 +37,20 @@ TEST(OperatorKeyword, Parse) {
       "operator+",
       OperatorKeywordResult{.success = true, .canonical_name = "operator+", .end_token = 2});
   CheckParseOperator(
+      "operator delete",
+      OperatorKeywordResult{.success = true, .canonical_name = "operator delete", .end_token = 2});
+  CheckParseOperator(
+      "operator new[]",
+      OperatorKeywordResult{.success = true, .canonical_name = "operator new[]", .end_token = 4});
+  CheckParseOperator(
       "operator,",
       OperatorKeywordResult{.success = true, .canonical_name = "operator,", .end_token = 2});
   CheckParseOperator(
       "operator  +",
       OperatorKeywordResult{.success = true, .canonical_name = "operator+", .end_token = 2});
+  CheckParseOperator(
+      "operator >>=",
+      OperatorKeywordResult{.success = true, .canonical_name = "operator>>=", .end_token = 3});
   CheckParseOperator(
       "operator >>",
       OperatorKeywordResult{.success = true, .canonical_name = "operator>>", .end_token = 3});
@@ -57,6 +66,9 @@ TEST(OperatorKeyword, Parse) {
       "operator +;",
       OperatorKeywordResult{.success = true, .canonical_name = "operator+", .end_token = 2});
   CheckParseOperator(
+      "operator new()",
+      OperatorKeywordResult{.success = true, .canonical_name = "operator new", .end_token = 2});
+  CheckParseOperator(
       "operator/(hello)",
       OperatorKeywordResult{.success = true, .canonical_name = "operator/", .end_token = 2});
 
@@ -64,6 +76,10 @@ TEST(OperatorKeyword, Parse) {
   CheckParseOperator(
       "void operator()()",
       OperatorKeywordResult{.success = true, .canonical_name = "operator()", .end_token = 4}, 1);
+  CheckParseOperator(
+      "void operator  delete[]()",
+      OperatorKeywordResult{.success = true, .canonical_name = "operator delete[]", .end_token = 5},
+      1);
 }
 
 }  // namespace zxdb

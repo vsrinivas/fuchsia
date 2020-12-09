@@ -219,6 +219,7 @@ class ExprParser {
   // compose a shift right token (">>"). Because of ambiguity, the tokenizer always tokenizes these
   // separately and we have to decide based on context what it is.
   bool IsCurTokenShiftRight() const;
+  bool IsCurTokenShiftRightEquals() const;
 
   // Equivalent to cur_token().precedence except this remaps two adjacent ">" to a ">>" precedence.
   // See IsCurTokenShiftRight().

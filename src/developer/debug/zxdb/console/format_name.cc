@@ -186,7 +186,9 @@ OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier,
         // Provide names for anonymous components.
         result.Append(Syntax::kComment, kAnonIdentifierComponentName);
       } else {
-        bool needs_escaping = !ExprTokenizer::IsNameToken(name);
+        // For now assume the language is C. It would be nice if the current language was piped
+        // through to this spot so we could make language-specific escaping determinations.
+        bool needs_escaping = !ExprTokenizer::IsNameToken(ExprLanguage::kC, name);
         if (needs_escaping)
           result.Append(Syntax::kComment, "$(");
 

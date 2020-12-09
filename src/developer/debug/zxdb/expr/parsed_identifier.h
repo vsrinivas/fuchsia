@@ -46,6 +46,7 @@ class ParsedIdentifierComponent {
 
   SpecialIdentifier special() const { return special_; }
   const std::string& name() const { return name_; }
+  std::string& name() { return name_; }
 
   const std::vector<std::string>& template_contents() const { return template_contents_; }
 

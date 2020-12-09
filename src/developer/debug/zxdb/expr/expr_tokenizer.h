@@ -43,7 +43,7 @@ class ExprTokenizer {
 
   // Returns whether the input is a valid unescaped name token. This does no trimming of whitespace
   // and does not accept "$" escaping. An empty string is not a valid name token.
-  static bool IsNameToken(std::string_view input);
+  static bool IsNameToken(ExprLanguage lang, std::string_view input);
 
   // Returns two context lines for an error message. It will quote a relevant portion of the input
   // showing the byte offset, and add a "^" on the next line to indicate where the error is.

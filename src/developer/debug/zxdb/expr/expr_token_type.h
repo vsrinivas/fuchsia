@@ -9,53 +9,68 @@
 
 namespace zxdb {
 
-// This type must start at 0 and increment monotonically since it is used
-// as an index into the parser lookup table.
+// This type must start at 0 and increment monotonically since it is used as an index into the
+// parser lookup table.
 enum class ExprTokenType : size_t {
   kInvalid = 0,
-  kName,           // random_text
-  kSpecialName,    // $something(perhaps_something_else)
-  kInteger,        // 123, 0x89ab
-  kFloat,          // 0.23e12  1.  2.3f  (never including a leading sign).
-  kStringLiteral,  // "foo" (token value will be the decoded contents between the quotes).
-  kEquals,         // =
-  kEquality,       // ==
-  kInequality,     // !=
-  kLessEqual,      // <=
-  kGreaterEqual,   // >=
-  kSpaceship,      // <=>
-  kDot,            // .
-  kComma,          // ,
-  kSemicolon,      // ;
-  kStar,           // *
-  kAmpersand,      // &
-  kDoubleAnd,      // && (logical "and" or rvalue reference)
-  kBitwiseOr,      // |
-  kLogicalOr,      // ||
-  kArrow,          // ->
-  kLeftSquare,     // [
-  kRightSquare,    // ]
-  kLeftParen,      // (
-  kRightParen,     // )
-  kLeftBracket,    // {
-  kRightBracket,   // }
-  kLess,           // <
-  kGreater,        // >
-  kMinus,          // - (by itself, not part of "->")
-  kBang,           // !
-  kPlus,           // +
-  kSlash,          // /
-  kCaret,          // ^
-  kPercent,        // %
-  kQuestion,       // ?
-  kColon,          // :
-  kColonColon,     // ::
-  kShiftLeft,      // <<
+  kName,             // random_text
+  kSpecialName,      // $something(perhaps_something_else)
+  kInteger,          // 123, 0x89ab
+  kFloat,            // 0.23e12  1.  2.3f  (never including a leading sign).
+  kStringLiteral,    // "foo" (token value will be the decoded contents between the quotes).
+  kEquals,           // =
+  kEquality,         // ==
+  kInequality,       // !=
+  kLessEqual,        // <=
+  kGreaterEqual,     // >=
+  kSpaceship,        // <=>
+  kDot,              // .
+  kDotStar,          // .*
+  kComma,            // ,
+  kSemicolon,        // ;
+  kStar,             // *
+  kAmpersand,        // &
+  kDoubleAnd,        // && (logical "and" or rvalue reference)
+  kBitwiseOr,        // |
+  kLogicalOr,        // ||
+  kArrow,            // ->
+  kArrowStar,        // ->*
+  kLeftSquare,       // [
+  kRightSquare,      // ]
+  kLeftParen,        // (
+  kRightParen,       // )
+  kLeftBracket,      // {
+  kRightBracket,     // }
+  kLess,             // <
+  kGreater,          // >
+  kMinus,            // - (by itself, not part of "->")
+  kMinusMinus,       // --
+  kBang,             // !
+  kPlus,             // +
+  kPlusPlus,         // ++
+  kSlash,            // /
+  kCaret,            // ^
+  kPercent,          // %
+  kQuestion,         // ?
+  kTilde,            // ~
+  kColon,            // :
+  kColonColon,       // ::
+  kPlusEquals,       // +=
+  kMinusEquals,      // -=
+  kStarEquals,       // *=
+  kSlashEquals,      // /=
+  kPercentEquals,    // %=
+  kCaretEquals,      // ^=
+  kAndEquals,        // &=
+  kOrEquals,         // |=
+  kShiftLeft,        // <<
+  kShiftLeftEquals,  // <<=
 
   // The shift right token is not produced by the tokenizer which will always produce two adjacent
   // ">" tokens. The parser will disambiguate ">>" as a shift operator vs. two template endings and
   // generate a "shift right" at that time.
-  kShiftRight,  // >>
+  kShiftRight,        // >>
+  kShiftRightEquals,  // >>=
 
   // Special keywords.
   kTrue,             // true
@@ -71,6 +86,8 @@ enum class ExprTokenType : size_t {
   kIf,               // if
   kElse,             // else
   kOperator,         // operator
+  kNew,              // new
+  kDelete,           // delete
 
   // Keep last. Not a token, but the count of tokens.
   kNumTypes

@@ -382,6 +382,50 @@ TEST(ExprTokenizer, GetErrorContext) {
       ExprTokenizer::GetErrorContext("foo", 3));
 }
 
+TEST(ExprTokenizer, Tilde) {
+  // Char offsets: 0123456789012345678901
+  // Token #'s:     01    23 4    5
+  ExprTokenizer t(" ~~Foo ~9 ~_bar~", ExprLanguage::kC);
+
+  EXPECT_TRUE(t.Tokenize());
+  EXPECT_FALSE(t.err().has_error()) << t.err().msg();
+  const auto& tokens = t.tokens();
+  ASSERT_EQ(6u, tokens.size());
+
+  EXPECT_EQ(ExprTokenType::kTilde, tokens[0].type());
+  EXPECT_EQ("~", tokens[0].value());
+  EXPECT_EQ(1u, tokens[0].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kName, tokens[1].type());
+  EXPECT_EQ("~Foo", tokens[1].value());
+  EXPECT_EQ(2u, tokens[1].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kTilde, tokens[2].type());
+  EXPECT_EQ("~", tokens[2].value());
+  EXPECT_EQ(7u, tokens[2].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kInteger, tokens[3].type());
+  EXPECT_EQ("9", tokens[3].value());
+  EXPECT_EQ(8u, tokens[3].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kName, tokens[4].type());
+  EXPECT_EQ("~_bar", tokens[4].value());
+  EXPECT_EQ(10u, tokens[4].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kTilde, tokens[5].type());
+  EXPECT_EQ("~", tokens[5].value());
+  EXPECT_EQ(15u, tokens[5].byte_offset());
+
+  // Tilde is not used in Rust.
+  ExprTokenizer rust_tilde("~", ExprLanguage::kRust);
+  EXPECT_FALSE(rust_tilde.Tokenize());
+  EXPECT_TRUE(rust_tilde.err().has_error());
+
+  ExprTokenizer rust_tilde_name("~", ExprLanguage::kRust);
+  EXPECT_FALSE(rust_tilde_name.Tokenize());
+  EXPECT_TRUE(rust_tilde_name.err().has_error());
+}
+
 // Tests that C and Rust tokens are separated.
 TEST(ExprTokenizer, Language) {
   // Test that "reinterpret_cast is valid in C but not in Rust.
@@ -402,6 +446,19 @@ TEST(ExprTokenizer, Language) {
 
   // Currently we don't have any Rust-only tokens. When we add one we should test that it works only
   // in Rust mode.
+}
+
+TEST(ExprTokenizer, IsNameToken) {
+  EXPECT_TRUE(ExprTokenizer::IsNameToken(ExprLanguage::kC, "foo"));
+  EXPECT_TRUE(ExprTokenizer::IsNameToken(ExprLanguage::kC, "~foo"));
+  EXPECT_TRUE(ExprTokenizer::IsNameToken(ExprLanguage::kC, "foo9"));
+
+  EXPECT_FALSE(ExprTokenizer::IsNameToken(ExprLanguage::kC, ""));
+  EXPECT_FALSE(ExprTokenizer::IsNameToken(ExprLanguage::kC, "foo~bar"));
+  EXPECT_FALSE(ExprTokenizer::IsNameToken(ExprLanguage::kC, "~"));
+  EXPECT_FALSE(ExprTokenizer::IsNameToken(ExprLanguage::kC, "9foo"));
+
+  EXPECT_FALSE(ExprTokenizer::IsNameToken(ExprLanguage::kRust, "~foo"));
 }
 
 }  // namespace zxdb

@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/expr/operator_keyword.h"
 
+#include <ctype.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
@@ -16,61 +17,59 @@ namespace {
 constexpr size_t kMaxOps = 3;  // Can have at most 3 operators in a row ("new[]").
 
 // This list is searched in-order so more specific tokens (longer ones) need to go first.
-//
-// Many operators are commented out because there are not currently tokens corresponding to them.
-// These should be uncommented when support for those operators is added to the tokenizer.
 const ExprTokenType kOverloadableOperators[][kMaxOps] = {
     // clang-format off
 
   // Operators with triple tokens,
-  //{ExprTokenType::kNew,    ExprTokenType::kLeftSquare, ExprTokenType::kRightSquare},  // new[]
-  //{ExprTokenType::kDelete, ExprTokenType::kLeftSquare, ExprTokenType::kRightSquare},  // delete[]
+  {ExprTokenType::kNew,    ExprTokenType::kLeftSquare, ExprTokenType::kRightSquare},  // new[]
+  {ExprTokenType::kDelete, ExprTokenType::kLeftSquare, ExprTokenType::kRightSquare},  // delete[]
 
   // Operators with double tokens. Note that the tokenizer generates two tokens for ">>" because of
   // C++'s ambiguity so we need to treat that as a double one.
-  {ExprTokenType::kLeftParen,  ExprTokenType::kRightParen,  ExprTokenType::kInvalid},  // operator()
-  {ExprTokenType::kLeftSquare, ExprTokenType::kRightSquare, ExprTokenType::kInvalid},  // operator[]
-  {ExprTokenType::kGreater,    ExprTokenType::kGreater,     ExprTokenType::kInvalid},  // operator>>
+  {ExprTokenType::kLeftParen,  ExprTokenType::kRightParen,   ExprTokenType::kInvalid},  // operator()
+  {ExprTokenType::kLeftSquare, ExprTokenType::kRightSquare,  ExprTokenType::kInvalid},  // operator[]
+  {ExprTokenType::kGreater,    ExprTokenType::kGreater,      ExprTokenType::kInvalid},  // operator>>
+  {ExprTokenType::kGreater,    ExprTokenType::kGreaterEqual, ExprTokenType::kInvalid},  // operator>>=
 
   // Operators with single tokens.
-  {ExprTokenType::kPlus,               ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kMinus,              ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kStar,               ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kSlash,              ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kPercent,            ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kCaret,              ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kAmpersand,          ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kBitwiseOr,          ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kTilde,            ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kBang,               ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kEquals,             ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kLess,               ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kGreater,            ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kPlusEquals,       ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kMinusEquals,      ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kStarEquals,       ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kSlashEquals,      ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kPercentEquals,    ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kTildeEquals,      ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kAndEquals,        ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kOrEquals,         ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kShiftLeft,          ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kShiftRight,         ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kShiftLeftEquals,  ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kShiftRightEquals, ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kEquality,           ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kInequality,         ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kLessEqual,          ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kGreaterEqual,       ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kDoubleAnd,          ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kLogicalOr,          ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kPlusPlus,         ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kMinusMinus,       ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kComma,              ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kArrowStar,        ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  {ExprTokenType::kArrow,              ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kNew,              ExprTokenType::kInvalid, ExprTokenType::kInvalid},
-  //{ExprTokenType::kDelete,           ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kPlus,             ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kMinus,            ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kStar,             ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kSlash,            ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kPercent,          ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kCaret,            ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kAmpersand,        ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kBitwiseOr,        ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kTilde,            ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kBang,             ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kEquals,           ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kLess,             ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kGreater,          ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kPlusEquals,       ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kMinusEquals,      ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kStarEquals,       ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kSlashEquals,      ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kPercentEquals,    ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kCaretEquals,      ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kAndEquals,        ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kOrEquals,         ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kShiftLeft,        ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kShiftRight,       ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kShiftLeftEquals,  ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kShiftRightEquals, ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kEquality,         ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kInequality,       ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kLessEqual,        ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kGreaterEqual,     ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kDoubleAnd,        ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kLogicalOr,        ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kPlusPlus,         ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kMinusMinus,       ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kComma,            ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kArrowStar,        ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kArrow,            ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kNew,              ExprTokenType::kInvalid, ExprTokenType::kInvalid},
+  {ExprTokenType::kDelete,           ExprTokenType::kInvalid, ExprTokenType::kInvalid},
 
     // clang-format on
 };
@@ -78,8 +77,12 @@ const ExprTokenType kOverloadableOperators[][kMaxOps] = {
 // Makes a name like "operator<" or "operator[]" given a squence of operator token types.
 std::string MakeCanonicalOperatorName(const ExprTokenType types[], size_t count) {
   std::string result = "operator";
-  for (size_t i = 0; i < count; i++)
-    result.append(RecordForTokenType(types[i]).static_value);
+  for (size_t i = 0; i < count; i++) {
+    const std::string_view& op_str = RecordForTokenType(types[i]).static_value;
+    if (isalnum(op_str[0]))
+      result.push_back(' ');  // Alphanumeric operators like "new" and "delete" need a space.
+    result.append(op_str);
+  }
   return result;
 }
 

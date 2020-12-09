@@ -106,6 +106,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceComparison},          // kGreaterEqual
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceThreeWayComparison},  // kSpaceship
     {nullptr,                        &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},          // kDot
+    {nullptr,                        nullptr,                      -1},                             // kDotStar (unsupported)
     {nullptr,                        nullptr,                      -1},                             // kComma
     {nullptr,                        nullptr,                      -1},                             // kSemicolon
     {&ExprParser::StarPrefix,        &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kStar
@@ -114,6 +115,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseOr},           // kBitwiseOr
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceLogicalOr},           // kLogicalOr
     {nullptr,                        &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},          // kArrow
+    {nullptr,                        nullptr,                      -1},                             // kArrowStar (unsupported)
     {nullptr,                        &ExprParser::LeftSquareInfix, kPrecedenceCallAccess},          // kLeftSquare
     {nullptr,                        nullptr,                      -1},                             // kRightSquare
     {&ExprParser::LeftParenPrefix,   &ExprParser::LeftParenInfix,  kPrecedenceCallAccess},          // kLeftParen
@@ -123,16 +125,29 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceComparison},          // kLess
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceComparison},          // kGreater
     {&ExprParser::UnaryPrefix,       &ExprParser::BinaryOpInfix,   kPrecedenceAddition},            // kMinus
+    {nullptr,                        nullptr,                      -1},                             // kMinusMinus (unsupported)
     {&ExprParser::UnaryPrefix,       nullptr,                      -1},                             // kBang
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAddition},            // kPlus
+    {nullptr,                        nullptr,                      -1},                             // kPlusPlus (unsupported)
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kSlash
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseXor},          // kCaret
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kPercent
     {nullptr,                        &ExprParser::QuestionInfix,   kPrecedenceAssignment},          // kQuestion
+    {&ExprParser::UnaryPrefix,       nullptr,                      -1},                             // kTilde
     {nullptr,                        nullptr,                      -1},                             // kColon
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kColonColon
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kPlusEquals
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kMinusEquals
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kStarEquals
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kSlashEquals
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kPercentEquals
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kCaretEquals
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kAndEquals
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kOrEquals
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceShift},               // kShiftLeft
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kShiftLeftEquals
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceShift},               // kShiftRight
+    {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kShiftRightEquals
     {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kTrue
     {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kFalse
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kConst
@@ -146,6 +161,8 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::IfPrefix,          nullptr,                      -1},                             // kIf
     {nullptr,                        nullptr,                      -1},                             // kElse
     {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kOperator
+    {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kNew
+    {&ExprParser::NamePrefix,        nullptr,                      -1},                             // kDelete
 };
 // clang-format on
 
@@ -372,6 +389,9 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
   // a thing that has a template so we know to parse the following "<" as part of the name and not
   // as a comparison. Note that when we need to parse function names, there is special handling
   // required for operators.
+  //
+  // As a special-case, this can also get called with a ~ operator when that begins a name. It gets
+  // joined with the following word for a C++ destructor name.
 
   // The mode of the state machine.
   enum Mode {
@@ -1282,6 +1302,12 @@ ExprToken ExprParser::ConsumeWithShiftTokenConversion() {
     Consume();
     return ExprToken(ExprTokenType::kShiftRight, ">>", first.byte_offset());
   }
+  if (IsCurTokenShiftRightEquals()) {
+    // Eat both ">" and ">=" operators and synthesize a shift operator.
+    const ExprToken& first = Consume();
+    Consume();
+    return ExprToken(ExprTokenType::kShiftRightEquals, ">>=", first.byte_offset());
+  }
   return Consume();
 }
 
@@ -1353,9 +1379,23 @@ bool ExprParser::IsCurTokenShiftRight() const {
   return tokens_[cur_].ImmediatelyPrecedes(tokens_[cur_ + 1]);
 }
 
+bool ExprParser::IsCurTokenShiftRightEquals() const {
+  if (tokens_.size() < 2 || cur_ > tokens_.size() - 2)
+    return false;  // Not enough room for two tokens.
+
+  if (tokens_[cur_].type() != ExprTokenType::kGreater ||
+      tokens_[cur_ + 1].type() != ExprTokenType::kGreaterEqual)
+    return false;  // Not ">" followed by ">=".
+
+  // They must also be next to each other with no space.
+  return tokens_[cur_].ImmediatelyPrecedes(tokens_[cur_ + 1]);
+}
+
 int ExprParser::CurPrecedenceWithShiftTokenConversion() const {
   if (IsCurTokenShiftRight())
     return kPrecedenceShift;
+  if (IsCurTokenShiftRightEquals())
+    return kPrecedenceAssignment;
   return DispatchForToken(cur_token()).precedence;
 }
 

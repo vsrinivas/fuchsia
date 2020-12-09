@@ -500,6 +500,22 @@ TEST_F(EvalOperators, UnaryBang) {
   EXPECT_EQ(0, out.value().GetAs<uint8_t>());
 }
 
+TEST_F(EvalOperators, UnaryTilde) {
+  // ~ Promotes to "int" so smaller types become 4 bytes.
+  ErrOrValue out = SyncEvalUnaryOperator(ExprTokenType::kTilde, ExprValue('a'));
+  ASSERT_TRUE(out.ok());
+  ASSERT_EQ(4u, out.value().data().size());
+  EXPECT_EQ(~'a', out.value().GetAs<int32_t>());
+  EXPECT_EQ("int32_t", out.value().type()->GetFullName());
+
+  uint64_t ff64 = 0xff;
+  out = SyncEvalUnaryOperator(ExprTokenType::kTilde, ExprValue(ff64));
+  ASSERT_TRUE(out.ok());
+  ASSERT_EQ(8u, out.value().data().size());
+  EXPECT_EQ(~ff64, out.value().GetAs<uint64_t>());
+  EXPECT_EQ("uint64_t", out.value().type()->GetFullName());
+}
+
 TEST_F(EvalOperators, Comparison) {
   // (int8_t)1 == (int)1
   ExprValue char_one(static_cast<int8_t>(1));
@@ -606,6 +622,21 @@ TEST_F(EvalOperators, LogicalShortCircuit) {
     EXPECT_EQ(0, v.value().GetAs<uint8_t>());
   });
   EXPECT_TRUE(called);  // Should eval synchronously.
+}
+
+// These aren't supported but we check that the right error is given.
+TEST_F(EvalOperators, InPlace) {
+  const char kUnimplementedMsg[] =
+      "In-place update operators (++, --, +=, >>=, etc.) aren't supported.";
+
+  ExprValue int_zero(0);
+  auto out = SyncEvalBinaryOperator(int_zero, ExprTokenType::kPlusPlus, int_zero);
+  ASSERT_TRUE(out.has_error());
+  EXPECT_EQ(kUnimplementedMsg, out.err().msg());
+
+  out = SyncEvalBinaryOperator(int_zero, ExprTokenType::kStarEquals, int_zero);
+  ASSERT_TRUE(out.has_error());
+  EXPECT_EQ(kUnimplementedMsg, out.err().msg());
 }
 
 }  // namespace zxdb

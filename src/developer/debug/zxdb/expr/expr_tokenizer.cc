@@ -18,11 +18,9 @@ namespace zxdb {
 
 namespace {
 
-bool IsNameFirstChar(char c) {
-  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_' || c == '~';
-}
-
-bool IsNameContinuingChar(char c) { return IsNameFirstChar(c) || (c >= '0' && c <= '9'); }
+bool IsNameChar(char c) { return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_'; }
+bool IsNameFirstChar(char c) { return IsNameChar(c); }
+bool IsNameContinuingChar(char c) { return IsNameChar(c) || (c >= '0' && c <= '9'); }
 
 bool IsIntegerFirstChar(char c) { return isdigit(c); }
 
@@ -41,7 +39,14 @@ const std::vector<const ExprTokenRecord*>& TokensWithFirstChar(char c) {
     // Construct the lookup table.
     initialized = true;
     for (size_t i = 0; i < kNumExprTokenTypes; i++) {
-      const ExprTokenRecord& record = RecordForTokenType(static_cast<ExprTokenType>(i));
+      ExprTokenType type = static_cast<ExprTokenType>(i);
+
+      // Special-case the ">" since they can be ambiguous. Don't add ">>" as they will be
+      // disambiguated by the parser.
+      if (type == ExprTokenType::kShiftRight || type == ExprTokenType::kShiftRightEquals)
+        continue;
+
+      const ExprTokenRecord& record = RecordForTokenType(type);
       if (!record.static_value.empty())
         mapping[static_cast<size_t>(record.static_value[0])].push_back(&record);
     }
@@ -117,12 +122,24 @@ bool ExprTokenizer::Tokenize() {
 }
 
 // static
-bool ExprTokenizer::IsNameToken(std::string_view input) {
+bool ExprTokenizer::IsNameToken(ExprLanguage lang, std::string_view input) {
   if (input.empty())
     return false;
-  if (!IsNameFirstChar(input[0]))
-    return false;
-  for (size_t i = 1; i < input.size(); i++) {
+
+  // Check the first character.
+  size_t i;  // Index to start subsequent checking at.
+  if (lang == ExprLanguage::kC && input.size() >= 2 && input[0] == '~') {
+    // See the comment about tilde handling in C in ClassifyCurrent().
+    if (!IsNameFirstChar(input[1]))
+      return false;
+    i = 2;
+  } else {
+    if (!IsNameFirstChar(input[0]))
+      return false;
+    i = 1;
+  }
+
+  for (; i < input.size(); i++) {
     if (!IsNameContinuingChar(input[i]))
       return false;
   }
@@ -218,6 +235,22 @@ const ExprTokenRecord& ExprTokenizer::ClassifyCurrent() {
   FX_DCHECK(!at_end());
   char cur = cur_char();
 
+  // Tilde is tricky in C++ because in different contexts ~Foo could be a destructor name or the
+  // bitwise not of a variable called "Foo". The compiler disambiguates by doing a lookup on the
+  // whether Foo is a type name or not.
+  //
+  // In the debugger we can't be so sure. We parse function names (including destructors) in
+  // contexts where we don't have any symbol information, so have to be able to handle destructor
+  // names at any time.
+  //
+  // As a result, we treat all ~ followed by a word as a word. If there's a space or another
+  // operator in between, we'll treat it as a unary bitwise not.
+  if (language_ == ExprLanguage::kC && cur == '~') {
+    if (can_advance(1) && IsNameFirstChar(input_[cur_ + 1]))
+      return RecordForTokenType(ExprTokenType::kName);
+  }
+
+  // Compare against known tokens.
   const ExprTokenRecord* longest = nullptr;
   for (const ExprTokenRecord* match : TokensWithFirstChar(cur)) {
     if (!CurrentMatchesTokenRecord(*match))

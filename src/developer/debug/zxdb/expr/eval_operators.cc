@@ -739,6 +739,21 @@ void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprValue
       result = DoLogicalBinaryOp(context, left_op_value, op, right_op_value);
       break;
 
+    case ExprTokenType::kMinusMinus:
+    case ExprTokenType::kPlusPlus:
+    case ExprTokenType::kPlusEquals:
+    case ExprTokenType::kMinusEquals:
+    case ExprTokenType::kStarEquals:
+    case ExprTokenType::kSlashEquals:
+    case ExprTokenType::kPercentEquals:
+    case ExprTokenType::kCaretEquals:
+    case ExprTokenType::kAndEquals:
+    case ExprTokenType::kOrEquals:
+    case ExprTokenType::kShiftLeftEquals:
+    case ExprTokenType::kShiftRightEquals:
+      result = Err("In-place update operators (++, --, +=, >>=, etc.) aren't supported.");
+      break;
+
     default:
       result = Err("Unsupported binary operator '%s', sorry!", op.value().c_str());
       break;
@@ -867,6 +882,22 @@ void EvalUnaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprToken&
           break;
         case MathRealm::kFloat:
           IMPLEMENT_UNARY_FLOAT_OP(!);
+          break;
+      }
+      break;
+
+    // ~
+    case ExprTokenType::kTilde:
+      switch (op_value.realm) {
+        case MathRealm::kSigned:
+          IMPLEMENT_UNARY_INTEGER_OP(~, int8_t, int16_t, int32_t, int64_t);
+          break;
+        case MathRealm::kUnsigned:
+          IMPLEMENT_UNARY_INTEGER_OP(~, uint8_t, uint16_t, uint32_t, uint64_t);
+          break;
+        default:
+          result =
+              Err("Invalid type '%s' for unary operator '~'.", value.type()->GetFullName().c_str());
           break;
       }
       break;
