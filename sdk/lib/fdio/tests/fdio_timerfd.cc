@@ -145,7 +145,8 @@ TEST(TimerFDTest, OneShotNonblocking) {
 
   EXPECT_EQ(0, timerfd_settime(fd.get(), 0, &value, &old_value));
   EXPECT_LT(0, select(fd.get() + 1, &rfds, nullptr, nullptr, nullptr));
-  EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)));
+  EXPECT_EQ(sizeof(counter), read(fd.get(), &counter, sizeof(counter)), "read on %d failed: %s",
+            fd.get(), strerror(errno));
   EXPECT_EQ(1, counter);
 }
 
