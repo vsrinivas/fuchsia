@@ -13,6 +13,7 @@ use {
     anyhow::{bail, Error},
     argh::FromArgs,
     delay_tracker::DelayTracker,
+    fidl_fuchsia_feedback::MAX_CRASH_SIGNATURE_LENGTH,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     glob::glob,
     injectable_time::MonotonicTime,
@@ -121,7 +122,7 @@ fn appropriate_check_interval(
 }
 
 fn build_signature(snapshot: triage::SnapshotTrigger, mode: Mode) -> String {
-    // Character restrictions are documented in
+    // Character and length restrictions are documented in
     // https://fuchsia.dev/reference/fidl/fuchsia.feedback#GenericCrashReport
     let sanitized: String = snapshot
         .signature
@@ -140,7 +141,19 @@ fn build_signature(snapshot: triage::SnapshotTrigger, mode: Mode) -> String {
             error!("{}", message);
         }
     }
-    format!("{}{}", SIGNATURE_PREFIX, sanitized)
+    let mut signature = format!("{}{}", SIGNATURE_PREFIX, sanitized);
+    if signature.len() > fidl_fuchsia_feedback::MAX_CRASH_SIGNATURE_LENGTH as usize {
+        let new_signature =
+            signature.chars().take(MAX_CRASH_SIGNATURE_LENGTH as usize).collect::<String>();
+        let message = format!("Signature '{}' truncated to '{}'", signature, new_signature);
+        if mode == Mode::Test {
+            warn!("{}", message);
+        } else {
+            error!("{}", message);
+        }
+        signature = new_signature;
+    }
+    signature
 }
 
 // on_error logs any errors from `value` and then returns a Result.
@@ -267,5 +280,24 @@ mod test {
         assert_eq!(appropriate_check_interval(&long_time, &Mode::Test)?, long_time_result);
         assert_eq!(appropriate_check_interval(&long_time, &Mode::Production)?, long_time_result);
         Ok(())
+    }
+
+    #[test]
+    fn verify_build_signature() {
+        fn sig(signature: &str) -> triage::SnapshotTrigger {
+            triage::SnapshotTrigger { interval: 0, signature: signature.to_string() }
+        }
+
+        let long_sig_input = "A very very long string that just keeps going and going and won't \
+          quit no matter how long it goes and I don't know when it will ever stop";
+        let desired_long_output = "fuchsia-detect-a-very-very-long-string-that-just-keeps-going-and-going-and-won-t-quit-no-matter-how-long-it-goes-and-i-don-t-kno";
+        let long_sig_output = build_signature(sig(long_sig_input), Mode::Production);
+
+        assert_eq!(long_sig_output, desired_long_output.to_string());
+        assert_eq!(long_sig_output.len(), MAX_CRASH_SIGNATURE_LENGTH as usize);
+        assert_eq!(
+            build_signature(sig("Test lowercase"), Mode::Production),
+            "fuchsia-detect-test-lowercase".to_string()
+        );
     }
 }
