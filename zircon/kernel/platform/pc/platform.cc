@@ -447,62 +447,30 @@ void platform_init_crashlog(void) {
   }
 }
 
-typedef struct e820_walk_ctx {
-  uint8_t* buf;
-  size_t len;
-  zx_status_t ret;
-} e820_walk_ctx_t;
-
-static void e820_entry_walk(uint64_t base, uint64_t size, bool is_mem, void* void_ctx) {
-  e820_walk_ctx* ctx = (e820_walk_ctx*)void_ctx;
-
-  // Something went wrong in one of the previous calls, don't attempt to
-  // continue.
-  if (ctx->ret != ZX_OK)
-    return;
-
-  // Make sure we have enough space in the buffer.
-  if (ctx->len < sizeof(e820entry_t)) {
-    ctx->ret = ZX_ERR_BUFFER_TOO_SMALL;
-    return;
+static fbl::Array<e820entry_t> ConvertMemoryRanges(ktl::span<zbi_mem_range_t> ranges) {
+  // Allocate memory to store physical memory range information.
+  ktl::span<zbi_mem_range_t> memory_ranges = bootloader.memory_ranges;
+  fbl::AllocChecker ac;
+  fbl::Array<e820entry_t> e820_ranges(new (&ac) e820entry_t[memory_ranges.size()],
+                                      memory_ranges.size());
+  if (!ac.check()) {
+    return nullptr;
   }
 
-  e820entry_t* entry = (e820entry_t*)ctx->buf;
-  entry->addr = base;
-  entry->size = size;
+  // Convert ranges to E820 format.
+  for (size_t i = 0; i < memory_ranges.size(); i++) {
+    e820_ranges[i].addr = memory_ranges[i].paddr;
+    e820_ranges[i].size = memory_ranges[i].length;
+    // Hack: When we first parse this map we normalize each section to either
+    // memory or not-memory. When we pass it to the next kernel, we lose
+    // information about the type of "not memory" in each region.
+    e820_ranges[i].type = (memory_ranges[i].type == ZBI_MEM_RANGE_RAM ? E820_RAM : E820_RESERVED);
+  }
 
-  // Hack: When we first parse this map we normalize each section to either
-  // memory or not-memory. When we pass it to the next kernel, we lose
-  // information about the type of "not memory" in each region.
-  entry->type = is_mem ? E820_RAM : E820_RESERVED;
-
-  ctx->buf += sizeof(*entry);
-  ctx->len -= sizeof(*entry);
-  ctx->ret = ZX_OK;
+  return e820_ranges;
 }
 
 zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi) {
-  uint8_t e820buf[sizeof(e820entry_t) * 64];
-
-  e820_walk_ctx ctx;
-  ctx.buf = e820buf;
-  ctx.len = sizeof(e820buf);
-  ctx.ret = ZX_OK;
-
-  zx_status_t ret = enumerate_e820(e820_entry_walk, &ctx);
-
-  if (ret != ZX_OK) {
-    printf("mexec: enumerate_e820 failed. Retcode = %d\n", ret);
-    return ret;
-  }
-
-  if (ctx.ret != ZX_OK) {
-    printf("mexec: error while enumerating e820 map. Retcode = %d\n", ctx.ret);
-    return ctx.ret;
-  }
-
-  uint32_t section_length = (uint32_t)(sizeof(e820buf) - ctx.len);
-
   zbitl::Image image(data_zbi);
   // The only possible storage error that can result from a span-backed Image
   // would be a failure to increase the capacity.
@@ -510,12 +478,20 @@ zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi) {
     return image_error.storage_error ? ZX_ERR_BUFFER_TOO_SMALL : ZX_ERR_INTERNAL;
   };
 
-  if (auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_E820_TABLE},
-                                 zbitl::AsBytes(e820buf, section_length));
-      result.is_error()) {
-    printf("mexec: failed to append E820 map to data ZBI: ");
-    zbitl::PrintViewError(result.error_value());
-    return error(result.error_value());
+  // Append physical memory ranges.
+  if (!bootloader.memory_ranges.empty()) {
+    fbl::Array<e820entry_t> memory_ranges = ConvertMemoryRanges(bootloader.memory_ranges);
+    if (memory_ranges.data() == nullptr) {
+      return ZX_ERR_NO_MEMORY;
+    }
+
+    if (auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_E820_TABLE},
+                                   zbitl::AsBytes(ktl::span<e820entry_t>{memory_ranges}));
+        result.is_error()) {
+      printf("mexec: failed to append E820 map to data ZBI: ");
+      zbitl::PrintViewError(result.error_value());
+      return error(result.error_value());
+    }
   }
 
   // Append platform ID.
