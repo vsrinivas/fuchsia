@@ -100,18 +100,14 @@ pub struct Hub {
 
 impl Hub {
     /// Create a new Hub given a `component_url` and a controller to the root directory.
-    pub fn new(model: &Arc<Model>, component_url: String) -> Result<Self, ModelError> {
+    pub fn new(model: Weak<Model>, component_url: String) -> Result<Self, ModelError> {
         let mut instances_map = HashMap::new();
         let abs_moniker = AbsoluteMoniker::root();
 
         Hub::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
             .expect("Did not create directory.");
 
-        Ok(Hub {
-            model: Arc::downgrade(model),
-            instances: Mutex::new(instances_map),
-            scope: ExecutionScope::new(),
-        })
+        Ok(Hub { model, instances: Mutex::new(instances_map), scope: ExecutionScope::new() })
     }
 
     pub async fn open_root(

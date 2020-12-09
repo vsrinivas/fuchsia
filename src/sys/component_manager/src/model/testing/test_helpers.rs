@@ -11,7 +11,7 @@ use {
             hooks::HooksRegistration,
             model::Model,
             moniker::{AbsoluteMoniker, PartialMoniker},
-            realm::Realm,
+            realm::{Realm, WeakRealm},
             rights,
             testing::{
                 mocks::{ControlMessage, MockResolver, MockRunner},
@@ -734,10 +734,16 @@ impl ActionsTest {
         let realm_proxy = if let Some(realm_moniker) = realm_moniker {
             let (realm_proxy, stream) =
                 endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
+            let realm = WeakRealm::from(
+                &model
+                    .look_up_realm(&realm_moniker)
+                    .await
+                    .expect(&format!("could not look up {}", realm_moniker)),
+            );
             fasync::Task::spawn(async move {
                 builtin_environment_inner
                     .realm_capability_host
-                    .serve(realm_moniker, stream)
+                    .serve(realm, stream)
                     .await
                     .expect("failed serving realm service");
             })

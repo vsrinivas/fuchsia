@@ -13,7 +13,7 @@ use {
             model::Model,
         },
     },
-    anyhow::{Context as _, Error},
+    anyhow::{format_err, Context as _, Error},
     async_trait::async_trait,
     cm_rust::CapabilityName,
     fidl::endpoints::ServerEnd,
@@ -37,12 +37,12 @@ lazy_static! {
 
 #[derive(Clone)]
 pub struct SystemController {
-    model: Arc<Model>,
+    model: Weak<Model>,
     shutdown_timeout: Duration,
 }
 
 impl SystemController {
-    pub fn new(model: Arc<Model>, shutdown_timeout: Duration) -> Self {
+    pub fn new(model: Weak<Model>, shutdown_timeout: Duration) -> Self {
         Self { model, shutdown_timeout }
     }
 
@@ -88,13 +88,13 @@ impl Hook for SystemController {
 }
 
 pub struct SystemControllerCapabilityProvider {
-    model: Arc<Model>,
+    model: Weak<Model>,
     request_timeout: Duration,
 }
 
 impl SystemControllerCapabilityProvider {
     // TODO (jmatt) allow timeout to be supplied in the constructor
-    pub fn new(model: Arc<Model>, request_timeout: Duration) -> Self {
+    pub fn new(model: Weak<Model>, request_timeout: Duration) -> Self {
         Self { model, request_timeout }
     }
 
@@ -120,7 +120,13 @@ impl SystemControllerCapabilityProvider {
                         panic!("Component manager did not complete shutdown in allowed time.");
                     })
                     .detach();
-                    ActionSet::register(self.model.root_realm.clone(), Action::Shutdown)
+                    let root_realm = self
+                        .model
+                        .upgrade()
+                        .ok_or(format_err!("model is dropped"))?
+                        .root_realm
+                        .clone();
+                    ActionSet::register(root_realm, Action::Shutdown)
                         .await
                         .context("got error waiting for shutdown action to complete")?;
                     match responder.send() {
@@ -213,7 +219,7 @@ mod tests {
 
         // Wire up connections to SystemController
         let sys_controller = Box::new(SystemControllerCapabilityProvider::new(
-            test.model.clone(),
+            Arc::downgrade(&test.model),
             // allow simulated shutdown to take up to 30 days
             Duration::from_secs(60 * 60 * 24 * 30),
         ));
@@ -300,7 +306,7 @@ mod tests {
 
             // Wire up connections to SystemController
             let sys_controller = Box::new(SystemControllerCapabilityProvider::new(
-                test.model.clone(),
+                Arc::downgrade(&test.model),
                 // require shutdown in a second
                 Duration::from_secs(u64::try_from(TIMEOUT_SECONDS).unwrap()),
             ));

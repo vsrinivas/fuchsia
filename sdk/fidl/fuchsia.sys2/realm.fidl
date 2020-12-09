@@ -11,7 +11,7 @@ using fuchsia.component;
 /// binding to its children.
 ///
 /// The component manager provides this service to components that use
-/// `/svc/fuchsia.sys2.Realm`.
+/// `fuchsia.sys2.Realm`.
 [Discoverable]
 protocol Realm {
     /// Binds to a child component instance, causing it to start running if it
@@ -38,6 +38,7 @@ protocol Realm {
     /// - `INSTANCE_CANNOT_START`: `child` was not running and there was an error
     ///   starting it.
     /// - `INSTANCE_CANNOT_RESOLVE`: `child`'s component declaration failed to resolve.
+    /// - `INSTANCE_DIED`: This realm no longer exists.
     BindChild(ChildRef child,
               request<fuchsia.io.Directory> exposed_dir) -> () error fuchsia.component.Error;
 
@@ -53,6 +54,7 @@ protocol Realm {
     /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
     /// - `INSTANCE_ALREADY_EXISTS`: `decl.name` already exists in `collection`.
     /// - `NO_SPACE`: Could not allocate storage for the new instance.
+    /// - `INSTANCE_DIED`: This realm no longer exists.
     CreateChild(CollectionRef collection, ChildDecl decl) -> () error fuchsia.component.Error;
 
     /// Destroys a dynamically-created component instance. When this function
@@ -66,6 +68,7 @@ protocol Realm {
     ///   to a dynamic instance.
     /// - `INSTANCE_NOT_FOUND`: `child` does not exist.
     /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
+    /// - `INSTANCE_DIED`: This realm no longer exists.
     DestroyChild(ChildRef child) -> () error fuchsia.component.Error;
 
     /// Returns an iterator that lists all instances in a collection.
@@ -78,8 +81,9 @@ protocol Realm {
     /// - `INVALID_ARGUMENTS`: `collection` is not a valid reference or `iter`
     /// does not have `ZX_RIGHT_WAIT`.
     /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
+    /// - `INSTANCE_DIED`: This realm no longer exists.
     /// - If `iter` does not have standard channel rights, this function may
-    /// return `ACCESS_DENIED` or component manager may close `iter`.
+    ///   return `ACCESS_DENIED` or component manager may close `iter`.
     ListChildren(CollectionRef collection, request<ChildIterator> iter) -> ()
         error fuchsia.component.Error;
 };

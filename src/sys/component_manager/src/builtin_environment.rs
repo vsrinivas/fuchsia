@@ -587,7 +587,8 @@ impl BuiltinEnvironment {
         }
 
         // Set up System Controller service.
-        let system_controller = Arc::new(SystemController::new(model.clone(), SHUTDOWN_TIMEOUT));
+        let system_controller =
+            Arc::new(SystemController::new(Arc::downgrade(&model), SHUTDOWN_TIMEOUT));
         model.root_realm.hooks.install(system_controller.hooks()).await;
 
         // Set up work scheduler.
@@ -597,7 +598,7 @@ impl BuiltinEnvironment {
 
         // Set up the realm service.
         let realm_capability_host =
-            Arc::new(RealmCapabilityHost::new(model.clone(), runtime_config));
+            Arc::new(RealmCapabilityHost::new(Arc::downgrade(&model), runtime_config));
         model.root_realm.hooks.install(realm_capability_host.hooks()).await;
 
         // Set up the storage admin protocol
@@ -613,7 +614,8 @@ impl BuiltinEnvironment {
         let stop_notifier = Arc::new(RootRealmStopNotifier::new());
         model.root_realm.hooks.install(stop_notifier.hooks()).await;
 
-        let hub = Arc::new(Hub::new(&model, root_component_url.as_str().to_owned())?);
+        let hub =
+            Arc::new(Hub::new(Arc::downgrade(&model), root_component_url.as_str().to_owned())?);
         model.root_realm.hooks.install(hub.hooks()).await;
 
         // Set up the capability ready notifier.

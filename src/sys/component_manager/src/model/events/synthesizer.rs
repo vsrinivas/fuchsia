@@ -114,12 +114,12 @@ impl SynthesisTask {
             // If we can't find the realm then we can't synthesize events.
             // This isn't necessarily an error as the model or realm might've been
             // destroyed in the intervening time, so we just exit early.
-            if let Ok(model) = self.model.upgrade().ok_or(ModelError::ModelNotAvailable) {
+            if let Some(model) = self.model.upgrade() {
                 let sender = self.sender;
                 let futs = self
                     .event_infos
                     .into_iter()
-                    .map(|event_info| Self::run(model.clone(), sender.clone(), event_info));
+                    .map(|event_info| Self::run(&model, sender.clone(), event_info));
                 for result in join_all(futs).await {
                     if let Err(e) = result {
                         error!("Event synthesis failed: {:?}", e);
@@ -136,7 +136,7 @@ impl SynthesisTask {
     /// for them). Those events will only be synthesized if their scope is within the scope of
     /// a Running scope.
     async fn run(
-        model: Arc<Model>,
+        model: &Arc<Model>,
         mut sender: mpsc::UnboundedSender<Event>,
         info: EventSynthesisInfo,
     ) -> Result<(), ModelError> {
