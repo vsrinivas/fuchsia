@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use archivist_lib::logs::{
-    debuglog::KERNEL_URL,
-    stats::{LogManagerStats, LogSource},
-};
+use archivist_lib::logs::debuglog::KERNEL_URL;
 use argh::FromArgs;
 use diagnostics_reader::{ArchiveReader, Logs};
 use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy};
@@ -21,6 +18,9 @@ use tracing::*;
 
 /// The name of the subcommand and the logs-tag.
 pub const PROGRAM_NAME: &str = "log-stats";
+
+mod stats;
+use stats::{LogManagerStats, LogSource};
 
 /// Empty command line args, just to give Launcher the subcommand name "log-stats"
 #[derive(FromArgs, Debug, PartialEq)]
