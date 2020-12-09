@@ -46,7 +46,7 @@ const char* FormatSize(uint64_t bytes, char* buf) {
 }
 
 void Printer::PrintCapture(const Capture& capture) {
-  TRACE_DURATION("memory_metrics", "Printer::PrintCaptureJsonSmall");
+  TRACE_DURATION("memory_metrics", "Printer::PrintCaptureJson");
   rapidjson::Document j(rapidjson::kObjectType);
   auto& a = j.GetAllocator();
 
@@ -75,12 +75,13 @@ void Printer::PrintCapture(const Capture& capture) {
     size_t operator()(const NameCount& kc) const { return std::hash<std::string>()(kc.name); }
   };
 
+  TRACE_DURATION_BEGIN("memory_metrics", "Printer::PrintCaptureJson::Processes");
   std::unordered_set<NameCount, NameCountHash> name_count;
   rapidjson::Value processes(rapidjson::kArrayType);
   processes.Reserve(capture.koid_to_process().size(), a);
   rapidjson::Value process_header(rapidjson::kArrayType);
   processes.PushBack(process_header.PushBack("koid", a).PushBack("name", a).PushBack("vmos", a), a);
-  for (const auto& [k, p] : capture.koid_to_process()) {
+  for (const auto& [_, p] : capture.koid_to_process()) {
     rapidjson::Value vmos(rapidjson::kArrayType);
     vmos.Reserve(p.vmos.size(), a);
     for (const auto& v : p.vmos) {
@@ -94,13 +95,15 @@ void Printer::PrintCapture(const Capture& capture) {
     process.PushBack(p.koid, a).PushBack(rapidjson::StringRef(p.name), a).PushBack(vmos, a);
     processes.PushBack(process, a);
   }
+  TRACE_DURATION_END("memory_metrics", "Printer::PrintCaptureJson::Processes");
 
+  TRACE_DURATION_BEGIN("memory_metrics", "Printer::PrintCaptureJson::Names");
   std::vector<NameCount> sorted_counts(name_count.begin(), name_count.end());
   std::sort(sorted_counts.begin(), sorted_counts.end(),
             [](const NameCount& kc1, const NameCount& kc2) { return kc1.count > kc2.count; });
   size_t index = 0;
   std::unordered_map<std::string, size_t> name_to_index(sorted_counts.size());
-  for (auto& kc : sorted_counts) {
+  for (const auto& kc : sorted_counts) {
     name_to_index[kc.name] = index++;
   }
 
@@ -108,7 +111,9 @@ void Printer::PrintCapture(const Capture& capture) {
   for (const auto& nc : sorted_counts) {
     vmo_names.PushBack(rapidjson::StringRef(nc.name.c_str()), a);
   }
+  TRACE_DURATION_END("memory_metrics", "Printer::PrintCaptureJson::Names");
 
+  TRACE_DURATION_BEGIN("memory_metrics", "Printer::PrintCaptureJson::Vmos");
   rapidjson::Value vmos(rapidjson::kArrayType);
   rapidjson::Value vmo_header(rapidjson::kArrayType);
   vmo_header.PushBack("koid", a)
@@ -126,6 +131,7 @@ void Printer::PrintCapture(const Capture& capture) {
         .PushBack(v.allocated_bytes, a);
     vmos.PushBack(vmo_value, a);
   }
+  TRACE_DURATION_END("memory_metrics", "Printer::PrintCaptureJson::Vmos");
 
   j.AddMember("Time", capture.time(), a)
       .AddMember("Kernel", kernel, a)
@@ -133,9 +139,11 @@ void Printer::PrintCapture(const Capture& capture) {
       .AddMember("VmoNames", vmo_names, a)
       .AddMember("Vmos", vmos, a);
 
+  TRACE_DURATION_BEGIN("memory_metrics", "Printer::PrintCaptureJson::Write");
   rapidjson::OStreamWrapper osw(os_);
   rapidjson::Writer<rapidjson::OStreamWrapper> writer(osw);
   j.Accept(writer);
+  TRACE_DURATION_END("memory_metrics", "Printer::PrintCaptureJson::Write");
 }
 
 void Printer::OutputSizes(const Sizes& sizes) {

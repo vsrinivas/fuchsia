@@ -4,9 +4,7 @@
 
 #include "src/developer/memory/metrics/capture.h"
 
-#include <fcntl.h>
 #include <fuchsia/kernel/c/fidl.h>
-#include <fuchsia/kernel/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
@@ -15,11 +13,7 @@
 #include <lib/zx/job.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
-
-#include <iostream>
-#include <memory>
-#include <ostream>
-#include <unordered_set>
+#include <zircon/types.h>
 
 #include <task-utils/walker.h>
 
@@ -49,12 +43,14 @@ class OSImpl : public OS, public TaskEnumerator {
 
   zx_status_t GetProcesses(
       fit::function<zx_status_t(int, zx_handle_t, zx_koid_t, zx_koid_t)> cb) override {
+    TRACE_DURATION("memory_metrics", "Capture::GetProcesses");
     cb_ = std::move(cb);
     zx::channel local, remote;
     zx_status_t status = zx::channel::create(0, &local, &remote);
     if (status != ZX_OK) {
       return status;
     }
+
     const char* root_job_svc = "/svc/fuchsia.kernel.RootJobForInspect";
     status = fdio_service_connect(root_job_svc, remote.release());
     if (status != ZX_OK) {
@@ -66,6 +62,7 @@ class OSImpl : public OS, public TaskEnumerator {
     if (status != ZX_OK) {
       return status;
     }
+
     return WalkJobTree(root_job.get());
   }
 
@@ -87,6 +84,7 @@ class OSImpl : public OS, public TaskEnumerator {
 
   zx_status_t GetKernelMemoryStats(llcpp::fuchsia::kernel::Stats::SyncClient* stats_client,
                                    zx_info_kmem_stats_t* kmem) override {
+    TRACE_DURATION("memory_metrics", "Capture::GetKernelMemoryStats");
     if (stats_client == nullptr) {
       return ZX_ERR_BAD_STATE;
     }
@@ -123,6 +121,7 @@ zx_status_t Capture::GetCaptureState(CaptureState* state) {
 }
 
 zx_status_t Capture::GetCaptureState(CaptureState* state, OS* os) {
+  TRACE_DURATION("memory_metrics", "Capture::GetCaptureState");
   zx_status_t err = os->GetKernelStats(&state->stats_client);
   if (err != ZX_OK) {
     return err;
@@ -164,36 +163,53 @@ zx_status_t Capture::GetCapture(Capture* capture, const CaptureState& state, Cap
         if (koid == state.self_koid) {
           return ZX_OK;
         }
-
-        Process process = {.koid = koid};
-        zx_status_t s = os->GetProperty(handle, ZX_PROP_NAME, process.name, ZX_MAX_NAME_LEN);
+        char name[ZX_MAX_NAME_LEN];
+        zx_status_t s = os->GetProperty(handle, ZX_PROP_NAME, name, ZX_MAX_NAME_LEN);
         if (s != ZX_OK) {
           return s == ZX_ERR_BAD_STATE ? ZX_OK : s;
         }
 
+        TRACE_DURATION_BEGIN("memory_metrics", "Capture::GetProcesses::GetVMOCount");
         size_t num_vmos;
         s = os->GetInfo(handle, ZX_INFO_PROCESS_VMOS, nullptr, 0, nullptr, &num_vmos);
         if (s != ZX_OK) {
           return s == ZX_ERR_BAD_STATE ? ZX_OK : s;
         }
+        TRACE_DURATION_END("memory_metrics", "Capture::GetProcesses::GetVMOCount");
+
+        TRACE_DURATION_BEGIN("memory_metrics", "Capture::GetProcesses::GetVMOs");
         auto vmos = std::make_unique<zx_info_vmo_t[]>(num_vmos);
         s = os->GetInfo(handle, ZX_INFO_PROCESS_VMOS, vmos.get(), num_vmos * sizeof(zx_info_vmo_t),
                         &num_vmos, nullptr);
         if (s != ZX_OK) {
           return s == ZX_ERR_BAD_STATE ? ZX_OK : s;
         }
-        std::unordered_map<zx_koid_t, const zx_info_vmo_t&> unique_vmos(num_vmos);
-        for (size_t i = 0; i < num_vmos; i++) {
-          const auto& vmo_info = vmos[i];
-          unique_vmos.try_emplace(vmo_info.koid, vmo_info);
-        }
+        TRACE_DURATION_END("memory_metrics", "Capture::GetProcesses::GetVMOs");
 
+        TRACE_DURATION_BEGIN("memory_metrics", "Capture::GetProcesses::UniqueProcessVMOs");
+        std::unordered_map<zx_koid_t, const zx_info_vmo_t*> unique_vmos;
+        unique_vmos.reserve(num_vmos);
+        for (size_t i = 0; i < num_vmos; i++) {
+          const auto* vmo_info = vmos.get() + i;
+          unique_vmos.try_emplace(vmo_info->koid, vmo_info);
+        }
+        TRACE_DURATION_END("memory_metrics", "Capture::GetProcesses::UniqueProcessVMOs");
+
+        TRACE_DURATION_BEGIN("memory_metrics", "Capture::GetProcesses::InsertProcess");
+        auto [it, _] = capture->koid_to_process_.insert({koid, {}});
+        auto& process = it->second;
+        process.koid = koid;
+        strncpy(process.name, name, ZX_MAX_NAME_LEN);
+        TRACE_DURATION_END("memory_metrics", "Capture::GetProcesses::InsertProcess");
+
+        TRACE_DURATION_BEGIN("memory_metrics", "Capture::GetProcesses::UniqueVMOs");
         process.vmos.reserve(unique_vmos.size());
         for (const auto& [koid, vmo] : unique_vmos) {
-          capture->koid_to_vmo_.try_emplace(koid, vmo);
+          capture->koid_to_vmo_.try_emplace(koid, *vmo);
           process.vmos.push_back(koid);
         }
-        capture->koid_to_process_.emplace(koid, process);
+        TRACE_DURATION_END("memory_metrics", "Capture::GetProcesses::UniqueVMOs");
+
         return ZX_OK;
       });
   capture->ReallocateDescendents(rooted_vmo_names);
@@ -208,8 +224,7 @@ zx_status_t Capture::GetCapture(Capture* capture, const CaptureState& state, Cap
 // meanings.
 void Capture::ReallocateDescendents(zx_koid_t parent_koid) {
   Vmo& parent = koid_to_vmo_.at(parent_koid);
-  for (auto& pair : koid_to_vmo_) {
-    Vmo& child = pair.second;
+  for (auto& [_, child] : koid_to_vmo_) {
     if (child.parent_koid == parent_koid) {
       uint64_t reallocated_bytes = std::min(parent.committed_bytes, child.allocated_bytes);
       parent.committed_bytes -= reallocated_bytes;
@@ -224,9 +239,9 @@ void Capture::ReallocateDescendents(zx_koid_t parent_koid) {
 void Capture::ReallocateDescendents(const std::vector<std::string>& rooted_vmo_names) {
   TRACE_DURATION("memory_metrics", "Capture::ReallocateDescendents");
   for (const auto& vmo_name : rooted_vmo_names) {
-    for (const auto& pair : koid_to_vmo_) {
-      if (pair.second.name == vmo_name) {
-        ReallocateDescendents(pair.first);
+    for (const auto& [koid, vmo] : koid_to_vmo_) {
+      if (vmo.name == vmo_name) {
+        ReallocateDescendents(koid);
       }
     }
   }
