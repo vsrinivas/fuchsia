@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 rustc_library("vfs") {
   version = "0.1.0"
@@ -107,4 +108,18 @@ rustc_library("vfs") {
   ]
 
   test_deps = [ "//src/testing/fidl:placeholders-rustc" ]
+}
+
+fuchsia_unittest_package("vfs-tests") {
+  executable_path = "bin/vfs_lib_test"
+  v2_test_runner = "rust_test_runner"
+  deps = [ ":vfs_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":vfs-tests",
+    "macros:tests",
+  ]
 }
