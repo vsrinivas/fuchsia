@@ -14,7 +14,12 @@ use {
         self as component_internal, BuiltinPkgResolver, OutDirContents,
     },
     fidl_fuchsia_sys2 as fsys,
-    std::{convert::TryFrom, path::PathBuf},
+    std::{
+        collections::{HashMap, HashSet},
+        convert::TryFrom,
+        iter::FromIterator,
+        path::PathBuf,
+    },
     thiserror::Error,
 };
 
@@ -78,8 +83,11 @@ pub struct RuntimeConfig {
 pub struct SecurityPolicy {
     /// Allowlists for Zircon job policy.
     pub job_policy: JobPolicyAllowlists,
-    /// Capability routing policies.
-    pub capability_policy: Vec<CapabilityAllowlistEntry>,
+    /// Capability routing policies. The key contains all the information required
+    /// to uniquely identify any routable capability and the set of monikers
+    /// define the set of component paths that are allowed to access this specific
+    /// capability.
+    pub capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AbsoluteMoniker>>,
 }
 
 /// Allowlists for Zircon job policy. Part of runtime security policy.
@@ -103,20 +111,21 @@ pub struct JobPolicyAllowlists {
 
 /// The available capability sources for capability allow lists. This is a strict
 /// subset of all possible Ref types, with equality support.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum CapabilityAllowlistSource {
     Self_,
     Framework,
 }
 
-/// Allowlist entry for capability routing policy. Part of the runtime security palicy.
-#[derive(Debug, PartialEq, Eq)]
-pub struct CapabilityAllowlistEntry {
+/// Allowlist key for capability routing policy. Part of the runtime
+/// security policy. This defines all the required keying information to lookup
+/// whether a capability exists in the policy map or not.
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub struct CapabilityAllowlistKey {
     source_moniker: ExtendedMoniker,
     source_name: String,
     source: CapabilityAllowlistSource,
     capability: CapabilityTypeName,
-    target_monikers: Vec<AbsoluteMoniker>,
 }
 
 impl Default for RuntimeConfig {
@@ -260,7 +269,7 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
         let capability_policy = if let Some(capability_policy) = &security_policy.capability_policy
         {
             if let Some(allowlist) = &capability_policy.allowlist {
-                let mut policies = Vec::with_capacity(allowlist.len());
+                let mut policies = HashMap::new();
                 for e in allowlist.iter() {
                     let source_moniker = ExtendedMoniker::parse_string_without_instances(
                         e.source_moniker
@@ -307,22 +316,21 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
                         Err(Error::new(PolicyConfigError::EmptyAllowlistedCapability))
                     }?;
 
-                    let target_monikers = parse_absolute_monikers_from_strings(&e.target_monikers)?;
+                    let target_monikers = HashSet::from_iter(
+                        parse_absolute_monikers_from_strings(&e.target_monikers)?.iter().cloned(),
+                    );
 
-                    policies.push(CapabilityAllowlistEntry {
-                        source_moniker,
-                        source_name,
-                        source,
-                        capability,
+                    policies.insert(
+                        CapabilityAllowlistKey { source_moniker, source_name, source, capability },
                         target_monikers,
-                    });
+                    );
                 }
                 policies
             } else {
-                Vec::new()
+                HashMap::new()
             }
         } else {
-            Vec::new()
+            HashMap::new()
         };
 
         Ok(SecurityPolicy { job_policy, capability_policy })
@@ -491,29 +499,31 @@ mod tests {
                             AbsoluteMoniker::from(vec!["something:0", "important:0"]),
                         ],
                     },
-                    capability_policy: vec![
-                        CapabilityAllowlistEntry {
+                    capability_policy: HashMap::from_iter(vec![
+                        (CapabilityAllowlistKey {
                             source_moniker: ExtendedMoniker::ComponentManager,
                             source_name: "fuchsia.kernel.RootResource".to_string(),
                             source: CapabilityAllowlistSource::Self_,
                             capability: CapabilityTypeName::Protocol,
-                            target_monikers: vec![
-                                AbsoluteMoniker::from(vec!["root:0"]),
-                                AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]),
-                                AbsoluteMoniker::from(vec!["root:0", "core:0"]),
-                            ],
                         },
-                        CapabilityAllowlistEntry {
+                        HashSet::from_iter(vec![
+                            AbsoluteMoniker::from(vec!["root:0"]),
+                            AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]),
+                            AbsoluteMoniker::from(vec!["root:0", "core:0"]),
+                        ].iter().cloned())
+                        ),
+                        (CapabilityAllowlistKey {
                             source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
                             source_name: "running".to_string(),
                             source: CapabilityAllowlistSource::Framework,
                             capability: CapabilityTypeName::Event,
-                            target_monikers: vec![
-                                AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),
-                                AbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"]),
-                            ],
                         },
-                    ],
+                        HashSet::from_iter(vec![
+                            AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),
+                            AbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"]),
+                        ].iter().cloned())
+                        ),
+                    ].iter().cloned()),
                 },
                 num_threads: 24,
                 namespace_capabilities: vec![

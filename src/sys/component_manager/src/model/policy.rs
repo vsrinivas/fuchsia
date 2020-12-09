@@ -86,7 +86,7 @@ mod tests {
             model::moniker::ChildMoniker,
         },
         matches::assert_matches,
-        std::sync::Arc,
+        std::{collections::HashMap, sync::Arc},
     };
 
     #[test]
@@ -120,7 +120,7 @@ mod tests {
                     ambient_mark_vmo_exec: vec![allowed1.clone(), allowed2.clone()],
                     main_process_critical: vec![allowed1.clone(), allowed2.clone()],
                 },
-                capability_policy: vec![],
+                capability_policy: HashMap::new(),
             },
             ..Default::default()
         });
@@ -167,7 +167,7 @@ mod tests {
                     ambient_mark_vmo_exec: vec![allowed1.clone(), allowed2.clone()],
                     main_process_critical: vec![allowed1.clone(), allowed2.clone()],
                 },
-                capability_policy: vec![],
+                capability_policy: HashMap::new(),
             },
             ..Default::default()
         });
