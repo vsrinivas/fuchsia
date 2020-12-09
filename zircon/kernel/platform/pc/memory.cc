@@ -22,6 +22,7 @@
 #include <dev/interrupt.h>
 #include <efi/boot-services.h>
 #include <fbl/algorithm.h>
+#include <kernel/range_check.h>
 #include <ktl/iterator.h>
 #include <lk/init.h>
 #include <object/handle.h>
@@ -179,45 +180,54 @@ void pc_mem_init(ktl::span<zbi_mem_range_t> ranges) {
     TRACEF("Error adding arenas from provided memory tables: error = %d\n", status);
   }
 
+  // Find an area that we can use for 16 bit bootstrapping of other SMP cores.
+  bool initialized_bootstrap16 = false;
+  constexpr uint64_t kAllocSize = 2 * PAGE_SIZE;
+  constexpr uint64_t kMinBase = 2 * PAGE_SIZE;
+  for (const auto& range : ranges) {
+    // Ignore ranges that are not normal RAM.
+    if (range.type != ZBI_MEM_RANGE_RAM) {
+      continue;
+    }
+
+    // Only consider parts of the range that are in [kMinBase, 1MiB).
+    uint64_t base, length;
+    bool overlap =
+        GetIntersect(kMinBase, 1 * MB - kMinBase, range.paddr, range.length, &base, &length);
+    if (!overlap) {
+      continue;
+    }
+
+    // Ignore ranges that are too small.
+    if (length < kAllocSize) {
+      continue;
+    }
+
+    // We have a valid range.
+    LTRACEF("Selected %" PRIxPTR " as bootstrap16 region\n", base);
+    x86_bootstrap16_init(base);
+    initialized_bootstrap16 = true;
+    break;
+  }
+  if (!initialized_bootstrap16) {
+    TRACEF("WARNING - Failed to assign bootstrap16 region, SMP won't work\n");
+  }
+
   // Cache the e820 entries so that they will be available for enumeration
   // later in the boot.
   //
   // TODO(dgreenaway): Use the same zbi_mem_range_t format as is used elsewhere.
-  bool initialized_bootstrap16 = false;
-  cached_e820_entry_count = 0;
+  if (ranges.size() > ktl::size(cached_e820_entries)) {
+    cached_e820_entry_count = 0;
+    TRACEF("ERROR - Too many e820 entries to hold in the cache!\n");
+    return;
+  }
   for (const auto& range : ranges) {
-    if (cached_e820_entry_count >= ktl::size(cached_e820_entries)) {
-      TRACEF("ERROR - Too many e820 entries to hold in the cache!\n");
-      cached_e820_entry_count = 0;
-      break;
-    }
-
     // Convert the entry into E820 format.
     struct addr_range* entry = &cached_e820_entries[cached_e820_entry_count++];
     entry->base = range.paddr;
     entry->size = range.length;
     entry->is_mem = range.type == ZBI_MEM_RANGE_RAM;
-
-    const uint64_t alloc_size = 2 * PAGE_SIZE;
-    const uint64_t min_base = 2 * PAGE_SIZE;
-    if (!initialized_bootstrap16 && entry->is_mem && entry->base <= 1 * MB - alloc_size &&
-        entry->size >= alloc_size) {
-      uint64_t adj_base = entry->base;
-      if (entry->base < min_base) {
-        uint64_t size_adj = min_base - entry->base;
-        if (entry->size < size_adj + alloc_size) {
-          continue;
-        }
-        adj_base = min_base;
-      }
-
-      LTRACEF("Selected %" PRIxPTR " as bootstrap16 region\n", adj_base);
-      x86_bootstrap16_init(adj_base);
-      initialized_bootstrap16 = true;
-    }
-  }
-  if (!initialized_bootstrap16) {
-    TRACEF("WARNING - Failed to assign bootstrap16 region, SMP won't work\n");
   }
 }
 
