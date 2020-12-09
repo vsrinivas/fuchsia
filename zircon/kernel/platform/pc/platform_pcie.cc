@@ -21,8 +21,7 @@
 #include <kernel/mutex.h>
 #include <ktl/limits.h>
 #include <lk/init.h>
-
-#include "platform_p.h"
+#include <platform/pc/bootloader.h>
 
 class X86PciePlatformSupport : public PciePlatformInterface {
  public:
@@ -106,34 +105,20 @@ static void x86_pcie_init_hook(uint level) {
     return;
   }
 
-  res = enumerate_e820(
-      [](uint64_t base, uint64_t size, bool is_mem, void* ctx) -> void {
-        DEBUG_ASSERT(ctx != nullptr);
-        auto pcie = reinterpret_cast<PcieBusDriver*>(ctx);
-        zx_status_t res;
-
-        res = pcie->SubtractBusRegion(base, size, PciAddrSpace::MMIO);
-        if (res != ZX_OK) {
-          // Woah, this is Very Bad!  If we failed to prohibit the PCIe bus
-          // driver from using a region of the MMIO bus we are in a pretty
-          // dangerous situation.  For now, log a message, then attempt to
-          // lockdown the bus.
-          TRACEF(
-              "FATAL ERROR - Failed to subtract PCIe MMIO region "
-              "[%" PRIx64 ", %" PRIx64 ") from bus driver! (res %d)\n",
-              base, base + size, res);
-          lockdown_pcie_bus_regions(*pcie);
-        }
-      },
-      pcie.get());
-
-  if (res != ZX_OK) {
-    // Woah, this is Very Bad!  If we failed to prohibit the PCIe bus
-    // driver from using a region of the MMIO bus we are in a pretty
-    // dangerous situation.  For now, log a message, then attempt to
-    // lockdown the bus.
-    TRACEF("FATAL ERROR - Failed to enumerate e820 (res = %d)\n", res);
-    lockdown_pcie_bus_regions(*pcie);
+  for (const zbi_mem_range_t& range : bootloader.memory_ranges) {
+    zx_status_t result = pcie->SubtractBusRegion(range.paddr, range.length, PciAddrSpace::MMIO);
+    if (result != ZX_OK) {
+      // Woah, this is Very Bad!  If we failed to prohibit the PCIe bus
+      // driver from using a region of the MMIO bus we are in a pretty
+      // dangerous situation.  For now, log a message, then attempt to
+      // lockdown the bus.
+      TRACEF(
+          "FATAL ERROR - Failed to subtract PCIe MMIO region "
+          "[%" PRIx64 ", %" PRIx64 ") from bus driver! (res %d)\n",
+          range.paddr, range.paddr + range.length, result);
+      lockdown_pcie_bus_regions(*pcie);
+      return;
+    }
   }
 }
 
