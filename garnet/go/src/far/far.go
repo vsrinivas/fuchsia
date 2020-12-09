@@ -15,6 +15,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strings"
 )
 
 // Magic is the first bytes of a FAR archive
@@ -33,7 +34,7 @@ type ChunkType uint64
 // alignment values from the FAR specification
 const (
 	contentAlignment = 4096
-	nameAlignment    = 8
+	chunkAlignment   = 8
 )
 
 // Various chunk types
@@ -243,9 +244,21 @@ func (r *Reader) readIndex() error {
 	}
 	r.indexEntries = make([]IndexEntry, nentries)
 
-	var dirIndex, dirNamesIndex *IndexEntry
+	if err := r.readEntries(); err != nil {
+		return err
+	}
 
-	buf = make([]byte, IndexEntryLen)
+	if err := r.verifyDirEntries(); err != nil {
+		return err
+	}
+
+	return r.verifyContentChunks()
+}
+
+// readEntries reads index entries and directory information into the Reader struct.
+func (r *Reader) readEntries() error {
+	var dirIndex, dirNamesIndex *IndexEntry
+	buf := make([]byte, IndexEntryLen)
 	for i := range r.indexEntries {
 		if _, err := r.source.ReadAt(buf, int64(IndexLen+(i*IndexEntryLen))); err != nil {
 			return err
@@ -262,14 +275,44 @@ func (r *Reader) readIndex() error {
 			return ErrInvalidArchive("short offset")
 		}
 
+		// All chunks must be aligned on 64 bit boundaries.
+		if (r.indexEntries[i].Offset % chunkAlignment) != 0 {
+			return ErrInvalidArchive("chunk not aligned on an 8 byte boundary")
+		}
+
 		switch r.indexEntries[i].Type {
 		case DirChunk:
+			// The spec requires exactly one to be part of the FAR.
+			if dirIndex != nil {
+				return ErrInvalidArchive("extra directory chunk")
+			}
 			dirIndex = &r.indexEntries[i]
 			if dirIndex.Length%DirectoryEntryLen != 0 {
 				return ErrInvalidArchive("bad directory index")
 			}
 		case DirNamesChunk:
+			// The spec requires exactly one to be part of the FAR.
+			if dirNamesIndex != nil {
+				return ErrInvalidArchive("extra directory names chunk")
+			}
 			dirNamesIndex = &r.indexEntries[i]
+			// DirNamesChunk length must be a multiple of 8.
+			if dirNamesIndex.Length%8 != 0 {
+				return ErrInvalidArchive("dir names chunk length is not a multiple of 8")
+			}
+		}
+
+		// Chunks must be tightly packed.
+		var expectedOffset uint64
+		if i == 0 {
+			expectedOffset = IndexLen + r.index.Length
+		} else {
+			prev := r.indexEntries[i-1]
+			expectedOffset = prev.Offset + prev.Length
+		}
+		expectedOffset = align(expectedOffset, chunkAlignment)
+		if r.indexEntries[i].Offset != expectedOffset {
+			return ErrInvalidArchive(fmt.Sprintf("chunk violates the tightly packed constraint: expected offset: %x, actual offset: %x", expectedOffset, r.indexEntries[i].Offset))
 		}
 	}
 
@@ -288,8 +331,83 @@ func (r *Reader) readIndex() error {
 	}
 
 	r.pathData = make([]byte, dirNamesIndex.Length)
-	_, err := r.source.ReadAt(r.pathData, int64(dirNamesIndex.Offset))
-	return err
+	if _, err := r.source.ReadAt(r.pathData, int64(dirNamesIndex.Offset)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// verifyDirEntries verifies directories and path compliance.
+func (r *Reader) verifyDirEntries() error {
+	for i, cur := range r.dirEntries {
+		cs := cur.NameOffset
+		ce := cs + uint32(cur.NameLength)
+		if ce > uint32(len(r.pathData)) {
+			return ErrInvalidArchive("invalid dir name length")
+		}
+		if err := validateName(r.pathData[cs:ce]); err != nil {
+			return err
+		}
+		// Verify lexicographical order of dir name strings.
+		if i == 0 {
+			continue
+		}
+		prev := r.dirEntries[i-1]
+		ps := prev.NameOffset
+		pe := ps + uint32(prev.NameLength)
+		if strings.Compare(string(r.pathData[cs:ce]), string(r.pathData[ps:pe])) != 1 {
+			return ErrInvalidArchive("invalid order of dir names")
+		}
+	}
+
+	return nil
+}
+
+// verifyContentChunks verifies alignment and packing of content chunks.
+func (r *Reader) verifyContentChunks() error {
+	for i, cur := range r.dirEntries {
+		cs := cur.DataOffset
+		if (cs % contentAlignment) != 0 {
+			return ErrInvalidArchive(fmt.Sprintf("content chunk at index %v not aligned on a 4096 byte boundary", i))
+		}
+
+		if i == 0 {
+			// Find the start of the first content chunk and verify packing.
+			// Note that this access is safe because prior index verification has
+			// ensured that there are at least two entries.
+			li := r.indexEntries[len(r.indexEntries)-1]
+			expectedOffset := align(li.Offset+li.Length, contentAlignment)
+			if expectedOffset != cs {
+				return ErrInvalidArchive(fmt.Sprintf("first content chunk violates the tightly packed constraint: expected offset: 0x%x, actual offset: 0x%x", expectedOffset, cs))
+			}
+		} else {
+			// Verify packing and ordering versus the previous content chunk.
+			prev := r.dirEntries[i-1]
+			ps := prev.DataOffset
+			pe := ps + prev.DataLength
+			if pe > cs {
+				return ErrInvalidArchive(fmt.Sprintf("content chunk at index %v starts before the previous chunk ends", i))
+			}
+			expectedOffset := align(pe, contentAlignment)
+			if cs != expectedOffset {
+				return ErrInvalidArchive(fmt.Sprintf("content chunk violates the tightly packed constraint: expected offset: 0x%x, actual offset: 0x%x", expectedOffset, cs))
+			}
+		}
+
+	}
+
+	// Ensure the last content chunk does not extend beyond the end of the file.
+	if len(r.dirEntries) != 0 {
+		le := r.dirEntries[len(r.dirEntries)-1]
+		expectedEnd := align(le.DataOffset+le.DataLength, contentAlignment)
+		buf := make([]byte, 1)
+		if _, err := r.source.ReadAt(buf, int64(expectedEnd)-1); err != nil {
+			return ErrInvalidArchive("last content chunk extends beyond end of file")
+		}
+	}
+
+	return nil
 }
 
 // List provides the list of all file names in the archive
@@ -379,4 +497,66 @@ func fileSize(path string) (int64, error) {
 		return 0, err
 	}
 	return info.Size(), nil
+}
+
+// validateName checks the argument for compliance to the FAR archive spec.
+func validateName(n []byte) error {
+	if len(n) == 0 {
+		return ErrInvalidArchive("name has zero length")
+	}
+	if n[0] == '/' {
+		return ErrInvalidArchive("name must not start with '/'")
+
+	}
+	if n[len(n)-1] == '/' {
+		return ErrInvalidArchive("name must not end with '/'")
+	}
+
+	// States for the parser
+	const (
+		empty = iota
+		dot
+		dotdot
+		other
+	)
+
+	state := empty
+
+	for _, c := range n {
+		switch c {
+		case 0x0:
+			return ErrInvalidArchive("name contains a null byte")
+		case '/':
+			switch state {
+			case empty:
+				return ErrInvalidArchive("name contains empty segment")
+			case dot:
+				return ErrInvalidArchive("name contains '.' segment")
+			case dotdot:
+				return ErrInvalidArchive("name contains '..' segment")
+			default:
+				state = empty
+			}
+		case '.':
+			switch state {
+			case empty:
+				state = dot
+			case dot:
+				state = dotdot
+			default:
+				state = other
+			}
+		default:
+			state = other
+		}
+	}
+
+	switch state {
+	case dot:
+		return ErrInvalidArchive("name contains '.' segment")
+	case dotdot:
+		return ErrInvalidArchive("name contains '..' segment")
+	}
+
+	return nil
 }

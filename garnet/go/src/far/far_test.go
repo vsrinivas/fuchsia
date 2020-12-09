@@ -275,6 +275,175 @@ func TestIsFAR(t *testing.T) {
 	}
 }
 
+func TestValidateName(t *testing.T) {
+	tests := []struct {
+		arg       []byte
+		wantError bool
+	}{
+		{
+			arg:       []byte("a"),
+			wantError: false,
+		},
+		{
+			arg:       []byte("a/a"),
+			wantError: false,
+		},
+		{
+			arg:       []byte("a/a/a"),
+			wantError: false,
+		},
+		{
+			arg:       []byte(".a"),
+			wantError: false,
+		},
+		{
+			arg:       []byte("a."),
+			wantError: false,
+		},
+		{
+			arg:       []byte("..a"),
+			wantError: false,
+		},
+		{
+			arg:       []byte("a.."),
+			wantError: false,
+		},
+		{
+			arg:       []byte("a./a"),
+			wantError: false,
+		},
+		{
+			arg:       []byte("a../a"),
+			wantError: false,
+		},
+		{
+			arg:       []byte("a/.a"),
+			wantError: false,
+		},
+		{
+			arg:       []byte("a/..a"),
+			wantError: false,
+		},
+		{
+			arg:       []byte("/"),
+			wantError: true,
+		},
+		{
+			arg:       []byte("/a"),
+			wantError: true,
+		},
+		{
+			arg:       []byte("a/"),
+			wantError: true,
+		},
+		{
+			arg:       []byte("aa/"),
+			wantError: true,
+		},
+		{
+			arg:       []byte{0x0},
+			wantError: true,
+		},
+		{
+			arg:       []byte{'a', 0x0},
+			wantError: true,
+		},
+		{
+			arg:       []byte{0x0, 'a'},
+			wantError: true,
+		},
+		{
+			arg:       []byte{'a', '/', 0x0},
+			wantError: true,
+		},
+		{
+			arg:       []byte{0x0, '/', 'a'},
+			wantError: true,
+		},
+		{
+			arg:       []byte("a//a"),
+			wantError: true,
+		},
+		{
+			arg:       []byte("a/a//a"),
+			wantError: true,
+		},
+		{
+			arg:       []byte("."),
+			wantError: true,
+		},
+		{
+			arg:       []byte("./a"),
+			wantError: true,
+		},
+		{
+			arg:       []byte("a/./"),
+			wantError: true,
+		},
+		{
+			arg:       []byte("a/./a"),
+			wantError: true,
+		},
+		{
+			arg:       []byte(".."),
+			wantError: true,
+		},
+		{
+			arg:       []byte("../a"),
+			wantError: true,
+		},
+		{
+			arg:       []byte("../a"),
+			wantError: true,
+		},
+		{
+			arg:       []byte("a/../"),
+			wantError: true,
+		},
+		{
+			arg:       []byte("a/../a"),
+			wantError: true,
+		},
+		{
+			// Valid 2-byte UTF-8 sequence.
+			arg:       []byte{0xc3, 0xb1},
+			wantError: false,
+		},
+		{
+			// Valid 4-byte UTF-8 sequence.
+			arg:       []byte{0xf0, 0x90, 0x8c, 0xbc},
+			wantError: false,
+		},
+		/*
+			Currently, validation of UTF-8 is not enforced, see
+			http://fxbug.dev/58420#c6
+			Should this change in the future, these are test cases
+			for invalid UTF-8 strings:
+				{
+					// Invalid 2-byte UTF-8 sequence (second octet).
+					arg:       []byte{0xc3, 0x20},
+					wantError: true,
+				},
+				{
+					// Invalid 4-byte UTF-8 sequence (fourth octet).
+					arg:       []byte{0xf0, 0x90, 0x8c, 0x20},
+					wantError: true,
+				},
+		*/
+	}
+	for _, tt := range tests {
+		got := validateName(tt.arg)
+		gotError := got != nil
+		if gotError != tt.wantError {
+			if got != nil {
+				t.Errorf("validateName(%#v) = %v, want nil", string(tt.arg), got)
+			} else {
+				t.Errorf("validateName(%#v) = %v, want nil", string(tt.arg), got)
+			}
+		}
+	}
+}
+
 // exampleArchive produces an archive similar to far(1) output
 func exampleArchive() []byte {
 	b := make([]byte, 16384)

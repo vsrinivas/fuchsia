@@ -12,6 +12,7 @@ go_library("far") {
   sources = [
     "far.go",
     "far_test.go",
+    "reject_invalid_fars_test.go",
   ]
 }
 
@@ -22,7 +23,10 @@ go_test("go_far_test") {
 }
 
 test_package("go_far_tests") {
-  deps = [ ":go_far_test" ]
+  deps = [
+    ":go_far_test",
+    "//src/sys/pkg/testing/invalid-fars:generate-invalid-fars",
+  ]
 
   tests = [
     {
@@ -30,4 +34,48 @@ test_package("go_far_tests") {
       environments = basic_envs
     },
   ]
+
+  resources = []
+  foreach(filename,
+          [
+            "invalid-magic-bytes.far",
+            "index-entries-length-not-a-multiple-of-24-bytes.far",
+            "directory-names-index-entry-before-directory-index-entry.far",
+            "two-directory-index-entries.far",
+            "two-directory-names-index-entries.far",
+            "no-directory-index-entry.far",
+            "no-directory-names-index-entry.far",
+            "directory-chunk-length-not-a-multiple-of-32-bytes.far",
+            "directory-chunk-not-tightly-packed.far",
+            "path-data-offset-too-large.far",
+            "path-data-length-too-large.far",
+            "directory-entries-not-sorted.far",
+            "directory-entries-with-same-name.far",
+            "directory-names-chunk-length-not-a-multiple-of-8-bytes.far",
+            "directory-names-chunk-not-tightly-packed.far",
+            "directory-names-chunk-before-directory-chunk.far",
+            "directory-names-chunk-overlaps-directory-chunk.far",
+            "zero-length-name.far",
+            "name-with-null-character.far",
+            "name-with-leading-slash.far",
+            "name-with-trailing-slash.far",
+            "name-with-empty-segment.far",
+            "name-with-dot-segment.far",
+            "name-with-dot-dot-segment.far",
+            "content-chunk-starts-early.far",
+            "content-chunk-starts-late.far",
+            "second-content-chunk-starts-early.far",
+            "second-content-chunk-starts-late.far",
+            "content-chunk-not-zero-padded.far",
+            "content-chunk-overlap.far",
+            "content-chunk-not-tightly-packed.far",
+            "content-chunk-offset-past-end-of-file.far",
+          ]) {
+    resources += [
+      {
+        path = "$root_gen_dir/invalid-fars/$filename"
+        dest = "$filename"
+      },
+    ]
+  }
 }
