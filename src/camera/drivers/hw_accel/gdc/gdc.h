@@ -77,7 +77,8 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
                           const hw_accel_remove_task_callback_t* task_remove_callback,
                           uint32_t* out_task_index);
 
-  zx_status_t GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index);
+  zx_status_t GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index,
+                              uint64_t capture_timestamp);
   void GdcRemoveTask(uint32_t task_index);
   void GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index);
   zx_status_t GdcSetOutputResolution(uint32_t task_index, uint32_t new_output_image_format_index);
@@ -100,6 +101,7 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
     // case: GDC_OP_SETOUTPUTRES |index| = output format index
     // case: GDC_OP_FRAME        |index| = input buffer index
     uint32_t index;
+    uint64_t capture_timestamp = 0;
     // Index of the task in the hashmap
     uint32_t task_index;
   };

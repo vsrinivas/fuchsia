@@ -210,12 +210,13 @@ void GdcDevice::ProcessFrame(TaskInfo& info) {
   // First fetch an unused buffer from the VMO pool.
   auto result = task->GetOutputBufferPhysAddr();
   if (result.is_error()) {
-    frame_available_info info;
-    info.frame_status = FRAME_STATUS_ERROR_BUFFER_FULL;
-    info.metadata.input_buffer_index = input_buffer_index;
-    info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
-    info.metadata.image_format_index = task->output_format_index();
-    task->FrameReadyCallback(&info);
+    frame_available_info frame_info;
+    frame_info.frame_status = FRAME_STATUS_ERROR_BUFFER_FULL;
+    frame_info.metadata.input_buffer_index = input_buffer_index;
+    frame_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
+    frame_info.metadata.image_format_index = task->output_format_index();
+    frame_info.metadata.capture_timestamp = info.capture_timestamp;
+    task->FrameReadyCallback(&frame_info);
     return;
   }
 
@@ -269,13 +270,14 @@ void GdcDevice::ProcessFrame(TaskInfo& info) {
   if (packet.key == kPortKeyDebugFakeInterrupt || packet.key == kPortKeyIrqMsg) {
     // Invoke the callback function and tell about the output buffer index
     // which is ready to be used.
-    frame_available_info info;
-    info.frame_status = FRAME_STATUS_OK;
-    info.buffer_id = task->GetOutputBufferIndex();
-    info.metadata.input_buffer_index = input_buffer_index;
-    info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
-    info.metadata.image_format_index = task->output_format_index();
-    task->FrameReadyCallback(&info);
+    frame_available_info frame_info;
+    frame_info.frame_status = FRAME_STATUS_OK;
+    frame_info.buffer_id = task->GetOutputBufferIndex();
+    frame_info.metadata.input_buffer_index = input_buffer_index;
+    frame_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
+    frame_info.metadata.image_format_index = task->output_format_index();
+    frame_info.metadata.capture_timestamp = info.capture_timestamp;
+    task->FrameReadyCallback(&frame_info);
   }
 }
 
@@ -377,7 +379,8 @@ zx_status_t GdcDevice::GdcSetOutputResolution(uint32_t task_index,
   return ZX_OK;
 }
 
-zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index) {
+zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index,
+                                       uint64_t capture_timestamp) {
   TRACE_DURATION("camera", "GdcDevice::GdcProcessFrame");
   TRACE_FLOW_BEGIN("camera", "process_frame", input_buffer_index);
   fbl::AutoLock al(&interface_lock_);
@@ -397,6 +400,7 @@ zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index, uint32_t input_buffe
   info.op = GDC_OP_FRAME;
   info.task = task_entry->second.get();
   info.index = input_buffer_index;
+  info.capture_timestamp = capture_timestamp;
   info.task_index = task_index;
 
   // Put the task on queue.

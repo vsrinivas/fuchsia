@@ -97,7 +97,8 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
       const hw_accel_res_change_callback_t* res_callback,
       const hw_accel_remove_task_callback_t* task_remove_callback, uint32_t* out_task_index);
 
-  zx_status_t Ge2dProcessFrame(uint32_t task_index, uint32_t input_buffer_index);
+  zx_status_t Ge2dProcessFrame(uint32_t task_index, uint32_t input_buffer_index,
+                               uint64_t capture_timestamp);
   void Ge2dRemoveTask(uint32_t task_index);
   void Ge2dReleaseFrame(uint32_t task_index, uint32_t buffer_index);
 
@@ -132,6 +133,7 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
     uint32_t index;
     rect_t crop_rect;
     uint32_t task_index;
+    uint64_t capture_timestamp = 0;
   };
 
   zx::port port_;

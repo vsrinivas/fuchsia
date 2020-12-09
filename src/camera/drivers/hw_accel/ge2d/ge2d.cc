@@ -223,7 +223,8 @@ zx_status_t Ge2dDevice::Ge2dSetInputAndOutputResolution(uint32_t task_index,
   return ZX_OK;
 }
 
-zx_status_t Ge2dDevice::Ge2dProcessFrame(uint32_t task_index, uint32_t input_buffer_index) {
+zx_status_t Ge2dDevice::Ge2dProcessFrame(uint32_t task_index, uint32_t input_buffer_index,
+                                         uint64_t capture_timestamp) {
   TRACE_DURATION("camera", "Ge2dDevice::Ge2dProcessFrame");
   fbl::AutoLock al(&interface_lock_);
   // Find the entry in hashmap.
@@ -241,6 +242,7 @@ zx_status_t Ge2dDevice::Ge2dProcessFrame(uint32_t task_index, uint32_t input_buf
   info.op = GE2D_OP_FRAME;
   info.task = task_entry->second.get();
   info.index = input_buffer_index;
+  info.capture_timestamp = capture_timestamp;
 
   // Put the task on queue.
   TRACE_FLOW_BEGIN("camera", "ge2d_process_frame", info.index);
@@ -827,6 +829,7 @@ void Ge2dDevice::ProcessFrame(TaskInfo& info) {
     f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
     f_info.metadata.image_format_index = task->input_format_index();
     f_info.metadata.input_buffer_index = input_buffer_index;
+    f_info.metadata.capture_timestamp = info.capture_timestamp;
     task->FrameReadyCallback(&f_info);
     return;
   }
@@ -840,6 +843,7 @@ void Ge2dDevice::ProcessFrame(TaskInfo& info) {
     f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
     f_info.metadata.image_format_index = task->output_format_index();
     f_info.metadata.input_buffer_index = input_buffer_index;
+    f_info.metadata.capture_timestamp = info.capture_timestamp;
     task->FrameReadyCallback(&f_info);
     return;
   }
@@ -858,6 +862,7 @@ void Ge2dDevice::ProcessFrame(TaskInfo& info) {
   f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
   f_info.metadata.image_format_index = task->output_format_index();
   f_info.metadata.input_buffer_index = input_buffer_index;
+  f_info.metadata.capture_timestamp = info.capture_timestamp;
   task->FrameReadyCallback(&f_info);
 }
 

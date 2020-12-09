@@ -203,11 +203,12 @@ void Ge2dNode::OnReleaseFrame(uint32_t buffer_index) {
 void Ge2dNode::OnReadyToProcess(const frame_available_info_t* info) {
   TRACE_DURATION("camera", "Ge2dNode::OnReadyToProcess");
   TRACE_FLOW_BEGIN("camera", "ge2d_node_on_ready_to_process", info->buffer_id);
-  async::PostTask(dispatcher_, [this, buffer_index = info->buffer_id]() {
+  async::PostTask(dispatcher_, [this, buffer_index = info->buffer_id,
+                                capture_timestamp = info->metadata.capture_timestamp]() {
     TRACE_DURATION("camera", "Ge2dNode::OnReadyToProcess.task");
     TRACE_FLOW_END("camera", "ge2d_node_on_ready_to_process", buffer_index);
     if (enabled_) {
-      ZX_ASSERT(ZX_OK == ge2d_.ProcessFrame(task_index_, buffer_index));
+      ZX_ASSERT(ZX_OK == ge2d_.ProcessFrame(task_index_, buffer_index, capture_timestamp));
     } else {
       // Since streaming is disabled the incoming frame is released
       // so it gets added back to the pool.

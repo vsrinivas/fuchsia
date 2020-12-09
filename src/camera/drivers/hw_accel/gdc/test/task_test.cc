@@ -48,9 +48,9 @@ ddk_mock::MockMmioReg& GetMockReg(ddk_mock::MockMmioRegRegion& registers) {
 class TaskTest : public zxtest::Test {
  public:
   void ProcessFrameCallback(uint32_t input_buffer_index, uint32_t output_buffer_index,
-                            frame_status_t status) {
+                            frame_status_t status, uint64_t capture_timestamp) {
     fbl::AutoLock al(&lock_);
-    callback_check_.emplace_back(input_buffer_index, output_buffer_index);
+    callback_check_.emplace_back(input_buffer_index, output_buffer_index, capture_timestamp);
     frame_ready_ = true;
     event_.Signal();
     if (status != FRAME_STATUS_OK) {
@@ -94,12 +94,17 @@ class TaskTest : public zxtest::Test {
 
   uint32_t GetCallbackBackOutputBufferIndex() {
     fbl::AutoLock al(&lock_);
-    return callback_check_.back().second;
+    return std::get<1>(callback_check_.back());
   }
 
   uint32_t GetCallbackBackInputBufferIndex() {
     fbl::AutoLock al(&lock_);
-    return callback_check_.back().first;
+    return std::get<0>(callback_check_.back());
+  }
+
+  uint64_t GetCallbackBackCaptureTimestamp() {
+    fbl::AutoLock al(&lock_);
+    return std::get<2>(callback_check_.back());
   }
 
  protected:
@@ -144,7 +149,8 @@ class TaskTest : public zxtest::Test {
       EXPECT_EQ(static_cast<TaskTest*>(ctx)->output_image_format_index_,
                 info->metadata.image_format_index);
       return static_cast<TaskTest*>(ctx)->ProcessFrameCallback(info->metadata.input_buffer_index,
-                                                               info->buffer_id, info->frame_status);
+                                                               info->buffer_id, info->frame_status,
+                                                               info->metadata.capture_timestamp);
     };
     frame_callback_.ctx = this;
 
@@ -241,7 +247,7 @@ class TaskTest : public zxtest::Test {
   bool frame_status_error_ = false;
 
  private:
-  std::vector<std::pair<uint32_t, uint32_t>> callback_check_;
+  std::vector<std::tuple<uint32_t, uint32_t, uint64_t>> callback_check_;
   bool frame_ready_;
   bool frame_removed_;
   fbl::Mutex lock_;
@@ -340,7 +346,7 @@ TEST_F(TaskTest, RemoveTaskTest) {
   auto task_id = SetupForFrameProcessing(fake_regs);
 
   // Posting a task for frame processing.
-  zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
+  zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1, 0);
   EXPECT_OK(status);
 
   // Posting a task to remove task.
@@ -370,7 +376,7 @@ TEST_F(TaskTest, ProcessInvalidFrameTest) {
   __UNUSED auto task_id = SetupForFrameProcessing(fake_regs);
 
   // Invalid task id.
-  zx_status_t status = gdc_device_->GdcProcessFrame(0xFF, 0);
+  zx_status_t status = gdc_device_->GdcProcessFrame(0xFF, 0, 0);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
 }
 
@@ -381,7 +387,7 @@ TEST_F(TaskTest, InvalidBufferProcessFrameTest) {
   __UNUSED auto task_id = SetupForFrameProcessing(fake_regs);
 
   // Invalid buffer id.
-  zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers);
+  zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers, 0);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
 }
 
@@ -394,7 +400,9 @@ TEST_F(TaskTest, ProcessFrameTest) {
   SetExpectations(fake_regs);
 
   // Valid buffer & task id.
-  zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
+  constexpr uint64_t kCaptureTimestamp = 42;
+  zx_status_t status =
+      gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1, kCaptureTimestamp);
   EXPECT_OK(status);
 
   // Trigger the interrupt manually.
@@ -403,7 +411,8 @@ TEST_F(TaskTest, ProcessFrameTest) {
 
   // Check if the callback was called.
   WaitAndReset();
-  EXPECT_EQ(1, GetCallbackSize());
+  ASSERT_EQ(1, GetCallbackSize());
+  EXPECT_EQ(GetCallbackBackCaptureTimestamp(), kCaptureTimestamp);
 
   fake_regs.VerifyAll();
 }
@@ -422,7 +431,7 @@ TEST_F(TaskTest, SetOutputResTest) {
   WaitAndReset();
 
   // Valid buffer & task id.
-  status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
+  status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1, 0);
   EXPECT_OK(status);
 
   // Trigger the interrupt manually.
@@ -446,7 +455,7 @@ TEST_F(TaskTest, ReleaseValidFrameTest) {
   auto task_id = SetupForFrameProcessing(fake_regs);
 
   // Valid buffer & task id.
-  zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
+  zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1, 0);
   EXPECT_OK(status);
 
   // Trigger the interrupt manually.
@@ -471,7 +480,7 @@ TEST_F(TaskTest, ReleaseInValidFrameTest) {
   auto task_id = SetupForFrameProcessing(fake_regs);
 
   // Valid buffer & task id.
-  zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
+  zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1, 0);
   EXPECT_OK(status);
 
   // Trigger the interrupt manually.
@@ -496,11 +505,11 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
   auto task_id = SetupForFrameProcessing(fake_regs);
 
   // Process few frames, putting them in a queue
-  zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
+  zx_status_t status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1, 0);
   EXPECT_OK(status);
-  status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 2);
+  status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 2, 0);
   EXPECT_OK(status);
-  status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 3);
+  status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 3, 0);
   EXPECT_OK(status);
 
   // Trigger the interrupt manually.
@@ -525,7 +534,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
 
   // This time adding another frame to process while its
   // waiting for an interrupt.
-  status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 4);
+  status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 4, 0);
   EXPECT_OK(status);
 
   // Trigger the interrupt manually.
@@ -556,7 +565,7 @@ TEST_F(TaskTest, DropFrameTest) {
 
   // We process kNumberOfBuffers frames.
   for (uint32_t i = 0; i < kNumberOfBuffers; i++) {
-    auto status = gdc_device_->GdcProcessFrame(task_id, i);
+    auto status = gdc_device_->GdcProcessFrame(task_id, i, 0);
     EXPECT_OK(status);
   }
 
@@ -574,7 +583,7 @@ TEST_F(TaskTest, DropFrameTest) {
   }
 
   // Adding one more frame to process.
-  auto status = gdc_device_->GdcProcessFrame(task_id, 0);
+  auto status = gdc_device_->GdcProcessFrame(task_id, 0, 0);
   EXPECT_OK(status);
 
   // Trigger the interrupt manually.

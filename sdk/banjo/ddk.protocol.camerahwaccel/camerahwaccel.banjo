@@ -16,9 +16,14 @@ enum TaskRemoveStatus : uint8 {
 };
 
 struct FrameMetadata {
+    // The value of the system monotonic clock at the time the frame data was received by the
+    // driver.
     uint64 timestamp;
     uint32 image_format_index;
     uint32 input_buffer_index;
+    // The value of the system monotonic clock at the time the root frame associated with this frame
+    // was received by the ISP driver.
+    uint64 capture_timestamp;
 };
 
 struct FrameAvailableInfo {

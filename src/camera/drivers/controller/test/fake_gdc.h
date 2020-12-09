@@ -12,6 +12,7 @@
 
 class FakeGdc {
  public:
+  static constexpr int64_t kFrameDelayClocks = 10;
   FakeGdc() {
     gdc_protocol_ops_.init_task = GdcInitTask;
     gdc_protocol_ops_.process_frame = GdcProcessFrame;
@@ -46,12 +47,15 @@ class FakeGdc {
     image_format_index_ = output_image_format_index;
     return ZX_OK;
   }
-  zx_status_t GdcProcessFrame(uint32_t /*task_index*/, uint32_t input_buffer_index) {
+  zx_status_t GdcProcessFrame(uint32_t /*task_index*/, uint32_t input_buffer_index,
+                              uint64_t capture_timestamp) {
     frame_available_info info = {
         .frame_status = FRAME_STATUS_OK,
         .buffer_id = input_buffer_index,
         .metadata.input_buffer_index = input_buffer_index,
         .metadata.image_format_index = image_format_index_,
+        .metadata.timestamp = capture_timestamp + kFrameDelayClocks,
+        .metadata.capture_timestamp = capture_timestamp,
     };
     frame_callback_->frame_ready(frame_callback_->ctx, &info);
     return ZX_OK;
@@ -98,8 +102,10 @@ class FakeGdc {
         out_task_index);
   }
 
-  static zx_status_t GdcProcessFrame(void* ctx, uint32_t task_index, uint32_t input_buffer_index) {
-    return static_cast<FakeGdc*>(ctx)->GdcProcessFrame(task_index, input_buffer_index);
+  static zx_status_t GdcProcessFrame(void* ctx, uint32_t task_index, uint32_t input_buffer_index,
+                                     uint64_t capture_timestamp) {
+    return static_cast<FakeGdc*>(ctx)->GdcProcessFrame(task_index, input_buffer_index,
+                                                       capture_timestamp);
   }
 
   static void GdcRemoveTask(void* ctx, uint32_t task_index) {

@@ -27,7 +27,7 @@ StreamImpl::Client::Client(StreamImpl& stream, uint64_t id,
 
 StreamImpl::Client::~Client() = default;
 
-void StreamImpl::Client::AddFrame(fuchsia::camera3::FrameInfo frame) {
+void StreamImpl::Client::AddFrame(fuchsia::camera3::FrameInfo2 frame) {
   TRACE_DURATION("camera", "StreamImpl::Client::AddFrame");
   frames_.push(std::move(frame));
   MaybeSendFrame();
@@ -42,7 +42,7 @@ void StreamImpl::Client::MaybeSendFrame() {
   // This Flow can be connected on the client end to allow tracing the flow of frames
   // into the client.
   TRACE_FLOW_BEGIN("camera", "camera3::Stream::GetNextFrame",
-                   fsl::GetKoid(frame.release_fence.get()));
+                   fsl::GetKoid(frame.release_fence().get()));
   frame_callback_(std::move(frame));
   frames_.pop();
   frame_callback_ = nullptr;
@@ -152,7 +152,16 @@ void StreamImpl::Client::WatchOrientation(WatchOrientationCallback callback) {
 }
 
 void StreamImpl::Client::GetNextFrame(GetNextFrameCallback callback) {
-  TRACE_DURATION("camera", "StreamImpl::Client::GetNextFrame");
+  GetNextFrame2([callback = std::move(callback)](fuchsia::camera3::FrameInfo2 frame) {
+    callback({.buffer_index = frame.buffer_index(),
+              .frame_counter = frame.frame_counter(),
+              .timestamp = frame.timestamp(),
+              .release_fence = std::move(*frame.mutable_release_fence())});
+  });
+}
+
+void StreamImpl::Client::GetNextFrame2(GetNextFrame2Callback callback) {
+  TRACE_DURATION("camera", "StreamImpl::Client::GetNextFrame2");
   if (frame_callback_) {
     FX_LOGS(INFO) << "Client called GetNextFrame while a previous call was still pending.";
     CloseConnection(ZX_ERR_BAD_STATE);

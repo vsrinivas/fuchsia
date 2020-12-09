@@ -101,6 +101,13 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
     return;
   }
 
+  uint64_t capture_timestamp = 0;
+  if (info.metadata.has_capture_timestamp()) {
+    capture_timestamp = info.metadata.capture_timestamp();
+  } else {
+    FX_LOGS(DEBUG) << "Driver sent a frame without a capture timestamp.";
+  }
+
   // Discard any spurious frames received while muted.
   if (mute_state_.muted()) {
     legacy_stream_->ReleaseFrame(info.buffer_id);
@@ -127,10 +134,13 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
     zx::eventpair release_fence;
     ZX_ASSERT(zx::eventpair::create(0u, &fence, &release_fence) == ZX_OK);
     fences.push_back(std::move(fence));
-    client->AddFrame({.buffer_index = info.buffer_id,
-                      .frame_counter = frame_counter_,
-                      .timestamp = info.metadata.timestamp(),
-                      .release_fence = std::move(release_fence)});
+    fuchsia::camera3::FrameInfo2 frame;
+    frame.set_buffer_index(info.buffer_id);
+    frame.set_frame_counter(frame_counter_);
+    frame.set_timestamp(info.metadata.timestamp());
+    frame.set_capture_timestamp(capture_timestamp);
+    frame.set_release_fence(std::move(release_fence));
+    client->AddFrame(std::move(frame));
   }
 
   // No participating clients exist. Release the frame immediately.

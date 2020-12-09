@@ -76,14 +76,14 @@ class StreamImpl {
     ~Client() override;
 
     // Add a frame to the queue of available frames.
-    void AddFrame(fuchsia::camera3::FrameInfo frame);
+    void AddFrame(fuchsia::camera3::FrameInfo2 frame);
 
     // Send a frame to the client if one is available and has been requested.
     void MaybeSendFrame();
 
     // Closes |binding_| with the provided |status| epitaph, and removes the client instance from
     // the parent |clients_| map.
-    void CloseConnection(zx_status_t epitaph);
+    void CloseConnection(zx_status_t status);
 
     // Add the given token to the client's token queue.
     void ReceiveBufferCollection(
@@ -118,6 +118,7 @@ class StreamImpl {
     void WatchBufferCollection(WatchBufferCollectionCallback callback) override;
     void WatchOrientation(WatchOrientationCallback callback) override;
     void GetNextFrame(GetNextFrameCallback callback) override;
+    void GetNextFrame2(GetNextFrame2Callback callback) override;
     void Rebind(fidl::InterfaceRequest<Stream> request) override;
 
     StreamImpl& stream_;
@@ -129,9 +130,9 @@ class StreamImpl {
                              fit::function<bool(fuchsia::math::Size, fuchsia::math::Size)>>
         resolution_;
     camera::HangingGetHelper<std::unique_ptr<fuchsia::math::RectF>> crop_region_;
-    GetNextFrameCallback frame_callback_;
+    GetNextFrame2Callback frame_callback_;
     bool participant_ = false;
-    std::queue<fuchsia::camera3::FrameInfo> frames_;
+    std::queue<fuchsia::camera3::FrameInfo2> frames_;
   };
 
   async_dispatcher_t* dispatcher_;

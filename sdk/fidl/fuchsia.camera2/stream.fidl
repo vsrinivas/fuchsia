@@ -27,6 +27,9 @@ table FrameMetadata {
     /// |image_format_index| references the index into the vector of available
     /// formats supported by the stream.
     2: uint32 image_format_index;
+    /// The value of the system monotonic clock at the moment the buffer used to construct this
+    /// frame was received from the ISP.
+    3: int64 capture_timestamp;
 };
 
 /// Sent by the driver to the client when a frame is available for processing,

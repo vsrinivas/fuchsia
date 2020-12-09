@@ -100,8 +100,8 @@ protocol Ge2d {
     // in the task corresponding to |task_index| and stores the ouput in the
     // |output_buffer_collection| after applying the correct configuration.
     // After processing we call the callback registered for this task with the
-    // output buffer index.
-    ProcessFrame(uint32 task_index, uint32 input_buffer_index) -> (zx.status s);
+    // output buffer index. |capture_timestamp| is forwarded to derived frames.
+    ProcessFrame(uint32 task_index, uint32 input_buffer_index, uint64 capture_timestamp) -> (zx.status s);
 
     // Releases the frame |buffer_index| from the |output_buffer_collection| to be
     // used again by the GE2D driver again. Not valid for in-place watermark tasks.

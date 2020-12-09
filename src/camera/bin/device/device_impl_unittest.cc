@@ -159,6 +159,10 @@ TEST_F(DeviceImplTest, GetFrames) {
   stream.set_error_handler(MakeErrorHandler("Stream"));
   constexpr uint32_t kBufferId1 = 42;
   constexpr uint32_t kBufferId2 = 17;
+  constexpr int64_t kCaptureTimestamp1 = 600;
+  constexpr int64_t kCaptureTimestamp2 = 700;
+  constexpr int64_t kTimestamp1 = 650;
+  constexpr int64_t kTimestamp2 = 745;
   constexpr uint32_t kMaxCampingBuffers = 1;
   std::unique_ptr<FakeLegacyStream> legacy_stream_fake;
   bool legacy_stream_created = false;
@@ -217,28 +221,34 @@ TEST_F(DeviceImplTest, GetFrames) {
   RunLoopUntil([&] { return HasFailure() || legacy_stream_fake->IsStreaming(); });
   bool frame1_received = false;
   bool frame2_received = false;
-  auto callback2 = [&](fuchsia::camera3::FrameInfo info) {
-    ASSERT_EQ(info.buffer_index, kBufferId2);
-    EXPECT_EQ(info.frame_counter, 2u);
+  auto callback2 = [&](fuchsia::camera3::FrameInfo2 info) {
+    ASSERT_EQ(info.buffer_index(), kBufferId2);
+    EXPECT_EQ(info.frame_counter(), 2u);
+    EXPECT_EQ(info.timestamp(), kTimestamp2);
+    EXPECT_EQ(info.capture_timestamp(), kCaptureTimestamp2);
     frame2_received = true;
   };
-  auto callback1 = [&](fuchsia::camera3::FrameInfo info) {
-    ASSERT_EQ(info.buffer_index, kBufferId1);
-    EXPECT_EQ(info.frame_counter, 1u);
+  auto callback1 = [&](fuchsia::camera3::FrameInfo2 info) {
+    ASSERT_EQ(info.buffer_index(), kBufferId1);
+    EXPECT_EQ(info.frame_counter(), 1u);
+    EXPECT_EQ(info.timestamp(), kTimestamp1);
+    EXPECT_EQ(info.capture_timestamp(), kCaptureTimestamp1);
     frame1_received = true;
-    info.release_fence.reset();
+    info.mutable_release_fence()->reset();
     fuchsia::camera2::FrameAvailableInfo frame2_info;
     frame2_info.frame_status = fuchsia::camera2::FrameStatus::OK;
     frame2_info.buffer_id = kBufferId2;
-    frame2_info.metadata.set_timestamp(0);
+    frame2_info.metadata.set_timestamp(kTimestamp2);
+    frame2_info.metadata.set_capture_timestamp(kCaptureTimestamp2);
     ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame2_info)), ZX_OK);
-    stream->GetNextFrame(std::move(callback2));
+    stream->GetNextFrame2(std::move(callback2));
   };
-  stream->GetNextFrame(std::move(callback1));
+  stream->GetNextFrame2(std::move(callback1));
   fuchsia::camera2::FrameAvailableInfo frame1_info;
   frame1_info.frame_status = fuchsia::camera2::FrameStatus::OK;
   frame1_info.buffer_id = kBufferId1;
-  frame1_info.metadata.set_timestamp(0);
+  frame1_info.metadata.set_timestamp(kTimestamp1);
+  frame1_info.metadata.set_capture_timestamp(kCaptureTimestamp1);
   ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame1_info)), ZX_OK);
   while (!HasFailure() && (!frame1_received || !frame2_received)) {
     RunLoopUntilIdle();
@@ -259,6 +269,7 @@ TEST_F(DeviceImplTest, GetFrames) {
   for (uint32_t i = 0; i < kNumFrames; ++i) {
     fuchsia::camera2::FrameAvailableInfo frame_info{.buffer_id = i};
     frame_info.metadata.set_timestamp(0);
+    frame_info.metadata.set_capture_timestamp(0);
     ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame_info)), ZX_OK);
     if (i < constraints.min_buffer_count_for_camping) {
       // Up to the camping limit, wait until the frames are received.
@@ -393,6 +404,7 @@ TEST_F(DeviceImplTest, RequestStreamFromController) {
     info.frame_status = fuchsia::camera2::FrameStatus::OK;
     info.buffer_id = kBufferId;
     info.metadata.set_timestamp(0);
+    info.metadata.set_capture_timestamp(0);
     zx_status_t status = controller_->SendFrameViaLegacyStream(std::move(info));
     if (status == ZX_OK) {
       frame_sent = true;
@@ -715,6 +727,7 @@ TEST_F(DeviceImplTest, SoftwareMuteState) {
     fuchsia::camera2::FrameAvailableInfo frame_info{
         .frame_status = fuchsia::camera2::FrameStatus::OK, .buffer_id = next_buffer_id};
     frame_info.metadata.set_timestamp(0);
+    frame_info.metadata.set_capture_timestamp(0);
     zx_status_t status = controller_->SendFrameViaLegacyStream(std::move(frame_info));
     if (status == ZX_ERR_SHOULD_WAIT || status == ZX_ERR_BAD_STATE) {
       // Keep trying until the device starts streaming.
@@ -920,6 +933,7 @@ TEST_F(DeviceImplTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
       frame_info.frame_status = fuchsia::camera2::FrameStatus::OK;
       frame_info.buffer_id = cycle;
       frame_info.metadata.set_timestamp(0);
+      frame_info.metadata.set_capture_timestamp(0);
       while (!HasFailure() && !legacy_stream_fakes[cycle]->IsStreaming()) {
         RunLoopUntilIdle();
       }
@@ -1110,11 +1124,13 @@ TEST_F(DeviceImplTest, GetFramesMultiClient) {
   frame1_info.frame_status = fuchsia::camera2::FrameStatus::OK;
   frame1_info.buffer_id = kBufferId1;
   frame1_info.metadata.set_timestamp(0);
+  frame1_info.metadata.set_capture_timestamp(0);
   ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame1_info)), ZX_OK);
   fuchsia::camera2::FrameAvailableInfo frame2_info;
   frame2_info.frame_status = fuchsia::camera2::FrameStatus::OK;
   frame2_info.buffer_id = kBufferId2;
   frame2_info.metadata.set_timestamp(0);
+  frame2_info.metadata.set_capture_timestamp(0);
   ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame2_info)), ZX_OK);
 
   // Try to receive each frame independently via each client.

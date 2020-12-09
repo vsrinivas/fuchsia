@@ -172,11 +172,12 @@ void GdcNode::OnReadyToProcess(const frame_available_info_t* info) {
   auto nonce = TRACE_NONCE();
   TRACE_DURATION("camera", "GdcNode::OnReadyToProcess");
   TRACE_FLOW_BEGIN("camera", "post_process_frame", nonce);
-  async::PostTask(dispatcher_, [this, nonce, buffer_index = info->buffer_id]() {
+  async::PostTask(dispatcher_, [this, nonce, buffer_index = info->buffer_id,
+                                capture_timestamp = info->metadata.capture_timestamp]() {
     TRACE_DURATION("camera", "GdcNode::OnReadyToProcess.task", "buffer_index", buffer_index);
     TRACE_FLOW_END("camera", "post_process_frame", nonce);
     if (enabled_) {
-      ZX_ASSERT(ZX_OK == gdc_.ProcessFrame(task_index_, buffer_index));
+      ZX_ASSERT(ZX_OK == gdc_.ProcessFrame(task_index_, buffer_index, capture_timestamp));
     } else {
       // Since streaming is disabled the incoming frame is released
       // so it gets added back to the pool.

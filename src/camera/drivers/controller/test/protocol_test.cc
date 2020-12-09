@@ -13,6 +13,7 @@
 
 #include <utility>
 
+#include "ddk/protocol/camerahwaccel.h"
 #include "src/camera/drivers/controller/controller_protocol.h"
 #include "src/camera/drivers/controller/gdc_node.h"
 #include "src/camera/drivers/controller/ge2d_node.h"
@@ -676,6 +677,9 @@ TEST_F(ControllerProtocolTest, TestEnabledDisableStreaming) {
   EXPECT_TRUE(ds_ml_output_node->enabled());
 }
 
+constexpr uint64_t FakeCaptureTimestamp(uint32_t id) { return 10000 * (id + 1); }
+constexpr uint64_t FakeTimestamp(uint32_t id) { return FakeCaptureTimestamp(id) + 1000; }
+
 TEST_F(ControllerProtocolTest, TestMultipleFrameRates) {
   auto fr_stream_type = kStreamTypeFR | kStreamTypeML;
   auto ds_stream_type = kStreamTypeMonitoring;
@@ -693,6 +697,10 @@ TEST_F(ControllerProtocolTest, TestMultipleFrameRates) {
   fr_stream.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo info) {
     fr_frame_received = true;
     fr_frame_index = info.buffer_id;
+    // FR node should use timestamp as capture time.
+    EXPECT_EQ(info.metadata.capture_timestamp(), info.metadata.timestamp());
+    // FR should use the timestamp reported by the driver.
+    EXPECT_EQ(info.metadata.timestamp(), static_cast<int64_t>(FakeTimestamp(info.buffer_id)));
   };
 
   bool ds_stream_alive = true;
@@ -705,6 +713,12 @@ TEST_F(ControllerProtocolTest, TestMultipleFrameRates) {
     ds_frame_received = true;
     ds_frame_index = info.buffer_id;
     ds_frame_count++;
+    // DS should have the same capture timestamp as FR.
+    EXPECT_EQ(info.metadata.capture_timestamp(),
+              static_cast<int64_t>(FakeTimestamp(info.buffer_id)));
+    // The fake GE2D driver adds a delay in its timestamp reporting.
+    EXPECT_EQ(info.metadata.timestamp(),
+              info.metadata.capture_timestamp() + FakeGe2d::kFrameDelayClocks);
   };
 
   auto* fr_head_node = pipeline_manager_->full_resolution_stream();
@@ -716,25 +730,21 @@ TEST_F(ControllerProtocolTest, TestMultipleFrameRates) {
   RunLoopUntilIdle();
 
   // Invoke OnFrameAvailable() for the ISP node. Buffer index = 1.
-  frame_available_info_t frame_info = {
-      .frame_status = FRAME_STATUS_OK,
-      .buffer_id = 0,
-      .metadata =
-          {
-              .timestamp = static_cast<uint64_t>(zx_clock_get_monotonic()),
-              .image_format_index = 0,
-              .input_buffer_index = 0,
-          },
-  };
-
   for (uint32_t i = 0; i < kNumBuffers; i++) {
-    frame_info.buffer_id = i;
-    async::PostTask(dispatcher(), [&frame_info, &fr_head_node]() {
-      fr_head_node->OnReadyToProcess(&frame_info);
+    async::PostTask(dispatcher(), [i, &fr_head_node]() {
+      frame_available_info_t info{
+          .frame_status = FRAME_STATUS_OK,
+          .buffer_id = i,
+          .metadata{.timestamp = FakeTimestamp(i), .capture_timestamp = FakeCaptureTimestamp(i)}};
+      fr_head_node->OnReadyToProcess(&info);
     });
     RunLoopUntilIdle();
-    async::PostTask(dispatcher(), [&frame_info, &ds_head_node]() {
-      ds_head_node->OnReadyToProcess(&frame_info);
+    async::PostTask(dispatcher(), [i, &ds_head_node]() {
+      frame_available_info_t info{
+          .frame_status = FRAME_STATUS_OK,
+          .buffer_id = i,
+          .metadata{.timestamp = FakeTimestamp(i), .capture_timestamp = FakeCaptureTimestamp(i)}};
+      ds_head_node->OnReadyToProcess(&info);
     });
     RunLoopUntilIdle();
   }

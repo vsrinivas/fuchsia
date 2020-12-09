@@ -46,6 +46,7 @@ void StreamImpl::FrameReady(const frame_available_info_t* info) {
   frame_info.buffer_id = info->buffer_id;
   frame_info.metadata.set_image_format_index(info->metadata.image_format_index);
   frame_info.metadata.set_timestamp(info->metadata.timestamp);
+  frame_info.metadata.set_capture_timestamp(info->metadata.capture_timestamp);
   ZX_ASSERT(binding_.is_bound());
   binding_.events().OnFrameAvailable(std::move(frame_info));
 }

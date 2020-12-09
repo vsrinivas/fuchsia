@@ -75,8 +75,10 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
 }
 
 void InputNode::OnReadyToProcess(const frame_available_info_t* info) {
-  // No processing to be done here, forward it to OnFrameAvailable().
-  OnFrameAvailable(info);
+  // Use the timestamp of the input as the capture time.
+  auto modified = *info;
+  modified.metadata.capture_timestamp = info->metadata.timestamp;
+  OnFrameAvailable(&modified);
 }
 
 void InputNode::OnFrameAvailable(const frame_available_info_t* info) {

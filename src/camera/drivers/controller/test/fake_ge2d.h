@@ -13,6 +13,7 @@ class FakeGe2d;
 
 class FakeGe2d {
  public:
+  static constexpr int64_t kFrameDelayClocks = 100;
   FakeGe2d() {
     ge2d_protocol_ops_.init_task_resize = Ge2dInitTaskResize;
     ge2d_protocol_ops_.init_task_water_mark = Ge2dInitTaskWaterMark;
@@ -81,12 +82,15 @@ class FakeGe2d {
     image_format_index_ = image_format_index;
     return ZX_OK;
   }
-  zx_status_t Ge2dProcessFrame(uint32_t /*task_index*/, uint32_t input_buffer_index) {
+  zx_status_t Ge2dProcessFrame(uint32_t /*task_index*/, uint32_t input_buffer_index,
+                               uint64_t capture_timestamp) {
     frame_available_info info = {
         .frame_status = FRAME_STATUS_OK,
         .buffer_id = input_buffer_index,
         .metadata.input_buffer_index = input_buffer_index,
         .metadata.image_format_index = image_format_index_,
+        .metadata.timestamp = capture_timestamp + kFrameDelayClocks,
+        .metadata.capture_timestamp = capture_timestamp,
     };
     frame_callback_->frame_ready(frame_callback_->ctx, &info);
     return ZX_OK;
@@ -164,8 +168,10 @@ class FakeGe2d {
         image_format_index, frame_callback, res_callback, task_remove_callback, out_task_index);
   }
 
-  static zx_status_t Ge2dProcessFrame(void* ctx, uint32_t task_index, uint32_t input_buffer_index) {
-    return static_cast<FakeGe2d*>(ctx)->Ge2dProcessFrame(task_index, input_buffer_index);
+  static zx_status_t Ge2dProcessFrame(void* ctx, uint32_t task_index, uint32_t input_buffer_index,
+                                      uint64_t capture_timestamp) {
+    return static_cast<FakeGe2d*>(ctx)->Ge2dProcessFrame(task_index, input_buffer_index,
+                                                         capture_timestamp);
   }
 
   static void Ge2dRemoveTask(void* ctx, uint32_t task_index) {

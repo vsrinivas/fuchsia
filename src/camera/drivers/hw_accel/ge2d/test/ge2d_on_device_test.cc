@@ -448,7 +448,7 @@ TEST_F(Ge2dDeviceTest, SameSize) {
       &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -477,7 +477,7 @@ TEST_F(Ge2dDeviceTest, Crop) {
       &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -506,7 +506,7 @@ TEST_F(Ge2dDeviceTest, CropOddOffset) {
       &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -536,7 +536,7 @@ TEST_F(Ge2dDeviceTest, Scale) {
       &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -566,7 +566,7 @@ TEST_F(Ge2dDeviceTest, ScaleQuarter) {
       &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -596,7 +596,7 @@ TEST_F(Ge2dDeviceTest, ScaleHeightQuarter) {
       &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -626,7 +626,7 @@ TEST_F(Ge2dDeviceTest, ScaleThird) {
       &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -657,7 +657,7 @@ TEST_F(Ge2dDeviceTest, Scale2x) {
       &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -706,7 +706,7 @@ TEST_F(Ge2dDeviceTest, NV12ToRgba) {
       &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -740,11 +740,11 @@ TEST_F(Ge2dDeviceTest, ChangeScale) {
       &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0, 0);
   EXPECT_OK(status);
 
   ge2d_device_->Ge2dSetCropRect(resize_task, &new_crop_rect);
-  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -780,14 +780,14 @@ TEST_F(Ge2dDeviceTest, RemoveTask) {
       &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0, 0);
   EXPECT_OK(status);
 
   ge2d_device_->Ge2dRemoveTask(resize_task);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
   EXPECT_TRUE(got_frame_callback);
-  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0, 0);
   EXPECT_NOT_OK(status);
 }
 
@@ -827,7 +827,7 @@ TEST_F(Ge2dDeviceTest, RgbaToRgba) {
       &frame_callback_, &res_callback_, &remove_task_callback_, &resize_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(resize_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -883,7 +883,7 @@ TEST_F(Ge2dDeviceTest, RGBABlankWatermark) {
       &remove_task_callback_, &watermark_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -930,7 +930,7 @@ TEST_F(Ge2dDeviceTest, RGBARedWatermark) {
       &remove_task_callback_, &watermark_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -963,7 +963,7 @@ TEST_F(Ge2dDeviceTest, SameColorWatermark) {
       &remove_task_callback_, &watermark_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -1016,7 +1016,7 @@ TEST_F(Ge2dDeviceTest, NewColorWatermark) {
       &remove_task_callback_, &watermark_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -1059,7 +1059,7 @@ TEST_F(Ge2dDeviceTest, YUVBlankWatermark) {
       &remove_task_callback_, &watermark_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -1122,7 +1122,7 @@ TEST_F(Ge2dDeviceTest, WatermarkOutputSize) {
   status = ge2d_device_->Ge2dSetInputAndOutputResolution(watermark_task, 1);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -1166,7 +1166,7 @@ TEST_F(Ge2dDeviceTest, GlobalAlphaWatermark) {
       &remove_task_callback_, &watermark_task);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 0);
+  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 0, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
@@ -1221,7 +1221,7 @@ TEST_F(Ge2dDeviceTest, InPlaceWatermarkOutputSize) {
   status = ge2d_device_->Ge2dSetInputAndOutputResolution(watermark_task, 1);
   EXPECT_OK(status);
 
-  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 1);
+  status = ge2d_device_->Ge2dProcessFrame(watermark_task, 1, 0);
   EXPECT_OK(status);
 
   EXPECT_EQ(ZX_OK, sync_completion_wait(&completion_, ZX_TIME_INFINITE));
