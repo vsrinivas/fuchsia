@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::config::Config,
     crate::fidl::FidlServer,
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_paver::PaverMarker,
@@ -15,6 +16,7 @@ use {
 };
 
 mod check_and_set;
+mod config;
 mod fidl;
 
 pub fn main() -> Result<(), Error> {
@@ -31,6 +33,10 @@ pub fn main() -> Result<(), Error> {
 
 // Soon, we will grow this to be smarter. Everyone starts somewhere. 🌱
 async fn main_inner_async() -> Result<(), Error> {
+    // FIXME(http://fxbug.dev/64595) Actually use the configuration once we start implementing
+    // health checks.
+    let _config = Config::load_from_config_data_or_default();
+
     let paver = fuchsia_component::client::connect_to_service::<PaverMarker>()
         .context("while connecting to paver")?;
     let (boot_manager, boot_manager_server_end) =
