@@ -58,6 +58,13 @@ import (
 */
 import "C"
 
+type hardError struct {
+	mu struct {
+		sync.Mutex
+		err *tcpip.Error
+	}
+}
+
 // endpoint is the base structure that models all network sockets.
 type endpoint struct {
 	// TODO(fxbug.dev/37419): Remove TransitionalBase after methods landed.
@@ -79,10 +86,7 @@ type endpoint struct {
 
 	ns *Netstack
 
-	hardErrorMu struct {
-		sync.Mutex
-		err *tcpip.Error
-	}
+	hardError hardError
 }
 
 func (ep *endpoint) incRef() {
@@ -103,22 +107,22 @@ func (ep *endpoint) decRef() bool {
 	return doClose
 }
 
-// storeAndRetrieveHardErrorLocked evaluates if the input error is a "hard
+// storeAndRetrieveLocked evaluates if the input error is a "hard
 // error" (one which puts the endpoint in an unrecoverable error state) and
 // stores it. Returns the pre-existing hard error if it was already set or the
 // new value if changed.
 //
-// Must be called with hardErrorMu locked.
-func (ep *endpoint) storeAndRetrieveHardErrorLocked(err *tcpip.Error) *tcpip.Error {
-	if ep.hardErrorMu.err == nil {
+// Must be called with he.mu held.
+func (he *hardError) storeAndRetrieveLocked(err *tcpip.Error) *tcpip.Error {
+	if he.mu.err == nil {
 		switch err {
 		case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset,
 			tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute, tcpip.ErrTimeout,
 			tcpip.ErrConnectionRefused:
-			ep.hardErrorMu.err = err
+			he.mu.err = err
 		}
 	}
-	return ep.hardErrorMu.err
+	return he.mu.err
 }
 
 func (ep *endpoint) Sync(fidl.Context) (int32, error) {
@@ -181,10 +185,10 @@ func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (sock
 
 		// Acquire hard error lock across ep calls to avoid races and store the
 		// hard error deterministically.
-		ep.hardErrorMu.Lock()
+		ep.hardError.mu.Lock()
 		err := ep.ep.Connect(addr)
-		hardError := ep.storeAndRetrieveHardErrorLocked(err)
-		ep.hardErrorMu.Unlock()
+		hardError := ep.hardError.storeAndRetrieveLocked(err)
+		ep.hardError.mu.Unlock()
 		if err != nil {
 			switch err {
 			case tcpip.ErrConnectStarted:
@@ -386,9 +390,9 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 	//
 	// Acquire hard error lock across ep calls to avoid races and store the
 	// hard error deterministically.
-	eps.endpoint.hardErrorMu.Lock()
-	hardError := eps.endpoint.storeAndRetrieveHardErrorLocked(eps.ep.LastError())
-	eps.endpoint.hardErrorMu.Unlock()
+	eps.endpoint.hardError.mu.Lock()
+	hardError := eps.endpoint.hardError.storeAndRetrieveLocked(eps.ep.LastError())
+	eps.endpoint.hardError.mu.Unlock()
 	if hardError != nil {
 		// Run this in a separate goroutine to avoid deadlock.
 		//
@@ -692,10 +696,10 @@ func (eps *endpointWithSocket) loopWrite() {
 		for {
 			// Acquire hard error lock across ep calls to avoid races and store the
 			// hard error deterministically.
-			eps.hardErrorMu.Lock()
+			eps.hardError.mu.Lock()
 			n, resCh, err := eps.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{})
-			hardError := eps.storeAndRetrieveHardErrorLocked(err)
-			eps.hardErrorMu.Unlock()
+			hardError := eps.hardError.storeAndRetrieveLocked(err)
+			eps.hardError.mu.Unlock()
 
 			if resCh != nil {
 				if err != tcpip.ErrNoLinkAddress {
@@ -803,10 +807,10 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 			var err *tcpip.Error
 			// Acquire hard error lock across ep calls to avoid races and store the
 			// hard error deterministically.
-			eps.hardErrorMu.Lock()
+			eps.hardError.mu.Lock()
 			v, _, err = eps.ep.Read(&sender)
-			hardError := eps.storeAndRetrieveHardErrorLocked(err)
-			eps.hardErrorMu.Unlock()
+			hardError := eps.hardError.storeAndRetrieveLocked(err)
+			eps.hardError.mu.Unlock()
 			if err == tcpip.ErrNotConnected {
 				if connected {
 					panic(fmt.Sprintf("connected endpoint returned %s", err))
