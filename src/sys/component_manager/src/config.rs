@@ -8,7 +8,7 @@ use {
         startup,
     },
     anyhow::{format_err, Context, Error},
-    cm_rust::FidlIntoNative,
+    cm_rust::{CapabilityTypeName, FidlIntoNative},
     cm_types::Url,
     fidl_fuchsia_component_internal::{
         self as component_internal, BuiltinPkgResolver, OutDirContents,
@@ -101,27 +101,21 @@ pub struct JobPolicyAllowlists {
     pub main_process_critical: Vec<AbsoluteMoniker>,
 }
 
-/// Define a wrapper around the component_internal type to implement Eq.
-#[derive(Debug, PartialEq)]
-pub enum AllowlistedCapability {
-    Directory(component_internal::AllowlistedDirectory),
-    Event(component_internal::AllowlistedEvent),
-    Protocol(component_internal::AllowlistedProtocol),
-    Service(component_internal::AllowlistedService),
-    Storage(component_internal::AllowlistedStorage),
-    Runner(component_internal::AllowlistedRunner),
-    Resolver(component_internal::AllowlistedResolver),
+/// The available capability sources for capability allow lists. This is a strict
+/// subset of all possible Ref types, with equality support.
+#[derive(Debug, PartialEq, Eq)]
+pub enum CapabilityAllowlistSource {
+    Self_,
+    Framework,
 }
-
-// Internal fidl tables implement PartialEq but not Eq, but this type is
-// semantically Eq.
-impl Eq for AllowlistedCapability {}
 
 /// Allowlist entry for capability routing policy. Part of the runtime security palicy.
 #[derive(Debug, PartialEq, Eq)]
 pub struct CapabilityAllowlistEntry {
     source_moniker: ExtendedMoniker,
-    capability: AllowlistedCapability,
+    source_name: String,
+    source: CapabilityAllowlistSource,
+    capability: CapabilityTypeName,
     target_monikers: Vec<AbsoluteMoniker>,
 }
 
@@ -273,80 +267,41 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
                             .as_ref()
                             .ok_or(Error::new(PolicyConfigError::EmptySourceMoniker))?,
                     )?;
+                    let source_name = if let Some(source_name) = e.source_name.as_ref() {
+                        Ok(source_name.clone())
+                    } else {
+                        Err(PolicyConfigError::EmptyCapabilitySourceName)
+                    }?;
+                    let source = match e.source {
+                        Some(fsys::Ref::Self_(_)) => Ok(CapabilityAllowlistSource::Self_),
+                        Some(fsys::Ref::Framework(_)) => Ok(CapabilityAllowlistSource::Framework),
+                        _ => Err(Error::new(PolicyConfigError::InvalidSourceCapability)),
+                    }?;
 
                     let capability = if let Some(capability) = e.capability.as_ref() {
-                        match capability {
-                            component_internal::AllowlistedCapability::Directory(e) => {
-                                Ok(AllowlistedCapability::Directory(
-                                    component_internal::AllowlistedDirectory {
-                                        source_name: e.source_name.clone(),
-                                        ..component_internal::AllowlistedDirectory::EMPTY
-                                    },
-                                ))
+                        match &capability {
+                            component_internal::AllowlistedCapability::Directory(_) => {
+                                Ok(CapabilityTypeName::Directory)
                             }
-                            component_internal::AllowlistedCapability::Event(e) => {
-                                // Only self and framework refs are valid in this context.
-                                let source = match e.source {
-                                    Some(fsys::Ref::Self_(_)) => {
-                                        Ok(fsys::Ref::Self_(fsys::SelfRef {}))
-                                    }
-                                    Some(fsys::Ref::Framework(_)) => {
-                                        Ok(fsys::Ref::Framework(fsys::FrameworkRef {}))
-                                    }
-                                    _ => {
-                                        Err(Error::new(PolicyConfigError::InvalidSourceCapability))
-                                    }
-                                }?;
-                                let event = component_internal::AllowlistedEvent {
-                                    source_name: e.source_name.clone(),
-                                    source: Some(source),
-                                    ..component_internal::AllowlistedEvent::EMPTY
-                                };
-                                Ok(AllowlistedCapability::Event(event))
+                            component_internal::AllowlistedCapability::Event(_) => {
+                                Ok(CapabilityTypeName::Event)
                             }
-                            component_internal::AllowlistedCapability::Protocol(e) => {
-                                Ok(AllowlistedCapability::Protocol(
-                                    component_internal::AllowlistedProtocol {
-                                        source_name: e.source_name.clone(),
-                                        ..component_internal::AllowlistedProtocol::EMPTY
-                                    },
-                                ))
+                            component_internal::AllowlistedCapability::Protocol(_) => {
+                                Ok(CapabilityTypeName::Protocol)
                             }
-                            component_internal::AllowlistedCapability::Service(e) => {
-                                Ok(AllowlistedCapability::Service(
-                                    component_internal::AllowlistedService {
-                                        source_name: e.source_name.clone(),
-                                        ..component_internal::AllowlistedService::EMPTY
-                                    },
-                                ))
+                            component_internal::AllowlistedCapability::Service(_) => {
+                                Ok(CapabilityTypeName::Service)
                             }
-                            component_internal::AllowlistedCapability::Storage(e) => {
-                                Ok(AllowlistedCapability::Storage(
-                                    component_internal::AllowlistedStorage {
-                                        source_name: e.source_name.clone(),
-                                        ..component_internal::AllowlistedStorage::EMPTY
-                                    },
-                                ))
+                            component_internal::AllowlistedCapability::Storage(_) => {
+                                Ok(CapabilityTypeName::Storage)
                             }
-                            component_internal::AllowlistedCapability::Runner(e) => {
-                                Ok(AllowlistedCapability::Runner(
-                                    component_internal::AllowlistedRunner {
-                                        source_name: e.source_name.clone(),
-                                        ..component_internal::AllowlistedRunner::EMPTY
-                                    },
-                                ))
+                            component_internal::AllowlistedCapability::Runner(_) => {
+                                Ok(CapabilityTypeName::Runner)
                             }
-                            component_internal::AllowlistedCapability::Resolver(e) => {
-                                Ok(AllowlistedCapability::Resolver(
-                                    component_internal::AllowlistedResolver {
-                                        source_name: e.source_name.clone(),
-                                        ..component_internal::AllowlistedResolver::EMPTY
-                                    },
-                                ))
+                            component_internal::AllowlistedCapability::Resolver(_) => {
+                                Ok(CapabilityTypeName::Resolver)
                             }
-                            _ => {
-                                Err(Error::new(PolicyConfigError::UnsupportedAllowlistedCapability))
-                            }
+                            _ => Err(Error::new(PolicyConfigError::EmptyAllowlistedCapability)),
                         }
                     } else {
                         Err(Error::new(PolicyConfigError::EmptyAllowlistedCapability))
@@ -356,6 +311,8 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
 
                     policies.push(CapabilityAllowlistEntry {
                         source_moniker,
+                        source_name,
+                        source,
                         capability,
                         target_monikers,
                     });
@@ -477,12 +434,9 @@ mod tests {
                         allowlist: Some(vec![
                         component_internal::CapabilityAllowlistEntry {
                             source_moniker: Some("<component_manager>".to_string()),
-                            capability: Some(component_internal::AllowlistedCapability::Protocol(
-                                component_internal::AllowlistedProtocol {
-                                    source_name: Some("fuchsia.boot.RootResource".to_string()),
-                                    ..component_internal::AllowlistedProtocol::EMPTY
-                                }
-                            )),
+                            source_name: Some("fuchsia.kernel.RootResource".to_string()),
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            capability: Some(component_internal::AllowlistedCapability::Protocol(component_internal::AllowlistedProtocol::EMPTY)),
                             target_monikers: Some(vec![
                                 "/root".to_string(),
                                 "/root/bootstrap".to_string(),
@@ -492,13 +446,9 @@ mod tests {
                         },
                         component_internal::CapabilityAllowlistEntry {
                             source_moniker: Some("/foo/bar".to_string()),
-                            capability: Some(component_internal::AllowlistedCapability::Event(
-                                    component_internal::AllowlistedEvent {
-                                        source_name: Some("running".to_string()),
-                                        source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                                        ..component_internal::AllowlistedEvent::EMPTY
-                                    }
-                            )),
+                            source_name: Some("running".to_string()),
+                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                            capability: Some(component_internal::AllowlistedCapability::Event(component_internal::AllowlistedEvent::EMPTY)),
                             target_monikers: Some(vec![
                                 "/foo/bar".to_string(),
                                 "/foo/bar/baz".to_string()
@@ -544,12 +494,9 @@ mod tests {
                     capability_policy: vec![
                         CapabilityAllowlistEntry {
                             source_moniker: ExtendedMoniker::ComponentManager,
-                            capability: AllowlistedCapability::Protocol(
-                                component_internal::AllowlistedProtocol {
-                                    source_name: Some("fuchsia.boot.RootResource".to_string()),
-                                    ..component_internal::AllowlistedProtocol::EMPTY
-                                }
-                            ),
+                            source_name: "fuchsia.kernel.RootResource".to_string(),
+                            source: CapabilityAllowlistSource::Self_,
+                            capability: CapabilityTypeName::Protocol,
                             target_monikers: vec![
                                 AbsoluteMoniker::from(vec!["root:0"]),
                                 AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]),
@@ -558,13 +505,9 @@ mod tests {
                         },
                         CapabilityAllowlistEntry {
                             source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
-                            capability: AllowlistedCapability::Event(
-                                component_internal::AllowlistedEvent {
-                                    source_name: Some("running".to_string()),
-                                    source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                                    ..component_internal::AllowlistedEvent::EMPTY
-                                }
-                            ),
+                            source_name: "running".to_string(),
+                            source: CapabilityAllowlistSource::Framework,
+                            capability: CapabilityTypeName::Event,
                             target_monikers: vec![
                                 AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),
                                 AbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"]),
@@ -625,7 +568,9 @@ mod tests {
                     allowlist: Some(vec![
                     component_internal::CapabilityAllowlistEntry {
                         source_moniker: Some("<component_manager>".to_string()),
-                        capability:  None,
+                        source_name: Some("fuchsia.kernel.RootResource".to_string()),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
+                        capability: None,
                         target_monikers: Some(vec!["/root".to_string()]),
                         ..component_internal::CapabilityAllowlistEntry::EMPTY
                     }]),
@@ -651,12 +596,8 @@ mod tests {
                 allowlist: Some(vec![
                 component_internal::CapabilityAllowlistEntry {
                     source_moniker: None,
-                    capability: Some(component_internal::AllowlistedCapability::Protocol(
-                        component_internal::AllowlistedProtocol {
-                            source_name: Some("fuchsia.boot.RootResource".to_string()),
-                            ..component_internal::AllowlistedProtocol::EMPTY
-                        }
-                    )),
+                    source_name: Some("fuchsia.kernel.RootResource".to_string()),
+                    capability: Some(component_internal::AllowlistedCapability::Protocol(component_internal::AllowlistedProtocol::EMPTY)),
                     target_monikers: Some(vec!["/root".to_string()]),
                     ..component_internal::CapabilityAllowlistEntry::EMPTY
                 }]),

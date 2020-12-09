@@ -124,32 +124,24 @@ flexible union AllowlistedCapability {
 };
 
 table AllowlistedDirectory {
-    1: string:fuchsia.component.MAX_NAME_LENGTH source_name;
 };
 
 table AllowlistedEvent {
-    1: string:fuchsia.component.MAX_NAME_LENGTH source_name;
-    2: fuchsia.sys2.Ref source;
 };
 
 table AllowlistedProtocol {
-    1: string:fuchsia.component.MAX_NAME_LENGTH source_name;
 };
 
 table AllowlistedService {
-    1: string:fuchsia.component.MAX_NAME_LENGTH source_name;
 };
 
 table AllowlistedStorage {
-    1: string:fuchsia.component.MAX_NAME_LENGTH source_name;
 };
 
 table AllowlistedRunner {
-    1: string:fuchsia.component.MAX_NAME_LENGTH source_name;
 };
 
 table AllowlistedResolver {
-    1: string:fuchsia.component.MAX_NAME_LENGTH source_name;
 };
 
 /// Defines a single capability policy entry in the set of capability policy
@@ -159,13 +151,19 @@ table CapabilityAllowlistEntry {
     /// `source_moniker` is either an absolute moniker or '<component_manager>'.
     1: string:fuchsia.component.MAX_MONIKER_LENGTH source_moniker;
 
+    /// The source name of this particular capability.
+    2: string:fuchsia.component.MAX_NAME_LENGTH source_name;
+
     /// Represents the type of capability that is being restricted along
     /// with any other properties required by a particular capability type.
-    2: AllowlistedCapability capability;
+    3: AllowlistedCapability capability;
 
     /// The set of absolute monikers that are allowed to use this specific
     /// capability.
-    3: vector<string:fuchsia.component.MAX_MONIKER_LENGTH>:MAX_ALLOWLIST_SIZE target_monikers;
+    4: vector<string:fuchsia.component.MAX_MONIKER_LENGTH>:MAX_ALLOWLIST_SIZE target_monikers;
+
+    /// The original source type of this component, self or framework.
+    5: fuchsia.sys2.Ref source;
 };
 
 /// Defines the total set of capability allowlists. Each

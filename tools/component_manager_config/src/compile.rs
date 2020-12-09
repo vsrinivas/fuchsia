@@ -80,83 +80,42 @@ impl std::default::Default for OutDirContents {
     }
 }
 
-pub trait AllowlistedCapabilityExt {
-    fn get_source_name(&self) -> String;
-    fn get_source(&self) -> Option<&fsys::Ref>;
-}
-
 #[derive(Deserialize, Debug, Clone)]
-#[serde(rename_all = "lowercase", tag = "type")]
-pub enum AllowlistedCapability {
-    Directory { source_name: String },
-    Event { source_name: String, source: CapabilityFrom },
-    Protocol { source_name: String },
-    Service { source_name: String },
-    Storage { source_name: String },
-    Runner { source_name: String },
-    Resolver { source_name: String },
+#[serde(rename_all = "lowercase")]
+pub enum CapabilityTypeName {
+    Directory,
+    Event,
+    Protocol,
+    Service,
+    Storage,
+    Runner,
+    Resolver,
 }
 
-impl Into<component_internal::AllowlistedCapability> for AllowlistedCapability {
+impl Into<component_internal::AllowlistedCapability> for CapabilityTypeName {
     fn into(self) -> component_internal::AllowlistedCapability {
         match &self {
-            AllowlistedCapability::Directory { source_name } => {
-                component_internal::AllowlistedCapability::Directory(
-                    component_internal::AllowlistedDirectory {
-                        source_name: Some(source_name.clone()),
-                        ..component_internal::AllowlistedDirectory::EMPTY
-                    },
-                )
-            }
-            AllowlistedCapability::Event { source_name, source } => {
-                component_internal::AllowlistedCapability::Event(
-                    component_internal::AllowlistedEvent {
-                        source_name: Some(source_name.clone()),
-                        source: Some(source.clone().into()),
-                        ..component_internal::AllowlistedEvent::EMPTY
-                    },
-                )
-            }
-            AllowlistedCapability::Protocol { source_name } => {
-                component_internal::AllowlistedCapability::Protocol(
-                    component_internal::AllowlistedProtocol {
-                        source_name: Some(source_name.clone()),
-                        ..component_internal::AllowlistedProtocol::EMPTY
-                    },
-                )
-            }
-            AllowlistedCapability::Service { source_name } => {
-                component_internal::AllowlistedCapability::Service(
-                    component_internal::AllowlistedService {
-                        source_name: Some(source_name.clone()),
-                        ..component_internal::AllowlistedService::EMPTY
-                    },
-                )
-            }
-            AllowlistedCapability::Storage { source_name } => {
-                component_internal::AllowlistedCapability::Storage(
-                    component_internal::AllowlistedStorage {
-                        source_name: Some(source_name.clone()),
-                        ..component_internal::AllowlistedStorage::EMPTY
-                    },
-                )
-            }
-            AllowlistedCapability::Runner { source_name } => {
-                component_internal::AllowlistedCapability::Runner(
-                    component_internal::AllowlistedRunner {
-                        source_name: Some(source_name.clone()),
-                        ..component_internal::AllowlistedRunner::EMPTY
-                    },
-                )
-            }
-            AllowlistedCapability::Resolver { source_name } => {
-                component_internal::AllowlistedCapability::Resolver(
-                    component_internal::AllowlistedResolver {
-                        source_name: Some(source_name.clone()),
-                        ..component_internal::AllowlistedResolver::EMPTY
-                    },
-                )
-            }
+            CapabilityTypeName::Directory => component_internal::AllowlistedCapability::Directory(
+                component_internal::AllowlistedDirectory::EMPTY,
+            ),
+            CapabilityTypeName::Event => component_internal::AllowlistedCapability::Event(
+                component_internal::AllowlistedEvent::EMPTY,
+            ),
+            CapabilityTypeName::Protocol => component_internal::AllowlistedCapability::Protocol(
+                component_internal::AllowlistedProtocol::EMPTY,
+            ),
+            CapabilityTypeName::Service => component_internal::AllowlistedCapability::Service(
+                component_internal::AllowlistedService::EMPTY,
+            ),
+            CapabilityTypeName::Storage => component_internal::AllowlistedCapability::Storage(
+                component_internal::AllowlistedStorage::EMPTY,
+            ),
+            CapabilityTypeName::Runner => component_internal::AllowlistedCapability::Runner(
+                component_internal::AllowlistedRunner::EMPTY,
+            ),
+            CapabilityTypeName::Resolver => component_internal::AllowlistedCapability::Resolver(
+                component_internal::AllowlistedResolver::EMPTY,
+            ),
         }
     }
 }
@@ -181,7 +140,9 @@ impl Into<fsys::Ref> for CapabilityFrom {
 #[serde(deny_unknown_fields)]
 pub struct CapabilityAllowlistEntry {
     source_moniker: Option<String>,
-    capability: Option<AllowlistedCapability>,
+    source_name: Option<String>,
+    source: Option<CapabilityFrom>,
+    capability: Option<CapabilityTypeName>,
     target_monikers: Option<Vec<String>>,
 }
 
@@ -256,6 +217,8 @@ fn translate_capability_policy(
         .iter()
         .map(|e| component_internal::CapabilityAllowlistEntry {
             source_moniker: e.source_moniker.clone(),
+            source_name: e.source_name.clone(),
+            source: e.source.clone().map_or_else(|| None, |t| Some(t.into())),
             capability: e.capability.clone().map_or_else(|| None, |t| Some(t.into())),
             target_monikers: e.target_monikers.clone(),
             ..component_internal::CapabilityAllowlistEntry::EMPTY
@@ -413,19 +376,16 @@ mod tests {
                 capability_policy: [
                     {
                         source_moniker: "<component_manager>",
-                        capability: {
-                            type: "protocol",
-                            source_name: "fuchsia.boot.RootResource",
-                        },
+                        source: "component",
+                        source_name: "fuchsia.kernel.RootResource",
+                        capability: "protocol",
                         target_monikers: ["/root", "/root/bootstrap", "/root/core"],
                     },
                     {
                         source_moniker: "/foo/bar",
-                        capability: {
-                            type: "event",
-                            source_name: "running",
-                            source: "framework",
-                        },
+                        source_name: "running",
+                        source: "framework",
+                        capability: "event",
                         target_monikers: ["/foo/bar", "/foo/bar/baz"],
                     },
                 ]
@@ -463,14 +423,11 @@ mod tests {
                         allowlist: Some(vec![
                             component_internal::CapabilityAllowlistEntry {
                                 source_moniker: Some("<component_manager>".to_string()),
+                                source_name: Some("fuchsia.kernel.RootResource".to_string()),
+                                source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                                 capability: Some(
                                     component_internal::AllowlistedCapability::Protocol(
-                                        component_internal::AllowlistedProtocol {
-                                            source_name: Some(
-                                                "fuchsia.boot.RootResource".to_string()
-                                            ),
-                                            ..component_internal::AllowlistedProtocol::EMPTY
-                                        }
+                                        component_internal::AllowlistedProtocol::EMPTY
                                     )
                                 ),
                                 target_monikers: Some(vec![
@@ -483,12 +440,10 @@ mod tests {
                             component_internal::CapabilityAllowlistEntry {
                                 source_moniker: Some("/foo/bar".to_string()),
                                 capability: Some(component_internal::AllowlistedCapability::Event(
-                                    component_internal::AllowlistedEvent {
-                                        source_name: Some("running".to_string()),
-                                        source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                                        ..component_internal::AllowlistedEvent::EMPTY
-                                    }
+                                    component_internal::AllowlistedEvent::EMPTY
                                 )),
+                                source_name: Some("running".to_string()),
+                                source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                                 target_monikers: Some(vec![
                                     "/foo/bar".to_string(),
                                     "/foo/bar/baz".to_string()
