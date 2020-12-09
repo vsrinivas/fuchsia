@@ -316,18 +316,21 @@ pub(crate) mod tests {
         }
     }
 
-    pub(crate) fn make_sbc_endpoint(seid: u8) -> StreamEndpoint {
+    pub(crate) fn make_sbc_endpoint(seid: u8, direction: avdtp::EndpointType) -> StreamEndpoint {
         StreamEndpoint::new(
             seid,
             avdtp::MediaType::Audio,
-            avdtp::EndpointType::Source,
+            direction,
             vec![avdtp::ServiceCapability::MediaTransport, sbc_mediacodec_capability()],
         )
         .expect("endpoint creation should succeed")
     }
 
     fn make_stream(seid: u8) -> Stream {
-        Stream::build(make_sbc_endpoint(seid), TestMediaTaskBuilder::new().builder())
+        Stream::build(
+            make_sbc_endpoint(seid, avdtp::EndpointType::Source),
+            TestMediaTaskBuilder::new().builder(),
+        )
     }
 
     #[test]
@@ -346,8 +349,10 @@ pub(crate) mod tests {
         assert!(streams.get_mut(&first_id).is_some());
         assert!(streams.get_mut(&missing_id).is_none());
 
-        let expected_info =
-            vec![make_sbc_endpoint(1).information(), make_sbc_endpoint(6).information()];
+        let expected_info = vec![
+            make_sbc_endpoint(1, avdtp::EndpointType::Source).information(),
+            make_sbc_endpoint(6, avdtp::EndpointType::Source).information(),
+        ];
 
         let infos = streams.information();
 
@@ -367,7 +372,8 @@ pub(crate) mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
         let mut builder = TestMediaTaskBuilder::new_reconfigurable();
-        let mut stream = Stream::build(make_sbc_endpoint(1), builder.builder());
+        let mut stream =
+            Stream::build(make_sbc_endpoint(1, avdtp::EndpointType::Source), builder.builder());
 
         // the default test stream only supports 48000hz
         let unsupported_sbc_codec_info = SbcCodecInfo::new(
@@ -462,7 +468,8 @@ pub(crate) mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
         let mut builder = TestMediaTaskBuilder::new();
-        let mut stream = Stream::build(make_sbc_endpoint(1), builder.builder());
+        let mut stream =
+            Stream::build(make_sbc_endpoint(1, avdtp::EndpointType::Source), builder.builder());
 
         let supported_sbc_codec_info = SbcCodecInfo::new(
             SbcSamplingFrequency::FREQ48000HZ,
@@ -541,7 +548,10 @@ pub(crate) mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
         let mut task_builder = TestMediaTaskBuilder::new();
-        let mut stream = Stream::build(make_sbc_endpoint(1), task_builder.builder());
+        let mut stream = Stream::build(
+            make_sbc_endpoint(1, avdtp::EndpointType::Source),
+            task_builder.builder(),
+        );
         let next_task_fut = task_builder.next_task();
         let remote_id = 1_u8.try_into().expect("good id");
 
@@ -595,7 +605,10 @@ pub(crate) mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
         let mut task_builder = TestMediaTaskBuilder::new();
-        let mut stream = Stream::build(make_sbc_endpoint(1), task_builder.builder());
+        let mut stream = Stream::build(
+            make_sbc_endpoint(1, avdtp::EndpointType::Source),
+            task_builder.builder(),
+        );
         let next_task_fut = task_builder.next_task();
         let peer_id = PeerId(1);
         let remote_id = 1_u8.try_into().expect("good id");

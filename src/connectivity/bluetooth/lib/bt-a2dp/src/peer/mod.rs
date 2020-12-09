@@ -201,7 +201,7 @@ impl Peer {
         async move {
             let local_id = {
                 let strong = PeerInner::upgrade(peer.clone())?;
-                let stream_id = strong.lock().find_compatible_local(&codec_params)?;
+                let stream_id = strong.lock().find_compatible_local(&codec_params, &remote_id)?;
                 stream_id
             };
 
@@ -393,7 +393,7 @@ impl PeerInner {
             self.remote_inspect.record_child(inspect::unique_name("remote_"), |node| {
                 node.record_string("endpoint_id", endpoint.local_id().debug());
                 node.record_string("capabilities", endpoint.capabilities().debug());
-                node.record_string("type", endpoint.information().endpoint_type().debug());
+                node.record_string("type", endpoint.endpoint_type().debug());
             });
         }
         self.remote_endpoints = Some(endpoints.iter().map(StreamEndpoint::as_new).collect());
@@ -402,6 +402,13 @@ impl PeerInner {
     /// If the remote endpoints have been set, returns a copy of the endpoints.
     fn remote_endpoints(&self) -> Option<Vec<StreamEndpoint>> {
         self.remote_endpoints.as_ref().map(|v| v.iter().map(StreamEndpoint::as_new).collect())
+    }
+
+    /// If the remote endpoint with endpoint `id` exists, return a copy of the endpoint.
+    fn remote_endpoint(&self, id: &StreamEndpointId) -> Option<StreamEndpoint> {
+        self.remote_endpoints
+            .as_ref()
+            .and_then(|v| v.iter().find(|v| v.local_id() == id).map(StreamEndpoint::as_new))
     }
 
     async fn set_opening(
@@ -456,10 +463,13 @@ impl PeerInner {
     pub fn find_compatible_local(
         &self,
         codec_params: &ServiceCapability,
+        remote_id: &StreamEndpointId,
     ) -> avdtp::Result<StreamEndpointId> {
         let config = codec_params.try_into()?;
+        let our_direction = self.remote_endpoint(remote_id).map(|e| e.endpoint_type().opposite());
         self.local
             .compatible(config)
+            .filter(|s| our_direction.map(|d| &d == s.endpoint().endpoint_type()).unwrap_or(true))
             .map(|s| s.endpoint().local_id().clone())
             .next()
             .ok_or(avdtp::Error::OutOfRange)
@@ -667,8 +677,16 @@ mod tests {
 
     fn build_test_streams() -> Streams {
         let mut streams = Streams::new();
-        let s = Stream::build(make_sbc_endpoint(1), TestMediaTaskBuilder::new().builder());
-        streams.insert(s);
+        let source = Stream::build(
+            make_sbc_endpoint(1, avdtp::EndpointType::Source),
+            TestMediaTaskBuilder::new().builder(),
+        );
+        streams.insert(source);
+        let sink = Stream::build(
+            make_sbc_endpoint(2, avdtp::EndpointType::Sink),
+            TestMediaTaskBuilder::new().builder(),
+        );
+        streams.insert(sink);
         streams
     }
 
@@ -1180,6 +1198,180 @@ mod tests {
     }
 
     #[test]
+    fn test_peer_stream_start_picks_correct_direction() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+
+        let (remote, _profile_request_stream, _, peer) = setup_peer_test();
+        let remote = avdtp::Peer::new(remote);
+        let mut remote_events = remote.take_request_stream();
+
+        // Respond as if we have a single SBC Source Stream
+        fn remote_handle_request(req: avdtp::Request) {
+            let expected_stream_id: StreamEndpointId = 4_u8.try_into().unwrap();
+            let res = match req {
+                avdtp::Request::Discover { responder } => {
+                    let infos = [avdtp::StreamInformation::new(
+                        expected_stream_id,
+                        false,
+                        avdtp::MediaType::Audio,
+                        avdtp::EndpointType::Source,
+                    )];
+                    responder.send(&infos)
+                }
+                avdtp::Request::GetAllCapabilities { stream_id, responder }
+                | avdtp::Request::GetCapabilities { stream_id, responder } => {
+                    assert_eq!(expected_stream_id, stream_id);
+                    let caps = vec![
+                        ServiceCapability::MediaTransport,
+                        ServiceCapability::MediaCodec {
+                            media_type: avdtp::MediaType::Audio,
+                            codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                            codec_extra: vec![0x11, 0x45, 51, 250],
+                        },
+                    ];
+                    responder.send(&caps[..])
+                }
+                avdtp::Request::Open { responder, stream_id } => {
+                    assert_eq!(expected_stream_id, stream_id);
+                    responder.send()
+                }
+                avdtp::Request::SetConfiguration {
+                    responder,
+                    local_stream_id,
+                    remote_stream_id,
+                    ..
+                } => {
+                    assert_eq!(local_stream_id, expected_stream_id);
+                    // This is the "sink" local stream id.
+                    assert_eq!(remote_stream_id, 2_u8.try_into().unwrap());
+                    responder.send()
+                }
+                x => panic!("Unexpected request: {:?}", x),
+            };
+            res.expect("should be able to respond");
+        }
+
+        // Need to discover the remote streams first, or the stream start will always work.
+        let collect_capabilities_fut = peer.collect_capabilities();
+        pin_mut!(collect_capabilities_fut);
+
+        assert!(exec.run_until_stalled(&mut collect_capabilities_fut).is_pending());
+
+        let request = exec.run_singlethreaded(&mut remote_events.next());
+        remote_handle_request(request.expect("should have a discovery request").unwrap());
+
+        assert!(exec.run_until_stalled(&mut collect_capabilities_fut).is_pending());
+        let request = exec.run_singlethreaded(&mut remote_events.next());
+        remote_handle_request(request.expect("should have a get_capabilities request").unwrap());
+
+        assert!(exec.run_until_stalled(&mut collect_capabilities_fut).is_ready());
+
+        // Try to start the stream.  It should continue to configure and connect.
+        let remote_seid = 4_u8.try_into().unwrap();
+
+        let codec_params = ServiceCapability::MediaCodec {
+            media_type: avdtp::MediaType::Audio,
+            codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+            codec_extra: vec![0x11, 0x45, 51, 51],
+        };
+        let start_future = peer.stream_start(remote_seid, codec_params);
+        pin_mut!(start_future);
+
+        assert!(exec.run_until_stalled(&mut start_future).is_pending());
+        let request = exec.run_singlethreaded(&mut remote_events.next());
+        remote_handle_request(request.expect("should have a set_capabilities request").unwrap());
+
+        assert!(exec.run_until_stalled(&mut start_future).is_pending());
+        let request = exec.run_singlethreaded(&mut remote_events.next());
+        remote_handle_request(request.expect("should have an open request").unwrap());
+    }
+
+    #[test]
+    fn test_peer_stream_start_fails_wrong_direction() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+
+        // Setup peers with only one Source Stream.
+        let (avdtp, remote) = setup_avdtp_peer();
+        let (profile_proxy, _requests) =
+            create_proxy_and_stream::<ProfileMarker>().expect("test proxy pair creation");
+
+        let mut streams = Streams::new();
+        let source = Stream::build(
+            make_sbc_endpoint(1, avdtp::EndpointType::Source),
+            TestMediaTaskBuilder::new().builder(),
+        );
+        streams.insert(source);
+
+        let peer = Peer::create(PeerId(1), avdtp, streams, profile_proxy, None);
+        let remote = avdtp::Peer::new(remote);
+        let mut remote_events = remote.take_request_stream();
+
+        // Respond as if we have a single SBC Source Stream
+        fn remote_handle_request(req: avdtp::Request) {
+            let expected_stream_id: StreamEndpointId = 2_u8.try_into().unwrap();
+            let res = match req {
+                avdtp::Request::Discover { responder } => {
+                    let infos = [avdtp::StreamInformation::new(
+                        expected_stream_id,
+                        false,
+                        avdtp::MediaType::Audio,
+                        avdtp::EndpointType::Source,
+                    )];
+                    responder.send(&infos)
+                }
+                avdtp::Request::GetAllCapabilities { stream_id, responder }
+                | avdtp::Request::GetCapabilities { stream_id, responder } => {
+                    assert_eq!(expected_stream_id, stream_id);
+                    let caps = vec![
+                        ServiceCapability::MediaTransport,
+                        ServiceCapability::MediaCodec {
+                            media_type: avdtp::MediaType::Audio,
+                            codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                            codec_extra: vec![0x11, 0x45, 51, 250],
+                        },
+                    ];
+                    responder.send(&caps[..])
+                }
+                avdtp::Request::Open { responder, .. } => responder.send(),
+                avdtp::Request::SetConfiguration { responder, .. } => responder.send(),
+                x => panic!("Unexpected request: {:?}", x),
+            };
+            res.expect("should be able to respond");
+        }
+
+        // Need to discover the remote streams first, or the stream start will always work.
+        let collect_capabilities_fut = peer.collect_capabilities();
+        pin_mut!(collect_capabilities_fut);
+
+        assert!(exec.run_until_stalled(&mut collect_capabilities_fut).is_pending());
+
+        let request = exec.run_singlethreaded(&mut remote_events.next());
+        remote_handle_request(request.expect("should have a discovery request").unwrap());
+
+        assert!(exec.run_until_stalled(&mut collect_capabilities_fut).is_pending());
+        let request = exec.run_singlethreaded(&mut remote_events.next());
+        remote_handle_request(request.expect("should have a get_capabilities request").unwrap());
+
+        assert!(exec.run_until_stalled(&mut collect_capabilities_fut).is_ready());
+
+        // Try to start the stream.  It should fail with OutOfRange because we can't connect a Source to a Source.
+        let remote_seid = 2_u8.try_into().unwrap();
+
+        let codec_params = ServiceCapability::MediaCodec {
+            media_type: avdtp::MediaType::Audio,
+            codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+            codec_extra: vec![0x11, 0x45, 51, 51],
+        };
+        let start_future = peer.stream_start(remote_seid, codec_params);
+        pin_mut!(start_future);
+
+        match exec.run_until_stalled(&mut start_future) {
+            Poll::Ready(Err(avdtp::Error::OutOfRange)) => {}
+            x => panic!("Expected a ready OutOfRange error but got {:?}", x),
+        };
+    }
+
+    #[test]
     fn test_peer_stream_start_fails_to_connect() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
@@ -1234,14 +1426,7 @@ mod tests {
     fn test_peer_delay_report() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
-        let (avdtp, remote) = setup_avdtp_peer();
-        let (profile_proxy, _requests) =
-            create_proxy_and_stream::<ProfileMarker>().expect("test proxy pair creation");
-        let mut streams = Streams::new();
-        let test_builder = TestMediaTaskBuilder::new();
-        streams.insert(Stream::build(make_sbc_endpoint(1), test_builder.builder()));
-
-        let _peer = Peer::create(PeerId(1), avdtp, streams, profile_proxy, None);
+        let (remote, _profile_requests, _, _peer) = setup_peer_test();
         let remote_peer = avdtp::Peer::new(remote);
 
         // Stream ID chosen randomly by fair dice roll
@@ -1280,7 +1465,10 @@ mod tests {
             create_proxy_and_stream::<ProfileMarker>().expect("test proxy pair creation");
         let mut streams = Streams::new();
         let mut test_builder = TestMediaTaskBuilder::new();
-        streams.insert(Stream::build(make_sbc_endpoint(1), test_builder.builder()));
+        streams.insert(Stream::build(
+            make_sbc_endpoint(1, avdtp::EndpointType::Source),
+            test_builder.builder(),
+        ));
         let next_task_fut = test_builder.next_task();
         pin_mut!(next_task_fut);
 
@@ -1290,7 +1478,7 @@ mod tests {
         let discover_fut = remote_peer.discover();
         pin_mut!(discover_fut);
 
-        let expected = vec![make_sbc_endpoint(1).information()];
+        let expected = vec![make_sbc_endpoint(1, avdtp::EndpointType::Source).information()];
         match exec.run_until_stalled(&mut discover_fut) {
             Poll::Ready(Ok(res)) => assert_eq!(res, expected),
             x => panic!("Expected discovery to complete and got {:?}", x),
@@ -1385,7 +1573,10 @@ mod tests {
             create_proxy_and_stream::<ProfileMarker>().expect("test proxy pair creation");
         let mut streams = Streams::new();
         let test_builder = TestMediaTaskBuilder::new();
-        streams.insert(Stream::build(make_sbc_endpoint(1), test_builder.builder()));
+        streams.insert(Stream::build(
+            make_sbc_endpoint(1, avdtp::EndpointType::Source),
+            test_builder.builder(),
+        ));
 
         let _peer = Peer::create(PeerId(1), avdtp, streams, profile_proxy, None);
         let remote_peer = avdtp::Peer::new(remote);
@@ -1435,7 +1626,10 @@ mod tests {
             create_proxy_and_stream::<ProfileMarker>().expect("test proxy pair creation");
         let mut streams = Streams::new();
         let mut test_builder = TestMediaTaskBuilder::new();
-        streams.insert(Stream::build(make_sbc_endpoint(1), test_builder.builder()));
+        streams.insert(Stream::build(
+            make_sbc_endpoint(1, avdtp::EndpointType::Source),
+            test_builder.builder(),
+        ));
         let next_task_fut = test_builder.next_task();
         pin_mut!(next_task_fut);
 

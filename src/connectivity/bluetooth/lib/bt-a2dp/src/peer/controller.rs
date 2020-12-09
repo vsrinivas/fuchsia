@@ -471,7 +471,10 @@ mod tests {
         let avdtp_peer = AvdtpPeer::new(signaling);
         let mut streams = Streams::new();
         let test_builder = TestMediaTaskBuilder::new();
-        streams.insert(Stream::build(make_sbc_endpoint(1), test_builder.builder()));
+        streams.insert(Stream::build(
+            make_sbc_endpoint(1, EndpointType::Source),
+            test_builder.builder(),
+        ));
         let peer = Peer::create(fake_peer_id, avdtp_peer, streams, profile_proxy, None);
         peer_map.insert(fake_peer_id, peer);
         let weak_peer = peer_map.get(&fake_peer_id).expect("just inserted");
