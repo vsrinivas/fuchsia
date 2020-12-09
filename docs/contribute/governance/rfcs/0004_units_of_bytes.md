@@ -1,13 +1,6 @@
-# Units of Bytes (RFC-0004)
-
-Field     | Value
-----------|--------------------------
-Status    | Step 2: Draft
-Author(s) | dschuyler@google.com, abbogart@google.com
-Reviewed  |
-Issue     | *link to bugs.fuchsia.dev issue*
-
-[TOC]
+{% set rfcid = "RFC-0004" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+<!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
 ## Summary
 

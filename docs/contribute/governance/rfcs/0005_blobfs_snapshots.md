@@ -1,16 +1,6 @@
-# Blobfs Snapshots
-
-Support for Blobfs snapshots during upgrades.
-
-Field     | Value
---------- | --------------------------------------
-Status    | Accepted
-Author(s) | csuter@google.com, jfsulliv@google.com
-Submitted | 2020-09-07
-Reviewed  | 2020-09-19
-Issue     | [fxbug.dev/59567](http://fxbug.dev/59567)
-
-[TOC]
+{% set rfcid = "RFC-0005" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+<!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
 ## Summary
 

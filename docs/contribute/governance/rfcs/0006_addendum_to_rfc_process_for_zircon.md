@@ -1,16 +1,6 @@
-# Addendum of the RFC Process for Zircon (RFC-0006)
-
-Special considerations when using the Fuchsia RFC process for Zircon.
-
-Field     | Value
-----------|--------------------------
-Status    | Accepted
-Author(s) | cpu@google.com
-Submitted | 2020-08-17
-Reviewed  | 2020-09-24
-
-
-[TOC]
+{% set rfcid = "RFC-0006" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+<!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
 ## Summary
 

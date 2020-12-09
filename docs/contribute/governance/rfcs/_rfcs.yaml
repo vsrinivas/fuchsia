@@ -1,0 +1,172 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+- name: 'Template'
+  title: 'RFC template'
+  short_description: 'The RFC template.'
+  authors: []
+  file: 'TEMPLATE.md'
+  area: ['General']
+  issue: []
+  gerrit_change_id: []
+  status: 'Template'
+  reviewers: []
+  submitted: ''
+  reviewed: ''
+
+- name: 'RFC-0001'
+  title: 'Fuchsia Request for Comments (RFC) process'
+  short_description: 'A process for making project-wide, technical decisions.'
+  authors: ['abarth@google.com']
+  file: '0001_rfc_process.md'
+  area: ['Governance']
+  issue: []
+  gerrit_change_id: ['366393']
+  status: 'Accepted'
+  reviewers: ['kulakowski@google.com', 'pylaligand@google.com', 'jln@google.com', 'benwright@google.com', 'cpu@google.com', 'ccherubino@google.com', 'dglazkov@google.com', 'lanechr@google.com', 'pascallouis@google.com']
+  submitted: '2020-02-20'
+  reviewed: '2020-02-27'
+
+- name: 'RFC-0002'
+  title: 'Fuchsia platform versioning'
+  short_description: 'Uses versioning to let the platform evolve while offering compatibility.'
+  authors: ['abarth@google.com']
+  file: '0002_platform_versioning.md'
+  area: ['General']
+  status: 'Accepted'
+  issue: []
+  gerrit_change_id: ['376759']
+  reviewers: ['jsanky@google.com', 'jln@google.com', 'kulakowski@google.com', 'geb@google.com', 'raggi@google.com', 'gridman@google.com', 'pascallouis@google.com', 'pylaligand@google.com', 'cpu@google.com']
+  submitted: '2020-0-30'
+  reviewed: '2020-0-23'
+
+- name: 'RFC-0003'
+  title: 'Fuchsia logging guidelines'
+  short_description: 'Best practices for using log severities. Applications of log severities in testing and in-field metrics.'
+  authors: ['fsamuel@google.com', 'shayba@google.com']
+  area: ['General']
+  file: '0003_logging.md'
+  issue: []
+  gerrit_change_id: ['395561']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'pascallouis@google.com', 'rlb@google.com', 'edcoyne@google.com', 'adamperry@google.com', 'crjohns@google.com', 'frousseau@google.com', 'drees@google.com']
+  submitted: '2020-06-03'
+  reviewed: '2020-06-11'
+
+- name: 'RFC-0004'
+  title: 'Units of bytes'
+  short_description: 'In Fuchsia, specific notation is used to denote multiples of bytes. This improves clarity by eliminating the need to guess the value of <code>MB</code>.'
+  authors: ['dschuyler@google.com']
+  file: '0004_units_of_bytes.md'
+  area: ['Governance']
+  issue: []
+  gerrit_change_id: ['397239']
+  status: 'Accepted'
+  reviewers: ['nathaniel@google.com', 'pascallouis@google.com', 'jaredb@google.com', 'heygray@google.com', 'cpu@google.com', 'abbogart@google.com', 'mcgrathr@google.com']
+  submitted: '2020-06-09'
+  reviewed: '2020-07-31'
+
+- name: 'RFC-0005'
+  title: 'Blobfs snapshots'
+  short_description: 'Support for Blobfs snapshots during upgrades.'
+  authors: ['csuter@google.com', 'jfsulliv@google.com']
+  file: '0005_blobfs_snapshots.md'
+  area: ['Storage']
+  issue: []
+  gerrit_change_id: ['424179']
+  status: 'Accepted'
+  reviewers: ['jfsulliv@google.com', 'computerdruid@google.com', 'abarth@google.com', 'wittrock@google.com', 'brettw@google.com']
+  submitted: '2020-09-06'
+  reviewed: '2020-09-21'
+
+- name: 'RFC-0006'
+  title: 'Addendum of the RFC process for Zircon'
+  short_description: 'Special considerations when using the Fuchsia RFC process for Zircon.'
+  authors: ['cpu@google.com']
+  file: '0006_addendum_to_rfc_process_for_zircon.md'
+  area: ['Governance']
+  issue: []
+  gerrit_change_id: ['417975']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'eieio@google.com', 'maniscalco@google.com', 'abdulla@google.com', 'kulakowski@google.com']
+  submitted: '2020-08-17'
+  reviewed: '2020-09-25'
+
+- name: 'RFC-0007'
+  title: 'Zircon removal of thread killing'
+  short_description: 'This document discusses the removal of thread killing functionality and the reasoning behind that removal.'
+  authors: ['dgilhooley@google.com']
+  file: '0007_remove_thread_killing.md'
+  area: ['Zircon']
+  issue: []
+  gerrit_change_id: ['431174']
+  status: 'Accepted'
+  reviewers: ['cpu@google.com', 'kulakowski@google.com']
+  submitted: '2020-09-25'
+  reviewed: '2020-10-06'
+
+- name: 'RFC-0008'
+  title: 'Remove zx_clock_get and zx_clock_adjust'
+  short_description: 'Defines the plan to deprecate and then remove the zx_clock_get and zx_clock_adjust syscalls.'
+  authors: ['jsankey@google.com', 'johngro@google.com']
+  file: '0008_remove_zx_clock_get_and_adjust.md'
+  area: ['Zircon']
+  issue: ['61987']
+  gerrit_change_id: ['438135']
+  status: 'Accepted'
+  reviewers: ['adamlesinski@google.com', 'vaas@google.com', 'abarth@google.com', 'johngro@google.com']
+  submitted: '2020-10-12'
+  reviewed: '2020-10-29'
+
+- name: 'RFC-0009'
+  title: 'Edge triggered async_wait'
+  short_description: 'The proposal is that, if the ZX_WAIT_ASYNC_EDGE flag is specified, the initial check is omitted and the signal set added to the interest list of the DispatchObject regardless of the initial signal state. In this mode of operation, one of the signals must transition from inactive to active for a packet to be queued on the supplied port (possibly requiring a signal to become inactive in the process).'
+  authors: ['steveaustin@google.com']
+  file: '0009_edge_triggered_async_wait.md'
+  area: ['Zircon']
+  issue: ['45709', '62553']
+  gerrit_change_id: ['442834']
+  status: 'Accepted'
+  reviewers: ['jamesr@google.com', 'maniscalco@google.com', 'cpu@google.com', 'tbodt@google.com']
+  submitted: '2020-10-24'
+  reviewed: '2020-11-06'
+
+- name: 'RFC-0010'
+  title: 'zx_channel_iovec_t support for zx_channel_write and zx_channel_call'
+  short_description: 'This RFC introduces a new mode to zx_channel_write and zx_channel_call which copies input data from multiple memory regions rather than from a single contiguous buffer.'
+  authors: ['bprosnitz@google.com']
+  file: '0010_channel_iovec.md'
+  area: ['Zircon']
+  issue: ['60623']
+  gerrit_change_id: ['433621']
+  status: 'Accepted'
+  reviewers: ['cpu@google.com', 'kulakowski@google.com', 'abarth@google.com', 'pascallouis@google.com']
+  submitted: '2020-09-25'
+  reviewed: '2020-10-06'
+
+- name: 'RFC-0011'
+  title: 'zx_object_get_info ZX_INFO_KMEM_STATS_EXTENDED'
+  short_description: 'Proposes adding a new topic - `ZX_INFO_KMEM_STATS_EXTENDED`, to the `zx_object_get_info()` syscall.'
+  authors: ['rashaeqbal@google.com']
+  file: '0011_getinfo_kmemstats_extended.md'
+  area: ['Zircon']
+  issue: []
+  gerrit_change_id: []
+  status: 'Accepted'
+  reviewers: []
+  submitted: '2020-11-04'
+  reviewed: '2020-11-20'
+
+- name: 'RFC-0012'
+  title: 'Zircon Discardable Memory'
+  short_description: 'Describes a mechanism for userspace applications to indicate to the kernel that certain memory buffers are eligible for reclamation.'
+  authors: ['rashaeqbal@google.com']
+  file: '0012_zircon_discardable_memory.md'
+  area: ['Zircon']
+  issue: ['60237']
+  gerrit_change_id: []
+  status: 'Accepted'
+  reviewers: []
+  submitted: '2020-10-27'
+  reviewed: '2020-12-02'

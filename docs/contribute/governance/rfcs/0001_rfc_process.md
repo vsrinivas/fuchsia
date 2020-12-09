@@ -1,15 +1,6 @@
-# Fuchsia Request for Comments (RFC) process (RFC-0001)
-
-A process for making project-wide, technical decisions.
-
-Field     | Value
-----------|--------------------------
-Status    | Accepted
-Authors   | abarth@google.com
-Submitted | 2020-02-20
-Reviewed  | 2020-02-27
-
-[TOC]
+{% set rfcid = "RFC-0001" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+<!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
 ## Summary
 
@@ -312,3 +303,4 @@ existing processes:
    similar process [to make decisions about the FIDL
    language](/docs/contribute/governance/fidl/README.md#process). This
    proposal exists because of the success of that decision-making process.
+

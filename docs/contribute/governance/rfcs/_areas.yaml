@@ -1,0 +1,39 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+- Bringup
+- Camera
+- Cast
+- Chromium
+- Cobalt
+- Connectivity
+- Dart
+- Developer
+- Devices
+- Diagnostics
+- Factory
+- FIDL
+- Firmware
+- Flutter
+- Fonts
+- General
+- Governance
+- Graphics
+- HWinfo
+- Identity
+- Internationalization
+- lib
+- Media
+- Modular
+- Power
+- Recovery
+- Security
+- Session
+- Speech
+- Storage
+- System
+- Testing
+- UI
+- Virtualization
+- Zircon

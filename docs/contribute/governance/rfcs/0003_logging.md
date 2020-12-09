@@ -1,16 +1,6 @@
-# Fuchsia Logging Guidelines (RFC-0003)
-
-Best practices for using log severities. Applications of log severities in
-testing and in-field metrics.
-
-Field     | Value
---------- | -------------------------------------
-Status    | Accepted
-Author(s) | fsamuel@google.com, shayba@google.com
-Submitted | 2020-06-03
-Reviewed  | 2020-06-10
-
-[TOC]
+{% set rfcid = "RFC-0003" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+<!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
 ## Summary
 

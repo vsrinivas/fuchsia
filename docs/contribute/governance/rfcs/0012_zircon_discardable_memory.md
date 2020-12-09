@@ -1,16 +1,6 @@
-# Zircon Discardable Memory (RFC-0012)
-
-Userspace memory that can be discarded by the Zircon kernel.
-
-Field     | Value
-----------|--------------------------
-Status    | Accepted
-Author(s) | rashaeqbal@google.com
-Submitted | 2020-10-27
-Reviewed  | 2020-12-02
-Issue     | [fxbug.dev/60237](http://fxbug.dev/60237)
-
-[TOC]
+{% set rfcid = "RFC-0012" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+<!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
 ## Summary
 

@@ -1,14 +1,6 @@
-# Edge triggered async_wait (RFC-0009)
-
-Field     | Value
-----------|--------------------------
-Status    | Accepted
-Author(s) | steveaustin@google.com
-Submitted | 2020-10-22
-Reviewed  | 2020-11-04
-Issue     | [fxbug.dev/62553](http://fxbug.dev/62553) [fxbug.dev/45709](http://fxbug.dev/45709)
-
-[TOC]
+{% set rfcid = "RFC-0009" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+<!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
 ## Summary
 

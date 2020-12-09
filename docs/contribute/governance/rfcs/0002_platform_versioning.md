@@ -1,16 +1,6 @@
-# Fuchsia Platform Versioning (RFC-0002)
-
-Uses versioning to let the platform evolve while offering compatibility.
-
-Field     | Value
-----------|--------------------------
-Status    | Accepted
-Author(s) | abarth@google.com
-Submitted | 2020-03-30
-Reviewed  | 2020-04-23
-
-
-[TOC]
+{% set rfcid = "RFC-0002" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+<!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
 ## Summary
 

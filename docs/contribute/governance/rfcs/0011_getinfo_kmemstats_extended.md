@@ -1,15 +1,6 @@
-# zx_object_get_info ZX_INFO_KMEM_STATS_EXTENDED (RFC-0011)
-
-New `ZX_INFO_KMEM_STATS_EXTENDED` topic for the `zx_object_get_info()` syscall.
-
-Field     | Value
-----------|--------------------------
-Status    | Accepted
-Author(s) | rashaeqbal@google.com
-Submitted | 2020-11-04
-Reviewed  | 2020-11-20
-
-[TOC]
+{% set rfcid = "RFC-0011" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+<!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
 ## Summary
 

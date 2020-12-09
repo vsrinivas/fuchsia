@@ -1,16 +1,6 @@
-# Zircon Removal of Thread Killing (RFC-0007)
-
-This document discusses the removal of thread killing functionality and the reasoning
-behind that removal.
-
-Field     | Value
-----------|--------------------------
-Status    | Accepted
-Author(s) | dgilhooley@google.com
-Submitted | 2020-09-25
-Reviewed  | 2020-10-06
-
-[TOC]
+{% set rfcid = "RFC-0007" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+<!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
 ## Summary
 

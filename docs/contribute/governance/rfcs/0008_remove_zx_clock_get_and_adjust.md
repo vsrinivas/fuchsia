@@ -1,16 +1,6 @@
-# Remove zx_clock_get and zx_clock_adjust (RFC-0008)
-
-Defines the plan to deprecate and then remove the `zx_clock_get` and
-`zx_clock_adjust` syscalls.
-
-Field     | Value
-----------|--------------------------
-Status    | Accepted
-Author(s) | jsankey@, based on earlier work by johngro@
-Submitted | 2020-10-21
-Reviewed  | 2020-10-29
-Issue     | [61987](https://fxbug.dev/61987)
-
+{% set rfcid = "RFC-0008" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+<!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
 ## Summary
 

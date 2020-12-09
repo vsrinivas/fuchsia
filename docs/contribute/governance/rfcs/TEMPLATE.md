@@ -1,14 +1,10 @@
-# Fuchsia RFC Template (RFC-NNNN)
+{% set rfcid = "Template" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+<!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
-One-sentence summary goes here.
-
-Field     | Value
-----------|--------------------------
-Status    | Draft
-Author(s) | *your names*
-Submitted | YYYY-MM-DD
-Reviewed  | *leave blank until reviewed*
-Issue     | *link to bugs.fuchsia.dev issue*
+<!--
+*** This should begin with an H2 element (for example, ## Summary).
+-->
 
 ## Summary
 

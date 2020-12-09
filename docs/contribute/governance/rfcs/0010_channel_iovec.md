@@ -1,18 +1,6 @@
-# zx_channel_iovec_t support for zx_channel_write and zx_channel_call (RFC-0010)
-
-This RFC introduces a new mode to zx_channel_write and zx_channel_call
-which copies input data from multiple memory regions rather than from a
-single contiguous buffer.
-
-Field     | Value
-----------|--------------------------
-Status    | Accepted
-Author(s) | bprosnitz@google.com
-Submitted | 2020-10-01
-Reviewed  | 2020-11-06
-Issue     | [fxbug.dev/60623](http://fxbug.dev/60623)
-
-[TOC]
+{% set rfcid = "RFC-0010" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+<!-- *** DO NOT EDIT ABOVE THIS LINE -->
 
 ## Summary
 
