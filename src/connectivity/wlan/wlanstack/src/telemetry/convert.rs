@@ -176,6 +176,7 @@ pub(super) fn convert_scan_result(
                 fidl_mlme::ScanResultCodes::NotSupported => NotSupported,
                 fidl_mlme::ScanResultCodes::InvalidArgs => InvalidArgs,
                 fidl_mlme::ScanResultCodes::InternalError => InternalError,
+                fidl_mlme::ScanResultCodes::ShouldWait => InternalError,
                 // This shouldn't happen, but we'll just map it to InternalError
                 fidl_mlme::ScanResultCodes::Success => InternalError,
             }),

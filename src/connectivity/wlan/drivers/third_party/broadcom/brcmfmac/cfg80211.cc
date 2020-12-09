@@ -1028,6 +1028,9 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
     if (err == ZX_ERR_UNAVAILABLE) {
       BRCMF_ERR("system busy : escan canceled sme state: 0x%lx\n",
                 atomic_load(&ifp->vif->sme_state));
+    } else if (err == ZX_ERR_SHOULD_WAIT) {
+      BRCMF_INFO("firmware is busy, failing the scan, please retry later. %s, fw err %s\n",
+                 zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
     } else {
       BRCMF_ERR("escan failed: %s, fw err %s\n", zx_status_get_string(err),
                 brcmf_fil_get_errstr(fw_err));
@@ -1111,7 +1114,9 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
   return ZX_OK;
 
 scan_out:
-  BRCMF_ERR("scan error (%d)", err);
+  if (err != ZX_ERR_SHOULD_WAIT) {
+    BRCMF_ERR("scan error (%d)", err);
+  }
   brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status);
   cfg->scan_request = nullptr;
   return err;
@@ -3267,7 +3272,11 @@ void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req) {
 
   BRCMF_DBG(SCAN, "About to scan! Txn ID %lu", ndev->scan_txn_id);
   result = brcmf_cfg80211_scan(ndev, req);
-  if (result != ZX_OK) {
+  if (result == ZX_ERR_SHOULD_WAIT) {
+    BRCMF_INFO("Couldn't start scan because firmware is busy: %d %s", result,
+               zx_status_get_string(result));
+    brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_SHOULD_WAIT);
+  } else if (result != ZX_OK) {
     BRCMF_ERR("Couldn't start scan: %d %s", result, zx_status_get_string(result));
     brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
   }

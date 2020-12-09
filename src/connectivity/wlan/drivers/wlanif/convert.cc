@@ -528,6 +528,8 @@ wlan_mlme::ScanResultCodes ConvertScanResultCode(uint8_t code) {
       return wlan_mlme::ScanResultCodes::INVALID_ARGS;
     case WLAN_SCAN_RESULT_INTERNAL_ERROR:
       return wlan_mlme::ScanResultCodes::INTERNAL_ERROR;
+    case WLAN_SCAN_RESULT_SHOULD_WAIT:
+      return wlan_mlme::ScanResultCodes::SHOULD_WAIT;
     default:
       ZX_ASSERT(0);
   }

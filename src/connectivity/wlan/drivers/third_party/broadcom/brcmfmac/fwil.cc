@@ -73,6 +73,8 @@ static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* 
     BRCMF_DBG(FIL, "Firmware error: %s (%d)", brcmf_fil_get_errstr(fwerr), fwerr);
     if (fwerr == BCME_UNSUPPORTED) {
       err = ZX_ERR_NOT_SUPPORTED;
+    } else if (fwerr == BCME_BUSY) {
+      err = ZX_ERR_SHOULD_WAIT;
     } else {
       err = ZX_ERR_IO_REFUSED;
     }

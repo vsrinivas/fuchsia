@@ -17,6 +17,9 @@
 
 namespace wlan::brcmfmac {
 
+constexpr zx::duration kScanStartTime = zx::sec(1);
+constexpr zx::duration kDefaultTestDuration = zx::sec(10);
+
 struct ApInfo {
   explicit ApInfo(simulation::Environment* env, const common::MacAddr& bssid,
                   const wlan_ssid_t& ssid, const wlan_channel_t& chan)
@@ -63,6 +66,9 @@ class ActiveScanTest : public SimTest {
   // This is the interface we will use for our single client interface
   ClientIfc client_ifc_;
 
+  // The default active scan request
+  wlanif_scan_req_t default_scan_req_;
+
  private:
   // StationIfc methods
   void Rx(std::shared_ptr<const simulation::SimFrame> frame,
@@ -92,6 +98,16 @@ void ActiveScanTest::Init() {
 
   // Get the interface MAC address
   client_ifc_.GetMacAddr(&sim_fw_mac_);
+
+  default_scan_req_ = {
+      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+      .scan_type = WLAN_SCAN_TYPE_ACTIVE,
+      .num_channels = 5,
+      .channel_list = {1, 2, 3, 4, 5},
+      .min_channel_time = kDwellTimeMs,
+      .max_channel_time = kDwellTimeMs,
+      .num_ssids = 0,
+  };
 }
 
 void ActiveScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
@@ -216,10 +232,6 @@ const common::MacAddr kAp3Bssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbe});
 
 // This test case might fail in a very low possibility because it's random.
 TEST_F(ActiveScanTest, RandomMacThreeAps) {
-  // Start time and end time of this test case
-  constexpr zx::duration kScanStartTime = zx::sec(1);
-  constexpr zx::duration kDefaultTestDuration = zx::sec(10);
-
   // Create simulated device
   Init();
 
@@ -228,18 +240,9 @@ TEST_F(ActiveScanTest, RandomMacThreeAps) {
   StartFakeAp(kAp2Bssid, kAp2Ssid, kDefaultChannel1);
   StartFakeAp(kAp3Bssid, kAp3Ssid, kDefaultChannel2);
 
-  wlanif_scan_req_t req = {
-      .txn_id = ++client_ifc_.scan_txn_id_,
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
-      .scan_type = WLAN_SCAN_TYPE_ACTIVE,
-      .num_channels = 5,
-      .channel_list = {1, 2, 3, 4, 5},
-      .min_channel_time = kDwellTimeMs,
-      .max_channel_time = kDwellTimeMs,
-      .num_ssids = 0,
-  };
+  default_scan_req_.txn_id = ++client_ifc_.scan_txn_id_;
 
-  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &req);
+  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &default_scan_req_);
 
   // Schedule scan end in environment
   SCHEDULE_CALL(kDefaultTestDuration, &ActiveScanTest::EndSimulation, this);
@@ -252,29 +255,16 @@ TEST_F(ActiveScanTest, RandomMacThreeAps) {
 }
 
 TEST_F(ActiveScanTest, ScanTwice) {
-  constexpr zx::duration kScanStartTime = zx::sec(1);
-  constexpr zx::duration kDefaultTestDuration = zx::sec(10);
-
   Init();
+  default_scan_req_.txn_id = ++client_ifc_.scan_txn_id_;
 
-  wlanif_scan_req_t req = {
-      .txn_id = ++client_ifc_.scan_txn_id_,
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
-      .scan_type = WLAN_SCAN_TYPE_ACTIVE,
-      .num_channels = 5,
-      .channel_list = {1, 2, 3, 4, 5},
-      .min_channel_time = kDwellTimeMs,
-      .max_channel_time = kDwellTimeMs,
-      .num_ssids = 0,
-  };
-
-  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &req);
+  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &default_scan_req_);
 
   env_->Run();
 
   VerifyScanResults();
 
-  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &req);
+  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &default_scan_req_);
 
   SCHEDULE_CALL(kDefaultTestDuration, &ActiveScanTest::EndSimulation, this);
 
@@ -287,23 +277,11 @@ TEST_F(ActiveScanTest, ScanTwice) {
 // Ensure that the FW sends out the max # probe requests set by the
 // driver (as there are no APs in the environment).
 TEST_F(ActiveScanTest, CheckNumProbeReqsSent) {
-  constexpr zx::duration kScanStartTime = zx::sec(1);
-  constexpr zx::duration kDefaultTestDuration = zx::sec(5);
-
   Init();
+  default_scan_req_.txn_id = ++client_ifc_.scan_txn_id_;
+  default_scan_req_.num_channels = 1;
 
-  wlanif_scan_req_t req = {
-      .txn_id = ++client_ifc_.scan_txn_id_,
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
-      .scan_type = WLAN_SCAN_TYPE_ACTIVE,
-      .num_channels = 1,
-      .channel_list = {1, 2, 3, 4, 5},
-      .min_channel_time = kDwellTimeMs,
-      .max_channel_time = kDwellTimeMs,
-      .num_ssids = 0,
-  };
-
-  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &req);
+  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &default_scan_req_);
   SCHEDULE_CALL(kDefaultTestDuration, &ActiveScanTest::EndSimulation, this);
 
   env_->Run();
@@ -316,7 +294,6 @@ TEST_F(ActiveScanTest, CheckNumProbeReqsSent) {
 TEST_F(ActiveScanTest, OverSizeSsid) {
   constexpr zx::duration kFirstScanStartTime = zx::sec(1);
   constexpr zx::duration kSecondScanStartTime = zx::sec(2);
-  constexpr zx::duration kDefaultTestDuration = zx::sec(10);
 
   Init();
 
@@ -366,6 +343,28 @@ TEST_F(ActiveScanTest, OverSizeSsid) {
 
   VerifyScanResults();
   EXPECT_EQ(client_ifc_.scan_result_code_, WLAN_SCAN_RESULT_INTERNAL_ERROR);
+}
+
+// This test case verifies that the driver returns SHOULD_WAIT as the scan result code when firmware
+// is busy.
+TEST_F(ActiveScanTest, ScanWhenFirmwareBusy) {
+  Init();
+
+  // Start the first AP
+  StartFakeAp(kAp1Bssid, kAp1Ssid, kDefaultChannel1);
+
+  // Set up our injector
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->err_inj_.AddErrInjIovar("escan", ZX_OK, BCME_BUSY);
+
+  SCHEDULE_CALL(kScanStartTime, &ActiveScanTest::StartScan, this, &default_scan_req_);
+  SCHEDULE_CALL(kDefaultTestDuration, &ActiveScanTest::EndSimulation, this);
+
+  env_->Run();
+
+  // Verify that there is no scan result and the scan result code is WLAN_SCAN_RESULT_SHOULD_WAIT.
+  EXPECT_EQ(client_ifc_.scan_results_.size(), 0U);
+  EXPECT_EQ(client_ifc_.scan_result_code_, WLAN_SCAN_RESULT_SHOULD_WAIT);
 }
 
 }  // namespace wlan::brcmfmac

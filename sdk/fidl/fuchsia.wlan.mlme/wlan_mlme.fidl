@@ -64,6 +64,7 @@ enum ScanResultCodes {
     NOT_SUPPORTED = 1;
     INVALID_ARGS = 2;
     INTERNAL_ERROR = 3;
+    SHOULD_WAIT = 4;
 };
 
 struct ScanResult {

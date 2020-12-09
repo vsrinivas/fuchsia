@@ -219,4 +219,32 @@ TEST_F(PassiveScanTest, ScanWithMalformedBeaconMissingSsidInformationElement) {
   env_->Run(kDefaultTestDuration);
 }
 
+// This test case verifies that the driver returns SHOULD_WAIT as the scan result code when firmware
+// is busy.
+TEST_F(PassiveScanTest, ScanWhenFirmwareBusy) {
+  constexpr zx::duration kScanStartTime = zx::sec(1);
+  constexpr zx::duration kDefaultTestDuration = zx::sec(100);
+  constexpr uint64_t kScanId = 0x1248;
+
+  // Create our simulated device
+  Init();
+
+  // Start up a single AP, with beacon error injection.
+  StartFakeAp(kDefaultBssid, kDefaultSsid, kDefaultChannel);
+
+  // Set up our injector
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->err_inj_.AddErrInjIovar("escan", ZX_OK, BCME_BUSY);
+
+  // Request a future scan
+  SCHEDULE_CALL(kScanStartTime, &PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false);
+
+  env_->Run(kDefaultTestDuration);
+
+  // Verify that there is no scan result and the scan result code is WLAN_SCAN_RESULT_SHOULD_WAIT.
+  EXPECT_GE(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
+  ASSERT_NE(client_ifc_.ScanResultCode(kScanId), std::nullopt);
+  EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(), WLAN_SCAN_RESULT_SHOULD_WAIT);
+}
+
 }  // namespace wlan::brcmfmac
