@@ -202,7 +202,9 @@ void SimInterface::OnScanEnd(const wlanif_scan_end_t* end) {
 }
 
 void SimInterface::OnScanResult(const wlanif_scan_result_t* result) {
-  auto results = scan_results_.find(result->txn_id);
+  // Reassign to remove the const qualifier so we can change the BSS's IEs pointer later
+  wlanif_scan_result_t copy = *result;
+  auto results = scan_results_.find(copy.txn_id);
 
   // Verify that we started a scan on this interface
   ZX_ASSERT(results != scan_results_.end());
@@ -210,7 +212,12 @@ void SimInterface::OnScanResult(const wlanif_scan_result_t* result) {
   // Verify that the scan hasn't sent a completion notice
   ZX_ASSERT(!results->second.result_code);
 
-  results->second.result_list.push_back(result->bss);
+  // Copy the IES data over since the original location may change data by the time we verify.
+  std::vector<uint8_t> ies(copy.bss.ies_bytes_list,
+                           copy.bss.ies_bytes_list + copy.bss.ies_bytes_count);
+  scan_results_ies_.push_back(ies);
+  copy.bss.ies_bytes_list = scan_results_ies_.at(scan_results_ies_.size() - 1).data();
+  results->second.result_list.push_back(copy.bss);
 }
 
 void SimInterface::OnStartConf(const wlanif_start_confirm_t* resp) {
@@ -245,14 +252,18 @@ void SimInterface::StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& s
   // Save off context
   assoc_ctx_.state = AssocContext::kJoining;
   assoc_ctx_.bssid = bssid;
-  assoc_ctx_.ssid = ssid;
+
+  assoc_ctx_.ies.clear();
+  assoc_ctx_.ies.push_back(0);         // SSID IE type ID
+  assoc_ctx_.ies.push_back(ssid.len);  // SSID IE length
+  assoc_ctx_.ies.insert(assoc_ctx_.ies.end(), ssid.ssid, ssid.ssid + ssid.len);
   assoc_ctx_.channel = channel;
 
   // Send join request
   wlanif_join_req join_req = {};
   std::memcpy(join_req.selected_bss.bssid, bssid.byte, ETH_ALEN);
-  join_req.selected_bss.ssid.len = ssid.len;
-  memcpy(join_req.selected_bss.ssid.data, ssid.ssid, WLAN_MAX_SSID_LEN);
+  join_req.selected_bss.ies_bytes_list = assoc_ctx_.ies.data();
+  join_req.selected_bss.ies_bytes_count = assoc_ctx_.ies.size();
   join_req.selected_bss.chan = channel;
   join_req.selected_bss.bss_type = WLAN_BSS_TYPE_ANY_BSS;
   if_impl_ops_->join_req(if_impl_ctx_, &join_req);

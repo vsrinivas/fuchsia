@@ -11,7 +11,9 @@ use {
     },
     anyhow::format_err,
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
-    std::{cmp::Ordering, collections::HashMap, fmt, hash::Hash},
+    static_assertions::assert_eq_size,
+    std::{cmp::Ordering, collections::HashMap, convert::TryInto, fmt, hash::Hash},
+    zerocopy::AsBytes,
 };
 
 // TODO(fxbug.dev/29885): Represent this as bitfield instead.
@@ -80,44 +82,50 @@ pub enum Standard {
     Dot11Ac,
 }
 
-pub trait BssDescriptionExt {
+#[derive(Debug, Clone, PartialEq)]
+pub struct BssDescription {
+    // *** Fields originally in fidl_internal::BssDescription
+    pub bssid: [u8; 6],
+    pub bss_type: fidl_internal::BssTypes,
+    pub beacon_period: u16,
+    pub timestamp: u64,
+    pub local_time: u64,
+    pub cap: u16,
+    pub chan: fidl_fuchsia_wlan_common::WlanChan,
+    pub rssi_dbm: i8,
+    pub snr_db: i8,
+    pub ies: Vec<u8>,
+
+    // *** Fields parsed out of fidl_internal::BssDescription IEs
+    pub ssid: Vec<u8>,
+    // IEEE Std 802.11-2016 9.4.2.3
+    // in 0.5 Mbps, with MSB indicating basic rate. See Table 9-78 for 126, 127.
+    pub rates: Vec<u8>,
+    pub dtim_period: u8,
+    pub country: Option<Vec<u8>>,
+    pub rsne: Option<Vec<u8>>,
+    pub ht_cap: Option<fidl_internal::HtCapabilities>,
+    pub ht_op: Option<fidl_internal::HtOperation>,
+    pub vht_cap: Option<fidl_internal::VhtCapabilities>,
+    pub vht_op: Option<fidl_internal::VhtOperation>,
+}
+
+impl BssDescription {
     /// Return bool on whether BSS is protected.
-    fn is_protected(&self) -> bool {
+    pub fn is_protected(&self) -> bool {
         self.protection() != Protection::Open
     }
+
     /// Return bool on whether BSS has security type that would require exchanging EAPOL frames.
-    fn needs_eapol_exchange(&self) -> bool {
+    pub fn needs_eapol_exchange(&self) -> bool {
         match self.protection() {
             Protection::Unknown | Protection::Open | Protection::Wep => false,
             _ => true,
         }
     }
-    /// Categorize BSS on what protection it supports.
-    fn protection(&self) -> Protection;
-    /// Get the latest WLAN standard that the BSS supports.
-    fn latest_standard(&self) -> Standard;
-    /// Search for vendor-specific Info Element for WPA. If found, return the body.
-    fn find_wpa_ie(&self) -> Option<&[u8]>;
-    /// Search for WPA Info Element and parse it. If no WPA Info Element is found, or a WPA Info
-    /// Element is found but is not valid, return an error.
-    fn wpa_ie(&self) -> Result<ie::wpa::WpaIe, anyhow::Error>;
-    /// Search for the WiFi Simple Configuration Info Element. If found, return the body.
-    fn find_wsc_ie(&self) -> Option<&[u8]>;
-    /// Return true if an attribute is present in the WiFi Simple Configuration element.
-    /// If the element or the attribute does not exist, return false.
-    fn has_wsc_attr(&self, id: ie::wsc::Id) -> bool;
-    /// Returns a simplified BssCandidacy which implements PartialOrd.
-    fn candidacy(&self) -> BssCandidacy;
-    /// Returns an obfuscated string representation of the BssDescriptionExt suitable
-    /// for protecting the privacy of an SSID and BSSID.
-    fn to_string(&self, hasher: &WlanHasher) -> String;
-    /// Returns a string representation of the BssDescriptionExt. This representation
-    /// is not suitable for protecting the privacy of an SSID and BSSID.
-    fn to_non_obfuscated_string(&self) -> String;
-}
 
-impl BssDescriptionExt for fidl_internal::BssDescription {
-    fn protection(&self) -> Protection {
+    /// Categorize BSS on what protection it supports.
+    pub fn protection(&self) -> Protection {
         let supports_wpa_1 = self
             .wpa_ie()
             .map(|wpa_ie| {
@@ -181,7 +189,8 @@ impl BssDescriptionExt for fidl_internal::BssDescription {
         Protection::Unknown
     }
 
-    fn latest_standard(&self) -> Standard {
+    /// Get the latest WLAN standard that the BSS supports.
+    pub fn latest_standard(&self) -> Standard {
         if self.vht_cap.is_some() && self.vht_op.is_some() {
             Standard::Dot11Ac
         } else if self.ht_cap.is_some() && self.ht_op.is_some() {
@@ -200,9 +209,9 @@ impl BssDescriptionExt for fidl_internal::BssDescription {
         }
     }
 
-    fn find_wpa_ie(&self) -> Option<&[u8]> {
-        let ies = self.vendor_ies.as_ref()?;
-        ie::Reader::new(&ies[..])
+    /// Search for vendor-specific Info Element for WPA. If found, return the body.
+    pub fn find_wpa_ie(&self) -> Option<&[u8]> {
+        ie::Reader::new(&self.ies[..])
             .filter_map(|(id, ie)| match id {
                 ie::Id::VENDOR_SPECIFIC => match ie::parse_vendor_ie(ie) {
                     Ok(ie::VendorIe::MsftLegacyWpa(body)) => Some(&body[..]),
@@ -213,14 +222,16 @@ impl BssDescriptionExt for fidl_internal::BssDescription {
             .next()
     }
 
-    fn wpa_ie(&self) -> Result<ie::wpa::WpaIe, anyhow::Error> {
+    /// Search for WPA Info Element and parse it. If no WPA Info Element is found, or a WPA Info
+    /// Element is found but is not valid, return an error.
+    pub fn wpa_ie(&self) -> Result<ie::wpa::WpaIe, anyhow::Error> {
         ie::parse_wpa_ie(self.find_wpa_ie().ok_or(format_err!("no wpa ie found"))?)
             .map_err(|e| e.into())
     }
 
-    fn find_wsc_ie(&self) -> Option<&[u8]> {
-        let ies = self.vendor_ies.as_ref()?;
-        ie::Reader::new(&ies[..])
+    /// Search for the WiFi Simple Configuration Info Element. If found, return the body.
+    pub fn find_wsc_ie(&self) -> Option<&[u8]> {
+        ie::Reader::new(&self.ies[..])
             .filter_map(|(id, ie)| match id {
                 ie::Id::VENDOR_SPECIFIC => match ie::parse_vendor_ie(ie) {
                     Ok(ie::VendorIe::Wsc(body)) => Some(&body[..]),
@@ -231,14 +242,8 @@ impl BssDescriptionExt for fidl_internal::BssDescription {
             .next()
     }
 
-    fn has_wsc_attr(&self, id: ie::wsc::Id) -> bool {
-        match self.find_wsc_ie() {
-            Some(bytes) => ie::wsc::Reader::new(bytes).find(|attr| id == attr.0).is_some(),
-            None => false,
-        }
-    }
-
-    fn candidacy(&self) -> BssCandidacy {
+    /// Returns a simplified BssCandidacy which implements PartialOrd.
+    pub fn candidacy(&self) -> BssCandidacy {
         let rssi_dbm = self.rssi_dbm;
         match rssi_dbm {
             // The value 0 is considered a marker for an invalid RSSI and is therefore
@@ -248,7 +253,9 @@ impl BssDescriptionExt for fidl_internal::BssDescription {
         }
     }
 
-    fn to_string(&self, hasher: &WlanHasher) -> String {
+    /// Returns an obfuscated string representation of the BssDescriptionExt suitable
+    /// for protecting the privacy of an SSID and BSSID.
+    pub fn to_string(&self, hasher: &WlanHasher) -> String {
         format!(
             "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
             hasher.hash_ssid(&self.ssid),
@@ -259,7 +266,9 @@ impl BssDescriptionExt for fidl_internal::BssDescription {
         )
     }
 
-    fn to_non_obfuscated_string(&self) -> String {
+    /// Returns a string representation of the BssDescriptionExt. This representation
+    /// is not suitable for protecting the privacy of an SSID and BSSID.
+    pub fn to_non_obfuscated_string(&self) -> String {
         format!(
             "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
             String::from_utf8(self.ssid.clone()).unwrap_or_else(|_| hex::encode(self.ssid.clone())),
@@ -268,6 +277,105 @@ impl BssDescriptionExt for fidl_internal::BssDescription {
             self.chan.primary,
             self.rssi_dbm,
         )
+    }
+
+    pub fn from_fidl(bss: fidl_internal::BssDescription) -> Result<Self, anyhow::Error> {
+        type HtCapArray = [u8; fidl_internal::HT_CAP_LEN as usize];
+        type HtOpArray = [u8; fidl_internal::HT_OP_LEN as usize];
+        type VhtCapArray = [u8; fidl_internal::VHT_CAP_LEN as usize];
+        type VhtOpArray = [u8; fidl_internal::VHT_OP_LEN as usize];
+
+        let mut ssid = None;
+        let mut rates = None;
+        let mut dtim_period = None;
+        let mut country = None;
+        let mut rsne = None;
+        let mut ht_cap = None;
+        let mut ht_op = None;
+        let mut vht_cap = None;
+        let mut vht_op = None;
+
+        for (id, body) in ie::Reader::new(&bss.ies[..]) {
+            match id {
+                ie::Id::SSID => ssid = Some(ie::parse_ssid(body)?.to_vec()),
+                ie::Id::SUPPORTED_RATES | ie::Id::EXT_SUPPORTED_RATES => {
+                    rates.get_or_insert_with(|| vec![]).extend_from_slice(body);
+                }
+                ie::Id::TIM => dtim_period = Some(ie::parse_tim(body)?.header.dtim_period),
+                ie::Id::COUNTRY => country = Some(body.to_vec()),
+                ie::Id::RSNE => {
+                    let mut rsne_bytes = vec![id.0, body.len() as u8];
+                    rsne_bytes.extend_from_slice(body);
+                    rsne = Some(rsne_bytes);
+                }
+                ie::Id::HT_CAPABILITIES => {
+                    let parsed_ht_cap = ie::parse_ht_capabilities(body)?;
+                    assert_eq_size!(ie::HtCapabilities, HtCapArray);
+                    let bytes: HtCapArray = parsed_ht_cap.as_bytes().try_into().unwrap();
+                    ht_cap = Some(fidl_internal::HtCapabilities { bytes })
+                }
+                ie::Id::HT_OPERATION => {
+                    let parsed_ht_op = ie::parse_ht_operation(body)?;
+                    assert_eq_size!(ie::HtOperation, HtOpArray);
+                    let bytes: HtOpArray = parsed_ht_op.as_bytes().try_into().unwrap();
+                    ht_op = Some(fidl_internal::HtOperation { bytes });
+                }
+                ie::Id::VHT_CAPABILITIES => {
+                    let parsed_vht_cap = ie::parse_vht_capabilities(body)?;
+                    assert_eq_size!(ie::VhtCapabilities, VhtCapArray);
+                    let bytes: VhtCapArray = parsed_vht_cap.as_bytes().try_into().unwrap();
+                    vht_cap = Some(fidl_internal::VhtCapabilities { bytes });
+                }
+                ie::Id::VHT_OPERATION => {
+                    let parsed_ht_op = ie::parse_vht_operation(body)?;
+                    assert_eq_size!(ie::VhtOperation, VhtOpArray);
+                    let bytes: VhtOpArray = parsed_ht_op.as_bytes().try_into().unwrap();
+                    vht_op = Some(fidl_internal::VhtOperation { bytes });
+                }
+                _ => (),
+            }
+        }
+
+        let ssid = ssid.ok_or_else(|| format_err!("Missing SSID IE"))?;
+        let rates = rates.ok_or_else(|| format_err!("Missing rates IE"))?;
+
+        Ok(Self {
+            bssid: bss.bssid,
+            bss_type: bss.bss_type,
+            beacon_period: bss.beacon_period,
+            timestamp: bss.timestamp,
+            local_time: bss.local_time,
+            cap: bss.cap,
+            chan: bss.chan,
+            rssi_dbm: bss.rssi_dbm,
+            snr_db: bss.snr_db,
+            ies: bss.ies,
+
+            ssid,
+            rates,
+            dtim_period: dtim_period.unwrap_or(0),
+            country,
+            rsne,
+            ht_cap,
+            ht_op,
+            vht_cap,
+            vht_op,
+        })
+    }
+
+    pub fn to_fidl(self) -> fidl_internal::BssDescription {
+        fidl_internal::BssDescription {
+            bssid: self.bssid,
+            bss_type: self.bss_type,
+            beacon_period: self.beacon_period,
+            timestamp: self.timestamp,
+            local_time: self.local_time,
+            cap: self.cap,
+            chan: self.chan,
+            rssi_dbm: self.rssi_dbm,
+            snr_db: self.snr_db,
+            ies: self.ies,
+        }
     }
 }
 
@@ -293,20 +401,20 @@ impl Ord for BssCandidacy {
 
 /// Given a list of BssDescription, categorize each one based on the latest PHY standard it
 /// supports and return a mapping from Standard to number of BSS.
-pub fn phy_standard_map(bss_list: &Vec<fidl_internal::BssDescription>) -> HashMap<Standard, usize> {
+pub fn phy_standard_map(bss_list: &Vec<BssDescription>) -> HashMap<Standard, usize> {
     info_map(bss_list, |bss| bss.latest_standard())
 }
 
 /// Given a list of BssDescription, return a mapping from channel to the number of BSS using
 /// that channel.
-pub fn channel_map(bss_list: &Vec<fidl_internal::BssDescription>) -> HashMap<u8, usize> {
+pub fn channel_map(bss_list: &Vec<BssDescription>) -> HashMap<u8, usize> {
     info_map(bss_list, |bss| bss.chan.primary)
 }
 
-fn info_map<F, T>(bss_list: &Vec<fidl_internal::BssDescription>, f: F) -> HashMap<T, usize>
+fn info_map<F, T>(bss_list: &Vec<BssDescription>, f: F) -> HashMap<T, usize>
 where
     T: Eq + Hash,
-    F: Fn(&fidl_internal::BssDescription) -> T,
+    F: Fn(&BssDescription) -> T,
 {
     let mut info_map: HashMap<T, usize> = HashMap::new();
     for bss in bss_list {
@@ -383,8 +491,8 @@ mod tests {
     #[test]
     fn test_latest_standard_ac() {
         let bss = fake_bss!(Open,
-                            vht_cap: Some(Box::new(fidl_internal::VhtCapabilities { bytes: Default::default() })),
-                            vht_op: Some(Box::new(fidl_internal::VhtOperation { bytes: Default::default() }))
+                            vht_cap: Some(fidl_internal::VhtCapabilities { bytes: Default::default() }),
+                            vht_op: Some(fidl_internal::VhtOperation { bytes: Default::default() })
         );
         assert_eq!(Standard::Dot11Ac, bss.latest_standard());
     }
@@ -394,8 +502,8 @@ mod tests {
         let bss = fake_bss!(Open,
                             vht_cap: None,
                             vht_op: None,
-                            ht_cap: Some(Box::new(fidl_internal::HtCapabilities { bytes: Default::default() })),
-                            ht_op: Some(Box::new(fidl_internal::HtOperation { bytes: Default::default() })),
+                            ht_cap: Some(fidl_internal::HtCapabilities { bytes: Default::default() }),
+                            ht_op: Some(fidl_internal::HtOperation { bytes: Default::default() }),
         );
         assert_eq!(Standard::Dot11N, bss.latest_standard());
     }
@@ -492,10 +600,7 @@ mod tests {
         );
     }
 
-    fn assert_bss_comparison(
-        worse: &fidl_internal::BssDescription,
-        better: &fidl_internal::BssDescription,
-    ) {
+    fn assert_bss_comparison(worse: &BssDescription, better: &BssDescription) {
         assert_eq!(Ordering::Less, worse.candidacy().cmp(&better.candidacy()));
         assert_eq!(Ordering::Greater, better.candidacy().cmp(&worse.candidacy()));
     }

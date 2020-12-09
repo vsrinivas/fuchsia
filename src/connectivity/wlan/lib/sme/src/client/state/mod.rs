@@ -17,7 +17,6 @@ use {
             report_connect_finished, AssociationFailure, ConnectFailure, ConnectResult,
             EstablishRsnaFailure, EstablishRsnaFailureReason, Status,
         },
-        clone_utils::clone_bss_desc,
         phy_selection::derive_phy_cbw,
         responder::Responder,
         sink::MlmeSink,
@@ -25,7 +24,7 @@ use {
         MlmeRequest,
     },
     anyhow::bail,
-    fidl_fuchsia_wlan_internal::{self as fidl_internal, BssDescription},
+    fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent},
     fuchsia_inspect_contrib::{inspect_log, log::InspectBytes},
     fuchsia_zircon as zx,
@@ -35,7 +34,7 @@ use {
     std::convert::TryInto,
     wep_deprecated,
     wlan_common::{
-        bss::BssDescriptionExt as _,
+        bss::BssDescription,
         channel::Channel,
         format::MacFmt,
         ie::{self, rsn::cipher},
@@ -922,13 +921,13 @@ impl ClientState {
         let start_state = self.state_name();
         let cfg = self.disconnect_internal(context);
 
-        let mut selected_bss = clone_bss_desc(&cmd.bss);
+        let mut selected_bss = cmd.bss.clone();
         let (phy_to_use, cbw_to_use) =
             derive_phy_cbw(&selected_bss, &context.device_info, &cmd.radio_cfg);
         selected_bss.chan.cbw = cbw_to_use;
 
         context.mlme_sink.send(MlmeRequest::Join(fidl_mlme::JoinRequest {
-            selected_bss,
+            selected_bss: selected_bss.to_fidl(),
             join_failure_timeout: DEFAULT_JOIN_FAILURE_TIMEOUT,
             nav_sync_delay: 0,
             op_rates: vec![],
@@ -1328,13 +1327,12 @@ mod tests {
 
         let state = idle_state();
         let (command, receiver) = connect_command_one();
-        let bss_ssid = command.bss.ssid.clone();
         let bssid = command.bss.bssid.clone();
 
         // Issue a "connect" command
         let state = state.connect(command, &mut h.context);
 
-        expect_join_request(&mut h.mlme_stream, &bss_ssid);
+        expect_join_request(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send a JoinConf as a response
         let join_conf = create_join_conf(fidl_mlme::JoinResultCodes::Success);
@@ -1365,13 +1363,12 @@ mod tests {
 
         let state = idle_state();
         let (command, receiver) = connect_command_wep();
-        let bss_ssid = command.bss.ssid.clone();
         let bssid = command.bss.bssid.clone();
 
         // Issue a "connect" command
         let state = state.connect(command, &mut h.context);
 
-        expect_join_request(&mut h.mlme_stream, &bss_ssid);
+        expect_join_request(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send a JoinConf as a response
         let join_conf = create_join_conf(fidl_mlme::JoinResultCodes::Success);
@@ -1411,13 +1408,12 @@ mod tests {
 
         let state = idle_state();
         let (command, receiver) = connect_command_wpa1(supplicant);
-        let bss_ssid = command.bss.ssid.clone();
         let bssid = command.bss.bssid.clone();
 
         // Issue a "connect" command
         let state = state.connect(command, &mut h.context);
 
-        expect_join_request(&mut h.mlme_stream, &bss_ssid);
+        expect_join_request(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send a JoinConf as a response
         let join_conf = create_join_conf(fidl_mlme::JoinResultCodes::Success);
@@ -1472,13 +1468,12 @@ mod tests {
 
         let state = idle_state();
         let (command, receiver) = connect_command_wpa2(supplicant);
-        let bss_ssid = command.bss.ssid.clone();
         let bssid = command.bss.bssid.clone();
 
         // Issue a "connect" command
         let state = state.connect(command, &mut h.context);
 
-        expect_join_request(&mut h.mlme_stream, &bss_ssid);
+        expect_join_request(&mut h.mlme_stream, bssid);
 
         // (mlme->sme) Send a JoinConf as a response
         let join_conf = create_join_conf(fidl_mlme::JoinResultCodes::Success);
@@ -1630,7 +1625,7 @@ mod tests {
         let (cmd_two, _receiver_two) = connect_command_two();
         let state = state.connect(cmd_two, &mut h.context);
         expect_result(receiver_one, ConnectResult::Canceled);
-        expect_join_request(&mut h.mlme_stream, &connect_command_two().0.bss.ssid);
+        expect_join_request(&mut h.mlme_stream, connect_command_two().0.bss.bssid);
         assert_joining(state, &connect_command_two().0.bss);
     }
 
@@ -1642,7 +1637,7 @@ mod tests {
         let (cmd_two, _receiver_two) = connect_command_two();
         let state = state.connect(cmd_two, &mut h.context);
         expect_result(receiver_one, ConnectResult::Canceled);
-        expect_join_request(&mut h.mlme_stream, &connect_command_two().0.bss.ssid);
+        expect_join_request(&mut h.mlme_stream, connect_command_two().0.bss.bssid);
         assert_joining(state, &connect_command_two().0.bss);
     }
 
@@ -1655,7 +1650,7 @@ mod tests {
         let state = state.connect(cmd_two, &mut h.context);
         let state = exchange_deauth(state, &mut h);
         expect_result(receiver_one, ConnectResult::Canceled);
-        expect_join_request(&mut h.mlme_stream, &connect_command_two().0.bss.ssid);
+        expect_join_request(&mut h.mlme_stream, connect_command_two().0.bss.bssid);
         assert_joining(state, &connect_command_two().0.bss);
     }
 
@@ -1952,7 +1947,7 @@ mod tests {
         let state = link_up_state(connect_command_one().0.bss);
         let state = state.connect(connect_command_two().0, &mut h.context);
         let state = exchange_deauth(state, &mut h);
-        expect_join_request(&mut h.mlme_stream, &connect_command_two().0.bss.ssid);
+        expect_join_request(&mut h.mlme_stream, connect_command_two().0.bss.bssid);
         assert_joining(state, &connect_command_two().0.bss);
     }
 
@@ -2305,8 +2300,8 @@ mod tests {
             association_id: 1,
             cap_info: 0,
             rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
-            ht_cap: cmd.bss.ht_cap.clone(),
-            vht_cap: cmd.bss.vht_cap.clone(),
+            ht_cap: cmd.bss.ht_cap.clone().map(Box::new),
+            vht_cap: cmd.bss.vht_cap.clone().map(Box::new),
             wmm_param: Some(Box::new(fake_wmm_param())),
         };
 
@@ -2552,10 +2547,10 @@ mod tests {
         state.on_mlme_event(deauth_conf, &mut h.context)
     }
 
-    fn expect_join_request(mlme_stream: &mut MlmeStream, ssid: &[u8]) {
+    fn expect_join_request(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
         // (sme->mlme) Expect a JoinRequest
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(req))) => {
-            assert_eq!(ssid, &req.selected_bss.ssid[..])
+            assert_eq!(bssid, req.selected_bss.bssid)
         });
     }
 

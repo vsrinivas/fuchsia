@@ -7,11 +7,10 @@ use {
     anyhow::{bail, ensure, format_err},
     eapol,
     fidl_fuchsia_wlan_common::DriverFeature,
-    fidl_fuchsia_wlan_internal::BssDescription,
     fidl_fuchsia_wlan_mlme::{DeviceInfo, SaeFrame},
     fidl_fuchsia_wlan_sme as fidl_sme,
     std::boxed::Box,
-    wlan_common::ie::rsn::rsne,
+    wlan_common::{bss::BssDescription, ie::rsn::rsne},
     wlan_rsn::{
         self, auth, nonce::NonceReader, psk, rsna::UpdateSink, Error, NegotiatedProtection,
         ProtectionInfo,

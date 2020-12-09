@@ -34,7 +34,7 @@ use {
     std::convert::TryInto,
     wlan_common::{
         appendable::Appendable,
-        bss::BssDescriptionExt,
+        bss::BssDescription,
         buffer_writer::BufferWriter,
         data_writer,
         ie::{self, parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, Id, Reader},
@@ -213,7 +213,10 @@ impl ClientMlme {
     }
 
     fn on_sme_join(&mut self, req: fidl_mlme::JoinRequest) -> Result<(), Error> {
-        let bss = req.selected_bss;
+        let bss = BssDescription::from_fidl(req.selected_bss).map_err(|e| {
+            Error::Status(format!("Error parsing BssDescription: {:?}", e), zx::Status::IO_INVALID)
+        })?;
+
         match self.join_device(&bss) {
             Ok(()) => {
                 self.sta.replace(Client::new(
@@ -247,7 +250,7 @@ impl ClientMlme {
         }
     }
 
-    fn join_device(&mut self, bss: &fidl_internal::BssDescription) -> Result<(), Error> {
+    fn join_device(&mut self, bss: &BssDescription) -> Result<(), Error> {
         let channel = crate::ddk_converter::ddk_channel_from_fidl(bss.chan);
         self.set_main_channel(channel)
             .map_err(|status| Error::Status(format!("Error setting device channel"), status))?;
@@ -1067,7 +1070,12 @@ mod tests {
         },
         fidl_fuchsia_wlan_common as fidl_common,
         wlan_common::{
-            assert_variant, fake_bss, ie, stats::SignalStrengthAverage, test_utils::fake_frames::*,
+            assert_variant, ie,
+            stats::SignalStrengthAverage,
+            test_utils::{
+                fake_frames::*,
+                fake_stas::{fake_fidl_bss, FakeProtectionCfg},
+            },
             TimeUnit,
         },
         wlan_statemachine::*,
@@ -1217,7 +1225,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_bss!(Open),
+            selected_bss: fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec()),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1234,7 +1242,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_bss!(Wpa2),
+            selected_bss: fake_fidl_bss(FakeProtectionCfg::Wpa2, b"foo".to_vec()),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1252,7 +1260,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_bss!(Wpa1),
+            selected_bss: fake_fidl_bss(FakeProtectionCfg::Wpa1, b"foo".to_vec()),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1270,7 +1278,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_bss!(Open),
+            selected_bss: fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec()),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],

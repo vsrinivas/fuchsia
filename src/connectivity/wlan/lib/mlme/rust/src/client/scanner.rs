@@ -235,7 +235,7 @@ impl<'a> BoundScanner<'a> {
         let bss_description = match bss_description {
             Ok(bss) => bss,
             Err(e) => {
-                warn!("Failed to parse beacon or probe response: {}", e);
+                warn!("Failed to process beacon or probe response: {}", e);
                 return;
             }
         };
@@ -806,21 +806,12 @@ mod tests {
                 txn_id: 1337,
                 bss: fidl_internal::BssDescription {
                     bssid: BSSID.0,
-                    ssid: b"ssid".to_vec(),
                     bss_type: fidl_internal::BssTypes::Infrastructure,
                     beacon_period: BEACON_INTERVAL,
-                    dtim_period: 1,
                     timestamp: TIMESTAMP,
                     local_time: 0,
                     cap: CAPABILITY_INFO.0,
-                    rates: vec![0xb0, 0x48, 0x60, 0x6c],
-                    country: None,
-                    rsne: None,
-                    vendor_ies: None,
-                    ht_cap: None,
-                    ht_op: None,
-                    vht_cap: None,
-                    vht_op: None,
+                    ies: beacon_ies(),
                     rssi_dbm: RX_INFO.rssi_dbm,
                     chan: fidl_common::WlanChan {
                         primary: RX_INFO.chan.primary,
@@ -866,13 +857,13 @@ mod tests {
             .fake_device
             .next_mlme_msg::<fidl_mlme::ScanResult>()
             .expect("error reading MLME ScanResult");
-        assert_eq!(scan_result.bss.ssid, b"ssid".to_vec());
+        assert_eq!(scan_result.bss.ies, beacon_ies());
 
         let scan_result = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::ScanResult>()
             .expect("error reading MLME ScanResult");
-        assert_eq!(scan_result.bss.ssid, b"ss".to_vec());
+        assert_eq!(scan_result.bss.ies, beacon_ies_2());
 
         let scan_end = m
             .fake_device

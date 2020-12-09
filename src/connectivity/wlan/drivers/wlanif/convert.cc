@@ -122,32 +122,16 @@ void CopyVendorSpecificIE(const ::std::vector<uint8_t>& in_vendor_specific,
   std::memcpy(out_vendor_specific, in_vendor_specific.data(), *vendor_specific_len);
 }
 
-void ConvertRateSets(wlanif_bss_description_t* wlanif_desc,
-                     const wlan_internal::BssDescription& fidl_desc) {
-  if (fidl_desc.rates.size() > WLAN_MAC_MAX_RATES) {
-    warnf("rates.size() %lu > max allowed size: %d\n", fidl_desc.rates.size(), WLAN_MAC_MAX_RATES);
-    ZX_DEBUG_ASSERT(fidl_desc.rates.size() <= WLAN_MAC_MAX_RATES);
-  }
-  wlanif_desc->num_rates = fidl_desc.rates.size();
-  std::copy(fidl_desc.rates.cbegin(), fidl_desc.rates.cend(), std::begin(wlanif_desc->rates));
-}
-
 void ConvertBssDescription(wlanif_bss_description_t* wlanif_desc,
                            const wlan_internal::BssDescription& fidl_desc) {
   // bssid
   std::memcpy(wlanif_desc->bssid, fidl_desc.bssid.data(), ETH_ALEN);
-
-  // ssid
-  CopySSID(fidl_desc.ssid, &wlanif_desc->ssid);
 
   // bss_type
   wlanif_desc->bss_type = ConvertBssType(fidl_desc.bss_type);
 
   // beacon_period
   wlanif_desc->beacon_period = fidl_desc.beacon_period;
-
-  // dtim_period
-  wlanif_desc->dtim_period = fidl_desc.dtim_period;
 
   // timestamp
   wlanif_desc->timestamp = fidl_desc.timestamp;
@@ -158,17 +142,9 @@ void ConvertBssDescription(wlanif_bss_description_t* wlanif_desc,
   // capability
   wlanif_desc->cap = fidl_desc.cap;
 
-  // basic_rate_set and op_rate_set
-  ConvertRateSets(wlanif_desc, fidl_desc);
-
-  // country
-  CopyCountry(fidl_desc.country.value_or(std::vector<uint8_t>{}), wlanif_desc->country,
-              &wlanif_desc->country_len);
-
-  // rsne
-  if (wlanif_desc->rsne_len)
-    CopyRSNE(fidl_desc.rsne.value_or(std::vector<uint8_t>{}), wlanif_desc->rsne,
-             &wlanif_desc->rsne_len);
+  // ies
+  wlanif_desc->ies_bytes_list = fidl_desc.ies.data();
+  wlanif_desc->ies_bytes_count = fidl_desc.ies.size();
 
   // chan
   ConvertWlanChan(&wlanif_desc->chan, fidl_desc.chan);
@@ -227,43 +203,16 @@ void ConvertWlanChan(wlan_common::WlanChan* fidl_chan, const wlan_channel_t& wla
   fidl_chan->secondary80 = wlanif_chan.secondary80;
 }
 
-template <typename T>
-static void ArrayToVector(::fidl::VectorPtr<T>* vecptr, const T* data, size_t len) {
-  if (len > 0) {
-    (*vecptr) = std::vector<T>(data, data + len);
-  }
-}
-
-void ConvertRates(::std::vector<uint8_t>* rates, const wlanif_bss_description_t& wlanif_desc) {
-  uint16_t total_rate_count = wlanif_desc.num_rates;
-  if (total_rate_count > wlan_internal::RATES_MAX_LEN) {
-    warnf("Non-compliant beacon: num_rates (%u) > max allowed (%d). Excess rates truncated.\n",
-          total_rate_count, wlan_internal::RATES_MAX_LEN);
-    total_rate_count = wlan_internal::RATES_MAX_LEN;
-  }
-
-  *rates = {wlanif_desc.rates, wlanif_desc.rates + total_rate_count};
-}
-
 void ConvertBssDescription(wlan_internal::BssDescription* fidl_desc,
                            const wlanif_bss_description_t& wlanif_desc) {
   // bssid
   std::memcpy(fidl_desc->bssid.data(), wlanif_desc.bssid, ETH_ALEN);
-
-  // ssid
-  auto in_ssid = &wlanif_desc.ssid;
-  size_t ssid_len = std::min<size_t>(in_ssid->len, WLAN_MAX_SSID_LEN);
-  std::vector<uint8_t> ssid(in_ssid->data, in_ssid->data + ssid_len);
-  fidl_desc->ssid = std::move(ssid);
 
   // bss_type
   fidl_desc->bss_type = ConvertBssType(wlanif_desc.bss_type);
 
   // beacon_period
   fidl_desc->beacon_period = wlanif_desc.beacon_period;
-
-  // dtim_period
-  fidl_desc->dtim_period = wlanif_desc.dtim_period;
 
   // timestamp
   fidl_desc->timestamp = wlanif_desc.timestamp;
@@ -274,18 +223,10 @@ void ConvertBssDescription(wlan_internal::BssDescription* fidl_desc,
   // capability
   fidl_desc->cap = wlanif_desc.cap;
 
-  // basic_rate_set and op_rate_set
-  ConvertRates(&fidl_desc->rates, wlanif_desc);
-
-  // country
-  ArrayToVector(&fidl_desc->country, wlanif_desc.country, wlanif_desc.country_len);
-
-  // rsne
-  ArrayToVector(&fidl_desc->rsne, wlanif_desc.rsne, wlanif_desc.rsne_len);
-
-  // vendor ie
-  if (wlanif_desc.vendor_ie_len) {
-    ArrayToVector(&fidl_desc->vendor_ies, wlanif_desc.vendor_ie, wlanif_desc.vendor_ie_len);
+  // ies
+  if (wlanif_desc.ies_bytes_count > 0) {
+    fidl_desc->ies = std::vector<uint8_t>(wlanif_desc.ies_bytes_list,
+                                          wlanif_desc.ies_bytes_list + wlanif_desc.ies_bytes_count);
   }
 
   // chan
@@ -540,6 +481,8 @@ wlan_mlme::JoinResultCodes ConvertJoinResultCode(uint8_t code) {
     case WLAN_JOIN_RESULT_SUCCESS:
       return wlan_mlme::JoinResultCodes::SUCCESS;
     case WLAN_JOIN_RESULT_FAILURE_TIMEOUT:
+      __FALLTHROUGH;
+    case WLAN_JOIN_RESULT_INTERNAL_ERROR:
       return wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT;
     default:
       ZX_ASSERT(0);

@@ -8,10 +8,10 @@ use {
         client::{ConnectFailure, ConnectResult},
         Ssid,
     },
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::collections::VecDeque,
     thiserror::Error,
+    wlan_common::bss::BssDescription,
     wlan_rsn::{
         key::exchange::Key,
         rsna::{SecAssocStatus, SecAssocUpdate, UpdateSink},
@@ -59,7 +59,7 @@ impl StatsCollector {
     pub fn report_discovery_scan_ended(
         &mut self,
         result: ScanResult,
-        bss_list: Option<&Vec<fidl_internal::BssDescription>>,
+        bss_list: Option<&Vec<BssDescription>>,
     ) -> Result<ScanStats, StatsError> {
         let now = now();
         let pending_stats = self.discovery_scan_stats.take().ok_or(StatsError::NoPendingScan)?;
@@ -97,10 +97,7 @@ impl StatsCollector {
         }
     }
 
-    pub fn report_candidate_network(
-        &mut self,
-        desc: fidl_internal::BssDescription,
-    ) -> Result<(), StatsError> {
+    pub fn report_candidate_network(&mut self, desc: BssDescription) -> Result<(), StatsError> {
         self.connect_stats()?.candidate_network.replace(desc);
         Ok(())
     }
@@ -343,7 +340,7 @@ pub(crate) struct PendingConnectStats {
     assoc_end_at: Option<zx::Time>,
     rsna_start_at: Option<zx::Time>,
     rsna_end_at: Option<zx::Time>,
-    candidate_network: Option<fidl_internal::BssDescription>,
+    candidate_network: Option<BssDescription>,
     supplicant_error: Option<anyhow::Error>,
     supplicant_progress: Option<SupplicantProgress>,
     num_rsna_key_frame_exchange_timeout: u32,

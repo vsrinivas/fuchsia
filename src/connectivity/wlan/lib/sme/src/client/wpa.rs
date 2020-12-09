@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use anyhow::format_err;
-use fidl_fuchsia_wlan_internal::BssDescription;
 use fidl_fuchsia_wlan_mlme::DeviceInfo;
 
 use fidl_fuchsia_wlan_sme as fidl_sme;
-use wlan_common::bss::BssDescriptionExt as _;
+use wlan_common::bss::BssDescription;
 use wlan_common::ie::rsn::{akm, cipher};
 use wlan_common::ie::wpa::WpaIe;
 use wlan_common::organization::Oui;

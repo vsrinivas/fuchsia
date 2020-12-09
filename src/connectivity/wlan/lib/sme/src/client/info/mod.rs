@@ -17,9 +17,9 @@ use {
         Ssid,
     },
     derivative::Derivative,
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon::{self as zx, prelude::DurationNum},
-    wlan_common,
+    wlan_common::{self, bss::BssDescription},
 };
 
 #[derive(Debug, PartialEq)]
@@ -79,7 +79,7 @@ pub struct ConnectStats {
     pub rsna_end_at: Option<zx::Time>,
 
     pub result: ConnectResult,
-    pub candidate_network: Option<fidl_internal::BssDescription>,
+    pub candidate_network: Option<BssDescription>,
 
     /// Possible detailed error from supplicant. May be downcast to wlan_rsn::Error.
     #[derivative(PartialEq(compare_with = "cmp_supplicant_error"))]

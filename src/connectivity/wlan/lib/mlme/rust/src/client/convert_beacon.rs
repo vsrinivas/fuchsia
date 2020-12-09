@@ -5,15 +5,12 @@
 use {
     anyhow::{format_err, Error},
     banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
-    static_assertions::assert_eq_size,
-    std::convert::TryInto,
     wlan_common::{
         channel::derive_channel,
         ie,
         mac::{Bssid, CapabilityInfo},
         TimeUnit,
     },
-    zerocopy::AsBytes,
 };
 
 /// Given information from beacon or probe response, convert to BssDescription.
@@ -25,80 +22,27 @@ pub fn construct_bss_description(
     ies: &[u8],
     rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
 ) -> Result<fidl_internal::BssDescription, Error> {
-    type HtCapArray = [u8; fidl_internal::HT_CAP_LEN as usize];
-    type HtOpArray = [u8; fidl_internal::HT_OP_LEN as usize];
-    type VhtCapArray = [u8; fidl_internal::VHT_CAP_LEN as usize];
-    type VhtOpArray = [u8; fidl_internal::VHT_OP_LEN as usize];
-
-    let mut ssid = None;
-    let mut rates = None;
     let mut dsss_chan = None;
-    let mut dtim_period = 0;
-    let mut country = None;
-    let mut rsne = None;
-    let mut vendor_ies = None;
-    let mut fidl_ht_cap = None;
-    let mut fidl_ht_op = None;
-    let mut fidl_vht_cap = None;
-    let mut fidl_vht_op = None;
-
     let mut parsed_ht_op = None;
     let mut parsed_vht_op = None;
 
     for (id, body) in ie::Reader::new(ies) {
         match id {
-            ie::Id::SSID => ssid = Some(ie::parse_ssid(body)?.to_vec()),
-            ie::Id::SUPPORTED_RATES | ie::Id::EXT_SUPPORTED_RATES => {
-                rates.get_or_insert_with(|| vec![]).extend_from_slice(body);
-            }
             ie::Id::DSSS_PARAM_SET => {
                 dsss_chan = Some(ie::parse_dsss_param_set(body)?.current_chan)
-            }
-            ie::Id::TIM => dtim_period = ie::parse_tim(body)?.header.dtim_period,
-            ie::Id::COUNTRY => country = Some(body.to_vec()),
-            ie::Id::RSNE => {
-                let mut rsne_bytes = vec![id.0, body.len() as u8];
-                rsne_bytes.extend_from_slice(body);
-                rsne = Some(rsne_bytes);
-            }
-            ie::Id::VENDOR_SPECIFIC => {
-                let vendor_ies = vendor_ies.get_or_insert_with(|| vec![]);
-                vendor_ies.push(id.0);
-                vendor_ies.push(body.len() as u8);
-                vendor_ies.extend_from_slice(body);
-            }
-            ie::Id::HT_CAPABILITIES => {
-                let ht_caps = ie::parse_ht_capabilities(body)?;
-                assert_eq_size!(ie::HtCapabilities, HtCapArray);
-                let bytes: HtCapArray = ht_caps.as_bytes().try_into().unwrap();
-                fidl_ht_cap = Some(Box::new(fidl_internal::HtCapabilities { bytes }))
             }
             ie::Id::HT_OPERATION => {
                 let ht_op = ie::parse_ht_operation(body)?;
                 parsed_ht_op = Some(*ht_op);
-                assert_eq_size!(ie::HtOperation, HtOpArray);
-                let bytes: HtOpArray = ht_op.as_bytes().try_into().unwrap();
-                fidl_ht_op = Some(Box::new(fidl_internal::HtOperation { bytes }));
-            }
-            ie::Id::VHT_CAPABILITIES => {
-                let ht_caps = ie::parse_vht_capabilities(body)?;
-                assert_eq_size!(ie::VhtCapabilities, VhtCapArray);
-                let bytes: VhtCapArray = ht_caps.as_bytes().try_into().unwrap();
-                fidl_vht_cap = Some(Box::new(fidl_internal::VhtCapabilities { bytes }));
             }
             ie::Id::VHT_OPERATION => {
                 let ht_op = ie::parse_vht_operation(body)?;
                 parsed_vht_op = Some(*ht_op);
-                assert_eq_size!(ie::VhtOperation, VhtOpArray);
-                let bytes: VhtOpArray = ht_op.as_bytes().try_into().unwrap();
-                fidl_vht_op = Some(Box::new(fidl_internal::VhtOperation { bytes }));
             }
             _ => (),
         }
     }
 
-    let ssid = ssid.ok_or(format_err!("Missing SSID IE"))?;
-    let rates = rates.ok_or(format_err!("Missing rates IE"))?;
     let bss_type = get_bss_type(capability_info);
     let chan = derive_channel(
         rx_info.map(|info| info.chan.primary),
@@ -110,21 +54,12 @@ pub fn construct_bss_description(
 
     Ok(fidl_internal::BssDescription {
         bssid: bssid.0,
-        ssid,
         bss_type,
         beacon_period: beacon_interval.into(),
-        dtim_period,
         timestamp,
         local_time: 0,
         cap: capability_info.raw(),
-        rates,
-        country,
-        rsne,
-        vendor_ies,
-        ht_cap: fidl_ht_cap,
-        ht_op: fidl_ht_op,
-        vht_cap: fidl_vht_cap,
-        vht_op: fidl_vht_op,
+        ies: ies.to_vec(),
 
         chan,
         rssi_dbm: rx_info.as_ref().map(|info| info.rssi_dbm).unwrap_or(0),
@@ -256,47 +191,12 @@ mod tests {
             bss_desc,
             fidl_internal::BssDescription {
                 bssid: BSSID.0,
-                ssid: b"foo-ssid".to_vec(),
                 bss_type: fidl_internal::BssTypes::Infrastructure,
                 beacon_period: BEACON_INTERVAL,
-                dtim_period: 1,
                 timestamp: TIMESTAMP,
                 local_time: 0,
                 cap: CAPABILITY_INFO.0,
-                rates: vec![0xb0, 0x48, 0x60, 0x6c],
-                country: Some(vec![
-                    // Note: We read the last padding byte, which may not be the right behavior
-                    0x55, 0x53, 0x20, 0x24, 0x04, 0x24, 0x34, 0x04, 0x1e, 0x64, 0x0c, 0x1e, 0x95,
-                    0x05, 0x24, 0x00,
-                ]),
-                rsne: Some(vec![
-                    0x30, 0x14, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x01, 0x00, 0x00, 0x0f, 0xac,
-                    0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x01, 0x28, 0x00,
-                ]),
-                vendor_ies: Some(vec![
-                    0xdd, 0x07, 0x00, 0x0b, 0x86, 0x01, 0x04, 0x08, 0x09, 0xdd, 0x18, 0x00, 0x50,
-                    0xf2, 0x02, 0x01, 0x01, 0x80, 0x00, 0x03, 0xa4, 0x00, 0x00, 0x27, 0xa4, 0x00,
-                    0x00, 0x42, 0x43, 0x5e, 0x00, 0x62, 0x32, 0x2f, 0x00
-                ]),
-                ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
-                    bytes: [
-                        0xef, 0x09, 0x17, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                        0x00, 0x00
-                    ]
-                })),
-                ht_op: Some(Box::new(fidl_internal::HtOperation {
-                    bytes: [
-                        0x8c, 0x0d, 0x16, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-                    ]
-                })),
-                vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
-                    bytes: [0x91, 0x59, 0x82, 0x0f, 0xea, 0xff, 0x00, 0x00, 0xea, 0xff, 0x00, 0x00]
-                })),
-                vht_op: Some(Box::new(fidl_internal::VhtOperation {
-                    bytes: [0x00, 0x00, 0x00, 0x00, 0x00]
-                })),
+                ies,
                 rssi_dbm: RX_INFO.rssi_dbm,
                 chan: fidl_common::WlanChan {
                     primary: 140,

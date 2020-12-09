@@ -1744,21 +1744,12 @@ mod tests {
         let mut rng = rand::thread_rng();
         Some(Box::new(fidl_fuchsia_wlan_internal::BssDescription {
             bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
-            ssid: format!("bss desc rand {}", rng.gen::<i32>()).as_bytes().to_vec(),
             bss_type: fidl_fuchsia_wlan_internal::BssTypes::Personal,
             beacon_period: rng.gen::<u16>(),
-            dtim_period: rng.gen::<u8>(),
             timestamp: rng.gen::<u64>(),
             local_time: rng.gen::<u64>(),
             cap: rng.gen::<u16>(),
-            rates: (0..4).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
-            country: None,
-            rsne: None,
-            vendor_ies: None,
-            ht_cap: None,
-            ht_op: None,
-            vht_cap: None,
-            vht_op: None,
+            ies: (0..1024).map(|_| rng.gen::<u8>()).collect(),
             rssi_dbm: rng.gen::<i8>(),
             chan: fidl_common::WlanChan {
                 primary: rng.gen_range(1, 255),

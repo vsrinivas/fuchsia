@@ -37,25 +37,13 @@ pub fn clone_vht_operation(o: &fidl_internal::VhtOperation) -> fidl_internal::Vh
 pub fn clone_bss_desc(d: &fidl_internal::BssDescription) -> fidl_internal::BssDescription {
     fidl_internal::BssDescription {
         bssid: d.bssid.clone(),
-        ssid: d.ssid.clone(),
         bss_type: d.bss_type,
         beacon_period: d.beacon_period,
-        dtim_period: d.dtim_period,
         timestamp: d.timestamp,
         local_time: d.local_time,
-
         cap: d.cap,
-        rates: d.rates.clone(),
-        country: d.country.clone(),
 
-        rsne: d.rsne.clone(),
-        vendor_ies: d.vendor_ies.clone(),
-
-        ht_cap: d.ht_cap.as_ref().map(|v| Box::new(clone_ht_capabilities(v))),
-        ht_op: d.ht_op.as_ref().map(|v| Box::new(clone_ht_operation(v))),
-
-        vht_cap: d.vht_cap.as_ref().map(|v| Box::new(clone_vht_capabilities(v))),
-        vht_op: d.vht_op.as_ref().map(|v| Box::new(clone_vht_operation(v))),
+        ies: d.ies.clone(),
 
         chan: fidl_common::WlanChan {
             primary: d.chan.primary,

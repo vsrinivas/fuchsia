@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::client::{DeviceInfo, Ssid},
-    fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_internal::{self as fidl_internal, BssDescription},
+    crate::client::{inspect, DeviceInfo, Ssid},
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, ScanRequest, ScanResultCodes},
     fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_inspect::NumericProperty,
     log::error,
     std::{
         collections::{hash_map, HashMap, HashSet},
@@ -15,9 +15,9 @@ use {
         sync::Arc,
     },
     wlan_common::{
-        bss::BssDescriptionExt as _,
+        bss::BssDescription,
         channel::{Cbw, Channel},
-        ie,
+        ie::IesMerger,
     },
 };
 
@@ -77,7 +77,7 @@ pub struct ScanScheduler<D, J> {
     last_mlme_txn_id: u64,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 enum ScanState<D, J> {
     NotScanning,
     // Join scan is canceled, but we are still waiting for it to complete. This state is to make
@@ -88,12 +88,12 @@ enum ScanState<D, J> {
     ScanningToJoin {
         cmd: JoinScan<J>,
         mlme_txn_id: u64,
-        bss_map: HashMap<BssId, BssDescription>,
+        bss_map: HashMap<BssId, (fidl_internal::BssDescription, IesMerger)>,
     },
     ScanningToDiscover {
         cmd: DiscoveryScan<D>,
         mlme_txn_id: u64,
-        bss_map: HashMap<BssId, BssDescription>,
+        bss_map: HashMap<BssId, (fidl_internal::BssDescription, IesMerger)>,
     },
 }
 
@@ -178,10 +178,8 @@ impl<D, J> ScanScheduler<D, J> {
         }
         match &mut self.current {
             ScanState::NotScanning | ScanState::StaleJoinScan { .. } => {}
-            ScanState::ScanningToJoin { cmd, bss_map, .. } => {
-                if cmd.ssid == msg.bss.ssid {
-                    maybe_insert_bss(bss_map, msg.bss);
-                }
+            ScanState::ScanningToJoin { bss_map, .. } => {
+                maybe_insert_bss(bss_map, msg.bss);
             }
             ScanState::ScanningToDiscover { bss_map, .. } => {
                 maybe_insert_bss(bss_map, msg.bss);
@@ -195,6 +193,7 @@ impl<D, J> ScanScheduler<D, J> {
     pub fn on_mlme_scan_end(
         &mut self,
         msg: fidl_mlme::ScanEnd,
+        sme_inspect: &Arc<inspect::SmeTree>,
     ) -> (ScanResult<D, J>, Option<ScanRequest>) {
         if !self.matching_mlme_txn_id(msg.txn_id) {
             return (ScanResult::None, None);
@@ -204,7 +203,9 @@ impl<D, J> ScanScheduler<D, J> {
             ScanState::NotScanning | ScanState::StaleJoinScan { .. } => ScanResult::None,
             ScanState::ScanningToJoin { cmd, bss_map, .. } => {
                 let result = match msg.code {
-                    ScanResultCodes::Success => Ok(bss_map.into_iter().map(|(_, v)| v).collect()),
+                    ScanResultCodes::Success => {
+                        Ok(convert_bss_map(bss_map, Some(cmd.ssid), sme_inspect))
+                    }
                     other => Err(other),
                 };
                 ScanResult::JoinScanFinished { token: cmd.token, result }
@@ -212,7 +213,7 @@ impl<D, J> ScanScheduler<D, J> {
             ScanState::ScanningToDiscover { cmd, bss_map, .. } => ScanResult::DiscoveryFinished {
                 tokens: cmd.tokens,
                 result: match msg.code {
-                    ScanResultCodes::Success => Ok(bss_map.into_iter().map(|(_, v)| v).collect()),
+                    ScanResultCodes::Success => Ok(convert_bss_map(bss_map, None, sme_inspect)),
                     other => Err(other),
                 },
             },
@@ -284,39 +285,43 @@ impl<D, J> ScanScheduler<D, J> {
     }
 }
 
-fn maybe_insert_bss(bss_map: &mut HashMap<BssId, BssDescription>, mut bss: BssDescription) {
-    match bss_map.entry(bss.bssid) {
+fn maybe_insert_bss(
+    bss_map: &mut HashMap<BssId, (fidl_internal::BssDescription, IesMerger)>,
+    mut fidl_bss: fidl_internal::BssDescription,
+) {
+    let mut ies = vec![];
+    std::mem::swap(&mut ies, &mut fidl_bss.ies);
+
+    match bss_map.entry(fidl_bss.bssid) {
         hash_map::Entry::Occupied(mut entry) => {
-            let existing_bss = entry.get_mut();
-
-            // In case where AP is hidden, its SSID is blank (all 0) in beacon but contains
-            // the actual SSID in probe response. So if we receive a blank SSID, always
-            // prefer the existing one since we may have set the actual SSID if we had
-            // received a probe response previously.
-            if bss.ssid.iter().all(|b| *b == 0) && existing_bss.ssid.iter().any(|b| *b != 0) {
-                bss.ssid = existing_bss.ssid.clone();
-            }
-
-            // TIM element is present in beacon frame but not probe response. In case we
-            // see no DTIM period in latest frame, use value from previous one.
-            if bss.dtim_period == 0 {
-                bss.dtim_period = existing_bss.dtim_period;
-            }
-
-            let existing_has_manufacturer = existing_bss.has_wsc_attr(ie::wsc::Id::MANUFACTURER);
-            let new_has_manufacturer = bss.has_wsc_attr(ie::wsc::Id::MANUFACTURER);
-            // Keep existing vendor IE if newer scan result lacks WSC IE that older one has.
-            // It's likely that the new scan result comes from a beacon while the old scan
-            // result comes from a probe response.
-            if existing_has_manufacturer && !new_has_manufacturer {
-                bss.vendor_ies = existing_bss.vendor_ies.take();
-            }
-            *existing_bss = bss;
+            let (ref mut existing_bss, ref mut ies_merger) = entry.get_mut();
+            ies_merger.merge(&ies[..]);
+            *existing_bss = fidl_bss;
         }
         hash_map::Entry::Vacant(entry) => {
-            entry.insert(bss);
+            entry.insert((fidl_bss, IesMerger::new(ies)));
         }
     }
+}
+
+fn convert_bss_map(
+    bss_map: HashMap<BssId, (fidl_internal::BssDescription, IesMerger)>,
+    ssid_filter: Option<Ssid>,
+    sme_inspect: &Arc<inspect::SmeTree>,
+) -> Vec<BssDescription> {
+    bss_map
+        .into_iter()
+        .filter_map(|(_bssid, (mut bss, mut ies_merger))| {
+            let mut ies = ies_merger.finalize();
+            std::mem::swap(&mut ies, &mut bss.ies);
+            let bss = BssDescription::from_fidl(bss).ok();
+            if bss.is_none() {
+                sme_inspect.scan_discard_fidl_bss.add(1);
+            }
+            bss
+        })
+        .filter(|v| ssid_filter.as_ref().map(|ssid| &v.ssid == ssid).unwrap_or(true))
+        .collect()
 }
 
 const WILDCARD_BSS_ID: [u8; 6] = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
@@ -445,7 +450,13 @@ mod tests {
 
     use crate::clone_utils::clone_bss_desc;
     use crate::test_utils;
-    use wlan_common::{assert_variant, fake_bss};
+    use fuchsia_inspect::Inspector;
+    use itertools;
+    use wlan_common::{
+        assert_variant,
+        hasher::WlanHasher,
+        test_utils::fake_stas::{fake_fidl_bss, FakeProtectionCfg},
+    };
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
@@ -456,26 +467,36 @@ mod tests {
     #[test]
     fn discovery_scan() {
         let mut sched = create_sched();
+        let (_inspector, sme_inspect) = sme_inspect();
         let req = sched
             .enqueue_scan_to_discover(passive_discovery_scan(10))
             .expect("expected a ScanRequest");
         let txn_id = req.txn_id;
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [1; 6]),
+            bss: fidl_internal::BssDescription {
+                bssid: [1; 6],
+                ..fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec())
+            },
         });
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id: txn_id + 100, // mismatching transaction id
-            bss: fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [2; 6]),
+            bss: fidl_internal::BssDescription {
+                bssid: [2; 6],
+                ..fake_fidl_bss(FakeProtectionCfg::Open, b"bar".to_vec())
+            },
         });
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss!(Open, ssid: b"qux".to_vec(), bssid: [3; 6]),
+            bss: fidl_internal::BssDescription {
+                bssid: [3; 6],
+                ..fake_fidl_bss(FakeProtectionCfg::Open, b"qux".to_vec())
+            },
         });
-        let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
-            txn_id,
-            code: fidl_mlme::ScanResultCodes::Success,
-        });
+        let (result, req) = sched.on_mlme_scan_end(
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            &sme_inspect,
+        );
         assert!(req.is_none());
         let (tokens, result) = assert_variant!(result,
             ScanResult::DiscoveryFinished { tokens, result } => (tokens, result),
@@ -494,23 +515,30 @@ mod tests {
     #[test]
     fn discovery_scan_deduplicate_bssid() {
         let mut sched = create_sched();
+        let (_inspector, sme_inspect) = sme_inspect();
         let req = sched
             .enqueue_scan_to_discover(passive_discovery_scan(10))
             .expect("expected a ScanRequest");
         let txn_id = req.txn_id;
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [1; 6]),
+            bss: fidl_internal::BssDescription {
+                bssid: [1; 6],
+                ..fake_fidl_bss(FakeProtectionCfg::Open, b"bar".to_vec())
+            },
         });
         // A new scan result with the same BSSID replaces the previous result.
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss!(Open, ssid: b"baz".to_vec(), bssid: [1; 6]),
+            bss: fidl_internal::BssDescription {
+                bssid: [1; 6],
+                ..fake_fidl_bss(FakeProtectionCfg::Open, b"baz".to_vec())
+            },
         });
-        let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
-            txn_id,
-            code: fidl_mlme::ScanResultCodes::Success,
-        });
+        let (result, req) = sched.on_mlme_scan_end(
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            &sme_inspect,
+        );
         assert!(req.is_none());
         let (tokens, result) = assert_variant!(result,
             ScanResult::DiscoveryFinished { tokens, result } => (tokens, result),
@@ -527,28 +555,29 @@ mod tests {
     }
 
     #[test]
-    fn discovery_scan_handle_blank_ssid() {
+    fn discovery_scan_merge_ies() {
         let mut sched = create_sched();
+        let (_inspector, sme_inspect) = sme_inspect();
         let req = sched
             .enqueue_scan_to_discover(passive_discovery_scan(10))
             .expect("expected a ScanRequest");
         let txn_id = req.txn_id;
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
-            txn_id,
-            bss: fake_bss!(Open, ssid: b"ssid".to_vec(), bssid: [1; 6]),
-        });
 
-        // A new scan result with the same BSSID replaces the previous result, but with a blank
-        // SSID so the existing SSID is kept.
-        let mut bss = fake_bss!(Open, ssid: vec![0u8, 0, 0, 0], bssid: [1; 6]);
-        // Add an extra IE so we can distinguish this result from the previous result.
-        let ie_marker = &[0xdd, 0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
-        bss.vendor_ies.get_or_insert(vec![]).extend_from_slice(ie_marker);
+        let mut bss = fake_fidl_bss(FakeProtectionCfg::Open, b"ssid".to_vec());
+        // Add an extra IE so we can distinguish this result.
+        let ie_marker1 = &[0xdd, 0x07, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee];
+        bss.ies.extend_from_slice(ie_marker1);
         sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss });
-        let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
-            txn_id,
-            code: fidl_mlme::ScanResultCodes::Success,
-        });
+
+        let mut bss = fake_fidl_bss(FakeProtectionCfg::Open, b"ssid".to_vec());
+        // Add an extra IE so we can distinguish this result.
+        let ie_marker2 = &[0xdd, 0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+        bss.ies.extend_from_slice(ie_marker2);
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss });
+        let (result, req) = sched.on_mlme_scan_end(
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            &sme_inspect,
+        );
         assert!(req.is_none());
         let (tokens, result) = assert_variant!(result,
             ScanResult::DiscoveryFinished { tokens, result } => (tokens, result),
@@ -558,50 +587,15 @@ mod tests {
 
         let result = result.expect("expected a successful scan result");
         assert_eq!(result.len(), 1);
-        // This verifies that we keep the SSID from the first result.
-        assert_eq!(result[0].ssid, b"ssid".to_vec());
-        // This verifies that we process the second result.
-        assert!(result[0].vendor_ies.as_ref().map(|ies| ies.ends_with(ie_marker)).unwrap_or(false));
+        // Verify that both IEs are processed.
+        assert!(slice_contains(&result[0].ies[..], ie_marker1));
+        assert!(slice_contains(&result[0].ies[..], ie_marker2));
     }
 
-    #[test]
-    fn test_handle_beacon_or_probe_response_no_tim() {
-        let mut sched = create_sched();
-        let req = sched
-            .enqueue_scan_to_discover(passive_discovery_scan(10))
-            .expect("expected a ScanRequest");
-        let txn_id = req.txn_id;
-
-        let mut bss_with_dtim = fake_bss!(Open, ssid: b"ssid".to_vec(), bssid: [1; 6]);
-        bss_with_dtim.dtim_period = 1;
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss: bss_with_dtim });
-
-        // A new scan result with the same BSSID replaces the previous result, but with a blank
-        // SSID so the existing SSID is kept.
-        let mut bss_no_dtim = fake_bss!(Open, ssid: b"ssid".to_vec(), bssid: [1; 6]);
-        bss_no_dtim.dtim_period = 0;
-        // Add an extra IE so we can distinguish this result from the previous result.
-        let ie_marker = &[0xdd, 0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
-        bss_no_dtim.vendor_ies.get_or_insert(vec![]).extend_from_slice(ie_marker);
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss: bss_no_dtim });
-        let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
-            txn_id,
-            code: fidl_mlme::ScanResultCodes::Success,
-        });
-        assert!(req.is_none());
-        let (tokens, result) = assert_variant!(result,
-            ScanResult::DiscoveryFinished { tokens, result } => (tokens, result),
-            "expected discovery scan to be completed"
-        );
-        assert_eq!(vec![10], tokens);
-
-        let result = result.expect("expected a successful scan result");
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].ssid, b"ssid".to_vec());
-        // This verifies that we keep the DTIM period from the first result.
-        assert_eq!(result[0].dtim_period, 1);
-        // This verifies that we process the second result.
-        assert!(result[0].vendor_ies.as_ref().map(|ies| ies.ends_with(ie_marker)).unwrap_or(false));
+    fn slice_contains(slice: &[u8], subslice: &[u8]) -> bool {
+        let slice_str = itertools::join(slice, ",");
+        let subslice_str = itertools::join(subslice, ",");
+        slice_str.contains(&subslice_str)
     }
 
     #[test]
@@ -658,6 +652,7 @@ mod tests {
     #[test]
     fn test_discovery_scans_dedupe_single_group() {
         let mut sched = create_sched();
+        let (_inspector, sme_inspect) = sme_inspect();
 
         // Post one scan command, expect a message to MLME
         let mlme_req = sched
@@ -668,7 +663,10 @@ mod tests {
         // Report a scan result
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [1; 6]),
+            bss: fidl_internal::BssDescription {
+                bssid: [1; 6],
+                ..fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec())
+            },
         });
 
         // Post another command. It should not issue another request to the MLME since
@@ -678,12 +676,15 @@ mod tests {
         // Report another scan result and the end of the scan transaction
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [2; 6]),
+            bss: fidl_internal::BssDescription {
+                bssid: [2; 6],
+                ..fake_fidl_bss(FakeProtectionCfg::Open, b"bar".to_vec())
+            },
         });
-        let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
-            txn_id,
-            code: fidl_mlme::ScanResultCodes::Success,
-        });
+        let (result, req) = sched.on_mlme_scan_end(
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            &sme_inspect,
+        );
 
         // We don't expect another request to the MLME
         assert!(req.is_none());
@@ -695,6 +696,7 @@ mod tests {
     #[test]
     fn test_discovery_scans_dedupe_multiple_groups() {
         let mut sched = create_sched();
+        let (_inspector, sme_inspect) = sme_inspect();
 
         // Post a passive scan command, expect a message to MLME
         let mlme_req = sched
@@ -730,12 +732,15 @@ mod tests {
         // Report scan result and scan end
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [1; 6]),
+            bss: fidl_internal::BssDescription {
+                bssid: [1; 6],
+                ..fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec())
+            },
         });
-        let (result, mlme_req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
-            txn_id,
-            code: fidl_mlme::ScanResultCodes::Success,
-        });
+        let (result, mlme_req) = sched.on_mlme_scan_end(
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            &sme_inspect,
+        );
 
         // Expect discovery result with 1st and 3rd tokens
         assert_discovery_scan_result(result, vec![10, 30], vec![b"foo".to_vec()]);
@@ -749,12 +754,15 @@ mod tests {
         // Report scan result and scan end
         sched.on_mlme_scan_result(fidl_mlme::ScanResult {
             txn_id,
-            bss: fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [2; 6]),
+            bss: fidl_internal::BssDescription {
+                bssid: [2; 6],
+                ..fake_fidl_bss(FakeProtectionCfg::Open, b"bar".to_vec())
+            },
         });
-        let (result, mlme_req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
-            txn_id,
-            code: fidl_mlme::ScanResultCodes::Success,
-        });
+        let (result, mlme_req) = sched.on_mlme_scan_end(
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            &sme_inspect,
+        );
 
         // Expect discovery result with 2nd and 3rd tokens
         assert_discovery_scan_result(result, vec![20, 40], vec![b"bar".to_vec()]);
@@ -785,37 +793,53 @@ mod tests {
     #[test]
     fn join_scan() {
         let mut sched = create_sched();
+        let (_inspector, sme_inspect) = sme_inspect();
         let (discarded_token, req) =
             sched.enqueue_scan_to_join(passive_join_scan(b"foo".to_vec(), 10));
         assert!(discarded_token.is_none());
         let txn_id = req.expect("expected a ScanRequest").txn_id;
 
         // Matching BSS
-        let bss1 = fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [1; 6]);
+        let bss1 = fidl_internal::BssDescription {
+            bssid: [1; 6],
+            ..fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec())
+        };
         sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss: clone_bss_desc(&bss1) });
 
         // Mismatching transaction ID
-        let bss2 = fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [2; 6]);
+        let bss2 = fidl_internal::BssDescription {
+            bssid: [2; 6],
+            ..fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec())
+        };
         sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id: txn_id + 100, bss: bss2 });
 
         // Mismatching SSID
-        let bss3 = fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [3; 6]);
+        let bss3 = fidl_internal::BssDescription {
+            bssid: [3; 6],
+            ..fake_fidl_bss(FakeProtectionCfg::Open, b"bar".to_vec())
+        };
         sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss: bss3 });
 
         // Matching BSS
-        let bss4 = fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [4; 6]);
+        let bss4 = fidl_internal::BssDescription {
+            bssid: [4; 6],
+            ..fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec())
+        };
         sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss: clone_bss_desc(&bss4) });
 
-        let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
-            txn_id,
-            code: fidl_mlme::ScanResultCodes::Success,
-        });
+        let (result, req) = sched.on_mlme_scan_end(
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            &sme_inspect,
+        );
         assert!(req.is_none());
         assert_variant!(
             result,
             ScanResult::JoinScanFinished { token: 10, result } => {
                 let mut bss_list = result.expect("bss_list is Err");
                 bss_list.sort_by(|a, b| a.bssid.cmp(&b.bssid));
+
+                let bss1 = BssDescription::from_fidl(bss1).expect("expect bss1 convert succeed");
+                let bss4 = BssDescription::from_fidl(bss4).expect("expect bss4 convert succeed");
                 assert_eq!(bss_list, vec![bss1, bss4]);
             },
             "expected join scan to be completed"
@@ -825,6 +849,7 @@ mod tests {
     #[test]
     fn test_stale_join_scan() {
         let mut sched = create_sched();
+        let (_inspector, sme_inspect) = sme_inspect();
         let (_discarded_token, req) =
             sched.enqueue_scan_to_join(passive_join_scan(b"foo".to_vec(), 10));
         let txn_id = req.expect("expected a ScanRequest").txn_id;
@@ -839,10 +864,10 @@ mod tests {
         assert!(req.is_none());
 
         // When stale scan finishes, the new one is ready to be sent
-        let (stale_scan_result, next_req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
-            txn_id,
-            code: fidl_mlme::ScanResultCodes::Success,
-        });
+        let (stale_scan_result, next_req) = sched.on_mlme_scan_end(
+            fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            &sme_inspect,
+        );
         match stale_scan_result {
             ScanResult::None => (), // expected path
             _ => panic!("expected ScanResult::None"),
@@ -895,14 +920,10 @@ mod tests {
         sched.enqueue_scan_to_join(passive_join_scan(b"foo".to_vec(), 10));
         // Make sure the scanner is in the state we expect it to be: the request is
         // 'current', not 'pending'
-        assert_eq!(
-            ScanState::ScanningToJoin {
-                cmd: passive_join_scan(b"foo".to_vec(), 10),
-                mlme_txn_id: 1,
-                bss_map: HashMap::new(),
-            },
-            sched.current
-        );
+        assert_variant!(&sched.current, ScanState::ScanningToJoin { cmd, mlme_txn_id, .. } => {
+            assert_eq!(cmd, &passive_join_scan(b"foo".to_vec(), 10));
+            assert_eq!(*mlme_txn_id, 1);
+        });
         assert_eq!(None, sched.pending_join);
 
         assert_eq!(Some(&passive_join_scan(b"foo".to_vec(), 10)), sched.get_join_scan());
@@ -910,7 +931,7 @@ mod tests {
         sched.enqueue_scan_to_join(passive_join_scan(b"bar".to_vec(), 20));
         // Again, make sure the state is what we expect. "Foo" should still be the current request,
         // while "bar" should be pending
-        assert_eq!(ScanState::StaleJoinScan { mlme_txn_id: 1 }, sched.current);
+        assert_variant!(&sched.current, ScanState::StaleJoinScan { mlme_txn_id: 1 });
         assert_eq!(Some(passive_join_scan(b"bar".to_vec(), 20)), sched.pending_join);
 
         // Expect the pending request to be returned since the current one will be discarded
@@ -923,16 +944,17 @@ mod tests {
         let mut device_info = device_info_with_chan(vec![1, 52]);
         device_info.driver_features = vec![fidl_common::DriverFeature::Dfs];
         let mut sched: ScanScheduler<i32, i32> = ScanScheduler::new(Arc::new(device_info));
+        let (_inspector, sme_inspect) = sme_inspect();
 
         // Passive scan request should always include all channels supported by device
         let (_, req) = sched.enqueue_scan_to_join(passive_join_scan(b"foo".to_vec(), 10));
         let req = req.expect("expect ScanRequest");
         assert_eq!(req.channel_list, Some(vec![52, 1]));
 
-        let _ = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
-            txn_id: req.txn_id,
-            code: fidl_mlme::ScanResultCodes::Success,
-        });
+        let _ = sched.on_mlme_scan_end(
+            fidl_mlme::ScanEnd { txn_id: req.txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            &sme_inspect,
+        );
 
         // Active scan request should include both DFS and non-DFS channels since device handles
         // DFS channel
@@ -952,16 +974,17 @@ mod tests {
         let mut device_info = device_info_with_chan(vec![1, 52]);
         device_info.driver_features = vec![];
         let mut sched: ScanScheduler<i32, i32> = ScanScheduler::new(Arc::new(device_info));
+        let (_inspector, sme_inspect) = sme_inspect();
 
         // Passive scan request should always include all channels supported by device
         let (_, req) = sched.enqueue_scan_to_join(passive_join_scan(b"foo".to_vec(), 10));
         let req = req.expect("expect ScanRequest");
         assert_eq!(req.channel_list, Some(vec![52, 1]));
 
-        let _ = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
-            txn_id: req.txn_id,
-            code: fidl_mlme::ScanResultCodes::Success,
-        });
+        let _ = sched.on_mlme_scan_end(
+            fidl_mlme::ScanEnd { txn_id: req.txn_id, code: fidl_mlme::ScanResultCodes::Success },
+            &sme_inspect,
+        );
 
         // Active scan request should exclude DFS channels since device does not handle them
         let (_, req) = sched.enqueue_scan_to_join(JoinScan {
@@ -973,83 +996,6 @@ mod tests {
             }),
         });
         assert_eq!(req.expect("expect ScanRequest").channel_list, Some(vec![1]));
-    }
-
-    #[test]
-    fn test_bss_map_retain_information() {
-        let mut sched = create_sched();
-        let req = sched
-            .enqueue_scan_to_discover(DiscoveryScan::new(
-                10,
-                fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-                    ssids: vec![],
-                    channels: vec![],
-                }),
-            ))
-            .expect("expected a ScanRequest");
-        let txn_id = req.txn_id;
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
-            txn_id,
-            bss: fake_bss!(Open, ssid: b"foo".to_vec()),
-        });
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
-            txn_id,
-            bss: fake_bss!(Open, ssid: b"foo".to_vec(), vendor_ies: Some(probe_resp_wsc_ie())),
-        });
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
-            txn_id,
-            bss: fake_bss!(Open, ssid: b"foo".to_vec()),
-        });
-        let (result, _req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
-            txn_id,
-            code: fidl_mlme::ScanResultCodes::Success,
-        });
-
-        let (_tokens, result) = assert_variant!(result,
-            ScanResult::DiscoveryFinished { tokens, result } => (tokens, result),
-            "expected discovery scan to be completed"
-        );
-        let scan_list = result.expect("expected a successful scan result");
-        assert_eq!(scan_list.len(), 1);
-        // The second scan result should be retained since it contains the AP manufacturer
-        // information, which the other ones don't.
-        assert_eq!(scan_list[0].vendor_ies, Some(probe_resp_wsc_ie()));
-    }
-
-    fn probe_resp_wsc_ie() -> Vec<u8> {
-        #[rustfmt::skip]
-        let ie = vec![
-            0xdd, 0x8c,                   // Vendor IE + Length
-            0x00, 0x50, 0xf2, 0x04,       // OUI type for WSC
-            0x10, 0x4a, 0x00, 0x01, 0x10, // Version
-            0x10, 0x44, 0x00, 0x01, 0x02, // WiFi Protected Setup State
-            0x10, 0x57, 0x00, 0x01, 0x01, // AP Setup Locked
-            0x10, 0x3b, 0x00, 0x01, 0x03, // Response Type
-            // UUID-E
-            0x10, 0x47, 0x00, 0x10,
-            0x3b, 0x3b, 0xe3, 0x66, 0x80, 0x84, 0x4b, 0x03,
-            0xbb, 0x66, 0x45, 0x2a, 0xf3, 0x00, 0x59, 0x22,
-            // Manufacturer
-            0x10, 0x21, 0x00, 0x15,
-            0x41, 0x53, 0x55, 0x53, 0x54, 0x65, 0x6b, 0x20, 0x43, 0x6f, 0x6d, 0x70,
-            0x75, 0x74, 0x65, 0x72, 0x20, 0x49, 0x6e, 0x63, 0x2e,
-            // Model name
-            0x10, 0x23, 0x00, 0x08, 0x52, 0x54, 0x2d, 0x41, 0x43, 0x35, 0x38, 0x55,
-            // Model number
-            0x10, 0x24, 0x00, 0x03, 0x31, 0x32, 0x33,
-            // Serial number
-            0x10, 0x42, 0x00, 0x05, 0x31, 0x32, 0x33, 0x34, 0x35,
-            // Primary device type
-            0x10, 0x54, 0x00, 0x08, 0x00, 0x06, 0x00, 0x50, 0xf2, 0x04, 0x00, 0x01,
-            // Device name
-            0x10, 0x11, 0x00, 0x0b,
-            0x41, 0x53, 0x55, 0x53, 0x20, 0x52, 0x6f, 0x75, 0x74, 0x65, 0x72,
-            // Config methods
-            0x10, 0x08, 0x00, 0x02, 0x20, 0x0c,
-            // Vendor extension
-            0x10, 0x49, 0x00, 0x06, 0x00, 0x37, 0x2a, 0x00, 0x01, 0x20,
-        ];
-        ie
     }
 
     fn create_sched() -> ScanScheduler<i32, i32> {
@@ -1064,5 +1010,12 @@ mod tests {
             }],
             ..test_utils::fake_device_info(CLIENT_ADDR)
         }
+    }
+
+    fn sme_inspect() -> (Inspector, Arc<inspect::SmeTree>) {
+        let inspector = Inspector::new();
+        let hasher = WlanHasher::new([88, 77, 66, 55, 44, 33, 22, 11]);
+        let sme_inspect = Arc::new(inspect::SmeTree::new(inspector.root(), hasher));
+        (inspector, sme_inspect)
     }
 }

@@ -14,6 +14,7 @@
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-frame.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_device.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
@@ -160,9 +161,10 @@ TEST_F(PassiveScanTest, BasicFunctionality) {
     EXPECT_EQ(result_bssid.Cmp(kDefaultBssid), 0);
 
     // Verify SSID.
-    EXPECT_EQ(result.bss.ssid.len, kDefaultSsid.len);
+    auto ssid = brcmf_find_ssid_in_ies(result.bss.ies_bytes_list, result.bss.ies_bytes_count);
+    EXPECT_THAT(ssid, SizeIs(kDefaultSsid.len));
     ASSERT_LE(kDefaultSsid.len, sizeof(kDefaultSsid.ssid));
-    EXPECT_EQ(std::memcmp(result.bss.ssid.data, kDefaultSsid.ssid, kDefaultSsid.len), 0);
+    EXPECT_EQ(std::memcmp(ssid.data(), kDefaultSsid.ssid, kDefaultSsid.len), 0);
 
     // Verify channel
     EXPECT_EQ(result.bss.chan.primary, kDefaultChannel.primary);
@@ -204,7 +206,8 @@ TEST_F(PassiveScanTest, ScanWithMalformedBeaconMissingSsidInformationElement) {
     EXPECT_EQ(result_bssid.Cmp(kDefaultBssid), 0);
 
     // Verify that SSID is empty, since there was no SSID IE.
-    EXPECT_EQ(result.bss.ssid.len, 0);
+    auto ssid = brcmf_find_ssid_in_ies(result.bss.ies_bytes_list, result.bss.ies_bytes_count);
+    EXPECT_EQ(ssid.size(), 0u);
     ASSERT_LE(kDefaultSsid.len, sizeof(kDefaultSsid.ssid));
 
     // Verify channel

@@ -33,7 +33,7 @@ class SimInterface {
     } state = kNone;
 
     common::MacAddr bssid;
-    wlan_ssid_t ssid;
+    std::vector<uint8_t> ies;
     wlan_channel_t channel;
   };
 
@@ -179,6 +179,8 @@ class SimInterface {
   };
   // One entry per scan started
   std::map<uint64_t, ScanStatus> scan_results_;
+  // BSS's IEs are raw pointers. Store the IEs here so we don't have dangling pointers
+  std::vector<std::vector<uint8_t>> scan_results_ies_;
 };
 
 // A base class that can be used for creating simulation tests. It provides functionality that

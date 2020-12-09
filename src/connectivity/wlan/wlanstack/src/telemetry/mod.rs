@@ -24,7 +24,7 @@ use {
     std::default::Default,
     std::ops::Sub,
     std::sync::Arc,
-    wlan_common::{bss::BssDescriptionExt as _, format::MacFmt},
+    wlan_common::format::MacFmt,
     wlan_metrics_registry as metrics,
     wlan_sme::client::{
         info::{

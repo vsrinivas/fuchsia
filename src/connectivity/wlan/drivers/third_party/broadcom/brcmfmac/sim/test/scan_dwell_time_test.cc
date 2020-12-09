@@ -9,6 +9,7 @@
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
 namespace wlan::brcmfmac {
@@ -67,8 +68,9 @@ TEST_F(ScanTest, PassiveDwellTime) {
     EXPECT_GT(bss_list->size(), 0U);
     for (const wlanif_bss_description_t& bss : *bss_list) {
       EXPECT_EQ(kDefaultBssid, common::MacAddr(bss.bssid));
-      EXPECT_EQ(kDefaultSsid.len, bss.ssid.len);
-      EXPECT_EQ(memcmp(kDefaultSsid.ssid, bss.ssid.data, bss.ssid.len), 0);
+      auto ssid = brcmf_find_ssid_in_ies(bss.ies_bytes_list, bss.ies_bytes_count);
+      EXPECT_EQ(kDefaultSsid.len, ssid.size());
+      EXPECT_EQ(memcmp(kDefaultSsid.ssid, ssid.data(), ssid.size()), 0);
       EXPECT_EQ(kDefaultChannel.primary, bss.chan.primary);
       EXPECT_EQ(kDefaultChannel.cbw, bss.chan.cbw);
     }

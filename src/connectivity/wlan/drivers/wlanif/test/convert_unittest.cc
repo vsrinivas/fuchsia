@@ -14,7 +14,9 @@
 #include <src/connectivity/wlan/drivers/wlanif/convert.h>
 #include <wlan/common/element.h>
 
+#include "ddk/protocol/wlan/info.h"
 #include "ddk/protocol/wlanif.h"
+#include "fuchsia/wlan/common/cpp/fidl.h"
 
 namespace wlanif {
 namespace {
@@ -40,91 +42,44 @@ zx_status_t ValidateMessage(T* msg) {
   return fidl_validate(T::FidlType, msg_body.data(), msg_body.size(), 0, &err_msg);
 }
 
-wlanif_bss_description_t FakeBssWithSsidLen(uint8_t ssid_len) {
-  return {
-      .ssid =
-          {
-              .len = ssid_len,
-          },
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
-  };
-}
+TEST(ConvertTest, ToFidlBssDescription) {
+  uint8_t ies[] = {0, 4, 0x73, 0x73, 0x69, 0x64};
+  wlanif_bss_description_t wlanif_desc{.bssid = {1, 2, 3, 4, 5, 6},
+                                       .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+                                       .beacon_period = 2,
+                                       .timestamp = 54321,
+                                       .local_time = 777,
+                                       .cap = 1337,
+                                       .ies_bytes_list = ies,
+                                       .ies_bytes_count = sizeof(ies),
 
-TEST(ConvertTest, ToFidlBSSDescription_SsidEmpty) {
-  wlan_internal::BssDescription fidl_desc = {};
-  ConvertBssDescription(&fidl_desc, FakeBssWithSsidLen(0));
-  auto status = ValidateMessage(&fidl_desc);
-  EXPECT_EQ(status, ZX_OK);
-}
-
-TEST(ConvertTest, ToFidlBSSDescription_Ssid) {
-  wlan_internal::BssDescription fidl_desc = {};
-  ConvertBssDescription(&fidl_desc, FakeBssWithSsidLen(3));
-  auto status = ValidateMessage(&fidl_desc);
-  EXPECT_EQ(status, ZX_OK);
-}
-
-TEST(ConvertTest, ToFidlBSSDescription_SsidMaxLength) {
-  wlan_internal::BssDescription fidl_desc = {};
-  ConvertBssDescription(&fidl_desc, FakeBssWithSsidLen(32));
-  auto status = ValidateMessage(&fidl_desc);
-  EXPECT_EQ(status, ZX_OK);
-}
-
-TEST(ConvertTest, ToFidlBSSDescription_SsidTooLong) {
-  wlan_internal::BssDescription fidl_desc = {};
-  ConvertBssDescription(&fidl_desc, FakeBssWithSsidLen(33));
-  auto status = ValidateMessage(&fidl_desc);
-  EXPECT_EQ(status, ZX_OK);
-}
-
-TEST(ConvertTest, ToFidlBSSDescription_Country) {
-  uint8_t country[] = {0x55, 0x53, 0x20, 0x01, 0x0b, 0x1e};
-  wlanif_bss_description_t wlanif_desc = {};
-  wlanif_desc.bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE;
-  memcpy(wlanif_desc.country, country, sizeof(country));
-  wlanif_desc.country_len = sizeof(country);
+                                       .chan{
+                                           .primary = 32,
+                                           .cbw = WLAN_CHANNEL_BANDWIDTH__40,
+                                           .secondary80 = 0,
+                                       },
+                                       .rssi_dbm = -40,
+                                       .snr_db = 20};
 
   wlan_internal::BssDescription fidl_desc = {};
   ConvertBssDescription(&fidl_desc, wlanif_desc);
 
-  EXPECT_EQ(fidl_desc.country->size(), sizeof(country));
-  EXPECT_EQ(memcmp(fidl_desc.country->data(), country, sizeof(country)), 0);
-
   auto status = ValidateMessage(&fidl_desc);
   EXPECT_EQ(status, ZX_OK);
-}
-
-TEST(ConvertTest, ToFidlBSSDescription_SnrDb) {
-  wlanif_bss_description_t wlanif_desc = {};
-  wlanif_desc.bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE;
-  const int8_t expected_snr_db = 45;
-  wlanif_desc.snr_db = expected_snr_db;
-
-  wlan_internal::BssDescription fidl_desc = {};
-  ConvertBssDescription(&fidl_desc, wlanif_desc);
-
-  EXPECT_EQ(fidl_desc.snr_db, expected_snr_db);
-
-  auto status = ValidateMessage(&fidl_desc);
-  EXPECT_EQ(status, ZX_OK);
-}
-
-TEST(ConvertTest, ToVectorRateSets_InvalidRateCount) {
-  wlanif_bss_description bss_desc{};
-  std::vector<uint8_t> expected;
-
-  bss_desc.num_rates = WLAN_MAC_MAX_RATES + 1;
-  for (unsigned i = 0; i < WLAN_MAC_MAX_RATES + 1; i++) {
-    bss_desc.rates[i] = i;
-    expected.push_back(i);
-  }
-  std::vector<uint8_t> rates;
-
-  ConvertRates(&rates, bss_desc);
-
-  expected.resize(wlan_internal::RATES_MAX_LEN);  // ConvertRates will truncate excess rates
-  EXPECT_EQ(rates, expected);
+  auto expected_bssid = std::array<uint8_t, 6>{1, 2, 3, 4, 5, 6};
+  EXPECT_EQ(fidl_desc.bssid, expected_bssid);
+  EXPECT_EQ(fidl_desc.bss_type, fuchsia::wlan::internal::BssTypes::INFRASTRUCTURE);
+  EXPECT_EQ(fidl_desc.beacon_period, 2u);
+  EXPECT_EQ(fidl_desc.timestamp, 54321u);
+  EXPECT_EQ(fidl_desc.local_time, 777u);
+  EXPECT_EQ(fidl_desc.cap, 1337);
+  auto expected_ies = std::vector<uint8_t>(ies, ies + sizeof(ies));
+  EXPECT_EQ(fidl_desc.ies, expected_ies);
+  EXPECT_EQ(fidl_desc.chan.primary, 32);
+  EXPECT_EQ(fidl_desc.chan.cbw, fuchsia::wlan::common::CBW::CBW40);
+  EXPECT_EQ(fidl_desc.chan.secondary80, 0);
+  EXPECT_EQ(fidl_desc.rssi_dbm, -40);
+  EXPECT_EQ(fidl_desc.snr_db, 20);
 }
 
 TEST(ConvertTest, ToFidlAssocInd) {
@@ -517,28 +472,38 @@ TEST(ConvertTest, ToFidlPmkInfo) {
   EXPECT_EQ(fidl_info.pmkid, pmkid);
 }
 
-TEST(ConvertTest, ToWlanifBssDescription_Country) {
-  wlan_internal::BssDescription fidl_desc = {};
-  uint8_t country[] = {0x55, 0x53, 0x20, 0x01, 0x0b, 0x1e};
-  fidl_desc.country = std::vector<uint8_t>(country, country + sizeof(country));
-  fidl_desc.bss_type = wlan_internal::BssTypes::INFRASTRUCTURE;
+TEST(ConvertTest, ToWlanifBssDescription) {
+  uint8_t ies[] = {0, 4, 0x73, 0x73, 0x69, 0x64};
+  wlan_internal::BssDescription fidl_desc{
+      .bssid = std::array<uint8_t, 6>{1, 2, 3, 4, 5, 6},
+      .bss_type = fuchsia::wlan::internal::BssTypes::INFRASTRUCTURE,
+      .beacon_period = 2,
+      .timestamp = 54321,
+      .local_time = 777,
+      .cap = 1337,
+      .ies = std::vector<uint8_t>(ies, ies + sizeof(ies)),
+
+      .chan{.primary = 32, .cbw = fuchsia::wlan::common::CBW::CBW40, .secondary80 = 0},
+      .rssi_dbm = -40,
+      .snr_db = 20};
 
   wlanif_bss_description_t wlanif_desc = {};
   ConvertBssDescription(&wlanif_desc, fidl_desc);
 
-  EXPECT_EQ(wlanif_desc.country_len, sizeof(country));
-  EXPECT_EQ(memcmp(wlanif_desc.country, country, sizeof(country)), 0);
-}
-
-TEST(ConvertTest, ToWlanifBssDescription_SnrDb) {
-  wlan_internal::BssDescription fidl_desc = {};
-  fidl_desc.bss_type = wlan_internal::BssTypes::INFRASTRUCTURE;
-  const int8_t expected_snr_db = 60;
-  fidl_desc.snr_db = expected_snr_db;
-  wlanif_bss_description_t wlanif_desc = {};
-  ConvertBssDescription(&wlanif_desc, fidl_desc);
-
-  EXPECT_EQ(wlanif_desc.snr_db, expected_snr_db);
+  uint8_t expected_bssid[] = {1, 2, 3, 4, 5, 6};
+  EXPECT_EQ(memcmp(wlanif_desc.bssid, expected_bssid, sizeof(wlanif_desc.bssid)), 0);
+  EXPECT_EQ(wlanif_desc.bss_type, WLAN_BSS_TYPE_INFRASTRUCTURE);
+  EXPECT_EQ(wlanif_desc.beacon_period, 2u);
+  EXPECT_EQ(wlanif_desc.timestamp, 54321u);
+  EXPECT_EQ(wlanif_desc.local_time, 777u);
+  EXPECT_EQ(wlanif_desc.cap, 1337);
+  ASSERT_EQ(wlanif_desc.ies_bytes_count, sizeof(ies));
+  EXPECT_EQ(memcmp(wlanif_desc.ies_bytes_list, ies, sizeof(ies)), 0);
+  EXPECT_EQ(wlanif_desc.chan.primary, 32);
+  EXPECT_EQ(wlanif_desc.chan.cbw, WLAN_CHANNEL_BANDWIDTH__40);
+  EXPECT_EQ(wlanif_desc.chan.secondary80, 0);
+  EXPECT_EQ(wlanif_desc.rssi_dbm, -40);
+  EXPECT_EQ(wlanif_desc.snr_db, 20);
 }
 
 TEST(ConvertTest, ToWlanifOrFidlSaeAuthFrame) {

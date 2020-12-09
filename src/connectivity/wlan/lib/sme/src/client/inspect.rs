@@ -48,6 +48,9 @@ pub struct SmeTree {
     ///    be thought similarly to an external entity periodically checking SME's status).
     pub last_pulse: Mutex<PulseNode>,
 
+    /// Number of FIDL BSS we discard in scan because we fail to convert them.
+    pub scan_discard_fidl_bss: UintProperty,
+
     /// Hasher used to hash sensitive information, preserving user privacy.
     pub hasher: WlanHasher,
 }
@@ -60,11 +63,13 @@ impl SmeTree {
         let join_scan_events =
             BoundedListNode::new(node.create_child("join_scan_events"), JOIN_SCAN_EVENTS_LIMIT);
         let pulse = PulseNode::new(node.create_child("last_pulse"));
+        let scan_discard_fidl_bss = node.create_uint("scan_discard_fidl_bss", 0);
         Self {
             state_events: Mutex::new(state_events),
             rsn_events: Mutex::new(rsn_events),
             join_scan_events: Mutex::new(join_scan_events),
             last_pulse: Mutex::new(pulse),
+            scan_discard_fidl_bss,
             hasher,
         }
     }

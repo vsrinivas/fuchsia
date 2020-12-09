@@ -12,6 +12,7 @@
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
@@ -40,6 +41,8 @@ struct ClientIfc : public SimInterface {
   wlan_scan_result_t scan_result_code_ = ZX_OK;
 
   std::list<wlanif_scan_result> scan_results_;
+  // BSS's IEs are raw pointers. Store the IEs here so we don't have dangling pointers
+  std::vector<std::vector<uint8_t>> seen_ies_;
 };
 
 class ActiveScanTest : public SimTest {
@@ -87,7 +90,14 @@ class ActiveScanTest : public SimTest {
 void ClientIfc::OnScanResult(const wlanif_scan_result_t* result) {
   ASSERT_NE(result, nullptr);
   EXPECT_EQ(scan_txn_id_, result->txn_id);
-  scan_results_.emplace_back(*result);
+
+  wlanif_scan_result_t copy = *result;
+  // Copy the IES data over since the original location may change data by the time we verify.
+  std::vector<uint8_t> ies(copy.bss.ies_bytes_list,
+                           copy.bss.ies_bytes_list + copy.bss.ies_bytes_count);
+  seen_ies_.push_back(ies);
+  copy.bss.ies_bytes_list = seen_ies_.at(seen_ies_.size() - 1).data();
+  scan_results_.emplace_back(copy);
 }
 
 void ClientIfc::OnScanEnd(const wlanif_scan_end_t* end) { scan_result_code_ = end->code; }
@@ -153,9 +163,10 @@ void ActiveScanTest::VerifyScanResults() {
 
         // Verify SSID
         wlan_ssid_t ssid_info = ap_info->ap_.GetSsid();
-        EXPECT_EQ(result.bss.ssid.len, ssid_info.len);
+        auto ssid = brcmf_find_ssid_in_ies(result.bss.ies_bytes_list, result.bss.ies_bytes_count);
+        EXPECT_EQ(ssid.size(), ssid_info.len);
         ASSERT_LE(ssid_info.len, sizeof(ssid_info.ssid));
-        EXPECT_EQ(memcmp(result.bss.ssid.data, ssid_info.ssid, ssid_info.len), 0);
+        EXPECT_EQ(memcmp(ssid.data(), ssid_info.ssid, ssid_info.len), 0);
 
         // Verify channel
         wlan_channel_t channel = ap_info->ap_.GetChannel();

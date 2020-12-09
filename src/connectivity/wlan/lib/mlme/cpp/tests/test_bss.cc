@@ -70,13 +70,10 @@ wlan_internal::BssDescription CreateBssDescription(bool rsne, wlan_channel_t cha
   wlan_internal::BssDescription bss_desc;
   std::memcpy(bss_desc.bssid.data(), bssid.byte, common::kMacAddrLen);
   std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
-  bss_desc.ssid = std::move(ssid);
   bss_desc.bss_type = wlan_internal::BssTypes::INFRASTRUCTURE;
   bss_desc.beacon_period = kBeaconPeriodTu;
-  bss_desc.dtim_period = kDtimPeriodTu;
   bss_desc.timestamp = 0;
   bss_desc.local_time = 0;
-  bss_desc.rates.resize(0);
 
   CapabilityInfo cap{};
   cap.set_ess(true);
@@ -84,16 +81,10 @@ wlan_internal::BssDescription CreateBssDescription(bool rsne, wlan_channel_t cha
   bss_desc.cap = cap.val();
 
   if (rsne) {
-    bss_desc.rsne.emplace(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
+    bss_desc.ies = std::vector<uint8_t>(kIes, kIes + sizeof(kIes));
   } else {
-    bss_desc.rsne.reset();
+    bss_desc.ies = std::vector<uint8_t>(kIes_NoRsne, kIes_NoRsne + sizeof(kIes_NoRsne));
   }
-
-  bss_desc.ht_cap.reset();
-  bss_desc.ht_op.reset();
-
-  bss_desc.vht_cap.reset();
-  bss_desc.vht_op.reset();
 
   bss_desc.chan.cbw = static_cast<wlan_common::CBW>(chan.cbw);
   bss_desc.chan.primary = chan.primary;
@@ -148,7 +139,6 @@ MlmeMsg<wlan_mlme::JoinRequest> CreateJoinRequest(bool rsn) {
   req->phy = wlan::common::ToFidl(kBssPhy);
   req->cbw = wlan::common::ToFidl(kBssChannel).cbw;
   req->selected_bss = CreateBssDescription(rsn);
-  req->selected_bss.rates = {12, 24, 48};
 
   return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_JoinReq_Ordinal};
 }

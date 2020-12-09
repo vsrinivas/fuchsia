@@ -58,31 +58,15 @@ struct VhtOperation {
 struct BssDescription {
     array<uint8>:6 bssid;
 
-    bytes:32 ssid;
-
     BssTypes bss_type;
     uint16 beacon_period; // in TU
-    uint8 dtim_period;
     uint64 timestamp;
     uint64 local_time;
 
     CapabilityInfo cap;
-    // IEEE Std 802.11-2016 9.4.2.3
-    // in 0.5 Mbps, with MSB indicating basic rate. See Table 9-78 for 126, 127.
-    bytes:RATES_MAX_LEN rates;
-    bytes? country;
 
-    bytes? rsne;
-
-    /// All vendor info elements present in the beacon frame. E.g. this may include a WPA1 IE.
-    /// This slice should be a valid chain of IEs including IE headers for each element.
-    bytes? vendor_ies;
-
-    HtCapabilities? ht_cap;
-    HtOperation? ht_op;
-
-    VhtCapabilities? vht_cap;
-    VhtOperation? vht_op;
+    /// All info elements present in the beacon or probe response frame.
+    bytes ies;
 
     // List up non-standard, Fuchsia only parameters
     fuchsia.wlan.common.WlanChan chan;

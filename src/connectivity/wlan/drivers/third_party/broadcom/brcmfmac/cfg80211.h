@@ -554,7 +554,10 @@ void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_
 zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_handshake_resp_t* resp);
 zx_status_t brcmf_if_sae_frame_tx(net_device* ndev, const wlanif_sae_frame_t* frame);
 
-void brcmf_extract_ies(const uint8_t* ie, size_t ie_len, wlanif_bss_description_t* bss);
+// Given IE, return a vector with the SSID bytes if the SSID is present.
+// This function does not distinguish between whether the SSID IE is not present and the SSID
+// is 0 length. In either case, it returns an empty vector.
+std::vector<uint8_t> brcmf_find_ssid_in_ies(const uint8_t* ie, size_t ie_len);
 
 // If the WMM parameter IE (used for QoS) is available from the association response, set its
 // body into the Association Confirm message.

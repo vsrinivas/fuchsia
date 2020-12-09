@@ -6,7 +6,7 @@ use {
     crate::{Config, Ssid},
     fidl_fuchsia_wlan_internal as fidl_internal, fuchsia_zircon as zx,
     wlan_common::{
-        bss::{BssDescriptionExt as _, Protection},
+        bss::{BssDescription, Protection},
         channel::Channel,
         ie::{self, rsn::rsne, wsc},
     },
@@ -26,7 +26,7 @@ impl ClientConfig {
     /// Converts a given BssDescription into a BssInfo.
     pub fn convert_bss_description(
         &self,
-        bss: &fidl_internal::BssDescription,
+        bss: &BssDescription,
         wmm_param: Option<ie::WmmParam>,
     ) -> BssInfo {
         let mut probe_resp_wsc = None;
@@ -52,16 +52,16 @@ impl ClientConfig {
             channel: Channel::from_fidl(bss.chan),
             protection: bss.protection(),
             compatible: self.is_bss_compatible(bss),
-            ht_cap: bss.ht_cap.as_ref().map(|cap| **cap),
-            vht_cap: bss.vht_cap.as_ref().map(|cap| **cap),
+            ht_cap: bss.ht_cap.as_ref().map(|cap| *cap),
+            vht_cap: bss.vht_cap.as_ref().map(|cap| *cap),
             probe_resp_wsc,
             wmm_param,
-            bss_desc: Some(bss.clone()),
+            bss_desc: Some(bss.clone().to_fidl()),
         }
     }
 
     /// Determines whether a given BSS is compatible with this client SME configuration.
-    pub fn is_bss_compatible(&self, bss: &fidl_internal::BssDescription) -> bool {
+    pub fn is_bss_compatible(&self, bss: &BssDescription) -> bool {
         let privacy = wlan_common::mac::CapabilityInfo(bss.cap).privacy();
         let protection = bss.protection();
         match &protection {
@@ -162,12 +162,12 @@ mod tests {
                        secondary80: 0,
                        cbw: fidl_common::Cbw::Cbw20,
                    },
-                   ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
+                   ht_cap: Some(fidl_internal::HtCapabilities {
                        bytes: fake_ht_cap_bytes()
-                   })),
-                   vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
+                   }),
+                   vht_cap: Some(fidl_internal::VhtCapabilities {
                        bytes: fake_vht_cap_bytes()
-                   })),
+                   }),
         );
         let bss_info = cfg.convert_bss_description(&bss_desc, None);
 
@@ -186,7 +186,7 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
-                bss_desc: Some(bss_desc),
+                bss_desc: Some(bss_desc.to_fidl()),
             }
         );
 
@@ -202,12 +202,12 @@ mod tests {
                        secondary80: 0,
                        cbw: fidl_common::Cbw::Cbw20,
                    },
-                   ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
+                   ht_cap: Some(fidl_internal::HtCapabilities {
                        bytes: fake_ht_cap_bytes()
-                   })),
-                   vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
+                   }),
+                   vht_cap: Some(fidl_internal::VhtCapabilities {
                        bytes: fake_vht_cap_bytes()
-                   })),
+                   }),
         );
         let bss_info = cfg.convert_bss_description(&bss_desc, Some(wmm_param));
 
@@ -226,7 +226,7 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: Some(wmm_param),
-                bss_desc: Some(bss_desc),
+                bss_desc: Some(bss_desc.to_fidl()),
             }
         );
 
@@ -240,12 +240,12 @@ mod tests {
                        secondary80: 0,
                        cbw: fidl_common::Cbw::Cbw20,
                    },
-                   ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
+                   ht_cap: Some(fidl_internal::HtCapabilities {
                        bytes: fake_ht_cap_bytes()
-                   })),
-                   vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
+                   }),
+                   vht_cap: Some(fidl_internal::VhtCapabilities {
                        bytes: fake_vht_cap_bytes()
-                   })),
+                   }),
         );
         let bss_info = cfg.convert_bss_description(&bss_desc, None);
         assert_eq!(
@@ -263,7 +263,7 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
-                bss_desc: Some(bss_desc),
+                bss_desc: Some(bss_desc.to_fidl()),
             },
         );
 
@@ -278,12 +278,12 @@ mod tests {
                        secondary80: 0,
                        cbw: fidl_common::Cbw::Cbw20,
                    },
-                   ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
+                   ht_cap: Some(fidl_internal::HtCapabilities {
                        bytes: fake_ht_cap_bytes()
-                   })),
-                   vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
+                   }),
+                   vht_cap: Some(fidl_internal::VhtCapabilities {
                        bytes: fake_vht_cap_bytes()
-                   })),
+                   }),
         );
         let bss_info = cfg.convert_bss_description(&bss_desc, None);
         assert_eq!(
@@ -301,7 +301,7 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
-                bss_desc: Some(bss_desc),
+                bss_desc: Some(bss_desc.to_fidl()),
             },
         );
     }

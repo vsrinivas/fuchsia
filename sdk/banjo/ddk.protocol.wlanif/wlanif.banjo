@@ -46,6 +46,9 @@ struct WlanifScanReq {
     array<WlanifSsid>:WLAN_SCAN_MAX_SSIDS ssid_list;
 };
 
+/// IEEE Std 802.11-2016, Table 9-19
+const uint32 WLAN_MSDU_MAX_LEN = 2304;
+
 /// IEEE Std 802.11-2016, 9.4.2.25.1
 /// IEEE mentions that an element body maximum length is 255 octets in the RSN element
 /// section, but not in a dedicated section.
@@ -55,24 +58,13 @@ const uint32 WLAN_VIE_MAX_LEN = 510;  // max length for two elements (WPA and WS
 
 struct WlanifBssDescription {
     array<uint8>:MAC_ARRAY_LENGTH bssid;
-    WlanifSsid ssid;
     ddk.protocol.wlan.info.WlanBssType bss_type;
     uint32 beacon_period;
-    uint32 dtim_period;
     uint64 timestamp;
     uint64 local_time;
     uint16 cap;
-    /// Concatenation of SuppRates and ExtSuppRates - MSB indicates basic rate
-    /// IEEE Std 802.11-2016, 9.4.2.3 & 9.4.2.13
-    array<uint8>:WLAN_MAC_MAX_RATES rates;
-    uint16 num_rates;
 
-    usize country_len;
-    array<uint8>:WLAN_IE_BODY_MAX_LEN country;
-    usize rsne_len;
-    array<uint8>:WLAN_IE_BODY_MAX_LEN rsne;
-    usize vendor_ie_len;
-    array<uint8>:WLAN_VIE_MAX_LEN vendor_ie;
+    vector<uint8> ies_bytes;
 
     ddk.protocol.wlan.info.WlanChannel chan;
     int8 rssi_dbm;
