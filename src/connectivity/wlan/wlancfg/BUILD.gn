@@ -96,8 +96,6 @@ rustc_binary("bin") {
     "src/mode_management/mod.rs",
     "src/mode_management/phy_manager.rs",
     "src/regulatory_manager.rs",
-    "src/util/clone.rs",
-    "src/util/cobalt.rs",
     "src/util/fuse_pending.rs",
     "src/util/future_with_metadata.rs",
     "src/util/listener/access_point.rs",
@@ -108,6 +106,10 @@ rustc_binary("bin") {
     "src/util/mod.rs",
     "src/util/sme_conversion.rs",
     "src/util/state_machine.rs",
+    "src/util/testing/cobalt.rs",
+    "src/util/testing/generate_struct.rs",
+    "src/util/testing/mod.rs",
+    "src/util/testing/sme_stream.rs",
   ]
 }
 

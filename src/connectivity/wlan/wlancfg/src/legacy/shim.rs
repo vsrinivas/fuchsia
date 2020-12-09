@@ -6,7 +6,6 @@ use {
         client::types as client_types,
         config_management::{Credential, NetworkIdentifier, SavedNetworksManager, SecurityType},
         legacy::IfaceRef,
-        util::clone::clone_bss_info,
     },
     fidl, fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_service as legacy,
     fidl_fuchsia_wlan_sme as fidl_sme, fidl_fuchsia_wlan_stats as fidl_wlan_stats, fuchsia_async,
@@ -135,7 +134,7 @@ async fn scan(iface: IfaceRef, _legacy_req: legacy::ScanRequest) -> legacy::Scan
 
         let mut bss_by_ssid: HashMap<Vec<u8>, Vec<fidl_sme::BssInfo>> = HashMap::new();
         for bss in aps.iter() {
-            bss_by_ssid.entry(bss.ssid.clone()).or_insert(vec![]).push(clone_bss_info(&bss));
+            bss_by_ssid.entry(bss.ssid.clone()).or_insert(vec![]).push(bss.clone());
         }
 
         Ok(bss_by_ssid
@@ -378,14 +377,16 @@ mod tests {
     use {
         super::*,
         crate::{
-            access_point::state_machine as ap_fsm, legacy::Iface,
-            mode_management::iface_manager_api::IfaceManagerApi, util::logger::set_logger_for_test,
+            access_point::state_machine as ap_fsm,
+            legacy::Iface,
+            mode_management::iface_manager_api::IfaceManagerApi,
+            util::{logger::set_logger_for_test, testing::poll_sme_req},
         },
         async_trait::async_trait,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device_service as wlan_service,
         fuchsia_async as fasync,
-        futures::{channel::oneshot, lock::Mutex as FutureMutex, stream::StreamFuture, task::Poll},
+        futures::{channel::oneshot, lock::Mutex as FutureMutex, task::Poll},
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
         std::sync::{Arc, Mutex},
@@ -527,17 +528,6 @@ mod tests {
     pub static TEST_PASSWORD: &str = "test_password";
     pub static TEST_BSSID: &str = "00:11:22:33:44:55";
     const TEST_SCAN_INTERVAL: u8 = 0;
-
-    fn poll_sme_req(
-        exec: &mut fasync::Executor,
-        next_sme_req: &mut StreamFuture<fidl_sme::ClientSmeRequestStream>,
-    ) -> Poll<fidl_sme::ClientSmeRequest> {
-        exec.run_until_stalled(next_sme_req).map(|(req, stream)| {
-            *next_sme_req = stream.into_future();
-            req.expect("did not expect the SME request stream to end")
-                .expect("error polling SME request stream")
-        })
-    }
 
     struct FakeIfaceManager {
         pub sme_proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
@@ -994,7 +984,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Scan{ txn, .. }) => {
                 let (_stream, ctrl) = txn
                     .into_stream_and_control_handle().expect("error accessing control handle");
-                let mut result = vec![clone_bss_info(&scan_result)];
+                let mut result = vec![scan_result.clone()];
                 ctrl.send_on_result(&mut result.iter_mut()).expect("could not send scan result");
                 ctrl.send_on_finished()
                     .expect("failed to send scan data");

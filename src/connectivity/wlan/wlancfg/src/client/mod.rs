@@ -477,7 +477,7 @@ mod tests {
         crate::{
             access_point::state_machine as ap_fsm,
             config_management::{Credential, NetworkConfig, SecurityType, PSK_BYTE_LEN},
-            util::{cobalt::create_mock_cobalt_sender, logger::set_logger_for_test},
+            util::{logger::set_logger_for_test, testing::cobalt::create_mock_cobalt_sender},
         },
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream, Proxy},

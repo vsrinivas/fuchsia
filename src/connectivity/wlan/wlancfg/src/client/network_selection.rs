@@ -444,7 +444,14 @@ mod tests {
         super::*,
         crate::{
             access_point::state_machine as ap_fsm,
-            util::{cobalt::create_mock_cobalt_sender_and_receiver, logger::set_logger_for_test},
+            util::{
+                logger::set_logger_for_test,
+                testing::{
+                    create_mock_cobalt_sender_and_receiver, generate_channel,
+                    generate_random_bss_desc, generate_random_channel,
+                    validate_sme_scan_request_and_send_results,
+                },
+            },
         },
         anyhow::Error,
         cobalt_client::traits::AsEventCode,
@@ -1267,25 +1274,12 @@ mod tests {
 
         // Check that a scan request was sent to the sme and send back results
         let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                txn, req, control_handle: _
-            }))) => {
-                // Validate the request
-                assert_eq!(req, expected_scan_request);
-                // Send all the APs
-                let (_stream, ctrl) = txn
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_result(&mut vec![].iter_mut())
-                    .expect("failed to send scan data");
-
-                // Send the end of data
-                ctrl.send_on_finished()
-                    .expect("failed to send scan data");
-            }
+        validate_sme_scan_request_and_send_results(
+            &mut exec,
+            &mut test_values.sme_stream,
+            &expected_scan_request,
+            vec![],
         );
-
         // Process scan
         exec.run_singlethreaded(&mut scan_fut);
 
@@ -1373,64 +1367,54 @@ mod tests {
             channels: vec![36],
         });
         let new_bss_desc = generate_random_bss_desc();
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                txn, req, control_handle: _
-            }))) => {
-                // Validate the request
-                assert_eq!(req, expected_scan_request);
-
-                let mut mock_scan_results = vec![
-                    fidl_sme::BssInfo {
-                        bssid: [0, 0, 0, 0, 0, 0], // Not the same BSSID
-                        ssid: test_id_1.ssid.clone(),
-                        rssi_dbm: 10,
-                        snr_db: 10,
-                        channel: fidl_common::WlanChan {
-                            primary: 1,
-                            cbw: fidl_common::Cbw::Cbw20,
-                            secondary80: 0,
-                        },
-                        protection: fidl_sme::Protection::Wpa3Enterprise,
-                        compatible: true,
-                        bss_desc: generate_random_bss_desc(),
-                    },
-                    fidl_sme::BssInfo {
-                        bssid: bss_info1.bssid.clone(),
-                        ssid: test_id_1.ssid.clone(),
-                        rssi_dbm: 0,
-                        snr_db: 0,
-                        channel: fidl_common::WlanChan {
-                            primary: 1,
-                            cbw: fidl_common::Cbw::Cbw20,
-                            secondary80: 0,
-                        },
-                        protection: fidl_sme::Protection::Wpa3Enterprise,
-                        compatible: true,
-                        bss_desc: new_bss_desc.clone(),
-                    },
-                ];
-                // Send all the APs
-                let (_stream, ctrl) = txn
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_result(&mut mock_scan_results.iter_mut())
-                    .expect("failed to send scan data");
-
-                // Send the end of data
-                ctrl.send_on_finished()
-                    .expect("failed to send scan data");
-            }
+        let mock_scan_results = vec![
+            fidl_sme::BssInfo {
+                bssid: [0, 0, 0, 0, 0, 0], // Not the same BSSID
+                ssid: test_id_1.ssid.clone(),
+                rssi_dbm: 10,
+                snr_db: 10,
+                channel: fidl_common::WlanChan {
+                    primary: 1,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    secondary80: 0,
+                },
+                protection: fidl_sme::Protection::Wpa3Enterprise,
+                compatible: true,
+                bss_desc: generate_random_bss_desc(),
+            },
+            fidl_sme::BssInfo {
+                bssid: bss_info1.bssid.clone(),
+                ssid: test_id_1.ssid.clone(),
+                rssi_dbm: 0,
+                snr_db: 0,
+                channel: fidl_common::WlanChan {
+                    primary: 1,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    secondary80: 0,
+                },
+                protection: fidl_sme::Protection::Wpa3Enterprise,
+                compatible: true,
+                bss_desc: new_bss_desc.clone(),
+            },
+        ];
+        validate_sme_scan_request_and_send_results(
+            &mut exec,
+            &mut test_values.sme_stream,
+            &expected_scan_request,
+            mock_scan_results,
         );
 
         // The connect_req comes out the other side with the new bss_desc
-        assert_eq!(exec.run_singlethreaded(fut), types::ConnectionCandidate{
-            bss: new_bss_desc,
-            // observed_in_passive_scan should still be true, since the network was found in a
-            // passive scan prior to the directed active scan augmentation.
-            observed_in_passive_scan: Some(true),
-            ..connect_req
-        });
+        assert_eq!(
+            exec.run_singlethreaded(fut),
+            types::ConnectionCandidate {
+                bss: new_bss_desc,
+                // observed_in_passive_scan should still be true, since the network was found in a
+                // passive scan prior to the directed active scan augmentation.
+                observed_in_passive_scan: Some(true),
+                ..connect_req
+            }
+        );
     }
 
     #[test]
@@ -1488,54 +1472,41 @@ mod tests {
 
         // Check that a scan request was sent to the sme and send back results
         let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                txn, req, control_handle: _
-            }))) => {
-                // Validate the request
-                assert_eq!(req, expected_scan_request);
-
-                let mut mock_scan_results = vec![
-                    fidl_sme::BssInfo {
-                        bssid: [0, 0, 0, 0, 0, 0],
-                        ssid: test_id_1.ssid.clone(),
-                        rssi_dbm: 10,
-                        snr_db: 10,
-                        channel: fidl_common::WlanChan {
-                            primary: 1,
-                            cbw: fidl_common::Cbw::Cbw20,
-                            secondary80: 0,
-                        },
-                        protection: fidl_sme::Protection::Wpa3Enterprise,
-                        compatible: true,
-                        bss_desc: bss_desc1.clone(),
-                    },
-                    fidl_sme::BssInfo {
-                        bssid: [0, 0, 0, 0, 0, 0],
-                        ssid: test_id_2.ssid.clone(),
-                        rssi_dbm: 0,
-                        snr_db: 0,
-                        channel: fidl_common::WlanChan {
-                            primary: 1,
-                            cbw: fidl_common::Cbw::Cbw20,
-                            secondary80: 0,
-                        },
-                        protection: fidl_sme::Protection::Wpa1,
-                        compatible: true,
-                        bss_desc: bss_desc2.clone(),
-                    },
-                ];
-                // Send all the APs
-                let (_stream, ctrl) = txn
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_result(&mut mock_scan_results.iter_mut())
-                    .expect("failed to send scan data");
-
-                // Send the end of data
-                ctrl.send_on_finished()
-                    .expect("failed to send scan data");
-            }
+        let mock_scan_results = vec![
+            fidl_sme::BssInfo {
+                bssid: [0, 0, 0, 0, 0, 0],
+                ssid: test_id_1.ssid.clone(),
+                rssi_dbm: 10,
+                snr_db: 10,
+                channel: fidl_common::WlanChan {
+                    primary: 1,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    secondary80: 0,
+                },
+                protection: fidl_sme::Protection::Wpa3Enterprise,
+                compatible: true,
+                bss_desc: bss_desc1.clone(),
+            },
+            fidl_sme::BssInfo {
+                bssid: [0, 0, 0, 0, 0, 0],
+                ssid: test_id_2.ssid.clone(),
+                rssi_dbm: 0,
+                snr_db: 0,
+                channel: fidl_common::WlanChan {
+                    primary: 1,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    secondary80: 0,
+                },
+                protection: fidl_sme::Protection::Wpa1,
+                compatible: true,
+                bss_desc: bss_desc2.clone(),
+            },
+        ];
+        validate_sme_scan_request_and_send_results(
+            &mut exec,
+            &mut test_values.sme_stream,
+            &expected_scan_request,
+            mock_scan_results,
         );
 
         // Process scan results
@@ -1553,40 +1524,25 @@ mod tests {
             ssids: vec![test_id_1.ssid.clone()],
             channels: vec![1],
         });
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                txn, req, control_handle: _
-            }))) => {
-                // Validate the request
-                assert_eq!(req, expected_scan_request);
-
-                let mut mock_scan_results = vec![
-                    fidl_sme::BssInfo {
-                        bssid: [0, 0, 0, 0, 0, 0],
-                        ssid: test_id_1.ssid.clone(),
-                        rssi_dbm: 10,
-                        snr_db: 10,
-                        channel: fidl_common::WlanChan {
-                            primary: 1,
-                            cbw: fidl_common::Cbw::Cbw20,
-                            secondary80: 0,
-                        },
-                        protection: fidl_sme::Protection::Wpa3Enterprise,
-                        compatible: true,
-                        bss_desc: bss_desc1_active.clone(),
-                    },
-                ];
-                // Send all the APs
-                let (_stream, ctrl) = txn
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_result(&mut mock_scan_results.iter_mut())
-                    .expect("failed to send scan data");
-
-                // Send the end of data
-                ctrl.send_on_finished()
-                    .expect("failed to send scan data");
-            }
+        let mock_scan_results = vec![fidl_sme::BssInfo {
+            bssid: [0, 0, 0, 0, 0, 0],
+            ssid: test_id_1.ssid.clone(),
+            rssi_dbm: 10,
+            snr_db: 10,
+            channel: fidl_common::WlanChan {
+                primary: 1,
+                cbw: fidl_common::Cbw::Cbw20,
+                secondary80: 0,
+            },
+            protection: fidl_sme::Protection::Wpa3Enterprise,
+            compatible: true,
+            bss_desc: bss_desc1_active.clone(),
+        }];
+        validate_sme_scan_request_and_send_results(
+            &mut exec,
+            &mut test_values.sme_stream,
+            &expected_scan_request,
+            mock_scan_results,
         );
 
         // Check that we pick a network
@@ -1613,40 +1569,25 @@ mod tests {
             ssids: vec![test_id_2.ssid.clone()],
             channels: vec![1],
         });
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                txn, req, control_handle: _
-            }))) => {
-                // Validate the request
-                assert_eq!(req, expected_scan_request);
-
-                let mut mock_scan_results = vec![
-                    fidl_sme::BssInfo {
-                        bssid: [0, 0, 0, 0, 0, 0],
-                        ssid: test_id_2.ssid.clone(),
-                        rssi_dbm: 10,
-                        snr_db: 10,
-                        channel: fidl_common::WlanChan {
-                            primary: 1,
-                            cbw: fidl_common::Cbw::Cbw20,
-                            secondary80: 0,
-                        },
-                        protection: fidl_sme::Protection::Wpa1,
-                        compatible: true,
-                        bss_desc: bss_desc2_active.clone(),
-                    },
-                ];
-                // Send all the APs
-                let (_stream, ctrl) = txn
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_result(&mut mock_scan_results.iter_mut())
-                    .expect("failed to send scan data");
-
-                // Send the end of data
-                ctrl.send_on_finished()
-                    .expect("failed to send scan data");
-            }
+        let mock_scan_results = vec![fidl_sme::BssInfo {
+            bssid: [0, 0, 0, 0, 0, 0],
+            ssid: test_id_2.ssid.clone(),
+            rssi_dbm: 10,
+            snr_db: 10,
+            channel: fidl_common::WlanChan {
+                primary: 1,
+                cbw: fidl_common::Cbw::Cbw20,
+                secondary80: 0,
+            },
+            protection: fidl_sme::Protection::Wpa1,
+            compatible: true,
+            bss_desc: bss_desc2_active.clone(),
+        }];
+        validate_sme_scan_request_and_send_results(
+            &mut exec,
+            &mut test_values.sme_stream,
+            &expected_scan_request,
+            mock_scan_results,
         );
 
         let results = exec.run_singlethreaded(&mut network_selection_fut);
@@ -1745,28 +1686,6 @@ mod tests {
         );
     }
 
-    // Generate a random bss description for a test. If certain values should not be random, they
-    // should be set specifically and this can be used for the rest of the fields.
-    fn generate_random_bss_desc() -> Option<Box<fidl_fuchsia_wlan_internal::BssDescription>> {
-        let mut rng = rand::thread_rng();
-        Some(Box::new(fidl_fuchsia_wlan_internal::BssDescription {
-            bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
-            bss_type: fidl_fuchsia_wlan_internal::BssTypes::Personal,
-            beacon_period: rng.gen::<u16>(),
-            timestamp: rng.gen::<u64>(),
-            local_time: rng.gen::<u64>(),
-            cap: rng.gen::<u16>(),
-            ies: (0..1024).map(|_| rng.gen::<u8>()).collect(),
-            rssi_dbm: rng.gen::<i8>(),
-            chan: fidl_common::WlanChan {
-                primary: rng.gen_range(1, 255),
-                cbw: fidl_common::Cbw::Cbw20,
-                secondary80: 0,
-            },
-            snr_db: rng.gen::<i8>(),
-        }))
-    }
-
     fn generate_random_bss() -> types::Bss {
         let mut rng = rand::thread_rng();
         let bss = (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>();
@@ -1774,11 +1693,7 @@ mod tests {
             bssid: bss.as_slice().try_into().unwrap(),
             rssi: rng.gen_range(-100, 20),
             frequency: rng.gen_range(2000, 6000),
-            channel: types::WlanChan {
-                primary: rng.gen_range(1, 255),
-                cbw: fidl_common::Cbw::Cbw20,
-                secondary80: 0,
-            },
+            channel: generate_random_channel(),
             timestamp_nanos: 0,
             snr_db: rng.gen_range(-20, 50),
             observed_in_passive_scan: rng.gen::<bool>(),
@@ -1814,23 +1729,6 @@ mod tests {
                 recent_failure_count: 0,
             },
         )
-    }
-
-    fn generate_channel(channel: u8) -> fidl_common::WlanChan {
-        let mut rng = rand::thread_rng();
-        fidl_common::WlanChan {
-            primary: channel,
-            cbw: match rng.gen_range(0, 5) {
-                0 => fidl_common::Cbw::Cbw20,
-                1 => fidl_common::Cbw::Cbw40,
-                2 => fidl_common::Cbw::Cbw40Below,
-                3 => fidl_common::Cbw::Cbw80,
-                4 => fidl_common::Cbw::Cbw160,
-                5 => fidl_common::Cbw::Cbw80P80,
-                _ => panic!(),
-            },
-            secondary80: rng.gen::<u8>(),
-        }
     }
 
     #[fasync::run_singlethreaded(test)]

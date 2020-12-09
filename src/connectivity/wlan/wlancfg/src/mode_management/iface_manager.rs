@@ -934,8 +934,10 @@ mod tests {
             config_management::{Credential, NetworkIdentifier, SecurityType},
             mode_management::phy_manager::{self, PhyManagerError},
             util::{
-                cobalt::{create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver},
                 logger::set_logger_for_test,
+                testing::{
+                    create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver, poll_sme_req,
+                },
             },
         },
         async_trait::async_trait,
@@ -1249,17 +1251,6 @@ mod tests {
         iface_manager.clients.push(client_container);
 
         (iface_manager, server.into_stream().unwrap().into_future())
-    }
-
-    fn poll_sme_req(
-        exec: &mut fuchsia_async::Executor,
-        next_sme_req: &mut StreamFuture<fidl_fuchsia_wlan_sme::ClientSmeRequestStream>,
-    ) -> Poll<fidl_fuchsia_wlan_sme::ClientSmeRequest> {
-        exec.run_until_stalled(next_sme_req).map(|(req, stream)| {
-            *next_sme_req = stream.into_future();
-            req.expect("did not expect the SME request stream to end")
-                .expect("error polling SME request stream")
-        })
     }
 
     fn create_ap_config(ssid: &str, password: &str) -> ap_fsm::ApConfig {

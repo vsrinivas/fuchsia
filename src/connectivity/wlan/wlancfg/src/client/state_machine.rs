@@ -594,9 +594,11 @@ mod tests {
         crate::{
             config_management::network_config::{self, Credential, FailureReason},
             util::{
-                cobalt::{create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver},
                 listener,
                 logger::set_logger_for_test,
+                testing::{
+                    create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver, poll_sme_req,
+                },
             },
             validate_cobalt_events, validate_no_cobalt_events,
         },
@@ -606,7 +608,7 @@ mod tests {
         fidl_fuchsia_wlan_policy as fidl_policy,
         fuchsia_cobalt::CobaltEventExt,
         fuchsia_zircon,
-        futures::{stream::StreamFuture, task::Poll, Future},
+        futures::{task::Poll, Future},
         rand::{distributions::Alphanumeric, thread_rng, Rng},
         wlan_common::assert_variant,
     };
@@ -646,17 +648,6 @@ mod tests {
             update_receiver,
             cobalt_events,
         }
-    }
-
-    fn poll_sme_req(
-        exec: &mut fasync::Executor,
-        next_sme_req: &mut StreamFuture<fidl_sme::ClientSmeRequestStream>,
-    ) -> Poll<fidl_sme::ClientSmeRequest> {
-        exec.run_until_stalled(next_sme_req).map(|(req, stream)| {
-            *next_sme_req = stream.into_future();
-            req.expect("did not expect the SME request stream to end")
-                .expect("error polling SME request stream")
-        })
     }
 
     async fn run_state_machine(

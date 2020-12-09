@@ -1,16 +1,14 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#![cfg(test)]
 
-#[cfg(test)]
 use {fidl_fuchsia_cobalt::CobaltEvent, fuchsia_cobalt::CobaltSender, futures::channel::mpsc};
 
-#[cfg(test)]
 pub fn create_mock_cobalt_sender() -> CobaltSender {
     create_mock_cobalt_sender_and_receiver().0
 }
 
-#[cfg(test)]
 pub fn create_mock_cobalt_sender_and_receiver() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
     // Arbitrary number that is (much) larger than the count of metrics we might send to it
     const MOCK_COBALT_MSG_BUFFER: usize = 100;
@@ -18,7 +16,6 @@ pub fn create_mock_cobalt_sender_and_receiver() -> (CobaltSender, mpsc::Receiver
     (CobaltSender::new(cobalt_mpsc_sender), cobalt_mpsc_receiver)
 }
 
-#[cfg(test)]
 #[macro_export]
 macro_rules! validate_cobalt_events {
     ($receiver:expr, $metric_id:expr, $event_code:expr) => {
@@ -33,7 +30,6 @@ macro_rules! validate_cobalt_events {
     };
 }
 
-#[cfg(test)]
 #[macro_export]
 macro_rules! validate_no_cobalt_events {
     ($receiver:expr) => {

@@ -328,7 +328,13 @@ mod tests {
         super::*,
         crate::{
             access_point::state_machine as ap_fsm,
-            util::{clone::clone_bss_info, logger::set_logger_for_test},
+            util::{
+                logger::set_logger_for_test,
+                testing::{
+                    generate_random_bss_desc, generate_random_channel,
+                    validate_sme_scan_request_and_send_results,
+                },
+            },
         },
         anyhow::Error,
         fidl::endpoints::{create_proxy, Proxy},
@@ -444,34 +450,6 @@ mod tests {
             let mut guard = self.scan_results.lock().await;
             *guard = Some(scan_results.clone());
         }
-    }
-
-    fn validate_sme_request_and_send_results(
-        exec: &mut fasync::Executor,
-        sme_stream: &mut fidl_sme::ClientSmeRequestStream,
-        expected_scan_request: &fidl_sme::ScanRequest,
-        scan_results: &[fidl_sme::BssInfo],
-    ) {
-        // Check that a scan request was sent to the sme and send back results
-        assert_variant!(
-            exec.run_until_stalled(&mut sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                txn, req, control_handle: _
-            }))) => {
-                // Validate the request
-                assert_eq!(req, *expected_scan_request);
-                // Send all the APs
-                let (_stream, ctrl) = txn
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                let mut scan_results = scan_results.iter().map(clone_bss_info).collect::<Vec<_>>();
-                ctrl.send_on_result(&mut scan_results.iter_mut())
-                    .expect("failed to send scan data");
-
-                // Send the end of data
-                ctrl.send_on_finished()
-                    .expect("failed to send scan data");
-            }
-        );
     }
 
     // Creates test data for the scan functions.
@@ -882,11 +860,11 @@ mod tests {
             combined_fidl_aps: _,
         } = create_scan_ap_data();
         // Validate the SME received the scan_request and send back mock data
-        validate_sme_request_and_send_results(
+        validate_sme_scan_request_and_send_results(
             &mut exec,
             &mut sme_stream,
             &scan_request,
-            &input_aps,
+            input_aps.clone(),
         );
 
         // Check for results
@@ -921,11 +899,11 @@ mod tests {
             combined_fidl_aps: _,
         } = create_scan_ap_data();
         // Validate the SME received the scan_request and send back mock data
-        validate_sme_request_and_send_results(
+        validate_sme_scan_request_and_send_results(
             &mut exec,
             &mut sme_stream,
             &scan_request,
-            &input_aps,
+            input_aps.clone(),
         );
 
         // Check for results
@@ -1031,11 +1009,11 @@ mod tests {
             combined_internal_aps: _,
             combined_fidl_aps: _,
         } = create_scan_ap_data();
-        validate_sme_request_and_send_results(
+        validate_sme_scan_request_and_send_results(
             &mut exec,
             &mut sme_stream,
             &expected_scan_request,
-            &input_aps,
+            input_aps.clone(),
         );
 
         // Process response from SME
@@ -1115,11 +1093,11 @@ mod tests {
 
         // Respond to the first (passive) scan request
         let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        validate_sme_request_and_send_results(
+        validate_sme_scan_request_and_send_results(
             &mut exec,
             &mut sme_stream,
             &expected_scan_request,
-            &passive_input_aps,
+            passive_input_aps.clone(),
         );
 
         // Process response from SME
@@ -1130,11 +1108,11 @@ mod tests {
             ssids: vec!["foo active ssid".as_bytes().to_vec()],
             channels: vec![],
         });
-        validate_sme_request_and_send_results(
+        validate_sme_scan_request_and_send_results(
             &mut exec,
             &mut sme_stream,
             &expected_scan_request,
-            &active_input_aps,
+            active_input_aps.clone(),
         );
 
         // Process response from SME
@@ -1349,11 +1327,11 @@ mod tests {
 
         // Respond to the first (passive) scan request
         let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        validate_sme_request_and_send_results(
+        validate_sme_scan_request_and_send_results(
             &mut exec,
             &mut sme_stream,
             &expected_scan_request,
-            &passive_input_aps,
+            passive_input_aps.clone(),
         );
 
         // Process response from SME
@@ -1437,11 +1415,11 @@ mod tests {
             combined_internal_aps: _,
             combined_fidl_aps: _,
         } = create_scan_ap_data();
-        validate_sme_request_and_send_results(
+        validate_sme_scan_request_and_send_results(
             &mut exec,
             &mut sme_stream,
             &expected_scan_request,
-            &input_aps,
+            input_aps.clone(),
         );
 
         // Progress scan side forward without progressing the scan result iterator
@@ -1460,11 +1438,11 @@ mod tests {
 
         // Create mock scan data and send it via the SME
         let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        validate_sme_request_and_send_results(
+        validate_sme_scan_request_and_send_results(
             &mut exec,
             &mut sme_stream,
             &expected_scan_request,
-            &input_aps,
+            input_aps.clone(),
         );
 
         // Request the results on the second iterator
@@ -1525,11 +1503,11 @@ mod tests {
             combined_internal_aps: _,
             combined_fidl_aps: _,
         } = create_scan_ap_data();
-        validate_sme_request_and_send_results(
+        validate_sme_scan_request_and_send_results(
             &mut exec,
             &mut sme_stream,
             &expected_scan_request,
-            &input_aps,
+            input_aps.clone(),
         );
 
         // Close the channel
@@ -1667,7 +1645,7 @@ mod tests {
                     // Send the first AP
                     let (_stream, ctrl) = txn
                         .into_stream_and_control_handle().expect("error accessing control handle");
-                    let mut aps = [clone_bss_info(&passive_input_aps[0])];
+                    let mut aps = [passive_input_aps[0].clone()];
                     ctrl.send_on_result(&mut aps.iter_mut())
                         .expect("failed to send scan data");
                     // Process SME result.
@@ -1679,7 +1657,7 @@ mod tests {
                     assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);
                     // Check that the second scan request was sent to the sme and send back results
                     let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-                    validate_sme_request_and_send_results(&mut exec, &mut sme_stream, &expected_scan_request, &passive_input_aps); // for output_iter_fut1
+                    validate_sme_scan_request_and_send_results(&mut exec, &mut sme_stream, &expected_scan_request, passive_input_aps.clone()); // for output_iter_fut1
                     // Process SME result.
                     assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);
                     // The second request should now result in an active scan
@@ -1687,7 +1665,7 @@ mod tests {
                         channels: vec![],
                         ssids: vec!["foo active ssid".as_bytes().to_vec()],
                     });
-                    validate_sme_request_and_send_results(&mut exec, &mut sme_stream, &expected_scan_request, &active_input_aps); // for output_iter_fut1
+                    validate_sme_scan_request_and_send_results(&mut exec, &mut sme_stream, &expected_scan_request, active_input_aps.clone()); // for output_iter_fut1
                     // Process SME result.
                     assert_variant!(exec.run_until_stalled(&mut scan_fut1), Poll::Pending);// The second iterator should have all its data
 
@@ -1698,7 +1676,7 @@ mod tests {
                     });
 
                     // Send the remaining APs for the first iterator
-                    let mut aps = passive_input_aps[1..].iter().map(clone_bss_info).collect::<Vec<_>>();
+                    let mut aps = passive_input_aps[1..].iter().map(|a| a.clone()).collect::<Vec<_>>();
                     ctrl.send_on_result(&mut aps.iter_mut())
                         .expect("failed to send scan data");
                     // Process SME result.
@@ -1820,28 +1798,6 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut send_fut), Poll::Ready(Err(_)));
     }
 
-    // Generate a random bss description for a test. If certain values should not be random, they
-    // should be set specifically and this can be used for the rest of the fields.
-    fn generate_random_bss_desc() -> Option<Box<fidl_fuchsia_wlan_internal::BssDescription>> {
-        let mut rng = rand::thread_rng();
-        Some(Box::new(fidl_fuchsia_wlan_internal::BssDescription {
-            bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
-            bss_type: fidl_fuchsia_wlan_internal::BssTypes::Personal,
-            beacon_period: rng.gen::<u16>(),
-            timestamp: rng.gen::<u64>(),
-            local_time: rng.gen::<u64>(),
-            cap: rng.gen::<u16>(),
-            ies: (0..1024).map(|_| rng.gen::<u8>()).collect(),
-            rssi_dbm: rng.gen::<i8>(),
-            chan: fidl_common::WlanChan {
-                primary: rng.gen_range(1, 255),
-                cbw: fidl_common::Cbw::Cbw20,
-                secondary80: 0,
-            },
-            snr_db: rng.gen::<i8>(),
-        }))
-    }
-
     fn generate_random_bss_info() -> fidl_sme::BssInfo {
         let mut rng = rand::thread_rng();
         let bssid = (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>();
@@ -1849,11 +1805,7 @@ mod tests {
             bssid: bssid.as_slice().try_into().unwrap(),
             ssid: format!("scan result rand {}", rng.gen::<i32>()).as_bytes().to_vec(),
             rssi_dbm: rng.gen_range(-100, 20),
-            channel: types::WlanChan {
-                primary: rng.gen_range(1, 255),
-                cbw: fidl_common::Cbw::Cbw20,
-                secondary80: 0,
-            },
+            channel: generate_random_channel(),
             snr_db: rng.gen_range(-20, 50),
             compatible: rng.gen::<bool>(),
             protection: match rng.gen_range(0, 5) {
@@ -1914,11 +1866,11 @@ mod tests {
             ssids: vec![desired_ssid.clone()],
             channels: desired_channels,
         });
-        validate_sme_request_and_send_results(
+        validate_sme_scan_request_and_send_results(
             &mut exec,
             &mut sme_stream,
             &expected_scan_request,
-            &scan_result_aps,
+            scan_result_aps.clone(),
         );
 
         // Check for results

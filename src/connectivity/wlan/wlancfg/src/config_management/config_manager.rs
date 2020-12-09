@@ -123,7 +123,7 @@ impl SavedNetworksManager {
     /// Creates a new config at a random path, ensuring a clean environment for an individual test
     #[cfg(test)]
     pub async fn new_for_test() -> Result<Self, anyhow::Error> {
-        use crate::util::cobalt::create_mock_cobalt_sender;
+        use crate::util::testing::cobalt::create_mock_cobalt_sender;
         use rand::{distributions::Alphanumeric, thread_rng};
 
         let stash_id: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
@@ -146,7 +146,7 @@ impl SavedNetworksManager {
         legacy_path: impl AsRef<Path>,
         legacy_tmp_path: impl AsRef<Path>,
     ) -> (Self, fidl_fuchsia_stash::StoreAccessorRequestStream) {
-        use crate::util::cobalt::create_mock_cobalt_sender;
+        use crate::util::testing::cobalt::create_mock_cobalt_sender;
         use rand::{distributions::Alphanumeric, thread_rng};
 
         let id: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
@@ -552,7 +552,9 @@ mod tests {
                 PerformanceStats, PROB_HIDDEN_DEFAULT, PROB_HIDDEN_IF_CONNECT_ACTIVE,
                 PROB_HIDDEN_IF_CONNECT_PASSIVE, PROB_HIDDEN_IF_SEEN_PASSIVE,
             },
-            util::cobalt::{create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver},
+            util::testing::cobalt::{
+                create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
+            },
         },
         cobalt_client::traits::AsEventCode,
         fidl_fuchsia_cobalt::CobaltEvent,
