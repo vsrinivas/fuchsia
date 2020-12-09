@@ -939,7 +939,6 @@ group("deprecated_package") {
     "//third_party/openssl-ecjpake/*",
     "//third_party/quickjs/*",
     "//third_party/sbase/*",
-    "//third_party/vim/*",
     "//third_party/vulkan-cts/fuchsia/*",
     "//third_party/vulkan-cts/fuchsia/split-cts/*",
     "//tools/blackout/blackout-target/*",

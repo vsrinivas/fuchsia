@@ -57,7 +57,6 @@ group("all") {
     "//garnet/packages/prod:test_runner",
     "//garnet/packages/prod:tiles",
     "//garnet/packages/prod:tracing",
-    "//garnet/packages/prod:vim",
     "//garnet/packages/prod:wlan_drivers",
     "//src/connectivity/network/dhcp:dhcpd",
     "//src/connectivity/network/mdns/bundles:services",
@@ -179,7 +178,6 @@ group("cmdutils") {
     "//garnet/packages/prod:hwstress",
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:sched",
-    "//garnet/packages/prod:vim",
   ]
 }
 
@@ -540,11 +538,6 @@ group("tracing") {
 group("usb_video") {
   testonly = true
   public_deps = [ "//src/camera/drivers/usb_video" ]
-}
-
-group("vim") {
-  testonly = true
-  public_deps = [ "//third_party/vim" ]
 }
 
 group("vulkan") {
