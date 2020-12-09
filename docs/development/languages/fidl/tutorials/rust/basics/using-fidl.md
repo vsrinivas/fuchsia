@@ -23,11 +23,11 @@ This document covers how to complete the following tasks:
   code](#inspect-user-generated-bindings).
 
 The example code is located in your Fuchsia checkout in
-`//examples/fidl/rust/unittests/`. If you want to write all the code
+`//examples/fidl/rust/fidl_crates/`. If you want to write all the code
 as you follow this tutorial, you can remove the example code:
 
 ```
-rm -r examples/fidl/rust/unittests/*
+rm -r examples/fidl/rust/fidl_crates/*
 ```
 
 ## Write a "hello world" program {#hello-world}
