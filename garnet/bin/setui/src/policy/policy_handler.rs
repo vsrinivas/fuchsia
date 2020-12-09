@@ -7,10 +7,8 @@ use crate::handler::device_storage::DeviceStorage;
 use crate::handler::setting_handler::persist::Storage;
 use crate::handler::setting_handler::StorageFactory;
 use crate::internal::core;
-use crate::policy::base::response::Response;
-use crate::policy::base::{
-    BoxedHandler, Context, GenerateHandlerResult, PolicyHandlerError, Request,
-};
+use crate::policy::base::response::{Error as PolicyError, Response};
+use crate::policy::base::{BoxedHandler, Context, GenerateHandlerResult, Request};
 use crate::switchboard::base::{SettingRequest, SettingType};
 use anyhow::Error;
 use async_trait::async_trait;
@@ -110,8 +108,10 @@ impl<S: Storage + 'static> ClientProxy<S> {
         Self { messenger, storage, setting_type }
     }
 
-    // TODO(fxbug.dev/65736): remove once used
-    #[allow(dead_code)]
+    pub fn setting_type(&self) -> SettingType {
+        self.setting_type
+    }
+
     pub async fn read(&self) -> S {
         self.storage.lock().await.get().await
     }
@@ -119,16 +119,14 @@ impl<S: Storage + 'static> ClientProxy<S> {
     /// Returns Ok if the value was written, or an Error if the write failed. The argument
     /// `write_through` will block returning until the value has been completely written to
     /// persistent store, rather than any temporary in-memory caching.
-    // TODO(fxbug.dev/65736): remove once used
-    #[allow(dead_code)]
-    pub async fn write(&self, value: S, write_through: bool) -> Result<(), PolicyHandlerError> {
+    pub async fn write(&self, value: S, write_through: bool) -> Result<(), PolicyError> {
         if value == self.read().await {
             return Ok(());
         }
 
         match self.storage.lock().await.write(&value, write_through).await {
             Ok(_) => Ok(()),
-            Err(_) => Err(PolicyHandlerError::WriteFailure(self.setting_type)),
+            Err(_) => Err(PolicyError::WriteFailure(self.setting_type)),
         }
     }
 }

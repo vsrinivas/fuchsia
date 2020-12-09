@@ -11,6 +11,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
+use std::borrow::Cow;
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -44,6 +45,12 @@ pub mod response {
 
         #[error("Communication error")]
         CommunicationError,
+
+        #[error("Invalid input argument for setting type: {0:?} argument:{1:?} value:{2:?}")]
+        InvalidArgument(SettingType, Cow<'static, str>, Cow<'static, str>),
+
+        #[error("Write failed. setting type: {0:?}")]
+        WriteFailure(SettingType),
     }
 }
 
@@ -85,10 +92,4 @@ pub enum PolicyHandlerFactoryError {
 
     #[error("Setting handler for {0:?} failed to startup")]
     HandlerStartupError(SettingType),
-}
-
-#[derive(Error, Debug, Clone, PartialEq)]
-pub enum PolicyHandlerError {
-    #[error("Write failed. setting type: {0:?}")]
-    WriteFailure(SettingType),
 }

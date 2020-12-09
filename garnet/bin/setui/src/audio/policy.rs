@@ -73,14 +73,33 @@ impl State {
     pub fn get_properties(&self) -> Vec<Property> {
         self.properties.values().cloned().collect::<Vec<Property>>()
     }
+
+    #[cfg(test)]
+    pub fn properties(&mut self) -> &mut HashMap<PropertyTarget, Property> {
+        &mut self.properties
+    }
+
+    /// Attempts to remove the policy with the given ID from the state. Returns the policy if it
+    /// was found and removed, else returns None.
+    pub fn remove_policy(&mut self, policy_id: PolicyId) -> Option<Policy> {
+        for property in self.properties.values_mut() {
+            match property.remove_policy(policy_id) {
+                Some(policy) => {
+                    return Some(policy);
+                }
+                None => {}
+            }
+        }
+        None
+    }
 }
 
 impl DeviceStorageCompatible for State {
-    const KEY: &'static str = "audio_policy_state";
-
     fn default_value() -> Self {
         State { properties: Default::default() }
     }
+
+    const KEY: &'static str = "audio_policy_state";
 }
 
 /// `Property` defines the current policy configuration over a given audio
@@ -103,14 +122,26 @@ impl Property {
         Self { target: stream_type, stream_type, available_transforms, active_policies: vec![] }
     }
 
-    pub fn add_transform(&mut self, transform: Transform) {
+    /// Adds the given transform to this property and returns its PolicyId.
+    pub fn add_transform(&mut self, transform: Transform) -> PolicyId {
         // Static atomic counter ensures each policy has a unique ID. Declared locally so nothing
         // else has access.
         static POLICY_ID_COUNTER: AtomicU32 = AtomicU32::new(1);
-        let policy =
-            Policy { id: PolicyId(POLICY_ID_COUNTER.fetch_add(1, Ordering::Relaxed)), transform };
+        let policy_id = PolicyId(POLICY_ID_COUNTER.fetch_add(1, Ordering::Relaxed));
+        let policy = Policy { id: policy_id, transform };
 
         self.active_policies.push(policy);
+
+        policy_id
+    }
+
+    /// Attempts to remove the policy with the given ID from this property. Returns the policy if it
+    /// was found and removed, else returns None.
+    pub fn remove_policy(&mut self, policy_id: PolicyId) -> Option<Policy> {
+        match self.active_policies.iter().position(|policy| policy.id == policy_id) {
+            Some(index) => Some(self.active_policies.remove(index)),
+            None => None,
+        }
     }
 }
 
