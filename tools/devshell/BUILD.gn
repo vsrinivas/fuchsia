@@ -13,6 +13,7 @@ if (!is_host) {
   group("fx") {
     testonly = true
     deps = [
+      "//src/developer/ffx:host",
       "//src/sys/pkg/bin/pm:host",
       "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config($default_toolchain)",
       "//tools/debug/symbolize",
