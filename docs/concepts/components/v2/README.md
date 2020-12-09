@@ -56,7 +56,7 @@ the transition to the new architecture is complete.
 
 # Components (either version)
 
-- [Component URLs][doc-component_urls] are URLs that identify components.
+- [Component URLs][doc-component-urls] are URLs that identify components.
 
 [doc-component-urls]: /docs/concepts/components/component_urls.md
 [glossary-components-v1]: /docs/glossary.md#components-v1
