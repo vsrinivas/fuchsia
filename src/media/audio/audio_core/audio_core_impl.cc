@@ -11,6 +11,7 @@
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_renderer.h"
 #include "src/media/audio/audio_core/process_config.h"
+#include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/throttle_output.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/logging/logging.h"
@@ -84,8 +85,8 @@ void AudioCoreImpl::CreateAudioCapturer(
 void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage render_usage,
                                        float gain_db) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetRenderUsageGain");
-  AUDIO_LOG(DEBUG) << " (render_usage: " << static_cast<int>(render_usage) << ", " << gain_db
-                   << " dB)";
+  FX_LOGS(INFO) << "SetRenderUsageGain(" << StreamUsage::WithRenderUsage(render_usage).ToString()
+                << ", " << gain_db << "db)";
   context_.volume_manager().SetUsageGain(
       fuchsia::media::Usage::WithRenderUsage(std::move(render_usage)), gain_db);
 }
@@ -93,8 +94,8 @@ void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage render_u
 void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage capture_usage,
                                         float gain_db) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetCaptureUsageGain");
-  AUDIO_LOG(DEBUG) << " (capture_usage: " << static_cast<int>(capture_usage) << ", " << gain_db
-                   << " dB)";
+  FX_LOGS(INFO) << "SetCaptureUsageGain(" << StreamUsage::WithCaptureUsage(capture_usage).ToString()
+                << ", " << gain_db << "db)";
   context_.volume_manager().SetUsageGain(
       fuchsia::media::Usage::WithCaptureUsage(std::move(capture_usage)), gain_db);
 }

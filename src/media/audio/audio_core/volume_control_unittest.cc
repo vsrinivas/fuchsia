@@ -28,7 +28,7 @@ class VolumeControlTest : public ::gtest::TestLoopFixture {
 
   fuchsia::media::audio::VolumeControlPtr BindVolumeControl() {
     fuchsia::media::audio::VolumeControlPtr volume_control_ptr;
-    volume_control_.AddBinding(volume_control_ptr.NewRequest(dispatcher()));
+    volume_control_.AddBinding(volume_control_ptr.NewRequest(dispatcher()), "Test");
     return volume_control_ptr;
   }
 

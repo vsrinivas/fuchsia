@@ -103,10 +103,10 @@ void StreamVolumeManager::BindUsageVolumeClient(
     fidl::InterfaceRequest<fuchsia::media::audio::VolumeControl> request) {
   if (usage.is_render_usage()) {
     render_usage_volume_controls_[fidl::ToUnderlying(usage.render_usage())].AddBinding(
-        std::move(request));
+        std::move(request), StreamUsageFromFidlUsage(usage).ToString());
   } else {
     capture_usage_volume_controls_[fidl::ToUnderlying(usage.capture_usage())].AddBinding(
-        std::move(request));
+        std::move(request), StreamUsageFromFidlUsage(usage).ToString());
   }
 }
 

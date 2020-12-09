@@ -35,7 +35,8 @@ class VolumeControl {
 
   VolumeControl(VolumeSetting* volume_setting, async_dispatcher_t* dispatcher);
 
-  void AddBinding(fidl::InterfaceRequest<fuchsia::media::audio::VolumeControl> request);
+  void AddBinding(fidl::InterfaceRequest<fuchsia::media::audio::VolumeControl> request,
+                  std::string name);
 
   // Sets the volume, notifies all clients, and persists the volume internally so it survives mutes.
   void SetVolume(float volume);
@@ -54,6 +55,7 @@ class VolumeControl {
   bool muted_ = false;
   VolumeSetting* volume_setting_;
   async_dispatcher_t* dispatcher_;
+  std::string name_;
 };
 
 }  // namespace media::audio
