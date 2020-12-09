@@ -36,6 +36,8 @@ config("zstd-config") {
     cflags = [ "-Wno-incompatible-pointer-types" ]
   }
 
+  configs += [ "$zx_build_config:Wno-conversion" ]
+
   # TODO(41757): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   configs += [ "$zx_build_config:temporarily_disable_ubsan_do_not_use" ]
@@ -198,6 +200,15 @@ zx_library("zstdseek") {
 }
 
 if (!is_kernel) {
+  if (zx != "/") {
+    import("//build/host.gni")
+
+    install_host_tools("host-tools") {
+      deps = [ ":zstdcli" ]
+      outputs = [ "zstd" ]
+    }
+  }
+
   zx_host_tool("zstdcli") {
     output_name = "zstd"
     sources = [
