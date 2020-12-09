@@ -508,7 +508,7 @@ use: [
     {
         directory: "themes",
         path: "/data/themes",
-        rights: [ "r* ]',
+        rights: [ "r*" ],
     },
     {
         storage: "persistent",
