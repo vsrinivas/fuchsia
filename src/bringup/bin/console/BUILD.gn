@@ -4,7 +4,7 @@
 
 import("//build/dist/component_manifest_resources.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 executable("console") {
   if (is_fuchsia) {
@@ -84,7 +84,13 @@ component_manifest_resources("bootfs") {
   sources = [ "meta/console.cml" ]
 }
 
-bootfs_test("bootfs-test") {
-  name = "console-test"
+fuchsia_unittest_package("console-test-pkg") {
+  package_name = "console-test"
+  executable_path = "test/console-test"
   deps = [ ":console-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":console-test-pkg" ]
 }

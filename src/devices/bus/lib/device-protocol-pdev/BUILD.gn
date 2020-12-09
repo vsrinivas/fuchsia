@@ -26,3 +26,8 @@ zx_library("device-protocol-pdev") {
     "//src/devices/lib/mmio",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

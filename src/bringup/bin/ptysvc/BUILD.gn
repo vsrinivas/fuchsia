@@ -4,7 +4,7 @@
 
 import("//build/dist/component_manifest_resources.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 executable("ptysvc") {
   if (is_fuchsia) {
@@ -89,7 +89,13 @@ component_manifest_resources("bootfs") {
   sources = [ "meta/ptysvc.cml" ]
 }
 
-bootfs_test("ptysvc-test-bootfs-test") {
-  name = "ptysvc-test"
+fuchsia_unittest_package("ptysvc-test-pkg") {
+  package_name = "ptysvc-test"
+  executable_path = "test/ptysvc-test"
   deps = [ ":ptysvc-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":ptysvc-test-pkg" ]
 }
