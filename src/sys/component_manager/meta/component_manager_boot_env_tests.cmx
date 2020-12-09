@@ -3,6 +3,7 @@
         "fuchsia.test": {
             "system-services": [
                 "fuchsia.boot.RootResource",
+                "fuchsia.kernel.DebugResource",
                 "fuchsia.kernel.HypervisorResource",
                 "fuchsia.kernel.IoportResource",
                 "fuchsia.kernel.IrqResource",
@@ -34,6 +35,7 @@
             "fidl.examples.echo.Echo",
             "fuchsia.boot.RootResource",
             "fuchsia.io.Directory",
+            "fuchsia.kernel.DebugResource",
             "fuchsia.kernel.HypervisorResource",
             "fuchsia.kernel.IoportResource",
             "fuchsia.kernel.IrqResource",

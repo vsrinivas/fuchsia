@@ -78,6 +78,7 @@ template("component_manager") {
   sources = [
     "src/builtin/arguments.rs",
     "src/builtin/capability.rs",
+    "src/builtin/debug_resource.rs",
     "src/builtin/hypervisor_resource.rs",
     "src/builtin/ioport_resource.rs",
     "src/builtin/irq_resource.rs",

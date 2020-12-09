@@ -90,6 +90,14 @@ test_package("policy-integration-tests") {
       dest = "smc_resource_allowed.cmx"
     },
     {
+      path = "meta/debug_resource.cmx"
+      dest = "debug_resource_denied.cmx"
+    },
+    {
+      path = "meta/debug_resource.cmx"
+      dest = "debug_resource_allowed.cmx"
+    },
+    {
       path = "meta/hypervisor_resource.cmx"
       dest = "hypervisor_resource_denied.cmx"
     },

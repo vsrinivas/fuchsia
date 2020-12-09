@@ -69,6 +69,7 @@
         {
             protocol: [
                 "fuchsia.boot.RootResource",
+                "fuchsia.kernel.DebugResource",
                 "fuchsia.kernel.HypervisorResource",
                 "fuchsia.kernel.IoportResource",
                 "fuchsia.kernel.IrqResource",
@@ -131,6 +132,7 @@
                 "fuchsia.hardware.pty.Device",
                 "fuchsia.kernel.Counter",
                 "fuchsia.kernel.DebugBroker",
+                "fuchsia.kernel.DebugResource",
                 "fuchsia.kernel.HypervisorResource",
                 "fuchsia.kernel.IoportResource",
                 "fuchsia.kernel.IrqResource",

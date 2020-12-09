@@ -9,6 +9,7 @@ group("appmgr_policy_eng") {
   deps = [
     ":appmgr_build_info_allowlist_eng",
     ":appmgr_component_event_provider_allowlist_eng",
+    ":appmgr_debug_resource_allowlist_eng",
     ":appmgr_deprecated_ambient_replace_as_executable_allowlist_eng",
     ":appmgr_deprecated_misc_storage_allowlist_eng",
     ":appmgr_deprecated_shell_allowlist_eng",
@@ -77,6 +78,12 @@ config_data("appmgr_hub_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "hub_allowlist_eng.txt" ]
   outputs = [ "allowlist/hub.txt" ]
+}
+
+config_data("appmgr_debug_resource_allowlist_eng") {
+  for_pkg = "appmgr"
+  sources = [ "debug_resource_allowlist_eng.txt" ]
+  outputs = [ "allowlist/debug_resource.txt" ]
 }
 
 config_data("appmgr_hypervisor_resource_allowlist_eng") {

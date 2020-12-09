@@ -52,6 +52,11 @@ fn serve_proxy_svc_dir() -> Result<zx::Channel, Error> {
         fs.add_proxy_service::<fboot::RootResourceMarker, _>();
     }
 
+    let debug_resource_path = PathBuf::from(format!("/svc/{}", fkernel::DebugResourceMarker::NAME));
+    if debug_resource_path.exists() {
+        fs.add_proxy_service::<fkernel::DebugResourceMarker, _>();
+    }
+
     let mmio_resource_path = PathBuf::from(format!("/svc/{}", fkernel::MmioResourceMarker::NAME));
     if mmio_resource_path.exists() {
         fs.add_proxy_service::<fkernel::MmioResourceMarker, _>();

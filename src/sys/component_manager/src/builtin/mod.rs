@@ -4,6 +4,7 @@
 
 pub mod arguments;
 pub mod capability;
+pub mod debug_resource;
 pub mod hypervisor_resource;
 pub mod ioport_resource;
 pub mod irq_resource;

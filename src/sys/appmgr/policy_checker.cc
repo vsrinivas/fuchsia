@@ -15,6 +15,7 @@ constexpr char kDeprecatedShellAllowList[] = "allowlist/deprecated_shell.txt";
 constexpr char kDeprecatedAmbientReplaceAsExecAllowList[] =
     "allowlist/deprecated_ambient_replace_as_executable.txt";
 constexpr char kComponentEventProviderAllowList[] = "allowlist/component_event_provider.txt";
+constexpr char kDebugResourceAllowList[] = "allowlist/debug_resource.txt";
 constexpr char kDurableDataAllowList[] = "allowlist/durable_data.txt";
 constexpr char kFactoryDataAllowList[] = "allowlist/factory_data.txt";
 constexpr char kHubAllowList[] = "allowlist/hub.txt";
@@ -72,6 +73,11 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
   if (sandbox.HasFeature("hub") && !CheckHub(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "hub. go/no-hub";
+    return std::nullopt;
+  }
+  if (sandbox.HasService("fuchsia.kernel.DebugResource") && !CheckDebugResource(pkg_url)) {
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                   << "fuchsia.kernel.DebugResource";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.kernel.HypervisorResource") &&
@@ -166,6 +172,11 @@ bool PolicyChecker::CheckFactoryData(const FuchsiaPkgUrl& pkg_url) {
 bool PolicyChecker::CheckHub(const FuchsiaPkgUrl& pkg_url) {
   AllowList hub_allowlist(config_, kHubAllowList);
   return hub_allowlist.IsAllowed(pkg_url);
+}
+
+bool PolicyChecker::CheckDebugResource(const FuchsiaPkgUrl& pkg_url) {
+  AllowList debug_resource_allowlist(config_, kDebugResourceAllowList);
+  return debug_resource_allowlist.IsAllowed(pkg_url);
 }
 
 bool PolicyChecker::CheckHypervisorResource(const FuchsiaPkgUrl& pkg_url) {

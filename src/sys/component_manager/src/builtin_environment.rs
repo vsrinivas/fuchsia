@@ -7,6 +7,7 @@ use {
         builtin::{
             arguments::Arguments as BootArguments,
             capability::BuiltinCapability,
+            debug_resource::DebugResource,
             hypervisor_resource::HypervisorResource,
             ioport_resource::IoportResource,
             irq_resource::IrqResource,
@@ -341,6 +342,7 @@ pub struct BuiltinEnvironment {
 
     // Framework capabilities.
     pub boot_args: Arc<BootArguments>,
+    pub debug_resource: Option<Arc<DebugResource>>,
     pub hypervisor_resource: Option<Arc<HypervisorResource>>,
     #[cfg(target_arch = "x86_64")]
     pub ioport_resource: Option<Arc<IoportResource>>,
@@ -521,6 +523,27 @@ impl BuiltinEnvironment {
             }
         }
 
+        // Set up the DebugResource service.
+        let debug_resource_handle = system_resource_handle
+            .as_ref()
+            .map(|handle| {
+                match handle.create_child(
+                    zx::ResourceKind::SYSTEM,
+                    None,
+                    zx::sys::ZX_RSRC_SYSTEM_DEBUG_BASE,
+                    1,
+                    b"debug",
+                ) {
+                    Ok(resource) => Some(resource),
+                    Err(_) => None,
+                }
+            })
+            .flatten();
+        let debug_resource = debug_resource_handle.map(DebugResource::new);
+        if let Some(debug_resource) = debug_resource.as_ref() {
+            model.root_realm.hooks.install(debug_resource.hooks()).await;
+        }
+
         // Set up the HypervisorResource service.
         let hypervisor_resource_handle = system_resource_handle
             .as_ref()
@@ -634,6 +657,7 @@ impl BuiltinEnvironment {
             kernel_stats,
             read_only_log,
             write_only_log,
+            debug_resource,
             mmio_resource,
             hypervisor_resource,
             irq_resource,

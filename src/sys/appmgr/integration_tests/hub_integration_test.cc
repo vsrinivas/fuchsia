@@ -121,6 +121,7 @@ TEST_F(HubTest, Services) {
       "fuchsia.hardware.pty.Device",
       "fuchsia.kernel.Counter",
       "fuchsia.kernel.DebugBroker",
+      "fuchsia.kernel.DebugResource",
       "fuchsia.kernel.HypervisorResource",
 #if __x86_64__
       "fuchsia.kernel.IoportResource",
