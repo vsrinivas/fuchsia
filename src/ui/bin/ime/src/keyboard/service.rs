@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context as _, Error};
-use fidl_fuchsia_ui_input as ui_input;
-use fidl_fuchsia_ui_input2 as ui_input2;
-use fidl_fuchsia_ui_input3 as ui_input3;
-use fuchsia_syslog::fx_log_err;
-use futures::lock::Mutex;
-use futures::{TryFutureExt, TryStreamExt};
-use std::sync::Arc;
+use {
+    anyhow::{Context as _, Error},
+    core::convert::TryInto,
+    fidl_fuchsia_ui_input as ui_input, fidl_fuchsia_ui_input2 as ui_input2,
+    fidl_fuchsia_ui_input3 as ui_input3,
+    fuchsia_syslog::fx_log_err,
+    futures::{lock::Mutex, TryFutureExt, TryStreamExt},
+    std::sync::Arc,
+};
 
 use crate::ime_service::ImeService;
-use crate::keyboard::{keyboard2, keyboard3};
+use crate::keyboard::{events::KeyEvent, keyboard2, keyboard3};
 
 /// Keyboard service router.
 /// **DEPRECATED**: This is replaced by input3.
@@ -36,7 +37,7 @@ impl Service {
 
     pub fn spawn_ime_service(&self, mut stream: ui_input::ImeServiceRequestStream) {
         let keyboard2 = self.keyboard2.clone();
-        let keyboard3 = self.keyboard3.clone();
+        let mut keyboard3 = self.keyboard3.clone();
         let mut ime_service = self.ime_service.clone();
         fuchsia_async::Task::spawn(
             async move {
@@ -53,6 +54,11 @@ impl Service {
                             responder.send()?;
                         }
                         ui_input::ImeServiceRequest::DispatchKey3 { event, responder, .. } => {
+                            let key_event =
+                                KeyEvent::new(&event, keyboard3.get_keys_pressed().await)?;
+                            ime_service
+                                .inject_input(ui_input::InputEvent::Keyboard(key_event.try_into()?))
+                                .await;
                             let was_handled = keyboard3
                                 .handle_key_event(event)
                                 .await

@@ -3,13 +3,17 @@
 // found in the LICENSE file.
 use {
     anyhow::{Context as _, Error},
-    fidl_fuchsia_ui_input3 as ui_input3, fidl_fuchsia_ui_views as ui_views,
+    fidl_fuchsia_input as input, fidl_fuchsia_ui_input3 as ui_input3,
+    fidl_fuchsia_ui_views as ui_views,
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_scenic as scenic,
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{lock::Mutex, TryStreamExt},
-    std::{collections::HashMap, sync::Arc},
+    std::{
+        collections::{HashMap, HashSet},
+        sync::Arc,
+    },
 };
 
 const DEFAULT_LISTENER_TIMEOUT: zx::Duration = zx::Duration::from_seconds(2);
@@ -32,6 +36,9 @@ struct KeyListenerStore {
 
     /// Currently focused View.
     focused_view: Option<ui_views::ViewRef>,
+
+    // Currently pressed keys.
+    keys_pressed: HashSet<input::Key>,
 }
 
 /// A client of fuchsia.ui.input3.Keyboard.SetListener()
@@ -47,7 +54,8 @@ impl KeyboardService {
     }
 
     /// Dispatches key event to clients.
-    pub async fn handle_key_event(&self, event: ui_input3::KeyEvent) -> Result<bool, Error> {
+    pub async fn handle_key_event(&mut self, event: ui_input3::KeyEvent) -> Result<bool, Error> {
+        self.update_keys_pressed(&event).await;
         Ok(self.store.lock().await.dispatch_key(event).await?)
     }
 
@@ -82,6 +90,26 @@ impl KeyboardService {
             store.subscribers.remove(i);
         });
         Ok(())
+    }
+
+    async fn update_keys_pressed(&mut self, event: &ui_input3::KeyEvent) {
+        let (type_, key) = match (event.type_, event.key) {
+            (Some(t), Some(k)) => (t, k),
+            _ => return,
+        };
+        let keys_pressed = &mut self.store.lock().await.keys_pressed;
+        match type_ {
+            ui_input3::KeyEventType::Sync | ui_input3::KeyEventType::Pressed => {
+                keys_pressed.insert(key);
+            }
+            ui_input3::KeyEventType::Cancel | ui_input3::KeyEventType::Released => {
+                keys_pressed.remove(&key);
+            }
+        }
+    }
+
+    pub(crate) async fn get_keys_pressed(&self) -> HashSet<input::Key> {
+        self.store.lock().await.keys_pressed.clone()
     }
 }
 
@@ -165,9 +193,10 @@ impl KeyListenerStore {
 mod tests {
     use {
         super::*,
-        fidl_fuchsia_input as input,
+        fidl_fuchsia_input as input, fuchsia_async as fasync,
         fuchsia_syslog::fx_log_err,
         futures::{future, StreamExt, TryFutureExt},
+        std::iter::FromIterator,
         std::task::Poll,
     };
 
@@ -231,7 +260,6 @@ mod tests {
 
     fn create_key_event(key: input::Key, modifiers: ui_input3::Modifiers) -> ui_input3::KeyEvent {
         ui_input3::KeyEvent {
-            timestamp: None,
             key: Some(key),
             modifiers: Some(modifiers),
             type_: Some(ui_input3::KeyEventType::Pressed),
@@ -260,7 +288,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_single_client() -> Result<(), Error> {
-        let helper = Helper::new();
+        let mut helper = Helper::new();
 
         let (_view_ref, mut listener) = helper.create_and_focus_client().await?;
 
@@ -280,7 +308,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_not_focused() -> Result<(), Error> {
-        let helper = Helper::new();
+        let mut helper = Helper::new();
         helper.create_fake_client().await?;
 
         let (key, modifiers) = (input::Key::A, ui_input3::Modifiers::CapsLock);
@@ -292,7 +320,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_switching_focus() -> Result<(), Error> {
-        let helper = Helper::new();
+        let mut helper = Helper::new();
 
         // Create fake clients.
         let (view_ref, mut listener) = helper.create_fake_client().await?;
@@ -356,7 +384,7 @@ mod tests {
     #[test]
     fn test_client_timeout() -> Result<(), Error> {
         let mut exec = fasync::Executor::new_with_fake_time().unwrap();
-        let helper = Helper::new();
+        let mut helper = Helper::new();
 
         let (_view_ref, _listener) = helper.create_and_focus_client_sync(&mut exec)?;
         let (key, modifiers) = (input::Key::D, ui_input3::Modifiers::NumLock);
@@ -376,6 +404,58 @@ mod tests {
 
         let result = exec.run_until_stalled(&mut handle_fut);
         assert!(matches!(result, Poll::Ready(Ok(false))));
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn update_keys_pressed() -> Result<(), Error> {
+        let mut helper = Helper::new();
+
+        // Press a key.
+        let (key, modifiers) = (input::Key::A, ui_input3::Modifiers::CapsLock);
+        helper.service.handle_key_event(create_key_event(key, modifiers)).await?;
+
+        assert_eq!(helper.service.get_keys_pressed().await, HashSet::from_iter(vec![key,]));
+
+        // Release a key.
+        helper
+            .service
+            .handle_key_event(ui_input3::KeyEvent {
+                key: Some(key),
+                type_: Some(ui_input3::KeyEventType::Released),
+                ..ui_input3::KeyEvent::EMPTY
+            })
+            .await?;
+
+        assert_eq!(helper.service.get_keys_pressed().await, HashSet::new());
+
+        // Trigger SYNC event.
+        helper
+            .service
+            .handle_key_event(ui_input3::KeyEvent {
+                key: Some(input::Key::LeftShift),
+                type_: Some(ui_input3::KeyEventType::Sync),
+                ..ui_input3::KeyEvent::EMPTY
+            })
+            .await?;
+
+        assert_eq!(
+            helper.service.get_keys_pressed().await,
+            HashSet::from_iter(vec![input::Key::LeftShift])
+        );
+
+        // Trigger CANCEL event.
+        helper
+            .service
+            .handle_key_event(ui_input3::KeyEvent {
+                key: Some(input::Key::LeftShift),
+                type_: Some(ui_input3::KeyEventType::Cancel),
+                ..ui_input3::KeyEvent::EMPTY
+            })
+            .await?;
+
+        assert_eq!(helper.service.get_keys_pressed().await, HashSet::new());
 
         Ok(())
     }

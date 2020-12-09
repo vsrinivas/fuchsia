@@ -10,7 +10,7 @@ use anyhow::{Context as _, Error};
 use fidl::endpoints::{ClientEnd, RequestStream, ServerEnd};
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_text as txt;
-use fuchsia_syslog::{fx_log_err, fx_vlog};
+use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use futures::prelude::*;
 use std::sync::{Arc, Weak};
@@ -130,7 +130,7 @@ impl ImeService {
 
     /// This is called by the operating system when input from the physical keyboard comes in.
     /// It also is called by legacy onscreen keyboards that just simulate physical keyboard input.
-    async fn inject_input(&mut self, mut event: uii::InputEvent) {
+    pub(crate) async fn inject_input(&mut self, mut event: uii::InputEvent) {
         let keyboard_event = match &event {
             uii::InputEvent::Keyboard(e) => clone_keyboard_event(e),
             _ => return,
@@ -168,6 +168,9 @@ impl ImeService {
         }
     }
 
+    // Bind ImeService to an instance of ImeServiceRequestStream.
+    // Is only used for testing.
+    #[cfg(test)]
     pub fn bind_ime_service(&self, mut stream: uii::ImeServiceRequestStream) {
         let mut self_clone = self.clone();
         fuchsia_async::Task::spawn(
@@ -177,10 +180,14 @@ impl ImeService {
                     .await
                     .context("error reading value from IME service request stream")?
                 {
-                    self_clone
-                        .handle_ime_service_msg(msg)
-                        .await
-                        .context("Handle IME service messages")?
+                    if let uii::ImeServiceRequest::InjectInput { event, .. } = msg {
+                        self_clone.inject_input(event).await
+                    } else {
+                        self_clone
+                            .handle_ime_service_msg(msg)
+                            .await
+                            .context("Handle IME service messages")?
+                    }
                 }
                 Ok(())
             }
@@ -211,9 +218,10 @@ impl ImeService {
             uii::ImeServiceRequest::HideKeyboard { .. } => {
                 self.hide_keyboard().await;
             }
-            uii::ImeServiceRequest::InjectInput { event, .. } => {
-                fx_vlog!(tag: "ime", 1, "InjectInput triggered: {:?}", event);
-                self.inject_input(event).await;
+            uii::ImeServiceRequest::InjectInput { .. } => {
+                // @deprecated
+                // fuchsia.ui.input.ImeServiceRequest::InjectInput is deprecated.
+                // fuchsia.ui.input.ImeServiceRequest::DispatchKey3 should be used instead.
             }
             uii::ImeServiceRequest::DispatchKey { .. }
             | uii::ImeServiceRequest::DispatchKey3 { .. }
