@@ -14,6 +14,10 @@
 
 namespace fidl {
 
+// A FIDL string that either borrows or owns its contents.
+//
+// To borrow the contents of an |std::string|,
+// use |fidl::unowned_str(my_str)|.
 class StringView final : private VectorView<const char> {
  public:
   StringView() : VectorView() {}
