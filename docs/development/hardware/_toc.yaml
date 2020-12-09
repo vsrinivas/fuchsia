@@ -18,8 +18,6 @@ toc:
   path: /docs/development/hardware/usb_setup.md
 - title: "Create a bootable Fuchsia image"
   path: /docs/development/hardware/installer.md
-- title: "Set up multiple Fuchsia devices"
-  path: /docs/development/hardware/multi_device.md
 - title: "Set up experimental hardware"
   section:
   - title: "Install Fuchsia on Acer Switch Alpha 12"
