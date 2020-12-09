@@ -58,18 +58,10 @@ config("compiler") {
     rebase_path(sysroot, root_build_dir) + "/lib",
     "-Clinker=" + rebase_path("$clang_prefix/lld", "", root_build_dir),
     "-Clink-arg=--sysroot=" + rebase_path(sysroot, root_build_dir),
-    "-Clink-arg=-L" + rebase_path(sysroot, root_build_dir) + "/lib",
     "-Clink-arg=-L" + clang_resource_dir + "/" + rust_target + "/lib",
     "-Clink-arg=--pack-dyn-relocs=relr",
     "-Clink-arg=-dynamic-linker=ld.so.1",
     "-Clink-arg=--icf=all",
-  ]
-
-  lib_dirs = [
-    # These libraries are required by Rust's libstd.
-    "$root_build_dir/gen/sdk/lib/fdio",
-    "$root_build_dir/gen/zircon/system/ulib/trace-engine",
-    "$root_build_dir/gen/zircon/system/ulib/syslog",
   ]
 
   if (build_id_format != "") {
@@ -237,6 +229,18 @@ config("integer-paranoia") {
 
 config("libunwind") {
   libs = [ clang_libunwind ]
+}
+
+# NOTE: This config is also used by //build/config/BUILDCONFIG.gn
+config("static-pie-config") {
+  cflags = [
+    "-fno-sanitize=all",
+    "-fno-stack-protector",
+  ]
+  ldflags = [
+    "-nostdlib",
+    "-Wl,-no-dynamic-linker",
+  ]
 }
 
 group("maybe_scudo_default_options") {

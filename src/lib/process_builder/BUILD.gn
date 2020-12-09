@@ -112,18 +112,6 @@ rustc_binary("test_util") {
   sources = [ "test/test_util.rs" ]
 }
 
-config("static-pie-config") {
-  visibility = [ ":*" ]
-  cflags = [
-    "-fno-sanitize=all",
-    "-fno-stack-protector",
-  ]
-  ldflags = [
-    "-nostdlib",
-    "-Wl,-no-dynamic-linker",
-  ]
-}
-
 # This is used to test the library's handling of statically linked PIE
 # executables.  Warning: Don't copy this unless you know what you're doing.
 executable("static_pie_test_util") {
@@ -134,8 +122,8 @@ executable("static_pie_test_util") {
 
   sources = [ "test/static_pie_test_util.c" ]
   configs += [
-    ":static-pie-config",
     "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/config/fuchsia:static-pie-config",
   ]
 
   exclude_toolchain_tags = [ "instrumented" ]

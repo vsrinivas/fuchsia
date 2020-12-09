@@ -1714,9 +1714,14 @@ template("variant_target") {
             deps += [ "//zircon/public/sysroot:rust_binary_deps" ]
           } else {
             deps += [ "//zircon/public/sysroot:cpp_binary_deps" ]
-            if (target_type == "executable" || target_type == "test") {
-              deps += [ "//zircon/public/sysroot:crt1_deps" ]
-            }
+          }
+
+          # Add dependency to the C runtime startup object file for executables,
+          # except if the static-pie-config is used.
+          if ((target_type == "executable" || target_type == "test") &&
+              configs + [ "//build/config/fuchsia:static-pie-config" ] -
+              [ "//build/config/fuchsia:static-pie-config" ] == configs) {
+            deps += [ "//zircon/public/sysroot:crt1_deps" ]
           }
         }
 
