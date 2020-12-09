@@ -12,7 +12,6 @@
 #include <platform.h>
 #include <string.h>
 #include <trace.h>
-#include <zircon/boot/e820.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -33,17 +32,6 @@
 #include "platform_p.h"
 
 #define LOCAL_TRACE 0
-
-struct addr_range {
-  uint64_t base;
-  uint64_t size;
-  bool is_mem;
-};
-
-/* Values that will store the largest low-memory contiguous address space
- * that we can let the PCIe bus driver use for allocations */
-paddr_t pcie_mem_lo_base;
-size_t pcie_mem_lo_size;
 
 // These are used to track memory arenas found during boot so they can
 // be exclusively reserved within the resource system after the heap
@@ -143,24 +131,6 @@ static zx_status_t mem_arena_init(ktl::span<zbi_mem_range_t> ranges) {
   return ZX_OK;
 }
 
-static size_t cached_e820_entry_count;
-static struct addr_range cached_e820_entries[64];
-
-zx_status_t enumerate_e820(enumerate_e820_callback callback, void* ctx) {
-  if (callback == NULL)
-    return ZX_ERR_INVALID_ARGS;
-
-  if (!cached_e820_entry_count)
-    return ZX_ERR_BAD_STATE;
-
-  DEBUG_ASSERT(cached_e820_entry_count <= ktl::size(cached_e820_entries));
-  for (size_t i = 0; i < cached_e820_entry_count; ++i)
-    callback(cached_e820_entries[i].base, cached_e820_entries[i].size,
-             cached_e820_entries[i].is_mem, ctx);
-
-  return ZX_OK;
-}
-
 // Discover the basic memory map.
 void pc_mem_init(ktl::span<zbi_mem_range_t> ranges) {
   pmm_checker_init_from_cmdline();
@@ -211,23 +181,6 @@ void pc_mem_init(ktl::span<zbi_mem_range_t> ranges) {
   }
   if (!initialized_bootstrap16) {
     TRACEF("WARNING - Failed to assign bootstrap16 region, SMP won't work\n");
-  }
-
-  // Cache the e820 entries so that they will be available for enumeration
-  // later in the boot.
-  //
-  // TODO(dgreenaway): Use the same zbi_mem_range_t format as is used elsewhere.
-  if (ranges.size() > ktl::size(cached_e820_entries)) {
-    cached_e820_entry_count = 0;
-    TRACEF("ERROR - Too many e820 entries to hold in the cache!\n");
-    return;
-  }
-  for (const auto& range : ranges) {
-    // Convert the entry into E820 format.
-    struct addr_range* entry = &cached_e820_entries[cached_e820_entry_count++];
-    entry->base = range.paddr;
-    entry->size = range.length;
-    entry->is_mem = range.type == ZBI_MEM_RANGE_RAM;
   }
 }
 
