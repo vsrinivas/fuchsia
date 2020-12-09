@@ -891,8 +891,9 @@ class View {
   // zbitl::decompress:DefaultAllocator is a default-constructible class that
   // can serve as `scratch`.  The overloads below with fewer arguments use it.
   template <typename CopyStorage, typename ScratchAllocator>
-  fitx::result<CopyError<CopyStorage>> CopyStorageItem(CopyStorage&& to, const iterator& it,
-                                                       ScratchAllocator&& scratch) {
+  fitx::result<CopyError<std::decay_t<CopyStorage>>> CopyStorageItem(CopyStorage&& to,
+                                                                     const iterator& it,
+                                                                     ScratchAllocator&& scratch) {
     if (auto compressed = IsCompressedStorage(*(*it).header)) {
       return DecompressStorage(std::forward<CopyStorage>(to), it,
                                std::forward<ScratchAllocator>(scratch));
@@ -932,7 +933,8 @@ class View {
   // doesn't work with default arguments.
 
   template <typename CopyStorage>
-  fitx::result<CopyError<CopyStorage>> CopyStorageItem(CopyStorage&& to, const iterator& it) {
+  fitx::result<CopyError<std::decay_t<CopyStorage>>> CopyStorageItem(CopyStorage&& to,
+                                                                     const iterator& it) {
     return CopyStorageItem(std::forward<CopyStorage>(to), it, decompress::DefaultAllocator);
   }
 
@@ -1170,12 +1172,23 @@ class View {
     const uint32_t compressed_size = header->length;
     const uint32_t uncompressed_size = header->extra;
 
+    if (auto result = ToTraits::EnsureCapacity(to, uncompressed_size); result.is_error()) {
+      return fitx::error{ErrorType{
+          .zbi_error = "cannot increase capacity",
+          .write_offset = uncompressed_size,
+          .write_error = std::move(result).error_value(),
+      }};
+    }
+
     auto decompress_error = [&](auto&& result) {
       return fitx::error{ErrorType{
           .zbi_error = result.error_value(),
           .read_offset = it.item_offset(),
       }};
     };
+
+    constexpr std::string_view kZbiErrorCorruptedOrBadData =
+        "bad or corrupted data: uncompressed length not as expected";
 
     if constexpr (Traits::CanOneShotRead()) {
       // All the data is on hand in one shot.  Fetch it first.
@@ -1242,6 +1255,10 @@ class View {
             outoffset += static_cast<uint32_t>(out.size());
           }
         }
+
+        if (outoffset != uncompressed_size) {
+          return fitx::error{ErrorType{.zbi_error = kZbiErrorCorruptedOrBadData}};
+        }
       }
     } else {
       std::byte* outptr = nullptr;
@@ -1291,6 +1308,7 @@ class View {
             }
             outptr = result.value().data();
             outlen = result.value().size();
+            outoffset += uncompressed_size - static_cast<uint32_t>(outlen);
           } else {
             ByteView out;
             if (auto result = (*decompressor)(chunk); result.is_error()) {
@@ -1314,6 +1332,9 @@ class View {
           }
         }
 
+        if (outoffset != uncompressed_size) {
+          return ChunkError(ErrorType{.zbi_error = kZbiErrorCorruptedOrBadData});
+        }
         return fitx::ok();
       };
 

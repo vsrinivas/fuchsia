@@ -35,19 +35,29 @@ fitx::result<std::string_view, fbl::Span<std::byte>> Streaming::Decompress(
   ZSTD_inBuffer in = {chunk.data(), chunk.size(), 0};
   ZSTD_outBuffer out = {buffer.data(), buffer.size(), 0};
 
-  while (in.pos < in.size && out.pos < out.size) {
+  // Run the decompressor once before checking bounds, to ensure that a bounds
+  // failure deriving from a spent buffer is reported and as we might consume
+  // more of the chunk (i.e., with metadata bytes) without advancing `out.pos`.
+  do {
     size_t result = ZSTD_decompressStream(stream, &out, &in);
     ZX_DEBUG_ASSERT_MSG(out.pos <= out.size, "ZSTD_decompressStream wrote %zu into a buffer of %zu",
                         out.pos, out.size);
     if (ZSTD_isError(result)) {
       return fitx::error{std::string_view{ZSTD_getErrorName(result)}};
     }
+
+    // Finished decompressing and flushed all the output.
     if (result == 0) {
-      // Finished all the input and flushed all the output.
-      ZX_ASSERT(in.pos == in.size);
+      ZX_ASSERT(in.pos <= in.size);
+      // While it is reasonable for ZSTD_decompressStream() to allow for midway
+      // end-of-stream indicators, the presence here in a payload indicates bad
+      // or corrupted data.
+      if (in.pos != in.size) {
+        return fitx::error{"bad or corrupted data: end-of-stream indicator found too soon"};
+      }
       break;
     }
-  }
+  } while (in.pos < in.size && out.pos < out.size);
 
   ZX_DEBUG_ASSERT(in.pos <= chunk.size());
   chunk.remove_prefix(in.pos);

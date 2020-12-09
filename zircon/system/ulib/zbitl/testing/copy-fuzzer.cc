@@ -35,10 +35,12 @@ enum class StorageType {
 enum class CopyCodepath {
   kDirectRawItem,
   kDirectRawItemWithHeader,
+  kDirectStorageItem,
   kDirectIteratorRange,
   kDirectByteRange,
   kCreationRawItem,
   kCreationRawItemWithHeader,
+  kCreationStorageItem,
   kCreationIteratorRange,
   kCreationByteRange,
   kMaxValue,  // Required by FuzzedDataProvider::ConsumeEnum().
@@ -120,6 +122,9 @@ int Fuzz(FuzzedDataProvider& provider) {
       case CopyCodepath::kDirectRawItemWithHeader:
         static_cast<void>(view.CopyRawItemWithHeader(to, it));
         break;
+      case CopyCodepath::kDirectStorageItem:
+        static_cast<void>(view.CopyStorageItem(to, it));
+        break;
       case CopyCodepath::kDirectIteratorRange:
         static_cast<void>(view.Copy(to, view.begin(), it));
         static_cast<void>(view.Copy(to, it, view.end()));
@@ -129,6 +134,9 @@ int Fuzz(FuzzedDataProvider& provider) {
         break;
       case CopyCodepath::kCreationRawItemWithHeader:
         static_cast<void>(view.CopyRawItemWithHeader(it));
+        break;
+      case CopyCodepath::kCreationStorageItem:
+        static_cast<void>(view.CopyStorageItem(it));
         break;
       case CopyCodepath::kCreationIteratorRange:
         static_cast<void>(view.Copy(view.begin(), it));
