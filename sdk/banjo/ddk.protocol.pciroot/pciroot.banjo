@@ -10,13 +10,23 @@ const uint8 DEVICES_PER_BUS = 64;
 const uint8 FUNCTIONS_PER_DEVICE = 8;
 const uint8 PINS_PER_FUNCTION = 4;
 
-/// This type is not used directly in any protocol methods. Instead it exists to
-/// allow both the Pciroot provider and Pci Bus Driver client to agree on a
-/// format for the routing table stored inside the PciPlatformInfo irq routing
-/// vmo.
-/// Equivalent to uint32_t table[DEVICES_PER_BUS][FUNCTIONS_PER_DEVICE][PINS_PER_FUNCTION in C]
-struct PciLegacyIrqRoutingTable {
-    array<array<array<uint32>:PINS_PER_FUNCTION>:FUNCTIONS_PER_DEVICE>:DEVICES_PER_BUS table;
+/// Used to indicate within a routing entry that there is no parent bridge/port
+/// device, it is connected directly at the root.
+const uint8 PCI_IRQ_ROUTING_NO_PARENT = 0xFF;
+/// An entry corresponds to all functions for the given device.
+const uint8 PCI_IRQ_ROUTING_ALL_FUNCTIONS = 0xF;
+
+/// A protocol representation of a routing entry.
+/// It is intentionally very similar to an ACPI _PRT entry to reduce the complexity of
+/// the data structure that needs to be passed over the 'wire'. Endpoints
+/// directly connected to a root complex will have port device and function_ids
+/// of PCI_IRQ_ROUTING_NO_PARENT. For other endpoints hanging off root ports or
+/// bridges their upstream port address will be contained in these fields.
+struct PciIrqRoutingEntry {
+    uint8 port_device_id;
+    uint8 port_function_id;
+    uint8 device_id;
+    array<uint32>:PINS_PER_FUNCTION pins;
 };
 
 /// This represents one of the vectors wired up for PCI legacy interrupts. How
@@ -39,8 +49,8 @@ struct PciPlatformInfo {
     uint8 end_bus_num;
     uint16 segment_group;
     handle<vmo> ecam_vmo;
-    handle<vmo> irq_routing_vmo;
     vector<PciLegacyIrq> legacy_irqs;
+    vector<PciIrqRoutingEntry> irq_routing;
 };
 
 enum PciAddressSpace : uint8 {

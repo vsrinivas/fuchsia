@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <memory>
 
@@ -19,13 +21,14 @@
 #include <acpica/acuuid.h>
 #include <bits/limits.h>
 #include <ddk/debug.h>
+#include <ddk/protocol/pciroot.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/array.h>
 #include <fbl/string_buffer.h>
 #include <fbl/vector.h>
 #include <region-alloc/region-alloc.h>
 
 #include "acpi-private.h"
-#include "ddk/protocol/pciroot.h"
 #include "methods.h"
 #include "resources.h"
 
@@ -268,6 +271,108 @@ static zx_status_t read_mcfg_table(std::vector<McfgAllocation>* mcfg_table) {
   return ZX_OK;
 }
 
+zx_status_t pci_init_interrupts(ACPI_HANDLE object, x64Pciroot::Context* dev_ctx) {
+  zx::vmo routing_vmo{};
+  if (acpi::GetPciRootIrqRouting(object, dev_ctx) != AE_OK) {
+    zxlogf(ERROR, "Failed to obtain PCI IRQ routing information, legacy IRQs will not function");
+  }
+
+  fbl::Array<pci_legacy_irq> irq_list(new pci_legacy_irq[dev_ctx->irqs.size()]{},
+                                      dev_ctx->irqs.size());
+  size_t irq_cnt = 0;
+  for (const auto& e : dev_ctx->irqs) {
+    const uint32_t& vector = e.first;
+    const acpi_legacy_irq& irq_cfg = e.second;
+    zx_status_t status = zx_interrupt_create(get_root_resource(), vector, irq_cfg.options,
+                                             &irq_list[irq_cnt].interrupt);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Couldn't create irq for legacy vector %#x: %s, skipping it", vector,
+             zx_status_get_string(status));
+      continue;
+    }
+    irq_list[irq_cnt].vector = vector;
+    irq_cnt++;
+  }
+
+  dev_ctx->info.legacy_irqs_list = irq_list.release();
+  dev_ctx->info.legacy_irqs_count = irq_cnt;
+  return ZX_OK;
+}
+
+zx_status_t pci_init_segment_and_ecam(ACPI_HANDLE object, x64Pciroot::Context* dev_ctx) {
+  zx_status_t status = acpi_bbn_call(object, &dev_ctx->info.start_bus_num);
+  if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
+    zxlogf(DEBUG, "Unable to read _BBN for '%s' (%d), assuming base bus of 0", dev_ctx->name,
+           status);
+
+    // Until we find an ecam we assume this potential legacy pci bus spans
+    // bus 0 to bus 255 in its segment group.
+    dev_ctx->info.end_bus_num = PCI_BUS_MAX;
+  }
+  bool found_bbn = (status == ZX_OK);
+
+  status = acpi_seg_call(object, &dev_ctx->info.segment_group);
+  if (status != ZX_OK) {
+    dev_ctx->info.segment_group = 0;
+    zxlogf(DEBUG, "Unable to read _SEG for '%s' (%d), assuming segment group 0.", dev_ctx->name,
+           status);
+  }
+
+  // If an MCFG is found for the given segment group this root has then we'll
+  // cache it for later pciroot operations and use its information to populate
+  // any fields missing via _BBN / _SEG.
+  auto& pinfo = dev_ctx->info;
+  memcpy(pinfo.name, dev_ctx->name, sizeof(pinfo.name));
+  McfgAllocation mcfg_alloc;
+  status = RootHost->GetSegmentMcfgAllocation(dev_ctx->info.segment_group, &mcfg_alloc);
+  if (status == ZX_OK) {
+    // Print a warning if _BBN and MCFG bus numbers don't match. We'll use the
+    // MCFG first if we have one, but a mismatch likely represents an error in
+    // an ACPI table.
+    if (found_bbn && mcfg_alloc.start_bus_number != pinfo.start_bus_num) {
+      zxlogf(WARNING, "conflicting base bus num for '%s', _BBN reports %u and MCFG reports %u",
+             dev_ctx->name, pinfo.start_bus_num, mcfg_alloc.start_bus_number);
+    }
+
+    // Same situation with Segment Group as with bus number above.
+    if (pinfo.segment_group != 0 && pinfo.segment_group != mcfg_alloc.pci_segment) {
+      zxlogf(WARNING, "conflicting segment group for '%s', _BBN reports %u and MCFG reports %u",
+             dev_ctx->name, pinfo.segment_group, mcfg_alloc.pci_segment);
+    }
+
+    // Since we have an ecam its metadata will replace anything defined in the ACPI tables.
+    pinfo.segment_group = mcfg_alloc.pci_segment;
+    pinfo.start_bus_num = mcfg_alloc.start_bus_number;
+    pinfo.end_bus_num = mcfg_alloc.end_bus_number;
+
+    // The bus driver needs a VMO representing the entire ecam region so it can map it in.
+    // The range from start_bus_num to end_bus_num is inclusive.
+    size_t ecam_size = (pinfo.end_bus_num - pinfo.start_bus_num + 1) * PCIE_ECAM_BYTES_PER_BUS;
+    zx_paddr_t vmo_base = mcfg_alloc.address + (pinfo.start_bus_num * PCIE_ECAM_BYTES_PER_BUS);
+    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
+    status = zx_vmo_create_physical(get_root_resource(), vmo_base, ecam_size, &pinfo.ecam_vmo);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "couldn't create VMO for ecam, mmio cfg will not work: %s!",
+             zx_status_get_string(status));
+      return status;
+    }
+  }
+
+  if (zxlog_level_enabled(DEBUG)) {
+    fbl::StringBuffer<128> log;
+    log.AppendPrintf("%s { acpi_obj(%p), bus range: %u:%u, segment: %u", dev_ctx->name,
+                     dev_ctx->acpi_object, pinfo.start_bus_num, pinfo.end_bus_num,
+                     pinfo.segment_group);
+    if (pinfo.ecam_vmo != ZX_HANDLE_INVALID) {
+      log.AppendPrintf(", ecam base: %#" PRIxPTR, mcfg_alloc.address);
+    }
+    log.AppendPrintf(" }");
+    zxlogf(DEBUG, "%s", log.c_str());
+  }
+
+  return ZX_OK;
+}
+
 // Parse the MCFG table and initialize the window allocators for the RootHost if this is the first
 // root found.
 zx_status_t pci_root_host_init() {
@@ -313,71 +418,18 @@ zx_status_t pci_init(zx_device_t* sys_root, zx_device_t* parent, ACPI_HANDLE obj
   // ACPI names are stored as 4 bytes in a u32
   memcpy(dev_ctx.name, &info->Name, 4);
 
-  status = acpi_bbn_call(object, &dev_ctx.info.start_bus_num);
-  if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
-    zxlogf(DEBUG, "Unable to read _BBN for '%s' (%d), assuming base bus of 0", dev_ctx.name,
-           status);
-
-    // Until we find an ecam we assume this potential legacy pci bus spans
-    // bus 0 to bus 255 in its segment group.
-    dev_ctx.info.end_bus_num = PCI_BUS_MAX;
-  }
-  bool found_bbn = (status == ZX_OK);
-
-  status = acpi_seg_call(object, &dev_ctx.info.segment_group);
+  status = pci_init_segment_and_ecam(object, &dev_ctx);
   if (status != ZX_OK) {
-    dev_ctx.info.segment_group = 0;
-    zxlogf(DEBUG, "Unable to read _SEG for '%s' (%d), assuming segment group 0.", dev_ctx.name,
-           status);
+    zxlogf(ERROR, "Initializing %.*s ecam and bus information failed: %s",
+           static_cast<int>(sizeof(dev_ctx.name)), dev_ctx.name, zx_status_get_string(status));
+    return status;
   }
 
-  // If an MCFG is found for the given segment group this root has then we'll
-  // cache it for later pciroot operations and use its information to populate
-  // any fields missing via _BBN / _SEG.
-  auto& pinfo = dev_ctx.info;
-  memcpy(pinfo.name, dev_ctx.name, sizeof(pinfo.name));
-  McfgAllocation mcfg_alloc;
-  status = RootHost->GetSegmentMcfgAllocation(dev_ctx.info.segment_group, &mcfg_alloc);
-  if (status == ZX_OK) {
-    // Do the bus values make sense?
-    if (found_bbn && mcfg_alloc.start_bus_number != pinfo.start_bus_num) {
-      zxlogf(ERROR, "conflicting base bus num for '%s', _BBN reports %u and MCFG reports %u",
-             dev_ctx.name, pinfo.start_bus_num, mcfg_alloc.start_bus_number);
-    }
-
-    // Do the segment values make sense?
-    if (pinfo.segment_group != 0 && pinfo.segment_group != mcfg_alloc.pci_segment) {
-      zxlogf(ERROR, "conflicting segment group for '%s', _BBN reports %u and MCFG reports %u",
-             dev_ctx.name, pinfo.segment_group, mcfg_alloc.pci_segment);
-    }
-
-    // Since we have an ecam its metadata will replace anything defined in the ACPI tables.
-    pinfo.segment_group = mcfg_alloc.pci_segment;
-    pinfo.start_bus_num = mcfg_alloc.start_bus_number;
-    pinfo.end_bus_num = mcfg_alloc.end_bus_number;
-
-    // The bus driver needs a VMO representing the entire ecam region so it can map it in.
-    // The range from start_bus_num to end_bus_num is inclusive.
-    size_t ecam_size = (pinfo.end_bus_num - pinfo.start_bus_num + 1) * PCIE_ECAM_BYTES_PER_BUS;
-    zx_paddr_t vmo_base = mcfg_alloc.address + (pinfo.start_bus_num * PCIE_ECAM_BYTES_PER_BUS);
-    // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-    status = zx_vmo_create_physical(get_root_resource(), vmo_base, ecam_size, &pinfo.ecam_vmo);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "couldn't create VMO for ecam, mmio cfg will not work: %d!", status);
-      return status;
-    }
-  }
-
-  if (zxlog_level_enabled(DEBUG)) {
-    fbl::StringBuffer<128> log;
-    log.AppendPrintf("%s { acpi_obj(%p), bus range: %u:%u, segment: %u", dev_ctx.name,
-                     dev_ctx.acpi_object, pinfo.start_bus_num, pinfo.end_bus_num,
-                     pinfo.segment_group);
-    if (pinfo.ecam_vmo != ZX_HANDLE_INVALID) {
-      log.AppendPrintf(", ecam base: %#" PRIxPTR, mcfg_alloc.address);
-    }
-    log.AppendPrintf(" }");
-    zxlogf(DEBUG, "%s", log.c_str());
+  status = pci_init_interrupts(object, &dev_ctx);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Initializing %.*s interrupt information failed: %s",
+           static_cast<int>(sizeof(dev_ctx.name)), dev_ctx.name, zx_status_get_string(status));
+    return status;
   }
 
   // These are cached here to work around dev_ctx potentially going out of scope

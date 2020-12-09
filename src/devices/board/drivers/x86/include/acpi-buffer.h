@@ -44,8 +44,8 @@ class AcpiBuffer : public ACPI_BUFFER {
     T* pointer_;
   };
 
-  auto begin() { return AcpiBuffer::iterator(*this); }
-  auto end() { return AcpiBuffer::iterator(); }
+  auto begin() const { return AcpiBuffer::iterator(*this); }
+  auto end() const { return AcpiBuffer::iterator(); }
 };
 
 }  // namespace acpi

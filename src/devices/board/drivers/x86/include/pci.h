@@ -9,6 +9,8 @@
 #include <zircon/compiler.h>
 #include <zircon/syscalls/pci.h>
 
+#include <unordered_map>
+
 #include <acpica/acpi.h>
 #include <acpica/actypes.h>
 #include <ddk/device.h>
@@ -31,6 +33,13 @@ struct pci_ecam_baas {
   uint32_t reserved0;
 };
 
+// A structure derived from ACPI _PRTs that represents a zx::interrupt to create and
+// provide to the PCI bus driver.
+struct acpi_legacy_irq {
+  uint32_t vector;   // Hardware vector
+  uint32_t options;  // Configuration for zx_interrupt_create
+};
+
 zx_status_t pci_init(zx_device_t* sys_root, zx_device_t* parent, ACPI_HANDLE object,
                      ACPI_DEVICE_INFO* info);
 
@@ -44,6 +53,8 @@ class x64Pciroot : public PcirootBase {
     ACPI_HANDLE acpi_object;
     ACPI_DEVICE_INFO acpi_device_info;
     zx_device_t* platform_bus;
+    std::unordered_map<uint32_t, acpi_legacy_irq> irqs;
+    std::vector<pci_irq_routing_entry_t> routing;
     struct pci_platform_info info;
   };
 
@@ -62,8 +73,14 @@ class x64Pciroot : public PcirootBase {
  private:
   Context context_;
   x64Pciroot(PciRootHost* root_host, x64Pciroot::Context ctx, zx_device_t* parent, const char* name)
-      : PcirootBase(root_host, parent, name), context_(ctx) {}
+      : PcirootBase(root_host, parent, name), context_(std::move(ctx)) {}
 };
+
+namespace acpi {
+
+ACPI_STATUS GetPciRootIrqRouting(ACPI_HANDLE root_obj, x64Pciroot::Context* context);
+
+}  // namespace acpi
 
 __END_CDECLS
 #endif  // SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_PCI_H_

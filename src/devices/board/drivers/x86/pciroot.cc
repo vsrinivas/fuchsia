@@ -15,6 +15,7 @@
 
 #include <acpica/acpi.h>
 #include <ddk/debug.h>
+#include <ddk/protocol/pciroot.h>
 #include <ddk/protocol/sysmem.h>
 
 #include "acpi-private.h"
@@ -72,6 +73,9 @@ zx_status_t x64Pciroot::PcirootConnectSysmem(zx::channel connection) {
 
 zx_status_t x64Pciroot::PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
   *info = context_.info;
+  info->irq_routing_list = context_.routing.data();
+  info->irq_routing_count = context_.routing.size();
+
   return ZX_OK;
 }
 

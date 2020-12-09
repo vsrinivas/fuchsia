@@ -107,7 +107,10 @@ driver_module("platform-bus-x86") {
   # driver is in pci.cpp.  If not enabled then the kernel pci bus driver
   # initialization code in ACPI (kpci.cc) will be built instead.
   if (platform_enable_user_pci) {
-    sources += [ "pci.cc" ]
+    sources += [
+      "pci.cc",
+      "pci_irqs.cc",
+    ]
   } else {
     sources += [ "kpci.cc" ]
   }
