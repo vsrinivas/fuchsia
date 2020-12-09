@@ -10,6 +10,7 @@ zx_library("fbl") {
     "fbl/algorithm.h",
     "fbl/alloc_checker.h",
     "fbl/array.h",
+    "fbl/atomic_ref.h",
     "fbl/auto_call.h",
     "fbl/auto_lock.h",
     "fbl/bits.h",

@@ -29,6 +29,7 @@ test("fbl") {
   sources = [
     "algorithm_tests.cc",
     "array_tests.cc",
+    "atomic_ref_tests.cc",
     "auto_call_tests.cc",
     "bit_tests.cc",
     "conditional_select_nospec_tests.cc",
