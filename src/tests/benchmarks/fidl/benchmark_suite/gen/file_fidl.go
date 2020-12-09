@@ -25,12 +25,15 @@ var fidlTmpl = template.Must(template.New("fidlTmpl").Parse(
 // GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
 
 library benchmarkfidl;
+{{- if .ExtraDefinition }}
 
-{{ .ExtraDefinition -}}
-{{ range .Definitions -}}
-{{ .Comment }}
+{{ .ExtraDefinition }}
+{{- end }}
+{{- range .Definitions }}
+
+{{ .Comment -}}
 {{ .Body }}
-{{ end -}}
+{{- end }}
 `))
 
 type fidlTmplInput struct {

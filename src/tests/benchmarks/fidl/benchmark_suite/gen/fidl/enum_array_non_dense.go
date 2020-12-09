@@ -17,7 +17,7 @@ func init() {
 		Filename: "enum_array_non_dense.gen.test.fidl",
 		Gen:      fidlGenEnumArrayNonDense,
 		ExtraDefinition: `
-enum EnumArrayNonDenseElement{
+enum EnumArrayNonDenseElement {
 	A = 1;
 	C = 3;
 	D = 6;

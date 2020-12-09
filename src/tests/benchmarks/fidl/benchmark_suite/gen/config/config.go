@@ -4,9 +4,7 @@
 
 package config
 
-import (
-	"log"
-)
+import "fmt"
 
 type Binding string
 
@@ -29,16 +27,14 @@ func (c Config) Get(key ConfigKey) interface{} {
 	if val, ok := c[key]; ok {
 		return val
 	}
-	log.Fatalf("key %s missing from map %#v", key, c)
-	panic("")
+	panic(fmt.Sprintf("key %s missing from map %#v", key, c))
 }
 
 func (c Config) GetInt(key ConfigKey) int {
 	if val, ok := c.Get(key).(int); ok {
 		return val
 	}
-	log.Fatalf("key %s is type %T, expected int", key, c.Get(key))
-	panic("")
+	panic(fmt.Sprintf("key %s is type %T, expected int", key, c.Get(key)))
 }
 
 type GidlFile struct {

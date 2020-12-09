@@ -17,7 +17,7 @@ func init() {
 		Filename: "struct_array.gen.test.fidl",
 		Gen:      fidlGenStructArray,
 		ExtraDefinition: `
-struct StructArrayElement{
+struct StructArrayElement {
 	uint8 a;
 	// 8 byte padding.
 	uint16 b;

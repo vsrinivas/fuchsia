@@ -17,7 +17,7 @@ func init() {
 		Filename: "enum_array.gen.test.fidl",
 		Gen:      fidlGenEnumArray,
 		ExtraDefinition: `
-enum EnumArrayElement{
+enum EnumArrayElement {
 	A = 1;
 	B = 2;
 };`,
