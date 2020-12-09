@@ -10,7 +10,6 @@ use {
     fidl_fuchsia_wlan_policy::{
         self as wlan_policy, Credential, Empty, NetworkConfig, NetworkIdentifier, SecurityType,
     },
-    fidl_fuchsia_wlan_service::{ConnectConfig, ErrCode, State, WlanProxy, WlanStatus},
     fidl_fuchsia_wlan_tap::{
         SetChannelArgs, TxArgs, WlanRxInfo, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy,
     },
@@ -273,15 +272,6 @@ fn default_deprecated_wpa1_vendor_ie() -> wlan_common::ie::wpa::WpaIe {
     }
 }
 
-pub fn create_connect_config<S: ToString>(ssid: &[u8], passphrase: S) -> ConnectConfig {
-    ConnectConfig {
-        ssid: String::from_utf8_lossy(ssid).to_string(),
-        pass_phrase: passphrase.to_string(),
-        scan_interval: 5,
-        bssid: "".to_string(), // BSSID is ignored by wlancfg
-    }
-}
-
 pub fn create_network_config<S: ToString>(
     ssid: &[u8],
     security_type: SecurityType,
@@ -478,56 +468,6 @@ where
             connect_fut,
         )
         .await
-}
-
-pub async fn connect_to_wpa2_ap(
-    wlan_service: &WlanProxy,
-    helper: &mut test_utils::TestHelper,
-    ap_ssid: &[u8],
-    ap_bssid: &mac::Bssid,
-    passphrase: &str,
-) {
-    let mut connect_config = create_connect_config(ap_ssid, passphrase);
-    let mut authenticator = Some(create_wpa2_psk_authenticator(ap_bssid, ap_ssid, passphrase));
-    let protection = Protection::Wpa2Personal;
-    let connect_fut = wlan_service.connect(&mut connect_config);
-    let error =
-        connect_to_ap(connect_fut, helper, ap_ssid, ap_bssid, &protection, &mut authenticator)
-            .await
-            .expect("connecting via wlancfg service");
-    assert_eq!(error.code, ErrCode::Ok, "connect failed: {:?}", error);
-}
-
-pub async fn connect_to_open_ap(
-    wlan_service: &WlanProxy,
-    helper: &mut test_utils::TestHelper,
-    ap_ssid: &[u8],
-    ap_bssid: &mac::Bssid,
-) {
-    let mut connect_config = create_connect_config(ap_ssid, "");
-    let protection = Protection::Open;
-    let connect_fut = wlan_service.connect(&mut connect_config);
-    let error = connect_to_ap(connect_fut, helper, ap_ssid, ap_bssid, &protection, &mut None)
-        .await
-        .expect("connecting via wlancfg service");
-    assert_eq!(error.code, ErrCode::Ok, "connect failed: {:?}", error);
-}
-
-pub fn assert_associated_state(
-    status: WlanStatus,
-    bssid: &mac::Bssid,
-    ssid: &[u8],
-    channel: &WlanChan,
-    is_secure: bool,
-) {
-    assert_eq!(status.error.code, ErrCode::Ok);
-    assert_eq!(status.state, State::Associated);
-    let ap = status.current_ap.expect("expect to be associated to an AP");
-    assert_eq!(ap.bssid, bssid.0.to_vec());
-    assert_eq!(ap.ssid, String::from_utf8_lossy(ssid).to_string());
-    assert_eq!(ap.chan, *channel);
-    assert!(ap.is_compatible);
-    assert_eq!(ap.is_secure, is_secure);
 }
 
 async fn connect_to_network(ssid: &[u8], passphrase: Option<&str>) {

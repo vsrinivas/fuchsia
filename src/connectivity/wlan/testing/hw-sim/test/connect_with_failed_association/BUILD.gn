@@ -8,7 +8,6 @@ rustc_test("connect_with_failed_association") {
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
-    "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
     "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
