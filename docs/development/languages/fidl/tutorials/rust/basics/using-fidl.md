@@ -58,16 +58,22 @@ rm -r examples/fidl/rust/fidl_crates/*
    to place the test code in a different file (e.g. `hello_world.rs`) instead, and then specify the
    crate root explicity in the `rustc_test` declaration (e.g. `source_root = "hello_world.rs"`).
 
-1. Build the file
+1. Include example in the build
 
    ```
    fx set core.x64 --with //examples/fidl/rust/fidl_crates
    ```
 
+1. Build the example
+
+   ```
+   fx build
+   ```
+
 1. Run the binary
 
    ```
-   out/default/host_x64/fidl_crates_bin`
+   out/default/host_x64/fidl_crates_bin
    ```
 
    You should see the hello world message printed.
