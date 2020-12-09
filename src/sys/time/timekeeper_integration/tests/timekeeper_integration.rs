@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use chrono::{Datelike, TimeZone, Timelike};
-use fidl::endpoints::create_endpoints;
+use fidl::endpoints::{create_endpoints, ServerEnd};
 use fidl_fuchsia_cobalt::{CobaltEvent, LoggerFactoryMarker};
 use fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierMarker, LoggerQuerierProxy};
 use fidl_fuchsia_hardware_rtc::{DeviceRequest, DeviceRequestStream};
@@ -11,7 +11,7 @@ use fidl_fuchsia_io::{NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN
 use fidl_fuchsia_logger::LogSinkMarker;
 use fidl_fuchsia_net_interfaces::{StateRequest, StateRequestStream};
 use fidl_fuchsia_time::{MaintenanceRequest, MaintenanceRequestStream};
-use fidl_fuchsia_time_external::{Status, TimeSample};
+use fidl_fuchsia_time_external::{PushSourceMarker, Status, TimeSample};
 use fidl_test_time::{TimeSourceControlRequest, TimeSourceControlRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_cobalt::CobaltEventExt;
@@ -21,8 +21,7 @@ use fuchsia_component::{
 };
 use fuchsia_zircon::{self as zx, HandleBased, Rights};
 use futures::{
-    channel::mpsc::Sender,
-    future::join,
+    channel::mpsc::{channel, Receiver, Sender},
     stream::{Stream, StreamExt, TryStreamExt},
     Future, FutureExt, SinkExt,
 };
@@ -74,18 +73,69 @@ enum InjectedServices {
     Network(StateRequestStream),
 }
 
-/// A handle to a `PushSource` controlled by the integ test that allows setting the latest data on
-/// the fly.
-struct PushSourceController(Sender<Update>);
+/// A `PushSource` that allows a single client and can be controlled by a test.
+struct PushSourcePuppet {
+    /// Channel through which connection requests are received.
+    client_recv: Receiver<ServerEnd<PushSourceMarker>>,
+    /// Push source implementation.
+    push_source: Arc<PushSource<TestUpdateAlgorithm>>,
+    /// Sender to push updates to `push_source`.
+    update_sink: Sender<Update>,
+    /// Task for retrieving updates in `push_source`.
+    update_task: fasync::Task<()>,
+    /// Task serving the client.
+    client_task: Option<fasync::Task<()>>,
+}
 
-impl PushSourceController {
-    async fn set_sample(&mut self, sample: TimeSample) {
-        self.0.send(sample.into()).await.unwrap();
+impl PushSourcePuppet {
+    /// Create a new `PushSourcePuppet` that receives new client channels through `client_recv`.
+    fn new(client_recv: Receiver<ServerEnd<PushSourceMarker>>) -> Self {
+        let (update_algorithm, update_sink) = TestUpdateAlgorithm::new();
+        let push_source = Arc::new(PushSource::new(update_algorithm, Status::Ok).unwrap());
+        let push_source_clone = Arc::clone(&push_source);
+        let update_task = fasync::Task::spawn(async move {
+            push_source_clone.poll_updates().await.unwrap();
+        });
+        Self { client_recv, push_source, update_sink, update_task, client_task: None }
     }
 
+    /// Set the next sample reported by the time source.
+    async fn set_sample(&mut self, sample: TimeSample) {
+        self.ensure_client().await;
+        self.update_sink.send(sample.into()).await.unwrap();
+    }
+
+    /// Set the next status reported by the time source.
     #[allow(dead_code)]
     async fn set_status(&mut self, status: Status) {
-        self.0.send(status.into()).await.unwrap();
+        self.ensure_client().await;
+        self.update_sink.send(status.into()).await.unwrap();
+    }
+
+    /// Wait for a client to connect if there's no existing client.
+    async fn ensure_client(&mut self) {
+        if self.client_task.is_none() {
+            let server_end = self.client_recv.next().await.unwrap();
+            let push_source_clone = Arc::clone(&self.push_source);
+            self.client_task.replace(fasync::Task::spawn(async move {
+                push_source_clone
+                    .handle_requests_for_stream(server_end.into_stream().unwrap())
+                    .await
+                    .unwrap();
+            }));
+        }
+    }
+
+    /// Simulate a crash by closing client channels and wiping state.
+    async fn simulate_crash(&mut self) {
+        let (update_algorithm, update_sink) = TestUpdateAlgorithm::new();
+        self.update_sink = update_sink;
+        self.push_source = Arc::new(PushSource::new(update_algorithm, Status::Ok).unwrap());
+        self.client_task.take();
+        let push_source_clone = Arc::clone(&self.push_source);
+        self.update_task = fasync::Task::spawn(async move {
+            push_source_clone.poll_updates().await.unwrap();
+        });
     }
 }
 
@@ -109,7 +159,7 @@ impl NestedTimekeeper {
     fn new(
         clock: Arc<zx::Clock>,
         initial_rtc_time: Option<zx::Time>,
-    ) -> (Self, PushSourceController, RtcUpdates, LoggerQuerierProxy) {
+    ) -> (Self, PushSourcePuppet, RtcUpdates, LoggerQuerierProxy) {
         let mut service_fs = ServiceFs::new();
         // Route logs for components in nested env to the same logsink as the test.
         service_fs.add_proxy_service::<LogSinkMarker, _>();
@@ -160,12 +210,7 @@ impl NestedTimekeeper {
             .spawn(nested_environment.launcher())
             .unwrap();
 
-        let (update_algorithm, update_sink) = TestUpdateAlgorithm::new();
-        let push_source = Arc::new(PushSource::new(update_algorithm, Status::Ok).unwrap());
-        let push_source_clone = Arc::clone(&push_source);
-        let push_source_update_fut = async move {
-            push_source_clone.poll_updates().await.unwrap();
-        };
+        let (server_end_send, server_end_recv) = channel(0);
 
         let injected_service_fut = async move {
             service_fs
@@ -173,7 +218,7 @@ impl NestedTimekeeper {
                     match conn_req {
                         InjectedServices::TimeSourceControl(stream) => {
                             debug!("Time source control service connected.");
-                            Self::serve_test_control(&*push_source, stream).await;
+                            Self::serve_test_control(server_end_send.clone(), stream).await;
                         }
                         InjectedServices::Maintenance(stream) => {
                             debug!("Maintenance service connected.");
@@ -206,26 +251,20 @@ impl NestedTimekeeper {
             _timekeeper_app: timekeeper_app,
             _cobalt_app: cobalt_app,
             _nested_envronment: nested_environment,
-            _task: fasync::Task::spawn(async {
-                join(injected_service_fut, push_source_update_fut).await;
-            }),
+            _task: fasync::Task::spawn(injected_service_fut),
         };
 
-        (nested_timekeeper, PushSourceController(update_sink), rtc_updates, cobalt_querier)
+        (nested_timekeeper, PushSourcePuppet::new(server_end_recv), rtc_updates, cobalt_querier)
     }
 
     async fn serve_test_control(
-        push_source: &PushSource<TestUpdateAlgorithm>,
+        server_end_sender: Sender<ServerEnd<PushSourceMarker>>,
         stream: TimeSourceControlRequestStream,
     ) {
         stream
-            .try_for_each_concurrent(None, |req| async move {
-                let TimeSourceControlRequest::ConnectPushSource { push_source: client_end, .. } =
-                    req;
-                push_source
-                    .handle_requests_for_stream(client_end.into_stream().unwrap())
-                    .await
-                    .unwrap();
+            .try_for_each_concurrent(None, |req| async {
+                let TimeSourceControlRequest::ConnectPushSource { push_source, .. } = req;
+                server_end_sender.clone().send(push_source).await.unwrap();
                 Ok(())
             })
             .await
@@ -295,7 +334,7 @@ fn rtc_time_to_zx_time(rtc_time: fidl_fuchsia_hardware_rtc::Time) -> zx::Time {
 /// provided with handles to manipulate the time source and observe changes to the RTC and cobalt.
 fn timekeeper_test<F, Fut>(clock: Arc<zx::Clock>, initial_rtc_time: Option<zx::Time>, test_fn: F)
 where
-    F: FnOnce(PushSourceController, RtcUpdates, LoggerQuerierProxy) -> Fut,
+    F: FnOnce(PushSourcePuppet, RtcUpdates, LoggerQuerierProxy) -> Fut,
     Fut: Future,
 {
     let _ = fuchsia_syslog::init();
@@ -309,27 +348,16 @@ where
     });
 }
 
+fn from_rfc2822(date: &str) -> zx::Time {
+    zx::Time::from_nanos(chrono::DateTime::parse_from_rfc2822(date).unwrap().timestamp_nanos())
+}
+
 lazy_static! {
-    static ref BACKSTOP_TIME: zx::Time = zx::Time::from_nanos(
-        chrono::DateTime::parse_from_rfc2822("Sun, 20 Sep 2020 01:01:01 GMT")
-            .unwrap()
-            .timestamp_nanos()
-    );
-    static ref VALID_RTC_TIME: zx::Time = zx::Time::from_nanos(
-        chrono::DateTime::parse_from_rfc2822("Sun, 20 Sep 2020 02:02:02 GMT")
-            .unwrap()
-            .timestamp_nanos()
-    );
-    static ref BEFORE_BACKSTOP_TIME: zx::Time = zx::Time::from_nanos(
-        chrono::DateTime::parse_from_rfc2822("Fri, 06 Mar 2020 04:04:04 GMT")
-            .unwrap()
-            .timestamp_nanos()
-    );
-    static ref VALID_TIME: zx::Time = zx::Time::from_nanos(
-        chrono::DateTime::parse_from_rfc2822("Tue, 29 Sep 2020 02:19:01 GMT")
-            .unwrap()
-            .timestamp_nanos()
-    );
+    static ref BACKSTOP_TIME: zx::Time = from_rfc2822("Sun, 20 Sep 2020 01:01:01 GMT");
+    static ref VALID_RTC_TIME: zx::Time = from_rfc2822("Sun, 20 Sep 2020 02:02:02 GMT");
+    static ref BEFORE_BACKSTOP_TIME: zx::Time = from_rfc2822("Fri, 06 Mar 2020 04:04:04 GMT");
+    static ref VALID_TIME: zx::Time = from_rfc2822("Tue, 29 Sep 2020 02:19:01 GMT");
+    static ref VALID_TIME_2: zx::Time = from_rfc2822("Wed, 30 Sep 2020 14:59:59 GMT");
 }
 
 /// Time between each reported sample.
@@ -733,5 +761,56 @@ fn test_step_clock() {
             utc_now_2,
             jump_utc + (monotonic_after_2 - monotonic_before) + zx::Duration::from_millis(500)
         );
+    });
+}
+
+fn avg(time_1: zx::Time, time_2: zx::Time) -> zx::Time {
+    let time_1 = time_1.into_nanos() as i128;
+    let time_2 = time_2.into_nanos() as i128;
+    let avg = (time_1 + time_2) / 2;
+    zx::Time::from_nanos(avg as i64)
+}
+
+#[test]
+fn test_restart_crashed_time_source() {
+    let clock = new_clock();
+    timekeeper_test(Arc::clone(&clock), None, |mut push_source_controller, _, _| async move {
+        // Let the first sample be slightly in the past so later samples are not in the future.
+        let monotonic_before = zx::Time::get_monotonic();
+        let sample_1_monotonic = monotonic_before - BETWEEN_SAMPLES;
+        let sample_1_utc = *VALID_TIME;
+        push_source_controller
+            .set_sample(TimeSample {
+                utc: Some(sample_1_utc.into_nanos()),
+                monotonic: Some(sample_1_monotonic.into_nanos()),
+                standard_deviation: Some(STD_DEV.into_nanos()),
+                ..TimeSample::EMPTY
+            })
+            .await;
+
+        // After the first sample, the clock is started.
+        fasync::OnSignals::new(&*clock, zx::Signals::CLOCK_STARTED).await.unwrap();
+        let last_generation_counter = clock.get_details().unwrap().generation_counter;
+
+        // After a time source crashes, timekeeper should restart it and accept samples from it.
+        push_source_controller.simulate_crash().await;
+        let sample_2_utc = *VALID_TIME_2;
+        let sample_2_monotonic = sample_1_monotonic + BETWEEN_SAMPLES;
+        push_source_controller
+            .set_sample(TimeSample {
+                utc: Some(sample_2_utc.into_nanos()),
+                monotonic: Some(sample_2_monotonic.into_nanos()),
+                standard_deviation: Some(STD_DEV.into_nanos()),
+                ..TimeSample::EMPTY
+            })
+            .await;
+        wait_until(|| clock.get_details().unwrap().generation_counter != last_generation_counter)
+            .await;
+        // Time from clock should incorporate the second sample.
+        let result_utc = clock.read().unwrap();
+        let monotonic_after = zx::Time::get_monotonic();
+        let minimum_expected = avg(sample_1_utc + BETWEEN_SAMPLES, sample_2_utc)
+            + (monotonic_after - monotonic_before);
+        assert_geq!(result_utc, minimum_expected);
     });
 }
