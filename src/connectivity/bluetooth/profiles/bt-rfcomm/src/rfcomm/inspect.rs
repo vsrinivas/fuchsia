@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    fuchsia_async as fasync,
+    fuchsia_bluetooth::inspect::DataStreamInspect,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_inspect_derive::{AttachError, IValue, Inspect},
 };
@@ -23,6 +25,32 @@ fn role_to_display_str(role: Role) -> &'static str {
         Role::Negotiating => "Negotiating",
         Role::Responder => "Responder",
         Role::Initiator => "Initiator",
+    }
+}
+
+/// Tracks the data stream inspect stats for a channel.
+/// Properties are tracked in both directions: data sent to the remote entity and data
+/// received from the remote.
+#[derive(Inspect, Default)]
+pub struct DuplexDataStreamInspect {
+    #[inspect(rename = "inbound_stream")]
+    inbound: DataStreamInspect,
+    #[inspect(rename = "outbound_stream")]
+    outbound: DataStreamInspect,
+}
+
+impl DuplexDataStreamInspect {
+    pub fn start(&mut self) {
+        self.inbound.start();
+        self.outbound.start();
+    }
+
+    pub fn record_inbound_transfer(&mut self, bytes: usize, at: fasync::Time) {
+        self.inbound.record_transferred(bytes, at);
+    }
+
+    pub fn record_outbound_transfer(&mut self, bytes: usize, at: fasync::Time) {
+        self.outbound.record_transferred(bytes, at);
     }
 }
 
@@ -49,8 +77,8 @@ impl SessionChannelInspect {
 
     pub fn set_flow_control(&mut self, flow_control: FlowControlMode) {
         if let FlowControlMode::CreditBased(credits) = flow_control {
-            self.initial_local_credits.iset(Some(credits.local as u64));
-            self.initial_remote_credits.iset(Some(credits.remote as u64));
+            self.initial_local_credits.iset(Some(credits.local() as u64));
+            self.initial_remote_credits.iset(Some(credits.remote() as u64));
         }
     }
 }
@@ -123,8 +151,10 @@ impl SessionInspect {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuchsia_async::DurationExt;
     use fuchsia_inspect::assert_inspect_tree;
     use fuchsia_inspect_derive::WithInspect;
+    use fuchsia_zircon::DurationNum;
     use std::convert::TryFrom;
 
     use crate::rfcomm::session::channel::Credits;
@@ -217,6 +247,73 @@ mod tests {
                 initial_local_credits: 10u64,
                 initial_remote_credits: 19u64,
             }
+        });
+    }
+
+    #[test]
+    fn duplex_data_stream_inspect_tree_updates_when_changed() {
+        let exec = fasync::Executor::new_with_fake_time().unwrap();
+        exec.set_fake_time(fasync::Time::from_nanos(1_234_567));
+
+        let inspect = inspect::Inspector::new();
+        let mut stream =
+            DuplexDataStreamInspect::default().with_inspect(inspect.root(), "stream").unwrap();
+        // Default inspect tree.
+        assert_inspect_tree!(inspect, root: {
+            inbound_stream: {
+                bytes_per_second_current: 0u64,
+                total_bytes: 0u64,
+            },
+            outbound_stream: {
+                bytes_per_second_current: 0u64,
+                total_bytes: 0u64,
+            },
+        });
+
+        stream.start();
+        // Both nodes should have same start_time.
+        assert_inspect_tree!(inspect, root: {
+            inbound_stream: {
+                bytes_per_second_current: 0u64,
+                start_time: 1_234_567i64,
+                total_bytes: 0u64,
+            },
+            outbound_stream: {
+                bytes_per_second_current: 0u64,
+                start_time: 1_234_567i64,
+                total_bytes: 0u64,
+            },
+        });
+
+        exec.set_fake_time(1.seconds().after_now());
+        // An inbound transfer should have no impact on the outbound stats.
+        stream.record_inbound_transfer(500, fasync::Time::now());
+        assert_inspect_tree!(inspect, root: {
+            inbound_stream: {
+                bytes_per_second_current: 500u64,
+                start_time: 1_234_567i64,
+                total_bytes: 500u64,
+            },
+            outbound_stream: {
+                bytes_per_second_current: 0u64,
+                start_time: 1_234_567i64,
+                total_bytes: 0u64,
+            },
+        });
+
+        exec.set_fake_time(1.seconds().after_now());
+        stream.record_outbound_transfer(250, fasync::Time::now());
+        assert_inspect_tree!(inspect, root: {
+            inbound_stream: {
+                bytes_per_second_current: 500u64, // 500 bytes in 1 second
+                start_time: 1_234_567i64,
+                total_bytes: 500u64,
+            },
+            outbound_stream: {
+                bytes_per_second_current: 125u64, // 250 bytes in 2 seconds
+                start_time: 1_234_567i64,
+                total_bytes: 250u64,
+            },
         });
     }
 }
