@@ -2635,7 +2635,8 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
       src_page = VmPageOrMarker::Marker();
     }
 
-    status = AddPageLocked(&src_page, offset);
+    // Defer individual range updates so we can do them in blocks.
+    status = AddPageLocked(&src_page, offset, /*do_range_update=*/false);
     if (status == ZX_OK) {
       new_pages_len += PAGE_SIZE;
     } else {
@@ -2651,6 +2652,7 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
         // We hit the end of a run of absent pages, so notify the pager source
         // of any new pages that were added and reset the tracking variables.
         if (new_pages_len) {
+          RangeChangeUpdateLocked(new_pages_start, new_pages_len, RangeChangeOp::Unmap);
           page_source_->OnPagesSupplied(new_pages_start, new_pages_len);
         }
         new_pages_start = offset + PAGE_SIZE;
@@ -2664,6 +2666,7 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
     DEBUG_ASSERT(new_pages_start + new_pages_len <= end);
   }
   if (new_pages_len) {
+    RangeChangeUpdateLocked(new_pages_start, new_pages_len, RangeChangeOp::Unmap);
     page_source_->OnPagesSupplied(new_pages_start, new_pages_len);
   }
 
