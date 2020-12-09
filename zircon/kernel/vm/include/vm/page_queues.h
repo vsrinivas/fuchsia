@@ -59,6 +59,10 @@ class PageQueues {
   // Moves page from whichever queue it is currently in, to the pager backed queue. Same rules on
   // keeping the back reference up to date as given in SetPagerBacked apply.
   void MoveToPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
+  // Moves page from whichever queue it is currently in, to the back of the pager backed queue (in
+  // contrast MoveToPagerBacked moves to the front of the queue). Same rules on keeping the back
+  // reference up to date as given in SetPagerBacked apply.
+  void MoveToEndOfPagerBacked(vm_page_t* page);
   // Place page in the unswappable zero forked queue. Must not already be in a page queue. Same
   // rules for back pointers apply as for SetPagerBacked.
   void SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset);

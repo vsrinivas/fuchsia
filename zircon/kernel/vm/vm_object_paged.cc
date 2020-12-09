@@ -146,6 +146,13 @@ void VmObjectPaged::HarvestAccessedBits() {
   }
 }
 
+void VmObjectPaged::PromoteForReclamation() {
+  canary_.Assert();
+
+  Guard<Mutex> guard{lock()};
+  cow_pages_locked()->PromoteRangeForReclamationLocked(0, size_locked());
+}
+
 bool VmObjectPaged::CanDedupZeroPagesLocked() {
   canary_.Assert();
 

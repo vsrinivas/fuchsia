@@ -65,6 +65,9 @@ class MemoryWatchdog {
   // Tracks last time the memory state was evaluated (and signaled if required).
   zx_time_t prev_mem_state_eval_time_ = ZX_TIME_INFINITE_PAST;
 
+  // The highest pressure level we trigger eviction at, OOM being the lowest pressure level (0).
+  PressureLevel max_eviction_level_ = PressureLevel::kCritical;
+
   // The free memory target to aim for when we trigger eviction.
   uint64_t free_mem_target_ = 0;
 

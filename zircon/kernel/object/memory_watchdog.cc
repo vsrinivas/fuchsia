@@ -176,9 +176,9 @@ void MemoryWatchdog::WorkerThread() {
         zx_time_sub_time(time_now, prev_mem_state_eval_time_) >= kHysteresisSeconds_) {
       printf("memory-pressure: memory availability state - %s\n", PressureLevelToString(idx));
 
-      // Trigger eviction if the memory availability state is more critical than the previous one.
-      // Currently we do not do any eviction at the kWarning level, only kCritical and below.
-      if (idx < prev_mem_event_idx_ && idx <= PressureLevel::kCritical) {
+      // Trigger eviction if the memory availability state is more critical than the previous one,
+      // and we're configured to evict at that level.
+      if (idx < prev_mem_event_idx_ && idx <= max_eviction_level_) {
         // Clear any previous eviction trigger. Once Cancel completes we know that we will not race
         // with the callback and are free to update the targets.
         eviction_trigger_.Cancel();
@@ -264,9 +264,12 @@ void MemoryWatchdog::Init(Executor* executor) {
     mem_watermarks[PressureLevel::kWarning] = gCmdline.GetUInt64("kernel.oom.warning-mb", 300) * MB;
     uint64_t watermark_debounce = gCmdline.GetUInt64("kernel.oom.debounce-mb", 1) * MB;
 
-    // Set our eviction target to be such that we try to get completely out of the critical level,
-    // taking into account the debounce.
-    free_mem_target_ = mem_watermarks[PressureLevel::kCritical] + watermark_debounce;
+    if (gCmdline.GetBool("kernel.oom.evict-at-warning", false)) {
+      max_eviction_level_ = PressureLevel::kWarning;
+    }
+    // Set our eviction target to be such that we try to get completely out of the max eviction
+    // level, taking into account the debounce.
+    free_mem_target_ = mem_watermarks[max_eviction_level_] + watermark_debounce;
 
     zx_status_t status =
         pmm_init_reclamation(&mem_watermarks[PressureLevel::kOutOfMemory], kNumWatermarks,
@@ -281,6 +284,8 @@ void MemoryWatchdog::Init(Executor* executor) {
         mem_watermarks[PressureLevel::kOutOfMemory] / MB,
         mem_watermarks[PressureLevel::kCritical] / MB, mem_watermarks[PressureLevel::kWarning] / MB,
         watermark_debounce / MB);
+    printf("memory-pressure: eviction trigger level - %s\n",
+           PressureLevelToString(max_eviction_level_));
 
     auto memory_worker_thread = [](void* arg) -> int {
       MemoryWatchdog* watchdog = reinterpret_cast<MemoryWatchdog*>(arg);

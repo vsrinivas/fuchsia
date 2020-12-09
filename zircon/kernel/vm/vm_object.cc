@@ -31,6 +31,7 @@
 
 VmObject::GlobalList VmObject::all_vmos_ = {};
 fbl::DoublyLinkedList<VmObject::VmoCursor*> VmObject::all_vmos_cursors_ = {};
+bool VmObject::eviction_promote_no_clones_ = false;
 
 VmObject::VmObject(fbl::RefPtr<VmHierarchyState> hierarchy_state_ptr)
     : VmHierarchyBase(ktl::move(hierarchy_state_ptr)) {
@@ -318,6 +319,14 @@ void VmObject::OnUserChildRemoved(Guard<Mutex>&& adopt) {
     if (child_observer_ != nullptr) {
       child_observer_->OnZeroChild();
     }
+  }
+  // TODO(fxbug.dev/65334): Remove this once we have an eviction hint API.
+  // This is currently used as a hack to move pages belonging to inactive blobs to the end of the
+  // pager queue, so that they can be evicted first under memory pressure. Blobfs classifies blobs
+  // that do not have any clients as inactive. Since blobfs hands out VMO clones to clients, this
+  // translates to VMOs with no clones.
+  if (VmObject::eviction_promote_no_clones_ && is_paged()) {
+    (static_cast<VmObjectPaged*>(this))->PromoteForReclamation();
   }
 }
 

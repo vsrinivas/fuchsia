@@ -348,6 +348,9 @@ static void scanner_init_func(uint level) {
     scanner_operation.fetch_or(kScannerOpDisable);
     scanner_request_event.Signal();
   }
+  if (gCmdline.GetBool("kernel.page-scanner.promote-no-clones", false)) {
+    VmObject::EnableEvictionPromoteNoClones();
+  }
   thread->Resume();
 }
 

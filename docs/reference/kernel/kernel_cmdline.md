@@ -466,6 +466,12 @@ memory on the system, i.e. we're in the Critical state, free memory will have to
 increase to at least 105 MB (100 MB + 5 MB) for the state to change from
 Critical to Warning.
 
+## kernel.oom.evict-at-warning=\<bool>
+
+This option, false by default, triggers eviction of file pages at the Warning
+pressure state, in addition to the default behavior, which is to evict at the
+Critical and OOM states.
+
 ## kernel.root-job.behavior=\<string>
 
 This option specifies what action the kernel should take when the root job is
@@ -509,6 +515,13 @@ enabled at boot with the `kernel.page-scanner.start-at-boot` option.
 This option, true by default, allows for the scanner to evict user pager backed
 pages. Eviction can reduce memory usage and prevent out of memory scenarios, but
 removes some timing predictability from system behavior.
+
+## kernel.page-scanner.promote-no-clones=\<bool>
+
+This option, false by default, allows the scanner to evict first the pages owned
+by pager backed VMOs with no clones. VMOs with no clones are meant to approximate
+inactive VMOs. Evicting inactive pages first is expected to free up memory that
+remains free for longer, and can be more effective at relieving memory pressure.
 
 ## kernel.userpager.overtime_wait_seconds=\<num>
 

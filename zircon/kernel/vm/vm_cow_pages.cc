@@ -2159,6 +2159,26 @@ void VmCowPages::UnpinPage(vm_page_t* page, uint64_t offset) {
   }
 }
 
+void VmCowPages::PromoteRangeForReclamationLocked(uint64_t offset, uint64_t len) {
+  canary_.Assert();
+
+  // We will have pages only if we are directly backed by a pager source.
+  if (!page_source_) {
+    return;
+  }
+
+  const uint64_t start_offset = ROUNDDOWN(offset, PAGE_SIZE);
+  const uint64_t end_offset = ROUNDUP(offset + len, PAGE_SIZE);
+  page_list_.ForEveryPageInRange(
+      [](const auto* p, uint64_t) {
+        if (p->IsPage()) {
+          pmm_page_queues()->MoveToEndOfPagerBacked(p->Page());
+        }
+        return ZX_ERR_NEXT;
+      },
+      start_offset, end_offset);
+}
+
 void VmCowPages::UnpinLocked(uint64_t offset, uint64_t len) {
   canary_.Assert();
 

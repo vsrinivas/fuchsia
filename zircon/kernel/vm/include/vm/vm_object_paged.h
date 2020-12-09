@@ -233,6 +233,11 @@ class VmObjectPaged final : public VmObject {
     return ret;
   }
 
+  // Promote this VMO's pages for reclamation under memory pressure.
+  // Currently used only for pager-backed VMOs to move their pages to the end of the
+  // pager-backed queue, so that they can be evicted first.
+  void PromoteForReclamation();
+
  private:
   // private constructor (use Create())
   VmObjectPaged(uint32_t options, fbl::RefPtr<VmHierarchyState> root_state);

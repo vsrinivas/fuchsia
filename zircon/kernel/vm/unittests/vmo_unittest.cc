@@ -935,6 +935,60 @@ static bool vmo_move_pages_on_access_test() {
   END_TEST;
 }
 
+static bool vmo_move_inactive_pages_test() {
+  BEGIN_TEST;
+
+  // If inactive VMOs (VMOs with no clones) are not promoted for eviction, there is nothing to test.
+  // Even though we can technically set the eviction_promote_no_clones flag here (with
+  // VmObject::EnableEvictionPromoteNoClones()), we cannot do that safely without affecting the
+  // default behavior outside the test, even if we enable it only for the duration of the test.
+  //
+  // TODO(fxbug.dev/65334): Remove the early return when an eviction hints API can be used, and we
+  // no longer need to classify pager-backed VMOs with no clones as inactive.
+  if (!VmObject::eviction_promote_no_clones()) {
+    return true;
+  }
+
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a pager-backed VMO with a single page.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  vm_page_t* page;
+  zx_status_t status = make_committed_pager_vmo(&page, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+  vmo->set_user_id(0xff);
+
+  // Our page should now be in a pager backed page queue.
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+
+  // If we lookup the page then it should be moved to specifically the first page queue.
+  status = vmo->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr);
+  EXPECT_EQ(ZX_OK, status);
+  size_t queue;
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Create a COW clone.
+  fbl::RefPtr<VmObject> clone;
+  status = vmo->CreateClone(Resizability::NonResizable, CloneType::PrivatePagerCopy, 0, PAGE_SIZE,
+                            true, &clone);
+  ASSERT_EQ(ZX_OK, status);
+  clone->set_user_id(0xfc);
+
+  // We're still in the first page queue.
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Destroy the clone, making the VMO inactive.
+  clone.reset();
+
+  // The page should now have moved to the last queue.
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(PageQueues::kNumPagerBacked - 1, queue);
+
+  END_TEST;
+}
+
 static bool vmo_eviction_test() {
   BEGIN_TEST;
   // Disable the page scanner as this test would be flaky if our pages get evicted by someone else.
@@ -1393,6 +1447,7 @@ VM_UNITTEST(vmo_lookup_clone_test)
 VM_UNITTEST(vmo_clone_removes_write_test)
 VM_UNITTEST(vmo_zero_scan_test)
 VM_UNITTEST(vmo_move_pages_on_access_test)
+VM_UNITTEST(vmo_move_inactive_pages_test)
 VM_UNITTEST(vmo_eviction_test)
 VM_UNITTEST(vmo_validate_page_splits_test)
 VM_UNITTEST(vmo_attribution_clones_test)

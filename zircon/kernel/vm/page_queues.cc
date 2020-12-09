@@ -106,6 +106,16 @@ void PageQueues::MoveToPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t
   list_add_head(&pager_backed_[0], &page->queue_node);
 }
 
+void PageQueues::MoveToEndOfPagerBacked(vm_page_t* page) {
+  DEBUG_ASSERT(page->state() == VM_PAGE_STATE_OBJECT);
+  DEBUG_ASSERT(!page->is_free());
+  DEBUG_ASSERT(page->object.pin_count == 0);
+  Guard<SpinLock, IrqSave> guard{&lock_};
+  DEBUG_ASSERT(list_in_list(&page->queue_node));
+  list_delete(&page->queue_node);
+  list_add_tail(&pager_backed_[kNumPagerBacked - 1], &page->queue_node);
+}
+
 void PageQueues::SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
   DEBUG_ASSERT(page->state() == VM_PAGE_STATE_OBJECT);
   DEBUG_ASSERT(!page->is_free());

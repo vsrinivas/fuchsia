@@ -211,6 +211,12 @@ class VmCowPages final : public VmHierarchyBase,
   // descendants within the range.
   void RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeChangeOp op) TA_REQ(lock_);
 
+  // Promote pages in the specified range for reclamation under memory pressure. |offset| will be
+  // rounded down to the page boundary, and |len| will be rounded up to the page boundary.
+  // Currently used only for pager-backed VMOs to move their pages to the end of the
+  // pager-backed queue, so that they can be evicted first.
+  void PromoteRangeForReclamationLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
+
  private:
   // private constructor (use Create())
   VmCowPages(fbl::RefPtr<VmHierarchyState> root_lock, uint32_t options, uint32_t pmm_alloc_flags,

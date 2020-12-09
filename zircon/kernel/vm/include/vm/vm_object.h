@@ -436,6 +436,11 @@ class VmObject : public VmHierarchyBase,
   // results.
   virtual void HarvestAccessedBits() {}
 
+  // See |eviction_promote_no_clones_|.
+  static void EnableEvictionPromoteNoClones() { eviction_promote_no_clones_ = true; }
+
+  static bool eviction_promote_no_clones() { return eviction_promote_no_clones_; }
+
  protected:
   explicit VmObject(fbl::RefPtr<VmHierarchyState> root_lock);
 
@@ -525,6 +530,10 @@ class VmObject : public VmHierarchyBase,
   };
 
   static fbl::DoublyLinkedList<VmoCursor*> all_vmos_cursors_ TA_GUARDED(AllVmosLock::Get());
+
+  // Set by kernel commandline kernel.page-scanner.promote-no-clones.
+  // If true, promote VMOs with no clones for eviction.
+  static bool eviction_promote_no_clones_;
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_OBJECT_H_
