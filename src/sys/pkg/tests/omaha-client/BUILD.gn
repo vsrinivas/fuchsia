@@ -48,12 +48,17 @@ test_package("omaha-client-integration-tests") {
   deps = [
     ":driver",
     "//src/sys/pkg/bin/omaha-client:bin",
+    "//src/sys/pkg/bin/system-updater:bin",
   ]
 
   binaries = [
     {
       name = "omaha_client_service"
       dest = "omaha-client-service"
+    },
+    {
+      name = "system_updater"
+      dest = "system-updater"
     },
   ]
 
@@ -62,6 +67,11 @@ test_package("omaha-client-integration-tests") {
       path = rebase_path(
               "//src/sys/pkg/bin/omaha-client/meta/omaha-client-service-for-integration-test.cmx")
       dest = "omaha-client-service-for-integration-test.cmx"
+    },
+    {
+      path = rebase_path(
+              "//src/sys/pkg/bin/system-updater/meta/system-updater-isolated.cmx")
+      dest = "system-updater-isolated.cmx"
     },
   ]
 

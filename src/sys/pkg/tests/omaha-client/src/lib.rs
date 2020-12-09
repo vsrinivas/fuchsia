@@ -47,7 +47,8 @@ use {
 
 const OMAHA_CLIENT_CMX: &str =
     "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/omaha-client-service-for-integration-test.cmx";
-const SYSTEM_UPDATER_CMX: &str = "fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx";
+const SYSTEM_UPDATER_CMX: &str =
+    "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/system-updater-isolated.cmx";
 
 struct Mounts {
     _test_dir: TempDir,
@@ -193,7 +194,12 @@ impl TestEnvBuilder {
                 (SystemUpdater::Mock(installer), env)
             }
             None => {
-                let mut system_updater = AppBuilder::new(SYSTEM_UPDATER_CMX);
+                let mut system_updater = AppBuilder::new(SYSTEM_UPDATER_CMX)
+                    .add_dir_to_namespace(
+                        "/config/build-info".into(),
+                        File::open(&mounts.build_info).expect("open build_info"),
+                    )
+                    .unwrap();
                 fs.add_proxy_service_to::<InstallerMarker, _>(
                     system_updater.directory_request().unwrap().clone(),
                 );

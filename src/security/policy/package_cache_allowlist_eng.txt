@@ -10,4 +10,5 @@ fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/pkg-resolver.cmx
 fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/system-updater.cmx
 fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx
 fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater.cmx
+fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/system-updater-isolated.cmx
 fuchsia-pkg://fuchsia.com/usb-system-update-checker-integration-tests#meta/pkg-resolver.cmx

@@ -15,6 +15,7 @@ fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-up
 fuchsia-pkg://fuchsia.com/pkgctl-integration-tests#meta/pkgctl-integration-test.cmx
 fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx
 fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater.cmx
+fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/system-updater-isolated.cmx
 fuchsia-pkg://fuchsia.com/pkgctl-integration-tests#meta/pkgctl.cmx
 fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/package_resolver_allowed.cmx
 fuchsia-pkg://fuchsia.com/isolated-swd-components#meta/system-updater-isolated.cmx
