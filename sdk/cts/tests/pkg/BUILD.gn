@@ -3,6 +3,9 @@
 # found in the LICENSE file.
 
 group("tests") {
-  deps = [ "fidl/cpp:tests" ]
+  deps = [
+    "fdio:tests",
+    "fidl/cpp:tests",
+  ]
   testonly = true
 }
