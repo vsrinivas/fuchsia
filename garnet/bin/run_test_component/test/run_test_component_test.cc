@@ -23,6 +23,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "lib/fit/defer.h"
 #include "src/lib/files/file.h"
 
 TEST(Run, TestHermeticEnv) {
@@ -104,6 +105,7 @@ TEST_F(RunFixture, ExposesDebugDataService) {
   auto status = fdio_ns_export_root(&flat);
   ASSERT_EQ(ZX_OK, status) << "FAILURE: Cannot export root namespace:"
                            << zx_status_get_string(status);
+  auto flat_guard = fit::defer([flat] { free(flat); });
 
   for (size_t i = 0; i < flat->count; ++i) {
     if (!strcmp(flat->path[i], "/svc")) {
@@ -157,6 +159,8 @@ TEST_F(RunFixture, TestTimeout) {
   auto status = fdio_ns_export_root(&flat);
   ASSERT_EQ(ZX_OK, status) << "FAILURE: Cannot export root namespace:"
                            << zx_status_get_string(status);
+
+  auto flat_guard = fit::defer([flat] { free(flat); });
 
   for (size_t i = 0; i < flat->count; ++i) {
     fdio_actions.push_back(action_ns_entry(flat->path[i], flat->handle[i]));
@@ -223,6 +227,7 @@ void run_component(const std::string& component_url, std::vector<const char*>& a
   auto status = fdio_ns_export_root(&flat);
   ASSERT_EQ(ZX_OK, status) << "FAILURE: Cannot export root namespace:"
                            << zx_status_get_string(status);
+  auto flat_guard = fit::defer([flat] { free(flat); });
 
   for (size_t i = 0; i < flat->count; ++i) {
     fdio_actions.push_back(action_ns_entry(flat->path[i], flat->handle[i]));
