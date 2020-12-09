@@ -133,8 +133,6 @@ func driverHostCrash(hostName, exceptHost string) *stringInLogCheck {
 
 // StringInLogsChecks returns checks to detect bad strings in certain logs.
 func StringInLogsChecks() (ret []FailureModeCheck) {
-	// For fxbug.dev/59720.
-	ret = append(ret, &stringInLogCheck{String: "KERN: fatal page fault in user thread", Type: serialLogType})
 	// For fxbug.dev/57548.
 	// Hardware watchdog tripped, should not happen.
 	// This string is specified in u-boot.
