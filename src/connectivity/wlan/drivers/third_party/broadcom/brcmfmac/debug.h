@@ -42,18 +42,18 @@
 #define BRCMF_DBG_EVENT(ifp, event_msg, REASON_FMT, reason_formatter) \
   BRCMF_DBG_LOG_EVENT(EVENT, ifp, event_msg, REASON_FMT, reason_formatter)
 
-#define BRCMF_DBG_LOG_EVENT(LEVEL, ifp, event_msg, REASON_FMT, reason_formatter)                  \
+#define BRCMF_DBG_LOG_EVENT(FILTER, ifp, event_msg, REASON_FMT, reason_formatter)                 \
   {                                                                                               \
     if (ifp == nullptr || event_msg == nullptr) {                                                 \
-      BRCMF_DBG(LEVEL, "Unable to log event %p for ifp %p", event_msg, ifp);                      \
+      BRCMF_DBG(FILTER, "Unable to log event %p for ifp %p", event_msg, ifp);                     \
     } else {                                                                                      \
-      BRCMF_DBG(LEVEL, "IF: %d event %s (%u)", ifp == nullptr ? -1 : ifp->ifidx,                  \
+      BRCMF_DBG(FILTER, "IF: %d event %s (%u)", ifp == nullptr ? -1 : ifp->ifidx,                 \
                 brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(event_msg->event_code)), \
                 event_msg->event_code);                                                           \
-      BRCMF_DBG(LEVEL, "  status %s", brcmf_fweh_get_event_status_str(event_msg->status));        \
-      BRCMF_DBG(LEVEL, "  reason " REASON_FMT, reason_formatter(event_msg->reason));              \
-      BRCMF_DBG(LEVEL, "    auth %s", brcmf_fweh_get_auth_type_str(event_msg->auth_type));        \
-      BRCMF_DBG(LEVEL, "   flags 0x%x", event_msg->flags);                                        \
+      BRCMF_DBG(FILTER, "  status %s", brcmf_fweh_get_event_status_str(event_msg->status));       \
+      BRCMF_DBG(FILTER, "  reason " REASON_FMT, reason_formatter(event_msg->reason));             \
+      BRCMF_DBG(FILTER, "    auth %s", brcmf_fweh_get_auth_type_str(event_msg->auth_type));       \
+      BRCMF_DBG(FILTER, "   flags 0x%x", event_msg->flags);                                       \
     }                                                                                             \
   }
 
@@ -73,6 +73,10 @@
       BRCMF_INFO("   flags 0x%x", event_msg->flags);                                               \
     }                                                                                              \
   }
+
+#define BRCMF_IFDBG(FILTER, ndev, fmt, ...)                                                      \
+  BRCMF_DBG(FILTER, "%s(%d): " fmt, brcmf_cfg80211_get_iface_str(ndev), ndev_to_if(ndev)->ifidx, \
+            ##__VA_ARGS__);
 
 constexpr size_t kMaxHexDumpBytes = 4096;  // point at which output will be truncated
 #define BRCMF_DBG_HEX_DUMP(condition, data, length, fmt, ...)            \

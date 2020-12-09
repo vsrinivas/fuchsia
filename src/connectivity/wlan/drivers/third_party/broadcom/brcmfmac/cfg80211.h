@@ -153,6 +153,7 @@
 #define BRCMF_VIF_EVENT_TIMEOUT_MSEC (1500)
 
 #define BRCMF_ACTIVE_SCAN_NUM_PROBES 3
+
 /**
  * enum brcmf_scan_status - scan engine status
  *
@@ -484,6 +485,7 @@ void brcmf_cfg80211_detach(struct brcmf_cfg80211_info* cfg);
 zx_status_t brcmf_cfg80211_up(struct net_device* ndev);
 zx_status_t brcmf_cfg80211_down(struct net_device* ndev);
 uint16_t brcmf_cfg80211_get_iftype(struct brcmf_if* ifp);
+const char* brcmf_cfg80211_get_iface_str(struct net_device* ndev);
 
 zx_status_t brcmf_cfg80211_add_iface(struct brcmf_pub* drvr, const char* name,
                                      struct vif_params* params,
