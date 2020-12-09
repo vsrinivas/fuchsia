@@ -628,7 +628,7 @@ if (dev_fuchsia_zbi_kernel_cmdline_golden != "") {
 
     args = [
       "--zbi-file",
-      "$root_out_dir/fuchsia.zbi",
+      rebase_path(inputs[2], root_build_dir),
       "--kernel-cmdline-golden-file",
       rebase_path(dev_fuchsia_zbi_kernel_cmdline_golden, root_build_dir),
       "--scrutiny",
