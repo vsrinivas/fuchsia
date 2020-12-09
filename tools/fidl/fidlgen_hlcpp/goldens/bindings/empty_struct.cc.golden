@@ -262,7 +262,7 @@ zx_status_t EmptyProtocol_SyncProxy::SendAndReceive(
     ::fidl::test::emptystruct::Empty e,
     ::fidl::test::emptystruct::Empty* out_e) {
   ::fidl::Encoder _encoder(internal::kEmptyProtocol_SendAndReceive_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable,

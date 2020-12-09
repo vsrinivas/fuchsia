@@ -38,7 +38,7 @@ TEST(ProxyController, Send) {
   EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(),
                                    nullptr));
 
-  MessageBuffer buffer;
+  IncomingMessageBuffer buffer;
   HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
   EXPECT_EQ(ZX_OK, message.Read(h2.get(), 0));
   EXPECT_EQ(0u, message.txid());
@@ -77,7 +77,7 @@ TEST(ProxyController, Callback) {
   loop.RunUntilIdle();
   EXPECT_EQ(0, callback_count);
 
-  MessageBuffer buffer;
+  IncomingMessageBuffer buffer;
   HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
   EXPECT_EQ(ZX_OK, message.Read(h2.get(), 0));
   EXPECT_NE(0u, message.txid());
@@ -237,7 +237,7 @@ TEST(ProxyController, Move) {
   loop.RunUntilIdle();
   EXPECT_EQ(0, callback_count);
 
-  MessageBuffer buffer;
+  IncomingMessageBuffer buffer;
   HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
   EXPECT_EQ(ZX_OK, message.Read(h2.get(), 0));
   EXPECT_NE(0u, message.txid());
@@ -287,7 +287,7 @@ TEST(ProxyController, Reset) {
   loop.RunUntilIdle();
   EXPECT_EQ(0, callback_count);
 
-  MessageBuffer buffer;
+  IncomingMessageBuffer buffer;
   HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
   EXPECT_EQ(ZX_OK, message.Read(h2.get(), 0));
   EXPECT_NE(0u, message.txid());

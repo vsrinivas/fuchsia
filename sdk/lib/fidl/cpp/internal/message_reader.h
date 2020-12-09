@@ -135,7 +135,7 @@ class MessageReader final {
                           const zx_packet_signal_t* signal);
   void OnHandleReady(async_dispatcher_t* dispatcher, zx_status_t status,
                      const zx_packet_signal_t* signal);
-  zx_status_t ReadAndDispatchMessage(MessageBuffer* buffer);
+  zx_status_t ReadAndDispatchMessage(IncomingMessageBuffer* buffer);
   void NotifyError(zx_status_t epitaph_value);
   void Stop();
 

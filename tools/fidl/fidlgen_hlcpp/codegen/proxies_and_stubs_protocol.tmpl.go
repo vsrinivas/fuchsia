@@ -538,7 +538,7 @@ void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
 zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }} {
   ::fidl::Encoder _encoder(internal::{{ .OrdinalName }});
     {{- if .HasResponse }}
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(&{{ .RequestTypeName }}, &{{ .ResponseTypeName }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .Request -}}

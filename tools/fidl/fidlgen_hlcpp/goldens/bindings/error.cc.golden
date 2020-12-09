@@ -386,7 +386,7 @@ Example_SyncProxy::~Example_SyncProxy() = default;
 zx_status_t Example_SyncProxy::foo(
     ::std::string s, ::fidl::test::error::Example_foo_Result* out_result) {
   ::fidl::Encoder _encoder(internal::kExample_foo_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ =
       proxy_.Call(&fidl_test_error_ExamplefooRequestTable,

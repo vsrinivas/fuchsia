@@ -262,7 +262,7 @@ TEST_F(ProtoValueTest, TableValue) {
 }
 
 TEST_F(ProtoValueTest, FidlMessageValue) {
-  fidl::MessageBuffer buffer_;
+  fidl::IncomingMessageBuffer buffer_;
   fidl::HLCPPIncomingMessage message = buffer_.CreateEmptyIncomingMessage();
   InterceptRequest<test::fidlcodec::examples::FidlCodecTestInterface>(
       message, [&](fidl::InterfacePtr<test::fidlcodec::examples::FidlCodecTestInterface>& ptr) {

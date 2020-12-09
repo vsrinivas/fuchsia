@@ -19,7 +19,7 @@ TEST(ServiceDirectoryTest, Control) {
   fidl::InterfaceHandle<test::placeholders::Echo> echo;
   EXPECT_EQ(ZX_OK, directory.Connect(echo.NewRequest()));
 
-  fidl::MessageBuffer buffer;
+  fidl::IncomingMessageBuffer buffer;
   auto message = buffer.CreateEmptyIncomingMessage();
   message.Read(svc_server.get(), 0);
 
@@ -34,7 +34,7 @@ TEST(ServiceDirectoryTest, CreateWithRequest) {
   fidl::InterfaceHandle<test::placeholders::Echo> echo;
   EXPECT_EQ(ZX_OK, directory->Connect(echo.NewRequest()));
 
-  fidl::MessageBuffer buffer;
+  fidl::IncomingMessageBuffer buffer;
   auto message = buffer.CreateEmptyIncomingMessage();
   message.Read(svc_server.get(), 0);
 
@@ -49,7 +49,7 @@ TEST(ServiceDirectoryTest, Clone) {
   fidl::InterfaceHandle<test::placeholders::Echo> echo;
   EXPECT_TRUE(directory->CloneChannel().is_valid());
 
-  fidl::MessageBuffer buffer;
+  fidl::IncomingMessageBuffer buffer;
   auto message = buffer.CreateEmptyIncomingMessage();
   message.Read(svc_server.get(), 0);
 

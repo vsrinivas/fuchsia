@@ -66,7 +66,7 @@ class MessageBuilder : public Builder {
 
  private:
   const fidl_type_t* type_;
-  MessageBuffer buffer_;
+  OutgoingMessageBuffer buffer_;
 };
 
 }  // namespace fidl

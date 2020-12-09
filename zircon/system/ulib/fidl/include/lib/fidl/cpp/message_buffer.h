@@ -13,17 +13,17 @@
 
 namespace fidl {
 
-class MessageBuffer {
+class OutgoingMessageBuffer {
  public:
   // Creates a |MessageBuffer| that allocates buffers for message of the
   // given capacities.
   //
   // The buffers are freed when the |MessageBuffer| is destructed.
-  explicit MessageBuffer(uint32_t bytes_capacity = ZX_CHANNEL_MAX_MSG_BYTES,
-                         uint32_t handles_capacity = ZX_CHANNEL_MAX_MSG_HANDLES);
+  explicit OutgoingMessageBuffer(uint32_t bytes_capacity = ZX_CHANNEL_MAX_MSG_BYTES,
+                                 uint32_t handles_capacity = ZX_CHANNEL_MAX_MSG_HANDLES);
 
   // The memory that backs the message is freed by this destructor.
-  ~MessageBuffer();
+  ~OutgoingMessageBuffer();
 
   // The memory in which bytes can be stored in this buffer.
   uint8_t* bytes() const { return buffer_; }
@@ -42,13 +42,43 @@ class MessageBuffer {
   // The returned |HLCPPOutgoingMessage| contains no bytes or handles.
   HLCPPOutgoingMessage CreateEmptyOutgoingMessage();
 
+  // Creates a |Builder| that is backed by the memory in this buffer.
+  Builder CreateBuilder();
+
+ private:
+  uint8_t* const buffer_;
+  const uint32_t bytes_capacity_;
+  const uint32_t handles_capacity_;
+};
+
+class IncomingMessageBuffer {
+ public:
+  // Creates a |MessageBuffer| that allocates buffers for message of the
+  // given capacities.
+  //
+  // The buffers are freed when the |MessageBuffer| is destructed.
+  explicit IncomingMessageBuffer(uint32_t bytes_capacity = ZX_CHANNEL_MAX_MSG_BYTES,
+                                 uint32_t handles_capacity = ZX_CHANNEL_MAX_MSG_HANDLES);
+
+  // The memory that backs the message is freed by this destructor.
+  ~IncomingMessageBuffer();
+
+  // The memory in which bytes can be stored in this buffer.
+  uint8_t* bytes() const { return buffer_; }
+
+  // The total number of bytes that can be stored in this buffer.
+  uint32_t bytes_capacity() const { return bytes_capacity_; }
+
+  // The memory in which handles can be stored in this buffer.
+  zx_handle_t* handles() const;
+
+  // The total number of handles that can be stored in this buffer.
+  uint32_t handles_capacity() const { return handles_capacity_; }
+
   // Creates a |HLCPPIncomingMessage| that is backed by the memory in this buffer.
   //
   // The returned |HLCPPIncomingMessage| contains no bytes or handles.
   HLCPPIncomingMessage CreateEmptyIncomingMessage();
-
-  // Creates a |Builder| that is backed by the memory in this buffer.
-  Builder CreateBuilder();
 
  private:
   uint8_t* const buffer_;

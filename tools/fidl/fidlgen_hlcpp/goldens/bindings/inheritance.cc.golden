@@ -166,7 +166,7 @@ super_SyncProxy::~super_SyncProxy() = default;
 
 zx_status_t super_SyncProxy::foo(::std::string s, int64_t* out_y) {
   ::fidl::Encoder _encoder(internal::ksuper_foo_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ =
       proxy_.Call(&fidl_test_inheritance_superfooRequestTable,
@@ -326,7 +326,7 @@ sub_SyncProxy::~sub_SyncProxy() = default;
 
 zx_status_t sub_SyncProxy::foo(::std::string s, int64_t* out_y) {
   ::fidl::Encoder _encoder(internal::ksub_foo_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ =
       proxy_.Call(&fidl_test_inheritance_subfooRequestTable,

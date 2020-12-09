@@ -21,29 +21,42 @@ size_t GetAllocSize(uint32_t bytes_capacity, uint32_t handles_capacity) {
 
 }  // namespace
 
-MessageBuffer::MessageBuffer(uint32_t bytes_capacity, uint32_t handles_capacity)
+OutgoingMessageBuffer::OutgoingMessageBuffer(uint32_t bytes_capacity, uint32_t handles_capacity)
     : buffer_(static_cast<uint8_t*>(malloc(GetAllocSize(bytes_capacity, handles_capacity)))),
       bytes_capacity_(bytes_capacity),
       handles_capacity_(handles_capacity) {
-  ZX_ASSERT_MSG(buffer_, "malloc returned NULL in MessageBuffer::MessageBuffer()");
+  ZX_ASSERT_MSG(buffer_, "malloc returned NULL in OutgoingMessageBuffer::OutgoingMessageBuffer()");
 }
 
-MessageBuffer::~MessageBuffer() { free(buffer_); }
+OutgoingMessageBuffer::~OutgoingMessageBuffer() { free(buffer_); }
 
-zx_handle_t* MessageBuffer::handles() const {
+zx_handle_t* OutgoingMessageBuffer::handles() const {
   return reinterpret_cast<zx_handle_t*>(buffer_ + AddPadding(bytes_capacity_));
 }
 
-HLCPPOutgoingMessage MessageBuffer::CreateEmptyOutgoingMessage() {
+HLCPPOutgoingMessage OutgoingMessageBuffer::CreateEmptyOutgoingMessage() {
   return HLCPPOutgoingMessage(BytePart(bytes(), bytes_capacity()),
                               HandlePart(handles(), handles_capacity()));
 }
 
-HLCPPIncomingMessage MessageBuffer::CreateEmptyIncomingMessage() {
+Builder OutgoingMessageBuffer::CreateBuilder() { return Builder(bytes(), bytes_capacity()); }
+
+IncomingMessageBuffer::IncomingMessageBuffer(uint32_t bytes_capacity, uint32_t handles_capacity)
+    : buffer_(static_cast<uint8_t*>(malloc(GetAllocSize(bytes_capacity, handles_capacity)))),
+      bytes_capacity_(bytes_capacity),
+      handles_capacity_(handles_capacity) {
+  ZX_ASSERT_MSG(buffer_, "malloc returned NULL in IncomingMessageBuffer::IncomingMessageBuffer()");
+}
+
+IncomingMessageBuffer::~IncomingMessageBuffer() { free(buffer_); }
+
+zx_handle_t* IncomingMessageBuffer::handles() const {
+  return reinterpret_cast<zx_handle_t*>(buffer_ + AddPadding(bytes_capacity_));
+}
+
+HLCPPIncomingMessage IncomingMessageBuffer::CreateEmptyIncomingMessage() {
   return HLCPPIncomingMessage(BytePart(bytes(), bytes_capacity()),
                               HandlePart(handles(), handles_capacity()));
 }
-
-Builder MessageBuffer::CreateBuilder() { return Builder(bytes(), bytes_capacity()); }
 
 }  // namespace fidl

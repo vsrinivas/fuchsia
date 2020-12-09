@@ -133,7 +133,7 @@ void LoggerImpl::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* 
   }
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
-    fidl::MessageBuffer buffer;
+    fidl::IncomingMessageBuffer buffer;
     for (uint64_t i = 0; i < signal->count; i++) {
       status = ReadAndDispatchMessage(&buffer, dispatcher);
       if (status == ZX_ERR_SHOULD_WAIT)
@@ -159,7 +159,7 @@ void LoggerImpl::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* 
   }
 }
 
-zx_status_t LoggerImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer,
+zx_status_t LoggerImpl::ReadAndDispatchMessage(fidl::IncomingMessageBuffer* buffer,
                                                async_dispatcher_t* dispatcher) {
   fidl::HLCPPIncomingMessage message = buffer->CreateEmptyIncomingMessage();
   zx_status_t status = message.Read(channel_.get(), 0);

@@ -602,7 +602,7 @@ SimpleProtocol_SyncProxy::~SimpleProtocol_SyncProxy() = default;
 zx_status_t SimpleProtocol_SyncProxy::Add(int32_t a, int32_t b,
                                           int32_t* out_sum) {
   ::fidl::Encoder _encoder(internal::kSimpleProtocol_Add_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_nullable_SimpleProtocolAddRequestTable,

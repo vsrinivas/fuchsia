@@ -965,7 +965,7 @@ Transitional_SyncProxy::~Transitional_SyncProxy() = default;
 
 zx_status_t Transitional_SyncProxy::Request(int64_t x, int64_t* out_y) {
   ::fidl::Encoder _encoder(internal::kTransitional_Request_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_TransitionalRequestRequestTable,
@@ -1261,7 +1261,7 @@ zx_status_t ChannelProtocol_SyncProxy::MethodA(int64_t a, int64_t b) {
 zx_status_t ChannelProtocol_SyncProxy::MethodB(int64_t a, int64_t b,
                                                int64_t* out_result) {
   ::fidl::Encoder _encoder(internal::kChannelProtocol_MethodB_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_ChannelProtocolMethodBRequestTable,
@@ -1276,7 +1276,7 @@ zx_status_t ChannelProtocol_SyncProxy::MethodB(int64_t a, int64_t b,
 zx_status_t ChannelProtocol_SyncProxy::MutateSocket(::zx::socket a,
                                                     ::zx::socket* out_b) {
   ::fidl::Encoder _encoder(internal::kChannelProtocol_MutateSocket_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_ChannelProtocolMutateSocketRequestTable,
@@ -1797,7 +1797,7 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::NoRequestNoResponse() {
 zx_status_t WithAndWithoutRequestResponse_SyncProxy::NoRequestEmptyResponse() {
   ::fidl::Encoder _encoder(
       internal::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable,
@@ -1813,7 +1813,7 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::NoRequestWithResponse(
     ::std::string* out_ret) {
   ::fidl::Encoder _encoder(
       internal::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable,
@@ -1842,7 +1842,7 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestEmptyResponse(
   ::fidl::Encoder _encoder(
       internal::
           kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable,
@@ -1858,7 +1858,7 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestWithResponse(
     ::std::string arg, ::std::string* out_ret) {
   ::fidl::Encoder _encoder(
       internal::kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable,
@@ -2164,7 +2164,7 @@ zx_status_t WithErrorSyntax_SyncProxy::ResponseAsStruct(
     ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
         out_result) {
   ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ResponseAsStruct_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable,
@@ -2182,7 +2182,7 @@ zx_status_t WithErrorSyntax_SyncProxy::ErrorAsPrimitive(
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
         out_result) {
   ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestTable,
@@ -2199,7 +2199,7 @@ zx_status_t WithErrorSyntax_SyncProxy::ErrorAsPrimitive(
 zx_status_t WithErrorSyntax_SyncProxy::ErrorAsEnum(
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* out_result) {
   ::fidl::Encoder _encoder(internal::kWithErrorSyntax_ErrorAsEnum_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestTable,

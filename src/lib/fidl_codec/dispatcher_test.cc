@@ -52,7 +52,7 @@ class DispatcherTest : public ::testing::Test {
 };
 
 TEST_F(DispatcherTest, TwoStringArrayInt) {
-  fidl::MessageBuffer buffer;
+  fidl::IncomingMessageBuffer buffer;
   fidl::HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
   InterceptRequest<FidlCodecTestInterface>(
       message, [&](fidl::InterfacePtr<FidlCodecTestInterface>& ptr) {
@@ -81,7 +81,7 @@ TEST_F(DispatcherTest, TwoStringArrayInt) {
 }
 
 TEST_F(DispatcherTest, TwoStringArrayIntIncorrect) {
-  fidl::MessageBuffer buffer;
+  fidl::IncomingMessageBuffer buffer;
   fidl::HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
   InterceptRequest<FidlCodecTestInterface>(
       message, [&](fidl::InterfacePtr<FidlCodecTestInterface>& ptr) {

@@ -102,7 +102,7 @@ class MessageDecoderTest : public ::testing::Test {
   uint64_t process_koid() const { return process_koid_; }
 
  private:
-  fidl::MessageBuffer buffer_;
+  fidl::IncomingMessageBuffer buffer_;
   LibraryLoader* loader_;
   std::unique_ptr<MessageDecoderDispatcher> decoder_;
   DisplayOptions display_options_;

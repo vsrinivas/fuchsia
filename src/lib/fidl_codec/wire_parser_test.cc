@@ -78,7 +78,7 @@ class WireParserTest : public ::testing::Test {
 };
 
 TEST_F(WireParserTest, ParseSingleString) {
-  fidl::MessageBuffer buffer;
+  fidl::IncomingMessageBuffer buffer;
   fidl::HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
 
   InterceptRequest<fidl::test::frobinator::Frobinator>(
@@ -141,7 +141,7 @@ TEST_F(WireParserTest, ParseSingleString) {
 #define TEST_DECODE_WIRE_BODY_COMMON(_iface, patched_offset, patched_value, _json_value,          \
                                      _pretty_print, num_bytes, ...)                               \
   do {                                                                                            \
-    fidl::MessageBuffer buffer;                                                                   \
+    fidl::IncomingMessageBuffer buffer;                                                           \
     fidl::HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();                     \
     using test::fidlcodec::examples::FidlCodecTestInterface;                                      \
     InterceptRequest<FidlCodecTestInterface>(                                                     \
@@ -1584,7 +1584,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   LibraryLoader loader;
   loader.AddContent(bad_schema, &err);
   ASSERT_TRUE(err.value == LibraryReadError::ErrorValue::kOk);
-  fidl::MessageBuffer buffer;
+  fidl::IncomingMessageBuffer buffer;
   fidl::HLCPPIncomingMessage message = buffer.CreateEmptyIncomingMessage();
 
   InterceptRequest<test::fidlcodec::examples::FidlCodecTestInterface>(

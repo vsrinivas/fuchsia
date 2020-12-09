@@ -272,7 +272,7 @@ zx_status_t Parent_SyncProxy::GetChild(
     ::fidl::InterfaceHandle<class ::fidl::test::protocolrequest::Child>*
         out_c) {
   ::fidl::Encoder _encoder(internal::kParent_GetChild_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ =
       proxy_.Call(&fidl_test_protocolrequest_ParentGetChildRequestTable,
@@ -289,7 +289,7 @@ zx_status_t Parent_SyncProxy::GetChild(
 zx_status_t Parent_SyncProxy::GetChildRequest(
     ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>* out_r) {
   ::fidl::Encoder _encoder(internal::kParent_GetChildRequest_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_protocolrequest_ParentGetChildRequestRequestTable,

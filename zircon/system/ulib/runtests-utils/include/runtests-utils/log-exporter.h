@@ -96,7 +96,7 @@ class LogExporter {
                      const zx_packet_signal_t* signal);
 
   // Decodes channel message and dispatches to correct handler.
-  zx_status_t ReadAndDispatchMessage(fidl::MessageBuffer* buffer);
+  zx_status_t ReadAndDispatchMessage(fidl::IncomingMessageBuffer* buffer);
 
   // Implementation of LogListener Log method.
   zx_status_t Log(fidl::HLCPPIncomingMessage message);

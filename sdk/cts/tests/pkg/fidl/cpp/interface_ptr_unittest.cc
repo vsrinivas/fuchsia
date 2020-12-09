@@ -132,11 +132,14 @@ TEST(InterfacePtr, MoveConstructWithOutstandingTransaction) {
   EXPECT_FALSE(ptr.is_bound());
   EXPECT_TRUE(ptr2.is_bound());
 
-  MessageBuffer buffer;
-  HLCPPIncomingMessage incoming_message = buffer.CreateEmptyIncomingMessage();
+  IncomingMessageBuffer incoming_buffer;
+  HLCPPIncomingMessage incoming_message = incoming_buffer.CreateEmptyIncomingMessage();
   EXPECT_EQ(ZX_OK, incoming_message.Read(h2.get(), 0));
-  HLCPPOutgoingMessage outgoing_message = buffer.CreateEmptyOutgoingMessage();
+  OutgoingMessageBuffer outgoing_buffer;
+  HLCPPOutgoingMessage outgoing_message = outgoing_buffer.CreateEmptyOutgoingMessage();
   outgoing_message.bytes().set_actual(incoming_message.bytes().actual());
+  memcpy(outgoing_message.bytes().data(), incoming_message.bytes().data(),
+         incoming_message.bytes().actual());
   EXPECT_EQ(ZX_OK, outgoing_message.Write(h2.get(), 0));
 
   EXPECT_EQ(0, reply_count);
@@ -184,11 +187,14 @@ TEST(InterfacePtr, MoveAssignWithOutstandingTransaction) {
   EXPECT_FALSE(ptr.is_bound());
   EXPECT_TRUE(ptr2.is_bound());
 
-  MessageBuffer buffer;
-  HLCPPIncomingMessage incoming_message = buffer.CreateEmptyIncomingMessage();
+  IncomingMessageBuffer incoming_buffer;
+  HLCPPIncomingMessage incoming_message = incoming_buffer.CreateEmptyIncomingMessage();
   EXPECT_EQ(ZX_OK, incoming_message.Read(h2.get(), 0));
-  HLCPPOutgoingMessage outgoing_message = buffer.CreateEmptyOutgoingMessage();
+  OutgoingMessageBuffer outgoing_buffer;
+  HLCPPOutgoingMessage outgoing_message = outgoing_buffer.CreateEmptyOutgoingMessage();
   outgoing_message.bytes().set_actual(incoming_message.bytes().actual());
+  memcpy(outgoing_message.bytes().data(), incoming_message.bytes().data(),
+         incoming_message.bytes().actual());
   EXPECT_EQ(ZX_OK, outgoing_message.Write(h2.get(), 0));
 
   EXPECT_EQ(0, reply_count);

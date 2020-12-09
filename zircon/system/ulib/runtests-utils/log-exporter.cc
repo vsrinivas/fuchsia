@@ -63,7 +63,7 @@ void LogExporter::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase*
   }
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
-    fidl::MessageBuffer buffer;
+    fidl::IncomingMessageBuffer buffer;
     for (uint64_t i = 0; i < signal->count; i++) {
       status = ReadAndDispatchMessage(&buffer);
       if (status == ZX_ERR_SHOULD_WAIT) {
@@ -92,7 +92,7 @@ void LogExporter::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase*
   NotifyError(ZX_ERR_PEER_CLOSED);
 }
 
-zx_status_t LogExporter::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
+zx_status_t LogExporter::ReadAndDispatchMessage(fidl::IncomingMessageBuffer* buffer) {
   fidl::HLCPPIncomingMessage message = buffer->CreateEmptyIncomingMessage();
   zx_status_t status = message.Read(channel_.get(), 0);
   if (status != ZX_OK) {

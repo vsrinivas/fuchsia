@@ -170,7 +170,7 @@ Top_SyncProxy::~Top_SyncProxy() = default;
 
 zx_status_t Top_SyncProxy::GetFoo(::bottom::Foo* out_foo) {
   ::fidl::Encoder _encoder(internal::kTop_GetFoo_Ordinal);
-  ::fidl::MessageBuffer buffer_;
+  ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ = proxy_.Call(
       &fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable,
