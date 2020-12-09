@@ -77,6 +77,14 @@ import("fuchsia_component.gni")
 #     Type: string
 #     Default: target_name
 #
+#   v2_test_runner (optional)
+#     If specified and no manifest is specified, a trivial Components v2
+#     manifest will be generated using the specified test runner. The
+#     generated manifest will include temporary storage at /tmp but no other
+#     special capabilities. Typical values: "rust_test_runner",
+#     "gtest_runner" or "go_test_runner".
+#     Type: string
+#
 #   deps
 #   visibility
 template("fuchsia_unittest_component") {
@@ -90,16 +98,45 @@ template("fuchsia_unittest_component") {
   } else {
     generated_target = "${target_name}_generated_manifest"
     generated_file(generated_target) {
-      contents = {
-        include = [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ]
-        program = {
-          binary = invoker.executable_path
-          if (defined(invoker.executable_args)) {
-            args = invoker.executable_args
-          }
+      program_stanza = {
+        binary = invoker.executable_path
+        if (defined(invoker.executable_args)) {
+          args = invoker.executable_args
         }
       }
-      outputs = [ "$target_out_dir/${generated_target}.cmx" ]
+      if (defined(invoker.v2_test_runner)) {
+        contents = {
+          include = [ "sdk/lib/diagnostics/syslog/client.shard.cml" ]
+          program = program_stanza
+          capabilities = [
+            {
+              protocol = "fuchsia.test.Suite"
+            },
+          ]
+          use = [
+            {
+              runner = invoker.v2_test_runner
+            },
+            {
+              storage = "temp"
+              path = "/tmp"
+            },
+          ]
+          expose = [
+            {
+              protocol = "fuchsia.test.Suite"
+              from = "self"
+            },
+          ]
+        }
+        outputs = [ "$target_out_dir/${generated_target}.cml" ]
+      } else {
+        contents = {
+          include = [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ]
+          program = program_stanza
+        }
+        outputs = [ "$target_out_dir/${generated_target}.cmx" ]
+      }
       output_conversion = "json"
       testonly = true
       visibility = [ ":*" ]
