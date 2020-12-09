@@ -113,8 +113,8 @@ gives two examples of important packaging conventions.
 #### meta
 
 By convention, the `meta` directory in a package contains metadata files that
-describe the package. The structure of this metadata, include the data formats
-used by these files, are part of the system ABI.
+describe the package. The structure of this metadata, including the data formats
+used by these files, is part of the system ABI.
 
 #### lib
 
