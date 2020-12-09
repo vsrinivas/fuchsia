@@ -247,12 +247,16 @@ TEST(TransactionTest, CreateTransactionTooManyBlocksFails) {
 
 // Attempts to reserve an blocks and inodes and then try to take only block reservation.
 TEST(TransactionDeathTest, TakeBlockReservationsWithInodeReservationDies) {
-  ASSERT_DEATH([]() {
-    FakeMinfs minfs;
-    auto transaction = std::make_unique<Transaction>(&minfs);
-    ASSERT_OK(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
+  FakeMinfs minfs;
+  std::unique_ptr<Transaction> transaction;
+  ASSERT_OK(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
+  // We lose ownership of the Transaction  in the ASSERT_DEATH, and it ends up leaking.
+  // So keep track of the raw pointer to be able to properly delete it afterwards.
+  Transaction* raw_transaction = transaction.get();
+  ASSERT_DEATH([&transaction]() {
     [[maybe_unused]] auto result = Transaction::TakeBlockReservations(std::move(transaction));
   });
+  delete raw_transaction;
 }
 
 // Tests allocation of a single inode.

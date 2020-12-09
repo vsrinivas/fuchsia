@@ -168,15 +168,15 @@ TEST(InspectorLoader, RunReadOperation) {
 }
 
 TEST(InspectorLoader, RunReadOperationBufferSizeAssertFail) {
-  ASSERT_DEATH(([] {
-                 uint64_t block_length = 2;
+  const uint64_t block_length = 2;
 
-                 storage::ArrayBuffer device(block_length, kMinfsBlockSize);
-                 MockTransactionHandler handler(&device);
-                 Loader loader(&handler);
+  storage::ArrayBuffer device(block_length, kMinfsBlockSize);
+  MockTransactionHandler handler(&device);
+  Loader loader(&handler);
 
-                 storage::ArrayBuffer client_buffer(0, kMinfsBlockSize);
+  storage::ArrayBuffer client_buffer(0, kMinfsBlockSize);
 
+  ASSERT_DEATH(([&] {
                  // Buffer too small. Should assert crash here.
                  loader.RunReadOperation(&client_buffer, 0, 0, block_length);
                }),
@@ -207,15 +207,15 @@ TEST(InspectorLoader, RunWriteOperation) {
 }
 
 TEST(InspectorLoader, RunWriteOperationBufferSizeAssertFail) {
-  ASSERT_DEATH(([] {
-                 uint64_t block_length = 2;
+  const uint64_t block_length = 2;
 
-                 storage::ArrayBuffer device(block_length, kMinfsBlockSize);
-                 MockTransactionHandler handler(&device);
-                 Loader loader(&handler);
+  storage::ArrayBuffer device(block_length, kMinfsBlockSize);
+  MockTransactionHandler handler(&device);
+  Loader loader(&handler);
 
-                 storage::ArrayBuffer client_buffer(0, kMinfsBlockSize);
+  storage::ArrayBuffer client_buffer(0, kMinfsBlockSize);
 
+  ASSERT_DEATH(([&] {
                  // Buffer too small. Should assert crash here.
                  loader.RunWriteOperation(&client_buffer, 0, 0, block_length);
                }),
