@@ -5,7 +5,6 @@
 package constants
 
 const (
-	FailedToReceiveFileMsg    = "failed to receive file"
 	FailedToStartTargetMsg    = "start target error"
 	QEMUInvocationErrorMsg    = "QEMU invocation error"
 	ReadConfigFileErrorMsg    = "could not open config file"

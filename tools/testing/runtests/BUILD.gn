@@ -10,8 +10,6 @@ go_library("runtests") {
     "data_sinks.go",
     "data_sinks_test.go",
     "output.go",
-    "poll.go",
-    "poll_test.go",
     "runtests.go",
   ]
   deps = [

@@ -31,8 +31,6 @@ func main() {
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(subcommands.CommandsCommand(), "")
 	subcommands.Register(subcommands.FlagsCommand(), "")
-	subcommands.Register(&ZedbootCommand{}, "")
-	subcommands.Register(&QEMUCommand{}, "")
 	subcommands.Register(&RunCommand{}, "")
 
 	flag.Parse()
