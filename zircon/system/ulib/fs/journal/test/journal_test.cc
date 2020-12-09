@@ -3216,7 +3216,7 @@ std::unique_ptr<Journal> CreateJournal(TestTransactionHandler& handler) {
                                    /*journal_start_block=*/0, Journal::Options());
 }
 
-TEST(JournaCallbackTest, CommitCallbackTriggeredAtCorrectTime) {
+TEST(JournalCallbackTest, CommitCallbackTriggeredAtCorrectTime) {
   constexpr int kBlockCount = 100;
   block_client::FakeBlockDevice device(kBlockCount, kBlockSize);
   TestTransactionHandler handler(device);
@@ -3412,6 +3412,18 @@ TEST(JournalCallbackTest, CompleteCallbackTriggeredAtCorrectTime) {
               ZX_OK);
   }
   EXPECT_TRUE(complete_callback_received);
+}
+
+TEST(JournalSimpleTest, EmptyOperationWithDataOrTrimReturnsError) {
+  constexpr int kBlockCount = 100;
+  block_client::FakeBlockDevice device(kBlockCount, kBlockSize);
+  TestTransactionHandler handler(device);
+  std::unique_ptr<Journal> journal = CreateJournal(handler);
+  EXPECT_EQ(journal->CommitTransaction(
+                {.data_promise = fit::make_promise(
+                     []() -> fit::result<void, zx_status_t> { return fit::ok(); })}),
+            ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(journal->CommitTransaction({.trim = {{}}}), ZX_ERR_INVALID_ARGS);
 }
 
 zx_status_t MakeJournalHelper(uint8_t* dest_buffer, uint64_t blocks, uint64_t block_size) {

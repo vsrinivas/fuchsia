@@ -147,8 +147,9 @@ Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> op
 
 zx_status_t Journal::CommitTransaction(Transaction transaction) {
   if (transaction.metadata_operations.empty()) {
-    ZX_ASSERT(!transaction.data_promise);  // Data must always be written with metadata.
-    ZX_ASSERT(transaction.trim.empty());   // For now, trim must come with metadata.
+    // For now, data must always be written with metadata and trim must come with metadata.
+    if (transaction.data_promise || !transaction.trim.empty())
+      return ZX_ERR_INVALID_ARGS;
     if (transaction.commit_callback)
       transaction.commit_callback();
     if (transaction.complete_callback)
