@@ -79,9 +79,6 @@ executable("service_startup_test_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]
-
-  # TODO(fxbug.dev/46846): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 fuchsia_component("service_startup_test") {
