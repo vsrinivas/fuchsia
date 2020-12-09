@@ -39,15 +39,10 @@ KCOUNTER(timeline_threading, "boot.timeline.threading")
 KCOUNTER(timeline_init, "boot.timeline.init")
 
 static void call_constructors() {
-  const bool trace = false;
-
   extern void (*const __init_array_start[])();
   extern void (*const __init_array_end[])();
 
   for (void (*const* a)() = __init_array_start; a != __init_array_end; a++) {
-    if (trace) {
-      printf("Calling global constructor %p\n", *a);
-    }
     (*a)();
   }
 }
@@ -60,14 +55,15 @@ void lk_main() {
   // bring the debuglog up early so we can safely printf
   dlog_init_early();
 
-  // we can safely printf now since we have both the debuglog and the current thread
-  // set which holds a per-line buffer.
+  // deal with any static constructors
+  call_constructors();
+
+  // we can safely printf now since we have the debuglog, the current thread set
+  // which holds (a per-line buffer), and global ctors finished (some of the
+  // printf machinery depends on ctors right now).
   // NOTE: botanist depends on this string being printed to serial. If this changes,
   // that code must be changed as well. See fxbug.dev/59963#c20.
   dprintf(ALWAYS, "printing enabled\n");
-
-  // deal with any static constructors
-  call_constructors();
 
   lk_primary_cpu_init_level(LK_INIT_LEVEL_EARLIEST, LK_INIT_LEVEL_ARCH_EARLY - 1);
 
