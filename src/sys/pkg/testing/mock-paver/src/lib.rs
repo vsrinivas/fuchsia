@@ -324,16 +324,16 @@ pub mod hooks {
     /// A Hook for the specific case where you want to control when each `PaverEvent` is emitted.
     pub fn throttle() -> (ThrottleHook, Throttle) {
         let (send, recv) = mpsc::unbounded();
-        (ThrottleHook(AsyncMutex::new(recv)), Throttle(send))
+        (ThrottleHook(AsyncMutex::new(Some(recv))), Throttle(send))
     }
 
-    /// Wrapper type to control how many `PaverEvent`s are unblocked.
-    /// Dropping the `Throttle` will cause all subsequent Paver requests to panic.
+    /// Wrapper type to control how many `PaverEvent`s are unblocked. Dropping the `Throttle` will
+    /// permanently release all subsequent `PaverEvent`s.
     pub struct Throttle(mpsc::UnboundedSender<PaverEvent>);
 
     impl Throttle {
         pub fn emit_next_paver_event(&self, expected_event: &PaverEvent) {
-            self.0.unbounded_send(expected_event.clone()).expect("emit next paver event");
+            self.0.unbounded_send(expected_event.clone()).expect("emit paver event");
         }
 
         pub fn emit_next_paver_events(&self, expected_events: &[PaverEvent]) {
@@ -343,7 +343,7 @@ pub mod hooks {
         }
     }
 
-    pub struct ThrottleHook(AsyncMutex<mpsc::UnboundedReceiver<PaverEvent>>);
+    pub struct ThrottleHook(AsyncMutex<Option<mpsc::UnboundedReceiver<PaverEvent>>>);
 
     #[async_trait]
     impl Hook for ThrottleHook {
@@ -351,9 +351,14 @@ pub mod hooks {
             &self,
             request: paver::BootManagerRequest,
         ) -> Option<paver::BootManagerRequest> {
-            let mut recv = self.0.lock().await;
-            let expected_event = recv.next().await.expect("receive unblock for boot manger");
-            assert_eq!(PaverEvent::from_boot_manager_request(&request), expected_event);
+            let mut optional_recv = self.0.lock().await;
+            if let Some(recv) = optional_recv.as_mut() {
+                if let Some(expected_request) = recv.next().await {
+                    assert_eq!(PaverEvent::from_boot_manager_request(&request), expected_request);
+                } else {
+                    assert!(optional_recv.take().is_some());
+                }
+            }
             Some(request)
         }
 
@@ -361,9 +366,14 @@ pub mod hooks {
             &self,
             request: paver::DataSinkRequest,
         ) -> Option<paver::DataSinkRequest> {
-            let mut recv = self.0.lock().await;
-            let expected_event = recv.next().await.expect("receive unblock for data sink");
-            assert_eq!(PaverEvent::from_data_sink_request(&request), expected_event);
+            let mut optional_recv = self.0.lock().await;
+            if let Some(recv) = optional_recv.as_mut() {
+                if let Some(expected_request) = recv.next().await {
+                    assert_eq!(PaverEvent::from_data_sink_request(&request), expected_request);
+                } else {
+                    assert!(optional_recv.take().is_some());
+                }
+            }
             Some(request)
         }
     }
@@ -789,6 +799,23 @@ pub mod tests {
             executor.run_until_stalled(&mut fut1).map(|fidl| fidl.unwrap()),
             Poll::Ready(Status::OK.into_raw())
         );
+
+        // Detach the throttler and observe subsequent requests are unblocked.
+        drop(throttler);
+        executor.run_singlethreaded(async {
+            assert_eq!(
+                paver.boot_manager.query_current_configuration().await.unwrap(),
+                Ok(paver::Configuration::A)
+            );
+            assert_matches!(
+                paver
+                    .data_sink
+                    .read_asset(paver::Configuration::A, paver::Asset::Kernel)
+                    .await
+                    .unwrap(),
+                Ok(_)
+            );
+        });
 
         Ok(())
     }
