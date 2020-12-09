@@ -35,7 +35,7 @@ pub async fn add_launch_event(
     app_version: Option<&str>,
     args: Option<&str>,
 ) -> anyhow::Result<()> {
-    if !is_opted_in() {
+    if is_test_env() || !is_opted_in() {
         return Ok(());
     }
 

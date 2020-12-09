@@ -67,6 +67,10 @@ https://policies.google.com/privacy
 ";
 
 pub fn show_analytics_notice<W: Write>(mut writer: W) {
+    if is_test_env() {
+        return;
+    }
+
     if is_new_user() {
         set_has_opened_ffx();
         let uuid = uuid();

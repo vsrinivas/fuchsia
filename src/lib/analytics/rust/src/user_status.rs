@@ -12,6 +12,14 @@ use uuid::Uuid;
 
 pub use crate::env_info::*;
 
+// TODO(fxbug.dev/66008): use a more explicit variable for the purpose rather
+// than the output dir
+const TEST_ENV_VAR: &'static str = "FUCHSIA_TEST_OUTDIR";
+
+pub fn is_test_env() -> bool {
+    std::env::var(TEST_ENV_VAR).is_ok()
+}
+
 pub fn is_new_user() -> bool {
     !analytics_status_file_exists()
 }
@@ -151,4 +159,21 @@ fn ffx_analytics_status_path() -> String {
 
 fn write_ffx_analytics_status() {
     write_boolean_to_file(&true, ffx_analytics_status_path())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    // Rust tests are run in parallel in threads, which means that this test is
+    // disruptive to other tests. There's little ROI to doing some kind of fork
+    // dance here, so the test is included, but not run by default.
+    #[ignore]
+    pub fn test_is_test_env() {
+        std::env::set(TEST_ENV_VAR, "somepath");
+        assert_eq!(true, is_test_env());
+        std::env::remove_var(TEST_ENV_VAR);
+        assert_eq!(false, is_test_env());
+    }
 }

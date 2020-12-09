@@ -47,6 +47,13 @@ impl Isolate {
 
         let ascendd_path = tmp_dir.join("ascendd");
 
+        let metrics_path = home_dir.join(".fuchsia/metrics");
+        std::fs::create_dir_all(&metrics_path)?;
+        // Mark that analytics are disabled
+        std::fs::write(metrics_path.join("analytics-status"), "0")?;
+        // Mark that the notice has been given
+        std::fs::write(metrics_path.join("ffx"), "1")?;
+
         let xdg_config_home = home_dir.join(".local/share");
 
         let user_config_dir = xdg_config_home.join("Fuchsia/ffx/config");
