@@ -250,6 +250,7 @@ zx_status_t dispatch_user_exception(uint exception_type,
       process->get_name(pname);
       char tname[ZX_MAX_NAME_LEN];
       thread->get_name(tname);
+      printf("KERN: exception_handler_worker returned %d\n", status);
       printf("KERN: %s in user thread '%s' in process '%s'\n", excp_type_to_string(exception_type),
              tname, pname);
 
