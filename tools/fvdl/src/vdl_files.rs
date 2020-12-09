@@ -8,7 +8,7 @@ use crate::types::{read_env_path, HostTools, ImageFiles, SSHKeys, VDLArgs};
 use ansi_term::Colour::*;
 use anyhow::{format_err, Result};
 use std::env;
-use std::fs::File;
+use std::fs::{copy, File};
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
@@ -127,7 +127,13 @@ impl VDLFiles {
         let vdl_args: VDLArgs = start_command.clone().into();
         let ssh_port = pick_unused_port().unwrap();
 
-        Command::new(&vdl)
+        // Enable emulator grpc server if running on linux
+        // doc: https://android.googlesource.com/platform/external/qemu/+/refs/heads/emu-master-dev/android/android-grpc/docs
+        let enable_emu_controller = match env::consts::OS {
+            "linux" => true,
+            _ => false,
+        };
+        let status = Command::new(&vdl)
             .arg("--action=start")
             .arg("--emulator_binary_path")
             .arg(&aemu)
@@ -159,7 +165,19 @@ impl VDLFiles {
             .arg(format!("--pointing_device={}", vdl_args.pointing_device))
             .arg(format!("--enable_webrtc={}", vdl_args.enable_grpcwebproxy))
             .arg(format!("--grpcwebproxy_port={}", vdl_args.grpcwebproxy_port))
+            .arg(format!("--enable_emu_controller={}", enable_emu_controller))
             .status()?;
+        if !status.success() {
+            let persistent_emu_log = read_env_path("FUCHSIA_OUT_DIR")
+                .unwrap_or(env::current_dir()?)
+                .join("emu_crash.log");
+            copy(&self.emulator_log, &persistent_emu_log)?;
+            return Err(format_err!(
+                "Cannot start Fuchsia Emulator. Exit status is {}\nEmulator log is copied to {}",
+                status.code().unwrap_or_default(),
+                persistent_emu_log.display()
+            ));
+        }
         if vdl_args.tuntap {
             println!("{}", Yellow.paint("To support fx tools on emulator, please run \"fx set-device step-atom-yard-juicy\""));
         } else {
