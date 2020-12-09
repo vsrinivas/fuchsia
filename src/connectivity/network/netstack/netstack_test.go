@@ -480,7 +480,9 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 // endpoint transitions to CLOSED state.
 func TestTCPEndpointMapClosing(t *testing.T) {
 	ns := newNetstack(t)
-	ns.addLoopback()
+	if err := ns.addLoopback(); err != nil {
+		t.Fatalf("ns.addLoopback() = %s", err)
+	}
 	createEP := func() *endpointWithSocket {
 		wq := &waiter.Queue{}
 		// Avoid polluting everything with err of type *tcpip.Error.
@@ -1044,13 +1046,13 @@ func newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t *testing.T, ndpDisp
 func getInterfaceAddresses(t *testing.T, ni *stackImpl, nicid tcpip.NICID) []tcpip.AddressWithPrefix {
 	t.Helper()
 
-	interfaces, err := ni.ListInterfaces(context.Background())
+	ifaces, err := ni.ListInterfaces(context.Background())
 	if err != nil {
 		t.Fatalf("ni.ListInterfaces() failed: %s", err)
 	}
 
 	info, found := stack.InterfaceInfo{}, false
-	for _, i := range interfaces {
+	for _, i := range ifaces {
 		if tcpip.NICID(i.Id) == nicid {
 			info = i
 			found = true
@@ -1058,7 +1060,7 @@ func getInterfaceAddresses(t *testing.T, ni *stackImpl, nicid tcpip.NICID) []tcp
 		}
 	}
 	if !found {
-		t.Fatalf("couldn't find NICID=%d in %+v", nicid, interfaces)
+		t.Fatalf("couldn't find NICID=%d in %#v", nicid, ifaces)
 	}
 
 	addrs := make([]tcpip.AddressWithPrefix, 0, len(info.Properties.Addresses))
@@ -1088,18 +1090,18 @@ func TestNetstackImpl_GetInterfaces2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	interfaces, err := ni.GetInterfaces2(context.Background())
+	ifaces, err := ni.GetInterfaces2(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if l := len(interfaces); l == 0 {
+	if l := len(ifaces); l == 0 {
 		t.Fatalf("got len(GetInterfaces2()) = %d, want != %d", l, l)
 	}
 
 	var expectedAddr fidlnet.IpAddress
 	expectedAddr.SetIpv4(fidlnet.Ipv4Address{})
-	for _, iface := range interfaces {
+	for _, iface := range ifaces {
 		if iface.Addr != expectedAddr {
 			t.Errorf("got interface %+v, want Addr = %+v", iface, expectedAddr)
 		}
