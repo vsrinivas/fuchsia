@@ -46,7 +46,7 @@ impl InspectDiagnostics {
     /// Create a new `InspectDiagnostics` that records diagnostics to the provided root node.
     pub fn new(root_node: &Node) -> Self {
         InspectDiagnostics {
-            failure_node: root_node.create_child("failure_counts"),
+            failure_node: root_node.create_child("failures"),
             last_failure_time: root_node.create_int("last_failure_time", 0),
             failure_counts: Mutex::new(HashMap::new()),
             recent_successes_buffer: Mutex::new(SampleMetricBuffer::new(
@@ -71,7 +71,7 @@ impl Diagnostics for InspectDiagnostics {
             Some(uint_property) => uint_property.add(1),
             None => {
                 failure_counts_lock
-                    .insert(*error, self.failure_node.create_uint(format!("{:?}", error), 1));
+                    .insert(*error, self.failure_node.create_uint(format!("{:?}_count", error), 1));
             }
         }
         self.last_failure_time.set(zx::Time::get_monotonic().into_nanos());
@@ -208,7 +208,7 @@ mod test {
         assert_inspect_tree!(
             inspector,
             root: contains {
-                failure_counts: {}
+                failures: {}
             }
         );
 
@@ -256,7 +256,7 @@ mod test {
         assert_inspect_tree!(
             inspector,
             root: contains {
-                failure_counts: {}
+                failures: {}
             }
         );
 
@@ -306,7 +306,7 @@ mod test {
         assert_inspect_tree!(
             inspector,
             root: contains {
-                failure_counts: {},
+                failures: {},
                 last_failure_time: 0i64,
             }
         );
@@ -315,8 +315,8 @@ mod test {
         assert_inspect_tree!(
             inspector,
             root: contains {
-                failure_counts: {
-                    NoCertificatesPresented: 1u64,
+                failures: {
+                    NoCertificatesPresented_count: 1u64,
                 },
                 last_failure_time: AnyProperty,
             }
@@ -327,9 +327,9 @@ mod test {
         assert_inspect_tree!(
             inspector,
             root: contains {
-                failure_counts: {
-                    NoCertificatesPresented: 2u64,
-                    NetworkError: 1u64,
+                failures: {
+                    NoCertificatesPresented_count: 2u64,
+                    NetworkError_count: 1u64,
                 },
                 last_failure_time: AnyProperty,
             }
