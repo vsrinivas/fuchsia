@@ -6,6 +6,7 @@
 
 #include <variant>
 
+#include <fbl/auto_call.h>
 #include <hid/boot.h>
 #include <hid/mouse.h>
 #include <zxtest/zxtest.h>
@@ -78,6 +79,7 @@ TEST(MouseTest, BootMouse) {
   const uint8_t* boot_mouse_desc = get_boot_mouse_report_desc(&boot_mouse_desc_size);
   auto parse_res = hid::ParseReportDescriptor(boot_mouse_desc, boot_mouse_desc_size, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
+  fbl::AutoCall free_descriptor([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
 
   hid_input_report::Mouse mouse;
 
@@ -140,6 +142,7 @@ TEST(MouseTest, ScrollMouse) {
     auto parse_res = hid::ParseReportDescriptor(descriptor, descriptor_size, &dev_desc);
     ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
   }
+  fbl::AutoCall free_descriptor([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
 
   hid_input_report::Mouse mouse;
 
@@ -183,6 +186,7 @@ TEST(MouseTest, VncMouse) {
         hid::ParseReportDescriptor(vnc_mouse_descriptor, sizeof(vnc_mouse_descriptor), &dev_desc);
     ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
   }
+  fbl::AutoCall free_descriptor([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
 
   hid_input_report::Mouse mouse;
 

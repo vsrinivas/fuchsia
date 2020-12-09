@@ -6,6 +6,7 @@
 
 #include <variant>
 
+#include <fbl/auto_call.h>
 #include <hid-parser/usages.h>
 #include <hid/ambient-light.h>
 #include <zxtest/zxtest.h>
@@ -25,6 +26,7 @@ TEST(SensorTest, AmbientLight) {
   size_t desc_size = get_ambient_light_report_desc(&desc);
   hid::ParseResult parse_res = hid::ParseReportDescriptor(desc, desc_size, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
+  fbl::AutoCall free_descriptor([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
 
   hid_input_report::Sensor sensor;
 

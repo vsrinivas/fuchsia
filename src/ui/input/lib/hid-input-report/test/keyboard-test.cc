@@ -9,6 +9,7 @@
 
 #include <variant>
 
+#include <fbl/auto_call.h>
 #include <hid/boot.h>
 #include <hid/usages.h>
 #include <zxtest/zxtest.h>
@@ -101,6 +102,7 @@ TEST(KeyboardTest, BootKeyboard) {
   hid::DeviceDescriptor* dev_desc = nullptr;
   auto parse_res = hid::ParseReportDescriptor(boot_keyboard_descriptor, descriptor_size, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
+  fbl::AutoCall free_descriptor([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
 
   hid_input_report::Keyboard keyboard;
 
@@ -159,6 +161,7 @@ TEST(KeyboardTest, OutputDescriptor) {
   hid::DeviceDescriptor* dev_desc = nullptr;
   auto parse_res = hid::ParseReportDescriptor(boot_keyboard_descriptor, descriptor_size, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
+  fbl::AutoCall free_descriptor([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
 
   hid_input_report::Keyboard keyboard;
 
@@ -191,6 +194,7 @@ TEST(KeyboardTest, DoubleCountingKeys) {
   auto parse_res =
       hid::ParseReportDescriptor(double_keys_keyboard, sizeof(double_keys_keyboard), &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
+  fbl::AutoCall free_descriptor([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
 
   // Test the descriptor parses correctly.
   hid_input_report::Keyboard keyboard;
@@ -214,6 +218,8 @@ TEST(KeyboardTest, BootKeyboardOutputReport) {
   hid::DeviceDescriptor* dev_desc = nullptr;
   auto parse_res = hid::ParseReportDescriptor(boot_keyboard_descriptor, descriptor_size, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
+  fbl::AutoCall free_descriptor([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
+
   hid_input_report::Keyboard keyboard;
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
@@ -243,6 +249,7 @@ TEST(KeyboardTest, FullKeysKeyboard) {
   auto parse_res =
       hid::ParseReportDescriptor(full_keys_keyboard, sizeof(full_keys_keyboard), &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
+  fbl::AutoCall free_descriptor([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
 
   hid_input_report::Keyboard keyboard;
 
