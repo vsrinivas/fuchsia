@@ -5,7 +5,7 @@
 use crate::internal::common::now;
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{
-    filter, group, Address, Audience, MessageEvent, MessengerType, Payload, Role, Status,
+    filter, group, role, Address, Audience, MessageEvent, MessengerType, Payload, Role, Status,
 };
 use crate::message::receptor::Receptor;
 use crate::tests::message_utils::verify_payload;
@@ -31,6 +31,12 @@ pub enum TestMessage {
 #[derive(Clone, Eq, PartialEq, Debug, Copy, Hash)]
 pub enum TestAddress {
     Foo(u64),
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Copy, Hash)]
+pub enum TestRole {
+    Foo,
+    Bar,
 }
 
 /// Ensures the delivery result matches expected value.
@@ -62,7 +68,7 @@ mod test {
     use super::*;
     use crate::message_hub_definition;
 
-    message_hub_definition!(TestMessage, TestAddress);
+    message_hub_definition!(TestMessage, TestAddress, TestRole);
 }
 
 mod num_test {
@@ -436,7 +442,9 @@ async fn test_messenger_behavior() {
     }
 }
 
-async fn verify_messenger_behavior(messenger_type: MessengerType<TestMessage, TestAddress>) {
+async fn verify_messenger_behavior(
+    messenger_type: MessengerType<TestMessage, TestAddress, TestRole>,
+) {
     let messenger_factory = test::message::create_hub();
 
     // Messenger to receive message.
@@ -1194,4 +1202,170 @@ async fn test_audience_matching() {
         assert!(audience_set.contains(&audience_subset));
         assert!(!audience_subset.contains(&audience_set));
     }
+}
+
+/// Ensures all members of a role receive messages.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_roles_membership() {
+    // Prepare a message hub.
+    let messenger_factory = test::message::create_hub();
+
+    // Create messengers who participate in roles
+    let (_, mut foo_role_receptor) = messenger_factory
+        .messenger_builder(MessengerType::Unbound)
+        .add_role(role::Signature::role(TestRole::Foo))
+        .build()
+        .await
+        .expect("recipient messenger should be created");
+    let (_, mut foo_role_receptor_2) = messenger_factory
+        .messenger_builder(MessengerType::Unbound)
+        .add_role(role::Signature::role(TestRole::Foo))
+        .build()
+        .await
+        .expect("recipient messenger should be created");
+
+    // Create messenger to send a message to the given participant.
+    let (sender, _) = messenger_factory
+        .messenger_builder(MessengerType::Unbound)
+        .build()
+        .await
+        .expect("sending messenger should be created");
+
+    let message = TestMessage::Foo;
+    let audience = Audience::Role(role::Signature::role(TestRole::Foo));
+    sender.message(message, audience).send().ack();
+
+    // Verify payload received by role members.
+    verify_payload(message, &mut foo_role_receptor, None).await;
+    verify_payload(message, &mut foo_role_receptor_2, None).await;
+}
+
+/// Ensures roles don't receive each other's messages.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_roles_exclusivity() {
+    // Prepare a message hub.
+    let messenger_factory = test::message::create_hub();
+
+    // Create messengers who participate in roles
+    let (_, mut foo_role_receptor) = messenger_factory
+        .messenger_builder(MessengerType::Unbound)
+        .add_role(role::Signature::role(TestRole::Foo))
+        .build()
+        .await
+        .expect("recipient messenger should be created");
+    let (_, mut bar_role_receptor) = messenger_factory
+        .messenger_builder(MessengerType::Unbound)
+        .add_role(role::Signature::role(TestRole::Bar))
+        .build()
+        .await
+        .expect("recipient messenger should be created");
+
+    // Create messenger to send a message to the given participant.
+    let (sender, _) = messenger_factory
+        .messenger_builder(MessengerType::Unbound)
+        .build()
+        .await
+        .expect("sending messenger should be created");
+
+    // Send messages to roles.
+    {
+        let message = TestMessage::Bar;
+        let audience = Audience::Role(role::Signature::role(TestRole::Bar));
+        sender.message(message, audience).send().ack();
+
+        // Verify payload received by role members.
+        verify_payload(message, &mut bar_role_receptor, None).await;
+    }
+    {
+        let message = TestMessage::Foo;
+        let audience = Audience::Role(role::Signature::role(TestRole::Foo));
+        sender.message(message, audience).send().ack();
+
+        // Verify payload received by role members.
+        verify_payload(message, &mut foo_role_receptor, None).await;
+    }
+}
+
+/// Ensures only role members receive messages directed to the role.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_roles_audience() {
+    // Prepare a message hub.
+    let messenger_factory = test::message::create_hub();
+
+    // Create messenger who participate in a role
+    let (_, mut foo_role_receptor) = messenger_factory
+        .messenger_builder(MessengerType::Unbound)
+        .add_role(role::Signature::role(TestRole::Foo))
+        .build()
+        .await
+        .expect("recipient messenger should be created");
+
+    // Create another messenger with no role to ensure messages are not routed
+    // improperly to other messengers.
+    let (outside_messenger, mut outside_receptor) = messenger_factory
+        .messenger_builder(MessengerType::Unbound)
+        .build()
+        .await
+        .expect("other messenger should be created");
+    let outside_signature = outside_messenger.get_signature();
+
+    // Create messenger to send a message to the given participant.
+    let (sender, _) = messenger_factory
+        .messenger_builder(MessengerType::Unbound)
+        .build()
+        .await
+        .expect("sending messenger should be created");
+
+    // Send message to role.
+    {
+        let message = TestMessage::Foo;
+        let audience = Audience::Role(role::Signature::role(TestRole::Foo));
+        sender.message(message, audience).send().ack();
+
+        // Verify payload received by role members.
+        verify_payload(message, &mut foo_role_receptor, None).await;
+    }
+
+    // Send message to outside messenger.
+    {
+        let message = TestMessage::Baz;
+        let audience = Audience::Messenger(outside_signature);
+        sender.message(message, audience).send().ack();
+
+        // Since outside messenger isn't part of the role, the next message should
+        // be the one sent directly to it, rather than the role.
+        verify_payload(message, &mut outside_receptor, None).await;
+    }
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_anonymous_roles() {
+    // Prepare a message hub.
+    let messenger_factory = test::message::create_hub();
+
+    // Create anonymous role.
+    let role = messenger_factory.create_role().await.expect("Role should be returned");
+
+    // Create messenger who participates in role.
+    let (_, mut role_receptor) = messenger_factory
+        .messenger_builder(MessengerType::Unbound)
+        .add_role(role)
+        .build()
+        .await
+        .expect("recipient messenger should be created");
+
+    // Create messenger to send a message to the given participant.
+    let (sender, _) = messenger_factory
+        .messenger_builder(MessengerType::Unbound)
+        .build()
+        .await
+        .expect("sending messenger should be created");
+
+    // Send messages to role.
+    let message = TestMessage::Bar;
+    let audience = Audience::Role(role);
+    sender.message(message, audience).send().ack();
+
+    // Verify payload received by role member.
+    verify_payload(message, &mut role_receptor, None).await;
 }

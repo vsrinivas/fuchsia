@@ -5,16 +5,18 @@
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::action_fuse::ActionFuseHandle;
 use crate::message::base::{
-    filter::Filter, ActionSender, Address, Audience, Fingerprint, Message, MessageAction,
-    MessageClientId, MessageError, MessageType, MessengerAction, MessengerId, MessengerType,
-    Payload, Role, Signature, Status,
+    filter::Filter, messenger, role, ActionSender, Address, Audience, Fingerprint, Message,
+    MessageAction, MessageClientId, MessageError, MessageType, MessengerAction, MessengerId,
+    MessengerType, Payload, Role, Signature, Status,
 };
 use crate::message::beacon::{Beacon, BeaconBuilder};
 use crate::message::messenger::{Messenger, MessengerClient, MessengerFactory};
-use anyhow::{format_err, Error};
+use anyhow::format_err;
 use fuchsia_async as fasync;
+use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use futures::StreamExt;
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 use std::sync::Arc;
@@ -25,6 +27,12 @@ pub type MessageHubHandle<P, A, R> = Arc<Mutex<MessageHub<P, A, R>>>;
 
 /// Type definition for exit message sender.
 type ExitSender = futures::channel::mpsc::UnboundedSender<()>;
+
+#[derive(thiserror::Error, Debug, Clone)]
+pub enum Error {
+    #[error("Failed to send response for operation: {0:?}")]
+    ResponseSendFail(Cow<'static, str>),
+}
 
 /// `Broker` captures the information necessary to process messages to a broker:
 /// messenger_id: The `MessengerId` associated with the broker so that it can be
@@ -46,6 +54,12 @@ pub struct MessageHub<P: Payload + 'static, A: Address + 'static, R: Role + 'sta
     /// Address mapping for looking up messengers. Used for sending messages
     /// to an addressable recipient.
     addresses: HashMap<A, MessengerId>,
+    /// MessengerId mapping to descriptors. This mapping allows the `MessageHub`
+    /// to remove a messenger from role memberships upon removal.
+    messengers: HashMap<MessengerId, messenger::Descriptor<P, A, R>>,
+    /// Role mapping for looking up which messengers belong to a particular
+    /// role.
+    roles: HashMap<role::Signature<R>, HashSet<MessengerId>>,
     /// Mapping of registered messengers (including brokers) to beacons. Used for
     /// delivering messages from a resolved address or a list of participants.
     beacons: HashMap<MessengerId, Beacon<P, A, R>>,
@@ -57,6 +71,8 @@ pub struct MessageHub<P: Payload + 'static, A: Address + 'static, R: Role + 'sta
     next_message_client_id: MessageClientId,
     /// Indicates whether the messenger channel has closed.
     messenger_channel_closed: bool,
+    /// Generator for creating new roles.
+    role_generator: role::Generator,
     /// Sender to signal when the hub should exit.
     exit_tx: ExitSender,
 }
@@ -72,6 +88,10 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
         let (messenger_tx, mut messenger_rx) =
             futures::channel::mpsc::unbounded::<MessengerAction<P, A, R>>();
 
+        // A channel used by the MessageHub to listen to requests for
+        // role-related actions.
+        let (role_tx, mut role_rx) = futures::channel::mpsc::unbounded::<role::Action<R>>();
+
         let (exit_tx, mut exit_rx) = futures::channel::mpsc::unbounded::<()>();
 
         let mut hub = MessageHub {
@@ -80,8 +100,11 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
             action_tx,
             beacons: HashMap::new(),
             addresses: HashMap::new(),
+            messengers: HashMap::new(),
+            roles: HashMap::new(),
             brokers: Vec::new(),
             messenger_channel_closed: false,
+            role_generator: role::Generator::new(),
             exit_tx,
         };
 
@@ -113,12 +136,17 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                             }
                         }
                     }
+                    role_action = role_rx.select_next_some() => {
+                        if hub.process_role_request(role_action).is_err() {
+                            fx_log_err!("failed to process role action");
+                        }
+                     }
                 }
             }
         })
         .detach();
 
-        MessengerFactory::new(messenger_tx)
+        MessengerFactory::new(messenger_tx, role_tx)
     }
 
     fn check_exit(&self) {
@@ -284,7 +312,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
         &self,
         sender_id: MessengerId,
         audience: &Audience<A, R>,
-    ) -> Result<(HashSet<MessengerId>, bool), Error> {
+    ) -> Result<(HashSet<MessengerId>, bool), anyhow::Error> {
         let mut return_set = HashSet::new();
         let mut delivery_required = false;
 
@@ -297,9 +325,10 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                     return Err(format_err!("could not resolve address"));
                 }
             }
-            Audience::Role(_) => {
-                // TODO(fxb/64977): Add Role resolution
-                return Err(format_err!("not implemented"));
+            Audience::Role(role) => {
+                if let Some(messengers) = self.roles.get(role) {
+                    return_set.extend(messengers);
+                }
             }
             Audience::Group(group) => {
                 for audience in &group.audiences {
@@ -338,9 +367,11 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
 
     async fn process_messenger_request(&mut self, action: MessengerAction<P, A, R>) {
         match action {
-            MessengerAction::Create(messenger_type, responder, messenger_tx) => {
+            MessengerAction::Create(messenger_descriptor, responder, messenger_tx) => {
                 let mut optional_address = None;
-                if let MessengerType::Addressable(address) = messenger_type.clone() {
+                if let MessengerType::Addressable(address) =
+                    messenger_descriptor.messenger_type.clone()
+                {
                     optional_address = Some(address.clone());
                     if self.addresses.contains_key(&address) {
                         responder
@@ -376,7 +407,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                     BeaconBuilder::new(messenger.clone()).add_fuse(fuse.clone()).build();
                 self.beacons.insert(id, beacon);
 
-                match messenger_type {
+                match messenger_descriptor.messenger_type.clone() {
                     MessengerType::Broker(filter) => {
                         self.brokers.push(Broker { messenger_id: id, filter });
                     }
@@ -387,6 +418,15 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                         // We do not track Unbounded messengers.
                     }
                 }
+
+                // Track roles
+                for role in &messenger_descriptor.roles {
+                    self.roles.entry(role.clone()).or_insert_with(|| HashSet::new()).insert(id);
+                }
+
+                // Update descriptor mapping and role records
+                self.messengers.insert(id, messenger_descriptor);
+
                 responder.send(Ok((MessengerClient::new(messenger, fuse.clone()), receptor))).ok();
             }
             MessengerAction::Delete(messenger) => {
@@ -398,6 +438,21 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
 
     fn delete_by_signature(&mut self, signature: Signature<A>) {
         let id = self.resolve_messenger_id(&signature);
+
+        // Clean up roles
+        if let Some(descriptor) = self.messengers.remove(&id) {
+            for role in descriptor.roles {
+                // Remove messenger from each role it belongs to. Remove the
+                // role as well if it no longer has any members.
+                if let Some(messengers) = self.roles.get_mut(&role) {
+                    messengers.remove(&id);
+
+                    if messengers.is_empty() {
+                        self.roles.remove(&role);
+                    }
+                }
+            }
+        }
 
         // These are all safe if the containers don't contain any items matching `id`.
         self.beacons.remove(&id);
@@ -462,6 +517,18 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
             }
 
             self.send_to_next(fingerprint.id, outgoing_message).await;
+        }
+    }
+
+    fn process_role_request(&mut self, action: role::Action<R>) -> Result<(), Error> {
+        match action {
+            // Handle creating a new role. Currently there is no way this call
+            // can fail. A signature for the generated role is handed back
+            // through the provided response sender.
+            role::Action::Create(result_sender) => result_sender
+                .send(Ok(role::Response::Role(self.role_generator.generate())))
+                .map(|_| ())
+                .map_err(|_| Error::ResponseSendFail("create role".into())),
         }
     }
 }

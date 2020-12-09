@@ -4,42 +4,101 @@
 
 use crate::message::action_fuse::ActionFuseHandle;
 use crate::message::base::{
-    default, ActionSender, Address, Audience, CreateMessengerResult, Fingerprint, Message,
-    MessageAction, MessageError, MessageType, MessengerAction, MessengerActionSender, MessengerId,
-    MessengerType, Payload, Role, Signature,
+    default, messenger, role, ActionSender, Address, Audience, CreateMessengerResult, Fingerprint,
+    Message, MessageAction, MessageError, MessageType, MessengerAction, MessengerActionSender,
+    MessengerId, MessengerType, Payload, Role, Signature,
 };
 use crate::message::beacon::Beacon;
 use crate::message::message_builder::MessageBuilder;
 
+use std::collections::HashSet;
 use std::convert::identity;
 
-/// MessengerFactory is the artifact of creating a MessageHub. It can be used
-/// to create new messengers.
-#[derive(Clone)]
-pub struct MessengerFactory<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
+/// `Builder` is the default way for creating a new messenger. Beyond the base
+/// messenger type, this helper allows for roles to be associated as well
+/// during construction.
+pub struct Builder<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
+    /// The sender for sending messenger creation requests to the MessageHub.
     messenger_action_tx: MessengerActionSender<P, A, R>,
+    /// The type of messenger to be created. Along with roles, the messenger
+    /// type determines what audiences the messenger is included in.
+    messenger_type: MessengerType<P, A, R>,
+    /// The roles to associate with this messenger.
+    roles: HashSet<role::Signature<R>>,
 }
 
-impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessengerFactory<P, A, R> {
-    pub(super) fn new(action_tx: MessengerActionSender<P, A, R>) -> MessengerFactory<P, A, R> {
-        MessengerFactory { messenger_action_tx: action_tx }
+impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Builder<P, A, R> {
+    /// Creates a new builder for constructing a messenger of the given
+    /// type.
+    fn new(
+        messenger_action_tx: MessengerActionSender<P, A, R>,
+        messenger_type: MessengerType<P, A, R>,
+    ) -> Self {
+        Self { messenger_action_tx, messenger_type, roles: HashSet::new() }
     }
 
-    pub async fn create(
-        &self,
-        messenger_type: MessengerType<P, A, R>,
-    ) -> CreateMessengerResult<P, A, R> {
+    /// Includes the specified role in the list of roles to be associated with
+    /// the new messenger.
+    pub fn add_role(mut self, role: role::Signature<R>) -> Self {
+        self.roles.insert(role);
+        self
+    }
+
+    /// Constructs a messenger based on specifications supplied.
+    pub async fn build(self) -> CreateMessengerResult<P, A, R> {
         let (tx, rx) = futures::channel::oneshot::channel::<CreateMessengerResult<P, A, R>>();
 
         self.messenger_action_tx
             .unbounded_send(MessengerAction::Create(
-                messenger_type,
+                messenger::Descriptor { messenger_type: self.messenger_type, roles: self.roles },
                 tx,
                 self.messenger_action_tx.clone(),
             ))
             .ok();
 
         rx.await.map_err(|_| MessageError::Unexpected).and_then(identity)
+    }
+}
+
+/// MessengerFactory is the artifact of creating a MessageHub. It can be used
+/// to create new messengers.
+#[derive(Clone)]
+pub struct MessengerFactory<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
+    role_action_tx: role::ActionSender<R>,
+    messenger_action_tx: MessengerActionSender<P, A, R>,
+}
+
+impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessengerFactory<P, A, R> {
+    pub(super) fn new(
+        action_tx: MessengerActionSender<P, A, R>,
+        role_action_tx: role::ActionSender<R>,
+    ) -> MessengerFactory<P, A, R> {
+        MessengerFactory { messenger_action_tx: action_tx, role_action_tx }
+    }
+
+    /// This method is soft-deprecated for now.
+    // #[deprecated(note = "Please use messenger_builder instead")]
+    pub async fn create_role(&self) -> Result<role::Signature<R>, role::Error> {
+        let (tx, rx) =
+            futures::channel::oneshot::channel::<Result<role::Response<R>, role::Error>>();
+
+        self.role_action_tx.unbounded_send(role::Action::Create(tx)).ok();
+
+        rx.await.unwrap_or(Err(role::Error::CommunicationError)).and_then(|result| match result {
+            role::Response::Role(signature) => Ok(signature),
+        })
+    }
+
+    /// Returns a builder for constructing a new messenger.
+    pub fn messenger_builder(&self, messenger_type: MessengerType<P, A, R>) -> Builder<P, A, R> {
+        Builder::new(self.messenger_action_tx.clone(), messenger_type)
+    }
+
+    pub async fn create(
+        &self,
+        messenger_type: MessengerType<P, A, R>,
+    ) -> CreateMessengerResult<P, A, R> {
+        self.messenger_builder(messenger_type).build().await
     }
 
     pub fn delete(&self, signature: Signature<A>) {
