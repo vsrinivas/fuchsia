@@ -40,16 +40,17 @@ developers understand when changes to a FIDL definition break downstream code.
 ## Migrating to fuchsia.io2
 
 The Process Framework team is actively exploring how to migrate Fuchsia
-libraries and applications from [fuchsia.io](/sdk/fidl/fuchsia.io/)
-to [fuchsia.io2](/sdk/fidl/fuchsia.io2/)
-in order to increase type safety and client reliability.
+libraries and applications from [fuchsia.io](/sdk/fidl/fuchsia.io/) to
+[fuchsia.io2](/sdk/fidl/fuchsia.io2/) in order to increase type safety and
+client reliability.
 
 ## Migrating to fuchsia.hardware.network
 
 The Connectivity team is actively exploring how to migrate existing Fuchsia
-drivers and clients from [fuchsia.hardware.ethernet](/sdk/fidl/fuchsia.hardware.ethernet/)
-to [fuchsia.hardware.network](/sdk/fidl/fuchsia.hardware.network/)
-in order to improve network performance.
+drivers and clients from
+[fuchsia.hardware.ethernet](/sdk/fidl/fuchsia.hardware.ethernet/) to
+[fuchsia.hardware.network](/sdk/fidl/fuchsia.hardware.network/) in order to
+improve network performance.
 
 ## Components v2
 

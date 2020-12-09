@@ -176,11 +176,10 @@ languages is up to the author of the tool.
 
 ### Style Guides
 
-Follow the corresponding [style guide](/docs/development/languages/README.md) for the language
-and area of Fuchsia being developed. For example,
-if the tool is included with Zircon and written
-in C++, use the style guide for C++ in Zircon. Specifically, avoid creating a
-separate style guide for tools.
+Follow the corresponding [style guide](/docs/development/languages/README.md)
+for the language and area of Fuchsia being developed. For example, if the tool
+is included with Zircon and written in C++, use the style guide for C++ in
+Zircon. Specifically, avoid creating a separate style guide for tools.
 
 ### Runtime Link Dependencies
 
