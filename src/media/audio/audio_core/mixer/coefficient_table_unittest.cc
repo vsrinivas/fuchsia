@@ -39,6 +39,22 @@ TEST(CoefficientTableTest, IntegralStrideHasPhysicallyContiguousIndicies) {
   }
 }
 
+TEST(CoefficientTableTest, ReadSlice) {
+  Fixed width(10);
+  CoefficientTable table(width.raw_value(), Fixed::Format::FractionalBits);
+
+  const auto FRAC_BITS = Fixed::Format::FractionalBits;
+  const auto FRAC_ONE = 1 << FRAC_BITS;
+  for (uint32_t fraction = 0; fraction < FRAC_ONE; ++fraction) {
+    auto slice = table.ReadSlice(fraction, width.Ceiling());
+    ASSERT_NE(slice, nullptr);
+
+    for (int64_t i = 0; i < width.Ceiling(); ++i) {
+      ASSERT_EQ(slice[i], table[fraction + (i << Fixed::Format::FractionalBits)]);
+    }
+  }
+}
+
 TEST(CoefficientTableCacheTest, CachingWorks) {
   using InputT = std::pair<int, int>;
 

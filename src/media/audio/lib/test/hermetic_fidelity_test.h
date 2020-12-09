@@ -94,7 +94,7 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   // are designed so that they pass if 'actual' is greater than or equal to 'expected' -- or if
   // 'actual' is less than 'expected' by (at most) the following tolerance. This tolerance also
   // determines the number of digits of precision for 'expected' values, when stored or displayed.
-  static constexpr double kFidelityDbTolerance = 0.001;
+  static constexpr double kFidelityDbTolerance = 0.118;
 
   // The power-of-two size of our spectrum analysis buffer.
   static constexpr size_t kFreqTestBufSize = 65536;

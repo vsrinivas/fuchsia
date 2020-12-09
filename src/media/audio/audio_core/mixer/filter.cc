@@ -52,32 +52,42 @@ float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients
 
   float result = 0.0f;
 
+  // We use some raw pointers here to make the loops below vectorizable. Note that the coefficient
+  // table stores values with an integer stride contiguously, which is what we want for the loops
+  // below.
+  //
+  // Ex:
+  //  coefficient_ptr[1] == filter_coefficients[frac_offset + frac_size_];
+  //
   // Negative side first
-  auto sample_ptr = center;
-  int32_t source_idx = 0;
-  for (auto off = frac_offset; off < side_width_; off += frac_size_) {
-    auto contribution = (*sample_ptr) * filter_coefficients[off];
+  float* sample_ptr = center;
+  size_t source_frames = (side_width_ + (frac_size_ - 1) - frac_offset) >> num_frac_bits_;
+  const float* coefficient_ptr = filter_coefficients.ReadSlice(frac_offset, source_frames);
+  for (size_t source_idx = 0; source_idx < source_frames; ++source_idx) {
+    FX_CHECK(coefficient_ptr != nullptr);
+    auto contribution = (*sample_ptr) * coefficient_ptr[source_idx];
     if constexpr (kTraceComputation) {
-      FX_LOGS(INFO) << "Adding src[" << source_idx << "] " << (*sample_ptr) << " x flt[" << off
-                    << "] " << filter_coefficients[off] << " = " << contribution;
+      FX_LOGS(INFO) << "Adding src[" << -source_idx << "] " << (*sample_ptr) << " x "
+                    << coefficient_ptr[source_idx] << " = " << contribution;
     }
     result += contribution;
     --sample_ptr;
-    --source_idx;
   }
 
   // Then positive side
   sample_ptr = center + 1;
-  source_idx = 1;
-  for (auto off = frac_size_ - frac_offset; off < side_width_; off += frac_size_) {
-    auto contribution = (*sample_ptr) * filter_coefficients[off];
+  // Reduction of:
+  //   side_width_ + (frac_size_ - 1) - (frac_size_ - frac_offset)
+  source_frames = (side_width_ + frac_offset - 1) >> num_frac_bits_;
+  coefficient_ptr = filter_coefficients.ReadSlice(frac_size_ - frac_offset, source_frames);
+  for (size_t source_idx = 0; source_idx < source_frames; ++source_idx) {
+    FX_CHECK(coefficient_ptr != nullptr);
+    auto contribution = sample_ptr[source_idx] * coefficient_ptr[source_idx];
     if constexpr (kTraceComputation) {
-      FX_LOGS(INFO) << "Adding src[" << source_idx << "] " << (*sample_ptr) << " x flt[" << off
-                    << "] " << filter_coefficients[off] << " = " << contribution;
+      FX_LOGS(INFO) << "Adding src[" << 1 + source_idx << "] " << sample_ptr[source_idx] << " x "
+                    << coefficient_ptr[source_idx] << " = " << contribution;
     }
     result += contribution;
-    ++sample_ptr;
-    ++source_idx;
   }
   if constexpr (kTraceComputation) {
     FX_LOGS(INFO) << "... to get " << result;

@@ -114,7 +114,8 @@ template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
 inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src_void,
     uint32_t frac_src_frames, int32_t* frac_src_offset) {
-  TRACE_DURATION("audio", "SincSamplerImpl::MixInternal");
+  TRACE_DURATION("audio", "SincSamplerImpl::MixInternal", "source_rate", source_rate_, "dest_rate",
+                 dest_rate_, "source_chans", SrcChanCount, "dest_chans", DestChanCount);
 
   static_assert(ScaleType != ScalerType::MUTED || DoAccumulate == true,
                 "Mixing muted streams without accumulation is explicitly unsupported");

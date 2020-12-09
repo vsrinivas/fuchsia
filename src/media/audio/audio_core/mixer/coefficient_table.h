@@ -32,13 +32,30 @@ class CoefficientTable {
   // rounded up to the nearest integer in the same fixed-point format.
   CoefficientTable(uint32_t width, uint32_t frac_bits)
       : stride_(ComputeStride(width, frac_bits)),
+        frac_filter_width_(width),
         frac_bits_(frac_bits),
         frac_mask_((1 << frac_bits_) - 1),
         table_(stride_ * (1 << frac_bits)) {}
 
   float& operator[](uint32_t offset) { return table_[PhysicalIndex(offset)]; }
-
   const float& operator[](uint32_t offset) const { return table_[PhysicalIndex(offset)]; }
+
+  // Reads |num_coefficients| coefficients starting at |offset|. The result is a pointer to
+  // |num_coefficients| coefficients with the following semantics:
+  //
+  // auto c = new CoefficientTable(width, frac_bits);
+  // auto f = c->ReadSlice(offset, size);
+  // ASSERT_EQ(f[0], c[off + 0 << frac_bits]);
+  // ASSERT_EQ(f[1], c[off + 1 << frac_bits]);
+  //  ...
+  // ASSERT_EQ(f[size], c[off + size << frac_bits]);
+  const float* ReadSlice(uint32_t offset, size_t num_coefficients) const {
+    if (offset + ((num_coefficients - 1) << frac_bits_) > frac_filter_width_) {
+      return nullptr;
+    }
+    // The underlying table already stores these consecutively.
+    return &table_[PhysicalIndex(offset)];
+  }
 
   auto begin() { return table_.begin(); }
   auto end() { return table_.end(); }
@@ -55,6 +72,7 @@ class CoefficientTable {
   }
 
   const uint32_t stride_;
+  const uint32_t frac_filter_width_;
   const uint32_t frac_bits_;
   const uint32_t frac_mask_;
   std::vector<float> table_;

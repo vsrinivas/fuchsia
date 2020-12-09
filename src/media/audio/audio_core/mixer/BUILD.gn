@@ -60,6 +60,17 @@ source_set("mixer") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+
+  # Allow some of our loops to be vectorized by the compiler.
+  cflags = [
+    "-ffast-math",
+
+    # Allow inf/nan until we can sanitize these out of streams (these are not normally allowed with
+    # -ffast-math).
+    "-fhonor-infinities",
+    "-fhonor-nans",
+    "-fno-finite-math-only",
+  ]
 }
 
 group("tests") {
