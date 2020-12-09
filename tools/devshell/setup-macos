@@ -64,15 +64,8 @@ function clear_tools {
 
 function allow_tools {
   for tool in "${FIREWALL_TOOLS[@]}"; do
-    for f in "${FUCHSIA_BUILD_DIR}/host-tools/${tool}" "${FUCHSIA_BUILD_DIR}"/host_*/"${tool}"; do
-      release_and_debug=("$f")
-      local unstripped="$(dirname "$f")/exe.unstripped/$(basename "$f")"
-      if [[ -f "${unstripped}" ]]; then
-        release_and_debug+=("${unstripped}")
-      fi
-      for t in "${release_and_debug[@]}"; do
-        dryer sudo ${FIREWALL_CMD} --add "$t" --unblockapp "$t" > /dev/null
-      done
+    for f in "${FUCHSIA_BUILD_DIR}/host-tools/${tool}" "${FUCHSIA_BUILD_DIR}"/host_*/"${tool}" "${FUCHSIA_BUILD_DIR}"/host_*/exe.unstripped/"${tool}"; do
+      dryer sudo ${FIREWALL_CMD} --add "$f" --unblockapp "$f" > /dev/null
     done
   done
 }
