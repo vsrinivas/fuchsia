@@ -145,14 +145,11 @@ executable("pcie_test") {
   sources = [ "pcie_test.cc" ]
 
   defines = testing_defines
-  deps = [
+  deps = testing_deps
+  deps += [
     "//garnet/lib/wlan/protocol:protocol",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:pcie",
-    "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -196,6 +193,7 @@ executable("wlan-device_test") {
 
   defines = testing_defines
   deps = testing_deps
+  deps += [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:pcie" ]
 }
 
 unittest_package("iwlwifi_test") {

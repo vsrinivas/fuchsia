@@ -23,6 +23,8 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/pcie_device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-pci.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 
 namespace wlan::testing {
@@ -307,6 +309,32 @@ TEST_F(WlanDeviceTest, MacRelease) {
             ZX_ERR_PEER_CLOSED);
 }
 
+// TODO(fxbug.dev/63618): Modify tests that use wlanphy_ops, to use the below approach.
+// Once that is done, this test can be removed since it will get covered by existing tests.
+TEST_F(WlanDeviceTest, CreateAndDestroyIfaceTest) {
+  FakePcieDdkTester tester;
+
+  wlanphy_impl_create_iface_req_t req = {
+      .role = WLAN_INFO_MAC_ROLE_CLIENT,
+      .sme_channel = sme_channel_,
+  };
+  uint16_t out_id;
+
+  auto device = std::make_unique<wlan::iwlwifi::PcieDevice>(fake_ddk::kFakeParent);
+  device->override_iwl_trans(sim_trans_.iwl_trans());
+
+  EXPECT_OK(device->WlanphyImplCreateIface(&req, &out_id), "failed to create iface");
+  EXPECT_OK(device->WlanphyImplDestroyIface(out_id), "failed to destroy iface");
+
+  // Delete same interface again to ensure it fails.
+  EXPECT_NOT_OK(device->WlanphyImplDestroyIface(out_id), "second destroy should fail");
+
+  auto mac_device = tester.macdevs()[0];
+  mac_device->DdkAsyncRemove();
+  EXPECT_OK(tester.ddk().WaitUntilRemove());
+  mac_device->DdkRelease();
+}
+
 /////////////////////////////////////       PHY       //////////////////////////////////////////////
 
 TEST_F(WlanDeviceTest, PhyQuery) {
@@ -333,6 +361,26 @@ TEST_F(WlanDeviceTest, PhyQuery) {
   EXPECT_EQ(expected_rate(11), info.wlan_info.bands[0].rates[11]);  // 54 Mbps
   EXPECT_EQ(expected_rate(4), info.wlan_info.bands[1].rates[0]);    // 6 Mbps
   EXPECT_EQ(165, info.wlan_info.bands[1].supported_channels.channels[24]);
+}
+
+TEST_F(WlanDeviceTest, PhyPartialCreateCleanup) {
+  wlanphy_impl_create_iface_req_t req = {
+      .role = WLAN_INFO_MAC_ROLE_CLIENT,
+      .sme_channel = sme_channel_,
+  };
+  uint16_t iface_id;
+  struct iwl_trans* iwl_trans = sim_trans_.iwl_trans();
+
+  // Test input null pointers
+  ASSERT_OK(phy_create_iface(iwl_trans, &req, &iface_id));
+
+  // Ensure mvmvif got created and indexed.
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
+  ASSERT_NOT_NULL(mvm->mvmvif[iface_id]);
+
+  // Ensure partial create failure removes it from the index.
+  phy_create_iface_undo(iwl_trans, iface_id);
+  ASSERT_NULL(mvm->mvmvif[iface_id]);
 }
 
 TEST_F(WlanDeviceTest, PhyCreateDestroySingleInterface) {

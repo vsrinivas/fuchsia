@@ -137,7 +137,7 @@ void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t
 
 /////////////////////////////////////       MAC       //////////////////////////////////////////////
 
-static zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
+zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
   struct iwl_mvm_vif* mvmvif = ctx;
 
   if (!ctx || !info) {
@@ -168,8 +168,7 @@ static zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) 
   return ZX_OK;
 }
 
-static zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc,
-                             zx_handle_t* out_sme_channel) {
+zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel) {
   struct iwl_mvm_vif* mvmvif = ctx;
 
   if (!ctx || !ifc || !out_sme_channel) {
@@ -201,7 +200,7 @@ static zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc,
   return ret;
 }
 
-static void mac_stop(void* ctx) {
+void mac_stop(void* ctx) {
   struct iwl_mvm_vif* mvmvif = ctx;
 
   zx_status_t ret = iwl_mvm_mac_remove_interface(mvmvif);
@@ -210,7 +209,7 @@ static void mac_stop(void* ctx) {
   }
 }
 
-static zx_status_t mac_queue_tx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
+zx_status_t mac_queue_tx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
   IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -233,7 +232,7 @@ static zx_status_t mac_ensure_phyctxt_valid(struct iwl_mvm_vif* mvmvif) {
   return ZX_OK;
 }
 
-static zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* chan) {
+zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* chan) {
   struct iwl_mvm_vif* mvmvif = ctx;
   zx_status_t ret;
 
@@ -286,7 +285,7 @@ static void free_ap_mvm_sta(struct iwl_mvm_sta* mvm_sta) {
   free(mvm_sta);
 }
 
-static zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss_config_t* config) {
+zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss_config_t* config) {
   struct iwl_mvm_vif* mvmvif = ctx;
 
   IWL_INFO(mvmvif, "mac_configure_bss(bssid=%02x:%02x:%02x:%02x:%02x:%02x, type=%d, remote=%d)\n",
@@ -351,35 +350,33 @@ exit:
   return ret;
 }
 
-static zx_status_t mac_enable_beaconing(void* ctx, uint32_t options,
-                                        const wlan_bcn_config_t* bcn_cfg) {
+zx_status_t mac_enable_beaconing(void* ctx, uint32_t options, const wlan_bcn_config_t* bcn_cfg) {
   IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t mac_configure_beacon(void* ctx, uint32_t options, const wlan_tx_packet_t* pkt) {
+zx_status_t mac_configure_beacon(void* ctx, uint32_t options, const wlan_tx_packet_t* pkt) {
   IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* key_config) {
+zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* key_config) {
   IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t mac_configure_assoc(void* ctx, uint32_t options,
-                                       const wlan_assoc_ctx_t* assoc_ctx) {
+zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ctx_t* assoc_ctx) {
   IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t mac_clear_assoc(void* ctx, uint32_t options, const uint8_t* peer_addr,
-                                   size_t peer_addr_size) {
+zx_status_t mac_clear_assoc(void* ctx, uint32_t options, const uint8_t* peer_addr,
+                            size_t peer_addr_size) {
   IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t mac_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_config) {
+zx_status_t mac_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_config) {
   struct iwl_mvm_vif* mvmvif = ctx;
 
   if (scan_config->scan_type != WLAN_HW_SCAN_TYPE_PASSIVE) {
@@ -390,6 +387,7 @@ static zx_status_t mac_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* sca
   return iwl_mvm_mac_hw_scan(mvmvif, scan_config);
 }
 
+// TODO (fxbug.dev/63618) - to be removed.
 wlanmac_protocol_ops_t wlanmac_ops = {
     .query = mac_query,
     .start = mac_start,
@@ -405,18 +403,17 @@ wlanmac_protocol_ops_t wlanmac_ops = {
     .start_hw_scan = mac_start_hw_scan,
 };
 
-static void mac_unbind(void* ctx) {
+void mac_unbind(void* ctx) {
   struct iwl_mvm_vif* mvmvif = ctx;
 
   if (!mvmvif->zxdev) {
     return;
   }
 
-  device_unbind_reply(mvmvif->zxdev);
   mvmvif->zxdev = NULL;
 }
 
-static void mac_release(void* ctx) {
+void mac_release(void* ctx) {
   struct iwl_mvm_vif* mvmvif = ctx;
 
   // Close the SME channel if it is NOT transferred to MLME yet.
@@ -428,6 +425,7 @@ static void mac_release(void* ctx) {
   free(mvmvif);
 }
 
+// //TODO (fxbug.dev/63618) - to be removed.
 zx_protocol_device_t device_mac_ops = {
     .version = DEVICE_OPS_VERSION,
     .unbind = mac_unbind,
@@ -525,7 +523,78 @@ zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* r
   mvmvif->bss_conf.beacon_int = 100;
   mvmvif->bss_conf.dtim_period = 3;
 
+  mvmvif->mvm = mvm;
+  mvmvif->mac_role = req->role;
+  mvmvif->sme_channel = req->sme_channel;
+  ret = iwl_mvm_bind_mvmvif(mvm, idx, mvmvif);
+  if (ret != ZX_OK) {
+    IWL_ERR(ctx, "Cannot assign the new mvmvif to MVM: %s\n", zx_status_get_string(ret));
+    // The allocated mvmvif instance will be freed at mac_release().
+    goto unlock;
+  }
+  *out_iface_id = idx;
+
+unlock:
+  mtx_unlock(&mvm->mutex);
+  return ret;
+}
+
+// If there are failures post phy_create_iface() and before phy_start_iface()
+// is successful, then this is the API to undo phy_create_iface().
+void phy_create_iface_undo(struct iwl_trans* iwl_trans, uint16_t idx) {
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
+
+  // Unbind and free the mvmvif interface.
+  mtx_lock(&mvm->mutex);
+  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[idx];
+  iwl_mvm_unbind_mvmvif(mvm, idx);
+  mtx_unlock(&mvm->mutex);
+
+  free(mvmvif);
+}
+
+zx_status_t phy_start_iface(void* ctx, zx_device_t* zxdev, uint16_t idx) {
+  struct iwl_trans* iwl_trans = ctx;
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
+  zx_status_t ret = ZX_OK;
+
+  mtx_lock(&mvm->mutex);
+  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[idx];
+  mvmvif->zxdev = zxdev;
+
+  // Only start FW MVM for the first device. The 'vif_count' will be increased in
+  // iwl_mvm_mac_add_interface().
+  if (mvm->vif_count == 0) {
+    ret = __iwl_mvm_mac_start(mvm);
+    if (ret != ZX_OK) {
+      IWL_ERR(ctx, "Cannot start MVM MAC: %s\n", zx_status_get_string(ret));
+
+      // If we fail to start the FW MVM, we shall unbind the mvmvif from the mvm. For the mvmvif
+      // instance, it will be released in mac_release().
+      // TODO: It does not look clean to have unbind happen here.
+      iwl_mvm_unbind_mvmvif(mvm, idx);
+    }
+  }
+
+  mtx_unlock(&mvm->mutex);
+  return ret;
+}
+
+// This function is unifies create and start of MAC interface.
+// TODO (fxbug.dev/63618) - can be removed once we get rid of ops structure.
+zx_status_t phy_create_and_start_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
+                                       uint16_t* out_iface_id) {
+  struct iwl_trans* iwl_trans = ctx;
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
+
+  zx_status_t status = phy_create_iface(ctx, req, out_iface_id);
+  if (status != ZX_OK) {
+    IWL_ERR(ctx, "%s() failed to create phy iface - %s\n", __func__, zx_status_get_string(status));
+    return status;
+  }
+
   // Add MAC interface
+  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[*out_iface_id];
   device_add_args_t mac_args = {
       .version = DEVICE_ADD_ARGS_VERSION,
       .name = "iwlwifi-wlanmac",
@@ -536,38 +605,21 @@ zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* r
   };
 
   // Add this MAC device into the tree. The parent device is the PHY device.
-  ret = device_add(iwl_trans->zxdev, &mac_args, &mvmvif->zxdev);
-  if (ret == ZX_OK) {
-    mvmvif->mvm = mvm;
-    mvmvif->mac_role = req->role;
-    mvmvif->sme_channel = req->sme_channel;
-    ret = iwl_mvm_bind_mvmvif(mvm, idx, mvmvif);
-    if (ret != ZX_OK) {
-      IWL_ERR(ctx, "Cannot assign the new mvmvif to MVM: %s\n", zx_status_get_string(ret));
-      // The allocated mvmvif instance will be freed at mac_release().
-      goto unlock;
-    }
-    *out_iface_id = idx;
-
-    // Only start FW MVM for the first device. The 'vif_count' will be increased in
-    // iwl_mvm_mac_add_interface().
-    if (mvm->vif_count == 0) {
-      ret = __iwl_mvm_mac_start(mvm);
-      if (ret != ZX_OK) {
-        IWL_ERR(ctx, "Cannot start MVM MAC: %s\n", zx_status_get_string(ret));
-
-        // If we fail to start the FW MVM, we shall unbind the mvmvif from the mvm. For the mvmvif
-        // instance, it will be released in mac_release().
-        iwl_mvm_unbind_mvmvif(mvm, idx);
-        goto unlock;
-      }
-    }
+  zx_device_t* zxdev;
+  status = device_add(iwl_trans->zxdev, &mac_args, &zxdev);
+  if (status != ZX_OK) {
+    phy_create_iface_undo(iwl_trans, out_iface_id);
+    return status;
   }
 
-unlock:
-  mtx_unlock(&mvm->mutex);
+  status = phy_start_iface(ctx, zxdev, *out_iface_id);
+  if (status != ZX_OK) {
+    IWL_ERR(ctx, "%s() failed to start phy iface %d - %s\n", __func__, *out_iface_id,
+            zx_status_get_string(status));
+    return status;
+  }
 
-  return ret;
+  return status;
 }
 
 // This function is working with a PHY context ('ctx') to delete a MAC interface ('id').
@@ -597,11 +649,6 @@ zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
     goto unlock;
   }
 
-  // Only remove the device if it has been added and not removed yet.
-  if (mvmvif->zxdev) {
-    device_async_remove(mvmvif->zxdev);
-  }
-
   // Unlink the 'mvmvif' from the 'mvm'. The zxdev will be removed in mac_unbind(),
   // and the memory of 'mvmvif' will be freed in mac_release().
   iwl_mvm_unbind_mvmvif(mvm, id);
@@ -612,9 +659,10 @@ zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
     __iwl_mvm_mac_stop(mvm);
   }
 
+  device_async_remove(mvmvif->zxdev);
+
 unlock:
   mtx_unlock(&mvm->mutex);
-
   return ret;
 }
 
@@ -633,9 +681,10 @@ zx_status_t phy_get_country(void* ctx, wlanphy_country_t* out_country) {
 }
 
 // PHY interface
+// TODO (fxbug.dev/63618) - to be removed.
 wlanphy_impl_protocol_ops_t wlanphy_ops = {
     .query = phy_query,
-    .create_iface = phy_create_iface,
+    .create_iface = phy_create_and_start_iface,
     .destroy_iface = phy_destroy_iface,
     .set_country = phy_set_country,
     .get_country = phy_get_country,

@@ -71,6 +71,7 @@
 #endif
 
 #ifdef __cplusplus
+#include <atomic>
 using std::atomic_int;
 #endif  // __cplusplus
 
@@ -1329,7 +1330,7 @@ static inline bool iwl_mvm_firmware_running(struct iwl_mvm* mvm) {
   return test_bit(IWL_MVM_STATUS_FIRMWARE_RUNNING, &mvm->status);
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 /* Must be called with rcu_read_lock() held and it can only be
  * released when mvmsta is not needed anymore.
  */
@@ -1518,7 +1519,7 @@ static inline bool iwl_mvm_is_tt_in_fw(struct iwl_mvm* mvm) {
    */
   return fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_CT_KILL_BY_FW) &&
          fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TEMP_THS_REPORT_SUPPORT);
-#else /* CONFIG_THERMAL */
+#else  /* CONFIG_THERMAL */
   return false;
 #endif /* CONFIG_THERMAL */
 }
@@ -1606,7 +1607,7 @@ void iwl_mvm_async_handlers_purge(struct iwl_mvm* mvm);
 
 static inline void iwl_mvm_set_tx_cmd_ccmp(struct ieee80211_tx_info* info,
                                            struct iwl_tx_cmd* tx_cmd) {
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     struct ieee80211_key_conf* keyconf = info->control.hw_key;
 
     tx_cmd->sec_ctl = TX_CMD_SEC_CCM;
@@ -1615,7 +1616,7 @@ static inline void iwl_mvm_set_tx_cmd_ccmp(struct ieee80211_tx_info* info,
 }
 
 static inline void iwl_mvm_wait_for_async_handlers(struct iwl_mvm* mvm) {
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     flush_work(&mvm->async_handlers_wk);
 #endif  // NEEDS_PORTING
 }
@@ -1960,11 +1961,11 @@ static inline void iwl_mvm_stop_device(struct iwl_mvm* mvm) {
   /* calling this function without using dump_start/end since at this
    * point we already hold the op mode mutex
    */
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   iwl_fw_dbg_collect_sync(&mvm->fwrt);
 #endif  // NEEDS_PORTING
   iwl_fw_cancel_timestamp(&mvm->fwrt);
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   iwl_free_fw_paging(&mvm->fwrt);
 #endif  // NEEDS_PORTING
   clear_bit(IWL_MVM_STATUS_FIRMWARE_RUNNING, &mvm->status);

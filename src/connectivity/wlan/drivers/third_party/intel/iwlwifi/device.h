@@ -37,6 +37,11 @@ class Device : public DeviceType, public ::ddk::WlanphyImplProtocol<Device, ::dd
   zx_status_t WlanphyImplClearCountry();
   zx_status_t WlanphyImplGetCountry(wlanphy_country_t* out_country);
 
+  // Intended for only unit test overriding.
+  void override_iwl_trans(struct iwl_trans* iwl_trans) {
+    iwl_trans_ = iwl_trans;
+  };
+
  protected:
   // Only derived classes are allowed to create this object.
   explicit Device(zx_device* parent) : DeviceType(parent){};

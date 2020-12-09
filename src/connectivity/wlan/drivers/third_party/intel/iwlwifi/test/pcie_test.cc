@@ -38,117 +38,13 @@ extern "C" {
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/pcie_device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-pci.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
 
 namespace {
 
-constexpr int test_device_id = 0x095a;
-constexpr int test_subsys_device_id = 0x9e10;
-
-// Fake PCI to emulate calls during bind.
-class FakePci {
- public:
-  FakePci() {
-    proto_ops_.config_read16 = PciConfigRead16;
-    proto_ops_.get_device_info = PciGetDeviceInfo;
-    proto_ops_.enable_bus_master = PciEnableBusMaster;
-    proto_ops_.get_bti = PciGetBti;
-    proto_ops_.get_bar = PciGetBar;
-    proto_ops_.config_write8 = PciConfigWrite8;
-    proto_ops_.config_read8 = PciConfigRead8;
-    proto_ops_.configure_irq_mode = PciConfigureIrqMode;
-    proto_ops_.map_interrupt = PciMapInterrupt;
-
-    proto_.ctx = this;
-    proto_.ops = &proto_ops_;
-  }
-
-  const pci_protocol_t* GetProto() const { return &proto_; }
-
-  static zx_status_t PciConfigureIrqMode(void* ctx, uint32_t requested_irq_count) { return ZX_OK; }
-  static zx_status_t PciConfigRead8(void* ctx, uint16_t offset, uint8_t* out_value) {
-    return ZX_OK;
-  }
-  static zx_status_t PciConfigWrite8(void* ctx, uint16_t offset, uint8_t value) { return ZX_OK; }
-  static zx_status_t PciEnableBusMaster(void* ctx, bool enable) { return ZX_OK; }
-
-  static zx_status_t PciGetDeviceInfo(void* ctx, zx_pcie_device_info_t* out_info) {
-    out_info->device_id = test_device_id;
-    return ZX_OK;
-  }
-  static zx_status_t PciConfigRead16(void* ctx, uint16_t offset, uint16_t* out_value) {
-    *out_value = test_subsys_device_id;
-    return ZX_OK;
-  }
-
-  static zx_status_t PciMapInterrupt(void* ctx, uint32_t which_irq, zx_handle_t* out_handle) {
-    return ZX_OK;
-  }
-
-  static zx_status_t PciGetBti(void* ctx, uint32_t index, zx_handle_t* out_bti) {
-    zx::bti* bti = (zx::bti*)out_bti;
-    zx_status_t status = fake_bti_create(bti->reset_and_get_address());
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    return ZX_OK;
-  }
-
-  static zx_status_t PciGetBar(void* ctx, uint32_t bar_id, zx_pci_bar_t* out_res) {
-    zx::vmo vmo_bar;
-    const int vmo_size = 4096u;
-    zx_status_t status = zx::vmo::create(vmo_size, 0u, &vmo_bar);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    out_res->id = bar_id;
-    out_res->type = ZX_PCI_BAR_TYPE_MMIO;
-    out_res->size = vmo_size;
-    out_res->handle = vmo_bar.release();
-
-    return ZX_OK;
-  }
-
- private:
-  pci_protocol_t proto_;
-  pci_protocol_ops_t proto_ops_;
-};
-
-class PcieDdkTester : public fake_ddk::Bind {
- public:
-  PcieDdkTester() : fake_ddk::Bind() {
-    // PCI is the only protocol of interest here, so we create and pass an
-    // fbl:Array of size 1.
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-    protocols[0] = {ZX_PROTOCOL_PCI,
-                    *reinterpret_cast<const fake_ddk::Protocol*>(fake_pci_.GetProto())};
-    SetProtocols(std::move(protocols));
-  }
-
-  wlan::iwlwifi::PcieDevice* dev() { return dev_; }
-  fake_ddk::Bind& ddk() { return *this; }
-  FakePci fake_pci_;
-
- protected:
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) override {
-    zx_status_t ret = Bind::DeviceAdd(drv, parent, args, out);
-    if (ret == ZX_OK) {
-      if (parent == fake_ddk::kFakeParent) {
-        dev_ = static_cast<wlan::iwlwifi::PcieDevice*>(args->ctx);
-      }
-    }
-    return ret;
-  }
-
- private:
-  wlan::iwlwifi::PcieDevice* dev_;
-};
-
-TEST(PcieDdkTester, DeviceLifeCycle) {
-  PcieDdkTester tester;
+TEST(FakePcieDdkTester, DeviceLifeCycle) {
+  wlan::testing::FakePcieDdkTester tester;
 
   // Create() allocates and binds the device.
   EXPECT_OK(wlan::iwlwifi::PcieDevice::Create(nullptr, fake_ddk::kFakeParent, false),

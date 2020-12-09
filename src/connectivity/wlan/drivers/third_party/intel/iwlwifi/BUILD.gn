@@ -55,6 +55,7 @@ source_set("core") {
     "iwl-prph.h",
     "iwl-trans.c",
     "iwl-trans.h",
+    "mac-device.cc",
     "mvm/binding.c",
     "mvm/coex.c",
     "mvm/fw.c",
