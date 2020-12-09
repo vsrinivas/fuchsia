@@ -524,20 +524,28 @@ files with the same name from different directories is not allowed.
 
 Triage provides predefined functions for use in `eval` expressions:
 
-*   Max(value1, value2, value3...) returns the largest value, with type
+*   `Max(value1, value2, value3...)` returns the largest value, with type
     promotion to float.
-*   Min(value1, value2, value3...) returns the smallest value, with type
+*   `Min(value1, value2, value3...)` returns the smallest value, with type
     promotion to float.
-*   And(value1, value2, value3...) takes Boolean arguments and returns the
+*   `And(value1, value2, value3...)` takes Boolean arguments and returns the
     logical AND of the values.
-*   Or(value1, value2, value3...) takes Boolean arguments and returns the
+*   `Or(value1, value2, value3...)` takes Boolean arguments and returns the
     logical OR of the values.
-*   Not(value) takes one Boolean argument and returns the logical NOT of it.
-*   SyslogHas(matcher), KlogHas(matcher), BootlogHas(matcher) return true if the
+*   `Not(value) takes one Boolean argument and returns the logical NOT of it.
+*   `SyslogHas(matcher)`, `KlogHas(matcher)`, `BootlogHas(matcher)` return true if the
     corresponding log file has a line matching matcher, which is a string
     containing a regex expression.
-*   Annotation(key) returns the corresponding value from the annotations.json
+*   `Annotation(key)` returns the corresponding value from the annotations.json
     file.
+*   `Option(value1, value2, value3...)` returns the first useful value, to
+    support selector migrations and defaults: the first non-empty-list,
+    non-Missing value if any; or empty list if one was given; or Missing.
+*   `Missing(value)` returns true if the value is an error indication.
+*   `Days()`, `Hours()`, `Minutes()`, `Seconds()`, `Millis()`, `Micros()`,
+    and `Nanos()` calculate values for comparison with monotonic timestamps.
+*   `Now()` returns the approximate timestamp when the Diagnostic data was
+    created.
 
 Note: Since logs are not structured, selectors can't be applied to them, so we
 supply regex matching functions instead.
@@ -548,8 +556,8 @@ Triage can apply functions to vectors of values. Vectors have the format
 `"[expr, expr, expr...]"`. Some selectors return multi-element vectors.
 
 Triage provides the functions `Map()`, `Fold()`, `Filter()`, and `Count()` to
-process vectors, and `Fn()` to define functions or lambdas for Map, Fold, and
-Filter to apply.
+process vectors, `Fn()` to define functions or lambdas for Map, Fold, and
+Filter to apply, and `Apply()` to apply a Fn() to arguments.
 
 For more information see [Configuring fx triage][triage-config-reference].
 

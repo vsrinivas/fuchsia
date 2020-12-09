@@ -405,11 +405,16 @@ impl<'a> MetricState<'a> {
     }
 
     fn option(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
+        let mut found_empty = false;
         for op in operands.iter() {
             match self.evaluate(namespace, op) {
                 MetricValue::Missing(_) => {}
+                MetricValue::Vector(v) if v.len() == 0 => found_empty = true,
                 value => return value,
             }
+        }
+        if found_empty {
+            return MetricValue::Vector(vec![]);
         }
         // This will be improved when we get structured output and structured errors.
         return missing("Every value was missing");

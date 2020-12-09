@@ -932,5 +932,9 @@ mod test {
         assert_eq!(eval!("Option(5, a)"), i(5));
         assert_eq!(eval!("Option(a, 5, a)"), i(5));
         assert_eq!(eval!("Option(a, b, c, d, 5)"), i(5));
+        assert_eq!(eval!("Option(a, b, [], d)"), MetricValue::Vector(vec![]));
+        assert_eq!(eval!("Option(a, b, [], d, [5])"), MetricValue::Vector(vec![i(5)]));
+        assert_eq!(eval!("Option(a, b, 5, d, [5])"), i(5));
+        assert_eq!(eval!("Option(a, b, [5], d, 5)"), MetricValue::Vector(vec![i(5)]));
     }
 }

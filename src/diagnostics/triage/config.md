@@ -86,18 +86,31 @@ Functions are a function name, '(', comma-separated expression list, ')'.
 Provided functions include:
 
 *   Boolean
-    *   And (1+ args)
-    *   Or (1+ args)
-    *   Not (1 arg)
+    *   `And (1+ args)`
+    *   `Or (1+ args)`
+    *   `Not (1 arg)`
+    *   `Missing(value)` returns true if the value is an error indication.
 *   Numeric
-    *   Min (1+ args)
-    *   Max (1+ args)
+    *   `Min (1+ args)`
+    *   `Max (1+ args)`
 *   Functional
-    *   Fn([name1, name2, ...], expression)
-    *   Map(function, vector1, vector2, ...)
-    *   Fold(function, vector, optional_start_value)
-    *   Filter(function, vector)
-    *   Count(vector)
+    *   `Fn([name1, name2, ...], expression)`
+    *   `Map(function, vector1, vector2, ...)`
+    *   `Fold(function, vector, optional_start_value)`
+    *   `Filter(function, vector)`
+    *   `Apply(function, arg1, arg2, ...)`
+    *   `Count(vector)`
+*   Time
+    *   `Days()`, `Hours()`, `Minutes()`, `Seconds()`, `Millis()`, `Micros()`,
+        and `Nanos()` calculate values for comparison with monotonic timestamps.
+    *   `Now()` returns the approximate timestamp when the Diagnostic data was
+        created.
+*   Other
+    *   `Option(value1, value2, value3...)` returns the first useful value, to
+        support selector migrations and defaults: the first non-empty-list,
+        non-Missing value if any; or empty list if one was given; or Missing.
+    *   `Annotation(string)` fetches the corresponding key from
+        the annotations.json file, if present.
 
 Metric type follows the type read from the Inspect file. Currently, UInt is
 converted to Int upon reading. Operating on mixed Int and Float promotes the
