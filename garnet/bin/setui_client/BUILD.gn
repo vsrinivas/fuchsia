@@ -34,6 +34,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.settings.policy:fuchsia.settings.policy-rustc",
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -62,6 +63,7 @@ rustc_library("lib") {
     "src/night_mode.rs",
     "src/privacy.rs",
     "src/setup.rs",
+    "src/volume_policy.rs",
   ]
 }
 
@@ -99,6 +101,7 @@ rustc_binary("setui_client_interface_test_bin") {
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.settings.policy:fuchsia.settings.policy-rustc",
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

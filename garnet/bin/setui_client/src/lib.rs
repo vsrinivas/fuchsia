@@ -21,6 +21,7 @@ pub mod light;
 pub mod night_mode;
 pub mod privacy;
 pub mod setup;
+pub mod volume_policy;
 
 /// SettingClient exercises the functionality found in SetUI service. Currently,
 /// action parameters are specified at as individual arguments, but the goal is
@@ -113,9 +114,9 @@ pub enum SettingClient {
     },
 
     #[structopt(name = "light")]
-    /// To get the value of all light types, omit all arguments. If setting the value for a light group,
-    /// name is required, then only one type of value between simple, brightness, or rgb should be
-    /// specified.
+    /// Reads and modifies the hardware light state. To get the value of all light types, omit all
+    /// arguments. If setting the value for a light group, name is required, then only one type of
+    /// value between simple, brightness, or rgb should be specified.
     Light {
         #[structopt(flatten)]
         light_group: LightGroup,
@@ -137,6 +138,19 @@ pub enum SettingClient {
     Setup {
         #[structopt(short = "i", long = "interfaces", parse(from_str = "str_to_interfaces"))]
         configuration_interfaces: Option<ConfigurationInterfaces>,
+    },
+
+    /// Reads and modifies volume policies that affect the behavior of the fuchsia.settings.audio.
+    /// To list the policies, run the subcommand without any arguments.
+    #[structopt(name = "volume_policy")]
+    VolumePolicy {
+        /// Adds a policy transform.
+        #[structopt(subcommand)]
+        add: Option<VolumePolicyCommands>,
+
+        /// Removes a policy transform by its policy ID.
+        #[structopt(short, long)]
+        remove: Option<u32>,
     },
 }
 
@@ -189,6 +203,31 @@ pub struct CaptionOptions {
 
     #[structopt(flatten)]
     pub style: CaptionFontStyle,
+}
+
+#[derive(StructOpt, Debug, Clone, Copy)]
+pub enum VolumePolicyCommands {
+    #[structopt(name = "add")]
+    AddPolicy(VolumePolicyOptions),
+}
+
+#[derive(StructOpt, Debug, Clone, Copy)]
+pub struct VolumePolicyOptions {
+    /// Target to apply the policy transform to.
+    #[structopt(parse(try_from_str = "str_to_audio_stream"))]
+    pub target: fidl_fuchsia_media::AudioRenderUsage,
+
+    #[structopt(long)]
+    pub min: Option<f32>,
+
+    #[structopt(long)]
+    pub max: Option<f32>,
+
+    #[structopt(long)]
+    pub mute: Option<bool>,
+
+    #[structopt(short, long)]
+    pub disable: Option<bool>,
 }
 
 #[derive(StructOpt, Debug, Clone, Copy)]
@@ -411,6 +450,13 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
                 .context("Failed to connect to setup service")?;
             let output = setup::command(setup_service, configuration_interfaces).await?;
             println!("Setup: {}", output);
+        }
+        SettingClient::VolumePolicy { add, remove } => {
+            let setup_service =
+                connect_to_service::<fidl_fuchsia_settings_policy::VolumePolicyControllerMarker>()
+                    .context("Failed to connect to volume policy service")?;
+            let output = volume_policy::command(setup_service, add, remove).await?;
+            println!("Volume policy: {}", output);
         }
     }
     Ok(())

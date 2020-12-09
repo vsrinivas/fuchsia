@@ -5,7 +5,12 @@
 use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_intl::{LocaleId, TemperatureUnit, TimeZoneId},
+    fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::*,
+    fidl_fuchsia_settings_policy::{
+        Disable, PolicyParameters, Property, Target, Transform, VolumePolicyControllerMarker,
+        VolumePolicyControllerRequest, VolumePolicyControllerRequestStream,
+    },
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
@@ -22,7 +27,11 @@ use {
     setui_client_lib::night_mode,
     setui_client_lib::privacy,
     setui_client_lib::setup,
-    setui_client_lib::{AccessibilityOptions, CaptionCommands, CaptionFontStyle, CaptionOptions},
+    setui_client_lib::volume_policy,
+    setui_client_lib::{
+        AccessibilityOptions, CaptionCommands, CaptionFontStyle, CaptionOptions,
+        VolumePolicyCommands, VolumePolicyOptions,
+    },
     std::sync::Arc,
 };
 
@@ -39,10 +48,11 @@ enum Services {
     NightMode(NightModeRequestStream),
     Privacy(PrivacyRequestStream),
     Setup(SetupRequestStream),
+    VolumePolicy(VolumePolicyControllerRequestStream),
 }
 
 struct ExpectedStreamSettingsStruct {
-    stream: Option<fidl_fuchsia_media::AudioRenderUsage>,
+    stream: Option<AudioRenderUsage>,
     source: Option<fidl_fuchsia_settings::AudioStreamSettingSource>,
     level: Option<f32>,
     volume_muted: Option<bool>,
@@ -74,7 +84,7 @@ async fn main() -> Result<(), Error> {
 
     println!("  client calls set audio input - stream");
     validate_audio(&ExpectedStreamSettingsStruct {
-        stream: Some(fidl_fuchsia_media::AudioRenderUsage::Background),
+        stream: Some(AudioRenderUsage::Background),
         source: None,
         level: None,
         volume_muted: None,
@@ -124,7 +134,7 @@ async fn main() -> Result<(), Error> {
 
     println!("  client calls set audio input - multiple");
     validate_audio(&ExpectedStreamSettingsStruct {
-        stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
+        stream: Some(AudioRenderUsage::Media),
         source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
         level: Some(0.6),
         volume_muted: Some(false),
@@ -231,6 +241,14 @@ async fn main() -> Result<(), Error> {
     println!("setup service tests");
     println!(" client calls set config interfaces");
     validate_setup().await?;
+
+    println!("volume policy tests");
+    println!("  client calls get");
+    validate_volume_policy_get().await?;
+    println!("  client calls add");
+    validate_volume_policy_add().await?;
+    println!("  client calls remove");
+    validate_volume_policy_remove().await?;
 
     Ok(())
 }
@@ -609,7 +627,7 @@ async fn validate_audio(expected: &'static ExpectedStreamSettingsStruct) -> Resu
         AudioRequest::Watch { responder } => {
             responder.send(AudioSettings {
                 streams: Some(vec![AudioStreamSettings {
-                    stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
+                    stream: Some(AudioRenderUsage::Media),
                     source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
                     user_volume: Some(Volume {
                         level: Some(0.6),
@@ -1131,6 +1149,98 @@ async fn validate_setup() -> Result<(), Error> {
         watch_result,
         setup::describe_setup_setting(&create_setup_setting(expected_watch_interfaces))
     );
+
+    Ok(())
+}
+
+// Verifies that invoking a volume policy command with no arguments fetches the policy properties.
+async fn validate_volume_policy_get() -> Result<(), Error> {
+    // Create a fake volume policy service that responds to GetProperties with a single property.
+    // Any other calls will cause the test to fail.
+    let env = create_service!(
+        Services::VolumePolicy,
+        VolumePolicyControllerRequest::GetProperties { responder } => {
+            let mut properties = Vec::new();
+            properties.push(Property {
+                target: Some(Target::Stream(AudioRenderUsage::Background)),
+                active_policies: Some(vec![]),
+                available_transforms: Some(vec![Transform::Max]),
+                ..Property::EMPTY
+            });
+            responder.send(&mut properties.into_iter())?;
+        }
+    );
+
+    let volume_policy_service = env
+        .connect_to_service::<VolumePolicyControllerMarker>()
+        .context("Failed to connect to volume policy service")?;
+
+    // Invoke the volume policy command with no arguments to trigger a get call.
+    let output = volume_policy::command(volume_policy_service, None, None).await?;
+
+    // Spot-check that the output contains the available transform in the data returned from the
+    // fake service.
+    assert!(output.contains("Max"));
+
+    Ok(())
+}
+
+// Verifies that adding a new policy works and prints out the resulting policy ID.
+async fn validate_volume_policy_add() -> Result<(), Error> {
+    let expected_target = AudioRenderUsage::Background;
+    let expected_policy_id = 42;
+    let add_options = VolumePolicyCommands::AddPolicy(VolumePolicyOptions {
+        target: expected_target,
+        min: None,
+        max: None,
+        mute: None,
+        disable: Some(true),
+    });
+
+    // Create a fake volume policy service that responds to AddPolicy and verifies that the inputs
+    // are the same as expected, then return the expected policy ID. Any other calls will cause the
+    // test to fail.
+    let env = create_service!(
+        Services::VolumePolicy,
+        VolumePolicyControllerRequest::AddPolicy { target, parameters, responder } => {
+            assert_eq!(target, Target::Stream(expected_target));
+            assert_eq!(parameters, PolicyParameters::Disable(Disable {..Disable::EMPTY}));
+            responder.send(&mut Ok(expected_policy_id))?;
+        }
+    );
+
+    let volume_policy_service = env
+        .connect_to_service::<VolumePolicyControllerMarker>()
+        .context("Failed to connect to volume policy service")?;
+
+    // Make the add call.
+    let output = volume_policy::command(volume_policy_service, Some(add_options), None).await?;
+
+    // Verify that the output contains the policy ID returned from the fake service.
+    assert!(output.contains(expected_policy_id.to_string().as_str()));
+
+    Ok(())
+}
+
+// Verifies that removing a policy sends the proper call to the volume policy API.
+async fn validate_volume_policy_remove() -> Result<(), Error> {
+    let expected_policy_id = 42;
+    // Create a fake volume policy service that verifies the removed policy ID matches the expected
+    // value. Any other calls will cause the
+    // test to fail.
+    let env = create_service!(
+        Services::VolumePolicy, VolumePolicyControllerRequest::RemovePolicy { policy_id, responder } => {
+            assert_eq!(policy_id, expected_policy_id);
+            responder.send(&mut Ok(()))?;
+        }
+    );
+
+    let volume_policy_service = env
+        .connect_to_service::<VolumePolicyControllerMarker>()
+        .context("Failed to connect to volume policy service")?;
+
+    // Attempt to remove the given policy ID.
+    volume_policy::command(volume_policy_service, None, Some(expected_policy_id)).await?;
 
     Ok(())
 }
