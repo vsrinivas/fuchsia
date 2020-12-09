@@ -43,7 +43,6 @@ group("all") {
     "//garnet/packages/prod:magma-qcom-adreno",
     "//garnet/packages/prod:memory_monitor",
     "//garnet/packages/prod:network-speed-test",
-    "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
     "//garnet/packages/prod:run",
     "//garnet/packages/prod:sbase",
@@ -357,14 +356,6 @@ group("memory_monitor") {
 group("network-speed-test") {
   testonly = true
   public_deps = [ "//src/connectivity/network/tools/network-speed-test" ]
-}
-
-group("ralink") {
-  public_deps = [
-    "//src/connectivity/wlan/drivers/mediatek/ralink",
-    "//src/connectivity/wlan/drivers/wlan",
-    "//src/connectivity/wlan/drivers/wlanphy",
-  ]
 }
 
 group("realtek") {

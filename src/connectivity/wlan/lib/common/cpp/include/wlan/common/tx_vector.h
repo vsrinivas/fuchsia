@@ -5,16 +5,17 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_TX_VECTOR_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_TX_VECTOR_H_
 
+#include <lib/zx/time.h>
+#include <zircon/assert.h>
+#include <zircon/types.h>
+
 #include <cstdio>
 #include <optional>
 
 #include <ddk/hw/wlan/wlaninfo.h>
-#include <lib/zx/time.h>
 #include <wlan/common/element.h>
 #include <wlan/common/logging.h>
 #include <wlan/protocol/mac.h>
-#include <zircon/assert.h>
-#include <zircon/types.h>
 
 namespace wlan {
 
@@ -72,9 +73,6 @@ struct TxVector {
 
 bool operator==(const TxVector& lhs, const TxVector& rhs);
 bool operator!=(const TxVector& lhs, const TxVector& rhs);
-// Used by ralink driver to check if its auto-fallback mechanism changed
-// anything other than MCS.
-bool IsEqualExceptMcs(const ::wlan::TxVector& lhs, const ::wlan::TxVector& rhs);
 std::optional<SupportedRate> TxVectorIdxToErpRate(tx_vec_idx_t idx);
 static constexpr bool IsHt(tx_vec_idx_t idx) {
   return kHtStartIdx <= idx && idx < kHtStartIdx + kHtNumTxVector;

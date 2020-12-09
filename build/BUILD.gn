@@ -288,7 +288,6 @@ group("deprecated_package") {
     "//src/connectivity/telephony/tools/tel-snoop-cli/*",
     "//src/connectivity/weave/adaptation/tests/*",
     "//src/connectivity/weave/weavestack/*",
-    "//src/connectivity/wlan/drivers/mediatek/ralink/*",
     "//src/connectivity/wlan/drivers/realtek/rtl88xx/*",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device/test/*",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env/test/*",

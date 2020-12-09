@@ -259,10 +259,4 @@ bool operator==(const TxVector& lhs, const TxVector& rhs) {
 }
 
 bool operator!=(const TxVector& lhs, const TxVector& rhs) { return !(lhs == rhs); }
-
-bool IsEqualExceptMcs(const ::wlan::TxVector& lhs, const ::wlan::TxVector& rhs) {
-  ::wlan::TxVector temp = lhs;
-  temp.mcs_idx = rhs.mcs_idx;  // Make mcs_idx equal so that we only compare other fields.
-  return rhs == temp;
-}
 }  // namespace wlan

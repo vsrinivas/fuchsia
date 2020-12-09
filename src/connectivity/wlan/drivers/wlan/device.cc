@@ -495,7 +495,7 @@ TxVector GetTxVector(const std::unique_ptr<MinstrelRateSelector>& minstrel,
     ZX_DEBUG_ASSERT(status == ZX_OK);
     return tv;
   } else {
-    // Note: This section has no practical effect on ralink and ath10k. It is
+    // Note: This section has no practical effect on ath10k. It is
     // only effective if the underlying device meets both criteria below:
     // 1. Does not support tx status report. i.e.
     // WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT NOT set

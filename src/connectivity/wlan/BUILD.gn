@@ -12,7 +12,6 @@ group("wlan") {
 
 group("drivers") {
   deps = [
-    "drivers/mediatek/ralink:ralink_driver",
     "drivers/realtek/rtl88xx:rtl88xx_driver",
     "drivers/testing:wlanphy-testdev",
     "drivers/third_party/atheros/ath10k:ath10k_driver",

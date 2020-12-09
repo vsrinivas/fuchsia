@@ -107,7 +107,6 @@ zx_library("ddk-deprecated-binding-headers") {
     "//src/connectivity/telephony/drivers/qmi-usb-transport:qmi_driver_src",
     "//src/connectivity/telephony/tests/fake-drivers/at-fake-transport:*",
     "//src/connectivity/telephony/tests/fake-drivers/usb-qmi-function:*",
-    "//src/connectivity/wlan/drivers/mediatek/ralink:*",
     "//src/connectivity/wlan/drivers/testing:*",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:*",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",

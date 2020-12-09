@@ -5,7 +5,6 @@
 group("drivers") {
   testonly = true
   deps = [
-    "mediatek",
     "realtek",
     "testing",
     "third_party",
