@@ -587,7 +587,6 @@ async fn meta_far_installed_one_blob_partially_installed() {
 }
 
 #[fasync::run_singlethreaded(test)]
-#[ignore] // TODO(61367): once we increase the concurrency limit again, un-ignore this.
 async fn test_concurrent_blob_writes() {
     // Create our test packages and find out the merkle of the duplicate blob
     let duplicate_blob_path = "blob/duplicate";
@@ -681,7 +680,7 @@ async fn test_concurrent_blob_writes() {
 }
 
 #[fasync::run_singlethreaded(test)]
-#[ignore] // TODO(61367): once we increase the concurrency limit again, un-ignore this.
+#[ignore] // TODO(65855): Fix to support lower concurrency limit.
 async fn dedup_concurrent_content_blob_fetches() {
     let env = TestEnvBuilder::new().build().await;
 
@@ -839,7 +838,6 @@ async fn h2_endpoint() {
 }
 
 #[fasync::run_singlethreaded(test)]
-#[ignore] // TODO(61367): once we increase the concurrency limit again, un-ignore this.
 async fn verify_concurrent_resolve() {
     let env = TestEnvBuilder::new().build().await;
 
