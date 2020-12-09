@@ -743,6 +743,15 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
 
   VmxRegion* region = vcpu->vmcs_page_.VirtualAddress<VmxRegion>();
   region->revision_id = vmx_info.revision_id;
+
+  // Only set the thread migrate function after we have initialised the VMCS.
+  // Otherwise, the migrate function may interact with an uninitialised VMCS.
+  //
+  // We have to disable thread safety analysis because it's not smart enough to
+  // realize that SetMigrateFn will always be called with the ThreadLock.
+  thread->SetMigrateFn([vcpu = vcpu.get()](Thread* thread, auto stage)
+                           TA_NO_THREAD_SAFETY_ANALYSIS { vcpu->MigrateCpu(thread, stage); });
+
   zx_paddr_t pml4_address = gpas->arch_aspace()->arch_table_phys();
   status =
       vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, entry, guest->MsrBitmapsAddress(),
@@ -762,10 +771,6 @@ Vcpu::Vcpu(Guest* guest, uint16_t vpid, Thread* thread)
       last_cpu_(thread->LastCpu()),
       vmx_state_(/* zero-init */) {
   thread->set_vcpu(true);
-  // We have to disable thread safety analysis because it's not smart enough to
-  // realize that SetMigrateFn will always be called with the ThreadLock.
-  thread->SetMigrateFn([this](Thread* thread, auto stage)
-                           TA_NO_THREAD_SAFETY_ANALYSIS { MigrateCpu(thread, stage); });
 }
 
 Vcpu::~Vcpu() {
