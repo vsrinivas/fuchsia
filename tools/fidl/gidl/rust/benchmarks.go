@@ -21,14 +21,14 @@ var benchmarkTmpl = template.Must(template.New("benchmarkTmpls").Parse(`
 use {
 	fidl::{
 		encoding::{Context, Decodable, Decoder, Encoder, with_tls_encode_buf},
-		handle::Handle, handle::HandleInfo,
+		handle::Handle, handle::HandleDisposition, handle::HandleInfo, handle::HandleOp,
 		ObjectType, Rights, UnknownData,
 	},
 	fidl_benchmarkfidl{{ .CrateSuffix }} as benchmarkfidl{{ .CrateSuffix }},
 	fuchsia_criterion::criterion::{BatchSize, Bencher, black_box},
 	fuchsia_async::futures::{future, stream::StreamExt},
 	fuchsia_zircon as zx,
-	gidl_util::{HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_handles},
+	gidl_util::{HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_vec},
 	std::mem::ManuallyDrop
 };
 
@@ -56,7 +56,7 @@ fn benchmark_{{ .Name }}_builder(b: &mut Bencher) {
 		|| {
 			{{- if .HandleDefs }}
 			let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
-			unsafe { disown_handles(handle_defs) }
+			unsafe { disown_vec(handle_defs) }
 			{{- else }}
 			{{- /* Use empty vector with b.iter_batched_ref, rather than b.iter,
 				for consistency between handle and non-handle benchmarks. */}}
@@ -79,7 +79,7 @@ fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
 		|| {
 			{{- if .HandleDefs }}
 			let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
-			let handle_defs = unsafe { disown_handles(handle_defs) };
+			let handle_defs = unsafe { disown_vec(handle_defs) };
 			let handle_defs = handle_defs.as_ref();
 			{{- end }}
 			{{ .Value }}
@@ -108,18 +108,21 @@ fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
 		|| {
 			{{- if .HandleDefs }}
 			let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
-			let handle_defs = unsafe { disown_handles(handle_defs) };
+			let handle_defs = unsafe { disown_vec(handle_defs) };
 			let handle_defs = handle_defs.as_ref();
 			{{- end }}
 			let mut bytes = Vec::<u8>::new();
-			let mut handles = Vec::<Handle>::new();
+			let mut handles = Vec::<HandleDisposition<'static>>::new();
 			let original_value = &mut {{ .Value }};
 			Encoder::encode_with_context(_V1_CONTEXT, &mut bytes, &mut handles, original_value).unwrap();
 			let handle_infos : Vec::<HandleInfo> = handles.into_iter().map(|h| {
 				HandleInfo {
-					handle: h,
-					object_type: ObjectType::NONE,
-					rights: Rights::SAME_RIGHTS,
+					handle: match h.handle_op {
+						HandleOp::Move(hdl) => hdl,
+						_ => panic!("unexpected handle op"),
+					},
+					object_type: h.object_type,
+					rights: h.rights,
 				}
 			}).collect();
 			{{- /* Wrap handle in an Option to allow low-overhead measurement of drop time */}}
@@ -165,7 +168,7 @@ fn benchmark_{{ .Name }}_send_event(b: &mut Bencher) {
 			b.iter_batched_ref(|| {
 				{{- if .HandleDefs }}
 				let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
-				let handle_defs = unsafe { disown_handles(handle_defs) };
+				let handle_defs = unsafe { disown_vec(handle_defs) };
 				let handle_defs = handle_defs.as_ref();
 				{{- end }}
 				{{ .Value }}
@@ -210,7 +213,7 @@ fn benchmark_{{ .Name }}_echo_call(b: &mut Bencher) {
 	b.iter_batched_ref(|| {
 		{{- if .HandleDefs }}
 		let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
-		let handle_defs = unsafe { disown_handles(handle_defs) };
+		let handle_defs = unsafe { disown_vec(handle_defs) };
 		let handle_defs = handle_defs.as_ref();
 		{{- end }}
 		{{ .Value }}

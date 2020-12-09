@@ -437,7 +437,7 @@ impl <'a> {{ $protocol.Name }}ServerSender<'a> {
 					{{ $param.Name -}},
 				{{- end -}}
 			)?;
-			self.channel.write(&*bytes_, &mut *handles_).map_err(fidl::Error::ServerResponseWrite)?;
+			self.channel.write_etc(&*bytes_, &mut *handles_).map_err(fidl::Error::ServerResponseWrite)?;
 			Ok(())
 		})
 	}
@@ -458,7 +458,7 @@ impl <'a> {{ $protocol.Name }}ServerSender<'a> {
 					{{ $param.Name -}},
 				{{- end -}}
 			)?;
-			self.channel.write(&*bytes_, &mut *handles_).map_err(fidl::Error::ServerResponseWrite)?;
+			self.channel.write_etc(&*bytes_, &mut *handles_).map_err(fidl::Error::ServerResponseWrite)?;
 			Ok(())
 		})
 	}
@@ -748,7 +748,7 @@ impl {{ $protocol.Name }}Encoder {
 	{{- if $method.HasRequest }}
 	pub fn encode_{{ $method.Name }}_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,
+		out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
 		{{- if $method.HasResponse }}
 		tx_id: u32,
 		{{- end -}}
@@ -779,7 +779,7 @@ impl {{ $protocol.Name }}Encoder {
 	{{- if $method.HasResponse }}
 	pub fn encode_{{ $method.Name }}_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
-		out_handles: &'a mut Vec<fidl::Handle>,
+		out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
 		{{- if $method.HasRequest }}
 		tx_id: u32,
 		{{- end -}}
@@ -849,7 +849,7 @@ impl {{ $protocol.Name }}ControlHandle {
 		};
 
 		fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
-			self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
+			self.inner.channel().write_etc(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
 		})?;
 
 		Ok(())
@@ -956,7 +956,7 @@ impl {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 			fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
 			fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 
-			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
+			self.control_handle.inner.channel().write_etc(&*bytes, &mut *handles)
 				.map_err(fidl::Error::ServerResponseWrite)?;
 			Ok(())
 		})

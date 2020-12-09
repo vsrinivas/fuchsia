@@ -86,37 +86,37 @@ pub unsafe fn copy_handles_at(handles: &[Handle], indices: &[usize]) -> Vec<Hand
     copy
 }
 
-/// Wraps `handles` in a structure that prevents them from being closed.
+/// Wraps `Vec<T>` in a structure that prevents elements from being dropped. The
+/// vector itself will release its memory, but it will not invoke `T::drop`.
 ///
 /// To use the contained vector after, use this pattern:
 ///
-///     let handles = unsafe { disown_handles(...) };
-///     let handles = handles.as_ref(); // or as_mut
+///     let items = unsafe { disown_vec(...) };
+///     let items = items.as_ref(); // or as_mut
 ///
 /// The seperate let-bindings are necessary for the `Disowned` value to outlive
 /// the reference obtained from it.
-pub unsafe fn disown_handles(handles: Vec<Handle>) -> Disowned {
-    Disowned(handles)
+pub unsafe fn disown_vec<T>(vec: Vec<T>) -> Disowned<T> {
+    Disowned(vec)
 }
 
-pub struct Disowned(Vec<Handle>);
+pub struct Disowned<T>(Vec<T>);
 
-impl AsRef<Vec<Handle>> for Disowned {
-    fn as_ref(&self) -> &Vec<Handle> {
+impl<T> AsRef<Vec<T>> for Disowned<T> {
+    fn as_ref(&self) -> &Vec<T> {
         &self.0
     }
 }
 
-impl AsMut<Vec<Handle>> for Disowned {
-    fn as_mut(&mut self) -> &mut Vec<Handle> {
+impl<T> AsMut<Vec<T>> for Disowned<T> {
+    fn as_mut(&mut self) -> &mut Vec<T> {
         &mut self.0
     }
 }
 
-impl Drop for Disowned {
+impl<T> Drop for Disowned<T> {
     fn drop(&mut self) {
         for h in self.0.drain(..) {
-            // Handles are just u32 wrappers, so this doesn't leak memory.
             std::mem::forget(h);
         }
     }

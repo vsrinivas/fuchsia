@@ -11,7 +11,7 @@ use {
             decode_transaction_header, Decodable, Decoder, Encodable, Encoder, EpitaphBody,
             TransactionHeader, TransactionMessage,
         },
-        handle::{AsyncChannel, Handle, MessageBufEtc},
+        handle::{AsyncChannel, HandleDisposition, MessageBufEtc},
         Error,
     },
     fuchsia_zircon_status as zx_status,
@@ -234,19 +234,27 @@ impl Client {
     }
 
     /// Send a raw message without expecting a response.
-    pub fn send_raw_msg(&self, buf: &[u8], handles: &mut Vec<Handle>) -> Result<(), Error> {
-        Ok(self.inner.channel.write(buf, handles).map_err(|e| Error::ClientWrite(e.into()))?)
+    pub fn send_raw_msg(
+        &self,
+        buf: &[u8],
+        handles: &mut Vec<HandleDisposition<'_>>,
+    ) -> Result<(), Error> {
+        Ok(self.inner.channel.write_etc(buf, handles).map_err(|e| Error::ClientWrite(e.into()))?)
     }
 
     /// Send a raw query and receive a response future.
     pub fn send_raw_query<F>(&self, msg_from_id: F) -> Result<MessageResponse, Error>
     where
-        F: for<'a, 'b> FnOnce(Txid, &'a mut Vec<u8>, &'b mut Vec<Handle>) -> Result<(), Error>,
+        F: for<'a, 'b> FnOnce(
+            Txid,
+            &'a mut Vec<u8>,
+            &'b mut Vec<HandleDisposition<'_>>,
+        ) -> Result<(), Error>,
     {
         let id = self.inner.register_msg_interest();
         crate::encoding::with_tls_encode_buf(|bytes, handles| {
             msg_from_id(Txid::from_interest_id(id), bytes, handles)?;
-            match self.inner.channel.write(bytes, handles) {
+            match self.inner.channel.write_etc(bytes, handles) {
                 Ok(()) => Ok(()),
                 Err(zx_status::Status::PEER_CLOSED) => {
                     // Try to receive the epitaph
@@ -715,7 +723,7 @@ pub mod sync {
         buf_read_handles: Vec<HandleInfo>,
 
         // Reusable handle buffer for writes.
-        buf_write_handles: Vec<Handle>,
+        buf_write_handles: Vec<HandleDisposition<'static>>,
     }
 
     // TODO: remove this and allow multiple overlapping queries on the same channel.
@@ -748,7 +756,7 @@ pub mod sync {
                 &mut TransactionMessage { header: TransactionHeader::new(0, ordinal), body: msg };
             Encoder::encode(&mut self.buf_bytes, &mut self.buf_write_handles, msg)?;
             self.channel
-                .write(&mut self.buf_bytes, &mut self.buf_write_handles)
+                .write_etc(&mut self.buf_bytes, &mut self.buf_write_handles)
                 .map_err(|e| Error::ClientWrite(e.into()))?;
             Ok(())
         }
@@ -769,7 +777,7 @@ pub mod sync {
             };
             Encoder::encode(&mut self.buf_bytes, &mut self.buf_write_handles, msg)?;
             self.channel
-                .write(&mut self.buf_bytes, &mut self.buf_write_handles)
+                .write_etc(&mut self.buf_bytes, &mut self.buf_write_handles)
                 .map_err(|e| Error::ClientWrite(e.into()))?;
 
             // Read the response
@@ -843,13 +851,13 @@ mod tests {
     fn send_transaction(header: TransactionHeader, channel: &zx::Channel) {
         let (bytes, handles) = (&mut vec![], &mut vec![]);
         encode_transaction(header, bytes, handles);
-        channel.write(bytes, handles).expect("Server channel write failed");
+        channel.write_etc(bytes, handles).expect("Server channel write failed");
     }
 
-    fn encode_transaction(
+    fn encode_transaction<'a>(
         header: TransactionHeader,
         bytes: &mut Vec<u8>,
-        handles: &mut Vec<zx::Handle>,
+        handles: &mut Vec<zx::HandleDisposition<'a>>,
     ) {
         let event = &mut TransactionMessage { header: header, body: &mut SEND_DATA.clone() };
         Encoder::encode(bytes, handles, event).expect("Encoding failure");
@@ -936,7 +944,7 @@ mod tests {
             let (bytes, handles) = (&mut vec![], &mut vec![]);
             let header = TransactionHeader::new(two_way_tx_id as u32, 42);
             encode_transaction(header, bytes, handles);
-            server.write(bytes, handles).expect("Server channel write failed");
+            server.write_etc(bytes, handles).expect("Server channel write failed");
         };
 
         // add a timeout to receiver so if test is broken it doesn't take forever
@@ -1081,7 +1089,7 @@ mod tests {
         let (bytes, handles) = (&mut vec![], &mut vec![]);
         let header = TransactionHeader::new(0, 5);
         encode_transaction(header, bytes, handles);
-        server.write(bytes, handles).expect("Server channel write failed");
+        server.write_etc(bytes, handles).expect("Server channel write failed");
         drop(server);
 
         let recv = client
@@ -1117,7 +1125,7 @@ mod tests {
         let (bytes, handles) = (&mut vec![], &mut vec![]);
         let header = TransactionHeader::new(0, 5);
         encode_transaction(header, bytes, handles);
-        server.write(bytes, handles).expect("Server channel write failed");
+        server.write_etc(bytes, handles).expect("Server channel write failed");
         drop(server);
 
         // Create a block to make sure the first event receiver is dropped.
@@ -1163,7 +1171,7 @@ mod tests {
         let (bytes, handles) = (&mut vec![], &mut vec![]);
         let header = TransactionHeader::new_full(0, 5, &crate::encoding::Context {}, 0);
         encode_transaction(header, bytes, handles);
-        server.write(bytes, handles).expect("Server channel write failed");
+        server.write_etc(bytes, handles).expect("Server channel write failed");
         drop(server);
 
         let mut event_receiver = client.take_event_receiver();
@@ -1414,7 +1422,7 @@ mod tests {
         let (bytes, handles) = (&mut vec![], &mut vec![]);
         let header = TransactionHeader::new(two_way_tx_id as u32, 42);
         encode_transaction(header, bytes, handles);
-        server.write(bytes, handles).expect("Server channel write failed");
+        server.write_etc(bytes, handles).expect("Server channel write failed");
 
         executor
             .run_singlethreaded(&mut checked_fut)

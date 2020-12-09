@@ -20,11 +20,11 @@ var conformanceTmpl = template.Must(template.New("conformanceTmpls").Parse(`
 #![allow(unused_imports)]
 
 use {
-	fidl::{AsHandleRef, Error, Handle, HandleInfo, ObjectType, Rights, UnknownData},
+	fidl::{AsHandleRef, Error, Handle, HandleDisposition, HandleInfo, HandleOp, ObjectType, Rights, UnknownData},
 	fidl::encoding::{Context, Decodable, Decoder, Encoder},
 	fidl_conformance as conformance,
 	fuchsia_zircon_status::Status,
-	gidl_util::{HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_handles, get_info_handle_valid},
+	gidl_util::{HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_vec, get_info_handle_valid},
 	matches::assert_matches,
 };
 
@@ -35,21 +35,25 @@ const V1_CONTEXT: &Context = &Context {};
 fn test_{{ .Name }}_encode() {
 	{{- if .HandleDefs }}
 	let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
-	let handle_defs = unsafe { disown_handles(handle_defs) };
+	let handle_defs = unsafe { disown_vec(handle_defs) };
 	let handle_defs = handle_defs.as_ref();
-	let expected_handles = unsafe { disown_handles(copy_handles_at(handle_defs, &{{ .Handles }})) };
+	let expected_handles = unsafe { disown_vec(copy_handles_at(handle_defs, &{{ .Handles }})) };
 	let expected_handles = expected_handles.as_ref();
 	{{- end }}
 	let value = &mut {{ .Value }};
 	let bytes = &mut Vec::new();
-	let handles = &mut Vec::new();
+	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
-	Encoder::encode_with_context({{ .Context }}, bytes, handles, value).unwrap();
+	Encoder::encode_with_context({{ .Context }}, bytes, handle_dispositions, value).unwrap();
 	assert_eq!(bytes, &{{ .Bytes }});
 	{{- if .HandleDefs }}
-	assert_eq!(handles, expected_handles);
+	let handles = handle_dispositions.drain(..).map(|h| match h.handle_op {
+		HandleOp::Move(hdl) => hdl,
+		_ => panic!("unknown handle op"),
+	}).collect::<Vec<Handle>>();
+	assert_eq!(&handles, expected_handles);
 	{{- else }}
-	assert_eq!(handles, &[]);
+	assert!(handle_dispositions.is_empty());
 	{{- end }}
 }
 {{ end }}
@@ -60,7 +64,7 @@ fn test_{{ .Name }}_decode() {
 	let bytes = &{{ .Bytes }};
 	{{- if .HandleDefs }}
 	let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
-	let handle_defs = unsafe { disown_handles(handle_defs) };
+	let handle_defs = unsafe { disown_vec(handle_defs) };
 	let handle_defs = handle_defs.as_ref();
 	let mut handles = unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) };
 	{{- else }}
@@ -78,7 +82,7 @@ fn test_{{ .Name }}_decode() {
 	assert_eq!(value, &{{ .Value }});
 	{{- if .HandleDefs }}
 	// Re-encode purely for the side effect of linearizing the handles.
-	let mut linear_handles = unsafe { disown_handles(Vec::new()) };
+	let mut linear_handles = unsafe { disown_vec(Vec::<HandleDisposition<'static>>::new()) };
 	let linear_handles = linear_handles.as_mut();
 	Encoder::encode_with_context({{ .Context }}, &mut Vec::new(), linear_handles, value)
 		.expect("Failed to re-encode the successfully decoded value");
@@ -91,7 +95,7 @@ fn test_{{ .Name }}_decode() {
 fn test_{{ .Name }}_encode_failure() {
 	{{- if .HandleDefs }}
 	let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
-	let handle_defs = unsafe { disown_handles(handle_defs) };
+	let handle_defs = unsafe { disown_vec(handle_defs) };
 	let handle_defs = handle_defs.as_ref();
 	{{- end }}
 	let value = &mut {{ .Value }};
@@ -117,7 +121,7 @@ fn test_{{ .Name }}_decode_failure() {
 	let bytes = &{{ .Bytes }};
 	{{- if .HandleDefs }}
 	let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
-	let handle_defs = unsafe { disown_handles(handle_defs) };
+	let handle_defs = unsafe { disown_vec(handle_defs) };
 	let handle_defs = handle_defs.as_ref();
 	let mut handles = unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) };
 	{{- else }}

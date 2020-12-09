@@ -406,7 +406,7 @@ impl<'a> InterfaceServerSender<'a> {
         fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             InterfaceEncoder::encode_on_event_response(bytes_, handles_)?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -584,7 +584,7 @@ pub struct InterfaceEncoder;
 impl InterfaceEncoder {
     pub fn encode_method_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x5c492542705b4265);
         let mut body = ();
@@ -597,7 +597,7 @@ impl InterfaceEncoder {
     }
     pub fn encode_on_event_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x37812b697096f6fa);
         let mut body = ();
@@ -638,7 +638,7 @@ impl InterfaceControlHandle {
         fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)
         })?;
 

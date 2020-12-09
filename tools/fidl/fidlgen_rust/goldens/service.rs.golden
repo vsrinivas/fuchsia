@@ -332,7 +332,7 @@ pub struct FirstProtocolEncoder;
 impl FirstProtocolEncoder {
     pub fn encode_method_on_first_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x5b76bb4db7c2bba4);
         let mut body = ();
@@ -667,7 +667,7 @@ pub struct SecondProtocolEncoder;
 impl SecondProtocolEncoder {
     pub fn encode_method_on_second_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x54ea6448c1555a29);
         let mut body = ();

@@ -8,7 +8,7 @@ use {
     crate::{
         encoding::{self, EpitaphBody, TransactionHeader, TransactionMessage},
         error::Error,
-        AsyncChannel, Channel, Handle,
+        AsyncChannel, Channel, HandleDisposition,
     },
     fuchsia_zircon_status as zx_status,
 };
@@ -32,18 +32,30 @@ impl ChannelEpitaphExt for AsyncChannel {
 }
 
 pub(crate) trait ChannelLike {
-    fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>) -> Result<(), zx_status::Status>;
+    fn write_etc<'a>(
+        &self,
+        bytes: &[u8],
+        handles: &mut Vec<HandleDisposition<'a>>,
+    ) -> Result<(), zx_status::Status>;
 }
 
 impl ChannelLike for Channel {
-    fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>) -> Result<(), zx_status::Status> {
-        self.write(bytes, handles)
+    fn write_etc<'a>(
+        &self,
+        bytes: &[u8],
+        handles: &mut Vec<HandleDisposition<'a>>,
+    ) -> Result<(), zx_status::Status> {
+        self.write_etc(bytes, handles)
     }
 }
 
 impl ChannelLike for AsyncChannel {
-    fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>) -> Result<(), zx_status::Status> {
-        self.write(bytes, handles)
+    fn write_etc<'a>(
+        &self,
+        bytes: &[u8],
+        handles: &mut Vec<HandleDisposition<'a>>,
+    ) -> Result<(), zx_status::Status> {
+        self.write_etc(bytes, handles)
     }
 }
 
@@ -56,6 +68,6 @@ pub(crate) fn write_epitaph_impl<T: ChannelLike>(
         body: &mut EpitaphBody { error: status },
     };
     encoding::with_tls_encoded(&mut msg, |bytes, handles| {
-        channel.write(&*bytes, &mut *handles).map_err(Error::ServerEpitaphWrite)
+        channel.write_etc(&*bytes, &mut *handles).map_err(Error::ServerEpitaphWrite)
     })
 }

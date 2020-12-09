@@ -438,7 +438,7 @@ pub struct ExampleProtocolEncoder;
 impl ExampleProtocolEncoder {
     pub fn encode_method_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         mut in_arg: &mut fidl_exampleusing::Empty,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x207d2f81c0ddb184);

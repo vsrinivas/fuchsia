@@ -440,7 +440,7 @@ impl<'a> WithAndWithoutRequestResponseServerSender<'a> {
                 txid.as_raw_id(),
             )?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -458,7 +458,7 @@ impl<'a> WithAndWithoutRequestResponseServerSender<'a> {
                 ret,
             )?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -474,7 +474,7 @@ impl<'a> WithAndWithoutRequestResponseServerSender<'a> {
                 txid.as_raw_id(),
             )?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -492,7 +492,7 @@ impl<'a> WithAndWithoutRequestResponseServerSender<'a> {
                 ret,
             )?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -503,7 +503,7 @@ impl<'a> WithAndWithoutRequestResponseServerSender<'a> {
                 bytes_, handles_,
             )?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -514,7 +514,7 @@ impl<'a> WithAndWithoutRequestResponseServerSender<'a> {
                 bytes_, handles_, ret,
             )?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -906,7 +906,7 @@ pub struct WithAndWithoutRequestResponseEncoder;
 impl WithAndWithoutRequestResponseEncoder {
     pub fn encode_no_request_no_response_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x6ad894147d0c6ba4);
         let mut body = ();
@@ -919,7 +919,7 @@ impl WithAndWithoutRequestResponseEncoder {
     }
     pub fn encode_no_request_empty_response_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x4068f26bf6d868ae);
@@ -933,7 +933,7 @@ impl WithAndWithoutRequestResponseEncoder {
     }
     pub fn encode_no_request_empty_response_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x4068f26bf6d868ae);
@@ -949,7 +949,7 @@ impl WithAndWithoutRequestResponseEncoder {
     }
     pub fn encode_no_request_with_response_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x447e655905ccfbf4);
@@ -963,7 +963,7 @@ impl WithAndWithoutRequestResponseEncoder {
     }
     pub fn encode_no_request_with_response_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_ret: &str,
     ) -> Result<(), fidl::Error> {
@@ -980,7 +980,7 @@ impl WithAndWithoutRequestResponseEncoder {
     }
     pub fn encode_with_request_no_response_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         mut in_arg: &str,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x7cb47b2f9e76d17d);
@@ -994,7 +994,7 @@ impl WithAndWithoutRequestResponseEncoder {
     }
     pub fn encode_with_request_empty_response_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_arg: &str,
     ) -> Result<(), fidl::Error> {
@@ -1009,7 +1009,7 @@ impl WithAndWithoutRequestResponseEncoder {
     }
     pub fn encode_with_request_empty_response_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x65eb512ff0e1c07e);
@@ -1025,7 +1025,7 @@ impl WithAndWithoutRequestResponseEncoder {
     }
     pub fn encode_with_request_with_response_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_arg: &str,
     ) -> Result<(), fidl::Error> {
@@ -1040,7 +1040,7 @@ impl WithAndWithoutRequestResponseEncoder {
     }
     pub fn encode_with_request_with_response_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_ret: &str,
     ) -> Result<(), fidl::Error> {
@@ -1057,7 +1057,7 @@ impl WithAndWithoutRequestResponseEncoder {
     }
     pub fn encode_on_empty_response_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x125c87a592bff029);
         let mut body = ();
@@ -1072,7 +1072,7 @@ impl WithAndWithoutRequestResponseEncoder {
     }
     pub fn encode_on_with_response_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         mut in_ret: &str,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x177adc0a3ee346c2);
@@ -1114,7 +1114,7 @@ impl WithAndWithoutRequestResponseControlHandle {
         fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)
         })?;
 
@@ -1132,7 +1132,7 @@ impl WithAndWithoutRequestResponseControlHandle {
         fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)
         })?;
 
@@ -1211,7 +1211,7 @@ impl WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -1289,7 +1289,7 @@ impl WithAndWithoutRequestResponseNoRequestWithResponseResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -1367,7 +1367,7 @@ impl WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -1445,7 +1445,7 @@ impl WithAndWithoutRequestResponseWithRequestWithResponseResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -1691,7 +1691,7 @@ impl<'a> WithErrorSyntaxServerSender<'a> {
                 result,
             )?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -1709,7 +1709,7 @@ impl<'a> WithErrorSyntaxServerSender<'a> {
                 result,
             )?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -1727,7 +1727,7 @@ impl<'a> WithErrorSyntaxServerSender<'a> {
                 result,
             )?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -1987,7 +1987,7 @@ pub struct WithErrorSyntaxEncoder;
 impl WithErrorSyntaxEncoder {
     pub fn encode_response_as_struct_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x3784d38864674290);
@@ -2001,7 +2001,7 @@ impl WithErrorSyntaxEncoder {
     }
     pub fn encode_response_as_struct_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_result: &mut WithErrorSyntaxResponseAsStructResult,
     ) -> Result<(), fidl::Error> {
@@ -2018,7 +2018,7 @@ impl WithErrorSyntaxEncoder {
     }
     pub fn encode_error_as_primitive_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x2f7c390f3cdef4ce);
@@ -2032,7 +2032,7 @@ impl WithErrorSyntaxEncoder {
     }
     pub fn encode_error_as_primitive_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_result: &mut WithErrorSyntaxErrorAsPrimitiveResult,
     ) -> Result<(), fidl::Error> {
@@ -2049,7 +2049,7 @@ impl WithErrorSyntaxEncoder {
     }
     pub fn encode_error_as_enum_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x8b550d7c29f740c);
@@ -2063,7 +2063,7 @@ impl WithErrorSyntaxEncoder {
     }
     pub fn encode_error_as_enum_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_result: &mut WithErrorSyntaxErrorAsEnumResult,
     ) -> Result<(), fidl::Error> {
@@ -2177,7 +2177,7 @@ impl WithErrorSyntaxResponseAsStructResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -2264,7 +2264,7 @@ impl WithErrorSyntaxErrorAsPrimitiveResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -2351,7 +2351,7 @@ impl WithErrorSyntaxErrorAsEnumResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -2592,7 +2592,7 @@ impl<'a> ChannelProtocolServerSender<'a> {
         fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             ChannelProtocolEncoder::encode_event_a_response(bytes_, handles_, a, b)?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -2610,7 +2610,7 @@ impl<'a> ChannelProtocolServerSender<'a> {
                 result,
             )?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -2628,7 +2628,7 @@ impl<'a> ChannelProtocolServerSender<'a> {
                 b,
             )?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -2896,7 +2896,7 @@ pub struct ChannelProtocolEncoder;
 impl ChannelProtocolEncoder {
     pub fn encode_method_a_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         mut in_a: i64,
         mut in_b: i64,
     ) -> Result<(), fidl::Error> {
@@ -2911,7 +2911,7 @@ impl ChannelProtocolEncoder {
     }
     pub fn encode_event_a_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         mut in_a: i64,
         mut in_b: i64,
     ) -> Result<(), fidl::Error> {
@@ -2928,7 +2928,7 @@ impl ChannelProtocolEncoder {
     }
     pub fn encode_method_b_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_a: i64,
         mut in_b: i64,
@@ -2944,7 +2944,7 @@ impl ChannelProtocolEncoder {
     }
     pub fn encode_method_b_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_result: i64,
     ) -> Result<(), fidl::Error> {
@@ -2961,7 +2961,7 @@ impl ChannelProtocolEncoder {
     }
     pub fn encode_mutate_socket_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_a: fidl::Socket,
     ) -> Result<(), fidl::Error> {
@@ -2976,7 +2976,7 @@ impl ChannelProtocolEncoder {
     }
     pub fn encode_mutate_socket_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_b: fidl::Socket,
     ) -> Result<(), fidl::Error> {
@@ -3019,7 +3019,7 @@ impl ChannelProtocolControlHandle {
         fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)
         })?;
 
@@ -3098,7 +3098,7 @@ impl ChannelProtocolMethodBResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -3176,7 +3176,7 @@ impl ChannelProtocolMutateSocketResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -3385,7 +3385,7 @@ impl<'a> TransitionalServerSender<'a> {
         fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             TransitionalEncoder::encode_request_response(bytes_, handles_, txid.as_raw_id(), y)?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -3394,7 +3394,7 @@ impl<'a> TransitionalServerSender<'a> {
         fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             TransitionalEncoder::encode_event_response(bytes_, handles_, x)?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -3610,7 +3610,7 @@ pub struct TransitionalEncoder;
 impl TransitionalEncoder {
     pub fn encode_request_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_x: i64,
     ) -> Result<(), fidl::Error> {
@@ -3625,7 +3625,7 @@ impl TransitionalEncoder {
     }
     pub fn encode_request_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_y: i64,
     ) -> Result<(), fidl::Error> {
@@ -3642,7 +3642,7 @@ impl TransitionalEncoder {
     }
     pub fn encode_one_way_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         mut in_x: i64,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0xf99bc4b26bc9ea5);
@@ -3656,7 +3656,7 @@ impl TransitionalEncoder {
     }
     pub fn encode_event_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         mut in_x: i64,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x53bb9212bcbe8966);
@@ -3698,7 +3698,7 @@ impl TransitionalControlHandle {
         fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)
         })?;
 
@@ -3777,7 +3777,7 @@ impl TransitionalRequestResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })

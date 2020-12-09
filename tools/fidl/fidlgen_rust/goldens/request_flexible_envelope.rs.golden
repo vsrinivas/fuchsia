@@ -299,7 +299,7 @@ impl<'a> ProtocolServerSender<'a> {
                 f,
             )?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -317,7 +317,7 @@ impl<'a> ProtocolServerSender<'a> {
                 f,
             )?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -556,7 +556,7 @@ pub struct ProtocolEncoder;
 impl ProtocolEncoder {
     pub fn encode_request_strict_response_flexible_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_s: &mut StrictFoo,
     ) -> Result<(), fidl::Error> {
@@ -571,7 +571,7 @@ impl ProtocolEncoder {
     }
     pub fn encode_request_strict_response_flexible_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_f: &mut FlexibleFoo,
     ) -> Result<(), fidl::Error> {
@@ -588,7 +588,7 @@ impl ProtocolEncoder {
     }
     pub fn encode_request_flexible_response_strict_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_s: &mut FlexibleFoo,
     ) -> Result<(), fidl::Error> {
@@ -603,7 +603,7 @@ impl ProtocolEncoder {
     }
     pub fn encode_request_flexible_response_strict_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_f: &mut StrictFoo,
     ) -> Result<(), fidl::Error> {
@@ -708,7 +708,7 @@ impl ProtocolRequestStrictResponseFlexibleResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -786,7 +786,7 @@ impl ProtocolRequestFlexibleResponseStrictResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })

@@ -564,7 +564,7 @@ impl<'a> ParentServerSender<'a> {
         fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             ParentEncoder::encode_get_child_response(bytes_, handles_, txid.as_raw_id(), c)?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -582,7 +582,7 @@ impl<'a> ParentServerSender<'a> {
                 r,
             )?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -901,7 +901,7 @@ pub struct ParentEncoder;
 impl ParentEncoder {
     pub fn encode_get_child_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x6e0c789be8dbb77e);
@@ -915,7 +915,7 @@ impl ParentEncoder {
     }
     pub fn encode_get_child_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
@@ -932,7 +932,7 @@ impl ParentEncoder {
     }
     pub fn encode_get_child_request_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x193e7d6949a9df98);
@@ -946,7 +946,7 @@ impl ParentEncoder {
     }
     pub fn encode_get_child_request_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
@@ -963,7 +963,7 @@ impl ParentEncoder {
     }
     pub fn encode_take_child_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x5311bd7214c0f6e);
@@ -977,7 +977,7 @@ impl ParentEncoder {
     }
     pub fn encode_take_child_request_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x15dae312bad5a9cc);
@@ -1082,7 +1082,7 @@ impl ParentGetChildResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -1163,7 +1163,7 @@ impl ParentGetChildRequestResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })

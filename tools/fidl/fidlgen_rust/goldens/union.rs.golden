@@ -814,7 +814,7 @@ impl<'a> TestProtocolServerSender<'a> {
 				bytes_, handles_,
 				txid.as_raw_id(),xu,)?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -829,7 +829,7 @@ impl<'a> TestProtocolServerSender<'a> {
 				bytes_, handles_,
 				txid.as_raw_id(),xu,)?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -1069,7 +1069,7 @@ pub struct TestProtocolEncoder;
 impl TestProtocolEncoder {
     pub fn encode_strict_x_union_hence_response_may_be_stack_allocated_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x747b084a44f0dc3e);
@@ -1083,7 +1083,7 @@ impl TestProtocolEncoder {
     }
     pub fn encode_strict_x_union_hence_response_may_be_stack_allocated_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_xu: &mut StrictBoundedXUnion,
     ) -> Result<(), fidl::Error> {
@@ -1100,7 +1100,7 @@ impl TestProtocolEncoder {
     }
     pub fn encode_flexible_x_union_hence_response_must_be_heap_allocated_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x57615a25c2a785d2);
@@ -1114,7 +1114,7 @@ impl TestProtocolEncoder {
     }
     pub fn encode_flexible_x_union_hence_response_must_be_heap_allocated_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_xu: &mut OlderSimpleUnion,
     ) -> Result<(), fidl::Error> {
@@ -1222,7 +1222,7 @@ impl TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -1300,7 +1300,7 @@ impl TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })

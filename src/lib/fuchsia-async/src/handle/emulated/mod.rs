@@ -27,7 +27,7 @@ use zx_status::Status;
 const INVALID_HANDLE: u32 = 0xffff_ffff;
 
 /// The type of an object.
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Copy, Clone)]
 pub struct ObjectType(u32);
 
 macro_rules! define_object_type_constant {
@@ -49,6 +49,7 @@ impl ObjectType {
 }
 
 /// A borrowed reference to an underlying handle
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct HandleRef<'a>(u32, std::marker::PhantomData<&'a u32>);
 
 impl<'a> HandleRef<'a> {
@@ -853,6 +854,7 @@ impl Rights {
 }
 
 /// Handle operation.
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum HandleOp<'a> {
     /// Move the handle.
     Move(Handle),
@@ -862,6 +864,7 @@ pub enum HandleOp<'a> {
 
 /// Operation to perform on handles during write.
 /// Based on zx_handle_disposition_t, but does not match the same layout.
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct HandleDisposition<'a> {
     /// Handle operation.
     pub handle_op: HandleOp<'a>,
@@ -876,7 +879,7 @@ pub struct HandleDisposition<'a> {
 }
 
 /// HandleInfo represents a handle with additional metadata.
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct HandleInfo {
     /// The handle.
     pub handle: Handle,

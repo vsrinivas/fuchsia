@@ -220,7 +220,7 @@ impl<'a> ExampleServerSender<'a> {
         fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
             ExampleEncoder::encode_foo_response(bytes_, handles_, txid.as_raw_id(), result)?;
             self.channel
-                .write(&*bytes_, &mut *handles_)
+                .write_etc(&*bytes_, &mut *handles_)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })
@@ -396,7 +396,7 @@ pub struct ExampleEncoder;
 impl ExampleEncoder {
     pub fn encode_foo_request<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_s: &str,
     ) -> Result<(), fidl::Error> {
@@ -411,7 +411,7 @@ impl ExampleEncoder {
     }
     pub fn encode_foo_response<'a>(
         out_bytes: &'a mut Vec<u8>,
-        out_handles: &'a mut Vec<fidl::Handle>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
         mut in_result: &mut ExampleFooResult,
     ) -> Result<(), fidl::Error> {
@@ -519,7 +519,7 @@ impl ExampleFooResponder {
             self.control_handle
                 .inner
                 .channel()
-                .write(&*bytes, &mut *handles)
+                .write_etc(&*bytes, &mut *handles)
                 .map_err(fidl::Error::ServerResponseWrite)?;
             Ok(())
         })

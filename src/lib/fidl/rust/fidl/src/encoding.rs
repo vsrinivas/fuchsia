@@ -5,7 +5,10 @@
 //! Encoding contains functions and traits for FIDL2 encoding and decoding.
 
 use {
-    crate::handle::{invoke_for_handle_types, Handle, HandleBased, HandleInfo, ObjectType, Rights},
+    crate::handle::{
+        invoke_for_handle_types, Handle, HandleBased, HandleDisposition, HandleInfo, HandleOp,
+        ObjectType, Rights, Status,
+    },
     crate::{Error, Result},
     bitflags::bitflags,
     fuchsia_zircon_status as zx_status,
@@ -15,7 +18,7 @@ use {
 
 struct TlsBuf {
     bytes: Vec<u8>,
-    encode_handles: Vec<Handle>,
+    encode_handles: Vec<HandleDisposition<'static>>,
     decode_handles: Vec<HandleInfo>,
 }
 
@@ -33,7 +36,9 @@ const MIN_TLS_BUF_BYTES_SIZE: usize = 512;
 ///
 /// This function may not be called recursively.
 #[inline]
-pub fn with_tls_encode_buf<R>(f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) -> R) -> R {
+pub fn with_tls_encode_buf<R>(
+    f: impl FnOnce(&mut Vec<u8>, &mut Vec<HandleDisposition<'static>>) -> R,
+) -> R {
     TLS_BUF.with(|buf| {
         let (mut bytes, mut handles) =
             RefMut::map_split(buf.borrow_mut(), |b| (&mut b.bytes, &mut b.encode_handles));
@@ -71,7 +76,7 @@ pub fn with_tls_decode_buf<R>(f: impl FnOnce(&mut Vec<u8>, &mut Vec<HandleInfo>)
 #[inline]
 pub fn with_tls_encoded<T, E: From<Error>>(
     val: &mut impl Encodable,
-    f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) -> std::result::Result<T, E>,
+    f: impl FnOnce(&mut Vec<u8>, &mut Vec<HandleDisposition<'static>>) -> std::result::Result<T, E>,
 ) -> std::result::Result<T, E> {
     with_tls_encode_buf(|bytes, handles| {
         Encoder::encode(bytes, handles, val)?;
@@ -167,7 +172,7 @@ impl Context {
 
 /// Encoding state
 #[derive(Debug)]
-pub struct Encoder<'a> {
+pub struct Encoder<'a, 'b> {
     /// Buffer to write output data into.
     ///
     /// New chunks of out-of-line data should be appended to the end of the `Vec`.
@@ -176,7 +181,7 @@ pub struct Encoder<'a> {
     buf: &'a mut Vec<u8>,
 
     /// Buffer to write output handles into.
-    handles: &'a mut Vec<Handle>,
+    handles: &'a mut Vec<HandleDisposition<'b>>,
 
     /// Encoding context.
     context: &'a Context,
@@ -195,12 +200,12 @@ fn default_encode_context() -> Context {
     Context {}
 }
 
-impl<'a> Encoder<'a> {
+impl<'a, 'b> Encoder<'a, 'b> {
     /// FIDL2-encodes `x` into the provided data and handle buffers.
     #[inline]
     pub fn encode<T: Encodable + ?Sized>(
         buf: &'a mut Vec<u8>,
-        handles: &'a mut Vec<Handle>,
+        handles: &'a mut Vec<HandleDisposition<'b>>,
         x: &mut T,
     ) -> Result<()> {
         let context = default_encode_context();
@@ -217,15 +222,15 @@ impl<'a> Encoder<'a> {
     pub fn encode_with_context<T: Encodable + ?Sized>(
         context: &Context,
         buf: &'a mut Vec<u8>,
-        handles: &'a mut Vec<Handle>,
+        handles: &'a mut Vec<HandleDisposition<'b>>,
         x: &mut T,
     ) -> Result<()> {
-        fn prepare_for_encoding<'a>(
+        fn prepare_for_encoding<'a, 'b>(
             context: &'a Context,
             buf: &'a mut Vec<u8>,
-            handles: &'a mut Vec<Handle>,
+            handles: &'a mut Vec<HandleDisposition<'b>>,
             ty_inline_size: usize,
-        ) -> Encoder<'a> {
+        ) -> Encoder<'a, 'b> {
             // An empty response can have size zero.
             // This if statement is needed to not break the padding write below.
             if ty_inline_size != 0 {
@@ -270,7 +275,7 @@ impl<'a> Encoder<'a> {
     #[inline(always)]
     pub fn write_out_of_line<F>(&mut self, len: usize, recursion_depth: usize, f: F) -> Result<()>
     where
-        F: FnOnce(&mut Encoder<'_>, usize, usize) -> Result<()>,
+        F: FnOnce(&mut Encoder<'_, '_>, usize, usize) -> Result<()>,
     {
         let new_offset = self.buf.len();
         let new_depth = recursion_depth + 1;
@@ -332,10 +337,16 @@ impl<'a> Encoder<'a> {
 
     /// Append handles to the buffer.
     #[inline]
-    pub fn append_handles(&mut self, handles: &mut [Handle]) {
+    pub fn append_unknown_handles(&mut self, handles: &mut [Handle]) {
         self.handles.reserve(handles.len());
         for handle in handles {
-            self.handles.push(take_handle(handle));
+            // Unknown handles don't have object type and rights.
+            self.handles.push(HandleDisposition {
+                handle_op: HandleOp::Move(take_handle(handle)),
+                object_type: ObjectType::NONE,
+                rights: Rights::SAME_RIGHTS,
+                result: Status::OK,
+            });
         }
     }
 
@@ -786,7 +797,7 @@ pub trait Encodable: LayoutObject {
     #[inline(always)]
     fn encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -803,7 +814,7 @@ pub trait Encodable: LayoutObject {
     #[inline(always)]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -928,7 +939,7 @@ macro_rules! impl_codable_int { ($($int_ty:ty,)*) => { $(
 
     impl Encodable for $int_ty {
         #[inline(always)]
-        unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, _recursion_depth: usize) -> Result<()> {
+        unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_, '_>, offset: usize, _recursion_depth: usize) -> Result<()> {
             debug_assert!(encoder.buf.len() >= offset + mem::size_of::<$int_ty>());
             let ptr = encoder.buf.get_unchecked_mut(offset);
             let int_ptr = mem::transmute::<*mut u8, *mut $int_ty>(ptr);
@@ -966,7 +977,7 @@ macro_rules! impl_codable_float { ($($float_ty:ty,)*) => { $(
 
     impl Encodable for $float_ty {
         #[inline]
-        unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, _recursion_depth: usize) -> Result<()> {
+        unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_, '_>, offset: usize, _recursion_depth: usize) -> Result<()> {
             debug_assert!(encoder.buf.len() >= offset + mem::size_of::<$float_ty>());
             let ptr = encoder.buf.get_unchecked_mut(offset);
             let float_ptr = mem::transmute::<*mut u8, *mut $float_ty>(ptr);
@@ -1021,7 +1032,7 @@ macro_rules! impl_slice_encoding_base {
             #[inline]
             unsafe fn unsafe_encode(
                 &mut self,
-                encoder: &mut Encoder<'_>,
+                encoder: &mut Encoder<'_, '_>,
                 offset: usize,
                 recursion_depth: usize,
             ) -> Result<()> {
@@ -1043,7 +1054,7 @@ macro_rules! impl_slice_encoding_by_iter {
             #[inline]
             unsafe fn unsafe_encode(
                 &mut self,
-                encoder: &mut Encoder<'_>,
+                encoder: &mut Encoder<'_, '_>,
                 offset: usize,
                 recursion_depth: usize,
             ) -> Result<()> {
@@ -1067,7 +1078,7 @@ macro_rules! impl_slice_encoding_by_copy {
             #[inline]
             unsafe fn unsafe_encode(
                 &mut self,
-                encoder: &mut Encoder<'_>,
+                encoder: &mut Encoder<'_, '_>,
                 offset: usize,
                 recursion_depth: usize,
             ) -> Result<()> {
@@ -1095,7 +1106,7 @@ impl Encodable for bool {
     #[inline]
     fn encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         _recursion_depth: usize,
     ) -> Result<()> {
@@ -1127,7 +1138,7 @@ impl Encodable for u8 {
     #[inline(always)]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         _recursion_depth: usize,
     ) -> Result<()> {
@@ -1158,7 +1169,7 @@ impl Encodable for i8 {
     #[inline(always)]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         _recursion_depth: usize,
     ) -> Result<()> {
@@ -1186,7 +1197,7 @@ impl Decodable for i8 {
 #[inline]
 unsafe fn encode_array<T: Encodable>(
     slice: &mut [T],
-    encoder: &mut Encoder<'_>,
+    encoder: &mut Encoder<'_, '_>,
     offset: usize,
     recursion_depth: usize,
 ) -> Result<()> {
@@ -1242,7 +1253,7 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
 
     impl<T: Encodable> Encodable for [T; $len] {
         #[inline]
-        unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, recursion_depth: usize) -> Result<()> {
+        unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> Result<()> {
             encode_array(self, encoder, offset, recursion_depth)
         }
     }
@@ -1285,7 +1296,7 @@ impl_codable_for_fixed_array!(256,);
 /// Encode an optional vector-like component.
 #[inline]
 pub unsafe fn encode_vector<T: Encodable>(
-    encoder: &mut Encoder<'_>,
+    encoder: &mut Encoder<'_, '_>,
     offset: usize,
     recursion_depth: usize,
     slice_opt: Option<&mut [T]>,
@@ -1315,7 +1326,7 @@ pub unsafe fn encode_vector<T: Encodable>(
 /// Encode an missing vector-like component.
 #[inline]
 pub unsafe fn encode_absent_vector(
-    encoder: &mut Encoder<'_>,
+    encoder: &mut Encoder<'_, '_>,
     offset: usize,
     recursion_depth: usize,
 ) -> Result<()> {
@@ -1326,7 +1337,7 @@ pub unsafe fn encode_absent_vector(
 /// Like `encode_vector`, but optimized for `&[u8]`.
 #[inline]
 unsafe fn encode_vector_from_bytes(
-    encoder: &mut Encoder<'_>,
+    encoder: &mut Encoder<'_, '_>,
     offset: usize,
     recursion_depth: usize,
     slice_opt: Option<&[u8]>,
@@ -1347,7 +1358,7 @@ unsafe fn encode_vector_from_bytes(
 /// Like `encode_vector`, but encodes from an iterator.
 #[inline]
 pub unsafe fn encode_vector_from_iter<Iter, T>(
-    encoder: &mut Encoder<'_>,
+    encoder: &mut Encoder<'_, '_>,
     offset: usize,
     recursion_depth: usize,
     iter_opt: Option<Iter>,
@@ -1453,7 +1464,7 @@ impl Encodable for &str {
     #[inline]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -1467,7 +1478,7 @@ impl Encodable for String {
     #[inline]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -1497,7 +1508,7 @@ impl Encodable for Option<&str> {
     #[inline]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -1516,7 +1527,7 @@ impl Encodable for Option<String> {
     #[inline]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -1555,7 +1566,7 @@ impl<T: Encodable> Encodable for &mut dyn ExactSizeIterator<Item = T> {
     #[inline]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -1569,7 +1580,7 @@ impl<T: Encodable> Encodable for Vec<T> {
     #[inline]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -1598,7 +1609,7 @@ impl<T: Encodable> Encodable for Option<&mut dyn ExactSizeIterator<Item = T>> {
     #[inline]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -1612,7 +1623,7 @@ impl<T: Encodable> Encodable for Option<Vec<T>> {
     #[inline]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -1739,7 +1750,7 @@ macro_rules! fidl_strict_bits {
             #[inline]
             fn encode(
                 &mut self,
-                encoder: &mut $crate::encoding::Encoder<'_>,
+                encoder: &mut $crate::encoding::Encoder<'_, '_>,
                 offset: usize,
                 recursion_depth: usize,
             ) -> std::result::Result<(), $crate::Error> {
@@ -1819,7 +1830,7 @@ macro_rules! fidl_flexible_bits {
             #[inline]
             fn encode(
                 &mut self,
-                encoder: &mut $crate::encoding::Encoder<'_>,
+                encoder: &mut $crate::encoding::Encoder<'_, '_>,
                 offset: usize,
                 recursion_depth: usize,
             ) -> std::result::Result<(), $crate::Error> {
@@ -1915,7 +1926,7 @@ macro_rules! fidl_strict_enum {
 
         impl $crate::encoding::Encodable for $name {
             #[inline]
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize)
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize)
                 -> std::result::Result<(), $crate::Error>
             {
                 $crate::fidl_encode!(&mut (*self as $prim_ty), encoder, offset, recursion_depth)
@@ -2041,7 +2052,7 @@ macro_rules! fidl_flexible_enum {
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize)
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize)
                 -> std::result::Result<(), $crate::Error>
             {
                 $crate::fidl_encode!(&mut self.into_primitive(), encoder, offset, recursion_depth)
@@ -2071,14 +2082,18 @@ impl_layout!(Handle, align: 4, size: 4);
 impl Encodable for Handle {
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
         ALLOC_PRESENT_U32.clone().unsafe_encode(encoder, offset, recursion_depth)?;
-        let handle = take_handle(self);
-        encoder.handles.push(handle);
-        Ok(())
+        // TODO(fxbug.dev/41920) Add object type and rights from FIDL here.
+        Ok(encoder.handles.push(HandleDisposition {
+            handle_op: HandleOp::Move(take_handle(self)),
+            object_type: ObjectType::NONE,
+            rights: Rights::SAME_RIGHTS,
+            result: Status::OK,
+        }))
     }
 }
 
@@ -2105,7 +2120,7 @@ impl_layout!(Option<Handle>, align: 4, size: 4);
 impl Encodable for Option<Handle> {
     fn encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -2154,7 +2169,7 @@ macro_rules! handle_based_codable {
         impl<$($($generic,)*)*> $crate::encoding::Encodable for $ty<$($($generic,)*)*> {
 
 #[inline]
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize)
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize)
                 -> $crate::Result<()>
             {
                 let mut handle = $crate::encoding::take_handle(self);
@@ -2187,7 +2202,7 @@ macro_rules! handle_based_codable {
 
         impl<$($($generic,)*)*> $crate::encoding::Encodable for Option<$ty<$($($generic,)*)*>> {
             #[inline]
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize)
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize)
                 -> $crate::Result<()>
             {
                 match self {
@@ -2226,7 +2241,7 @@ impl Encodable for zx_status::Status {
     #[inline]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -2269,7 +2284,7 @@ impl Layout for EpitaphBody {
 impl Encodable for EpitaphBody {
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -2333,7 +2348,7 @@ impl<T: Autonull> Encodable for Option<&mut T> {
     #[inline]
     fn encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -2379,7 +2394,7 @@ impl<T: Autonull> Encodable for Option<Box<T>> {
     #[inline]
     fn encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -2479,7 +2494,7 @@ macro_rules! fidl_struct {
 
         impl $crate::encoding::Encodable for $name {
             #[inline]
-            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
                 // Ensure padding is zero by writing zero to the padded region which will be partially overwritten
                 // when the field is written.
                 $(
@@ -2594,7 +2609,7 @@ macro_rules! fidl_struct_copy {
 
         impl $crate::encoding::Encodable for $name {
             #[inline]
-            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, _recursion_depth: usize) -> $crate::Result<()> {
+            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, _recursion_depth: usize) -> $crate::Result<()> {
                 let buf_ptr = encoder.mut_buffer().as_mut_ptr().offset(offset as isize);
                 let typed_buf_ptr = std::mem::transmute::<*mut u8, *mut $name>(buf_ptr);
                 std::ptr::copy_nonoverlapping(self as *mut $name, typed_buf_ptr, 1);
@@ -2671,7 +2686,7 @@ macro_rules! fidl_empty_struct {
             #[inline]
             unsafe fn unsafe_encode(
                 &mut self,
-                encoder: &mut $crate::encoding::Encoder<'_>,
+                encoder: &mut $crate::encoding::Encoder<'_, '_>,
                 offset: usize,
                 recursion_depth: usize,
             ) -> $crate::Result<()> {
@@ -2712,7 +2727,7 @@ macro_rules! fidl_empty_struct {
 /// Encode the provided value behind a FIDL "envelope".
 pub unsafe fn encode_in_envelope(
     val: &mut Option<&mut dyn Encodable>,
-    encoder: &mut Encoder<'_>,
+    encoder: &mut Encoder<'_, '_>,
     offset: usize,
     recursion_depth: usize,
 ) -> Result<()> {
@@ -2837,7 +2852,7 @@ macro_rules! fidl_table {
             // Implementation of unsafe_encode that isn't an unsafe function to avoid a large unsafe block that may
             // lead to unintended unsafe operations.
             #[inline(always)]
-            fn unsafe_encode_impl(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+            fn unsafe_encode_impl(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
                 // Vector header
                 let max_ordinal = self.find_max_ordinal();
                 unsafe {
@@ -2983,7 +2998,7 @@ macro_rules! fidl_table {
         }
 
         impl $crate::encoding::Encodable for $name {
-            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
                 self.unsafe_encode_impl(encoder, offset, recursion_depth)
             }
         }
@@ -3084,7 +3099,7 @@ where
     #[inline]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -3325,7 +3340,7 @@ macro_rules! fidl_xunion {
 
         impl $crate::encoding::Encodable for $name {
             #[inline]
-            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
                 let mut ordinal = self.ordinal();
                 // Encode ordinal
                 $crate::fidl_unsafe_encode!(&mut ordinal, encoder, offset, recursion_depth)?;
@@ -3353,7 +3368,7 @@ macro_rules! fidl_xunion {
                             encoder.append_out_of_line_bytes(bytes);
                             encoder.set_next_handle_subtype($crate::handle::ObjectType::NONE);
                             encoder.set_next_handle_rights($crate::handle::Rights::SAME_RIGHTS);
-                            encoder.append_handles(handles);
+                            encoder.append_unknown_handles(handles);
                             Ok(())
                         },
                     )?
@@ -3651,7 +3666,7 @@ impl<T: Encodable> Encodable for TransactionMessage<'_, T> {
     #[inline]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -3790,7 +3805,7 @@ impl<T: Encodable> Encodable for PersistentMessage<'_, T> {
     #[inline]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -3809,7 +3824,7 @@ impl<T: Encodable> Encodable for PersistentMessage<'_, T> {
 pub fn encode_persistent<T: Encodable>(body: &mut T) -> Result<Vec<u8>> {
     let msg = &mut PersistentMessage { header: PersistentHeader::new(), body };
     let mut combined_bytes = Vec::<u8>::new();
-    let mut handles = Vec::<Handle>::new();
+    let mut handles = Vec::<HandleDisposition<'static>>::new();
     Encoder::encode(&mut combined_bytes, &mut handles, msg)?;
     debug_assert!(handles.is_empty(), "Persistent message contains handles");
     Ok(combined_bytes)
@@ -3833,7 +3848,7 @@ pub fn encode_persistent_body<T: Encodable>(
     header: &PersistentHeader,
 ) -> Result<Vec<u8>> {
     let mut combined_bytes = Vec::<u8>::new();
-    let mut handles = Vec::<Handle>::new();
+    let mut handles = Vec::<HandleDisposition<'static>>::new();
     Encoder::encode_with_context(
         &header.decoding_context(),
         &mut combined_bytes,
@@ -3900,7 +3915,7 @@ macro_rules! wrap_handle_metadata {
             #[inline]
             unsafe fn unsafe_encode(
                 &mut self,
-                encoder: &mut $crate::encoding::Encoder<'_>,
+                encoder: &mut $crate::encoding::Encoder<'_, '_>,
                 offset: usize,
                 recursion_depth: usize,
             ) -> $crate::Result<()> {
@@ -3989,7 +4004,7 @@ macro_rules! tuple_impls {
                   $( $ntyp: Encodable,)*
         {
             #[inline]
-            unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, recursion_depth: usize) -> Result<()> {
+            unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> Result<()> {
                 // Tuples are encoded like structs.
                 // $idx is always 0 for the first element.
                 self.$idx.unsafe_encode(encoder, offset, recursion_depth)?;
@@ -4074,7 +4089,7 @@ impl Encodable for () {
     #[inline]
     fn encode(
         &mut self,
-        _: &mut Encoder<'_>,
+        _: &mut Encoder<'_, '_>,
         _offset: usize,
         _recursion_depth: usize,
     ) -> Result<()> {
@@ -4108,7 +4123,7 @@ impl<T: Encodable> Encodable for &mut T {
     #[inline]
     fn encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -4118,7 +4133,7 @@ impl<T: Encodable> Encodable for &mut T {
     #[inline]
     unsafe fn unsafe_encode(
         &mut self,
-        encoder: &mut Encoder<'_>,
+        encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
@@ -4140,13 +4155,19 @@ mod test {
 
     pub const CONTEXTS: &[&Context] = &[&Context {}];
 
-    fn to_handle_info(handles: &mut Vec<Handle>) -> Vec<HandleInfo> {
+    fn to_handle_info(handles: &mut Vec<HandleDisposition<'static>>) -> Vec<HandleInfo> {
         handles
             .drain(..)
-            .map(|mut h| HandleInfo {
-                handle: mem::replace(&mut h, Handle::invalid()),
-                object_type: ObjectType::NONE,
-                rights: Rights::SAME_RIGHTS,
+            .map(|h| {
+                assert_eq!(h.result, Status::OK);
+                if let HandleOp::Move(mut handle) = h.handle_op {
+                    return HandleInfo {
+                        handle: mem::replace(&mut handle, Handle::invalid()),
+                        object_type: h.object_type,
+                        rights: h.rights,
+                    };
+                }
+                panic!("expected HandleOp::Move");
             })
             .collect()
     }
@@ -5664,13 +5685,19 @@ mod zx_test {
     use crate::handle::AsHandleRef;
     use fuchsia_zircon as zx;
 
-    fn to_handle_info(handles: &mut [Handle]) -> Vec<HandleInfo> {
+    fn to_handle_info(handles: &mut Vec<HandleDisposition<'static>>) -> Vec<HandleInfo> {
         handles
-            .iter_mut()
-            .map(|h| HandleInfo {
-                handle: mem::replace(h, Handle::invalid()),
-                object_type: ObjectType::NONE,
-                rights: Rights::SAME_RIGHTS,
+            .drain(..)
+            .map(|h| {
+                assert_eq!(h.result, Status::OK);
+                if let HandleOp::Move(mut handle) = h.handle_op {
+                    return HandleInfo {
+                        handle: mem::replace(&mut handle, Handle::invalid()),
+                        object_type: h.object_type,
+                        rights: h.rights,
+                    };
+                }
+                panic!("expected HandleOp::Move");
             })
             .collect()
     }
