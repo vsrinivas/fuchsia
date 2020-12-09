@@ -209,7 +209,9 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", sshutilconstants.TimedOutConnectingMsg), Type: swarmingOutputType})
 	// For fxbug.dev/61419.
 	// Error is being logged at https://fuchsia.googlesource.com/fuchsia/+/675c6b9cc2452cd7108f075d91e048218b92ae69/garnet/bin/run_test_component/main.cc#431
-	ret = append(ret, &stringInLogCheck{String: ".cmx canceled due to timeout.", Type: swarmingOutputType, OnlyOnStates: []string{"TIMED_OUT"}})
+	ret = append(ret, &stringInLogCheck{String: ".cmx canceled due to timeout.", Type: swarmingOutputType,
+		ExceptBlocks: []*logBlock{{startString: "[ RUN      ] RunFixture.TestTimeout", endString: "RunFixture.TestTimeout ("}},
+		OnlyOnStates: []string{"TIMED_OUT"}})
 	// For fxbug.dev/61420.
 	ret = append(ret, &stringInLogCheck{
 		String:       fmt.Sprintf("syslog: %s", syslogconstants.CtxReconnectError),
