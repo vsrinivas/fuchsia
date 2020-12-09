@@ -4,28 +4,48 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Build
-### generate a compilation database for the current build configuration
+### Generates a compile_commands.json file in FUCHSIA_DIR using the current build configuration
 
-## usage: fx compdb
+## Generates a compile_commands.json file in FUCHSIA_DIR using the current build configuration.
+##
+## Usage: fx compdb [flags]
+##
+##   --no-gen              Do not first run `fx gen`
+##   --help|-h             Print this help
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
 
-main () {
-    if [ $# -gt 0 ]; then
-        echo "Script to generate compile_commands.json file"
-        echo "Concatenates the Fuchsia and Zircon compile_commands.json into one"
-        echo "Usage: fx compdb"
-        echo
-        exit
+main() {
+    local use_gen=true
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --help | -h)
+            fx-command-help
+            exit 0
+            ;;
+        --no-gen)
+            use_gen=false
+            ;;
+        *)
+            echo "Invalid argument '$1'"
+            fx-command-help
+            exit 1
+            ;;
+        esac
+        shift
+    done
+
+    if [[ "${use_gen}" == true ]]; then
+      fx-gen
     fi
 
-    fx-gen
     local concat_filename="${FUCHSIA_BUILD_DIR}/compile_commands.zircon-and-build.json"
     "${FUCHSIA_DIR}/scripts/editors/cat_compile_commands.py" \
         "${ZIRCON_BUILDROOT}/compile_commands.json" \
         "${FUCHSIA_BUILD_DIR}/compile_commands.json" \
-            > "${concat_filename}"
+        >"${concat_filename}"
     ln -sf "${concat_filename}" "${FUCHSIA_DIR}/compile_commands.json"
 }
 
