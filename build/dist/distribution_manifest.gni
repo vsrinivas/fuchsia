@@ -125,3 +125,37 @@ template("distribution_manifest") {
     }
   }
 }
+
+# Adds distribution entries from a given FINI manifest file.
+#
+# Use this template to ensure that all entries from a given input FINI
+# manifest are collected through distribution_manifest() or fini_manifest()
+# when this target is part of their dependency tree.
+#
+# Parameters
+#
+#   file (required)
+#     Path to a FINI file.
+#
+#   deps
+#   testonly
+#   visibility
+template("distribution_entries_file") {
+  assert(defined(invoker.file), "Must specify file")
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    metadata = {
+      distribution_entries_files = [
+        {
+          file = rebase_path(invoker.file, root_build_dir)
+          label = get_label_info(":$target_name", "label_with_toolchain")
+        },
+      ]
+    }
+  }
+}
