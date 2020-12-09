@@ -46,9 +46,6 @@ sandbox_test_package("has_isolated_cache_storage") {
     "//third_party/googletest:gmock",
   ]
 
-  # TODO(fxbug.dev/46729): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
   environments = basic_envs
 }
 
