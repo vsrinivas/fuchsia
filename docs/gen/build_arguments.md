@@ -725,7 +725,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/3cf0b1b8a0e197a8d31e25f978eeca334f0d1848/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/6ecb8a44b8f307da9ac323f78039dbc6b696e768/runtime/dart/config.gni#10)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
