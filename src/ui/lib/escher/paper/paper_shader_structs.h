@@ -42,6 +42,10 @@ static std::pair<StructT*, UniformBinding> NewPaperShaderUniformBinding(const Fr
 struct PaperShaderMeshInstance {
   mat4 model_transform;
   vec4 color;
+  float gamma_power;
+  float __padding0;
+  float __padding1;
+  float __padding2;
   // TODO(fxbug.dev/7243): field for vertex-shader clip-planes.
 
   static constexpr size_t kDescriptorSet = 1;

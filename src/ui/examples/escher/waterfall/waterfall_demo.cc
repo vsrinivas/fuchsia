@@ -406,20 +406,22 @@ static void UpdateLighting(PaperScene* paper_scene, const escher::Stopwatch& sto
     pl.falloff = 0.001f;
   }
 
+  const double current_time = stopwatch.GetElapsedSeconds();
+
   // Simple animation of point light.
   const float width = paper_scene->width();
   const float height = paper_scene->height();
   if (num_point_lights == 1) {
-    paper_scene->point_lights[0].position = vec3(
-        width * .3f, height * .3f, -(800.f + 200.f * sin(stopwatch.GetElapsedSeconds() * 1.2f)));
+    paper_scene->point_lights[0].position =
+        vec3(width * .3f, height * .3f, -(800.f + 200.f * sin(current_time * 1.2f)));
   } else {
     FX_DCHECK(num_point_lights == 2);
 
-    paper_scene->point_lights[0].position = vec3(
-        width * .3f, height * .3f, -(800.f + 300.f * sin(stopwatch.GetElapsedSeconds() * 1.2f)));
+    paper_scene->point_lights[0].position =
+        vec3(width * .3f, height * .3f, -(800.f + 300.f * sin(current_time * 1.2f)));
     paper_scene->point_lights[1].position =
-        vec3(width * (0.6f + 0.3f * sin(stopwatch.GetElapsedSeconds() * 0.7f)),
-             height * (0.4f + 0.2f * sin(stopwatch.GetElapsedSeconds() * 0.6f)), -900.f);
+        vec3(width * (0.6f + 0.3f * sin(current_time * 0.7f)),
+             height * (0.4f + 0.2f * sin(current_time * 0.6f)), -900.f);
 
     // Make the light colors subtly different.
     vec3 color_diff = vec3(.02f, -.01f, .04f) * paper_scene->point_lights[0].color;

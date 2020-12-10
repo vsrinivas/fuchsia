@@ -47,6 +47,9 @@ Frame::Frame(impl::FrameManager* manager, escher::CommandBuffer::Type requested_
       // vkCmdBeginQuery, vkCmdEndQuery that is used in querying gpu cannot be executed on a
       // protected command buffer.
       // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/man/html/vkCmdBeginQuery.html
+      //
+      // TODO(fxbug.dev/66003): instantiation of the profiler shouldn't depend on
+      // |enable_gpu_logging|.
       profiler_((escher()->supports_timer_queries() && enable_gpu_logging && !use_protected_memory)
                     ? fxl::MakeRefCounted<TimestampProfiler>(escher()->vk_device(),
                                                              escher()->timestamp_period())

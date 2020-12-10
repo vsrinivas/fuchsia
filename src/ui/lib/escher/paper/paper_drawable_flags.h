@@ -17,8 +17,12 @@ namespace escher {
 enum class PaperDrawableFlagBits : uint8_t {
   kDebug = 1U << 0,
   kDisableShadowCasting = 1U << 1,
+  // Apply a BT.709 OETF (essentially a "gamma correction" curve) to the texture sampled in the
+  // fragment shader.  More precisely, a close approximation to the OETF, achieved by squaring
+  // the RGB components of the sampled texture.
+  kBt709Oetf = 1U << 2,
 
-  kAllFlags = 0x3u,
+  kAllFlags = 0x7u,
 };
 ESCHER_DECLARE_ENUM_FLAGS(PaperDrawableFlags, PaperDrawableFlagBits);
 

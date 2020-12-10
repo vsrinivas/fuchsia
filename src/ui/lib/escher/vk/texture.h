@@ -36,8 +36,11 @@ class Texture : public ImageView {
 
   uint32_t sample_count() const { return image()->info().sample_count; }
 
+  bool is_yuv_format() const { return is_yuv_format_; }
+
  private:
   SamplerPtr sampler_;
+  const bool is_yuv_format_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Texture);
 };

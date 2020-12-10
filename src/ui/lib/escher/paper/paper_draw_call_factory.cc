@@ -209,8 +209,11 @@ void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_en
                             !(drawable_flags & PaperDrawableFlagBits::kDisableShadowCasting);
   const PaperShaderList shader_list = GetShaderList(material, cast_shadows);
 
-  auto draw_data = PaperRenderFuncs::NewMeshDrawData(frame_, transform.matrix, material_color,
-                                                     shader_list, cache_entry.num_indices);
+  const bool needs_gamma_correction =
+      texture->is_yuv_format() || (drawable_flags & PaperDrawableFlagBits::kBt709Oetf);
+  auto draw_data = PaperRenderFuncs::NewMeshDrawData(
+      frame_, transform.matrix, material_color, /*gamma_power*/ needs_gamma_correction ? 2.f : 1.f,
+      shader_list, cache_entry.num_indices);
 
   auto sort_key = GetSortKey(material, pipeline_hash, mesh_hash, depth).key();
   auto queue_flags = GetRenderQueueFlagBits(material);
@@ -226,9 +229,9 @@ void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_en
   if (cast_shadows) {
     // Generate an additional draw call.
 
-    draw_data =
-        PaperRenderFuncs::NewMeshDrawData(frame_, transform.matrix, material_color, shader_list,
-                                          cache_entry.num_shadow_volume_indices);
+    draw_data = PaperRenderFuncs::NewMeshDrawData(frame_, transform.matrix, material_color,
+                                                  /*gamma_power*/ 1.f, shader_list,
+                                                  cache_entry.num_shadow_volume_indices);
 
     // TODO(fxbug.dev/7241): revisit sort key... we expect that a subsequent CL will add a
     // ShaderProgram as a field in the |instance_data| created by NewMeshDrawData().  Then, we'll

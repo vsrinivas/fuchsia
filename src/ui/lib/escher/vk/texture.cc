@@ -7,6 +7,7 @@
 #include "src/ui/lib/escher/impl/command_buffer.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/image.h"
 
 namespace escher {
@@ -36,7 +37,8 @@ TexturePtr Texture::New(ResourceRecycler* resource_recycler, ImagePtr image, vk:
 Texture::Texture(ResourceRecycler* recycler, SamplerPtr sampler, ImagePtr image,
                  vk::ImageAspectFlags aspect_mask)
     : ImageView(recycler, image, aspect_mask, sampler->GetExtensionData()),
-      sampler_(std::move(sampler)) {}
+      sampler_(std::move(sampler)),
+      is_yuv_format_(image_utils::IsYuvFormat(image->format())) {}
 
 Texture::~Texture() {}
 

@@ -7,10 +7,21 @@
 
 #include <tuple>
 
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
+
 namespace escher {
 
 struct ColorRgba {
   constexpr ColorRgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a) : r(r), g(g), b(b), a(a) {}
+  // Construct from floats in range 0 - 1.
+  static ColorRgba FromFloats(glm::vec4 rgba) {
+    rgba *= 255.f;
+    return ColorRgba(static_cast<uint8_t>(rgba.r), static_cast<uint8_t>(rgba.g),
+                     static_cast<uint8_t>(rgba.b), static_cast<uint8_t>(rgba.a));
+  }
+  static ColorRgba FromFloats(float r, float g, float b, float a) {
+    return ColorRgba::FromFloats(glm::vec4(r, g, b, a));
+  }
 
   const uint8_t* bytes() const { return reinterpret_cast<const uint8_t*>(this); }
 
@@ -23,6 +34,15 @@ struct ColorRgba {
 struct ColorBgra {
   // Constructor is idiomatic RGBA, but memory layout is native BGRA.
   constexpr ColorBgra(uint8_t r, uint8_t g, uint8_t b, uint8_t a) : b(b), g(g), r(r), a(a) {}
+  // Construct from floats in range 0 - 1.
+  static ColorBgra FromFloats(glm::vec4 rgba) {
+    rgba *= 255.f;
+    return ColorBgra(static_cast<uint8_t>(rgba.r), static_cast<uint8_t>(rgba.g),
+                     static_cast<uint8_t>(rgba.b), static_cast<uint8_t>(rgba.a));
+  }
+  static ColorBgra FromFloats(float r, float g, float b, float a) {
+    return ColorBgra::FromFloats(glm::vec4(r, g, b, a));
+  }
 
   const uint8_t* bytes() const { return reinterpret_cast<const uint8_t*>(this); }
 

@@ -34,13 +34,14 @@ layout(location = 4) in vec2 inBlendWeight;
 // ***** DESCRIPTOR BINDINGS ********************************
 
 #ifdef USE_PAPER_SHADER_SCENE_DATA
-// Struct that defines a grepable common layout for C++ and GLSL code.
+// Shared with C++ code, see "paper_shader_structs.h".
 layout(set = 0, binding = 0) uniform PaperShaderSceneData {
   vec3 ambient_light_color;
 };
 #endif  // USE_PAPER_SHADER_SCENE_DATA
 
 #ifdef USE_PAPER_SHADER_LATCHED_POSEBUFFER
+// Shared with C++ code, see "paper_shader_structs.h".
 layout(set = 0, binding = 1) uniform PaperShaderLatchedPoseBuffer {
   // Padding same size as escher::hmd::Pose.
   vec4 _padding_PaperShaderLatchedPoseBuffer[2];
@@ -52,7 +53,7 @@ layout(set = 0, binding = 1) uniform PaperShaderLatchedPoseBuffer {
 #endif  // USE_PAPER_SHADER_LATCHED_POSEBUFFER
 
 #ifdef USE_PAPER_SHADER_POINT_LIGHT
-// Struct that defines a grepable common layout for C++ and GLSL code.
+// Shared with C++ code, see "paper_shader_structs.h".
 struct PaperShaderPointLight {
   vec4 position;  // world-space
   vec4 color;     // RGB intensities
@@ -69,9 +70,13 @@ layout(set = 0, binding = 2) uniform PointLightUniforms {
 #endif  // USE_PAPER_SHADER_POINT_LIGHT
 
 #ifdef USE_PAPER_SHADER_MESH_INSTANCE
+// Shared with C++ code, see "paper_shader_structs.h".
 layout(set = 1, binding = 0) uniform PaperShaderMeshInstance {
   mat4 model_transform;
   vec4 model_color;
+  // Only the x component is used, the rest are padding to handle GLSL packing
+  // requirements.
+  vec4 gamma_power;
 };
 #endif  // USE_PAPER_SHADER_MESH_INSTANCE
 

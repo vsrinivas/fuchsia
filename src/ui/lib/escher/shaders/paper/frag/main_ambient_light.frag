@@ -14,12 +14,15 @@ layout(location = 0) in vec2 inUV;
 #include "shaders/paper/common/use.glsl"
 
 void main() {
-  outColor = model_color
+  outColor = model_color;
+
 #ifndef DISABLE_AMBIENT_LIGHT
-      * vec4(ambient_light_color, 1)
+  outColor *= vec4(ambient_light_color, 1);
 #endif
+
 #ifdef USE_ATTRIBUTE_UV
-      * texture(material_tex, inUV);
+  vec4 material_color = texture(material_tex, inUV);
+  material_color.rgb = pow(material_color.rgb, gamma_power.xxx);
+  outColor *= material_color;
 #endif
-  ;
 }
