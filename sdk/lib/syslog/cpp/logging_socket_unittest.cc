@@ -314,8 +314,8 @@ TEST_F(LoggingSocketTest, TooManyTags) {
 }
 
 TEST_F(LoggingSocketTest, Structured) {
-  FX_SLOG(INFO)("msg", {"one"_k = 2, "three"_k = {4, 5}});
-  ReadPacketAndCompare(FX_LOG_INFO, "msg {\"one\": 2, \"three\": [4, 5]}");
+  FX_SLOG(INFO, "msg", KV("one", 2), KV("three", 3));
+  ReadPacketAndCompare(FX_LOG_INFO, "msg {\"one\": 2, \"three\": 3}");
   CheckSocketEmpty();
 }
 

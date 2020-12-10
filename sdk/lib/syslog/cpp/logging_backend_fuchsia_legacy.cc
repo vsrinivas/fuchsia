@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <lib/syslog/cpp/log_level.h>
 #include <lib/syslog/cpp/logging_backend.h>
+#include <lib/syslog/cpp/logging_backend_shared.h>
 #include <lib/syslog/global.h>
 #include <lib/zx/process.h>
 
+#include <cstdio>
 #include <iostream>
 #include <sstream>
 
@@ -56,35 +59,23 @@ syslog::LogSeverity GetMinLogLevel() {
   return static_cast<syslog::LogSeverity>(fx_logger_get_min_severity(fx_log_get_logger()));
 }
 
-void WriteLogValue(syslog::LogSeverity severity, const char* file, unsigned int line,
-                   const char* condition, const syslog::LogValue& value, const char* msg) {
-  std::string message(msg);
-  auto rest = value.ToString();
-  if (!rest.empty()) {
-    message += " " + value.ToString();
-  }
-  WriteLog(severity, file, line, nullptr, condition, message);
-}
-
-void WriteLog(syslog::LogSeverity severity, const char* file, unsigned int line, const char* tag,
-              const char* condition, const std::string& msg) {
-  std::ostringstream stream;
-
-  stream << "[" << file << "(" << line << ")] ";
-
-  if (condition)
-    stream << "Check failed: " << condition << ". ";
-
-  stream << msg;
-
+bool FlushRecord(LogBuffer* buffer) {
+  auto header = MsgHeader::CreatePtr(buffer);
+  *(header->offset++) = 0;
   // Write fatal logs to stderr as well because death tests sometimes verify a certain
   // log message was printed prior to the crash.
   // TODO(samans): Convert tests to not depend on stderr. https://fxbug.dev/49593
-  if (severity == syslog::LOG_FATAL)
-    std::cerr << stream.str() << std::endl;
-
+  if (header->severity == syslog::LOG_FATAL) {
+    std::cerr << reinterpret_cast<const char*>(buffer->data) << std::endl;
+  }
   fx_logger_t* logger = fx_log_get_logger();
-  fx_logger_log(logger, severity, tag, stream.str().c_str());
+  if (header->user_tag) {
+    fx_logger_log(logger, header->severity, header->user_tag,
+                  reinterpret_cast<const char*>(buffer->data));
+  } else {
+    fx_logger_log(logger, header->severity, nullptr, reinterpret_cast<const char*>(buffer->data));
+  }
+  return true;
 }
 
 }  // namespace syslog_backend

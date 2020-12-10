@@ -12,109 +12,140 @@
 #include <lib/fit/variant.h>
 #include <lib/syslog/cpp/log_level.h>
 
+#include <atomic>
 #include <limits>
 #include <sstream>
 #include <vector>
 
+namespace syslog_backend {
+
+struct LogBuffer;
+
+#define WEAK __attribute__((weak))
+
+WEAK void BeginRecord(LogBuffer* buffer, syslog::LogSeverity severity, const char* file,
+                      unsigned int line, const char* msg, const char* condition);
+
+WEAK void WriteKeyValue(LogBuffer* buffer, const char* key, const char* value);
+
+WEAK void WriteKeyValue(LogBuffer* buffer, const char* key, int64_t value);
+
+WEAK void WriteKeyValue(LogBuffer* buffer, const char* key, uint64_t value);
+
+WEAK void WriteKeyValue(LogBuffer* buffer, const char* key, double value);
+
+WEAK void EndRecord(LogBuffer* buffer);
+
+WEAK bool FlushRecord(LogBuffer* buffer);
+
+template <typename... Args>
+constexpr size_t ArgsSize(Args... args) {
+  return sizeof...(args);
+}
+
+template <typename... Args>
+struct Tuplet {
+  std::tuple<Args...> tuple;
+  size_t size;
+  constexpr Tuplet(std::tuple<Args...> tuple, size_t size) : tuple(tuple), size(size) {}
+};
+
+template <typename Key, typename Value>
+struct KeyValue {
+  Key key;
+  Value value;
+  constexpr KeyValue(Key key, Value value) : key(key), value(value) {}
+};
+
+template <size_t i, size_t size>
+constexpr bool ILessThanSize() {
+  return i < size;
+}
+
+template <bool expr>
+constexpr bool Not() {
+  return !expr;
+}
+
+// Opaque structure representing the backend encode state.
+// This structure only has meaning to the backend and application code shouldn't
+// touch these values.
+struct LogBuffer {
+  // Max size of log buffer
+  static constexpr auto kBufferSize = (1 << 15) / 8;
+  // Additional storage for internal log state.
+  static constexpr auto kStateSize = 8;
+  // Record state (for keeping track of backend-specific details)
+  uint64_t record_state[kStateSize];
+  // Log data (used by the backend to encode the log into). The format
+  // for this is backend-specific.
+  uint64_t data[kBufferSize];
+
+  // Does nothing (enabled when we hit the last parameter that the user passed into us)
+  template <size_t i, size_t size, typename... T,
+            typename std::enable_if<Not<ILessThanSize<i, size>()>(), int>::type = 0>
+  void Encode(Tuplet<T...> value) {}
+
+  // Encodes an int64
+  void Encode(KeyValue<const char*, int64_t> value) {
+    syslog_backend::WriteKeyValue(this, value.key, value.value);
+  }
+
+  // Encodes an int
+  void Encode(KeyValue<const char*, int> value) {
+    Encode(KeyValue<const char*, int64_t>(value.key, value.value));
+  }
+
+  // Encodes a NULL-terminated C-string.
+  void Encode(KeyValue<const char*, const char*> value) {
+    syslog_backend::WriteKeyValue(this, value.key, value.value);
+  }
+
+  // Encodes an arbitrary list of values recursively.
+  template <size_t i, size_t size, typename... T,
+            typename std::enable_if<ILessThanSize<i, size>(), int>::type = 0>
+  void Encode(Tuplet<T...> value) {
+    auto val = std::get<i>(value.tuple);
+    Encode(val);
+    Encode<i + 1, size>(value);
+  }
+};
+}  // namespace syslog_backend
+
 namespace syslog {
 
-class LogValue;
-class LogField;
-
-template <typename T>
-LogValue ToLogValue(T);
-
-class LogValue {
- public:
-  LogValue(std::nullptr_t n) : value_(n) {}
-  LogValue(std::initializer_list<LogValue> list) : value_(list) {}
-  LogValue(std::initializer_list<LogField> obj) : value_(obj) {}
-  LogValue(std::string msg) : value_(msg) {}
-  LogValue(int i) : value_(i) {}
-  template <typename T>
-  LogValue(T t) : LogValue(std::move(ToLogValue(t))) {}
-
-  std::string ToString(bool quote_if_string = false) const;
-  void Log(::syslog::LogSeverity severity, const char* file, unsigned int line,
-           const char* condition, const char* msg) const;
-
-  operator bool() const { return !fit::holds_alternative<std::nullptr_t>(value_); }
-
-  const std::string* string_value() const {
-    if (fit::holds_alternative<std::string>(value_)) {
-      return &fit::get<std::string>(value_);
-    }
-
-    return nullptr;
-  }
-
-  const int64_t* int_value() const {
-    if (fit::holds_alternative<int64_t>(value_)) {
-      return &fit::get<int64_t>(value_);
-    }
-
-    return nullptr;
-  }
-
-  const std::vector<LogField>* fields() const {
-    if (fit::holds_alternative<std::vector<LogField>>(value_)) {
-      return &fit::get<std::vector<LogField>>(value_);
-    }
-
-    return nullptr;
-  }
-
- private:
-  fit::variant<std::nullptr_t, std::string, int64_t, std::vector<LogValue>, std::vector<LogField>>
-      value_;
-};
-
-class LogField {
- public:
-  LogField(std::string key, LogValue value) : key_(std::move(key)), value_(std::move(value)) {}
-
-  std::string ToString() const;
-
-  const std::string& key() const { return key_; }
-  const LogValue& value() const { return value_; }
-
- private:
-  std::string key_;
-  LogValue value_;
-};
-
-class LogKey {
- public:
-  LogKey(std::string key) : key_(std::move(key)) {}
-
-  LogField operator=(LogValue&& message) const { return LogField(key_, std::move(message)); }
-
- private:
-  std::string key_;
-};
-
-LogKey operator"" _k(const char* k, unsigned long sz);
-
-template <>
-inline LogValue ToLogValue(std::nullptr_t msg) {
-  return ToLogValue(msg);
+template <typename... LogArgs>
+constexpr syslog_backend::Tuplet<LogArgs...> Args(LogArgs... values) {
+  return syslog_backend::Tuplet<LogArgs...>(std::make_tuple(values...), sizeof...(values));
 }
 
-inline LogValue ToLogValue(std::string msg) { return LogValue(std::move(msg)); }
-
-template <>
-inline LogValue ToLogValue(const char* msg) {
-  return ToLogValue(std::string(msg));
+template <typename Key, typename Value>
+constexpr syslog_backend::KeyValue<Key, Value> KeyValueInternal(Key key, Value value) {
+  return syslog_backend::KeyValue<Key, Value>(key, value);
 }
 
-template <>
-inline LogValue ToLogValue(int foo) {
-  return ToLogValue(foo);
-}
+// Used to denote a key-value pair for use in structured logging API calls.
+// This macro exists solely to improve readability of calls to FX_SLOG
+#define KV(a, b) a, b
 
-inline LogValue ToLogValue(std::initializer_list<LogValue> list) { return LogValue(list); }
+template <typename Msg, typename... KeyValuePairs>
+struct LogValue {
+  constexpr LogValue(Msg msg, syslog_backend::Tuplet<KeyValuePairs...> kvps)
+      : msg(msg), kvps(kvps) {}
+  void LogNew(::syslog::LogSeverity severity, const char* file, unsigned int line,
+              const char* condition) const {
+    syslog_backend::LogBuffer buffer;
+    syslog_backend::BeginRecord(&buffer, severity, file, line, msg, condition);
+    // https://bugs.llvm.org/show_bug.cgi?id=41093 -- Clang loses constexpr
+    // even though this should be constexpr here.
+    buffer.Encode<0, sizeof...(KeyValuePairs)>(kvps);
+    syslog_backend::EndRecord(&buffer);
+    syslog_backend::FlushRecord(&buffer);
+  }
 
-inline LogValue ToLogValue(std::initializer_list<LogField> obj) { return LogValue(obj); }
+  Msg msg;
+  syslog_backend::Tuplet<KeyValuePairs...> kvps;
+};
 
 class LogMessageVoidify {
  public:
@@ -163,11 +194,6 @@ int GetVlogVerbosity();
 bool ShouldCreateLogMessage(LogSeverity severity);
 
 }  // namespace syslog
-
-#define FX_SLOG(severity)                                                                    \
-  !FX_LOG_IS_ON(severity) ? (void)0 : ([](const char* msg, ::syslog::LogValue v = nullptr) { \
-    v.Log(::syslog::LOG_##severity, __FILE__, __LINE__, nullptr, msg);                       \
-  })
 
 #define FX_LOG_STREAM(severity, tag) \
   ::syslog::LogMessage(::syslog::LOG_##severity, __FILE__, __LINE__, nullptr, tag).stream()
@@ -247,6 +273,13 @@ static inline syslog::LogSeverity GetSeverityFromVerbosity(int verbosity) {
   return static_cast<syslog::LogSeverity>(severity);
 }
 
+// this class exists solely to fix a compilation error.
+// we can't use __UNUSED here because it has to compile for both host and device code.
+class FixCompilationErrorCausedByUnusedGetSeverityFromVerbosity {
+ public:
+  FixCompilationErrorCausedByUnusedGetSeverityFromVerbosity() { GetSeverityFromVerbosity(0); }
+};
+
 #define FX_VLOG_IS_ON(verbose_level) (verbose_level <= ::syslog::GetVlogVerbosity())
 
 #define FX_VLOG_STREAM(verbose_level, tag)                                                        \
@@ -272,5 +305,50 @@ static inline syslog::LogSeverity GetSeverityFromVerbosity(int verbosity) {
 #define FX_NOTREACHED() FX_DCHECK(false)
 
 #define FX_NOTIMPLEMENTED() FX_LOGS(ERROR) << "Not implemented in: " << __PRETTY_FUNCTION__
+
+template <typename Msg, typename... Args>
+static auto MakeValue(Msg msg, syslog_backend::Tuplet<Args...> args) {
+  return syslog::LogValue<Msg, Args...>(msg, args);
+}
+
+template <size_t i, size_t size, typename... Values, typename... Tuple,
+          typename std::enable_if<syslog_backend::Not<syslog_backend::ILessThanSize<i, size>()>(),
+                                  int>::type = 0>
+static auto MakeKV(std::tuple<Values...> value, std::tuple<Tuple...> tuple) {
+  return syslog_backend::Tuplet<Tuple...>(tuple, size);
+}
+
+template <size_t i, size_t size, typename... Values, typename... Tuple,
+          typename std::enable_if<syslog_backend::ILessThanSize<i, size>(), int>::type = 0>
+static auto MakeKV(std::tuple<Values...> value, std::tuple<Tuple...> tuple) {
+  // Key at index i, value at index i+1
+  auto k = std::get<i>(value);
+  auto v = std::get<i + 1>(value);
+  auto new_tuple = std::tuple_cat(tuple, std::make_tuple(syslog::KeyValueInternal(k, v)));
+  return MakeKV<i + 2, size, Values...>(value, new_tuple);
+}
+
+template <typename... Args, typename... EmptyTuple>
+static auto MakeKV(std::tuple<Args...> args, std::tuple<EmptyTuple...> start_tuple) {
+  return MakeKV<0, sizeof...(Args), Args..., EmptyTuple...>(args, start_tuple);
+}
+
+template <typename... Args>
+static auto MakeKV(std::tuple<Args...> args) {
+  return MakeKV(args, std::make_tuple());
+}
+
+template <typename Msg, typename... Args>
+static void fx_slog_internal(syslog::LogSeverity flag, const char* file, int line, Msg msg,
+                             Args... args) {
+  MakeValue(msg, MakeKV<Args...>(std::make_tuple(args...))).LogNew(flag, file, line, nullptr);
+}
+
+#define FX_SLOG_ETC(flag, args...)                    \
+  do {                                                \
+    fx_slog_internal(flag, __FILE__, __LINE__, args); \
+  } while (0)
+
+#define FX_SLOG(flag, msg...) FX_SLOG_ETC(::syslog::LOG_##flag, msg)
 
 #endif  // LIB_SYSLOG_CPP_MACROS_H_

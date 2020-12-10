@@ -11,6 +11,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "lib/syslog/cpp/log_level.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
@@ -61,20 +62,11 @@ TEST_F(LoggingFixture, Log) {
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
 
-#ifdef __Fuchsia__
   EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
                                       std::to_string(error_line) + ")] something at error"));
 
   EXPECT_THAT(log, testing::HasSubstr("INFO: [logging_unittest.cc(" + std::to_string(info_line) +
                                       ")] and some other at info level"));
-#else
-  EXPECT_THAT(log, testing::HasSubstr("[ERROR:sdk/lib/syslog/cpp/logging_unittest.cc(" +
-                                      std::to_string(error_line) + ")] something at error"));
-
-  EXPECT_THAT(log, testing::HasSubstr("[INFO:logging_unittest.cc(" + std::to_string(info_line) +
-                                      ")] and some other at info level"));
-
-#endif
 }
 
 TEST_F(LoggingFixture, LogFirstN) {
@@ -121,22 +113,12 @@ TEST_F(LoggingFixture, LogT) {
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
 
-#ifdef __Fuchsia__
   EXPECT_THAT(log, testing::HasSubstr("first] ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
                                       std::to_string(error_line) + ")] something at error"));
 
   EXPECT_THAT(log,
               testing::HasSubstr("second] INFO: [logging_unittest.cc(" + std::to_string(info_line) +
                                  ")] and some other at info level"));
-#else
-  EXPECT_THAT(log, testing::HasSubstr("[first] [ERROR:sdk/lib/syslog/cpp/logging_unittest.cc(" +
-                                      std::to_string(error_line) + ")] something at error"));
-
-  EXPECT_THAT(log,
-              testing::HasSubstr("[second] [INFO:logging_unittest.cc(" + std::to_string(info_line) +
-                                 ")] and some other at info level"));
-
-#endif
 }
 
 TEST_F(LoggingFixture, VLogT) {
@@ -272,33 +254,28 @@ TEST_F(LoggingFixture, SLog) {
   SetLogSettings(new_settings);
 
   int line1 = __LINE__ + 1;
-  FX_SLOG(ERROR)("msg", "String log");
+  FX_SLOG(ERROR, nullptr, "msg", "String log");
 
   int line2 = __LINE__ + 1;
-  FX_SLOG(ERROR)("msg", 42);
-
-  int line3 = __LINE__ + 1;
-  FX_SLOG(ERROR)("msg", {42, "string"});
+  FX_SLOG(ERROR, nullptr, "msg", 42);
 
   int line4 = __LINE__ + 1;
-  FX_SLOG(ERROR)("msg", {"first"_k = 42, "second"_k = "string"});
+  FX_SLOG(ERROR, "msg", "first", 42, "second", "string");
 
   int line5 = __LINE__ + 1;
-  FX_SLOG(ERROR)("String log");
+  FX_SLOG(ERROR, "String log");
 
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
 
-  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
-                                      std::to_string(line1) + ")] msg String log"));
-  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
-                                      std::to_string(line2) + ")] msg 42"));
-  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
-                                      std::to_string(line3) + ")] msg [42, \"string\"]"));
-  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
-                                      std::to_string(line4) +
-                                      ")] msg {\"first\": 42, \"second\": \"string\"}"));
-  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
+  EXPECT_THAT(log, testing::HasSubstr("ERROR: [" + std::string(__FILE__) + "(" +
+                                      std::to_string(line1) + ")] {\"msg\": \"String log\"}"));
+  EXPECT_THAT(log, testing::HasSubstr("ERROR: [" + std::string(__FILE__) + "(" +
+                                      std::to_string(line2) + ")] {\"msg\": 42}"));
+  EXPECT_THAT(log,
+              testing::HasSubstr("ERROR: [" + std::string(__FILE__) + "(" + std::to_string(line4) +
+                                 ")] msg {\"first\": 42, \"second\": \"string\"}"));
+  EXPECT_THAT(log, testing::HasSubstr("ERROR: [" + std::string(__FILE__) + "(" +
                                       std::to_string(line5) + ")] String log"));
 }
 
@@ -308,11 +285,17 @@ TEST_F(LoggingFixture, BackendDirect) {
   files::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
   SetLogSettings(new_settings);
-
-  syslog_backend::WriteLog(syslog::LOG_ERROR, "foo.cc", 42, "fake tag", "condition", "Log message");
-  syslog_backend::WriteLogValue(syslog::LOG_ERROR, "foo.cc", 42, "condition", {"foo"_k = 42},
-                                "fake message");
-
+  syslog_backend::LogBuffer buffer;
+  syslog_backend::BeginRecord(&buffer, syslog::LOG_ERROR, "foo.cc", 42, "Log message", "condition");
+  syslog_backend::WriteKeyValue(&buffer, "tag", "fake tag");
+  syslog_backend::EndRecord(&buffer);
+  syslog_backend::FlushRecord(&buffer);
+  syslog_backend::BeginRecord(&buffer, syslog::LOG_ERROR, "foo.cc", 42, "fake message",
+                              "condition");
+  syslog_backend::WriteKeyValue(&buffer, "tag", "fake tag");
+  syslog_backend::WriteKeyValue(&buffer, "foo", static_cast<int64_t>(42));
+  syslog_backend::EndRecord(&buffer);
+  syslog_backend::FlushRecord(&buffer);
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
 

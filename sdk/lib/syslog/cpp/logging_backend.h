@@ -19,12 +19,6 @@ WEAK void SetLogSettings(const syslog::LogSettings& settings,
 
 WEAK syslog::LogSeverity GetMinLogLevel();
 
-WEAK void WriteLog(syslog::LogSeverity severity, const char* file, unsigned int line,
-                   const char* tag, const char* condition, const std::string& msg);
-
-WEAK void WriteLogValue(syslog::LogSeverity severity, const char* file, unsigned int line,
-                        const char* condition, const syslog::LogValue& value, const char* msg);
-
 }  // namespace syslog_backend
 
 #endif  // LIB_SYSLOG_CPP_LOGGING_BACKEND_H_

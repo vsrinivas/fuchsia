@@ -52,7 +52,10 @@ sdk_source_set("backend_host") {
 
   include_base = "//sdk"
 
-  sources = [ "logging_backend_host.cc" ]
+  sources = [
+    "logging_backend_host.cc",
+    "logging_backend_shared.cc",
+  ]
 
   deps = [
     ":cpp",
@@ -70,7 +73,10 @@ sdk_source_set("backend_legacy_fuchsia") {
 
   include_base = "//sdk"
 
-  sources = [ "logging_backend_fuchsia_legacy.cc" ]
+  sources = [
+    "logging_backend_fuchsia_legacy.cc",
+    "logging_backend_shared.cc",
+  ]
 
   deps = [
     ":cpp",
@@ -208,7 +214,8 @@ group("tests") {
   testonly = true
   deps = [
     ":logging-cpp-tests",
-    # TODO(fxbug.dev/62157) uncomment when fixed for host
-    # ":logging_cpp_unittests($host_toolchain)",
+
+    # Refer to the README.md for instructions on host tests
+    ":logging_cpp_unittests($host_toolchain)",
   ]
 }

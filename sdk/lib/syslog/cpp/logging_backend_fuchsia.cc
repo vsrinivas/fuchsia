@@ -23,11 +23,21 @@
 
 #include "lib/syslog/streams/cpp/fields.h"
 #include "logging_backend_fuchsia_private.h"
+#include "macros.h"
 
 namespace syslog_backend {
-namespace {
 
 using log_word_t = uint64_t;
+
+zx_koid_t GetKoid(zx_handle_t handle) {
+  zx_info_handle_basic_t info;
+  zx_status_t status =
+      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
+}
+
+static zx_koid_t pid = GetKoid(zx_process_self());
+static thread_local zx_koid_t tid = GetCurrentThreadKoid();
 
 // Represents a slice of a buffer of type T.
 template <typename T>
@@ -58,6 +68,16 @@ static DataSlice<const char> SliceFromString(const std::string& string) {
   return DataSlice<const char>(string.data(), string.size());
 }
 
+template <typename T, size_t size>
+static DataSlice<const T> SliceFromArray(const T (&array)[size]) {
+  return DataSlice<const T>(array, size);
+}
+
+template <size_t size>
+static DataSlice<const char> SliceFromArray(const char (&array)[size]) {
+  return DataSlice<const char>(array, size - 1);
+}
+
 static constexpr int WORD_SIZE = sizeof(log_word_t);  // See sdk/lib/syslog/streams/cpp/encode.cc
 class DataBuffer {
  public:
@@ -84,8 +104,6 @@ class DataBuffer {
     Write(reinterpret_cast<const log_word_t*>(&data), sizeof(T) / sizeof(log_word_t));
   }
 
-  uint64_t* data() { return buffer_ + cursor_; }
-
   DataSlice<log_word_t> GetSlice() { return DataSlice<log_word_t>(buffer_, cursor_); }
 
  private:
@@ -96,6 +114,7 @@ class DataBuffer {
 struct RecordState {
   // Header of the record itself
   uint64_t* header;
+  syslog::LogSeverity log_severity;
   ::fuchsia::diagnostics::Severity severity;
   // arg_size in words
   size_t arg_size = 0;
@@ -103,9 +122,72 @@ struct RecordState {
   size_t current_key_size = 0;
   // Header of the current argument being encoded
   uint64_t* current_header_position = 0;
+  uint32_t dropped_count = 0;
+  // Current position (in 64-bit words) into the buffer.
+  size_t cursor = 0;
+  // True if encoding was successful, false otherwise
+  bool encode_success = true;
+  static RecordState* CreatePtr(LogBuffer* buffer) {
+    return reinterpret_cast<RecordState*>(&buffer->record_state);
+  }
   size_t PtrToIndex(void* ptr) {
     return reinterpret_cast<size_t>(static_cast<uint8_t*>(ptr)) - reinterpret_cast<size_t>(header);
   }
+};
+static_assert(sizeof(RecordState) <= sizeof(LogBuffer::record_state));
+static_assert(std::alignment_of<RecordState>() == sizeof(uint64_t));
+
+// Used for accessing external data buffers provided by clients.
+// Used by the Encoder to do in-place encoding of data
+class ExternalDataBuffer {
+ public:
+  explicit ExternalDataBuffer(LogBuffer* buffer)
+      : buffer_(&buffer->data[sizeof(buffer->record_state) / sizeof(log_word_t)]),
+        capacity_((sizeof(buffer->data) - sizeof(buffer->record_state))),
+        cursor_(RecordState::CreatePtr(buffer)->cursor) {}
+
+  ExternalDataBuffer(log_word_t* data, size_t length, size_t& cursor)
+      : buffer_(data), capacity_(length), cursor_(cursor) {}
+  __WARN_UNUSED_RESULT bool Write(const log_word_t* data, size_t length) {
+    if (cursor_ + length >= capacity_) {
+      return false;
+    }
+    for (size_t i = 0; i < length; i++) {
+      buffer_[cursor_ + i] = data[i];
+    }
+    cursor_ += length;
+    return true;
+  }
+
+  __WARN_UNUSED_RESULT bool WritePadded(const void* msg, size_t word_count, size_t* written) {
+    assert(written != nullptr);
+    if (cursor_ + word_count >= capacity_) {
+      return false;
+    }
+    auto retval = WritePaddedInternal(buffer_ + cursor_, msg, word_count);
+    cursor_ += retval;
+    *written = retval;
+    return true;
+  }
+
+  template <typename T>
+  __WARN_UNUSED_RESULT bool Write(const T& data) {
+    static_assert(sizeof(T) >= sizeof(log_word_t));
+    static_assert(alignof(T) >= sizeof(log_word_t));
+    return Write(reinterpret_cast<const log_word_t*>(&data), sizeof(T) / sizeof(log_word_t));
+  }
+
+  uint64_t* data() { return buffer_ + cursor_; }
+
+  DataSlice<log_word_t> GetSlice() { return DataSlice<log_word_t>(buffer_, cursor_); }
+
+ private:
+  // Start of buffer
+  log_word_t* buffer_ = nullptr;
+  // Capacity (in words)
+  __UNUSED size_t capacity_ = 0;
+  // Current location in buffer (in words)
+  size_t& cursor_;
 };
 
 template <typename T>
@@ -113,14 +195,12 @@ class Encoder {
  public:
   explicit Encoder(T& buffer) { buffer_ = &buffer; }
 
-  RecordState Begin(zx_time_t timestamp, ::fuchsia::diagnostics::Severity severity) {
-    RecordState state;
+  void Begin(RecordState& state, zx_time_t timestamp, ::fuchsia::diagnostics::Severity severity) {
     state.severity = severity;
     state.header = buffer_->data();
     log_word_t empty_header = 0;
-    buffer_->Write(empty_header);
-    buffer_->Write(timestamp);
-    return state;
+    state.encode_success &= buffer_->Write(empty_header);
+    state.encode_success &= buffer_->Write(timestamp);
   }
 
   void FlushPreviousArgument(RecordState& state) { state.arg_size = 0; }
@@ -129,8 +209,9 @@ class Encoder {
     FlushPreviousArgument(state);
     auto header_position = buffer_->data();
     log_word_t empty_header = 0;
-    buffer_->Write(empty_header);
-    size_t s_size = buffer_->WritePadded(key.data(), key.size());
+    state.encode_success &= buffer_->Write(empty_header);
+    size_t s_size = 0;
+    state.encode_success &= buffer_->WritePadded(key.data(), key.size(), &s_size);
     state.arg_size = s_size + 1;  // offset by 1 for the header
     state.current_key_size = key.size();
     state.current_header_position = header_position;
@@ -145,28 +226,30 @@ class Encoder {
 
   void AppendArgumentValue(RecordState& state, int64_t value) {
     int type = 3;
-    buffer_->Write(value);
+    state.encode_success &= buffer_->Write(value);
     state.arg_size++;
     *state.current_header_position = ComputeArgHeader(state, type);
   }
 
   void AppendArgumentValue(RecordState& state, uint64_t value) {
     int type = 4;
-    buffer_->Write(value);
+    state.encode_success &= buffer_->Write(value);
     state.arg_size++;
     *state.current_header_position = ComputeArgHeader(state, type);
   }
 
   void AppendArgumentValue(RecordState& state, double value) {
     int type = 5;
-    buffer_->Write(value);
+    state.encode_success &= buffer_->Write(value);
     state.arg_size++;
     *state.current_header_position = ComputeArgHeader(state, type);
   }
 
   void AppendArgumentValue(RecordState& state, DataSlice<const char> string) {
     int type = 6;
-    state.arg_size += buffer_->WritePadded(string.data(), string.size());
+    size_t written = 0;
+    state.encode_success &= buffer_->WritePadded(string.data(), string.size(), &written);
+    state.arg_size += written;
     *state.current_header_position =
         ComputeArgHeader(state, type, string.size() > 0 ? (1 << 15) | string.size() : 0);
   }
@@ -187,85 +270,14 @@ class Encoder {
 };
 
 const size_t kMaxTags = 4;  // Legacy from ulib/syslog. Might be worth rethinking.
-const char kMessageFieldName[] = "message";
+// Compiler thinks this is unused even though WriteLogToSocket uses it.
+__UNUSED const char kMessageFieldName[] = "message";
 const char kPidFieldName[] = "pid";
 const char kTidFieldName[] = "tid";
 const char kDroppedLogsFieldName[] = "dropped_logs";
 const char kTagFieldName[] = "tag";
 const char kFileFieldName[] = "file";
 const char kLineFieldName[] = "line";
-
-zx_koid_t GetKoid(zx_handle_t handle) {
-  zx_info_handle_basic_t info;
-  zx_status_t status =
-      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-  return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
-}
-
-template <typename T>
-std::string FullMessageString(const char* condition, const char* msg, const T& value);
-
-template <>
-std::string FullMessageString(const char* condition, const char* msg, const std::string& value) {
-  std::ostringstream stream;
-
-  if (condition) {
-    stream << "Check failed: " << condition << ". ";
-  }
-
-  if (msg) {
-    stream << msg;
-  }
-
-  stream << " " << value;
-  return stream.str();
-}
-
-template <>
-std::string FullMessageString(const char* condition, const char* msg,
-                              const syslog::LogValue& value) {
-  return FullMessageString(condition, msg, value.ToString());
-}
-
-void WriteValueToRecordWithKeyDeprecated(RecordState& record, Encoder<DataBuffer>& encoder,
-                                         const std::string& key, const syslog::LogValue& value) {
-  encoder.AppendArgumentKey(record, SliceFromString(key));
-
-  if (!value) {
-    return;
-  }
-
-  if (auto string_value = value.string_value()) {
-    encoder.AppendArgumentValue(record, SliceFromString(*string_value));
-  } else if (auto int_value = value.int_value()) {
-    encoder.AppendArgumentValue(record, int64_t(*int_value));
-  } else {
-    // TODO(fxbug.dev/57571): LogValue also supports lists and nested objects, which Record doesn't.
-    // It does NOT support unsigned values, or floats, which Record does.
-    encoder.AppendArgumentValue(record, SliceFromString(value.ToString()));
-  }
-}
-
-template <typename T>
-void WriteMessageToRecordDeprecated(RecordState& state, Encoder<T>& encoder,
-                                    const std::string& msg) {
-  encoder.AppendArgumentKey(state, SliceFromString(kMessageFieldName));
-  encoder.AppendArgumentValue(state, SliceFromString(msg));
-}
-
-template <typename T>
-void WriteMessageToRecordDeprecated(RecordState& state, Encoder<T>& encoder,
-                                    const syslog::LogValue& msg) {
-  if (auto fields = msg.fields()) {
-    for (const auto& field : *fields) {
-      WriteValueToRecordWithKeyDeprecated(state, encoder, field.key(), field.value());
-    }
-  } else {
-    WriteValueToRecordWithKeyDeprecated(state, encoder, "message", msg);
-  }
-}
-
-}  // namespace
 
 class LogState {
  public:
@@ -279,14 +291,13 @@ class LogState {
   template <typename T>
   void WriteLog(syslog::LogSeverity severity, const char* file_name, unsigned int line,
                 const char* tag, const char* condition, const T& msg) const;
+  const std::string* tags() const { return tags_; }
+  size_t tag_count() const { return num_tags_; }
+  // Allowed to be const because descriptor_ is mutable
+  fit::variant<zx::socket, std::ofstream>& descriptor() const { return descriptor_; }
 
  private:
   LogState(const syslog::LogSettings& settings, const std::initializer_list<std::string>& tags);
-
-  template <typename T>
-  bool WriteLogToSocket(const zx::socket* socket, zx_time_t time, zx_koid_t pid, zx_koid_t tid,
-                        syslog::LogSeverity severity, const char* file_name, unsigned int line,
-                        std::string& message, const char* condition, const T& value) const;
   bool WriteLogToFile(std::ofstream* file_ptr, zx_time_t time, zx_koid_t pid, zx_koid_t tid,
                       syslog::LogSeverity severity, const char* file_name, unsigned int line,
                       const char* tag, const char* condition, const std::string& msg) const;
@@ -299,31 +310,36 @@ class LogState {
   size_t num_tags_ = 0;
 };
 
-template <typename T>
-bool LogState::WriteLogToSocket(const zx::socket* socket, zx_time_t time, zx_koid_t pid,
-                                zx_koid_t tid, syslog::LogSeverity severity, const char* file_name,
-                                unsigned int line, std::string& message, const char* condition,
-                                const T& value) const {
-  std::unique_ptr<DataBuffer> buffer = std::make_unique<DataBuffer>();
-  Encoder<DataBuffer> encoder(*buffer);
-  auto record = encoder.Begin(time, ::fuchsia::diagnostics::Severity(severity));
-  encoder.AppendArgumentKey(record, SliceFromString(kPidFieldName));
-  encoder.AppendArgumentValue(record, uint64_t(pid));
-  encoder.AppendArgumentKey(record, SliceFromString(kTidFieldName));
-  encoder.AppendArgumentValue(record, uint64_t(tid));
-
-  encoder.AppendArgumentKey(record, SliceFromString(kMessageFieldName));
-  encoder.AppendArgumentValue(record, SliceFromString(message));
+void BeginRecord(LogBuffer* buffer, syslog::LogSeverity severity, const char* file_name,
+                 unsigned int line, const char* msg, const char* condition) {
+  // Ensure we have log state
+  LogState::Get();
+  zx_time_t time = zx_clock_get_monotonic();
+  auto* state = RecordState::CreatePtr(buffer);
+  RecordState& record = *state;
+  new (state) RecordState;
+  state->log_severity = severity;
+  ExternalDataBuffer external_buffer(buffer);
+  Encoder<ExternalDataBuffer> encoder(external_buffer);
+  encoder.Begin(*state, time, ::fuchsia::diagnostics::Severity(severity));
+  encoder.AppendArgumentKey(record, SliceFromArray(kPidFieldName));
+  encoder.AppendArgumentValue(record, static_cast<uint64_t>(pid));
+  encoder.AppendArgumentKey(record, SliceFromArray(kTidFieldName));
+  encoder.AppendArgumentValue(record, static_cast<uint64_t>(tid));
 
   auto dropped_count = GetAndResetDropped();
+  record.dropped_count = dropped_count;
   if (dropped_count) {
     encoder.AppendArgumentKey(record, SliceFromString(kDroppedLogsFieldName));
-    encoder.AppendArgumentValue(record, uint64_t(dropped_count));
+    encoder.AppendArgumentValue(record, static_cast<uint64_t>(dropped_count));
   }
-
-  for (size_t i = 0; i < num_tags_; i++) {
+  for (size_t i = 0; i < GetState()->tag_count(); i++) {
     encoder.AppendArgumentKey(record, SliceFromString(kTagFieldName));
-    encoder.AppendArgumentValue(record, SliceFromString(tags_[i]));
+    encoder.AppendArgumentValue(record, SliceFromString(GetState()->tags()[i]));
+  }
+  if (msg) {
+    encoder.AppendArgumentKey(record, SliceFromString(kMessageFieldName));
+    encoder.AppendArgumentValue(record, SliceFromString(msg));
   }
 
   // TODO(fxbug.dev/56051): Enable this everywhere once doing so won't spam everything.
@@ -332,19 +348,65 @@ bool LogState::WriteLogToSocket(const zx::socket* socket, zx_time_t time, zx_koi
     encoder.AppendArgumentValue(record, SliceFromString(file_name));
 
     encoder.AppendArgumentKey(record, SliceFromString(kLineFieldName));
-    encoder.AppendArgumentValue(record, uint64_t(line));
+    encoder.AppendArgumentValue(record, static_cast<uint64_t>(line));
   }
+}
 
-  WriteMessageToRecordDeprecated(record, encoder, value);  // See inline below
-  encoder.End(record);
-  auto slice = buffer->GetSlice();
-  auto status = socket->write(0, slice.data(), slice.size() * sizeof(log_word_t), nullptr);
+void WriteKeyValue(LogBuffer* buffer, const char* key, const char* value) {
+  auto* state = RecordState::CreatePtr(buffer);
+  ExternalDataBuffer external_buffer(buffer);
+  Encoder<ExternalDataBuffer> encoder(external_buffer);
+  encoder.AppendArgumentKey(*state, DataSlice<const char>(key, strlen(key)));
+  encoder.AppendArgumentValue(*state, DataSlice<const char>(value, strlen(value)));
+}
+
+void WriteKeyValue(LogBuffer* buffer, const char* key, int64_t value) {
+  auto* state = RecordState::CreatePtr(buffer);
+  ExternalDataBuffer external_buffer(buffer);
+  Encoder<ExternalDataBuffer> encoder(external_buffer);
+  encoder.AppendArgumentKey(*state, DataSlice<const char>(key, strlen(key)));
+  encoder.AppendArgumentValue(*state, value);
+}
+
+void WriteKeyValue(LogBuffer* buffer, const char* key, uint64_t value) {
+  auto* state = RecordState::CreatePtr(buffer);
+  ExternalDataBuffer external_buffer(buffer);
+  Encoder<ExternalDataBuffer> encoder(external_buffer);
+  encoder.AppendArgumentKey(*state, DataSlice<const char>(key, strlen(key)));
+  encoder.AppendArgumentValue(*state, value);
+}
+
+void WriteKeyValue(LogBuffer* buffer, const char* key, double value) {
+  auto* state = RecordState::CreatePtr(buffer);
+  ExternalDataBuffer external_buffer(buffer);
+  Encoder<ExternalDataBuffer> encoder(external_buffer);
+  encoder.AppendArgumentKey(*state, DataSlice<const char>(key, strlen(key)));
+  encoder.AppendArgumentValue(*state, value);
+}
+
+void EndRecord(LogBuffer* buffer) {
+  auto* state = RecordState::CreatePtr(buffer);
+  ExternalDataBuffer external_buffer(buffer);
+  Encoder<ExternalDataBuffer> encoder(external_buffer);
+  encoder.End(*state);
+}
+
+bool FlushRecord(LogBuffer* buffer) {
+  auto* state = RecordState::CreatePtr(buffer);
+  if (!state->encode_success) {
+    return false;
+  }
+  ExternalDataBuffer external_buffer(buffer);
+  Encoder<ExternalDataBuffer> encoder(external_buffer);
+  auto slice = external_buffer.GetSlice();
+
+  auto& socket = fit::get<zx::socket>(GetState()->descriptor());
+  auto status = socket.write(0, slice.data(), slice.size() * sizeof(log_word_t), nullptr);
   if (status != ZX_OK) {
-    AddDropped(dropped_count + 1);
+    AddDropped(state->dropped_count + 1);
   }
-
   return status != ZX_ERR_BAD_STATE && status != ZX_ERR_PEER_CLOSED &&
-         severity != syslog::LOG_FATAL;
+         state->log_severity != syslog::LOG_FATAL;
 }
 
 bool LogState::WriteLogToFile(std::ofstream* file_ptr, zx_time_t time, zx_koid_t pid, zx_koid_t tid,
@@ -418,7 +480,7 @@ void LogState::Set(const syslog::LogSettings& settings,
 
 LogState::LogState(const syslog::LogSettings& settings,
                    const std::initializer_list<std::string>& tags)
-    : min_severity_(settings.min_log_level), pid_(GetKoid(zx_process_self())) {
+    : min_severity_(settings.min_log_level), pid_(pid) {
   min_severity_ = settings.min_log_level;
 
   std::ostringstream tag_str;
@@ -468,7 +530,6 @@ LogState::LogState(const syslog::LogSettings& settings,
 template <typename T>
 void LogState::WriteLog(syslog::LogSeverity severity, const char* file_name, unsigned int line,
                         const char* msg, const char* condition, const T& value) const {
-  zx_koid_t tid = GetCurrentThreadKoid();
   zx_time_t time = zx_clock_get_monotonic();
 
   // Cached getter for a stringified version of the log message, so we stringify at most once.
@@ -509,15 +570,5 @@ void SetLogSettings(const syslog::LogSettings& settings,
 }
 
 syslog::LogSeverity GetMinLogLevel() { return LogState::Get().min_severity(); }
-
-void WriteLogValue(syslog::LogSeverity severity, const char* file_name, unsigned int line,
-                   const char* condition, const syslog::LogValue& value, const char* msg) {
-  LogState::Get().WriteLog(severity, file_name, line, msg, condition, value);
-}
-
-void WriteLog(syslog::LogSeverity severity, const char* file_name, unsigned int line,
-              const char* tag, const char* condition, const std::string& msg) {
-  LogState::Get().WriteLog(severity, file_name, line, tag, condition, msg);
-}
 
 }  // namespace syslog_backend

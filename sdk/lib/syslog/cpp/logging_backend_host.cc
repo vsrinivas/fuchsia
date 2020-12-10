@@ -2,13 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <lib/syslog/cpp/log_level.h>
 #include <lib/syslog/cpp/logging_backend.h>
 #include <unistd.h>
 
 #include <iostream>
 #include <sstream>
+
+#include "logging_backend_shared.h"
 
 namespace syslog_backend {
 
@@ -17,6 +21,8 @@ namespace {
 // It's OK to keep global state here even though this file is in a source_set because on host
 // we don't use shared libraries.
 syslog::LogSettings g_log_settings;
+
+}  // namespace
 
 const std::string GetNameForLogSeverity(syslog::LogSeverity severity) {
   switch (severity) {
@@ -42,8 +48,6 @@ const std::string GetNameForLogSeverity(syslog::LogSeverity severity) {
 
   return "UNKNOWN";
 }
-
-}  // namespace
 
 void SetLogSettings(const syslog::LogSettings& settings) {
   g_log_settings.min_log_level = std::min(syslog::LOG_FATAL, settings.min_log_level);
@@ -79,14 +83,15 @@ void SetLogTags(const std::initializer_list<std::string>& tags) {
 
 syslog::LogSeverity GetMinLogLevel() { return g_log_settings.min_log_level; }
 
-void WriteLogValue(syslog::LogSeverity severity, const char* file, unsigned int line,
-                   const char* condition, const syslog::LogValue& value, const char* msg) {
-  std::string message(msg);
-  auto rest = value.ToString();
-  if (!rest.empty()) {
-    message += " " + value.ToString();
+bool FlushRecord(LogBuffer* buffer) {
+  auto header = MsgHeader::CreatePtr(buffer);
+  *(header->offset++) = 0;
+  if (header->user_tag) {
+    auto tag = header->user_tag;
+    std::cerr << "[" << tag << "] ";
   }
-  WriteLog(severity, file, line, nullptr, condition, message);
+  std::cerr << reinterpret_cast<const char*>(buffer->data) << std::endl;
+  return true;
 }
 
 void WriteLog(syslog::LogSeverity severity, const char* file, unsigned int line, const char* tag,

@@ -30,7 +30,7 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
   }
 
   void EmitLog(EmitLogCallback callback) override {
-    FX_SLOG(WARNING)("test_log", {syslog::LogKey("foo") = "bar"});
+    FX_SLOG(WARNING, "test_log", KV("foo", "bar"));
     callback();
   }
 
