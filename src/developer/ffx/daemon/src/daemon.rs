@@ -404,6 +404,10 @@ impl Daemon {
                     Err(e) => log::error!("failed to remove socket file: {}", e),
                 }
 
+                if cfg!(test) {
+                    panic!("quit() should not be invoked in test code");
+                }
+
                 // It is desirable for the client to receive an ACK for the quit
                 // request. As Overnet has a potentially complicated routing
                 // path, it is tricky to implement some notion of a bounded
@@ -611,17 +615,6 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_echo() {
-        let echo = "test-echo";
-        let (daemon_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        let _ctrl = spawn_daemon_server_with_target_ctrl(stream).await;
-        let echoed = daemon_proxy.echo_string(echo).await.unwrap();
-        assert_eq!(echoed, echo);
-        daemon_proxy.quit().await.unwrap();
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_getting_rcs_multiple_targets_mdns_with_no_selector_should_err() -> Result<()> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
@@ -709,26 +702,6 @@ mod test {
         assert!(!has_nodename(&res, "foobar"));
         assert!(!has_nodename(&res, "baz"));
         assert!(has_nodename(&res, "quux"));
-        Ok(())
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_quit() -> Result<()> {
-        let (daemon_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-
-        let socket = get_socket().await;
-        if std::path::Path::new(&socket).is_file() {
-            std::fs::remove_file(&socket).unwrap();
-        }
-
-        let mut _ctrl = spawn_daemon_server_with_fake_target("florp", stream).await;
-        let r = daemon_proxy.quit().await.unwrap();
-
-        assert!(r);
-
-        assert!(!std::path::Path::new(&socket).is_file());
-
         Ok(())
     }
 
