@@ -84,6 +84,7 @@ base_package_labels += [
   "//src/sys/time/network_time_service:network-time-service",
   "//src/sys/time/httpsdate_time_source:httpsdate-time-source",
   "//src/sys/time/timekeeper",
+  "//src/sys/universe-resolver",
 
   "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
 ]

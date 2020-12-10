@@ -1,0 +1,42 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// [START sample]
+{
+    children: [
+        {
+            name: "universe-resolver",
+            url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm",
+        },
+        {
+            // This realm and its children are resolved with the universe-resolver.
+            name: "universe-realm",
+            url: "fuchsia-pkg://fuchsia.com/universe-realm#meta/universe-realm.cm",
+            environment: "#universe-env",
+        },
+    ],
+    offer: [
+        {
+            // Acquire the fuchsia.pkg.PackageResolver from somewhere.
+            protocol: "fuchsia.pkg.PackageResolver",
+            from: "parent",
+            to: [ "#universe-resolver" ],
+        },
+    ],
+    environments: [
+        {
+            name: "universe-env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "universe_resolver",
+                    from: "#universe-resolver",
+                    scheme: "fuchsia-pkg",
+                },
+            ],
+        },
+    ],
+}
+
+// [END sample]

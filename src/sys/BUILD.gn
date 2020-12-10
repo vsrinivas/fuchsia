@@ -38,5 +38,6 @@ group("tests") {
     "time:tests",
     "tools/cs:tests",
     "tools/log:tests",
+    "universe-resolver:tests",
   ]
 }

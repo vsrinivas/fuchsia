@@ -1,0 +1,25 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        binary: "bin/universe_resolver",
+    },
+    capabilities: [
+        {
+            resolver: "universe-resolver",
+            path: "/svc/fuchsia.sys2.ComponentResolver",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        { protocol: "fuchsia.pkg.PackageResolver" },
+    ],
+    expose: [
+        {
+            resolver: "universe-resolver",
+            from: "self",
+        },
+    ],
+}

@@ -34,6 +34,7 @@
         {
             name: "test_manager",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",
+            environment: "#test-manager-env",
         },
         {
             name: "font_provider",
@@ -54,6 +55,10 @@
         {
             name: "temperature-logger",
             url: "fuchsia-pkg://fuchsia.com/temperature-logger#meta/temperature-logger.cm",
+        },
+        {
+            name: "ephemeral-resolver",
+            url: "fuchsia-pkg://fuchsia.com/ephemeral-resolver#meta/ephemeral-resolver.cm",
         },
     ],
     capabilities: [
@@ -115,6 +120,11 @@
             protocol: [ "fuchsia.cobalt.LoggerFactory" ],
             from: "#appmgr",
             to: [ "#sampler" ],
+        },
+        {
+            protocol: "fuchsia.pkg.PackageResolver",
+            from: "#appmgr",
+            to: [ "#ephemeral-resolver" ],
         },
 
         // Passing from root realm to appmgr
@@ -191,6 +201,7 @@
                 "#activity",
                 "#debug_serial",
                 "#detect",
+                "#ephemeral-resolver",
                 "#font_provider",
                 "#log-stats",
                 "#remote-control",
@@ -439,6 +450,19 @@
         {
             directory: "hub",
             from: "#appmgr",
+        },
+    ],
+    environments: [
+        {
+            name: "test-manager-env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "ephemeral-resolver",
+                    scheme: "fuchsia-pkg",
+                    from: "#ephemeral-resolver",
+                },
+            ],
         },
     ],
 }
