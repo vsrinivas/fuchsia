@@ -87,10 +87,7 @@ class VmCowPages final : public VmHierarchyBase,
 
   fbl::RefPtr<PageSource> GetRootPageSourceLocked() const TA_REQ(lock_);
 
-  void DetachSource() {
-    DEBUG_ASSERT(page_source_);
-    page_source_->Detach();
-  }
+  void DetachSourceLocked() TA_REQ(lock_);
 
   // Resizes the range of this cow pages. |size| must be a multiple of the page size and this must
   // not be called on slices or nodes with slice children.
@@ -237,6 +234,16 @@ class VmCowPages final : public VmHierarchyBase,
   // On success the page to add is moved out of `*p`, otherwise it is left there.
   zx_status_t AddPageLocked(VmPageOrMarker* p, uint64_t offset, bool do_range_update = true)
       TA_REQ(lock_);
+
+  // Unmaps a range and frees up all the committed pages. Called from DecommitRangeLocked() to
+  // perform the actual decommit action after some of the initial sanity checks have succeeded.
+  // Also called from DetachSourceLocked() when a VMO is detached from the pager source.
+  //
+  // Unlike DecommitRangeLocked(), this function only operates on |this| node, which must have no
+  // parent.
+  // |offset| must be page aligned. |len| must be less than or equal to |size_ - offset|. If |len|
+  // is less than |size_ - offset| it must be page aligned.
+  zx_status_t UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
   // internal check if any pages in a range are pinned
   bool AnyPagesPinnedLocked(uint64_t offset, size_t len) TA_REQ(lock_);

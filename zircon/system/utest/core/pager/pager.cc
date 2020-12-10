@@ -587,6 +587,85 @@ TEST(Pager, DetachPageCompleteTest) {
   ASSERT_TRUE(pager.WaitForPageComplete(vmo->GetKey(), ZX_TIME_INFINITE));
 }
 
+// Tests that pages are decommitted on a detach, and accessing pages (via the parent VMO or the
+// clone) after the detach results in failures.
+VMO_VMAR_TEST(DecommitOnDetachTest) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  // Create a pager backed VMO and a clone.
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(2, &vmo));
+  auto clone = vmo->Clone();
+
+  // Reading the first page via the clone should create a read request packet.
+  TestThread t1([clone = clone.get(), check_vmar]() -> bool {
+    return check_buffer(clone, 0, 1, check_vmar);
+  });
+  ASSERT_TRUE(t1.Start());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  // Supply the page and wait for the thread to successfully exit.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+  ASSERT_TRUE(t1.Wait());
+
+  // Verify that a page is committed in the parent VMO.
+  zx_info_vmo_t info;
+  uint64_t a1, a2;
+  ASSERT_EQ(ZX_OK, vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
+  ASSERT_EQ(ZX_PAGE_SIZE, info.committed_bytes);
+
+  // Detach the VMO.
+  pager.DetachVmo(vmo);
+  ASSERT_TRUE(pager.WaitForPageComplete(vmo->GetKey(), ZX_TIME_INFINITE));
+
+  // Verify that no committed pages remain in the parent VMO.
+  ASSERT_EQ(ZX_OK, vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
+  ASSERT_EQ(0ul, info.committed_bytes);
+
+  // Try to access the first page in the parent vmo, which was previously paged in but is now
+  // decommitted. This should fail.
+  TestThread t2([vmo, check_vmar]() -> bool { return check_buffer(vmo, 0, 1, check_vmar); });
+  ASSERT_TRUE(t2.Start());
+  if (check_vmar) {
+    ASSERT_TRUE(t2.WaitForCrash(vmo->GetBaseAddr()));
+  } else {
+    ASSERT_TRUE(t2.WaitForFailure());
+  }
+
+  // Try to access the first page from the clone. This should also fail.
+  TestThread t3([clone = clone.get(), check_vmar]() -> bool {
+    return check_buffer(clone, 0, 1, check_vmar);
+  });
+  ASSERT_TRUE(t3.Start());
+  if (check_vmar) {
+    ASSERT_TRUE(t3.WaitForCrash(clone->GetBaseAddr()));
+  } else {
+    ASSERT_TRUE(t3.WaitForFailure());
+  }
+
+  // Try to access the second page in the parent vmo, which was previously not paged in.
+  // This should fail.
+  TestThread t4([vmo, check_vmar]() -> bool { return check_buffer(vmo, 0, 1, check_vmar); });
+  ASSERT_TRUE(t4.Start());
+  if (check_vmar) {
+    ASSERT_TRUE(t4.WaitForCrash(vmo->GetBaseAddr()));
+  } else {
+    ASSERT_TRUE(t4.WaitForFailure());
+  }
+
+  // Try to access the second page from the clone. This should also fail.
+  TestThread t5([clone = clone.get(), check_vmar]() -> bool {
+    return check_buffer(clone, 0, 1, check_vmar);
+  });
+  ASSERT_TRUE(t5.Start());
+  if (check_vmar) {
+    ASSERT_TRUE(t5.WaitForCrash(clone->GetBaseAddr()));
+  } else {
+    ASSERT_TRUE(t5.WaitForFailure());
+  }
+}
+
 // Tests that closing results in a complete request.
 TEST(Pager, ClosePageCompleteTest) {
   UserPager pager;
@@ -891,31 +970,67 @@ VMO_VMAR_TEST(CloneWriteToCloneTest) {
   ASSERT_TRUE(clone->CheckVmar(0, 1));
 }
 
-// Tests that detaching the parent doesn't crash the clone.
+// Tests that detaching the parent crashes the clone only for pages owned by the parent, not for
+// pages that have been forked by the clone.
 TEST(Pager, CloneDetachTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
 
+  // Create a pager backed VMO and a clone.
   Vmo* vmo;
-  ASSERT_TRUE(pager.CreateVmo(2, &vmo));
+  ASSERT_TRUE(pager.CreateVmo(3, &vmo));
   auto clone = vmo->Clone();
 
-  ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
+  // Read the second page.
+  TestThread t1([clone = clone.get()]() -> bool { return check_buffer(clone, 1, 1, true); });
+  ASSERT_TRUE(t1.Start());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
 
-  TestThread t([clone = clone.get()]() -> bool {
-    uint8_t data[ZX_PAGE_SIZE] = {};
-    return check_buffer_data(clone, 0, 1, data, true) && check_buffer(clone, 1, 1, true);
+  // Write to the first page, forking it.
+  TestThread t2([clone = clone.get()]() -> bool {
+    // Fork a page in the clone.
+    *reinterpret_cast<uint64_t*>(clone->GetBaseAddr()) = 0xdeadbeef;
+    return true;
   });
-  ASSERT_TRUE(t.Start());
-
+  ASSERT_TRUE(t2.Start());
   ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
 
-  ASSERT_TRUE(pager.DetachVmo(vmo));
+  // Threads t1 and t2 should have generated page requests. Fulfill them and wait for the threads to
+  // exit succesfully.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
+  ASSERT_TRUE(t1.Wait());
+  ASSERT_TRUE(t2.Wait());
 
+  // Detach the parent vmo.
+  ASSERT_TRUE(pager.DetachVmo(vmo));
   ASSERT_TRUE(pager.WaitForPageComplete(vmo->GetKey(), ZX_TIME_INFINITE));
 
-  ASSERT_TRUE(t.Wait());
+  // Read the third page. This page was not previously paged in (and not forked either) and should
+  // result in a fatal page fault.
+  TestThread t3([clone = clone.get()]() -> bool {
+    uint8_t data[ZX_PAGE_SIZE] = {};
+    return check_buffer_data(clone, 2, 1, data, true);
+  });
+  ASSERT_TRUE(t3.Start());
+  ASSERT_TRUE(t3.WaitForCrash(clone->GetBaseAddr() + 2 * PAGE_SIZE));
+
+  // Read the second page. This page was previously paged in but not forked, and should now have
+  // been decomitted. Should result in a fatal page fault.
+  TestThread t4([clone = clone.get()]() -> bool {
+    uint8_t data[ZX_PAGE_SIZE] = {};
+    return check_buffer_data(clone, 1, 1, data, true);
+  });
+  ASSERT_TRUE(t4.Start());
+  ASSERT_TRUE(t4.WaitForCrash(clone->GetBaseAddr() + PAGE_SIZE));
+
+  // Read the first page and verify its contents. This page was forked in the clone and should still
+  // be valid.
+  TestThread t5([clone = clone.get()]() -> bool {
+    return (*reinterpret_cast<uint64_t*>(clone->GetBaseAddr()) == 0xdeadbeef);
+  });
+  ASSERT_TRUE(t5.Start());
+  ASSERT_TRUE(t5.Wait());
 }
 
 // Tests that commit on the clone populates things properly.

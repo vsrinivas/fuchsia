@@ -168,7 +168,7 @@ class VmObjectPaged final : public VmObject {
   void DetachSource() override {
     Guard<Mutex> guard{&lock_};
 
-    cow_pages_locked()->DetachSource();
+    cow_pages_locked()->DetachSourceLocked();
   }
 
   zx_status_t CreateChildSlice(uint64_t offset, uint64_t size, bool copy_name,

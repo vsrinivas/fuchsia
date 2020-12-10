@@ -1575,14 +1575,7 @@ zx_status_t VmCowPages::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
       // Pager page sources will never synchronously return a page.
       DEBUG_ASSERT(status != ZX_OK);
 
-      if (page_owner != this && status == ZX_ERR_NOT_FOUND) {
-        // The default behavior of clones of detached pager VMOs fault in zero
-        // pages instead of propagating the pager's fault.
-        // TODO: Add an arg to zx_vmo_create_child to optionally fault here.
-        p = vm_get_zero_page();
-      } else {
-        return status;
-      }
+      return status;
     }
   }
 
@@ -1885,24 +1878,39 @@ zx_status_t VmCowPages::DecommitRangeLocked(uint64_t offset, uint64_t len) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  LTRACEF("start offset %#" PRIx64 ", end %#" PRIx64 "\n", offset, offset + new_len);
+  return UnmapAndRemovePagesLocked(offset, new_len);
+}
 
+zx_status_t VmCowPages::UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len) {
   // TODO(teisenbe): Allow decommitting of pages pinned by
   // CommitRangeContiguous
-
-  if (AnyPagesPinnedLocked(offset, new_len)) {
+  if (AnyPagesPinnedLocked(offset, len)) {
     return ZX_ERR_BAD_STATE;
   }
 
+  LTRACEF("start offset %#" PRIx64 ", end %#" PRIx64 "\n", offset, offset + len);
+
+  // We've already trimmed the range in DecommitRangeLocked().
+  DEBUG_ASSERT(InRange(offset, len, size_));
+
+  // Verify page alignment.
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(len) || (offset + len == size_));
+
+  // DecommitRangeLocked() will call this function only on a VMO with no parent. The only clone
+  // types that support OP_DECOMMIT are slices, for which we will recurse up to the root.
+  // The only other callsite, DetachSourceLocked(), can only be called on a root pager-backed VMO.
+  DEBUG_ASSERT(!parent_);
+
   // unmap all of the pages in this range on all the mapping regions
-  RangeChangeUpdateLocked(offset, new_len, RangeChangeOp::Unmap);
+  RangeChangeUpdateLocked(offset, len, RangeChangeOp::Unmap);
 
   list_node_t freed_list;
   list_initialize(&freed_list);
 
   BatchPQRemove page_remover(&freed_list);
 
-  page_list_.RemovePages(page_remover.RemovePagesCallback(), offset, offset + new_len);
+  page_list_.RemovePages(page_remover.RemovePagesCallback(), offset, offset + len);
   page_remover.Flush();
   pmm_free(&freed_list);
 
@@ -2737,6 +2745,16 @@ fbl::RefPtr<PageSource> VmCowPages::GetRootPageSourceLocked() const {
     }
   }
   return cow_pages->page_source_;
+}
+
+void VmCowPages::DetachSourceLocked() {
+  DEBUG_ASSERT(page_source_);
+  page_source_->Detach();
+
+  // Remove committed pages so that all future page faults on this VMO and its clones can fail.
+  UnmapAndRemovePagesLocked(0, size_locked());
+
+  IncrementHierarchyGenerationCountLocked();
 }
 
 bool VmCowPages::IsCowClonableLocked() const {
