@@ -53,6 +53,20 @@ pub struct TypefaceId {
     pub index: Option<TypefaceInAssetIndex>,
 }
 
+#[cfg(test)]
+impl TypefaceId {
+    /// Creates a new `TypefaceId` representing a single typeface in the given file.
+    ///
+    /// - `file_name`: The file name of the font asset.
+    /// - `index`: The index of the typeface in the given file. See [`TypefaceInAssetIndex`].
+    pub(crate) fn new(
+        file_name: impl Into<String>,
+        index: impl Into<TypefaceInAssetIndex>,
+    ) -> Self {
+        Self { file_name: file_name.into(), index: Some(index.into()) }
+    }
+}
+
 /// An in-memory representation of a ".fontcfg.json" file.
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Default)]
 pub struct ProductConfig {

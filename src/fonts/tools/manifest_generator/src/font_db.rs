@@ -35,6 +35,7 @@ type AssetKey = (FamilyIndex, AssetInFamilyIndex);
 /// the target product.)
 ///
 /// For test coverage, please see the integration tests.
+#[derive(Debug)]
 pub struct FontDb {
     font_catalog: FontCatalog,
     font_sets: FontSets,
@@ -118,9 +119,14 @@ impl FontDb {
         // TODO(fxbug.dev/46156): Switch to iter_fallback_chain() when legacy fallbacks are removed.
         for typeface_id in db.iter_explicit_fallback_chain() {
             *fallback_typeface_counts.entry(typeface_id.clone()).or_insert(0) += 1;
-            if db.get_assets_by_name(&typeface_id.file_name).is_empty() {
+            // Confirm that the TypefaceId in the fallback chain actually exists in the database.
+            if !db
+                .get_assets_by_name(&typeface_id.file_name)
+                .iter()
+                .any(|asset| asset.typefaces.contains_key(&typeface_id.index.into()))
+            {
                 errors.push(FontDbError::UnknownFallbackChainEntry {
-                    asset_name: typeface_id.file_name.clone(),
+                    typeface_id: typeface_id.clone(),
                 })
             }
         }
@@ -387,6 +393,12 @@ impl From<Vec<FontDbError>> for FontDbErrorVec {
     }
 }
 
+impl From<FontDbErrors> for Vec<FontDbError> {
+    fn from(wrapper: FontDbErrors) -> Self {
+        (wrapper.0).0
+    }
+}
+
 impl fmt::Display for FontDbErrorVec {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let descriptions = self.0.iter().map(|e| format!("{}", e)).collect_vec();
@@ -406,8 +418,8 @@ pub enum FontDbError {
     #[error("Asset {} is not listed in *.font_catalog.json", asset_name)]
     FontCatalogMissingEntry { asset_name: String },
 
-    #[error("Fallback asset {} is unknown", asset_name)]
-    UnknownFallbackChainEntry { asset_name: String },
+    #[error("Fallback asset {}, index {} is unknown", typeface_id.file_name, typeface_id.index)]
+    UnknownFallbackChainEntry { typeface_id: v2::TypefaceId },
 
     #[error("Multiple entries in fallback chain for {}, index {}", typeface_id.file_name, typeface_id.index)]
     DuplicateFallbackChainEntry { typeface_id: v2::TypefaceId },
@@ -431,5 +443,124 @@ pub struct FontInfoRequest {
 impl FontInfoRequest {
     fn asset_name(&self) -> String {
         self.path.file_name().and_then(|os_str| os_str.to_str()).unwrap().to_owned()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::{
+            fake_font_info_loader::FakeFontInfoLoaderImpl,
+            font_catalog::{Asset, Family, Typeface, TypefaceInAssetIndex},
+            font_pkgs::{FontPackageEntry, FontPackageListing},
+            font_sets::{FontSet, FontSets},
+            product_config::{ProductConfig, Settings, TypefaceId},
+        },
+        fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width},
+        manifest::v2::Style,
+        maplit::btreemap,
+        matches::assert_matches,
+    };
+
+    fn make_font_db_contents() -> (FontCatalog, FontPackageListing, FontSets) {
+        let font_catalog = FontCatalog {
+            families: vec![Family {
+                name: "Alpha Sans".to_string(),
+                aliases: vec![],
+                generic_family: Some(GenericFontFamily::SansSerif),
+                fallback: true,
+                assets: vec![Asset {
+                    file_name: "AlphaSans-Regular.ttc".to_string(),
+                    typefaces: btreemap! {
+                        TypefaceInAssetIndex(0) => Typeface {
+                            index: 0,
+                            languages: vec!["en".to_string()],
+                            style: Style {
+                                slant: Slant::Upright,
+                                weight: 400,
+                                width: Width::Normal,
+                            },
+                        },
+                        TypefaceInAssetIndex(2) => Typeface {
+                            index: 2,
+                            languages: vec!["ru".to_string()],
+                            style: Style {
+                                slant: Slant::Upright,
+                                weight: 400,
+                                width: Width::Normal,
+                            },
+                        },
+                    },
+                }],
+            }],
+        };
+
+        let font_pkgs = FontPackageListing::new(btreemap! {
+            "AlphaSans-Regular.ttc".to_string() =>
+                FontPackageEntry::new(
+                    "AlphaSans-Regular.ttc",
+                    "alphasans-regular-ttc",
+                    "alphasans/",
+                ),
+        });
+
+        let font_sets = FontSets::new(btreemap! {
+            "AlphaSans-Regular.ttc".to_string() => FontSet::Local,
+        });
+
+        (font_catalog, font_pkgs, font_sets)
+    }
+
+    /// The fallback chain references an unknown asset.
+    #[test]
+    fn test_unknown_fallback_asset() -> Result<(), Error> {
+        let (font_catalog, font_pkgs, font_sets) = make_font_db_contents();
+
+        let product_config = ProductConfig {
+            fallback_chain: vec![TypefaceId::new("BetaSans-Regular.ttc", 0)],
+            settings: Settings { cache_size_bytes: None },
+        };
+
+        let result = FontDb::new(
+            font_catalog,
+            font_pkgs,
+            font_sets,
+            product_config,
+            FakeFontInfoLoaderImpl::new(),
+            "foo/bar",
+        );
+
+        assert!(result.is_err());
+        let errors: Vec<FontDbError> = result.unwrap_err().into();
+        assert_matches!(errors[0], FontDbError::UnknownFallbackChainEntry{ typeface_id: _ });
+
+        Ok(())
+    }
+
+    /// The fallback chain references a known asset with an unknown typeface index.
+    #[test]
+    fn test_unknown_fallback_typeface_index() -> Result<(), Error> {
+        let (font_catalog, font_pkgs, font_sets) = make_font_db_contents();
+
+        let product_config = ProductConfig {
+            fallback_chain: vec![TypefaceId::new("AlphaSans-Regular.ttc", 1)],
+            settings: Settings { cache_size_bytes: None },
+        };
+
+        let result = FontDb::new(
+            font_catalog,
+            font_pkgs,
+            font_sets,
+            product_config,
+            FakeFontInfoLoaderImpl::new(),
+            "foo/bar",
+        );
+
+        assert!(result.is_err());
+        let errors: Vec<FontDbError> = result.unwrap_err().into();
+        assert_matches!(errors[0], FontDbError::UnknownFallbackChainEntry{ typeface_id: _ });
+
+        Ok(())
     }
 }

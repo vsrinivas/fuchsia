@@ -74,7 +74,7 @@ pub struct FontPackageListing {
 }
 
 impl FontPackageListing {
-    /// Load multiple .font_pkgs.json files and merge them.
+    /// Loads multiple .font_pkgs.json files and merges them.
     pub fn load_from_paths<T, P>(paths: T) -> Result<Self, Error>
     where
         T: IntoIterator<Item = P>,
@@ -87,7 +87,15 @@ impl FontPackageListing {
             by_name.insert(package.file_name.clone(), package);
         }
 
-        Ok(FontPackageListing { by_name })
+        Ok(Self::new(by_name))
+    }
+
+    /// Creates a new `FontPackageListing` from a map of font file names to `FontPackageEntry`,
+    /// as generated in [`FontPackageListing::load_from_paths`].
+    ///
+    /// _Visible for tests only._
+    pub(crate) fn new(by_name: BTreeMap<String, FontPackageEntry>) -> Self {
+        Self { by_name }
     }
 
     pub fn get(&self, asset_name: &str) -> Option<&FontPackageEntry> {

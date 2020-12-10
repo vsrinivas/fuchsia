@@ -50,10 +50,23 @@ pub struct FamilyIndex(pub usize);
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct AssetInFamilyIndex(pub usize);
 
-/// A [Typeface]'s index inside an [Asset]. Note that an [Asset]'s `typefaces`'s indices might not
-/// start at zero and can have discontinuities.
+/// A [`Typeface`](manifest::v2::Typeface)'s index inside an [`Asset`](manifest::v2::Asset).
+///
+/// For single-typeface font files (e.g. .ttf), this will be `0`. A multiple-typeface font file,
+/// such as a TrueType Collection (.ttc), can contain typefaces at other indices.
+///
+/// Note that an [Asset]'s [`typefaces`](manifest::v2::Asset::typefaces) indices might not start at
+/// zero and can have discontinuities, depending on which typefaces from the font file are actually
+/// being exposed in the font manifest.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize)]
 pub struct TypefaceInAssetIndex(pub u32);
+
+impl From<u32> for TypefaceInAssetIndex {
+    /// - `index`: The [index of a typeface within a font asset](TypefaceInAssetIndex).
+    fn from(index: u32) -> Self {
+        Self(index)
+    }
+}
 
 impl FontCatalog {
     /// Loads and merges multiple catalogs.

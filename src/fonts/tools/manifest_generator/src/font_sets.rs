@@ -35,7 +35,7 @@ impl FontSets {
     pub fn load_from_all_and_local_paths<T: AsRef<Path>>(
         all_path: T,
         local_path: T,
-    ) -> Result<FontSets, LoadError> {
+    ) -> Result<Self, LoadError> {
         let all_file_names: BTreeSet<String> = serde_ext::load_from_path(all_path)?;
         let local_file_names: BTreeSet<String> = serde_ext::load_from_path(local_path)?;
 
@@ -48,7 +48,15 @@ impl FontSets {
             map.insert(file_name, FontSet::Local);
         }
 
-        Ok(FontSets { map })
+        Ok(Self::new(map))
+    }
+
+    /// Creates a new `FontSets` collection from a map of font file names to [`FontSet`] values,
+    /// as generated in [`FontSets::load_from_all_and_local_paths`].
+    ///
+    /// _Visible for tests only._
+    pub(crate) fn new(map: BTreeMap<String, FontSet>) -> Self {
+        Self { map }
     }
 
     pub fn get_font_set(&self, file_name: &str) -> Option<&FontSet> {
