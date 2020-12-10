@@ -946,7 +946,7 @@ impl TargetCollection {
     pub async fn get_default(&self, n: Option<String>) -> Result<Target> {
         let targets = self.inner.read().await;
         match (targets.len(), n) {
-            (0, None) => return Err(anyhow!("no targets connected - is your device plugged in?")),
+            (0, None) => Err(anyhow!("no targets connected - is your device plugged in?")),
             (1, None) => {
                 let res = targets
                     .values()
@@ -957,19 +957,26 @@ impl TargetCollection {
                     "No default target selected, returning only target - {:?}",
                     res.nodename(),
                 );
-                return Ok(res);
+                Ok(res)
             }
             (_, None) => {
                 // n > 1 case (0 and 1 are covered, and this is an unsigned integer).
-                return Err(anyhow!("more than one target - specify a default target"));
+                Err(anyhow!("more than one target - specify a default target"))
             }
             (_, Some(nodename)) => {
-                return targets
-                    .get(&nodename)
+                // TODO(fxb/66152) Use target query instead.
+                targets
+                    .iter()
+                    .find_map(|(target_nodename, target)| {
+                        if target_nodename.contains(&nodename) {
+                            Some(target.clone())
+                        } else {
+                            None
+                        }
+                    })
                     .ok_or(anyhow!("no targets found"))
-                    .map(|t| t.clone());
             }
-        };
+        }
     }
 
     pub async fn get(&self, t: TargetQuery) -> Option<Target> {
@@ -1473,6 +1480,23 @@ mod test {
         assert_eq!(tc.get_default(Some(default.to_string())).await.unwrap(), t);
         assert!(tc.get_default(None).await.is_err());
         assert!(tc.get_default(Some("not_in_here".to_owned())).await.is_err());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_get_default_matches_contains() {
+        let default = "clam-chowder-is-tasty";
+        let t = Target::new(default);
+        let t2 = Target::new("this-is-a-crunchy-falafel");
+        let tc = TargetCollection::new();
+        assert!(tc.get_default(None).await.is_err());
+        tc.merge_insert(clone_target(&t).await).await;
+        assert_eq!(tc.get_default(Some(default.to_string())).await.unwrap(), t);
+        assert_eq!(tc.get_default(None).await.unwrap(), t);
+        tc.merge_insert(t2).await;
+        assert_eq!(tc.get_default(Some(default.to_string())).await.unwrap(), t);
+        assert!(tc.get_default(None).await.is_err());
+        assert!(tc.get_default(Some("not_in_here".to_owned())).await.is_err());
+        assert_eq!(tc.get_default(Some("clam".to_string())).await.unwrap(), t);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

@@ -227,7 +227,7 @@ impl Daemon {
                 if let DaemonEvent::NewTarget(n) = e {
                     // Gets either a target with the correct name if matching,
                     // or returns true if there is ANY target at all.
-                    n_clone.as_ref().map(|s| s.eq(&n)).unwrap_or(true)
+                    n_clone.as_ref().map(|s| n.contains(s)).unwrap_or(true)
                 } else {
                     false
                 }
