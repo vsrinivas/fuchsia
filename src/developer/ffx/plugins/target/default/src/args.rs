@@ -21,6 +21,20 @@ pub struct TargetDefaultCommand {
 pub enum SubCommand {
     Get(TargetDefaultGetCommand),
     Set(TargetDefaultSetCommand),
+    Unset(TargetDefaultUnsetCommand),
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "unset", description = "removes the default target from the config")]
+pub struct TargetDefaultUnsetCommand {
+    #[argh(option, default = "ConfigLevel::User", short = 'l')]
+    /// config level. Possible values: "user", "build", "global". Defaults to "user".
+    pub level: ConfigLevel,
+
+    #[argh(option, short = 'b')]
+    /// optional build directory to associate the build config provided -
+    /// used for "build" configs.
+    pub build_dir: Option<String>,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]

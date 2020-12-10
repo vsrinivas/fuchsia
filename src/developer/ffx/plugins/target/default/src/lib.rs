@@ -24,6 +24,11 @@ pub async fn exec_target_default(cmd: TargetDefaultCommand) -> Result<()> {
             )
             .await?
         }
+        SubCommand::Unset(unset) => {
+            let _ = ffx_config::remove((TARGET_DEFAULT_KEY, &unset.level, &unset.build_dir))
+                .await
+                .map_err(|e| eprintln!("warning: {}", e));
+        }
     };
     Ok(())
 }
