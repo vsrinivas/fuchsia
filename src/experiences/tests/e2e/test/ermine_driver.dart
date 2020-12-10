@@ -49,4 +49,12 @@ class ErmineDriver {
     await _driver?.close();
     await _connector.tearDown();
   }
+
+  /// Launch a component given its [componentUrl].
+  Future<void> launch(String componentUrl) async {
+    final result = await sl4f.ssh.run('session_control add $componentUrl');
+    if (result.exitCode != 0) {
+      fail('failed to launch component: $componentUrl.');
+    }
+  }
 }
