@@ -73,7 +73,7 @@ more about any subcommand.
 In a terminal, run the following:
 
 ```sh
-$ fx ffx target list
+fx ffx target list
 ```
 
 You'll see a list of devices that `ffx` has discovered. For example, with a
@@ -92,14 +92,39 @@ A couple columns worth explanation:
 - `RCS`: Indicates whether there is a reachable instance of the
   Remote Control Service (RCS) running on the device.
 
-If you wait 10 to 15 seconds and run the same command again, you should see the
-value in the `RCS` column change to `Y`.
+In order to get `ffx` to automatically connect to a device, you must either have
+set the target's nodename to be the default target, or attempt to interact with the
+device.
+
+To set the target to be the default, run:
+
+```sh
+fx ffx target default set $NODENAME
+```
+
+If the default target has been set prior to starting the daemon, waiting a few seconds
+should yield a change to the `RCS` status to show `Y`.
+
+If the default target has been set after starting the daemon, attempting to interact
+with the target should be sufficient to kick off a connection, like the following
+
+```sh
+fx ffx component list
+```
+
+NOTE: if the default target has been set, and you are unable to run that command
+against the target, [reach out](#contacting_us) to the `ffx` team.
+
+Then the next time you list targets you should see that an `RCS` connection
+isn't active.
 
 ```sh
 $ fx ffx target list
 NAME                    TYPE       STATE      ADDRS/IP                       AGE     RCS
 step-atom-yard-juicy    Unknown    Unknown    [fe80::5054:ff:fe63:5e7a%4]    0m6s    Y
 ```
+
+If a target has been set as default there will be a `*` next to it.
 
 If you had `fx log` running, you should also see something like the following in
 the logs:
@@ -108,8 +133,24 @@ the logs:
 [00009.776170][28540][28542][remote-control, remote_control_bin] INFO: published remote control service to overnet
 ```
 
-NOTE: if the `RCS` column remains `N` for an extended amount of time,
-[reach out](#contacting-us) to the `ffx` team.
+NOTE: if the `RCS` column remains `N` for an extended amount of time and you have
+already set this target's nodename to `target.default` _before_ initially starting
+ffx, [reach out](#contacting_us) to the `ffx` team.
+
+#### On Default Targets
+
+Above we covered setting the default target using the command
+
+```sh
+fx ffx target default set
+```
+
+It is also possible to set the default target on a per-command basis using the
+`--target` flag like so.
+
+```sh
+fx ffx --target $NODENAME component list
+```
 
 ### Interacting with multiple devices
 TODO: fill this out.
