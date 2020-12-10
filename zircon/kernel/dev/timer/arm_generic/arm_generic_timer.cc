@@ -19,6 +19,7 @@
 #include <zircon/boot/driver-config.h>
 #include <zircon/types.h>
 
+#include <arch/interrupt.h>
 #include <arch/quirks.h>
 #include <dev/interrupt.h>
 #include <dev/timer/arm_generic.h>
@@ -68,7 +69,7 @@ namespace {
 
 // Global saved config state
 int timer_irq;
-uint32_t timer_cntfrq; // Timer tick rate in Hz.
+uint32_t timer_cntfrq;  // Timer tick rate in Hz.
 
 enum timer_irq_assignment {
   IRQ_PHYS,
@@ -77,6 +78,11 @@ enum timer_irq_assignment {
 };
 
 timer_irq_assignment timer_assignment;
+
+// event stream state
+bool event_stream_enable;
+uint32_t event_stream_shift;
+uint32_t event_stream_freq;
 
 }  // anonymous namespace
 
@@ -294,10 +300,12 @@ static inline affine::Ratio arm_generic_timer_compute_conversion_factors(uint32_
   return cntpct_to_nsec;
 }
 
-static void enable_event_stream(uint32_t cntfrq) {
+// Run once on the boot cpu to decide if we want to start an event stream on each
+// cpu and at what rate.
+static void event_stream_init(uint32_t cntfrq) {
   // Check to see if it's enabled in the command line
-  bool enable = gCmdline.GetBool("kernel.arm64.event-stream.enable", false);
-  if (!enable) {
+  event_stream_enable = gCmdline.GetBool("kernel.arm64.event-stream.enable", false);
+  if (!event_stream_enable) {
     return;
   }
 
@@ -322,21 +330,31 @@ static void enable_event_stream(uint32_t cntfrq) {
   // If we ran off the end of the for loop 15 is the max shift and is okay
   DEBUG_ASSERT(shift <= 15);
 
-  uint32_t real_event_freq = (cntfrq >> (shift + 1));
+  // Save the computed state
+  event_stream_shift = shift;
+  event_stream_freq = (cntfrq >> (event_stream_shift + 1));
+
+  dprintf(INFO, "arm generic timer enabling event stream on all cpus: shift %u, %u Hz\n",
+          event_stream_shift, event_stream_freq);
+}
+
+static void event_stream_enable_percpu() {
+  if (!event_stream_enable) {
+    return;
+  }
+
+  DEBUG_ASSERT(event_stream_shift <= 15);
 
   // Enable the event stream
   uint64_t cntkctl = __arm_rsr64(TIMER_REG_CNTKCTL);
   // Set the trigger bit (field 7:4)
   cntkctl &= ~(0xfUL << 4);
-  cntkctl |= shift << 4;  // EVNTI
+  cntkctl |= event_stream_shift << 4;  // EVNTI
   // Clear the transition bit to 0
   cntkctl &= ~(1 << 3);  // ENVTDIR
   // Enable the stream
   cntkctl |= (1 << 2);  // EVNTEN
   __arm_wsr64(TIMER_REG_CNTKCTL, cntkctl);
-
-  dprintf(INFO, "arm generic timer enabling event stream on cpu %u: shift %u, %u Hz\n",
-          arch_curr_cpu_num(), shift, real_event_freq);
 }
 
 static void arm_generic_timer_init(uint32_t freq_override) {
@@ -367,8 +385,11 @@ static void arm_generic_timer_init(uint32_t freq_override) {
   auto cntkctl = __arm_rsr64(TIMER_REG_CNTKCTL);
   ASSERT(cntkctl & (1 << 1));  // EL0VCTEN
 
+  // Determine and compute values for the event stream if requested
+  event_stream_init(timer_cntfrq);
+
   // try to enable the event stream if requested
-  enable_event_stream(timer_cntfrq);
+  event_stream_enable_percpu();
 
   // enable the IRQ on the boot cpu
   LTRACEF("unmask irq %d on cpu %u\n", timer_irq, arch_curr_cpu_num());
@@ -377,7 +398,7 @@ static void arm_generic_timer_init(uint32_t freq_override) {
 
 static void arm_generic_timer_init_secondary_cpu(uint level) {
   // try to enable the event stream if requested
-  enable_event_stream(timer_cntfrq);
+  event_stream_enable_percpu();
 
   LTRACEF("unmask irq %d on cpu %u\n", timer_irq, arch_curr_cpu_num());
   unmask_interrupt(timer_irq);
@@ -583,6 +604,65 @@ bool test_cntpct_to_time(uint32_t cntfrq) {
   END_TEST;
 }
 
+bool test_event_stream() {
+  BEGIN_TEST;
+
+  const int kEventStreamIters = 1000;
+  const bool trace = false;
+
+  if (!event_stream_enable) {
+    printf("event stream disabled, skipping test\n");
+    END_TEST;
+  }
+
+  // compute the period of the event stream
+  affine::Ratio event_ticks_to_nsec = {ZX_SEC(1), event_stream_freq};
+  zx_time_t event_stream_period = event_ticks_to_nsec.Scale(1);
+
+  if (trace) {
+    printf("event stream period %ld ns\n", event_stream_period);
+  }
+
+  // Repeatedly time how the cpu stays in a single WFE instruction. Verify that it
+  // does not substantially exceed the event stream timer period. If the event timer isn't firing
+  // it's possible the current cpu will lock up forever and a cross cpu check will have to generate
+  // an oops to catch it. Since this really shouldn't be happening it's probably not worth writing a
+  // more robust scheme to force a cpu wakeup after some time.
+  //
+  // Fairly sloppy test but err on the side of false negative.
+  for (int i = 0; i < kEventStreamIters; i++) {
+    zx_time_t t;
+    {
+      InterruptDisableGuard guard;
+
+      t = current_time();
+
+      // The test sequence is
+      // sevl   wfe   wfe
+      //
+      // The first two instructions clear any pending event flag that may be set in the cpu by
+      // locally setting the flag and then consuming it with a wfe. This instruction sequence should
+      // be extremely fast so shouldn't affect the timing much.
+      __asm__ volatile("sevl;wfe;wfe");
+
+      t = current_time() - t;
+    }
+
+    if (trace) {
+      printf("time %ld\n", t);
+    }
+
+    // verify that no delay is substantially more than the computed period
+    if (t > event_stream_period * 2) {
+      printf("WFE took substantially longer than event stream period: %ld ns, period %ld\n", t,
+             event_stream_period);
+      ASSERT_TRUE(false);
+    }
+  }
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(arm_clock_tests)
@@ -592,4 +672,5 @@ UNITTEST("Time --> CNTPCT (cur freq)", []() -> bool { return test_time_to_cntpct
 UNITTEST("CNTPCT --> Time (min freq)", []() -> bool { return test_cntpct_to_time(kMinTestFreq); })
 UNITTEST("CNTPCT --> Time (max freq)", []() -> bool { return test_cntpct_to_time(kMaxTestFreq); })
 UNITTEST("CNTPCT --> Time (cur freq)", []() -> bool { return test_cntpct_to_time(kCurTestFreq); })
+UNITTEST("Event Stream", test_event_stream)
 UNITTEST_END_TESTCASE(arm_clock_tests, "arm_clock", "Tests for ARM tick count and current time")
