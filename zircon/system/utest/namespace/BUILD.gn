@@ -25,9 +25,6 @@ test("namespace") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
-
-  # TODO(fxbug.dev/47453): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 bootfs_test("namespace-bootfs-test") {
