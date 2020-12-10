@@ -17,6 +17,7 @@ use {
     bt_a2dp_metrics as metrics,
     bt_avdtp::{self as avdtp, ServiceCapability, ServiceCategory, StreamEndpoint},
     fidl::endpoints::create_request_stream,
+    fidl_fuchsia_bluetooth_a2dp::{AudioModeRequest, AudioModeRequestStream, Role},
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
     fidl_fuchsia_media_sessions2 as sessions2,
@@ -292,7 +293,7 @@ async fn connect_after_timeout(
     channel_mode: bredr::ChannelMode,
 ) {
     trace!(
-        "A2DP sink - waiting {}s before connecting to peer {}.",
+        "A2DP - waiting {}s before connecting to peer {}.",
         INITIATOR_DELAY.into_seconds(),
         peer_id
     );
@@ -301,7 +302,7 @@ async fn connect_after_timeout(
         return;
     }
 
-    trace!("Peer has not established connection. A2DP sink assuming the INT role.");
+    trace!("Peer has not established connection. A2DP assuming the INT role.");
     let channel = match profile_svc
         .connect(
             &mut peer_id.into(),
@@ -424,6 +425,34 @@ async fn test_encode_sbc() -> Result<(), Error> {
     EncodedStream::test(required_format, &MediaCodecConfig::min_sbc()).await
 }
 
+/// Handles role change requests from serving AudioMode
+fn handle_audio_mode_connection(
+    peers: Arc<Mutex<ConnectedPeers>>,
+    mut stream: AudioModeRequestStream,
+) {
+    fasync::Task::spawn(async move {
+        info!("AudioMode Client connected");
+        while let Some(request) = stream.next().await {
+            match request {
+                Err(e) => info!("AudioMode client connection error: {}", e),
+                Ok(AudioModeRequest::SetRole { role, responder }) => {
+                    // We want to be `role` so we prefer to start streams of the opposite direction.
+                    let direction = match role {
+                        Role::Source => avdtp::EndpointType::Sink,
+                        Role::Sink => avdtp::EndpointType::Source,
+                    };
+                    info!("Setting AudioMode to {:?}", role);
+                    peers.lock().set_preferred_direction(direction);
+                    if let Err(e) = responder.send() {
+                        warn!("Failed to respond to mode request: {}", e);
+                    }
+                }
+            }
+        }
+    })
+    .detach();
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let opts: Opt = argh::from_env();
@@ -444,14 +473,6 @@ async fn main() -> Result<(), Error> {
 
     let inspect = inspect::Inspector::new();
     inspect.serve(&mut fs)?;
-
-    let pool_clone = controller_pool.clone();
-    fs.dir("svc").add_fidl_service(move |s| pool_clone.connected(s));
-
-    if let Err(e) = fs.take_and_serve_directory_handle() {
-        warn!("Unable to serve service directory: {}", e);
-    }
-    let _servicefs_task = fasync::Task::spawn(fs.collect::<()>());
 
     let abs_vol_relay = volume_relay::VolumeRelay::start();
     if let Err(e) = &abs_vol_relay {
@@ -482,11 +503,23 @@ async fn main() -> Result<(), Error> {
     }
 
     let peers_connected_stream = peers.connected_stream();
-    let _controller_pool_connected_task = fasync::Task::spawn(
-        peers_connected_stream.map(move |p| controller_pool.peer_connected(p)).collect::<()>(),
-    );
+    let _controller_pool_connected_task = fasync::Task::spawn({
+        let pool = controller_pool.clone();
+        peers_connected_stream.map(move |p| pool.peer_connected(p)).collect::<()>()
+    });
 
     let peers = Arc::new(Mutex::new(peers));
+
+    fs.dir("svc").add_fidl_service(move |s| controller_pool.connected(s));
+    fs.dir("svc").add_fidl_service({
+        let peers = peers.clone();
+        move |s| handle_audio_mode_connection(peers.clone(), s)
+    });
+
+    if let Err(e) = fs.take_and_serve_directory_handle() {
+        warn!("Unable to serve service directory: {}", e);
+    }
+    let _servicefs_task = fasync::Task::spawn(fs.collect::<()>());
 
     let source_uuid = Uuid::new16(bredr::ServiceClassProfileIdentifier::AudioSource as u16);
     let sink_uuid = Uuid::new16(bredr::ServiceClassProfileIdentifier::AudioSink as u16);
@@ -603,6 +636,7 @@ mod tests {
 
     use async_utils::PollExt;
     use fidl::endpoints::create_proxy_and_stream;
+    use fidl_fuchsia_bluetooth_a2dp as a2dp;
     use fidl_fuchsia_bluetooth_bredr::{
         ConnectionReceiverMarker, ProfileRequest, ProfileRequestStream, SearchResultsMarker,
     };
@@ -622,10 +656,8 @@ mod tests {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
     }
 
-    fn setup_connected_peer_test(
-    ) -> (fasync::Executor, Arc<Mutex<ConnectedPeers>>, bredr::ProfileProxy, ProfileRequestStream)
-    {
-        let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+    fn setup_connected_peers(
+    ) -> (Arc<Mutex<ConnectedPeers>>, bredr::ProfileProxy, ProfileRequestStream) {
         let (proxy, stream) = create_proxy_and_stream::<bredr::ProfileMarker>()
             .expect("Profile proxy should be created");
         let (cobalt_sender, _) = fake_cobalt_sender();
@@ -635,13 +667,13 @@ mod tests {
             proxy.clone(),
             Some(cobalt_sender),
         )));
-
-        (exec, peers, proxy, stream)
+        (peers, proxy, stream)
     }
 
     #[test]
     fn test_responds_to_search_results() {
-        let (mut exec, peers, profile_proxy, _profile_stream) = setup_connected_peer_test();
+        let mut exec = fasync::Executor::new().expect("executor should build");
+        let (peers, profile_proxy, _profile_stream) = setup_connected_peers();
         let (sink_results_proxy, sink_results_stream) =
             create_proxy_and_stream::<SearchResultsMarker>()
                 .expect("SearchResults proxy should be created");
@@ -721,7 +753,8 @@ mod tests {
     /// Tests that A2DP sink assumes the initiator role when a peer is found, but
     /// not connected, and the timeout completes.
     fn wait_to_initiate_success_with_no_connected_peer() {
-        let (mut exec, peers, proxy, mut prof_stream) = setup_connected_peer_test();
+        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let (peers, proxy, mut prof_stream) = setup_connected_peers();
         // Initialize context to a fixed point in time.
         exec.set_fake_time(fasync::Time::from_nanos(1000000000));
         let peer_id = PeerId(1);
@@ -781,7 +814,8 @@ mod tests {
     /// Tests that A2DP sink does not assume the initiator role when a peer connects
     /// before `INITIATOR_DELAY` timeout completes.
     fn wait_to_initiate_returns_early_with_connected_peer() {
-        let (mut exec, peers, proxy, mut prof_stream) = setup_connected_peer_test();
+        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let (peers, proxy, mut prof_stream) = setup_connected_peers();
         // Initialize context to a fixed point in time.
         exec.set_fake_time(fasync::Time::from_nanos(1000000000));
         let peer_id = PeerId(1);
@@ -867,5 +901,24 @@ mod tests {
 
         let channel_string = Some("foobar123".to_string());
         assert!(channel_mode_from_arg(channel_string).is_err());
+    }
+
+    #[test]
+    fn test_audio_mode_connection() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+        let (peers, _profile_proxy, _profile_stream) = setup_connected_peers();
+
+        let (proxy, stream) = create_proxy_and_stream::<a2dp::AudioModeMarker>()
+            .expect("AudioMode proxy should be created");
+
+        handle_audio_mode_connection(peers.clone(), stream);
+
+        exec.run_singlethreaded(proxy.set_role(a2dp::Role::Sink)).expect("set role response");
+
+        assert_eq!(avdtp::EndpointType::Source, peers.lock().preferred_direction());
+
+        exec.run_singlethreaded(proxy.set_role(a2dp::Role::Source)).expect("set role response");
+
+        assert_eq!(avdtp::EndpointType::Sink, peers.lock().preferred_direction());
     }
 }

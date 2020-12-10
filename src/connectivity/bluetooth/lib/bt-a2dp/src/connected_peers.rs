@@ -96,6 +96,14 @@ impl ConnectedPeers {
         self.get(&id).map(|p| p.set_descriptor(desc));
     }
 
+    pub fn set_preferred_direction(&mut self, direction: avdtp::EndpointType) {
+        self.codec_negotiation.set_direction(direction);
+    }
+
+    pub fn preferred_direction(&self) -> avdtp::EndpointType {
+        self.codec_negotiation.direction()
+    }
+
     /// Accept a channel that was connected to the peer `id`.  If `initiator` is true, we initiated
     /// this connection (and should take the INT role)
     /// Returns a weak peer pointer if connected (even if it was connected before) if successful.

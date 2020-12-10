@@ -388,6 +388,17 @@ impl CodecNegotiation {
         None
     }
 
+    /// Change the preferred direction.  Calls to `select` after this call will prefer to match
+    /// endpoints that are of `direction`
+    pub fn set_direction(&mut self, direction: avdtp::EndpointType) {
+        self.preferred_direction = direction;
+    }
+
+    /// Returns the currently preferred direction
+    pub fn direction(&self) -> avdtp::EndpointType {
+        self.preferred_direction
+    }
+
     fn get_codec_cap<'a>(stream: &'a avdtp::StreamEndpoint) -> Option<&'a ServiceCapability> {
         stream
             .capabilities()
@@ -631,7 +642,7 @@ mod tests {
             test_codec_cap(MediaCodecType::AUDIO_AAC),
             test_codec_cap(MediaCodecType::AUDIO_SBC),
         ];
-        let negotiation =
+        let mut negotiation =
             CodecNegotiation::build(priority_order, avdtp::EndpointType::Sink).expect("builds");
 
         assert!(negotiation.select(&Vec::new()).is_none());
@@ -699,6 +710,14 @@ mod tests {
         ];
         assert_eq!(
             negotiation.select(&oops_all_sources),
+            Some((aac_negotiated.capability(), aac_source_seid.try_into().unwrap()))
+        );
+
+        // Changing the preferred direction means the new direction is preferred.
+        negotiation.set_direction(avdtp::EndpointType::Source);
+
+        assert_eq!(
+            negotiation.select(&reversed_endpoints),
             Some((aac_negotiated.capability(), aac_source_seid.try_into().unwrap()))
         );
     }
