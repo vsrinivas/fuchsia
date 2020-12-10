@@ -241,23 +241,29 @@ where
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let self_mut = self.get_mut();
-        match self_mut.event_stream.poll_next_unpin(cx) {
-            Poll::Ready(Some(Ok(SpinelDeviceEvent::OnReadyForSendFrames { number_of_frames }))) => {
-                traceln!("SPINEL_READY_FOR_SEND: {}", number_of_frames);
-                self_mut.send_window.inc(number_of_frames);
-                Poll::Pending
+        loop {
+            match self_mut.event_stream.poll_next_unpin(cx) {
+                Poll::Ready(Some(Ok(SpinelDeviceEvent::OnReadyForSendFrames {
+                    number_of_frames,
+                }))) => {
+                    traceln!("SPINEL_READY_FOR_SEND: {}", number_of_frames);
+                    self_mut.send_window.inc(number_of_frames);
+                    // Continue the loop. Since `poll_next(..) == Ready(..)`, no wakeup is scheduled
+                }
+                Poll::Ready(Some(Ok(SpinelDeviceEvent::OnReceiveFrame { data }))) => {
+                    traceln!("SPINEL_RECV: {:x?}", data);
+                    self_mut.device_proxy.ready_to_receive_frames(1)?;
+                    return Poll::Ready(Some(Ok(data)));
+                }
+                Poll::Ready(Some(Ok(SpinelDeviceEvent::OnError { error, .. }))) => {
+                    return Poll::Ready(Some(Err(error).map_err(SpinelError).map_err(Error::from)))
+                }
+                Poll::Ready(Some(Err(error))) => {
+                    return Poll::Ready(Some(Err(error).map_err(Error::from)))
+                }
+                Poll::Ready(None) => return Poll::Ready(None),
+                Poll::Pending => return Poll::Pending,
             }
-            Poll::Ready(Some(Ok(SpinelDeviceEvent::OnReceiveFrame { data }))) => {
-                traceln!("SPINEL_RECV: {:x?}", data);
-                self_mut.device_proxy.ready_to_receive_frames(1)?;
-                Poll::Ready(Some(Ok(data)))
-            }
-            Poll::Ready(Some(Ok(SpinelDeviceEvent::OnError { error, .. }))) => {
-                Poll::Ready(Some(Err(error).map_err(SpinelError).map_err(Error::from)))
-            }
-            Poll::Ready(Some(Err(error))) => Poll::Ready(Some(Err(error).map_err(Error::from))),
-            Poll::Ready(None) => Poll::Ready(None),
-            Poll::Pending => Poll::Pending,
         }
     }
 }
