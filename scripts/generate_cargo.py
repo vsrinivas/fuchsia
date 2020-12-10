@@ -12,6 +12,8 @@ import re
 import sys
 import json
 import datetime
+import functools
+import collections
 
 ROOT_PATH = os.path.abspath(__file__ + "/../..")
 sys.path += [os.path.join(ROOT_PATH, "third_party", "pytoml")]
@@ -40,7 +42,7 @@ path = "%(source_root)s"
 """
 
 CARGO_PACKAGE_DEP = """\
-[dependencies.%(crate_name)s]
+[%(dep_type)s.%(crate_name)s]
 version = "0.0.1"
 path = "%(crate_path)s"
 
@@ -78,10 +80,36 @@ class Project(object):
         self.patches = None
         self.third_party_features = {}
 
+    @functools.cached_property
     def rust_targets(self):
-        for target in self.targets.keys():
-            if "crate_root" in self.targets[target]:
-                yield target
+        return {
+            target: meta
+            for target, meta in self.targets.items()
+            if "crate_root" in meta
+        }
+
+    @functools.cached_property
+    def rust_targets_by_source_root(self):
+        result = collections.defaultdict(list)
+        for target, meta in self.rust_targets.items():
+            source_root = meta["crate_root"]
+            result[source_root].append(target)
+        return dict(result)
+
+    @functools.cached_property
+    def reachable_targets(self):
+        result = set(["//:default"])
+        pending = ["//:default"]
+        while pending:
+            current = pending.pop()
+            meta = self.targets[current]
+            for dep_kind in ["deps", "public_deps", "data_deps"]:
+                for dep in meta.get(dep_kind, []):
+                    if dep not in result:
+                        result.add(dep)
+                        pending.append(dep)
+
+        return result
 
     def dereference_group(self, target):
         """Dereference proc macro shims.
@@ -108,9 +136,18 @@ class Project(object):
         if meta["type"] == "source_set":
             return meta["deps"]
 
+    def find_test_targets(self, source_root):
+        overlapping_targets = self.rust_targets_by_source_root.get(
+            source_root, [])
+        return [
+            t for t in overlapping_targets
+            if "--test" in self.targets[t]["rustflags"]
+        ]
+
 
 def write_toml_file(
-        fout, metadata, project, target, lookup, root_path, root_build_dir):
+        fout, metadata, project, target, lookup, root_path, root_build_dir,
+        gn_cargo_dir):
     rust_crates_path = os.path.join(root_path, "third_party/rust_crates")
 
     edition = "2018" if "--edition=2018" in metadata["rustflags"] else "2015"
@@ -155,6 +192,36 @@ def write_toml_file(
             "rust_crates_path": rust_crates_path,
         })
 
+    extra_test_deps = set()
+    if target_type in {"[lib]", "[[bin]]"}:
+        test_targets = project.find_test_targets(metadata["crate_root"])
+        # hack to filter to just matching toolchains:
+        test_targets = [
+            t for t in test_targets if t.split("(")[1:] == target.split("(")[1:]
+        ]
+
+        test_deps = set()
+        for test_target in test_targets:
+            test_deps.update(project.targets[test_target]["deps"])
+
+        unreachable_test_deps = sorted(
+            [dep for dep in test_deps if dep not in project.reachable_targets])
+        if unreachable_test_deps:
+            fout.write(
+                "# Note: disabling tests because test deps are not included in the build: %s\n"
+                % unreachable_test_deps)
+            fout.write("test = false\n")
+        elif not test_targets:
+            fout.write(
+                "# Note: disabling tests because no test target was found with the same source root\n"
+            )
+            fout.write("test = false\n")
+        else:
+            fout.write(
+                "# Note: using extra deps from discovered test target(s): %s\n"
+                % test_targets)
+            extra_test_deps = sorted(test_deps - set(metadata["deps"]))
+
     if features:
         fout.write("\n[features]\n")
         # Filter 'default' feature out to avoid generating a duplicated entry.
@@ -171,46 +238,52 @@ def write_toml_file(
     fout.write("\n")
 
     # collect all dependencies
-    deps = metadata["deps"]
-    while deps:
-        dep = deps.pop()
-        # handle proc macro shims:
-        dep = project.dereference_group(dep)
+    deps = metadata["deps"][:]
 
-        # If a dependency points to a source set, expand it into a list
-        # of its deps, and append them to the deps list. Finally, continue
-        # to the next item, since a source set itself is not considered a
-        # dependency for our purposes.
-        expanded_deps = project.expand_source_set(dep)
-        if expanded_deps:
-            deps.extend(expanded_deps)
-            continue
+    def write_deps(deps, dep_type):
+        while deps:
+            dep = deps.pop()
+            # handle proc macro shims:
+            dep = project.dereference_group(dep)
 
-        # this is a third-party dependency
-        # TODO remove this when all things use GN. temporary hack?
-        if "third_party/rust_crates:" in dep:
-            has_third_party_deps = True
-            match = re.search("rust_crates:([\w-]*)", dep)
-            crate_name, version = str(match.group(1)).rsplit("-v", 1)
-            version = version.replace("_", ".")
-            feature_spec = project.third_party_features.get(crate_name)
-            fout.write("[dependencies.\"%s\"]\n" % crate_name)
-            fout.write("version = \"%s\"\n" % version)
-            if feature_spec:
+            # If a dependency points to a source set, expand it into a list
+            # of its deps, and append them to the deps list. Finally, continue
+            # to the next item, since a source set itself is not considered a
+            # dependency for our purposes.
+            expanded_deps = project.expand_source_set(dep)
+            if expanded_deps:
+                deps.extend(expanded_deps)
+                continue
+
+            # this is a third-party dependency
+            # TODO remove this when all things use GN. temporary hack?
+            if "third_party/rust_crates:" in dep:
+                has_third_party_deps = True
+                match = re.search("rust_crates:([\w-]*)", dep)
+                crate_name, version = str(match.group(1)).rsplit("-v", 1)
+                version = version.replace("_", ".")
+                feature_spec = project.third_party_features.get(crate_name)
+                fout.write("[%s.\"%s\"]\n" % (dep_type, crate_name))
+                fout.write("version = \"%s\"\n" % version)
+                if feature_spec:
+                    fout.write(
+                        "features = %s\n" % json.dumps(feature_spec.features))
+                    if feature_spec.default_features is False:
+                        fout.write("default-features = false\n")
+            # this is a in-tree rust target
+            elif "crate_name" in project.targets[dep]:
+                crate_name = lookup_gn_pkg_name(project, dep)
+                output_name = project.targets[dep]["crate_name"]
+                dep_dir = os.path.join(gn_cargo_dir, str(lookup[dep]))
                 fout.write(
-                    "features = %s\n" % json.dumps(feature_spec.features))
-                if feature_spec.default_features is False:
-                    fout.write("default-features = false\n")
-        # this is a in-tree rust target
-        elif "crate_name" in project.targets[dep]:
-            crate_name = lookup_gn_pkg_name(project, dep)
-            output_name = project.targets[dep]["crate_name"]
-            dep_dir = os.path.join(root_build_dir, "cargo", str(lookup[dep]))
-            fout.write(
-                CARGO_PACKAGE_DEP % {
-                    "crate_path": dep_dir,
-                    "crate_name": crate_name,
-                })
+                    CARGO_PACKAGE_DEP % {
+                        "dep_type": dep_type,
+                        "crate_path": dep_dir,
+                        "crate_name": crate_name,
+                    })
+
+    write_deps(deps, "dependencies")
+    write_deps(extra_test_deps, "dev-dependencies")
 
 
 def main():
@@ -261,7 +334,7 @@ def main():
     target_binaries = []
 
     lookup = {}
-    for idx, target in enumerate(project.rust_targets()):
+    for idx, target in enumerate(project.rust_targets):
         # hash is the GN target name without the prefixed //
         lookup[target] = hashlib.sha1(target[2:].encode("utf-8")).hexdigest()
 
@@ -274,7 +347,7 @@ def main():
     with open(os.path.join(gn_cargo_dir, "generate_cargo.stamp"), "w") as f:
         f.truncate()
 
-    for target in project.rust_targets():
+    for target in project.rust_targets:
         cargo_toml_dir = os.path.join(gn_cargo_dir, str(lookup[target]))
         try:
             os.makedirs(cargo_toml_dir)
@@ -285,7 +358,8 @@ def main():
         with open(os.path.join(cargo_toml_dir, "Cargo.toml"), "w") as fout:
             write_toml_file(
                 fout, metadata, project, target, lookup, root_path,
-                root_build_dir)
+                root_build_dir, gn_cargo_dir)
+
     return 0
 
 
