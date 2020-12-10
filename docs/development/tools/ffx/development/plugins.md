@@ -57,7 +57,7 @@ struct has been decorated by the `ffx_command` attribute which signifies that
 your plugin should run when someone types the following command:
 
 ```sh
-$fx ffx example
+$ fx ffx example
 ```
 
 If you want to add more parameters for your plugins, you add them to
@@ -134,8 +134,13 @@ $fx build ffx
 You should now see the output when you run your example:
 
 ```sh
-$fx ffx example
+$ fx ffx example
 Hello from the example plugin :)
+```
+
+If your `lib.rs` contains tests, they can be invoked via:
+```sh
+$ fx test ffx_example_lib_test
 ```
 
 Plugins can also use FIDL proxies to communicate with a target device through
