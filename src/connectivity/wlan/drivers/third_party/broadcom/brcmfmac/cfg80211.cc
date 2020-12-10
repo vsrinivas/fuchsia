@@ -58,6 +58,7 @@
 #include "pno.h"
 #include "proto.h"
 #include "third_party/bcmdhd/crossdriver/dhd.h"
+#include "third_party/bcmdhd/crossdriver/wlioctl.h"
 #include "workqueue.h"
 
 #define BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS 320
@@ -4447,7 +4448,6 @@ void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_
 }
 
 zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_handshake_resp_t* resp) {
-  brcmf_ext_auth auth_data;
   struct brcmf_if* ifp = ndev_to_if(ndev);
   bcme_status_t fw_err = BCME_OK;
   zx_status_t err = ZX_OK;
@@ -4466,7 +4466,7 @@ zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_hands
               " join MAC (" MAC_FMT_STR ").",
               MAC_FMT_ARGS(new_mac), MAC_FMT_ARGS(old_mac));
 
-    // Just in case, in debug builds, we should investigate why the MLME is giving us inconsitent
+    // Just in case, in debug builds, we should investigate why the MLME is giving us inconsistent
     // requests.
     ZX_DEBUG_ASSERT(0);
 
@@ -4480,20 +4480,22 @@ zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_hands
     brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   }
 
-  memcpy(&auth_data.bssid, &resp->peer_sta_address, ETH_ALEN);
-  memcpy(&auth_data.ssid.SSID, ssid.data(), ssid.size());
-  auth_data.ssid.SSID_len = ssid.size();
-  auth_data.status = resp->result_code;
-
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
 
-  // Using "scb_assoc" iovar to continue the association process in firmware.
-  err = brcmf_fil_iovar_data_set(ifp, "scb_assoc", &auth_data, sizeof(brcmf_ext_auth), &fw_err);
+  // Issue assoc_mgr_cmd to resume firmware from waiting for the success of SAE authentication.
+  assoc_mgr_cmd_t cmd;
+  cmd.version = ASSOC_MGR_CURRENT_VERSION;
+  cmd.length = sizeof(cmd);
+  cmd.cmd = ASSOC_MGR_CMD_PAUSE_ON_EVT;
+  cmd.params = ASSOC_MGR_PARAMS_EVENT_NONE;
+
+  err = brcmf_fil_iovar_data_set(ifp, "assoc_mgr_cmd", &cmd, sizeof(cmd), &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("Set iovar scb_assoc fail. err: %s, fw_err: %s", zx_status_get_string(err),
+    BRCMF_ERR("Set iovar assoc_mgr_cmd fail. err: %s, fw_err: %s", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
     brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   }
+
   return err;
 }
 
@@ -4505,14 +4507,25 @@ zx_status_t brcmf_if_sae_frame_tx(net_device* ndev, const wlanif_sae_frame_t* fr
   // Mac header(24 bytes) + Auth frame header(6 bytes) + sae_fields length.
   uint32_t frame_size =
       sizeof(wlan::MgmtFrameHeader) + sizeof(wlan::Authentication) + frame->sae_fields_count;
-  uint8_t frame_buf[frame_size];
+  // Carry the SAE authentication frame in the last field of assoc_mgr_cmd.
+  uint32_t cmd_buf_len = sizeof(assoc_mgr_cmd_t) + frame_size;
+  uint8_t cmd_buf[cmd_buf_len];
+  assoc_mgr_cmd_t* cmd = reinterpret_cast<assoc_mgr_cmd_t*>(cmd_buf);
+  cmd->version = ASSOC_MGR_CURRENT_VERSION;
+  // As the description of "length" field in this structure, it should be used to store the length
+  // of the entire structure, here is a special case where we store the length of the frame here.
+  // After confirming with vendor, this is the way they deal with extra data for this iovar, the
+  // value of "length" field should be the length of extra data.
+  cmd->length = frame_size;
+  cmd->cmd = ASSOC_MGR_CMD_SEND_AUTH;
 
-  auto sae_frame = reinterpret_cast<brcmf_sae_auth_frame*>(frame_buf);
+  auto sae_frame =
+      reinterpret_cast<brcmf_sae_auth_frame*>(cmd_buf + offsetof(assoc_mgr_cmd_t, params));
 
   // Set MAC addresses in MAC header, firmware will check these parts, and fill other missing parts.
-  sae_frame->mac_hdr.addr1 = wlan::common::MacAddr(frame->peer_sta_address);
-  sae_frame->mac_hdr.addr2 = wlan::common::MacAddr(ifp->mac_addr);
-  sae_frame->mac_hdr.addr3 = wlan::common::MacAddr(frame->peer_sta_address);
+  sae_frame->mac_hdr.addr1 = wlan::common::MacAddr(frame->peer_sta_address);  // DA
+  sae_frame->mac_hdr.addr2 = wlan::common::MacAddr(ifp->mac_addr);            // SA
+  sae_frame->mac_hdr.addr3 = wlan::common::MacAddr(frame->peer_sta_address);  // BSSID
 
   BRCMF_DBG(CONN,
             "The peer_sta_address: " MAC_FMT_STR ", the ifp mac is: " MAC_FMT_STR
@@ -4532,16 +4545,13 @@ zx_status_t brcmf_if_sae_frame_tx(net_device* ndev, const wlanif_sae_frame_t* fr
   // Attach SAE payload after authentication frame header.
   memcpy(sae_frame->sae_payload, frame->sae_fields_list, frame->sae_fields_count);
 
-  // Use command BRCMF_C_SCB_AUTHENTICATE to send SAE authentication frames to firmware.
-  err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SCB_AUTHENTICATE, frame_buf, frame_size, &fw_err);
+  err = brcmf_fil_iovar_data_set(ifp, "assoc_mgr_cmd", cmd_buf, cmd_buf_len, &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("Auth frame is not set correctly to firmware. err: %s, fw_err: %s",
-              zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
-    // TODO: Even when the frame is successfully passed to firmware, it will still return
-    // a BCME_ERROR, the ZX_ERR code will be set to ZX_ERR_IO_REFUSED in this case(refer
-    // to brcmf_fil_cmd_data() in fwil.cc). This is most likely to be a firmware bug, we
-    // should return an assoc result to SME here once the bug is fixed.
+    BRCMF_ERR("Error sending SAE auth frame. err: %s, fw_err: %s", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+    brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED);
   }
+
   return err;
 }
 
@@ -4788,6 +4798,9 @@ static zx_status_t brcmf_notify_start_auth(struct brcmf_if* ifp, const struct br
     BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping SAE auth start notifications.");
     return ZX_ERR_BAD_HANDLE;
   }
+  assoc_mgr_cmd_t cmd;
+  zx_status_t err = ZX_OK;
+  bcme_status_t fw_err = BCME_OK;
 
   wlanif_sae_handshake_ind_t ind;
   brcmf_ext_auth* auth_start_evt = (brcmf_ext_auth*)data;
@@ -4807,8 +4820,20 @@ static zx_status_t brcmf_notify_start_auth(struct brcmf_if* ifp, const struct br
   // SAE four-way authentication start.
   brcmf_set_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
 
+  // Issue assoc_mgr_cmd to update the the state machine of firmware, so that the firmware will wait
+  // for SAE frame from external supplicant.
+  cmd.version = ASSOC_MGR_CURRENT_VERSION;
+  cmd.length = sizeof(cmd);
+  cmd.cmd = ASSOC_MGR_CMD_PAUSE_ON_EVT;
+  cmd.params = ASSOC_MGR_PARAMS_PAUSE_EVENT_AUTH_RESP;
+  err = brcmf_fil_iovar_data_set(ifp, "assoc_mgr_cmd", &cmd, sizeof(cmd), &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Set assoc_mgr_cmd fail. err: %s, fw_err: %s", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+  }
   wlanif_impl_ifc_sae_handshake_ind(&ndev->if_proto, &ind);
-  return ZX_OK;
+
+  return err;
 }
 
 static zx_status_t brcmf_rx_auth_frame(struct brcmf_if* ifp, const uint32_t datalen, void* data) {
@@ -5355,7 +5380,7 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_IF, brcmf_notify_vif_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_CSA_COMPLETE_IND, brcmf_notify_channel_switch);
   brcmf_fweh_register(cfg->pub, BRCMF_E_AP_STARTED, brcmf_notify_ap_started);
-  brcmf_fweh_register(cfg->pub, BRCMF_E_START_AUTH, brcmf_notify_start_auth);
+  brcmf_fweh_register(cfg->pub, BRCMF_E_JOIN_START, brcmf_notify_start_auth);
 }
 
 static void brcmf_deinit_cfg_mem(struct brcmf_cfg80211_info* cfg) {

@@ -205,6 +205,7 @@ void AuthTest::VerifyAuthFrames() {
   EXPECT_EQ(rx_auth_frames_.size(), expect_auth_frames_.size());
 
   while (!expect_auth_frames_.empty()) {
+    ASSERT_EQ(rx_auth_frames_.empty(), false);
     AuthFrameContent rx_content = rx_auth_frames_.front();
     AuthFrameContent expect_content = expect_auth_frames_.front();
     EXPECT_EQ(rx_content.seq_num_, expect_content.seq_num_);

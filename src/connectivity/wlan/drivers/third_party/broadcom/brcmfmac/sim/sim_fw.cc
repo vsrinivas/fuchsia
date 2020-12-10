@@ -25,6 +25,7 @@
 #include <optional>
 
 #include <third_party/bcmdhd/crossdriver/dhd.h>
+#include <third_party/bcmdhd/crossdriver/wlioctl.h>
 #include <wlan/common/mac_frame.h>
 
 #include "ddk/protocol/wlan/info.h"
@@ -474,37 +475,6 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
         *callback = std::bind(&SimFirmware::ScanComplete, this, BRCMF_E_STATUS_ABORT);
         hw_.RequestCallback(std::move(callback), kAbortScanDelay);
       }
-      break;
-    }
-    case BRCMF_C_SCB_AUTHENTICATE: {
-      if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(int32_t))) == ZX_OK) {
-        if (ifidx != kClientIfidx) {
-          ZX_ASSERT_MSG(false, "SAE authentication only supported on client iface.");
-        }
-
-        auto sae_frame = reinterpret_cast<brcmf_sae_auth_frame*>(data);
-
-        if (memcmp(sae_frame->mac_hdr.addr1.byte, assoc_state_.opts->bssid.byte, ETH_ALEN) ||
-            memcmp(sae_frame->mac_hdr.addr3.byte, assoc_state_.opts->bssid.byte, ETH_ALEN)) {
-          BRCMF_ERR("Dest addr does not match in SAE frame from external supplicant.");
-          return ZX_ERR_INVALID_ARGS;
-        }
-
-        // Authentication algorithm field must be SAE.
-        if (sae_frame->auth_hdr.auth_algorithm_number != BRCMF_AUTH_MODE_SAE) {
-          BRCMF_ERR("Authentication algorithm number does not match SAE algorithm number");
-          return ZX_ERR_INVALID_ARGS;
-        }
-
-        if ((status = LocalUpdateExternalSaeStatus(
-                 sae_frame->auth_hdr.auth_txn_seq_number, sae_frame->auth_hdr.status_code,
-                 sae_frame->sae_payload,
-                 data_len - offsetof(struct brcmf_sae_auth_frame, sae_payload))) != ZX_OK) {
-          BRCMF_ERR("Update SAE status failed with auth frame from external supllicant.");
-          return ZX_ERR_BAD_STATE;
-        }
-      }
-
       break;
     }
 
@@ -993,7 +963,7 @@ void SimFirmware::AuthStart() {
     ext_auth_data->key_mgmt_suite = WPA3_AUTH_SAE_PSK;
     ext_auth_data->status = BRCMF_E_STATUS_SUCCESS;
     auth_state_.state = AuthState::EXPECTING_EXTERNAL_COMMIT;
-    SendEventToDriver(sizeof(brcmf_ext_auth), std::move(buf), BRCMF_E_START_AUTH,
+    SendEventToDriver(sizeof(brcmf_ext_auth), std::move(buf), BRCMF_E_JOIN_START,
                       BRCMF_E_STATUS_SUCCESS, kClientIfidx);
   } else {
     auth_req_frame.sec_proto_type_ = auth_state_.sec_type;
@@ -1949,25 +1919,85 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name_buf, const v
     return ZX_OK;
   }
 
-  if (!std::strcmp(name, "scb_assoc")) {
-    if (value_len < sizeof(brcmf_ext_auth)) {
+  if (!std::strcmp(name, "assoc_mgr_cmd")) {
+    BRCMF_DBG(SIM, "Receive assoc_mgr_cmd in sim-fw.");
+    if (value_len < sizeof(assoc_mgr_cmd_t)) {
       return ZX_ERR_IO;
     }
 
-    if (ifidx != kClientIfidx) {
-      BRCMF_ERR("Should not do SAE on iface other than client iface.");
-      return ZX_ERR_INVALID_ARGS;
+    ZX_ASSERT_MSG(ifidx == kClientIfidx, "SAE authentication only supported on client iface.");
+
+    auto cmd = reinterpret_cast<const assoc_mgr_cmd_t*>(value);
+    if (cmd->version != ASSOC_MGR_CURRENT_VERSION) {
+      BRCMF_INFO(
+          "Version number doesn't match the current one, but ignoring it in sim-fw for now.");
     }
 
-    // This is an iovar to move firmware from SAE external supplicant authentication to assoc stage,
-    // so client interface should be allocated
-    if (!iface_tbl_[kClientIfidx].allocated) {
-      BRCMF_ERR("Client iface has not been allocated.");
-      return ZX_ERR_BAD_STATE;
-    }
+    switch (cmd->cmd) {
+      case ASSOC_MGR_CMD_PAUSE_ON_EVT:
+        if (cmd->params == ASSOC_MGR_PARAMS_PAUSE_EVENT_AUTH_RESP) {
+          // When driver received JOIN_START event and successfully notified SME that the SAE
+          // authentication should start by sending up handshake indication, it will send a
+          // assoc_mgr_cmd with this parameter, telling firmware to expect the first authentication
+          // frame from external supplicant. Here we only check whether the auth_state is correct.
+          if (auth_state_.state != AuthState::EXPECTING_EXTERNAL_COMMIT) {
+            BRCMF_ERR(
+                "Incorrect state, START_AUTH event wasn't sent up to the driver, or the SAE "
+                "process has been started. Ignoring the command and return.");
+            return ZX_ERR_BAD_STATE;
+          }
+        } else if (cmd->params == ASSOC_MGR_PARAMS_EVENT_NONE) {
+          // Driver is trying to start association after finishing SAE authentication.
+          if (auth_state_.state != AuthState::EXPECTING_EXTERNAL_HANDSHAKE_RESP) {
+            BRCMF_ERR(
+                "Unexpected HANDSHAKE_RESP from external supplicant. Ignoring the command and "
+                "return.");
+            return ZX_ERR_BAD_STATE;
+          }
+          // Handshake resp received from external supplicant, cancel timer.
+          hw_.CancelCallback(auth_state_.auth_timer_id);
 
-    auto ext_auth = reinterpret_cast<const brcmf_ext_auth*>(value);
-    return HandleScbAssoc(ext_auth);
+          auth_state_.state = AuthState::AUTHENTICATED;
+          AssocStart();
+          return ZX_OK;
+        }
+        break;
+      case ASSOC_MGR_CMD_ABORT_ASSOC:
+        ZX_ASSERT_MSG(false, "Not supporting this command for assoc_mgr_cmd yet.");
+        break;
+      case ASSOC_MGR_CMD_SEND_AUTH: {
+        ZX_ASSERT_MSG(ifidx == kClientIfidx, "SAE authentication only supported on client iface.");
+
+        auto sae_frame = reinterpret_cast<const brcmf_sae_auth_frame*>(&cmd->params);
+        if (memcmp(sae_frame->mac_hdr.addr1.byte, assoc_state_.opts->bssid.byte, ETH_ALEN) ||
+            memcmp(sae_frame->mac_hdr.addr3.byte, assoc_state_.opts->bssid.byte, ETH_ALEN)) {
+          BRCMF_ERR(
+              "Dest addr does not match in SAE frame from external supplicant. Ignoring frame.");
+          return ZX_ERR_INVALID_ARGS;
+        }
+
+        // Authentication algorithm field must be SAE.
+        if (sae_frame->auth_hdr.auth_algorithm_number != BRCMF_AUTH_MODE_SAE) {
+          BRCMF_ERR("Authentication algorithm number does not match SAE algorithm number");
+          return ZX_ERR_INVALID_ARGS;
+        }
+
+        size_t sae_payload_length =
+            cmd->length - offsetof(struct brcmf_sae_auth_frame, sae_payload);
+        if ((status = LocalUpdateExternalSaeStatus(
+                 sae_frame->auth_hdr.auth_txn_seq_number, sae_frame->auth_hdr.status_code,
+                 sae_frame->sae_payload, sae_payload_length)) != ZX_OK) {
+          BRCMF_ERR("Update SAE status failed with auth frame from external supllicant.");
+          return ZX_ERR_BAD_STATE;
+        }
+        break;
+      }
+      default:
+        ZX_ASSERT_MSG(false, "Command type %u is not currently supported for assoc_mgr_cmd.",
+                      cmd->cmd);
+        break;
+    }
+    return ZX_OK;
   }
   // FIXME: For now, just pretend that we successfully set the value even when we did nothing
   BRCMF_DBG(SIM, "Ignoring request to set iovar '%s'", name);
