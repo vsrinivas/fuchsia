@@ -29,7 +29,7 @@ use {
     crate::inspect::inspect_broker::InspectBroker,
     crate::intl::intl_controller::IntlController,
     crate::light::light_controller::LightController,
-    crate::monitor::base::GenerateMonitor,
+    crate::monitor::base as monitor_base,
     crate::night_mode::night_mode_controller::NightModeController,
     crate::policy::policy_handler,
     crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl,
@@ -187,7 +187,7 @@ pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     storage_factory: Arc<Mutex<T>>,
     generate_service: Option<GenerateService>,
     handlers: HashMap<SettingType, GenerateHandler<T>>,
-    resource_monitors: Vec<GenerateMonitor>,
+    resource_monitors: Vec<monitor_base::monitor::Generate>,
 }
 
 macro_rules! register_handler {
@@ -286,7 +286,10 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         self
     }
 
-    pub fn resource_monitors(mut self, monitors: &[GenerateMonitor]) -> EnvironmentBuilder<T> {
+    pub fn resource_monitors(
+        mut self,
+        monitors: &[monitor_base::monitor::Generate],
+    ) -> EnvironmentBuilder<T> {
         self.resource_monitors.append(&mut monitors.to_vec());
         self
     }
@@ -525,7 +528,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     components: HashSet<SettingType>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
-    resource_monitor_generators: Vec<GenerateMonitor>,
+    resource_monitor_generators: Vec<monitor_base::monitor::Generate>,
     event_subscriber_blueprints: Vec<internal::event::subscriber::BlueprintHandle>,
     service_context_handle: ServiceContextHandle,
     event_messenger_factory: internal::event::message::Factory,

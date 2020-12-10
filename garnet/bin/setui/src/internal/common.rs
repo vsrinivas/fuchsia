@@ -17,6 +17,7 @@ macro_rules! message_hub_definition {
         pub mod message {
             #[allow(unused_imports)]
             use super::*;
+            use crate::message::base::Audience as BaseAudience;
             use crate::message::base::MessageError as BaseMessageError;
             use crate::message::base::Signature as BaseSignature;
             use crate::message::message_client::MessageClient as BaseMessageClient;
@@ -28,6 +29,9 @@ macro_rules! message_hub_definition {
             use crate::message::receptor::Receptor as BaseReceptor;
 
             pub type Factory = BaseFactory<$payload, $address, $role>;
+
+            #[allow(dead_code)]
+            pub type Audience = BaseAudience<$address, $role>;
 
             #[allow(dead_code)]
             pub type Messenger = BaseMessengerClient<$payload, $address, $role>;
