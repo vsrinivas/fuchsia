@@ -1,8 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_RING_MASTER_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_RING_MASTER_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_RING_PROVIDER_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_RING_PROVIDER_H_
 
 #include <zircon/types.h>
 
@@ -56,12 +56,12 @@ class PcieRingProvider : public DmaRingProviderInterface {
   DmaConfig dma_config_ = {};
   std::unique_ptr<DmaBuffer> index_buffer_;
 
-  // PCIE bus core regs.  We hold on to ownership of this instance throughout our lifetime, as the
-  // DMA rings host to device write signal exists in the PCIE core register space.
-  PcieBuscore::CoreRegs pci_core_regs_;
+  // PCIE core window.  We hold on to ownership of this instance throughout our lifetime, as we
+  // don't wan't to be switching away the BAR0 window while servicing interrupts.
+  std::unique_ptr<PcieBuscore::PcieRegisterWindow> pcie_core_window_;
 
   // DMA ring state.  These are arrays of DMA ring index pointers, existing in coherent RAM shared
-  // with the firmware.  They are only valid as long as `pci_core_regs_` is valid.
+  // with the firmware.  They are only valid as long as `pcie_core_window_` is valid.
   size_t ring_index_size_ = 0;
   volatile std::atomic<uint16_t>* d2h_read_indices_ = nullptr;
   volatile std::atomic<uint16_t>* d2h_write_indices_ = nullptr;
@@ -80,4 +80,4 @@ class PcieRingProvider : public DmaRingProviderInterface {
 }  // namespace brcmfmac
 }  // namespace wlan
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_RING_MASTER_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_RING_PROVIDER_H_

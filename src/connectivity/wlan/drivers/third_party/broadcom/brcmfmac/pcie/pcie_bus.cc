@@ -76,8 +76,9 @@ zx_status_t PcieBus::Create(Device* device, std::unique_ptr<PcieBus>* bus_out) {
   bus->ops = PcieBus::GetBusOps();
 
   auto mp_device = std::make_unique<brcmf_mp_device>();
-  brcmf_get_module_param(brcmf_bus_type::BRCMF_BUS_TYPE_PCIE, pcie_buscore->chip()->chip,
-                         pcie_buscore->chip()->chiprev, mp_device.get());
+  brcmf_get_module_param(brcmf_bus_type::BRCMF_BUS_TYPE_PCIE,
+                         static_cast<uint32_t>(pcie_buscore->GetBackplane()->chip_id()),
+                         pcie_buscore->GetBackplane()->chip_rev(), mp_device.get());
 
   device->drvr()->bus_if = bus.get();
   device->drvr()->settings = mp_device.get();

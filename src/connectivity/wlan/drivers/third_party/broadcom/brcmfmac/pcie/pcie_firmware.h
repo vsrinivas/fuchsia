@@ -17,6 +17,7 @@
 namespace wlan {
 namespace brcmfmac {
 
+class Chipset;
 class Device;
 class PcieBuscore;
 
@@ -48,6 +49,7 @@ class PcieFirmware {
   struct SharedRamInfo;
 
   PcieBuscore* buscore_ = nullptr;
+  std::unique_ptr<Chipset> chipset_;
   std::unique_ptr<SharedRamInfo> shared_ram_info_;
 
   // Firmware scratch buffers.

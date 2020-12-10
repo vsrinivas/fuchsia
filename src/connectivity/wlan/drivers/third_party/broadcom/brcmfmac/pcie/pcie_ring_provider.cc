@@ -98,14 +98,23 @@ constexpr PcieRingProvider::DmaRingConfig kRxCompleteRingConfig = {
 // rings are dynamically configured using control messages.
 void UpdateRingState(PcieBuscore* buscore, uint32_t ring_state_offset,
                      const BaseDmaRing& dma_ring) {
+  zx_status_t status = ZX_OK;
   // Update the state in shared RAM.
   auto ring_state = std::make_unique<RingState>();
-  buscore->TcmRead(ring_state_offset, ring_state.get(), sizeof(*ring_state));
+  if ((status = buscore->TcmRead(ring_state_offset, ring_state.get(), sizeof(*ring_state))) !=
+      ZX_OK) {
+    BRCMF_ERR("Failed to read ring state: %s", zx_status_get_string(status));
+    return;
+  }
   ring_state->max_item = dma_ring.capacity();
   ZX_DEBUG_ASSERT(dma_ring.item_size() <= std::numeric_limits<uint16_t>::max());
   ring_state->len_items = static_cast<uint16_t>(dma_ring.item_size());
   ring_state->mem_base_addr = dma_ring.dma_address();
-  buscore->TcmWrite(ring_state_offset, ring_state.get(), sizeof(*ring_state));
+  if ((status = buscore->TcmWrite(ring_state_offset, ring_state.get(), sizeof(*ring_state))) !=
+      ZX_OK) {
+    BRCMF_ERR("Failed to write ring state: %s", zx_status_get_string(status));
+    return;
+  }
 }
 
 }  // namespace
@@ -124,7 +133,11 @@ zx_status_t PcieRingProvider::Create(PcieBuscore* buscore, PcieFirmware* firmwar
   int max_flow_rings = 0;
   int max_completion_rings = 0;
   auto ringinfo = std::make_unique<DhiRingInfo>();
-  buscore->TcmRead(firmware->GetRingInfoOffset(), ringinfo.get(), sizeof(*ringinfo));
+  if ((status = buscore->TcmRead(firmware->GetRingInfoOffset(), ringinfo.get(),
+                                 sizeof(*ringinfo))) != ZX_OK) {
+    BRCMF_ERR("Failed to read ring info: %s", zx_status_get_string(status));
+    return status;
+  }
 
   if (firmware->GetSharedRamVersion() >= 6) {
     max_submission_rings = ringinfo->max_submission_rings;
@@ -154,10 +167,30 @@ zx_status_t PcieRingProvider::Create(PcieBuscore* buscore, PcieFirmware* firmwar
   if ((firmware->GetSharedRamFlags() & kDmaIndexSupported) == 0) {
     // Using TCM indices.
     ring_index_size = sizeof(uint32_t);
-    d2h_read_indices = buscore->GetTcmPointer(ringinfo->d2h_r_idx_ptr);
-    d2h_write_indices = buscore->GetTcmPointer(ringinfo->d2h_w_idx_ptr);
-    h2d_read_indices = buscore->GetTcmPointer(ringinfo->h2d_r_idx_ptr);
-    h2d_write_indices = buscore->GetTcmPointer(ringinfo->h2d_w_idx_ptr);
+    status = [&]() {
+      zx_status_t status = ZX_OK;
+      if ((status = buscore->GetTcmPointer(ringinfo->d2h_r_idx_ptr, sizeof(d2h_read_indices),
+                                           &d2h_read_indices)) != ZX_OK) {
+        return status;
+      }
+      if ((status = buscore->GetTcmPointer(ringinfo->d2h_w_idx_ptr, sizeof(d2h_write_indices),
+                                           &d2h_write_indices)) != ZX_OK) {
+        return status;
+      }
+      if ((status = buscore->GetTcmPointer(ringinfo->h2d_r_idx_ptr, sizeof(h2d_read_indices),
+                                           &h2d_read_indices)) != ZX_OK) {
+        return status;
+      }
+      if ((status = buscore->GetTcmPointer(ringinfo->h2d_w_idx_ptr, sizeof(h2d_write_indices),
+                                           &h2d_write_indices)) != ZX_OK) {
+        return status;
+      }
+      return ZX_OK;
+    }();
+    if (status != ZX_OK) {
+      BRCMF_ERR("Failed to get TCM indices: %s", zx_status_get_string(status));
+      return status;
+    }
   } else {
     // Using the index buffer and host memory indices.
     if ((firmware->GetSharedRamFlags() & kDmaIndex2Bytes) != 0) {
@@ -194,26 +227,35 @@ zx_status_t PcieRingProvider::Create(PcieBuscore* buscore, PcieFirmware* firmwar
     ringinfo->h2d_w_idx_hostaddr = dma_index_address + index_offset;
 
     // Write the configuration back to the device.
-    buscore->TcmWrite(firmware->GetRingInfoOffset(), ringinfo.get(), sizeof(*ringinfo));
+    if ((status = buscore->TcmWrite(firmware->GetRingInfoOffset(), ringinfo.get(),
+                                    sizeof(*ringinfo))) != ZX_OK) {
+      BRCMF_ERR("Failed to write ring info: %s", zx_status_get_string(status));
+      return status;
+    }
   }
 
-  PcieBuscore::CoreRegs pci_core_regs;
-  if ((status = buscore->GetCoreRegs(CHIPSET_PCIE2_CORE, &pci_core_regs)) != ZX_OK) {
-    BRCMF_ERR("Failed to get PCIE2 core regs: %s", zx_status_get_string(status));
+  auto pcie_core_window = std::make_unique<PcieBuscore::PcieRegisterWindow>();
+  if ((status = buscore->GetCoreWindow(Backplane::CoreId::kPcie2Core, pcie_core_window.get())) !=
+      ZX_OK) {
+    BRCMF_ERR("Failed to get PCIE2 core window: %s", zx_status_get_string(status));
     return status;
   }
 
   // Note that `h2d_write_signal` is only valid during the lifetime of the CoreRegs instance from
   // which it was obtained.
-  volatile void* const h2d_write_signal =
-      pci_core_regs.GetRegPointer(BRCMF_PCIE_PCIE2REG_H2D_MAILBOX);
+  volatile void* h2d_write_signal = nullptr;
+  if ((status = pcie_core_window->GetRegisterPointer(
+           BRCMF_PCIE_PCIE2REG_H2D_MAILBOX, sizeof(uint32_t), &h2d_write_signal)) != ZX_OK) {
+    BRCMF_ERR("Failed to get host to device write signal: %s", zx_status_get_string(status));
+    return status;
+  }
 
   // Set up enough state on a PcieRingProvider to begin to forge rings.
   auto ring_provider = std::make_unique<PcieRingProvider>();
   ring_provider->buscore_ = buscore;
   ring_provider->dma_config_ = dma_config;
   ring_provider->index_buffer_ = std::move(index_buffer);
-  ring_provider->pci_core_regs_ = std::move(pci_core_regs);
+  ring_provider->pcie_core_window_ = std::move(pcie_core_window);
   ring_provider->ring_index_size_ = ring_index_size;
   ring_provider->d2h_read_indices_ =
       reinterpret_cast<volatile std::atomic<uint16_t>*>(d2h_read_indices);

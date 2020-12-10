@@ -11,8 +11,9 @@
 #include <cstring>
 #include <limits>
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chip.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/backplane.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/chipset.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/chipset_interfaces.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
@@ -37,21 +38,6 @@ constexpr size_t kDmaD2hRingupdateBufferSize = 1024;
 
 // Default value for GetMaxRxbufpost(), if firmware provides no value.
 constexpr int kDefaultMaxRxbufpost = 255;
-
-// Adjust the buscore RAM size, according to the firmware binary.
-void AdjustBuscoreRamsize(std::string_view firmware, PcieBuscore* buscore) {
-  if (firmware.size() < kFirmwareRamsizeOffset + 8) {
-    return;
-  }
-  if (std::memcmp(firmware.data() + kFirmwareRamsizeOffset, &kFirmwareRamsizeMagic,
-                  sizeof(kFirmwareRamsizeMagic)) != 0) {
-    return;
-  }
-  uint32_t ramsize = 0;
-  std::memcpy(&ramsize, firmware.data() + kFirmwareRamsizeOffset + sizeof(kFirmwareRamsizeMagic),
-              sizeof(ramsize));
-  buscore->SetRamsize(ramsize);
-}
 
 }  // namespace
 
@@ -85,27 +71,23 @@ zx_status_t PcieFirmware::Create(Device* device, PcieBuscore* buscore,
                                  std::unique_ptr<PcieFirmware>* out_firmware) {
   zx_status_t status = ZX_OK;
 
+  // Get the firmware and NVRAM binaries.
+  const CommonCoreId chip_id = buscore->GetBackplane()->chip_id();
+  const uint16_t chip_rev = buscore->GetBackplane()->chip_rev();
   std::string firmware_binary;
-  if ((status = GetFirmwareBinary(device, brcmf_bus_type::BRCMF_BUS_TYPE_PCIE,
-                                  static_cast<CommonCoreId>(buscore->chip()->chip),
-                                  buscore->chip()->chiprev, &firmware_binary)) != ZX_OK) {
+  if ((status = GetFirmwareBinary(device, brcmf_bus_type::BRCMF_BUS_TYPE_PCIE, chip_id, chip_rev,
+                                  &firmware_binary)) != ZX_OK) {
     return status;
   }
-  // For devices with shared device memory, the memory size of the device may be defined in the
-  // firmware.  Adjust the chip memory size if that is the case.
-  AdjustBuscoreRamsize(firmware_binary, buscore);
-
   std::string nvram_binary;
-  if ((status = GetNvramBinary(device, brcmf_bus_type::BRCMF_BUS_TYPE_PCIE,
-                               static_cast<CommonCoreId>(buscore->chip()->chip),
-                               buscore->chip()->chiprev, &nvram_binary)) != ZX_OK) {
+  if ((status = GetNvramBinary(device, brcmf_bus_type::BRCMF_BUS_TYPE_PCIE, chip_id, chip_rev,
+                               &nvram_binary)) != ZX_OK) {
     if (status != ZX_ERR_NOT_FOUND) {
       return status;
     }
     // A missing NVRAM binary is not a fatal error.
     BRCMF_INFO("NVRAM binary not found");
   }
-
   if (firmware_binary.size() < 4) {
     BRCMF_ERR("Invalid firmware binary size %zu", firmware_binary.size());
     return ZX_ERR_IO_INVALID;
@@ -113,55 +95,86 @@ zx_status_t PcieFirmware::Create(Device* device, PcieBuscore* buscore,
   uint32_t resetintr = 0;
   std::memcpy(&resetintr, firmware_binary.data(), sizeof(resetintr));
 
-  // Enter the FW download state.
-  if (buscore->chip()->chip == BRCM_CC_43602_CHIP_ID) {
-    PcieBuscore::CoreRegs arm_cr4_core;
-    if ((status = buscore->GetCoreRegs(CHIPSET_ARM_CR4_CORE, &arm_cr4_core)) != ZX_OK) {
-      return status;
-    }
-    arm_cr4_core.RegWrite(BRCMF_PCIE_ARMCR4REG_BANKIDX, 5);
-    arm_cr4_core.RegWrite(BRCMF_PCIE_ARMCR4REG_BANKPDA, 0);
-    arm_cr4_core.RegWrite(BRCMF_PCIE_ARMCR4REG_BANKIDX, 7);
-    arm_cr4_core.RegWrite(BRCMF_PCIE_ARMCR4REG_BANKPDA, 0);
+  // Create the chipset.
+  std::unique_ptr<Chipset> chipset;
+  if ((status = Chipset::Create(buscore, buscore->GetBackplane(), &chipset)) != ZX_OK) {
+    BRCMF_ERR("Failed to create chipset: %s", zx_status_get_string(status));
+    return status;
   }
+  const uint32_t rambase = chipset->GetRambase();
+  const size_t ramsize = [&]() {
+    size_t ramsize = chipset->GetRamsize();
+    if (firmware_binary.size() >= kFirmwareRamsizeOffset + 8) {
+      if (std::memcmp(firmware_binary.data() + kFirmwareRamsizeOffset, &kFirmwareRamsizeMagic,
+                      sizeof(kFirmwareRamsizeMagic)) == 0) {
+        // This firmware binary configures a particular ramsize, so we use that instead.
+        std::memcpy(&ramsize,
+                    firmware_binary.data() + kFirmwareRamsizeOffset + sizeof(kFirmwareRamsizeMagic),
+                    sizeof(ramsize));
+      }
+    }
+    return ramsize;
+  }();
 
-  // Download the firmware.
-  buscore->RamWrite(0, firmware_binary.data(), firmware_binary.size());
+  // Upload the firmware.
+  if ((status = chipset->EnterUploadState()) != ZX_OK) {
+    BRCMF_ERR("Failed to enter upload state: %s", zx_status_get_string(status));
+    return status;
+  }
+  if ((status = buscore->TcmWrite(rambase, firmware_binary.data(), firmware_binary.size())) !=
+      ZX_OK) {
+    BRCMF_ERR("Failed to write firmware binary: %s", zx_status_get_string(status));
+    return status;
+  }
 
   // Clear the last 4 bytes of RAM.  This will flag when the FW is running.
   uint32_t sharedram_addr_value = 0;
-  const uint32_t sharedram_addr_offset = buscore->chip()->ramsize - sizeof(sharedram_addr_value);
-  buscore->RamWrite(sharedram_addr_offset, &sharedram_addr_value, sizeof(sharedram_addr_value));
+  const uint32_t sharedram_addr_offset = ramsize - sizeof(sharedram_addr_value);
+  if ((status = buscore->TcmWrite(rambase + sharedram_addr_offset, sharedram_addr_value)) !=
+      ZX_OK) {
+    BRCMF_ERR("Failed to write firmware flag: %s", zx_status_get_string(status));
+    return status;
+  }
 
-  // Download the NVRAM.
+  // Upload the NVRAM.
   if (!nvram_binary.empty()) {
-    if (nvram_binary.size() > buscore->chip()->ramsize) {
-      BRCMF_ERR("RamWrite not attempted: nvram_binary size %lu too large for ramsize %d",
-                nvram_binary.size(), buscore->chip()->ramsize);
-      return ZX_ERR_INTERNAL;
+    if (nvram_binary.size() > ramsize) {
+      BRCMF_ERR("NVRAM binary size %zu too large for ramsize %zu", nvram_binary.size(), ramsize);
+      return ZX_ERR_IO_INVALID;
     }
-    const auto offset = buscore->chip()->ramsize - static_cast<uint32_t>(nvram_binary.size());
-    buscore->RamWrite(offset, nvram_binary.data(), nvram_binary.size());
+    const auto nvram_offset = static_cast<uint32_t>(ramsize - nvram_binary.size());
+    buscore->TcmWrite(rambase + nvram_offset, nvram_binary.data(), nvram_binary.size());
   }
 
-  buscore->RamRead(sharedram_addr_offset, &sharedram_addr_value, sizeof(sharedram_addr_value));
-
-  // Exit the FW download state and start the ARM core.
-  if (buscore->chip()->chip == BRCM_CC_43602_CHIP_ID) {
-    const auto core = brcmf_chip_get_core(buscore->chip(), CHIPSET_INTERNAL_MEM_CORE);
-    brcmf_chip_resetcore(core, 0, 0, 0);
+  if ((status = buscore->TcmRead(rambase + sharedram_addr_offset, &sharedram_addr_value)) !=
+      ZX_OK) {
+    BRCMF_ERR("Failed to read firmware flag: %s", zx_status_get_string(status));
+    return status;
   }
-  if (!brcmf_chip_set_active(buscore->chip(), resetintr)) {
-    BRCMF_ERR("Failed to set chip active");
-    return ZX_ERR_IO_NOT_PRESENT;
+  if ((status = chipset->ExitUploadState()) != ZX_OK) {
+    BRCMF_ERR("Failed to exit upload state: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  // Activate the chip!
+  if ((status = buscore->TcmWrite(0, resetintr)) != ZX_OK) {
+    BRCMF_ERR("Failed to write reset interrupt: %s", zx_status_get_string(status));
+    return status;
+  }
+  if ((status = chipset->Reset()) != ZX_OK) {
+    BRCMF_ERR("Failed to reset chipset: %s", zx_status_get_string(status));
+    return status;
   }
 
   // Wait for firmware init.
   int poll_iteration = 0;
   while (true) {
     uint32_t new_sharedram_addr_value = 0;
-    buscore->RamRead(sharedram_addr_offset, &new_sharedram_addr_value,
-                     sizeof(new_sharedram_addr_value));
+    if ((status = buscore->TcmRead(rambase + sharedram_addr_offset, &new_sharedram_addr_value)) !=
+        ZX_OK) {
+      BRCMF_ERR("Failed to read firmware flag: %s", zx_status_get_string(status));
+      return status;
+    }
     if (new_sharedram_addr_value != sharedram_addr_value) {
       sharedram_addr_value = new_sharedram_addr_value;
       break;
@@ -191,21 +204,33 @@ zx_status_t PcieFirmware::Create(Device* device, PcieBuscore* buscore,
   // Setup the shared ram info.
   auto shared_ram_info = std::make_unique<SharedRamInfo>();
   buscore->TcmRead(sharedram_addr_value, shared_ram_info.get(), sizeof(*shared_ram_info));
-  if (dma_d2h_scratch_buffer->size() > std::numeric_limits<uint32_t>::max()) {
-    BRCMF_ERR("TcmWrite not attempted: dma_scratch_len %lu invalid (overflow)",
-              dma_d2h_scratch_buffer->size());
+  if (dma_d2h_scratch_buffer->size() >
+      std::numeric_limits<decltype(shared_ram_info->dma_scratch_len)>::max()) {
+    BRCMF_ERR("D2H scratch buffer size %zu too large", dma_d2h_scratch_buffer->size());
     return ZX_ERR_INTERNAL;
   }
-  shared_ram_info->dma_scratch_len = static_cast<uint32_t>(dma_d2h_scratch_buffer->size());
+  shared_ram_info->dma_scratch_len =
+      static_cast<decltype(shared_ram_info->dma_scratch_len)>(dma_d2h_scratch_buffer->size());
+  if ((status = buscore->TcmRead(sharedram_addr_value, shared_ram_info.get(),
+                                 sizeof(*shared_ram_info))) != ZX_OK) {
+    BRCMF_ERR("Failed to read shared ram info: %s", zx_status_get_string(status));
+    return status;
+  }
+  shared_ram_info->dma_scratch_len = dma_d2h_scratch_buffer->size();
   shared_ram_info->dma_scratch_addr = dma_d2h_scratch_buffer->dma_address();
-  if (dma_d2h_ringupdate_buffer->size() > std::numeric_limits<uint32_t>::max()) {
-    BRCMF_ERR("TcmWrite not attempted: dma_ringupd_len %lu invalid (overflow)",
-              dma_d2h_ringupdate_buffer->size());
+  if (dma_d2h_ringupdate_buffer->size() >
+      std::numeric_limits<decltype(shared_ram_info->dma_ringupd_len)>::max()) {
+    BRCMF_ERR("D2H ringupdate buffer size %zu too large", dma_d2h_ringupdate_buffer->size());
     return ZX_ERR_INTERNAL;
   }
-  shared_ram_info->dma_ringupd_len = static_cast<uint32_t>(dma_d2h_ringupdate_buffer->size());
+  shared_ram_info->dma_ringupd_len =
+      static_cast<decltype(shared_ram_info->dma_ringupd_len)>(dma_d2h_ringupdate_buffer->size());
   shared_ram_info->dma_ringupd_addr = dma_d2h_ringupdate_buffer->dma_address();
-  buscore->TcmWrite(sharedram_addr_value, shared_ram_info.get(), sizeof(*shared_ram_info));
+  if ((status = buscore->TcmWrite(sharedram_addr_value, shared_ram_info.get(),
+                                  sizeof(*shared_ram_info))) != ZX_OK) {
+    BRCMF_ERR("Failed to write shared ram info: %s", zx_status_get_string(status));
+    return status;
+  }
 
   auto firmware = std::make_unique<PcieFirmware>();
   firmware->buscore_ = buscore;
@@ -214,10 +239,18 @@ zx_status_t PcieFirmware::Create(Device* device, PcieBuscore* buscore,
   firmware->dma_d2h_ringupdate_buffer_ = std::move(dma_d2h_ringupdate_buffer);
 
   // Setup the firmware console offsets.
-  firmware->console_buffer_addr_ = buscore->TcmRead<uint32_t>(
-      firmware->shared_ram_info_->console_addr + BRCMF_CONSOLE_BUFADDR_OFFSET);
-  firmware->console_buffer_size_ = buscore->TcmRead<uint32_t>(
-      firmware->shared_ram_info_->console_addr + BRCMF_CONSOLE_BUFSIZE_OFFSET);
+  if ((status = buscore->TcmRead<uint32_t>(
+           firmware->shared_ram_info_->console_addr + BRCMF_CONSOLE_BUFADDR_OFFSET,
+           &firmware->console_buffer_addr_)) != ZX_OK) {
+    BRCMF_ERR("Failed to read console buffer address: %s", zx_status_get_string(status));
+    return status;
+  }
+  if ((status = buscore->TcmRead<uint32_t>(
+           firmware->shared_ram_info_->console_addr + BRCMF_CONSOLE_BUFSIZE_OFFSET,
+           &firmware->console_buffer_size_)) != ZX_OK) {
+    BRCMF_ERR("Failed to read console buffer size: %s", zx_status_get_string(status));
+    return status;
+  }
 
   *out_firmware = std::move(firmware);
   return ZX_OK;
@@ -243,15 +276,26 @@ uint32_t PcieFirmware::GetDeviceToHostMailboxDataAddress() const {
 uint32_t PcieFirmware::GetRingInfoOffset() const { return shared_ram_info_->ring_info_addr; }
 
 std::string PcieFirmware::ReadConsole() {
+  zx_status_t status = ZX_OK;
+
   // Optimization: estimated line length of a typical console log line.  Not required for
   // correctness.
   constexpr size_t kConsoleReserveLength = 64;
 
   std::string line;
-  uint32_t end =
-      buscore_->TcmRead<uint32_t>(shared_ram_info_->console_addr + BRCMF_CONSOLE_WRITEIDX_OFFSET);
+  uint32_t end = 0;
+  if ((status = buscore_->TcmRead<uint32_t>(
+           shared_ram_info_->console_addr + BRCMF_CONSOLE_WRITEIDX_OFFSET, &end)) != ZX_OK) {
+    BRCMF_ERR("Failed to read console write index: %s", zx_status_get_string(status));
+    return line;
+  }
   while (console_read_index_ != end) {
-    const uint8_t c = buscore_->TcmRead<uint8_t>(console_buffer_addr_ + console_read_index_);
+    uint8_t c = 0;
+    if ((status = buscore_->TcmRead<uint8_t>(console_buffer_addr_ + console_read_index_, &c)) !=
+        ZX_OK) {
+      BRCMF_ERR("Failed to read console character: %s", zx_status_get_string(status));
+      return line;
+    }
     console_read_index_ += 1;
     if (console_read_index_ >= console_buffer_size_) {
       console_read_index_ = 0;

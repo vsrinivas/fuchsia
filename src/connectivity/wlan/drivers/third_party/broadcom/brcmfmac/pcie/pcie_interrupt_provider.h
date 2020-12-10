@@ -1,8 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_INTERRUPT_MASTER_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_INTERRUPT_MASTER_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_INTERRUPT_PROVIDER_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_INTERRUPT_PROVIDER_H_
 
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
@@ -37,15 +37,22 @@ class PcieInterruptProvider : public InterruptProviderInterface {
   zx_status_t RemoveInterruptHandler(InterruptHandler* handler) override;
 
  private:
+  // User packet commands for the interrupt service function.
+  enum class UserPacketCommand : uint64_t;
+
   // Handle the modification of the interrupt handlers list.
-  zx_status_t ModifyInterruptHandler(int command, InterruptHandler* handler);
+  zx_status_t ModifyInterruptHandler(UserPacketCommand command, InterruptHandler* handler);
+
+  // Handle different packets for the interrupt service function.
+  void HandleUserPacket(const zx_port_packet_t& packet, bool* exit_isr);
+  void HandleInterruptPacket(const zx_port_packet_t& packet);
 
   // Interrupt service function.
   void InterruptServiceFunction();
 
-  // PCIE bus core regs.  We hold on to ownership of this instance throughout our lifetime, as we
+  // PCIE core window.  We hold on to ownership of this instance throughout our lifetime, as we
   // don't wan't to be switching away the BAR0 window while servicing interrupts.
-  PcieBuscore::CoreRegs pci_core_regs_;
+  std::unique_ptr<PcieBuscore::PcieRegisterWindow> pci_core_window_;
 
   // IRQ handling.
   zx::interrupt pci_interrupt_;
@@ -57,4 +64,4 @@ class PcieInterruptProvider : public InterruptProviderInterface {
 }  // namespace brcmfmac
 }  // namespace wlan
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_INTERRUPT_MASTER_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_INTERRUPT_PROVIDER_H_

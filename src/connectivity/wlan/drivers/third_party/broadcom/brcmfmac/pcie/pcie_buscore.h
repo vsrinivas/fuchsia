@@ -5,7 +5,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_BUSCORE_H_
 
 #include <lib/mmio/mmio.h>
-#include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <atomic>
@@ -15,7 +15,8 @@
 #include <ddk/device.h>
 #include <ddktl/protocol/pci.h>
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chip.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/backplane.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/chipset_interfaces.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_interfaces.h"
 
 namespace wlan {
@@ -23,10 +24,12 @@ namespace brcmfmac {
 
 class DmaBuffer;
 
-// This class implements the brcmfmac buscore functionality (see: chip.h) for the PCIE bus.  It
-// implements the C-style bus transaction logic as defined by brcmf_buscore_ops, used to perform
-// reads and writes over the PCIE bus.
-class PcieBuscore : public DmaBufferProviderInterface {
+// This class implements the brcmfmac buscore functionality for the PCIE bus.  It provides bus
+// access for the rest of the PCIE bus driver layer, as well as a few interfaces used elsewhere:
+//
+// * RegisterWindowProviderInterface, used by the chipset logic.
+// * DmaBufferProviderInterface, used by the MSGBUF logic.
+class PcieBuscore : public RegisterWindowProviderInterface, public DmaBufferProviderInterface {
  public:
   // This class represents a view into a particular core's register space.  Core register access
   // requires setting the BAR0 window mapping, which is global state on the device.  Since this
@@ -36,36 +39,33 @@ class PcieBuscore : public DmaBufferProviderInterface {
   // At a first level, the PcieBuscore instance internally provides AcquireBar0Window() and
   // ReleaseBar0Window() to mediate access to this window, allowing multiple users to concurrently
   // share the window if they request the same window setting.  For the external interface, this
-  // window is held by a CoreRegs instance in an RAII fashion, thus turning a possibly brittle
-  // threading problem into a more tractable ownership problem; as long as a CoreRegs instance is
-  // valid, register access through that instance is valid.
-  class CoreRegs {
+  // window is held by a RegisterWindow instance in an RAII fashion, thus turning a possibly brittle
+  // threading problem into a more tractable ownership problem; as long as a RegisterWindow instance
+  // is valid, register access through that instance is valid.
+  class PcieRegisterWindow : public RegisterWindowProviderInterface::RegisterWindow {
    public:
-    CoreRegs();
-    CoreRegs(const CoreRegs& other) = delete;
-    CoreRegs(CoreRegs&& other);
-    CoreRegs& operator=(CoreRegs other);
-    friend void swap(CoreRegs& lhs, CoreRegs& rhs);
-    ~CoreRegs();
+    PcieRegisterWindow();
+    PcieRegisterWindow(PcieRegisterWindow&& other);
+    PcieRegisterWindow& operator=(PcieRegisterWindow other);
+    friend void swap(PcieRegisterWindow& lhs, PcieRegisterWindow& rhs);
+    ~PcieRegisterWindow() override;
 
-    // State accessors.
-    bool is_valid() const;
+    // Get a pointer to the core's register space.  This pointer is valid as long as the
+    // PcieRegisterWindow instance is valid.
+    zx_status_t GetRegisterPointer(uint32_t offset, size_t size, volatile void** pointer);
 
-    // Read/write registers to the core.
-    uint32_t RegRead(uint32_t offset);
-    void RegWrite(uint32_t offset, uint32_t value);
-
-    // Get a pointer to the core's register space.  This pointer is valid as long as the CoreRegs
-    // instance is valid.
-    volatile void* GetRegPointer(uint32_t offset);
+    // RegisterWindowProviderInterface::RegisterWindow implementation.
+    zx_status_t Read(uint32_t offset, uint32_t* value) override;
+    zx_status_t Write(uint32_t offset, uint32_t value) override;
 
    private:
     friend class PcieBuscore;
 
-    explicit CoreRegs(PcieBuscore* parent, uint32_t base_address);
+    explicit PcieRegisterWindow(PcieBuscore* parent, uintptr_t base_address, size_t size);
 
     PcieBuscore* parent_ = nullptr;
-    uintptr_t regs_offset_ = 0;
+    uintptr_t base_address_ = 0;
+    size_t size_ = 0;
   };
 
   PcieBuscore();
@@ -74,38 +74,34 @@ class PcieBuscore : public DmaBufferProviderInterface {
   // Static factory function for PcieBuscore instances.
   static zx_status_t Create(zx_device_t* device, std::unique_ptr<PcieBuscore>* out_buscore);
 
-  // Get a CoreRegs instance for reading/writing from/to a particular core.  This may fail if
-  // another instance already exists with an incompatible BAR0 window mapping.
-  zx_status_t GetCoreRegs(uint16_t coreid, CoreRegs* out_core_regs);
-
   // Read/write registers through the PCIE bus.
   template <typename T>
-  T TcmRead(uint32_t offset);
+  zx_status_t TcmRead(uint32_t offset, T* value);
   template <typename T>
-  void TcmWrite(uint32_t offset, T value);
+  zx_status_t TcmWrite(uint32_t offset, T value);
 
   // Read/write memory regions through the PCIE bus.
-  void TcmRead(uint32_t offset, void* data, size_t size);
-  void TcmWrite(uint32_t offset, const void* data, size_t size);
-  void RamRead(uint32_t offset, void* data, size_t size);
-  void RamWrite(uint32_t offset, const void* data, size_t size);
+  zx_status_t TcmRead(uint32_t offset, void* data, size_t size);
+  zx_status_t TcmWrite(uint32_t offset, const void* data, size_t size);
 
   // Get a pointer to the device shared memory region.
-  volatile void* GetTcmPointer(uint32_t offset);
+  zx_status_t GetTcmPointer(uint32_t offset, size_t size, volatile void** pointer);
 
   // DmaBufferProviderInterface implementation.
   zx_status_t CreateDmaBuffer(uint32_t cache_policy, size_t size,
                               std::unique_ptr<DmaBuffer>* out_dma_buffer) override;
 
-  // Manually set the ramsize for this PCIE buscore chip.
-  void SetRamsize(uint32_t ramsize);
+  // Get a pointer to the Backplane instance.
+  Backplane* GetBackplane();
 
-  // Data accessors.
-  brcmf_chip* chip();
-  const brcmf_chip* chip() const;
+  // Get a PcieRegisterWindow instance for access to a particular core's register space.  This call
+  // may fail if another instance already exists with an incompatible BAR0 window mapping.
+  zx_status_t GetCoreWindow(Backplane::CoreId core_id, PcieRegisterWindow* out_register_window);
 
-  // Get the brcmf_buscore_ops struct that forwards brcmf buscore ops to a PcieBuscore instance.
-  static const brcmf_buscore_ops* GetBuscoreOps();
+  // RegisterWindowProviderInterface implementation.
+  zx_status_t GetRegisterWindow(uint32_t offset, size_t size,
+                                std::unique_ptr<RegisterWindowProviderInterface::RegisterWindow>*
+                                    out_register_window) override;
 
  private:
   // PCIE config read/write.
@@ -113,24 +109,18 @@ class PcieBuscore : public DmaBufferProviderInterface {
   void ConfigWrite(uint16_t offset, uint32_t value);
 
   // Configure the BAR0 window mapping.
-  zx_status_t AcquireBar0Window(uint32_t address);
+  zx_status_t AcquireBar0Window(uint32_t address, size_t size, uintptr_t* out_window_offset);
   void ReleaseBar0Window();
 
-  // Buscore brcmf_buscore_ops functionality implementation.
-  uint32_t OpRead32(uint32_t address);
-  void OpWrite32(uint32_t address, uint32_t value);
-  zx_status_t OpPrepare();
-  int OpReset(brcmf_chip* chip);
-  void OpActivate(brcmf_chip* chip, uint32_t rstvec);
-
-  // Reset the buscore.
-  zx_status_t ResetDevice(brcmf_chip* chip);
+  // Get a PcieRegisterWindow instance for a particular register window.
+  zx_status_t GetRegisterWindow(uint32_t offset, size_t size,
+                                PcieRegisterWindow* out_register_window);
 
   // Data members.
   std::unique_ptr<ddk::PciProtocolClient> pci_proto_;
   std::unique_ptr<ddk::MmioBuffer> regs_mmio_;
   std::unique_ptr<ddk::MmioBuffer> tcm_mmio_;
-  brcmf_chip* chip_ = nullptr;
+  std::unique_ptr<Backplane> backplane_;
 
   // BAR0 window mapping state.
   std::mutex bar0_window_mutex_;
@@ -139,27 +129,33 @@ class PcieBuscore : public DmaBufferProviderInterface {
 };
 
 template <typename T>
-T PcieBuscore::TcmRead(uint32_t offset) {
-  ZX_DEBUG_ASSERT(offset + sizeof(T) <= tcm_mmio_->get_size());
-  return reinterpret_cast<const volatile std::atomic<T>*>(
-             reinterpret_cast<uintptr_t>(tcm_mmio_->get()) + offset)
-      ->load(std::memory_order::memory_order_relaxed);
+zx_status_t PcieBuscore::TcmRead(uint32_t offset, T* value) {
+  if (offset + sizeof(T) > tcm_mmio_->get_size()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  *value = reinterpret_cast<const volatile std::atomic<T>*>(
+               reinterpret_cast<uintptr_t>(tcm_mmio_->get()) + offset)
+               ->load(std::memory_order::memory_order_relaxed);
+  return ZX_OK;
 }
 
 template <typename T>
-void PcieBuscore::TcmWrite(uint32_t offset, T value) {
-  ZX_DEBUG_ASSERT(offset + sizeof(T) <= tcm_mmio_->get_size());
+zx_status_t PcieBuscore::TcmWrite(uint32_t offset, T value) {
+  if (offset + sizeof(T) > tcm_mmio_->get_size()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
   reinterpret_cast<volatile std::atomic<T>*>(reinterpret_cast<uintptr_t>(tcm_mmio_->get()) + offset)
       ->store(value, std::memory_order::memory_order_relaxed);
+  return ZX_OK;
 }
 
 // Specializations for 64-bit accesses, which have to be broken down to 32-bit accesses.
 
 template <>
-uint64_t PcieBuscore::TcmRead(uint32_t offset);
+zx_status_t PcieBuscore::TcmRead(uint32_t offset, uint64_t* value);
 
 template <>
-void PcieBuscore::TcmWrite<uint64_t>(uint32_t offset, uint64_t value);
+zx_status_t PcieBuscore::TcmWrite<uint64_t>(uint32_t offset, uint64_t value);
 
 }  // namespace brcmfmac
 }  // namespace wlan

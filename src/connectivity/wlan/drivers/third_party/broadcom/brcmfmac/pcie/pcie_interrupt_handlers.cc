@@ -3,6 +3,10 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_handlers.h"
 
+#include <zircon/errors.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/regs.h"
 
@@ -22,14 +26,21 @@ PcieSleepInterruptHandler::~PcieSleepInterruptHandler() {
 }
 
 uint32_t PcieSleepInterruptHandler::HandleInterrupt(uint32_t mailboxint) {
+  zx_status_t status = ZX_OK;
+
   constexpr uint32_t kInterruptMask = (BRCMF_PCIE_MB_INT_FN0_0 | BRCMF_PCIE_MB_INT_FN0_1);
   if ((mailboxint & kInterruptMask) == 0) {
     return 0;
   }
 
-  const uint32_t d2h_mb_data = buscore_->TcmRead<uint32_t>(d2h_mb_data_address_);
+  uint32_t d2h_mb_data = 0;
+  if ((status = buscore_->TcmRead<uint32_t>(d2h_mb_data_address_, &d2h_mb_data)) != ZX_OK) {
+    BRCMF_ERR("Failed to read device to host mailbox: %s", zx_status_get_string(status));
+  }
   if (d2h_mb_data != 0) {
-    buscore_->TcmWrite<uint32_t>(d2h_mb_data_address_, 0);
+    if ((status = buscore_->TcmWrite<uint32_t>(d2h_mb_data_address_, 0)) != ZX_OK) {
+      BRCMF_ERR("Failed to write device to host mailbox: %s", zx_status_get_string(status));
+    }
     BRCMF_ERR("PCIE sleep states not supported, d2h_mb_data=0x%08x", d2h_mb_data);
   }
 
