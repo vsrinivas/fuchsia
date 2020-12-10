@@ -55,8 +55,8 @@ func RebootWithCommand(t *testing.T, cmd string, kind ExpectedRebootType) {
 
 	i.WaitForLogMessage("initializing platform")
 
-	// Make sure the shell is ready to accept commands over serial.
-	i.WaitForLogMessage("console.shell: enabled")
+	// Make sure the shell is ready to accept commands over serial, and wait for fshost to start.
+	i.WaitForLogMessages([]string{"console.shell: enabled", "fshost.cm"})
 
 	// Trigger a reboot in one of the various ways.
 	i.RunCommand(cmd)
