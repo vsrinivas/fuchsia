@@ -170,3 +170,16 @@
   reviewers: ['maniscalco@google.com','cpu@google.com','jamesr@google.com','adanis@google.com']
   submitted: '2020-10-27'
   reviewed: '2020-12-02'
+
+- name: 'RFC-0014'
+  title: 'Relax zx_fifo_create constraints'
+  short_description: 'Permit `zx_fifo_create` calls with element counts that are not powers of two.'
+  authors: ['jfsulliv@google.com']
+  file: '0014_relax_fifo_create_constraints.md'
+  area: ['Zircon']
+  issue: ['65697']
+  gerrit_change_id: ['457334']
+  status: 'Accepted'
+  reviewers: ['kulakowski@google.com', 'jamesr@google.com', 'cpu@google.com', 'maniscalco@google.com', 'johngro@google.com', 'abarth@google.com']
+  submitted: '2020-12-02'
+  reviewed: '2020-12-09'
