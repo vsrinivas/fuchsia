@@ -23,6 +23,7 @@ executable("screen_reader_util_tests") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/screen_reader/util",
+    "//src/ui/a11y/lib/semantics/tests/mocks",
     "//third_party/googletest:gmock",
   ]
 }

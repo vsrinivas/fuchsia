@@ -59,7 +59,7 @@ const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetParentNod
 
     for (const auto child_id : node.second.child_ids()) {
       if (child_id == node_id) {
-        return GetSemanticNode(koid, child_id);
+        return &node.second;
       }
     }
   }

@@ -8,6 +8,8 @@
 #include <lib/fit/scope.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <set>
+
 #include "fuchsia/accessibility/semantics/cpp/fidl.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 #include "src/ui/a11y/lib/screen_reader/util/util.h"
@@ -34,21 +36,28 @@ void LinearNavigationAction::Run(ActionData process_data) {
 
   FX_DCHECK(action_context_->semantics_source);
 
+  // ************************ Workaround for fxb/64295  ************************
+  // TODO(fxb/66128): Remove workaround once flutter semantics are fixed.
+  auto nodes_to_exclude = GetNodesToExclude(a11y_focus->view_ref_koid, a11y_focus->node_id,
+                                            action_context_->semantics_source);
+
   // Get the new node base on ActionType.
   const fuchsia::accessibility::semantics::Node* new_node;
   switch (direction_) {
     case kNextAction:
       new_node = action_context_->semantics_source->GetNextNode(
           a11y_focus->view_ref_koid, a11y_focus->node_id,
-          [](const fuchsia::accessibility::semantics::Node* node) {
-            return NodeIsDescribable(node);
+          [nodes_to_exclude](const fuchsia::accessibility::semantics::Node* node) {
+            return (nodes_to_exclude.find(node->node_id()) == nodes_to_exclude.end()) &&
+                   NodeIsDescribable(node);
           });
       break;
     case kPreviousAction:
       new_node = action_context_->semantics_source->GetPreviousNode(
           a11y_focus->view_ref_koid, a11y_focus->node_id,
-          [](const fuchsia::accessibility::semantics::Node* node) {
-            return NodeIsDescribable(node);
+          [nodes_to_exclude](const fuchsia::accessibility::semantics::Node* node) {
+            return (nodes_to_exclude.find(node->node_id()) == nodes_to_exclude.end()) &&
+                   NodeIsDescribable(node);
           });
       break;
     default:
