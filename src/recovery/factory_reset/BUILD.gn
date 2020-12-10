@@ -37,6 +37,7 @@ source_set("lib") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/kms-stateless",
   ]
 }
 

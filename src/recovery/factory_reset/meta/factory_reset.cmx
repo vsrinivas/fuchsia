@@ -12,7 +12,8 @@
             "sys/platform"
         ],
         "services": [
-            "fuchsia.hardware.power.statecontrol.Admin"
+            "fuchsia.hardware.power.statecontrol.Admin",
+            "fuchsia.tee.Device"
         ]
     }
 }

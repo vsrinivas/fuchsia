@@ -20,11 +20,12 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/system.h>
-#include <zxcrypt/fdio-volume.h>
 
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
 #include <fs-management/mount.h>
+#include <kms-stateless/kms-stateless.h>
+#include <zxcrypt/fdio-volume.h>
 
 namespace factory_reset {
 
@@ -46,8 +47,8 @@ zx_status_t ShredBlockDevice(fbl::unique_fd fd, fbl::unique_fd devfs_root_fd) {
   zx::channel driver_chan;
   status = volume->OpenManager(zx::sec(5), driver_chan.reset_and_get_address());
   if (status != ZX_OK) {
-    fprintf(stderr, "Couldn't open channel to zxcrypt volume manager: %d (%s)\n",
-            status, zx_status_get_string(status));
+    fprintf(stderr, "Couldn't open channel to zxcrypt volume manager: %d (%s)\n", status,
+            zx_status_get_string(status));
     return status;
   }
 
@@ -100,6 +101,18 @@ void FactoryReset::Reset(ResetCallback callback) {
     return;
   }
 
+  uint8_t key_info[kms_stateless::kExpectedKeyInfoSize] = "zxcrypt";
+  status = kms_stateless::RotateHardwareDerivedKeyFromService(key_info);
+  if (status == ZX_ERR_NOT_SUPPORTED) {
+    fprintf(stderr,
+            "FactoryReset: The device does not support rotatable hardware keys. Ignoring.\n");
+    status = ZX_OK;
+  } else if (status != ZX_OK) {
+    fprintf(stderr, "FactoryReset: RotateHardwareDerivedKey() failed: %d (%s)\n", status,
+            zx_status_get_string(status));
+    callback(std::move(status));
+    return;
+  }
   // Reboot to initiate the recovery.
   admin_->Reboot(fuchsia::hardware::power::statecontrol::RebootReason::FACTORY_DATA_RESET,
                  [callback{std::move(callback)}](
