@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,7 +28,6 @@ int main(int argc, char** argv) {
   bool filter_pid = false;
   bool plain = false;
   zx_koid_t pid = 0;
-  zx_handle_t h;
 
   while (argc > 1) {
     if (!strcmp(argv[1], "-h")) {
@@ -59,21 +59,22 @@ int main(int argc, char** argv) {
     argv++;
   }
 
-  zx_handle_t local, remote;
-  zx_status_t status = zx_channel_create(0, &local, &remote);
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to create channel: %d\n", status);
     return -1;
   }
 
   const char kReadOnlyLogPath[] = "/svc/" fuchsia_boot_ReadOnlyLog_Name;
-  status = fdio_service_connect(kReadOnlyLogPath, remote);
+  status = fdio_service_connect(kReadOnlyLogPath, remote.release());
   if (status != ZX_OK) {
     fprintf(stderr, "Failed to connect to ReadOnlyLog: %d\n", status);
     return -1;
   }
 
-  status = fuchsia_boot_ReadOnlyLogGet(local, &h);
+  zx_handle_t h;
+  status = fuchsia_boot_ReadOnlyLogGet(local.get(), &h);
   if (status != ZX_OK) {
     fprintf(stderr, "ReadOnlyLogGet failed: %d\n", status);
     return -1;
@@ -104,5 +105,6 @@ int main(int argc, char** argv) {
       write(1, "\n", 1);
     }
   }
+  zx_handle_close(h);
   return 0;
 }

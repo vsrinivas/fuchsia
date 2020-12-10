@@ -4,7 +4,7 @@
 
 executable("dlog") {
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "dlog.c" ]
+  sources = [ "dlog.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
