@@ -10,13 +10,19 @@ use {
     std::collections::HashSet,
 };
 
+const EMPTY_CODEPOINT: u32 = 0;
+const EMPTY_TIME: u64 = 0;
+const EMPTY_DEVICE_ID: u32 = 0;
+
 // Type of a keyboard event.
+#[derive(Debug)]
 pub(crate) enum KeyEventType {
     Pressed,
     Released,
 }
 
 /// Abstraction wrapper for a key event.
+#[derive(Debug)]
 pub(crate) struct KeyEvent {
     // Key that triggered the event.
     pub key: input::Key,
@@ -110,7 +116,7 @@ impl TryFrom<KeyEvent> for ui_input::KeyboardEvent {
         let hid_usage = input3_key_to_hid_usage(event.key) as usize;
         let code_point = if hid_usage < QWERTY_MAP.len() {
             if let Some(map_entry) = QWERTY_MAP[hid_usage] {
-                if caps_lock | left_shift | right_shift != 0 {
+                if caps_lock | left_shift | right_shift != ui_input::MODIFIER_NONE {
                     map_entry
                         .1
                         .and_then(|shifted_char| Some(shifted_char as u32))
@@ -119,15 +125,15 @@ impl TryFrom<KeyEvent> for ui_input::KeyboardEvent {
                     Ok(map_entry.0 as u32)
                 }
             } else {
-                Err(format_err!("Invalid USB HID code: {:?}", hid_usage))
+                Ok(EMPTY_CODEPOINT) // No code point provided by a keymap, e.g. Enter.
             }
         } else {
-            Err(format_err!("USB HID code out of bounds: {:?}", hid_usage))
+            Ok(EMPTY_CODEPOINT) // No code point available, e.g. Shift, Alt, etc.
         };
 
         Ok(ui_input::KeyboardEvent {
-            event_time: inner.timestamp.unwrap_or(0) as u64,
-            device_id: 0,
+            event_time: inner.timestamp.unwrap_or(EMPTY_TIME as i64) as u64,
+            device_id: EMPTY_DEVICE_ID,
             phase: phase,
             hid_usage: hid_usage as u32,
             code_point: code_point?,
@@ -173,7 +179,7 @@ mod test {
             keyboard_event,
             ui_input::KeyboardEvent {
                 event_time: TEST_TIMESTAMP as u64,
-                device_id: 0,
+                device_id: EMPTY_DEVICE_ID,
                 phase: ui_input::KeyboardEventPhase::Pressed,
                 hid_usage: Usages::HidUsageKeyA as u32,
                 code_point: 'A' as u32,
@@ -214,8 +220,8 @@ mod test {
         assert_eq!(
             keyboard_event,
             ui_input::KeyboardEvent {
-                event_time: 0,
-                device_id: 0,
+                event_time: EMPTY_TIME,
+                device_id: EMPTY_DEVICE_ID,
                 phase: ui_input::KeyboardEventPhase::Pressed,
                 hid_usage: Usages::HidUsageKeyB as u32,
                 code_point: 'B' as u32,
@@ -247,8 +253,8 @@ mod test {
         assert_eq!(
             keyboard_event,
             ui_input::KeyboardEvent {
-                event_time: 0,
-                device_id: 0,
+                event_time: EMPTY_TIME,
+                device_id: EMPTY_DEVICE_ID,
                 phase: ui_input::KeyboardEventPhase::Pressed,
                 hid_usage: Usages::HidUsageKeyC as u32,
                 code_point: 'c' as u32,
@@ -272,8 +278,8 @@ mod test {
         assert_eq!(
             keyboard_event,
             ui_input::KeyboardEvent {
-                event_time: 0,
-                device_id: 0,
+                event_time: EMPTY_TIME,
+                device_id: EMPTY_DEVICE_ID,
                 phase: ui_input::KeyboardEventPhase::Released,
                 hid_usage: Usages::HidUsageKeyD as u32,
                 code_point: 'd' as u32,
@@ -344,14 +350,45 @@ mod test {
         assert_eq!(
             keyboard_event,
             ui_input::KeyboardEvent {
-                event_time: 0,
-                device_id: 0,
+                event_time: EMPTY_TIME,
+                device_id: EMPTY_DEVICE_ID,
                 phase: ui_input::KeyboardEventPhase::Pressed,
                 hid_usage: Usages::HidUsageKeyF as u32,
                 code_point: 'f' as u32,
                 modifiers: ui_input::MODIFIER_NONE,
             }
         );
+        Ok(())
+    }
+
+    #[test]
+    fn empty_codepoint() -> Result<(), Error> {
+        let keys = &[
+            (input::Key::LeftShift, Usages::HidUsageKeyLeftShift as u32),
+            (input::Key::Enter, Usages::HidUsageKeyEnter as u32),
+        ];
+        for &(key1, key2) in keys {
+            let event = ui_input3::KeyEvent {
+                key: Some(key1),
+                type_: Some(ui_input3::KeyEventType::Pressed),
+                ..ui_input3::KeyEvent::EMPTY
+            };
+
+            let key_event = KeyEvent::new(&event, HashSet::new())?;
+
+            let keyboard_event: ui_input::KeyboardEvent = key_event.try_into()?;
+            assert_eq!(
+                keyboard_event,
+                ui_input::KeyboardEvent {
+                    event_time: EMPTY_TIME,
+                    device_id: EMPTY_DEVICE_ID,
+                    phase: ui_input::KeyboardEventPhase::Pressed,
+                    hid_usage: key2,
+                    code_point: EMPTY_CODEPOINT,
+                    modifiers: ui_input::MODIFIER_NONE,
+                }
+            );
+        }
         Ok(())
     }
 }
