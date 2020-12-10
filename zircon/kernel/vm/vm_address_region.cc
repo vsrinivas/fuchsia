@@ -590,9 +590,7 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
   }
 
   // Don't allow any operations on the vDSO code mapping.
-  // TODO(fxbug.dev/39860): Factor this out into a common helper.
-  if (aspace_->vdso_code_mapping_ && Intersects(aspace_->vdso_code_mapping_->base(),
-                                                aspace_->vdso_code_mapping_->size(), base, size)) {
+  if (aspace_->IntersectsVdsoCode(base, size)) {
     return ZX_ERR_ACCESS_DENIED;
   }
 
@@ -722,8 +720,7 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
   }
 
   // Any unmap spanning the vDSO code mapping is verboten.
-  if (aspace_->vdso_code_mapping_ && Intersects(aspace_->vdso_code_mapping_->base(),
-                                                aspace_->vdso_code_mapping_->size(), base, size)) {
+  if (aspace_->IntersectsVdsoCode(base, size)) {
     return ZX_ERR_ACCESS_DENIED;
   }
 

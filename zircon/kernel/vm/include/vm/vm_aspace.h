@@ -171,6 +171,9 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   uintptr_t vdso_base_address() const;
   uintptr_t vdso_code_address() const;
 
+  // Helper function to test for collision with vdso_code_mapping_.
+  bool IntersectsVdsoCode(vaddr_t base, size_t size) const;
+
  protected:
   // Share the aspace lock with VmAddressRegion/VmMapping so they can serialize
   // changes to the aspace.

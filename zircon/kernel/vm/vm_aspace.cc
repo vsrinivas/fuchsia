@@ -677,3 +677,8 @@ void VmAspace::DropUserPageTables() {
   Guard<Mutex> guard{&lock_};
   arch_aspace().Unmap(base(), size() / PAGE_SIZE, nullptr);
 }
+
+bool VmAspace::IntersectsVdsoCode(vaddr_t base, size_t size) const {
+  return vdso_code_mapping_ &&
+         Intersects(vdso_code_mapping_->base(), vdso_code_mapping_->size(), base, size);
+}
