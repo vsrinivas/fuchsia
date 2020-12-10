@@ -2014,7 +2014,7 @@ const char* kFirmwareVer = "wl0: Sep 10 2018 16:37:38 version 7.35.79 (r487924) 
 const char* kFirmwareCap =
     "ap sta wme 802.11d 802.11h rm cqa cac dualband ampdu ampdu_tx ampdu_rx amsdurx tdls "
     "radio_pwrsave btamp p2p proptxstatus mchan wds dwds p2po anqpo vht-prop-rates dfrts "
-    "txpwrcache stbc-tx stbc-rx-1ss epno pfnx wnm bsstrans mfp ndoe rssi_mon cptlv-4";
+    "txpwrcache stbc-tx stbc-rx-1ss epno pfnx wnm bsstrans mfp ndoe rssi_mon cptlv-4 extsae";
 
 zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value_out,
                                    size_t value_len, bcme_status_t* fw_err) {

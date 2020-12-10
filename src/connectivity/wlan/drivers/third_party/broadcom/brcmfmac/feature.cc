@@ -43,10 +43,10 @@ struct brcmf_feat_fwcap {
 };
 
 static const struct brcmf_feat_fwcap brcmf_fwcap_map[] = {
-    {BRCMF_FEAT_AP, "ap"},          {BRCMF_FEAT_STA, "sta"},     {BRCMF_FEAT_MBSS, "mbss"},
-    {BRCMF_FEAT_MCHAN, "mchan"},    {BRCMF_FEAT_P2P, "p2p"},     {BRCMF_FEAT_PNO, "pno"},
-    {BRCMF_FEAT_EPNO, "epno"},      {BRCMF_FEAT_DFS, "802.11h"}, {BRCMF_FEAT_TPC, "802.11h"},
-    {BRCMF_FEAT_DOT11H, "802.11h"},
+    {BRCMF_FEAT_AP, "ap"},          {BRCMF_FEAT_STA, "sta"},       {BRCMF_FEAT_MBSS, "mbss"},
+    {BRCMF_FEAT_MCHAN, "mchan"},    {BRCMF_FEAT_P2P, "p2p"},       {BRCMF_FEAT_PNO, "pno"},
+    {BRCMF_FEAT_EPNO, "epno"},      {BRCMF_FEAT_DFS, "802.11h"},   {BRCMF_FEAT_TPC, "802.11h"},
+    {BRCMF_FEAT_DOT11H, "802.11h"}, {BRCMF_FEAT_EXTSAE, "extsae"},
 };
 
 /**
@@ -134,7 +134,7 @@ static void brcmf_feat_firmware_capabilities(struct brcmf_if* ifp) {
   }
 
   caps[sizeof(caps) - 1] = 0;
-  BRCMF_DBG(INFO, "[ %s]", caps);
+  BRCMF_DBG(INFO, "cap string: [ %s]", caps);
 
   for (i = 0; i < (int)countof(brcmf_fwcap_map); i++) {
     if (strstr(caps, brcmf_fwcap_map[i].fwcap_id)) {

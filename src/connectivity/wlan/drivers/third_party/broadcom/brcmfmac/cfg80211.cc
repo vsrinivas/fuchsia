@@ -3965,6 +3965,10 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
     info->driver_features |= WLAN_INFO_DRIVER_FEATURE_DFS;
   }
 
+  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_EXTSAE)) {
+    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH;
+  }
+
   // bands
   uint32_t bandlist[3];
   status = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BANDLIST, &bandlist, sizeof(bandlist), &fw_err);

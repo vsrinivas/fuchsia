@@ -39,6 +39,10 @@ TEST_F(SimTest, ClientIfcQuery) {
     // Number of channels shouldn't exceed the maximum allowable
     ASSERT_LE(band_info->num_channels, (size_t)WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
   }
+
+  // Verify driver features from if query.
+  EXPECT_NE(0U, ifc_query_result.driver_features & WLAN_INFO_DRIVER_FEATURE_DFS);
+  EXPECT_NE(0U, ifc_query_result.driver_features & WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH);
 }
 
 // Verify that we can retrieve interface attributes even if the nchain iovar value is too large

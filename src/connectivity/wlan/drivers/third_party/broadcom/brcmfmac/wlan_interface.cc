@@ -256,6 +256,10 @@ wlan_info_driver_feature_t WlanInterface::GetSupportedDriverFeatures(struct brcm
     driver_features |= WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
   }
 
+  if (brcmf_feat_is_enabled(drvr->iflist[0], BRCMF_FEAT_EXTSAE)) {
+    driver_features |= WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH;
+  }
+
   // The driver features associated with WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION,
   // WLAN_INFO_DRIVER_FEATURE_SYNTH, WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT, and
   // WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD are not supported.
