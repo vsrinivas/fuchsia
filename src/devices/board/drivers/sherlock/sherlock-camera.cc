@@ -130,11 +130,6 @@ constexpr pbus_mmio_t isp_mmios[] = {
         .base = T931_MEMORY_PD_BASE,
         .length = T931_MEMORY_PD_LENGTH,
     },
-    // ISP Base (Duplicate)
-    {
-        .base = T931_ISP_BASE,
-        .length = T931_ISP_LENGTH,
-    },
     // ISP Base
     {
         .base = T931_ISP_BASE,
