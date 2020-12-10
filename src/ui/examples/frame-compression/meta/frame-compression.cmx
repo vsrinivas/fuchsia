@@ -1,23 +1,21 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/application.shard.cmx"
     ],
     "program": {
         "binary": "bin/frame-compression"
     },
     "sandbox": {
         "features": [
-            "isolated-persistent-storage",
-            "vulkan"
+            "isolated-persistent-storage"
         ],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.policy.Presenter",
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }

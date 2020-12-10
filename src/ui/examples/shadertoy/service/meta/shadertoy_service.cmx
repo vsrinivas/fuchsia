@@ -1,18 +1,14 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/application.shard.cmx"
     ],
     "program": {
         "binary": "bin/shadertoy_service"
     },
     "sandbox": {
-        "features": [
-            "vulkan"
-        ],
         "services": [
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

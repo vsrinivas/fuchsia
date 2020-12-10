@@ -1,6 +1,7 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/application.shard.cmx"
     ],
     "program": {
         "binary": "bin/escher_examples"
@@ -11,13 +12,10 @@
             "class/input"
         ],
         "features": [
-            "isolated-cache-storage",
-            "vulkan"
+            "isolated-cache-storage"
         ],
         "services": [
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }
