@@ -86,6 +86,7 @@ pub mod task;
 
 pub use display::LightSensorConfig;
 pub use light::light_hardware_configuration::LightHardwareConfiguration;
+use std::sync::atomic::AtomicU64;
 
 pub mod agent;
 pub mod config;
@@ -326,15 +327,21 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         let service_context =
             ServiceContext::create(self.generate_service, Some(event_messenger_factory.clone()));
 
+        let context_id_counter = Arc::new(AtomicU64::new(1));
+
         let mut handler_factory = SettingHandlerFactoryImpl::new(
             settings.clone(),
             service_context.clone(),
             self.storage_factory.clone(),
+            context_id_counter.clone(),
         );
 
         // Create the policy handler factory and register policy handlers.
-        let mut policy_handler_factory =
-            PolicyHandlerFactoryImpl::new(settings.clone(), self.storage_factory.clone());
+        let mut policy_handler_factory = PolicyHandlerFactoryImpl::new(
+            settings.clone(),
+            self.storage_factory.clone(),
+            context_id_counter,
+        );
         policy_handler_factory.register(
             SettingType::Audio,
             Box::new(policy_handler::create_handler::<State, AudioPolicyHandler, _>),

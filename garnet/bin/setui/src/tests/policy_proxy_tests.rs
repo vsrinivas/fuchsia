@@ -22,6 +22,7 @@ use crate::tests::message_utils::verify_payload;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
+use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
 static REQUEST_ID: u64 = 100;
@@ -84,6 +85,7 @@ fn create_handler_factory(
     let mut handler_factory = PolicyHandlerFactoryImpl::new(
         vec![SETTING_TYPE].into_iter().collect(),
         storage_factory_handler,
+        Arc::new(AtomicU64::new(1)),
     );
     handler_factory.register(
         SETTING_TYPE,

@@ -12,6 +12,7 @@ use async_trait::async_trait;
 use futures::lock::Mutex;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 /// PolicyHandlerFactoryImpl houses registered closures for generating setting
@@ -21,9 +22,8 @@ pub struct PolicyHandlerFactoryImpl<T: DeviceStorageFactory + Send + Sync> {
     storage_factory: Arc<Mutex<T>>,
     generators: HashMap<SettingType, GenerateHandler<T>>,
 
-    /// Used to uniquely identify a context.
-    // TODO(fxbug.dev/65736): use IDs from the same source as setting handlers.
-    next_context_id: u64,
+    /// Atomic counter used to generate new IDs, which uniquely identify a context.
+    context_id_counter: Arc<AtomicU64>,
 }
 
 #[async_trait]
@@ -51,14 +51,12 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactory for PolicyHandl
             setting_type,
             messenger: messenger.clone(),
             storage_factory_handle: self.storage_factory.clone(),
-            id: self.next_context_id,
+            id: self.context_id_counter.fetch_add(1, Ordering::Relaxed),
         };
 
         let handler = (generate_function)(context)
             .await
             .map_err(|_| PolicyHandlerFactoryError::HandlerStartupError(setting_type))?;
-
-        self.next_context_id += 1;
 
         return Ok(handler);
     }
@@ -68,12 +66,13 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactoryImpl<T> {
     pub fn new(
         settings: HashSet<SettingType>,
         storage_factory_handle: Arc<Mutex<T>>,
+        context_id_counter: Arc<AtomicU64>,
     ) -> PolicyHandlerFactoryImpl<T> {
         PolicyHandlerFactoryImpl {
             settings,
             storage_factory: storage_factory_handle,
             generators: HashMap::new(),
-            next_context_id: 1,
+            context_id_counter,
         }
     }
 

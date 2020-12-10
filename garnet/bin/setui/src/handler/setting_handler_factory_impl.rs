@@ -15,6 +15,7 @@ use futures::lock::Mutex;
 use futures::StreamExt;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 /// SettingHandlerFactoryImpl houses registered closures for generating setting
@@ -23,8 +24,8 @@ pub struct SettingHandlerFactoryImpl<T: DeviceStorageFactory + Send + Sync> {
     environment: Environment<T>,
     generators: HashMap<SettingType, GenerateHandler<T>>,
 
-    /// Used to uniquely identify a context.
-    next_context_id: u64,
+    /// Atomic counter used to generate new IDs, which uniquely identify a context.
+    context_id_counter: Arc<AtomicU64>,
 }
 
 #[async_trait]
@@ -56,12 +57,10 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
             receptor,
             notifier_signature,
             self.environment.clone(),
-            self.next_context_id,
+            self.context_id_counter.fetch_add(1, Ordering::Relaxed),
         ))
         .await
         .map_err(|_| SettingHandlerFactoryError::HandlerStartupError(setting_type))?;
-
-        self.next_context_id += 1;
 
         let (controller_messenger, _) = messenger_factory
             .create(MessengerType::Unbound)
@@ -94,11 +93,12 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactoryImpl<T> {
         settings: HashSet<SettingType>,
         service_context_handle: ServiceContextHandle,
         storage_factory_handle: Arc<Mutex<T>>,
+        context_id_counter: Arc<AtomicU64>,
     ) -> SettingHandlerFactoryImpl<T> {
         SettingHandlerFactoryImpl {
             environment: Environment::new(settings, service_context_handle, storage_factory_handle),
             generators: HashMap::new(),
-            next_context_id: 1,
+            context_id_counter,
         }
     }
 
