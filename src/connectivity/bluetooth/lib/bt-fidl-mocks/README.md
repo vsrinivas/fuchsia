@@ -6,5 +6,5 @@ drive the state and behavior of each protocol by setting up expectations on indi
 
 ## Test
 ```
-fx test bt-fidl-mocks-unittests
+fx test bt-fidl-mocks-tests
 ```

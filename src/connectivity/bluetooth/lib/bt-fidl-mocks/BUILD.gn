@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("bt-fidl-mocks") {
   name = "bt_fidl_mocks"
@@ -15,7 +15,6 @@ rustc_library("bt-fidl-mocks") {
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -25,6 +24,8 @@ rustc_library("bt-fidl-mocks") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [ "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc" ]
+
   sources = [
     "src/control.rs",
     "src/expect.rs",
@@ -33,16 +34,12 @@ rustc_library("bt-fidl-mocks") {
   ]
 }
 
-test_package("tests") {
-  package_name = "bt-fidl-mocks-tests"
-
+fuchsia_unittest_package("bt-fidl-mocks-tests") {
+  executable_path = "bin/bt_fidl_mocks_lib_test"
   deps = [ ":bt-fidl-mocks_test" ]
+}
 
-  tests = [
-    {
-      name = "bt_fidl_mocks_lib_test"
-      dest = "bt-fidl-mocks-unittests"
-      environments = basic_envs
-    },
-  ]
+group("tests") {
+  testonly = true
+  deps = [ ":bt-fidl-mocks-tests" ]
 }
