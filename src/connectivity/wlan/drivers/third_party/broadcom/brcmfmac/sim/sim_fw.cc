@@ -829,12 +829,16 @@ void SimFirmware::AssocScanResultSeen(const ScanResult& scan_result) {
   assoc_state_.scan_results.push_back(scan_result);
 }
 
-void SimFirmware::AssocScanDone() {
+void SimFirmware::AssocScanDone(brcmf_fweh_event_status_t event_status) {
   ZX_ASSERT(assoc_state_.state == AssocState::SCANNING);
 
   // Operation fails if we don't have at least one scan result
-  if (assoc_state_.scan_results.size() == 0) {
-    SendEventToDriver(0, nullptr, BRCMF_E_SET_SSID, BRCMF_E_STATUS_NO_NETWORKS, kClientIfidx);
+  if ((event_status == BRCMF_E_STATUS_SUCCESS) && (assoc_state_.scan_results.size() == 0)) {
+    event_status = BRCMF_E_STATUS_NO_NETWORKS;
+  }
+
+  if (event_status != BRCMF_E_STATUS_SUCCESS) {
+    SendEventToDriver(0, nullptr, BRCMF_E_SET_SSID, event_status, kClientIfidx);
     SetAssocState(AssocState::NOT_ASSOCIATED);
     return;
   }
@@ -1629,7 +1633,7 @@ zx_status_t SimFirmware::HandleJoinRequest(const void* value, size_t value_len) 
 
   scan_opts->on_result_fn =
       std::bind(&SimFirmware::AssocScanResultSeen, this, std::placeholders::_1);
-  scan_opts->on_done_fn = std::bind(&SimFirmware::AssocScanDone, this);
+  scan_opts->on_done_fn = std::bind(&SimFirmware::AssocScanDone, this, std::placeholders::_1);
 
   // Reset assoc state
   SetAssocState(AssocState::SCANNING);
@@ -2361,7 +2365,7 @@ void SimFirmware::ScanContinue() {
 }
 
 // Clean up state after a scan request is finished
-void SimFirmware::ScanComplete(enum brcmf_fweh_event_status_t status) {
+void SimFirmware::ScanComplete(brcmf_fweh_event_status_t status) {
   if (scan_state_.opts->is_active) {
     BRCMF_DBG(SIM, "Resetting pfn_mac_addr_ to system mac addr: " MAC_FMT_STR,
               MAC_FMT_ARGS(mac_addr_.data()));
@@ -2377,7 +2381,7 @@ void SimFirmware::ScanComplete(enum brcmf_fweh_event_status_t status) {
     chanspec_to_channel(&d11_inf_, iface_tbl_[kClientIfidx].chanspec, &channel);
     hw_.SetChannel(channel);
   }
-  scan_state_.opts->on_done_fn();
+  scan_state_.opts->on_done_fn(status);
   scan_state_.opts = nullptr;
 }
 
@@ -2460,12 +2464,25 @@ zx_status_t SimFirmware::EscanStart(uint16_t sync_id, const brcmf_scan_params_le
             scan_opts->channels.data());
 
   scan_opts->on_result_fn = std::bind(&SimFirmware::EscanResultSeen, this, std::placeholders::_1);
-  scan_opts->on_done_fn = std::bind(&SimFirmware::EscanComplete, this);
+  scan_opts->on_done_fn = std::bind(&SimFirmware::EscanComplete, this, std::placeholders::_1);
   return ScanStart(std::move(scan_opts));
 }
 
-void SimFirmware::EscanComplete() {
-  SendEventToDriver(0, nullptr, BRCMF_E_ESCAN_RESULT, BRCMF_E_STATUS_SUCCESS, kClientIfidx);
+void SimFirmware::EscanComplete(brcmf_fweh_event_status_t event_status) {
+  // The last field in a brcmf_escan_result_le is variable-length (although it isn't defined that
+  // way). To generate a scan complete message, it has to have no BSS entries.
+  size_t buf_len = offsetof(brcmf_escan_result_le, bss_info_le);
+  auto buf = std::make_unique<std::vector<uint8_t>>(buf_len);
+
+  // Assemble the result buffer. As per above, we are making a pointer to the escan_result, but we
+  // MUST NOT reference the last field (bss_info_le), since it hasn't been allocated.
+  auto result = reinterpret_cast<brcmf_escan_result_le*>(buf->data());
+  result->buflen = buf_len;
+  result->version = BRCMF_BSS_INFO_VERSION;
+  result->sync_id = scan_state_.opts->sync_id;
+  result->bss_count = 0;
+
+  SendEventToDriver(buf_len, std::move(buf), BRCMF_E_ESCAN_RESULT, event_status, kClientIfidx);
 }
 
 void SimFirmware::Rx(std::shared_ptr<const simulation::SimFrame> frame,

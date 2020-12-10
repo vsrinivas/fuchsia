@@ -93,8 +93,8 @@ class SimFirmware {
     std::list<std::shared_ptr<wlan::simulation::InformationElement>> ies;
   };
 
-  using ScanResultHandler = std::function<void(const ScanResult& scan_result)>;
-  using ScanDoneHandler = std::function<void()>;
+  using ScanResultHandler = std::function<void(const ScanResult&)>;
+  using ScanDoneHandler = std::function<void(brcmf_fweh_event_status_t)>;
 
   struct ScanOpts {
     // Unique scan identifier
@@ -342,17 +342,17 @@ class SimFirmware {
   // Generic scan operations
   zx_status_t ScanStart(std::unique_ptr<ScanOpts> opts);
   void ScanContinue();
-  void ScanComplete(enum brcmf_fweh_event_status_t status);
+  void ScanComplete(brcmf_fweh_event_status_t status);
 
   // Escan operations
   zx_status_t EscanStart(uint16_t sync_id, const brcmf_scan_params_le* params, size_t params_len);
   void EscanResultSeen(const ScanResult& scan_result);
-  void EscanComplete();
+  void EscanComplete(brcmf_fweh_event_status_t event_status);
 
   // Association operations
   void AssocInit(std::unique_ptr<AssocOpts> assoc_opts, wlan_channel_t& channel);
   void AssocScanResultSeen(const ScanResult& scan_result);
-  void AssocScanDone();
+  void AssocScanDone(brcmf_fweh_event_status_t event_status);
   void AuthStart();  // Scan complete, start authentication process
   void AssocStart();
   void SetAssocState(AssocState::AssocStateName state);
