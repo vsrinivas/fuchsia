@@ -29,6 +29,16 @@ dart_library("zircon") {
   ]
 }
 
+group("tests") {
+  testonly = true
+  deps = [ ":target_tests" ]
+}
+
+group("target_tests") {
+  testonly = true
+  deps = [ ":test_extract_zircon_constants($host_toolchain)" ]
+}
+
 # TODO(fxb/62912): Move over the extract constants tests left out of this migration //topaz/public/dart/zircon.
 group("test_extract_zircon_constants") {
 }

@@ -38,7 +38,10 @@ group("sdk.modular") {
 group("tests") {
   testonly = true
 
-  deps = [ "lib:tests" ]
+  deps = [
+    "dart:tests",
+    "lib:tests",
+  ]
 }
 
 sdk_documentation("open_source") {
