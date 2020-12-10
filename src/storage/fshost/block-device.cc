@@ -10,6 +10,7 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
@@ -200,6 +201,26 @@ zx_status_t BlockDevice::GetInfo(fuchsia_hardware_block_BlockInfo* out_info) con
   return call_status;
 }
 
+const fuchsia_hardware_block_partition_GUID& BlockDevice::GetInstanceGuid() const {
+  if (instance_guid_) {
+    return *instance_guid_;
+  }
+  instance_guid_.emplace();
+  fdio_cpp::UnownedFdioCaller connection(fd_.get());
+  // The block device might not support the partition protocol in which case the connection will be
+  // closed, so clone the channel in case that happens.
+  zx::channel channel(fdio_service_clone(connection.borrow_channel()));
+  zx_status_t io_status, call_status;
+  io_status = fuchsia_hardware_block_partition_PartitionGetInstanceGuid(channel.get(), &call_status,
+                                                                        &instance_guid_.value());
+  if (io_status != ZX_OK) {
+    FX_LOGS(ERROR) << "Unable to get partition instance GUID (fidl error)";
+  } else if (call_status != ZX_OK) {
+    FX_LOGS(ERROR) << "Unable to get partition instance GUID";
+  }
+  return *instance_guid_;
+}
+
 const fuchsia_hardware_block_partition_GUID& BlockDevice::GetTypeGuid() const {
   if (type_guid_) {
     return *type_guid_;
@@ -306,6 +327,31 @@ bool BlockDevice::ShouldAllowAuthoringFactory() {
   // Checks for presence of /boot/config/allow-authoring-factory
   fbl::unique_fd allow_authoring_factory_fd(open(kAllowAuthoringFactoryConfigFile, O_RDONLY));
   return allow_authoring_factory_fd.is_valid();
+}
+
+zx_status_t BlockDevice::SetPartitionMaxSize(const std::string& fvm_path, uint64_t max_size) {
+  // Get the partition GUID for talking to FVM.
+  const fuchsia_hardware_block_partition_GUID& instance_guid = GetInstanceGuid();
+  if (std::all_of(std::begin(instance_guid.value), std::end(instance_guid.value),
+                  [](auto val) { return val == 0; }))
+    return ZX_ERR_NOT_SUPPORTED;  // Not a partition, nothing to do.
+
+  fbl::unique_fd fvm_fd(open(fvm_path.c_str(), O_RDONLY));
+  if (!fvm_fd)
+    return ZX_ERR_NOT_SUPPORTED;  // Not in FVM, nothing to do.
+
+  // Actually set the limit.
+  fdio_cpp::UnownedFdioCaller caller(fvm_fd.get());
+  zx_status_t set_status;
+  if (zx_status_t fidl_status = fuchsia_hardware_block_volume_VolumeManagerSetPartitionLimit(
+          caller.channel()->get(), &instance_guid, max_size, &set_status);
+      fidl_status != ZX_OK || set_status != ZX_OK) {
+    FX_LOGS(ERROR) << "Unable to set partition limit for " << topological_path() << " to "
+                   << max_size << " bytes";
+    return fidl_status != ZX_OK ? fidl_status : set_status;
+  }
+
+  return ZX_OK;
 }
 
 bool BlockDevice::ShouldCheckFilesystems() { return mounter_->ShouldCheckFilesystems(); }

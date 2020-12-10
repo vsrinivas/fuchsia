@@ -58,7 +58,10 @@ class BlockDeviceInterface {
   // Queries (using the block interface) for info about the underlying device.
   virtual zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const = 0;
 
-  // Queries (using the partition interface) for the GUID of the underlying device.
+  // Queries (using the partition interface) for the instance/type GUID of the underlying device.
+  // Returns a GUID with all 0 bytes on failure, normally this means the device doesn't support the
+  // Partition interface.
+  virtual const fuchsia_hardware_block_partition_GUID& GetInstanceGuid() const = 0;
   virtual const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const = 0;
 
   // Attempts to directly bind a driver to the device. This is typically used
@@ -94,6 +97,9 @@ class BlockDeviceInterface {
 
   // Queries if we should allow factory partition modifications.
   virtual bool ShouldAllowAuthoringFactory() = 0;
+
+  // Sets the maximum size in FVM (at the given device path) for this device.
+  virtual zx_status_t SetPartitionMaxSize(const std::string& fvm_path, uint64_t max_size) = 0;
 };
 
 }  // namespace devmgr

@@ -5,6 +5,7 @@
 #include "src/storage/fshost/block-device-manager.h"
 
 #include <fuchsia/device/llcpp/fidl.h>
+#include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/device/block.h>
@@ -25,6 +26,11 @@ std::pair<std::string_view, std::string_view> SplitPath(std::string_view path) {
   } else {
     return std::make_pair(std::string_view(), path);
   }
+}
+
+bool IsRamdisk(const BlockDeviceInterface& device) {
+  constexpr std::string_view kRamdiskPrefix = "/dev/misc/ramctl/";
+  return device.topological_path().compare(0, kRamdiskPrefix.length(), kRamdiskPrefix) == 0;
 }
 
 // Matches anything that appears to have the given content and keeps track of the first device it
@@ -82,9 +88,7 @@ class PartitionMapMatcher : public ContentMatcher {
   bool ramdisk_required() const { return ramdisk_required_; }
 
   disk_format_t Match(const BlockDeviceInterface& device) override {
-    constexpr std::string_view kRamdiskPrefix = "/dev/misc/ramctl/";
-    if (ramdisk_required_ &&
-        device.topological_path().compare(0, kRamdiskPrefix.length(), kRamdiskPrefix) != 0) {
+    if (ramdisk_required_ && !IsRamdisk(device)) {
       return DISK_FORMAT_UNKNOWN;
     }
     return ContentMatcher::Match(device);
@@ -114,9 +118,16 @@ class PartitionMapMatcher : public ContentMatcher {
 // Matches a partition with a given name and expected type GUID.
 class SimpleMatcher : public BlockDeviceManager::Matcher {
  public:
+  // The max_nonram_size is the maximum partition size when launched on a "real" (non-ramdisk) block
+  // device. Pass 0 for this value to disable max partition size limits.
   SimpleMatcher(PartitionMapMatcher& map, std::string partition_name,
-                const fuchsia_hardware_block_partition_GUID& type_guid, disk_format_t format)
-      : map_(map), partition_name_(partition_name), type_guid_(type_guid), format_(format) {}
+                const fuchsia_hardware_block_partition_GUID& type_guid, disk_format_t format,
+                uint64_t max_nonram_size = 0)
+      : map_(map),
+        partition_name_(partition_name),
+        type_guid_(type_guid),
+        format_(format),
+        max_nonram_size_(max_nonram_size) {}
 
   disk_format_t Match(const BlockDeviceInterface& device) override {
     if (map_.IsChild(device) && device.partition_name() == partition_name_ &&
@@ -127,11 +138,21 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
     }
   }
 
+  zx_status_t Add(BlockDeviceInterface& device) override {
+    if (max_nonram_size_ && !IsRamdisk(device)) {
+      // Set the max size for this partition in FVM. Ignore failures since the max size is
+      // mostly a guard rail against bad behavior and we can still function.
+      [[maybe_unused]] auto status = device.SetPartitionMaxSize(map_.path(), max_nonram_size_);
+    }
+    return device.Add();
+  }
+
  private:
   const PartitionMapMatcher& map_;
   const std::string partition_name_;
   const fuchsia_hardware_block_partition_GUID type_guid_;
   const disk_format_t format_;
+  const uint64_t max_nonram_size_;  // 0 means no limit.
 };
 
 // Matches a data partition, which is a Minfs partition backed by zxcrypt.
@@ -155,11 +176,13 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
   static constexpr std::string_view kZxcryptSuffix = "/zxcrypt/unsealed/block";
 
   MinfsMatcher(const PartitionMapMatcher& map, PartitionNames partition_names,
-               const fuchsia_hardware_block_partition_GUID& type_guid, Variant variant)
+               const fuchsia_hardware_block_partition_GUID& type_guid, Variant variant,
+               uint64_t max_nonram_size = 0)
       : map_(map),
         partition_names_(std::move(partition_names)),
         type_guid_(type_guid),
-        variant_(variant) {}
+        variant_(variant),
+        max_nonram_size_(max_nonram_size) {}
 
   static Variant GetVariantFromOptions(const BlockDeviceManager::Options& options) {
     Variant variant;
@@ -197,6 +220,13 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
   }
 
   zx_status_t Add(BlockDeviceInterface& device) override {
+    if (max_nonram_size_ && !IsRamdisk(device)) {
+      // Set the max size for this partition in FVM. This is not persisted so we need to set it
+      // every time on mount. Ignore failures since the max size is mostly a guard rail against bad
+      // behavior and we can still function.
+      [[maybe_unused]] auto status = device.SetPartitionMaxSize(map_.path(), max_nonram_size_);
+    }
+
     // If the volume doesn't appear to be zxcrypt, assume that it's because it was never formatted
     // as such, or the keys have been shredded, so skip straight to reformatting.  Strictly
     // speaking, it's not necessary, because attempting to unseal should trigger the same behaviour,
@@ -238,6 +268,8 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
   const PartitionNames partition_names_;
   const fuchsia_hardware_block_partition_GUID type_guid_;
   const Variant variant_;
+  const uint64_t max_nonram_size_;
+
   std::string expected_inner_path_;
   // If we reformat the zxcrypt device, this flag is set so that we know we should reformat the
   // minfs device when it appears.
@@ -299,6 +331,24 @@ class BootpartMatcher : public BlockDeviceManager::Matcher {
 
 MinfsMatcher::PartitionNames GetMinfsPartitionNames() { return {"minfs", GUID_DATA_NAME, "data"}; }
 
+// Reads the given named option from the given key/value store, defaulting to the given value if
+// not found.
+uint64_t ReadUint64OptionValue(const std::map<std::string, std::string, std::less<>>& options,
+                               const std::string& key, uint64_t default_value) {
+  auto found = options.find(key);
+  if (found == options.end())
+    return default_value;
+
+  uint64_t value = 0;
+  if (sscanf(found->second.c_str(), "%" PRIu64, &value) != 1) {
+    FX_LOGS(ERROR) << "fshost: Can't read integer option value for " << key << ", got "
+                   << found->second;
+    return default_value;
+  }
+
+  return value;
+}
+
 }  // namespace
 
 BlockDeviceManager::Options BlockDeviceManager::ReadOptions(std::istream& stream) {
@@ -338,7 +388,7 @@ BlockDeviceManager::Options BlockDeviceManager::DefaultOptions() {
                       {Options::kFormatMinfsOnCorruption, {}}}};
 }
 
-BlockDeviceManager::BlockDeviceManager(const Options& options) {
+BlockDeviceManager::BlockDeviceManager(const Options& options) : options_(options) {
   static constexpr fuchsia_hardware_block_partition_GUID minfs_type_guid = GUID_DATA_VALUE;
 
   if (options.is_set(Options::kBootpart)) {
@@ -352,6 +402,11 @@ BlockDeviceManager::BlockDeviceManager(const Options& options) {
 
   bool gpt_required = options.is_set(Options::kGpt) || options.is_set(Options::kGptAll);
   bool fvm_required = options.is_set(Options::kFvm);
+
+  uint64_t blobfs_nonram_max_bytes =
+      ReadUint64OptionValue(options_.options, Options::kBlobfsMaxBytes, 0);
+  uint64_t minfs_nonram_max_bytes =
+      ReadUint64OptionValue(options_.options, Options::kMinfsMaxBytes, 0);
 
   if (!options.is_set(Options::kNetboot)) {
     // GPT partitions:
@@ -371,14 +426,14 @@ BlockDeviceManager::BlockDeviceManager(const Options& options) {
     // FVM partitions:
     if (options.is_set(Options::kBlobfs)) {
       static constexpr fuchsia_hardware_block_partition_GUID blobfs_type_guid = GUID_BLOB_VALUE;
-      matchers_.push_back(
-          std::make_unique<SimpleMatcher>(*fvm, "blobfs", blobfs_type_guid, DISK_FORMAT_BLOBFS));
+      matchers_.push_back(std::make_unique<SimpleMatcher>(
+          *fvm, "blobfs", blobfs_type_guid, DISK_FORMAT_BLOBFS, blobfs_nonram_max_bytes));
       fvm_required = true;
     }
     if (options.is_set(Options::kMinfs)) {
-      matchers_.push_back(
-          std::make_unique<MinfsMatcher>(*fvm, GetMinfsPartitionNames(), minfs_type_guid,
-                                         MinfsMatcher::GetVariantFromOptions(options)));
+      matchers_.push_back(std::make_unique<MinfsMatcher>(
+          *fvm, GetMinfsPartitionNames(), minfs_type_guid,
+          MinfsMatcher::GetVariantFromOptions(options), minfs_nonram_max_bytes));
       fvm_required = true;
     }
   }
@@ -395,7 +450,8 @@ BlockDeviceManager::BlockDeviceManager(const Options& options) {
       if (options.is_set(Options::kAttachZxcryptToNonRamdisk)) {
         matchers_.push_back(std::make_unique<MinfsMatcher>(
             *non_ramdisk_fvm, GetMinfsPartitionNames(), minfs_type_guid,
-            MinfsMatcher::Variant{.zxcrypt = MinfsMatcher::ZxcryptVariant::kZxcryptOnly}));
+            MinfsMatcher::Variant{.zxcrypt = MinfsMatcher::ZxcryptVariant::kZxcryptOnly},
+            minfs_nonram_max_bytes));
       }
     }
     matchers_.push_back(std::move(fvm));

@@ -313,9 +313,11 @@ fuchsia_unittest_component("fshost-metrics-test") {
 
 test("block_watcher_test") {
   sources = [
+    "block-device-manager-test.cc",
     "block-device-test.cc",
     "block-watcher-test.cc",
     "filesystem-mounter-test.cc",
+    "mock-block-device.h",
   ]
   deps = [
     ":block-watcher",

@@ -34,6 +34,7 @@ class BlockDevice final : public BlockDeviceInterface {
   disk_format_t GetFormat() final;
   void SetFormat(disk_format_t format) final;
   zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final;
+  const fuchsia_hardware_block_partition_GUID& GetInstanceGuid() const final;
   const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final;
   zx_status_t AttachDriver(const std::string_view& driver) final;
   zx_status_t UnsealZxcrypt() final;
@@ -45,6 +46,7 @@ class BlockDevice final : public BlockDeviceInterface {
   zx::status<std::string> VeritySeal() final;
   zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) final;
   bool ShouldAllowAuthoringFactory() final;
+  zx_status_t SetPartitionMaxSize(const std::string& fvm_path, uint64_t max_size) override;
 
   disk_format_t content_format() const final;
   const std::string& topological_path() const final { return topological_path_; }
@@ -58,6 +60,7 @@ class BlockDevice final : public BlockDeviceInterface {
   disk_format_t format_ = DISK_FORMAT_UNKNOWN;
   std::string topological_path_;
   mutable std::string partition_name_;
+  mutable std::optional<fuchsia_hardware_block_partition_GUID> instance_guid_;
   mutable std::optional<fuchsia_hardware_block_partition_GUID> type_guid_;
 };
 

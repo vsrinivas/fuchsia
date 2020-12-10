@@ -39,9 +39,9 @@ std::unique_ptr<FsHostMetrics> MakeMetrics(cobalt_client::InMemoryLogger** logge
       std::make_unique<cobalt_client::Collector>(std::move(logger_ptr)));
 }
 
-class BlockDeviceHarness : public testing::Test {
+class BlockDeviceTest : public testing::Test {
  public:
-  BlockDeviceHarness()
+  BlockDeviceTest()
       : manager_(nullptr, MakeMetrics(&logger_)), watcher_(manager_, FshostOptions()) {}
 
   void SetUp() override {
@@ -96,7 +96,7 @@ class BlockDeviceHarness : public testing::Test {
   BlockWatcher watcher_;
 };
 
-TEST_F(BlockDeviceHarness, TestBadHandleDevice) {
+TEST_F(BlockDeviceTest, TestBadHandleDevice) {
   FshostOptions options;
   FilesystemMounter mounter(manager_, options);
   fbl::unique_fd fd;
@@ -119,7 +119,7 @@ TEST_F(BlockDeviceHarness, TestBadHandleDevice) {
   EXPECT_EQ(device.MountFilesystem(), ZX_ERR_BAD_HANDLE);
 }
 
-TEST_F(BlockDeviceHarness, TestEmptyDevice) {
+TEST_F(BlockDeviceTest, TestEmptyDevice) {
   FshostOptions options;
   FilesystemMounter mounter(manager_, options);
 
@@ -147,7 +147,7 @@ TEST_F(BlockDeviceHarness, TestEmptyDevice) {
   EXPECT_EQ(device.MountFilesystem(), ZX_ERR_NOT_SUPPORTED);
 }
 
-TEST_F(BlockDeviceHarness, TestMinfsBadGUID) {
+TEST_F(BlockDeviceTest, TestMinfsBadGUID) {
   FshostOptions options;
   FilesystemMounter mounter(manager_, options);
 
@@ -166,7 +166,7 @@ TEST_F(BlockDeviceHarness, TestMinfsBadGUID) {
   EXPECT_EQ(device.MountFilesystem(), ZX_ERR_WRONG_TYPE);
 }
 
-TEST_F(BlockDeviceHarness, TestMinfsGoodGUID) {
+TEST_F(BlockDeviceTest, TestMinfsGoodGUID) {
   FshostOptions options;
   FilesystemMounter mounter(manager_, options);
 
@@ -182,7 +182,7 @@ TEST_F(BlockDeviceHarness, TestMinfsGoodGUID) {
   EXPECT_EQ(device.MountFilesystem(), ZX_ERR_ALREADY_BOUND);
 }
 
-TEST_F(BlockDeviceHarness, TestMinfsReformat) {
+TEST_F(BlockDeviceTest, TestMinfsReformat) {
   FshostOptions options;
   options.check_filesystems = true;
   FilesystemMounter mounter(manager_, options);
@@ -205,7 +205,7 @@ TEST_F(BlockDeviceHarness, TestMinfsReformat) {
   EXPECT_EQ(device.MountFilesystem(), ZX_OK);
 }
 
-TEST_F(BlockDeviceHarness, TestBlobfs) {
+TEST_F(BlockDeviceTest, TestBlobfs) {
   FshostOptions options;
   options.check_filesystems = true;
   FilesystemMounter mounter(manager_, options);
@@ -228,7 +228,7 @@ TEST_F(BlockDeviceHarness, TestBlobfs) {
   EXPECT_NE(device.MountFilesystem(), ZX_OK);
 }
 
-TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
+TEST_F(BlockDeviceTest, TestCorruptionEventLogged) {
   FshostOptions options;
   options.check_filesystems = true;
   FilesystemMounter mounter(manager_, options);
@@ -266,35 +266,6 @@ TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
     sleep(1);
   }
   ASSERT_EQ(logger_->counters().at(metric_options), 1ul);
-}
-
-TEST(BlockDeviceManager, ReadOptions) {
-  std::stringstream stream;
-  stream << "# A comment" << std::endl
-         << BlockDeviceManager::Options::kDefault << std::endl
-         << BlockDeviceManager::Options::kNoZxcrypt
-         << std::endl
-         // Duplicate keys should be de-duped.
-         << BlockDeviceManager::Options::kNoZxcrypt << std::endl
-         << BlockDeviceManager::Options::kMinfsMaxBytes << "=1"
-         << std::endl
-         // Duplicates should overwrite the value.
-         << BlockDeviceManager::Options::kMinfsMaxBytes << "=12345"
-         << std::endl
-         // Empty value.
-         << BlockDeviceManager::Options::kBlobfsMaxBytes << "=" << std::endl
-         << "-" << BlockDeviceManager::Options::kBlobfs << std::endl
-         << "-" << BlockDeviceManager::Options::kFormatMinfsOnCorruption;
-
-  const auto options = BlockDeviceManager::ReadOptions(stream);
-  auto expected_options = BlockDeviceManager::DefaultOptions();
-  expected_options.options[BlockDeviceManager::Options::kNoZxcrypt] = std::string();
-  expected_options.options[BlockDeviceManager::Options::kMinfsMaxBytes] = "12345";
-  expected_options.options[BlockDeviceManager::Options::kBlobfsMaxBytes] = std::string();
-  expected_options.options.erase(BlockDeviceManager::Options::kBlobfs);
-  expected_options.options.erase(BlockDeviceManager::Options::kFormatMinfsOnCorruption);
-
-  EXPECT_EQ(expected_options.options, options.options);
 }
 
 // TODO(unknown): Add tests for Zxcrypt binding.

@@ -81,6 +81,8 @@ class BlockDeviceManager {
   zx_status_t AddDevice(BlockDeviceInterface& device);
 
  private:
+  Options options_;
+
   // A vector of configured matchers.  First-to-match wins.
   std::vector<std::unique_ptr<Matcher>> matchers_;
 };
