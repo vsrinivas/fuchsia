@@ -106,6 +106,27 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessengerFac
     }
 }
 
+/// TargetedMessengerClient is a wrapper around [`MessengerClient`] that limits
+/// the audience of sent messages to a preset target.
+#[derive(Clone, Debug)]
+pub struct TargetedMessengerClient<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
+    client: MessengerClient<P, A, R>,
+    audience: Audience<A, R>,
+}
+
+impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static>
+    TargetedMessengerClient<P, A, R>
+{
+    pub fn new(client: MessengerClient<P, A, R>, audience: Audience<A, R>) -> Self {
+        Self { client, audience }
+    }
+
+    /// Creates a MessageBuilder for a new message with the specified payload.
+    pub fn message(&self, payload: P) -> MessageBuilder<P, A, R> {
+        self.client.message(payload, self.audience.clone())
+    }
+}
+
 /// MessengerClient is a wrapper around a messenger with a fuse.
 #[derive(Clone, Debug)]
 pub struct MessengerClient<

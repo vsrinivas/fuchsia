@@ -23,6 +23,7 @@ macro_rules! message_hub_definition {
             use crate::message::message_hub::MessageHub;
             use crate::message::messenger::{
                 MessengerClient as BaseMessengerClient, MessengerFactory as BaseFactory,
+                TargetedMessengerClient as BaseTargetedMessengerClient,
             };
             use crate::message::receptor::Receptor as BaseReceptor;
 
@@ -30,6 +31,9 @@ macro_rules! message_hub_definition {
 
             #[allow(dead_code)]
             pub type Messenger = BaseMessengerClient<$payload, $address, $role>;
+
+            #[allow(dead_code)]
+            pub type TargetedMessenger = BaseTargetedMessengerClient<$payload, $address, $role>;
 
             #[allow(dead_code)]
             pub type MessageError = BaseMessageError<$address>;
