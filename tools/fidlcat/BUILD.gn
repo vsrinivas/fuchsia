@@ -46,9 +46,6 @@ if (is_host) {
       "//src/lib/fxl",
       "//zircon/system/ulib/cmdline",
     ]
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 
   test("fidlcat_host_tests") {
@@ -70,9 +67,6 @@ if (is_host) {
       "//third_party/googletest:gtest",
       "//zircon/system/ulib/cmdline",
     ]
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 }
 

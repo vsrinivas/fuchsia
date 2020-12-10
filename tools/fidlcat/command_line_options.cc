@@ -251,8 +251,9 @@ bool SetLogSettings(const std::string& level, int multiplier, syslog::LogSetting
     settings->min_log_level = syslog::LOG_FATAL;
   } else if (fxl::StringToNumberWithError(level, &settings->min_log_level)) {
     settings->min_log_level =
-        syslog::LOG_INFO + (multiplier * (multiplier > 0 ? syslog::LogSeverityStepSize
-                                                         : syslog::LogVerbosityStepSize));
+        syslog::LOG_INFO + static_cast<syslog::LogSeverity>(
+                               (multiplier * (multiplier > 0 ? syslog::LogSeverityStepSize
+                                                             : syslog::LogVerbosityStepSize)));
 
   } else {
     return false;
