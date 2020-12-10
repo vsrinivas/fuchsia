@@ -8,7 +8,7 @@ use {
     crate::request_respond,
     crate::switchboard::base::{
         FidlResponseErrorLogger, LowLightMode, SettingRequest, SettingResponse, SettingType,
-        ThemeMode,
+        ThemeType,
     },
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
@@ -63,18 +63,18 @@ impl From<SettingResponse> for DisplaySettings {
 
             display_settings.screen_enabled = Some(info.screen_enabled);
 
-            display_settings.theme = match info.theme_mode {
-                ThemeMode::Unknown => None,
-                ThemeMode::Default => {
+            display_settings.theme = match info.theme_type {
+                ThemeType::Unknown => None,
+                ThemeType::Default => {
                     Some(Theme { theme_type: Some(FidlThemeType::Default), ..Theme::EMPTY })
                 }
-                ThemeMode::Light => {
+                ThemeType::Light => {
                     Some(Theme { theme_type: Some(FidlThemeType::Light), ..Theme::EMPTY })
                 }
-                ThemeMode::Dark => {
+                ThemeType::Dark => {
                     Some(Theme { theme_type: Some(FidlThemeType::Dark), ..Theme::EMPTY })
                 }
-                ThemeMode::Auto => {
+                ThemeType::Auto => {
                     Some(Theme { theme_type: Some(FidlThemeType::Auto), ..Theme::EMPTY })
                 }
             };
@@ -106,10 +106,10 @@ fn to_request(settings: DisplaySettings) -> Option<SettingRequest> {
         };
     } else if let Some(Theme { theme_type: Some(theme_type), .. }) = settings.theme {
         request = match theme_type {
-            FidlThemeType::Default => Some(SettingRequest::SetThemeMode(ThemeMode::Default)),
-            FidlThemeType::Light => Some(SettingRequest::SetThemeMode(ThemeMode::Light)),
-            FidlThemeType::Dark => Some(SettingRequest::SetThemeMode(ThemeMode::Dark)),
-            FidlThemeType::Auto => Some(SettingRequest::SetThemeMode(ThemeMode::Auto)),
+            FidlThemeType::Default => Some(SettingRequest::SetThemeType(ThemeType::Default)),
+            FidlThemeType::Light => Some(SettingRequest::SetThemeType(ThemeType::Light)),
+            FidlThemeType::Dark => Some(SettingRequest::SetThemeType(ThemeType::Dark)),
+            FidlThemeType::Auto => Some(SettingRequest::SetThemeType(ThemeType::Auto)),
         }
     }
     request

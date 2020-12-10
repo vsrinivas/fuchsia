@@ -13,7 +13,7 @@ use crate::handler::setting_handler::persist::{
 use crate::handler::setting_handler::{controller, ControllerError};
 use crate::service_context::ExternalServiceProxy;
 use crate::switchboard::base::{
-    DisplayInfo, LowLightMode, SettingRequest, SettingResponse, SettingType, ThemeMode,
+    DisplayInfo, LowLightMode, SettingRequest, SettingResponse, SettingType, ThemeType,
 };
 use async_trait::async_trait;
 use fidl_fuchsia_ui_brightness::{
@@ -29,24 +29,26 @@ impl DeviceStorageCompatible for DisplayInfo {
             0.5,                   /*brightness_value*/
             true,                  /*screen_enabled*/
             LowLightMode::Disable, /*low_light_mode*/
-            ThemeMode::Unknown,    /*theme_mode*/
+            ThemeType::Unknown,    /*theme_type*/
         )
     }
 
     fn deserialize_from(value: &String) -> Self {
         Self::extract(&value)
-            .unwrap_or_else(|_| Self::from(DisplayInfoV2::deserialize_from(&value)))
+            .unwrap_or_else(|_| Self::from(DisplayInfoV3::deserialize_from(&value)))
     }
 }
 
-impl From<DisplayInfoV2> for DisplayInfo {
-    fn from(v2: DisplayInfoV2) -> Self {
+impl From<DisplayInfoV3> for DisplayInfo {
+    fn from(v3: DisplayInfoV3) -> Self {
         DisplayInfo {
-            auto_brightness: v2.auto_brightness,
-            manual_brightness_value: v2.manual_brightness_value,
-            screen_enabled: true,
-            low_light_mode: v2.low_light_mode,
-            theme_mode: v2.theme_mode,
+            auto_brightness: v3.auto_brightness,
+            manual_brightness_value: v3.manual_brightness_value,
+            screen_enabled: v3.screen_enabled,
+            low_light_mode: v3.low_light_mode,
+            // In v4, the field formally known as theme_mode was renamed to
+            // theme_type.
+            theme_type: ThemeType::from(v3.theme_mode),
         }
     }
 }
@@ -184,9 +186,9 @@ where
                 display_info.auto_brightness = !enabled;
                 Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
             }
-            SettingRequest::SetThemeMode(theme_mode) => {
+            SettingRequest::SetThemeType(theme_type) => {
                 let mut display_info = self.client.read().await;
-                display_info.theme_mode = theme_mode;
+                display_info.theme_type = theme_type;
                 Some(write(&self.client, display_info, false).await.into_handler_result())
             }
             SettingRequest::Get => {
@@ -236,7 +238,7 @@ pub struct DisplayInfoV2 {
     pub manual_brightness_value: f32,
     pub auto_brightness: bool,
     pub low_light_mode: LowLightMode,
-    pub theme_mode: ThemeMode,
+    pub theme_mode: ThemeModeV1,
 }
 
 impl DisplayInfoV2 {
@@ -244,7 +246,7 @@ impl DisplayInfoV2 {
         auto_brightness: bool,
         manual_brightness_value: f32,
         low_light_mode: LowLightMode,
-        theme_mode: ThemeMode,
+        theme_mode: ThemeModeV1,
     ) -> DisplayInfoV2 {
         DisplayInfoV2 { manual_brightness_value, auto_brightness, low_light_mode, theme_mode }
     }
@@ -258,7 +260,7 @@ impl DeviceStorageCompatible for DisplayInfoV2 {
             false,                 /*auto_brightness_enabled*/
             0.5,                   /*brightness_value*/
             LowLightMode::Disable, /*low_light_mode*/
-            ThemeMode::Unknown,    /*theme_mode*/
+            ThemeModeV1::Unknown,  /*theme_mode*/
         )
     }
 
@@ -274,7 +276,88 @@ impl From<DisplayInfoV1> for DisplayInfoV2 {
             auto_brightness: v1.auto_brightness,
             manual_brightness_value: v1.manual_brightness_value,
             low_light_mode: v1.low_light_mode,
-            theme_mode: ThemeMode::Unknown,
+            theme_mode: ThemeModeV1::Unknown,
+        }
+    }
+}
+
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum ThemeModeV1 {
+    Unknown,
+    Default,
+    Light,
+    Dark,
+    /// Product can choose a theme based on ambient cues.
+    Auto,
+}
+
+impl From<ThemeModeV1> for ThemeType {
+    fn from(theme_mode_v1: ThemeModeV1) -> Self {
+        match theme_mode_v1 {
+            ThemeModeV1::Unknown => ThemeType::Unknown,
+            ThemeModeV1::Default => ThemeType::Default,
+            ThemeModeV1::Light => ThemeType::Light,
+            ThemeModeV1::Dark => ThemeType::Dark,
+            ThemeModeV1::Auto => ThemeType::Auto,
+        }
+    }
+}
+
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct DisplayInfoV3 {
+    /// The last brightness value that was manually set.
+    pub manual_brightness_value: f32,
+    pub auto_brightness: bool,
+    pub screen_enabled: bool,
+    pub low_light_mode: LowLightMode,
+    pub theme_mode: ThemeModeV1,
+}
+
+impl DisplayInfoV3 {
+    pub const fn new(
+        auto_brightness: bool,
+        manual_brightness_value: f32,
+        screen_enabled: bool,
+        low_light_mode: LowLightMode,
+        theme_mode: ThemeModeV1,
+    ) -> DisplayInfoV3 {
+        DisplayInfoV3 {
+            manual_brightness_value,
+            auto_brightness,
+            screen_enabled,
+            low_light_mode,
+            theme_mode,
+        }
+    }
+}
+
+impl DeviceStorageCompatible for DisplayInfoV3 {
+    const KEY: &'static str = "display_info";
+
+    fn default_value() -> Self {
+        DisplayInfoV3::new(
+            false,                 /*auto_brightness_enabled*/
+            0.5,                   /*brightness_value*/
+            true,                  /*screen_enabled*/
+            LowLightMode::Disable, /*low_light_mode*/
+            ThemeModeV1::Unknown,  /*theme_mode*/
+        )
+    }
+
+    fn deserialize_from(value: &String) -> Self {
+        Self::extract(&value)
+            .unwrap_or_else(|_| Self::from(DisplayInfoV2::deserialize_from(&value)))
+    }
+}
+
+impl From<DisplayInfoV2> for DisplayInfoV3 {
+    fn from(v2: DisplayInfoV2) -> Self {
+        DisplayInfoV3 {
+            auto_brightness: v2.auto_brightness,
+            manual_brightness_value: v2.manual_brightness_value,
+            screen_enabled: true,
+            low_light_mode: v2.low_light_mode,
+            theme_mode: v2.theme_mode,
         }
     }
 }
@@ -290,7 +373,7 @@ fn test_display_migration_v1_to_v2() {
     let v2 = DisplayInfoV2::deserialize_from(&serialized_v1);
 
     assert_eq!(v2.manual_brightness_value, BRIGHTNESS_VALUE);
-    assert_eq!(v2.theme_mode, ThemeMode::Unknown);
+    assert_eq!(v2.theme_mode, ThemeModeV1::Unknown);
 }
 
 #[test]
@@ -318,6 +401,23 @@ fn test_display_migration_v1_to_current() {
     let current = DisplayInfo::deserialize_from(&serialized_v1);
 
     assert_eq!(current.manual_brightness_value, BRIGHTNESS_VALUE);
-    assert_eq!(current.theme_mode, ThemeMode::Unknown);
+    assert_eq!(current.theme_type, ThemeType::Unknown);
     assert_eq!(current.screen_enabled, true);
+}
+
+#[test]
+fn test_display_migration_v3_to_current() {
+    let mut v3 = DisplayInfoV3::default_value();
+    // In v4 ThemeMode type was renamed to ThemeType, but the field in v3 is
+    // still mode.
+    v3.theme_mode = ThemeModeV1::Light;
+    v3.screen_enabled = false;
+
+    let serialized_v3 = v3.serialize_to();
+
+    let current = DisplayInfo::deserialize_from(&serialized_v3);
+
+    // In v4, the field formally known as theme_mode is theme_type.
+    assert_eq!(current.theme_type, ThemeType::Light);
+    assert_eq!(current.screen_enabled, false);
 }

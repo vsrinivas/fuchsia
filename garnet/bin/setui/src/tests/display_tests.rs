@@ -7,7 +7,7 @@ use {
     crate::agent::restore_agent,
     crate::config::base::ControllerFlag,
     crate::handler::device_storage::testing::*,
-    crate::switchboard::base::{DisplayInfo, LowLightMode, SettingType, ThemeMode},
+    crate::switchboard::base::{DisplayInfo, LowLightMode, SettingType, ThemeType},
     crate::tests::fakes::brightness_service::BrightnessService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::test_failure_utils::create_test_env_with_failures,
@@ -216,7 +216,7 @@ async fn test_light_mode_with_brightness_controller() {
 
 // Tests for display theme.
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_theme_mode_auto() {
+async fn test_theme_type_auto() {
     let display_proxy = setup_display_env().await;
 
     // Test that if theme is is set to auto, it is reflected.
@@ -302,7 +302,7 @@ async fn test_display_restore_with_storage_controller() {
         true,
         true,
         LowLightMode::Enable,
-        ThemeMode::Default,
+        ThemeType::Default,
     )
     .await;
 
@@ -312,7 +312,7 @@ async fn test_display_restore_with_storage_controller() {
         false,
         true,
         LowLightMode::Disable,
-        ThemeMode::Default,
+        ThemeType::Default,
     )
     .await;
 }
@@ -322,7 +322,7 @@ async fn validate_restore_with_storage_controller(
     auto_brightness: bool,
     screen_enabled: bool,
     low_light_mode: LowLightMode,
-    theme_mode: ThemeMode,
+    theme_type: ThemeType,
 ) {
     let service_registry = ServiceRegistry::create();
     let storage_factory = InMemoryStorageFactory::create();
@@ -336,7 +336,7 @@ async fn validate_restore_with_storage_controller(
             auto_brightness,
             screen_enabled,
             low_light_mode,
-            theme_mode,
+            theme_type,
         };
         assert!(store.lock().await.write(&info, false).await.is_ok());
     }
@@ -370,7 +370,7 @@ async fn test_display_restore_with_brightness_controller() {
         true,
         true,
         LowLightMode::Enable,
-        ThemeMode::Default,
+        ThemeType::Default,
     )
     .await;
 
@@ -380,7 +380,7 @@ async fn test_display_restore_with_brightness_controller() {
         false,
         true,
         LowLightMode::Disable,
-        ThemeMode::Default,
+        ThemeType::Default,
     )
     .await;
 }
@@ -390,7 +390,7 @@ async fn validate_restore_with_brightness_controller(
     auto_brightness: bool,
     screen_enabled: bool,
     low_light_mode: LowLightMode,
-    theme_mode: ThemeMode,
+    theme_type: ThemeType,
 ) {
     let service_registry = ServiceRegistry::create();
     let brightness_service_handle = BrightnessService::create();
@@ -409,7 +409,7 @@ async fn validate_restore_with_brightness_controller(
             auto_brightness,
             screen_enabled,
             low_light_mode,
-            theme_mode,
+            theme_type,
         };
         assert!(store.lock().await.write(&info, false).await.is_ok());
     }
