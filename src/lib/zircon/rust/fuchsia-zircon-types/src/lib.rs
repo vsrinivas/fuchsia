@@ -365,6 +365,7 @@ multiconst!(zx_rsrc_system_base_t, [
     ZX_RSRC_SYSTEM_HYPERVISOR_BASE = 0;
     ZX_RSRC_SYSTEM_VMEX_BASE       = 1;
     ZX_RSRC_SYSTEM_DEBUG_BASE      = 2;
+    ZX_RSRC_SYSTEM_INFO_BASE       = 3;
 ]);
 
 pub const ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET: usize = 1;

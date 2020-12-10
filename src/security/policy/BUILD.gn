@@ -17,6 +17,7 @@ group("appmgr_policy_eng") {
     ":appmgr_factory_data_allowlist_eng",
     ":appmgr_hub_allowlist_eng",
     ":appmgr_hypervisor_resource_allowlist_eng",
+    ":appmgr_info_resource_allowlist_eng",
     ":appmgr_ioport_resource_allowlist_eng",
     ":appmgr_irq_resource_allowlist_eng",
     ":appmgr_mmio_resource_allowlist_eng",
@@ -90,6 +91,12 @@ config_data("appmgr_hypervisor_resource_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "hypervisor_resource_allowlist_eng.txt" ]
   outputs = [ "allowlist/hypervisor_resource.txt" ]
+}
+
+config_data("appmgr_info_resource_allowlist_eng") {
+  for_pkg = "appmgr"
+  sources = [ "info_resource_allowlist_eng.txt" ]
+  outputs = [ "allowlist/info_resource.txt" ]
 }
 
 config_data("appmgr_ioport_resource_allowlist_eng") {

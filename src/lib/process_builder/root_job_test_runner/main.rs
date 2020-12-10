@@ -68,6 +68,11 @@ fn serve_proxy_svc_dir() -> Result<zx::Channel, Error> {
         fs.add_proxy_service::<fkernel::HypervisorResourceMarker, _>();
     }
 
+    let info_resource_path = PathBuf::from(format!("/svc/{}", fkernel::InfoResourceMarker::NAME));
+    if info_resource_path.exists() {
+        fs.add_proxy_service::<fkernel::InfoResourceMarker, _>();
+    }
+
     let irq_resource_path = PathBuf::from(format!("/svc/{}", fkernel::IrqResourceMarker::NAME));
     if irq_resource_path.exists() {
         fs.add_proxy_service::<fkernel::IrqResourceMarker, _>();

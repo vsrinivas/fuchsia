@@ -44,6 +44,7 @@
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.kernel.DebugResource",
                 "fuchsia.kernel.HypervisorResource",
+                "fuchsia.kernel.InfoResource",
                 "fuchsia.kernel.IoportResource",
                 "fuchsia.kernel.IrqResource",
                 "fuchsia.kernel.MmioResource",

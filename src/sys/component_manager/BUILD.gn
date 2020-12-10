@@ -80,6 +80,7 @@ template("component_manager") {
     "src/builtin/capability.rs",
     "src/builtin/debug_resource.rs",
     "src/builtin/hypervisor_resource.rs",
+    "src/builtin/info_resource.rs",
     "src/builtin/ioport_resource.rs",
     "src/builtin/irq_resource.rs",
     "src/builtin/kernel_stats.rs",

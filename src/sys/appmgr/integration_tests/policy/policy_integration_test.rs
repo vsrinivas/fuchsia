@@ -31,6 +31,8 @@ lazy_static! {
         policy_url!("hypervisor_resource_allowed.cmx");
     static ref MMIO_RESOURCE_DENIED_URL: String = policy_url!("mmio_resource_denied.cmx");
     static ref MMIO_RESOURCE_ALLOWED_URL: String = policy_url!("mmio_resource_allowed.cmx");
+    static ref INFO_RESOURCE_DENIED_URL: String = policy_url!("info_resource_denied.cmx");
+    static ref INFO_RESOURCE_ALLOWED_URL: String = policy_url!("info_resource_allowed.cmx");
     static ref IRQ_RESOURCE_DENIED_URL: String = policy_url!("irq_resource_denied.cmx");
     static ref IRQ_RESOURCE_ALLOWED_URL: String = policy_url!("irq_resource_allowed.cmx");
     static ref IOPORT_RESOURCE_DENIED_URL: String = policy_url!("ioport_resource_denied.cmx");
@@ -145,6 +147,18 @@ async fn mmio_resource_allowed() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn mmio_resource_denied() -> Result<(), Error> {
     assert_launch_denied(&MMIO_RESOURCE_DENIED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn info_resource_allowed() -> Result<(), Error> {
+    assert_launch_allowed(&INFO_RESOURCE_ALLOWED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn info_resource_denied() -> Result<(), Error> {
+    assert_launch_denied(&INFO_RESOURCE_DENIED_URL).await;
     Ok(())
 }
 

@@ -20,6 +20,7 @@ constexpr char kDurableDataAllowList[] = "allowlist/durable_data.txt";
 constexpr char kFactoryDataAllowList[] = "allowlist/factory_data.txt";
 constexpr char kHubAllowList[] = "allowlist/hub.txt";
 constexpr char kHypervisorResourceAllowList[] = "allowlist/hypervisor_resource.txt";
+constexpr char kInfoResourceAllowList[] = "allowlist/info_resource.txt";
 constexpr char kIoportResourceAllowList[] = "allowlist/ioport_resource.txt";
 constexpr char kIrqResourceAllowList[] = "allowlist/irq_resource.txt";
 constexpr char kMmioResourceAllowList[] = "allowlist/mmio_resource.txt";
@@ -84,6 +85,11 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
       !CheckHypervisorResource(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "fuchsia.kernel.HypervisorResource";
+    return std::nullopt;
+  }
+  if (sandbox.HasService("fuchsia.kernel.InfoResource") && !CheckInfoResource(pkg_url)) {
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                   << "fuchsia.kernel.InfoResource";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.kernel.IoportResource") && !CheckIoportResource(pkg_url)) {
@@ -182,6 +188,11 @@ bool PolicyChecker::CheckDebugResource(const FuchsiaPkgUrl& pkg_url) {
 bool PolicyChecker::CheckHypervisorResource(const FuchsiaPkgUrl& pkg_url) {
   AllowList hypervisor_resource_allowlist(config_, kHypervisorResourceAllowList);
   return hypervisor_resource_allowlist.IsAllowed(pkg_url);
+}
+
+bool PolicyChecker::CheckInfoResource(const FuchsiaPkgUrl& pkg_url) {
+  AllowList info_resource_allowlist(config_, kInfoResourceAllowList);
+  return info_resource_allowlist.IsAllowed(pkg_url);
 }
 
 bool PolicyChecker::CheckIoportResource(const FuchsiaPkgUrl& pkg_url) {

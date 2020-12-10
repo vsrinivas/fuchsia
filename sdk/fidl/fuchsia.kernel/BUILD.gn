@@ -11,6 +11,7 @@ fidl("fuchsia.kernel") {
   sources = [
     "debug-resource.fidl",
     "hypervisor-resource.fidl",
+    "info-resource.fidl",
     "ioport-resource.fidl",
     "irq-resource.fidl",
     "kernel-counter.fidl",

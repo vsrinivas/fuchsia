@@ -244,6 +244,7 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
         "fuchsia.kernel.Counter",
         "fuchsia.kernel.DebugResource",
         "fuchsia.kernel.HypervisorResource",
+        "fuchsia.kernel.InfoResource",
         "fuchsia.kernel.IoportResource",
         "fuchsia.kernel.IrqResource",
         "fuchsia.kernel.MmioResource",
@@ -270,12 +271,13 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
             fuchsia::boot::RootResource::Name_, fuchsia::boot::WriteOnlyLog::Name_,
             fuchsia::device::NameProvider::Name_, fuchsia::kernel::Counter::Name_,
             fuchsia::kernel::DebugResource::Name_, fuchsia::kernel::HypervisorResource::Name_,
-            fuchsia::kernel::IoportResource::Name_, fuchsia::kernel::IrqResource::Name_,
-            fuchsia::kernel::MmioResource::Name_, fuchsia::kernel::RootJob::Name_,
-            fuchsia::kernel::SmcResource::Name_, fuchsia::kernel::VmexResource::Name_,
-            fuchsia::scheduler::ProfileProvider::Name_, fuchsia::sys::test::CacheControl::Name_,
-            fuchsia::sysmem::Allocator::Name_, fuchsia::ui::scenic::Scenic::Name_,
-            fuchsia::ui::policy::Presenter::Name_, fuchsia::vulkan::loader::Loader::Name_));
+            fuchsia::kernel::InfoResource::Name_, fuchsia::kernel::IoportResource::Name_,
+            fuchsia::kernel::IrqResource::Name_, fuchsia::kernel::MmioResource::Name_,
+            fuchsia::kernel::RootJob::Name_, fuchsia::kernel::SmcResource::Name_,
+            fuchsia::kernel::VmexResource::Name_, fuchsia::scheduler::ProfileProvider::Name_,
+            fuchsia::sys::test::CacheControl::Name_, fuchsia::sysmem::Allocator::Name_,
+            fuchsia::ui::scenic::Scenic::Name_, fuchsia::ui::policy::Presenter::Name_,
+            fuchsia::vulkan::loader::Loader::Name_));
   }
 }
 

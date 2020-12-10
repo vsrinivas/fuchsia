@@ -171,6 +171,10 @@
             path: "/svc_for_sys/fuchsia.kernel.HypervisorResource",
         },
         {
+            protocol: "fuchsia.kernel.InfoResource",
+            path: "/svc_for_sys/fuchsia.kernel.InfoResource",
+        },
+        {
             protocol: "fuchsia.kernel.IoportResource",
             path: "/svc_for_sys/fuchsia.kernel.IoportResource",
         },

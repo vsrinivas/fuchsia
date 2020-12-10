@@ -123,6 +123,7 @@ TEST_F(HubTest, Services) {
       "fuchsia.kernel.DebugBroker",
       "fuchsia.kernel.DebugResource",
       "fuchsia.kernel.HypervisorResource",
+      "fuchsia.kernel.InfoResource",
 #if __x86_64__
       "fuchsia.kernel.IoportResource",
 #elif __aarch64__

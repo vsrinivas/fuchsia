@@ -9,6 +9,7 @@ use {
             capability::BuiltinCapability,
             debug_resource::DebugResource,
             hypervisor_resource::HypervisorResource,
+            info_resource::InfoResource,
             ioport_resource::IoportResource,
             irq_resource::IrqResource,
             kernel_stats::KernelStats,
@@ -344,6 +345,7 @@ pub struct BuiltinEnvironment {
     pub boot_args: Arc<BootArguments>,
     pub debug_resource: Option<Arc<DebugResource>>,
     pub hypervisor_resource: Option<Arc<HypervisorResource>>,
+    pub info_resource: Option<Arc<InfoResource>>,
     #[cfg(target_arch = "x86_64")]
     pub ioport_resource: Option<Arc<IoportResource>>,
     pub irq_resource: Option<Arc<IrqResource>>,
@@ -565,6 +567,27 @@ impl BuiltinEnvironment {
             model.root_realm.hooks.install(hypervisor_resource.hooks()).await;
         }
 
+        // Set up the InfoResource service.
+        let info_resource_handle = system_resource_handle
+            .as_ref()
+            .map(|handle| {
+                match handle.create_child(
+                    zx::ResourceKind::SYSTEM,
+                    None,
+                    zx::sys::ZX_RSRC_SYSTEM_INFO_BASE,
+                    1,
+                    b"info",
+                ) {
+                    Ok(resource) => Some(resource),
+                    Err(_) => None,
+                }
+            })
+            .flatten();
+        let info_resource = info_resource_handle.map(InfoResource::new);
+        if let Some(info_resource) = info_resource.as_ref() {
+            model.root_realm.hooks.install(info_resource.hooks()).await;
+        }
+
         // Set up the VmexResource service.
         let vmex_resource_handle = system_resource_handle
             .as_ref()
@@ -662,6 +685,7 @@ impl BuiltinEnvironment {
             debug_resource,
             mmio_resource,
             hypervisor_resource,
+            info_resource,
             irq_resource,
             #[cfg(target_arch = "x86_64")]
             ioport_resource: _ioport_resource,

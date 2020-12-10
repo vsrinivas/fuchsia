@@ -106,6 +106,14 @@ test_package("policy-integration-tests") {
       dest = "hypervisor_resource_allowed.cmx"
     },
     {
+      path = "meta/info_resource.cmx"
+      dest = "info_resource_denied.cmx"
+    },
+    {
+      path = "meta/info_resource.cmx"
+      dest = "info_resource_allowed.cmx"
+    },
+    {
       path = "meta/root_resource.cmx"
       dest = "root_resource_denied.cmx"
     },
