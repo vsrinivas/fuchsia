@@ -2,6 +2,106 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/dart.gni")
+import("//build/sdk/sdk_atom.gni")
+
+kernel_snapshot = "//prebuilt/third_party/dart/$host_os-$host_cpu/bin/snapshots/gen_kernel.dart.snapshot"
+
+# TODO(alainv): Move that to dart_tool.gni to make it more generic.
+sdk_atom("kernel_compiler_sdk") {
+  id = "sdk://tools/dart_kernel_compiler"
+  category = "partner"
+
+  meta = {
+    schema = "host_tool"
+    dest = "tools/dart_kernel_compiler-meta.json"
+    value = {
+      type = "host_tool"
+      name = "dart_kernel_compiler"
+      root = "tools"
+      files = [
+        "tools/dart",
+        "tools/dart_prebuilts/dart_runner/platform_strong.dill",
+        "tools/dart_prebuilts/flutter_runner/platform_strong.dill",
+        "tools/dart_prebuilts/kernel_compiler.snapshot",
+        "tools/dart_prebuilts/frontend_server_tool.snapshot",
+      ]
+    }
+  }
+
+  kernel_compiler_path = kernel_snapshot
+
+  files = [
+    {
+      source = "$kernel_compiler_path"
+      dest = "tools/dart_prebuilts/kernel_compiler.snapshot"
+    },
+    {
+      source = prebuilt_dart
+      dest = "tools/dart"
+    },
+    {
+      source = "$root_out_dir/dart_runner_patched_sdk_nnbd/platform_strong.dill"
+      dest = "tools/dart_prebuilts/dart_runner/platform_strong.dill"
+    },
+    {
+      source =
+          "$root_out_dir/flutter_runner_patched_sdk_nnbd/platform_strong.dill"
+      dest = "tools/dart_prebuilts/flutter_runner/platform_strong.dill"
+    },
+    {
+      source = rebase_path(
+              "//prebuilt/third_party/flutter/${host_cpu}/debug/jit/dart_binaries/flutter_frontend_server.snapshot")
+      dest = "tools/dart_prebuilts/frontend_server_tool.snapshot"
+    },
+  ]
+
+  non_sdk_deps = [
+    "//build/dart:platform_files",
+    "//build/flutter:platform_files",
+  ]
+}
+
+sdk_atom("gen_snapshot_sdk") {
+  id = "sdk://tools/gen_snapshot"
+  category = "partner"
+
+  files_content = [
+    "tools/gen_snapshot.${current_cpu}",
+    "tools/gen_snapshot_product.${current_cpu}",
+  ]
+
+  meta = {
+    schema = "host_tool"
+    dest = "tools/gen_snapshot-meta.json"
+    value = {
+      type = "host_tool"
+      name = "gen_snapshot"
+      root = "tools"
+      target_files = {
+      }
+      if (target_cpu == "arm64") {
+        target_files.arm64 = files_content
+      } else if (target_cpu == "x64") {
+        target_files.x64 = files_content
+      } else {
+        assert(false, "Unknown CPU type: $target_cpu")
+      }
+    }
+  }
+
+  files = [
+    {
+      source = prebuilt_gen_snapshot
+      dest = "tools/gen_snapshot.${current_cpu}"
+    },
+    {
+      source = prebuilt_gen_snapshot_product
+      dest = "tools/gen_snapshot_product.${current_cpu}"
+    },
+  ]
+}
+
 group("tests") {
   testonly = true
 

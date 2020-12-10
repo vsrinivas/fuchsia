@@ -477,6 +477,8 @@ sdk("fuchsia_dart") {
   api = "fuchsia_dart.manifest"
 
   deps = [
+    "//sdk/dart:gen_snapshot_sdk($dart_toolchain)",
+    "//sdk/dart:kernel_compiler_sdk($dart_toolchain)",
     "//sdk/docs:modular_config_schema",
 
     # TODO(leetodd): remove, needed to soft transition
@@ -519,7 +521,5 @@ sdk("fuchsia_dart") {
         get_label_info(dart_package_label.fuchsia_vfs, "name") +
         "_sdk($dart_toolchain)",
     "//topaz/public/dart/fuchsia_webview_flutter:fuchsia_webview_flutter_sdk($dart_toolchain)",
-    "//topaz/runtime/dart:gen_snapshot_sdk($dart_toolchain)",
-    "//topaz/runtime/dart:kernel_compiler_sdk($host_toolchain)",
   ]
 }
