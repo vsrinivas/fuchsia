@@ -21,14 +21,14 @@ def main(argv):
     if not args.output:
         output = sys.stdout
     else:
-        output = open(args.output, 'wb')
+        output = open(args.output, 'wt')
 
     for input_file in args.input_file:
         if not os.path.exists(input_file):
             sys.stderr.write('ERROR: Missing file: %s' % input_file)
             sys.exit(1)
 
-        with open(input_file) as f:
+        with open(input_file, "rb") as f:
             input_data = f.read()
         if len(input_data) & 3 != 0:
             sys.stderr.write(

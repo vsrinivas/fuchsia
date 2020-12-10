@@ -272,7 +272,7 @@ SvgSceneDemoImage::setup(uint32_t frame_counter)
       {
         float rgba[4];
 
-        color_rgb32_to_rgba_f32(rgba, l.fill_color, l.fill_opacity);
+        color_rgb32_to_rgba_f32(rgba, l.fill_color, (float)l.fill_opacity);
         if (is_srgb)
           color_srgb_to_linear_rgb_f32(rgba);
 

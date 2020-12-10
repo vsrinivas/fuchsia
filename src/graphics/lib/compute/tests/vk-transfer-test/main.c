@@ -269,8 +269,8 @@ main(int argc, char const * argv[])
 
     .device_config = {
       .required_queues = VK_QUEUE_GRAPHICS_BIT,
-      .vendor_id       = (argc <= 2) ? 0 : strtoul(argv[1], NULL, 16),
-      .device_id       = (argc <= 3) ? 0 : strtoul(argv[2], NULL, 16),
+      .vendor_id       = (argc <= 2) ? 0 : (uint32_t)strtoul(argv[1], NULL, 16),
+      .device_id       = (argc <= 3) ? 0 : (uint32_t)strtoul(argv[2], NULL, 16),
     },
 
     .require_swapchain      = true,

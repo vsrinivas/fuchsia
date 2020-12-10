@@ -4,11 +4,10 @@
 
 # These rules are only used by the Fuchsia platform build.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
+import("//src/sys/build/components.gni")
 import("build_settings.gni")
 
 # A target providing access to Vulkan at compile time when added to deps.
@@ -136,13 +135,18 @@ graphics_compute_gtest_main_target = "//src/lib/fxl/test:gtest_main"
 #
 # Accept all variables from the GN executable() rule, as well as:
 # Variables:
-#    needs_vulkan: set to true if Vulkan is required to run the component.
-#    test_package: optional flag. True to turn this into a test package
-#      that can run with 'fx run-test' or 'fx shell runtests'. Will force
-#      |testonly| to be true.
-#    test_environments: optional list of test environments. Requires
-#      |test_package| to be true. Used to run the test in the right environment
-#      on the continuous integration bots.
+#    needs_vulkan (optional)
+#      [boolean] Set to true if Vulkan is required to run the component.
+#
+#    test_package (optional)
+#      [boolean] Set to true to turn this into a test package that can
+#      run with 'fx run-test' or 'fx shell runtests'. Will force |testonly|
+#      to be true.
+#
+#    test_environments (optional)
+#      [list of strings] A list of test environments. Requires |test_package|
+#      to be true. Used to run the test in the right environment on the
+#      continuous integration bots.
 #
 template("graphics_compute_single_component_package") {
   _component_name = target_name
@@ -156,6 +160,29 @@ template("graphics_compute_single_component_package") {
   }
 
   _binary_target = "bin_${target_name}"
+
+  # A list of scopes describing the Vulkan layers to be used.
+  # Each scope has the following schema:
+  #
+  #  loadable_modules: A list of scopes, each one must have a 'name'
+  #    key associated with the name of the loadable module implementing
+  #    the layer (e.g. 'VkLayer_krhonos_validation.so')
+  #
+  #  resources: A list of scopes with the following keys:
+  #    path: source path to the .json file describing this layer.
+  #    dest: installation part for the .json file in packages
+  #      (e.g. 'vulkan/explicit_layer.d/VkLayer_khronos_validation.json')
+  #
+  #  public_deps: A list of GN labels used to generate the files listed
+  #    above.
+  #
+  if (_needs_vulkan) {
+    _all_vulkan_layer_scopes = [
+      vulkan_validation_layers,
+      image_pipe_swapchain_fb,
+      image_pipe_swapchain_fb_skip_present,
+    ]
+  }
 
   # Generate executable target.
   executable(_binary_target) {
@@ -179,6 +206,10 @@ template("graphics_compute_single_component_package") {
         deps = []
       }
       deps += [ graphics_compute_vulkan_loader_target ]
+
+      foreach(vulkan, _all_vulkan_layer_scopes) {
+        deps += vulkan.public_deps
+      }
     }
 
     # NOTE: The package() rule *requires* that for tests, the executable's
@@ -214,60 +245,63 @@ template("graphics_compute_single_component_package") {
         "--needs-vulkan-framebuffer",
       ]
     }
+    testonly = _testonly
   }
 
-  # Create the package now.
-  package(target_name) {
-    testonly = _testonly
+  _component_target = "${target_name}_component"
+  _resource_target = "${target_name}_data"
+
+  fuchsia_component(_component_target) {
+    component_name = target_name
+    manifest = _component_manifest
     deps = [
       ":${_binary_target}",
       ":${_component_manifest_target}",
     ]
+    testonly = _testonly
+  }
 
-    if (_needs_vulkan) {
-      deps += [ graphics_compute_vulkan_loader_target ]
+  # When Vulkan is needed, use a resource() target to ensure the
+  # Vulkan layers .json files are installed properly. Otherwise
+  # use an empty group, because resource() does not support an
+  # empty list of sources/outputs.
+  if (_needs_vulkan) {
+    resource(_resource_target) {
+      testonly = _testonly
+      sources = []
+      deps = []
 
-      public_deps = []
-      loadable_modules = []
-      resources = []
-
-      public_deps += vulkan_validation_layers.public_deps
-      public_deps += image_pipe_swapchain_fb.public_deps
-      public_deps += image_pipe_swapchain_fb_skip_present.public_deps
-
-      loadable_modules += vulkan_validation_layers.loadable_modules
-      loadable_modules += image_pipe_swapchain_fb.loadable_modules
-      loadable_modules += image_pipe_swapchain_fb_skip_present.loadable_modules
-
-      resources += vulkan_validation_layers.resources
-      resources += image_pipe_swapchain_fb.resources
-      resources += image_pipe_swapchain_fb_skip_present.resources
+      foreach(vulkan, _all_vulkan_layer_scopes) {
+        foreach(resource, vulkan.resources) {
+          sources += [ resource.path ]
+        }
+        deps += vulkan.public_deps
+      }
+      outputs = [ "data/vulkan/explicit_layer.d/{{source_file_part}}" ]
     }
+  } else {
+    group(_resource_target) {
+      testonly = _testonly
+    }
+  }
 
-    meta = [
-      {
-        path = _component_manifest
-        dest = "${_component_name}.cmx"
-      },
-    ]
-
-    if (_test_package) {
-      tests = [
-        {
-          name = _component_name
-          dest = _component_name
-          manifest = _component_manifest
-          if (defined(invoker.test_environments)) {
-            environments = invoker.test_environments
-          }
-        },
+  if (_test_package) {
+    fuchsia_test_package(target_name) {
+      test_components = [ ":$_component_target" ]
+      deps = [ ":$_resource_target" ]
+      if (defined(invoker.test_environments)) {
+        test_specs = {
+          environments = invoker.test_environments
+        }
+      }
+    }
+  } else {
+    fuchsia_package(target_name) {
+      deps = [
+        ":$_component_target",
+        ":$_resource_target",
       ]
-    } else {
-      binaries = [
-        {
-          name = _component_name
-        },
-      ]
+      testonly = _testonly
     }
   }
 }

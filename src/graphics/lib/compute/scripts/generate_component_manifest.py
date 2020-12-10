@@ -42,15 +42,10 @@ def main(argv):
     needs_vulkan = args.needs_vulkan or args.needs_vulkan_framebuffer
 
     # Output is a JSON dictionary.
-    if args.type in ('test'):
-        binary_path = 'test/'
-    else:
-        binary_path = 'bin/'
-
     content = {
         'include': ['sdk/lib/diagnostics/syslog/client.shard.cmx'],
         'program': {
-            'binary': binary_path + args.name
+            'binary': 'bin/' + args.name
         },
         'sandbox': {
             'features': ['isolated-temp',],

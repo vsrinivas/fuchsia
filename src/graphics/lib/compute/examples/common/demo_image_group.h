@@ -41,7 +41,7 @@ class DemoImageGroup {
   getNextImage(uint32_t * frame_index)
   {
     *frame_index = current_;
-    current_     = (current_ + 1) % images_.size();
+    current_     = static_cast<uint32_t>(((current_ + 1) % images_.size()));
     return *images_[*frame_index];
   }
 
@@ -64,7 +64,7 @@ class DemoImageGroup {
  protected:
   DemoImage::Factory                      factory_;
   std::vector<std::unique_ptr<DemoImage>> images_;
-  size_t                                  current_ = 0;
+  uint32_t                                current_ = 0;
 };
 
 #endif  // SRC_GRAPHICS_LIB_COMPUTE_EXAMPLES_COMMON_DEMO_IMAGE_GROUP_H_
