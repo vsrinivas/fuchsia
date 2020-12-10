@@ -8,7 +8,7 @@ use {
         startup,
     },
     anyhow::{format_err, Context, Error},
-    cm_rust::{CapabilityTypeName, FidlIntoNative},
+    cm_rust::{CapabilityName, CapabilityTypeName, FidlIntoNative},
     cm_types::Url,
     fidl_fuchsia_component_internal::{
         self as component_internal, BuiltinPkgResolver, OutDirContents,
@@ -115,6 +115,7 @@ pub struct JobPolicyAllowlists {
 pub enum CapabilityAllowlistSource {
     Self_,
     Framework,
+    Capability,
 }
 
 /// Allowlist key for capability routing policy. Part of the runtime
@@ -122,10 +123,10 @@ pub enum CapabilityAllowlistSource {
 /// whether a capability exists in the policy map or not.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct CapabilityAllowlistKey {
-    source_moniker: ExtendedMoniker,
-    source_name: String,
-    source: CapabilityAllowlistSource,
-    capability: CapabilityTypeName,
+    pub source_moniker: ExtendedMoniker,
+    pub source_name: CapabilityName,
+    pub source: CapabilityAllowlistSource,
+    pub capability: CapabilityTypeName,
 }
 
 impl Default for RuntimeConfig {
@@ -277,13 +278,14 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
                             .ok_or(Error::new(PolicyConfigError::EmptySourceMoniker))?,
                     )?;
                     let source_name = if let Some(source_name) = e.source_name.as_ref() {
-                        Ok(source_name.clone())
+                        Ok(CapabilityName(source_name.clone()))
                     } else {
                         Err(PolicyConfigError::EmptyCapabilitySourceName)
                     }?;
                     let source = match e.source {
                         Some(fsys::Ref::Self_(_)) => Ok(CapabilityAllowlistSource::Self_),
                         Some(fsys::Ref::Framework(_)) => Ok(CapabilityAllowlistSource::Framework),
+                        Some(fsys::Ref::Capability(_)) => Ok(CapabilityAllowlistSource::Capability),
                         _ => Err(Error::new(PolicyConfigError::InvalidSourceCapability)),
                     }?;
 
@@ -502,7 +504,7 @@ mod tests {
                     capability_policy: HashMap::from_iter(vec![
                         (CapabilityAllowlistKey {
                             source_moniker: ExtendedMoniker::ComponentManager,
-                            source_name: "fuchsia.kernel.RootResource".to_string(),
+                            source_name: CapabilityName::from("fuchsia.kernel.RootResource"),
                             source: CapabilityAllowlistSource::Self_,
                             capability: CapabilityTypeName::Protocol,
                         },
@@ -514,7 +516,7 @@ mod tests {
                         ),
                         (CapabilityAllowlistKey {
                             source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
-                            source_name: "running".to_string(),
+                            source_name: CapabilityName::from("running"),
                             source: CapabilityAllowlistSource::Framework,
                             capability: CapabilityTypeName::Event,
                         },

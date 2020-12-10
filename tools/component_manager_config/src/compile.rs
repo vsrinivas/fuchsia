@@ -123,6 +123,7 @@ impl Into<component_internal::AllowlistedCapability> for CapabilityTypeName {
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum CapabilityFrom {
+    Capability,
     Component,
     Framework,
 }
@@ -130,6 +131,9 @@ pub enum CapabilityFrom {
 impl Into<fsys::Ref> for CapabilityFrom {
     fn into(self) -> fsys::Ref {
         match &self {
+            CapabilityFrom::Capability => {
+                fsys::Ref::Capability(fsys::CapabilityRef { name: "".into() })
+            }
             CapabilityFrom::Component => fsys::Ref::Self_(fsys::SelfRef {}),
             CapabilityFrom::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
         }
