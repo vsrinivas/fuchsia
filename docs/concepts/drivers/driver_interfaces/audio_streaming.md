@@ -18,6 +18,7 @@ discussed in this document. Additionally, the information present in audio
 outputs streams is exclusive to the application owner of the stream. Mixing of
 audio is not a service provided by the audio stream interface.
 
+{% comment %}
 > TODO(fxbug.dev/35523):
 > The pre-FIDL serialization still in use as of 2020/02/04
 > is defined in [audio_streaming_original.md](audio_streaming_original.md),
@@ -26,6 +27,7 @@ audio is not a service provided by the audio stream interface.
 
 > TODO: extend this interface to support the concept of low-latency hardware
 > mixers.
+{% endcomment %}
 
 ### Definitions
 
@@ -62,9 +64,11 @@ audio is not a service provided by the audio stream interface.
 :                               : these interfaces to communicate with an      :
 :                               : audio driver/device.                         :
 
+{% comment %}
 > TODO: do we need to extend this interface to support non-linear audio sample
 > encodings? This may be important for telephony oriented microphones which
 > deliver &mu;-law encoded samples.
+{% endcomment %}
 
 ### Basic Operation
 
@@ -83,9 +87,11 @@ The stream channel is used for most command and control tasks, including:
 *   Plug detection notification
 *   Access control capability detection and signalling
 
+{% comment %}
 > TODO: Should plug/unplug detection be done by sending notifications over the
 > stream channel (as it is today), or by publishing/unpublishing the device
 > nodes (and closing all channels in the case of unpublished channels)?
+{% endcomment %}
 
 In order to actually send or receive audio information on the stream, the
 specific format to be used must first be set. The response to a successful
@@ -225,7 +231,7 @@ Notes:
 *   When encoding a smaller sample size in a larger channel (e.g. 20 or 24bit in
     32), the most significant bits of the 32 bit container are used while the
     least significant bits will be ignored (left justified). e.g. a 20 bit sample would be mapped
-    onto the range [12,31] (bits [0,11] would be ignored) of the 32 bit container.
+    onto the range \[12,31\] (bits \[0,11\] would be ignored) of the 32 bit container.
 
 ### Setting the desired stream format
 
@@ -259,7 +265,7 @@ dynamically reported as properties of codecs using protocols such as Intel HDA
 or the USB Audio specifications, or reported by down stream devices using
 mechanisms such as EDID when using HDMI or DisplayPort interconnects.
 
-## Hardware Gain Control
+## Hardware gain control
 
 ### Hardware gain control capability reporting
 
@@ -317,12 +323,12 @@ plugged or unplugged at any given point in time. For example, a set of USB
 headphones may publish a new output stream when connected to USB, but choose to
 be "hardwired" from a plug detection standpoint. A different USB audio adapter
 with a standard 3.5mm phono jack might publish an output stream when connected
-via USB, but choose to change its plugged/unplugged state as the user plugs and
-unplugs an analog device via the 3.5mm jack.
+with USB, but choose to change its plugged/unplugged state as the user plugs and
+unplugs an analog device with the 3.5mm jack.
 
 The ability to query the currently plugged or unplugged state of a stream, and
 to register for asynchonous notifications of plug state changes (if supported)
-is handled via plug detection messages.
+is handled through plug detection messages.
 
 ### Plug detect capabilities
 
@@ -360,14 +366,16 @@ by applications. Driver with `CAN_ASYNC_NOTIFY` set will reply to the first
 
 ## Stream purpose and association
 
+{% comment %}
 > TODO: specify how drivers can indicate the general "purpose" of an audio
 > stream in the system (if known), as well as its relationship to other streams
 > (if known). For example, an embedded target like a phone or a tablet needs to
 > indicate which output stream is the built-in speaker vs. which is the headset
 > jack output. In addition, it needs to make clear which input stream is the
 > microphone associated with the headset output vs. the builtin speaker.
+{% endcomment %}
 
-## Ring-Buffer Channels
+## Ring-Buffer channels
 
 ### Overview
 
@@ -435,7 +443,7 @@ To send or receive audio, the application must first establish a shared memory
 buffer. This is done by sending an `CreateRingBuffer` request over the
 ring-buffer channel. This may only be done while the ring-buffer is stopped.
 
-If the channel created via `CreateRingBuffer` is closed by the driver for instance
+If the channel created with `CreateRingBuffer` is closed by the driver for instance
 because a buffer has already been established and the ring-buffer has already
 been started, it must not either stop the ring-buffer, or discard the
 existing shared memory. If the application requests a new buffer after having
@@ -455,12 +463,14 @@ size of the ring buffer. Clients must not assume that the size of the buffer
 must ensure that the size of the ring buffer is an integral number of audio
 frames.
 
+{% comment %}
 > TODO : Is it reasonable to require that drivers produce buffers which are an
 > integral number of audio frames in length? It certainly makes the audio
 > client's life easier (client code never needs to split or re-assemble a frame
 > before processing), but it might make it difficult for some audio hardware to
 > meet its requirements without making the buffer significantly larger than the
 > client asked for.
+{% endcomment %}
 
 #### `clock_recovery_notifications_per_ring`
 
@@ -498,7 +508,7 @@ established using the `CreateRingBuffer` operation.
 Upon successfully starting a stream, drivers must provide their best estimate of
 the time at which their hardware began to transmit or capture the stream in the
 `start_time` field of the response. This time stamp must be taken from the clock
-exposed via the
+exposed with the
 [zx_clock_get_monotonic()](/docs/reference/syscalls/clock_get_monotonic.md)
 syscall. Along with the FIFO depth property of the ring buffer, this timestamp
 allows applications to send or receive stream data without the need for periodic
@@ -510,15 +520,17 @@ used to synchronize the
 [monotonic](/docs/reference/syscalls/clock_get_monotonic.md) timelines across
 the cohort of synchronized devices).
 
+{% comment %}
 > TODO: Redefine `start_time` to allow it to be an arbitrary 'audio stream
 > clock' instead of the `zx_clock_get_monotonic()` clock. If the stream clock is
 > made to count in audio frames since start, then this `start_time` can be
 > replaced with the terms for a segment of a piecewise linear transformation
-> which can be subsequently updated via notifications sent by the driver in the
+> which can be subsequently updated through notifications sent by the driver in the
 > case that the audio hardware clock is rooted in a different oscillator from
 > the system's tick counter. Clients can then use this transformation either to
 > control the rate of consumption of input streams, or to determine where to
 > sample in the input stream to effect clock correction.
+{% endcomment %}
 
 Upon successfully starting a stream, drivers must guarantee that no position
 notifications will be sent before the start response has been enqueued into the
@@ -530,7 +542,7 @@ response has been enqueued.
 
 ### Position notifications
 
-If requested by the client via a non-zero `clock_recovery_notifications_per_ring` in the
+If requested by the client through a non-zero `clock_recovery_notifications_per_ring` in the
 `CreateRingBuffer` operation, the driver will
 periodically send updates to the client informing it of its current production
 or consumption position in the buffer. This position is expressed in bytes in
@@ -574,6 +586,7 @@ mechanism by which its rate would be fine-tuned, then it should return the value
 information (in addition to `AUDIO_RB_POSITION_NOTIFY` messages) to simplify the
 process of recovering the audio device's clock.
 
+{% comment %}
 > TODO: extend this section to include how clock recovery occurs, and how this
 > is exposed to clients. Also, detail how slewable oscillators are discovered
 > and controlled. We may need rate-change notifications to clients of slewable
@@ -588,10 +601,13 @@ process of recovering the audio device's clock.
 > wide clock identifier and provide the ability to obtain a channel on which
 > clock recovery notifications can be delivered to clients and hardware slewing
 > command can be sent from clients to the clock.
+{% endcomment %}
 
 ### Error notifications
 
-> TODO: define these and what driver behavior should be, if/when they occur.
+{% comment %}
+TODO: define these and what driver behavior should be, if/when they occur.
+{% endcomment %}
 
 ### Unexpected client termination
 
