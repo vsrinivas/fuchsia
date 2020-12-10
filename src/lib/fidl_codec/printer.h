@@ -66,7 +66,7 @@ class PrettyPrinter {
   void set_header_on_every_line(bool header_on_every_line) {
     header_on_every_line_ = header_on_every_line;
   }
-  int remaining_size() const { return remaining_size_; }
+  size_t remaining_size() const { return remaining_size_; }
 
   bool LineEmpty() const { return need_to_print_header_; }
 
@@ -254,7 +254,7 @@ class PrettyPrinter {
   bool need_to_print_header_ = true;
   int line_header_size_ = 0;
   int tabulations_;
-  int remaining_size_ = 0;
+  size_t remaining_size_ = 0;
 };
 
 inline PrettyPrinter& ResetColor(PrettyPrinter& printer) {

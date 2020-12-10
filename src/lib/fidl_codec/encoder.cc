@@ -89,8 +89,8 @@ void Encoder::EncodeEnvelope(const Value* value, const Type* for_type) {
   Encoder envelope_encoder;
   envelope_encoder.AllocateObject(for_type->InlineSize());
   value->Visit(&envelope_encoder, for_type);
-  WriteValue<uint32_t>(envelope_encoder.bytes_.size());
-  WriteValue<uint32_t>(envelope_encoder.handles_.size());
+  WriteValue<uint32_t>(static_cast<uint32_t>(envelope_encoder.bytes_.size()));
+  WriteValue<uint32_t>(static_cast<uint32_t>(envelope_encoder.handles_.size()));
   WriteValue<uint64_t>(UINTPTR_MAX);
   current_offset_ = AllocateObject(envelope_encoder.bytes_.size());
   WriteData(envelope_encoder.bytes_);
@@ -138,7 +138,7 @@ void Encoder::VisitDoubleValue(const DoubleValue* node, const Type* for_type) {
   FX_DCHECK(for_type != nullptr);
   size_t size = for_type->InlineSize();
   if (size == sizeof(float)) {
-    float value = node->value();
+    float value = static_cast<float>(node->value());
     WriteData(reinterpret_cast<const uint8_t*>(&value), size);
   } else {
     double value = node->value();

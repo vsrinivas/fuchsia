@@ -40,8 +40,8 @@ void NullValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitNullValue(this, for_type);
 }
 
-int RawValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {
-  return (data_.size() == 0) ? 0 : static_cast<int>(data_.size()) * 3 - 1;
+size_t RawValue::DisplaySize(const Type* /*for_type*/, size_t /*remaining_size*/) const {
+  return (data_.size() == 0) ? 0 : data_.size() * 3 - 1;
 }
 
 void RawValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) const {
@@ -63,7 +63,7 @@ void RawValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitRawValue(this, for_type);
 }
 
-int BoolValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {
+size_t BoolValue::DisplaySize(const Type* /*for_type*/, size_t /*remaining_size*/) const {
   constexpr int kTrueSize = 4;
   constexpr int kFalseSize = 5;
   return value_ ? kTrueSize : kFalseSize;
@@ -81,7 +81,7 @@ uint8_t IntegerValue::GetUint8Value() const {
   return (!negative_ && (absolute_value_ < 0x100)) ? static_cast<uint8_t>(absolute_value_) : 0;
 }
 
-int IntegerValue::DisplaySize(const Type* for_type, int /*remaining_size*/) const {
+size_t IntegerValue::DisplaySize(const Type* for_type, size_t /*remaining_size*/) const {
   std::stringstream dummyStream;
   auto dummyPrinter = PrettyPrinter(dummyStream, WithoutColors, true, "", INT_MAX, false);
   for_type->PrettyPrint(this, dummyPrinter);
@@ -97,7 +97,7 @@ void IntegerValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitIntegerValue(this, for_type);
 }
 
-int DoubleValue::DisplaySize(const Type* for_type, int /*remaining_size*/) const {
+size_t DoubleValue::DisplaySize(const Type* for_type, size_t /*remaining_size*/) const {
   return std::to_string(value_).size();
 }
 
@@ -110,8 +110,8 @@ void DoubleValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitDoubleValue(this, for_type);
 }
 
-int StringValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {
-  return static_cast<int>(string_.size()) + 2;  // The two quotes.
+size_t StringValue::DisplaySize(const Type* /*for_type*/, size_t /*remaining_size*/) const {
+  return string_.size() + 2;  // The two quotes.
 }
 
 void StringValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) const {
@@ -130,7 +130,7 @@ bool HandleValue::NeedsToLoadHandleInfo(zx_koid_t tid,
   return handle_semantic->NeedsToLoadHandleInfo(tid, handle_.handle);
 }
 
-int HandleValue::DisplaySize(const Type* /*for_type*/, int /*remaining_size*/) const {
+size_t HandleValue::DisplaySize(const Type* /*for_type*/, size_t /*remaining_size*/) const {
   return std::to_string(handle_.handle).size();
 }
 
@@ -147,13 +147,13 @@ bool UnionValue::NeedsToLoadHandleInfo(zx_koid_t tid,
   return value_->NeedsToLoadHandleInfo(tid, handle_semantic);
 }
 
-int UnionValue::DisplaySize(const Type* for_type, int remaining_size) const {
+size_t UnionValue::DisplaySize(const Type* for_type, size_t remaining_size) const {
   // Two characters for the opening brace ("{ ") + three characters for equal
   // (" = ") and two characters for the closing brace (" }").
   constexpr int kExtraSize = 7;
-  int size = static_cast<int>(member_.name().size()) + kExtraSize;
+  size_t size = member_.name().size() + kExtraSize;
   // Two characters for ": ".
-  size += static_cast<int>(member_.type()->Name().size()) + 2;
+  size += member_.type()->Name().size() + 2;
   size += value_->DisplaySize(member_.type(), remaining_size - size);
   return size;
 }
@@ -209,8 +209,8 @@ bool StructValue::NeedsToLoadHandleInfo(zx_koid_t tid,
   return false;
 }
 
-int StructValue::DisplaySize(const Type* for_type, int remaining_size) const {
-  int size = 0;
+size_t StructValue::DisplaySize(const Type* for_type, size_t remaining_size) const {
+  size_t size = 0;
   for (const auto& member : struct_definition_.members()) {
     auto it = fields_.find(member.get());
     if (it == fields_.end())
@@ -218,9 +218,9 @@ int StructValue::DisplaySize(const Type* for_type, int remaining_size) const {
     // Two characters for the separator ("{ " or ", ") and three characters for
     // equal (" = ").
     constexpr int kExtraSize = 5;
-    size += static_cast<int>(member->name().size()) + kExtraSize;
+    size += member->name().size() + kExtraSize;
     // Two characters for ": ".
-    size += static_cast<int>(member->type()->Name().size()) + 2;
+    size += member->type()->Name().size() + 2;
     size += it->second->DisplaySize(member->type(), remaining_size - size);
     if (size > remaining_size) {
       return size;
@@ -288,17 +288,17 @@ bool VectorValue::NeedsToLoadHandleInfo(zx_koid_t tid,
   return false;
 }
 
-int VectorValue::DisplaySize(const Type* for_type, int remaining_size) const {
+size_t VectorValue::DisplaySize(const Type* for_type, size_t remaining_size) const {
   FX_DCHECK(for_type != nullptr);
   if (values_.empty()) {
     return 2;  // The two brackets.
   }
   if (is_string_) {
-    return static_cast<int>(values_.size() + 2);  // The string and the two quotes.
+    return values_.size() + 2;  // The string and the two quotes.
   }
   const Type* component_type = for_type->GetComponentType();
   FX_DCHECK(component_type != nullptr);
-  int size = 0;
+  size_t size = 0;
   for (const auto& value : values_) {
     // Two characters for the separator ("[ " or ", ").
     size += value->DisplaySize(component_type, remaining_size - size) + 2;
@@ -352,7 +352,7 @@ void VectorValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) cons
     {
       Indent indent(printer);
       for (const auto& value : values_) {
-        int value_size = value->DisplaySize(component_type, printer.remaining_size());
+        size_t value_size = value->DisplaySize(component_type, printer.remaining_size());
         if (!printer.LineEmpty()) {
           if (value_size + 3 > printer.remaining_size()) {
             printer << "\n";
@@ -391,17 +391,17 @@ bool TableValue::NeedsToLoadHandleInfo(zx_koid_t tid,
   return false;
 }
 
-int TableValue::DisplaySize(const Type* for_type, int remaining_size) const {
-  int size = 0;
+size_t TableValue::DisplaySize(const Type* for_type, size_t remaining_size) const {
+  size_t size = 0;
   for (const auto& member : table_definition_.members()) {
     if ((member != nullptr) && !member->reserved()) {
       auto it = members_.find(member.get());
       if ((it == members_.end()) || (it->second == nullptr) || it->second->IsNull())
         continue;
       // Two characters for the separator ("{ " or ", "), three characters for " = ".
-      size += static_cast<int>(member->name().size()) + 2 + 3;
+      size += member->name().size() + 2 + 3;
       // Two characters for ": ".
-      size += static_cast<int>(member->type()->Name().size()) + 2;
+      size += member->type()->Name().size() + 2;
       size += it->second->DisplaySize(member->type(), remaining_size - size);
       if (size > remaining_size) {
         return size;
@@ -414,7 +414,7 @@ int TableValue::DisplaySize(const Type* for_type, int remaining_size) const {
 }
 
 void TableValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) const {
-  int display_size = DisplaySize(for_type, printer.remaining_size());
+  size_t display_size = DisplaySize(for_type, printer.remaining_size());
   if (display_size == 2) {
     printer << "{}";
   } else if (display_size <= printer.remaining_size()) {
@@ -489,7 +489,9 @@ bool FidlMessageValue::NeedsToLoadHandleInfo(zx_koid_t tid,
   return false;
 }
 
-int FidlMessageValue::DisplaySize(const Type* for_type, int remaining_size) const { return 0; }
+size_t FidlMessageValue::DisplaySize(const Type* for_type, size_t remaining_size) const {
+  return 0;
+}
 
 void FidlMessageValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) const {
   PrintMessage(printer);

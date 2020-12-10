@@ -69,7 +69,7 @@ class Value {
   // Remaining size is just an optimization parameter. It avoids to compute the
   // whole display size for an object: the computation is stopped as soon as we
   // find that the object doesn't fit.
-  virtual int DisplaySize(const Type* for_type, int remaining_size) const = 0;
+  virtual size_t DisplaySize(const Type* for_type, size_t remaining_size) const = 0;
 
   // Pretty print of the value.
   virtual void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const = 0;
@@ -84,7 +84,7 @@ class InvalidValue : public Value {
  public:
   InvalidValue() = default;
 
-  int DisplaySize(const Type* for_type, int remaining_size) const override {
+  size_t DisplaySize(const Type* for_type, size_t remaining_size) const override {
     constexpr int kInvalidSize = 7;
     return kInvalidSize;  // length of "invalid"
   }
@@ -103,7 +103,7 @@ class NullValue : public Value {
 
   bool IsNull() const override { return true; }
 
-  int DisplaySize(const Type* for_type, int remaining_size) const override {
+  size_t DisplaySize(const Type* for_type, size_t remaining_size) const override {
     constexpr int kNullSize = 4;
     return kNullSize;  // length of "null"
   }
@@ -122,7 +122,7 @@ class RawValue : public Value {
 
   const std::vector<uint8_t>& data() const { return data_; }
 
-  int DisplaySize(const Type* for_type, int remaining_size) const override;
+  size_t DisplaySize(const Type* for_type, size_t remaining_size) const override;
 
   void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
@@ -139,7 +139,7 @@ class BoolValue : public Value {
 
   uint8_t value() const { return value_; }
 
-  int DisplaySize(const Type* for_type, int remaining_size) const override;
+  size_t DisplaySize(const Type* for_type, size_t remaining_size) const override;
 
   void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
@@ -170,14 +170,14 @@ class IntegerValue : public Value {
   }
 
   bool GetDoubleValue(double* result) const override {
-    *result = absolute_value_;
+    *result = static_cast<double>(absolute_value_);
     if (negative_) {
       *result = -(*result);
     }
     return true;
   }
 
-  int DisplaySize(const Type* for_type, int remaining_size) const override;
+  size_t DisplaySize(const Type* for_type, size_t remaining_size) const override;
 
   void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
@@ -210,7 +210,7 @@ class DoubleValue : public Value {
     return true;
   }
 
-  int DisplaySize(const Type* for_type, int remaining_size) const override;
+  size_t DisplaySize(const Type* for_type, size_t remaining_size) const override;
 
   void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
@@ -229,7 +229,7 @@ class StringValue : public Value {
 
   const StringValue* AsStringValue() const override { return this; }
 
-  int DisplaySize(const Type* for_type, int remaining_size) const override;
+  size_t DisplaySize(const Type* for_type, size_t remaining_size) const override;
 
   void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
@@ -242,8 +242,7 @@ class StringValue : public Value {
 // A handle.
 class HandleValue : public Value {
  public:
-  HandleValue(const zx_handle_disposition_t& handle)
-      : handle_(handle) {}
+  explicit HandleValue(const zx_handle_disposition_t& handle) : handle_(handle) {}
 
   const zx_handle_disposition_t& handle() const { return handle_; }
 
@@ -252,7 +251,7 @@ class HandleValue : public Value {
   bool NeedsToLoadHandleInfo(zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;
 
-  int DisplaySize(const Type* for_type, int remaining_size) const override;
+  size_t DisplaySize(const Type* for_type, size_t remaining_size) const override;
 
   void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
@@ -274,7 +273,7 @@ class UnionValue : public Value {
   bool NeedsToLoadHandleInfo(zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;
 
-  int DisplaySize(const Type* for_type, int remaining_size) const override;
+  size_t DisplaySize(const Type* for_type, size_t remaining_size) const override;
 
   void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
@@ -311,7 +310,7 @@ class StructValue : public Value {
   bool NeedsToLoadHandleInfo(zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;
 
-  int DisplaySize(const Type* for_type, int remaining_size) const override;
+  size_t DisplaySize(const Type* for_type, size_t remaining_size) const override;
 
   void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
@@ -353,7 +352,7 @@ class VectorValue : public Value {
   bool NeedsToLoadHandleInfo(zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;
 
-  int DisplaySize(const Type* for_type, int remaining_size) const override;
+  size_t DisplaySize(const Type* for_type, size_t remaining_size) const override;
 
   void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
@@ -386,7 +385,7 @@ class TableValue : public Value {
   bool NeedsToLoadHandleInfo(zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;
 
-  int DisplaySize(const Type* for_type, int remaining_size) const override;
+  size_t DisplaySize(const Type* for_type, size_t remaining_size) const override;
 
   void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 
@@ -452,7 +451,7 @@ class FidlMessageValue : public Value {
   bool NeedsToLoadHandleInfo(zx_koid_t tid,
                              semantic::HandleSemantic* handle_semantic) const override;
 
-  int DisplaySize(const Type* for_type, int remaining_size) const override;
+  size_t DisplaySize(const Type* for_type, size_t remaining_size) const override;
 
   void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
 

@@ -31,7 +31,8 @@ class JsonVisitor : public Visitor {
   void VisitNullValue(const NullValue* node, const Type* for_type) override { result_->SetNull(); }
 
   void VisitStringValue(const StringValue* node, const Type* for_type) override {
-    result_->SetString(node->string().data(), node->string().size(), *allocator_);
+    result_->SetString(node->string().data(),
+                       static_cast<rapidjson::SizeType>(node->string().size()), *allocator_);
   }
 
   void VisitUnionValue(const UnionValue* node, const Type* for_type) override {

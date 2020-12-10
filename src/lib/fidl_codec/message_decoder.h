@@ -123,14 +123,14 @@ class MessageDecoderDispatcher {
 // Helper to decode a message (request or response). It generates a StructValue.
 class MessageDecoder {
  public:
-  MessageDecoder(const uint8_t* bytes, uint32_t num_bytes, const zx_handle_disposition_t* handles,
+  MessageDecoder(const uint8_t* bytes, uint64_t num_bytes, const zx_handle_disposition_t* handles,
                  uint32_t num_handles, std::ostream& error_stream);
   MessageDecoder(MessageDecoder* container, uint64_t offset, uint64_t num_bytes_remaining,
                  uint64_t num_handles_remaining);
 
-  uint32_t absolute_offset() const { return absolute_offset_; }
+  uint64_t absolute_offset() const { return absolute_offset_; }
 
-  uint32_t num_bytes() const { return num_bytes_; }
+  uint64_t num_bytes() const { return num_bytes_; }
 
   const zx_handle_disposition_t* handle_pos() const { return handle_pos_; }
 
@@ -216,10 +216,10 @@ class MessageDecoder {
 
  private:
   // The absolute offset in the main buffer.
-  const uint32_t absolute_offset_ = 0;
+  const uint64_t absolute_offset_ = 0;
 
   // The size of the message bytes.
-  const uint32_t num_bytes_;
+  const uint64_t num_bytes_;
 
   // The start of the message.
   const uint8_t* const start_byte_pos_;

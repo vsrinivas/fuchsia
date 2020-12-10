@@ -203,7 +203,8 @@ void Struct::DecodeTypes(std::string_view container_name, const char* size_name,
     enclosing_library_->FieldNotFound(container_name, name_, v1_name);
   } else {
     const rapidjson::Value& v1 = (*json_definition)[v1_name];
-    size_ = enclosing_library_->ExtractUint64(&v1, container_name, name_, "inline_size");
+    size_ = static_cast<uint32_t>(
+        enclosing_library_->ExtractUint64(&v1, container_name, name_, "inline_size"));
   }
 
   if (!json_definition->HasMember(member_name)) {
@@ -493,7 +494,8 @@ uint32_t Library::ExtractUint32(const rapidjson::Value* json_definition,
     FieldNotFound(container_type, container_name, field_name);
     return 0;
   }
-  return std::strtoll((*json_definition)[field_name].GetString(), nullptr, kDecimalBase);
+  return static_cast<uint32_t>(
+      std::strtoul((*json_definition)[field_name].GetString(), nullptr, kDecimalBase));
 }
 
 std::unique_ptr<Type> Library::ExtractScalarType(const rapidjson::Value* json_definition,

@@ -342,10 +342,10 @@ void Uint8Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         printer << Blue << absolute << ResetColor;
         break;
       case Kind::kHexaDecimal:
-        printer.DisplayHexa8(absolute);
+        printer.DisplayHexa8(static_cast<uint8_t>(absolute));
         break;
       case Kind::kPacketGuestVcpuType:
-        printer.DisplayPacketGuestVcpuType(absolute);
+        printer.DisplayPacketGuestVcpuType(static_cast<uint8_t>(absolute));
     }
   }
 }
@@ -374,10 +374,10 @@ void Uint16Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         printer << Blue << absolute << ResetColor;
         break;
       case Kind::kHexaDecimal:
-        printer.DisplayHexa16(absolute);
+        printer.DisplayHexa16(static_cast<uint16_t>(absolute));
         break;
       case Kind::kPacketPageRequestCommand:
-        printer.DisplayPacketPageRequestCommand(absolute);
+        printer.DisplayPacketPageRequestCommand(static_cast<uint16_t>(absolute));
         break;
     }
   }
@@ -426,46 +426,46 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
     FX_DCHECK(!negative);
     switch (kind_) {
       case Kind::kBtiPerm:
-        printer.DisplayBtiPerm(absolute);
+        printer.DisplayBtiPerm(static_cast<uint32_t>(absolute));
         break;
       case Kind::kCachePolicy:
-        printer.DisplayCachePolicy(absolute);
+        printer.DisplayCachePolicy(static_cast<uint32_t>(absolute));
         break;
       case Kind::kClock:
-        printer.DisplayClock(absolute);
+        printer.DisplayClock(static_cast<uint32_t>(absolute));
         break;
       case Kind::kDecimal:
         printer << Blue << absolute << ResetColor;
         break;
       case Kind::kExceptionState:
-        printer.DisplayExceptionState(absolute);
+        printer.DisplayExceptionState(static_cast<uint32_t>(absolute));
         break;
       case Kind::kHexaDecimal:
-        printer.DisplayHexa32(absolute);
+        printer.DisplayHexa32(static_cast<uint32_t>(absolute));
         break;
       case Kind::kObjectInfoTopic:
-        printer.DisplayObjectInfoTopic(absolute);
+        printer.DisplayObjectInfoTopic(static_cast<uint32_t>(absolute));
         break;
       case Kind::kPciBarType:
-        printer.DisplayPciBarType(absolute);
+        printer.DisplayPciBarType(static_cast<uint32_t>(absolute));
         break;
       case Kind::kProfileInfoFlags:
-        printer.DisplayProfileInfoFlags(absolute);
+        printer.DisplayProfileInfoFlags(static_cast<uint32_t>(absolute));
         break;
       case Kind::kPropType:
-        printer.DisplayPropType(absolute);
+        printer.DisplayPropType(static_cast<uint32_t>(absolute));
         break;
       case Kind::kPortPacketType:
-        printer.DisplayPortPacketType(absolute);
+        printer.DisplayPortPacketType(static_cast<uint32_t>(absolute));
         break;
       case Kind::kRights:
-        printer.DisplayRights(absolute);
+        printer.DisplayRights(static_cast<uint32_t>(absolute));
         break;
       case Kind::kSignals:
-        printer.DisplaySignals(absolute);
+        printer.DisplaySignals(static_cast<uint32_t>(absolute));
         break;
       case Kind::kStatus:
-        printer.DisplayStatus(absolute);
+        printer.DisplayStatus(static_cast<uint32_t>(absolute));
         break;
     }
   }
@@ -908,7 +908,8 @@ std::unique_ptr<Type> Type::GetType(LibraryLoader* loader, const rapidjson::Valu
   }
   if (kind == "array") {
     const rapidjson::Value& element_type = type["element_type"];
-    uint32_t element_count = std::strtol(type["element_count"].GetString(), nullptr, kDecimalBase);
+    uint32_t element_count = static_cast<uint32_t>(
+        std::strtol(type["element_count"].GetString(), nullptr, kDecimalBase));
     return std::make_unique<ArrayType>(GetType(loader, element_type), element_count);
   }
   if (kind == "vector") {
