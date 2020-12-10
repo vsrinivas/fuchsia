@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 # Separated into own target, so it is easier to cleanup later.
 test("metrics-composite-latency-event") {
@@ -93,17 +93,29 @@ group("test") {
   ]
 }
 
-bootfs_test("metrics-cobalt-bootfs-test") {
-  name = "metrics-cobalt"
+fuchsia_unittest_package("metrics-cobalt-test-pkg") {
+  package_name = "metrics-cobalt"
+  executable_path = "test/metrics-cobalt"
   deps = [ ":metrics-cobalt" ]
 }
 
-bootfs_test("metrics-composite-latency-event-bootfs-test") {
-  name = "metrics-composite-latency-event"
+group("tests") {
+  testonly = true
+  deps = [
+    ":metrics-cobalt-test-pkg",
+    ":metrics-composite-latency-event-test-pkg",
+    ":metrics-inspect-test-pkg",
+  ]
+}
+
+fuchsia_unittest_package("metrics-composite-latency-event-test-pkg") {
+  package_name = "metrics-composite-latency-event"
+  executable_path = "test/metrics-composite-latency-event"
   deps = [ ":metrics-composite-latency-event" ]
 }
 
-bootfs_test("metrics-inspect-bootfs-test") {
-  name = "metrics-inspect"
+fuchsia_unittest_package("metrics-inspect-test-pkg") {
+  package_name = "metrics-inspect"
+  executable_path = "test/metrics-inspect"
   deps = [ ":metrics-inspect" ]
 }

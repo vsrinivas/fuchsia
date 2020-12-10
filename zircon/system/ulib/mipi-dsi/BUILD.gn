@@ -36,3 +36,8 @@ zx_library("mipi-dsi") {
     "//zircon/public/lib/zxc",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

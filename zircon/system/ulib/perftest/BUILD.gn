@@ -38,3 +38,8 @@ zx_library("perftest") {
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

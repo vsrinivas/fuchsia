@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("test") {
   testonly = true
@@ -45,7 +45,13 @@ test("io-scheduler-test") {
   ]
 }
 
-bootfs_test("io-scheduler-test-bootfs-test") {
-  name = "iosched"
+fuchsia_unittest_package("io-scheduler-test-pkg") {
+  package_name = "iosched"
+  executable_path = "test/iosched"
   deps = [ ":io-scheduler-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":io-scheduler-test-pkg" ]
 }

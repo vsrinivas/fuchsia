@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("test") {
   testonly = true
@@ -55,7 +55,13 @@ test("lazy_init-test") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-bootfs_test("lazy_init-test-bootfs-test") {
-  name = "lazy_init-test"
+fuchsia_unittest_package("lazy-init-test-pkg") {
+  package_name = "lazy_init-test"
+  executable_path = "test/lazy_init-test"
   deps = [ ":lazy_init-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":lazy-init-test-pkg" ]
 }

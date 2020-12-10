@@ -89,3 +89,8 @@ group("metrics") {
     ":metrics-inspect",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

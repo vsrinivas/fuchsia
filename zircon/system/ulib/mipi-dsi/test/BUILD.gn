@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("test") {
   testonly = true
@@ -43,7 +43,13 @@ test("mipidsi") {
   ]
 }
 
-bootfs_test("mipidsi-bootfs-test") {
-  name = "mipidsi-test"
+fuchsia_unittest_package("mipidsi-test-pkg") {
+  package_name = "mipidsi-test"
+  executable_path = "test/mipidsi-test"
   deps = [ ":mipidsi" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":mipidsi-test-pkg" ]
 }

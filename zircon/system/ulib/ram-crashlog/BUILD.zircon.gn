@@ -14,3 +14,8 @@ zx_library("ram-crashlog") {
   kernel = true
   static = true
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

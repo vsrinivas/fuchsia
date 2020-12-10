@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("test") {
   testonly = true
@@ -61,21 +61,27 @@ test("libhwreg-i2c") {
   ]
 }
 
-bootfs_test("libhwreg-i2c-bootfs-test") {
-  name = "libhwreg-i2c-test"
-  deps = [ ":libhwreg-i2c" ]
-}
-
-bootfs_test("libhwreg-bootfs-test") {
-  name = "libhwreg-test"
-  deps = [ ":libhwreg" ]
-}
-
 group("tests") {
   testonly = true
 
   # NOTE: The other tests in this file are zbi tests which are
   # included from //bundles/bringup:tests. The list below should
   # instead be reachable from //src:tests.
-  deps = [ "asm:tests" ]
+  deps = [
+    ":libhwreg-i2c-test-pkg",
+    ":libhwreg-test-pkg",
+    "asm:tests",
+  ]
+}
+
+fuchsia_unittest_package("libhwreg-test-pkg") {
+  package_name = "libhwreg-test"
+  executable_path = "test/libhwreg-test"
+  deps = [ ":libhwreg" ]
+}
+
+fuchsia_unittest_package("libhwreg-i2c-test-pkg") {
+  package_name = "libhwreg-i2c-test"
+  executable_path = "test/libhwreg-i2c-test"
+  deps = [ ":libhwreg-i2c" ]
 }

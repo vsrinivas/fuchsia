@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 config("unused") {
   cflags = [ "-Wno-unneeded-internal-declaration" ]
@@ -45,7 +45,13 @@ group("test") {
   deps = [ ":lockdep-test" ]
 }
 
-bootfs_test("lockdep-test-bootfs-test") {
-  name = "lockdep-test-test"
+fuchsia_unittest_package("lockdep-test-pkg") {
+  package_name = "lockdep-test-test"
+  executable_path = "test/lockdep-test-test"
   deps = [ ":lockdep-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":lockdep-test-pkg" ]
 }

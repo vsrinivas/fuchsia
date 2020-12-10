@@ -15,3 +15,8 @@ zx_library("lazy_init") {
     deps = [ "$zx/system/ulib/zx" ]
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

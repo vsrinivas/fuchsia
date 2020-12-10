@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("test") {
   testonly = true
@@ -35,7 +35,13 @@ test("ram-crashlog") {
   ]
 }
 
-bootfs_test("ram-crashlog-bootfs-test") {
-  name = "ram-crashlog-test"
+fuchsia_unittest_package("ram-crashlog-test-pkg") {
+  package_name = "ram-crashlog-test"
+  executable_path = "test/ram-crashlog-test"
   deps = [ ":ram-crashlog" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":ram-crashlog-test-pkg" ]
 }

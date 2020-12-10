@@ -33,3 +33,8 @@ zx_library("id_allocator") {
     "//zircon/system/ulib/bitmap",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}
