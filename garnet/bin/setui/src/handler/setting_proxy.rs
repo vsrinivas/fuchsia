@@ -75,6 +75,8 @@ pub struct SettingProxy {
     controller_messenger_factory: handler::message::Factory,
     /// Client for communicating with handlers.
     controller_messenger_client: handler::message::Messenger,
+    /// Signature for the controller messenger.
+    controller_messenger_signature: handler::message::Signature,
     /// Client for communicating events.
     event_publisher: event::Publisher,
 
@@ -111,7 +113,7 @@ impl SettingProxy {
         }
         let (core_client, mut core_receptor) = messenger_result.unwrap();
 
-        let signature = core_client.get_signature();
+        let signature = core_receptor.get_signature();
 
         let controller_messenger_result =
             controller_messenger_factory.create(MessengerType::Unbound).await;
@@ -127,7 +129,7 @@ impl SettingProxy {
         )
         .await;
 
-        let handler_signature = controller_messenger_client.get_signature();
+        let handler_signature = controller_receptor.get_signature();
 
         let (active_controller_sender, mut active_controller_receiver) =
             futures::channel::mpsc::unbounded::<ActiveControllerRequest>();
@@ -141,6 +143,7 @@ impl SettingProxy {
             active_requests: VecDeque::new(),
             has_active_listener: false,
             messenger_client: core_client,
+            controller_messenger_signature: handler_signature.clone(),
             controller_messenger_client,
             controller_messenger_factory,
             event_publisher: event_publisher,
@@ -264,7 +267,7 @@ impl SettingProxy {
                 .generate(
                     self.setting_type,
                     self.controller_messenger_factory.clone(),
-                    self.controller_messenger_client.get_signature(),
+                    self.controller_messenger_signature.clone(),
                 )
                 .await
                 .map_or(None, Some);

@@ -148,16 +148,17 @@ async fn test_policy_message_hub() {
     let policy_handler_address = internal::policy::Address::Policy(SettingType::Audio);
 
     // Create messenger to send request.
-    let (messenger, _) = messenger_factory
+    let (messenger, receptor) = messenger_factory
         .create(MessengerType::Unbound)
         .await
         .expect("unbound messenger should be present");
 
     // Create receptor to act as policy endpoint.
-    let (_, mut receptor) = messenger_factory
+    let mut policy_receptor = messenger_factory
         .create(MessengerType::Addressable(policy_handler_address))
         .await
-        .expect("addressable messenger should be present");
+        .expect("addressable messenger should be present")
+        .1;
 
     let request_payload = internal::policy::Payload::Request(Request::Audio(AudioRequest::Get));
 
@@ -167,9 +168,9 @@ async fn test_policy_message_hub() {
         .send();
 
     // Wait and verify request received.
-    let (payload, client) = receptor.next_payload().await.expect("should receive message");
+    let (payload, client) = policy_receptor.next_payload().await.expect("should receive message");
     assert_eq!(payload, request_payload);
-    assert_eq!(client.get_author(), messenger.get_signature());
+    assert_eq!(client.get_author(), receptor.get_signature());
 
     let state = StateBuilder::new()
         .add_property(AudioStreamType::Background, TransformFlags::TRANSFORM_MAX)

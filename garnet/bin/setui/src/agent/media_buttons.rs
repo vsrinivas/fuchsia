@@ -247,26 +247,23 @@ mod tests {
         // a different messenger below because a broadcast would not send a message
         // to itself. The signature is used to delete the original messenger for this
         // receptor.
-        let (event_signature, event_receptor) = {
-            let (messenger, receptor) = event_message_hub
-                .create(MessengerType::Unbound)
-                .await
-                .expect("Unable to create agent receptor");
-            (messenger.get_signature(), receptor)
-        };
+        let event_receptor = event_message_hub
+            .create(MessengerType::Unbound)
+            .await
+            .expect("Unable to create agent receptor")
+            .1;
+
         let publisher = Publisher::create(&event_message_hub, MessengerType::Unbound).await;
 
         // Get the messenger's signature and the receptor for agents. We need
         // a different messenger below because a broadcast would not send a message
         // to itself. The signature is used to delete the original messenger for this
         // receptor.
-        let (switchboard_signature, switchboard_receptor) = {
-            let (messenger, receptor) = switchboard_message_hub
-                .create(MessengerType::Addressable(switchboard::Address::Switchboard))
-                .await
-                .expect("Unable to create switchboard receptor");
-            (messenger.get_signature(), receptor)
-        };
+        let switchboard_receptor = switchboard_message_hub
+            .create(MessengerType::Addressable(switchboard::Address::Switchboard))
+            .await
+            .expect("Unable to create switchboard receptor")
+            .1;
         let (switchboard_messenger, _) = switchboard_message_hub
             .create(MessengerType::Unbound)
             .await
@@ -291,8 +288,8 @@ mod tests {
 
         // Delete the messengers for the receptors we're selecting below. This
         // will allow the `select!` to eventually hit the `complete` case.
-        switchboard_message_hub.delete(switchboard_signature);
-        event_message_hub.delete(event_signature);
+        switchboard_message_hub.delete(switchboard_receptor.get_signature());
+        event_message_hub.delete(event_receptor.get_signature());
 
         let (
             mut agent_received_volume,
@@ -375,13 +372,11 @@ mod tests {
         // a different messenger below because a broadcast would not send a message
         // to itself. The signature is used to delete the original messenger for this
         // receptor.
-        let (switchboard_signature, mut switchboard_receptor) = {
-            let (messenger, receptor) = switchboard_message_hub
-                .create(MessengerType::Addressable(switchboard::Address::Switchboard))
-                .await
-                .expect("Unable to create switchboard receptor");
-            (messenger.get_signature(), receptor)
-        };
+        let mut switchboard_receptor = switchboard_message_hub
+            .create(MessengerType::Addressable(switchboard::Address::Switchboard))
+            .await
+            .expect("Unable to create switchboard receptor")
+            .1;
         let (switchboard_messenger, _) = switchboard_message_hub
             .create(MessengerType::Unbound)
             .await
@@ -404,7 +399,7 @@ mod tests {
 
         // Delete the messengers for the receptors we're selecting below. This will allow the while
         // loop below to eventually finish.
-        switchboard_message_hub.delete(switchboard_signature);
+        switchboard_message_hub.delete(switchboard_receptor.get_signature());
 
         while let Some(message) = switchboard_receptor.next().await {
             if let MessageEvent::Message(

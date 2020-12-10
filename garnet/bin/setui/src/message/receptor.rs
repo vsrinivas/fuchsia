@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::message::action_fuse::ActionFuseHandle;
-use crate::message::base::{Address, MessageEvent, Payload, Role, Status};
+use crate::message::base::{Address, MessageEvent, Payload, Role, Signature, Status};
 use crate::message::message_client::MessageClient;
 use anyhow::{format_err, Error};
 use futures::channel::mpsc::UnboundedReceiver;
@@ -22,6 +22,7 @@ type EventReceiver<P, A, R> = UnboundedReceiver<MessageEvent<P, A, R>>;
 /// Clients interact with the Receptor similar to a Receiver, waiting on a new
 /// MessageEvent via the watch method.
 pub struct Receptor<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
+    signature: Signature<A>,
     event_rx: EventReceiver<P, A, R>,
     // Fuse to be triggered when all receptors go out of scope.
     _fuse: ActionFuseHandle,
@@ -36,8 +37,18 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Stream for R
 }
 
 impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Receptor<P, A, R> {
-    pub(super) fn new(event_rx: EventReceiver<P, A, R>, fuse: ActionFuseHandle) -> Self {
-        Self { event_rx, _fuse: fuse }
+    pub(super) fn new(
+        signature: Signature<A>,
+        event_rx: EventReceiver<P, A, R>,
+        fuse: ActionFuseHandle,
+    ) -> Self {
+        Self { signature, event_rx, _fuse: fuse }
+    }
+
+    /// Returns the signature associated the top level messenger associated with
+    /// this receptor.
+    pub fn get_signature(&self) -> Signature<A> {
+        self.signature.clone()
     }
 
     /// Returns the next pending payload, returning an Error if the origin

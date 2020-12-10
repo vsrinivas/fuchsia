@@ -265,8 +265,12 @@ mod tests {
 
         let messenger_factory = create_hub();
 
-        let (proxy_messenger_client, _) =
-            messenger_factory.create(MessengerType::Unbound).await.unwrap();
+        let proxy_signature = messenger_factory
+            .create(MessengerType::Unbound)
+            .await
+            .expect("should create proxy messenger")
+            .1
+            .get_signature();
 
         let setting_handler_address = Address::Handler(1);
         let (setting_handler, setting_handler_receptor) = messenger_factory
@@ -280,10 +284,7 @@ mod tests {
 
         // Setting handler notifies proxy of setting changed.
         setting_handler
-            .message(
-                Payload::Event(Event::Changed),
-                Audience::Messenger(proxy_messenger_client.get_signature()),
-            )
+            .message(Payload::Event(Event::Changed), Audience::Messenger(proxy_signature))
             .send();
 
         // Inspect broker sends get request to setting handler, handler replies with value.

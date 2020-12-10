@@ -123,12 +123,13 @@ fn process_payload(
 #[async_trait]
 impl Authority for AuthorityImpl {
     async fn register(&mut self, blueprint: BlueprintHandle) -> Result<(), Error> {
-        let (messenger, agent_receptor) = self
+        let agent_receptor = self
             .messenger_factory
             .create(MessengerType::Unbound)
             .await
-            .map_err(|_| format_err!("could not register"))?;
-        let signature = messenger.get_signature();
+            .map_err(|_| format_err!("could not register"))?
+            .1;
+        let signature = agent_receptor.get_signature();
         blueprint
             .create(
                 Context::new(

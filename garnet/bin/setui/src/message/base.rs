@@ -22,8 +22,8 @@ impl<T: Clone + Debug + Send + Sync> Payload for T {}
 
 /// Trait alias for types of data that can be used as an address in a
 /// MessageHub.
-pub trait Address: Clone + Debug + Eq + Hash + Send + Sync {}
-impl<T: Clone + Debug + Eq + Hash + Send + Sync> Address for T {}
+pub trait Address: Clone + Debug + Eq + Hash + Unpin + Send + Sync {}
+impl<T: Clone + Debug + Eq + Hash + Unpin + Send + Sync> Address for T {}
 
 /// Trait alias for types of data that can be used as a role in a
 /// MessageHub.

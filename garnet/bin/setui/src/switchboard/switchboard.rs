@@ -513,13 +513,16 @@ mod tests {
         let switchboard_factory = switchboard::message::create_hub();
 
         // Create proxy endpoint.
-        let (proxy_messenger, mut proxy_receptor) =
-            messenger_factory.create(MessengerType::Unbound).await.unwrap();
+        let mut proxy_receptor = messenger_factory
+            .create(MessengerType::Unbound)
+            .await
+            .expect("receptor should be created")
+            .1;
 
         assert!(SwitchboardBuilder::create()
             .core_messenger_factory(messenger_factory.clone())
             .switchboard_messenger_factory(switchboard_factory.clone())
-            .add_setting_proxy(SettingType::Unknown, proxy_messenger.get_signature())
+            .add_setting_proxy(SettingType::Unknown, proxy_receptor.get_signature())
             .build()
             .await
             .is_ok());
@@ -599,12 +602,15 @@ mod tests {
         let switchboard_factory = switchboard::message::create_hub();
 
         // Create proxy endpoint.
-        let (proxy_messenger, mut receptor) =
-            messenger_factory.create(MessengerType::Unbound).await.unwrap();
+        let mut receptor = messenger_factory
+            .create(MessengerType::Unbound)
+            .await
+            .expect("receptor should be created")
+            .1;
 
         assert!(SwitchboardBuilder::create()
             .core_messenger_factory(messenger_factory.clone())
-            .add_setting_proxy(SettingType::Unknown, proxy_messenger.get_signature())
+            .add_setting_proxy(SettingType::Unknown, receptor.get_signature())
             .switchboard_messenger_factory(switchboard_factory.clone())
             .build()
             .await
@@ -649,7 +655,7 @@ mod tests {
 
         assert!(SwitchboardBuilder::create()
             .core_messenger_factory(messenger_factory.clone())
-            .add_setting_proxy(SettingType::Unknown, proxy_messenger.get_signature())
+            .add_setting_proxy(SettingType::Unknown, proxy_receptor.get_signature())
             .switchboard_messenger_factory(switchboard_factory.clone())
             .build()
             .await

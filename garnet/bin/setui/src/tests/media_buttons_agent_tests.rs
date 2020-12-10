@@ -38,9 +38,9 @@ async fn test_media_buttons_proxied() {
     let agent_hub = agent::message::create_hub();
     let event_hub = event::message::create_hub();
     // Create the agent receptor for use by the agent.
-    let (messenger, agent_receptor) =
-        agent_hub.create(MessengerType::Unbound).await.expect("Unable to create agent messenger");
-    let signature = messenger.get_signature();
+    let agent_receptor =
+        agent_hub.create(MessengerType::Unbound).await.expect("Unable to create agent messenger").1;
+    let signature = agent_receptor.get_signature();
 
     // Create the messenger where we will send the invocations.
     let (agent_messenger, _) =

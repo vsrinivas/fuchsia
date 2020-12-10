@@ -192,14 +192,17 @@ async fn test_setting_message_pass_through() {
         .await
         .unwrap();
     // Create a messenger that represents a setting handler.
-    let (setting_handler_messenger, mut setting_handler_receptor) =
-        core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    let mut setting_handler_receptor = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("messenger should be created")
+        .1;
 
     // Send a setting request from the switchboard to the setting handler.
     let mut settings_send_receptor = switchboard_messenger
         .message(
             SETTING_REQUEST_PAYLOAD.clone(),
-            Audience::Messenger(setting_handler_messenger.get_signature()),
+            Audience::Messenger(setting_handler_receptor.get_signature()),
         )
         .send();
 
@@ -250,14 +253,17 @@ async fn test_setting_message_result_replacement() {
         .await
         .unwrap();
     // Create a messenger that represents a setting handler.
-    let (setting_handler_messenger, mut setting_handler_receptor) =
-        core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    let mut setting_handler_receptor = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("messenger should be created")
+        .1;
 
     // Send a setting request from the switchboard to the setting handler.
     let mut settings_send_receptor = switchboard_messenger
         .message(
             SETTING_REQUEST_PAYLOAD.clone(),
-            Audience::Messenger(setting_handler_messenger.get_signature()),
+            Audience::Messenger(setting_handler_receptor.get_signature()),
         )
         .send();
 
@@ -270,7 +276,7 @@ async fn test_setting_message_result_replacement() {
     test_messenger
         .message(
             SETTING_REQUEST_PAYLOAD_2.clone(),
-            Audience::Messenger(setting_handler_messenger.get_signature()),
+            Audience::Messenger(setting_handler_receptor.get_signature()),
         )
         .send();
     verify_payload(SETTING_REQUEST_PAYLOAD_2.clone(), &mut setting_handler_receptor, None).await;
@@ -333,14 +339,17 @@ async fn test_setting_message_payload_replacement() {
         .await
         .unwrap();
     // Create a messenger that represents a setting handler.
-    let (setting_handler_messenger, mut setting_handler_receptor) =
-        core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    let mut setting_handler_receptor = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("setting handler should be created")
+        .1;
 
     // Send a setting request from the switchboard to the setting handler.
     let mut settings_send_receptor = switchboard_messenger
         .message(
             setting_request_1_payload,
-            Audience::Messenger(setting_handler_messenger.get_signature()),
+            Audience::Messenger(setting_handler_receptor.get_signature()),
         )
         .send();
 
@@ -398,8 +407,12 @@ async fn test_multiple_messages() {
         .await
         .unwrap();
     // Create a messenger that represents a setting handler.
-    let (setting_handler_messenger, _) =
-        core_messenger_factory.create(MessengerType::Unbound).await.unwrap();
+    let setting_handler_signature = core_messenger_factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("messenger should be created")
+        .1
+        .get_signature();
 
     // Send a few requests to the policy proxy.
     for _ in 0..3 {
@@ -423,7 +436,7 @@ async fn test_multiple_messages() {
         let mut settings_send_receptor = switchboard_messenger
             .message(
                 SETTING_REQUEST_PAYLOAD.clone(),
-                Audience::Messenger(setting_handler_messenger.get_signature()),
+                Audience::Messenger(setting_handler_signature),
             )
             .send();
 

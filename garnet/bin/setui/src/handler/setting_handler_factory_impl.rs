@@ -43,7 +43,7 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
             .create(MessengerType::Unbound)
             .await
             .map_err(|_| SettingHandlerFactoryError::HandlerMessengerError)?;
-        let signature = messenger.get_signature();
+        let signature = receptor.get_signature();
 
         let generate_function = self
             .generators

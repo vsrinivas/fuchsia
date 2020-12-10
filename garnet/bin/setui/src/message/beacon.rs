@@ -79,6 +79,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Beacon<P, A,
         let sentinel = Arc::new(Mutex::new(Sentinel::new()));
         let (event_tx, event_rx) = futures::channel::mpsc::unbounded::<MessageEvent<P, A, R>>();
         let (timeout_abort_client, timeout_abort_server) = AbortHandle::new_pair();
+        let signature = messenger.get_signature();
         let beacon = Beacon {
             messenger,
             event_sender: event_tx.clone(),
@@ -88,6 +89,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Beacon<P, A,
 
         // pass fuse to receptor to hold and set when it goes out of scope.
         let receptor = Receptor::new(
+            signature,
             event_rx,
             ActionFuseBuilder::new()
                 .add_action(Box::new(move || {

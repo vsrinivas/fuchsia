@@ -127,13 +127,18 @@ async fn test_write_notify() {
     let factory = message::create_hub();
     let (handler_messenger, handler_receptor) =
         factory.create(MessengerType::Unbound).await.unwrap();
-    let (messenger, _) = factory.create(MessengerType::Unbound).await.unwrap();
+    let signature = factory
+        .create(MessengerType::Unbound)
+        .await
+        .expect("messenger should be created")
+        .1
+        .get_signature();
     let context = ContextBuilder::new(
         SettingType::Accessibility,
         InMemoryStorageFactory::create(),
         handler_messenger,
         handler_receptor,
-        messenger.get_signature(),
+        signature,
         CONTEXT_ID,
     )
     .build();
@@ -279,18 +284,18 @@ async fn test_event_propagation() {
     let factory = message::create_hub();
     let setting_type = SettingType::Unknown;
 
-    let (messenger, _) = factory.create(MessengerType::Unbound).await.unwrap();
+    let (messenger, receptor) = factory.create(MessengerType::Unbound).await.unwrap();
     let (event_tx, mut event_rx) = unbounded::<State>();
     let (invocations_tx, _invocations_rx) = unbounded::<HashMap<State, u8>>();
     let (handler_messenger, handler_receptor) =
         factory.create(MessengerType::Unbound).await.unwrap();
-    let signature = handler_messenger.get_signature();
+    let signature = handler_receptor.get_signature();
     let context = ContextBuilder::new(
         setting_type,
         InMemoryStorageFactory::create(),
         handler_messenger,
         handler_receptor,
-        messenger.get_signature(),
+        receptor.get_signature(),
         CONTEXT_ID,
     )
     .build();
@@ -353,18 +358,18 @@ async fn verify_controller_state(state: State, n: u8) {
     let factory = message::create_hub();
     let setting_type = SettingType::Audio;
 
-    let (messenger, _) = factory.create(MessengerType::Unbound).await.unwrap();
+    let (messenger, receptor) = factory.create(MessengerType::Unbound).await.unwrap();
     let (event_tx, mut event_rx) = unbounded::<State>();
     let (invocations_tx, mut invocations_rx) = unbounded::<HashMap<State, u8>>();
     let (handler_messenger, handler_receptor) =
         factory.create(MessengerType::Unbound).await.unwrap();
-    let signature = handler_messenger.get_signature();
+    let signature = handler_receptor.get_signature();
     let context = ContextBuilder::new(
         setting_type,
         InMemoryStorageFactory::create(),
         handler_messenger,
         handler_receptor,
-        messenger.get_signature(),
+        receptor.get_signature(),
         CONTEXT_ID,
     )
     .build();
@@ -428,30 +433,30 @@ async fn test_unimplemented_error() {
     for setting_type in get_all_setting_types() {
         let factory = message::create_hub();
 
-        let (messenger, _) = factory.create(MessengerType::Unbound).await.unwrap();
+        let (messenger, receptor) = factory.create(MessengerType::Unbound).await.unwrap();
         let (handler_messenger, handler_receptor) =
             factory.create(MessengerType::Unbound).await.unwrap();
-        let signature = handler_messenger.get_signature();
+        let signature = handler_receptor.get_signature();
         let context = ContextBuilder::new(
             setting_type,
             InMemoryStorageFactory::create(),
             handler_messenger,
             handler_receptor,
-            messenger.get_signature(),
+            receptor.get_signature(),
             CONTEXT_ID,
         )
         .build();
 
         assert!(ClientImpl::create(context, StubController::create_generator()).await.is_ok());
 
-        let mut receptor = messenger
+        let mut reply_receptor = messenger
             .message(
                 Payload::Command(Command::HandleRequest(SettingRequest::Get)),
                 Audience::Messenger(signature),
             )
             .send();
 
-        while let Some(message_event) = receptor.next().await {
+        while let Some(message_event) = reply_receptor.next().await {
             if let MessageEvent::Message(incoming_payload, _) = message_event {
                 if let Payload::Result(Err(ControllerError::UnimplementedRequest(
                     incoming_type,

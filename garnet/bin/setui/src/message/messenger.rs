@@ -130,10 +130,6 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessengerCli
     pub fn message(&self, payload: P, audience: Audience<A, R>) -> MessageBuilder<P, A, R> {
         MessageBuilder::new(payload, MessageType::Origin(audience), self.messenger.clone())
     }
-
-    pub fn get_signature(&self) -> Signature<A> {
-        self.messenger.get_signature()
-    }
 }
 
 /// Messengers provide clients the ability to send messages to other registered

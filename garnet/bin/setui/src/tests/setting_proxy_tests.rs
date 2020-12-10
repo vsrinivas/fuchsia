@@ -166,7 +166,7 @@ impl FakeFactory {
     ) -> (handler::message::Messenger, handler::message::Receptor) {
         let (client, receptor) =
             self.messenger_factory.create(MessengerType::Unbound).await.unwrap();
-        self.handlers.insert(setting_type, client.get_signature());
+        self.handlers.insert(setting_type, receptor.get_signature());
 
         (client, receptor)
     }
