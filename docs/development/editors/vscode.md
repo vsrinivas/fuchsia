@@ -47,6 +47,9 @@ Add a directory pattern you want to exclude the search from. Alternatively one c
     },
 ```
 
+### Useful Fuchsia-specific extensions
+
+- [fuchsia.git helper](https://marketplace.visualstudio.com/items?itemName=jwing.fuchsia-git-helper&ssr=false): Adds an "Open in..." option to the editor context menus.
 
 ## Language specifics
 Each language may require extra configuration. See more for
