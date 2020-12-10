@@ -4,6 +4,7 @@
 
 mod accessibility_tests;
 mod agent_tests;
+mod audio_policy_handler_tests;
 mod audio_policy_tests;
 mod audio_tests;
 mod bluetooth_earcons_tests;

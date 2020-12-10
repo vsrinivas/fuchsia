@@ -201,6 +201,7 @@ rustc_library("lib") {
     "src/tests.rs",
     "src/tests/accessibility_tests.rs",
     "src/tests/agent_tests.rs",
+    "src/tests/audio_policy_handler_tests.rs",
     "src/tests/audio_policy_tests.rs",
     "src/tests/audio_tests.rs",
     "src/tests/bluetooth_earcons_tests.rs",
