@@ -42,9 +42,14 @@ group("build_infra") {
   public_deps = [
     "//tools/artifactory($host_toolchain)",
     "//tools/blobstats($host_toolchain)",
-    "//tools/build:tools($host_toolchain)",
-    "//tools/debug:tools($host_toolchain)",
+    "//tools/build/ninjago/buildstats($host_toolchain)",
+    "//tools/build/ninjago/ninjatrace($host_toolchain)",
     "//tools/size_checker/cmd:host($host_toolchain)",
+
+    # TODO(fxbug.dev/63540): remove after
+    # https://fuchsia-review.googlesource.com/c/infra/recipes/+/460152 rolled.
+    "//tools/debug/covargs($host_toolchain)",
+    "//tools/debug/symbolize($host_toolchain)",
   ]
 }
 
@@ -58,6 +63,8 @@ group("test_infra") {
   # Tools that are only needed on Linux x64, regardless of the current host.
   linux_x64_only_tools = [
     "//src/diagnostics/triage:triage_bin",
+    "//tools/debug/covargs",
+    "//tools/debug/symbolize",
     "//tools/testing/resultdb",
     "//tools/testing/tefmocheck",
   ]

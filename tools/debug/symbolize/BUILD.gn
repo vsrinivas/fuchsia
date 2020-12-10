@@ -54,6 +54,7 @@ go_library("main") {
 go_binary("symbolize") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/debug/symbolize/cmd"
   deps = [ ":main" ]
+  cgo = false
 }
 
 _testdata_path = "$target_gen_dir/testdata"
