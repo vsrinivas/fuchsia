@@ -164,6 +164,7 @@ CoefficientTable* CreateLinearFilterTable(LinearFilter::Inputs inputs) {
 // Calculate our windowed-sinc FIR filter. With it we perform band-limited frame-rate conversion.
 CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
   TRACE_DURATION("audio", "CreateSincFilterTable");
+  auto start_time = zx::clock::get_monotonic();
   auto out = new CoefficientTable(inputs.side_width, inputs.num_frac_bits);
   auto& table = *out;
 
@@ -210,6 +211,11 @@ CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
                    return sample * normalize_factor;
                  });
 
+  auto end_time = zx::clock::get_monotonic();
+  FX_LOGS(INFO) << "CreateSincFilterTable took " << (end_time - start_time).to_nsecs()
+                << " ns with Inputs { side_width=" << inputs.side_width
+                << ", num_frac_bits=" << inputs.num_frac_bits
+                << ", rate_conversion_ratio=" << inputs.rate_conversion_ratio << " }";
   return out;
 }
 
