@@ -1,0 +1,30 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.thermal.test;
+
+/// This arbitrarily-chosen value is the maximum number of entries in the vector
+/// `thermal_states_for_subscribers` returned by `GetSupportedThermalStates`.
+const uint32 MAX_SUBSCRIBER_COUNT = 256;
+
+/// fuchsia.thermal.test.Control
+///
+/// This protocol enables tests to manipulate thermal states via a test service.
+/// A service would implement this protocol and fuchsia::thermal::Controller,
+/// and would be injected into the environment of the component under test. Once
+/// thermal actors have subscribed, a test suite would retrieve the number of
+/// subscribed thermal actors and their supported thermal states, and would
+/// directly trigger state-change commands sent to subscribed actors.
+[Discoverable]
+protocol Control {
+    /// Retrieve the number of thermal states (including 0) supported by each
+    /// subscriber, sorted by time of subscription (from earliest to latest).
+    GetSupportedThermalStates()
+        -> (vector<uint32>:MAX_SUBSCRIBER_COUNT thermal_states_for_subscribers);
+
+    /// Send a thermal state change to the subscriber at the specified index.
+    /// This method's completion occurs only after its internal
+    /// fuchsia.thermal.Agent.SetThermalState call has completed.
+    SetThermalState(uint32 subscriber, uint32 state) -> ();
+};
