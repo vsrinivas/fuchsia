@@ -135,6 +135,20 @@ impl DaemonEventHandler {
         log::trace!("Found new target via overnet: {}", target.nodename());
         tc.merge_insert(target).await;
     }
+
+    async fn handle_fastboot(t: events::TargetInfo, tc: &TargetCollection) {
+        log::trace!("Found new target via fastboot: {}", t.nodename);
+        tc.merge_insert(t.into())
+            .then(|target| async move {
+                target
+                    .update_connection_state(|s| match s {
+                        ConnectionState::Disconnected => ConnectionState::Fastboot,
+                        _ => s,
+                    })
+                    .await;
+            })
+            .await;
+    }
 }
 
 #[async_trait]
@@ -154,8 +168,7 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
                     Self::handle_mdns(t, &tc, Arc::downgrade(&self.config_reader)).await;
                 }
                 WireTrafficType::Fastboot(t) => {
-                    log::trace!("Found new target via fastboot: {}", t.nodename);
-                    tc.merge_insert(t.into()).await;
+                    Self::handle_fastboot(t, &tc).await;
                 }
             },
             DaemonEvent::OvernetPeer(node_id) => {

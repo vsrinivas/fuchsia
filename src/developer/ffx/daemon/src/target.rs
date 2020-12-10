@@ -204,6 +204,7 @@ pub enum ConnectionState {
     /// Contains an actual connection to RCS.
     Rcs(RcsConnection),
     // TODO(awdavies): Have fastboot in here.
+    Fastboot,
 }
 
 impl Default for ConnectionState {
@@ -499,7 +500,7 @@ impl Target {
     /// to the event queue.
     pub async fn update_connection_state<F>(&self, func: F)
     where
-        F: FnOnce(ConnectionState) -> ConnectionState + Sized + Send + Copy,
+        F: FnOnce(ConnectionState) -> ConnectionState + Sized + Send,
     {
         let mut state = self.inner.state.lock().await;
         let former_state = state.connection_state.clone();
