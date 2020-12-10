@@ -9,7 +9,8 @@ use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy, Scan
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
 use futures::channel::mpsc;
 use futures::{prelude::*, select, stream::FuturesUnordered};
-use log::error;
+use itertools::Itertools;
+use log::{error, info};
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
@@ -204,10 +205,18 @@ fn send_scan_results(
     handle: fidl_sme::ScanTransactionControlHandle,
     result: BssDiscoveryResult,
 ) -> Result<(), fidl::Error> {
+    // Maximum number of scan results to send at a time so we don't exceed FIDL msg size limit.
+    // A scan result may contain all IEs, which is at most 2304 bytes since that's the maximum
+    // frame size. Let's be conservative and assume each scan result is 3k bytes.
+    // At 15, maximum size is 45k bytes, which is well under the 64k bytes limit.
+    const MAX_ON_SCAN_RESULT: usize = 15;
     match result {
         Ok(bss_list) => {
-            let mut fidl_list = bss_list.into_iter().map(convert_bss_info).collect::<Vec<_>>();
-            handle.send_on_result(&mut fidl_list.iter_mut())?;
+            info!("Sending scan results for {} APs", bss_list.len());
+            for chunk in &bss_list.into_iter().chunks(MAX_ON_SCAN_RESULT) {
+                let mut fidl_list = chunk.into_iter().map(convert_bss_info).collect::<Vec<_>>();
+                handle.send_on_result(&mut fidl_list.iter_mut())?;
+            }
             handle.send_on_finished()?;
         }
         Err(e) => {
@@ -278,12 +287,21 @@ fn send_connect_result(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fidl_fuchsia_wlan_mlme::ScanResultCodes;
-    use fidl_fuchsia_wlan_sme::{self as fidl_sme};
-    use wlan_rsn::auth;
-    use wlan_sme::client::{
-        ConnectFailure, ConnectResult, EstablishRsnaFailure, EstablishRsnaFailureReason,
+    use {
+        super::*,
+        fidl::endpoints::create_proxy,
+        fidl_fuchsia_wlan_mlme::ScanResultCodes,
+        fidl_fuchsia_wlan_sme::{self as fidl_sme},
+        fuchsia_async as fasync, fuchsia_zircon as zx,
+        futures::task::Poll,
+        pin_utils::pin_mut,
+        rand::{prelude::ThreadRng, Rng},
+        std::convert::TryInto,
+        wlan_common::{assert_variant, bss::Protection, channel::Channel},
+        wlan_rsn::auth,
+        wlan_sme::client::{
+            ConnectFailure, ConnectResult, EstablishRsnaFailure, EstablishRsnaFailureReason,
+        },
     };
 
     #[test]
@@ -319,5 +337,97 @@ mod tests {
             ))),
             fidl_sme::ConnectResultCode::Failed
         );
+    }
+
+    // Verify that we don't exceed FIDL maximum message limit when sending scan results
+    #[test]
+    fn test_large_on_scan_result() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (proxy, txn) = create_proxy::<fidl_sme::ScanTransactionMarker>()
+            .expect("failed to create ScanTransaction proxy");
+        let handle = txn.into_stream().expect("expect into_stream to succeed").control_handle();
+
+        let mut rng = rand::thread_rng();
+        let scan_results = (0..1000).map(|_| random_bss_info(&mut rng)).collect::<Vec<_>>();
+        // If we exceed size limit, it should already fail here
+        send_scan_results(handle, Ok(scan_results.clone()))
+            .expect("expect send_scan_results to succeed");
+
+        // Sanity check that we receive all scan results
+        let results_fut = collect_scan(&proxy);
+        pin_mut!(results_fut);
+        assert_variant!(exec.run_until_stalled(&mut results_fut), Poll::Ready(results) => {
+            let sent_scan_results = scan_results.into_iter().map(|bss| bss.bss_desc.unwrap()).collect::<Vec<_>>();
+            let received_scan_results = results.into_iter().map(|bss| *bss.bss_desc.unwrap()).collect::<Vec<_>>();
+            assert_eq!(sent_scan_results, received_scan_results);
+        })
+    }
+
+    async fn collect_scan(proxy: &fidl_sme::ScanTransactionProxy) -> Vec<fidl_sme::BssInfo> {
+        let mut stream = proxy.take_event_stream();
+        let mut results = vec![];
+        while let Some(Ok(event)) = stream.next().await {
+            match event {
+                fidl_sme::ScanTransactionEvent::OnResult { aps } => {
+                    results.extend(aps);
+                }
+                fidl_sme::ScanTransactionEvent::OnFinished {} => {
+                    return results;
+                }
+                fidl_sme::ScanTransactionEvent::OnError { error } => {
+                    panic!("Did not expect scan error: {:?}", error);
+                }
+            }
+        }
+        panic!("Did not receive fidl_sme::ScanTransactionEvent::OnFinished");
+    }
+
+    // Create roughly over 2k bytes BssInfo
+    fn random_bss_info(rng: &mut ThreadRng) -> BssInfo {
+        let mut ies = vec![];
+        // SSID
+        let ssid = (0..32).map(|_| rng.gen::<u8>()).collect::<Vec<_>>();
+        ies.extend_from_slice(&[0, 32]);
+        ies.extend_from_slice(&ssid[..]);
+        // Supported rates
+        ies.extend_from_slice(&[1, 5]);
+        ies.extend_from_slice(&rng.gen::<[u8; 5]>()[..]);
+        // Eight giant vendor IEs
+        for _j in 0..8 {
+            ies.extend_from_slice(&[221, 250]);
+            ies.extend((0..250).map(|_| rng.gen::<u8>()))
+        }
+        let bss_desc = fidl_fuchsia_wlan_internal::BssDescription {
+            bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
+            bss_type: fidl_fuchsia_wlan_internal::BssTypes::Infrastructure,
+            beacon_period: rng.gen::<u16>(),
+            timestamp: rng.gen::<u64>(),
+            local_time: rng.gen::<u64>(),
+            cap: rng.gen::<u16>(),
+            ies,
+            rssi_dbm: rng.gen::<i8>(),
+            chan: fidl_common::WlanChan {
+                primary: rng.gen_range(1, 255),
+                cbw: fidl_common::Cbw::Cbw20,
+                secondary80: 0,
+            },
+            snr_db: rng.gen::<i8>(),
+        };
+        let bss_info = BssInfo {
+            bssid: bss_desc.bssid.clone(),
+            ssid,
+            rssi_dbm: bss_desc.rssi_dbm,
+            snr_db: bss_desc.snr_db,
+            signal_report_time: zx::Time::ZERO,
+            channel: Channel::from_fidl(bss_desc.chan),
+            protection: Protection::Open,
+            compatible: rng.gen::<bool>(),
+            ht_cap: None,
+            vht_cap: None,
+            probe_resp_wsc: None,
+            wmm_param: None,
+            bss_desc: Some(bss_desc),
+        };
+        bss_info
     }
 }

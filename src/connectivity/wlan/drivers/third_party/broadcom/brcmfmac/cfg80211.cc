@@ -713,7 +713,7 @@ static void brcmf_signal_scan_end(struct net_device* ndev, uint64_t txn_id,
     BRCMF_IFDBG(WLANIF, ndev,
                 "Sending scan end event to SME. txn_id: %" PRIu64
                 ", result: %s"
-                ", APs seen: %" PRIu32 "",
+                ", number of results: %" PRIu32 "",
                 args.txn_id,
                 args.code == WLAN_SCAN_RESULT_SUCCESS          ? "success"
                 : args.code == WLAN_SCAN_RESULT_NOT_SUPPORTED  ? "not supported"
