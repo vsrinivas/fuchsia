@@ -7,15 +7,15 @@ use {
     crate::fidl_processor::settings::RequestContext,
     crate::request_respond,
     crate::switchboard::base::{
-        FidlResponseErrorLogger, LowLightMode, SettingRequest, SettingResponse, SettingType,
-        ThemeType,
+        FidlResponseErrorLogger, LowLightMode, SettingRequest, SettingResponse, SettingType, Theme,
+        ThemeMode, ThemeType,
     },
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
         DisplayMarker, DisplayRequest, DisplaySettings, DisplayWatch2Responder,
         DisplayWatchLightSensor2Responder, DisplayWatchLightSensorResponder, DisplayWatchResponder,
-        Error, LightSensorData, LowLightMode as FidlLowLightMode, Theme,
-        ThemeType as FidlThemeType,
+        Error, LightSensorData, LowLightMode as FidlLowLightMode, Theme as FidlTheme,
+        ThemeMode as FidlThemeMode, ThemeType as FidlThemeType,
     },
     fuchsia_async as fasync,
 };
@@ -45,6 +45,29 @@ impl From<SettingResponse> for LightSensorData {
     }
 }
 
+impl From<FidlThemeMode> for ThemeMode {
+    fn from(fidl: FidlThemeMode) -> Self {
+        ThemeMode::from_bits(FidlThemeMode::bits(&fidl)).unwrap()
+    }
+}
+
+impl From<ThemeMode> for FidlThemeMode {
+    fn from(fidl: ThemeMode) -> Self {
+        FidlThemeMode::from_bits(ThemeMode::bits(&fidl)).unwrap()
+    }
+}
+
+impl From<FidlThemeType> for ThemeType {
+    fn from(fidl_theme_type: FidlThemeType) -> Self {
+        match fidl_theme_type {
+            FidlThemeType::Default => ThemeType::Default,
+            FidlThemeType::Auto => ThemeType::Auto,
+            FidlThemeType::Light => ThemeType::Light,
+            FidlThemeType::Dark => ThemeType::Dark,
+        }
+    }
+}
+
 impl From<SettingResponse> for DisplaySettings {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::Brightness(info) = response {
@@ -63,21 +86,25 @@ impl From<SettingResponse> for DisplaySettings {
 
             display_settings.screen_enabled = Some(info.screen_enabled);
 
-            display_settings.theme = match info.theme_type {
-                ThemeType::Unknown => None,
-                ThemeType::Default => {
-                    Some(Theme { theme_type: Some(FidlThemeType::Default), ..Theme::EMPTY })
-                }
-                ThemeType::Light => {
-                    Some(Theme { theme_type: Some(FidlThemeType::Light), ..Theme::EMPTY })
-                }
-                ThemeType::Dark => {
-                    Some(Theme { theme_type: Some(FidlThemeType::Dark), ..Theme::EMPTY })
-                }
-                ThemeType::Auto => {
-                    Some(Theme { theme_type: Some(FidlThemeType::Auto), ..Theme::EMPTY })
-                }
-            };
+            display_settings.theme = Some(FidlTheme {
+                theme_type: match info.theme {
+                    Some(Theme { theme_type: Some(theme_type), .. }) => match theme_type {
+                        ThemeType::Unknown => None,
+                        ThemeType::Default => Some(FidlThemeType::Default),
+                        ThemeType::Light => Some(FidlThemeType::Light),
+                        ThemeType::Dark => Some(FidlThemeType::Dark),
+                        ThemeType::Auto => Some(FidlThemeType::Auto),
+                    },
+                    _ => None,
+                },
+                theme_mode: match info.theme {
+                    Some(Theme { theme_mode, .. }) if !theme_mode.is_empty() => {
+                        Some(FidlThemeMode::from(theme_mode))
+                    }
+                    _ => None,
+                },
+                ..FidlTheme::EMPTY
+            });
 
             display_settings
         } else {
@@ -104,14 +131,16 @@ fn to_request(settings: DisplaySettings) -> Option<SettingRequest> {
                 Some(SettingRequest::SetLowLightMode(LowLightMode::DisableImmediately))
             }
         };
-    } else if let Some(Theme { theme_type: Some(theme_type), .. }) = settings.theme {
-        request = match theme_type {
-            FidlThemeType::Default => Some(SettingRequest::SetThemeType(ThemeType::Default)),
-            FidlThemeType::Light => Some(SettingRequest::SetThemeType(ThemeType::Light)),
-            FidlThemeType::Dark => Some(SettingRequest::SetThemeType(ThemeType::Dark)),
-            FidlThemeType::Auto => Some(SettingRequest::SetThemeType(ThemeType::Auto)),
-        }
+    } else if let Some(fidl_theme) = settings.theme {
+        request = Some(SettingRequest::SetTheme(Theme {
+            theme_type: fidl_theme.theme_type.map(ThemeType::from),
+            theme_mode: match fidl_theme.theme_mode {
+                Some(fidl_theme_mode) => ThemeMode::from(fidl_theme_mode),
+                None => ThemeMode::empty(),
+            },
+        }))
     }
+
     request
 }
 

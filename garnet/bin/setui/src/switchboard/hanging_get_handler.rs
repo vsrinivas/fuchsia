@@ -368,7 +368,7 @@ mod tests {
     use std::borrow::Cow;
 
     use crate::message::base::MessengerType;
-    use crate::switchboard::base::{DisplayInfo, LowLightMode, ThemeType};
+    use crate::switchboard::base::{DisplayInfo, LowLightMode};
 
     use super::*;
 
@@ -519,7 +519,7 @@ mod tests {
                     value,
                     true,
                     LowLightMode::Disable,
-                    ThemeType::Unknown,
+                    None,
                 )))));
             }
 

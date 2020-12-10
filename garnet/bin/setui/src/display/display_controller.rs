@@ -13,7 +13,8 @@ use crate::handler::setting_handler::persist::{
 use crate::handler::setting_handler::{controller, ControllerError};
 use crate::service_context::ExternalServiceProxy;
 use crate::switchboard::base::{
-    DisplayInfo, LowLightMode, SettingRequest, SettingResponse, SettingType, ThemeType,
+    DisplayInfo, LowLightMode, SettingRequest, SettingResponse, SettingType, Theme, ThemeBuilder,
+    ThemeMode, ThemeType,
 };
 use async_trait::async_trait;
 use fidl_fuchsia_ui_brightness::{
@@ -29,26 +30,27 @@ impl DeviceStorageCompatible for DisplayInfo {
             0.5,                   /*brightness_value*/
             true,                  /*screen_enabled*/
             LowLightMode::Disable, /*low_light_mode*/
-            ThemeType::Unknown,    /*theme_type*/
+            None,
         )
     }
 
     fn deserialize_from(value: &String) -> Self {
         Self::extract(&value)
-            .unwrap_or_else(|_| Self::from(DisplayInfoV3::deserialize_from(&value)))
+            .unwrap_or_else(|_| Self::from(DisplayInfoV4::deserialize_from(&value)))
     }
 }
 
-impl From<DisplayInfoV3> for DisplayInfo {
-    fn from(v3: DisplayInfoV3) -> Self {
+impl From<DisplayInfoV4> for DisplayInfo {
+    fn from(v4: DisplayInfoV4) -> Self {
         DisplayInfo {
-            auto_brightness: v3.auto_brightness,
-            manual_brightness_value: v3.manual_brightness_value,
-            screen_enabled: v3.screen_enabled,
-            low_light_mode: v3.low_light_mode,
-            // In v4, the field formally known as theme_mode was renamed to
-            // theme_type.
-            theme_type: ThemeType::from(v3.theme_mode),
+            auto_brightness: v4.auto_brightness,
+            manual_brightness_value: v4.manual_brightness_value,
+            screen_enabled: v4.screen_enabled,
+            low_light_mode: v4.low_light_mode,
+            theme: Some(Theme::new(
+                Some(v4.theme_type),
+                if v4.theme_type == ThemeType::Auto { ThemeMode::AUTO } else { ThemeMode::empty() },
+            )),
         }
     }
 }
@@ -186,9 +188,43 @@ where
                 display_info.auto_brightness = !enabled;
                 Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
             }
-            SettingRequest::SetThemeType(theme_type) => {
+            SettingRequest::SetTheme(incoming_theme) => {
                 let mut display_info = self.client.read().await;
-                display_info.theme_type = theme_type;
+                let mut theme_builder = ThemeBuilder::new();
+
+                let existing_theme_type = display_info.theme.map_or(None, |theme| theme.theme_type);
+
+                let new_theme_type = incoming_theme.theme_type.or(existing_theme_type);
+
+                // Temporarily, if no theme type has ever been set, and the
+                // theme mode is Auto, we also set the theme type to Auto
+                // to support clients that haven't migrated.
+                // TODO(fxb/64775): Remove this assignment.
+                let mode_adjusted_new_theme_type = match new_theme_type {
+                    None | Some(ThemeType::Unknown)
+                        if incoming_theme.theme_mode.contains(ThemeMode::AUTO) =>
+                    {
+                        Some(ThemeType::Auto)
+                    }
+                    _ => new_theme_type,
+                };
+
+                theme_builder.set_theme_type(mode_adjusted_new_theme_type);
+
+                theme_builder.set_theme_mode(
+                    incoming_theme.theme_mode
+                    // Temporarily, if the theme type is auto we also set the
+                    // theme mode to auto until all clients are sending setUI
+                    // theme mode Auto.
+                    // TODO(fxb/64775): Remove this or clause.
+                    | match incoming_theme.theme_type {
+                        Some(ThemeType::Auto) => ThemeMode::AUTO,
+                        _ => ThemeMode::empty(),
+                    },
+                );
+
+                display_info.theme = theme_builder.build();
+
                 Some(write(&self.client, display_info, false).await.into_handler_result())
             }
             SettingRequest::Get => {
@@ -362,6 +398,67 @@ impl From<DisplayInfoV2> for DisplayInfoV3 {
     }
 }
 
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct DisplayInfoV4 {
+    /// The last brightness value that was manually set.
+    pub manual_brightness_value: f32,
+    pub auto_brightness: bool,
+    pub screen_enabled: bool,
+    pub low_light_mode: LowLightMode,
+    pub theme_type: ThemeType,
+}
+
+impl DisplayInfoV4 {
+    pub const fn new(
+        auto_brightness: bool,
+        manual_brightness_value: f32,
+        screen_enabled: bool,
+        low_light_mode: LowLightMode,
+        theme_type: ThemeType,
+    ) -> DisplayInfoV4 {
+        DisplayInfoV4 {
+            manual_brightness_value,
+            auto_brightness,
+            screen_enabled,
+            low_light_mode,
+            theme_type,
+        }
+    }
+}
+
+impl From<DisplayInfoV3> for DisplayInfoV4 {
+    fn from(v3: DisplayInfoV3) -> Self {
+        DisplayInfoV4 {
+            auto_brightness: v3.auto_brightness,
+            manual_brightness_value: v3.manual_brightness_value,
+            screen_enabled: v3.screen_enabled,
+            low_light_mode: v3.low_light_mode,
+            // In v4, the field formally known as theme_mode was renamed to
+            // theme_type.
+            theme_type: ThemeType::from(v3.theme_mode),
+        }
+    }
+}
+
+impl DeviceStorageCompatible for DisplayInfoV4 {
+    const KEY: &'static str = "display_info";
+
+    fn default_value() -> Self {
+        DisplayInfoV4::new(
+            false,                 /*auto_brightness_enabled*/
+            0.5,                   /*brightness_value*/
+            true,                  /*screen_enabled*/
+            LowLightMode::Disable, /*low_light_mode*/
+            ThemeType::Unknown,    /*theme_type*/
+        )
+    }
+
+    fn deserialize_from(value: &String) -> Self {
+        Self::extract(&value)
+            .unwrap_or_else(|_| Self::from(DisplayInfoV3::deserialize_from(&value)))
+    }
+}
+
 #[test]
 fn test_display_migration_v1_to_v2() {
     const BRIGHTNESS_VALUE: f32 = 0.6;
@@ -401,7 +498,7 @@ fn test_display_migration_v1_to_current() {
     let current = DisplayInfo::deserialize_from(&serialized_v1);
 
     assert_eq!(current.manual_brightness_value, BRIGHTNESS_VALUE);
-    assert_eq!(current.theme_type, ThemeType::Unknown);
+    assert_eq!(current.theme.expect("theme not present").theme_type, Some(ThemeType::Unknown));
     assert_eq!(current.screen_enabled, true);
 }
 
@@ -418,6 +515,23 @@ fn test_display_migration_v3_to_current() {
     let current = DisplayInfo::deserialize_from(&serialized_v3);
 
     // In v4, the field formally known as theme_mode is theme_type.
-    assert_eq!(current.theme_type, ThemeType::Light);
+    assert_eq!(current.theme.expect("theme not present").theme_type, Some(ThemeType::Light));
     assert_eq!(current.screen_enabled, false);
+}
+
+#[test]
+fn test_display_migration_v4_to_current() {
+    const THEME_TYPE: ThemeType = ThemeType::Auto;
+    let mut v4 = DisplayInfoV4::default_value();
+    v4.theme_type = THEME_TYPE;
+
+    let serialized_v4 = v4.serialize_to();
+
+    let current = DisplayInfo::deserialize_from(&serialized_v4);
+
+    assert_eq!(current.theme.expect("theme not present").theme_type, Some(THEME_TYPE));
+    assert_eq!(
+        current.theme.expect("theme not present").theme_mode & ThemeMode::AUTO,
+        ThemeMode::AUTO
+    );
 }

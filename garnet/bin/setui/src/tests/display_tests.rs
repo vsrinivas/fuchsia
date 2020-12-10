@@ -7,7 +7,7 @@ use {
     crate::agent::restore_agent,
     crate::config::base::ControllerFlag,
     crate::handler::device_storage::testing::*,
-    crate::switchboard::base::{DisplayInfo, LowLightMode, SettingType, ThemeType},
+    crate::switchboard::base::{DisplayInfo, LowLightMode, SettingType, Theme},
     crate::tests::fakes::brightness_service::BrightnessService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::test_failure_utils::create_test_env_with_failures,
@@ -17,7 +17,7 @@ use {
     fidl::Error::ClientChannelClosed,
     fidl_fuchsia_settings::{
         DisplayMarker, DisplayProxy, DisplaySettings, IntlMarker, LowLightMode as FidlLowLightMode,
-        Theme as FidlTheme, ThemeType as FidlThemeType,
+        Theme as FidlTheme, ThemeMode as FidlThemeMode, ThemeType as FidlThemeType,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
@@ -216,21 +216,19 @@ async fn test_light_mode_with_brightness_controller() {
 
 // Tests for display theme.
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_theme_type_auto() {
+async fn test_theme_type_light() {
+    let incoming_theme =
+        Some(FidlTheme { theme_type: Some(FidlThemeType::Light), ..FidlTheme::EMPTY });
+    let expected_theme = incoming_theme.clone();
+
     let display_proxy = setup_display_env().await;
 
-    // Test that if theme is is set to auto, it is reflected.
     let mut display_settings = DisplaySettings::EMPTY;
-    display_settings.theme =
-        Some(FidlTheme { theme_type: Some(FidlThemeType::Auto), ..FidlTheme::EMPTY });
+    display_settings.theme = incoming_theme;
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
     let settings = display_proxy.watch().await.expect("watch completed");
-
-    assert_eq!(
-        settings.theme,
-        Some(FidlTheme { theme_type: Some(FidlThemeType::Auto), ..FidlTheme::EMPTY })
-    );
+    assert_eq!(settings.theme, expected_theme);
 }
 
 #[fuchsia_async::run_until_stalled(test)]
@@ -238,8 +236,101 @@ async fn test_no_theme_set() {
     let display_proxy = setup_display_env().await;
 
     let settings = display_proxy.watch().await.expect("watch completed");
+    assert_eq!(settings.theme, Some(FidlTheme::EMPTY));
+}
 
-    assert_eq!(settings.theme, None);
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_theme_mode_auto() {
+    let incoming_theme =
+        Some(FidlTheme { theme_mode: Some(FidlThemeMode::Auto), ..FidlTheme::EMPTY });
+    // TODO(fxb/64775): Once we remove ThemeType.AUTO, the incoming and expected
+    // values should be the same.
+    let expected_theme = Some(FidlTheme {
+        theme_type: Some(FidlThemeType::Auto),
+        ..incoming_theme.clone().unwrap()
+    });
+
+    let display_proxy = setup_display_env().await;
+
+    let mut display_settings = DisplaySettings::EMPTY;
+    display_settings.theme = incoming_theme;
+    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
+
+    let settings = display_proxy.watch().await.expect("watch completed");
+    assert_eq!(settings.theme, expected_theme);
+}
+
+// TODO(fxb/64775) Remove this test once we remove the theme type of AUTO.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_theme_type_auto() {
+    let incoming_theme =
+        Some(FidlTheme { theme_type: Some(FidlThemeType::Auto), ..FidlTheme::EMPTY });
+    let expected_theme = Some(FidlTheme {
+        theme_mode: Some(FidlThemeMode::Auto),
+        ..incoming_theme.clone().unwrap()
+    });
+
+    let display_proxy = setup_display_env().await;
+
+    let mut display_settings = DisplaySettings::EMPTY;
+    display_settings.theme = incoming_theme;
+    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
+
+    let settings = display_proxy.watch().await.expect("watch completed");
+    assert_eq!(settings.theme, expected_theme);
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_theme_mode_auto_and_type_light() {
+    let incoming_theme = Some(FidlTheme {
+        theme_mode: Some(FidlThemeMode::Auto),
+        theme_type: Some(FidlThemeType::Light),
+        ..FidlTheme::EMPTY
+    });
+    let expected_theme = incoming_theme.clone();
+
+    let display_proxy = setup_display_env().await;
+
+    let mut display_settings = DisplaySettings::EMPTY;
+    display_settings.theme = incoming_theme;
+    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
+
+    let settings = display_proxy.watch().await.expect("watch completed");
+    assert_eq!(settings.theme, expected_theme);
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_theme_mode_auto_preserves_previous_type() {
+    let first_incoming_theme =
+        Some(FidlTheme { theme_type: Some(FidlThemeType::Light), ..FidlTheme::EMPTY });
+    let second_incoming_theme =
+        Some(FidlTheme { theme_mode: Some(FidlThemeMode::Auto), ..FidlTheme::EMPTY });
+    let expected_theme = Some(FidlTheme {
+        theme_mode: Some(FidlThemeMode::Auto),
+        theme_type: Some(FidlThemeType::Light),
+        ..FidlTheme::EMPTY
+    });
+
+    let display_proxy = setup_display_env().await;
+
+    let mut first_display_settings = DisplaySettings::EMPTY;
+    first_display_settings.theme = first_incoming_theme;
+    display_proxy
+        .set(first_display_settings)
+        .await
+        .expect("set completed")
+        .expect("set successful");
+
+    let mut second_display_settings = DisplaySettings::EMPTY;
+    second_display_settings.theme = second_incoming_theme;
+    display_proxy
+        .set(second_display_settings)
+        .await
+        .expect("set completed")
+        .expect("set successful");
+
+    let settings = display_proxy.watch().await.expect("watch completed");
+    assert_eq!(settings.theme, expected_theme);
 }
 
 // Tests that the FIDL calls for screen enabled result in appropriate
@@ -297,24 +388,10 @@ async fn test_screen_enabled(display_proxy: DisplayProxy) {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_display_restore_with_storage_controller() {
     // Ensure auto-brightness value is restored correctly.
-    validate_restore_with_storage_controller(
-        0.7,
-        true,
-        true,
-        LowLightMode::Enable,
-        ThemeType::Default,
-    )
-    .await;
+    validate_restore_with_storage_controller(0.7, true, true, LowLightMode::Enable, None).await;
 
     // Ensure manual-brightness value is restored correctly.
-    validate_restore_with_storage_controller(
-        0.9,
-        false,
-        true,
-        LowLightMode::Disable,
-        ThemeType::Default,
-    )
-    .await;
+    validate_restore_with_storage_controller(0.9, false, true, LowLightMode::Disable, None).await;
 }
 
 async fn validate_restore_with_storage_controller(
@@ -322,7 +399,7 @@ async fn validate_restore_with_storage_controller(
     auto_brightness: bool,
     screen_enabled: bool,
     low_light_mode: LowLightMode,
-    theme_type: ThemeType,
+    theme: Option<Theme>,
 ) {
     let service_registry = ServiceRegistry::create();
     let storage_factory = InMemoryStorageFactory::create();
@@ -336,7 +413,7 @@ async fn validate_restore_with_storage_controller(
             auto_brightness,
             screen_enabled,
             low_light_mode,
-            theme_type,
+            theme,
         };
         assert!(store.lock().await.write(&info, false).await.is_ok());
     }
@@ -365,24 +442,11 @@ async fn validate_restore_with_storage_controller(
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_display_restore_with_brightness_controller() {
     // Ensure auto-brightness value is restored correctly.
-    validate_restore_with_brightness_controller(
-        0.7,
-        true,
-        true,
-        LowLightMode::Enable,
-        ThemeType::Default,
-    )
-    .await;
+    validate_restore_with_brightness_controller(0.7, true, true, LowLightMode::Enable, None).await;
 
     // Ensure manual-brightness value is restored correctly.
-    validate_restore_with_brightness_controller(
-        0.9,
-        false,
-        true,
-        LowLightMode::Disable,
-        ThemeType::Default,
-    )
-    .await;
+    validate_restore_with_brightness_controller(0.9, false, true, LowLightMode::Disable, None)
+        .await;
 }
 
 async fn validate_restore_with_brightness_controller(
@@ -390,7 +454,7 @@ async fn validate_restore_with_brightness_controller(
     auto_brightness: bool,
     screen_enabled: bool,
     low_light_mode: LowLightMode,
-    theme_type: ThemeType,
+    theme: Option<Theme>,
 ) {
     let service_registry = ServiceRegistry::create();
     let brightness_service_handle = BrightnessService::create();
@@ -409,7 +473,7 @@ async fn validate_restore_with_brightness_controller(
             auto_brightness,
             screen_enabled,
             low_light_mode,
-            theme_type,
+            theme,
         };
         assert!(store.lock().await.write(&info, false).await.is_ok());
     }
