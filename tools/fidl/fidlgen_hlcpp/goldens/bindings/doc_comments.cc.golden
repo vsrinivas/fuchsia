@@ -128,7 +128,8 @@ void Table::Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset) {
             std::forward_as_tuple());
         auto iter = result.first;
         iter->second.resize(envelope->num_bytes);
-        memcpy(iter->second.data(), envelope->data, iter->second.size());
+        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
+                                           _decoder->GetOffset(envelope->data));
       }
     }
   }
@@ -391,8 +392,9 @@ void FlexibleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
-      envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
-      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      ::fidl::EncodeUnknownBytesContents(encoder, &unknown_data_,
+                                         envelope_offset);
       break;
     default:
       break;
@@ -430,8 +432,10 @@ void FlexibleUnion::Decode(::fidl::Decoder* decoder, FlexibleUnion* value,
       ::fidl::Decode(decoder, &value->Field_, envelope_offset);
       break;
     default:
-      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
-      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
+
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(decoder, &value->unknown_data_,
+                                         envelope_offset);
       break;
   }
 }
@@ -459,7 +463,7 @@ FlexibleUnion& FlexibleUnion::set_Field(int32_t value) {
 FlexibleUnion& FlexibleUnion::SetUnknownData(fidl_xunion_tag_t ordinal,
                                              std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
-  unknown_data_.bytes = std::move(bytes);
+  unknown_data_ = std::move(bytes);
   return *this;
 }
 

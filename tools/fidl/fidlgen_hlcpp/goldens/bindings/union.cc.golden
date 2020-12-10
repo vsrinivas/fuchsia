@@ -1693,8 +1693,9 @@ void FlexiblePizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
-      envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
-      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      ::fidl::EncodeUnknownBytesContents(encoder, &unknown_data_,
+                                         envelope_offset);
       break;
     default:
       break;
@@ -1737,8 +1738,10 @@ void FlexiblePizzaOrPasta::Decode(::fidl::Decoder* decoder,
       ::fidl::Decode(decoder, &value->pasta_, envelope_offset);
       break;
     default:
-      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
-      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
+
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(decoder, &value->unknown_data_,
+                                         envelope_offset);
       break;
   }
 }
@@ -1778,7 +1781,7 @@ FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::set_pasta(
 FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::SetUnknownData(
     fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
-  unknown_data_.bytes = std::move(bytes);
+  unknown_data_ = std::move(bytes);
   return *this;
 }
 
@@ -2086,8 +2089,9 @@ void OlderSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
-      envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
-      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      ::fidl::EncodeUnknownBytesContents(encoder, &unknown_data_,
+                                         envelope_offset);
       break;
     default:
       break;
@@ -2128,8 +2132,10 @@ void OlderSimpleUnion::Decode(::fidl::Decoder* decoder, OlderSimpleUnion* value,
       ::fidl::Decode(decoder, &value->f_, envelope_offset);
       break;
     default:
-      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
-      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
+
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(decoder, &value->unknown_data_,
+                                         envelope_offset);
       break;
   }
 }
@@ -2165,7 +2171,7 @@ OlderSimpleUnion& OlderSimpleUnion::set_f(float value) {
 OlderSimpleUnion& OlderSimpleUnion::SetUnknownData(fidl_xunion_tag_t ordinal,
                                                    std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
-  unknown_data_.bytes = std::move(bytes);
+  unknown_data_ = std::move(bytes);
   return *this;
 }
 
@@ -2333,8 +2339,9 @@ void NewerSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
-      envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
-      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      ::fidl::EncodeUnknownBytesContents(encoder, &unknown_data_,
+                                         envelope_offset);
       break;
     default:
       break;
@@ -2380,8 +2387,10 @@ void NewerSimpleUnion::Decode(::fidl::Decoder* decoder, NewerSimpleUnion* value,
       ::fidl::Decode(decoder, &value->v_, envelope_offset);
       break;
     default:
-      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
-      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
+
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(decoder, &value->unknown_data_,
+                                         envelope_offset);
       break;
   }
 }
@@ -2427,7 +2436,7 @@ NewerSimpleUnion& NewerSimpleUnion::set_v(::std::vector<::std::string> value) {
 NewerSimpleUnion& NewerSimpleUnion::SetUnknownData(fidl_xunion_tag_t ordinal,
                                                    std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
-  unknown_data_.bytes = std::move(bytes);
+  unknown_data_ = std::move(bytes);
   return *this;
 }
 
@@ -2577,8 +2586,9 @@ void FlexibleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
-      envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
-      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      ::fidl::EncodeUnknownBytesContents(encoder, &unknown_data_,
+                                         envelope_offset);
       break;
     default:
       break;
@@ -2626,8 +2636,10 @@ void FlexibleUnion::Decode(::fidl::Decoder* decoder, FlexibleUnion* value,
                      envelope_offset);
       break;
     default:
-      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
-      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
+
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(decoder, &value->unknown_data_,
+                                         envelope_offset);
       break;
   }
 }
@@ -2677,7 +2689,7 @@ FlexibleUnion& FlexibleUnion::set_VectorStringAlsoNeedsConstructor(
 FlexibleUnion& FlexibleUnion::SetUnknownData(fidl_xunion_tag_t ordinal,
                                              std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
-  unknown_data_.bytes = std::move(bytes);
+  unknown_data_ = std::move(bytes);
   return *this;
 }
 
@@ -2803,8 +2815,9 @@ void FlexibleFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
-      envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
-      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      ::fidl::EncodeUnknownBytesContents(encoder, &unknown_data_,
+                                         envelope_offset);
       break;
     default:
       break;
@@ -2846,8 +2859,10 @@ void FlexibleFoo::Decode(::fidl::Decoder* decoder, FlexibleFoo* value,
       ::fidl::Decode(decoder, &value->i_, envelope_offset);
       break;
     default:
-      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
-      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
+
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(decoder, &value->unknown_data_,
+                                         envelope_offset);
       break;
   }
 }
@@ -2884,7 +2899,7 @@ FlexibleFoo& FlexibleFoo::set_i(int32_t value) {
 FlexibleFoo& FlexibleFoo::SetUnknownData(fidl_xunion_tag_t ordinal,
                                          std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
-  unknown_data_.bytes = std::move(bytes);
+  unknown_data_ = std::move(bytes);
   return *this;
 }
 
@@ -3139,8 +3154,9 @@ void ExplicitXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
-      envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
-      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      ::fidl::EncodeUnknownBytesContents(encoder, &unknown_data_,
+                                         envelope_offset);
       break;
     default:
       break;
@@ -3181,8 +3197,10 @@ void ExplicitXUnion::Decode(::fidl::Decoder* decoder, ExplicitXUnion* value,
       ::fidl::Decode(decoder, &value->f_, envelope_offset);
       break;
     default:
-      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
-      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
+
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(decoder, &value->unknown_data_,
+                                         envelope_offset);
       break;
   }
 }
@@ -3218,7 +3236,7 @@ ExplicitXUnion& ExplicitXUnion::set_f(float value) {
 ExplicitXUnion& ExplicitXUnion::SetUnknownData(fidl_xunion_tag_t ordinal,
                                                std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
-  unknown_data_.bytes = std::move(bytes);
+  unknown_data_ = std::move(bytes);
   return *this;
 }
 
@@ -3688,8 +3706,9 @@ void ExplicitFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
-      envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
-      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      ::fidl::EncodeUnknownBytesContents(encoder, &unknown_data_,
+                                         envelope_offset);
       break;
     default:
       break;
@@ -3731,8 +3750,10 @@ void ExplicitFoo::Decode(::fidl::Decoder* decoder, ExplicitFoo* value,
       ::fidl::Decode(decoder, &value->i_, envelope_offset);
       break;
     default:
-      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
-      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
+
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(decoder, &value->unknown_data_,
+                                         envelope_offset);
       break;
   }
 }
@@ -3769,7 +3790,7 @@ ExplicitFoo& ExplicitFoo::set_i(int32_t value) {
 ExplicitFoo& ExplicitFoo::SetUnknownData(fidl_xunion_tag_t ordinal,
                                          std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
-  unknown_data_.bytes = std::move(bytes);
+  unknown_data_ = std::move(bytes);
   return *this;
 }
 
@@ -3902,8 +3923,9 @@ void XUnionContainingEmptyStruct::Encode(::fidl::Encoder* encoder,
       break;
     }
     case Tag::kUnknown:
-      envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
-      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      ::fidl::EncodeUnknownBytesContents(encoder, &unknown_data_,
+                                         envelope_offset);
       break;
     default:
       break;
@@ -3943,8 +3965,10 @@ void XUnionContainingEmptyStruct::Decode(::fidl::Decoder* decoder,
       ::fidl::Decode(decoder, &value->empty_, envelope_offset);
       break;
     default:
-      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
-      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
+
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(decoder, &value->unknown_data_,
+                                         envelope_offset);
       break;
   }
 }
@@ -3975,7 +3999,7 @@ XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::set_empty(
 XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::SetUnknownData(
     fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
-  unknown_data_.bytes = std::move(bytes);
+  unknown_data_ = std::move(bytes);
   return *this;
 }
 

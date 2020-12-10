@@ -180,7 +180,7 @@ class FlexibleFoo final {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-    return &unknown_data_.bytes;
+    return &unknown_data_;
   }
 
   friend ::fidl::Equality<::fidl::test::requestflexibleenvelope::FlexibleFoo>;
@@ -193,7 +193,7 @@ class FlexibleFoo final {
   union {
     ::std::string s_;
     int32_t i_;
-    ::fidl::UnknownBytes unknown_data_;
+    std::vector<uint8_t> unknown_data_;
   };
 };
 

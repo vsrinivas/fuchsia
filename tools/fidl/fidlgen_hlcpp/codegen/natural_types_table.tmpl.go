@@ -276,10 +276,10 @@ void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t 
     {{- if .IsResourceType }}
         iter->second.bytes.resize(envelope->num_bytes);
         iter->second.handles.resize(envelope->num_handles);
-        ::fidl::Decode(_decoder, &iter->second, _decoder->GetOffset(envelope->data));
+        ::fidl::DecodeUnknownDataContents(_decoder, &iter->second, _decoder->GetOffset(envelope->data));
     {{- else }}
         iter->second.resize(envelope->num_bytes);
-        memcpy(iter->second.data(), envelope->data, iter->second.size());
+        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second, _decoder->GetOffset(envelope->data));
     {{- end }}
       }
     }

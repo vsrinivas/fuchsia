@@ -266,8 +266,9 @@ void FlexibleFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
       break;
     }
     case Tag::kUnknown:
-      envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
-      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      ::fidl::EncodeUnknownBytesContents(encoder, &unknown_data_,
+                                         envelope_offset);
       break;
     default:
       break;
@@ -309,8 +310,10 @@ void FlexibleFoo::Decode(::fidl::Decoder* decoder, FlexibleFoo* value,
       ::fidl::Decode(decoder, &value->i_, envelope_offset);
       break;
     default:
-      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
-      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
+
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(decoder, &value->unknown_data_,
+                                         envelope_offset);
       break;
   }
 }
@@ -347,7 +350,7 @@ FlexibleFoo& FlexibleFoo::set_i(int32_t value) {
 FlexibleFoo& FlexibleFoo::SetUnknownData(fidl_xunion_tag_t ordinal,
                                          std::vector<uint8_t> bytes) {
   EnsureStorageInitialized(ordinal);
-  unknown_data_.bytes = std::move(bytes);
+  unknown_data_ = std::move(bytes);
   return *this;
 }
 

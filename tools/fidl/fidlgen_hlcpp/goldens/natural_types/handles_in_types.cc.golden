@@ -76,7 +76,8 @@ void UnionWithHandle::Encode(::fidl::Encoder* encoder, size_t offset) {
     }
     case Tag::kUnknown:
       envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
-      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
+      ::fidl::EncodeUnknownDataContents(encoder, &unknown_data_,
+                                        envelope_offset);
       break;
     default:
       break;
@@ -115,9 +116,11 @@ void UnionWithHandle::Decode(::fidl::Decoder* decoder, UnionWithHandle* value,
       ::fidl::Decode(decoder, &value->h_, envelope_offset);
       break;
     default:
+
       value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
       value->unknown_data_.handles.resize(xunion->envelope.num_handles);
-      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
+      ::fidl::DecodeUnknownDataContents(decoder, &value->unknown_data_,
+                                        envelope_offset);
       break;
   }
 }
@@ -305,8 +308,8 @@ void TableWithHandle::Decode(::fidl::Decoder* _decoder, TableWithHandle* _value,
         auto iter = result.first;
         iter->second.bytes.resize(envelope->num_bytes);
         iter->second.handles.resize(envelope->num_handles);
-        ::fidl::Decode(_decoder, &iter->second,
-                       _decoder->GetOffset(envelope->data));
+        ::fidl::DecodeUnknownDataContents(_decoder, &iter->second,
+                                          _decoder->GetOffset(envelope->data));
       }
     }
   }

@@ -894,7 +894,7 @@ class FlexiblePizzaOrPasta final {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-    return &unknown_data_.bytes;
+    return &unknown_data_;
   }
 
   friend ::fidl::Equality<::fidl::test::union_::FlexiblePizzaOrPasta>;
@@ -907,7 +907,7 @@ class FlexiblePizzaOrPasta final {
   union {
     ::fidl::test::union_::Pizza pizza_;
     ::fidl::test::union_::Pasta pasta_;
-    ::fidl::UnknownBytes unknown_data_;
+    std::vector<uint8_t> unknown_data_;
   };
 };
 
@@ -1082,7 +1082,7 @@ class OlderSimpleUnion final {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-    return &unknown_data_.bytes;
+    return &unknown_data_;
   }
 
   friend ::fidl::Equality<::fidl::test::union_::OlderSimpleUnion>;
@@ -1095,7 +1095,7 @@ class OlderSimpleUnion final {
   union {
     int64_t i_;
     float f_;
-    ::fidl::UnknownBytes unknown_data_;
+    std::vector<uint8_t> unknown_data_;
   };
 };
 
@@ -1309,7 +1309,7 @@ class NewerSimpleUnion final {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-    return &unknown_data_.bytes;
+    return &unknown_data_;
   }
 
   friend ::fidl::Equality<::fidl::test::union_::NewerSimpleUnion>;
@@ -1323,7 +1323,7 @@ class NewerSimpleUnion final {
     int64_t i_;
     ::std::string s_;
     ::std::vector<::std::string> v_;
-    ::fidl::UnknownBytes unknown_data_;
+    std::vector<uint8_t> unknown_data_;
   };
 };
 
@@ -1435,7 +1435,7 @@ class FlexibleUnion final {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-    return &unknown_data_.bytes;
+    return &unknown_data_;
   }
 
   friend ::fidl::Equality<::fidl::test::union_::FlexibleUnion>;
@@ -1449,7 +1449,7 @@ class FlexibleUnion final {
     int32_t Primitive_;
     ::std::string StringNeedsConstructor_;
     ::std::vector<::std::string> VectorStringAlsoNeedsConstructor_;
-    ::fidl::UnknownBytes unknown_data_;
+    std::vector<uint8_t> unknown_data_;
   };
 };
 
@@ -1539,7 +1539,7 @@ class FlexibleFoo final {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-    return &unknown_data_.bytes;
+    return &unknown_data_;
   }
 
   friend ::fidl::Equality<::fidl::test::union_::FlexibleFoo>;
@@ -1552,7 +1552,7 @@ class FlexibleFoo final {
   union {
     ::std::string s_;
     int32_t i_;
-    ::fidl::UnknownBytes unknown_data_;
+    std::vector<uint8_t> unknown_data_;
   };
 };
 
@@ -1711,7 +1711,7 @@ class ExplicitXUnion final {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-    return &unknown_data_.bytes;
+    return &unknown_data_;
   }
 
   friend ::fidl::Equality<::fidl::test::union_::ExplicitXUnion>;
@@ -1724,7 +1724,7 @@ class ExplicitXUnion final {
   union {
     int64_t i_;
     float f_;
-    ::fidl::UnknownBytes unknown_data_;
+    std::vector<uint8_t> unknown_data_;
   };
 };
 
@@ -1982,7 +1982,7 @@ class ExplicitFoo final {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-    return &unknown_data_.bytes;
+    return &unknown_data_;
   }
 
   friend ::fidl::Equality<::fidl::test::union_::ExplicitFoo>;
@@ -1995,7 +1995,7 @@ class ExplicitFoo final {
   union {
     ::std::string s_;
     int32_t i_;
-    ::fidl::UnknownBytes unknown_data_;
+    std::vector<uint8_t> unknown_data_;
   };
 };
 
@@ -2091,7 +2091,7 @@ class XUnionContainingEmptyStruct final {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-    return &unknown_data_.bytes;
+    return &unknown_data_;
   }
 
   friend ::fidl::Equality<::fidl::test::union_::XUnionContainingEmptyStruct>;
@@ -2103,7 +2103,7 @@ class XUnionContainingEmptyStruct final {
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
     ::fidl::test::union_::Empty empty_;
-    ::fidl::UnknownBytes unknown_data_;
+    std::vector<uint8_t> unknown_data_;
   };
 };
 

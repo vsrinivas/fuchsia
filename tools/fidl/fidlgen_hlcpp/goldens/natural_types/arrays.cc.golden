@@ -416,7 +416,8 @@ void TableSmallArray::Decode(::fidl::Decoder* _decoder, TableSmallArray* _value,
             std::forward_as_tuple());
         auto iter = result.first;
         iter->second.resize(envelope->num_bytes);
-        memcpy(iter->second.data(), envelope->data, iter->second.size());
+        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
+                                           _decoder->GetOffset(envelope->data));
       }
     }
   }
@@ -558,7 +559,8 @@ void TableLargeArray::Decode(::fidl::Decoder* _decoder, TableLargeArray* _value,
             std::forward_as_tuple());
         auto iter = result.first;
         iter->second.resize(envelope->num_bytes);
-        memcpy(iter->second.data(), envelope->data, iter->second.size());
+        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
+                                           _decoder->GetOffset(envelope->data));
       }
     }
   }

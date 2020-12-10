@@ -130,7 +130,11 @@ class {{ .Name }} final {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
+  {{- if .IsResourceType }}
     return &unknown_data_.bytes;
+  {{- else }}
+    return &unknown_data_;
+  {{- end }}
   }
 
   {{- if .IsResourceType }}
@@ -187,7 +191,7 @@ class {{ .Name }} final {
     {{ .Type.FullDecl }} {{ .StorageName }};
   {{- end }}
   {{- if .IsFlexible }}
-    {{ if .IsResourceType }}::fidl::UnknownData{{ else }}::fidl::UnknownBytes{{ end }} unknown_data_;
+    {{ if .IsResourceType }}::fidl::UnknownData{{ else }}std::vector<uint8_t>{{ end }} unknown_data_;
   {{- end }}
   };
 };
@@ -288,8 +292,13 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
     {{- end }}
     {{- if .IsFlexible }}
     case Tag::kUnknown:
+      {{- if .IsResourceType }}
       envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
-      ::fidl::Encode(encoder, &unknown_data_, envelope_offset);
+      ::fidl::EncodeUnknownDataContents(encoder, &unknown_data_, envelope_offset);
+      {{- else }}
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      ::fidl::EncodeUnknownBytesContents(encoder, &unknown_data_, envelope_offset);
+      {{- end }}
       break;
     {{- end }}
     default:
@@ -335,11 +344,14 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
   {{- end }}
     default:
   {{ if .IsFlexible -}}
-      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
     {{- if .IsResourceType }}
+      value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
       value->unknown_data_.handles.resize(xunion->envelope.num_handles);
+      ::fidl::DecodeUnknownDataContents(decoder, &value->unknown_data_, envelope_offset);
+    {{- else }}
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(decoder, &value->unknown_data_, envelope_offset);
     {{- end }}
-      ::fidl::Decode(decoder, &value->unknown_data_, envelope_offset);
   {{ end -}}
       break;
   }
@@ -381,9 +393,11 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 {{- if .IsFlexible }}
 {{ .Name }}& {{ .Name }}::SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes{{ if .IsResourceType }}, std::vector<zx::handle> handles{{ end }}) {
   EnsureStorageInitialized(ordinal);
-  unknown_data_.bytes = std::move(bytes);
   {{- if .IsResourceType }}
+  unknown_data_.bytes = std::move(bytes);
   unknown_data_.handles = std::move(handles);
+  {{- else }}
+  unknown_data_ = std::move(bytes);
   {{- end }}
   return *this;
 }

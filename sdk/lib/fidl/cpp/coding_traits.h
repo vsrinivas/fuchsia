@@ -225,58 +225,53 @@ struct CodingTraits<::std::array<T, N>> {
   }
 };
 
-template <>
-struct CodingTraits<UnknownBytes> {
-  template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, UnknownBytes* value, size_t offset) {
-    std::copy(value->bytes.begin(), value->bytes.end(), encoder->template GetPtr<uint8_t>(offset));
-  }
-  template <class DecoderImpl>
-  static void Decode(DecoderImpl* decoder, UnknownBytes* value, size_t offset) {
-    memcpy(value->bytes.data(), decoder->template GetPtr<void>(offset), value->bytes.size());
-  }
-};
+template <class DecoderImpl>
+void DecodeUnknownBytesContents(DecoderImpl* decoder, std::vector<uint8_t>* value, size_t offset) {
+  memcpy(value->data(), decoder->template GetPtr<void>(offset), value->size());
+}
+
+template <class EncoderImpl>
+void EncodeUnknownBytesContents(EncoderImpl* encoder, std::vector<uint8_t>* value, size_t offset) {
+  std::copy(value->begin(), value->end(), encoder->template GetPtr<uint8_t>(offset));
+}
 
 template <class EncoderImpl>
 void EncodeUnknownBytes(EncoderImpl* encoder, std::vector<uint8_t>* value, size_t envelope_offset) {
-  // encode the envelope
+  // encode the envelope header
   uint64_t num_bytes_then_num_handles = value->size();
   CodingTraits<uint64_t>::Encode(encoder, &num_bytes_then_num_handles, envelope_offset);
   *encoder->template GetPtr<uintptr_t>(envelope_offset + offsetof(fidl_envelope_t, presence)) =
       FIDL_ALLOC_PRESENT;
-  // encode the data
-  const size_t data_offset = encoder->Alloc(value->size());
-  std::copy(value->begin(), value->end(), encoder->template GetPtr<uint8_t>(data_offset));
+  // encode the envelope contents
+  EncodeUnknownBytesContents(encoder, value, encoder->Alloc(value->size()));
 }
 
 #ifdef __Fuchsia__
-template <>
-struct CodingTraits<UnknownData> {
-  template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, UnknownData* value, size_t offset) {
-    std::copy(value->bytes.begin(), value->bytes.end(), encoder->template GetPtr<uint8_t>(offset));
-    for (auto& handle : value->handles) {
-      encoder->EncodeUnknownHandle(&handle);
-    }
+template <class DecoderImpl>
+void DecodeUnknownDataContents(DecoderImpl* decoder, UnknownData* value, size_t offset) {
+  DecodeUnknownBytesContents(decoder, &value->bytes, offset);
+  for (auto& h : value->handles) {
+    h = decoder->ClaimHandle();
   }
-  template <class DecoderImpl>
-  static void Decode(DecoderImpl* decoder, UnknownData* value, size_t offset) {
-    memcpy(value->bytes.data(), decoder->template GetPtr<void>(offset), value->bytes.size());
-    for (auto& h : value->handles) {
-      h = decoder->ClaimHandle();
-    }
+}
+
+template <class EncoderImpl>
+void EncodeUnknownDataContents(EncoderImpl* encoder, UnknownData* value, size_t offset) {
+  EncodeUnknownBytesContents(encoder, &value->bytes, offset);
+  for (auto& handle : value->handles) {
+    encoder->EncodeUnknownHandle(&handle);
   }
-};
+}
 
 template <class EncoderImpl>
 void EncodeUnknownData(EncoderImpl* encoder, UnknownData* value, size_t envelope_offset) {
-  // encode the envelope
+  // encode the envelope header
   uint64_t num_bytes_then_num_handles = value->bytes.size() | (value->handles.size() << 32);
   CodingTraits<uint64_t>::Encode(encoder, &num_bytes_then_num_handles, envelope_offset);
   *encoder->template GetPtr<uintptr_t>(envelope_offset + offsetof(fidl_envelope_t, presence)) =
       FIDL_ALLOC_PRESENT;
-  // encode the data
-  CodingTraits<UnknownData>::Encode(encoder, value, encoder->Alloc(value->bytes.size()));
+  // encode the envelope contents
+  EncodeUnknownDataContents(encoder, value, encoder->Alloc(value->bytes.size()));
 }
 #endif
 

@@ -623,7 +623,7 @@ class FlexibleUnion final {
     if (Which() != Tag::kUnknown) {
       return nullptr;
     }
-    return &unknown_data_.bytes;
+    return &unknown_data_;
   }
 
   friend ::fidl::Equality<::fidl::test::doccomments::FlexibleUnion>;
@@ -635,7 +635,7 @@ class FlexibleUnion final {
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
     int32_t Field_;
-    ::fidl::UnknownBytes unknown_data_;
+    std::vector<uint8_t> unknown_data_;
   };
 };
 
