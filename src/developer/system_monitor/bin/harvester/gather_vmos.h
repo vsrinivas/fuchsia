@@ -138,6 +138,9 @@ class GatherVmos : public GatherCategory {
   // Returns true if the VMO is descended from a rooted VMO.
   bool VmoHasRootedAncestor(zx_koid_t vmo_koid);
 
+  // Returns the koid of the rooted ancestor VMO if one exists, zero if not.
+  zx_koid_t GetRootedAncestorKoid(zx_koid_t child_vmo_koid);
+
   // Creates and stores handles to all VMOs belonging to |parent_process|.
   //
   // New VMOs are added to the |new_vmos| vector.
@@ -146,7 +149,7 @@ class GatherVmos : public GatherCategory {
 
   // Uploads samples to dockyard.
   void UploadSamples(const std::unordered_set<zx_koid_t>& live_process_koids,
-                     const std::map<zx_koid_t, Vmo>& vmo_data);
+                     std::map<zx_koid_t, Vmo>& vmo_data);
 };
 
 }  // namespace harvester

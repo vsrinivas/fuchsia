@@ -176,6 +176,16 @@ bool GatherVmos::VmoHasRootedAncestor(zx_koid_t vmo_koid) {
   return rooted_vmo_descendants_.count(vmo_koid) != 0;
 }
 
+zx_koid_t GatherVmos::GetRootedAncestorKoid(zx_koid_t child_vmo_koid) {
+  for (zx_koid_t root_vmo_koid : rooted_vmos_) {
+    if (vmo_forest_.InSameSet(root_vmo_koid, child_vmo_koid)) {
+      return root_vmo_koid;
+    }
+  }
+
+  return 0;
+}
+
 void GatherVmos::CleanProcessToVmos(
     const std::unordered_set<zx_koid_t>& live_process_koids) {
   TRACE_DURATION("harvester", "GatherVmos::CleanProcessToVmos");
@@ -256,6 +266,7 @@ std::map<zx_koid_t, GatherVmos::Vmo> GatherVmos::BuildVmoData() {
     if (vmo_data.count(vmo.parent_koid) == 0) {
       FX_LOGS(ERROR) << "vmo's (" << vmo_koid << ") parent koid ("
                      << vmo.parent_koid << ") is not in vmo_data map.";
+      continue;
     }
 
     Vmo& parent_vmo = vmo_data[vmo.parent_koid];
@@ -290,7 +301,7 @@ std::map<zx_koid_t, GatherVmos::Vmo> GatherVmos::BuildVmoData() {
 
 void GatherVmos::UploadSamples(
     const std::unordered_set<zx_koid_t>& live_process_koids,
-    const std::map<zx_koid_t, GatherVmos::Vmo>& vmo_data) {
+    std::map<zx_koid_t, GatherVmos::Vmo>& vmo_data) {
   TRACE_DURATION("harvester", "GatherVmos::UploadSamples");
 
   TRACE_DURATION_BEGIN("harvester", "build process -> rooted map");
@@ -302,13 +313,14 @@ void GatherVmos::UploadSamples(
         continue;
       }
 
-      const Vmo& vmo = vmo_data.at(vmo_koid);
+      Vmo& vmo = vmo_data[vmo_koid];
+      Vmo& root_vmo = vmo_data[GetRootedAncestorKoid(vmo_koid)];
 
       // Find index of the name in the VmoMap of rooted names.
       size_t i = std::distance(kRootedVmoNames.begin(),
                                std::find(kRootedVmoNames.begin(),
                                          kRootedVmoNames.end(),
-                                         vmo.name));
+                                         root_vmo.name));
       if (i >= kNumRootedVmos) {
         continue;
       }

@@ -201,9 +201,12 @@ TEST_F(GatherVmosTest, RootedVmos_WithNestedDescendants) {
       MakeVmo(202, 4096 * 2, 4096 * 2, "scudo");
   process_handle_to_vmos_[2] = {intermediate_vmo, nonrooted_vmo};
 
-  // <koid:4> will take the page from <koid:2>.
+  // <koid:4> will take the page from <koid:2>. Even though the VMO has been
+  // assigned a slightly different name, GatherVmos will still find it using the
+  // parent/child relationship.
   zx_info_vmo_t child_vmo =
-      MakeVmoWithParent(104, intermediate_vmo.koid, 4096, 4096, "Sysmem-core");
+      MakeVmoWithParent(104, intermediate_vmo.koid, 4096, 4096,
+                        "Sysmem-core-child");
   process_handle_to_vmos_[4] = {child_vmo};
 
   // <koid:3> gets a non-rooted page.
