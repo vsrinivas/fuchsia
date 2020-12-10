@@ -574,19 +574,21 @@ mod tests {
             }
         };
 
-        let propose_fut = local_proxy.propose_element(
-            ElementSpec {
-                component_url: Some(element_url.to_string()),
-                ..ElementSpec::new_empty()
-            },
-            None,
-        );
+        let propose_and_drop_fut = async {
+            local_proxy
+                .propose_element(
+                    ElementSpec {
+                        component_url: Some(element_url.to_string()),
+                        ..ElementSpec::new_empty()
+                    },
+                    None,
+                )
+                .await
+                .expect("Failed to propose element")
+                .expect("Failed to propose element");
 
-        let drop_fut = async {
             std::mem::drop(local_proxy); // Drop proxy to terminate `server_fut`.
         };
-
-        let propose_and_drop_fut = future::join(propose_fut, drop_fut);
 
         let _ = future::join3(propose_and_drop_fut, local_server_fut, downstream_server_fut).await;
 
