@@ -30,6 +30,11 @@ and [Rejected proposals](/docs/contribute/governance/rfcs#rejected).
 To stay up-to-date with RFCs that are still in progress, you can bookmark this [saved search](https://fuchsia-review.googlesource.com/q/dir:docs/contribute/governance/rfcs+is:open)
 that lists any open Gerrit change in the `rfcs` directory.
 
+### Create an RFC
+
+If you want to create a proposal that you want the Fuchsia Eng Council to
+review, see [Creating an RFC.](/docs/contribute/governance/rfcs/create_rfc.md)
+
 ## Join a mailing list
 
 Stay informed about the Fuchsia project by joining mailing lists.
