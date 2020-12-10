@@ -2,122 +2,42 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:convert';
+// import 'dart:convert';
 
+import 'package:flutter_driver/flutter_driver.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
-import 'package:logging/logging.dart';
 
-final _log = Logger('ermine_e2e_ask_test');
+import 'ermine_driver.dart';
 
-/// Tests that the DUT running ermine can do the following:
-///  - login as guest (unauthenticated login)
-///  - show the ask_bar
-///  - execute commands via the ask_bar
 void main() {
-  Sl4f sl4fDriver;
+  Sl4f sl4f;
+  ErmineDriver ermine;
 
   setUp(() async {
-    sl4fDriver = Sl4f.fromEnvironment();
-    await sl4fDriver.startServer();
+    sl4f = Sl4f.fromEnvironment();
+    await sl4f.startServer();
+
+    ermine = ErmineDriver(sl4f);
+    await ermine.setUp();
   });
 
   tearDown(() async {
-    await sl4fDriver.stopServer();
-    sl4fDriver.close();
+    // Any of these may end up being null if the test fails in setup.
+    await ermine.tearDown();
+    await sl4f?.stopServer();
+    sl4f?.close();
   });
 
-  test('ermine session shell guest login & ask', () async {
-    // TODO: note that 'user picker' screen is changing/going away
-    // so here we use sessionctl to do guest login. Once final
-    // OOBE UI is established for Ermine, this could be revisited
-    // so as to provide for more robust testing of no-auth login.
-    await sl4fDriver.ssh.run('sessionctl restart_session');
-
-    final result = await sl4fDriver.ssh.run('sessionctl login_guest');
-
-    if (result.exitCode != 0) {
-      fail('unable to login guest - check user already logged in?');
-    }
-
-    // allow time for shell to startup and ask bar to show
-    await Future.delayed(Duration(seconds: 3));
-
-    // Ask bar should have focus at this point, so we should
-    // be able to inject text entry via the shell and have it
-    // enter the bar.
-
-    // Note sl4f library 'input' support doesn't currently support
-    // text or keyevents. In addition to that, input keyevent doesn't
-    // appear to support keyevents with modifiers (otherwise we could
-    // tie into the show/hide of the askbar and test with esc/ALT+space)
-
-    // As it is, here we'll just open simple browser so that we can
-    // verify launching chromium from the ask bar
-    await sl4fDriver.ssh.run('input text simple_browser');
-
-    // Have to drive ask bar from suggestion (can't just input
-    // 'simple_browser' text and enter). So give the suggestions
-    // a second to settle down.
-    await Future.delayed(Duration(seconds: 5));
-
-    // with the top suggestion being 'open simple_browser', we can
-    // now just inject 'enter' to trigger the action.
-    await sl4fDriver.ssh.run('input keyevent 40');
-
-    // allow time for simple_browser to startup
-    await Future.delayed(Duration(seconds: 5));
-
-    // verify that simple_browser is active
-    bool browserActive =
-        await _checkActiveComponent(driver: sl4fDriver, name: 'simple_browser');
-
-    if (!browserActive) {
-      fail('simple_browser is not active');
-    }
-
-    // Logout for next test
-    await sl4fDriver.ssh.run('sessionctl restart_session');
-
-    // allow time for logout
-    await Future.delayed(Duration(seconds: 3));
-
-    return;
+  test('use ask to resolve spinning_square_view using FlutterDriver', () async {
+    await ermine.driver.enterText('spinning');
+    await ermine.driver.waitFor(find.text('spinning_square_view'));
+    final askResult =
+        await ermine.driver.getText(find.text('spinning_square_view'));
+    expect(askResult, 'spinning_square_view');
   });
-}
 
-/// checks to see if the component associated with [name] is running.
-Future<bool> _checkActiveComponent({Sl4f driver, String name}) async {
-  Future<String> getComponents() async {
-    // Note: using 'cs' here as iquery doesn't appear to actually provide a
-    // list of these active components via the hub.
-    final process = await driver.ssh.start('cs');
-    final exitCode = await process.exitCode;
-    final stdout = await process.stdout.transform(utf8.decoder).join();
-    if (exitCode != 0) {
-      final stderr = await process.stderr.transform(utf8.decoder).join();
-      _log.severe('cs failed with exit code $exitCode');
-      if (stdout.isNotEmpty) {
-        _log.severe('cs stdout: $stdout');
-      }
-      if (stderr.isNotEmpty) {
-        _log.severe('cs stderr: $stderr');
-      }
-      return null;
-    }
-    return stdout;
-  }
-
-  final activeComponents = await getComponents();
-
-  if (activeComponents == null) {
-    return false;
-  }
-
-  final matchingActiveComponentList =
-      activeComponents.split('\n').where((line) {
-    return line.contains(name);
-  }).toList();
-
-  return matchingActiveComponentList.isNotEmpty;
+  // TODO(http://fxbug.dev/60790): Implement this when input tool is ready.
+  test('use ask to resolve spinning_square_view using input tool', () async {},
+      skip: true);
 }

@@ -11,12 +11,17 @@ import 'package:test/test.dart';
 /// Flutter Driver. This utility will grow with more convenience methods in the
 /// future useful for testing.
 class ErmineDriver {
+  /// The instance of [Sl4f] used to connect to Ermine flutter app.
   final Sl4f sl4f;
-  final FlutterDriverConnector connector;
-  FlutterDriver driver;
+
+  FlutterDriver _driver;
+  final FlutterDriverConnector _connector;
 
   /// Constructor.
-  ErmineDriver(this.sl4f) : connector = FlutterDriverConnector(sl4f);
+  ErmineDriver(this.sl4f) : _connector = FlutterDriverConnector(sl4f);
+
+  /// The instance of [FlutterDriver] that is connected to Ermine flutter app.
+  FlutterDriver get driver => _driver;
 
   /// Set up the test environment for Ermine.
   ///
@@ -30,18 +35,18 @@ class ErmineDriver {
     }
 
     // Initialize flutter driver connector.
-    await connector.initialize();
+    await _connector.initialize();
 
     // Now connect to ermine.
-    driver = await connector.driverForIsolate('ermine');
-    if (driver == null) {
+    _driver = await _connector.driverForIsolate('ermine');
+    if (_driver == null) {
       fail('unable to connect to ermine.');
     }
   }
 
   /// Closes [FlutterDriverConnector] and performs cleanup.
   Future<void> tearDown() async {
-    await driver?.close();
-    await connector.tearDown();
+    await _driver?.close();
+    await _connector.tearDown();
   }
 }

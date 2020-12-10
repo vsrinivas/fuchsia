@@ -10,10 +10,10 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
     "ermine_driver.dart",
 
     # TODO(43263): Re-write ermine tests to use FlutterDriver.
-    # "ermine_session_shell_ask_test.dart",
     # "ermine_session_shell_simple_browser_test.dart",
     # "ermine_session_shell_status_test.dart",
     "ermine_intl_test.dart",
+    "ermine_session_shell_ask_test.dart",
     "ermine_smoke_test.dart",
   ]
 
