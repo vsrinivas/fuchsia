@@ -87,6 +87,11 @@ zx_status_t MapStructs2_1(const smbios::EntryPoint2_1* ep, fbl::RefPtr<VmMapping
   if (status != ZX_OK) {
     return status;
   }
+  // Prepopulate the mapping's page tables so there are no page faults taken.
+  status = m->MapRange(0, len, true);
+  if (status != ZX_OK) {
+    return status;
+  }
   *struct_table_virt = m->base() + subpage_offset;
   *mapping = ktl::move(m);
   return ZX_OK;
