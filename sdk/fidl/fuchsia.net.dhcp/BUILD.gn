@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.net.dhcp") {
-  sdk_category = "partner"
+  sdk_category = "internal"
   sources = [
     "client.fidl",
     "options.fidl",

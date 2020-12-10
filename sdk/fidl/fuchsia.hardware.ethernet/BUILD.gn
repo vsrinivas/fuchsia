@@ -5,8 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.ethernet") {
-  sdk_category = "partner"
-  api = "fuchsia.hardware.ethernet.api"
+  sdk_category = "internal"
   sources = [ "ethernet.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

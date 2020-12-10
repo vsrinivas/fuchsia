@@ -179,7 +179,6 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.net.oldhttp:fuchsia.net.oldhttp_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.posix:fuchsia.posix_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.process:fuchsia.process_sdk($fidl_toolchain)",

@@ -40,7 +40,6 @@ sdk://fidl/fuchsia.factory.wlan
 sdk://fidl/fuchsia.feedback
 sdk://fidl/fuchsia.fonts
 sdk://fidl/fuchsia.hardware.audio
-sdk://fidl/fuchsia.hardware.ethernet
 sdk://fidl/fuchsia.hardware.goldfish
 sdk://fidl/fuchsia.hardware.light
 sdk://fidl/fuchsia.hardware.network
@@ -75,13 +74,11 @@ sdk://fidl/fuchsia.metrics
 sdk://fidl/fuchsia.migration
 sdk://fidl/fuchsia.modular
 sdk://fidl/fuchsia.net
-sdk://fidl/fuchsia.net.dhcp
 sdk://fidl/fuchsia.net.http
 sdk://fidl/fuchsia.net.interfaces
 sdk://fidl/fuchsia.net.mdns
 sdk://fidl/fuchsia.net.oldhttp
 sdk://fidl/fuchsia.net.routes
-sdk://fidl/fuchsia.netstack
 sdk://fidl/fuchsia.posix
 sdk://fidl/fuchsia.posix.socket
 sdk://fidl/fuchsia.process
