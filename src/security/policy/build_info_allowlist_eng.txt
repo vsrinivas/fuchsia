@@ -8,7 +8,6 @@ fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/main_service_unittest.cmx
 fuchsia-pkg://fuchsia.com/forensics#meta/crash_reports.cmx
 fuchsia-pkg://fuchsia.com/forensics#meta/feedback_data.cmx
 fuchsia-pkg://fuchsia.com/has-build-info#meta/has-build-info.cmx
-fuchsia-pkg://fuchsia.com/omaha-client#meta/omaha-client-service.cmx
 fuchsia-pkg://fuchsia.com/settings#meta/settings.cmx
 fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx
 fuchsia-pkg://fuchsia.com/setui_service_tests#meta/settings_lib_test.cmx
