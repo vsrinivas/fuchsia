@@ -211,6 +211,7 @@ async fn create_authority() -> AuthorityImpl {
         switchboard::message::create_hub(),
         event::message::create_hub(),
         HashSet::new(),
+        None,
     )
     .await
     .unwrap()

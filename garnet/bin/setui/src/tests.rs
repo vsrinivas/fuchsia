@@ -26,6 +26,7 @@ mod night_mode_tests;
 mod policy_handler_tests;
 mod policy_proxy_tests;
 mod privacy_tests;
+mod resource_monitor_tests;
 mod restore_agent_tests;
 mod scaffold;
 mod service_configuration_tests;

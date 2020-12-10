@@ -8,6 +8,7 @@ use crate::internal::agent;
 use crate::internal::event;
 use crate::internal::switchboard;
 use crate::message::base::{Audience, MessengerType};
+use crate::monitor;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::SettingType;
 use anyhow::{format_err, Error};
@@ -30,6 +31,8 @@ pub struct AuthorityImpl {
     event_factory: event::message::Factory,
     // Available components
     available_components: HashSet<SettingType>,
+    // Available resource monitors
+    resource_monitor_actor: Option<monitor::environment::Actor>,
 }
 
 impl AuthorityImpl {
@@ -38,6 +41,7 @@ impl AuthorityImpl {
         switchboard_messenger_factory: switchboard::message::Factory,
         event_factory: event::message::Factory,
         available_components: HashSet<SettingType>,
+        resource_monitor_actor: Option<monitor::environment::Actor>,
     ) -> Result<AuthorityImpl, Error> {
         let messenger_result = messenger_factory.create(MessengerType::Unbound).await;
 
@@ -53,6 +57,7 @@ impl AuthorityImpl {
             messenger: client,
             event_factory,
             available_components,
+            resource_monitor_actor,
         });
     }
 
@@ -132,6 +137,7 @@ impl Authority for AuthorityImpl {
                     self.switchboard_messenger_factory.clone(),
                     self.event_factory.clone(),
                     self.available_components.clone(),
+                    self.resource_monitor_actor.clone(),
                 )
                 .await,
             )

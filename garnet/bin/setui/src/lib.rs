@@ -29,6 +29,7 @@ use {
     crate::inspect::inspect_broker::InspectBroker,
     crate::intl::intl_controller::IntlController,
     crate::light::light_controller::LightController,
+    crate::monitor::base::GenerateMonitor,
     crate::night_mode::night_mode_controller::NightModeController,
     crate::policy::policy_handler,
     crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl,
@@ -91,6 +92,7 @@ pub mod config;
 pub mod fidl_common;
 pub mod handler;
 pub mod message;
+pub mod monitor;
 pub mod service_context;
 pub mod switchboard;
 
@@ -184,6 +186,7 @@ pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     storage_factory: Arc<Mutex<T>>,
     generate_service: Option<GenerateService>,
     handlers: HashMap<SettingType, GenerateHandler<T>>,
+    resource_monitors: Vec<GenerateMonitor>,
 }
 
 macro_rules! register_handler {
@@ -220,6 +223,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             storage_factory,
             generate_service: None,
             handlers: HashMap::new(),
+            resource_monitors: vec![],
         }
     }
 
@@ -278,6 +282,11 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
     pub fn agents(mut self, blueprints: &[AgentBlueprintHandle]) -> EnvironmentBuilder<T> {
         self.agent_blueprints.append(&mut blueprints.to_vec());
+        self
+    }
+
+    pub fn resource_monitors(mut self, monitors: &[GenerateMonitor]) -> EnvironmentBuilder<T> {
+        self.resource_monitors.append(&mut monitors.to_vec());
         self
     }
 
@@ -350,6 +359,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             service_dir,
             settings,
             agent_blueprints,
+            self.resource_monitors,
             self.event_subscriber_blueprints,
             service_context,
             event_messenger_factory,
@@ -508,6 +518,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     components: HashSet<SettingType>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
+    resource_monitor_generators: Vec<GenerateMonitor>,
     event_subscriber_blueprints: Vec<internal::event::subscriber::BlueprintHandle>,
     service_context_handle: ServiceContextHandle,
     event_messenger_factory: internal::event::message::Factory,
@@ -522,6 +533,12 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     for blueprint in event_subscriber_blueprints {
         blueprint.create(event_messenger_factory.clone()).await;
     }
+
+    let monitor_actor = if resource_monitor_generators.is_empty() {
+        None
+    } else {
+        Some(monitor::environment::Builder::new().add_monitors(resource_monitor_generators).build())
+    };
 
     // Attach inspect broker, which watches messages between proxies and setting handlers to
     // record settings values to inspect.
@@ -580,6 +597,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         switchboard_messenger_factory.clone(),
         event_messenger_factory.clone(),
         components.clone(),
+        monitor_actor,
     )
     .await?;
 

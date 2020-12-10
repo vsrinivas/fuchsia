@@ -43,6 +43,7 @@ macro_rules! message_hub_definition {
             #[allow(dead_code)]
             pub type Signature = BaseSignature<$address>;
 
+            #[allow(dead_code)]
             pub fn create_hub() -> Factory {
                 MessageHub::<$payload, $address, $role>::create(None)
             }

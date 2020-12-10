@@ -5,6 +5,7 @@ use crate::internal::agent::message::Receptor;
 use crate::internal::event;
 use crate::internal::switchboard;
 use crate::message::base::MessengerType;
+use crate::monitor;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::SettingType;
 use anyhow::Error;
@@ -51,6 +52,7 @@ pub struct Context {
     publisher: event::Publisher,
     switchboard_messenger_factory: switchboard::message::Factory,
     pub available_components: HashSet<SettingType>,
+    pub resource_monitor_actor: Option<monitor::environment::Actor>,
 }
 
 impl Context {
@@ -60,6 +62,7 @@ impl Context {
         switchboard_messenger_factory: switchboard::message::Factory,
         event_factory: event::message::Factory,
         available_components: HashSet<SettingType>,
+        resource_monitor_actor: Option<monitor::environment::Actor>,
     ) -> Self {
         let publisher = event::Publisher::create(
             &event_factory,
@@ -72,6 +75,7 @@ impl Context {
             publisher,
             switchboard_messenger_factory,
             available_components,
+            resource_monitor_actor,
         }
     }
 

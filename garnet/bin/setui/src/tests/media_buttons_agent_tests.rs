@@ -56,6 +56,7 @@ async fn test_media_buttons_proxied() {
         switchboard::message::create_hub(),
         event_hub,
         HashSet::new(),
+        None,
     )
     .await;
     MediaButtonsAgent::create(context).await;
