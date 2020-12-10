@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <zircon/assert.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -152,9 +151,4 @@ static zx_driver_ops_t pcf8563_rtc_ops = {
     .bind = pcf8563_bind,
 };
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(pcf8563_rtc, pcf8563_rtc_ops, "pcf8563_rtc", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_NXP),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_PCF8563_RTC),
-ZIRCON_DRIVER_END(pcf8563_rtc)
-    // clang-format on
+ZIRCON_DRIVER(pcf8563_rtc, pcf8563_rtc_ops, "pcf8563_rtc", "0.1");

@@ -1,0 +1,15 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.acpi;
+
+fuchsia.BIND_PROTOCOL == fuchsia.acpi.BIND_PROTOCOL.DEVICE;
+
+if fuchsia.BIND_ACPI_HID_0_3 == 0x504e5030 {    // PNP0B00\0
+  fuchsia.BIND_ACPI_HID_4_7 == 0x42303000;
+} else if fuchsia.BIND_ACPI_CID_0_3 == 0x504e5030{
+  fuchsia.BIND_ACPI_CID_4_7 == 0x42303000;    // PNP0B00\0
+} else {
+  abort;
+}

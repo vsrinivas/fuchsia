@@ -2,7 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("pcf8563_rtc_bind") {
+  rules = "pcf8563_rtc.bind"
+  output = "pcf8563_rtc_bind.h"
+  tests = "bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
+}
 
 driver_module("nxp") {
   configs += [
@@ -12,18 +20,21 @@ driver_module("nxp") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "pcf8563-rtc.c" ]
   deps = [
+    ":pcf8563_rtc_bind",
     "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/rtc/lib/rtc",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/hid",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":pcf8563_rtc_bind_test" ]
 }

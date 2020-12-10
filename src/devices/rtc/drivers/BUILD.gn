@@ -6,6 +6,11 @@ group("tests") {
   testonly = true
   deps = [
     "fallback:tests",
+    "nxp:tests",
     "pl031-rtc:tests",
   ]
+
+  if (current_cpu == "x64") {
+    deps += [ "intel-rtc:tests" ]
+  }
 }
