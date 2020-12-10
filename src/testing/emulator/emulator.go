@@ -332,7 +332,14 @@ func (d *Distribution) appendCommonArgs(params Params, args []string) []string {
 }
 
 func getCommonKernelCmdline(params Params) string {
-	cmdline := "kernel.serial=legacy kernel.entropy-mixin=1420bb81dc0396b37cc2d0aa31bb2785dadaf9473d0780ecee1751afb5867564 kernel.halt-on-panic=true"
+	cmdline := "kernel.serial=legacy " +
+		"kernel.entropy-mixin=1420bb81dc0396b37cc2d0aa31bb2785dadaf9473d0780ecee1751afb5867564 " +
+		"kernel.halt-on-panic=true " +
+		// Disable lockup detector heartbeats. In emulated environments, virtualized CPUs
+		// may be starved or fail to execute in a timely fashion, resulting in apparent
+		// lockups. See fxbug.dev/65990.
+		"kernel.lockup-detector.heartbeat-period-ms=0 " +
+		"kernel.lockup-detector.heartbeat-age-threshold-ms=0"
 	if params.AppendCmdline != "" {
 		cmdline += " "
 		cmdline += params.AppendCmdline
