@@ -133,8 +133,8 @@ func (l *Logger) log(callDepth int, prefix, format string, a ...interface{}) {
 }
 
 // Logf logs the string based on the loglevel of the string and the LogLevel of the logger.
-func (l *Logger) logf(callDepth int, loglevel LogLevel, format string, a ...interface{}) {
-	switch loglevel {
+func (l *Logger) logf(callDepth int, logLevel LogLevel, format string, a ...interface{}) {
+	switch logLevel {
 	case InfoLevel:
 		l.infof(callDepth+1, format, a...)
 	case DebugLevel:
@@ -148,7 +148,7 @@ func (l *Logger) logf(callDepth int, loglevel LogLevel, format string, a ...inte
 	case FatalLevel:
 		l.fatalf(callDepth+1, format, a...)
 	default:
-		panic(fmt.Sprintf("Undefined loglevel: %v, log message: %s", loglevel, fmt.Sprintf(format, a...)))
+		panic(fmt.Sprintf("Undefined loglevel: %v, log message: %s", logLevel, fmt.Sprintf(format, a...)))
 	}
 }
 
@@ -159,8 +159,20 @@ func Logf(ctx context.Context, logLevel LogLevel, format string, a ...interface{
 func logf(callDepth int, ctx context.Context, logLevel LogLevel, format string, a ...interface{}) {
 	if v := LoggerFromContext(ctx); v != nil {
 		v.logf(callDepth+1, logLevel, format, a...)
-	} else {
+		return
+	}
+	switch logLevel {
+	case InfoLevel:
+	case DebugLevel:
+	case TraceLevel:
+	case WarningLevel:
+	case ErrorLevel:
 		goLog.Output(callDepth+1, fmt.Sprintf(format, a...))
+	case FatalLevel:
+		goLog.Output(callDepth+1, fmt.Sprintf(format, a...))
+		os.Exit(1)
+	default:
+		panic(fmt.Sprintf("Undefined loglevel: %v, log message: %s", logLevel, fmt.Sprintf(format, a...)))
 	}
 }
 
@@ -253,8 +265,8 @@ func (l *Logger) Fatalf(format string, a ...interface{}) {
 func (l *Logger) fatalf(callDepth int, format string, a ...interface{}) {
 	if l.LoggerLevel >= FatalLevel {
 		l.goErrorLogger.Output(callDepth+1, fmt.Sprintf("%s%s%s", l.prefix, l.color.Red("FATAL: "), fmt.Sprintf(format, a...)))
-		os.Exit(1)
 	}
+	os.Exit(1)
 }
 
 func Fatalf(ctx context.Context, format string, a ...interface{}) {
