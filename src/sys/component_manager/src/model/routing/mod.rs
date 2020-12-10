@@ -17,9 +17,6 @@ use {
             events::filter::EventFilter,
             hooks::{Event, EventPayload},
             logging::{FmtArgsLogger, LOGGER as MODEL_LOGGER},
-            moniker::{
-                AbsoluteMoniker, ChildMoniker, ExtendedMoniker, PartialMoniker, RelativeMoniker,
-            },
             realm::{BindReason, ComponentManagerRealm, ExtendedRealm, Realm, WeakRealm},
             rights::{Rights, READ_RIGHTS, WRITE_RIGHTS},
             storage,
@@ -40,6 +37,7 @@ use {
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::*,
+    moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker, PartialMoniker, RelativeMoniker},
     std::{path::PathBuf, sync::Arc},
 };
 

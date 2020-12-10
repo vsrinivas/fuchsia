@@ -13,7 +13,6 @@ use {
             Event as ComponentEvent, EventError, EventErrorPayload, EventPayload, HasEventType,
             TransferEvent,
         },
-        moniker::AbsoluteMoniker,
     },
     anyhow::Error,
     cm_rust::DictionaryValue,
@@ -24,6 +23,7 @@ use {
         sink::SinkExt,
     },
     maplit::hashmap,
+    moniker::AbsoluteMoniker,
 };
 
 /// EventDispatcher and EventStream are two ends of a channel.

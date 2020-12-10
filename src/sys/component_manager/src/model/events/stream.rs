@@ -10,10 +10,10 @@ use {
             registry::SubscriptionOptions,
         },
         hooks::{EventType, HasEventType},
-        moniker::AbsoluteMoniker,
     },
     fuchsia_trace as trace,
     futures::{channel::mpsc, StreamExt},
+    moniker::AbsoluteMoniker,
     std::sync::{Arc, Weak},
 };
 

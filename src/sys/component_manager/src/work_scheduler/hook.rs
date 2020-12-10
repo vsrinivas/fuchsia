@@ -9,7 +9,6 @@ use {
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-            moniker::AbsoluteMoniker,
             routing::RoutingError,
         },
         work_scheduler::work_scheduler::{
@@ -22,6 +21,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::TryStreamExt,
     log::warn,
+    moniker::AbsoluteMoniker,
     std::{
         path::PathBuf,
         sync::{Arc, Weak},

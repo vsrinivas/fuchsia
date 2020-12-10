@@ -10,7 +10,6 @@ use {
             Event, EventError, EventErrorPayload, EventPayload, EventType, Hook, HooksRegistration,
         },
         model::Model,
-        moniker::AbsoluteMoniker,
         realm::Realm,
         rights::{Rights, WRITE_RIGHTS},
     },
@@ -25,6 +24,7 @@ use {
     futures::stream::StreamExt,
     io_util,
     log::*,
+    moniker::AbsoluteMoniker,
     std::sync::{Arc, Weak},
 };
 

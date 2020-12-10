@@ -59,7 +59,6 @@ use {
     crate::model::{
         error::ModelError,
         hooks::{Event, EventPayload},
-        moniker::ChildMoniker,
         realm::{BindReason, Realm},
     },
     fuchsia_async as fasync,
@@ -67,6 +66,7 @@ use {
         channel::oneshot,
         future::{join_all, BoxFuture, FutureExt, Shared},
     },
+    moniker::ChildMoniker,
     std::collections::HashMap,
     std::hash::{Hash, Hasher},
     std::sync::Arc,
@@ -330,7 +330,6 @@ pub mod tests {
         crate::model::{
             binding::Binder,
             hooks::{EventType, Hook, HooksRegistration},
-            moniker::{AbsoluteMoniker, PartialMoniker},
             realm::BindReason,
             testing::{
                 test_helpers::{
@@ -348,6 +347,7 @@ pub mod tests {
         },
         fuchsia_async as fasync,
         matches::assert_matches,
+        moniker::{AbsoluteMoniker, PartialMoniker},
         std::{convert::TryFrom, sync::Weak},
     };
 

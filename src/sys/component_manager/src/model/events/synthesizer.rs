@@ -8,7 +8,6 @@ use {
         events::{dispatcher::EventDispatcherScope, event::Event, filter::EventFilter},
         hooks::{Event as HookEvent, EventType},
         model::Model,
-        moniker::AbsoluteMoniker,
         realm::Realm,
     },
     async_trait::async_trait,
@@ -16,6 +15,7 @@ use {
     fuchsia_async as fasync,
     futures::{channel::mpsc, future::join_all, stream, SinkExt, StreamExt},
     log::error,
+    moniker::AbsoluteMoniker,
     std::{
         collections::{HashMap, HashSet},
         sync::{Arc, Weak},
@@ -205,11 +205,11 @@ mod tests {
                 stream::EventStream,
             },
             hooks::{EventError, EventErrorPayload, EventPayload, EventType},
-            moniker::AbsoluteMoniker,
             testing::{routing_test_helpers::*, test_helpers::*},
         },
         cm_rust::{DirectoryDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget},
         fidl_fuchsia_io2 as fio, fuchsia_async as fasync,
+        moniker::AbsoluteMoniker,
         std::{collections::HashSet, iter::FromIterator},
     };
 

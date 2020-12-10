@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        model::moniker::{AbsoluteMoniker, ExtendedMoniker, MonikerError},
-        startup,
-    },
+    crate::startup,
     anyhow::{format_err, Context, Error},
     cm_rust::{CapabilityName, CapabilityTypeName, FidlIntoNative},
     cm_types::Url,
@@ -14,6 +11,7 @@ use {
         self as component_internal, BuiltinPkgResolver, OutDirContents,
     },
     fidl_fuchsia_sys2 as fsys,
+    moniker::{AbsoluteMoniker, ExtendedMoniker, MonikerError},
     std::{
         collections::{HashMap, HashSet},
         convert::TryFrom,

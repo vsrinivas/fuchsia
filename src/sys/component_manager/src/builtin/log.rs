@@ -96,15 +96,13 @@ impl BuiltinCapability for WriteOnlyLog {
 mod tests {
     use {
         super::*,
-        crate::model::{
-            hooks::{Event, EventPayload, Hooks},
-            moniker::AbsoluteMoniker,
-        },
+        crate::model::hooks::{Event, EventPayload, Hooks},
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,
         fuchsia_zircon::AsHandleRef,
         fuchsia_zircon_sys as sys,
         futures::lock::Mutex,
+        moniker::AbsoluteMoniker,
         std::path::PathBuf,
     };
 

@@ -3,14 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{
-        error::ModelError,
-        moniker::{AbsoluteMoniker, ChildMoniker},
-        realm::WeakRealm,
-    },
+    crate::model::{error::ModelError, realm::WeakRealm},
     async_trait::async_trait,
     cm_rust::*,
     fuchsia_zircon as zx,
+    moniker::{AbsoluteMoniker, ChildMoniker},
     std::{collections::HashSet, fmt, path::PathBuf},
     thiserror::Error,
 };

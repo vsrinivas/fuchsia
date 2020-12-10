@@ -4,12 +4,12 @@
 
 use {
     crate::model::{
-        moniker::RelativeMoniker,
         rights,
         testing::{routing_test_helpers::*, test_helpers::*},
     },
     cm_rust::*,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
+    moniker::RelativeMoniker,
     std::{convert::TryInto, fs, path::PathBuf},
 };
 

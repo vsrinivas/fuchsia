@@ -17,7 +17,6 @@ use {
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-            moniker::ExtendedMoniker,
             realm::{BindReason, WeakRealm},
             routing::{self, CapabilityState},
             storage,
@@ -33,6 +32,7 @@ use {
     futures::TryStreamExt,
     lazy_static::lazy_static,
     log::*,
+    moniker::ExtendedMoniker,
     std::{
         convert::TryInto,
         path::PathBuf,

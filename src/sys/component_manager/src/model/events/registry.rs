@@ -20,7 +20,6 @@ use {
                 HooksRegistration,
             },
             model::Model,
-            moniker::AbsoluteMoniker,
             realm::Realm,
             routing,
         },
@@ -29,6 +28,7 @@ use {
     cm_rust::{CapabilityName, UseDecl, UseEventDecl},
     fuchsia_trace as trace,
     futures::lock::Mutex,
+    moniker::AbsoluteMoniker,
     std::{
         collections::HashMap,
         sync::{Arc, Weak},
@@ -385,7 +385,6 @@ mod tests {
                 environment::Environment,
                 events::event::Event,
                 hooks::{Event as ComponentEvent, EventError, EventErrorPayload, EventPayload},
-                moniker::AbsoluteMoniker,
                 realm::Realm,
                 testing::test_helpers::{TestModelResult, *},
             },
@@ -393,6 +392,7 @@ mod tests {
         cm_rust::ProtocolDecl,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         matches::assert_matches,
+        moniker::AbsoluteMoniker,
     };
 
     async fn dispatch_capability_requested_event(

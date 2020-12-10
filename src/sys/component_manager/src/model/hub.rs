@@ -12,7 +12,6 @@ use {
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration, RuntimeInfo},
             model::Model,
-            moniker::AbsoluteMoniker,
             realm::Realm,
             routing_fns::{route_expose_fn, route_use_fn},
         },
@@ -24,6 +23,7 @@ use {
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
     fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::lock::Mutex,
+    moniker::AbsoluteMoniker,
     std::{
         collections::HashMap,
         path::PathBuf,

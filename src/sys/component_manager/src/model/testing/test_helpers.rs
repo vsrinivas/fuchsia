@@ -10,7 +10,6 @@ use {
         model::{
             hooks::HooksRegistration,
             model::Model,
-            moniker::{AbsoluteMoniker, PartialMoniker},
             realm::{Realm, WeakRealm},
             rights,
             testing::{
@@ -33,6 +32,7 @@ use {
     fidl_fuchsia_sys2 as fsys, files_async, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::{channel::mpsc::Receiver, StreamExt, TryStreamExt},
+    moniker::{AbsoluteMoniker, PartialMoniker},
     std::collections::HashSet,
     std::default::Default,
     std::path::Path,

@@ -322,7 +322,7 @@ fn koid_to_string(koid: Result<zx::Koid, zx::Status>) -> String {
 mod tests {
     use {
         super::*,
-        crate::model::{hooks::Hooks, moniker::AbsoluteMoniker},
+        crate::model::hooks::Hooks,
         anyhow::{format_err, Context},
         fidl::endpoints::{ClientEnd, Proxy, ServerEnd, ServiceMarker},
         fidl_fuchsia_io as fio,
@@ -331,6 +331,7 @@ mod tests {
         fuchsia_runtime::{job_default, HandleType},
         fuchsia_zircon::HandleBased,
         futures::lock::Mutex,
+        moniker::AbsoluteMoniker,
         std::mem,
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,

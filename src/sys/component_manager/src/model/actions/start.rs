@@ -7,7 +7,6 @@ use {
         error::ModelError,
         exposed_dir::ExposedDir,
         hooks::{Event, EventError, EventErrorPayload, EventPayload, RuntimeInfo},
-        moniker::AbsoluteMoniker,
         namespace::IncomingNamespace,
         realm::{BindReason, ExecutionState, Realm, Runtime, WeakRealm},
         runner::Runner,
@@ -18,6 +17,7 @@ use {
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     log::*,
+    moniker::AbsoluteMoniker,
     std::sync::Arc,
     vfs::execution_scope::ExecutionScope,
 };

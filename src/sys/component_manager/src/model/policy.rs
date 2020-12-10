@@ -6,11 +6,9 @@ use {
     crate::{
         capability::CapabilitySource,
         config::{CapabilityAllowlistKey, CapabilityAllowlistSource, RuntimeConfig},
-        model::{
-            error::ModelError,
-            moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker},
-        },
+        model::error::ModelError,
     },
+    moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker},
     std::sync::{Arc, Weak},
     thiserror::Error,
 };
@@ -199,13 +197,13 @@ mod tests {
             config::{JobPolicyAllowlists, SecurityPolicy},
             model::{
                 environment::{Environment, RunnerRegistry},
-                moniker::ChildMoniker,
                 realm::Realm,
                 resolver::ResolverRegistry,
             },
         },
         cm_rust::*,
         matches::assert_matches,
+        moniker::ChildMoniker,
         std::{collections::HashMap, collections::HashSet, iter::FromIterator, sync::Arc},
     };
 

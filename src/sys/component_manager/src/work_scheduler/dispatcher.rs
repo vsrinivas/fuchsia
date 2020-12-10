@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        model::{binding::Binder, error::ModelError, moniker::AbsoluteMoniker, realm::BindReason},
+        model::{binding::Binder, error::ModelError, realm::BindReason},
         work_scheduler::{work_item::WorkItem, work_scheduler::WORKER_CAPABILITY_NAME},
     },
     cm_rust::CapabilityPath,
@@ -14,6 +14,7 @@ use {
     fuchsia_async::Channel,
     fuchsia_zircon as zx,
     futures::future::BoxFuture,
+    moniker::AbsoluteMoniker,
     std::{
         hash::{Hash, Hasher},
         io,

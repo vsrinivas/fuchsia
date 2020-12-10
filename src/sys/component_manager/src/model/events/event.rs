@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{hooks::Event as ComponentEvent, moniker::AbsoluteMoniker},
-    fuchsia_trace as trace,
-    futures::channel::oneshot,
+    crate::model::hooks::Event as ComponentEvent, fuchsia_trace as trace,
+    futures::channel::oneshot, moniker::AbsoluteMoniker,
 };
 
 #[derive(PartialEq, Clone)]

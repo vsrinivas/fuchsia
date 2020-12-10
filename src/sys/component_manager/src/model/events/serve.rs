@@ -16,7 +16,6 @@ use {
             hooks::{
                 EventError, EventErrorPayload, EventPayload, EventResult, EventType, HasEventType,
             },
-            moniker::{AbsoluteMoniker, RelativeMoniker},
         },
     },
     async_trait::async_trait,
@@ -28,6 +27,7 @@ use {
     fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt, TryStreamExt},
     log::{debug, error, info, warn},
+    moniker::{AbsoluteMoniker, RelativeMoniker},
     std::{path::PathBuf, sync::Arc},
 };
 

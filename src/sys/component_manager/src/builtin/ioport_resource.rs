@@ -66,10 +66,7 @@ mod tests {
         super::*,
         crate::{
             builtin::capability::BuiltinCapability,
-            model::{
-                hooks::{Event, EventPayload, Hooks},
-                moniker::AbsoluteMoniker,
-            },
+            model::hooks::{Event, EventPayload, Hooks},
         },
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
@@ -77,6 +74,7 @@ mod tests {
         fuchsia_zircon::AsHandleRef,
         fuchsia_zircon_sys as sys,
         futures::lock::Mutex,
+        moniker::AbsoluteMoniker,
         std::path::PathBuf,
     };
 

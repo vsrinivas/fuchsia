@@ -3,19 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        model::moniker::AbsoluteMoniker,
-        work_scheduler::{
-            dispatcher::Dispatcher,
-            timer::WorkSchedulerTimer,
-            work_item::WorkItem,
-            work_scheduler::{WorkScheduler, WORKER_CAPABILITY_NAME},
-        },
+    crate::work_scheduler::{
+        dispatcher::Dispatcher,
+        timer::WorkSchedulerTimer,
+        work_item::WorkItem,
+        work_scheduler::{WorkScheduler, WORKER_CAPABILITY_NAME},
     },
     cm_rust::ComponentDecl,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
     fuchsia_async::{self as fasync, Time},
     futures::lock::Mutex,
+    moniker::AbsoluteMoniker,
     std::{
         collections::HashMap,
         sync::{Arc, Weak},
@@ -334,15 +332,13 @@ impl WorkSchedulerDelegate {
 mod tests {
     use {
         super::WorkSchedulerDelegate,
-        crate::{
-            model::moniker::AbsoluteMoniker,
-            work_scheduler::{
-                dispatcher::{self as dspr, Dispatcher},
-                work_item::WorkItem,
-            },
+        crate::work_scheduler::{
+            dispatcher::{self as dspr, Dispatcher},
+            work_item::WorkItem,
         },
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
         futures::future::BoxFuture,
+        moniker::AbsoluteMoniker,
         std::sync::Arc,
     };
 

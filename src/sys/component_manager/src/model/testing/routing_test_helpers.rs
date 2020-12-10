@@ -13,7 +13,6 @@ use {
             error::ModelError,
             hooks::HooksRegistration,
             model::Model,
-            moniker::{AbsoluteMoniker, PartialMoniker, RelativeMoniker},
             realm::BindReason,
             testing::{echo_service::*, mocks::*, out_dir::OutDir, test_helpers::*},
         },
@@ -36,6 +35,7 @@ use {
     futures::lock::Mutex,
     futures::prelude::*,
     matches::assert_matches,
+    moniker::{AbsoluteMoniker, PartialMoniker, RelativeMoniker},
     std::{
         collections::{HashMap, HashSet},
         convert::{TryFrom, TryInto},

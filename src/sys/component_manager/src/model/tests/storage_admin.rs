@@ -4,11 +4,11 @@
 
 use {
     crate::model::{
-        moniker::RelativeMoniker,
         rights,
         testing::{routing_test_helpers::*, test_helpers::*},
     },
     cm_rust::*,
+    moniker::RelativeMoniker,
     std::{
         convert::{TryFrom, TryInto},
         path::PathBuf,

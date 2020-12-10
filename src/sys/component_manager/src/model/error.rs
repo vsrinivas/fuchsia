@@ -4,18 +4,13 @@
 
 use {
     crate::model::{
-        environment::EnvironmentError,
-        events::error::EventsError,
-        moniker::{AbsoluteMoniker, PartialMoniker},
-        policy::PolicyError,
-        resolver::ResolverError,
-        rights::RightsError,
-        routing::RoutingError,
-        runner::RunnerError,
+        environment::EnvironmentError, events::error::EventsError, policy::PolicyError,
+        resolver::ResolverError, rights::RightsError, routing::RoutingError, runner::RunnerError,
         storage::StorageError,
     },
     anyhow::Error,
     clonable_error::ClonableError,
+    moniker::{AbsoluteMoniker, PartialMoniker},
     std::{ffi::OsString, path::PathBuf},
     thiserror::Error,
 };

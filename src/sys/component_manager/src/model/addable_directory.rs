@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{error::ModelError, moniker::AbsoluteMoniker},
+    crate::model::error::ModelError,
+    moniker::AbsoluteMoniker,
     std::sync::Arc,
     vfs::directory::{entry::DirectoryEntry, helper::DirectlyMutable, immutable::simple as pfs},
 };

@@ -6,7 +6,7 @@ use {
     crate::{
         model::testing::mocks::ManagedNamespace,
         model::testing::{routing_test_helpers::*, test_helpers::*},
-        model::{binding::Binder, moniker::AbsoluteMoniker, testing::mocks::FakeBinder},
+        model::{binding::Binder, testing::mocks::FakeBinder},
         work_scheduler::WorkScheduler,
     },
     cm_rust::{
@@ -17,6 +17,7 @@ use {
     fidl::endpoints::Proxy,
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,
+    moniker::AbsoluteMoniker,
     std::{convert::TryFrom, ops::Deref, path::Path, sync::Arc},
 };
 

@@ -8,7 +8,6 @@ use {
         channel,
         model::{
             error::ModelError,
-            moniker::{AbsoluteMoniker, RelativeMoniker},
             realm::{BindReason, Realm},
         },
     },
@@ -20,6 +19,7 @@ use {
         DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
+    moniker::{AbsoluteMoniker, RelativeMoniker},
     std::{path::PathBuf, sync::Arc},
     thiserror::Error,
 };

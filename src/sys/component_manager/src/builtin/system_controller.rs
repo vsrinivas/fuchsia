@@ -178,7 +178,6 @@ mod tests {
         crate::model::{
             binding::Binder,
             hooks::{EventType, Hook, HooksRegistration},
-            moniker::AbsoluteMoniker,
             realm::BindReason,
             testing::test_helpers::{
                 component_decl_with_test_runner, ActionsTest, ComponentDeclBuilder, ComponentInfo,
@@ -187,6 +186,7 @@ mod tests {
         async_trait::async_trait,
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
+        moniker::AbsoluteMoniker,
         std::{boxed::Box, convert::TryFrom, sync::Arc, time::Duration},
     };
 

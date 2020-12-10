@@ -7,12 +7,12 @@ use {
         actions::{start, Action, ActionSet},
         error::ModelError,
         model::Model,
-        moniker::AbsoluteMoniker,
         realm::{BindReason, Realm},
     },
     async_trait::async_trait,
     fidl_fuchsia_sys2 as fsys,
     futures::future::{join_all, BoxFuture},
+    moniker::AbsoluteMoniker,
     std::sync::{Arc, Weak},
 };
 
@@ -138,7 +138,6 @@ mod tests {
                 actions::{Action, ActionSet},
                 events::event::SyncMode,
                 hooks::{EventPayload, EventType, HooksRegistration},
-                moniker::PartialMoniker,
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::TestHook},
             },
         },
@@ -149,6 +148,7 @@ mod tests {
         fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
         futures::prelude::*,
         matches::assert_matches,
+        moniker::PartialMoniker,
         std::{collections::HashSet, convert::TryFrom},
     };
 

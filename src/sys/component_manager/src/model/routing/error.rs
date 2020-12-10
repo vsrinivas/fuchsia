@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::moniker::{AbsoluteMoniker, ExtendedMoniker, PartialMoniker, RelativeMoniker},
     anyhow::Error,
     clonable_error::ClonableError,
     fidl_fuchsia_component as fcomponent, fuchsia_zircon as zx,
+    moniker::{AbsoluteMoniker, ExtendedMoniker, PartialMoniker, RelativeMoniker},
     thiserror::Error,
 };
 

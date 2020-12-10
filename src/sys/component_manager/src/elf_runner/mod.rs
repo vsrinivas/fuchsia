@@ -864,10 +864,7 @@ impl ProcessLauncherConnector {
 mod tests {
     use {
         super::*,
-        crate::{
-            config::{JobPolicyAllowlists, RuntimeConfig, SecurityPolicy},
-            model::moniker::AbsoluteMoniker,
-        },
+        crate::config::{JobPolicyAllowlists, RuntimeConfig, SecurityPolicy},
         fdio,
         fidl::endpoints::{create_proxy, ClientEnd, Proxy},
         fidl_fuchsia_component as fcomp, fidl_fuchsia_data as fdata,
@@ -876,6 +873,7 @@ mod tests {
         futures::prelude::*,
         io_util,
         matches::assert_matches,
+        moniker::AbsoluteMoniker,
         runner::component::Controllable,
         scoped_task,
         std::{convert::TryFrom, ffi::CString, task::Poll},

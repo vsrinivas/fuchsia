@@ -11,9 +11,9 @@ use {
         context::ModelContext,
         environment::Environment,
         error::ModelError,
-        moniker::AbsoluteMoniker,
         realm::{BindReason, ComponentManagerRealm, Realm},
     },
+    moniker::AbsoluteMoniker,
     std::sync::Arc,
 };
 

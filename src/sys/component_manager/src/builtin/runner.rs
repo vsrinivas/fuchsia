@@ -129,7 +129,6 @@ mod tests {
             config::{JobPolicyAllowlists, SecurityPolicy},
             model::{
                 hooks::Hooks,
-                moniker::AbsoluteMoniker,
                 testing::{mocks::MockRunner, routing_test_helpers::*, test_helpers::*},
             },
         },
@@ -138,6 +137,7 @@ mod tests {
         fidl_fuchsia_sys2 as fsys,
         futures::{lock::Mutex, prelude::*},
         matches::assert_matches,
+        moniker::AbsoluteMoniker,
     };
 
     fn sample_start_info(name: &str) -> fcrunner::ComponentStartInfo {

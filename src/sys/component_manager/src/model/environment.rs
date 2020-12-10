@@ -223,7 +223,6 @@ mod tests {
             binding::Binder,
             error::ModelError,
             model::{Model, ModelParams},
-            moniker::AbsoluteMoniker,
             realm::BindReason,
             testing::{
                 mocks::MockResolver,
@@ -236,6 +235,7 @@ mod tests {
         fuchsia_async as fasync,
         maplit::hashmap,
         matches::assert_matches,
+        moniker::AbsoluteMoniker,
         std::sync::Weak,
     };
 

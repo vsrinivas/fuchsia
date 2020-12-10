@@ -14,7 +14,6 @@ use {
             error::ModelError,
             exposed_dir::ExposedDir,
             hooks::{Event, EventError, EventErrorPayload, EventPayload, Hooks},
-            moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker, InstanceId, PartialMoniker},
             namespace::IncomingNamespace,
             resolver::Resolver,
             routing::{self, RoutingError},
@@ -35,6 +34,7 @@ use {
         StreamExt,
     },
     log::warn,
+    moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker, InstanceId, PartialMoniker},
     std::convert::TryInto,
     std::iter::Iterator,
     std::{

@@ -44,7 +44,6 @@ use {
             hooks::EventType,
             hub::Hub,
             model::{Model, ModelParams},
-            moniker::AbsoluteMoniker,
             realm::BindReason,
             resolver::{Resolver, ResolverRegistrationError, ResolverRegistry},
             storage::admin_protocol::StorageAdmin,
@@ -69,6 +68,7 @@ use {
     fuchsia_zircon::{self as zx, Clock, HandleBased},
     futures::{channel::oneshot, prelude::*},
     log::{error, info, warn},
+    moniker::AbsoluteMoniker,
     std::{
         path::PathBuf,
         process,

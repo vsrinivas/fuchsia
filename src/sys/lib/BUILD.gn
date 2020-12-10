@@ -17,6 +17,7 @@ group("tests") {
     "fuchsia-bootfs:fuchsia-bootfs-tests",
     "fuchsia_backoff:fuchsia_backoff_tests",
     "library_loader:tests",
+    "moniker:moniker-tests",
     "runner:tests",
   ]
 }

@@ -11,7 +11,6 @@ use {
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
-            moniker::{AbsoluteMoniker, PartialMoniker},
             realm::{BindReason, WeakRealm},
             routing::error::RoutingError,
         },
@@ -27,6 +26,7 @@ use {
     futures::prelude::*,
     lazy_static::lazy_static,
     log::*,
+    moniker::{AbsoluteMoniker, PartialMoniker},
     std::{
         cmp,
         path::PathBuf,
@@ -383,7 +383,6 @@ mod tests {
             model::{
                 binding::Binder,
                 events::{event::SyncMode, source::EventSource, stream::EventStream},
-                moniker::AbsoluteMoniker,
                 realm::{BindReason, Realm},
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::*},
             },
@@ -397,6 +396,7 @@ mod tests {
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
         fuchsia_async as fasync,
         io_util::OPEN_RIGHT_READABLE,
+        moniker::AbsoluteMoniker,
         std::collections::HashSet,
         std::convert::TryFrom,
         std::path::PathBuf,

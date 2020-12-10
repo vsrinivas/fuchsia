@@ -8,7 +8,6 @@ use {
         model::{
             error::ModelError,
             events::error::EventsError,
-            moniker::AbsoluteMoniker,
             realm::{BindReason, Realm, Runtime},
         },
     },
@@ -19,6 +18,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex},
     io_util,
+    moniker::AbsoluteMoniker,
     rand::random,
     std::{
         collections::HashMap,

@@ -9,7 +9,6 @@ pub mod event_logger;
 pub mod hooks;
 pub mod hub;
 pub mod model;
-pub mod moniker;
 pub mod realm;
 // TODO: This would be #[cfg(test)], but it cannot be because some external crates depend on
 // fuctionality in this module. Factor out the externally-depended code into its own module.

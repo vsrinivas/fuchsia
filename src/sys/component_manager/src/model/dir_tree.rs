@@ -3,12 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{
-        addable_directory::AddableDirectory, error::ModelError, moniker::AbsoluteMoniker,
-        realm::WeakRealm,
-    },
+    crate::model::{addable_directory::AddableDirectory, error::ModelError, realm::WeakRealm},
     cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::{DirectoryBroker, RoutingFn},
+    moniker::AbsoluteMoniker,
     std::collections::HashMap,
     vfs::directory::immutable::simple as pfs,
 };

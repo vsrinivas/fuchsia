@@ -10,7 +10,6 @@ use {
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-            moniker::AbsoluteMoniker,
         },
     },
     async_trait::async_trait,
@@ -19,6 +18,7 @@ use {
     fidl_fuchsia_io::DirectoryMarker,
     fuchsia_zircon as zx,
     futures::{executor::block_on, lock::Mutex, prelude::*},
+    moniker::AbsoluteMoniker,
     std::{
         cmp::Eq,
         collections::HashMap,

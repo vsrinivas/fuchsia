@@ -53,13 +53,11 @@ impl BuiltinCapability for RootResource {
 mod tests {
     use {
         super::*,
-        crate::model::{
-            hooks::{Event, EventPayload, Hooks},
-            moniker::AbsoluteMoniker,
-        },
+        crate::model::hooks::{Event, EventPayload, Hooks},
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
         futures::lock::Mutex,
+        moniker::AbsoluteMoniker,
         std::path::PathBuf,
     };
 

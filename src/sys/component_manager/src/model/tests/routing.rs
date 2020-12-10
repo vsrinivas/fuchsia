@@ -10,7 +10,6 @@ use {
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-            moniker::AbsoluteMoniker,
             resolver::ResolverError,
             rights,
             routing::{self, RoutingError},
@@ -33,6 +32,7 @@ use {
     log::*,
     maplit::hashmap,
     matches::assert_matches,
+    moniker::AbsoluteMoniker,
     std::{
         convert::{TryFrom, TryInto},
         path::{Path, PathBuf},

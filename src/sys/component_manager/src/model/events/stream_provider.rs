@@ -12,7 +12,6 @@ use {
             serve::serve_event_stream,
         },
         hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-        moniker::AbsoluteMoniker,
         resolver::ResolverError,
         rights::{Rights, WRITE_RIGHTS},
     },
@@ -26,6 +25,7 @@ use {
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::lock::Mutex,
+    moniker::AbsoluteMoniker,
     std::{
         collections::HashMap,
         sync::{Arc, Weak},

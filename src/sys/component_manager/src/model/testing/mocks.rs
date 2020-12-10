@@ -9,7 +9,6 @@ use {
             binding::Binder,
             environment::{Environment, RunnerRegistry},
             error::ModelError,
-            moniker::AbsoluteMoniker,
             policy::ScopedPolicyChecker,
             realm::{BindReason, Realm, WeakRealm},
             resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
@@ -32,6 +31,7 @@ use {
         lock::Mutex,
         prelude::*,
     },
+    moniker::AbsoluteMoniker,
     std::{
         boxed::Box,
         collections::{HashMap, HashSet},

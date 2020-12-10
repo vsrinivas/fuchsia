@@ -15,13 +15,14 @@
 
 use {
     crate::{
-        model::{binding::Binder, moniker::AbsoluteMoniker},
+        model::binding::Binder,
         work_scheduler::{delegate::WorkSchedulerDelegate, dispatcher::RealDispatcher},
     },
     cm_rust::{CapabilityName, ComponentDecl},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
     futures::lock::Mutex,
     lazy_static::lazy_static,
+    moniker::AbsoluteMoniker,
     std::sync::Arc,
 };
 
@@ -164,7 +165,7 @@ mod time_tests {
     use {
         super::WorkScheduler,
         crate::{
-            model::{binding::Binder, moniker::AbsoluteMoniker, testing::mocks::FakeBinder},
+            model::{binding::Binder, testing::mocks::FakeBinder},
             work_scheduler::{
                 dispatcher::{Dispatcher, Error},
                 work_item::WorkItem,
@@ -173,6 +174,7 @@ mod time_tests {
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
         fuchsia_async::{Executor, Time, WaitState},
         futures::{executor::block_on, future::BoxFuture, lock::Mutex, Future},
+        moniker::AbsoluteMoniker,
         std::sync::Arc,
     };
 
@@ -768,7 +770,6 @@ mod connect_tests {
             capability::{CapabilitySource, InternalCapability},
             model::{
                 hooks::{Event, EventPayload, Hooks},
-                moniker::AbsoluteMoniker,
                 testing::mocks::FakeBinder,
             },
         },
@@ -777,6 +778,7 @@ mod connect_tests {
         fidl_fuchsia_sys2::WorkSchedulerControlMarker,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::lock::Mutex,
+        moniker::AbsoluteMoniker,
         std::{path::PathBuf, sync::Arc},
     };
 
