@@ -17,6 +17,7 @@ import (
 	"fidl/fuchsia/net/routes"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
@@ -28,10 +29,20 @@ type routesImpl struct {
 }
 
 func (r *routesImpl) Resolve(_ fidl.Context, destination net.IpAddress) (routes.StateResolveResult, error) {
+	const unspecifiedNIC = tcpip.NICID(0)
+	const unspecifiedLocalAddress = tcpip.Address("")
+
 	remote, proto := fidlconv.ToTCPIPAddressAndProtocolNumber(destination)
-	route, err := r.stack.FindRoute(0, "", remote, proto, false /* multicastLoop */)
+	route, err := r.stack.FindRoute(unspecifiedNIC, unspecifiedLocalAddress, remote, proto, false /* multicastLoop */)
 	if err != nil {
-		_ = syslog.WarnTf("fuchsia.net.routes", "stack.FindRoute failed: %s", err)
+		_ = syslog.InfoTf(
+			"fuchsia.net.routes", "stack.FindRoute returned: %s; unspecified=%t, v4=%t, v6=%t, proto=%d",
+			err,
+			remote.Unspecified(),
+			len(remote) == header.IPv4AddressSize,
+			len(remote) == header.IPv6AddressSize,
+			proto,
+		)
 		return routes.StateResolveResultWithErr(int32(WrapTcpIpError(err).ToZxStatus())), nil
 	}
 	// Check if we need to resolve the link address for this route.
@@ -45,7 +56,14 @@ func (r *routesImpl) Resolve(_ fidl.Context, destination net.IpAddress) (routes.
 				<-ch
 				continue
 			default:
-				_ = syslog.WarnTf("fuchsia.net.routes", "route.Resolve failed: %s", err)
+				_ = syslog.InfoTf(
+					"fuchsia.net.routes", "route.Resolve(nil) returned: %s; unspecified=%t, v4=%t, v6=%t, proto=%d",
+					err,
+					remote.Unspecified(),
+					len(remote) == header.IPv4AddressSize,
+					len(remote) == header.IPv6AddressSize,
+					proto,
+				)
 				return routes.StateResolveResultWithErr(int32(zx.ErrAddressUnreachable)), nil
 			}
 			break
