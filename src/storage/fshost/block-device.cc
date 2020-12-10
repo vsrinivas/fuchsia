@@ -584,7 +584,8 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
       return MountFilesystem();
     }
     case DISK_FORMAT_MINFS: {
-      FX_LOGS(INFO) << "mounting minfs";
+      FX_LOGS(INFO) << "mounting minfs: format on corruption is "
+                    << (format_on_corruption ? "enabled" : "disabled");
       if (zx_status_t status = CheckFilesystem(); status != ZX_OK) {
         if (!format_on_corruption) {
           FX_LOGS(INFO) << "formatting minfs on this target is disabled";

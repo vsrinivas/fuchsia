@@ -448,3 +448,10 @@ fshost_config("no_minfs_zxcrypt") {
 fshost_config("gpt_all") {
   gpt_all = true
 }
+
+# Writes default configuration plus any changes to global variables.
+fshost_config("default_config") {
+  minfs_ramdisk = false
+  gpt_all = false
+  no_minfs_zxcrypt = false
+}
