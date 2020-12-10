@@ -209,6 +209,18 @@ needed for debugging it may speed up boot to disable it.
 This option asks the graphics console to use a specific font.  Currently
 only "9x16" (the default) and "18x32" (a double-size font) are supported.
 
+## kernel.arm64.event-stream.enable=\<bool>
+
+When enabled, each ARM cpu will enable an event stream generator, which per-cpu
+sets the hidden event flag at a particular rate. This has the effect of kicking
+cpus out of any WFE states they may be sitting in. The default is false.
+
+## kernel.arm64.event-stream.freq-hz=\<uint32>
+
+If the event stream is enabled, specifies the frequency at which it will attempt
+to run. The resolution is limited, so the driver will only be able to pick the
+nearest power of 2 from the cpu timer counter. The default is 10000.
+
 ## kernel.bypass-debuglog=\<bool>
 
 When enabled, forces output to the console instead of buffering it. The reason

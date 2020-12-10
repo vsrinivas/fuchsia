@@ -9,10 +9,12 @@
 #include <inttypes.h>
 #include <lib/affine/ratio.h>
 #include <lib/arch/intrin.h>
+#include <lib/cmdline.h>
 #include <lib/counters.h>
 #include <lib/fixed_point.h>
 #include <lib/unittest/unittest.h>
 #include <platform.h>
+#include <pow2.h>
 #include <trace.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/types.h>
@@ -28,27 +30,26 @@
 
 #define LOCAL_TRACE 0
 
-/* CNTFRQ AArch64 register */
+// AArch64 timer control registers
+#define TIMER_REG_CNTKCTL "cntkctl_el1"
 #define TIMER_REG_CNTFRQ "cntfrq_el0"
 
-/* CNTP AArch64 registers */
+// CNTP AArch64 registers
 #define TIMER_REG_CNTP_CTL "cntp_ctl_el0"
 #define TIMER_REG_CNTP_CVAL "cntp_cval_el0"
 #define TIMER_REG_CNTP_TVAL "cntp_tval_el0"
 #define TIMER_REG_CNTPCT "cntpct_el0"
 
-/* CNTPS "AArch64" registers */
+// CNTPS "AArch64" registers
 #define TIMER_REG_CNTPS_CTL "cntps_ctl_el1"
 #define TIMER_REG_CNTPS_CVAL "cntps_cval_el1"
 #define TIMER_REG_CNTPS_TVAL "cntps_tval_el1"
 
-/* CNTV "AArch64" registers */
+// CNTV "AArch64" registers
 #define TIMER_REG_CNTV_CTL "cntv_ctl_el0"
 #define TIMER_REG_CNTV_CVAL "cntv_cval_el0"
 #define TIMER_REG_CNTV_TVAL "cntv_tval_el0"
 #define TIMER_REG_CNTVCT "cntvct_el0"
-
-static int timer_irq;
 
 extern "C" {
 
@@ -65,6 +66,10 @@ KCOUNTER(timeline_virtual_entry, "boot.timeline.virtual")
 
 namespace {
 
+// Global saved config state
+int timer_irq;
+uint32_t timer_cntfrq; // Timer tick rate in Hz.
+
 enum timer_irq_assignment {
   IRQ_PHYS,
   IRQ_VIRT,
@@ -80,19 +85,11 @@ zx_time_t cntpct_to_zx_time(uint64_t cntpct) {
   return platform_get_ticks_to_time_ratio().Scale(static_cast<int64_t>(cntpct));
 }
 
-static uint32_t read_cntfrq(void) {
-  uint32_t cntfrq;
+static uint32_t read_cntp_ctl() { return __arm_rsr(TIMER_REG_CNTP_CTL); }
 
-  cntfrq = __arm_rsr(TIMER_REG_CNTFRQ);
-  LTRACEF("cntfrq: 0x%08x, %u\n", cntfrq, cntfrq);
-  return cntfrq;
-}
+static uint32_t read_cntv_ctl() { return __arm_rsr(TIMER_REG_CNTV_CTL); }
 
-static uint32_t read_cntp_ctl(void) { return __arm_rsr(TIMER_REG_CNTP_CTL); }
-
-static uint32_t read_cntv_ctl(void) { return __arm_rsr(TIMER_REG_CNTV_CTL); }
-
-static uint32_t read_cntps_ctl(void) { return __arm_rsr(TIMER_REG_CNTPS_CTL); }
+static uint32_t read_cntps_ctl() { return __arm_rsr(TIMER_REG_CNTPS_CTL); }
 
 static void write_cntp_ctl(uint32_t val) {
   LTRACEF_LEVEL(3, "cntp_ctl: 0x%x %x\n", val, read_cntp_ctl());
@@ -148,7 +145,7 @@ static void write_cntps_tval(int32_t val) {
   __isb(ARM_MB_SY);
 }
 
-static uint64_t read_cntpct_a73(void) {
+static uint64_t read_cntpct_a73() {
   // Workaround for Cortex-A73 erratum 858921.
   // Fix will be applied to all cores, as two consecutive reads should be
   // faster than checking if core is A73 and branching before every read.
@@ -161,7 +158,7 @@ static uint64_t read_cntpct_a73(void) {
   return (((old_read ^ new_read) >> 32) & 1) ? old_read : new_read;
 }
 
-static uint64_t read_cntvct_a73(void) {
+static uint64_t read_cntvct_a73() {
   // Workaround for Cortex-A73 erratum 858921.
   // Fix will be applied to all cores, as two consecutive reads should be
   // faster than checking if core is A73 and branching before every read.
@@ -174,15 +171,15 @@ static uint64_t read_cntvct_a73(void) {
   return (((old_read ^ new_read) >> 32) & 1) ? old_read : new_read;
 }
 
-static uint64_t read_cntpct(void) { return __arm_rsr64(TIMER_REG_CNTPCT); }
+static uint64_t read_cntpct() { return __arm_rsr64(TIMER_REG_CNTPCT); }
 
-static uint64_t read_cntvct(void) { return __arm_rsr64(TIMER_REG_CNTVCT); }
+static uint64_t read_cntvct() { return __arm_rsr64(TIMER_REG_CNTVCT); }
 
 struct timer_reg_procs {
   void (*write_ctl)(uint32_t val);
   void (*write_cval)(uint64_t val);
   void (*write_tval)(int32_t val);
-  uint64_t (*read_ct)(void);
+  uint64_t (*read_ct)();
 };
 
 __UNUSED static const struct timer_reg_procs cntp_procs = {
@@ -239,7 +236,7 @@ static inline void write_cval(uint64_t val) { reg_procs->write_cval(val); }
 
 static inline void write_tval(uint32_t val) { reg_procs->write_tval(val); }
 
-static zx_ticks_t read_ct(void) {
+static zx_ticks_t read_ct() {
   zx_ticks_t cntpct = static_cast<zx_ticks_t>(reg_procs->read_ct());
   LTRACEF_LEVEL(3, "cntpct: 0x%016" PRIx64 ", %" PRIi64 "\n", static_cast<uint64_t>(cntpct),
                 cntpct);
@@ -274,16 +271,16 @@ zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
   return 0;
 }
 
-void platform_stop_timer(void) { write_ctl(0); }
+void platform_stop_timer() { write_ctl(0); }
 
-void platform_shutdown_timer(void) {
+void platform_shutdown_timer() {
   DEBUG_ASSERT(arch_ints_disabled());
   mask_interrupt(timer_irq);
 }
 
-bool platform_usermode_can_access_tick_registers(void) {
+bool platform_usermode_can_access_tick_registers() {
   // We always use the ARM generic timer for the tick counter, and these
-  // registers are accessible from usermode.
+  // registers are accessible from usermode
   return true;
 }
 
@@ -297,40 +294,101 @@ static inline affine::Ratio arm_generic_timer_compute_conversion_factors(uint32_
   return cntpct_to_nsec;
 }
 
-static void arm_generic_timer_init(uint32_t freq_override) {
-  uint32_t cntfrq;
-
-  if (freq_override == 0) {
-    cntfrq = read_cntfrq();
-
-    if (!cntfrq) {
-      TRACEF("Failed to initialize timer, frequency is 0\n");
-      return;
-    }
-  } else {
-    cntfrq = freq_override;
+static void enable_event_stream(uint32_t cntfrq) {
+  // Check to see if it's enabled in the command line
+  bool enable = gCmdline.GetBool("kernel.arm64.event-stream.enable", false);
+  if (!enable) {
+    return;
   }
 
-  dprintf(INFO, "arm generic timer freq %u Hz\n", cntfrq);
-  platform_set_ticks_to_time_ratio(arm_generic_timer_compute_conversion_factors<true>(cntfrq));
+  // Default target frequency is 10khz
+  uint32_t target_event_freq = gCmdline.GetUInt32("kernel.arm64.event-stream.freq-hz", 10000);
 
-  LTRACEF("register irq %d on cpu %u\n", timer_irq, arch_curr_cpu_num());
-  zx_status_t status = register_permanent_int_handler(timer_irq, &platform_tick, NULL);
-  DEBUG_ASSERT(status == ZX_OK);
-  unmask_interrupt(timer_irq);
+  // Compute the closest power of two from the timer frequency to get to the target.
+  //
+  // The mechanism to select the rate of the event counter is to select which bit in the virtual
+  // counter it should watch for a transition from 0->1 or 1->0 on. This has the effect of
+  // of selecting a power of two to divide the virtual counter by plus one.
+  //
+  // There's no real out of range value here. Everything gets clamped to a shift value of [0, 15].
+  uint shift;
+  for (shift = 0; shift <= 14; shift++) {
+    // Find a matching shift to the target frequency within range. If the target frequency is too
+    // large even for shift 0 then it'll just pick shift 0 because of the <=.
+    if (log2_uint_floor(cntfrq >> (shift + 1)) <= log2_uint_floor(target_event_freq)) {
+      break;
+    }
+  }
+  // If we ran off the end of the for loop 15 is the max shift and is okay
+  DEBUG_ASSERT(shift <= 15);
+
+  uint32_t real_event_freq = (cntfrq >> (shift + 1));
+
+  // Enable the event stream
+  uint64_t cntkctl = __arm_rsr64(TIMER_REG_CNTKCTL);
+  // Set the trigger bit (field 7:4)
+  cntkctl &= ~(0xfUL << 4);
+  cntkctl |= shift << 4;  // EVNTI
+  // Clear the transition bit to 0
+  cntkctl &= ~(1 << 3);  // ENVTDIR
+  // Enable the stream
+  cntkctl |= (1 << 2);  // EVNTEN
+  __arm_wsr64(TIMER_REG_CNTKCTL, cntkctl);
+
+  dprintf(INFO, "arm generic timer enabling event stream on cpu %u: shift %u, %u Hz\n",
+          arch_curr_cpu_num(), shift, real_event_freq);
 }
 
-static void arm_generic_timer_init_secondary_cpu(uint level) {
+static void arm_generic_timer_init(uint32_t freq_override) {
+  if (freq_override == 0) {
+    // Read the firmware supplied cntfrq register. Note: it may not be correct
+    // in buggy firmware situations, so always provide a mechanism to override it.
+    timer_cntfrq = __arm_rsr(TIMER_REG_CNTFRQ);
+    LTRACEF("cntfrq: %#08x, %u\n", timer_cntfrq, timer_cntfrq);
+  } else {
+    timer_cntfrq = freq_override;
+  }
+
+  dprintf(INFO, "arm generic timer freq %u Hz\n", timer_cntfrq);
+
+  // No way to reasonably continue. Just hard stop.
+  ASSERT(timer_cntfrq != 0);
+
+  platform_set_ticks_to_time_ratio(
+      arm_generic_timer_compute_conversion_factors<true>(timer_cntfrq));
+
+  // Set up the hardware timer irq handler for this vector. Use the permanent irq handler
+  // registraion scheme since it is enabled on all cpus and does not need any locking
+  // for reentrancy and deregistration purposes.
+  zx_status_t status = register_permanent_int_handler(timer_irq, &platform_tick, NULL);
+  DEBUG_ASSERT(status == ZX_OK);
+
+  // assert that access to the virtual counter is available in EL0
+  auto cntkctl = __arm_rsr64(TIMER_REG_CNTKCTL);
+  ASSERT(cntkctl & (1 << 1));  // EL0VCTEN
+
+  // try to enable the event stream if requested
+  enable_event_stream(timer_cntfrq);
+
+  // enable the IRQ on the boot cpu
   LTRACEF("unmask irq %d on cpu %u\n", timer_irq, arch_curr_cpu_num());
   unmask_interrupt(timer_irq);
 }
 
-/* secondary cpu initialize the timer just before the kernel starts with interrupts enabled */
+static void arm_generic_timer_init_secondary_cpu(uint level) {
+  // try to enable the event stream if requested
+  enable_event_stream(timer_cntfrq);
+
+  LTRACEF("unmask irq %d on cpu %u\n", timer_irq, arch_curr_cpu_num());
+  unmask_interrupt(timer_irq);
+}
+
+// secondary cpu initialize the timer just before the kernel starts with interrupts enabled
 LK_INIT_HOOK_FLAGS(arm_generic_timer_init_secondary_cpu, arm_generic_timer_init_secondary_cpu,
                    LK_INIT_LEVEL_THREADING - 1, LK_INIT_FLAG_SECONDARY_CPUS)
 
 static void arm_generic_timer_resume_cpu(uint level) {
-  /* Always trigger a timer interrupt on each cpu for now */
+  // Always trigger a timer interrupt on each cpu for now
   write_tval(0);
   write_ctl(1);
 }
@@ -383,7 +441,7 @@ static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length
 }
 
 // Called once per cpu in the system post cpu detection.
-void late_update_reg_procs(uint) {
+static void late_update_reg_procs(uint) {
   ASSERT(timer_assignment == IRQ_PHYS || timer_assignment == IRQ_VIRT ||
          timer_assignment == IRQ_SPHYS);
 

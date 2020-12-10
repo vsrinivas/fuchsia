@@ -11,6 +11,7 @@ zx_library("arm_generic") {
     "$zx/kernel/dev/interrupt",
     "$zx/kernel/dev/pdev",
     "$zx/kernel/lib/arch",
+    "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/counters",
     "$zx/kernel/lib/fixed_point",
     "$zx/kernel/lib/init",

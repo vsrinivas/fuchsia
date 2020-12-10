@@ -18,6 +18,7 @@
 #define CPACR_EL1_FPEN          (0b11 << 20)
 #define ID_AA64PFR0_EL1_GIC     (0b1111 << 24)
 
+#define CNTHCTL_EL2_EVNTEN      (1 << 2)
 #define CNTHCTL_EL2_EL1PCEN     (1 << 1)
 #define CNTHCTL_EL2_EL1PCTEN    (1 << 0)
 #define CPTR_EL2_RES1           0x33ff
@@ -109,9 +110,11 @@ FUNCTION(arm64_elX_to_el1)
     adr_global x9, arm64_el2_init_table
     msr vbar_el2, x9
 
-    // Disable EL1 timer traps and the timer offset.
     mrs x9, cnthctl_el2
+    // Disable EL1 timer traps and the timer offset.
     orr x9, x9, CNTHCTL_EL2_EL1PCEN | CNTHCTL_EL2_EL1PCTEN
+    // Make sure the EL2 physical event stream is not running.
+    bic x9, x9, CNTHCTL_EL2_EVNTEN
     msr cnthctl_el2, x9
     msr cntvoff_el2, xzr
 
