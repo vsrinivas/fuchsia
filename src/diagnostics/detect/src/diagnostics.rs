@@ -88,7 +88,7 @@ impl InspectFetcher {
             }
         };
         let selectors = selectors.into_iter().filter_map(get_inspect);
-        let reader = reader.add_selectors(selectors);
+        let reader = reader.retry_if_empty(false).add_selectors(selectors);
         Ok(InspectFetcher { reader: Some(reader) })
     }
 
