@@ -169,19 +169,14 @@ mod tests {
             create_proxy_and_stream::<LauncherMarker>().expect("Failed to create Launcher FIDL.");
         let session_url = "test_session";
 
-        fasync::Task::spawn(async move {
-            if let Some(launch_request) = launcher_server.try_next().await.unwrap() {
-                if let Some((configuration, responder)) = launch_request.into_launch() {
-                    assert_eq!(configuration.session_url, Some(session_url.to_string()));
-                    let _ = responder.send(&mut Ok(()));
-                } else {
-                    assert!(false);
-                }
-            } else {
-                assert!(false);
-            }
-        })
-        .detach();
+        let _server_task = fasync::Task::spawn(async move {
+            let launch_request =
+                launcher_server.try_next().await.expect("FIDL Error").expect("Stream terminated");
+            let (configuration, responder) =
+                launch_request.into_launch().expect("Failed to unwrap launch request");
+            assert_eq!(configuration.session_url, Some(session_url.to_string()));
+            let _ = responder.send(&mut Ok(()));
+        });
 
         assert!(launch_session(&session_url, launcher).await.is_ok());
     }
@@ -194,18 +189,13 @@ mod tests {
             create_proxy_and_stream::<LauncherMarker>().expect("Failed to create Launcher FIDL.");
         let session_url = "test_session";
 
-        fasync::Task::spawn(async move {
-            if let Some(launch_request) = launcher_server.try_next().await.unwrap() {
-                if let Some((_, responder)) = launch_request.into_launch() {
-                    let _ = responder.send(&mut Err(LaunchError::NotFound));
-                } else {
-                    assert!(false);
-                }
-            } else {
-                assert!(false);
-            }
-        })
-        .detach();
+        let _server_task = fasync::Task::spawn(async move {
+            let launch_request =
+                launcher_server.try_next().await.expect("FIDL Error").expect("Stream terminated");
+            let (_, responder) =
+                launch_request.into_launch().expect("Failed to unwrap launch request");
+            let _ = responder.send(&mut Err(LaunchError::NotFound));
+        });
 
         assert!(launch_session(&session_url, launcher).await.is_err());
     }
@@ -216,18 +206,13 @@ mod tests {
         let (restarter, mut restarter_server) =
             create_proxy_and_stream::<RestarterMarker>().expect("Failed to create Restarter FIDL.");
 
-        fasync::Task::spawn(async move {
-            if let Some(restarter_request) = restarter_server.try_next().await.unwrap() {
-                if let Some(responder) = restarter_request.into_restart() {
-                    let _ = responder.send(&mut Ok(()));
-                } else {
-                    assert!(false);
-                }
-            } else {
-                assert!(false);
-            }
-        })
-        .detach();
+        let _server_task = fasync::Task::spawn(async move {
+            let restarter_request =
+                restarter_server.try_next().await.expect("FIDL Error").expect("Stream terminated");
+            let responder =
+                restarter_request.into_restart().expect("Failed to unwrap restarter request");
+            let _ = responder.send(&mut Ok(()));
+        });
 
         assert!(restart_session(restarter).await.is_ok());
     }
@@ -238,18 +223,13 @@ mod tests {
         let (restarter, mut restarter_server) =
             create_proxy_and_stream::<RestarterMarker>().expect("Failed to create Restarter FIDL.");
 
-        fasync::Task::spawn(async move {
-            if let Some(restarter_request) = restarter_server.try_next().await.unwrap() {
-                if let Some(responder) = restarter_request.into_restart() {
-                    let _ = responder.send(&mut Err(RestartError::NotFound));
-                } else {
-                    assert!(false);
-                }
-            } else {
-                assert!(false);
-            }
-        })
-        .detach();
+        let _server_task = fasync::Task::spawn(async move {
+            let restarter_request =
+                restarter_server.try_next().await.expect("FIDL Error").expect("Stream terminated");
+            let responder =
+                restarter_request.into_restart().expect("Failed to unwrap restarter request");
+            let _ = responder.send(&mut Err(RestartError::NotFound));
+        });
 
         assert!(restart_session(restarter).await.is_err());
     }
@@ -261,16 +241,13 @@ mod tests {
             .expect("Failed to create ElementManager FIDL.");
         let element_url = "test_element";
 
-        fasync::Task::spawn(async move {
-            if let Some(propose_request) = server.try_next().await.unwrap() {
-                let ElementManagerRequest::ProposeElement { spec, responder, .. } = propose_request;
-                assert_eq!(spec.component_url, Some(element_url.to_string()));
-                let _ = responder.send(&mut Ok(()));
-            } else {
-                assert!(false);
-            }
-        })
-        .detach();
+        let _server_task = fasync::Task::spawn(async move {
+            let propose_request =
+                server.try_next().await.expect("FIDL Error").expect("Stream terminated");
+            let ElementManagerRequest::ProposeElement { spec, responder, .. } = propose_request;
+            assert_eq!(spec.component_url, Some(element_url.to_string()));
+            let _ = responder.send(&mut Ok(()));
+        });
 
         assert!(add_element(element_url, proxy).await.is_ok());
     }
@@ -282,15 +259,12 @@ mod tests {
             .expect("Failed to create ElementManager FIDL.");
         let element_url = "test_element";
 
-        fasync::Task::spawn(async move {
-            if let Some(propose_request) = server.try_next().await.unwrap() {
-                let ElementManagerRequest::ProposeElement { responder, .. } = propose_request;
-                let _ = responder.send(&mut Err(ProposeElementError::Rejected));
-            } else {
-                assert!(false);
-            }
-        })
-        .detach();
+        let _server_task = fasync::Task::spawn(async move {
+            let propose_request =
+                server.try_next().await.expect("FIDL Error").expect("Stream terminated");
+            let ElementManagerRequest::ProposeElement { responder, .. } = propose_request;
+            let _ = responder.send(&mut Err(ProposeElementError::Rejected));
+        });
 
         assert!(add_element(element_url, proxy).await.is_err());
     }
