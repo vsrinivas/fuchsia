@@ -89,13 +89,30 @@ async fn check_for_system_update_impl(
         return update_available;
     }
 
-    match is_vbmeta_up_to_date(&update_pkg, paver).await {
+    match is_image_up_to_date(
+        &update_pkg,
+        paver,
+        ImageType::FuchsiaVbmeta,
+        Asset::VerifiedBootMetadata,
+    )
+    .await
+    {
         Ok(true) => {}
         Ok(false) => {
             return update_available;
         }
         Err(err) => {
+            // In the case that reading the vbmeta errors or there is no vbmeta, check the ZBI for an update.
             fx_log_warn!("Failed to check if vbmeta is up to date: {:#}", anyhow!(err));
+            match is_image_up_to_date(&update_pkg, paver, ImageType::Zbi, Asset::Kernel).await {
+                Ok(true) => {}
+                Ok(false) => {
+                    return update_available;
+                }
+                Err(err) => {
+                    fx_log_warn!("Failed to check if zbi is up to date: {:#}", anyhow!(err));
+                }
+            }
         }
     }
 
@@ -155,28 +172,30 @@ async fn latest_system_image_merkle(
     Ok(hash.to_owned())
 }
 
-async fn is_vbmeta_up_to_date(
+async fn is_image_up_to_date(
     update_package: &UpdatePackage,
     paver: &PaverProxy,
+    image_type: ImageType,
+    asset: Asset,
 ) -> Result<bool, anyhow::Error> {
-    let latest_vbmeta = update_package
-        .open_image(&update_package::Image::new(ImageType::FuchsiaVbmeta, None))
-        .await?;
+    let latest_image =
+        update_package.open_image(&update_package::Image::new(image_type, None)).await?;
 
     let (boot_manager, server_end) = fidl::endpoints::create_proxy::<BootManagerMarker>()?;
     let () = paver.find_boot_manager(server_end).context("connect to fuchsia.paver.BootManager")?;
     let configuration = boot_manager.query_current_configuration().await?.map_err(|status| {
-        anyhow!("query_current_configuration responded with {}", zx::Status::from_raw(status))
+        anyhow!("error querying current configuration {}", zx::Status::from_raw(status))
     })?;
 
     let (data_sink, server_end) = fidl::endpoints::create_proxy::<DataSinkMarker>()?;
     let () = paver.find_data_sink(server_end).context("connect to fuchsia.paver.DataSink")?;
-    let current_vbmeta = data_sink
-        .read_asset(configuration, Asset::VerifiedBootMetadata)
+
+    let current_image = data_sink
+        .read_asset(configuration, asset)
         .await?
         .map_err(|status| anyhow!("read_asset responded with {}", zx::Status::from_raw(status)))?;
 
-    compare_buffer(latest_vbmeta, current_vbmeta)
+    compare_buffer(latest_image, current_image)
 }
 
 // Compare two buffers and return true if they are equal.
@@ -308,6 +327,13 @@ pub mod test_check_for_system_update_impl {
             let PackageResolverProxyTempDir { temp_dir } =
                 Self::new_with_latest_system_image(ACTIVE_SYSTEM_IMAGE_MERKLE);
             fs::write(temp_dir.path().join("fuchsia.vbmeta"), vbmeta).expect("write vbmeta");
+            PackageResolverProxyTempDir { temp_dir }
+        }
+
+        fn new_with_zbi(zbi: impl AsRef<[u8]>) -> PackageResolverProxyTempDir {
+            let PackageResolverProxyTempDir { temp_dir } =
+                Self::new_with_latest_system_image(ACTIVE_SYSTEM_IMAGE_MERKLE);
+            fs::write(temp_dir.path().join("zbi"), zbi).expect("write zbi");
             PackageResolverProxyTempDir { temp_dir }
         }
     }
@@ -527,8 +553,7 @@ pub mod test_check_for_system_update_impl {
                 .insert_hook(mock_paver::hooks::read_asset(|configuration, asset| {
                     assert_eq!(configuration, Configuration::A);
                     match asset {
-                        // TODO(fxbug.dev/63078): return up to date zbi.
-                        Asset::Kernel => panic!("not expecting to read kernel"),
+                        Asset::Kernel => panic!("shouldn't read kernel if vbmeta is the same!"),
                         Asset::VerifiedBootMetadata => Ok(vec![1]),
                     }
                 }))
@@ -680,6 +705,81 @@ pub mod test_check_for_system_update_impl {
                     .parse()
                     .expect("new system image string literal") &&
                 latest_update_package == *UPDATE_PACKAGE_MERKLE
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_zbi_only_update_available() {
+        let mut file_system = FakeFileSystem::new_with_valid_system_meta();
+        let package_resolver = PackageResolverProxyTempDir::new_with_zbi([1]);
+        let mock_paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .active_config(Configuration::A)
+                .insert_hook(mock_paver::hooks::read_asset(|configuration, asset| {
+                    assert_eq!(configuration, Configuration::A);
+                    match asset {
+                        Asset::Kernel => Ok(vec![0]),
+                        Asset::VerifiedBootMetadata => panic!("no vbmeta available"),
+                    }
+                }))
+                .build(),
+        );
+        let paver = mock_paver.spawn_paver_service();
+
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            Some(&UPDATE_PACKAGE_MERKLE),
+        )
+        .await;
+
+        assert_matches!(
+            result,
+            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image, latest_update_package })
+            if
+                current_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                    .parse()
+                    .expect("active system image string literal") &&
+                latest_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                    .parse()
+                    .expect("new system image string literal") &&
+                latest_update_package == *UPDATE_PACKAGE_MERKLE
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_zbi_did_not_require_update() {
+        let mut file_system = FakeFileSystem::new_with_valid_system_meta();
+        let package_resolver = PackageResolverProxyTempDir::new_with_zbi([0]);
+        let mock_paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .active_config(Configuration::A)
+                .insert_hook(mock_paver::hooks::read_asset(|configuration, asset| {
+                    assert_eq!(configuration, Configuration::A);
+                    match asset {
+                        Asset::Kernel => Ok(vec![0]),
+                        Asset::VerifiedBootMetadata => panic!("no vbmeta available"),
+                    }
+                }))
+                .build(),
+        );
+        let paver = mock_paver.spawn_paver_service();
+
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            Some(&UPDATE_PACKAGE_MERKLE),
+        )
+        .await;
+
+        assert_matches!(
+            result,
+            Ok(SystemUpdateStatus::UpToDate { system_image, update_package: _ })
+                if system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                .parse()
+                .expect("active system image string literal")
         );
     }
 }
