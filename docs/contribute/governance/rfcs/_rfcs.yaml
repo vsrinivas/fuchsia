@@ -183,3 +183,17 @@
   reviewers: ['kulakowski@google.com', 'jamesr@google.com', 'cpu@google.com', 'maniscalco@google.com', 'johngro@google.com', 'abarth@google.com']
   submitted: '2020-12-02'
   reviewed: '2020-12-09'
+
+- name: 'RFC-0015'
+  title: 'Fuchsia Compatibility Test Suite (CTS)'
+  short_description: 'Requirements, goals, and context for a Compatibility Test Suite (CTS) for Fuchsia.'
+  authors: ['jeremymanson@google.com']
+  file: '0015_cts.md'
+  area: ['Governance', 'Testing']
+  issue: ['66256']
+  gerrit_change_id: ['450861']
+  status: 'Accepted'
+  reviewers: ['pascallouis@google.com', 'jamesr@google.com']
+  submitted: '2020-11-13'
+  reviewed: '2020-12-09'
+

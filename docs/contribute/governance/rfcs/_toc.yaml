@@ -39,5 +39,7 @@ toc:
   path: /docs/contribute/governance/rfcs/0012_zircon_discardable_memory.md
 - title: "RFC-0014: Relax zx_fifo_create constraints"
   path: /docs/contribute/governance/rfcs/0014_relax_fifo_create_constraints.md
+- title: "RFC-0015: Compatibility Test Suite"
+  path: /docs/contribute/governance/rfcs/0015_cts.md
 - title: "RFC template"
   path: /docs/contribute/governance/rfcs/TEMPLATE.md
