@@ -19,16 +19,6 @@ group("tests") {
 }
 
 if (is_linux) {
-  go_library("recovery_simulator_support_lib") {
-    testonly = true
-
-    source_dir = "//src/recovery/simulator/support"
-
-    deps = [ "//src/testing/emulator" ]
-
-    sources = [ "support.go" ]
-  }
-
   # These take >5m (the infra timeout) if they're all in one binary, so they
   # need to be split into multiple binaries.
   template("split_go_test") {
@@ -36,10 +26,7 @@ if (is_linux) {
     go_library(target_name) {
       testonly = true
       source_dir = "//src/recovery/simulator/$split_name"
-      deps = [
-        ":recovery_simulator_support_lib",
-        "//src/testing/emulator",
-      ]
+      deps = [ "//src/testing/emulator" ]
       forward_variables_from(invoker, [ "sources" ])
     }
 
