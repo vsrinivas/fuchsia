@@ -33,10 +33,11 @@ import (
 )
 
 var (
-	ninjalogPath = flag.String("ninjalog", "", "path of .ninja_log")
-	compdbPath   = flag.String("compdb", "", "path of JSON compilation database")
-	graphPath    = flag.String("graph", "", "path of graphviz dot file for ninja targets")
-	outputPath   = flag.String("output", "", "path to output the serialized build stats")
+	ninjalogPath       = flag.String("ninjalog", "", "path of .ninja_log")
+	compdbPath         = flag.String("compdb", "", "path of JSON compilation database")
+	graphPath          = flag.String("graph", "", "path of graphviz dot file for ninja targets")
+	outputPath         = flag.String("output", "", "path to output the serialized build stats")
+	minActionBuildTime = flag.Duration("min_action_build_time", 5*time.Second, "actions that took longer than or equal to this time granularity are included in output")
 
 	colors color.EnableColor
 	level  logger.LogLevel
@@ -98,8 +99,11 @@ type buildStats struct {
 	TotalBuildTime time.Duration
 	// Wall time spent to complete this build.
 	BuildDuration time.Duration
-	// All build actions from this build.
+	// All build actions from this build that took longer to finish than granularity.
+	// TODO(jayzhuang): deprecate `All` after the pipeline is migrated to `Actions`.
 	All []action
+	// All build actions from this build that took longer to finish than granularity.
+	Actions []action
 }
 
 // constructGraph constructs a ninjagraph based on files from input paths, and
@@ -134,7 +138,7 @@ type graph interface {
 	PopulatedSteps() ([]ninjalog.Step, error)
 }
 
-func extractBuildStats(g graph) (buildStats, error) {
+func extractBuildStats(g graph, minActionBuildTime time.Duration) (buildStats, error) {
 	steps, err := g.PopulatedSteps()
 	if err != nil {
 		return buildStats{}, fmt.Errorf("getting steps with float and drag: %w", err)
@@ -153,7 +157,10 @@ func extractBuildStats(g graph) (buildStats, error) {
 	}
 
 	for _, step := range steps {
-		ret.All = append(ret.All, toAction(step))
+		if step.Duration() >= minActionBuildTime {
+			ret.All = append(ret.All, toAction(step))
+			ret.Actions = append(ret.Actions, toAction(step))
+		}
 
 		ret.TotalBuildTime += step.Duration()
 		// The first action always starts at time zero, so build duration equals to
@@ -254,7 +261,7 @@ func main() {
 	}
 
 	log.Infof("Extracting build stats from graph.")
-	stats, err := extractBuildStats(&graph)
+	stats, err := extractBuildStats(&graph, *minActionBuildTime)
 	if err != nil {
 		log.Fatalf("Failed to extract build stats from graph: %v", err)
 	}
