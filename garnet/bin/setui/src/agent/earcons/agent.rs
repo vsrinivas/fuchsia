@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::agent::base::{
-    AgentError, Context as AgentContext, Descriptor, Invocation, InvocationResult, Lifespan,
+    AgentError, Context as AgentContext, Invocation, InvocationResult, Lifespan,
 };
 use crate::agent::earcons::bluetooth_handler::BluetoothHandler;
 use crate::agent::earcons::volume_change_handler::VolumeChangeHandler;
@@ -22,7 +22,7 @@ use futures::StreamExt;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-blueprint_definition!(Descriptor::Component("earcons_agent"), Agent::create);
+blueprint_definition!("earcons_agent", Agent::create);
 
 /// The Earcons Agent is responsible for watching updates to relevant sources that need to play
 /// sounds.

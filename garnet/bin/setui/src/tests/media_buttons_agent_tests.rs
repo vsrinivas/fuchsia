@@ -52,7 +52,7 @@ async fn test_media_buttons_proxied() {
     // Create the agent context and agent.
     let context = Context::new(
         agent_receptor,
-        Descriptor::Component("test_media_buttons_agent"),
+        Descriptor::new("test_media_buttons_agent"),
         switchboard::message::create_hub(),
         event_hub,
         HashSet::new(),

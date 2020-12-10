@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::agent::base::{
-    AgentError, Context as AgentContext, Descriptor, Invocation, InvocationResult, Lifespan,
+    AgentError, Context as AgentContext, Invocation, InvocationResult, Lifespan,
 };
 use crate::blueprint_definition;
 use crate::input::common::ButtonType;
@@ -20,7 +20,7 @@ use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::StreamExt;
 use std::collections::HashSet;
 
-blueprint_definition!(Descriptor::Component("buttons_agent"), MediaButtonsAgent::create);
+blueprint_definition!("buttons_agent", MediaButtonsAgent::create);
 
 /// Setting types that the media buttons agent will send media button events to, if they're
 /// available on the device.

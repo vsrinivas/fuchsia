@@ -16,10 +16,7 @@ use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::StreamExt;
 use std::collections::HashSet;
 
-blueprint_definition!(
-    crate::agent::base::Descriptor::Component("restore_agent"),
-    crate::agent::restore_agent::RestoreAgent::create
-);
+blueprint_definition!("restore_agent", crate::agent::restore_agent::RestoreAgent::create);
 
 #[derive(Debug)]
 pub struct RestoreAgent {

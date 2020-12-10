@@ -32,9 +32,17 @@ pub enum AgentError {
 }
 
 /// Identification for the agent used for logging purposes.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Descriptor {
-    Component(&'static str),
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Descriptor {
+    component: String,
+}
+
+impl Descriptor {
+    /// Returns a `Descriptor` with the passed in argument as the component
+    /// name.
+    pub fn new(component: &str) -> Self {
+        Self { component: component.to_string() }
+    }
 }
 
 pub struct Context {
@@ -126,7 +134,7 @@ pub trait Authority {
 
 #[macro_export]
 macro_rules! blueprint_definition {
-    ($descriptor:stmt, $create:expr) => {
+    ($component:expr, $create:expr) => {
         pub mod blueprint {
             #[allow(unused_imports)]
             use super::*;
@@ -142,7 +150,7 @@ macro_rules! blueprint_definition {
 
             impl base::Blueprint for BlueprintImpl {
                 fn get_descriptor(&self) -> base::Descriptor {
-                    $descriptor
+                    base::Descriptor::new($component)
                 }
 
                 fn create(&self, context: base::Context) -> BoxFuture<'static, ()> {

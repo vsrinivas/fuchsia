@@ -20,8 +20,8 @@ pub struct Blueprint {
 }
 
 impl Blueprint {
-    pub fn new(generate: Generate, component: &'static str) -> Self {
-        Self { generate: generate, descriptor: base::Descriptor::Component(component) }
+    pub fn new(generate: Generate, component: &str) -> Self {
+        Self { generate: generate, descriptor: base::Descriptor::new(component) }
     }
 }
 

@@ -109,7 +109,7 @@ impl TestAgent {
                 })
                 .detach();
             })),
-            Box::leak(id.to_string().into_boxed_str()),
+            &id.to_string()[..],
         ));
 
         (agent.clone(), blueprint)
