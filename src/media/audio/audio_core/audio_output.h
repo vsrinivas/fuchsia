@@ -133,7 +133,7 @@ class AudioOutput : public AudioDevice {
   size_t max_block_size_frames_;
 
   std::unique_ptr<OutputPipeline> pipeline_;
-  Reporter::Container<Reporter::OutputDevice>::Ptr reporter_;
+  Reporter::Container<Reporter::OutputDevice, Reporter::kObjectsToCache>::Ptr reporter_;
   ThreadCpuTimer cpu_timer_;
 };
 

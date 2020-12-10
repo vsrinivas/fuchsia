@@ -267,7 +267,7 @@ class BaseCapturer : public AudioObject,
   StopAsyncCaptureCallback pending_async_stop_cbk_;
 
   std::shared_ptr<MixStage> mix_stage_;
-  Reporter::Container<Reporter::Capturer>::Ptr reporter_;
+  Reporter::Container<Reporter::Capturer, Reporter::kObjectsToCache>::Ptr reporter_;
 
   AudioClock audio_clock_;
 

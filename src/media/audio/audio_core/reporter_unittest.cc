@@ -86,20 +86,33 @@ TEST_F(ReporterTest, InitialState) {
                              UintIs("count of failures to start a device", 0)})))));
 
   // Expect empty child nodes for devices and client ports.
-  EXPECT_THAT(hierarchy,
-              ChildrenMatch(UnorderedElementsAre(
-                  AllOf(NodeMatches(AllOf(NameMatches("output devices"), PropertyList(IsEmpty()),
-                                          PropertyList(IsEmpty()))),
-                        ChildrenMatch(IsEmpty())),
-                  AllOf(NodeMatches(AllOf(NameMatches("input devices"), PropertyList(IsEmpty()),
-                                          PropertyList(IsEmpty()))),
-                        ChildrenMatch(IsEmpty())),
-                  AllOf(NodeMatches(AllOf(NameMatches("renderers"), PropertyList(IsEmpty()),
-                                          PropertyList(IsEmpty()))),
-                        ChildrenMatch(IsEmpty())),
-                  AllOf(NodeMatches(AllOf(NameMatches("capturers"), PropertyList(IsEmpty()),
-                                          PropertyList(IsEmpty()))),
-                        ChildrenMatch(IsEmpty())))));
+  EXPECT_THAT(
+      hierarchy,
+      ChildrenMatch(UnorderedElementsAre(
+          AllOf(NodeMatches(AllOf(NameMatches("output devices"), PropertyList(IsEmpty()),
+                                  PropertyList(IsEmpty()))),
+                ChildrenMatch(IsEmpty())),
+          AllOf(NodeMatches(AllOf(NameMatches("input devices"), PropertyList(IsEmpty()),
+                                  PropertyList(IsEmpty()))),
+                ChildrenMatch(IsEmpty())),
+          AllOf(NodeMatches(AllOf(NameMatches("renderers"), PropertyList(IsEmpty()),
+                                  PropertyList(IsEmpty()))),
+                ChildrenMatch(IsEmpty())),
+          AllOf(NodeMatches(AllOf(NameMatches("capturers"), PropertyList(IsEmpty()),
+                                  PropertyList(IsEmpty()))),
+                ChildrenMatch(IsEmpty())),
+          AllOf(NodeMatches(
+                    AllOf(NameMatches("thermal state"),
+                          PropertyList(UnorderedElementsAre(UintIs("num thermal states", 1))))),
+                ChildrenMatch(UnorderedElementsAre(NodeMatches(
+                    AllOf(NameMatches("normal"),
+                          Not(PropertyList(Contains(UintIs("total duration (ns)", 0))))))))),
+          AllOf(
+              NodeMatches(NameMatches("thermal state transitions")),
+              ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
+                  NameMatches("1"),
+                  PropertyList(IsSupersetOf({BoolIs("active", true), StringIs("state", "normal")})),
+                  Not(PropertyList(Contains(UintIs("duration (ns)", 0))))))))))));
 }
 
 // Tests methods that update metrics in the root node.
@@ -127,8 +140,8 @@ TEST_F(ReporterTest, RootMetrics) {
 
 // Tests methods that add and remove devices.
 TEST_F(ReporterTest, AddRemoveDevices) {
-  std::vector<Reporter::Container<Reporter::OutputDevice>::Ptr> outputs;
-  std::vector<Reporter::Container<Reporter::InputDevice>::Ptr> inputs;
+  std::vector<Reporter::Container<Reporter::OutputDevice, Reporter::kObjectsToCache>::Ptr> outputs;
+  std::vector<Reporter::Container<Reporter::InputDevice, Reporter::kObjectsToCache>::Ptr> inputs;
   for (size_t k = 0; k < 5; k++) {
     outputs.push_back(under_test_.CreateOutputDevice(fxl::StringPrintf("output_device_%lu", k),
                                                      fxl::StringPrintf("output_thread_%lu", k)));
@@ -235,7 +248,19 @@ TEST_F(ReporterTest, DeviceMetrics) {
                               BoolIs("agc supported", false), BoolIs("agc enabled", false),
                               StringIs("mixer thread name", "input_thread")))))))),
           AllOf(NodeMatches(NameMatches("renderers")), ChildrenMatch(IsEmpty())),
-          AllOf(NodeMatches(NameMatches("capturers")), ChildrenMatch(IsEmpty())))));
+          AllOf(NodeMatches(NameMatches("capturers")), ChildrenMatch(IsEmpty())),
+          AllOf(NodeMatches(
+                    AllOf(NameMatches("thermal state"),
+                          PropertyList(UnorderedElementsAre(UintIs("num thermal states", 1))))),
+                ChildrenMatch(UnorderedElementsAre(NodeMatches(
+                    AllOf(NameMatches("normal"),
+                          Not(PropertyList(Contains(UintIs("total duration (ns)", 0))))))))),
+          AllOf(
+              NodeMatches(NameMatches("thermal state transitions")),
+              ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
+                  NameMatches("1"),
+                  PropertyList(IsSupersetOf({BoolIs("active", true), StringIs("state", "normal")})),
+                  Not(PropertyList(Contains(UintIs("duration (ns)", 0))))))))))));
 
   output_device->StartSession(zx::time(0));
   output_device->DeviceUnderflow(zx::time(10), zx::time(15));
@@ -278,7 +303,19 @@ TEST_F(ReporterTest, DeviceSetGainInfo) {
                                                BoolIs("agc enabled", false)}))))))),
           AllOf(NodeMatches(NameMatches("input devices")), ChildrenMatch(IsEmpty())),
           AllOf(NodeMatches(NameMatches("renderers")), ChildrenMatch(IsEmpty())),
-          AllOf(NodeMatches(NameMatches("capturers")), ChildrenMatch(IsEmpty())))));
+          AllOf(NodeMatches(NameMatches("capturers")), ChildrenMatch(IsEmpty())),
+          AllOf(NodeMatches(
+                    AllOf(NameMatches("thermal state"),
+                          PropertyList(UnorderedElementsAre(UintIs("num thermal states", 1))))),
+                ChildrenMatch(UnorderedElementsAre(NodeMatches(
+                    AllOf(NameMatches("normal"),
+                          Not(PropertyList(Contains(UintIs("total duration (ns)", 0))))))))),
+          AllOf(
+              NodeMatches(NameMatches("thermal state transitions")),
+              ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
+                  NameMatches("1"),
+                  PropertyList(IsSupersetOf({BoolIs("active", true), StringIs("state", "normal")})),
+                  Not(PropertyList(Contains(UintIs("duration (ns)", 0))))))))))));
 
   fuchsia::media::AudioGainInfo gain_info_a{
       .gain_db = -1.0f,
@@ -352,8 +389,8 @@ TEST_F(ReporterTest, DeviceSetGainInfo) {
 
 // Tests methods that add and remove client ports.
 TEST_F(ReporterTest, AddRemoveClientPorts) {
-  std::vector<Reporter::Container<Reporter::Renderer>::Ptr> renderers;
-  std::vector<Reporter::Container<Reporter::Capturer>::Ptr> capturers;
+  std::vector<Reporter::Container<Reporter::Renderer, Reporter::kObjectsToCache>::Ptr> renderers;
+  std::vector<Reporter::Container<Reporter::Capturer, Reporter::kObjectsToCache>::Ptr> capturers;
   for (size_t k = 0; k < 5; k++) {
     renderers.push_back(under_test_.CreateRenderer());
   }
@@ -566,6 +603,103 @@ TEST_F(ReporterTest, CapturerMetrics) {
                                               UintIs("calls to SetGainWithRamp", 2),
                                               StringIs("usage", "CaptureUsage::FOREGROUND"),
                                               StringIs("mixer thread name", "thread"))))))))))));
+}
+
+// Tests ThermalStateTracker methods.
+TEST_F(ReporterTest, SetThermalStateMetrics) {
+  under_test_.SetNumThermalStates(3);
+  under_test_.SetThermalState(0);
+  // Expect first thermal state metric values.
+  EXPECT_THAT(
+      GetHierarchyLazyValues(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(AllOf(NameMatches("thermal state"),
+                            PropertyList(UnorderedElementsAre(UintIs("num thermal states", 3))))),
+          ChildrenMatch(UnorderedElementsAre(NodeMatches(
+              AllOf(NameMatches("normal"),
+                    Not(PropertyList(Contains(UintIs("total duration (ns)", 0))))))))))));
+  // Expect second thermal state metric values, with first thermal state metrics stored.
+  under_test_.SetThermalState(2);
+  EXPECT_THAT(
+      GetHierarchyLazyValues(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(AllOf(NameMatches("thermal state"),
+                            PropertyList(UnorderedElementsAre(UintIs("num thermal states", 3))))),
+          ChildrenMatch(UnorderedElementsAre(
+              NodeMatches(AllOf(NameMatches("normal"),
+                                Not(PropertyList(Contains(UintIs("total duration (ns)", 0)))))),
+              NodeMatches(AllOf(NameMatches("2"), Not(PropertyList(Contains(
+                                                      UintIs("total duration (ns)", 0))))))))))));
+  // Expect values to be unchanged, since state 2 has already been triggered.
+  under_test_.SetThermalState(2);
+  EXPECT_THAT(
+      GetHierarchyLazyValues(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(AllOf(NameMatches("thermal state"),
+                            PropertyList(UnorderedElementsAre(UintIs("num thermal states", 3))))),
+          ChildrenMatch(UnorderedElementsAre(
+              NodeMatches(AllOf(NameMatches("normal"),
+                                Not(PropertyList(Contains(UintIs("total duration (ns)", 0)))))),
+              NodeMatches(AllOf(NameMatches("2"), Not(PropertyList(Contains(
+                                                      UintIs("total duration (ns)", 0))))))))))));
+}
+
+// Tests caching of ThermalStates up to limit Reporter::kThermalStatesToCache == 8.
+TEST_F(ReporterTest, CacheThermalStateTransitions) {
+  // Reporter initializes thermal state to 0.
+  under_test_.SetThermalState(1);  // ThermalState 2, first cached
+  under_test_.SetThermalState(2);
+  under_test_.SetThermalState(3);
+  under_test_.SetThermalState(1);
+  under_test_.SetThermalState(3);
+  under_test_.SetThermalState(1);
+  under_test_.SetThermalState(2);
+  under_test_.SetThermalState(2);  // Skip duplicate.
+  under_test_.SetThermalState(0);  // ThermalState 9, final cached
+  under_test_.SetThermalState(1);  // ThermalState 10, alive
+
+  // Expect most recent 8 thermal state metric values.
+  EXPECT_THAT(
+      GetHierarchyLazyValues(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("thermal state transitions")),
+          ChildrenMatch(UnorderedElementsAre(
+              NodeMatches(AllOf(
+                  NameMatches("2"),
+                  PropertyList(IsSupersetOf({BoolIs("active", false), StringIs("state", "1")})),
+                  Not(PropertyList(Contains(UintIs("duration (ns)", 0)))))),
+              NodeMatches(AllOf(
+                  NameMatches("3"),
+                  PropertyList(IsSupersetOf({BoolIs("active", false), StringIs("state", "2")})),
+                  Not(PropertyList(Contains(UintIs("duration (ns)", 0)))))),
+              NodeMatches(AllOf(
+                  NameMatches("4"),
+                  PropertyList(IsSupersetOf({BoolIs("active", false), StringIs("state", "3")})),
+                  Not(PropertyList(Contains(UintIs("duration (ns)", 0)))))),
+              NodeMatches(AllOf(
+                  NameMatches("5"),
+                  PropertyList(IsSupersetOf({BoolIs("active", false), StringIs("state", "1")})),
+                  Not(PropertyList(Contains(UintIs("duration (ns)", 0)))))),
+              NodeMatches(AllOf(
+                  NameMatches("6"),
+                  PropertyList(IsSupersetOf({BoolIs("active", false), StringIs("state", "3")})),
+                  Not(PropertyList(Contains(UintIs("duration (ns)", 0)))))),
+              NodeMatches(AllOf(
+                  NameMatches("7"),
+                  PropertyList(IsSupersetOf({BoolIs("active", false), StringIs("state", "1")})),
+                  Not(PropertyList(Contains(UintIs("duration (ns)", 0)))))),
+              NodeMatches(AllOf(
+                  NameMatches("8"),
+                  PropertyList(IsSupersetOf({BoolIs("active", false), StringIs("state", "2")})),
+                  Not(PropertyList(Contains(UintIs("duration (ns)", 0)))))),
+              NodeMatches(AllOf(NameMatches("9"),
+                                PropertyList(IsSupersetOf(
+                                    {BoolIs("active", false), StringIs("state", "normal")})),
+                                Not(PropertyList(Contains(UintIs("duration (ns)", 0)))))),
+              NodeMatches(AllOf(
+                  NameMatches("10"),
+                  PropertyList(IsSupersetOf({BoolIs("active", true), StringIs("state", "1")})),
+                  Not(PropertyList(Contains(UintIs("duration (ns)", 0))))))))))));
 }
 
 }  // namespace

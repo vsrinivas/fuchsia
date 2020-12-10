@@ -17,8 +17,8 @@ namespace media::audio {
 
 namespace {
 static std::mutex singleton_mutex;
-static Reporter singleton_nop;
-static std::unique_ptr<Reporter> singleton_real;
+static Reporter* const singleton_nop = new Reporter();
+static Reporter* singleton_real;
 }  // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -367,6 +367,79 @@ class DeviceGainInfo {
   inspect::BoolProperty agc_enabled_;
 };
 
+class Reporter::ThermalStateTransition {
+ public:
+  explicit ThermalStateTransition(Reporter::Impl& impl, uint32_t state)
+      : node_(impl.thermal_state_transitions_node.CreateChild(impl.NextThermalTransitionName())),
+        state_(node_.CreateString("state", state ? std::to_string(state) : "normal")),
+        active_(node_.CreateBool("active", true)),
+        duration_(node_.CreateLazyValues(
+            "ThermalStateTransitionDuration",
+            [this] {
+              std::lock_guard<std::mutex> lock(mutex_);
+              inspect::Inspector i;
+              i.GetRoot().CreateUint(
+                  "duration (ns)",
+                  (alive_ ? zx::clock::get_monotonic() - start_time_ : past_duration_).get(), &i);
+              return fit::make_ok_promise(std::move(i));
+            })),
+        start_time_(zx::clock::get_monotonic()) {}
+
+  void Destroy() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    past_duration_ = zx::clock::get_monotonic() - start_time_;
+    alive_ = false;
+    active_.Set(false);
+  }
+
+ private:
+  inspect::Node node_;
+  inspect::StringProperty state_;
+  inspect::BoolProperty active_;
+  inspect::LazyNode duration_;
+
+  const zx::time start_time_;
+
+  std::mutex mutex_;
+  bool alive_ FXL_GUARDED_BY(mutex_) = true;
+  zx::duration past_duration_ FXL_GUARDED_BY(mutex_);
+};
+
+class Reporter::ThermalStateTracker {
+ public:
+  ThermalStateTracker(
+      Reporter::Impl& impl,
+      Container<ThermalStateTransition, kThermalStatesToCache>& thermal_state_transitions);
+
+  void SetNumThermalStates(size_t num);
+  void SetThermalState(uint32_t state);
+
+  void DropLastTransition() { last_transition_.Drop(); }
+
+ private:
+  struct State {
+    // Total duration this state has been active, not counting
+    // the current activation if this is the current state.
+    zx::duration past_duration;
+    // Set if this is the current thermal state.
+    std::optional<zx::time> current_activation_time;
+
+    inspect::Node node_;
+    inspect::LazyNode duration_;
+
+    void Activate();
+    void Deactivate();
+  };
+  Reporter::Impl& impl_;
+  Container<ThermalStateTransition, kThermalStatesToCache>& thermal_state_transitions_;
+  inspect::Node root_;
+  inspect::UintProperty num_thermal_states_;
+
+  uint32_t active_state_;
+  std::unordered_map<uint32_t, State> states_;
+  Container<ThermalStateTransition, kThermalStatesToCache>::Ptr last_transition_;
+};
+
 class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
  public:
   OutputDeviceImpl(Reporter::Impl& impl, const std::string& name, const std::string& thread_name)
@@ -693,7 +766,7 @@ Reporter& Reporter::Singleton() {
   }
   FX_LOGS_FIRST_N(INFO, 1)
       << "Creating reporting objects before the Reporter singleton has been initialized";
-  return singleton_nop;
+  return *singleton_nop;
 }
 
 // static
@@ -704,7 +777,7 @@ void Reporter::InitializeSingleton(sys::ComponentContext& component_context,
     FX_LOGS(ERROR) << "Reporter::Singleton double initialized";
     return;
   }
-  singleton_real = std::make_unique<Reporter>(component_context, threading_model);
+  singleton_real = new Reporter(component_context, threading_model);
 }
 
 Reporter::Reporter(sys::ComponentContext& component_context, ThreadingModel& threading_model)
@@ -714,6 +787,8 @@ Reporter::Reporter(sys::ComponentContext& component_context, ThreadingModel& thr
   InitInspect();
   InitCobalt();
 }
+
+Reporter::~Reporter() { impl_->thermal_state_tracker->DropLastTransition(); }
 
 void Reporter::InitInspect() {
   impl_->inspector = std::make_unique<sys::ComponentInspector>(&impl_->component_context);
@@ -736,6 +811,10 @@ void Reporter::InitInspect() {
   impl_->inputs_node = root_node.CreateChild("input devices");
   impl_->renderers_node = root_node.CreateChild("renderers");
   impl_->capturers_node = root_node.CreateChild("capturers");
+  impl_->thermal_state_transitions_node = root_node.CreateChild("thermal state transitions");
+
+  impl_->thermal_state_tracker =
+      std::make_unique<ThermalStateTracker>(*impl_, thermal_state_transitions_);
 }
 
 void Reporter::InitCobalt() {
@@ -756,29 +835,29 @@ void Reporter::InitCobalt() {
       });
 }
 
-Reporter::Container<Reporter::OutputDevice>::Ptr Reporter::CreateOutputDevice(
-    const std::string& name, const std::string& thread_name) {
+Reporter::Container<Reporter::OutputDevice, Reporter::kObjectsToCache>::Ptr
+Reporter::CreateOutputDevice(const std::string& name, const std::string& thread_name) {
   std::lock_guard<std::mutex> lock(mutex_);
   return outputs_.New(
       impl_ ? static_cast<OutputDevice*>(new OutputDeviceImpl(*impl_, name, thread_name))
             : static_cast<OutputDevice*>(new OutputDeviceNop));
 }
 
-Reporter::Container<Reporter::InputDevice>::Ptr Reporter::CreateInputDevice(
-    const std::string& name, const std::string& thread_name) {
+Reporter::Container<Reporter::InputDevice, Reporter::kObjectsToCache>::Ptr
+Reporter::CreateInputDevice(const std::string& name, const std::string& thread_name) {
   std::lock_guard<std::mutex> lock(mutex_);
   return inputs_.New(impl_
                          ? static_cast<InputDevice*>(new InputDeviceImpl(*impl_, name, thread_name))
                          : static_cast<InputDevice*>(new InputDeviceNop));
 }
 
-Reporter::Container<Reporter::Renderer>::Ptr Reporter::CreateRenderer() {
+Reporter::Container<Reporter::Renderer, Reporter::kObjectsToCache>::Ptr Reporter::CreateRenderer() {
   std::lock_guard<std::mutex> lock(mutex_);
   return renderers_.New(impl_ ? static_cast<Renderer*>(new RendererImpl(*impl_))
                               : static_cast<Renderer*>(new RendererNop));
 }
 
-Reporter::Container<Reporter::Capturer>::Ptr Reporter::CreateCapturer(
+Reporter::Container<Reporter::Capturer, Reporter::kObjectsToCache>::Ptr Reporter::CreateCapturer(
     const std::string& thread_name) {
   std::lock_guard<std::mutex> lock(mutex_);
   return capturers_.New(impl_ ? static_cast<Capturer*>(new CapturerImpl(*impl_, thread_name))
@@ -825,6 +904,22 @@ void Reporter::MixerClockSkewDiscontinuity(zx::duration clock_error) {
     return;
   }
   impl_->mixer_clock_skew_discontinuities.Insert(clock_error.get());
+}
+
+void Reporter::SetNumThermalStates(size_t num) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!impl_) {
+    return;
+  }
+  impl_->thermal_state_tracker->SetNumThermalStates(num);
+}
+
+void Reporter::SetThermalState(uint32_t state) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!impl_) {
+    return;
+  }
+  impl_->thermal_state_tracker->SetThermalState(state);
 }
 
 Reporter::Impl::Impl(sys::ComponentContext& cc, ThreadingModel& tm)
@@ -992,6 +1087,64 @@ void Reporter::OverflowUnderflowTracker::LogCobaltDuration(uint32_t metric_id,
       }
     });
   });
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+// ThermalStateTracker implementation
+
+Reporter::ThermalStateTracker::ThermalStateTracker(
+    Reporter::Impl& impl,
+    Container<ThermalStateTransition, kThermalStatesToCache>& thermal_state_transitions)
+    : impl_(impl),
+      thermal_state_transitions_(thermal_state_transitions),
+      root_(impl.inspector->root().CreateChild("thermal state")),
+      num_thermal_states_(root_.CreateUint("num thermal states", 1)),
+      active_state_(0),
+      last_transition_(
+          thermal_state_transitions_.New(new ThermalStateTransition(impl_, active_state_))) {
+  states_[active_state_] = State({.node_ = root_.CreateChild("normal")});
+  states_[active_state_].Activate();
+}
+
+void Reporter::ThermalStateTracker::SetNumThermalStates(size_t num) {
+  num_thermal_states_.Set(num);
+}
+
+void Reporter::ThermalStateTracker::SetThermalState(uint32_t state) {
+  if (active_state_ == state) {
+    return;
+  }
+  states_[active_state_].Deactivate();
+
+  if (states_.find(state) == states_.end()) {
+    states_[state] = State({.node_ = root_.CreateChild(state ? std::to_string(state) : "normal")});
+  }
+  states_[state].Activate();
+  active_state_ = state;
+  last_transition_ = thermal_state_transitions_.New(new ThermalStateTransition(impl_, state));
+}
+
+void Reporter::ThermalStateTracker::State::Activate() {
+  current_activation_time = zx::clock::get_monotonic();
+
+  // If state has never been activated, set duration LazyNode.
+  if (!past_duration.get()) {
+    duration_ = node_.CreateLazyValues("TotalThermalStateDuration", [this] {
+      inspect::Inspector i;
+      i.GetRoot().CreateUint("total duration (ns)",
+                             (current_activation_time ? past_duration + zx::clock::get_monotonic() -
+                                                            current_activation_time.value()
+                                                      : past_duration)
+                                 .get(),
+                             &i);
+      return fit::make_ok_promise(std::move(i));
+    });
+  }
+}
+
+void Reporter::ThermalStateTracker::State::Deactivate() {
+  past_duration += (zx::clock::get_monotonic() - current_activation_time.value());
+  current_activation_time = std::nullopt;
 }
 
 }  // namespace media::audio

@@ -9,6 +9,7 @@
 #include <unordered_set>
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
+#include "src/media/audio/audio_core/reporter.h"
 
 namespace media::audio {
 namespace {
@@ -31,6 +32,8 @@ std::unordered_map<std::string, std::vector<std::string>> PopulateTargetConfigur
   const auto& entries = thermal_config.entries();
   const size_t num_thermal_states = entries.size() + 1;
   std::unordered_map<std::string, std::vector<std::string>> result;
+
+  Reporter::Singleton().SetNumThermalStates(num_thermal_states);
 
   // "Bad" targets have no nominal configuration. We record them so the name of every such target
   // can be logged only once.
@@ -172,6 +175,7 @@ void ThermalAgent::SetThermalState(uint32_t state, SetThermalStateCallback callb
     }
 
     current_state_ = state;
+    Reporter::Singleton().SetThermalState(current_state_);
   }
 
   callback();

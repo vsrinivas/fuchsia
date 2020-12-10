@@ -131,15 +131,25 @@ class Reporter {
   // This class is an implementation detail.
   // Container::Ptr is a smart pointer that calls T::Destroy() when the Ptr is destructed.
   // The underlying object may be cached for some time afterwards.
-  template <typename T>
+  // ObjectsToCache is the number of destroyed objects to cache, in addition to the
+  // current alive object.
+  template <typename T, size_t ObjectsToCache>
   class Container {
    public:
     class Ptr {
      public:
-      Ptr(Container<T>* c, std::shared_ptr<T> p) : container_(c), ptr_(p) {}
+      Ptr(Container<T, ObjectsToCache>* c, std::shared_ptr<T> p) : container_(c), ptr_(p) {}
       Ptr(const Ptr&) = delete;
       Ptr(Ptr&&) = default;
       ~Ptr() { Drop(); }
+
+      Ptr& operator=(Ptr&& rhs) noexcept {
+        Drop();
+        ptr_ = std::move(rhs.ptr_);
+        container_ = rhs.container_;
+        rhs.container_ = nullptr;
+        return *this;
+      }
 
       T& operator*() const { return *ptr_; }
       T* operator->() const { return ptr_.get(); }
@@ -153,12 +163,11 @@ class Reporter {
       }
 
      private:
-      Container<T>* container_;
+      Container<T, ObjectsToCache>* container_ = nullptr;
       std::shared_ptr<T> ptr_;
     };
 
    private:
-    static constexpr size_t kObjectsToCache = 4;
     friend class Reporter;
     friend class Ptr;
 
@@ -172,7 +181,7 @@ class Reporter {
     void Kill(const std::shared_ptr<T>& ptr) {
       std::lock_guard<std::mutex> lock(mutex_);
       alive_.erase(ptr);
-      while (dead_.size() >= kObjectsToCache) {
+      while (dead_.size() >= ObjectsToCache) {
         dead_.pop();
       }
       dead_.push(ptr);
@@ -185,13 +194,20 @@ class Reporter {
 
   Reporter() {}
   Reporter(sys::ComponentContext& component_context, ThreadingModel& threading_model);
+  ~Reporter();
 
-  Container<OutputDevice>::Ptr CreateOutputDevice(const std::string& name,
-                                                  const std::string& thread_name);
-  Container<InputDevice>::Ptr CreateInputDevice(const std::string& name,
-                                                const std::string& thread_name);
-  Container<Renderer>::Ptr CreateRenderer();
-  Container<Capturer>::Ptr CreateCapturer(const std::string& thread_name);
+  static constexpr size_t kObjectsToCache = 4;
+
+  Container<OutputDevice, kObjectsToCache>::Ptr CreateOutputDevice(const std::string& name,
+                                                                   const std::string& thread_name);
+  Container<InputDevice, kObjectsToCache>::Ptr CreateInputDevice(const std::string& name,
+                                                                 const std::string& thread_name);
+  Container<Renderer, kObjectsToCache>::Ptr CreateRenderer();
+  Container<Capturer, kObjectsToCache>::Ptr CreateCapturer(const std::string& thread_name);
+
+  // Thermal state of Audio system.
+  void SetNumThermalStates(size_t num);
+  void SetThermalState(uint32_t state);
 
   // Device creation failures.
   void FailedToOpenDevice(const std::string& name, bool is_input, int err);
@@ -209,14 +225,19 @@ class Reporter {
   }
 
  private:
+  static constexpr size_t kThermalStatesToCache = 8;
+
   class OverflowUnderflowTracker;
   class ObjectTracker;
   class DeviceDriverInfo;
+  class ThermalStateTransition;
+  class ThermalStateTracker;
   class OutputDeviceImpl;
   class InputDeviceImpl;
   class ClientPort;
   class RendererImpl;
   class CapturerImpl;
+  struct Impl;
 
   friend class OverflowUnderflowTracker;
   friend class ObjectTracker;
@@ -246,12 +267,16 @@ class Reporter {
     inspect::Node inputs_node;
     inspect::Node renderers_node;
     inspect::Node capturers_node;
+    inspect::Node thermal_state_transitions_node;
+
+    std::unique_ptr<ThermalStateTracker> thermal_state_tracker;
 
     // These could be guarded by Reporter::mutex_, but clang's thread safety
     // analysis cannot represent that relationship.
     std::mutex mutex;
     uint64_t next_renderer_name FXL_GUARDED_BY(mutex) = 0;
     uint64_t next_capturer_name FXL_GUARDED_BY(mutex) = 0;
+    uint64_t next_thermal_transition_name FXL_GUARDED_BY(mutex) = 0;
 
     Impl(sys::ComponentContext& cc, ThreadingModel& tm);
     ~Impl();
@@ -264,16 +289,21 @@ class Reporter {
       std::lock_guard<std::mutex> lock(mutex);
       return std::to_string(++next_capturer_name);
     }
+    std::string NextThermalTransitionName() {
+      std::lock_guard<std::mutex> lock(mutex);
+      return std::to_string(++next_thermal_transition_name);
+    }
   };
 
   std::mutex mutex_;
   std::unique_ptr<Impl> impl_ FXL_GUARDED_BY(mutex_);
 
   // Caches of allocated objects so they can live beyond destruction.
-  Container<OutputDevice> outputs_;
-  Container<InputDevice> inputs_;
-  Container<Renderer> renderers_;
-  Container<Capturer> capturers_;
+  Container<OutputDevice, kObjectsToCache> outputs_;
+  Container<InputDevice, kObjectsToCache> inputs_;
+  Container<Renderer, kObjectsToCache> renderers_;
+  Container<Capturer, kObjectsToCache> capturers_;
+  Container<ThermalStateTransition, kThermalStatesToCache> thermal_state_transitions_;
 };
 
 }  // namespace media::audio
