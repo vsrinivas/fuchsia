@@ -120,7 +120,7 @@ Tests and the components launched in a hermetic environment will have access to 
 ## Restricting log severity
 
 Tests may be configured to fail when the component's test environment produces
-high severity [logs][syslogs]. This is useful for when such logs, for instance
+high severity [logs][syslogs]. This is useful, for instance, 
 when such logs are unexpected, as they indicate an error.
 
 A test might expect to log at ERROR severity. For example, the test might be
