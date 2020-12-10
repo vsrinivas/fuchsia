@@ -55,9 +55,6 @@ if (is_fuchsia) {
     testonly = true
     sources = []
     deps = [ ":test_sources" ]
-
-    # TODO(fxbug.dev/46873): Fix the leaks and remove this.
-    deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
   }
 
   fuchsia_unittest_package("fidl-walker-tests") {
