@@ -387,6 +387,52 @@ func TestEndpoint(t *testing.T) {
 				}
 			})
 
+			t.Run("WritePacketWithExistingLinkHeader", func(t *testing.T) {
+				pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
+					ReserveHeaderBytes: int(endpoint.MaxHeaderLength()) + len(packetHeader) + 5,
+					Data:               data,
+				})
+				pkt.LinkHeader().Push(header.EthernetMinimumSize)
+				if err := endpoint.WritePacket(&route, nil, protocol, pkt); err != nil {
+					t.Fatal(err)
+				}
+
+				if err := cycleTX(deviceFifos.Tx, 1, device.iob, func(b []byte) {
+					if len(b) < header.EthernetMinimumSize {
+						t.Fatalf("got len(b) = %d, want >= %d", len(b), header.EthernetMinimumSize)
+					}
+				}); err != nil {
+					t.Fatal(err)
+				}
+				if err := checkTXDone(deviceFifos.Tx); err != nil {
+					t.Fatal(err)
+				}
+			})
+
+			t.Run("WritePacketsWithExistingLinkHeader", func(t *testing.T) {
+				pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
+					ReserveHeaderBytes: int(endpoint.MaxHeaderLength()) + len(packetHeader) + 5,
+					Data:               data,
+				})
+				pkt.LinkHeader().Push(header.EthernetMinimumSize)
+				var pkts stack.PacketBufferList
+				pkts.PushBack(pkt)
+				if _, err := endpoint.WritePackets(&stack.Route{}, nil, pkts, 1337); err != nil {
+					t.Fatal(err)
+				}
+
+				if err := cycleTX(deviceFifos.Tx, 1, device.iob, func(b []byte) {
+					if len(b) < header.EthernetMinimumSize {
+						t.Fatalf("got len(b) = %d, want >= %d", len(b), header.EthernetMinimumSize)
+					}
+				}); err != nil {
+					t.Fatal(err)
+				}
+				if err := checkTXDone(deviceFifos.Tx); err != nil {
+					t.Fatal(err)
+				}
+			})
+
 			// ReceivePacket tests that receiving ethernet frames of size
 			// less than the minimum size does not panic or cause any issues for future
 			// (valid) frames.

@@ -32,14 +32,18 @@ func (e *endpoint) MaxHeaderLength() uint16 {
 }
 
 func (e *endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
-	e.AddHeader(r.LocalLinkAddress, r.RemoteLinkAddress(), protocol, pkt)
+	if pkt.LinkHeader().View().IsEmpty() {
+		e.AddHeader(r.LocalLinkAddress, r.RemoteLinkAddress(), protocol, pkt)
+	}
 	return e.Endpoint.WritePacket(r, gso, protocol, pkt)
 }
 
 func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	fields := utils.MakeEthernetFields(e.LinkAddress(), r.LocalLinkAddress, r.RemoteLinkAddress(), protocol)
 	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
-		utils.AddEthernetHeaderWithFields(&fields, pkt)
+		if pkt.LinkHeader().View().IsEmpty() {
+			utils.AddEthernetHeaderWithFields(&fields, pkt)
+		}
 	}
 	return e.Endpoint.WritePackets(r, gso, pkts, protocol)
 }
