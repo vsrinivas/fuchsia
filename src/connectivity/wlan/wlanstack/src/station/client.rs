@@ -317,7 +317,7 @@ mod tests {
             convert_connect_result(&ConnectResult::Failed(ConnectFailure::ScanFailure(
                 ScanResultCodes::InternalError
             ))),
-            fidl_sme::ConnectResultCode::Success
+            fidl_sme::ConnectResultCode::Failed
         );
     }
 }
