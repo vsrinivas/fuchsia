@@ -39,6 +39,12 @@ FORBIDDEN_PACKAGES = ['mojo', 'mojo_services']
 # This is to account for https://github.com/flutter/devtools/issues/1148
 PACKAGES_WITH_NO_LIB = ['devtools']
 
+# A list of pakcage names that have directories that should not be included.
+FORBIDDEN_DIRS = {
+    'characters': [
+        'third_party/Wikipedia' # Invalid license
+    ]
+}
 
 def parse_packages_file(dot_packages_path):
     """ parse the list of packages and paths in .packages file """
@@ -367,6 +373,14 @@ def main():
             test_path = os.path.join(dest_dir, 'test')
             if os.path.exists(test_path):
                 shutil.rmtree(test_path)
+
+            # Check to see if this package has any forbidden directories.
+            if package_name in FORBIDDEN_DIRS:
+                for d in FORBIDDEN_DIRS[package_name]:
+                    forbidden_dir = os.path.join(dest_dir, d)
+                    if os.path.exists(forbidden_dir):
+                        shutil.rmtree(forbidden_dir)
+
             write_build_file(os.path.join(dest_dir, 'BUILD.gn'), package_name,
                              name_with_version, min_sdk_version, deps, dart_sources)
             # All pub packages are required to have a lib/ dir, so it's safe to
