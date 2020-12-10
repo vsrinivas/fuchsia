@@ -8,6 +8,9 @@ See [Recording] for information about how Fuchsia software writes logs.
 
 See [Viewing] for information about how to view the recorded logs.
 
+See [Attributing LogSink connections] for information about how Fuchsia identifies
+the producer of each log message.
+
 ## Contents
 
 [Log records][LogMessage] have a few pieces of metadata, mostly self-reported by
@@ -56,3 +59,4 @@ from the previous boot. These messages appear when running [`fx snapshot`].
 [feedback data]: /src/developer/forensics/feedback_data
 [persistent disk store]: /src/developer/forensics/feedback_data/system_log_recorder/system_log_recorder.h
 [`fx snapshot`]: /src/developer/forensics/snapshot/README.md
+[Attributing LogSink connections]: /docs/concepts/diagnostics/logs/attribution.md

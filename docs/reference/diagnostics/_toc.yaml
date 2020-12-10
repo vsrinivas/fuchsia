@@ -64,9 +64,6 @@ toc:
   - title: "Overview"
     path: /docs/reference/diagnostics/logs
 
-  - title: "Attributing LogSink connections"
-    path: /docs/reference/diagnostics/logs/attribution.md
-
   - title: "Message encoding"
     path: /docs/reference/diagnostics/logs/encoding.md
 

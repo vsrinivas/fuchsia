@@ -35,6 +35,9 @@ toc:
   - title: "Overview"
     path: /docs/concepts/diagnostics/logs/README.md
 
+  - title: "Attributing LogSink connections"
+    path: /docs/concepts/diagnostics/logs/attribution.md
+
   # TODO(fxbug.dev/60766)
   # - title: "Principles"
   #   path: /docs/concepts/diagnostics/logs/principles.md
