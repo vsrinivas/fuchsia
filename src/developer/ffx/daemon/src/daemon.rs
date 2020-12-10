@@ -615,16 +615,27 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_getting_rcs_multiple_targets_mdns_with_no_selector_should_err() -> Result<()> {
+    async fn test_getting_rcs_multiple_targets_mdns_with_empty_selector_should_err() -> Result<()> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
         let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
         ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
-        if let Ok(_) = timeout(Duration::from_millis(10), async move {
-            daemon_proxy.get_remote_control(Some(""), remote_server_end).await.unwrap()
-        })
-        .await
+        if let Ok(_) = daemon_proxy.get_remote_control(None, remote_server_end).await.unwrap() {
+            panic!("failure expected for multiple targets");
+        }
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_getting_rcs_multiple_targets_mdns_with_unclear_selector_should_not_err(
+    ) -> Result<()> {
+        let (daemon_proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+        let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
+        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
+        if let Err(_) = daemon_proxy.get_remote_control(Some(""), remote_server_end).await.unwrap()
         {
             panic!("failure expected for multiple targets");
         }
