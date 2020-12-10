@@ -35,10 +35,11 @@ use time_metrics_registry::{
     RealTimeClockEventsMetricDimensionEventType as RtcEventType,
     TimeMetricDimensionExperiment as Experiment, TimeMetricDimensionTrack as Track,
     TimekeeperLifecycleEventsMetricDimensionEventType as LifecycleEventType,
+    TimekeeperTimeSourceEventsMetricDimensionEventType as TimeSourceEvent,
     TimekeeperTrackEventsMetricDimensionEventType as TrackEvent, PROJECT_ID,
     REAL_TIME_CLOCK_EVENTS_METRIC_ID, TIMEKEEPER_CLOCK_CORRECTION_METRIC_ID,
     TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID, TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID,
-    TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+    TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID, TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
 };
 use vfs::{directory::entry::DirectoryEntry, pseudo_directory};
 
@@ -654,6 +655,39 @@ fn test_start_clock_from_rtc() {
             );
         },
     );
+}
+
+#[test]
+fn test_reject_before_backstop() {
+    let clock = new_clock();
+    timekeeper_test(Arc::clone(&clock), None, |mut push_source_controller, _, cobalt| async move {
+        let cobalt_event_stream =
+            create_cobalt_event_stream(Arc::new(cobalt), LogMethod::LogCobaltEvent);
+
+        push_source_controller
+            .set_sample(TimeSample {
+                utc: Some(BEFORE_BACKSTOP_TIME.into_nanos()),
+                monotonic: Some(zx::Time::get_monotonic().into_nanos()),
+                standard_deviation: Some(STD_DEV.into_nanos()),
+                ..TimeSample::EMPTY
+            })
+            .await;
+
+        // Wait for the sample rejected event to be sent to Cobalt.
+        cobalt_event_stream
+            .take_while(|event| {
+                let is_reject_sample_event = event.metric_id
+                    == TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID
+                    && event
+                        .event_codes
+                        .contains(&(TimeSourceEvent::SampleRejectedBeforeBackstop as u32));
+                futures::future::ready(is_reject_sample_event)
+            })
+            .collect::<Vec<_>>()
+            .await;
+        // Clock should still read backstop.
+        assert_eq!(*BACKSTOP_TIME, clock.read().unwrap());
+    });
 }
 
 #[test]
