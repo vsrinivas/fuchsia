@@ -125,6 +125,7 @@ impl ProjectSampler {
 
         Ok(ProjectSampler {
             archive_reader: ArchiveReader::new()
+                .retry_if_empty(false)
                 .add_selectors(metric_transformation_map.keys().cloned()),
             metric_transformation_map,
             metric_cache: HashMap::new(),
