@@ -18,6 +18,7 @@ group("tests") {
     "//src/devices/nand/drivers/broker/test:nand-broker-bootfs-test",  # HW-required.
     "//src/devices/nand/drivers/ram-nand:ram-nand-test-bootfs-test",
     "//src/devices/sysmem/tests/sysmem:sysmem-bootfs-test",
+    "//src/tests/reboot/dm_reboot_bringup_test:tests",
 
     # The devcoordinator-namespace-test assumes the root filesystem and can't be
     # migrated as packages are given their own local filesystem.

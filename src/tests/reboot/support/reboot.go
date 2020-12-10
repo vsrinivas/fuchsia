@@ -12,14 +12,14 @@ import (
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
-func zbiPath(t *testing.T) string {
+func zbiPath(t *testing.T, zbi_name string) string {
 	ex, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
 		return ""
 	}
 	exPath := filepath.Dir(ex)
-	return filepath.Join(exPath, "../fuchsia.zbi")
+	return filepath.Join(exPath, "../"+zbi_name)
 }
 
 type ExpectedRebootType int
@@ -31,6 +31,10 @@ const (
 
 // RebootWithCommand is a test helper that boots a qemu instance then reboots it by issuing cmd.
 func RebootWithCommand(t *testing.T, cmd string, kind ExpectedRebootType) {
+	RebootWithCommandAndZbi(t, cmd, kind, "fuchsia.zbi")
+}
+
+func RebootWithCommandAndZbi(t *testing.T, cmd string, kind ExpectedRebootType, zbi_name string) {
 	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
@@ -43,7 +47,7 @@ func RebootWithCommand(t *testing.T, cmd string, kind ExpectedRebootType) {
 
 	i := distro.Create(emulator.Params{
 		Arch:          arch,
-		ZBI:           zbiPath(t),
+		ZBI:           zbiPath(t, zbi_name),
 		AppendCmdline: "devmgr.log-to-debuglog",
 	})
 
