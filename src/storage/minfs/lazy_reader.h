@@ -59,7 +59,7 @@ class LazyReader {
   void SetLoaded(BlockRange range, bool set);
 
  private:
-  bitmap::RleBitmap mapped_;
+  bitmap::RleBitmapBase<uint64_t> mapped_;
 };
 
 // An interface for mapping file blocks to device blocks.

@@ -68,7 +68,7 @@ class PendingAllocationData {
   blk_t node_size_ = 0;
 
   // Map of relative data blocks to be allocated at a later time.
-  bitmap::RleBitmap block_map_;
+  bitmap::RleBitmapBase<blk_t> block_map_;
 };
 
 }  // namespace minfs

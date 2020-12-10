@@ -12,15 +12,14 @@ zx_status_t LazyReader::Read(ByteRange range, ReaderInterface* reader) {
 
   // Find the first block that isn't loaded.
   const range::Range block_range = BytesToBlocks(range, reader->BlockSize());
-  // TODO(fxbug.dev/50842): Make RleBitmap work with uint64_t.
-  size_t block = static_cast<size_t>(block_range.Start());
+  uint64_t block = block_range.Start();
   if (mapped_.GetOne(block)) {
     mapped_.Find(false, block + 1, block_range.End(), 1, &block);
   }
 
   // Loop through all unloaded block ranges and enqueue reads for them.
   while (block < block_range.End()) {
-    size_t end;
+    uint64_t end;
     mapped_.Find(true, block + 1, block_range.End(), 1, &end);
     zx_status_t status = EnumerateBlocks(BlockRange(block, end),
                                          [&](BlockRange range) { return reader->Enqueue(range); });

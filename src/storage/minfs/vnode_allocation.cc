@@ -19,8 +19,8 @@ zx_status_t PendingAllocationData::GetNextRange(blk_t* start, blk_t* count) cons
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  *start = static_cast<blk_t>(range->bitoff);
-  *count = static_cast<blk_t>(range->bitlen);
+  *start = range->bitoff;
+  *count = range->bitlen;
   return ZX_OK;
 }
 

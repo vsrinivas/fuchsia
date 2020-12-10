@@ -31,7 +31,7 @@ const size_t kBits = sizeof(size_t) * CHAR_BIT;
 constexpr size_t LastIdx(size_t bitmax) { return (bitmax - 1) / kBits; }
 
 // Base class for RawGenericBitmap, to reduce what needs to be templated.
-class RawBitmapBase : public Bitmap {
+class RawBitmapBase : public Bitmap<size_t> {
  public:
   // Returns the size of this bitmap.
   size_t size() const { return size_; }
@@ -64,7 +64,8 @@ class RawBitmapBase : public Bitmap {
   // Returns true if all the bits in [*bitoff*, *bitmax*) are set. Afterwards,
   // *first_unset* will be set to the lesser of bitmax and the index of the
   // first unset bit after *bitoff*.
-  bool Get(size_t bitoff, size_t bitmax, size_t* first_unset = nullptr) const override;
+  bool Get(size_t bitoff, size_t bitmax, size_t* first_unset) const override;
+  using Bitmap::Get;
 
   // Sets all bits in the range [*bitoff*, *bitmax*).  Returns an error if
   // bitmax < bitoff or size_ < bitmax, and ZX_OK otherwise.

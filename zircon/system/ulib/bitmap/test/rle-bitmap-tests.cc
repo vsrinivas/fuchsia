@@ -441,5 +441,15 @@ TEST(RleBitmapTests, FindRange) {
   EXPECT_EQ(out, 50, "unexpected bitoff");
 }
 
+TEST(RleBitmapTests, DifferentOffsetType) {
+  RleBitmapBase<uint32_t> bitmap;
+  EXPECT_EQ(bitmap.Set(5, 10), ZX_OK);
+  EXPECT_EQ(bitmap.num_bits(), 5);
+  EXPECT_EQ(bitmap.Clear(5, 10), ZX_OK);
+  EXPECT_EQ(bitmap.num_bits(), 0);
+  EXPECT_EQ(bitmap.Set(1000, std::numeric_limits<uint32_t>::max()), ZX_OK);
+  EXPECT_EQ(bitmap.num_bits(), std::numeric_limits<uint32_t>::max() - 1000);
+}
+
 }  // namespace tests
 }  // namespace bitmap

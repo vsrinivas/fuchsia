@@ -16,10 +16,7 @@ zx_library("bitmap") {
   kernel = true
   host = true
   static = true
-  sources = [
-    "raw-bitmap.cc",
-    "rle-bitmap.cc",
-  ]
+  sources = [ "raw-bitmap.cc" ]
   public_deps = [ "$zx/system/ulib/fbl:headers" ]
   if (!is_kernel && !is_host) {
     public_deps += [
