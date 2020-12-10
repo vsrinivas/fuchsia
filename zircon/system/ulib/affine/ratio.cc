@@ -220,8 +220,8 @@ int64_t Ratio::Scale(int64_t value, uint32_t numerator, uint32_t denominator) {
     // get properly flipped back to MIN during the return.
     //
     constexpr uint64_t LIMIT = static_cast<uint64_t>(std::numeric_limits<int64_t>::min());
-    return -static_cast<int64_t>(ScaleUInt64<RoundDirection::Up, LIMIT>(
-        static_cast<uint64_t>(-value), numerator, denominator));
+    return static_cast<int64_t>(-ScaleUInt64<RoundDirection::Up, LIMIT>(
+        -static_cast<uint64_t>(value), numerator, denominator));
   }
 }
 
