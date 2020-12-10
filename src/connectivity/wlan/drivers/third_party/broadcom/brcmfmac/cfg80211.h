@@ -512,6 +512,9 @@ void brcmf_enable_mpc(struct brcmf_if* ndev, int mpc);
 void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg);
 void brcmf_free_net_device_vif(struct net_device* ndev);
 
+// Is an AP Start operation in progress? Exposed for state inspection in tests.
+bool brcmf_is_ap_start_pending(brcmf_cfg80211_info* cfg);
+
 // Helpers
 zx_status_t brcmf_gen_ap_macaddr(struct brcmf_if* ifp, wlan::common::MacAddr& out_mac_addr);
 

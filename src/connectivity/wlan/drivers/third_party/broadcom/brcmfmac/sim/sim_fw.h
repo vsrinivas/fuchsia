@@ -59,6 +59,8 @@ constexpr zx::duration kSsidEventDelay = zx::msec(100);
 constexpr zx::duration kLinkEventDelay = zx::msec(5);
 // Delay in sending E_DISASSOC event during disassoc.
 constexpr zx::duration kDisassocEventDelay = zx::msec(1);
+// Delay between cancelling a scan and receiving an abort event
+constexpr zx::duration kAbortScanDelay = zx::msec(10);
 
 // Size allocated to hold association frame IEs in SIM FW
 #define ASSOC_IES_MAX_LEN 1000
@@ -336,9 +338,11 @@ class SimFirmware {
   void HandleAuthReq(std::shared_ptr<const simulation::SimAuthFrame> frame);
   void HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame> frame);
   zx_status_t HandleScbAssoc(const brcmf_ext_auth* ext_auth);
+
   // Generic scan operations
   zx_status_t ScanStart(std::unique_ptr<ScanOpts> opts);
   void ScanContinue();
+  void ScanComplete(enum brcmf_fweh_event_status_t status);
 
   // Escan operations
   zx_status_t EscanStart(uint16_t sync_id, const brcmf_scan_params_le* params, size_t params_len);

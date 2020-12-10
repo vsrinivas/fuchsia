@@ -1073,7 +1073,6 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
   }
 
   struct brcmf_cfg80211_info* cfg = ndev_to_if(ndev)->drvr->config;
-  struct net_device* softap_ndev = cfg_to_softap_ndev(cfg);
 
   if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
     BRCMF_ERR("Scanning already: status (%lu)\n", cfg->scan_status.load());
@@ -1092,8 +1091,7 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
               vif->sme_state.load());
     return ZX_ERR_UNAVAILABLE;
   }
-  if (softap_ndev != nullptr && brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING,
-                                                        &ndev_to_vif(softap_ndev)->sme_state)) {
+  if (brcmf_is_ap_start_pending(cfg)) {
     BRCMF_INFO("AP start request in progress, rejecting scan request, a retry is expected.");
     return ZX_ERR_UNAVAILABLE;
   }
@@ -2909,6 +2907,18 @@ zx_status_t brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif) {
 
   memset(&vif->saved_ie, 0, sizeof(vif->saved_ie));
   return ZX_OK;
+}
+
+bool brcmf_is_ap_start_pending(brcmf_cfg80211_info* cfg) {
+  struct net_device* softap_ndev = cfg_to_softap_ndev(cfg);
+
+  // No softAP interface
+  if (softap_ndev == nullptr) {
+    return false;
+  }
+
+  struct brcmf_cfg80211_vif* vif = ndev_to_vif(softap_ndev);
+  return brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING, &vif->sme_state);
 }
 
 // Returns an MLME result code (WLAN_START_RESULT_*) if an error is encountered.

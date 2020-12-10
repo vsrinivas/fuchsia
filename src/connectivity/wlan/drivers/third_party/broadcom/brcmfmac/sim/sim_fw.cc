@@ -467,8 +467,13 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       auto scan_params = (reinterpret_cast<brcmf_scan_params_le*>(data));
       ZX_ASSERT_MSG(scan_params->channel_list[0] == static_cast<uint16_t>(-1),
                     "BRCMF_C_SCAN should only be used for aborting an escan now.");
-      // Stop the escan.
-      scan_state_.state = ScanState::STOPPED;
+
+      // Abort the scan. If there is no scan in progress, this becomes a nop.
+      if (scan_state_.state == ScanState::SCANNING) {
+        auto callback = std::make_unique<std::function<void()>>();
+        *callback = std::bind(&SimFirmware::ScanComplete, this, BRCMF_E_STATUS_ABORT);
+        hw_.RequestCallback(std::move(callback), kAbortScanDelay);
+      }
       break;
     }
     case BRCMF_C_SCB_AUTHENTICATE: {
@@ -2305,24 +2310,7 @@ void SimFirmware::ScanContinue() {
       }
 
       if (scan_state_.channel_index >= scan_state_.opts->channels.size()) {
-        // Scanning complete
-        if (scan_state_.opts->is_active) {
-          BRCMF_DBG(SIM, "Resetting pfn_mac_addr_ to system mac addr: " MAC_FMT_STR,
-                    MAC_FMT_ARGS(mac_addr_.data()));
-          memcpy(pfn_mac_addr_.byte, mac_addr_.data(), ETH_ALEN);
-        }
-        hw_.DisableRx();
-
-        scan_state_.state = ScanState::STOPPED;
-        // Restore the operating channel since Scan is done. This applies
-        // only if the scan was started when the IF is already associated
-        if (iface_tbl_[kClientIfidx].chanspec) {
-          wlan_channel_t channel;
-          chanspec_to_channel(&d11_inf_, iface_tbl_[kClientIfidx].chanspec, &channel);
-          hw_.SetChannel(channel);
-        }
-        scan_state_.opts->on_done_fn();
-        scan_state_.opts = nullptr;
+        ScanComplete(BRCMF_E_STATUS_SUCCESS);
       } else {
         // Scan next channel
         uint16_t chanspec = scan_state_.opts->channels[scan_state_.channel_index++];
@@ -2340,6 +2328,27 @@ void SimFirmware::ScanContinue() {
         hw_.RequestCallback(std::move(callback), scan_state_.opts->dwell_time);
       }
   }
+}
+
+// Clean up state after a scan request is finished
+void SimFirmware::ScanComplete(enum brcmf_fweh_event_status_t status) {
+  if (scan_state_.opts->is_active) {
+    BRCMF_DBG(SIM, "Resetting pfn_mac_addr_ to system mac addr: " MAC_FMT_STR,
+              MAC_FMT_ARGS(mac_addr_.data()));
+    memcpy(pfn_mac_addr_.byte, mac_addr_.data(), ETH_ALEN);
+  }
+  hw_.DisableRx();
+
+  scan_state_.state = ScanState::STOPPED;
+  // Restore the operating channel since Scan is done. This applies
+  // only if the scan was started when the IF is already associated
+  if (iface_tbl_[kClientIfidx].chanspec) {
+    wlan_channel_t channel;
+    chanspec_to_channel(&d11_inf_, iface_tbl_[kClientIfidx].chanspec, &channel);
+    hw_.SetChannel(channel);
+  }
+  scan_state_.opts->on_done_fn();
+  scan_state_.opts = nullptr;
 }
 
 // Send an event to the firmware notifying them that the scan has completed.

@@ -669,32 +669,6 @@ TEST_F(DynamicIfTest, StartApIfaceTimeoutWithReqSpamAndFwIgnore) {
   EXPECT_EQ(softap_ifc_.stats_.start_confirmations.back().result_code, WLAN_START_RESULT_SUCCESS);
 }
 
-// This test case verifies that when an AP start request comes during a scan, the scan will be
-// aborted and AP interface will be start successfully.
-TEST_F(DynamicIfTest, StartApWhileScanning) {
-  constexpr uint64_t kScanId = 0x18c5f;
-
-  Init();
-  StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
-  StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_);
-
-  SCHEDULE_CALL(zx::msec(30), &SimInterface::StartScan, &client_ifc_, kScanId, false);
-  SCHEDULE_CALL(zx::msec(200), &SimInterface::StartSoftAp, &softap_ifc_,
-                SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100);
-
-  env_->Run(kTestDuration);
-
-  // There will be no result received from firmware, because the fake external AP's channel number
-  // is 149, The scan has been stopped before reaching that channel.
-  EXPECT_EQ(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
-  ASSERT_NE(client_ifc_.ScanResultCode(kScanId), std::nullopt);
-  EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(), WLAN_SCAN_RESULT_INTERNAL_ERROR);
-
-  // Make sure the AP iface is finally started successfully.
-  EXPECT_EQ(softap_ifc_.stats_.start_confirmations.size(), 1U);
-  EXPECT_EQ(softap_ifc_.stats_.start_confirmations.back().result_code, WLAN_START_RESULT_SUCCESS);
-}
-
 // This test case verifies that a scan request comes while a AP start req is in progress will be
 // rejected. Because the AP start request will return a success immediately in SIM, so here we
 // inject a ignore error for AP start req to simulate the pending of it.
