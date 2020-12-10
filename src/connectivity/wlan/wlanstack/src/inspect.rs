@@ -29,6 +29,7 @@ const DEVICE_EVENTS_LIMIT: usize = 20;
 /// enough so they can be used to trigger bug reports.
 const CONNECT_EVENTS_LIMIT: usize = 7;
 const DISCONNECT_EVENTS_LIMIT: usize = 7;
+const SCAN_EVENTS_LIMIT: usize = 20;
 const SCAN_FAILURE_EVENTS_LIMIT: usize = 5;
 const COUNTERS_EVENTS_LIMIT: usize = 60;
 
@@ -160,6 +161,8 @@ pub struct ClientStatsNode {
     _node: Node,
     pub connect: Mutex<BoundedListNode>,
     pub disconnect: Mutex<BoundedListNode>,
+    /// Tracked so we know periods of time when there may be spotty data transfer.
+    pub scan: Mutex<BoundedListNode>,
     pub scan_failures: Mutex<BoundedListNode>,
     pub counters: Mutex<BoundedListNode>,
 }
@@ -168,12 +171,14 @@ impl ClientStatsNode {
     fn new(node: Node) -> Self {
         let connect = node.create_child("connect");
         let disconnect = node.create_child("disconnect");
+        let scan = node.create_child("scan");
         let scan_failures = node.create_child("scan_failures");
         let counters = node.create_child("counters");
         Self {
             _node: node,
             connect: Mutex::new(BoundedListNode::new(connect, CONNECT_EVENTS_LIMIT)),
             disconnect: Mutex::new(BoundedListNode::new(disconnect, DISCONNECT_EVENTS_LIMIT)),
+            scan: Mutex::new(BoundedListNode::new(scan, SCAN_EVENTS_LIMIT)),
             scan_failures: Mutex::new(BoundedListNode::new(
                 scan_failures,
                 SCAN_FAILURE_EVENTS_LIMIT,

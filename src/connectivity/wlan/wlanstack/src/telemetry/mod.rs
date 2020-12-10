@@ -221,6 +221,13 @@ pub fn log_scan_stats(
     scan_stats: &ScanStats,
     is_join_scan: bool,
 ) {
+    inspect_log!(inspect_tree.client_stats.scan.lock(), {
+        start_at: scan_stats.scan_start_at.into_nanos(),
+        end_at: scan_stats.scan_end_at.into_nanos(),
+        result: format!("{:?}", scan_stats.result),
+        start_while_connected: scan_stats.scan_start_while_connected,
+    });
+
     let (scan_result_dim, error_code_dim) = convert_scan_result(&scan_stats.result);
     let scan_type_dim = convert_scan_type(scan_stats.scan_type);
     let is_join_scan_dim = convert_bool_dim(is_join_scan);
@@ -1148,6 +1155,37 @@ mod tests {
                         reason_code: 1u64,
                         disconnect_source: "mlme",
                         time_since_channel_switch: 1337i64,
+                    }
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn test_inspect_log_scan() {
+        let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
+        let inspect_tree = fake_inspect_tree();
+
+        let now = now();
+        let scan_stats = ScanStats {
+            scan_start_at: now - 3.seconds(),
+            scan_end_at: now,
+            scan_type: fidl_mlme::ScanTypes::Active,
+            scan_start_while_connected: true,
+            result: ScanResult::Success,
+            bss_count: 5,
+        };
+        log_scan_stats(&mut cobalt_sender, inspect_tree.clone(), &scan_stats, true);
+
+        assert_inspect_tree!(inspect_tree.inspector, root: contains {
+            client_stats: contains {
+                scan: {
+                    "0": {
+                        "@time": AnyProperty,
+                        start_at: scan_stats.scan_start_at.into_nanos(),
+                        end_at: scan_stats.scan_end_at.into_nanos(),
+                        result: "Success",
+                        start_while_connected: true,
                     }
                 }
             }
