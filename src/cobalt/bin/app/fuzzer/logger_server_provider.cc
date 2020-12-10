@@ -42,9 +42,13 @@ cobalt::CobaltConfig cfg = {
     .local_aggregate_proto_store_path = "/tmp/local_agg",
     .obs_history_proto_store_path = "/tmp/obs_hist",
 
-    .target_interval = std::chrono::seconds(10),
-    .min_interval = std::chrono::seconds(10),
-    .initial_interval = std::chrono::seconds(10),
+    .upload_schedule_cfg =
+        {
+            .target_interval = std::chrono::seconds(10),
+            .min_interval = std::chrono::seconds(10),
+            .initial_interval = std::chrono::seconds(10),
+            .jitter = .2,
+        },
 
     .target_pipeline = std::make_unique<cobalt::LocalPipeline>(),
 
