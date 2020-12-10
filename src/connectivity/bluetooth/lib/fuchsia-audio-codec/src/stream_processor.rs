@@ -16,7 +16,7 @@ use {
         task::{Context, Poll, Waker},
         Future, StreamExt,
     },
-    log::*,
+    log::{trace, warn},
     parking_lot::{Mutex, RwLock},
     std::{
         collections::{HashSet, VecDeque},
@@ -236,10 +236,7 @@ impl StreamProcessorInner {
                 lock.enqueue(output_packet);
             }
             StreamProcessorEvent::OnFreeInputPacket {
-                free_input_packet:
-                    PacketHeader {
-                        buffer_lifetime_ordinal: Some(_ord), packet_index: Some(idx), ..
-                    },
+                free_input_packet: PacketHeader { packet_index: Some(idx), .. },
             } => {
                 self.client_owned.insert(InputBufferIndex(idx));
                 self.setup_input_cursor();
@@ -248,7 +245,8 @@ impl StreamProcessorInner {
                 let mut lock = self.output_queue.lock();
                 lock.mark_ended();
             }
-            e => trace!("Unhandled stream processor event: {:#?}", e),
+            StreamProcessorEvent::OnOutputFormat { .. } => {}
+            e => trace!("Unhandled stream processor event: {:?}", e),
         }
         Ok(())
     }
