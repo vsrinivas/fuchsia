@@ -70,6 +70,5 @@ static int StartAudioCore() {
 
 int main(int argc, const char** argv) {
   auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
-  media::audio::BaseCapturer::SetMustReleasePackets(cl.HasOption("captures-must-release-packets"));
   media::audio::StartAudioCore();
 }
