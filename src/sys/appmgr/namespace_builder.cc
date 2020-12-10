@@ -172,11 +172,12 @@ zx_status_t NamespaceBuilder::AddSandbox(
       // fxbug.dev/50308
       AllowList build_info_allowlist(appmgr_config_dir_, kBuildInfoAllowList);
       FuchsiaPkgUrl pkg_url;
-      if (pkg_url.Parse(ns_id) && !build_info_allowlist.IsAllowed(pkg_url)) {
+      if (pkg_url.Parse(ns_id) && build_info_allowlist.IsAllowed(pkg_url)) {
+        PushDirectoryFromPathAs("/pkgfs/packages/build-info/0/data", "/config/build-info");
+      } else {
         FX_LOGS(WARNING) << "Component " << ns_id
                          << " is not allowlisted to use build-info. See fxbug.dev/50308.";
       }
-      PushDirectoryFromPathAs("/pkgfs/packages/build-info/0/data", "/config/build-info");
     } else if (feature == "deprecated-misc-storage") {
       AllowList misc_storage_allowlist(appmgr_config_dir_, kMiscStorageAllowList);
       FuchsiaPkgUrl pkg_url;
