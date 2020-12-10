@@ -43,20 +43,32 @@ pub async fn configure_dhcp_server(guest_name: &str, command_to_run: &str) -> Re
 ///
 /// # Arguments
 ///
-/// * `addr` - IpAddress that should appear on a Netstack interface.
+/// * `want_addr` - IpAddress that should appear on a Netstack interface.
 /// * `timeout` - Duration to wait for the address to appear in Netstack.
-pub async fn verify_v4_addr_present(addr: fnet::IpAddress, timeout: Duration) -> Result<(), Error> {
+pub async fn verify_v4_addr_present(
+    want_addr: fnet::IpAddress,
+    timeout: Duration,
+) -> Result<(), Error> {
     let interface_state = client::connect_to_service::<finterfaces::StateMarker>()?;
     let mut if_map = std::collections::HashMap::new();
     fidl_fuchsia_net_interfaces_ext::wait_interface(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
         &mut if_map,
         |if_map| {
-            if_map
-                .iter()
-                .filter_map(|(_, properties)| properties.addresses.as_ref())
-                .flatten()
-                .find_map(|a| if a.addr?.addr == addr { Some(()) } else { None })
+            // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
+            if if_map.values().any(
+                |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
+                    addresses.iter().any(
+                        |fidl_fuchsia_net_interfaces_ext::Address {
+                             addr: fnet::Subnet { addr, prefix_len: _ },
+                         }| { *addr == want_addr },
+                    )
+                },
+            ) {
+                Some(())
+            } else {
+                None
+            }
         },
     )
     .map_err(anyhow::Error::from)
@@ -65,10 +77,13 @@ pub async fn verify_v4_addr_present(addr: fnet::IpAddress, timeout: Duration) ->
     .with_context(|| {
         format!(
             "failed to wait for address {:?}, final interfaces state: {}",
-            addr,
-            if_map.iter().fold(String::from("addresses present:"), |s, (id, properties)| {
-                s + &format!(" {:?}: {:?}", id, properties.addresses)
-            }),
+            want_addr,
+            if_map.iter().fold(
+                String::from("addresses present:"),
+                |s, (id, fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. })| {
+                    s + &format!(" {:?}: {:?}", id, addresses)
+                }
+            ),
         )
     })
 }

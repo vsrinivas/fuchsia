@@ -126,8 +126,9 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid.into()),
-        |properties| {
-            if properties.online? {
+        |&fidl_fuchsia_net_interfaces_ext::Properties { online, .. }| {
+            // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
+            if online {
                 Some(())
             } else {
                 None

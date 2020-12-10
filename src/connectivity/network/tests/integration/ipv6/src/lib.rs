@@ -396,21 +396,27 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(name: &str) -> Resu
     fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(iface.id()),
-        |properties| {
-            if properties
-                .addresses
-                .as_ref()?
+        |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
+            if addresses
                 .iter()
-                .filter_map(|a| match a.addr?.addr {
-                    net::IpAddress::Ipv6(a) => {
-                        if ipv6_consts::PREFIX.contains(&net_types_ip::Ipv6Addr::new(a.addr)) {
-                            Some(())
-                        } else {
-                            None
+                .filter_map(
+                    |&fidl_fuchsia_net_interfaces_ext::Address {
+                         addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                     }| {
+                        match addr {
+                            net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
+                                // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
+                                if ipv6_consts::PREFIX.contains(&net_types_ip::Ipv6Addr::new(addr))
+                                {
+                                    Some(())
+                                } else {
+                                    None
+                                }
+                            }
+                            net::IpAddress::Ipv4(_) => None,
                         }
-                    }
-                    net::IpAddress::Ipv4(_) => None,
-                })
+                    },
+                )
                 .count()
                 == expected_addrs as usize
             {
@@ -605,17 +611,23 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) -> Result
     fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(iface.id()),
-        |properties| {
-            properties.addresses.as_ref()?.iter().find_map(|a| match a.addr?.addr {
-                net::IpAddress::Ipv6(a) => {
-                    if ipv6_consts::LINK_LOCAL_ADDR == net_types_ip::Ipv6Addr::new(a.addr) {
-                        Some(())
-                    } else {
-                        None
+        |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
+            addresses.iter().find_map(
+                |&fidl_fuchsia_net_interfaces_ext::Address {
+                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                 }| {
+                    match addr {
+                        net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
+                            if ipv6_consts::LINK_LOCAL_ADDR == net_types_ip::Ipv6Addr::new(addr) {
+                                Some(())
+                            } else {
+                                None
+                            }
+                        }
+                        net::IpAddress::Ipv4(_) => None,
                     }
-                }
-                net::IpAddress::Ipv4(_) => None,
-            })
+                },
+            )
         },
     )
     .map_err(anyhow::Error::from)
@@ -846,31 +858,29 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(iface.id()),
-        |properties| {
+        |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
             // We have to make sure 2 things:
             // 1. We have `expected_addrs` addrs which have the advertised prefix for the
             // interface.
             // 2. The last tried address should be among the addresses for the interface.
-            let (slaac_addrs, has_target_addr) = properties.addresses.as_ref()?.iter().fold(
+            let (slaac_addrs, has_target_addr) = addresses.iter().fold(
                 (0, false),
-                |(mut slaac_addrs, mut has_target_addr), a| {
-                    if let Some(a) = a.addr {
-                        match a.addr {
-                            net::IpAddress::Ipv6(a) => {
-                                let configured_addr = net_types_ip::Ipv6Addr::new(a.addr);
-                                assert!(configured_addr != tried_address,
-                                    "unexpected address ({}) assigned to the interface which previously failed DAD",
-                                    configured_addr
-                                );
-                                if ipv6_consts::PREFIX.contains(&configured_addr) {
-                                    slaac_addrs += 1;
-                                }
-                                if configured_addr == target_address {
-                                    has_target_addr = true;
-                                }
+                |(mut slaac_addrs, mut has_target_addr), &fidl_fuchsia_net_interfaces_ext::Address { addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ } }| {
+                    match addr {
+                        net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
+                            let configured_addr = net_types_ip::Ipv6Addr::new(addr);
+                            assert!(configured_addr != tried_address,
+                                "unexpected address ({}) assigned to the interface which previously failed DAD",
+                                configured_addr
+                            );
+                            if ipv6_consts::PREFIX.contains(&configured_addr) {
+                                slaac_addrs += 1;
                             }
-                            net::IpAddress::Ipv4(_) => {}
+                            if configured_addr == target_address {
+                                has_target_addr = true;
+                            }
                         }
+                        net::IpAddress::Ipv4(_) => {}
                     }
                     (slaac_addrs, has_target_addr)
                 },

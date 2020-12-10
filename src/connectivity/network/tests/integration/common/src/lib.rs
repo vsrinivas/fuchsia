@@ -139,21 +139,26 @@ pub async fn wait_for_non_loopback_interface_up<
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(interface_state)?,
         &mut if_map,
         |if_map| {
-            if_map.iter().find_map(|(id, properties)| {
-                let id = *id as u32;
-                if properties.device_class
-                    != Some(net_interfaces::DeviceClass::Loopback(net_interfaces::Empty {}))
-                    && properties.online?
-                    && exclude_ids.map_or(true, |ids| !ids.contains(&id))
-                {
-                    Some((
-                        id,
-                        properties.name.clone().expect("failed to find loopback interface name"),
-                    ))
-                } else {
-                    None
-                }
-            })
+            if_map.iter().find_map(
+                |(
+                    id,
+                    fidl_fuchsia_net_interfaces_ext::Properties {
+                        name, device_class, online, ..
+                    },
+                )| {
+                    let id = *id as u32;
+                    // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
+                    if *device_class
+                        != net_interfaces::DeviceClass::Loopback(net_interfaces::Empty {})
+                        && *online
+                        && exclude_ids.map_or(true, |ids| !ids.contains(&id))
+                    {
+                        Some((id, name.clone()))
+                    } else {
+                        None
+                    }
+                },
+            )
         },
     )
     .map_err(anyhow::Error::from)

@@ -575,7 +575,7 @@ mod helpers {
             fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
                 .context("failed to create event stream")?,
             &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(interface_id),
-            |fidl_fuchsia_net_interfaces::Properties {
+            |&fidl_fuchsia_net_interfaces_ext::Properties {
                  id: _,
                  addresses: _,
                  online,
@@ -583,9 +583,8 @@ mod helpers {
                  has_default_ipv4_route: _,
                  has_default_ipv6_route: _,
                  name: _,
-                 ..
              }| {
-                if *online == Some(true) {
+                if online {
                     Some(())
                 } else {
                     None

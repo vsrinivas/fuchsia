@@ -174,29 +174,25 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid.into()),
-        |fidl_fuchsia_net_interfaces::Properties { online, addresses, .. }| {
-            if !opt.skip_up_check && !online.unwrap_or(false) {
+        |fidl_fuchsia_net_interfaces_ext::Properties { online, addresses, .. }| {
+            if !opt.skip_up_check && !online {
                 log::info!("Found interface with id {}, but it's down. waiting.", nicid);
                 return None;
             }
             // If configuring static addresses, make sure the addresses are present (this ensures
             // that DAD has resolved for IPv6 addresses).
             if subnets.iter().all(|subnet| {
-                addresses.as_ref().map_or(false, |addresses| {
-                    let present = addresses.iter().any(
-                        |fidl_fuchsia_net_interfaces::Address { addr, .. }| {
-                            addr.map_or(false, |addr| addr == *subnet)
-                        },
+                let present = addresses
+                    .iter()
+                    .any(|fidl_fuchsia_net_interfaces_ext::Address { addr }| addr == subnet);
+                if !present {
+                    log::info!(
+                        "Found interface with id {}, but address {} not yet present. waiting.",
+                        nicid,
+                        fidl_fuchsia_net_ext::Subnet::from(*subnet),
                     );
-                    if !present {
-                        log::info!(
-                            "Found interface with id {}, but address {} not yet present. waiting.",
-                            nicid,
-                            fidl_fuchsia_net_ext::Subnet::from(*subnet),
-                        );
-                    }
-                    present
-                })
+                }
+                present
             }) {
                 Some(())
             } else {

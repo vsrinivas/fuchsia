@@ -64,33 +64,36 @@ async fn create_environment<'a>(
     let interfaces = env
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("failed to connect to interfaces.State")?;
-    let (ipv6, loopback_id) =
-        fidl_fuchsia_net_interfaces_ext::wait_interface(
-            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces)
-                .context("failed to get interfaces stream")?,
-            &mut std::collections::HashMap::<u64, fidl_fuchsia_net_interfaces::Properties>::new(),
-            |interfaces| {
-                let addr = interfaces.get(&ep.id())?.addresses.as_ref()?.iter().find_map(
-                    |addr| match addr.addr?.addr {
+    let (ipv6, loopback_id) = fidl_fuchsia_net_interfaces_ext::wait_interface(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces)
+            .context("failed to get interfaces stream")?,
+        &mut std::collections::HashMap::new(),
+        |interfaces| {
+            let addr = interfaces.get(&ep.id())?.addresses.iter().find_map(
+                |&fidl_fuchsia_net_interfaces_ext::Address {
+                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                 }| {
+                    match addr {
                         a @ fidl_fuchsia_net::IpAddress::Ipv6(_) => Some(a.clone()),
                         fidl_fuchsia_net::IpAddress::Ipv4(_) => None,
-                    },
-                )?;
-                let loopback_id = interfaces.iter().find_map(|(id, props)| {
-                    if let Some(fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
-                        fidl_fuchsia_net_interfaces::Empty {},
-                    )) = props.device_class
-                    {
-                        Some(*id)
-                    } else {
-                        None
                     }
-                })?;
-                Some((addr, loopback_id))
-            },
-        )
-        .await
-        .context("failed to retrieve IPv6 address")?;
+                },
+            )?;
+            let loopback_id = interfaces.iter().find_map(|(id, props)| {
+                if let fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
+                    fidl_fuchsia_net_interfaces::Empty {},
+                ) = props.device_class
+                {
+                    Some(*id)
+                } else {
+                    None
+                }
+            })?;
+            Some((addr, loopback_id))
+        },
+    )
+    .await
+    .context("failed to retrieve IPv6 address")?;
 
     Ok(NeighborEnvironment { env, ep, ipv6, loopback_id })
 }

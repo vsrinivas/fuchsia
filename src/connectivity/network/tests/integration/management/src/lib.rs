@@ -294,23 +294,29 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
             fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
             &mut if_map,
             |if_map| {
-                if_map.iter().find_map(|(id, properties)| {
-                    if properties.online?
-                        && properties
-                            .addresses
-                            .as_ref()?
-                            .iter()
-                            .filter_map(|a| a.addr)
-                            .any(|a| a.addr == INTERFACE_ADDR.into_ext())
-                    {
-                        Some((
-                            *id,
-                            properties.name.clone().expect("WLAN AP interface name missing"),
-                        ))
-                    } else {
-                        None
-                    }
-                })
+                if_map.iter().find_map(
+                    |(
+                        id,
+                        fidl_fuchsia_net_interfaces_ext::Properties {
+                            name, online, addresses, ..
+                        },
+                    )| {
+                        // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
+                        if *online
+                            && addresses.iter().any(
+                                |&fidl_fuchsia_net_interfaces_ext::Address {
+                                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                                 }| {
+                                    addr == INTERFACE_ADDR.into_ext()
+                                },
+                            )
+                        {
+                            Some((*id, name.clone()))
+                        } else {
+                            None
+                        }
+                    },
+                )
             },
         )
         .map_err(anyhow::Error::from)
@@ -393,22 +399,32 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
             fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
             &mut if_map,
             |if_map| {
-                if_map.iter().find_map(|(id, properties)| {
-                    if *id != wlan_ap_id
-                        && properties.online?
-                        && properties.addresses.as_ref()?.iter().filter_map(|a| a.addr).any(|a| {
-                            match a.addr {
-                                net::IpAddress::Ipv4(addr) => NETWORK_ADDR_SUBNET
-                                    .contains(&net_types_ip::Ipv4Addr::new(addr.addr)),
-                                net::IpAddress::Ipv6(_) => false,
-                            }
-                        })
-                    {
-                        Some(())
-                    } else {
-                        None
-                    }
-                })
+                if_map.iter().find_map(
+                    |(
+                        id,
+                        fidl_fuchsia_net_interfaces_ext::Properties { online, addresses, .. },
+                    )| {
+                        // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
+                        if *id != wlan_ap_id
+                            && *online
+                            && addresses.iter().any(
+                                |&fidl_fuchsia_net_interfaces_ext::Address {
+                                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                                 }| match addr {
+                                    net::IpAddress::Ipv4(net::Ipv4Address { addr }) => {
+                                        NETWORK_ADDR_SUBNET
+                                            .contains(&net_types_ip::Ipv4Addr::new(addr))
+                                    }
+                                    net::IpAddress::Ipv6(_) => false,
+                                },
+                            )
+                        {
+                            Some(())
+                        } else {
+                            None
+                        }
+                    },
+                )
             },
         )
         .map_err(anyhow::Error::from)

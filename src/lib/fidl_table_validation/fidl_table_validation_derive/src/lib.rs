@@ -381,11 +381,13 @@ fn impl_valid_fidl_table(
     );
 
     Ok(quote!(
+        #[allow(missing_docs)]
         #[derive(Debug, Clone, Copy, PartialEq)]
         pub enum #missing_field_error_type {
             #field_errors
         }
 
+        #[allow(missing_docs)]
         #[derive(Debug)]
         pub enum #error_type_name {
             MissingField(#missing_field_error_type),

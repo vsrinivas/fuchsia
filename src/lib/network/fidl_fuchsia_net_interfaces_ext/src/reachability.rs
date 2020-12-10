@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{Update, UpdateResult, WatcherOperationError};
+use crate::{Address, Properties, Update, UpdateResult, WatcherOperationError};
 
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
@@ -11,26 +11,26 @@ use net_types::{LinkLocalAddress as _, ScopeableAddress as _};
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
-/// Returns true iff the supplied [`fnet_interfaces::Properties`] (expected to be fully populated)
+/// Returns true iff the supplied [`Properties`] (expected to be fully populated)
 /// appears to provide network connectivity, i.e. is not loopback, is online, and has a default
 /// route and a globally routable address for either IPv4 or IPv6. An IPv4 address is assumed to be
 /// globally routable if it's not link-local. An IPv6 address is assumed to be globally routable if
 /// it has global scope.
 pub fn is_globally_routable(
-    &fnet_interfaces::Properties {
+    &Properties {
         ref device_class,
         online,
         ref addresses,
         has_default_ipv4_route,
         has_default_ipv6_route,
         ..
-    }: &fnet_interfaces::Properties,
+    }: &Properties,
 ) -> bool {
     match device_class {
-        None | Some(fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {})) => {
+        fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {}) => {
             return false;
         }
-        Some(fnet_interfaces::DeviceClass::Device(device)) => match device {
+        fnet_interfaces::DeviceClass::Device(device) => match device {
             fidl_fuchsia_hardware_network::DeviceClass::Unknown
             | fidl_fuchsia_hardware_network::DeviceClass::Ethernet
             | fidl_fuchsia_hardware_network::DeviceClass::Wlan
@@ -38,30 +38,20 @@ pub fn is_globally_routable(
             | fidl_fuchsia_hardware_network::DeviceClass::Bridge => {}
         },
     }
-    if online != Some(true) {
+    if !online {
         return false;
     }
-    let has_default_ipv4_route = has_default_ipv4_route.unwrap_or(false);
-    let has_default_ipv6_route = has_default_ipv6_route.unwrap_or(false);
     if !has_default_ipv4_route && !has_default_ipv6_route {
         return false;
     }
-    addresses.as_ref().map_or(false, |addresses| {
-        addresses.iter().any(|fnet_interfaces::Address { addr, .. }| match addr {
-            Some(fnet::Subnet {
-                addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }),
-                prefix_len: _,
-            }) => has_default_ipv4_route && !net_types::ip::Ipv4Addr::new(*addr).is_linklocal(),
-            Some(fnet::Subnet {
-                addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }),
-                prefix_len: _,
-            }) => {
-                has_default_ipv6_route
-                    && net_types::ip::Ipv6Addr::new(*addr).scope()
-                        == net_types::ip::Ipv6Scope::Global
-            }
-            None => false,
-        })
+    addresses.iter().any(|Address { addr: fnet::Subnet { addr, prefix_len: _ } }| match addr {
+        fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
+            has_default_ipv4_route && !net_types::ip::Ipv4Addr::new(*addr).is_linklocal()
+        }
+        fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
+            has_default_ipv6_route
+                && net_types::ip::Ipv6Addr::new(*addr).scope() == net_types::ip::Ipv6Scope::Global
+        }
     })
 }
 
@@ -70,8 +60,7 @@ pub fn is_globally_routable(
 /// it changes.
 pub fn to_reachability_stream(
     event_stream: impl Stream<Item = Result<fnet_interfaces::Event, fidl::Error>>,
-) -> impl Stream<Item = Result<bool, WatcherOperationError<HashMap<u64, fnet_interfaces::Properties>>>>
-{
+) -> impl Stream<Item = Result<bool, WatcherOperationError<HashMap<u64, Properties>>>> {
     let mut if_map = HashMap::new();
     let mut reachable = None;
     let mut reachable_ids = HashSet::new();
@@ -82,12 +71,10 @@ pub fn to_reachability_stream(
                     UpdateResult::Existing(properties)
                     | UpdateResult::Added(properties)
                     | UpdateResult::Changed(properties) => {
-                        if let Some(id) = properties.id {
-                            if is_globally_routable(properties) {
-                                let _present: bool = reachable_ids.insert(id);
-                            } else {
-                                let _removed: bool = reachable_ids.remove(&id);
-                            }
+                        if is_globally_routable(properties) {
+                            let _present: bool = reachable_ids.insert(properties.id);
+                        } else {
+                            let _removed: bool = reachable_ids.remove(&properties.id);
                         }
                     }
                     UpdateResult::Removed(id) => {
@@ -122,7 +109,7 @@ pub enum OperationError<B: Update + std::fmt::Debug> {
 /// has properties which satisfy [`is_globally_routable`].
 pub async fn wait_for_reachability(
     event_stream: impl Stream<Item = Result<fnet_interfaces::Event, fidl::Error>>,
-) -> Result<(), OperationError<HashMap<u64, fnet_interfaces::Properties>>> {
+) -> Result<(), OperationError<HashMap<u64, Properties>>> {
     futures::pin_mut!(event_stream);
     let rtn = to_reachability_stream(event_stream)
         .map_err(OperationError::Watcher)
@@ -141,6 +128,7 @@ mod tests {
     use fidl_fuchsia_hardware_network as fnetwork;
     use futures::FutureExt as _;
     use net_declare::fidl_subnet;
+    use std::convert::TryInto as _;
 
     const IPV4_LINK_LOCAL: fnet::Subnet = fidl_subnet!(169.254.0.1/16);
     const IPV6_LINK_LOCAL: fnet::Subnet = fidl_subnet!(fe80::1/64);
@@ -180,83 +168,62 @@ mod tests {
     }
 
     #[test]
-    fn test_is_globally_routable() {
+    fn test_is_globally_routable() -> Result<(), anyhow::Error> {
         const ID: u64 = 1;
         // These combinations are not globally routable.
-        assert!(!is_globally_routable(&fnet_interfaces::Properties {
-            device_class: None,
-            ..valid_interface(ID)
+        assert!(!is_globally_routable(&Properties {
+            device_class: fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {}),
+            ..valid_interface(ID).try_into()?
         }));
-        assert!(!is_globally_routable(&fnet_interfaces::Properties {
-            device_class: Some(fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {})),
-            ..valid_interface(ID)
+        assert!(!is_globally_routable(&Properties {
+            online: false,
+            ..valid_interface(ID).try_into()?
         }));
-        assert!(!is_globally_routable(&fnet_interfaces::Properties {
-            online: Some(false),
-            ..valid_interface(ID)
+        assert!(!is_globally_routable(&Properties {
+            addresses: vec![],
+            ..valid_interface(ID).try_into()?
         }));
-        assert!(!is_globally_routable(&fnet_interfaces::Properties {
-            addresses: Some(vec![]),
-            ..valid_interface(ID)
+        assert!(!is_globally_routable(&Properties {
+            has_default_ipv4_route: false,
+            has_default_ipv6_route: false,
+            ..valid_interface(ID).try_into()?
         }));
-        assert!(!is_globally_routable(&fnet_interfaces::Properties {
-            has_default_ipv4_route: Some(false),
-            has_default_ipv6_route: Some(false),
-            ..valid_interface(ID)
+        assert!(!is_globally_routable(&Properties {
+            addresses: vec![Address { addr: IPV4_GLOBAL }],
+            has_default_ipv4_route: false,
+            ..valid_interface(ID).try_into()?
         }));
-        assert!(!is_globally_routable(&fnet_interfaces::Properties {
-            addresses: Some(vec![fnet_interfaces::Address {
-                addr: Some(IPV4_GLOBAL),
-                ..fnet_interfaces::Address::EMPTY
-            }]),
-            has_default_ipv4_route: Some(false),
-            ..valid_interface(ID)
+        assert!(!is_globally_routable(&Properties {
+            addresses: vec![Address { addr: IPV6_GLOBAL }],
+            has_default_ipv6_route: false,
+            ..valid_interface(ID).try_into()?
         }));
-        assert!(!is_globally_routable(&fnet_interfaces::Properties {
-            addresses: Some(vec![fnet_interfaces::Address {
-                addr: Some(IPV6_GLOBAL),
-                ..fnet_interfaces::Address::EMPTY
-            }]),
-            has_default_ipv6_route: Some(false),
-            ..valid_interface(ID)
+        assert!(!is_globally_routable(&Properties {
+            addresses: vec![Address { addr: IPV6_LINK_LOCAL }],
+            has_default_ipv6_route: true,
+            ..valid_interface(ID).try_into()?
         }));
-        assert!(!is_globally_routable(&fnet_interfaces::Properties {
-            addresses: Some(vec![fnet_interfaces::Address {
-                addr: Some(IPV6_LINK_LOCAL),
-                ..fnet_interfaces::Address::EMPTY
-            }]),
-            has_default_ipv6_route: Some(true),
-            ..valid_interface(ID)
-        }));
-        assert!(!is_globally_routable(&fnet_interfaces::Properties {
-            addresses: Some(vec![fnet_interfaces::Address {
-                addr: Some(IPV4_LINK_LOCAL),
-                ..fnet_interfaces::Address::EMPTY
-            }]),
-            has_default_ipv4_route: Some(true),
-            ..valid_interface(ID)
+        assert!(!is_globally_routable(&Properties {
+            addresses: vec![Address { addr: IPV4_LINK_LOCAL }],
+            has_default_ipv4_route: true,
+            ..valid_interface(ID).try_into()?
         }));
 
         // These combinations are globally routable.
-        assert!(is_globally_routable(&valid_interface(ID)));
-        assert!(is_globally_routable(&fnet_interfaces::Properties {
-            addresses: Some(vec![fnet_interfaces::Address {
-                addr: Some(IPV4_GLOBAL),
-                ..fnet_interfaces::Address::EMPTY
-            }]),
-            has_default_ipv4_route: Some(true),
-            has_default_ipv6_route: Some(false),
-            ..valid_interface(ID)
+        assert!(is_globally_routable(&valid_interface(ID).try_into()?));
+        assert!(is_globally_routable(&Properties {
+            addresses: vec![Address { addr: IPV4_GLOBAL }],
+            has_default_ipv4_route: true,
+            has_default_ipv6_route: false,
+            ..valid_interface(ID).try_into()?
         }));
-        assert!(is_globally_routable(&fnet_interfaces::Properties {
-            addresses: Some(vec![fnet_interfaces::Address {
-                addr: Some(IPV6_GLOBAL),
-                ..fnet_interfaces::Address::EMPTY
-            }]),
-            has_default_ipv4_route: Some(false),
-            has_default_ipv6_route: Some(true),
-            ..valid_interface(ID)
+        assert!(is_globally_routable(&Properties {
+            addresses: vec![Address { addr: IPV6_GLOBAL }],
+            has_default_ipv4_route: false,
+            has_default_ipv6_route: true,
+            ..valid_interface(ID).try_into()?
         }));
+        Ok(())
     }
 
     #[test]

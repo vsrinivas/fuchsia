@@ -92,8 +92,12 @@ async fn test_resolve_route() -> Result {
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&host_interface_state)?,
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(host_ep.id()),
-        |properties| {
-            if properties.addresses.as_ref()?.iter().any(|a| a.addr == Some(HOST_IP_V6)) {
+        |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
+            // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
+            if addresses
+                .iter()
+                .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr }| addr == HOST_IP_V6)
+            {
                 Some(())
             } else {
                 None
@@ -127,8 +131,12 @@ async fn test_resolve_route() -> Result {
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&gateway_interface_state)?,
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(gateway_ep.id()),
-        |properties| {
-            if properties.addresses.as_ref()?.iter().any(|a| a.addr == Some(GATEWAY_IP_V6)) {
+        |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
+            // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
+            if addresses
+                .iter()
+                .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr }| addr == GATEWAY_IP_V6)
+            {
                 Some(())
             } else {
                 None

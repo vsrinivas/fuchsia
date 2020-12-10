@@ -140,7 +140,7 @@ async fn client_acquires_addr(
             let addr = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
                 fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
                 &mut properties,
-                |fidl_fuchsia_net_interfaces::Properties {
+                |fidl_fuchsia_net_interfaces_ext::Properties {
                      id: _,
                      addresses,
                      online: _,
@@ -148,18 +148,14 @@ async fn client_acquires_addr(
                      has_default_ipv4_route: _,
                      has_default_ipv6_route: _,
                      name: _,
-                     .. // TODO(fxbug.dev/63727): Remove this when we have a validated type.
-                }| {
-                    addresses.as_ref()?.iter().find_map(
-                        |fidl_fuchsia_net_interfaces::Address { addr, .. /* TODO(fxbug.dev/63727): Remove this when we have a validated type. */ }| {
-
-                            addr.and_then(|subnet| {
-                                let fidl_fuchsia_net::Subnet { addr, prefix_len: _ } = subnet;
-                                match addr {
-                                    fidl_fuchsia_net::IpAddress::Ipv4(_) => Some(subnet),
-                                    fidl_fuchsia_net::IpAddress::Ipv6(_) => None,
-                                }
-                            })
+                 }| {
+                    addresses.iter().find_map(
+                        |&fidl_fuchsia_net_interfaces_ext::Address { addr: subnet }| {
+                            let fidl_fuchsia_net::Subnet { addr, prefix_len: _ } = subnet;
+                            match addr {
+                                fidl_fuchsia_net::IpAddress::Ipv4(_) => Some(subnet),
+                                fidl_fuchsia_net::IpAddress::Ipv6(_) => None,
+                            }
                         },
                     )
                 },
@@ -186,27 +182,23 @@ async fn client_acquires_addr(
             let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
                 fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
                 &mut properties,
-                |fidl_fuchsia_net_interfaces::Properties {
-                    id: _,
-                    addresses,
-                    online: _,
-                    device_class: _,
-                    has_default_ipv4_route: _,
-                    has_default_ipv6_route: _,
-                    name: _,
-                    .. // TODO(fxbug.dev/63727): Remove this when we have a validated type.
-                }| {
-                    addresses.as_ref().map_or(Some(()), |addresses| {
-                        if addresses.iter().any(
-                            |fidl_fuchsia_net_interfaces::Address { addr, .. /* TODO(fxbug.dev/63727): Remove this when we have a validated type. */ }| {
-                                addr == &Some(want_addr)
-                            },
-                        ) {
-                            None
-                        } else {
-                            Some(())
-                        }
-                    })
+                |fidl_fuchsia_net_interfaces_ext::Properties {
+                     id: _,
+                     addresses,
+                     online: _,
+                     device_class: _,
+                     has_default_ipv4_route: _,
+                     has_default_ipv6_route: _,
+                     name: _,
+                 }| {
+                    if addresses
+                        .iter()
+                        .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr }| addr == want_addr)
+                    {
+                        None
+                    } else {
+                        Some(())
+                    }
                 },
             )
             .await

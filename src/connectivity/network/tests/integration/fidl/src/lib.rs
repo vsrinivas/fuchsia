@@ -616,7 +616,10 @@ async fn test_down_close_race<E: netemul::Endpoint>(name: &str) -> Result {
             fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
             &mut if_map,
             |if_map| {
-                if if_map.get(&id)?.online? {
+                let &fidl_fuchsia_net_interfaces_ext::Properties { online, .. } =
+                    if_map.get(&id)?;
+                // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
+                if online {
                     Some(())
                 } else {
                     None
@@ -695,7 +698,10 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
             fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
             &mut if_map,
             |if_map| {
-                if if_map.get(&id)?.online? {
+                let &fidl_fuchsia_net_interfaces_ext::Properties { online, .. } =
+                    if_map.get(&id)?;
+                // TODO(https://github.com/rust-lang/rust/issues/64260): use bool::then when we're on Rust 1.50.0.
+                if online {
                     Some(())
                 } else {
                     None
