@@ -7,7 +7,7 @@ use {
         constants,
         container::{ReadSnapshot, SnapshotData},
         diagnostics::ConnectionStats,
-        repository::DataRepo,
+        repository::Pipeline,
     },
     anyhow::Error,
     collector::Moniker,
@@ -107,13 +107,13 @@ pub struct BatchResultItem {
 impl ReaderServer {
     /// Create a stream of filtered inspect data, ready to serve.
     pub fn stream(
-        inspect_repo: Arc<RwLock<DataRepo>>,
+        inspect_pipeline: Arc<RwLock<Pipeline>>,
         timeout: Option<i64>,
         selectors: Option<Vec<Selector>>,
         stats: Arc<ConnectionStats>,
     ) -> impl Stream<Item = Data<Inspect>> + Send + 'static {
         let selectors = selectors.map(|s| s.into_iter().map(Arc::new).collect());
-        let repo_data = inspect_repo.read().fetch_inspect_data(&selectors).into_iter();
+        let repo_data = inspect_pipeline.read().fetch_inspect_data(&selectors).into_iter();
 
         let server = Self { selectors };
         let timeout = timeout.unwrap_or(constants::PER_COMPONENT_ASYNC_TIMEOUT_SECONDS);
@@ -329,6 +329,7 @@ mod tests {
             accessor::BatchIterator,
             diagnostics,
             events::types::{ComponentIdentifier, InspectData, LegacyIdentifier, RealmPath},
+            repository::DataRepo,
         },
         anyhow::format_err,
         diagnostics_hierarchy::{trie::TrieIterableNode, DiagnosticsHierarchy},
@@ -630,7 +631,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn inspect_repo_disallows_duplicated_dirs() {
-        let mut inspect_repo = DataRepo::for_test(None);
+        let mut inspect_repo = DataRepo::for_test();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -760,7 +761,9 @@ mod tests {
                     }))
                     .await;
 
-                let inspect_repo = Arc::new(RwLock::new(DataRepo::for_test(None)));
+                let inspect_repo = Arc::new(RwLock::new(DataRepo::for_test()));
+                let pipeline_wrapper =
+                    Arc::new(RwLock::new(Pipeline::for_test(None, inspect_repo.clone())));
 
                 for (cid, proxy) in id_and_directory_proxy {
                     inspect_repo
@@ -772,6 +775,8 @@ mod tests {
                             zx::Time::from_nanos(0),
                         )
                         .unwrap();
+
+                    pipeline_wrapper.write().add_inspect_artifacts(cid.clone()).unwrap();
                 }
 
                 let inspector = Inspector::new();
@@ -785,7 +790,7 @@ mod tests {
                 );
 
                 let _result_json = read_snapshot_verify_batch_count_and_batch_size(
-                    inspect_repo.clone(),
+                    pipeline_wrapper.clone(),
                     expected_batch_results,
                     test_batch_iterator_stats1,
                 )
@@ -828,10 +833,12 @@ mod tests {
         let child_1_1_selector = selectors::parse_selector(r#"*:root/child_1/*:some-int"#).unwrap();
         let child_2_selector =
             selectors::parse_selector(r#"test_component.cmx:root/child_2:*"#).unwrap();
-        let inspect_repo = Arc::new(RwLock::new(DataRepo::for_test(Some(vec![
-            Arc::new(child_1_1_selector),
-            Arc::new(child_2_selector),
-        ]))));
+        let inspect_repo = Arc::new(RwLock::new(DataRepo::for_test()));
+        let static_selectors_opt =
+            Some(vec![Arc::new(child_1_1_selector), Arc::new(child_2_selector)]);
+
+        let pipeline_wrapper =
+            Arc::new(RwLock::new(Pipeline::for_test(static_selectors_opt, inspect_repo.clone())));
 
         let out_dir_proxy = InspectDataCollector::find_directory_proxy(&path).await.unwrap();
 
@@ -913,6 +920,8 @@ mod tests {
             )
             .unwrap();
 
+        pipeline_wrapper.write().add_inspect_artifacts(component_id.clone()).unwrap();
+
         let expected_get_next_result_errors = match mode {
             VerifyMode::ExpectComponentFailure => 1u64,
             _ => 0u64,
@@ -920,7 +929,7 @@ mod tests {
 
         {
             let result_json = read_snapshot(
-                inspect_repo.clone(),
+                pipeline_wrapper.clone(),
                 inspector_arc.clone(),
                 test_batch_iterator_stats1,
             )
@@ -1007,9 +1016,10 @@ mod tests {
             Arc::new(diagnostics::ConnectionStats::for_inspect(test_accessor_stats.clone()));
 
         inspect_repo.write().remove(&component_id);
+        pipeline_wrapper.write().remove(&component_id);
         {
             let result_json = read_snapshot(
-                inspect_repo.clone(),
+                pipeline_wrapper.clone(),
                 inspector_arc.clone(),
                 test_batch_iterator_stats2,
             )
@@ -1069,11 +1079,11 @@ mod tests {
     }
 
     fn start_snapshot(
-        inspect_repo: Arc<RwLock<DataRepo>>,
+        inspect_pipeline: Arc<RwLock<Pipeline>>,
         stats: Arc<ConnectionStats>,
     ) -> (BatchIteratorProxy, Task<()>) {
         let reader_server = Box::pin(ReaderServer::stream(
-            inspect_repo,
+            inspect_pipeline,
             BATCH_RETRIEVAL_TIMEOUT_SECONDS,
             None,
             stats.clone(),
@@ -1098,11 +1108,11 @@ mod tests {
     }
 
     async fn read_snapshot(
-        inspect_repo: Arc<RwLock<DataRepo>>,
+        inspect_pipeline: Arc<RwLock<Pipeline>>,
         _test_inspector: Arc<Inspector>,
         stats: Arc<ConnectionStats>,
     ) -> serde_json::Value {
-        let (consumer, server) = start_snapshot(inspect_repo, stats);
+        let (consumer, server) = start_snapshot(inspect_pipeline, stats);
 
         let mut result_vec: Vec<String> = Vec::new();
         loop {
@@ -1135,7 +1145,7 @@ mod tests {
     }
 
     async fn read_snapshot_verify_batch_count_and_batch_size(
-        inspect_repo: Arc<RwLock<DataRepo>>,
+        inspect_repo: Arc<RwLock<Pipeline>>,
         expected_batch_sizes: Vec<usize>,
         stats: Arc<ConnectionStats>,
     ) -> serde_json::Value {

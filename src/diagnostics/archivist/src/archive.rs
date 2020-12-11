@@ -9,11 +9,10 @@ use {
             ComponentEvent, ComponentEventStream, ComponentIdentifier, DiagnosticsReadyEvent,
             EventMetadata,
         },
-        repository::DataRepo,
+        repository::{DataRepo, Pipeline},
     },
     anyhow::{format_err, Error},
     chrono::prelude::*,
-    fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS,
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
     fuchsia_zircon as zx,
     futures::StreamExt,
@@ -580,13 +579,15 @@ pub struct ArchivistState {
     writer: Option<ArchiveWriter>,
     log_node: BoundedListNode,
     configuration: configs::Config,
-    diagnostics_repositories: Vec<Arc<RwLock<DataRepo>>>,
+    diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
+    diagnostics_repo: Arc<RwLock<DataRepo>>,
 }
 
 impl ArchivistState {
     pub fn new(
         configuration: configs::Config,
-        diagnostics_repositories: Vec<Arc<RwLock<DataRepo>>>,
+        diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
+        diagnostics_repo: Arc<RwLock<DataRepo>>,
         writer: Option<ArchiveWriter>,
     ) -> Result<Self, Error> {
         let mut log_node = BoundedListNode::new(
@@ -596,7 +597,13 @@ impl ArchivistState {
 
         inspect_log!(log_node, event: "Archivist started");
 
-        Ok(ArchivistState { writer, log_node, configuration, diagnostics_repositories })
+        Ok(ArchivistState {
+            writer,
+            log_node,
+            configuration,
+            diagnostics_pipelines,
+            diagnostics_repo,
+        })
     }
 }
 
@@ -608,39 +615,37 @@ async fn populate_inspect_repo(
     // as an Option is only to support mock objects for equality in tests.
     let diagnostics_proxy = diagnostics_ready_data.directory.unwrap();
 
+    let component_id = diagnostics_ready_data.metadata.component_id.clone();
+
+    let locked_state = &state.lock();
+
+    // Update the central repository to reference the new diagnostics source.
+    locked_state
+        .diagnostics_repo
+        .write()
+        .add_inspect_artifacts(
+            component_id.clone(),
+            diagnostics_ready_data.metadata.component_url.clone(),
+            diagnostics_proxy,
+            diagnostics_ready_data.metadata.timestamp.clone(),
+        )
+        .unwrap_or_else(|e| {
+            warn!(
+                component = ?component_id.clone(), ?e,
+                "Failed to add inspect artifacts to repository"
+            );
+        });
+
+    // Let each pipeline know that a new component arrived, and allow the pipeline
+    // to eagerly bucket static selectors based on that component's moniker.
     // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
-    // Once there is a central repository for each pipeline, the updates will just be
-    // greedy selector evaluation.
-    for diagnostics_repo in &state.lock().diagnostics_repositories {
-        // DirectoryProxys aren't thread safe, so each repository must get
-        // a unique clone.
-        let identifier = diagnostics_ready_data.metadata.component_id.clone();
-        match io_util::clone_directory(&diagnostics_proxy, CLONE_FLAG_SAME_RIGHTS) {
-            Ok(cloned_directory) => {
-                // TODO(fxbug.dev/55736): There should be a central diagnostics repository that
-                // is shared across all pipelines.
-                diagnostics_repo
-                    .write()
-                    .add_inspect_artifacts(
-                        identifier.clone(),
-                        diagnostics_ready_data.metadata.component_url.clone(),
-                        cloned_directory,
-                        diagnostics_ready_data.metadata.timestamp.clone(),
-                    )
-                    .unwrap_or_else(|e| {
-                        warn!(
-                            component = ?identifier, ?e,
-                            "Failed to add inspect artifacts to repository"
-                        );
-                    });
-            }
-            Err(e) => {
-                warn!(
-                    component = ?identifier, ?e,
-                    "Failed to clone diagnostics proxy for a repository",
-                );
-            }
-        }
+    for pipeline in &locked_state.diagnostics_pipelines {
+        pipeline.write().add_inspect_artifacts(component_id.clone()).unwrap_or_else(|e| {
+            warn!(
+                component = ?component_id.clone(), ?e,
+                "Failed to add inspect artifacts to pipeline wrapper"
+            );
+        });
     }
 }
 
@@ -651,30 +656,36 @@ fn add_new_component(
     event_timestamp: zx::Time,
     component_start_time: Option<zx::Time>,
 ) {
-    for diagnostics_repo in &state.lock().diagnostics_repositories {
-        diagnostics_repo
-            .write()
-            .add_new_component(
-                identifier.clone(),
-                component_url.clone(),
-                event_timestamp,
-                component_start_time,
-            )
-            .unwrap_or_else(|e| {
-                error!(
-                    id = ?identifier, ?e,
-                    "Failed to add new component to repository",
-                );
-            });
-    }
+    let locked_state = &state.lock();
+
+    // Update the central repository to reference the new diagnostics source.
+    locked_state
+        .diagnostics_repo
+        .write()
+        .add_new_component(
+            identifier.clone(),
+            component_url.clone(),
+            event_timestamp,
+            component_start_time,
+        )
+        .unwrap_or_else(|e| {
+            error!(
+                id = ?identifier, ?e,
+                "Failed to add new component to repository",
+            );
+        });
 }
 
 fn remove_from_inspect_repo(
     state: &Arc<Mutex<ArchivistState>>,
     component_id: &ComponentIdentifier,
 ) {
-    for diagnostics_repo in &state.lock().diagnostics_repositories {
-        diagnostics_repo.write().remove(&component_id);
+    let locked_state = &state.lock();
+    locked_state.diagnostics_repo.write().remove(&component_id);
+
+    // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
+    for pipeline in &locked_state.diagnostics_pipelines {
+        pipeline.write().remove(&component_id);
     }
 }
 

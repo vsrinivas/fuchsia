@@ -13,7 +13,7 @@ use {
         },
     },
     anyhow::{format_err, Error},
-    diagnostics_hierarchy::trie,
+    diagnostics_hierarchy::{trie, InspectHierarchyMatcher},
     fidl_fuchsia_diagnostics::{self, Selector, StreamMode},
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fuchsia_zircon as zx,
@@ -21,9 +21,116 @@ use {
     io_util,
     parking_lot::RwLock,
     selectors,
+    std::collections::HashMap,
     std::convert::TryInto,
     std::sync::Arc,
 };
+
+/// Overlay that mediates connections between servers and the central
+/// data repository. The overlay is provided static configurations that
+/// make it unique to a specific pipeline, and uses those static configurations
+/// to offer filtered access to the central repository.
+pub struct Pipeline {
+    static_pipeline_selectors: Option<Vec<Arc<Selector>>>,
+    log_redactor: Arc<Redactor>,
+    moniker_to_static_matcher_map: HashMap<String, InspectHierarchyMatcher>,
+    data_repo: Arc<RwLock<DataRepo>>,
+}
+
+impl Pipeline {
+    pub fn new(
+        static_pipeline_selectors: Option<Vec<Arc<Selector>>>,
+        log_redactor: Redactor,
+        data_repo: Arc<RwLock<DataRepo>>,
+    ) -> Self {
+        Pipeline {
+            moniker_to_static_matcher_map: HashMap::new(),
+            static_pipeline_selectors,
+            log_redactor: Arc::new(log_redactor),
+            data_repo,
+        }
+    }
+
+    #[cfg(test)]
+    pub fn for_test(
+        static_pipeline_selectors: Option<Vec<Arc<Selector>>>,
+        data_repo: Arc<RwLock<DataRepo>>,
+    ) -> Self {
+        Pipeline {
+            moniker_to_static_matcher_map: HashMap::new(),
+            static_pipeline_selectors,
+            log_redactor: Arc::new(Redactor::noop()),
+            data_repo,
+        }
+    }
+
+    pub async fn logs(
+        pipeline: &Arc<RwLock<Self>>,
+        mode: StreamMode,
+    ) -> impl Stream<Item = RedactedItem<Message>> {
+        let (redactor, manager) = {
+            let locked_pipeline = pipeline.read();
+            // Without this variable, the temporary is part of an expression at the end of a block;
+            // Here, we force the temporary to be dropped sooner,
+            // before the block's local variables are dropped
+            // by saving the expression's value in a new local variable
+            // and then placing the expression at the end of the block
+            let unlocked_tuple = (
+                locked_pipeline.log_redactor.clone(),
+                locked_pipeline.data_repo.read().log_manager.clone(),
+            );
+            unlocked_tuple
+        };
+        redactor.redact_stream(manager.cursor(mode).await)
+    }
+
+    pub fn remove(&mut self, component_id: &ComponentIdentifier) {
+        self.moniker_to_static_matcher_map
+            .remove(&component_id.relative_moniker_for_selectors().join("/"));
+    }
+
+    pub fn add_inspect_artifacts(&mut self, identifier: ComponentIdentifier) -> Result<(), Error> {
+        let relative_moniker = identifier.relative_moniker_for_selectors();
+
+        // Update the pipeline wrapper to be aware of the new inspect source if there
+        // are are static selectors for the pipeline, and some of them are applicable to
+        // the inspect source's relative moniker. Otherwise, ignore.
+        if let Some(selectors) = &self.static_pipeline_selectors {
+            let matched_selectors = selectors::match_component_moniker_against_selectors(
+                &relative_moniker,
+                &selectors,
+            )?;
+
+            match &matched_selectors[..] {
+                [] => {}
+                populated_vec => {
+                    let hierarchy_matcher = (populated_vec).try_into()?;
+                    self.moniker_to_static_matcher_map
+                        .insert(relative_moniker.join("/"), hierarchy_matcher);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn fetch_lifecycle_event_data(&self) -> Vec<LifecycleDataContainer> {
+        self.data_repo.read().fetch_lifecycle_event_data()
+    }
+
+    /// Return all of the DirectoryProxies that contain Inspect hierarchies
+    /// which contain data that should be selected from.
+    pub fn fetch_inspect_data(
+        &self,
+        component_selectors: &Option<Vec<Arc<Selector>>>,
+    ) -> Vec<UnpopulatedInspectDataContainer> {
+        let moniker_to_static_selector_opt =
+            self.static_pipeline_selectors.as_ref().map(|_| &self.moniker_to_static_matcher_map);
+
+        self.data_repo
+            .read()
+            .fetch_inspect_data(component_selectors, moniker_to_static_selector_opt)
+    }
+}
 
 pub type DiagnosticsDataTrie = trie::Trie<String, ComponentDiagnostics>;
 
@@ -32,45 +139,16 @@ pub type DiagnosticsDataTrie = trie::Trie<String, ComponentDiagnostics>;
 pub struct DataRepo {
     pub data_directories: DiagnosticsDataTrie,
     log_manager: LogManager,
-
-    /// Removes potentially sensitive strings from logs. By default pipelines are constructed
-    /// with a no-op redactor.
-    log_redactor: Arc<Redactor>,
-
-    /// Optional static selectors. For the all_access reader, there
-    /// are no provided selectors. For all other pipelines, a non-empty
-    /// vector is required.
-    pub static_selectors: Option<Vec<Arc<Selector>>>,
 }
 
 impl DataRepo {
-    pub fn new(
-        log_manager: LogManager,
-        log_redactor: Redactor,
-        static_selectors: Option<Vec<Arc<Selector>>>,
-    ) -> Self {
-        DataRepo {
-            log_manager,
-            log_redactor: Arc::new(log_redactor),
-            data_directories: DiagnosticsDataTrie::new(),
-            static_selectors: static_selectors,
-        }
+    pub fn new(log_manager: LogManager) -> Self {
+        DataRepo { log_manager, data_directories: DiagnosticsDataTrie::new() }
     }
 
     #[cfg(test)]
-    pub fn for_test(static_selectors: Option<Vec<Arc<Selector>>>) -> Self {
-        Self::new(LogManager::new(), Redactor::noop(), static_selectors)
-    }
-
-    pub async fn logs(
-        repo: &Arc<RwLock<Self>>,
-        mode: StreamMode,
-    ) -> impl Stream<Item = RedactedItem<Message>> {
-        let (redactor, manager) = {
-            let repo = repo.read();
-            (repo.log_redactor.clone(), repo.log_manager.clone())
-        };
-        redactor.redact_stream(manager.cursor(mode).await)
+    pub fn for_test() -> Self {
+        Self::new(LogManager::new())
     }
 
     pub fn remove(&mut self, component_id: &ComponentIdentifier) {
@@ -158,48 +236,19 @@ impl DataRepo {
         event_timestamp: zx::Time,
     ) -> Result<(), Error> {
         let relative_moniker = identifier.relative_moniker_for_selectors();
-
         let key = identifier.unique_key();
 
-        // Create an optional inspect artifact container. If the option is None, this implies
-        // that there existed static selectors, and none of them matched the relative moniker
-        // of the component being inserted. So we can abort insertion.
-        let inspect_artifact_container = match &self.static_selectors {
-            Some(selectors) => {
-                let matched_selectors = selectors::match_component_moniker_against_selectors(
-                    &relative_moniker,
-                    &selectors,
-                )?;
-                match &matched_selectors[..] {
-                    [] => None,
-                    populated_vec => Some(InspectArtifactsContainer {
-                        component_diagnostics_proxy: Arc::new(directory_proxy),
-                        inspect_matcher: Some((populated_vec).try_into()?),
-                        event_timestamp,
-                    }),
-                }
-            }
-            None => Some(InspectArtifactsContainer {
-                component_diagnostics_proxy: Arc::new(directory_proxy),
-                inspect_matcher: None,
-                event_timestamp,
-            }),
+        let inspect_container = InspectArtifactsContainer {
+            component_diagnostics_proxy: Arc::new(directory_proxy),
+            event_timestamp,
         };
 
-        match inspect_artifact_container {
-            Some(inspect_container) => self.insert_inspect_artifact_container(
-                inspect_container,
-                key,
-                relative_moniker,
-                component_url.into(),
-            ),
-            // The Inspect artifact container being None here implies that
-            // there were valid static selectors and none of them applied to
-            // the component currently being processed.
-            None => {
-                return Ok(());
-            }
-        }
+        self.insert_inspect_artifact_container(
+            inspect_container,
+            key,
+            relative_moniker,
+            component_url.into(),
+        )
     }
 
     // Inserts an InspectArtifactsContainer into the data repository.
@@ -309,6 +358,7 @@ impl DataRepo {
     pub fn fetch_inspect_data(
         &self,
         component_selectors: &Option<Vec<Arc<Selector>>>,
+        moniker_to_static_matcher_map: Option<&HashMap<String, InspectHierarchyMatcher>>,
     ) -> Vec<UnpopulatedInspectDataContainer> {
         return self
             .data_directories
@@ -327,6 +377,20 @@ impl DataRepo {
                         None => return None,
                     };
 
+                let optional_hierarchy_matcher = match moniker_to_static_matcher_map {
+                    Some(map) => {
+                        match map.get(&diagnostics_artifacts_container.relative_moniker.join("/")) {
+                            Some(inspect_matcher) => Some(inspect_matcher),
+                            // Return early if there were static selectors, and none were for this
+                            // moniker.
+                            None => return None,
+                        }
+                    }
+                    None => None,
+                };
+
+                // Verify that the dynamic selectors contain an entry that applies to
+                // this moniker as well.
                 if !match component_selectors {
                     Some(component_selectors) => component_selectors.iter().any(|s| {
                         selectors::match_component_moniker_against_selector(
@@ -351,7 +415,7 @@ impl DataRepo {
                     relative_moniker: diagnostics_artifacts_container.relative_moniker.clone(),
                     component_url: diagnostics_artifacts_container.component_url.clone(),
                     component_diagnostics_proxy: directory,
-                    inspect_matcher: inspect_artifacts.inspect_matcher.clone(),
+                    inspect_matcher: optional_hierarchy_matcher.cloned(),
                 })
             })
             .collect();
@@ -372,7 +436,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn inspect_repo_disallows_duplicated_dirs() {
-        let mut inspect_repo = DataRepo::for_test(None);
+        let mut inspect_repo = DataRepo::for_test();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -401,7 +465,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_updates_existing_entry_to_hold_inspect_data() {
-        let mut data_repo = DataRepo::for_test(None);
+        let mut data_repo = DataRepo::for_test();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -431,7 +495,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_tolerates_duplicate_new_component_insertions() {
-        let mut data_repo = DataRepo::for_test(None);
+        let mut data_repo = DataRepo::for_test();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -467,7 +531,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn running_components_provide_start_time() {
-        let mut data_repo = DataRepo::for_test(None);
+        let mut data_repo = DataRepo::for_test();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -500,7 +564,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_tolerant_of_new_component_calls_if_diagnostics_ready_already_processed() {
-        let mut data_repo = DataRepo::for_test(None);
+        let mut data_repo = DataRepo::for_test();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -537,7 +601,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn diagnostics_repo_cant_have_more_than_one_diagnostics_data_container_per_component() {
-        let mut data_repo = DataRepo::for_test(None);
+        let mut data_repo = DataRepo::for_test();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -573,7 +637,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_filters_inspect_by_selectors() {
-        let mut data_repo = DataRepo::for_test(None);
+        let data_repo = Arc::new(RwLock::new(DataRepo::for_test()));
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -584,10 +648,12 @@ mod tests {
         });
 
         data_repo
+            .write()
             .add_new_component(component_id.clone(), TEST_URL, zx::Time::from_nanos(0), None)
             .expect("insertion will succeed.");
 
         data_repo
+            .write()
             .add_inspect_artifacts(
                 component_id.clone(),
                 TEST_URL,
@@ -604,10 +670,12 @@ mod tests {
         });
 
         data_repo
+            .write()
             .add_new_component(component_id2.clone(), TEST_URL, zx::Time::from_nanos(0), None)
             .expect("insertion will succeed.");
 
         data_repo
+            .write()
             .add_inspect_artifacts(
                 component_id2.clone(),
                 TEST_URL,
@@ -617,21 +685,21 @@ mod tests {
             )
             .expect("add inspect artifacts");
 
-        assert_eq!(2, data_repo.fetch_inspect_data(&None).len());
+        assert_eq!(2, data_repo.read().fetch_inspect_data(&None, None).len());
 
         let selectors = Some(vec![Arc::new(
             selectors::parse_selector("a/b/foo.cmx:root").expect("parse selector"),
         )]);
-        assert_eq!(1, data_repo.fetch_inspect_data(&selectors).len());
+        assert_eq!(1, data_repo.read().fetch_inspect_data(&selectors, None).len());
 
         let selectors = Some(vec![Arc::new(
             selectors::parse_selector("a/b/f*.cmx:root").expect("parse selector"),
         )]);
-        assert_eq!(2, data_repo.fetch_inspect_data(&selectors).len());
+        assert_eq!(2, data_repo.read().fetch_inspect_data(&selectors, None).len());
 
         let selectors = Some(vec![Arc::new(
             selectors::parse_selector("foo.cmx:root").expect("parse selector"),
         )]);
-        assert_eq!(0, data_repo.fetch_inspect_data(&selectors).len());
+        assert_eq!(0, data_repo.read().fetch_inspect_data(&selectors, None).len());
     }
 }

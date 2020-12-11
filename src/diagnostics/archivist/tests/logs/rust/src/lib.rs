@@ -173,10 +173,12 @@ async fn embedding_stop_api() {
         tags: vec!["logging component".to_owned()],
     };
     let (send_logs, recv_logs) = mpsc::unbounded();
-    let l = Listener { send_logs };
-    let _listen = fasync::Task::spawn(async move {
+
+    fasync::Task::spawn(async move {
+        let l = Listener { send_logs };
         run_log_listener_with_proxy(&log_proxy, l, Some(&mut options), false, None).await.unwrap();
-    });
+    })
+    .detach();
 
     // wait for logging_component to die
     assert!(logging_component.wait().await.unwrap().success());

@@ -9,7 +9,7 @@ use {
         events::{stream::EventStream, types::EventSource},
         logs,
         logs::redact::Redactor,
-        repository::DataRepo,
+        repository::{DataRepo, Pipeline},
     },
     anyhow::Error,
     fidl::{endpoints::RequestStream, AsyncChannel},
@@ -259,30 +259,32 @@ impl Archivist {
         });
 
         let pipelines_node = diagnostics::root().create_child("pipelines");
-        let feedback_pipeline = pipelines_node.create_child("feedback");
-        let legacy_pipeline = pipelines_node.create_child("legacy_metrics");
+        let feedback_pipeline_node = pipelines_node.create_child("feedback");
+        let legacy_pipeline_node = pipelines_node.create_child("legacy_metrics");
         let mut feedback_config = configs::PipelineConfig::from_directory(
             "/config/data/feedback",
             configs::EmptyBehavior::DoNotFilter,
         );
-        feedback_config.record_to_inspect(&feedback_pipeline);
+        feedback_config.record_to_inspect(&feedback_pipeline_node);
         let mut legacy_config = configs::PipelineConfig::from_directory(
             "/config/data/legacy_metrics",
             configs::EmptyBehavior::Disable,
         );
-        legacy_config.record_to_inspect(&legacy_pipeline);
+        legacy_config.record_to_inspect(&legacy_pipeline_node);
         // Do not set the state to error if the pipelines simply do not exist.
         let pipeline_exists = !((Path::new("/config/data/feedback").is_dir()
             && feedback_config.has_error())
             || (Path::new("/config/data/legacy_metrics").is_dir() && legacy_config.has_error()));
+
+        let diagnostics_repo = Arc::new(RwLock::new(DataRepo::new(log_manager.clone())));
 
         // The Inspect Repository offered to the ALL_ACCESS pipeline. This
         // repository is unique in that it has no statically configured
         // selectors, meaning all diagnostics data is visible.
         // This should not be used for production services.
         // TODO(fxbug.dev/55735): Lock down this protocol using allowlists.
-        let all_inspect_repository =
-            Arc::new(RwLock::new(DataRepo::new(log_manager.clone(), Redactor::noop(), None)));
+        let all_access_pipeline =
+            Arc::new(RwLock::new(Pipeline::new(None, Redactor::noop(), diagnostics_repo.clone())));
 
         // The Inspect Repository offered to the Feedback pipeline. This repository applies
         // static selectors configured under config/data/feedback to inspect exfiltration.
@@ -300,18 +302,16 @@ impl Archivist {
             (None, Redactor::noop())
         };
 
-        let feedback_inspect_repository = Arc::new(RwLock::new(DataRepo::new(
-            log_manager.clone(),
-            feedback_redactor,
+        let feedback_pipeline = Arc::new(RwLock::new(Pipeline::new(
             feedback_static_selectors,
+            feedback_redactor,
+            diagnostics_repo.clone(),
         )));
 
         // The Inspect Repository offered to the LegacyMetrics
         // pipeline. This repository applies static selectors configured
         // under config/data/legacy_metrics to inspect exfiltration.
-        let legacy_metrics_inspect_repository = Arc::new(RwLock::new(DataRepo::new(
-            log_manager.clone(),
-            Redactor::noop(),
+        let legacy_metrics_pipeline = Arc::new(RwLock::new(Pipeline::new(
             match legacy_config.disable_filtering {
                 false => legacy_config.take_inspect_selectors().map(|selectors| {
                     selectors
@@ -321,6 +321,8 @@ impl Archivist {
                 }),
                 true => None,
             },
+            Redactor::noop(),
+            diagnostics_repo.clone(),
         )));
 
         // TODO(fxbug.dev/55736): Refactor this code so that we don't store
@@ -329,10 +331,11 @@ impl Archivist {
         let archivist_state = archive::ArchivistState::new(
             archivist_configuration,
             vec![
-                all_inspect_repository.clone(),
-                feedback_inspect_repository.clone(),
-                legacy_metrics_inspect_repository.clone(),
+                all_access_pipeline.clone(),
+                feedback_pipeline.clone(),
+                legacy_metrics_pipeline.clone(),
             ],
+            diagnostics_repo,
             writer,
         )?;
 
@@ -351,16 +354,14 @@ impl Archivist {
         fs.dir("svc")
             .add_fidl_service(move |stream| {
                 debug!("fuchsia.diagnostics.ArchiveAccessor connection");
-                let all_archive_accessor = ArchiveAccessor::new(
-                    all_inspect_repository.clone(),
-                    all_accessor_stats.clone(),
-                );
+                let all_archive_accessor =
+                    ArchiveAccessor::new(all_access_pipeline.clone(), all_accessor_stats.clone());
                 all_archive_accessor.spawn_archive_accessor_server(stream)
             })
             .add_fidl_service_at(constants::FEEDBACK_ARCHIVE_ACCESSOR_NAME, move |chan| {
                 debug!("fuchsia.diagnostics.FeedbackArchiveAccessor connection");
                 let feedback_archive_accessor = ArchiveAccessor::new(
-                    feedback_inspect_repository.clone(),
+                    feedback_pipeline.clone(),
                     feedback_accessor_stats.clone(),
                 );
                 feedback_archive_accessor.spawn_archive_accessor_server(chan)
@@ -368,7 +369,7 @@ impl Archivist {
             .add_fidl_service_at(constants::LEGACY_METRICS_ARCHIVE_ACCESSOR_NAME, move |chan| {
                 debug!("fuchsia.diagnostics.LegacyMetricsAccessor connection");
                 let legacy_archive_accessor = ArchiveAccessor::new(
-                    legacy_metrics_inspect_repository.clone(),
+                    legacy_metrics_pipeline.clone(),
                     legacy_accessor_stats.clone(),
                 );
                 legacy_archive_accessor.spawn_archive_accessor_server(chan)
@@ -383,7 +384,7 @@ impl Archivist {
             listen_receiver,
             listen_sender,
             pipeline_exists,
-            _pipeline_nodes: vec![pipelines_node, feedback_pipeline, legacy_pipeline],
+            _pipeline_nodes: vec![pipelines_node, feedback_pipeline_node, legacy_pipeline_node],
             _pipeline_configs: vec![feedback_config, legacy_config],
             log_manager,
             event_stream: EventStream::new(events_node),

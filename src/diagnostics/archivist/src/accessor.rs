@@ -10,7 +10,7 @@ use {
         formatter::{new_batcher, FormattedStream, JsonPacketSerializer, JsonString},
         inspect,
         lifecycle::LifecycleServer,
-        repository::DataRepo,
+        repository::Pipeline,
     },
     anyhow::format_err,
     diagnostics_data::{Data, DiagnosticsData},
@@ -36,7 +36,7 @@ use {
 pub struct ArchiveAccessor {
     // The inspect repository containing read-only inspect data shared across
     // all inspect reader instances.
-    diagnostics_repo: Arc<RwLock<DataRepo>>,
+    pipeline: Arc<RwLock<Pipeline>>,
     archive_accessor_stats: Arc<AccessorStats>,
 }
 
@@ -63,18 +63,18 @@ fn validate_and_parse_inspect_selectors(
 }
 
 impl ArchiveAccessor {
-    /// Create a new accessor for interacting with the archivist's data. The inspect_repo
-    /// parameter determines which static configurations scope/restrict the visibility of inspect
+    /// Create a new accessor for interacting with the archivist's data. The pipeline
+    /// parameter determines which static configurations scope/restrict the visibility of
     /// data accessed by readers spawned by this accessor.
     pub fn new(
-        diagnostics_repo: Arc<RwLock<DataRepo>>,
+        pipeline: Arc<RwLock<Pipeline>>,
         archive_accessor_stats: Arc<AccessorStats>,
     ) -> Self {
-        ArchiveAccessor { diagnostics_repo, archive_accessor_stats }
+        ArchiveAccessor { pipeline, archive_accessor_stats }
     }
 
     async fn run_server(
-        diagnostics_repo: Arc<RwLock<DataRepo>>,
+        pipeline: Arc<RwLock<Pipeline>>,
         requests: BatchIteratorRequestStream,
         params: fidl_fuchsia_diagnostics::StreamParameters,
         accessor_stats: Arc<AccessorStats>,
@@ -104,7 +104,7 @@ impl ArchiveAccessor {
 
                 BatchIterator::new(
                     inspect::ReaderServer::stream(
-                        diagnostics_repo,
+                        pipeline,
                         params.batch_retrieval_timeout_seconds,
                         selectors,
                         stats.clone(),
@@ -131,13 +131,13 @@ impl ArchiveAccessor {
                     ))?;
                 }
 
-                let events = LifecycleServer::new(diagnostics_repo);
+                let events = LifecycleServer::new(pipeline);
 
                 BatchIterator::new(events, requests, mode, stats)?.run().await
             }
             DataType::Logs => {
                 let stats = Arc::new(ConnectionStats::for_logs(accessor_stats));
-                let logs = DataRepo::logs(&diagnostics_repo, mode).await;
+                let logs = Pipeline::logs(&pipeline, mode).await;
                 BatchIterator::new_serving_arrays(logs, requests, mode, stats)?.run().await
             }
         }
@@ -165,11 +165,12 @@ impl ArchiveAccessor {
                 };
 
                 self.archive_accessor_stats.global_stats.stream_diagnostics_requests.add(1);
-                let repo = self.diagnostics_repo.clone();
+                let pipeline = self.pipeline.clone();
                 let accessor_stats = self.archive_accessor_stats.clone();
                 Task::spawn(async move {
                     if let Err(e) =
-                        Self::run_server(repo, requests, stream_parameters, accessor_stats).await
+                        Self::run_server(pipeline, requests, stream_parameters, accessor_stats)
+                            .await
                     {
                         e.close(control);
                     }

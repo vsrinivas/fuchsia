@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::repository::DataRepo,
+    crate::repository::Pipeline,
     diagnostics_data::{Data, LifecycleData},
     futures::prelude::*,
     parking_lot::RwLock,
@@ -29,8 +29,10 @@ pub struct LifecycleServer {
 }
 
 impl LifecycleServer {
-    pub fn new(diagnostics_repo: Arc<RwLock<DataRepo>>) -> Self {
-        LifecycleServer { data: diagnostics_repo.read().fetch_lifecycle_event_data().into_iter() }
+    pub fn new(diagnostics_pipeline: Arc<RwLock<Pipeline>>) -> Self {
+        LifecycleServer {
+            data: diagnostics_pipeline.read().fetch_lifecycle_event_data().into_iter(),
+        }
     }
 
     fn next_event(&mut self) -> Option<LifecycleData> {
@@ -71,6 +73,7 @@ mod tests {
             diagnostics::{self, ConnectionStats},
             events::types::{ComponentIdentifier, LegacyIdentifier},
             inspect::collector::InspectDataCollector,
+            repository::DataRepo,
         },
         fdio,
         fidl::endpoints::create_proxy_and_stream,
@@ -144,7 +147,9 @@ mod tests {
     }
 
     async fn verify_reader(path: PathBuf) {
-        let diagnostics_repo = Arc::new(RwLock::new(DataRepo::for_test(None)));
+        let diagnostics_repo = Arc::new(RwLock::new(DataRepo::for_test()));
+        let pipeline_wrapper =
+            Arc::new(RwLock::new(Pipeline::for_test(None, diagnostics_repo.clone())));
         let out_dir_proxy = InspectDataCollector::find_directory_proxy(&path).await.unwrap();
 
         // The absolute moniker here is made up since the selector is a glob
@@ -170,6 +175,8 @@ mod tests {
             )
             .unwrap();
 
+        pipeline_wrapper.write().add_inspect_artifacts(component_id.clone()).unwrap();
+
         let inspector = Inspector::new();
         let root = inspector.root();
         let test_archive_accessor_node = root.create_child("test_archive_accessor_node");
@@ -180,19 +187,21 @@ mod tests {
         let test_batch_iterator_stats1 =
             Arc::new(diagnostics::ConnectionStats::for_lifecycle(test_accessor_stats.clone()));
         {
-            let reader_server = LifecycleServer::new(diagnostics_repo.clone());
+            let reader_server = LifecycleServer::new(pipeline_wrapper.clone());
             let result_json = read_snapshot(reader_server, test_batch_iterator_stats1).await;
 
             let result_array = result_json.as_array().expect("unit test json should be array.");
             assert_eq!(result_array.len(), 2, "Expect only two schemas to be returned.");
         }
 
-        diagnostics_repo.write().remove(&component_id);
+        diagnostics_repo.write().remove(&component_id.clone());
+        pipeline_wrapper.write().remove(&component_id.clone());
+
         let test_batch_iterator_stats2 =
             Arc::new(diagnostics::ConnectionStats::for_lifecycle(test_accessor_stats.clone()));
 
         {
-            let reader_server = LifecycleServer::new(diagnostics_repo.clone());
+            let reader_server = LifecycleServer::new(pipeline_wrapper.clone());
             let result_json = read_snapshot(reader_server, test_batch_iterator_stats2).await;
 
             let result_array = result_json.as_array().expect("unit test json should be array.");
