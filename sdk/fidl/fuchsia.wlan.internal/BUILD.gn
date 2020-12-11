@@ -9,7 +9,5 @@ fidl("fuchsia.wlan.internal") {
 
   sources = [ "wlan_internal.fidl" ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.wlan.common",
-  ]
+  public_deps = [ "//sdk/fidl/fuchsia.wlan.common" ]
 }

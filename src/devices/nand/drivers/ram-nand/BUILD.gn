@@ -25,8 +25,8 @@ driver_module("ram-nand") {
     "ram-nand-ctl.cc",
   ]
   deps = [
-    ":ram-nand-bind",
     ":common",
+    ":ram-nand-bind",
     "//sdk/banjo/ddk.protocol.nand",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//src/devices/lib/driver",

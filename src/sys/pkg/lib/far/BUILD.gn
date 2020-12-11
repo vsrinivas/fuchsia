@@ -48,13 +48,10 @@ executable("validate-fars") {
 
 fuchsia_unittest_package("cpp-fars-tests") {
   manifest = "meta/validate-fars.cml"
-  deps = [
-    ":validate-fars",
-  ]
+  deps = [ ":validate-fars" ]
 }
 
 group("tests") {
   testonly = true
   deps = [ ":cpp-fars-tests" ]
 }
-
