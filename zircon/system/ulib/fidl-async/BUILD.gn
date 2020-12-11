@@ -48,3 +48,8 @@ zx_library("fidl-async-cpp") {
     "//zircon/public/lib/zx",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

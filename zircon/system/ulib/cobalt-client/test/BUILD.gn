@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("test") {
   testonly = true
@@ -92,7 +92,13 @@ test("cobalt-client-unit") {
   ]
 }
 
-bootfs_test("cobalt-client-unit-bootfs-test") {
-  name = "cobalt-client-unit-test"
+fuchsia_unittest_package("cobalt-client-unit-test-pkg") {
+  package_name = "cobalt-client-unit-test"
+  executable_path = "test/cobalt-client-unit-test"
   deps = [ ":cobalt-client-unit" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":cobalt-client-unit-test-pkg" ]
 }

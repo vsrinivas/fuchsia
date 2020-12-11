@@ -14,7 +14,7 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fidl/fidl.gni")
 import("//build/fuzzing/fuzzer.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("fidl-async-test") {
   if (is_fuchsia) {
@@ -44,7 +44,13 @@ fidl("fidl.test.simple") {
   sources = [ "simple.test.fidl" ]
 }
 
-bootfs_test("fidl-async-test-bootfs-test") {
-  name = "fidl-async-test"
+fuchsia_unittest_package("fidl-async-test-pkg") {
+  package_name = "fidl-async-test"
+  executable_path = "test/fidl-async-test"
   deps = [ ":fidl-async-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fidl-async-test-pkg" ]
 }

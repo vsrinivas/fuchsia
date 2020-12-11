@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("closure-queue") {
   output_name = "closure-queue-test"
@@ -28,7 +28,13 @@ test("closure-queue") {
   ]
 }
 
-bootfs_test("closure-queue-bootfs-test") {
-  name = "closure-queue-test"
+fuchsia_unittest_package("closure-queue-test-pkg") {
+  package_name = "closure-queue-test"
+  executable_path = "test/closure-queue-test"
   deps = [ ":closure-queue" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":closure-queue-test-pkg" ]
 }

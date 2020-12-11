@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("test") {
   testonly = true
@@ -45,7 +45,13 @@ test("fdio-caller") {
   ]
 }
 
-bootfs_test("fdio-caller-bootfs-test") {
-  name = "fdio-caller-test"
+fuchsia_unittest_package("fdio-caller-test-pkg") {
+  package_name = "fdio-caller-test"
+  executable_path = "test/fdio-caller-test"
   deps = [ ":fdio-caller" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fdio-caller-test-pkg" ]
 }

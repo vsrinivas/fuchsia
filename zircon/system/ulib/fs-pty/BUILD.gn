@@ -43,3 +43,8 @@ zx_library("fs-pty") {
     "//zircon/system/ulib/fs",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

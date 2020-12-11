@@ -33,3 +33,8 @@ zx_library("driver-unit-test") {
     "//zircon/public/lib/zxtest",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

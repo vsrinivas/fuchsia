@@ -26,3 +26,8 @@ zx_library("closure-queue") {
   ]
   public_deps = [ "//zircon/public/lib/async" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

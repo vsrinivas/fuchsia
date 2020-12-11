@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("test") {
   testonly = true
@@ -37,7 +37,13 @@ test("debugdata") {
   ]
 }
 
-bootfs_test("debugdata-bootfs-test") {
-  name = "debugdata-test"
+fuchsia_unittest_package("debugdata-test-pkg") {
+  package_name = "debugdata-test"
+  executable_path = "test/debugdata-test"
   deps = [ ":debugdata" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":debugdata-test-pkg" ]
 }

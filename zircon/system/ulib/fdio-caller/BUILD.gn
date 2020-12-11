@@ -29,3 +29,8 @@ zx_library("fdio-caller") {
     "//zircon/public/lib/zx",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

@@ -42,3 +42,8 @@ zx_library("debugdata") {
     "//zircon/public/lib/zircon-internal",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}
