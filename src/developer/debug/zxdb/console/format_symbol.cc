@@ -24,6 +24,8 @@
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/module_symbol_status.h"
+#include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
@@ -32,6 +34,8 @@
 namespace zxdb {
 
 namespace {
+
+std::string GetIndentStr(int indent_level) { return std::string(indent_level * 2, ' '); }
 
 // Handles formatting with pretty identifier formatting if possible, and falls back to raw strings
 // for cases where the name isn't an identifier (e.g. modified types like "const int*").
@@ -114,11 +118,12 @@ OutputBuffer FormatCollectionMembers(const ProcessSymbols* process_symbols,
   std::stable_sort(records.begin(), records.end(),
                    [](const Record& a, const Record& b) { return a.offset < b.offset; });
 
+  out.Append(Syntax::kHeading, "  Members:");
   if (records.empty()) {
-    out.Append("  Members: <none>\n");
+    out.Append(" <empty>\n");
     return out;
   }
-  out.Append("  Members:\n");
+  out.Append("\n");
 
   // Construct into table rows.
   std::vector<std::vector<OutputBuffer>> rows;
@@ -164,7 +169,7 @@ OutputBuffer FormatCollectionMembers(const ProcessSymbols* process_symbols,
 // will be followed with a colon to provide a label.
 OutputBuffer FormatTypeDescription(const char* heading, const LazySymbol& lazy_type) {
   OutputBuffer out;
-  out.Append(fxl::StringPrintf("  %s: ", heading));
+  out.Append(Syntax::kHeading, fxl::StringPrintf("  %s: ", heading));
   // DWARF uses empty types for "void".
   if (lazy_type) {
     out.Append(GetFormattedName(lazy_type.Get()->AsType()));
@@ -175,17 +180,28 @@ OutputBuffer FormatTypeDescription(const char* heading, const LazySymbol& lazy_t
   return out;
 }
 
-// Creates a compilation unit line for the given symbol. If there is none (normally during testing),
-// returns an empty buffer.
-OutputBuffer FormatCompilationUnit(const Symbol* symbol) {
+// Creates a compilation unit and module line for the given symbol. If there is none (normally
+// during testing), returns an empty buffer.
+OutputBuffer FormatCompilationUnitAndModule(int indent, const Symbol* symbol) {
   OutputBuffer out;
 
   auto compile_unit = symbol->GetCompileUnit();
   if (!compile_unit)
     return out;
 
-  out.Append("  Compilation unit: ");
-  out.Append(compile_unit->name());
+  std::string indent_str = GetIndentStr(indent);
+
+  if (fxl::WeakPtr<ModuleSymbols> module = symbol->GetModuleSymbols()) {
+    ModuleSymbolStatus status = module->GetStatus();
+    if (!status.name.empty()) {
+      out.Append(Syntax::kHeading, indent_str + "  Module: ");
+      out.Append(Syntax::kFileName, status.name);
+      out.Append("\n");
+    }
+  }
+
+  out.Append(Syntax::kHeading, indent_str + "  Compilation unit: ");
+  out.Append(Syntax::kFileName, compile_unit->name());
   out.Append("\n");
 
   return out;
@@ -205,19 +221,21 @@ class ArchDataProvider : public SymbolDataProvider {
 OutputBuffer FormatVariableLocation(int indent, const std::string& title,
                                     const SymbolContext& symbol_context,
                                     const VariableLocation& loc, const FormatSymbolOptions& opts) {
-  std::string indent_str(indent * 2, ' ');
+  std::string indent_str = GetIndentStr(indent);
 
   OutputBuffer out;
   if (loc.is_null()) {
-    out.Append(indent_str + title + ": <no location info>\n");
+    out.Append(Syntax::kHeading, indent_str + title + ":");
+    out.Append(Syntax::kComment, " <no location info>\n");
     return out;
   }
 
-  out.Append(indent_str + title + " (address range + DWARF expression):\n");
+  out.Append(Syntax::kHeading, indent_str + title);
+  out.Append(Syntax::kComment, " (address range + DWARF expression):\n");
   for (const auto& entry : loc.locations()) {
     // Address range.
     if (entry.begin == 0 && entry.end == 0) {
-      out.Append(indent_str + "  <always valid>:");
+      out.Append(Syntax::kComment, indent_str + "  <always valid>:");
     } else {
       out.Append(indent_str + fxl::StringPrintf("  [0x%" PRIx64 ", 0x%" PRIx64 "):",
                                                 symbol_context.RelativeToAbsolute(entry.begin),
@@ -247,16 +265,16 @@ OutputBuffer FormatType(const ProcessSymbols* process_symbols, const Type* type)
   out.Append(Syntax::kHeading, "Type: ");
   out.Append(GetFormattedName(type));
 
-  out.Append("\n  DWARF tag: " + DwarfTagToString(type->tag(), true) + "\n");
-  // Write the compilation unit for types. Some types can list many matches from multiple units,
-  // so this makes it more clear what's happening.
-  out.Append(FormatCompilationUnit(type));
-  out.Append("  Byte size: " + std::to_string(type->byte_size()) + "\n");
+  out.Append(Syntax::kHeading, "\n  DWARF tag: ");
+  out.Append(DwarfTagToString(type->tag(), true) + "\n");
+  out.Append(FormatCompilationUnitAndModule(1, type));
+  out.Append(Syntax::kHeading, "  Byte size: ");
+  out.Append(std::to_string(type->byte_size()) + "\n");
 
   // Subtype-specific handling.
   if (const BaseType* base_type = type->AsBaseType()) {
-    out.Append("  DWARF base type: " + BaseType::BaseTypeToString(base_type->base_type(), true) +
-               "\n");
+    out.Append(Syntax::kHeading, "  DWARF base type: ");
+    out.Append(BaseType::BaseTypeToString(base_type->base_type(), true) + "\n");
   } else if (const Collection* collection = type->AsCollection()) {
     out.Append(FormatCollectionMembers(process_symbols, collection));
   } else if (const ModifiedType* modified = type->AsModifiedType()) {
@@ -280,14 +298,16 @@ OutputBuffer FormatType(const ProcessSymbols* process_symbols, const Type* type)
 OutputBuffer FormatVariable(const std::string& heading, int indent,
                             const SymbolContext& symbol_context, const Variable* variable,
                             const FormatSymbolOptions& opts) {
-  std::string indent_str(indent * 2, ' ');
+  std::string indent_str = GetIndentStr(indent);
 
   OutputBuffer out;
   out.Append(Syntax::kHeading, indent_str + heading + ": ");
   out.Append(Syntax::kVariable, variable->GetAssignedName());
   out.Append("\n" + indent_str);
   out.Append(FormatTypeDescription("Type", variable->type()));
-  out.Append(indent_str + "  DWARF tag: " + DwarfTagToString(variable->tag(), true) + "\n");
+  out.Append(FormatCompilationUnitAndModule(indent, variable));
+  out.Append(Syntax::kHeading, indent_str + "  DWARF tag: ");
+  out.Append(DwarfTagToString(variable->tag(), true) + "\n");
 
   out.Append(FormatVariableLocation(indent + 1, "DWARF location", symbol_context,
                                     variable->location(), opts));
@@ -316,7 +336,8 @@ OutputBuffer FormatFunction(const SymbolContext& symbol_context, const Function*
   if (ranges.empty()) {
     out.Append("  No code ranges.\n");
   } else {
-    out.Append("  Code ranges [begin, end-non-inclusive):\n");
+    out.Append(Syntax::kHeading, "  Code ranges");
+    out.Append(Syntax::kComment, " [begin, end-non-inclusive):\n");
     for (const auto& range : ranges)
       out.Append("    " + range.ToString() + "\n");
   }
@@ -337,14 +358,15 @@ OutputBuffer FormatDataMember(const DataMember* data_member) {
   out.Append(Syntax::kVariable, data_member->GetFullName() + "\n");
 
   auto parent = data_member->parent().Get();
-  out.Append("  Contained in: ");
+  out.Append(Syntax::kHeading, "  Contained in: ");
   out.Append(FormatIdentifier(parent->GetIdentifier(), FormatIdentifierOptions()));
   out.Append("\n");
 
   out.Append(FormatTypeDescription("Type", data_member->type()));
-  out.Append(fxl::StringPrintf("  Offset within container: %" PRIu32 "\n",
-                               data_member->member_location()));
-  out.Append("  DWARF tag: " + DwarfTagToString(data_member->tag(), true) + "\n");
+  out.Append(Syntax::kHeading, "  Offset within container: ");
+  out.Append(fxl::StringPrintf("%" PRIu32 "\n", data_member->member_location()));
+  out.Append(Syntax::kHeading, "  DWARF tag: ");
+  out.Append(DwarfTagToString(data_member->tag(), true) + "\n");
 
   return out;
 }
@@ -361,10 +383,11 @@ OutputBuffer FormatElfSymbol(const SymbolContext& symbol_context, const ElfSymbo
   }
   out.Append(elf_symbol->linkage_name() + "\n");
 
-  out.Append("  Address: " +
-             to_hex_string(symbol_context.RelativeToAbsolute(elf_symbol->relative_address())) +
+  out.Append(Syntax::kHeading, "  Address: ");
+  out.Append(to_hex_string(symbol_context.RelativeToAbsolute(elf_symbol->relative_address())) +
              "\n");
-  out.Append("  Size: " + to_hex_string(elf_symbol->size()) + "\n");
+  out.Append(Syntax::kHeading, "  Size: ");
+  out.Append(to_hex_string(elf_symbol->size()) + "\n");
   return out;
 }
 

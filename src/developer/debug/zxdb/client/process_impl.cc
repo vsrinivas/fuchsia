@@ -147,9 +147,7 @@ void ProcessImpl::Continue(bool forward_exceptions) {
 
 void ProcessImpl::ContinueUntil(std::vector<InputLocation> locations,
                                 fit::callback<void(const Err&)> cb) {
-  cb(
-      Err("Process-wide 'Until' is temporarily closed for construction. "
-          "Please try again in a few days."));
+  cb(Err("Process-wide 'until' is not implemented."));
 }
 
 fxl::RefPtr<SymbolDataProvider> ProcessImpl::GetSymbolDataProvider() const {
@@ -167,7 +165,7 @@ void ProcessImpl::GetTLSHelpers(GetTLSHelpersCallback cb) {
     } else if (have_helpers) {
       cb(&tls_helpers_);
     } else {
-      cb(Err("Could not find Zxdb support code."));
+      cb(Err("This binary is missing debugger integration hooks for reading TLS."));
     }
   });
 }
