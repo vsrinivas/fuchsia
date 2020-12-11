@@ -12,6 +12,7 @@ import("//src/sys/build/components.gni")
 
 config_9364_path = "gt6853/goodix_cfg_group_fiti9364.bin"
 config_9365_path = "gt6853/goodix_cfg_group_fiti9365.bin"
+firmware_path = "gt6853/goodix_firmware.bin"
 
 driver_package("gt6853") {
   deps = [ ":gt6853-module" ]
@@ -28,6 +29,7 @@ driver_package("gt6853") {
     deps += [
       ":config-9364-copy($shlib_toolchain)",
       ":config-9365-copy($shlib_toolchain)",
+      ":firmware-copy($shlib_toolchain)",
     ]
 
     libraries += [
@@ -36,6 +38,9 @@ driver_package("gt6853") {
       },
       {
         name = "firmware/$config_9365_path"
+      },
+      {
+        name = "firmware/$firmware_path"
       },
     ]
   }
@@ -49,6 +54,10 @@ if (internal_access) {
   copy("config-9365-copy") {
     sources = [ "//prebuilt/touch/$config_9365_path" ]
     outputs = [ "$root_out_dir/firmware/$config_9365_path" ]
+  }
+  copy("firmware-copy") {
+    sources = [ "//prebuilt/touch/$firmware_path" ]
+    outputs = [ "$root_out_dir/firmware/$firmware_path" ]
   }
 }
 
@@ -73,6 +82,7 @@ group("common") {
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hid",
   ]
 }
@@ -98,6 +108,7 @@ driver_module("gt6853-module") {
   defines = [
     "GT6853_CONFIG_9364_PATH=\"$config_9364_path\"",
     "GT6853_CONFIG_9365_PATH=\"$config_9365_path\"",
+    "GT6853_FIRMWARE_PATH=\"$firmware_path\"",
   ]
 }
 
@@ -119,6 +130,7 @@ test("gt6853-test") {
   defines = [
     "GT6853_CONFIG_9364_PATH=\"$config_9364_path\"",
     "GT6853_CONFIG_9365_PATH=\"$config_9365_path\"",
+    "GT6853_FIRMWARE_PATH=\"$firmware_path\"",
   ]
 }
 

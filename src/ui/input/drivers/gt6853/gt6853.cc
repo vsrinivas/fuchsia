@@ -27,6 +27,18 @@ constexpr size_t kContactSize = 8;
 
 constexpr uint8_t kTouchEvent = 1 << 7;
 
+constexpr uint8_t kCpuCtrlHoldSs51 = 0x24;
+
+constexpr zx::duration kResetSetupTime = zx::msec(2);
+
+constexpr int kFirmwareTries = 200;
+
+constexpr size_t kMaxSubsysCount = 28;
+constexpr size_t kI2cMaxTransferSize = 256;
+
+constexpr uint8_t kCpuRunFromFlash[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+constexpr uint8_t kCpuRunFromRam[8] = {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55};
+
 }  // namespace
 
 namespace touch {
@@ -227,6 +239,10 @@ zx_status_t Gt6853Device::Init() {
     return status;
   }
 
+  if ((status = UpdateFirmwareIfNeeded()) != ZX_OK) {
+    return status;
+  }
+
   if ((status = DownloadConfigIfNeeded()) != ZX_OK) {
     return status;
   }
@@ -317,7 +333,7 @@ zx_status_t Gt6853Device::DownloadConfigIfNeeded() {
 
   uint32_t config_size = 0;
   if (config_vmo_size < config_offset.value() + sizeof(config_size)) {
-    zxlogf(ERROR, "Config vmo size is %zu, must be at least %lu", config_vmo_size,
+    zxlogf(ERROR, "Config VMO size is %zu, must be at least %lu", config_vmo_size,
            config_offset.value() + sizeof(config_size));
     return ZX_ERR_IO_INVALID;
   }
@@ -508,6 +524,385 @@ zx_status_t Gt6853Device::SendConfig(const zx::vmo& config_vmo, uint64_t offset,
   return ZX_OK;
 }
 
+zx_status_t Gt6853Device::UpdateFirmwareIfNeeded() {
+  zx::vmo fw_vmo;
+  size_t fw_vmo_size = 0;
+  zx_status_t status =
+      load_firmware(parent(), GT6853_FIRMWARE_PATH, fw_vmo.reset_and_get_address(), &fw_vmo_size);
+  if (status != ZX_OK) {
+    zxlogf(WARNING, "Failed to load firmware binary, skipping firmware update");
+    return ZX_OK;
+  }
+
+  fzl::VmoMapper mapped_fw;
+  if ((status = mapped_fw.Map(fw_vmo, 0, fw_vmo_size, ZX_VM_PERM_READ)) != ZX_OK) {
+    zxlogf(ERROR, "Failed to map firmware VMO: %d", status);
+    return status;
+  }
+
+  FirmwareSubsysInfo subsys_entries[kMaxSubsysCount];
+  zx::status<size_t> entry_count = ParseFirmwareInfo(mapped_fw, subsys_entries);
+  if (entry_count.is_error()) {
+    return entry_count.error_value();
+  }
+
+  fbl::Span<const FirmwareSubsysInfo> subsys_span(subsys_entries, entry_count.value());
+  if ((status = PrepareFirmwareUpdate(subsys_span)) != ZX_OK) {
+    return status;
+  }
+
+  for (const FirmwareSubsysInfo& subsys_info : subsys_span.subspan(1)) {
+    if ((status = FlashSubsystem(subsys_info)) != ZX_OK) {
+      return status;
+    }
+  }
+
+  return FinishFirmwareUpdate();
+}
+
+zx::status<size_t> Gt6853Device::ParseFirmwareInfo(const fzl::VmoMapper& mapped_fw,
+                                                   FirmwareSubsysInfo* out_subsys_entries) {
+  constexpr size_t kFirmwareHeaderSize = 32;
+  constexpr size_t kSubsysCountOffset = 27;
+  constexpr size_t kSubsysEntrySize = 8;
+  constexpr size_t kSubsysDataOffset = kFirmwareHeaderSize + (kMaxSubsysCount * kSubsysEntrySize);
+
+  if (mapped_fw.size() < kSubsysDataOffset) {
+    zxlogf(ERROR, "Firmware VMO size is %zu, must be at least %zu", mapped_fw.size(),
+           kSubsysDataOffset);
+    return zx::error(ZX_ERR_IO_INVALID);
+  }
+
+  const uint8_t* fw_data = static_cast<const uint8_t*>(mapped_fw.start());
+
+  uint32_t fw_size;
+  memcpy(&fw_size, fw_data, sizeof(fw_size));
+  fw_size = be32toh(fw_size);
+
+  uint16_t checksum;
+
+  if (fw_size + sizeof(fw_size) + sizeof(checksum) != mapped_fw.size()) {
+    zxlogf(ERROR, "Firmware header indicates size %zu, but VMO size is %zu",
+           fw_size + sizeof(fw_size) + sizeof(checksum), mapped_fw.size());
+    return zx::error(ZX_ERR_IO_INVALID);
+  }
+
+  memcpy(&checksum, fw_data + sizeof(fw_size), sizeof(checksum));
+  checksum = be16toh(checksum);
+
+  uint16_t expected_checksum = 0;
+  for (size_t i = sizeof(fw_size) + sizeof(checksum); i < mapped_fw.size(); i++) {
+    expected_checksum += fw_data[i];
+  }
+
+  if (checksum != expected_checksum) {
+    zxlogf(ERROR, "Firmware checksum doesn't match calculated value");
+    return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
+  }
+
+  const uint8_t subsys_count = fw_data[kSubsysCountOffset];
+  if (subsys_count > kMaxSubsysCount) {
+    zxlogf(ERROR, "Firmware subsys count is %u, only %zu are allowed", subsys_count,
+           kMaxSubsysCount);
+    return zx::error(ZX_ERR_IO_INVALID);
+  }
+
+  size_t subsys_data_offset = kSubsysDataOffset;
+  for (uint32_t i = 0; i < subsys_count; i++) {
+    const uint8_t* subsys_header = fw_data + kFirmwareHeaderSize + (i * kSubsysEntrySize);
+    FirmwareSubsysInfo& entry = out_subsys_entries[i];
+
+    entry.type = *subsys_header++;
+
+    memcpy(&entry.size, subsys_header, sizeof(entry.size));
+    entry.size = be32toh(entry.size);
+    subsys_header += sizeof(entry.size);
+
+    memcpy(&entry.flash_addr, subsys_header, sizeof(entry.flash_addr));
+    entry.flash_addr = be16toh(entry.flash_addr);
+
+    entry.data = fw_data + subsys_data_offset;
+    subsys_data_offset += entry.size;
+
+    if (subsys_data_offset > mapped_fw.size()) {
+      zxlogf(ERROR, "Subsys offset %zu exceeds firmware size", subsys_data_offset);
+      return zx::error(ZX_ERR_IO_INVALID);
+    }
+  }
+
+  return zx::ok(subsys_count);
+}
+
+zx_status_t Gt6853Device::PrepareFirmwareUpdate(
+    fbl::Span<const FirmwareSubsysInfo> subsys_entries) {
+  constexpr zx::duration kResetHoldTime = zx::msec(10);
+  constexpr int kHoldSs51Tries = 20;
+  constexpr zx::duration kHoldSs51TryInterval = zx::msec(20);
+
+  if (subsys_entries.empty()) {
+    zxlogf(ERROR, "Expected at least one firmware subsys entry");
+    return ZX_ERR_IO_INVALID;
+  }
+
+  zx::status<> status = Write(Register::kCpuRunFrom, kCpuRunFromFlash, sizeof(kCpuRunFromFlash));
+  if (status.is_error()) {
+    return status.error_value();
+  }
+
+  reset_gpio_.ConfigOut(0);
+  zx::nanosleep(zx::deadline_after(kResetSetupTime));
+  reset_gpio_.Write(1);
+  zx::nanosleep(zx::deadline_after(kResetHoldTime));
+
+  for (int i = 0; i < kHoldSs51Tries; i++) {
+    status = WriteAndCheck(Register::kCpuCtrl, &kCpuCtrlHoldSs51, sizeof(kCpuCtrlHoldSs51));
+    if (status.is_error()) {
+      zx::nanosleep(zx::deadline_after(kHoldSs51TryInterval));
+    } else {
+      break;
+    }
+  }
+  if (status.is_error()) {
+    zxlogf(ERROR, "Timed out waiting for CPU control register");
+    return ZX_ERR_TIMED_OUT;
+  }
+
+  const uint8_t dsp_mcu_power = 0;
+  status = WriteAndCheck(Register::kDspMcuPower, &dsp_mcu_power, sizeof(dsp_mcu_power));
+  if (status.is_error()) {
+    zxlogf(ERROR, "Failed to enable DSP/MCU power: %d", status.error_value());
+    return status.error_value();
+  }
+
+  // Disable the watchdog timer.
+  constexpr uint8_t kWatchdogDisableKey1 = 0x95;
+  constexpr uint8_t kWatchdogDisableKey2 = 0x27;
+
+  if ((status = WriteReg8(Register::kCache, 0)).is_error()) {
+    return status.error_value();
+  }
+  if ((status = WriteReg8(Register::kEsdKey, kWatchdogDisableKey1)).is_error()) {
+    return status.error_value();
+  }
+  if ((status = WriteReg8(Register::kWtdTimer, 0)).is_error()) {
+    return status.error_value();
+  }
+  if ((status = WriteReg8(Register::kEsdKey, kWatchdogDisableKey2)).is_error()) {
+    return status.error_value();
+  }
+
+  if ((status = WriteReg8(Register::kScramble, 0)).is_error()) {
+    return status.error_value();
+  }
+
+  return LoadIsp(subsys_entries[0]);
+}
+
+zx_status_t Gt6853Device::LoadIsp(const FirmwareSubsysInfo& isp_info) {
+  zx::status status = WriteReg8(Register::kBankSelect, 0);
+  if (status.is_error()) {
+    return status.error_value();
+  }
+
+  if ((status = WriteReg8(Register::kAccessPatch0, 1)).is_error()) {
+    return status.error_value();
+  }
+
+  if ((status = WriteAndCheck(Register::kIspAddr, isp_info.data, isp_info.size)).is_error()) {
+    zxlogf(ERROR, "Failed to write ISP data: %d", status.error_value());
+    return status.error_value();
+  }
+
+  const uint8_t disable_patch0_access = 0;
+  if ((status = WriteAndCheck(Register::kAccessPatch0, &disable_patch0_access, 1)).is_error()) {
+    zxlogf(ERROR, "Failed to write disable patch0 access: %d", status.error_value());
+    return status.error_value();
+  }
+
+  const uint8_t isp_run_flag[2] = {0, 0};
+  if ((status = Write(Register::kIspRunFlag, isp_run_flag, sizeof(isp_run_flag))).is_error()) {
+    return status.error_value();
+  }
+
+  if ((status = Write(Register::kCpuRunFrom, kCpuRunFromRam, sizeof(kCpuRunFromRam))).is_error()) {
+    return status.error_value();
+  }
+
+  if ((status = WriteReg8(Register::kCpuCtrl, 0)).is_error()) {
+    return status.error_value();
+  }
+
+  constexpr uint8_t kIspRunFlagWorking1 = 0xaa;
+  constexpr uint8_t kIspRunFlagWorking2 = 0xbb;
+  constexpr zx::duration kIspRunFlagTryInterval = zx::msec(10);
+
+  for (int i = 0; i < kFirmwareTries; i++) {
+    zx::nanosleep(zx::deadline_after(kIspRunFlagTryInterval));
+    uint8_t isp_run_check[2];
+    if (Read(Register::kIspRunFlag, isp_run_check, sizeof(isp_run_check)).is_ok()) {
+      if (isp_run_check[0] == kIspRunFlagWorking1 && isp_run_check[1] == kIspRunFlagWorking2) {
+        return ZX_OK;
+      }
+    }
+  }
+
+  zxlogf(ERROR, "Timed out waiting for ISP to be ready");
+  return ZX_ERR_TIMED_OUT;
+}
+
+zx_status_t Gt6853Device::FlashSubsystem(const FirmwareSubsysInfo& subsys_info) {
+  constexpr size_t kIspMaxTransferSize = 1024 * 4;
+  constexpr size_t kPacketHeaderAndChecksumSize = sizeof(uint16_t) * 3;
+  constexpr int kFirmwarePacketTries = 3;
+
+  // Packet format (total size n, all fields big-endian):
+  // 0x00: data length
+  // 0x02: flash address
+  // 0x04: data
+  //  ...: data
+  //  n-2: checksum of data length, flash address, and data fields
+
+  size_t remaining = subsys_info.size;
+  uint32_t offset = 0;
+  while (remaining > 0) {
+    const uint16_t transfer_size = std::min(remaining, kIspMaxTransferSize);
+
+    uint8_t packet_buffer[kIspMaxTransferSize + kPacketHeaderAndChecksumSize];
+
+    const uint16_t transfer_size_be = htobe16(transfer_size);
+    memcpy(packet_buffer, &transfer_size_be, 2);
+
+    const uint16_t flash_addr_be = htobe16(subsys_info.flash_addr + (offset >> 8));
+    memcpy(packet_buffer + 2, &flash_addr_be, 2);
+
+    memcpy(packet_buffer + 4, subsys_info.data + offset, transfer_size);
+
+    const uint16_t checksum_be = htobe16(Checksum16(packet_buffer, transfer_size + 4));
+    memcpy(packet_buffer + transfer_size + 4, &checksum_be, 2);
+
+    zx_status_t status;
+    for (int i = 0; i < kFirmwarePacketTries; i++) {
+      status = SendFirmwarePacket(subsys_info.type, packet_buffer,
+                                  transfer_size + kPacketHeaderAndChecksumSize);
+      if (status == ZX_OK) {
+        break;
+      }
+    }
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Exhausted retries for sending subsys %u packet", subsys_info.type);
+      return status;
+    }
+
+    offset += transfer_size;
+    remaining -= transfer_size;
+  }
+
+  return ZX_OK;
+}
+
+uint16_t Gt6853Device::Checksum16(const uint8_t* data, const size_t size) {
+  ZX_ASSERT(size % 2 == 0);
+
+  uint16_t checksum = 0;
+  for (size_t i = 0; i < size; i += 2) {
+    uint16_t entry;
+    memcpy(&entry, data + i, 2);
+    checksum += be16toh(entry);
+  }
+
+  return ~checksum + 1;
+}
+
+zx_status_t Gt6853Device::SendFirmwarePacket(const uint8_t type, const uint8_t* packet,
+                                             const size_t size) {
+  constexpr uint8_t kFlashStatusWriting = 0xaa;
+  constexpr uint8_t kFlashStatusSuccess = 0xbb;
+  constexpr uint8_t kFlashStatusError = 0xcc;
+  constexpr uint8_t kFlashStatusCheckError = 0xdd;
+  constexpr zx::duration kFlashWritingWait = zx::msec(55);
+
+  zx::status<> status = WriteAndCheck(Register::kIspBuffer, packet, size);
+  if (status.is_error()) {
+    zxlogf(ERROR, "Failed to send firmware packet: %d", status.error_value());
+    return status.error_value();
+  }
+
+  const uint8_t flash_flag[2] = {0, 0};
+  if ((status = WriteAndCheck(Register::kFlashFlag, flash_flag, sizeof(flash_flag))).is_error()) {
+    zxlogf(ERROR, "Failed to set flash flag: %d", status.error_value());
+    return status.error_value();
+  }
+
+  const uint8_t subsys_type[2] = {type, type};
+  status = WriteAndCheck(Register::kSubsysType, subsys_type, sizeof(subsys_type));
+  if (status.is_error()) {
+    zxlogf(ERROR, "Failed to set subsys type to %u: %d", type, status.error_value());
+    return status.error_value();
+  }
+
+  for (int i = 0; i < kFirmwareTries; i++) {
+    uint8_t flash_status[2];
+    if ((status = Read(Register::kFlashFlag, flash_status, sizeof(flash_status))).is_error()) {
+      return status.error_value();
+    }
+
+    if (flash_status[0] == kFlashStatusWriting && flash_status[1] == kFlashStatusWriting) {
+      zx::nanosleep(zx::deadline_after(kFlashWritingWait));
+      continue;
+    }
+
+    if (flash_status[0] == kFlashStatusSuccess && flash_status[1] == kFlashStatusSuccess) {
+      if ((status = Read(Register::kFlashFlag, flash_status, sizeof(flash_status))).is_error()) {
+        return status.error_value();
+      }
+      if (flash_status[0] == kFlashStatusSuccess && flash_status[1] == kFlashStatusSuccess) {
+        return ZX_OK;
+      }
+    }
+
+    if (flash_status[0] == kFlashStatusError && flash_status[1] == kFlashStatusError) {
+      zxlogf(ERROR, "Failed to flash subsys %u", type);
+      return ZX_ERR_IO;
+    }
+
+    if (flash_status[0] == kFlashStatusCheckError) {
+      zxlogf(ERROR, "Flash checksum error for subsys %u", type);
+      return ZX_ERR_IO_DATA_INTEGRITY;
+    }
+
+    zx::nanosleep(zx::deadline_after(zx::msec(1)));
+  }
+
+  zxlogf(ERROR, "Timed out waiting for subsys %u flash to complete", type);
+  return ZX_ERR_TIMED_OUT;
+}
+
+zx_status_t Gt6853Device::FinishFirmwareUpdate() {
+  constexpr zx::duration kResetHoldTime = zx::msec(80);
+
+  zx::status<> status = WriteReg8(Register::kCpuCtrl, kCpuCtrlHoldSs51);
+  if (status.is_error()) {
+    return status.error_value();
+  }
+
+  status = Write(Register::kCpuRunFrom, kCpuRunFromFlash, sizeof(kCpuRunFromFlash));
+  if (status.is_error()) {
+    return status.error_value();
+  }
+
+  if ((status = WriteReg8(Register::kCpuCtrl, 0)).is_error()) {
+    return status.error_value();
+  }
+
+  reset_gpio_.Write(0);
+  zx::nanosleep(zx::deadline_after(kResetSetupTime));
+  reset_gpio_.Write(1);
+  zx::nanosleep(zx::deadline_after(kResetHoldTime));
+
+  zxlogf(INFO, "Updated firmware, reset IC");
+  return ZX_OK;
+}
+
 zx::status<uint8_t> Gt6853Device::ReadReg8(const Register reg) {
   const uint16_t address = htobe16(static_cast<uint16_t>(reg));
   uint8_t value = 0;
@@ -521,13 +916,23 @@ zx::status<uint8_t> Gt6853Device::ReadReg8(const Register reg) {
   return zx::ok(value);
 }
 
-zx::status<> Gt6853Device::Read(const Register reg, uint8_t* const buffer, const size_t size) {
-  const uint16_t address = htobe16(static_cast<uint16_t>(reg));
-  zx_status_t status =
-      i2c_.WriteReadSync(reinterpret_cast<const uint8_t*>(&address), sizeof(address), buffer, size);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read %zu bytes from 0x%02x: %d", size, address, status);
-    return zx::error_status(status);
+zx::status<> Gt6853Device::Read(const Register reg, uint8_t* buffer, const size_t size) {
+  uint16_t address = static_cast<uint16_t>(reg);
+  size_t remaining = size;
+
+  while (remaining > 0) {
+    const size_t transfer_size = std::min(remaining, kI2cMaxTransferSize);
+    const uint16_t be_address = htobe16(address);
+    zx_status_t status = i2c_.WriteReadSync(reinterpret_cast<const uint8_t*>(&be_address),
+                                            sizeof(be_address), buffer, transfer_size);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to read %zu bytes from 0x%02x: %d", transfer_size, address, status);
+      return zx::error_status(status);
+    }
+
+    address += transfer_size;
+    buffer += transfer_size;
+    remaining -= transfer_size;
   }
 
   return zx::ok();
@@ -545,6 +950,65 @@ zx::status<> Gt6853Device::WriteReg8(const Register reg, const uint8_t value) {
     zxlogf(ERROR, "Failed to write 0x%02x to 0x%02x: %d", value, address, status);
     return zx::error_status(status);
   }
+  return zx::ok();
+}
+
+zx::status<> Gt6853Device::Write(const Register reg, const uint8_t* buffer, const size_t size) {
+  uint16_t address = static_cast<uint16_t>(reg);
+  size_t remaining = size;
+
+  while (remaining > 0) {
+    const size_t transfer_size = std::min(remaining, kI2cMaxTransferSize - sizeof(address));
+    const uint16_t be_address = htobe16(address);
+
+    uint8_t write_buffer[kI2cMaxTransferSize];
+    memcpy(write_buffer, &be_address, sizeof(be_address));
+    memcpy(write_buffer + sizeof(be_address), buffer, transfer_size);
+
+    zx_status_t status = i2c_.WriteSync(write_buffer, sizeof(be_address) + transfer_size);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to write %zu bytes to 0x%02x: %d", transfer_size, address, status);
+      return zx::error_status(status);
+    }
+
+    address += transfer_size;
+    buffer += transfer_size;
+    remaining -= transfer_size;
+  }
+
+  return zx::ok();
+}
+
+zx::status<> Gt6853Device::WriteAndCheck(Register reg, const uint8_t* buffer, size_t size) {
+  zx::status<> write_status = Write(reg, buffer, size);
+  if (write_status.is_error()) {
+    return write_status;
+  }
+
+  uint16_t address = static_cast<uint16_t>(reg);
+  size_t remaining = size;
+
+  while (remaining > 0) {
+    const size_t transfer_size = std::min(remaining, kI2cMaxTransferSize);
+    const uint16_t be_address = htobe16(address);
+
+    uint8_t read_buffer[kI2cMaxTransferSize];
+    zx_status_t status = i2c_.WriteReadSync(reinterpret_cast<const uint8_t*>(&be_address),
+                                            sizeof(be_address), read_buffer, transfer_size);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to read %zu bytes from 0x%02x: %d", transfer_size, address, status);
+      return zx::error_status(status);
+    }
+
+    if (memcmp(read_buffer, buffer, transfer_size) != 0) {
+      return zx::error_status(ZX_ERR_IO_DATA_INTEGRITY);
+    }
+
+    address += transfer_size;
+    buffer += transfer_size;
+    remaining -= transfer_size;
+  }
+
   return zx::ok();
 }
 

@@ -10,6 +10,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/clock.h>
 
+#include <array>
 #include <vector>
 
 #include <ddk/protocol/composite.h>
@@ -23,22 +24,36 @@ namespace {
 zx::vmo* config_vmo = nullptr;
 size_t config_size = 0;
 
+zx::vmo* firmware_vmo = nullptr;
+size_t firmware_size = 0;
+
 }  // namespace
 
 zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw, size_t* size) {
-  if (!config_vmo || !config_vmo->is_valid() || strcmp(path, GT6853_CONFIG_9364_PATH) != 0) {
-    return ZX_ERR_NOT_FOUND;
+  if (strcmp(path, GT6853_CONFIG_9364_PATH) == 0 && config_vmo && config_vmo->is_valid()) {
+    *fw = config_vmo->get();
+    *size = config_size;
+    return ZX_OK;
+  }
+  if (strcmp(path, GT6853_FIRMWARE_PATH) == 0 && firmware_vmo && firmware_vmo->is_valid()) {
+    *fw = firmware_vmo->get();
+    *size = firmware_size;
+    return ZX_OK;
   }
 
-  *fw = config_vmo->get();
-  *size = config_size;
-  return ZX_OK;
+  return ZX_ERR_NOT_FOUND;
 }
 
 namespace touch {
 
 class FakeTouchDevice : public fake_i2c::FakeI2c {
  public:
+  struct FirmwarePacket {
+    uint8_t type;
+    uint16_t size;
+    uint16_t flash_addr;
+  };
+
   void WaitForTouchDataRead() {
     sync_completion_wait(&read_completion_, ZX_TIME_INFINITE);
     sync_completion_reset(&read_completion_);
@@ -48,6 +63,7 @@ class FakeTouchDevice : public fake_i2c::FakeI2c {
 
   void set_sensor_id(const uint16_t sensor_id) { sensor_id_ = sensor_id; }
   const std::vector<uint8_t>& get_config_data() const { return config_data_; }
+  const std::vector<FirmwarePacket>& get_firmware_packets() const { return firmware_packets_; }
 
  protected:
   zx_status_t Transact(const uint8_t* write_buffer, size_t write_buffer_size, uint8_t* read_buffer,
@@ -117,6 +133,110 @@ class FakeTouchDevice : public fake_i2c::FakeI2c {
     } else if (address == static_cast<uint16_t>(Register::kConfigDataReg) &&
                write_buffer_size > 0) {
       config_data_.insert(config_data_.end(), write_buffer, write_buffer + write_buffer_size);
+    } else if (address >= static_cast<uint16_t>(Register::kIspBuffer) &&
+               address < (static_cast<uint16_t>(Register::kIspBuffer) + 4096)) {
+      const uint16_t offset = address - static_cast<uint16_t>(Register::kIspBuffer);
+      if (write_buffer_size > 0) {
+        if (offset + write_buffer_size > 4096) {
+          return ZX_ERR_IO;
+        }
+        memcpy(flash_packet_ + offset, write_buffer, write_buffer_size);
+      } else {
+        memcpy(read_buffer, flash_packet_ + offset, 4096 - offset);
+        *read_buffer_size = 4096 - offset;
+      }
+    } else if (address >= static_cast<uint16_t>(Register::kIspAddr) &&
+               address < (static_cast<uint16_t>(Register::kIspAddr) + 4096)) {
+      const uint16_t offset = address - static_cast<uint16_t>(Register::kIspAddr);
+      if (write_buffer_size > 0) {
+        if (offset + write_buffer_size > 4096) {
+          return ZX_ERR_IO;
+        }
+        memcpy(flash_packet_ + offset, write_buffer, write_buffer_size);
+      } else {
+        memcpy(read_buffer, flash_packet_ + offset, 4096 - offset);
+        *read_buffer_size = 4096 - offset;
+      }
+    } else if (address == static_cast<uint16_t>(Register::kSubsysType)) {
+      if (write_buffer_size == 0) {
+        read_buffer[0] = subsys_type_;
+        read_buffer[1] = subsys_type_;
+        *read_buffer_size = 2;
+      } else if (write_buffer_size == 2 && write_buffer[0] == write_buffer[1]) {
+        subsys_type_ = write_buffer[0];
+
+        FirmwarePacket packet = {};
+        packet.type = write_buffer[0];
+
+        memcpy(&packet.size, flash_packet_, sizeof(packet.size));
+        packet.size = be16toh(packet.size);
+
+        memcpy(&packet.flash_addr, flash_packet_ + sizeof(packet.size), sizeof(packet.flash_addr));
+        packet.flash_addr = be16toh(packet.flash_addr);
+
+        firmware_packets_.push_back(packet);
+      } else {
+        return ZX_ERR_IO;
+      }
+    } else if (address == static_cast<uint16_t>(Register::kFlashFlag)) {
+      if (write_buffer_size == 0) {
+        // The flash state is read twice, report success in two states to handle this.
+        if (current_state_ == kFlashingFirmware || current_state_ == kFlashingFirmwareDone) {
+          read_buffer[0] = 0xbb;
+          read_buffer[1] = 0xbb;
+          current_state_ = current_state_ == kFlashingFirmware ? kFlashingFirmwareDone : kIdle;
+        } else {
+          read_buffer[0] = 0;
+          read_buffer[1] = 0;
+          current_state_ = kFlashingFirmware;
+        }
+        *read_buffer_size = 2;
+      } else if (write_buffer_size != 2) {
+        return ZX_ERR_IO;
+      }
+    } else if (address == static_cast<uint16_t>(Register::kIspRunFlag)) {
+      if (write_buffer_size == 0) {
+        read_buffer[0] = 0xaa;
+        read_buffer[1] = 0xbb;
+        *read_buffer_size = 2;
+      } else if (write_buffer_size != 2) {
+        return ZX_ERR_IO;
+      }
+    } else if (address == static_cast<uint16_t>(Register::kAccessPatch0)) {
+      if (write_buffer_size == 0) {
+        read_buffer[0] = access_patch0;
+        *read_buffer_size = 1;
+      } else if (write_buffer_size == 1) {
+        access_patch0 = write_buffer[0];
+      } else {
+        return ZX_ERR_IO;
+      }
+    } else if (address == static_cast<uint16_t>(Register::kCpuCtrl)) {
+      if (write_buffer_size == 0) {
+        read_buffer[0] = 0x24;  // kCpuCtrlHoldSs51
+        *read_buffer_size = 1;
+      } else if (write_buffer_size != 1) {
+        return ZX_ERR_IO;
+      }
+    } else if (address == static_cast<uint16_t>(Register::kDspMcuPower)) {
+      if (write_buffer_size == 0) {
+        read_buffer[0] = 0;
+        *read_buffer_size = 1;
+      } else if (write_buffer_size != 1) {
+        return ZX_ERR_IO;
+      }
+    } else if (address == static_cast<uint16_t>(Register::kBankSelect) ||
+               address == static_cast<uint16_t>(Register::kCache) ||
+               address == static_cast<uint16_t>(Register::kEsdKey) ||
+               address == static_cast<uint16_t>(Register::kWtdTimer) ||
+               address == static_cast<uint16_t>(Register::kScramble)) {
+      if (write_buffer_size != 1) {
+        return ZX_ERR_IO;
+      }
+    } else if (address == static_cast<uint16_t>(Register::kCpuRunFrom)) {
+      if (write_buffer_size != 8) {
+        return ZX_ERR_IO;
+      }
     } else {
       return ZX_ERR_IO;
     }
@@ -128,6 +248,8 @@ class FakeTouchDevice : public fake_i2c::FakeI2c {
   enum State {
     kIdle,
     kWaitingForConfig,
+    kFlashingFirmware,
+    kFlashingFirmwareDone,
   };
 
   sync_completion_t read_completion_;
@@ -135,6 +257,10 @@ class FakeTouchDevice : public fake_i2c::FakeI2c {
   uint16_t sensor_id_ = UINT16_MAX;
   State current_state_ = kIdle;
   std::vector<uint8_t> config_data_;
+  uint8_t flash_packet_[4096];
+  uint8_t subsys_type_ = 0;
+  uint8_t access_patch0 = 0;
+  std::vector<FirmwarePacket> firmware_packets_;
 };
 
 class Gt6853Test : public zxtest::Test {
@@ -183,6 +309,7 @@ class Gt6853Test : public zxtest::Test {
     ddk_.SetMetadata(&use_9365_config_, sizeof(use_9365_config_));
 
     config_vmo = &config_vmo_;
+    firmware_vmo = &firmware_vmo_;
 
     auto status = Gt6853Device::CreateAndGetDevice(nullptr, fake_ddk::kFakeParent);
     if (status.is_error()) {
@@ -201,12 +328,18 @@ class Gt6853Test : public zxtest::Test {
     return config_vmo_.write(data, offset, strlen(data) + 1);
   }
 
+  zx_status_t WriteFirmwareData(const std::vector<uint8_t>& data, uint64_t offset) {
+    return firmware_vmo_.write(data.data(), offset, data.size());
+  }
+
   fake_ddk::Bind ddk_;
   FakeTouchDevice fake_i2c_;
   zx::interrupt gpio_interrupt_;
   Gt6853Device* device_ = nullptr;
   bool use_9365_config_ = false;
   zx::vmo config_vmo_;
+  zx::vmo firmware_vmo_;
+  ddk::MockGpio mock_gpio_;
 
  private:
   static bool GetFragment(void* ctx, const char* name, zx_device_t** out_fragment) {
@@ -218,8 +351,6 @@ class Gt6853Test : public zxtest::Test {
 
     return false;
   }
-
-  ddk::MockGpio mock_gpio_;
 };
 
 TEST_F(Gt6853Test, GetDescriptor) {
@@ -337,6 +468,10 @@ TEST_F(Gt6853Test, ConfigDownload) {
   EXPECT_EQ(fake_i2c_.get_config_data().size(), 0x0304 - 121);
 }
 
+TEST_F(Gt6853Test, ConfigDownloadSkipped) {
+  EXPECT_OK(Init());
+}
+
 TEST_F(Gt6853Test, NoConfigEntry) {
   config_size = 2338;
   ASSERT_OK(zx::vmo::create(fbl::round_up(config_size, ZX_PAGE_SIZE), 0, &config_vmo_));
@@ -380,6 +515,54 @@ TEST_F(Gt6853Test, InvalidConfigEntry) {
   fake_i2c_.set_sensor_id(1);
 
   config_size = 0x031a + 2;
+  EXPECT_NOT_OK(Init());
+}
+
+TEST_F(Gt6853Test, FirmwareDownload) {
+  firmware_size = 2048;
+  ASSERT_OK(zx::vmo::create(fbl::round_up(firmware_size, ZX_PAGE_SIZE), 0, &firmware_vmo_));
+  ASSERT_OK(WriteFirmwareData({0x00, 0x00, 0x07, 0xfa, 0x02, 0x98}, 0));
+  ASSERT_OK(WriteFirmwareData({0x03}, 27));
+  ASSERT_OK(WriteFirmwareData({0x01, 0x00, 0x00, 0x01, 0x00, 0xab, 0xcd}, 32));
+  ASSERT_OK(WriteFirmwareData({0x02, 0x00, 0x00, 0x01, 0x00, 0x12, 0x34}, 40));
+  ASSERT_OK(WriteFirmwareData({0x03, 0x00, 0x00, 0x01, 0x00, 0x56, 0x78}, 48));
+
+  mock_gpio_.ExpectConfigOut(ZX_OK, 0);
+  mock_gpio_.ExpectWrite(ZX_OK, 1);
+  mock_gpio_.ExpectWrite(ZX_OK, 0);
+  mock_gpio_.ExpectWrite(ZX_OK, 1);
+
+  EXPECT_OK(Init());
+
+  ASSERT_EQ(fake_i2c_.get_firmware_packets().size(), 2);
+
+  EXPECT_EQ(fake_i2c_.get_firmware_packets()[0].type, 2);
+  EXPECT_EQ(fake_i2c_.get_firmware_packets()[0].size, 256);
+  EXPECT_EQ(fake_i2c_.get_firmware_packets()[0].flash_addr, 0x1234);
+
+  EXPECT_EQ(fake_i2c_.get_firmware_packets()[1].type, 3);
+  EXPECT_EQ(fake_i2c_.get_firmware_packets()[1].size, 256);
+  EXPECT_EQ(fake_i2c_.get_firmware_packets()[1].flash_addr, 0x5678);
+}
+
+TEST_F(Gt6853Test, FirmwareDownloadInvalidCrc) {
+  firmware_size = 2048;
+  ASSERT_OK(zx::vmo::create(fbl::round_up(firmware_size, ZX_PAGE_SIZE), 0, &firmware_vmo_));
+  ASSERT_OK(WriteFirmwareData({0x00, 0x00, 0x07, 0xfa, 0x02, 0x99}, 0));
+  ASSERT_OK(WriteFirmwareData({0x03}, 27));
+  ASSERT_OK(WriteFirmwareData({0x01, 0x00, 0x00, 0x01, 0x00, 0xab, 0xcd}, 32));
+  ASSERT_OK(WriteFirmwareData({0x02, 0x00, 0x00, 0x01, 0x00, 0x12, 0x34}, 40));
+  ASSERT_OK(WriteFirmwareData({0x03, 0x00, 0x00, 0x01, 0x00, 0x56, 0x78}, 48));
+
+  EXPECT_NOT_OK(Init());
+}
+
+TEST_F(Gt6853Test, FirmwareDownloadNoIspEntry) {
+  firmware_size = 2048;
+  ASSERT_OK(zx::vmo::create(fbl::round_up(firmware_size, ZX_PAGE_SIZE), 0, &firmware_vmo_));
+  ASSERT_OK(WriteFirmwareData({0x00, 0x00, 0x07, 0xfa, 0x00, 0x00}, 0));
+  ASSERT_OK(WriteFirmwareData({0x00}, 27));
+
   EXPECT_NOT_OK(Init());
 }
 
