@@ -21,11 +21,11 @@ JournalSuperblock::JournalSuperblock(std::unique_ptr<storage::BlockBuffer> buffe
 
 zx_status_t JournalSuperblock::Validate() const {
   if (Info()->magic != kJournalMagic) {
-    FX_LOGS(ERROR) << "Bad journal magic";
+    FX_LOGST(ERROR, "journal") << "Bad journal magic";
     return ZX_ERR_IO;
   }
   if (old_checksum() != new_checksum()) {
-    FX_LOGS(ERROR) << "Bad journal info checksum";
+    FX_LOGST(ERROR, "journal") << "Bad journal info checksum";
     return ZX_ERR_IO;
   }
   return ZX_OK;

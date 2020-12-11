@@ -82,35 +82,6 @@ std::optional<const JournalEntryView> ParseEntry(storage::VmoBuffer* journal_buf
   return entry_view;
 }
 
-bool IsSubsequentEntryValid(storage::VmoBuffer* journal_buffer, uint64_t start,
-                            uint64_t sequence_number) {
-  // Access the current entry, but ignore everything except the "length" field.
-  // WARNING: This (intentionally) does not validate the current entry.
-  storage::BlockBufferView small_view(journal_buffer, start, kJournalEntryHeaderBlocks);
-  const auto header = JournalHeaderView::Create(
-      fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(small_view.Data(0)), small_view.BlockSize()),
-      sequence_number);
-
-  if (header.is_error()) {
-    // If this isn't a header, we can't find the subsequent entry.
-    return false;
-  }
-
-  // Check the next entry, if the current entry's length field is (somehow) valid.
-  uint64_t entry_length = ParseEntryLength(journal_buffer, header.value());
-  if (!entry_length) {
-    // If we can't parse the length, then we can't check the subsequent entry.
-    // If two neighboring entries are corrupted, this is treated as an interruption.
-    return false;
-  }
-  start = (start + entry_length) % journal_buffer->capacity();
-  return JournalHeaderView::Create(
-             fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(journal_buffer->Data(start)),
-                                journal_buffer->BlockSize()),
-             sequence_number + 1)
-      .is_ok();
-}
-
 void ParseBlocks(const storage::VmoBuffer& journal_buffer, const JournalEntryView& entry,
                  uint64_t entry_start, ReplayTree* operation_tree) {
   // Collect all the operations to be replayed from this entry into |operation_tree|.
@@ -132,39 +103,18 @@ void ParseBlocks(const storage::VmoBuffer& journal_buffer, const JournalEntryVie
 zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffer* journal_buffer,
                                 std::vector<storage::BufferedOperation>* operations,
                                 uint64_t* out_sequence_number, uint64_t* out_start) {
-  // Validate |info| before using it.
-  zx_status_t status = info->Validate();
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Journal Superblock does not validate: " << status;
-    return status;
-  }
-  if (info->start() >= journal_buffer->capacity()) {
-    FX_LOGS(ERROR) << "Journal entries start beyond end of journal capacity (" << info->start()
-                   << " vs " << journal_buffer->capacity() << ")";
-    return ZX_ERR_IO_DATA_INTEGRITY;
-  }
-
   // Start parsing the journal, and replay as many entries as possible.
   uint64_t entry_start = info->start();
   uint64_t sequence_number = info->sequence_number();
-  FX_LOGS(INFO) << "replay: entry_start: " << entry_start
-                << ", sequence_number: " << sequence_number;
+  FX_LOGST(INFO, "journal") << "replay: entry_start: " << entry_start
+                            << ", sequence_number: " << sequence_number;
   ReplayTree operation_tree;
   while (true) {
     // Attempt to parse the next entry in the journal. Eventually, we expect this to fail.
     std::optional<const JournalEntryView> entry =
         ParseEntry(journal_buffer, entry_start, sequence_number);
-    if (!entry) {
-      // Typically, an invalid entry will imply that the entry was interrupted
-      // partway through being written. However, if the subsequent entry in the journal
-      // looks valid, that implies the entry at |entry_start| was corrupted for some unknown
-      // reason. The inability to replay committed journal entries may lead to filesystem
-      // corruption, so we return an explicit error in this case.
-      if (IsSubsequentEntryValid(journal_buffer, entry_start, sequence_number)) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
-      }
+    if (!entry)
       break;
-    }
 
     if (entry->header().ObjectType() == JournalObjectType::kRevocation) {
       // TODO(fxbug.dev/34525): Revocation records advise us to avoid replaying the provided
@@ -207,26 +157,29 @@ zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_
                                             uint32_t block_size) {
   const uint64_t journal_entry_start = journal_start + kJournalMetadataBlocks;
   const uint64_t journal_entry_blocks = journal_length - kJournalMetadataBlocks;
-  FX_LOGS(DEBUG) << "replay: Initializing journal superblock";
+  FX_LOGST(DEBUG, "journal") << "replay: Initializing journal superblock";
 
   // Initialize and read the journal superblock and journal buffer.
   auto journal_superblock_buffer = std::make_unique<storage::VmoBuffer>();
   zx_status_t status = journal_superblock_buffer->Initialize(registry, kJournalMetadataBlocks,
                                                              block_size, "journal-superblock");
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "journal: Cannot initialize journal info block: " << status;
+    FX_LOGST(ERROR, "journal") << "Cannot initialize journal info block: "
+                               << zx_status_get_string(status);
     return zx::error(status);
   }
   // Initialize and read the journal itself.
-  FX_LOGS(INFO) << "replay: Initializing journal buffer (" << journal_entry_blocks << " blocks)";
+  FX_LOGST(INFO, "journal") << "replay: Initializing journal buffer (" << journal_entry_blocks
+                            << " blocks)";
   storage::VmoBuffer journal_buffer;
   status = journal_buffer.Initialize(registry, journal_entry_blocks, block_size, "journal-buffer");
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "journal: Cannot initialize journal buffer: " << status;
+    FX_LOGST(ERROR, "journal") << "Cannot initialize journal buffer: "
+                               << zx_status_get_string(status);
     return zx::error(status);
   }
 
-  FX_LOGS(DEBUG) << "replay: Reading from storage";
+  FX_LOGST(DEBUG, "journal") << "replay: Reading from storage";
   fs::BufferedOperationsBuilder builder;
   builder
       .Add(storage::Operation{.type = storage::OperationType::kRead,
@@ -241,55 +194,103 @@ zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_
            &journal_buffer);
   status = transaction_handler->RunRequests(builder.TakeOperations());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "journal: Cannot load journal: " << status;
+    FX_LOGST(ERROR, "journal") << "Cannot load journal: " << zx_status_get_string(status);
     return zx::error(status);
   }
 
-  // Parse the journal, deciding which entries should be replayed.
-  //
-  // NOTE(fxbug.dev/34510): This current implementation of replay is built against the specification
-  // of the journaling format, not against how the journaling writeback code happens to be
-  // implemented. In the current implementation, "write to journal" and "write to final location"
-  // are tightly coupled, so although we will replay a multi-entry journal, it is unlikely the
-  // disk will end up in that state. However, this use case is supported by this replay code
-  // regardless.
-  std::vector<storage::BufferedOperation> operations;
-  uint64_t sequence_number = 0;
-  uint64_t next_entry_start = 0;
-  FX_LOGS(DEBUG) << "replay: Parsing journal entries";
   JournalSuperblock journal_superblock(std::move(journal_superblock_buffer));
-  status = ParseJournalEntries(&journal_superblock, &journal_buffer, &operations, &sequence_number,
-                               &next_entry_start);
+  std::vector<storage::BufferedOperation> operations;
+  bool write_superblock = false;
+
+  status = journal_superblock.Validate();
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "journal: Cannot parse journal entries: " << status;
-    return zx::error(status);
+    // Assume that the superblock has become corrupt.  Assume that this is just the superblock that
+    // is bad and that it was because a write to the info block failed.  If that has happened, then
+    // it would be immediately after a flush and so no entries should need replaying.  To restore
+    // the superblock, we search for the latest sequence number in the journal entries.  This code
+    // mostly exists for tests that deliberately put blocks in an indeterminate state between a
+    // write call and a flush, since encountering this on real devices is unlikely.
+    storage::BlockBufferView view(&journal_buffer, 0, journal_entry_blocks);
+    std::optional<uint64_t> sequence_number;
+    for (uint64_t i = 0; i < journal_entry_blocks; ++i) {
+      const auto* header = static_cast<JournalHeaderBlock*>(view.Data(i));
+      if (header->prefix.magic == kJournalEntryMagic &&
+          header->prefix.sequence_number > sequence_number) {
+        sequence_number = header->prefix.sequence_number;
+      }
+    }
+    if (!sequence_number) {
+      // We didn't find any valid journal entries which means it's likely that the volume is
+      // corrupted in an unrecoverable way, so give up.
+      FX_LOGST(ERROR, "journal") << "Found corrupt superblock and no valid journal entries";
+      return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
+    }
+    FX_LOGST(WARNING, "journal")
+        << "Found corrupt superblock, but valid entries; restoring superblock";
+    journal_superblock.Update(0, *sequence_number + 1);
+    write_superblock = true;
+  } else {
+    uint64_t sequence_number = 0;
+    uint64_t next_entry_start = 0;
+
+    if (journal_superblock.start() >= journal_buffer.capacity()) {
+      FX_LOGST(ERROR, "journal") << "Journal entries start beyond end of journal capacity ("
+                                 << journal_superblock.start() << " vs "
+                                 << journal_buffer.capacity();
+      return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
+    }
+
+    // Parse the journal, deciding which entries should be replayed.
+    //
+    // NOTE(fxbug.dev/34510): This current implementation of replay is built against the
+    // specification of the journaling format, not against how the journaling writeback code happens
+    // to be implemented. In the current implementation, "write to journal" and "write to final
+    // location" are tightly coupled, so although we will replay a multi-entry journal, it is
+    // unlikely the disk will end up in that state. However, this use case is supported by this
+    // replay code regardless.
+    FX_LOGST(DEBUG, "journal") << "replay: Parsing journal entries";
+    status = ParseJournalEntries(&journal_superblock, &journal_buffer, &operations,
+                                 &sequence_number, &next_entry_start);
+    if (status != ZX_OK) {
+      FX_LOGST(ERROR, "journal") << "Cannot parse journal entries: "
+                                 << zx_status_get_string(status);
+      return zx::error(status);
+    }
+
+    // Replay the requested journal entries, then the new header.
+    if (!operations.empty()) {
+      // Update to the new sequence_number (in-memory).
+      journal_superblock.Update(next_entry_start, sequence_number);
+      write_superblock = true;
+
+      if (FX_LOG_IS_ON(INFO)) {
+        for (auto& op : operations) {
+          FX_LOGST(INFO, "journal")
+              << "replay: writing operation @ dev_offset: " << op.op.dev_offset
+              << ", vmo_offset: " << op.op.vmo_offset << ", length: " << op.op.length;
+        }
+      }
+
+      status = transaction_handler->RunRequests(operations);
+      if (status != ZX_OK) {
+        FX_LOGST(ERROR, "journal") << "Cannot replay entries: " << zx_status_get_string(status);
+        return zx::error(status);
+      }
+
+      status = transaction_handler->Flush();
+      if (status != ZX_OK) {
+        FX_LOGST(ERROR, "journal") << "replay: Flush failed: " << zx_status_get_string(status);
+        return zx::error(status);
+      }
+    } else {
+      FX_LOGST(DEBUG, "journal") << "replay: Not replaying entries";
+    }
   }
 
-  // Replay the requested journal entries, then the new header.
-  if (!operations.empty()) {
-    // Update to the new sequence_number (in-memory).
-    journal_superblock.Update(next_entry_start, sequence_number);
-
-    for (auto& op : operations) {
-      FX_LOGS(INFO) << "replay: writing operation @ dev_offset: " << op.op.dev_offset
-                    << ", vmo_offset: " << op.op.vmo_offset << ", length: " << op.op.length;
-    }
-
-    status = transaction_handler->RunRequests(operations);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "journal: Cannot replay entries: " << status;
-      return zx::error(status);
-    }
-
-    status = transaction_handler->Flush();
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "replay: Flush failed: " << status;
-      return zx::error(status);
-    }
-
+  if (write_superblock) {
     operations.clear();
-    FX_LOGS(INFO) << "replay: New start: " << next_entry_start
-                  << ", sequence_number: " << sequence_number;
+    FX_LOGST(INFO, "journal") << "replay: New start: " << journal_superblock.start()
+                              << ", sequence_number: " << journal_superblock.sequence_number();
     storage::BufferedOperation operation;
     operation.vmoid = journal_superblock.buffer().vmoid();
     operation.op.type = storage::OperationType::kWrite;
@@ -299,12 +300,10 @@ zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_
     operations.push_back(operation);
     status = transaction_handler->RunRequests(operations);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "journal: Cannot update journal superblock: " << status;
+      FX_LOGST(ERROR, "journal") << "Cannot update journal superblock: "
+                                 << zx_status_get_string(status);
       return zx::error(status);
     }
-
-  } else {
-    FX_LOGS(DEBUG) << "replay: Not replaying entries";
   }
 
   return zx::ok(std::move(journal_superblock));

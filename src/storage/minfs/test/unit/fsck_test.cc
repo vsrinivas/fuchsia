@@ -340,27 +340,5 @@ TEST_F(ConsistencyCheckerFixtureVerbose, CorruptSuperblock) {
   ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache));
 }
 
-TEST_F(ConsistencyCheckerFixtureVerbose, CorruptJournalInfo) {
-  std::unique_ptr<Bcache> bcache;
-  destroy_fs(&bcache);
-
-  Superblock sb;
-  EXPECT_OK(bcache->Readblk(0, &sb));
-  char data[kMinfsBlockSize];
-
-  blk_t journal_block = static_cast<blk_t>(JournalStartBlock(sb));
-  EXPECT_OK(bcache->Readblk(journal_block, data));
-
-  // Check that the journal superblock is valid.
-  fs::JournalInfo* journal_info = reinterpret_cast<fs::JournalInfo*>(data);
-  EXPECT_EQ(journal_info->magic, fs::kJournalMagic);
-
-  // Corrupt the journalInfo checksum
-  journal_info->checksum = 0;
-  EXPECT_OK(bcache->Writeblk(journal_block, data));
-
-  ASSERT_NOT_OK(Fsck(std::move(bcache), FsckOptions{.repair = false}, &bcache));
-}
-
 }  // namespace
 }  // namespace minfs
