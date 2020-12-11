@@ -21,19 +21,9 @@ var additionalSkipDirs = []string{
 	"third_party/dart-pkg/pub/characters/third_party/Wikipedia", // TODO(b/172586985): Remove once completed.
 	"third_party/grpc/third_party/cares",                        // TODO(b/172586985): Remove once completed.
 	"third_party/libc-tests/third_party/nacl-tests",             // TODO(b/172586985): Remove once completed.
-	"third_party/openthread/third_party/build_gn",               // TODO(b/172586985): Remove once completed.
-	"third_party/openthread/third_party/jlink",                  // TODO(b/172586985): Remove once completed.
-	"third_party/openthread/third_party/microchip",              // TODO(b/173236215): Remove once completed.
-	"third_party/openthread/third_party/NordicSemiconductor",    // TODO(b/172586985): Remove once completed.
-	"third_party/openthread/third_party/nxp",                    // TODO(b/172066115): Remove once completed.
-	"third_party/openthread/third_party/openthread-test-driver", // TODO(b/171816602): Remove once completed.
-	"third_party/openthread/third_party/Qorvo",                  // TODO(b/172586985): Remove once completed.
-	"third_party/openthread/third_party/silabs",                 // TODO(b/172586985): Remove once completed.
-	"third_party/openthread/third_party/ti",                     // TODO(b/172066853): Remove once completed.
 	"third_party/rust_crates/compat",                            // TODO(b/172586985): Remove once completed.
 	"third_party/rust_crates/tiny_mirrors",                      // TODO(b/172586985): Remove once completed.
 	"third_party/tink/third_party/wycheproof",                   // TODO(b/172586985): Remove once completed.
-	"third_party/vim",                                           // TODO(b/172066343): Remove once completed.
 	"zircon/third_party/zstd",                                   // TODO(b/171584331): Remove once completed.
 	"src/devices/tools/banjo/src/backends/templates",            // Skip template directories
 }
