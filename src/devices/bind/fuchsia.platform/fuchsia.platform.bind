@@ -38,7 +38,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   INFINEON = 24,
   SILERGY = 25,
   FOCALTECH = 26,
-  SENSIRION = 27,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
