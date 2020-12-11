@@ -263,7 +263,6 @@
         },
         {
             protocol: [
-                "fuchsia.kernel.MexecBroker",
                 "fuchsia.tracing.kernel.Controller",
                 "fuchsia.tracing.kernel.Reader",
             ],

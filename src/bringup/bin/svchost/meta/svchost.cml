@@ -6,7 +6,6 @@
         {
             protocol: [
                 "fuchsia.kernel.DebugBroker",
-                "fuchsia.kernel.MexecBroker",
                 "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
@@ -37,7 +36,6 @@
         {
             protocol: [
                 "fuchsia.kernel.DebugBroker",
-                "fuchsia.kernel.MexecBroker",
                 "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
