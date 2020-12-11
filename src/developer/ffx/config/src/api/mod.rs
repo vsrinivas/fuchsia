@@ -14,6 +14,8 @@ pub mod query;
 pub mod value;
 
 pub type ConfigResult = Result<ConfigValue>;
+
+#[derive(Debug)]
 pub struct ConfigError(anyhow::Error);
 
 pub(crate) async fn get_config<'a, T: Fn(Value) -> Option<Value>>(

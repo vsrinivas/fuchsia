@@ -10,4 +10,5 @@ use std::fmt::Debug;
 pub enum TargetTaskType {
     HostPipe,
     MdnsMonitor,
+    ProactiveLog,
 }

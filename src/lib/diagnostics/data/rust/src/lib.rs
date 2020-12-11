@@ -178,6 +178,12 @@ impl From<u64> for Timestamp {
     }
 }
 
+impl From<u128> for Timestamp {
+    fn from(nanos: u128) -> Timestamp {
+        Timestamp(nanos as u64)
+    }
+}
+
 impl From<i64> for Timestamp {
     fn from(nanos: i64) -> Timestamp {
         Timestamp(nanos as u64)
@@ -186,6 +192,12 @@ impl From<i64> for Timestamp {
 
 impl Into<i64> for Timestamp {
     fn into(self) -> i64 {
+        self.0 as _
+    }
+}
+
+impl Into<u64> for Timestamp {
+    fn into(self) -> u64 {
         self.0 as _
     }
 }

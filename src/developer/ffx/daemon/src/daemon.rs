@@ -133,7 +133,7 @@ impl DaemonEventHandler {
         };
 
         log::trace!("Found new target via overnet: {}", target.nodename());
-        tc.merge_insert(target).await;
+        tc.merge_insert(target).then(|target| async move { target.run_logger().await }).await;
     }
 
     async fn handle_fastboot(t: events::TargetInfo, tc: &TargetCollection) {

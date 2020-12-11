@@ -27,6 +27,7 @@ mod daemon;
 mod discovery;
 mod events;
 mod fastboot;
+mod logger;
 mod mdns;
 mod net;
 mod onet;

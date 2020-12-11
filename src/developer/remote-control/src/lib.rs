@@ -19,19 +19,27 @@ const HUB_ROOT: &str = "/discovery_root";
 pub struct RemoteControlService {
     netstack_proxy: fnetstack::StackProxy,
     name_provider_proxy: fdevice::NameProviderProxy,
+    boot_timestamp_nanos: u64,
 }
 
 impl RemoteControlService {
     pub fn new() -> Result<Self, Error> {
         let (netstack_proxy, name_provider_proxy) = Self::construct_proxies()?;
-        return Ok(Self::new_with_proxies(netstack_proxy, name_provider_proxy));
+        let boot_timestamp =
+            fuchsia_runtime::utc_time().into_nanos() - zx::Time::get_monotonic().into_nanos();
+        return Ok(Self::new_with_proxies_and_boot_time(
+            netstack_proxy,
+            name_provider_proxy,
+            boot_timestamp as u64,
+        ));
     }
 
-    pub fn new_with_proxies(
+    pub fn new_with_proxies_and_boot_time(
         netstack_proxy: fnetstack::StackProxy,
         name_provider_proxy: fdevice::NameProviderProxy,
+        boot_timestamp_nanos: u64,
     ) -> Self {
-        return Self { netstack_proxy, name_provider_proxy };
+        return Self { netstack_proxy, name_provider_proxy, boot_timestamp_nanos };
     }
 
     pub async fn serve_stream(
@@ -188,6 +196,7 @@ impl RemoteControlService {
             .send(&mut Ok(rcs::IdentifyHostResponse {
                 nodename: Some(nodename),
                 addresses: Some(result),
+                boot_timestamp_nanos: Some(self.boot_timestamp_nanos),
                 ..rcs::IdentifyHostResponse::EMPTY
             }))
             .context("sending IdentifyHost response")?;
@@ -210,6 +219,7 @@ mod tests {
     };
 
     const NODENAME: &'static str = "thumb-set-human-shred";
+    const BOOT_TIME: u64 = 123456789000000000;
 
     const IPV4_ADDR: [u8; 4] = [127, 0, 0, 1];
     const IPV6_ADDR: [u8; 16] = [127, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6];
@@ -280,9 +290,10 @@ mod tests {
     }
 
     fn make_rcs() -> Rc<RemoteControlService> {
-        Rc::new(RemoteControlService::new_with_proxies(
+        Rc::new(RemoteControlService::new_with_proxies_and_boot_time(
             setup_fake_netstack_service(),
             setup_fake_name_provider_service(),
+            BOOT_TIME,
         ))
     }
 
@@ -317,6 +328,8 @@ mod tests {
         let v6 = &addrs[1];
         assert_eq!(v6.prefix_len, 6);
         assert_eq!(v6.addr, fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_ADDR }));
+
+        assert_eq!(resp.boot_timestamp_nanos.unwrap(), BOOT_TIME);
 
         Ok(())
     }

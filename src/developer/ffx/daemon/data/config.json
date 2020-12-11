@@ -15,5 +15,10 @@
       "$HOME/.ssh/fuchsia_authorized_keys",
       "$FUCHSIA_DIR/.ssh/authorized_keys"
     ]
+  },
+  "proactive_log": {
+        "cache_directory": "$DATA/target_logs",
+        "max_log_size_bytes": 10485760,
+        "enabled": false
   }
 }

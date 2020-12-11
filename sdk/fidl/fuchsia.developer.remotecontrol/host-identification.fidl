@@ -10,6 +10,8 @@ using fuchsia.net;
 table IdentifyHostResponse {
     1: vector<fuchsia.net.Subnet>:MAX addresses;
     2: string:fuchsia.device.DEVICE_NAME_MAX nodename;
+    // UTC timestamp of the target's time of boot, in nanoseconds.
+    3: uint64 boot_timestamp_nanos;
 };
 
 enum IdentifyHostError : uint32 {

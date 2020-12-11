@@ -6,6 +6,7 @@ use {
     crate::constants::{MDNS_BROADCAST_INTERVAL_SECS, MDNS_TARGET_DROP_GRACE_PERIOD_SECS},
     crate::events::{self, DaemonEvent, EventSynthesizer},
     crate::fastboot::open_interface_with_serial,
+    crate::logger::{streamer::DiagnosticsStreamer, Logger},
     crate::net::IsLocalAddr,
     crate::onet::HostPipeConnection,
     crate::task::{SingleFlight, TaskSnapshot},
@@ -292,6 +293,8 @@ struct TargetInner {
     addrs: RwLock<BTreeSet<TargetAddrEntry>>,
     // used for Fastboot
     serial: RwLock<Option<String>>,
+    boot_timestamp_nanos: RwLock<Option<u64>>,
+    diagnostics_info: Arc<DiagnosticsStreamer>,
 }
 
 impl Default for TargetInner {
@@ -302,6 +305,8 @@ impl Default for TargetInner {
             state: Mutex::new(TargetState::default()),
             addrs: RwLock::new(BTreeSet::new()),
             serial: RwLock::new(None),
+            boot_timestamp_nanos: RwLock::new(None),
+            diagnostics_info: Arc::new(DiagnosticsStreamer::default()),
         }
     }
 }
@@ -309,6 +314,14 @@ impl Default for TargetInner {
 impl TargetInner {
     fn new(nodename: &str) -> Self {
         Self { nodename: nodename.to_string(), ..Default::default() }
+    }
+
+    pub fn new_with_boot_timestamp(nodename: &str, boot_timestamp_nanos: u64) -> Self {
+        Self {
+            nodename: nodename.to_string(),
+            boot_timestamp_nanos: RwLock::new(Some(boot_timestamp_nanos)),
+            ..Default::default()
+        }
     }
 
     pub fn new_with_addrs(nodename: &str, addrs: BTreeSet<TargetAddr>) -> Self {
@@ -434,12 +447,18 @@ impl Target {
                 ),
             )
             .boxed(),
+            TargetTaskType::ProactiveLog => Logger::new(weak_target.clone()).start().boxed(),
         }));
         Self { inner, events, task_manager }
     }
 
     pub fn new(nodename: &str) -> Self {
         let inner = Arc::new(TargetInner::new(nodename));
+        Self::from_inner(inner)
+    }
+
+    pub fn new_with_boot_timestamp(nodename: &str, boot_timestamp_nanos: u64) -> Self {
+        let inner = Arc::new(TargetInner::new_with_boot_timestamp(nodename, boot_timestamp_nanos));
         Self::from_inner(inner)
     }
 
@@ -474,6 +493,19 @@ impl Target {
 
     pub fn nodename(&self) -> String {
         self.inner.nodename.clone()
+    }
+
+    pub async fn boot_timestamp_nanos(&self) -> Option<u64> {
+        self.inner.boot_timestamp_nanos.read().await.clone()
+    }
+
+    pub async fn update_boot_timestamp(&self, ts: Option<u64>) {
+        let mut inner_ts = self.inner.boot_timestamp_nanos.write().await;
+        *inner_ts = ts;
+    }
+
+    pub fn stream_info(&self) -> Arc<DiagnosticsStreamer> {
+        self.inner.diagnostics_info.clone()
     }
 
     /// Allows a client to atomically update the connection state based on what
@@ -602,7 +634,11 @@ impl Target {
         // TODO(awdavies): Merge target addresses once the scope_id is picked
         // up properly, else there will be duplicate link-local addresses that
         // aren't usable.
-        let target = Target::new(nodename.as_ref());
+        let target = match fidl_target.boot_timestamp_nanos {
+            Some(t) => Target::new_with_boot_timestamp(nodename.as_ref(), t),
+            None => Target::new(nodename.as_ref()),
+        };
+
         // Forces drop of target state mutex so that target can be returned.
         {
             let mut target_state = target.inner.state.lock().await;
@@ -618,6 +654,10 @@ impl Target {
 
     pub async fn run_mdns_monitor(&self) {
         self.task_manager.spawn_detached(TargetTaskType::MdnsMonitor).await;
+    }
+
+    pub async fn run_logger(&self) {
+        self.task_manager.spawn_detached(TargetTaskType::ProactiveLog).await;
     }
 }
 
@@ -914,6 +954,7 @@ impl TargetCollection {
                 futures::join!(
                     to_update.update_last_response(t.last_response().await),
                     to_update.addrs_extend(t.addrs().await),
+                    to_update.update_boot_timestamp(t.boot_timestamp_nanos().await),
                     to_update.overwrite_state(TargetState {
                         connection_state: std::mem::replace(
                             &mut t.inner.state.lock().await.connection_state,
@@ -1013,6 +1054,10 @@ mod test {
                 state: Mutex::new(block_on(self.state.lock()).clone()),
                 addrs: RwLock::new(block_on(self.addrs.read()).clone()),
                 serial: RwLock::new(block_on(self.serial.read()).clone()),
+                boot_timestamp_nanos: RwLock::new(
+                    block_on(self.boot_timestamp_nanos.read()).clone(),
+                ),
+                diagnostics_info: self.diagnostics_info.clone(),
             }
         }
     }
