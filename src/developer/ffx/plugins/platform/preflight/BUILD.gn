@@ -8,10 +8,19 @@ ffx_plugin("ffx_preflight") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
-  deps = []
+  deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:thiserror",
+  ]
 
   sources = [
     "src/args.rs",
+    "src/check.rs",
+    "src/check/build_prereqs.rs",
+    "src/command_runner.rs",
+    "src/config.rs",
     "src/lib.rs",
   ]
 }

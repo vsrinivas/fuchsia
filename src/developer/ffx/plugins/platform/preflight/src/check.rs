@@ -1,0 +1,29 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use crate::config::PreflightConfig;
+use anyhow::Result;
+use async_trait::async_trait;
+
+pub mod build_prereqs;
+
+/// The result of execution of a `PreflightCheck`. In all cases, the `String` parameter
+/// contains a message for the end user explaining the result.
+#[derive(Debug)]
+pub enum PreflightCheckResult {
+    /// Everything checked out!
+    Success(String),
+
+    /// An unsupported condition or configuration was detected.
+    Failure(String),
+}
+
+#[async_trait(?Send)]
+pub trait PreflightCheck {
+    /// Runs the check with `config`.
+    ///
+    /// Returns `Ok(PreflightCheckResult)` if the check was able to execute
+    /// to completion, and `Err()` otherwise.
+    async fn run(&self, config: &PreflightConfig) -> Result<PreflightCheckResult>;
+}
