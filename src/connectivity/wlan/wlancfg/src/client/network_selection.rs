@@ -12,7 +12,7 @@ use {
         mode_management::iface_manager_api::IfaceManagerApi,
     },
     async_trait::async_trait,
-    fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -183,6 +183,34 @@ impl NetworkSelector {
                 Some(augment_bss_with_active_scan(selected, channel, bssid, iface_manager).await)
             }
             None => None,
+        }
+    }
+
+    /// Find a suitable BSS for the given network.
+    #[allow(unused)]
+    pub(crate) async fn find_connection_candidate_for_network(
+        &self,
+        sme_proxy: &fidl_sme::ClientSmeProxy,
+        network: &types::NetworkIdentifier,
+    ) -> Option<types::ConnectionCandidate> {
+        // TODO: check if we have recent enough scan results that we can pull from instead?
+        let scan_results = scan::perform_directed_active_scan(sme_proxy, &network.ssid, None).await;
+
+        match scan_results {
+            Err(()) => None,
+            Ok(scan_results) => {
+                let saved_networks =
+                    load_saved_networks(Arc::clone(&self.saved_network_manager)).await;
+                let networks =
+                    merge_saved_networks_and_scan_data(saved_networks, &scan_results).await;
+                let ignore_list = vec![];
+                select_best_connection_candidate(networks, &ignore_list).map(|(candidate, _, _)| {
+                    // Strip out the information about passive vs active scan, because we can't know
+                    // if this network would have been observed in a passive scan (since we never
+                    // performed a passive scan).
+                    types::ConnectionCandidate { observed_in_passive_scan: None, ..candidate }
+                })
+            }
         }
     }
 }
@@ -1715,6 +1743,141 @@ mod tests {
                 .await,
             None
         );
+    }
+
+    #[test]
+    fn find_connection_candidate_for_network_end_to_end() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = exec.run_singlethreaded(test_setup());
+        let network_selector = test_values.network_selector;
+
+        // create identifiers
+        let test_id_1 = types::NetworkIdentifier {
+            ssid: "foo".as_bytes().to_vec(),
+            type_: types::SecurityType::Wpa3,
+        };
+        let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
+        let bss_desc_1 = generate_random_bss_desc();
+
+        // insert saved networks
+        exec.run_singlethreaded(
+            test_values.saved_network_manager.store(test_id_1.clone().into(), credential_1.clone()),
+        )
+        .unwrap();
+
+        // get the sme proxy
+        let mut iface_manager_inner = exec.run_singlethreaded(test_values.iface_manager.lock());
+        let sme_proxy =
+            exec.run_singlethreaded(iface_manager_inner.get_sme_proxy_for_scan()).unwrap();
+        drop(iface_manager_inner);
+
+        // Kick off network selection
+        let network_selection_fut =
+            network_selector.find_connection_candidate_for_network(&sme_proxy, &test_id_1);
+        pin_mut!(network_selection_fut);
+        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
+
+        // Check that a scan request was sent to the sme and send back results
+        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: vec![test_id_1.ssid.clone()],
+            channels: vec![],
+        });
+        let mock_scan_results = vec![
+            fidl_sme::BssInfo {
+                bssid: [0, 0, 0, 0, 0, 0],
+                ssid: test_id_1.ssid.clone(),
+                rssi_dbm: 10,
+                snr_db: 10,
+                channel: fidl_common::WlanChan {
+                    primary: 1,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    secondary80: 0,
+                },
+                // This network is WPA3, but should still match against the desired WPA2 network
+                protection: fidl_sme::Protection::Wpa3Personal,
+                compatible: true,
+                bss_desc: bss_desc_1.clone(),
+            },
+            fidl_sme::BssInfo {
+                bssid: [0, 0, 0, 0, 0, 0],
+                ssid: "other ssid".as_bytes().to_vec(),
+                rssi_dbm: 0,
+                snr_db: 0,
+                channel: fidl_common::WlanChan {
+                    primary: 1,
+                    cbw: fidl_common::Cbw::Cbw20,
+                    secondary80: 0,
+                },
+                protection: fidl_sme::Protection::Wpa1,
+                compatible: true,
+                bss_desc: generate_random_bss_desc(),
+            },
+        ];
+        validate_sme_scan_request_and_send_results(
+            &mut exec,
+            &mut test_values.sme_stream,
+            &expected_scan_request,
+            mock_scan_results,
+        );
+
+        // Check that we pick a network
+        let results = exec.run_singlethreaded(&mut network_selection_fut);
+        assert_eq!(
+            results,
+            Some(types::ConnectionCandidate {
+                network: test_id_1.clone(),
+                credential: credential_1.clone(),
+                bss: bss_desc_1,
+                // This code path can't know if the network would have been observed in a passive
+                // scan, since it never performs a passive scan.
+                observed_in_passive_scan: None,
+            })
+        );
+    }
+
+    #[test]
+    fn find_connection_candidate_for_network_end_to_end_with_failure() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = exec.run_singlethreaded(test_setup());
+        let network_selector = test_values.network_selector;
+
+        // create identifiers
+        let test_id_1 = types::NetworkIdentifier {
+            ssid: "foo".as_bytes().to_vec(),
+            type_: types::SecurityType::Wpa3,
+        };
+
+        // get the sme proxy
+        let mut iface_manager_inner = exec.run_singlethreaded(test_values.iface_manager.lock());
+        let sme_proxy =
+            exec.run_singlethreaded(iface_manager_inner.get_sme_proxy_for_scan()).unwrap();
+        drop(iface_manager_inner);
+
+        // Kick off network selection
+        let network_selection_fut =
+            network_selector.find_connection_candidate_for_network(&sme_proxy, &test_id_1);
+        pin_mut!(network_selection_fut);
+        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
+
+        // Return an error on the scan
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                txn, req: _, control_handle: _
+            }))) => {
+                // Send failed scan response.
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_error(&mut fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::InternalError,
+                    message: "Failed to scan".to_string()
+                }).expect("failed to send scan error");
+            }
+        );
+
+        // Check that nothing is returned
+        let results = exec.run_singlethreaded(&mut network_selection_fut);
+        assert_eq!(results, None);
     }
 
     fn generate_random_bss() -> types::Bss {

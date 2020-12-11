@@ -28,21 +28,21 @@ pub fn validate_sme_scan_request_and_send_results(
 ) {
     // Check that a scan request was sent to the sme and send back results
     assert_variant!(
-            exec.run_until_stalled(&mut sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                txn, req, control_handle: _
-            }))) => {
-                // Validate the request
-                assert_eq!(req, *expected_scan_request);
-                // Send all the APs
-                let (_stream, ctrl) = txn
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_result(&mut scan_results.iter_mut())
-                    .expect("failed to send scan data");
+        exec.run_until_stalled(&mut sme_stream.next()),
+        Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+            txn, req, control_handle: _
+        }))) => {
+            // Validate the request
+            assert_eq!(req, *expected_scan_request);
+            // Send all the APs
+            let (_stream, ctrl) = txn
+                .into_stream_and_control_handle().expect("error accessing control handle");
+            ctrl.send_on_result(&mut scan_results.iter_mut())
+                .expect("failed to send scan data");
 
-                // Send the end of data
-                ctrl.send_on_finished()
-                    .expect("failed to send scan data");
-            }
-        );
+            // Send the end of data
+            ctrl.send_on_finished()
+                .expect("failed to send scan data");
+        }
+    );
 }
