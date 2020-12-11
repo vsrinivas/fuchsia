@@ -7,7 +7,14 @@
 group("tests") {
   testonly = true
   deps = [
+    "handle-alias:tests",
     "kernel-clocks:tests",
     "kernel-cmdline:tests",
+    "processor:tests",
+    "property:tests",
+    "register-state:tests",
+    "status:tests",
+    "thread-initial-state:tests",
+    "vmo:tests",
   ]
 }

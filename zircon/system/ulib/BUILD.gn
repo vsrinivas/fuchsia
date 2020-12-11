@@ -25,6 +25,7 @@ group("tests") {
     "bitmap:tests",
     "block-client:tests",
     "c:tests",
+    "chromeos-disk-setup:tests",
     "closure-queue:tests",
     "cobalt-client:tests",
     "debugdata:tests",

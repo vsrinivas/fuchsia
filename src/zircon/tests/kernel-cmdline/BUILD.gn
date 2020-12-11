@@ -4,11 +4,14 @@
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":kernel-cmdline-fuzzers" ]
+  deps = [
+    ":kernel-cmdline-fuzzers",
+    ":kernel-cmdline-test-pkg",
+  ]
 }
 
 test("kernel-cmdline") {
@@ -31,11 +34,6 @@ test("kernel-cmdline") {
   ]
 }
 
-bootfs_test("kernel-cmdline-bootfs-test") {
-  name = "kernel-cmdline-test"
-  deps = [ ":kernel-cmdline" ]
-}
-
 fuzzer("kernel-cmdline-fuzzer") {
   sources = [ "kernel_cmdline_fuzztest.cc" ]
   deps = [
@@ -46,4 +44,10 @@ fuzzer("kernel-cmdline-fuzzer") {
 
 fuzzers_package("kernel-cmdline-fuzzers") {
   cpp_fuzzers = [ ":kernel-cmdline-fuzzer" ]
+}
+
+fuchsia_unittest_package("kernel-cmdline-test-pkg") {
+  package_name = "kernel-cmdline-test"
+  executable_path = "test/kernel-cmdline-test"
+  deps = [ ":kernel-cmdline" ]
 }

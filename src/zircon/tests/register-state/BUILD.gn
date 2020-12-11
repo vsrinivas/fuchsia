@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("register-state") {
   output_name = "register-state-test"
@@ -15,7 +15,15 @@ test("register-state") {
   ]
 }
 
-bootfs_test("register-state-bootfs-test") {
-  name = "register-state-test"
+fuchsia_unittest_package("register-state-test-pkg") {
+  package_name = "register-state-test"
+  executable_path = "test/register-state-test"
   deps = [ ":register-state" ]
+}
+
+group("tests") {
+  testonly = true
+  if (target_cpu == "x64") {
+    deps = [ ":register-state-test-pkg" ]
+  }
 }
