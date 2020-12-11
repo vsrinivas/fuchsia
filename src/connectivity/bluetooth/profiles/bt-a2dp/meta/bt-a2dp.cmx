@@ -17,6 +17,7 @@
             "fuchsia.media.sessions2.Publisher",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.settings.Audio",
+            "fuchsia.sys.Launcher",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry"
         ]

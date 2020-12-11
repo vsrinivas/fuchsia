@@ -38,6 +38,7 @@ use {
 };
 
 mod avrcp_relay;
+mod avrcp_target;
 mod encoding;
 mod latm;
 mod pcm_audio;
@@ -506,6 +507,12 @@ async fn main() -> Result<(), Error> {
     let _controller_pool_connected_task = fasync::Task::spawn({
         let pool = controller_pool.clone();
         peers_connected_stream.map(move |p| pool.peer_connected(p)).collect::<()>()
+    });
+
+    // TODO(fxbug.dev/66124): launch the target component based on the A2DP source availability
+    let _avrcp_target = avrcp_target::launch().await.or_else(|e| {
+        warn!("Couldn't launch AVRCP target: {}", e);
+        Err(e)
     });
 
     let peers = Arc::new(Mutex::new(peers));
