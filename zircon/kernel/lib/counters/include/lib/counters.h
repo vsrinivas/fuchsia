@@ -10,8 +10,8 @@
 #include <lib/special-sections/special-sections.h>
 
 #include <arch/ops.h>
-#include <kernel/atomic.h>
 #include <kernel/percpu.h>
+#include <fbl/atomic_ref.h>
 
 #include "counter-vmo-abi.h"
 
@@ -105,30 +105,20 @@ class Counter {
  public:
   explicit constexpr Counter(const counters::Descriptor* desc) : desc_(desc) {}
 
-  int64_t Value() const { return *Slot(); }
+  int64_t Value() const {
+    fbl::atomic_ref<int64_t> slot(*Slot());
+    return slot.load(fbl::memory_order_relaxed);
+  }
 
   void Add(int64_t delta) const {
-#if defined(__aarch64__)
-    // Use a relaxed atomic load/store for arm64 to avoid a potentially
-    // nasty race between the regular load/store operations for a +1.
-    // Relaxed atomic load/stores are about as efficient as a regular
-    // load/store.
-    atomic_add_64_relaxed(Slot(), delta);
-#else
-    // x86 can do the add in a single non atomic instruction, so the data
-    // loss of a preemption in the middle of this sequence is fairly
-    // minimal.
-    *Slot() += delta;
-#endif
+    fbl::atomic_ref<int64_t> slot(*Slot());
+    slot.store(slot.load(fbl::memory_order_relaxed) + delta, fbl::memory_order_relaxed);
   }
 
   // Set value of counter to |value|. No memory order is implied.
   void Set(uint64_t value) const {
-#if defined(__aarch64__)
-    atomic_store_64_relaxed(Slot(), value);
-#else
-    *Slot() = value;
-#endif
+    fbl::atomic_ref<int64_t> slot(*Slot());
+    slot.store(value, fbl::memory_order_relaxed);
   }
 
  protected:

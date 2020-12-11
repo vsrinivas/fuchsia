@@ -41,20 +41,12 @@ static inline void atomic_store_relaxed_u32(volatile uint32_t* ptr, uint32_t new
 
 // 64-bit versions. Assumes the compiler/platform is LLP so int is 32 bits.
 
-static inline void atomic_store_64_relaxed(volatile int64_t* ptr, int64_t newval) {
-  __atomic_store_n(ptr, newval, __ATOMIC_RELAXED);
-}
-
 static inline uint64_t atomic_or_u64(volatile uint64_t* ptr, uint64_t val) {
   return __atomic_fetch_or(ptr, val, __ATOMIC_SEQ_CST);
 }
 
 static inline uint64_t atomic_load_u64(volatile uint64_t* ptr) {
   return __atomic_load_n(ptr, __ATOMIC_SEQ_CST);
-}
-
-static inline int64_t atomic_add_64_relaxed(volatile int64_t* ptr, int64_t val) {
-  return __atomic_fetch_add(ptr, val, __ATOMIC_RELAXED);
 }
 
 __END_CDECLS
