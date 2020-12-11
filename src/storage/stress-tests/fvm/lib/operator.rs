@@ -6,7 +6,7 @@ use {
     crate::fvm::Volume,
     fuchsia_async::Task,
     fuchsia_zircon::Status,
-    log::debug,
+    log::{debug, info},
     rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
     std::collections::HashMap,
 };
@@ -368,6 +368,13 @@ impl VolumeOperator {
             debug!("{} ---->>>> {:?}", index, operation);
             let result = self.do_operation(operation).await;
             debug!("{} <<<<---- {:?} [{:?}]", index, operation, result);
+
+            if index % 1000 == 0 {
+                // This log is a heartbeat that keeps the test running
+                // on infra bots. Without this infra bots may terminate
+                // the test due to idleness.
+                info!("Completed {} operations!", index)
+            }
         }
     }
 

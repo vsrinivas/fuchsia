@@ -7,7 +7,7 @@ use {
     crate::BLOBFS_MOUNT_PATH,
     fidl_fuchsia_io::{SeekOrigin, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fuchsia_zircon::Status,
-    log::{debug, warn},
+    log::{debug, info, warn},
     rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
     stress_test_utils::{
         data::{Compressibility, FileDataFactory},
@@ -318,6 +318,13 @@ impl BlobfsOperator {
             }
 
             debug!("{} <<<<---- {:?} [{:?}]", index, operation, result);
+
+            if index % 1000 == 0 {
+                // This log is a heartbeat that keeps the test running
+                // on infra bots. Without this infra bots may terminate
+                // the test due to idleness.
+                info!("Completed {} operations!", index)
+            }
         }
     }
 }

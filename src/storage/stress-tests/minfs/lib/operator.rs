@@ -8,7 +8,7 @@ use {
         OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
-    log::debug,
+    log::{debug, info},
     rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
     stress_test_utils::{
         data::{Compressibility, FileDataFactory},
@@ -130,6 +130,13 @@ impl MinfsOperator {
             }
 
             debug!("{} <<<<---- {:?} [{:?}]", index, operation, result);
+
+            if index % 1000 == 0 {
+                // This log is a heartbeat that keeps the test running
+                // on infra bots. Without this infra bots may terminate
+                // the test due to idleness.
+                info!("Completed {} operations!", index)
+            }
         }
     }
 }

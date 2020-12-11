@@ -53,7 +53,7 @@ struct Args {
 
 impl Environment for Args {
     fn init_logger(&self) {
-        let filter = self.log_filter.unwrap_or(LevelFilter::Debug);
+        let filter = self.log_filter.unwrap_or(LevelFilter::Info);
         StdoutLogger::init(filter);
     }
 
