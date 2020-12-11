@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ramdisk-isolated-devmgr#meta/ramdisk-isolated-devmgr.cmx"
+                "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/blobfs-fsck-soft-target-test#meta/ramdisk-isolated-devmgr.cmx"
             }
         }
     },
@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/blobfs_fsck_soft_target_bin_bin_test"
+        "binary": "bin/blobfs_fsck_soft_target_bin_bin_test"
     },
     "sandbox": {
         "services": [

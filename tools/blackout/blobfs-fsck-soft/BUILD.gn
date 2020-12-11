@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 if (host_toolchain == current_toolchain) {
   rustc_binary("blobfs-fsck-soft-host") {
@@ -51,52 +50,36 @@ rustc_binary("blobfs-fsck-soft-target-bin") {
   sources = [ "src/target.rs" ]
 }
 
-package("blobfs-fsck-soft-target") {
+fuchsia_component("blobfs-fsck-soft-target-component") {
   testonly = true
   deps = [
     ":blobfs-fsck-soft-target-bin",
     "//src/storage/bin/blobfs",
     "//src/storage/blobfs/test:blobfs-load-generator",
   ]
-  binaries = [
-    {
-      name = "blobfs"
-    },
-    {
-      name = "blobfs_fsck_soft_target_bin"
-    },
-    {
-      name = "blobfs-load-generator"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/blobfs_fsck_soft_target.cmx")
-      dest = "blobfs_fsck_soft_target.cmx"
-    },
-  ]
+  manifest = "meta/blobfs_fsck_soft_target.cmx"
 }
 
-test_package("blobfs-fsck-soft-target-test") {
+fuchsia_package("blobfs-fsck-soft-target") {
+  testonly = true
+  deps = [ ":blobfs-fsck-soft-target-component" ]
+}
+
+fuchsia_component("blobfs-fsck-soft-target-test-component") {
+  testonly = true
   deps = [
     ":blobfs-fsck-soft-target-bin_test",
-    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
     "//src/storage/bin/blobfs",
     "//src/storage/blobfs/test:blobfs-load-generator",
   ]
-  binaries = [
-    {
-      name = "blobfs"
-    },
-    {
-      name = "blobfs-load-generator"
-    },
-  ]
-  tests = [
-    {
-      name = "blobfs_fsck_soft_target_bin_bin_test"
-      environment = basic_envs
-    },
+  manifest = "meta/blobfs_fsck_soft_target_bin_bin_test.cmx"
+}
+
+fuchsia_test_package("blobfs-fsck-soft-target-test") {
+  test_components = [ ":blobfs-fsck-soft-target-test-component" ]
+  deps = [
+    ":blobfs-fsck-soft-target-test-component",
+    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr-component",
   ]
 }
 
