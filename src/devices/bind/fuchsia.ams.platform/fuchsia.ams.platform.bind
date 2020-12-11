@@ -1,0 +1,9 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.Lenovo P1 G2
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ams.platform;
+
+extend uint fuchsia.BIND_PLATFORM_DEV_VID {
+  AMS = 10,
+};

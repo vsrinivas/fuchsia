@@ -16,27 +16,17 @@ extend uint fuchsia.BIND_PROTOCOL {
 extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   GENERIC = 0,
   QEMU = 1,
-  NINETY_SIX_BOARDS = 2,
   GOOGLE = 3,
   AMLOGIC = 5,
-  BROADCOM = 6,
-  HARDKERNEL = 7,
-  INTEL = 8,
   NXP = 9,
-  AMS = 10,
   DESIGNWARE = 12,
   MEDIATEK = 13,
   SONY = 14,
-  HISILICON = 15,
   TI = 16,
   ARM = 18,
   QUALCOMM = 19,
   SYNAPTICS = 20,
   MAXIM = 21,
-  NORDIC = 22,
-  MARVELL = 23,
-  INFINEON = 24,
-  SILERGY = 25,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
