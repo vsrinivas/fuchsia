@@ -194,6 +194,14 @@ union ldshape {
 #define CMPLXF(x, y) __CMPLX(x, y, float)
 #define CMPLXL(x, y) __CMPLX(x, y, long double)
 
+// This is a macro for performing a cast from a uint32_t to an int32_t as a
+// signed 32-bit two's complement representation. This is a platform-independent
+// way of performing two's complement without assuming the underlying
+// representation of a signed int is two's complement. With optimizations, Clang
+// treats this as a no-op.
+#define TWOS_COMPLEMENT_UINT32_TO_INT32(x) \
+    (((x) <= INT32_MAX) ? (int32_t)(x) : ((int32_t)((x) - (uint32_t)(INT32_MIN)) + INT32_MIN))
+
 /* fdlibm kernel functions */
 
 int __rem_pio2_large(double*, double*, int, int, int);

@@ -804,10 +804,6 @@ config("temporarily_disable_ubsan_do_not_use") {
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx/third_party/ulib/musl/src/stdio:*",
 
-    # TODO(fxbug.dev/41903): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx/third_party/ulib/musl/third_party/math:*",
-
     # TODO(fxbug.dev/41904): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/third_party/ulib/boringssl:*",

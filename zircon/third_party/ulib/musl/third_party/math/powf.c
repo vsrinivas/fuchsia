@@ -260,7 +260,7 @@ float powf(float x, float y) {
   r = (z * t1) / (t1 - 2.0f) - (w + z * w);
   z = 1.0f - (r - z);
   GET_FLOAT_WORD(j, z);
-  j += n << 23;
+  j += TWOS_COMPLEMENT_UINT32_TO_INT32((uint32_t)n << 23);
   if ((j >> 23) <= 0) /* subnormal output */
     z = scalbnf(z, n);
   else
