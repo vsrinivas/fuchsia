@@ -6,7 +6,10 @@
 #![warn(missing_docs)]
 
 use {
-    crate::{modern_backend::input_reports_reader::InputReportsReader, synthesizer},
+    crate::{
+        modern_backend::input_reports_reader::InputReportsReader, synthesizer,
+        usages::hid_usage_to_input3_key,
+    },
     anyhow::{format_err, Context as _, Error},
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
@@ -14,10 +17,11 @@ use {
     fidl_fuchsia_input::Key,
     fidl_fuchsia_input_report::{
         DeviceDescriptor, InputDeviceRequest, InputDeviceRequestStream, InputReport,
-        InputReportsReaderMarker,
+        InputReportsReaderMarker, KeyboardInputReport,
     },
     fidl_fuchsia_ui_input::{KeyboardReport, Touch},
     futures::{future, pin_mut, StreamExt, TryFutureExt},
+    std::convert::TryFrom as _,
 };
 
 /// Implements the `synthesizer::InputDevice` trait, and the server side of the
@@ -60,27 +64,34 @@ impl<F: Fn() -> DeviceDescriptor> synthesizer::InputDevice for self::InputDevice
         _camera_disable: bool,
         _time: u64,
     ) -> Result<(), Error> {
-        todo!();
+        Err(format_err!("TODO: implement media_buttons()"))
     }
 
     // TODO(fxbug.dev/63973): remove dependency on HID usage codes.
-    fn key_press(&mut self, _report: KeyboardReport, _time: u64) -> Result<(), Error> {
-        // TODO: populate the `InputReport` with a `KeyboardInputReport`.
-        self.reports.push(InputReport::EMPTY);
+    fn key_press(&mut self, report: KeyboardReport, time: u64) -> Result<(), Error> {
+        self.reports.push(InputReport {
+            event_time: Some(i64::try_from(time).context("converting time to i64")?),
+            keyboard: Some(KeyboardInputReport {
+                pressed_keys: Some(vec![]), // `keyboard.rs` requires `Some`-thing.
+                pressed_keys3: Some(Self::convert_keyboard_report_to_keys(&report)?),
+                ..KeyboardInputReport::EMPTY
+            }),
+            ..InputReport::EMPTY
+        });
         Ok(())
     }
 
     // TODO(fxbug.dev/63973): remove reference to HID usage codes.
-    fn key_press_usage(&mut self, _usage: Option<u32>, _time: u64) -> Result<(), Error> {
-        todo!();
+    fn key_press_usage(&mut self, usage: Option<u32>, time: u64) -> Result<(), Error> {
+        self.key_press(KeyboardReport { pressed_keys: usage.into_iter().collect() }, time)
     }
 
     fn tap(&mut self, _pos: Option<(u32, u32)>, _time: u64) -> Result<(), Error> {
-        todo!();
+        Err(format_err!("TODO: implement tap()"))
     }
 
     fn multi_finger_tap(&mut self, _fingers: Option<Vec<Touch>>, _time: u64) -> Result<(), Error> {
-        todo!();
+        Err(format_err!("TODO: implement multi_finger_tap()"))
     }
 
     /// Returns a `Future` which resolves when all `InputReport`s for this device
@@ -205,6 +216,17 @@ impl<F: Fn() -> DeviceDescriptor> InputDevice<F> {
             Err(e) => Some(Err(anyhow::Error::from(e).context("while reading InputDeviceRequest"))),
         }
     }
+
+    fn convert_keyboard_report_to_keys(report: &KeyboardReport) -> Result<Vec<Key>, Error> {
+        report
+            .pressed_keys
+            .iter()
+            .map(|&usage| {
+                hid_usage_to_input3_key(usage as u16)
+                    .ok_or_else(|| format_err!("no Key for usage {:?}", usage))
+            })
+            .collect()
+    }
 }
 
 #[cfg(test)]
@@ -308,6 +330,115 @@ mod tests {
             );
             assert_matches!(executor.run_until_stalled(&mut get_descriptor_fut), Poll::Ready(_));
             Ok(())
+        }
+    }
+
+    mod report_contents {
+        use {
+            super::{
+                utils::{get_input_reports, make_input_device_proxy_and_struct},
+                *,
+            },
+            crate::usages::Usages,
+            std::convert::TryInto as _,
+        };
+
+        #[fasync::run_until_stalled(test)]
+        async fn key_press_generates_expected_keyboard_input_report() -> Result<(), Error> {
+            let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device.key_press(
+                KeyboardReport {
+                    pressed_keys: vec![Usages::HidUsageKeyA as u32, Usages::HidUsageKeyB as u32],
+                },
+                DEFAULT_REPORT_TIMESTAMP,
+            )?;
+
+            let input_reports = get_input_reports(input_device, input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    keyboard: Some(KeyboardInputReport {
+                        pressed_keys: Some(vec![]),
+                        pressed_keys3: Some(vec![Key::A, Key::B]),
+                        ..KeyboardInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn key_press_usage_generates_expected_keyboard_input_report_for_some(
+        ) -> Result<(), Error> {
+            let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device
+                .key_press_usage(Some(Usages::HidUsageKeyA as u32), DEFAULT_REPORT_TIMESTAMP)?;
+
+            let input_reports = get_input_reports(input_device, input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    keyboard: Some(KeyboardInputReport {
+                        pressed_keys: Some(vec![]),
+                        pressed_keys3: Some(vec![Key::A]),
+                        ..KeyboardInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn key_press_usage_generates_expected_keyboard_input_report_for_none(
+        ) -> Result<(), Error> {
+            let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device.key_press_usage(None, DEFAULT_REPORT_TIMESTAMP)?;
+
+            let input_reports = get_input_reports(input_device, input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    keyboard: Some(KeyboardInputReport {
+                        pressed_keys: Some(vec![]),
+                        pressed_keys3: Some(vec![]),
+                        ..KeyboardInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn key_press_returns_error_if_usage_cannot_be_mapped_to_key() {
+            let (_input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            assert_matches!(
+                input_device.key_press(
+                    KeyboardReport { pressed_keys: vec![0xffff_ffff] },
+                    DEFAULT_REPORT_TIMESTAMP
+                ),
+                Err(_)
+            );
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn key_press_usage_returns_error_if_usage_cannot_be_mapped_to_key() {
+            let (_input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            assert_matches!(
+                input_device.key_press_usage(Some(0xffff_ffff), DEFAULT_REPORT_TIMESTAMP),
+                Err(_)
+            );
         }
     }
 
@@ -569,6 +700,40 @@ mod tests {
         }
     }
 
+    // Because `input_synthesis` is a library, unimplemented features should yield `Error`s,
+    // rather than panic!()-ing.
+    mod unimplemented_trait_methods {
+        use super::{utils::make_input_device_proxy_and_struct, *};
+
+        #[test]
+        fn media_buttons_yields_error() -> Result<(), Error> {
+            let _executor = fuchsia_async::Executor::new(); // Create TLS executor used by `endpoints`.
+            let (_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            let media_buttons_result =
+                input_device.media_buttons(false, false, false, false, false, false, 0);
+            assert_matches!(media_buttons_result, Err(_));
+            Ok(())
+        }
+
+        #[test]
+        fn tap_yields_error() -> Result<(), Error> {
+            let _executor = fuchsia_async::Executor::new(); // Create TLS executor used by `endpoints`.
+            let (_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            let tap_result = input_device.tap(None, 0);
+            assert_matches!(tap_result, Err(_));
+            Ok(())
+        }
+
+        #[test]
+        fn multi_finger_tap_yields_error() -> Result<(), Error> {
+            let _executor = fuchsia_async::Executor::new(); // Create TLS executor used by `endpoints`.
+            let (_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            let multi_finger_tap_result = input_device.multi_finger_tap(None, 0);
+            assert_matches!(multi_finger_tap_result, Err(_));
+            Ok(())
+        }
+    }
+
     // Because `input_synthesis` is a library, unsupported use cases should yield `Error`s,
     // rather than panic!()-ing.
     mod unsupported_use_cases {
@@ -608,6 +773,7 @@ mod tests {
                 InputDeviceMarker, InputDeviceProxy, InputReportsReaderMarker,
                 InputReportsReaderProxy,
             },
+            fuchsia_zircon as zx,
         };
 
         /// Creates a `DeviceDescriptor` for a keyboard which has the keys enumerated
@@ -658,6 +824,31 @@ mod tests {
                 .get_input_reports_reader(input_reports_reader_server_end)
                 .expect("sending get_input_reports_reader request");
             input_reports_reader_proxy
+        }
+
+        /// Serves `fuchsia.input.report.InputDevice` and `fuchsia.input.report.InputReportsReader`
+        /// protocols using `input_device`, and reads `InputReport`s with one call to
+        /// `input_device_proxy.read_input_reports()`. Then drops the connections to
+        /// `fuchsia.input.report.InputDevice` and `fuchsia.input.report.InputReportsReader`.
+        ///
+        /// # Returns
+        /// The reports provided by the `InputDevice`.
+        pub(super) async fn get_input_reports<F: Fn() -> DeviceDescriptor>(
+            input_device: Box<InputDevice<F>>,
+            mut input_device_proxy: InputDeviceProxy,
+        ) -> Vec<InputReport> {
+            let input_reports_reader_proxy =
+                make_input_reports_reader_proxy(&mut input_device_proxy);
+            let input_device_server_fut = input_device.serve_reports();
+            let input_reports_fut = input_reports_reader_proxy.read_input_reports();
+            std::mem::drop(input_reports_reader_proxy); // Close channel to `input_reports_reader_server_end`
+            std::mem::drop(input_device_proxy); // Terminate `input_device_request_stream`.
+            future::join(input_device_server_fut, input_reports_fut)
+                .await
+                .1
+                .expect("fidl error")
+                .map_err(zx::Status::from_raw)
+                .expect("service error")
         }
     }
 }
