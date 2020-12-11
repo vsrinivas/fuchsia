@@ -377,13 +377,14 @@ TEST_F(InspectManagerTest, ExposeSettings_TrackUploadPolicyChanges) {
                                 "upload_policy", ToString(ReportingPolicy::kArchive))))))))))));
 
   watcher.Set(ReportingPolicy::kDoNotFileAndDelete);
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(Contains(
-                  AllOf(NodeMatches(NameMatches("crash_reporter")),
-                        ChildrenMatch(Contains(NodeMatches(AllOf(
-                            NameMatches("settings"),
-                            PropertyList(ElementsAre(StringIs(
-                                "upload_policy", ToString(ReportingPolicy::kDoNotFileAndDelete))))))))))));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(
+          AllOf(NodeMatches(NameMatches("crash_reporter")),
+                ChildrenMatch(Contains(NodeMatches(AllOf(
+                    NameMatches("settings"),
+                    PropertyList(ElementsAre(StringIs(
+                        "upload_policy", ToString(ReportingPolicy::kDoNotFileAndDelete))))))))))));
 
   watcher.Set(ReportingPolicy::kUpload);
   EXPECT_THAT(InspectTree(),

@@ -54,8 +54,8 @@ void CreatePreviousLogsFile(cobalt::Logger* cobalt) {
   // We read the set of /cache files into a single /tmp file.
   system_log_recorder::ProductionDecoder decoder;
   float compression_ratio;
-  if (!system_log_recorder::Concatenate(kCurrentLogsDir, &decoder,
-                                       kPreviousLogsFilePath, &compression_ratio)) {
+  if (!system_log_recorder::Concatenate(kCurrentLogsDir, &decoder, kPreviousLogsFilePath,
+                                        &compression_ratio)) {
     return;
   }
   FX_LOGS(INFO) << fxl::StringPrintf(
