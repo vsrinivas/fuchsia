@@ -3,15 +3,14 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.hardware.display.Provider": "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx",
-                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
-                "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
-                "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
+                "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
             }
         }
     },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
         "binary": "test/root_presenter_unittests"

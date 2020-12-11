@@ -6,14 +6,10 @@
         "binary": "test/root_presenter_apptests"
     },
     "sandbox": {
-        "features": [
-            "vulkan"
-        ],
         "services": [
             "fuchsia.recovery.FactoryReset",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.sys.Loader"
         ]
     }
 }
