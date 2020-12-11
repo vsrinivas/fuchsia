@@ -54,18 +54,22 @@ Note: You need to get OSRB approval first before uploading a change for review.
    fx set core.x64 && fx build
    ```
 1. **Do not submit the change for code review. Get OSRB approval first.**
-   Create an tracking issue at 
-   [Open Source Review Board (OSRB) template](https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=Open+Source+Review+Board+)
-   Identify all the crates to be brought in
-   (see the diff in `//third_party/rust_crates/vendor/`).
-   If there are any files in the source repository that are not included when
-   vendored, make a note of that for the OSRB reviewer. For example, font files
-   that are only used for testing but are excluded when the crate is vendored.
-   If you are not a Google employee, you will need to ask a Google employee to
-   do this part for you.
+   - Create an tracking issue at 
+     [Open Source Review Board (OSRB) template](https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=Open+Source+Review+Board+)
+   - Do not add a specific 'owner' to the request. The OSRB team meets regularly 
+     to review the issues. Please allow about a week for a response.
+   - Identify all the crates to be brought in (see the diff in 
+     `//third_party/rust_crates/vendor/`).
+   - If there are any files in the source repository that are not included when
+     vendored, make a note of that for the OSRB reviewer. For example, font files
+     that are only used for testing but are excluded when the crate is vendored.
+   - If you are not a Google employee, you will need to ask a Google employee to
+     do this part for you.
 
    Note: As part of OSRB review, you may be asked to import only a subset
-   of the files in a third-party crate. See [Importing a subset of files in a crate](#importing-a-subset-of-files-in-a-crate) for how to do this.
+   of the files in a third-party crate. See 
+   [Importing a subset of files in a crate](#importing-a-subset-of-files-in-a-crate) 
+   for how to do this.
 
 1. After the OSRB approval, upload the change for review to Gerrit. Include the OSRB bug
    number in the change (e.g. Bug: "1234").
