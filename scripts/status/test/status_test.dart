@@ -100,11 +100,11 @@ void main() {
     return Process.start('fx', args).then((Process pr) {
       pr.exitCode.then((exitCode) {
         if (exitCode != 0) {
-          throw 'Unexpected error running fx gn format:\n' +
-              'exit code $exitCode\n' +
-              'command: fx $args\n' +
-              'input:\n' +
-              '$argsGn';
+          throw Exception('Unexpected error running fx gn format:\n'
+              'exit code $exitCode\n'
+              'command: fx $args\n'
+              'input:\n'
+              '$argsGn');
         }
       });
       // With the `--stdin` option, `gn format --dump-tree` echos the formatted
@@ -112,13 +112,13 @@ void main() {
       // that the JSON parser doesn't complain.
       var data = pr.stdout
           .transform(utf8.decoder)
-          .transform(new LineSplitter())
+          .transform(LineSplitter())
           .takeWhile((s) => s != '}')
           .join('\n');
       pr.stdin
         ..writeln(argsGn)
         ..close();
-      return data.then((d) => jsonDecode(d + '}'));
+      return data.then((d) => jsonDecode('$d}'));
     });
   }
 
