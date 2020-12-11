@@ -309,9 +309,12 @@ fn impl_valid_fidl_table(
     };
 
     let custom_validator = fidl_table_validator(name.span(), attrs)?;
-    let custom_validator_error = custom_validator
-        .as_ref()
-        .map(|validator| quote!(Logical(<#validator as Validate<#name>>::Error),));
+    let custom_validator_error = custom_validator.as_ref().map(|validator| {
+        quote!(
+            /// Custom validator error.
+            Logical(<#validator as Validate<#name>>::Error),
+        )
+    });
     let custom_validator_call =
         custom_validator.as_ref().map(|validator| quote!(#validator::validate(&maybe_valid)?;));
     let custom_validator_error_from_impl = custom_validator.map(|validator| {
@@ -376,21 +379,31 @@ fn impl_valid_fidl_table(
                 FidlFieldKind::Required => true,
                 _ => false,
             })
-            .map(FidlField::camel_case)
-            .map(|camel_case| quote!(#camel_case,)),
+            .map(|field| {
+                let doc = format!("`{}` is missing.", field.ident.to_string());
+                let camel_case = FidlField::camel_case(field);
+                quote!(
+                    #[doc = #doc]
+                    #camel_case,
+                )
+            }),
     );
 
+    let missing_error_doc = format!("Missing fields in `{}`.", fidl_table_type);
+    let error_doc = format!("Errors validating `{}`.", fidl_table_type);
     Ok(quote!(
-        #[allow(missing_docs)]
+        #[doc = #missing_error_doc]
         #[derive(Debug, Clone, Copy, PartialEq)]
         pub enum #missing_field_error_type {
             #field_errors
         }
 
-        #[allow(missing_docs)]
+        #[doc = #error_doc]
         #[derive(Debug)]
         pub enum #error_type_name {
+            /// Missing Field.
             MissingField(#missing_field_error_type),
+            /// Invalid Field.
             InvalidField(anyhow::Error),
             #custom_validator_error
         }
