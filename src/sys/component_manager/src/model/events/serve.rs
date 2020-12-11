@@ -223,7 +223,7 @@ fn maybe_create_capability_routed_payload(
 ) -> Option<fsys::EventResult> {
     let routing_protocol = Some(serve_routing_protocol_async(capability_provider));
 
-    let name = source.name().map(|n| n.to_string());
+    let name = source.source_name().map(|n| n.to_string());
     let source = Some(match source {
         CapabilitySource::Component { realm, .. } => {
             let realm = realm.upgrade().ok()?;

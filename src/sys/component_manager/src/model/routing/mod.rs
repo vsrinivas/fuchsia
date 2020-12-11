@@ -247,7 +247,7 @@ fn get_default_provider(
                     target_realm,
                     source_realm: realm.clone(),
                     name: capability
-                        .name()
+                        .source_name()
                         .expect("capability with source path should have a name")
                         .clone(),
                     path: path.clone(),
@@ -315,7 +315,7 @@ pub async fn open_capability_at_source(
             CapabilitySource::Framework { capability, scope_moniker: m } => {
                 return Err(RoutingError::capability_from_framework_not_found(
                     &m,
-                    capability.name().to_string(),
+                    capability.source_name().to_string(),
                 )
                 .into());
             }
@@ -329,7 +329,7 @@ pub async fn open_capability_at_source(
             CapabilitySource::Builtin { capability } => {
                 return Err(ModelError::from(
                     RoutingError::capability_from_component_manager_not_found(
-                        capability.name().to_string(),
+                        capability.source_name().to_string(),
                     ),
                 ));
             }

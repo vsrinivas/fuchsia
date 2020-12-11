@@ -54,12 +54,12 @@ impl CapabilitySource {
         }
     }
 
-    pub fn name(&self) -> Option<&CapabilityName> {
+    pub fn source_name(&self) -> Option<&CapabilityName> {
         match self {
-            CapabilitySource::Component { capability, .. } => capability.name(),
-            CapabilitySource::Framework { capability, .. } => Some(capability.name()),
-            CapabilitySource::Builtin { capability } => Some(capability.name()),
-            CapabilitySource::Namespace { capability } => capability.name(),
+            CapabilitySource::Component { capability, .. } => capability.source_name(),
+            CapabilitySource::Framework { capability, .. } => Some(capability.source_name()),
+            CapabilitySource::Builtin { capability } => Some(capability.source_name()),
+            CapabilitySource::Namespace { capability } => capability.source_name(),
             CapabilitySource::Capability { .. } => None,
         }
     }
@@ -127,7 +127,7 @@ impl InternalCapability {
         }
     }
 
-    pub fn name(&self) -> &CapabilityName {
+    pub fn source_name(&self) -> &CapabilityName {
         match self {
             InternalCapability::Service(name) => &name,
             InternalCapability::Protocol(name) => &name,
@@ -250,7 +250,7 @@ impl InternalCapability {
 
 impl fmt::Display for InternalCapability {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} '{}' from component manager", self.type_name(), self.name())
+        write!(f, "{} '{}' from component manager", self.type_name(), self.source_name())
     }
 }
 
@@ -367,20 +367,13 @@ impl ComponentCapability {
     }
 
     /// Return the name of the capability, if this is a capability declaration.
-    pub fn name<'a>(&self) -> Option<&CapabilityName> {
+    pub fn source_name<'a>(&self) -> Option<&CapabilityName> {
         match self {
             ComponentCapability::Storage(storage) => Some(&storage.name),
             ComponentCapability::Protocol(protocol) => Some(&protocol.name),
             ComponentCapability::Directory(directory) => Some(&directory.name),
             ComponentCapability::Runner(runner) => Some(&runner.name),
             ComponentCapability::Resolver(resolver) => Some(&resolver.name),
-            _ => None,
-        }
-    }
-
-    /// Return the source name of the capability, if one exists.
-    pub fn source_name<'a>(&self) -> Option<&CapabilityName> {
-        match self {
             ComponentCapability::Use(use_) => match use_ {
                 UseDecl::Protocol(UseProtocolDecl { source_name, .. }) => Some(source_name),
                 UseDecl::Directory(UseDirectoryDecl { source_name, .. }) => Some(source_name),
@@ -424,8 +417,6 @@ impl ComponentCapability {
                 OfferDecl::Resolver(OfferResolverDecl { source_name, .. }) => Some(source_name),
                 _ => None,
             },
-            ComponentCapability::Storage(storage) => Some(&storage.backing_dir),
-            _ => None,
         }
     }
 
@@ -767,10 +758,15 @@ impl ComponentCapability {
         decl.find_protocol_source(self.source_name()?)
     }
 
-    /// Given an offer/expose of a directory from `self`, return the associated DirectoryDecl,
+    /// Given an offer/expose of a directory from `self` or a storage decl, return the associated DirectoryDecl,
     /// if it exists.
     pub fn find_directory_source<'a>(&self, decl: &'a ComponentDecl) -> Option<&'a DirectoryDecl> {
-        decl.find_directory_source(self.source_name()?)
+        match &self {
+            ComponentCapability::Storage(storage) => {
+                decl.find_directory_source(&storage.backing_dir)
+            }
+            _ => decl.find_directory_source(self.source_name()?),
+        }
     }
 
     /// Given an offer/expose of a runner from `self`, return the associated RunnerDecl,
