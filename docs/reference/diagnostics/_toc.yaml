@@ -103,9 +103,8 @@ toc:
     - title: "iquery"
       path: /docs/reference/diagnostics/consumers/iquery.md
 
-    # TODO(fxbug.dev/60824)
-    # - title: "log_listener"
-    #   path: /docs/reference/diagnostics/consumers/log_listener.md
+    - title: "log_listener CLI"
+      path: /docs/reference/diagnostics/consumers/log_listener.md
 
     # TODO(fxbug.dev/60828)
     # - title: "triage tool"

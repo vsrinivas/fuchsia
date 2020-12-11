@@ -22,14 +22,18 @@
 ##    --help|-h               show this help and attempt to also show the
 ##                            on-device log_listener help
 ##
-##    LOG_LISTENER_FLAGS      bypass flags for the on-device log_listener
+##    LOG_LISTENER_FLAGS      bypass flags for the on-device log_listener, options are listed at
+##                            https://fuchsia.dev/fuchsia-src/reference/diagnostics/logs/log_listener
 ##
 ## Creates an SSH connection with a device and starts listening for logs.
 ## It will listen to the device specified with `fx -d DEVICE log` or
 ## `fx set-device`, otherwise it will try to find a connected device.
 ##
-## For more information on flags supported by on-device log_listener, look at
-## the source code in https://fuchsia.googlesource.com/fuchsia/+/HEAD/garnet/bin/log_listener/src/main.rs#314
+## If the command hangs without printing anything, first check to make sure `fx shell`
+## works on its own.
+##
+## For more information on flags supported by the on-device log_listener, see
+## https://fuchsia.dev/fuchsia-src/reference/diagnostics/consumers/log_listener.
 ##
 
 set -o pipefail

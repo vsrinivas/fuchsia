@@ -17,6 +17,8 @@ To view specifics logs, add a tag specification:
 $ log_listener --tag foobar
 ```
 
+See [log_listener CLI] for a list of available flags.
+
 ## Symbolization
 
 `//tools/symbolize` should be used to symbolize stack traces. It should be
@@ -25,3 +27,5 @@ are hosted:
 ```
 tools/symbolize --build-id-dir .build-id
 ```
+
+[log_listener CLI]: /docs/reference/diagnostics/consumers/log_listener.md
