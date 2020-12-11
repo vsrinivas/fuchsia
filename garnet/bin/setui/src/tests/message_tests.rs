@@ -27,6 +27,7 @@ pub enum TestMessage {
     Error,
     Baz,
     Qux,
+    Thud,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Copy, Hash)]
@@ -62,6 +63,7 @@ async fn verify_result<
 
 static ORIGINAL: TestMessage = TestMessage::Foo;
 static MODIFIED: TestMessage = TestMessage::Qux;
+static MODIFIED_2: TestMessage = TestMessage::Thud;
 static BROADCAST: TestMessage = TestMessage::Baz;
 static REPLY: TestMessage = TestMessage::Bar;
 
@@ -678,16 +680,26 @@ async fn test_propagation() {
     let messenger_factory = test::message::create_hub();
 
     // Create messenger to send source message.
-    let (sending_messenger, _) = messenger_factory
+    let (sending_messenger, sending_receptor) = messenger_factory
         .create(MessengerType::Unbound)
         .await
         .expect("sending messenger should be created");
+    let sending_signature = sending_receptor.get_signature();
 
-    // Create broker to propagate a derived message.
-    let (_, mut broker) = messenger_factory
+    // Create brokers to propagate a derived message.
+    let mut broker_1 = messenger_factory
         .create(MessengerType::Broker(None))
         .await
-        .expect("broker should be created");
+        .expect("broker should be created")
+        .1;
+    let modifier_1_signature = broker_1.get_signature();
+
+    let mut broker_2 = messenger_factory
+        .create(MessengerType::Broker(None))
+        .await
+        .expect("broker should be created")
+        .1;
+    let modifier_2_signature = broker_2.get_signature();
 
     // Create messenger to be target of source message.
     let mut target_receptor = messenger_factory
@@ -701,10 +713,10 @@ async fn test_propagation() {
         .message(ORIGINAL, Audience::Messenger(target_receptor.get_signature()))
         .send();
 
-    // Ensure broker receives message and propagate modified message.
+    // Ensure broker 1 receives original message and propagate modified message.
     verify_payload(
         ORIGINAL,
-        &mut broker,
+        &mut broker_1,
         Some(Box::new(move |client| -> BoxFuture<'_, ()> {
             Box::pin(async move {
                 client.propagate(MODIFIED).send().ack();
@@ -713,12 +725,31 @@ async fn test_propagation() {
     )
     .await;
 
-    // Ensure target receives message and reply back.
+    // Ensure broker 2 receives modified message and propagates a differen
+    // modified message.
     verify_payload(
         MODIFIED,
+        &mut broker_2,
+        Some(Box::new(move |client| -> BoxFuture<'_, ()> {
+            Box::pin(async move {
+                client.propagate(MODIFIED_2).send().ack();
+            })
+        })),
+    )
+    .await;
+
+    // Ensure target receives message and reply back.
+    verify_payload(
+        MODIFIED_2,
         &mut target_receptor,
         Some(Box::new(move |client| -> BoxFuture<'_, ()> {
             Box::pin(async move {
+                // ensure the original author is attributed to the message.
+                assert_eq!(client.get_author(), sending_signature);
+                // ensure the modifiers are present.
+                assert!(client.get_modifiers().contains(&modifier_1_signature));
+                assert!(client.get_modifiers().contains(&modifier_2_signature));
+                // ensure the message author has not been modified.
                 client.reply(REPLY).send().ack();
             })
         })),

@@ -457,8 +457,9 @@ pub enum Attribution<P: Payload + 'static, A: Address + 'static, R: Role + 'stat
     Source(MessageType<P, A, R>),
     /// `Derived` attributed messages are messages that have been modified by
     /// someone in the message path. They follow the same trajectory (audience
-    /// or return path), but their message has been altered.
-    Derived(Box<Message<P, A, R>>),
+    /// or return path), but their message has been altered. The supplied
+    /// signature is the messenger that modified the specified message.
+    Derived(Box<Message<P, A, R>>, Signature<A>),
 }
 
 /// The core messaging unit. A Message may be annotated by messengers, but is
@@ -488,7 +489,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
         let mut return_path = vec![];
 
         // A derived message adopts the return path of the original message.
-        if let Attribution::Derived(message) = &attribution {
+        if let Attribution::Derived(message, _) = &attribution {
             return_path.append(&mut message.get_return_path());
         }
 
@@ -504,8 +505,24 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
         self.timestamp.clone()
     }
 
+    /// Returns the Signatures of messengers who have modified this message
+    /// through propagation.
+    pub fn get_modifiers(&self) -> Vec<Signature<A>> {
+        let mut modifiers = vec![];
+
+        if let Attribution::Derived(origin, signature) = &self.attribution {
+            modifiers.push(signature.clone());
+            modifiers.extend(origin.get_modifiers());
+        }
+
+        modifiers
+    }
+
     pub fn get_author(&self) -> Signature<A> {
-        self.author.signature.clone()
+        match &self.attribution {
+            Attribution::Source(_) => self.author.signature.clone(),
+            Attribution::Derived(message, _) => message.get_author(),
+        }
     }
 
     /// Binds the action fuse to the author's receptor. The fuse will fire
@@ -525,7 +542,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
     pub(super) fn get_message_type(&self) -> MessageType<P, A, R> {
         match &self.attribution {
             Attribution::Source(message_type) => message_type.clone(),
-            Attribution::Derived(message) => message.get_message_type(),
+            Attribution::Derived(message, _) => message.get_message_type(),
         }
     }
 

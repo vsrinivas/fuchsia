@@ -49,7 +49,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageBuild
     ) -> MessageBuilder<P, A, R> {
         MessageBuilder {
             payload,
-            attribution: Attribution::Derived(Box::new(source)),
+            attribution: Attribution::Derived(Box::new(source), messenger.get_signature()),
             messenger,
             forwarder: None,
             timeout: None,

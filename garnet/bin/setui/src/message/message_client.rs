@@ -63,6 +63,10 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageClien
         self.message.get_timestamp()
     }
 
+    pub fn get_modifiers(&self) -> Vec<Signature<A>> {
+        self.message.get_modifiers()
+    }
+
     /// Returns the Signature of the original author of the associated Message.
     /// This value can be used to communicate with the author at top-level
     /// communication.
