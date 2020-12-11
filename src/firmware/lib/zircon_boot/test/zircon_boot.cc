@@ -25,6 +25,8 @@ constexpr size_t kZirconPartitionSize = 128 * 1024;
 constexpr size_t kVbmetaPartitionSize = 64 * 1024;
 constexpr size_t kImageSize = 1024;
 
+const char kTestCmdline[] = "foo=bar";
+
 void CreateMockZirconBootOps(std::unique_ptr<MockZirconBootOps>* out) {
   auto device = std::make_unique<MockZirconBootOps>();
 
@@ -74,6 +76,18 @@ void CreateMockZirconBootOps(std::unique_ptr<MockZirconBootOps>* out) {
     ASSERT_OK(device->WriteToPartition(ele.name, 0, ele.data_len, ele.data));
   }
 
+  device->SetAddDeviceZbiItemsMethod([](zbi_header_t* image, size_t capacity, AbrSlotIndex slot) {
+    if (AppendCurrentSlotZbiItem(image, capacity, slot) != ZBI_RESULT_OK) {
+      return false;
+    }
+
+    if (zbi_create_entry_with_payload(image, capacity, ZBI_TYPE_CMDLINE, 0, 0, kTestCmdline,
+                                      sizeof(kTestCmdline)) != ZBI_RESULT_OK) {
+      return false;
+    }
+    return true;
+  });
+
   *out = std::move(device);
 }
 
@@ -87,12 +101,46 @@ void MarkSlotActive(MockZirconBootOps* dev, AbrSlotIndex slot) {
   }
 }
 
+// We only care about |type|, |extra| and |payload|
+// Use std::tuple for the built-in comparison operator.
+using NormalizedZbiItem = std::tuple<uint32_t, uint32_t, std::vector<uint8_t>>;
+NormalizedZbiItem NormalizeZbiItem(uint32_t type, uint32_t extra, const void* payload,
+                                   size_t size) {
+  const uint8_t* start = static_cast<const uint8_t*>(payload);
+  return {type, extra, std::vector<uint8_t>(start, start + size)};
+}
+
+zbi_result_t ExtractAndSortZbiItemsCallback(zbi_header_t* hdr, void* payload, void* cookie) {
+  std::multiset<NormalizedZbiItem>* out = static_cast<std::multiset<NormalizedZbiItem>*>(cookie);
+  if (hdr->type == ZBI_TYPE_KERNEL_ARM64) {
+    return ZBI_RESULT_OK;
+  }
+  out->insert(NormalizeZbiItem(hdr->type, hdr->extra, payload, hdr->length));
+  return ZBI_RESULT_OK;
+}
+
+void ExtractAndSortZbiItems(const uint8_t* buffer, std::multiset<NormalizedZbiItem>* out) {
+  out->clear();
+  ASSERT_EQ(zbi_for_each(buffer, ExtractAndSortZbiItemsCallback, out), ZBI_RESULT_OK);
+}
+
 void ValidateBootedSlot(const MockZirconBootOps* dev, AbrSlotIndex expected_slot) {
   auto booted_slot = dev->GetBootedSlot();
   ASSERT_TRUE(booted_slot.has_value());
   ASSERT_EQ(*booted_slot, expected_slot);
-  // TODO(b/174968242): Once zbi handling logic is integrated, validate that the expected zbi
-  // items are added.
+  // Use multiset so that we can catch bugs such as duplicated append.
+  std::multiset<NormalizedZbiItem> zbi_items_added;
+  ASSERT_NO_FAILURES(ExtractAndSortZbiItems(dev->GetBootedImage().data(), &zbi_items_added));
+
+  std::string current_slot = "zvb.current_slot=" + std::string(AbrGetSlotSuffix(expected_slot));
+  std::multiset<NormalizedZbiItem> zbi_items_expected = {
+      // Verify that the current slot item is appended. (plus 1 for null terminator)
+      NormalizeZbiItem(ZBI_TYPE_CMDLINE, 0, current_slot.data(), current_slot.size() + 1),
+      // Verify that the additional cmdline item is appended.
+      NormalizeZbiItem(ZBI_TYPE_CMDLINE, 0, kTestCmdline, sizeof(kTestCmdline)),
+  };
+  // Exactly the above items are appended. No more, no less.
+  EXPECT_EQ(zbi_items_added, zbi_items_expected);
 }
 
 // Tests that boot logic for OS ABR works correctly.
@@ -126,7 +174,21 @@ TEST(BootTests, TestSuccessfulBootOsAbr) {
       TestOsAbrSuccessfulBoot(kAbrSlotIndexR, kAbrSlotIndexR, kForceRecoveryOn));
 }
 
-// Tests that OS ABR booting logic detects zbi header corruption and falls back to the other slots.
+TEST(BootTests, SkipAddZbiItems) {
+  std::unique_ptr<MockZirconBootOps> dev;
+  ASSERT_NO_FATAL_FAILURES(CreateMockZirconBootOps(&dev));
+  ZirconBootOps zircon_boot_ops = dev->GetZirconBootOps();
+  zircon_boot_ops.get_firmware_slot = nullptr;
+  zircon_boot_ops.add_zbi_items = nullptr;
+  std::vector<uint8_t> buffer(kZirconPartitionSize);
+  ASSERT_EQ(LoadAndBoot(&zircon_boot_ops, buffer.data(), buffer.size(), kForceRecoveryOff),
+            kBootResultBootReturn);
+  std::multiset<NormalizedZbiItem> zbi_items_added;
+  ASSERT_NO_FAILURES(ExtractAndSortZbiItems(dev->GetBootedImage().data(), &zbi_items_added));
+  ASSERT_TRUE(zbi_items_added.empty());
+}
+
+// Tests that OS ABR booting logic detects ZBI header corruption and falls back to the other slots.
 // |corrupt_hdr| is a function that specifies how header should be corrupted.
 void TestInvalidZbiHeaderOsAbr(std::function<void(zbi_header_t* hdr)> corrupt_hdr) {
   std::unique_ptr<MockZirconBootOps> dev;

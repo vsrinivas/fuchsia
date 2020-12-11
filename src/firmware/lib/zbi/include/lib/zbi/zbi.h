@@ -141,7 +141,7 @@ zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t callback, voi
 //     ZBI_RESULT_BAD_TYPE - If the base ZBI is not a valid ZBI container.
 //     ZBI_RESULT_TOO_BIG - If the base ZBI is too small.
 zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32_t extra,
-                              uint32_t flags, uint32_t payload_length, void** payload);
+                              uint32_t flags, size_t payload_length, void** payload);
 
 // Creates a new ZBI entry with the provided payload.
 //
@@ -169,7 +169,7 @@ zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32
 //     ZBI_RESULT_TOO_BIG - If the base ZBI is too small.
 zbi_result_t zbi_create_entry_with_payload(void* base, size_t capacity, uint32_t type,
                                            uint32_t extra, uint32_t flags, const void* payload,
-                                           uint32_t payload_length);
+                                           size_t payload_length);
 
 // Returns the payload buffer for the next ZBI entry to add.
 //

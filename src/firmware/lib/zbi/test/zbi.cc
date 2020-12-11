@@ -529,6 +529,14 @@ TEST(ZbiTests, ZbiTestCreateEntryTestZbiCrc32NotSupported) {
             ZBI_RESULT_ERROR);
 }
 
+TEST(ZbiTest, ZbiTestCreateEntryTestPayloadTooBig) {
+  single_entry_test_zbi_t zbi;
+  void* payload = nullptr;
+  size_t payload_length = std::numeric_limits<uint32_t>::max();
+  ASSERT_EQ(zbi_create_entry(&zbi, sizeof(zbi), 0, 0, 0, payload_length + 1, &payload),
+            ZBI_RESULT_TOO_BIG);
+}
+
 TEST(ZbiTests, ZbiTestCreateEntryTestZbiNotContainer) {
   single_entry_test_zbi_t zbi;
   zbi.container.type = 0;
@@ -598,6 +606,14 @@ TEST(ZbiTests, ZbiTestCreateEntryWithPayloadTestZbiCrc32NotSupported) {
 
   ASSERT_EQ(zbi_create_entry_with_payload(&container, 0, 0, 0, ZBI_FLAG_CRC32, &payload, 0),
             ZBI_RESULT_ERROR);
+}
+
+TEST(ZbiTests, ZbiTestCreateEntryWithPayloadTestPayloadTooBig) {
+  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
+  void* payload = nullptr;
+  size_t payload_length = std::numeric_limits<uint32_t>::max();
+  ASSERT_EQ(zbi_create_entry_with_payload(&container, 0, 0, 0, 0, &payload, payload_length + 1),
+            ZBI_RESULT_TOO_BIG);
 }
 
 TEST(ZbiTests, ZbiTestCreateEntryWithPayloadTestZbiNotContainer) {

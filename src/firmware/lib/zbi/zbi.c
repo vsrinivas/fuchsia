@@ -173,7 +173,7 @@ zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t callback, voi
 
 zbi_result_t zbi_create_entry_with_payload(void* base, const size_t capacity, uint32_t type,
                                            uint32_t extra, uint32_t flags, const void* payload,
-                                           uint32_t payload_length) {
+                                           size_t payload_length) {
   if (!base || !payload) {
     return ZBI_RESULT_ERROR;
   }
@@ -192,7 +192,7 @@ zbi_result_t zbi_create_entry_with_payload(void* base, const size_t capacity, ui
 }
 
 zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32_t extra,
-                              uint32_t flags, uint32_t payload_length, void** payload) {
+                              uint32_t flags, size_t payload_length, void** payload) {
   if (!base) {
     return ZBI_RESULT_ERROR;
   }
@@ -200,6 +200,10 @@ zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32
   // We don't support CRC computation (yet?)
   if (flags & ZBI_FLAG_CRC32) {
     return ZBI_RESULT_ERROR;
+  }
+
+  if (payload_length > 0xFFFFFFFFU) {
+    return ZBI_RESULT_TOO_BIG;
   }
 
   zbi_header_t* hdr = (zbi_header_t*)base;
@@ -221,7 +225,7 @@ zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32
   zbi_header_t* new_header = (void*)((uint8_t*)(hdr + 1) + hdr->length);
   *new_header = (zbi_header_t){
       .type = type,
-      .length = payload_length,
+      .length = (uint32_t)payload_length,
       .extra = extra,
       .flags = flags | ZBI_FLAG_VERSION,
       .magic = ZBI_ITEM_MAGIC,

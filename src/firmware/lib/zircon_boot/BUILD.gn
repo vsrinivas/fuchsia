@@ -7,8 +7,14 @@ import("//build/unification/zx_library.gni")
 # Common variables for our SDK and in-tree targets.
 common_vars = {
   sdk = "source"
-  sdk_headers = [ "lib/zircon_boot/zircon_boot.h" ]
-  sources = [ "zircon_boot.c" ]
+  sdk_headers = [
+    "lib/zircon_boot/zbi_utils.h",
+    "lib/zircon_boot/zircon_boot.h",
+  ]
+  sources = [
+    "zbi_utils.c",
+    "zircon_boot.c",
+  ]
   deps = [
     "//src/firmware/lib/abr",
     "//src/firmware/lib/zbi",

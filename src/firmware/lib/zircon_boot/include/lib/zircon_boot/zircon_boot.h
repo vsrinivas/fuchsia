@@ -13,11 +13,14 @@
 #ifdef ZIRCON_BOOT_CUSTOM_SYSDEPS_HEADER
 #include <zircon_boot_sysdeps.h>
 #else
-#include <lib/abr/abr.h>
 #include <stddef.h>
 #endif
 
+// This should point to the abr.h in the abr library in firmware sdk.
+#include <lib/abr/abr.h>
+// This should point to the zbi.h in the zbi library in firmware sdk..
 #include <lib/zbi/zbi.h>
+#include <lib/zircon_boot/zbi_utils.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,6 +42,8 @@ typedef enum ZirconBootResult {
 
   kBootResultErrorInvalidSlotIdx,
   kBootResultErrorImageTooLarge,
+
+  kBootResultErrorAppendZbiItems,
 } ZirconBootResult;
 
 struct ZirconBootOps;
@@ -120,6 +125,18 @@ struct ZirconBootOps {
    * The function is not expected to return if reboot is successful.
    */
   void (*reboot)(ZirconBootOps* ops, bool force_recovery);
+
+  // Adds device-specific ZBI items based on available boot information. The method is optional and
+  // may be set to NULL, in which case no zbi items will be appended to the boot image.
+  //
+  // @ops: Pointer to the host |ZirconBootOps|
+  // @image: The loaded kernel image as a ZBI container. Items should be appended to it.
+  // @capacity: Capacity of the ZBI container.
+  // @slot: A/B/R slot of the loaded image.
+  //
+  // Returns true on success.
+  bool (*add_zbi_items)(ZirconBootOps* ops, zbi_header_t* image, size_t capacity,
+                        AbrSlotIndex slot);
 };
 
 typedef enum ForceRecovery {

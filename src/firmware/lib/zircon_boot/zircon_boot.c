@@ -119,7 +119,7 @@ static ZirconBootResult LoadImageOsAbr(ZirconBootOps* ops, void* load_address,
 static ZirconBootResult LoadImageFirmwareAbr(ZirconBootOps* ops, void* load_address,
                                              size_t load_address_size, ForceRecovery force_recovery,
                                              AbrSlotIndex* out_slot) {
-  // Only boot to matching firmware and os slot.
+  // Only boot to matching firmware and OS slot.
   AbrSlotIndex firmware_slot;
   if (!ZIRCON_BOOT_OPS_CALL(ops, get_firmware_slot, &firmware_slot)) {
     zircon_boot_dlog("Fail to get firmware slot\n");
@@ -157,53 +157,31 @@ static ZirconBootResult LoadImageFirmwareAbr(ZirconBootOps* ops, void* load_addr
   return kBootResultOK;
 }
 
-static ZirconBootResult LoadAndBootOsAbr(ZirconBootOps* ops, void* load_address,
-                                         size_t load_address_size, ForceRecovery force_recovery) {
-  AbrSlotIndex slot;
-  ZirconBootResult res =
-      LoadImageOsAbr(ops, load_address, load_address_size, force_recovery, &slot);
-  if (res != kBootResultOK) {
-    return res;
-  }
-
-  // TODO(b/174968242): Add a new method in |ZirconBootOps| that retrieves device-specific
-  // zbi items. Then add logic here for collecting and appending device-specific zbi items to
-  // loaded image.
-
-  ZIRCON_BOOT_OPS_CALL(ops, boot, load_address, load_address_size, slot);
-  zircon_boot_dlog("Should not reach here. Boot handoff failed\n");
-  return kBootResultBootReturn;
-}
-
-static ZirconBootResult LoadAndBootFirmwareAbr(ZirconBootOps* ops, void* load_address,
-                                               size_t load_address_size,
-                                               ForceRecovery force_recovery) {
-  AbrSlotIndex slot;
-  ZirconBootResult res =
-      LoadImageFirmwareAbr(ops, load_address, load_address_size, force_recovery, &slot);
-  if (res == kBootResultErrorMismatchedFirmwareSlot || res == kBootResultErrorSlotFail) {
-    ZIRCON_BOOT_OPS_CALL(ops, reboot, force_recovery);
-    zircon_boot_dlog("Should not reach here. Reboot handoff failed\n");
-    return kBootResultRebootReturn;
-  }
-  if (res != kBootResultOK) {
-    return res;
-  }
-
-  // TODO(b/174968242): Add a new method in |ZirconBootOps| that retrieves device-specific
-  // zbi items. Then add logic here for collecting and appending device-specific zbi items to
-  // loaded image.
-
-  ZIRCON_BOOT_OPS_CALL(ops, boot, load_address, load_address_size, slot);
-  zircon_boot_dlog("Should not reach here. Boot handoff failed\n");
-  return kBootResultBootReturn;
-}
-
 ZirconBootResult LoadAndBoot(ZirconBootOps* ops, void* load_address, size_t load_address_size,
                              ForceRecovery force_recovery) {
+  AbrSlotIndex slot;
+  ZirconBootResult res;
   if (ops->get_firmware_slot) {
-    return LoadAndBootFirmwareAbr(ops, load_address, load_address_size, force_recovery);
+    res = LoadImageFirmwareAbr(ops, load_address, load_address_size, force_recovery, &slot);
+    if (res == kBootResultErrorMismatchedFirmwareSlot || res == kBootResultErrorSlotFail) {
+      ZIRCON_BOOT_OPS_CALL(ops, reboot, force_recovery);
+      zircon_boot_dlog("Should not reach here. Reboot handoff failed\n");
+      return kBootResultRebootReturn;
+    }
   } else {
-    return LoadAndBootOsAbr(ops, load_address, load_address_size, force_recovery);
+    res = LoadImageOsAbr(ops, load_address, load_address_size, force_recovery, &slot);
   }
+  if (res != kBootResultOK) {
+    return res;
+  }
+
+  // Adds device-specific ZBI items provided by device through |add_zbi_items| method
+  if (ops->add_zbi_items && !ops->add_zbi_items(ops, load_address, load_address_size, slot)) {
+    zircon_boot_dlog("Failed to add ZBI items\n");
+    return kBootResultErrorAppendZbiItems;
+  }
+
+  ZIRCON_BOOT_OPS_CALL(ops, boot, load_address, load_address_size, slot);
+  zircon_boot_dlog("Should not reach here. Boot handoff failed\n");
+  return kBootResultBootReturn;
 }

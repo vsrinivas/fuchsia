@@ -85,6 +85,11 @@ AbrOps MockZirconBootOps::GetAbrOps() {
   };
 }
 
+void MockZirconBootOps::SetAddDeviceZbiItemsMethod(
+    std::function<bool(zbi_header_t*, size_t, AbrSlotIndex)> method) {
+  add_zbi_items_ = method;
+}
+
 bool MockZirconBootOps::ReadFromPartition(ZirconBootOps* ops, const char* part, size_t offset,
                                           size_t size, void* dst, size_t* read_size) {
   MockZirconBootOps* dev = static_cast<MockZirconBootOps*>(ops->context);
@@ -124,6 +129,12 @@ void MockZirconBootOps::Boot(ZirconBootOps* ops, zbi_header_t* image, size_t cap
   dev->Boot(image, capacity, slot);
 }
 
+bool MockZirconBootOps::AddDeviceZbiItems(ZirconBootOps* zb_ops, zbi_header_t* image,
+                                          size_t capacity, AbrSlotIndex slot) {
+  MockZirconBootOps* dev = static_cast<MockZirconBootOps*>(zb_ops->context);
+  return dev->add_zbi_items_(image, capacity, slot);
+}
+
 ZirconBootOps MockZirconBootOps::GetZirconBootOps() {
   ZirconBootOps zircon_boot_ops;
   zircon_boot_ops.context = this;
@@ -132,5 +143,6 @@ ZirconBootOps MockZirconBootOps::GetZirconBootOps() {
   zircon_boot_ops.get_firmware_slot = GetFirmwareSlot;
   zircon_boot_ops.reboot = Reboot;
   zircon_boot_ops.boot = Boot;
+  zircon_boot_ops.add_zbi_items = AddDeviceZbiItems;
   return zircon_boot_ops;
 }
