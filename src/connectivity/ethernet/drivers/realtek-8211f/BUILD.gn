@@ -9,7 +9,7 @@ bind_rules("rtl8211f_bind") {
   rules = "rtl8211f.bind"
   output = "rtl8211f-bind.h"
   tests = "bind-tests.json"
-  deps = [ "//src/devices/bind/fuchsia.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.realtek.platform" ]
 }
 
 driver_module("realtek-8211f") {
