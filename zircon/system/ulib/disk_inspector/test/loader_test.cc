@@ -4,8 +4,8 @@
 
 #include "disk_inspector/loader.h"
 
-#include <storage/buffer/array_buffer.h>
 #include <fs/transaction/transaction_handler.h>
+#include <storage/buffer/array_buffer.h>
 #include <zxtest/zxtest.h>
 
 namespace disk_inspector {
@@ -84,15 +84,14 @@ TEST(InspectorLoader, RunReadOperation) {
 }
 
 TEST(InspectorLoader, RunReadOperationBufferSizeAssertFail) {
-  ASSERT_DEATH(([] {
-                 uint64_t block_length = 2;
+  uint64_t block_length = 2;
 
-                 storage::ArrayBuffer device(block_length, kTestBlockSize);
-                 MockTransactionHandler handler(&device);
-                 Loader loader(&handler);
+  storage::ArrayBuffer device(block_length, kTestBlockSize);
+  MockTransactionHandler handler(&device);
+  Loader loader(&handler);
 
-                 storage::ArrayBuffer client_buffer(0, kTestBlockSize);
-
+  storage::ArrayBuffer client_buffer(0, kTestBlockSize);
+  ASSERT_DEATH(([&] {
                  // Buffer too small. Should assert crash here.
                  loader.RunReadOperation(&client_buffer, 0, 0, block_length);
                }),
@@ -123,15 +122,14 @@ TEST(InspectorLoader, RunWriteOperation) {
 }
 
 TEST(InspectorLoader, RunWriteOperationBufferSizeAssertFail) {
-  ASSERT_DEATH(([] {
-                 uint64_t block_length = 2;
+  uint64_t block_length = 2;
 
-                 storage::ArrayBuffer device(block_length, kTestBlockSize);
-                 MockTransactionHandler handler(&device);
-                 Loader loader(&handler);
+  storage::ArrayBuffer device(block_length, kTestBlockSize);
+  MockTransactionHandler handler(&device);
+  Loader loader(&handler);
 
-                 storage::ArrayBuffer client_buffer(0, kTestBlockSize);
-
+  storage::ArrayBuffer client_buffer(0, kTestBlockSize);
+  ASSERT_DEATH(([&] {
                  // Buffer too small. Should assert crash here.
                  loader.RunWriteOperation(&client_buffer, 0, 0, block_length);
                }),
