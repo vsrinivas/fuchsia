@@ -12,7 +12,7 @@ use {
         types::{Channel, PeerId},
     },
     fuchsia_cobalt::CobaltSender,
-    fuchsia_inspect as inspect,
+    fuchsia_inspect::{self as inspect, Property},
     fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{
         channel::mpsc,
@@ -42,6 +42,8 @@ pub struct ConnectedPeers {
     cobalt_sender: Option<CobaltSender>,
     /// The 'peers' node of the inspect tree. All connected peers own a child node of this node.
     inspect: inspect::Node,
+    /// Inspect node for which is the current preferred peer direction.
+    inspect_peer_direction: inspect::StringProperty,
     /// Listeners for new connected peers
     connected_peer_senders: Vec<mpsc::Sender<DetachableWeak<PeerId, Peer>>>,
 }
@@ -60,6 +62,7 @@ impl ConnectedPeers {
             codec_negotiation,
             profile,
             inspect: inspect::Node::default(),
+            inspect_peer_direction: inspect::StringProperty::default(),
             cobalt_sender,
             connected_peer_senders: Vec::new(),
         }
@@ -98,6 +101,7 @@ impl ConnectedPeers {
 
     pub fn set_preferred_direction(&mut self, direction: avdtp::EndpointType) {
         self.codec_negotiation.set_direction(direction);
+        self.inspect_peer_direction.set(&format!("{:?}", direction));
     }
 
     pub fn preferred_direction(&self) -> avdtp::EndpointType {
@@ -199,6 +203,9 @@ impl ConnectedPeers {
 impl Inspect for &mut ConnectedPeers {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
         self.inspect = parent.create_child(name);
+        let peer_dir_str = format!("{:?}", self.preferred_direction());
+        self.inspect_peer_direction =
+            self.inspect.create_string("preferred_peer_direction", peer_dir_str);
         Ok(())
     }
 }
@@ -480,15 +487,22 @@ mod tests {
         let inspect = inspect::Inspector::new();
         peers.iattach(inspect.root(), "peers").expect("should attach to inspect tree");
 
-        assert_inspect_tree!(inspect, root: { peers: {} });
+        assert_inspect_tree!(inspect, root: { peers: { preferred_peer_direction: "Sink" }});
+
+        peers.set_preferred_direction(avdtp::EndpointType::Source);
+
+        assert_inspect_tree!(inspect, root: { peers: { preferred_peer_direction: "Source" }});
 
         // Connect a peer, it should show up in the tree.
         let (_remote, channel) = Channel::create();
         assert!(peers.connected(id, channel, false).is_ok());
 
-        assert_inspect_tree!(inspect, root: { peers: { peer_0: {
-            id: "0000000000000001", local_streams: contains {}
-        }}});
+        assert_inspect_tree!(inspect, root: {
+            peers: {
+                preferred_peer_direction: "Source",
+                peer_0: { id: "0000000000000001", local_streams: contains {} }
+            }
+        });
     }
 
     #[test]
