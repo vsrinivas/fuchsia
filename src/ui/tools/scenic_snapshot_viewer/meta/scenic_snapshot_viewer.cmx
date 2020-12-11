@@ -8,8 +8,7 @@
     "sandbox": {
         "services": [
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }

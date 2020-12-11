@@ -1,6 +1,7 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/application.shard.cmx"
     ],
     "program": {
         "binary": "bin/scenic"
@@ -11,8 +12,7 @@
         ],
         "features": [
             "config-data",
-            "isolated-temp",
-            "vulkan"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
@@ -20,8 +20,7 @@
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.ui.input.ImeService",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.ui.input.ImeService"
         ]
     }
 }
