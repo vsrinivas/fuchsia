@@ -23,7 +23,7 @@
 #include "device.h"
 
 struct Context {
-  amlogic_secure_mem::AmlogicSecureMemDevice* dev;
+  std::shared_ptr<amlogic_secure_mem::AmlogicSecureMemDevice> dev;
 };
 
 class Binder : public fake_ddk::Bind {
@@ -40,7 +40,7 @@ class Binder : public fake_ddk::Bind {
                         zx_device_t** out) override {
     *out = parent;
     Context* context = reinterpret_cast<Context*>(parent);
-    context->dev = reinterpret_cast<amlogic_secure_mem::AmlogicSecureMemDevice*>(args->ctx);
+    context->dev.reset(reinterpret_cast<amlogic_secure_mem::AmlogicSecureMemDevice*>(args->ctx));
 
     if (args && args->ops) {
       if (args->ops->message) {
@@ -221,7 +221,7 @@ class AmlogicSecureMemTest : public zxtest::Test {
 
   zx_device_t* parent() { return reinterpret_cast<zx_device_t*>(&ctx_); }
 
-  amlogic_secure_mem::AmlogicSecureMemDevice* dev() { return ctx_.dev; }
+  amlogic_secure_mem::AmlogicSecureMemDevice* dev() { return ctx_.dev.get(); }
 
  private:
   // Default dispatcher for the test thread.  Not used to actually dispatch in these tests so far.
