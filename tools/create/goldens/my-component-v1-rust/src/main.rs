@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 use anyhow::{self, Context};
-use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::{component, health::Reporter};
-use fuchsia_syslog as syslog;
 use futures::prelude::*;
 use tracing;
 
@@ -19,9 +17,8 @@ enum IncomingRequest {
     // ```
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging = true)]
 async fn main() -> Result<(), anyhow::Error> {
-    syslog::init()?;
     let mut service_fs = ServiceFs::new_local();
 
     // Initialize inspect
@@ -49,9 +46,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn smoke_test() {
         assert!(true);
     }
