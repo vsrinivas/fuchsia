@@ -8,7 +8,7 @@ use fuchsia_syslog::fx_log_warn;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::audio::ModifiedFlags;
+use crate::audio::ModifiedCounters;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::setting_handler::ControllerError;
 use crate::input::{ButtonType, VolumeGain};
@@ -333,7 +333,7 @@ pub struct AudioInputInfo {
 pub struct AudioInfo {
     pub streams: [AudioStream; 5],
     pub input: AudioInputInfo,
-    pub modified_flags: Option<ModifiedFlags>,
+    pub modified_counters: Option<ModifiedCounters>,
 }
 
 impl AudioInfo {

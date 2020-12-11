@@ -4,7 +4,7 @@
 
 use {
     crate::agent::restore_agent,
-    crate::audio::{create_default_modified_flags, default_audio_info},
+    crate::audio::{create_default_modified_counters, default_audio_info},
     crate::handler::device_storage::testing::*,
     crate::handler::device_storage::DeviceStorage,
     crate::input::common::MediaButtonsEventBuilder,
@@ -245,6 +245,33 @@ async fn test_consecutive_volume_changes() {
 }
 
 #[fuchsia_async::run_until_stalled(test)]
+async fn test_multiple_changes_on_stream() {
+    let (service_registry, _) = create_services().await;
+    let (env, store) = create_environment(service_registry).await;
+
+    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+
+    let settings = audio_proxy.watch().await.expect("watch completed");
+    verify_audio_stream(
+        settings.clone(),
+        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
+    );
+
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
+    let settings = audio_proxy.watch().await.expect("watch completed");
+    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
+
+    // Check to make sure value wrote out to store correctly.
+    let stored_streams: [AudioStream; 5];
+    {
+        let mut store_lock = store.lock().await;
+        stored_streams = store_lock.get().await.streams;
+    }
+    verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM_2);
+}
+
+#[fuchsia_async::run_until_stalled(test)]
 async fn test_volume_overwritten() {
     let (service_registry, fake_services) = create_services().await;
     let (env, store) = create_environment(service_registry).await;
@@ -470,7 +497,7 @@ async fn test_persisted_values_applied_at_start() {
             },
         ],
         input: AudioInputInfo { mic_mute: true },
-        modified_flags: Some(create_default_modified_flags()),
+        modified_counters: Some(create_default_modified_counters()),
     };
 
     // Write values in the store.

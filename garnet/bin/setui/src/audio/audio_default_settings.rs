@@ -29,12 +29,15 @@ const DEFAULT_STREAMS: [AudioStream; 5] = [
 /// A mapping from stream type to an arbitrary numerical value. This number will
 /// change from the number sent in the previous update if the stream type's
 /// volume has changed.
-pub type ModifiedFlags = HashMap<AudioStreamType, usize>;
+pub type ModifiedCounters = HashMap<AudioStreamType, usize>;
 
 const DEFAULT_AUDIO_INPUT_INFO: AudioInputInfo = AudioInputInfo { mic_mute: DEFAULT_MIC_MUTE };
 
-const DEFAULT_AUDIO_INFO: AudioInfo =
-    AudioInfo { streams: DEFAULT_STREAMS, input: DEFAULT_AUDIO_INPUT_INFO, modified_flags: None };
+const DEFAULT_AUDIO_INFO: AudioInfo = AudioInfo {
+    streams: DEFAULT_STREAMS,
+    input: DEFAULT_AUDIO_INPUT_INFO,
+    modified_counters: None,
+};
 
 lazy_static! {
     pub static ref AUDIO_DEFAULT_SETTINGS: Mutex<DefaultSetting<AudioInfo, &'static str>> =
@@ -44,8 +47,8 @@ lazy_static! {
         ));
 }
 
-pub fn create_default_modified_flags() -> ModifiedFlags {
-    let mut flags = HashMap::new();
+pub fn create_default_modified_counters() -> ModifiedCounters {
+    let mut counters = HashMap::new();
     let stream_types = [
         AudioStreamType::Background,
         AudioStreamType::Media,
@@ -57,9 +60,9 @@ pub fn create_default_modified_flags() -> ModifiedFlags {
     // The values inserted here are irrelevant. They are simply a starting
     // point.
     for stream_type in stream_types.iter() {
-        flags.insert(*stream_type, 0);
+        counters.insert(*stream_type, 0);
     }
-    flags
+    counters
 }
 
 pub const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioStream {
@@ -121,7 +124,7 @@ impl From<AudioInfoV1> for AudioInfo {
         AudioInfo {
             streams: v1.streams,
             input: v1.input,
-            modified_flags: Some(create_default_modified_flags()),
+            modified_counters: Some(create_default_modified_counters()),
         }
     }
 }
@@ -164,7 +167,7 @@ mod tests {
             },
         ],
         input: AudioInputInfo { mic_mute: true },
-        modified_flags: None,
+        modified_counters: None,
     };
 
     #[test]

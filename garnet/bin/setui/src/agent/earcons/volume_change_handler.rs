@@ -5,7 +5,7 @@
 use crate::agent::earcons::agent::CommonEarconsParams;
 use crate::agent::earcons::sound_ids::{VOLUME_CHANGED_SOUND_ID, VOLUME_MAX_SOUND_ID};
 use crate::agent::earcons::utils::{connect_to_sound_player, play_sound};
-use crate::audio::{create_default_modified_flags, ModifiedFlags};
+use crate::audio::{create_default_modified_counters, ModifiedCounters};
 use crate::internal::event;
 use crate::internal::switchboard;
 use crate::message::base::Audience;
@@ -24,7 +24,7 @@ use std::collections::{HashMap, HashSet};
 pub struct VolumeChangeHandler {
     common_earcons_params: CommonEarconsParams,
     last_user_volumes: HashMap<AudioStreamType, f32>,
-    modified_flags: ModifiedFlags,
+    modified_counters: ModifiedCounters,
     switchboard_messenger: switchboard::message::Messenger,
     publisher: event::Publisher,
 }
@@ -82,7 +82,7 @@ impl VolumeChangeHandler {
             let mut handler = Self {
                 common_earcons_params: params,
                 last_user_volumes,
-                modified_flags: create_default_modified_flags(),
+                modified_counters: create_default_modified_counters(),
                 switchboard_messenger: switchboard_messenger.clone(),
                 publisher,
             };
@@ -155,13 +155,13 @@ impl VolumeChangeHandler {
     fn calculate_changed_streams(
         &mut self,
         all_streams: [AudioStream; 5],
-        new_modified_flags: ModifiedFlags,
+        new_modified_counters: ModifiedCounters,
     ) -> Vec<AudioStream> {
         let mut changed_stream_types = HashSet::new();
-        for (stream_type, timestamp) in new_modified_flags {
-            if self.modified_flags.get(&stream_type) != Some(&timestamp) {
+        for (stream_type, timestamp) in new_modified_counters {
+            if self.modified_counters.get(&stream_type) != Some(&timestamp) {
                 changed_stream_types.insert(stream_type);
-                self.modified_flags.insert(stream_type, timestamp);
+                self.modified_counters.insert(stream_type, timestamp);
             }
         }
 
@@ -214,10 +214,13 @@ impl VolumeChangeHandler {
     /// Invoked when a new `AudioInfo` is retrieved. Determines whether an
     /// earcon should be played and plays sound if necessary.
     async fn on_audio_info(&mut self, audio_info: AudioInfo) {
-        let changed_streams = if audio_info.modified_flags.is_none() {
+        let changed_streams = if audio_info.modified_counters.is_none() {
             Vec::new()
         } else {
-            self.calculate_changed_streams(audio_info.streams, audio_info.modified_flags.unwrap())
+            self.calculate_changed_streams(
+                audio_info.streams,
+                audio_info.modified_counters.unwrap(),
+            )
         };
 
         let media_user_volume =
@@ -294,12 +297,12 @@ mod tests {
 
     fn fake_values() -> (
         [AudioStream; 5], // fake_streams
-        ModifiedFlags,    // old_flags
-        ModifiedFlags,    // new_flags
+        ModifiedCounters, // old_counters
+        ModifiedCounters, // new_counters
         Vec<AudioStream>, // expected_changed_streams
     ) {
         let fake_streams = default_audio_info().streams;
-        let old_timestamps = create_default_modified_flags();
+        let old_timestamps = create_default_modified_counters();
         let new_timestamps = [
             (AudioStreamType::Background, 0),
             (AudioStreamType::Media, 1),
@@ -336,7 +339,7 @@ mod tests {
                 sound_player_connection: Arc::new(Mutex::new(None)),
             },
             last_user_volumes,
-            modified_flags: old_timestamps,
+            modified_counters: old_timestamps,
             publisher,
         };
         let changed_streams = handler.calculate_changed_streams(fake_streams, new_timestamps);

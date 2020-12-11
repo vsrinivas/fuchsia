@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::audio::{
-    create_default_modified_flags, default_audio_info, ModifiedFlags, StreamVolumeControl,
+    create_default_modified_counters, default_audio_info, ModifiedCounters, StreamVolumeControl,
 };
 use crate::handler::base::{Event, SettingHandlerResult, State};
 use crate::handler::setting_handler::persist::{
@@ -36,7 +36,7 @@ pub struct VolumeController {
     audio_service_connected: bool,
     stream_volume_controls: HashMap<AudioStreamType, StreamVolumeControl>,
     mic_mute_state: bool,
-    modified_flags: ModifiedFlags,
+    modified_counters: ModifiedCounters,
 }
 
 impl VolumeController {
@@ -46,7 +46,7 @@ impl VolumeController {
             stream_volume_controls: HashMap::new(),
             audio_service_connected: false,
             mic_mute_state: false,
-            modified_flags: create_default_modified_flags(),
+            modified_counters: create_default_modified_counters(),
         }));
 
         handle
@@ -71,20 +71,22 @@ impl VolumeController {
         let mut audio_info = self.client.read().await;
 
         audio_info.input = AudioInputInfo { mic_mute: self.mic_mute_state };
-        audio_info.modified_flags = Some(self.modified_flags.clone());
+        audio_info.modified_counters = Some(self.modified_counters.clone());
         Ok(audio_info)
     }
 
     async fn set_volume(&mut self, volume: Vec<AudioStream>) -> SettingHandlerResult {
         self.get_info().await?;
 
-        // Update flags for changed streams.
+        // Update counters for changed streams.
         for stream in volume.iter() {
-            // We only new two values to signify a change. Therefore, we
-            // restrict the flag to 0 and 1.
-            self.modified_flags.insert(
+            // We don't care what the value of the counter is, just that it is different from the
+            // previous value. We use wrapping_add to avoid eventual overflow of the counter.
+            self.modified_counters.insert(
                 stream.stream_type,
-                self.modified_flags.get(&stream.stream_type).map_or(0, |flag| flag ^ 1),
+                self.modified_counters
+                    .get(&stream.stream_type)
+                    .map_or(0, |flag| flag.wrapping_add(1)),
             );
         }
 

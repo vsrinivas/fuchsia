@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 pub use self::audio_default_settings::{
-    create_default_audio_stream, create_default_modified_flags, default_audio_info, ModifiedFlags,
+    create_default_audio_stream, create_default_modified_counters, default_audio_info,
+    ModifiedCounters,
 };
 pub use self::audio_fidl_handler::fidl_io;
 pub use self::stream_volume_control::StreamVolumeControl;
