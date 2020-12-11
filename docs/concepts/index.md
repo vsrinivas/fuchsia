@@ -26,7 +26,7 @@ and security patches can be pushed to all products on demand.
 ## [Inclusive](/docs/concepts/principles/inclusive.md)
 
 Fuchsia is an open source project that currently supports a variety
-of languages and runtimes, including C++, Rust, Go, Flutter, and Dart.
+of languages and runtimes, including C++, Web, Rust, Go, Flutter, and Dart.
 
 ## [Pragmatic](/docs/concepts/principles/pragmatic.md)
 
