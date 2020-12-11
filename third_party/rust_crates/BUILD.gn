@@ -581,6 +581,12 @@ if (current_os == "fuchsia") {
 }
 
 if (!(current_os == "fuchsia")) {
+  group("serial_test") {
+    deps = [ ":serial_test-v0_5_1" ]
+  }
+}
+
+if (!(current_os == "fuchsia")) {
   group("signal-hook") {
     deps = [ ":signal-hook-v0_1_16" ]
   }
@@ -7689,6 +7695,54 @@ rust_proc_macro("serde_repr-v0_1_3") {
     "--edition=2018",
     "-Cmetadata=821e19f1d7a82d0e",
     "-Cextra-filename=-821e19f1d7a82d0e",
+  ]
+}
+
+rust_library("serial_test-v0_5_1") {
+  crate_name = "serial_test"
+  crate_root = "//third_party/rust_crates/vendor/serial_test/src/lib.rs"
+  output_name = "serial_test-cf7a4047894f2a7b"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":lazy_static-v1_4_0" ]
+  deps += [ ":parking_lot-v0_10_2" ]
+  deps += [ ":serial_test_derive-v0_5_1($host_toolchain)" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=cf7a4047894f2a7b",
+    "-Cextra-filename=-cf7a4047894f2a7b",
+  ]
+}
+
+rust_proc_macro("serial_test_derive-v0_5_1") {
+  crate_name = "serial_test_derive"
+  crate_root = "//third_party/rust_crates/vendor/serial_test_derive/src/lib.rs"
+  output_name = "serial_test_derive-349c76aef8defaba"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":proc-macro2-v1_0_19" ]
+  deps += [ ":quote-v1_0_7" ]
+  deps += [ ":syn-v1_0_41" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=349c76aef8defaba",
+    "-Cextra-filename=-349c76aef8defaba",
   ]
 }
 

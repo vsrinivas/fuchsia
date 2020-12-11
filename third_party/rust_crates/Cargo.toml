@@ -202,6 +202,7 @@ petgraph = "0.5.1"
 proc-macro2 = "1.0.9"
 pulldown-cmark = "0.6.0"
 quote = "1.0.2"
+serial_test = "0.5.1" # Not for use on Fuchsia, only for a single process.
 signal-hook = "0.1.16"
 simplelog = "0.8.0"
 smol = "0.1.11"
