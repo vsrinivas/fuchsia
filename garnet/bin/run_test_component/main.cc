@@ -87,7 +87,7 @@ Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-s
 
        If --max-log-severity is passed, then the test will fail if it produces logs with higher severity.
        Allowed values: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
-       For more information see: https://fuchsia.dev/fuchsia-src/concepts/testing/test_component#restricting_log_severity
+       For more information see: https://fuchsia.dev/fuchsia-src/concepts/testing/v1_test_component#restricting_log_severity
 
        If --wait-for-utc is specified, the runner waits up to <timeout_sec> seconds
        for the UTC clock to start before launching the test component. If the
@@ -300,7 +300,9 @@ int main(int argc, const char** argv) {
             "\nWARNING: Test '%s' overrides max log severity in BUILD.gn as well as config file. "
             "Using the value from config file. If you want the test to pickup value from BUILD.gn, "
             "please remove the test url from the config file.\n"
-            "See: https://fuchsia.dev/fuchsia-src/concepts/testing/test_component#restricting_log_severity"
+            "See: "
+            "https://fuchsia.dev/fuchsia-src/concepts/testing/"
+            "v1_test_component#restricting_log_severity"
             "\n",
             program_name.c_str());
       }
@@ -571,7 +573,8 @@ int main(int argc, const char** argv) {
     printf("----------------xxxxx----------------\n");
     printf(
         "Failing this test. See: "
-        "https://fuchsia.dev/fuchsia-src/concepts/testing/test_component#restricting_log_severity"
+        "https://fuchsia.dev/fuchsia-src/concepts/testing/"
+        "v1_test_component#restricting_log_severity"
         "\n");
     fflush(stdout);
     ret_code = 1;
