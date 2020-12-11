@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_TESTING_LOOP_FIXTURE_INTERNAL_REAL_LOOP_FIXTURE_H_
-#define SRC_LIB_TESTING_LOOP_FIXTURE_INTERNAL_REAL_LOOP_FIXTURE_H_
+#ifndef SRC_LIB_TESTING_LOOP_FIXTURE_REAL_LOOP_H_
+#define SRC_LIB_TESTING_LOOP_FIXTURE_REAL_LOOP_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 
@@ -57,6 +58,13 @@ class RealLoop {
   // Runs the message loop until idle.
   void RunLoopUntilIdle();
 
+  // Runs the loop until the given |fit::promise| completes, and returns the
+  // |fit::result| it produced.
+  //
+  // If the |fit::promise| never completes, this method will run forever.
+  template <typename PromiseType>
+  typename PromiseType::result_type RunPromise(PromiseType promise);
+
   // Quits the loop.
   void QuitLoop();
 
@@ -70,6 +78,23 @@ class RealLoop {
   FXL_DISALLOW_COPY_AND_ASSIGN(RealLoop);
 };
 
+// Internal template implementation details
+// ========================================
+
+template <typename PromiseType>
+typename PromiseType::result_type RealLoop::RunPromise(PromiseType promise) {
+  async::Executor e(dispatcher());
+  fit::optional<typename PromiseType::result_type> res;
+  e.schedule_task(
+      promise.then([&res](typename PromiseType::result_type& v) { res = std::move(v); }));
+
+  // We set |step| to infinity, as the automatic-wake-up timer shouldn't be
+  // necessary. A well-behaved promise must always wake up the executor when
+  // there's more work to be done.
+  RunLoopUntil([&res]() { return res.has_value(); }, zx::duration::infinite());
+  return std::move(res.value());
+}
+
 }  // namespace loop_fixture
 
-#endif  // SRC_LIB_TESTING_LOOP_FIXTURE_INTERNAL_REAL_LOOP_FIXTURE_H_
+#endif  // SRC_LIB_TESTING_LOOP_FIXTURE_REAL_LOOP_H_
