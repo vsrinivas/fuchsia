@@ -440,7 +440,7 @@ Command line tools are expected to support some common switches:
 
 A tool must accept a `--help` switch and provide usage information to the
 command line in that case. The layout and syntax of the help text is described
-in a future document.
+in [CLI tool help requirements](/docs/concepts/api/cli_help.md).
 
 The tool must not do other work (i.e. have side effects) when displaying help.
 
