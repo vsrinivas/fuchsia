@@ -46,7 +46,7 @@ static bool verbose = false;
       printf(fmt);      \
   } while (0)
 
-enum class Command { read, readall, get, set, parse };
+enum class Command { read, readall, get, set, descriptor };
 
 void usage(void) {
   printf("usage: hid [-v] <command> [<args>]\n\n");
@@ -54,7 +54,7 @@ void usage(void) {
   printf("    read [<devpath> [num reads]]\n");
   printf("    get <devpath> <in|out|feature> <id>\n");
   printf("    set <devpath> <in|out|feature> <id> [0xXX *]\n");
-  printf("    parse <devpath>\n");
+  printf("    descriptor <devpath>\n");
 }
 
 constexpr size_t kDevPathSize = 128;
@@ -420,8 +420,8 @@ zx_status_t parse_input_args(int argc, const char** argv, input_args_t* args) {
     args->command = Command::get;
   } else if (!strcmp("set", argv[0])) {
     args->command = Command::set;
-  } else if (!strcmp("parse", argv[0])) {
-    args->command = Command::parse;
+  } else if (!strcmp("descriptor", argv[0])) {
+    args->command = Command::descriptor;
   } else {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -444,7 +444,7 @@ zx_status_t parse_input_args(int argc, const char** argv, input_args_t* args) {
   args->sync_client = llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(chan));
   snprintf(args->devpath, kDevPathSize, "%s", argv[1]);
 
-  if (args->command == Command::parse) {
+  if (args->command == Command::descriptor) {
     if (argc > 2) {
       return ZX_ERR_INTERNAL;
     }
@@ -508,7 +508,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  if (args.command == Command::parse) {
+  if (args.command == Command::descriptor) {
     return parse_rpt_descriptor(&args);
   } else if (args.command == Command::get) {
     return get_report(&args);
