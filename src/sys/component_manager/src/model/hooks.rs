@@ -8,7 +8,7 @@ use {
         model::{
             error::ModelError,
             events::error::EventsError,
-            realm::{BindReason, Realm, Runtime},
+            realm::{BindReason, Realm, Runtime, WeakRealm},
         },
     },
     anyhow::format_err,
@@ -294,6 +294,7 @@ pub enum EventPayload {
         decl: ComponentDecl,
     },
     Started {
+        realm: WeakRealm,
         runtime: RuntimeInfo,
         component_decl: ComponentDecl,
         bind_reason: BindReason,

@@ -646,8 +646,7 @@ impl BuiltinEnvironment {
         let stop_notifier = Arc::new(RootRealmStopNotifier::new());
         model.root_realm.hooks.install(stop_notifier.hooks()).await;
 
-        let hub =
-            Arc::new(Hub::new(Arc::downgrade(&model), root_component_url.as_str().to_owned())?);
+        let hub = Arc::new(Hub::new(root_component_url.as_str().to_owned())?);
         model.root_realm.hooks.install(hub.hooks()).await;
 
         // Set up the capability ready notifier.

@@ -78,6 +78,7 @@ pub(super) async fn do_start(
             let event = Event::new_with_timestamp(
                 realm,
                 Ok(EventPayload::Started {
+                    realm: realm.into(),
                     runtime: RuntimeInfo::from_runtime(&start_context.pending_runtime),
                     component_decl: start_context.component_decl.clone(),
                     bind_reason: bind_reason.clone(),

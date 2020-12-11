@@ -11,8 +11,7 @@ use {
             dir_tree::DirTree,
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration, RuntimeInfo},
-            model::Model,
-            realm::Realm,
+            realm::WeakRealm,
             routing_fns::{route_expose_fn, route_use_fn},
         },
     },
@@ -93,21 +92,20 @@ struct Execution {
 /// debugging and instrumentation tools can query information about component instances
 /// on the system, such as their component URLs, execution state and so on.
 pub struct Hub {
-    model: Weak<Model>,
     instances: Mutex<HashMap<AbsoluteMoniker, Instance>>,
     scope: ExecutionScope,
 }
 
 impl Hub {
-    /// Create a new Hub given a `component_url` and a controller to the root directory.
-    pub fn new(model: Weak<Model>, component_url: String) -> Result<Self, ModelError> {
+    /// Create a new Hub given a `component_url` for the root component.
+    pub fn new(component_url: String) -> Result<Self, ModelError> {
         let mut instances_map = HashMap::new();
         let abs_moniker = AbsoluteMoniker::root();
 
         Hub::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
             .expect("Did not create directory.");
 
-        Ok(Hub { model, instances: Mutex::new(instances_map), scope: ExecutionScope::new() })
+        Ok(Hub { instances: Mutex::new(instances_map), scope: ExecutionScope::new() })
     }
 
     pub async fn open_root(
@@ -258,47 +256,48 @@ impl Hub {
         execution_directory: Directory,
         component_decl: ComponentDecl,
         package_dir: Option<DirectoryProxy>,
-        target_realm: &Arc<Realm>,
+        target_moniker: &AbsoluteMoniker,
+        target_realm: WeakRealm,
     ) -> Result<(), ModelError> {
-        let tree = DirTree::build_from_uses(route_use_fn, target_realm.as_weak(), component_decl);
+        let tree = DirTree::build_from_uses(route_use_fn, target_realm, component_decl);
         let mut in_dir = pfs::simple();
-        tree.install(&target_realm.abs_moniker, &mut in_dir)?;
+        tree.install(target_moniker, &mut in_dir)?;
         if let Some(pkg_dir) = package_dir {
             in_dir.add_node(
                 "pkg",
                 directory_broker::DirectoryBroker::from_directory_proxy(pkg_dir),
-                &target_realm.abs_moniker,
+                target_moniker,
             )?;
         }
-        execution_directory.add_node("in", in_dir, &target_realm.abs_moniker)?;
+        execution_directory.add_node("in", in_dir, target_moniker)?;
         Ok(())
     }
 
     fn add_expose_directory(
         execution_directory: Directory,
         component_decl: ComponentDecl,
-        target_realm: &Arc<Realm>,
+        target_moniker: &AbsoluteMoniker,
+        target_realm: WeakRealm,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_expose_directory");
-        let tree =
-            DirTree::build_from_exposes(route_expose_fn, target_realm.as_weak(), component_decl);
+        let tree = DirTree::build_from_exposes(route_expose_fn, target_realm, component_decl);
         let mut expose_dir = pfs::simple();
-        tree.install(&target_realm.abs_moniker, &mut expose_dir)?;
-        execution_directory.add_node("expose", expose_dir, &target_realm.abs_moniker)?;
+        tree.install(target_moniker, &mut expose_dir)?;
+        execution_directory.add_node("expose", expose_dir, target_moniker)?;
         Ok(())
     }
 
     fn add_out_directory(
         execution_directory: Directory,
         outgoing_dir: Option<DirectoryProxy>,
-        abs_moniker: &AbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_out_directory");
         if let Some(out_dir) = outgoing_dir {
             execution_directory.add_node(
                 "out",
                 directory_broker::DirectoryBroker::from_directory_proxy(out_dir),
-                abs_moniker,
+                target_moniker,
             )?;
         }
         Ok(())
@@ -323,6 +322,7 @@ impl Hub {
     async fn on_started_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
+        target_realm: &WeakRealm,
         component_url: String,
         runtime: &RuntimeInfo,
         component_decl: &'a ComponentDecl,
@@ -345,10 +345,6 @@ impl Hub {
         // If we haven't already created an execution directory, create one now.
         if instance.execution.is_none() {
             trace::duration!("component_manager", "hub:create_execution");
-            let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
-            // TODO: Calling this under lock seems like it could be deadlock prone, consider
-            // passing an Arc<Realm> to the event instead
-            let target_realm = model.look_up_realm(target_moniker).await?;
 
             let execution_directory = pfs::simple();
 
@@ -368,19 +364,21 @@ impl Hub {
                 execution_directory.clone(),
                 component_decl.clone(),
                 Self::clone_dir(runtime.package_dir.as_ref()),
-                &target_realm,
+                target_moniker,
+                target_realm.clone(),
             )?;
 
             Self::add_expose_directory(
                 execution_directory.clone(),
                 component_decl.clone(),
-                &target_realm,
+                target_moniker,
+                target_realm.clone(),
             )?;
 
             Self::add_out_directory(
                 execution_directory.clone(),
                 Self::clone_dir(runtime.outgoing_dir.as_ref()),
-                &target_moniker,
+                target_moniker,
             )?;
 
             Self::add_runtime_directory(
@@ -527,9 +525,10 @@ impl Hook for Hub {
             Ok(EventPayload::MarkedForDestruction) => {
                 self.on_marked_for_destruction_async(&event.target_moniker).await?;
             }
-            Ok(EventPayload::Started { runtime, component_decl, .. }) => {
+            Ok(EventPayload::Started { realm, runtime, component_decl, .. }) => {
                 self.on_started_async(
                     &event.target_moniker,
+                    realm,
                     event.component_url.clone(),
                     &runtime,
                     &component_decl,
