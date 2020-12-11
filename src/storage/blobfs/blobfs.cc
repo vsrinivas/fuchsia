@@ -82,32 +82,17 @@ const char* CachePolicyToString(CachePolicy policy) {
   }
 }
 
-}  // namespace
-
-zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
-                           const MountOptions& options, zx::resource vmex_resource,
-                           std::unique_ptr<Blobfs>* out) {
-  TRACE_DURATION("blobfs", "Blobfs::Create");
-  char block[kBlobfsBlockSize];
-  zx_status_t status = device->ReadBlock(0, kBlobfsBlockSize, block);
+zx_status_t LoadSuperblock(const fuchsia_hardware_block_BlockInfo& block_info, int block_offset,
+                           BlockDevice& device, char block[kBlobfsBlockSize]) {
+  zx_status_t status = device.ReadBlock(block_offset * kBlobfsBlockSize / block_info.block_size,
+                                        kBlobfsBlockSize, block);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "could not read info block";
     return status;
   }
   const Superblock* superblock = reinterpret_cast<Superblock*>(&block[0]);
 
-  fuchsia_hardware_block_BlockInfo block_info;
-  status = device->BlockGetInfo(&block_info);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "cannot acquire block info: " << status;
-    return status;
-  }
   uint64_t blocks = (block_info.block_size * block_info.block_count) / kBlobfsBlockSize;
-
-  if (block_info.flags & BLOCK_FLAG_READONLY &&
-      (options.writability != blobfs::Writability::ReadOnlyDisk)) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
   if (kBlobfsBlockSize % block_info.block_size != 0) {
     FX_LOGS(ERROR) << "Blobfs block size (" << kBlobfsBlockSize
                    << ") not divisible by device block size (" << block_info.block_size << ")";
@@ -117,15 +102,45 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   // Perform superblock validations which should succeed prior to journal replay.
   const uint64_t total_blocks = TotalBlocks(*superblock);
   if (blocks < total_blocks) {
-    FX_LOGS(ERROR) << "Block size mismatch: (superblock: " << total_blocks
-                   << ") vs (actual: " << blocks << ")";
     return ZX_ERR_BAD_STATE;
   }
-  status = CheckSuperblock(superblock, total_blocks);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Check Superblock failure";
+  return CheckSuperblock(superblock, total_blocks, /*quiet=*/true);
+}
+
+}  // namespace
+
+zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
+                           const MountOptions& options, zx::resource vmex_resource,
+                           std::unique_ptr<Blobfs>* out) {
+  TRACE_DURATION("blobfs", "Blobfs::Create");
+
+  fuchsia_hardware_block_BlockInfo block_info;
+  if (zx_status_t status = device->BlockGetInfo(&block_info); status != ZX_OK) {
+    FX_LOGS(ERROR) << "cannot acquire block info: " << status;
     return status;
   }
+
+  if (block_info.flags & BLOCK_FLAG_READONLY &&
+      (options.writability != blobfs::Writability::ReadOnlyDisk)) {
+    return ZX_ERR_ACCESS_DENIED;
+  }
+
+  bool fvm_required = false;
+  char block[kBlobfsBlockSize];
+
+  if (zx_status_t status1 = LoadSuperblock(block_info, kSuperblockOffset, *device, block);
+      status1 != ZX_OK) {
+    FX_LOGS(WARNING) << "Trying backup superblock";
+    if (zx_status_t status2 =
+            LoadSuperblock(block_info, kFVMBackupSuperblockOffset, *device, block);
+        status2 != ZX_OK) {
+      FX_LOGS(ERROR) << "No good superblock found";
+      return status1;  // Return the first error we found.
+    }
+    // Backup superblocks are only valid with FVM.
+    fvm_required = true;
+  }
+  const Superblock* superblock = reinterpret_cast<Superblock*>(&block[0]);
 
   // Construct the Blobfs object, without intensive validation, since it
   // may require upgrades / journal replays to become valid.
@@ -179,6 +194,11 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     }
   }
 
+  if (fvm_required && (fs->Info().flags & kBlobFlagFVM) == 0) {
+    FX_LOGS(ERROR) << "FVM required but superblock indicates otherwise";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   switch (options.writability) {
     case blobfs::Writability::Writable: {
       FX_LOGS(DEBUG) << "Initializing journal for writeback";
@@ -205,8 +225,9 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   }
 
   // Validate the FVM after replaying the journal.
-  status = CheckFvmConsistency(&fs->info_, fs->Device(),
-                               /*repair=*/options.writability != blobfs::Writability::ReadOnlyDisk);
+  zx_status_t status =
+      CheckFvmConsistency(&fs->info_, fs->Device(),
+                          /*repair=*/options.writability != blobfs::Writability::ReadOnlyDisk);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "FVM info check failed";
     return status;
@@ -291,7 +312,17 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
       FX_LOGS(INFO) << "Setting oldest_revision to " << kBlobfsCurrentRevision;
       fs->info_.oldest_revision = kBlobfsCurrentRevision;
     }
-    fs->WriteInfo(transaction);
+    // Write a backup superblock if there's an old version of blobfs.
+    bool write_backup = false;
+    if (fs->info_.oldest_revision < kBlobfsRevisionBackupSuperblock) {
+      FX_LOGS(INFO) << "Upgrading to latest revision";
+      if (fs->Info().flags & kBlobFlagFVM) {
+        FX_LOGS(INFO) << "Writing backup superblock";
+        write_backup = true;
+      }
+      fs->info_.oldest_revision = kBlobfsRevisionBackupSuperblock;
+    }
+    fs->WriteInfo(transaction, write_backup);
     transaction.Commit(*fs->journal());
   }
 
@@ -453,9 +484,9 @@ void Blobfs::WriteNode(uint32_t map_index, BlobTransaction& transaction) {
                             }});
 }
 
-void Blobfs::WriteInfo(BlobTransaction& transaction) {
+void Blobfs::WriteInfo(BlobTransaction& transaction, bool write_backup) {
   memcpy(info_mapping_.start(), &info_, sizeof(info_));
-  transaction.AddOperation({
+  storage::UnbufferedOperation operation = {
       .vmo = zx::unowned_vmo(info_mapping_.vmo().get()),
       .op =
           {
@@ -464,7 +495,13 @@ void Blobfs::WriteInfo(BlobTransaction& transaction) {
               .dev_offset = 0,
               .length = 1,
           },
-  });
+  };
+  transaction.AddOperation(operation);
+  if (write_backup) {
+    ZX_ASSERT(info_.flags & kBlobFlagFVM);
+    operation.op.dev_offset = kFVMBackupSuperblockOffset;
+    transaction.AddOperation(operation);
+  }
 }
 
 void Blobfs::DeleteExtent(uint64_t start_block, uint64_t num_blocks,
@@ -830,14 +867,13 @@ zx_status_t Blobfs::ReloadSuperblock() {
 
   // Re-read the info block from disk.
   char block[kBlobfsBlockSize];
-  zx_status_t status = Device()->ReadBlock(0, kBlobfsBlockSize, block);
-  if (status != ZX_OK) {
+  if (zx_status_t status = Device()->ReadBlock(0, kBlobfsBlockSize, block); status != ZX_OK) {
     FX_LOGS(ERROR) << "could not read info block";
     return status;
   }
 
   Superblock* info = reinterpret_cast<Superblock*>(&block[0]);
-  if ((status = CheckSuperblock(info, TotalBlocks(*info))) != ZX_OK) {
+  if (zx_status_t status = CheckSuperblock(info, TotalBlocks(*info)); status != ZX_OK) {
     FX_LOGS(ERROR) << "Check info failure";
     return status;
   }
@@ -884,6 +920,23 @@ std::shared_ptr<BlobfsMetrics> Blobfs::CreateMetrics() {
   enable_page_in_metrics = true;
 #endif
   return std::make_shared<BlobfsMetrics>(enable_page_in_metrics);
+}
+
+zx::status<std::unique_ptr<Superblock>> Blobfs::ReadBackupSuperblock() {
+  // If the filesystem is writable, it's possible that we just wrote a backup superblock, so issue a
+  // sync just in case.
+  if (writability_ == Writability::Writable) {
+    sync_completion_t sync;
+    Sync([&](zx_status_t status) { sync_completion_signal(&sync); });
+    sync_completion_wait(&sync, ZX_TIME_INFINITE);
+  }
+  auto superblock = std::make_unique<Superblock>();
+  if (zx_status_t status =
+          block_device_->ReadBlock(kFVMBackupSuperblockOffset, kBlobfsBlockSize, superblock.get());
+      status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(std::move(superblock));
 }
 
 }  // namespace blobfs

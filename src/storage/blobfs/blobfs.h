@@ -212,6 +212,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
     return pager_backed_cache_policy_;
   };
 
+  zx::status<std::unique_ptr<Superblock>> ReadBackupSuperblock();
+
  protected:
   // Reloads metadata from disk. Useful when metadata on disk
   // may have changed due to journal playback.
@@ -261,8 +263,9 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   void WriteNode(uint32_t map_index, BlobTransaction& transaction);
 
   // Enqueues into |transaction| a write to set the on-disk superblock to the current state in
-  // |info_|.
-  void WriteInfo(BlobTransaction& transaction);
+  // |info_|. If |write_backup| is true, then also write the backup superblock (which should
+  // only be necessary if the backup superblock becomes corrupted for some reason).
+  void WriteInfo(BlobTransaction& transaction, bool write_backup = false);
 
   // Adds a trim operation to |transaction|.
   void DeleteExtent(uint64_t start_block, uint64_t num_blocks, BlobTransaction& transaction) const;

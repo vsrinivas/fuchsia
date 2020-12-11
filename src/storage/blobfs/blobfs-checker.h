@@ -41,6 +41,7 @@ class BlobfsChecker {
   uint32_t inode_blocks_ = 0;
   const Options options_;
 
+  zx_status_t CheckBackupSuperblock();
   void TraverseInodeBitmap();
   void TraverseBlockBitmap();
   zx_status_t CheckAllocatedCounts() const;

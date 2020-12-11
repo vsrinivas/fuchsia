@@ -56,11 +56,12 @@ TEST_F(SyncFdioTest, Sync) {
   // those required to flush the journal.  This might change, but presently, flushing the journal
   // will trigger a flush after writing data, but before writing to the journal, another one after
   // between writing to the journal and writing to the final metadata location, and then another one
-  // prior to writing a new info-block, so we should see 3 flush calls.
+  // prior to writing a new info-block, so we should see 3 flush calls plus a flush that's triggered
+  // when we format, so 4 in total.
   fuchsia_hardware_block_BlockStats stats;
   block_device()->GetStats(true, &stats);
   EXPECT_LE(1u, stats.write.success.total_calls);
-  EXPECT_EQ(3u, stats.flush.success.total_calls);
+  EXPECT_EQ(4u, stats.flush.success.total_calls);
 
   // Sync the root directory. Syncing a directory will force the block device to flush.
   EXPECT_EQ(0, fsync(root_fd()));

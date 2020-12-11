@@ -61,5 +61,34 @@ TEST(FsckTest, TestOverflow) {
   ASSERT_EQ(Fsck(std::move(device), MountOptions()), ZX_ERR_OUT_OF_RANGE);
 }
 
+TEST(FsckTest, TestBadBackupSuperblock) {
+  auto device = std::make_unique<block_client::FakeFVMBlockDevice>(
+      400, kBlobfsBlockSize, /*slice_size=*/32768, /*slice_capacity=*/500);
+  ASSERT_TRUE(device);
+  ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
+
+  char block[kBlobfsBlockSize];
+  memset(block, 0xaf, sizeof(block));
+  DeviceBlockWrite(device.get(), block, sizeof(block), kBlobfsBlockSize);
+
+  ASSERT_EQ(Fsck(std::move(device), MountOptions()), ZX_ERR_INVALID_ARGS);
+}
+
+TEST(FsckTest, TestNoBackupSuperblockOnOldRevsiionPassesFsck) {
+  auto device = std::make_unique<block_client::FakeFVMBlockDevice>(
+      400, kBlobfsBlockSize, /*slice_size=*/32768, /*slice_capacity=*/500);
+  ASSERT_TRUE(device);
+  ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
+
+  Superblock superblock;
+  DeviceBlockRead(device.get(), &superblock, sizeof(superblock), 0);
+  superblock.oldest_revision = kBlobfsRevisionBackupSuperblock - 1;
+  DeviceBlockWrite(device.get(), &superblock, sizeof(superblock), 0);
+  memset(&superblock, 0xaf, sizeof(superblock));
+  DeviceBlockWrite(device.get(), &superblock, sizeof(superblock), kBlobfsBlockSize);
+
+  ASSERT_EQ(Fsck(std::move(device), MountOptions{.writability = Writability::ReadOnlyDisk}), ZX_OK);
+}
+
 }  // namespace
 }  // namespace blobfs

@@ -7,6 +7,7 @@
 #include <lib/sync/completion.h>
 
 #include <blobfs/format.h>
+#include <blobfs/fsck.h>
 #include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
@@ -19,12 +20,22 @@
 namespace blobfs {
 namespace {
 
-using block_client::FakeBlockDevice;
+using ::block_client::FakeBlockDevice;
+
+constexpr uint32_t kBlockSize = 512;
+constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kBlockSize;
 
 class MockBlockDevice : public FakeBlockDevice {
  public:
   MockBlockDevice(uint64_t block_count, uint32_t block_size)
       : FakeBlockDevice(block_count, block_size) {}
+
+  static std::unique_ptr<MockBlockDevice> CreateAndFormat(const FilesystemOptions& options,
+                                                          uint64_t num_blocks) {
+    auto device = std::make_unique<MockBlockDevice>(num_blocks, kBlockSize);
+    EXPECT_EQ(FormatFilesystem(device.get(), options), ZX_OK);
+    return device;
+  }
 
   bool saw_trim() const { return saw_trim_; }
 
@@ -53,22 +64,13 @@ zx_status_t MockBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* info
   return status;
 }
 
-constexpr uint32_t kBlockSize = 512;
-constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kBlockSize;
-
-std::unique_ptr<MockBlockDevice> CreateAndFormatDevice(const FilesystemOptions& options,
-                                                       uint64_t num_blocks) {
-  auto device = std::make_unique<MockBlockDevice>(num_blocks, kBlockSize);
-  EXPECT_EQ(FormatFilesystem(device.get(), options), ZX_OK);
-  return device;
-}
-
-template <uint64_t oldest_revision, uint64_t num_blocks = kNumBlocks>
+template <uint64_t oldest_revision, uint64_t num_blocks = kNumBlocks,
+          typename Device = MockBlockDevice>
 class BlobfsTestAtRevision : public testing::Test {
  public:
   void SetUp() final {
     FilesystemOptions options{.oldest_revision = oldest_revision};
-    std::unique_ptr<MockBlockDevice> device = CreateAndFormatDevice(options, num_blocks);
+    auto device = Device::CreateAndFormat(options, num_blocks);
     ASSERT_TRUE(device);
     device_ = device.get();
     loop_.StartThread();
@@ -82,7 +84,7 @@ class BlobfsTestAtRevision : public testing::Test {
   virtual MountOptions GetMountOptions() const { return MountOptions(); }
 
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
-  MockBlockDevice* device_ = nullptr;
+  Device* device_ = nullptr;
   std::unique_ptr<Blobfs> fs_;
 };
 
@@ -133,7 +135,8 @@ TEST_F(BlobfsTest, CleanFlag) {
 
 // Tests that the driver does *not* update the oldest_revision field when mounting a filesystem that
 // has a lesser oldest_revision.
-TEST_F(BlobfsTestAtPastRevision, OldestRevisionNotUpdated) {
+// For now, this test must be disabled because Blobfs will upgrade to the latest revision.
+TEST_F(BlobfsTestAtPastRevision, DISABLED_OldestRevisionNotUpdated) {
   // Destroy the blobfs instance to claim the block device.
   auto device = Blobfs::Destroy(std::move(fs_));
 
@@ -224,6 +227,29 @@ TEST_F(BlobfsTest, TrimsData) {
   EXPECT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
 
   ASSERT_TRUE(device_->saw_trim());
+}
+
+class MockFvmDevice : public block_client::FakeFVMBlockDevice {
+ public:
+  using FakeFVMBlockDevice::FakeFVMBlockDevice;
+
+  static std::unique_ptr<MockFvmDevice> CreateAndFormat(const FilesystemOptions& options,
+                                                        uint64_t num_blocks) {
+    auto device = std::make_unique<MockFvmDevice>(num_blocks, kBlockSize, /*slice_size=*/32768,
+                                                  /*slice_capacity=*/500);
+    EXPECT_EQ(FormatFilesystem(device.get(), options), ZX_OK);
+    return device;
+  }
+};
+
+using BlobfsTestWithOldRevisionAndFvmDevice =
+    BlobfsTestAtRevision<blobfs::kBlobfsRevisionBackupSuperblock - 1, kNumBlocks, MockFvmDevice>;
+
+TEST_F(BlobfsTestWithOldRevisionAndFvmDevice, OldInstanceTriggersWriteToBackupSuperblock) {
+  ASSERT_TRUE(fs_->Info().flags & kBlobFlagFVM);
+  ASSERT_EQ(fs_->Info().oldest_revision, kBlobfsCurrentRevision);
+  auto device = Blobfs::Destroy(std::move(fs_));
+  ASSERT_EQ(Fsck(std::move(device), MountOptions{.writability = Writability::ReadOnlyDisk}), ZX_OK);
 }
 
 using BlobfsTestWithLargeDevice =

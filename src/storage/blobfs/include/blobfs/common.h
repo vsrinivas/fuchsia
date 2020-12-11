@@ -47,8 +47,9 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 #endif
 
-// Validates the metadata of a blobfs superblock, given a disk with |max| blocks.
-zx_status_t CheckSuperblock(const Superblock* info, uint64_t max);
+// Validates the metadata of a blobfs superblock, given a disk with |max| blocks. If |quiet| is
+// true, no log messages will be emitted.
+zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet = false);
 
 // Returns the total number of vslices needed for the given partition.
 uint32_t CalculateVsliceCount(const Superblock& info);

@@ -946,4 +946,11 @@ fit::result<void, std::string> ExportBlobs(int output_dir, Blobfs& fs) {
   });
 }
 
+zx::status<std::unique_ptr<Superblock>> Blobfs::ReadBackupSuperblock() {
+  if (zx_status_t status = ReadBlock(kFVMBackupSuperblockOffset); status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(std::make_unique<Superblock>(*reinterpret_cast<Superblock*>(cache_.blk)));
+}
+
 }  // namespace blobfs

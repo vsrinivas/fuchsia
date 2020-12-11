@@ -26,6 +26,24 @@
 
 namespace blobfs {
 
+zx_status_t BlobfsChecker::CheckBackupSuperblock() {
+  if ((blobfs_->Info().flags & kBlobFlagFVM) == 0 ||
+      blobfs_->Info().oldest_revision < kBlobfsRevisionBackupSuperblock)
+    return ZX_OK;
+  auto superblock_or = blobfs_->ReadBackupSuperblock();
+  if (superblock_or.is_error()) {
+    FX_LOGS(ERROR) << "could not read backup superblock";
+    return superblock_or.status_value();
+  }
+  if (zx_status_t status =
+          CheckSuperblock(superblock_or.value().get(), TotalBlocks(*superblock_or.value()));
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "bad backup superblock";
+    return status;
+  }
+  return ZX_OK;
+}
+
 void BlobfsChecker::TraverseInodeBitmap() {
   for (unsigned n = 0; n < blobfs_->info_.inode_count; n++) {
     InodePtr inode = blobfs_->GetNode(n);
@@ -118,6 +136,8 @@ zx_status_t BlobfsChecker::CheckAllocatedCounts() const {
 }
 
 zx_status_t BlobfsChecker::Check() {
+  if (zx_status_t status = CheckBackupSuperblock(); status != ZX_OK)
+    return status;
   TraverseInodeBitmap();
   TraverseBlockBitmap();
   return CheckAllocatedCounts();

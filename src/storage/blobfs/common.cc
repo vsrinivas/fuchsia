@@ -30,22 +30,20 @@ namespace {
 
 // Dumps the content of superblock.
 std::ostream& operator<<(std::ostream& stream, const Superblock& info) {
-  return stream << "\ninfo.magic0: " << info.magic0
-      << "\ninfo.magic1: " << info.magic1
-      << "\ninfo.format_version: " << info.format_version
-      << "\ninfo.flags: " << info.flags
-      << "\ninfo.block_size: " << info.block_size
-      << "\ninfo.data_block_count: " << info.data_block_count
-      << "\ninfo.journal_block_count: " << info.journal_block_count
-      << "\ninfo.inode_count: " << info.inode_count
-      << "\ninfo.alloc_block_count: " << info.alloc_block_count
-      << "\ninfo.alloc_inode_count: " << info.alloc_inode_count
-      << "\ninfo.slice_size: " << info.slice_size
-      << "\ninfo.abm_slices: " << info.abm_slices
-      << "\ninfo.ino_slices: " << info.ino_slices
-      << "\ninfo.dat_slices: " << info.dat_slices
-      << "\ninfo.journal_slices: " << info.journal_slices
-      << "\ninfo.oldest_revision: " << info.oldest_revision;
+  return stream << "\ninfo.magic0: " << info.magic0 << "\ninfo.magic1: " << info.magic1
+                << "\ninfo.format_version: " << info.format_version
+                << "\ninfo.flags: " << info.flags << "\ninfo.block_size: " << info.block_size
+                << "\ninfo.data_block_count: " << info.data_block_count
+                << "\ninfo.journal_block_count: " << info.journal_block_count
+                << "\ninfo.inode_count: " << info.inode_count
+                << "\ninfo.alloc_block_count: " << info.alloc_block_count
+                << "\ninfo.alloc_inode_count: " << info.alloc_inode_count
+                << "\ninfo.slice_size: " << info.slice_size
+                << "\ninfo.abm_slices: " << info.abm_slices
+                << "\ninfo.ino_slices: " << info.ino_slices
+                << "\ninfo.dat_slices: " << info.dat_slices
+                << "\ninfo.journal_slices: " << info.journal_slices
+                << "\ninfo.oldest_revision: " << info.oldest_revision;
 }
 
 uint32_t GetBlobfsFormatVersionFromOptions(const FilesystemOptions& options) {
@@ -73,59 +71,70 @@ bool CheckFilesystemAndDriverCompatibility(uint32_t format_version) {
 
 // Validate the metadata for the superblock, given a maximum number of
 // available blocks.
-zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
+zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet) {
   if ((info->magic0 != kBlobfsMagic0) || (info->magic1 != kBlobfsMagic1)) {
-    FX_LOGS(ERROR) << "bad magic";
+    if (!quiet)
+      FX_LOGS(ERROR) << "bad magic";
     return ZX_ERR_INVALID_ARGS;
   }
   if (!CheckFilesystemAndDriverCompatibility(info->format_version)) {
-    FX_LOGS(ERROR) << *info;
+    if (!quiet)
+      FX_LOGS(ERROR) << *info;
     return ZX_ERR_INVALID_ARGS;
   }
   if (info->block_size != kBlobfsBlockSize) {
-    FX_LOGS(ERROR) << "bsz " << info->block_size << " unsupported" << *info;
+    if (!quiet)
+      FX_LOGS(ERROR) << "bsz " << info->block_size << " unsupported" << *info;
     return ZX_ERR_INVALID_ARGS;
   }
 
   if (info->data_block_count < kMinimumDataBlocks) {
-    FX_LOGS(ERROR) << "Not enough space for minimum data partition";
+    if (!quiet)
+      FX_LOGS(ERROR) << "Not enough space for minimum data partition";
     return ZX_ERR_NO_SPACE;
   }
 
 #ifdef __Fuchsia__
   if ((info->flags & kBlobFlagClean) == 0) {
-    FX_LOGS(WARNING) << "filesystem in dirty state. Was not unmounted cleanly.";
+    if (!quiet)
+      FX_LOGS(WARNING) << "filesystem in dirty state. Was not unmounted cleanly.";
   } else {
-    FX_LOGS(INFO) << "filesystem in clean state.";
+    if (!quiet)
+      FX_LOGS(INFO) << "filesystem in clean state.";
   }
 #endif
 
   // Determine the number of blocks necessary for the block map and node map.
   uint64_t total_inode_size;
   if (mul_overflow(info->inode_count, sizeof(Inode), &total_inode_size)) {
-    FX_LOGS(ERROR) << "Multiplication overflow";
+    if (!quiet)
+      FX_LOGS(ERROR) << "Multiplication overflow";
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   uint64_t node_map_size;
   if (mul_overflow(NodeMapBlocks(*info), kBlobfsBlockSize, &node_map_size)) {
-    FX_LOGS(ERROR) << "Multiplication overflow";
+    if (!quiet)
+      FX_LOGS(ERROR) << "Multiplication overflow";
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   if (total_inode_size != node_map_size) {
-    FX_LOGS(ERROR) << "Inode table block must be entirely filled";
+    if (!quiet)
+      FX_LOGS(ERROR) << "Inode table block must be entirely filled";
     return ZX_ERR_BAD_STATE;
   }
 
   if (info->journal_block_count < kMinimumJournalBlocks) {
-    FX_LOGS(ERROR) << "Not enough space for minimum journal partition";
+    if (!quiet)
+      FX_LOGS(ERROR) << "Not enough space for minimum journal partition";
     return ZX_ERR_NO_SPACE;
   }
 
   if ((info->flags & kBlobFlagFVM) == 0) {
     if (TotalBlocks(*info) > max) {
-      FX_LOGS(ERROR) << "too large for device" << *info;
+      if (!quiet)
+        FX_LOGS(ERROR) << "too large for device" << *info;
       return ZX_ERR_INVALID_ARGS;
     }
   } else {
@@ -134,34 +143,41 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
     size_t abm_blocks_needed = BlockMapBlocks(*info);
     size_t abm_blocks_allocated = info->abm_slices * blocks_per_slice;
     if (abm_blocks_needed > abm_blocks_allocated) {
-      FX_LOGS(ERROR) << "Not enough slices for block bitmap" << *info;
+      if (!quiet)
+        FX_LOGS(ERROR) << "Not enough slices for block bitmap" << *info;
       return ZX_ERR_INVALID_ARGS;
     } else if (abm_blocks_allocated + BlockMapStartBlock(*info) >= NodeMapStartBlock(*info)) {
-      FX_LOGS(ERROR) << "Block bitmap collides into node map" << *info;
+      if (!quiet)
+        FX_LOGS(ERROR) << "Block bitmap collides into node map" << *info;
       return ZX_ERR_INVALID_ARGS;
     }
 
     size_t ino_blocks_needed = NodeMapBlocks(*info);
     size_t ino_blocks_allocated = info->ino_slices * blocks_per_slice;
     if (ino_blocks_needed > ino_blocks_allocated) {
-      FX_LOGS(ERROR) << "Not enough slices for node map" << *info;
+      if (!quiet)
+        FX_LOGS(ERROR) << "Not enough slices for node map" << *info;
       return ZX_ERR_INVALID_ARGS;
     } else if (ino_blocks_allocated + NodeMapStartBlock(*info) >= DataStartBlock(*info)) {
-      FX_LOGS(ERROR) << "Node bitmap collides into data blocks" << *info;
+      if (!quiet)
+        FX_LOGS(ERROR) << "Node bitmap collides into data blocks" << *info;
       return ZX_ERR_INVALID_ARGS;
     }
 
     size_t dat_blocks_needed = DataBlocks(*info);
     size_t dat_blocks_allocated = info->dat_slices * blocks_per_slice;
     if (dat_blocks_needed < kStartBlockMinimum) {
-      FX_LOGS(ERROR) << "Partition too small; no space left for data blocks" << *info;
+      if (!quiet)
+        FX_LOGS(ERROR) << "Partition too small; no space left for data blocks" << *info;
       return ZX_ERR_INVALID_ARGS;
     } else if (dat_blocks_needed > dat_blocks_allocated) {
-      FX_LOGS(ERROR) << "Not enough slices for data blocks" << *info;
+      if (!quiet)
+        FX_LOGS(ERROR) << "Not enough slices for data blocks" << *info;
       return ZX_ERR_INVALID_ARGS;
     } else if (dat_blocks_allocated + DataStartBlock(*info) >
                std::numeric_limits<uint32_t>::max()) {
-      FX_LOGS(ERROR) << "Data blocks overflow uint32" << *info;
+      if (!quiet)
+        FX_LOGS(ERROR) << "Data blocks overflow uint32" << *info;
       return ZX_ERR_INVALID_ARGS;
     }
   }

@@ -185,6 +185,8 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   // Errors on |visitor| will be forwarded to the caller, and will stop the iteration.
   fit::result<void, std::string> VisitBlobs(BlobVisitor visitor);
 
+  zx::status<std::unique_ptr<Superblock>> ReadBackupSuperblock();
+
  private:
   struct BlockCache {
     size_t bno;

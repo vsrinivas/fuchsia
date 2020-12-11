@@ -134,7 +134,7 @@ class FakeBlockDevice : public BlockDevice {
 //
 // This class is thread-safe.
 // This class is not movable or copyable.
-class FakeFVMBlockDevice final : public FakeBlockDevice {
+class FakeFVMBlockDevice : public FakeBlockDevice {
  public:
   FakeFVMBlockDevice(uint64_t block_count, uint32_t block_size, uint64_t slice_size,
                      uint64_t slice_capacity);

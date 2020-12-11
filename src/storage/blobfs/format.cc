@@ -178,7 +178,7 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
     return block * (kBlobfsBlockSize / disk_block);
   };
 
-  block_fifo_request_t requests[4] = {};
+  block_fifo_request_t requests[5] = {};
   requests[0].opcode = BLOCKIO_WRITE;
   requests[0].vmoid = vmoid.get();
   requests[0].length = static_cast<uint32_t>(FsToDeviceBlocks(superblock_blocks));
@@ -203,7 +203,22 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
   requests[3].vmo_offset = FsToDeviceBlocks(superblock_blocks + blockmap_blocks + nodemap_blocks);
   requests[3].dev_offset = FsToDeviceBlocks(JournalStartBlock(superblock));
 
-  return device->FifoTransaction(requests, std::size(requests));
+  int count = 4;
+  if (superblock.flags & kBlobFlagFVM) {
+    requests[4].opcode = BLOCKIO_WRITE;
+    requests[4].vmoid = vmoid.get();
+    requests[4].length = static_cast<uint32_t>(FsToDeviceBlocks(superblock_blocks));
+    requests[4].vmo_offset = FsToDeviceBlocks(0);
+    requests[4].dev_offset = FsToDeviceBlocks(kFVMBackupSuperblockOffset);
+    ++count;
+  }
+
+  status = device->FifoTransaction(requests, count);
+  if (status != ZX_OK)
+    return status;
+
+  block_fifo_request_t flush_request = {.opcode = BLOCKIO_FLUSH};
+  return device->FifoTransaction(&flush_request, 1);
 }
 
 }  // namespace

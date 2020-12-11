@@ -45,7 +45,12 @@ constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
 //
 // See //src/storage/docs/versioning.md for more.
 constexpr uint32_t kBlobfsCurrentFormatVersion = 0x00000009;
-constexpr uint64_t kBlobfsCurrentRevision = 0x00000001;
+
+// Revision 2: introduced a backup superblock.
+constexpr uint64_t kBlobfsRevisionBackupSuperblock = 0x00000002;
+
+// When this next changes, consider enabling the OldestRevisionNotUpdated test.
+constexpr uint64_t kBlobfsCurrentRevision = 0x00000002;
 
 constexpr uint32_t kBlobFlagClean          = 1;
 constexpr uint32_t kBlobFlagFVM            = 4;
@@ -59,6 +64,25 @@ constexpr uint64_t kBlobfsMaxFileSize      = kBlobfsBlockSize * sizeof(uint32_t)
 
 // Known Blobfs metadata locations. Unit of the location is blobfs block.
 constexpr size_t kSuperblockOffset = 0;
+
+// Blobfs has a backup superblock but only with FVM.  The backup superblock only needs to be
+// sufficient to get to the journal, since once there, either the primary superblock is valid or
+// there's a pending write in the journal to the primary superblock.  Note that the backup
+// superblock is not there for the purpose of solving random corruption issues i.e. a random
+// corruption of the primary superblock will still render the volume unusable.  It only exists to
+// guard against the potential for corruption whilst updating the primary superblock.  In practice,
+// after a write to a device but before a sucessful flush, we will either see the data before the
+// write or after the write and not some indeterminate state inbetween so it's unlikely that the
+// primary superblock wouldn't be readable, but if it's easy to do so, we should be resilient to the
+// case where data is in an indeterminate state between write and flush, and we should have tests
+// for this.  A backup superblock solves this issue.  Regarding random corruption: there are other
+// blocks within a filesystem that could be corrupted and would have equally serious consequences,
+// so if this is something to be addressed, it might benefit from a holistic solution, although one
+// could argue that corruption of the first block on the device is more likely than other blocks.
+// Note that there's no need to update the superblock when the primary superblock changes since its
+// only purpose is to help locate the journal, so some aspects of the backup superblock are likely
+// to be inconsistent.
+constexpr size_t kFVMBackupSuperblockOffset = 1;
 
 // Blobfs block offset of various filesystem structures, when using the FVM.
 constexpr size_t kFVMBlockMapStart = 0x10000;
@@ -94,7 +118,7 @@ constexpr uint64_t kBlobfsDefaultInodeCount = 10240;
 
 constexpr size_t kMinimumDataBlocks = 2;
 
-struct __PACKED Superblock {
+struct __PACKED alignas(8) Superblock {
   uint64_t magic0;
   uint64_t magic1;
   uint32_t format_version;
