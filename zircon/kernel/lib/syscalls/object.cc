@@ -507,7 +507,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     }
 
     case ZX_INFO_GUEST_STATS: {
-      auto status = validate_resource(handle, ZX_RSRC_KIND_ROOT);
+      auto status =
+          validate_ranged_resource(handle, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_INFO_BASE, 1);
       if (status != ZX_OK)
         return status;
 
@@ -565,7 +566,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     }
 
     case ZX_INFO_CPU_STATS: {
-      auto status = validate_resource(handle, ZX_RSRC_KIND_ROOT);
+      auto status =
+          validate_ranged_resource(handle, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_INFO_BASE, 1);
       if (status != ZX_OK)
         return status;
 
@@ -637,7 +639,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
     }
     case ZX_INFO_KMEM_STATS:
     case ZX_INFO_KMEM_STATS_EXTENDED: {
-      auto status = validate_resource(handle, ZX_RSRC_KIND_ROOT);
+      auto status =
+          validate_ranged_resource(handle, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_INFO_BASE, 1);
       if (status != ZX_OK)
         return status;
 

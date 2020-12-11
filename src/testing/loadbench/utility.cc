@@ -19,7 +19,7 @@
 #include <regex>
 #include <tuple>
 
-#include "fuchsia/boot/cpp/fidl.h"
+#include "fuchsia/kernel/cpp/fidl.h"
 #include "fuchsia/scheduler/cpp/fidl.h"
 #include "lib/fdio/directory.h"
 
@@ -231,38 +231,66 @@ zx::unowned_profile GetProfile(zx::duration capacity, zx::duration deadline, zx:
   return zx::unowned_profile{iter->second.get()};
 }
 
-zx::unowned_resource GetRootResource() {
-  static zx::resource root_resource;
+zx::unowned_resource GetDebugResource() {
+  static zx::resource debug_resource;
   static std::mutex mutex;
 
   std::lock_guard<std::mutex> guard{mutex};
 
-  if (root_resource) {
-    return zx::unowned_resource{root_resource.get()};
+  if (debug_resource) {
+    return zx::unowned_resource{debug_resource.get()};
   }
 
-  // Connect to the root resource.
+  // Connect to the debug resource.
   zx::channel channel0, channel1;
   zx_status_t status;
 
   status = zx::channel::create(0u, &channel0, &channel1);
   FX_CHECK(status == ZX_OK);
 
-  status = fdio_service_connect((std::string("/svc/") + fuchsia::boot::RootResource::Name_).c_str(),
-                                channel0.release());
+  status = fdio_service_connect(
+      (std::string("/svc/") + fuchsia::kernel::DebugResource::Name_).c_str(), channel0.release());
   FX_CHECK(status == ZX_OK);
 
-  fuchsia::boot::RootResource_SyncProxy proxy(std::move(channel1));
-  status = proxy.Get(&root_resource);
+  fuchsia::kernel::DebugResource_SyncProxy proxy(std::move(channel1));
+  status = proxy.Get(&debug_resource);
   FX_CHECK(status == ZX_OK);
 
-  return zx::unowned_resource{root_resource.get()};
+  return zx::unowned_resource{debug_resource.get()};
+}
+
+zx::unowned_resource GetInfoResource() {
+  static zx::resource info_resource;
+  static std::mutex mutex;
+
+  std::lock_guard<std::mutex> guard{mutex};
+
+  if (info_resource) {
+    return zx::unowned_resource{info_resource.get()};
+  }
+
+  // Connect to the info resource.
+  zx::channel channel0, channel1;
+  zx_status_t status;
+
+  status = zx::channel::create(0u, &channel0, &channel1);
+  FX_CHECK(status == ZX_OK);
+
+  status = fdio_service_connect(
+      (std::string("/svc/") + fuchsia::kernel::InfoResource::Name_).c_str(), channel0.release());
+  FX_CHECK(status == ZX_OK);
+
+  fuchsia::kernel::InfoResource_SyncProxy proxy(std::move(channel1));
+  status = proxy.Get(&info_resource);
+  FX_CHECK(status == ZX_OK);
+
+  return zx::unowned_resource{info_resource.get()};
 }
 
 size_t ReadCpuCount() {
   size_t actual, available;
   const auto status =
-      GetRootResource()->get_info(ZX_INFO_CPU_STATS, nullptr, 0, &actual, &available);
+      GetInfoResource()->get_info(ZX_INFO_CPU_STATS, nullptr, 0, &actual, &available);
   FX_CHECK(status == ZX_OK);
   return available;
 }
@@ -270,7 +298,7 @@ size_t ReadCpuCount() {
 void ReadCpuStats(zx_info_cpu_stats_t* stats_buffer, size_t record_count) {
   size_t actual, available;
   const auto buffer_size = sizeof(zx_info_cpu_stats_t) * record_count;
-  const auto status = GetRootResource()->get_info(ZX_INFO_CPU_STATS, stats_buffer, buffer_size,
+  const auto status = GetInfoResource()->get_info(ZX_INFO_CPU_STATS, stats_buffer, buffer_size,
                                                   &actual, &available);
   FX_CHECK(status == ZX_OK);
 }

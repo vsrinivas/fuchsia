@@ -40,9 +40,9 @@ zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, size_t ma
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // TODO(fxbug.dev/30918): finer grained validation
   zx_status_t status;
-  if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
+  if ((status = validate_ranged_resource(handle, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_DEBUG_BASE,
+                                         1)) != ZX_OK) {
     return status;
   }
 
@@ -107,9 +107,9 @@ zx_status_t sys_debug_send_command(zx_handle_t handle, user_in_ptr<const char> p
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // TODO(fxbug.dev/30918): finer grained validation
   zx_status_t status;
-  if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
+  if ((status = validate_ranged_resource(handle, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_DEBUG_BASE,
+                                         1)) != ZX_OK) {
     return status;
   }
 
@@ -133,9 +133,9 @@ zx_status_t sys_ktrace_read(zx_handle_t handle, user_out_ptr<void> _data, uint32
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // TODO(fxbug.dev/30918): finer grained validation
   zx_status_t status;
-  if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
+  if ((status = validate_ranged_resource(handle, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_DEBUG_BASE,
+                                         1)) != ZX_OK) {
     return status;
   }
 
@@ -154,9 +154,9 @@ zx_status_t sys_ktrace_control(zx_handle_t handle, uint32_t action, uint32_t opt
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // TODO(fxbug.dev/30918): finer grained validation
   zx_status_t status;
-  if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
+  if ((status = validate_ranged_resource(handle, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_DEBUG_BASE,
+                                         1)) != ZX_OK) {
     return status;
   }
 
@@ -180,9 +180,9 @@ zx_status_t sys_ktrace_write(zx_handle_t handle, uint32_t event_id, uint32_t arg
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // TODO(fxbug.dev/30918): finer grained validation
   zx_status_t status;
-  if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
+  if ((status = validate_ranged_resource(handle, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_DEBUG_BASE,
+                                         1)) != ZX_OK) {
     return status;
   }
 
@@ -201,9 +201,9 @@ zx_status_t sys_mtrace_control(zx_handle_t handle, uint32_t kind, uint32_t actio
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // TODO(fxbug.dev/30918): finer grained validation
   zx_status_t status;
-  if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
+  if ((status = validate_ranged_resource(handle, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_DEBUG_BASE,
+                                         1)) != ZX_OK) {
     return status;
   }
 

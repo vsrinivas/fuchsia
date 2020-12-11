@@ -444,13 +444,22 @@ impl BuiltinEnvironment {
         model.root_realm.hooks.install(boot_args.hooks()).await;
 
         // Set up KernelStats service.
-        let kernel_stats = root_resource_handle.as_ref().map(|handle| {
-            KernelStats::new(
-                handle
-                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
-                    .expect("Failed to duplicate root resource handle"),
-            )
-        });
+        let info_resource_handle = system_resource_handle
+            .as_ref()
+            .map(|handle| {
+                match handle.create_child(
+                    zx::ResourceKind::SYSTEM,
+                    None,
+                    zx::sys::ZX_RSRC_SYSTEM_INFO_BASE,
+                    1,
+                    b"info",
+                ) {
+                    Ok(resource) => Some(resource),
+                    Err(_) => None,
+                }
+            })
+            .flatten();
+        let kernel_stats = info_resource_handle.map(KernelStats::new);
         if let Some(kernel_stats) = kernel_stats.as_ref() {
             model.root_realm.hooks.install(kernel_stats.hooks()).await;
         }

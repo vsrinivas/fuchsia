@@ -158,7 +158,7 @@ class Tracing {
   // Writes human-readable translation for flow records into file specified by <file>.
   void WriteFlowRecord(const KTraceRecord record, const EventState event_state, std::ostream* file);
 
-  zx_handle_t root_resource_ = GetRootResource()->get();
+  zx_handle_t debug_resource_ = GetDebugResource()->get();
   bool running_ = false;
 };
 

@@ -10,7 +10,8 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.boot.RootResource",
+            "fuchsia.kernel.DebugResource",
+            "fuchsia.kernel.InfoResource",
             "fuchsia.scheduler.ProfileProvider"
         ]
     }

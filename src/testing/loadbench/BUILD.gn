@@ -22,7 +22,7 @@ source_set("lib") {
     "workload.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.boot",
+    "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/lib/fdio",
     "//src/lib/files",

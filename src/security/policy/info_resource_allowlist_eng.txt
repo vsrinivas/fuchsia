@@ -1,2 +1,4 @@
 fuchsia-pkg://fuchsia.com/component-manager-tests#meta/component_manager_boot_env_tests.cmx
+fuchsia-pkg://fuchsia.com/loadbench#meta/loadbench.cmx
+fuchsia-pkg://fuchsia.com/loadbench_tests#meta/loadbench_unittests.cmx
 fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/info_resource_allowed.cmx

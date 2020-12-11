@@ -208,13 +208,13 @@ std::tuple<bool, bool> Tracing::FetchRecord(zx_handle_t handle, uint8_t* data_bu
 
 // Rewinds kernel trace buffer.
 void Tracing::Rewind() {
-  const auto status = zx_ktrace_control(root_resource_, KTRACE_ACTION_REWIND, 0, nullptr);
+  const auto status = zx_ktrace_control(debug_resource_, KTRACE_ACTION_REWIND, 0, nullptr);
   FX_CHECK(status == ZX_OK) << "Failed to rewind kernel trace buffer.";
 }
 
 // Starts kernel tracing.
 void Tracing::Start(uint32_t group_mask) {
-  const auto status = zx_ktrace_control(root_resource_, KTRACE_ACTION_START, group_mask, nullptr);
+  const auto status = zx_ktrace_control(debug_resource_, KTRACE_ACTION_START, group_mask, nullptr);
   FX_CHECK(status == ZX_OK) << "Failed to start tracing.";
 
   running_ = true;
@@ -222,7 +222,7 @@ void Tracing::Start(uint32_t group_mask) {
 
 // Stops kernel tracing.
 void Tracing::Stop() {
-  const auto status = zx_ktrace_control(root_resource_, KTRACE_ACTION_STOP, 0, nullptr);
+  const auto status = zx_ktrace_control(debug_resource_, KTRACE_ACTION_STOP, 0, nullptr);
   FX_CHECK(status == ZX_OK) << "Failed to stop tracing.";
 
   running_ = false;
@@ -423,7 +423,7 @@ bool Tracing::WriteHumanReadable(std::ostream& human_readable_file) {
   bool done = false;
   while (!done) {
     auto [read_success, buffer_end] =
-        FetchRecord(root_resource_, data_buf, &offset, &bytes_read_per_fetch, buf_len);
+        FetchRecord(debug_resource_, data_buf, &offset, &bytes_read_per_fetch, buf_len);
 
     if (!read_success) {
       return false;
@@ -514,7 +514,7 @@ bool Tracing::PopulateDurationStats(std::string string_ref,
   bool done = false;
   while (!done) {
     auto [read_success, buffer_end] =
-        FetchRecord(root_resource_, data_buf, &offset, &bytes_read_per_fetch, buf_len);
+        FetchRecord(debug_resource_, data_buf, &offset, &bytes_read_per_fetch, buf_len);
 
     if (!read_success) {
       FX_LOGS(WARNING) << "Error reading traces, trace read stopped.";

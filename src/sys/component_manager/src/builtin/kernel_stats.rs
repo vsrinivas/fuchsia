@@ -24,7 +24,7 @@ pub struct KernelStats {
 }
 
 impl KernelStats {
-    /// `resource` must be the root resource.
+    /// `resource` must be the info resource.
     pub fn new(resource: Resource) -> Arc<Self> {
         Arc::new(Self { resource })
     }

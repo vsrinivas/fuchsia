@@ -40,7 +40,7 @@ zx::unowned_profile GetProfile(zx::duration capacity, zx::duration deadline, zx:
 
 // Returns an unowned handle to the root resource. Mantains an internal handle and returns the same
 // value for multiple requests.
-zx::unowned_resource GetRootResource();
+zx::unowned_resource GetDebugResource();
 
 // Returns the number of CPUs in the system.
 size_t ReadCpuCount();
