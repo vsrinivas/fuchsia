@@ -26,12 +26,12 @@ if (current_toolchain == default_toolchain) {
 
     args = [
       rebase_path(rebased_output_file),
-      rebase_path("//.git"),
+      rebase_path("//integration/.git"),
     ]
 
     sources = [
-      "//.git/HEAD",
-      "//.git/index",
+      "//integration/.git/HEAD",
+      "//integration/.git/index",
     ]
 
     inputs =
