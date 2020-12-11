@@ -19,6 +19,7 @@ product_bootfs_labels = [
   "//build/info:bootfs",
   "//bundles:bootstrap",
   "//bundles:debugging",
+  "//bundles:diagnostics-eng",
   "//bundles/bringup:manual_testing",
   "//bundles/drivers:bootstrap",
   "//bundles/drivers:bootstrap-eng",

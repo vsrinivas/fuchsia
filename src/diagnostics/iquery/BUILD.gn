@@ -161,6 +161,9 @@ group("tests") {
   deps = [ ":iquery-tests" ]
 }
 
-group("bootfs") {
-  deps = [ ":bin" ]
+group("iquery") {
+  deps = [
+    ":bin",
+    "//build/validate:non_production_tag",
+  ]
 }
