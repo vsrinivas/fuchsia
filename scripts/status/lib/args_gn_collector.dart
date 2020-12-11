@@ -41,13 +41,7 @@ class GNStatusParser {
       // ignore: only_throw_errors
       throw 'Unexpected error running fx gn: exit code ${processResult.exitCode}\n---- stderr output:\n${processResult.stderr}\n------';
     } else {
-      // removes any text preceeding the actual json string. Since gn outputs
-      // the json string to stderr, any warning output by fx, like the metrics
-      // warning, will get in the way of the json, causing a parsing error.
-      String json = processResult.stderr;
-      if (json.indexOf('{') > 0) {
-        json = json.substring(json.indexOf('{'));
-      }
+      String json = processResult.stdout;
 
       List<Map<String, dynamic>> argsTree =
           jsonDecode(json)['child'].cast<Map<String, dynamic>>().toList();

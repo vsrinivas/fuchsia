@@ -107,19 +107,18 @@ void main() {
               '$argsGn';
         }
       });
-      // removes any text preceeding the actual json string. Since gn outputs
-      // the json string to stderr, any warning output by fx, like the metrics
-      // warning, will get in the way of the json, causing a parsing error.
-      var data = pr.stderr
-          .skipWhile((t) => t[0] != '{'.codeUnitAt(0))
+      // With the `--stdin` option, `gn format --dump-tree` echos the formatted
+      // GN right after the JSON data. We need to truncate this extra output so
+      // that the JSON parser doesn't complain.
+      var data = pr.stdout
           .transform(utf8.decoder)
-          .map(jsonDecode)
-          .cast<Map>()
-          .first;
+          .transform(new LineSplitter())
+          .takeWhile((s) => s != '}')
+          .join('\n');
       pr.stdin
         ..writeln(argsGn)
         ..close();
-      return data;
+      return data.then((d) => jsonDecode(d + '}'));
     });
   }
 
@@ -139,15 +138,13 @@ void main() {
             'Unexpected error running fx gn: exit code 1\n---- stderr output:\nasdf\n------'),
       );
     });
-    test('parses a json that is preceded by a warning message', () async {
-      var jsonWithText =
-          '''WARNING: Please opt in or out of fx metrics collection.
-             {"child": [
+    test('parses a json output', () async {
+      var jsonText = '''{"child": [
                 {"type": "IDENTIFIER", "value": "use_goma"},
                 {"type": "LITERAL", "value": "true"}
               ]}
       ''';
-      ProcessResult pr = ProcessResult(123, 0, '', jsonWithText);
+      ProcessResult pr = ProcessResult(123, 0, jsonText, '');
       List<Item> items = parser.parseGn(processResult: pr);
       expect(items.length, 2);
       expect(items[0].key, 'goma');
@@ -196,16 +193,48 @@ void main() {
     test('parses partial files (useful for other tests)', () async {
       var data = await runFxGn('use_goma = true');
       expect(data, {
+        'begin_token': '',
         'child': [
           {
             'child': [
-              {'type': 'IDENTIFIER', 'value': 'use_goma'},
-              {'type': 'LITERAL', 'value': 'true'}
+              {
+                'location': {
+                  'begin_column': 1,
+                  'begin_line': 1,
+                  'end_column': 9,
+                  'end_line': 1
+                },
+                'type': 'IDENTIFIER',
+                'value': 'use_goma'
+              },
+              {
+                'location': {
+                  'begin_column': 12,
+                  'begin_line': 1,
+                  'end_column': 16,
+                  'end_line': 1
+                },
+                'type': 'LITERAL',
+                'value': 'true'
+              }
             ],
+            'location': {
+              'begin_column': 1,
+              'begin_line': 1,
+              'end_column': 16,
+              'end_line': 1
+            },
             'type': 'BINARY',
             'value': '='
           }
         ],
+        'location': {
+          'begin_column': 1,
+          'begin_line': 1,
+          'end_column': 16,
+          'end_line': 1
+        },
+        'result_mode': 'discards_result',
         'type': 'BLOCK'
       });
     });
@@ -223,62 +252,223 @@ universe_package_labels += [
   "//third_party/dart-pkg/pub/io/",
 ]''');
       expect(data, {
+        'begin_token': '',
         'child': [
           {
             'child': [
               {
+                'begin_token': '(',
                 'child': [
-                  {'type': 'LITERAL', 'value': '"//products/core.gni"'}
+                  {
+                    'location': {
+                      'begin_column': 8,
+                      'begin_line': 1,
+                      'end_column': 29,
+                      'end_line': 1
+                    },
+                    'type': 'LITERAL',
+                    'value': '"//products/core.gni"'
+                  }
                 ],
+                'end': {
+                  'location': {
+                    'begin_column': 29,
+                    'begin_line': 1,
+                    'end_column': 30,
+                    'end_line': 1
+                  },
+                  'type': 'END',
+                  'value': ')'
+                },
+                'location': {
+                  'begin_column': 7,
+                  'begin_line': 1,
+                  'end_column': 29,
+                  'end_line': 1
+                },
                 'type': 'LIST'
               }
             ],
+            'location': {
+              'begin_column': 1,
+              'begin_line': 1,
+              'end_column': 29,
+              'end_line': 1
+            },
             'type': 'FUNCTION',
             'value': 'import'
           },
           {
             'child': [
-              {'type': 'IDENTIFIER', 'value': 'use_goma'},
-              {'type': 'LITERAL', 'value': 'true'}
+              {
+                'location': {
+                  'begin_column': 1,
+                  'begin_line': 2,
+                  'end_column': 9,
+                  'end_line': 2
+                },
+                'type': 'IDENTIFIER',
+                'value': 'use_goma'
+              },
+              {
+                'location': {
+                  'begin_column': 12,
+                  'begin_line': 2,
+                  'end_column': 16,
+                  'end_line': 2
+                },
+                'type': 'LITERAL',
+                'value': 'true'
+              }
             ],
+            'location': {
+              'begin_column': 1,
+              'begin_line': 2,
+              'end_column': 16,
+              'end_line': 2
+            },
             'type': 'BINARY',
             'value': '='
           },
           {
             'child': [
-              {'type': 'IDENTIFIER', 'value': 'goma_dir'},
-              {'type': 'LITERAL', 'value': '"/Users/ldap/goma"'}
+              {
+                'location': {
+                  'begin_column': 1,
+                  'begin_line': 3,
+                  'end_column': 9,
+                  'end_line': 3
+                },
+                'type': 'IDENTIFIER',
+                'value': 'goma_dir'
+              },
+              {
+                'location': {
+                  'begin_column': 12,
+                  'begin_line': 3,
+                  'end_column': 30,
+                  'end_line': 3
+                },
+                'type': 'LITERAL',
+                'value': '"/Users/ldap/goma"'
+              }
             ],
+            'location': {
+              'begin_column': 1,
+              'begin_line': 3,
+              'end_column': 30,
+              'end_line': 3
+            },
             'type': 'BINARY',
             'value': '='
           },
           {
             'before_comment': ['# See: fx args --list=base_package_labels'],
             'child': [
-              {'type': 'IDENTIFIER', 'value': 'base_package_labels'},
-              {'child': [], 'type': 'LIST'}
+              {
+                'location': {
+                  'begin_column': 1,
+                  'begin_line': 6,
+                  'end_column': 20,
+                  'end_line': 6
+                },
+                'type': 'IDENTIFIER',
+                'value': 'base_package_labels'
+              },
+              {
+                'begin_token': '[',
+                'child': [],
+                'end': {
+                  'location': {
+                    'begin_column': 25,
+                    'begin_line': 6,
+                    'end_column': 26,
+                    'end_line': 6
+                  },
+                  'type': 'END',
+                  'value': ']'
+                },
+                'location': {
+                  'begin_column': 24,
+                  'begin_line': 6,
+                  'end_column': 25,
+                  'end_line': 6
+                },
+                'type': 'LIST'
+              }
             ],
+            'location': {
+              'begin_column': 1,
+              'begin_line': 6,
+              'end_column': 25,
+              'end_line': 6
+            },
             'type': 'BINARY',
             'value': '+='
           },
           {
             'before_comment': ['# See: fx args --list=universe_package_labels'],
             'child': [
-              {'type': 'IDENTIFIER', 'value': 'universe_package_labels'},
               {
+                'location': {
+                  'begin_column': 1,
+                  'begin_line': 9,
+                  'end_column': 24,
+                  'end_line': 9
+                },
+                'type': 'IDENTIFIER',
+                'value': 'universe_package_labels'
+              },
+              {
+                'begin_token': '[',
                 'child': [
                   {
+                    'location': {
+                      'begin_column': 3,
+                      'begin_line': 10,
+                      'end_column': 35,
+                      'end_line': 10
+                    },
                     'type': 'LITERAL',
                     'value': '"//third_party/dart-pkg/pub/io/"'
                   }
                 ],
+                'end': {
+                  'location': {
+                    'begin_column': 1,
+                    'begin_line': 11,
+                    'end_column': 2,
+                    'end_line': 11
+                  },
+                  'type': 'END',
+                  'value': ']'
+                },
+                'location': {
+                  'begin_column': 28,
+                  'begin_line': 9,
+                  'end_column': 1,
+                  'end_line': 11
+                },
                 'type': 'LIST'
               }
             ],
+            'location': {
+              'begin_column': 1,
+              'begin_line': 9,
+              'end_column': 1,
+              'end_line': 11
+            },
             'type': 'BINARY',
             'value': '+='
           }
         ],
+        'location': {
+          'begin_column': 1,
+          'begin_line': 1,
+          'end_column': 1,
+          'end_line': 11
+        },
+        'result_mode': 'discards_result',
         'type': 'BLOCK'
       });
     });
