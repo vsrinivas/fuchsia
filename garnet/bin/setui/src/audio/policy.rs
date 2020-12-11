@@ -324,10 +324,15 @@ pub enum Response {
 
 #[cfg(test)]
 mod tests {
-    use crate::audio::policy::Transform;
+    use crate::audio::policy::{
+        PolicyId, Property, PropertyTarget, StateBuilder, Transform, TransformFlags,
+    };
+    use crate::switchboard::base::AudioStreamType;
     use fidl_fuchsia_settings_policy::{Disable, Mute, PolicyParameters, Volume};
     use matches::assert_matches;
+    use std::collections::{HashMap, HashSet};
     use std::convert::TryFrom;
+    use std::iter::FromIterator;
 
     /// Verifies that using `TryFrom` to convert a `PolicyParameters` into a `Transform` will fail
     /// if the source did not have required parameters specified.
@@ -360,5 +365,75 @@ mod tests {
         assert_eq!(Transform::try_from(min_params), Ok(Transform::Min(min_volume)));
         assert_eq!(Transform::try_from(mute_params), Ok(Transform::Mute(mute)));
         assert_eq!(Transform::try_from(disable_params), Ok(Transform::Disable));
+    }
+
+    // Verifies that the audio policy state builder functions correctly for adding targets and
+    // transforms.
+    #[test]
+    fn test_state_builder() {
+        let properties: HashMap<AudioStreamType, TransformFlags> = [
+            (AudioStreamType::Background, TransformFlags::TRANSFORM_MAX),
+            (AudioStreamType::Media, TransformFlags::TRANSFORM_MIN),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        let mut builder = StateBuilder::new();
+
+        for (property, value) in &properties {
+            builder = builder.add_property(property.clone(), value.clone());
+        }
+
+        let state = builder.build();
+        let retrieved_properties = state.get_properties();
+        assert_eq!(retrieved_properties.len(), properties.len());
+
+        let mut seen_targets = HashSet::<PropertyTarget>::new();
+        for property in retrieved_properties.iter().cloned() {
+            let target = property.target;
+            // Make sure only unique targets are encountered.
+            assert!(!seen_targets.contains(&target));
+            seen_targets.insert(target);
+            // Ensure the specified transforms are present.
+            assert_eq!(
+                property.available_transforms,
+                *properties.get(&property.stream_type).expect("unexpected property")
+            );
+        }
+    }
+
+    // Verifies that adding transforms to policy properties works.
+    #[test]
+    fn test_property_transforms() {
+        let supported_transforms = TransformFlags::TRANSFORM_MAX | TransformFlags::TRANSFORM_MIN;
+        let transforms = [Transform::Min(0.1), Transform::Max(0.9)];
+        let mut property = Property::new(AudioStreamType::Media, supported_transforms);
+        let mut property2 = Property::new(AudioStreamType::Background, supported_transforms);
+
+        for transform in transforms.iter().cloned() {
+            property.add_transform(transform);
+            property2.add_transform(transform);
+        }
+
+        // Ensure policy size matches transforms specified.
+        assert_eq!(property.active_policies.len(), transforms.len());
+        assert_eq!(property2.active_policies.len(), transforms.len());
+
+        let mut retrieved_ids: HashSet<PolicyId> =
+            HashSet::from_iter(property.active_policies.iter().map(|policy| policy.id));
+        retrieved_ids.extend(property2.active_policies.iter().map(|policy| policy.id));
+
+        // Make sure all ids are unique, even across properties.
+        assert_eq!(retrieved_ids.len(), transforms.len() * 2);
+
+        // Verify transforms are present.
+        let retrieved_transforms: Vec<Transform> =
+            property.active_policies.iter().map(|policy| policy.transform).collect();
+        let retrieved_transforms2: Vec<Transform> =
+            property2.active_policies.iter().map(|policy| policy.transform).collect();
+        for transform in transforms.iter() {
+            assert!(retrieved_transforms.contains(&transform));
+            assert!(retrieved_transforms2.contains(&transform));
+        }
     }
 }

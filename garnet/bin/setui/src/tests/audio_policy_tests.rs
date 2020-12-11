@@ -2,85 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::audio::default_audio_info;
 use crate::audio::policy::{
-    PolicyId, Property, PropertyTarget, Request as AudioRequest, Response as AudioResponse,
-    StateBuilder, Transform, TransformFlags,
+    Request as AudioRequest, Response as AudioResponse, StateBuilder, TransformFlags,
 };
-use crate::internal;
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::message::base::{Audience, MessengerType};
 use crate::policy::base::{response::Payload, Request};
 use crate::switchboard::base::{AudioStreamType, SettingType};
-use std::collections::{HashMap, HashSet};
-use std::iter::FromIterator;
+use crate::{internal, EnvironmentBuilder};
+use fidl_fuchsia_settings_policy::{
+    self as fidl, VolumePolicyControllerMarker, VolumePolicyControllerProxy,
+};
+use std::collections::HashSet;
 
-// Verifies that the audio policy state builder functions correctly for adding targets and
-// transforms.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_state_builder() {
-    let properties: HashMap<AudioStreamType, TransformFlags> = [
-        (AudioStreamType::Background, TransformFlags::TRANSFORM_MAX),
-        (AudioStreamType::Media, TransformFlags::TRANSFORM_MIN),
-    ]
-    .iter()
-    .cloned()
-    .collect();
-    let mut builder = StateBuilder::new();
+const ENV_NAME: &str = "settings_service_privacy_test_environment";
 
-    for (property, value) in &properties {
-        builder = builder.add_property(property.clone(), value.clone());
-    }
+/// Creates an environment for audio policy.
+async fn create_test_environment() -> VolumePolicyControllerProxy {
+    let storage_factory = InMemoryStorageFactory::create();
 
-    let state = builder.build();
-    let retrieved_properties = state.get_properties();
-    assert_eq!(retrieved_properties.len(), properties.len());
+    let env = EnvironmentBuilder::new(storage_factory)
+        .settings(&[SettingType::Audio])
+        .spawn_and_get_nested_environment(ENV_NAME)
+        .await
+        .unwrap();
 
-    let mut seen_targets = HashSet::<PropertyTarget>::new();
-    for property in retrieved_properties.iter().cloned() {
-        let target = property.target;
-        // Make sure only unique targets are encountered.
-        assert!(!seen_targets.contains(&target));
-        seen_targets.insert(target);
-        // Ensure the specified transforms are present.
-        assert_eq!(
-            property.available_transforms,
-            *properties.get(&property.stream_type).expect("should be here")
-        );
-    }
-}
-
-// Verifies that adding transforms to policy properties works.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_property_transforms() {
-    let supported_transforms = TransformFlags::TRANSFORM_MAX | TransformFlags::TRANSFORM_MIN;
-    let transforms = [Transform::Min(0.1), Transform::Max(0.9)];
-    let mut property = Property::new(AudioStreamType::Media, supported_transforms);
-    let mut property2 = Property::new(AudioStreamType::Background, supported_transforms);
-
-    for transform in transforms.iter().cloned() {
-        property.add_transform(transform);
-        property2.add_transform(transform);
-    }
-
-    // Ensure policy size matches transforms specified.
-    assert_eq!(property.active_policies.len(), transforms.len());
-    assert_eq!(property2.active_policies.len(), transforms.len());
-
-    let mut retrieved_ids: HashSet<PolicyId> =
-        HashSet::from_iter(property.active_policies.iter().map(|policy| policy.id));
-    retrieved_ids.extend(property2.active_policies.iter().map(|policy| policy.id));
-
-    // Make sure all ids are unique, even across properties.
-    assert_eq!(retrieved_ids.len(), transforms.len() * 2);
-
-    // Verify transforms are present.
-    let retrieved_transforms: Vec<Transform> =
-        property.active_policies.iter().map(|policy| policy.transform).collect();
-    let retrieved_transforms2: Vec<Transform> =
-        property2.active_policies.iter().map(|policy| policy.transform).collect();
-    for transform in transforms.iter() {
-        assert!(retrieved_transforms.contains(&transform));
-        assert!(retrieved_transforms2.contains(&transform));
-    }
+    env.connect_to_service::<VolumePolicyControllerMarker>().unwrap()
 }
 
 // A simple validation test to ensure the policy message hub propagates messages
@@ -127,4 +75,118 @@ async fn test_policy_message_hub() {
     // Verify response received.
     let (result_payload, _) = reply_receptor.next_payload().await.expect("should receive result");
     assert_eq!(result_payload, reply_payload);
+}
+
+// Tests that from a clean slate, the policy service returns the expected default property targets.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_policy_get_default() {
+    let expected_stream_types = default_audio_info()
+        .streams
+        .iter()
+        .map(|stream| stream.stream_type)
+        .collect::<HashSet<_>>();
+
+    let policy_service = create_test_environment().await;
+
+    // Attempt to read properties.
+    let properties = policy_service.get_properties().await.expect("failed to get properties");
+
+    // Verify that each expected stream type is contained in the property targets.
+    assert_eq!(properties.len(), expected_stream_types.len());
+    for property in properties {
+        // Allow unreachable patterns so this test will still build if more Target enums are added.
+        #[allow(unreachable_patterns)]
+        match property.target.expect("no target found for property") {
+            fidl::Target::Stream(stream) => {
+                assert!(expected_stream_types.contains(&stream.into()));
+            }
+            _ => panic!("unexpected target type"),
+        }
+    }
+}
+
+// Tests that adding a new policy transform returns its policy ID and is reflected by the output
+// from GetProperties.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_policy_add_policy() {
+    let expected_policy_target = AudioStreamType::Media;
+    let expected_policy_parameters =
+        fidl::PolicyParameters::Disable(fidl::Disable { ..fidl::Disable::EMPTY });
+
+    let policy_service = create_test_environment().await;
+
+    // Add a policy property and save the returned policy ID.
+    let added_policy_id = policy_service
+        .add_policy(
+            &mut fidl::Target::Stream(expected_policy_target.into()),
+            &mut expected_policy_parameters.clone(),
+        )
+        .await
+        .expect("failed to add policy")
+        .unwrap();
+
+    // Read the policies.
+    let properties = policy_service.get_properties().await.expect("failed to get properties");
+
+    // Verify that the expected target has the given policy and that others are unchanged.
+    for property in properties {
+        // Allow unreachable patterns so this test will still build if more Target enums are added.
+        #[allow(unreachable_patterns)]
+        match property.target.expect("no target found for property") {
+            fidl::Target::Stream(stream) => {
+                if stream == expected_policy_target.into() {
+                    // Chosen property should have a policy added.
+                    let added_policies = property.active_policies.unwrap();
+                    assert_eq!(added_policies.len(), 1);
+                    let added_policy = added_policies.first().unwrap();
+                    assert_eq!(added_policy.policy_id.unwrap(), added_policy_id);
+                    assert_eq!(
+                        *added_policy.parameters.as_ref().unwrap(),
+                        expected_policy_parameters
+                    );
+                } else {
+                    // Other properties shouldn't have any policies.
+                    assert!(property.active_policies.unwrap().is_empty());
+                }
+            }
+            _ => panic!("unexpected target type"),
+        }
+    }
+}
+
+// Tests that removing and added policy transform works and the removed policy is gone
+// from GetProperties.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_policy_remove_policy() {
+    let expected_policy_target = AudioStreamType::Media;
+    let expected_policy_parameters =
+        fidl::PolicyParameters::Disable(fidl::Disable { ..fidl::Disable::EMPTY });
+
+    let policy_service = create_test_environment().await;
+
+    // Add a policy property and save the returned policy ID.
+    let added_policy_id = policy_service
+        .add_policy(
+            &mut fidl::Target::Stream(expected_policy_target.into()),
+            &mut expected_policy_parameters.clone(),
+        )
+        .await
+        .expect("failed to add policy")
+        .unwrap();
+
+    // Remove the same policy using the returned ID.
+    policy_service
+        .remove_policy(added_policy_id)
+        .await
+        .expect("failed to remove policy")
+        .expect("removal error");
+
+    // Fetch the properties.
+    let properties = policy_service.get_properties().await.expect("failed to get properties");
+
+    // Verify that the expected target has the given policy and that others are unchanged.
+    for property in properties {
+        // No policies are active.
+        assert!(property.active_policies.unwrap().is_empty());
+    }
 }

@@ -365,7 +365,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             })
             .unwrap_or(self.agent_blueprints);
 
-        if create_environment(
+        create_environment(
             service_dir,
             settings,
             agent_blueprints,
@@ -377,10 +377,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             Arc::new(Mutex::new(policy_handler_factory)),
         )
         .await
-        .is_err()
-        {
-            return Err(format_err!("could not create environment"));
-        }
+        .map_err(|err| format_err!("could not create environment: {:?}", err))?;
 
         Ok(fs)
     }
@@ -559,16 +556,15 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // TODO(fxbug.dev/60925): allow configuration of policy API, create proxies based on
     // configured policy types.
-    let mut policy_proxies = HashMap::new();
-    policy_proxies.insert(
-        SettingType::Audio,
+    if components.contains(&SettingType::Audio) {
         PolicyProxy::create(
             SettingType::Audio,
             policy_handler_factory.clone(),
             core_messenger_factory.clone(),
             policy_messenger_factory.clone(),
-        ),
-    );
+        )
+        .await?;
+    }
 
     let mut proxies = HashMap::new();
 
