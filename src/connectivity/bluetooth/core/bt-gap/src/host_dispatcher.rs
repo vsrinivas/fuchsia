@@ -340,16 +340,12 @@ impl HostDispatcherState {
     fn set_active_id(&mut self, id: Option<HostId>) {
         info!("New active adapter: {}", id.map_or("<none>".to_string(), |id| id.to_string()));
         self.active_id = id;
-        if let Some(host_info) = self.get_active_host_info() {
-            let mut adapter_info = control::AdapterInfo::from(host_info);
+        if let Some(host) = self.get_active_host() {
+            let mut adapter_info = control::AdapterInfo::from(host.info());
             self.notify_event_listeners(|listener| {
                 let _res = listener.send_on_active_adapter_changed(Some(&mut adapter_info));
             })
         }
-    }
-
-    fn get_active_host_info(&mut self) -> Option<HostInfo> {
-        self.get_active_host().map(|host| host.info())
     }
 
     pub fn notify_event_listeners<F>(&mut self, mut f: F)
@@ -413,10 +409,6 @@ impl HostDispatcher {
         HostDispatcher { state: Arc::new(RwLock::new(hd)) }
     }
 
-    pub fn get_active_host_info(&self) -> Option<HostInfo> {
-        self.state.write().get_active_host_info()
-    }
-
     pub async fn when_hosts_found(&self) -> HostDispatcher {
         WhenHostsFound::new(self.clone()).await
     }
@@ -431,7 +423,7 @@ impl HostDispatcher {
 
     pub async fn set_name(&self, name: String) -> types::Result<()> {
         self.state.write().name = name;
-        match self.get_active_adapter().await {
+        match self.active_host().await {
             Some(host) => {
                 let name = self.state.read().name.clone();
                 host.set_name(name).await
@@ -442,7 +434,7 @@ impl HostDispatcher {
 
     pub async fn set_device_class(&self, class: DeviceClass) -> types::Result<()> {
         let class_repr = class.debug();
-        let res = match self.get_active_adapter().await {
+        let res = match self.active_host().await {
             Some(host) => host.set_device_class(class).await,
             None => Err(types::Error::no_host()),
         };
@@ -488,7 +480,7 @@ impl HostDispatcher {
     }
 
     async fn discover_on_active_host(&self) -> types::Result<HostDiscoverySession> {
-        match self.get_active_adapter().await {
+        match self.active_host().await {
             Some(host) => HostDevice::establish_discovery_session(&host).await,
             None => Err(types::Error::no_host()),
         }
@@ -548,7 +540,7 @@ impl HostDispatcher {
             return Ok(Arc::clone(&token));
         }
 
-        match self.get_active_adapter().await {
+        match self.active_host().await {
             Some(host) => {
                 let token = Arc::new(host.establish_discoverable_session().await?);
                 self.state.write().discoverable = Some(Arc::downgrade(&token));
@@ -596,7 +588,7 @@ impl HostDispatcher {
     }
 
     pub async fn connect(&self, peer_id: PeerId) -> types::Result<()> {
-        let host = self.get_active_adapter().await;
+        let host = self.active_host().await;
         match host {
             Some(host) => host.connect(peer_id).await,
             None => Err(types::Error::SysError(sys::Error::Failed)),
@@ -606,7 +598,7 @@ impl HostDispatcher {
     /// Instruct the active host to intitiate a pairing procedure with the target peer. If it
     /// fails, we return the error we receive from the host
     pub async fn pair(&self, id: PeerId, pairing_options: PairingOptions) -> types::Result<()> {
-        let host = self.get_active_adapter().await;
+        let host = self.active_host().await;
         match host {
             Some(host) => host.pair(id, pairing_options.into()).await,
             None => Err(sys::Error::Failed.into()),
@@ -615,14 +607,14 @@ impl HostDispatcher {
 
     // Attempt to disconnect peer with id `peer_id` from all transports
     pub async fn disconnect(&self, peer_id: PeerId) -> types::Result<()> {
-        let host = self.get_active_adapter().await;
+        let host = self.active_host().await;
         match host {
             Some(host) => host.disconnect(peer_id).await,
             None => Err(types::Error::no_host()),
         }
     }
 
-    pub async fn get_active_adapter(&self) -> Option<HostDevice> {
+    pub async fn active_host(&self) -> Option<HostDevice> {
         let adapter = self.when_hosts_found().await;
         let mut wstate = adapter.state.write();
         wstate.get_active_host()
@@ -639,7 +631,7 @@ impl HostDispatcher {
     }
 
     pub async fn request_host_service(self, chan: zx::Channel, service: HostService) {
-        match self.get_active_adapter().await {
+        match self.active_host().await {
             Some(host) => {
                 let host = host.proxy();
                 match service {

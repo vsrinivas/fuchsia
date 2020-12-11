@@ -4,10 +4,10 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl_fuchsia_bluetooth_control::ControlMarker,
-    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
+    fidl_fuchsia_bluetooth_control::{ControlMarker, InputCapabilityType, OutputCapabilityType},
+    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_zircon::DurationNum,
-    futures::FutureExt,
+    matches::assert_matches,
 };
 
 use crate::services::start_control_service;
@@ -20,9 +20,11 @@ async fn close_channel_when_client_dropped() -> Result<(), Error> {
     let hd = crate::host_dispatcher::test::make_simple_test_dispatcher();
     let serve_until_done = start_control_service(hd, server);
 
-    // Send a FIDL request
-    let _response = client.is_bluetooth_available();
-    fasync::Task::spawn(_response.map(|_| ())).detach();
+    // Send a FIDL request - we use set_io_capabilities as it does not depend on a host being
+    // available
+    let fidl_sent = client.set_io_capabilities(InputCapabilityType::None, OutputCapabilityType::None);
+    assert_matches!(fidl_sent, Ok(()));
+
     // Before receiving a response, drop our end of the channel so that the remote end should
     // terminate
     std::mem::drop(client);

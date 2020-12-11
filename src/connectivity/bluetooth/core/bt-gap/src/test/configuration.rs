@@ -162,7 +162,7 @@ async fn set_secure_connections_only() {
 async fn configure_applies_to_multiple_devices() {
     // `setup_configuration_test` adds the first host, and in this test we add a second
     let (host1_server, dispatcher, config_client, server) = setup_configuration_test().unwrap();
-    let host1_info = dispatcher.get_active_host_info().unwrap();
+    let host1_info = dispatcher.active_host().await.unwrap().info();
     let host2_id = HostId(host1_info.id.0 + 1);
     let host2_server =
         hd_test::create_and_add_test_host_to_dispatcher(host2_id, &dispatcher).unwrap();

@@ -129,7 +129,7 @@ async fn handler(
             responder.send(&mut devices.iter_mut())
         }
         ControlRequest::IsBluetoothAvailable { responder } => {
-            let is_available = hd.get_active_host_info().is_some();
+            let is_available = hd.active_host().await.is_some();
             responder.send(is_available)
         }
         ControlRequest::SetPairingDelegate { delegate, responder } => {
@@ -164,8 +164,8 @@ async fn handler(
             }
         }
         ControlRequest::GetActiveAdapterInfo { responder } => {
-            let host_info = hd.get_active_host_info();
-            responder.send(host_info.map(fctrl::AdapterInfo::from).as_mut())
+            let host = hd.active_host().await;
+            responder.send(host.map(|host| fctrl::AdapterInfo::from(host.info())).as_mut())
         }
         ControlRequest::RequestDiscovery { discovery, responder } => {
             let mut resp = if discovery {
