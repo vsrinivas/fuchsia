@@ -9,7 +9,6 @@
 #include <fcntl.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
-#include <fuchsia/power/manager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/receiver.h>
@@ -66,7 +65,6 @@ constexpr char kBootFirmwarePath[] = "lib/firmware";
 constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 constexpr char kFshostAdminPath[] = "/svc/fuchsia.fshost.Admin";
-constexpr zx::duration kPowerManagerConnectionTimeout = zx::sec(40);
 
 // The driver_host doesn't just define its own __asan_default_options()
 // function because that conflicts with the build-system feature of injecting
@@ -120,7 +118,6 @@ void suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
 }  // namespace
 
 namespace power_fidl = llcpp::fuchsia::hardware::power;
-namespace power_manager_fidl = llcpp::fuchsia::power::manager;
 
 Coordinator::Coordinator(CoordinatorConfig config, async_dispatcher_t* dispatcher)
     : config_(std::move(config)), dispatcher_(dispatcher), inspect_manager_(dispatcher) {
@@ -159,29 +156,64 @@ void Coordinator::ShutdownFilesystems() {
   LOGF(INFO, "Successfully waited for VFS exit completion");
 }
 
-zx_status_t Coordinator::RegisterWithPowerManager(zx::channel power_manager_client,
+zx_status_t Coordinator::RegisterWithPowerManager(zx::channel devfs_handle) {
+  zx::channel system_state_transition_client, system_state_transition_server;
+  zx_status_t status =
+      zx::channel::create(0, &system_state_transition_client, &system_state_transition_server);
+  if (status != ZX_OK) {
+    return status;
+  }
+  std::unique_ptr<SystemStateManager> system_state_manager;
+  status = SystemStateManager::Create(dispatcher_, this, std::move(system_state_transition_server),
+                                      &system_state_manager);
+  if (status != ZX_OK) {
+    return status;
+  }
+  set_system_state_manager(std::move(system_state_manager));
+  zx::channel local, remote;
+  status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+  std::string registration_svc =
+      "/svc/" + std::string(llcpp::fuchsia::power::manager::DriverManagerRegistration::Name);
+
+  status = fdio_service_connect(registration_svc.c_str(), remote.release());
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to connect to fuchsia.power.manager: %s", zx_status_get_string(status));
+  }
+
+  status = RegisterWithPowerManager(std::move(local), std::move(system_state_transition_client),
+                                    std::move(devfs_handle));
+  if (status == ZX_OK) {
+    set_power_manager_registered(true);
+  }
+  return ZX_OK;
+}
+
+zx_status_t Coordinator::RegisterWithPowerManager(zx::channel power_manager_client_channel,
                                                   zx::channel system_state_transition_client,
                                                   zx::channel devfs_handle) {
-  // This request is called with a timeout until fxbug.dev/53240 is resolved.
-  power_manager_fidl::DriverManagerRegistration::ResultOf::Register result(
-      power_manager_client.get(), system_state_transition_client, devfs_handle,
-      zx::deadline_after(kPowerManagerConnectionTimeout).get());
+  power_manager_client_.Bind(std::move(power_manager_client_channel), dispatcher_);
+  auto result = power_manager_client_->Register(
+      std::move(system_state_transition_client), std::move(devfs_handle),
+      [](power_manager_fidl::DriverManagerRegistration::RegisterResponse* response) {
+        if (response->result.is_err()) {
+          power_manager_fidl::RegistrationError err = response->result.err();
+          if (err == power_manager_fidl::RegistrationError::INVALID_HANDLE) {
+            LOGF(ERROR, "Failed to register with power_manager.Invalid handle.\n");
+            return;
+          }
+          LOGF(ERROR, "Failed to register with power_manager\n");
+          return;
+        }
+        LOGF(INFO, "Registered with power manager successfully");
+      });
   if (!result.ok()) {
-    LOGF(ERROR, "Failed to register with power_manager:%d\n", result.status());
+    LOGF(INFO, "Failed to register with power_manager: %d\n", result.status());
     return result.status();
   }
 
-  if (result.Unwrap()->result.is_err()) {
-    power_manager_fidl::RegistrationError err = result.Unwrap()->result.err();
-    if (err == power_manager_fidl::RegistrationError::INVALID_HANDLE) {
-      LOGF(ERROR, "Failed to register with power_manager.Invalid handle.\n");
-      return ZX_ERR_INVALID_ARGS;
-    }
-    LOGF(ERROR, "Failed to register with power_manager\n");
-    return ZX_ERR_INTERNAL;
-  }
-
-  LOGF(INFO, "Registered with power manager successfully");
   return ZX_OK;
 }
 

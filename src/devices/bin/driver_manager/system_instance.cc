@@ -165,6 +165,11 @@ void SystemInstance::ServiceStarter(Coordinator* coordinator) {
     }
   }
 
+  zx_status_t status = coordinator->RegisterWithPowerManager(CloneFs("dev"));
+  if (status != ZX_OK) {
+    LOGF(WARNING, "Unable to RegisterWithPowerManager: %d", status);
+  }
+
   auto starter_args = std::make_unique<ServiceStarterArgs>();
   starter_args->instance = this;
   starter_args->coordinator = coordinator;
@@ -194,39 +199,6 @@ int SystemInstance::WaitForSystemAvailable(Coordinator* coordinator) {
   coordinator->set_system_available(true);
   coordinator->ScanSystemDrivers();
 
-  zx::channel system_state_transition_client, system_state_transition_server;
-  zx_status_t status =
-      zx::channel::create(0, &system_state_transition_client, &system_state_transition_server);
-  if (status != ZX_OK) {
-    return status;
-  }
-  std::unique_ptr<SystemStateManager> system_state_manager;
-  status =
-      SystemStateManager::Create(coordinator->dispatcher(), coordinator,
-                                 std::move(system_state_transition_server), &system_state_manager);
-  if (status != ZX_OK) {
-    return status;
-  }
-  coordinator->set_system_state_manager(std::move(system_state_manager));
-  zx::channel dev_handle = CloneFs("dev");
-  zx::channel local, remote;
-  status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
-  }
-  std::string registration_svc =
-      "/svc/" + std::string(llcpp::fuchsia::power::manager::DriverManagerRegistration::Name);
-
-  status = fdio_service_connect(registration_svc.c_str(), remote.release());
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to connect to fuchsia.power.manager: %s", zx_status_get_string(status));
-  }
-
-  status = coordinator->RegisterWithPowerManager(
-      std::move(local), std::move(system_state_transition_client), std::move(dev_handle));
-  if (status == ZX_OK) {
-    coordinator->set_power_manager_registered(true);
-  }
   return 0;
 }
 

@@ -7,6 +7,7 @@
 
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/fshost/llcpp/fidl.h>
+#include <fuchsia/power/manager/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/svc/outgoing.h>
@@ -47,6 +48,7 @@
 namespace power_fidl = llcpp::fuchsia::hardware::power;
 using power_fidl::statecontrol::SystemPowerState;
 namespace device_manager_fidl = llcpp::fuchsia::device::manager;
+namespace power_manager_fidl = llcpp::fuchsia::power::manager;
 
 class DriverHostLoaderService;
 class FsProvider;
@@ -386,6 +388,8 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface {
 
   // Returns path to driver that should be bound to fragments of composite devices.
   std::string GetFragmentDriverPath() const;
+
+  zx_status_t RegisterWithPowerManager(zx::channel devfs_handle);
   zx_status_t RegisterWithPowerManager(zx::channel power_manager_client,
                                        zx::channel system_state_transition_client,
                                        zx::channel devfs_handle);
@@ -402,6 +406,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface {
   bool system_loaded_ = false;
   bool power_manager_registered_ = false;
   LoaderServiceConnector loader_service_connector_;
+  fidl::Client<power_manager_fidl::DriverManagerRegistration> power_manager_client_;
 
   // All Drivers
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_;

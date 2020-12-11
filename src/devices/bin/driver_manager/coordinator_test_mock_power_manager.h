@@ -13,14 +13,17 @@ class MockPowerManager
  public:
   void Register(zx::channel system_state_transition, zx::channel dir,
                 RegisterCompleter::Sync& completer) override {
-    register_called_ = true;
+    sync_completion_signal(&register_called_);
     completer.ReplySuccess();
   }
 
-  bool register_called() { return register_called_; }
+  void wait_until_register_called() {
+    sync_completion_wait(&register_called_, ZX_TIME_INFINITE);
+    sync_completion_reset(&register_called_);
+  }
 
  private:
-  bool register_called_ = false;
+  sync_completion_t register_called_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_TEST_MOCK_POWER_MANAGER_H_

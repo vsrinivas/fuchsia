@@ -509,5 +509,5 @@ TEST_F(MultipleDeviceTestCase, PowerManagerRegistration) {
   ASSERT_OK(coordinator()->RegisterWithPowerManager(std::move(mock_power_manager_client),
                                                     std::move(system_state_transition_client),
                                                     std::move(dev_local)));
-  ASSERT_TRUE(mock_power_manager.register_called());
+  mock_power_manager.wait_until_register_called();
 }
