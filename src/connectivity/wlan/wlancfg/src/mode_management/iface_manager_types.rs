@@ -55,6 +55,11 @@ pub(crate) struct ScanRequest {
 }
 
 #[derive(Debug)]
+pub(crate) struct ScanProxyRequest {
+    pub responder: oneshot::Sender<Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error>>,
+}
+
+#[derive(Debug)]
 pub(crate) struct StopClientConnectionsRequest {
     pub reason: client_types::DisconnectReason,
     pub responder: oneshot::Sender<Result<(), Error>>,
@@ -92,6 +97,7 @@ pub(crate) enum IfaceManagerRequest {
     AddIface(AddIfaceRequest),
     RemoveIface(RemoveIfaceRequest),
     Scan(ScanRequest),
+    GetScanProxy(ScanProxyRequest),
     StopClientConnections(StopClientConnectionsRequest),
     StartClientConnections(StartClientConnectionsRequest),
     StartAp(StartApRequest),

@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_component::client::connect_to_service,
     futures::{lock::Mutex, prelude::*},
-    log::{debug, error, info},
+    log::{debug, error, info, warn},
     std::{collections::HashMap, sync::Arc},
     stream::FuturesUnordered,
 };
@@ -30,13 +30,16 @@ pub trait ScanResultUpdate: Sync + Send {
 
 /// Requests a new SME scan and returns the results.
 async fn sme_scan(
-    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    scan_request: fidl_sme::ScanRequest,
+    sme_proxy: &fidl_sme::ClientSmeProxy,
+    mut scan_request: fidl_sme::ScanRequest,
 ) -> Result<Vec<fidl_sme::BssInfo>, ()> {
+    let (local, remote) = fidl::endpoints::create_proxy().map_err(|e| {
+        error!("Failed to create FIDL proxy for scan: {:?}", e);
+        ()
+    })?;
     let txn = {
-        let mut iface_manager = iface_manager.lock().await;
-        match iface_manager.scan(scan_request).await {
-            Ok(txn) => txn,
+        match sme_proxy.scan(&mut scan_request, remote) {
+            Ok(()) => local,
             Err(error) => {
                 error!("Scan initiation error: {:?}", error);
                 return Err(());
@@ -83,9 +86,24 @@ pub(crate) async fn perform_scan<F>(
     let mut bss_by_network: HashMap<fidl_policy::NetworkIdentifier, Vec<types::Bss>> =
         HashMap::new();
 
+    // Get an SME proxy
+    let sme_proxy = match iface_manager.lock().await.get_sme_proxy_for_scan().await {
+        Ok(proxy) => proxy,
+        Err(e) => {
+            // The attempt to get an SME proxy failed. Send an error to the requester, return early.
+            warn!("Failed to get an SME proxy for scan: {:?}", e);
+            if let Some(output_iterator) = output_iterator {
+                send_scan_error(output_iterator, fidl_policy::ScanErrorCode::GeneralError)
+                    .await
+                    .unwrap_or_else(|e| error!("Failed to send scan error: {}", e));
+            }
+            return;
+        }
+    };
+
     // Perform an initial passive scan
     let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-    let sme_result = sme_scan(Arc::clone(&iface_manager), scan_request).await;
+    let sme_result = sme_scan(&sme_proxy, scan_request).await;
     match sme_result {
         Ok(results) => {
             insert_bss_to_network_bss_map(&mut bss_by_network, results, true);
@@ -109,7 +127,7 @@ pub(crate) async fn perform_scan<F>(
             ssids: requested_active_scan_ssids,
             channels: vec![],
         });
-        let sme_result = sme_scan(iface_manager, scan_request).await;
+        let sme_result = sme_scan(&sme_proxy, scan_request).await;
         match sme_result {
             Ok(results) => {
                 insert_bss_to_network_bss_map(&mut bss_by_network, results, false);
@@ -147,7 +165,7 @@ pub(crate) async fn perform_scan<F>(
 
 /// Perform a directed active scan for a given network on given channels.
 pub(crate) async fn perform_directed_active_scan(
-    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    sme_proxy: &fidl_sme::ClientSmeProxy,
     ssid: &Vec<u8>,
     channels: Option<Vec<u8>>,
 ) -> Result<Vec<types::ScanResult>, ()> {
@@ -156,7 +174,7 @@ pub(crate) async fn perform_directed_active_scan(
         channels: channels.unwrap_or(vec![]),
     });
 
-    let sme_result = sme_scan(Arc::clone(&iface_manager), scan_request).await;
+    let sme_result = sme_scan(sme_proxy, scan_request).await;
 
     sme_result.map(|results| {
         let mut bss_by_network: HashMap<types::NetworkIdentifier, Vec<types::Bss>> = HashMap::new();
@@ -398,6 +416,12 @@ mod tests {
             Ok(local)
         }
 
+        async fn get_sme_proxy_for_scan(
+            &mut self,
+        ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
+            Ok(self.sme_proxy.clone())
+        }
+
         async fn stop_client_connections(
             &mut self,
             _reason: types::DisconnectReason,
@@ -433,6 +457,14 @@ mod tests {
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("error creating proxy");
         let iface_manager = Arc::new(Mutex::new(FakeIfaceManager::new(client_sme)));
         (iface_manager, remote.into_stream().expect("failed to create stream"))
+    }
+
+    /// Creates an SME proxy for tests.
+    async fn create_sme_proxy() -> (fidl_sme::ClientSmeProxy, fidl_sme::ClientSmeRequestStream) {
+        set_logger_for_test();
+        let (client_sme, remote) =
+            create_proxy::<fidl_sme::ClientSmeMarker>().expect("error creating proxy");
+        (client_sme, remote.into_stream().expect("failed to create stream"))
     }
 
     struct MockScanResultConsumer {
@@ -840,11 +872,11 @@ mod tests {
     #[test]
     fn sme_scan_with_passive_request() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
+        let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
 
         // Issue request to scan.
         let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        let scan_fut = sme_scan(client, scan_request.clone());
+        let scan_fut = sme_scan(&sme_proxy, scan_request.clone());
         pin_mut!(scan_fut);
 
         // Request scan data from SME
@@ -876,14 +908,14 @@ mod tests {
     #[test]
     fn sme_scan_with_active_request() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
+        let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
 
         // Issue request to scan.
         let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
             ssids: vec!["foo_ssid".as_bytes().to_vec(), "bar_ssid".as_bytes().to_vec()],
             channels: vec![1, 20],
         });
-        let scan_fut = sme_scan(client, scan_request.clone());
+        let scan_fut = sme_scan(&sme_proxy, scan_request.clone());
         pin_mut!(scan_fut);
 
         // Request scan data from SME
@@ -915,11 +947,11 @@ mod tests {
     #[test]
     fn sme_scan_error() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
+        let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
 
         // Issue request to scan.
         let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        let scan_fut = sme_scan(client, scan_request);
+        let scan_fut = sme_scan(&sme_proxy, scan_request);
         pin_mut!(scan_fut);
 
         // Request scan data from SME
@@ -951,11 +983,11 @@ mod tests {
     #[test]
     fn sme_scan_channel_closed() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
+        let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
 
         // Issue request to scan.
         let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        let scan_fut = sme_scan(client, scan_request);
+        let scan_fut = sme_scan(&sme_proxy, scan_request);
         pin_mut!(scan_fut);
 
         // Request scan data from SME
@@ -1825,13 +1857,13 @@ mod tests {
     #[test]
     fn directed_active_scan_filters_desired_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
+        let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
 
         // Issue request to scan.
         let desired_ssid = "test_ssid".as_bytes().to_vec();
         let desired_channels = vec![1, 36];
         let scan_fut =
-            perform_directed_active_scan(client, &desired_ssid, Some(desired_channels.clone()));
+            perform_directed_active_scan(&sme_proxy, &desired_ssid, Some(desired_channels.clone()));
         pin_mut!(scan_fut);
 
         // Generate scan results

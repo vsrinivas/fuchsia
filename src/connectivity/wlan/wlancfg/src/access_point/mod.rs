@@ -424,6 +424,12 @@ mod tests {
             unimplemented!()
         }
 
+        async fn get_sme_proxy_for_scan(
+            &mut self,
+        ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
+            unimplemented!()
+        }
+
         async fn stop_client_connections(
             &mut self,
             _reason: client_types::DisconnectReason,

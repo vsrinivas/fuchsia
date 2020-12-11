@@ -534,6 +534,15 @@ impl IfaceManagerService {
         }
     }
 
+    async fn get_sme_proxy_for_scan(
+        &mut self,
+    ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
+        let client_iface = self.get_client(None).await?;
+        let sme_proxy = client_iface.sme_proxy.clone();
+        self.clients.push(client_iface);
+        Ok(sme_proxy)
+    }
+
     fn stop_client_connections(
         &mut self,
         reason: client_types::DisconnectReason,
@@ -878,6 +887,11 @@ pub(crate) async fn serve_iface_manager_requests(
                     }
                     IfaceManagerRequest::Scan(ScanRequest {  scan_request, responder }) => {
                         if responder.send(iface_manager.scan( scan_request).await).is_err() {
+                            error!("could not respond to ScanRequest");
+                        }
+                    }
+                    IfaceManagerRequest::GetScanProxy(ScanProxyRequest {  responder }) => {
+                        if responder.send(iface_manager.get_sme_proxy_for_scan().await).is_err() {
                             error!("could not respond to ScanRequest");
                         }
                     }
@@ -3082,12 +3096,12 @@ mod tests {
 
     #[derive(Debug)]
     struct FakeIfaceManagerRequester {
-        scan_requested: bool,
+        scan_proxy_requested: bool,
     }
 
     impl FakeIfaceManagerRequester {
         fn new() -> Self {
-            FakeIfaceManagerRequester { scan_requested: false }
+            FakeIfaceManagerRequester { scan_proxy_requested: false }
         }
     }
 
@@ -3128,7 +3142,13 @@ mod tests {
             &mut self,
             _scan_request: fidl_fuchsia_wlan_sme::ScanRequest,
         ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
-            self.scan_requested = true;
+            unimplemented!()
+        }
+
+        async fn get_sme_proxy_for_scan(
+            &mut self,
+        ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
+            self.scan_proxy_requested = true;
             Err(format_err!("scan failed"))
         }
 
@@ -3816,12 +3836,12 @@ mod tests {
         // module took action.
         match test_type {
             NetworkSelectionMissingAttribute::AllAttributesPresent => {
-                assert!(iface_manager_client.scan_requested);
+                assert!(iface_manager_client.scan_proxy_requested);
             }
             NetworkSelectionMissingAttribute::IdleClient
             | NetworkSelectionMissingAttribute::SavedNetwork
             | NetworkSelectionMissingAttribute::NetworkSelectionInProgress => {
-                assert!(!iface_manager_client.scan_requested);
+                assert!(!iface_manager_client.scan_proxy_requested);
             }
         }
     }

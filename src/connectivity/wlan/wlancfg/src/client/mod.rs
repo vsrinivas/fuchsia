@@ -587,11 +587,15 @@ mod tests {
 
         async fn scan(
             &mut self,
-            mut scan_request: fidl_fuchsia_wlan_sme::ScanRequest,
+            _scan_request: fidl_fuchsia_wlan_sme::ScanRequest,
         ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
-            let (local, remote) = fidl::endpoints::create_proxy()?;
-            let _ = self.sme_proxy.scan(&mut scan_request, remote);
-            Ok(local)
+            unimplemented!()
+        }
+
+        async fn get_sme_proxy_for_scan(
+            &mut self,
+        ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
+            Ok(self.sme_proxy.clone())
         }
 
         async fn stop_client_connections(
@@ -1945,6 +1949,12 @@ mod tests {
             &mut self,
             _scan_request: fidl_sme::ScanRequest,
         ) -> Result<fidl_fuchsia_wlan_sme::ScanTransactionProxy, Error> {
+            unimplemented!()
+        }
+
+        async fn get_sme_proxy_for_scan(
+            &mut self,
+        ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
             Err(format_err!("No ifaces"))
         }
 

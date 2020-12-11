@@ -52,6 +52,11 @@ pub(crate) trait IfaceManagerApi {
         scan_request: fidl_sme::ScanRequest,
     ) -> Result<fidl_sme::ScanTransactionProxy, Error>;
 
+    /// Selects a client iface and return it for use with a scan
+    async fn get_sme_proxy_for_scan(
+        &mut self,
+    ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error>;
+
     /// Disconnects all configured clients and disposes of all client ifaces before instructing
     /// the PhyManager to stop client connections.
     async fn stop_client_connections(
@@ -140,6 +145,15 @@ impl IfaceManagerApi for IfaceManager {
         let (responder, receiver) = oneshot::channel();
         let req = ScanRequest { scan_request, responder };
         self.sender.try_send(IfaceManagerRequest::Scan(req))?;
+        receiver.await?
+    }
+
+    async fn get_sme_proxy_for_scan(
+        &mut self,
+    ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
+        let (responder, receiver) = oneshot::channel();
+        let req = ScanProxyRequest { responder };
+        self.sender.try_send(IfaceManagerRequest::GetScanProxy(req))?;
         receiver.await?
     }
 
@@ -295,6 +309,9 @@ mod tests {
                     handle_negative_test_result_responder(responder, failure_mode);
                 }
                 IfaceManagerRequest::Scan(ScanRequest { responder, .. }) => {
+                    handle_negative_test_result_responder(responder, failure_mode);
+                }
+                IfaceManagerRequest::GetScanProxy(ScanProxyRequest { responder }) => {
                     handle_negative_test_result_responder(responder, failure_mode);
                 }
                 IfaceManagerRequest::StartAp(StartApRequest { responder, .. }) => {
@@ -801,6 +818,73 @@ mod tests {
 
         // Verify that an error is returned.
         assert_variant!(test_values.exec.run_until_stalled(&mut scan_fut), Poll::Ready(Err(_)));
+    }
+
+    #[test]
+    fn test_get_scan_proxy_success() {
+        let mut test_values = test_setup();
+
+        // Request a scan
+        let scan_proxy_fut = test_values.iface_manager.get_sme_proxy_for_scan();
+        pin_mut!(scan_proxy_fut);
+        assert_variant!(test_values.exec.run_until_stalled(&mut scan_proxy_fut), Poll::Pending);
+
+        // Verify that the service sees the request.
+        let next_message = test_values.receiver.next();
+        pin_mut!(next_message);
+
+        assert_variant!(
+            test_values.exec.run_until_stalled(&mut next_message),
+            Poll::Ready(Some(IfaceManagerRequest::GetScanProxy(ScanProxyRequest{
+                responder
+            }))) => {
+                let (proxy, _) = create_proxy::<fidl_sme::ClientSmeMarker>()
+                    .expect("failed to create scan sme proxy");
+                responder.send(Ok(proxy)).expect("failed to send scan sme proxy");
+            }
+        );
+
+        // Verify that the client side gets the scan proxy
+        assert_variant!(
+            test_values.exec.run_until_stalled(&mut scan_proxy_fut),
+            Poll::Ready(Ok(_))
+        );
+    }
+
+    #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
+    #[test_case(NegativeTestFailureMode::OperationFailure; "operation failure")]
+    #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    fn scan_proxy_negative_test(failure_mode: NegativeTestFailureMode) {
+        let mut test_values = test_setup();
+
+        // Request a scan
+        let scan_proxy_fut = test_values.iface_manager.get_sme_proxy_for_scan();
+        pin_mut!(scan_proxy_fut);
+
+        let service_fut =
+            iface_manager_api_negative_test(test_values.receiver, failure_mode.clone());
+        pin_mut!(service_fut);
+
+        match failure_mode {
+            NegativeTestFailureMode::RequestFailure => {}
+            _ => {
+                // Run the request and the servicing of the request
+                assert_variant!(
+                    test_values.exec.run_until_stalled(&mut scan_proxy_fut),
+                    Poll::Pending
+                );
+                assert_variant!(
+                    test_values.exec.run_until_stalled(&mut service_fut),
+                    Poll::Ready(())
+                );
+            }
+        }
+
+        // Verify that an error is returned.
+        assert_variant!(
+            test_values.exec.run_until_stalled(&mut scan_proxy_fut),
+            Poll::Ready(Err(_))
+        );
     }
 
     #[test]

@@ -12,6 +12,7 @@ use {
         mode_management::iface_manager_api::IfaceManagerApi,
     },
     async_trait::async_trait,
+    fidl_fuchsia_wlan_internal as fidl_internal,
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -343,39 +344,63 @@ async fn augment_bss_with_active_scan(
     bssid: types::Bssid,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
 ) -> types::ConnectionCandidate {
-    match selected_network.observed_in_passive_scan {
-        Some(true) => {
-            info!("Performing directed active scan on selected network");
-            let directed_scan_result = scan::perform_directed_active_scan(
-                iface_manager,
-                &selected_network.network.ssid,
-                Some(vec![channel.primary]),
-            )
-            .await;
-            match directed_scan_result {
-                Ok(mut results) => {
-                    if let Some(mut network) =
-                        results.drain(..).find(|n| n.id == selected_network.network)
-                    {
-                        if let Some(bss) = network.entries.drain(..).find(|bss| bss.bssid == bssid)
-                        {
-                            return types::ConnectionCandidate {
-                                bss: bss.bss_desc,
-                                ..selected_network
-                            };
-                        }
-                    }
-                    info!("BSS info will lack active scan augmentation, proceeding anyway.");
-                }
-                Err(()) => info!("Failed to perform active scan to augment BSS info."),
-            };
+    // This internal function encapsulates all the logic and has a Result<> return type, allowing us
+    // to use the `?` operator inside it to reduce nesting.
+    async fn get_enhanced_bss_description(
+        selected_network: &types::ConnectionCandidate,
+        channel: types::WlanChan,
+        bssid: types::Bssid,
+        iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    ) -> Result<Option<Box<fidl_internal::BssDescription>>, ()> {
+        // Make sure the scan is needed
+        match selected_network.observed_in_passive_scan {
+            Some(true) => info!("Performing directed active scan on selected network"),
+            Some(false) => {
+                debug!("Network already discovered via active scan.");
+                return Err(());
+            }
+            None => {
+                error!("Unexpected 'None' value for 'observed_in_passive_scan'.");
+                return Err(());
+            }
         }
-        Some(false) => debug!("Network already discovered via active scan."),
-        None => error!("Unexpected 'None' value for 'observed_in_passive_scan'."),
+
+        // Get an SME proxy
+        let sme_proxy = iface_manager.lock().await.get_sme_proxy_for_scan().await.map_err(|e| {
+            info!("Failed to get an SME proxy for scan: {:?}", e);
+        })?;
+
+        // Perform the scan
+        let mut directed_scan_result = scan::perform_directed_active_scan(
+            &sme_proxy,
+            &selected_network.network.ssid,
+            Some(vec![channel.primary]),
+        )
+        .await
+        .map_err(|()| {
+            info!("Failed to perform active scan to augment BSS info.");
+        })?;
+
+        // Find the network in the results
+        let mut network = directed_scan_result
+            .drain(..)
+            .find(|n| n.id == selected_network.network)
+            .ok_or_else(|| {
+                info!("BSS info will lack active scan augmentation, proceeding anyway.");
+            })?;
+
+        // Find the BSS in the network's list of BSSs
+        let bss = network.entries.drain(..).find(|bss| bss.bssid == bssid).ok_or_else(|| {
+            info!("BSS info will lack active scan augmentation, proceeding anyway.");
+        })?;
+
+        Ok(bss.bss_desc)
     }
 
-    // fallback to returning the selected network with no change.
-    selected_network
+    match get_enhanced_bss_description(&selected_network, channel, bssid, iface_manager).await {
+        Ok(new_bss_desc) => types::ConnectionCandidate { bss: new_bss_desc, ..selected_network },
+        Err(()) => selected_network,
+    }
 }
 
 fn record_metrics_on_scan(
@@ -551,6 +576,12 @@ mod tests {
             let (local, remote) = fidl::endpoints::create_proxy()?;
             let _ = self.sme_proxy.scan(&mut scan_request, remote);
             Ok(local)
+        }
+
+        async fn get_sme_proxy_for_scan(
+            &mut self,
+        ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
+            Ok(self.sme_proxy.clone())
         }
 
         async fn stop_client_connections(
