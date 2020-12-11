@@ -5,13 +5,14 @@
 #![cfg(test)]
 use {
     anyhow::anyhow,
-    fidl_fuchsia_paver::PaverRequestStream,
+    fidl_fuchsia_paver::{self as paver, PaverRequestStream},
     fidl_fuchsia_pkg::{PackageCacheRequestStream, PackageResolverRequestStream},
     fidl_fuchsia_update::{
-        CheckNotStartedReason, CheckOptions, CheckingForUpdatesData, ErrorCheckingForUpdateData,
-        Initiator, InstallationErrorData, InstallationProgress, InstallingData, ManagerMarker,
-        ManagerProxy, MonitorMarker, MonitorRequest, MonitorRequestStream, NoUpdateAvailableData,
-        State, UpdateInfo,
+        CheckNotStartedReason, CheckOptions, CheckingForUpdatesData, CommitStatusProviderMarker,
+        CommitStatusProviderProxy, ErrorCheckingForUpdateData, Initiator,
+        InstallationDeferralReason, InstallationDeferredData, InstallationErrorData,
+        InstallationProgress, InstallingData, ManagerMarker, ManagerProxy, MonitorMarker,
+        MonitorRequest, MonitorRequestStream, NoUpdateAvailableData, State, UpdateInfo,
     },
     fidl_fuchsia_update_channelcontrol::{ChannelControlMarker, ChannelControlProxy},
     fidl_fuchsia_update_installer::InstallerMarker,
@@ -32,7 +33,7 @@ use {
     matches::assert_matches,
     mock_installer::MockUpdateInstallerService,
     mock_omaha_server::{OmahaResponse, OmahaServer},
-    mock_paver::MockPaverServiceBuilder,
+    mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_reboot::MockRebootService,
     mock_resolver::MockResolverService,
     parking_lot::Mutex,
@@ -49,6 +50,8 @@ const OMAHA_CLIENT_CMX: &str =
     "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/omaha-client-service-for-integration-test.cmx";
 const SYSTEM_UPDATER_CMX: &str =
     "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/system-updater-isolated.cmx";
+const SYSTEM_UPDATE_COMMITTER_CMX: &str =
+    "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/system-update-committer.cmx";
 
 struct Mounts {
     _test_dir: TempDir,
@@ -92,17 +95,24 @@ struct Proxies {
     resolver: Arc<MockResolverService>,
     update_manager: ManagerProxy,
     channel_control: ChannelControlProxy,
+    commit_status_provider: CommitStatusProviderProxy,
 }
 
 struct TestEnvBuilder {
     response: OmahaResponse,
     version: String,
     installer: Option<MockUpdateInstallerService>,
+    paver: Option<MockPaverService>,
 }
 
 impl TestEnvBuilder {
     fn new() -> Self {
-        Self { response: OmahaResponse::NoUpdate, version: "0.1.2.3".to_string(), installer: None }
+        Self {
+            response: OmahaResponse::NoUpdate,
+            version: "0.1.2.3".to_string(),
+            installer: None,
+            paver: None,
+        }
     }
 
     fn response(self, response: OmahaResponse) -> Self {
@@ -117,12 +127,21 @@ impl TestEnvBuilder {
         Self { installer: Some(installer), ..self }
     }
 
+    fn paver(self, paver: MockPaverService) -> Self {
+        Self { paver: Some(paver), ..self }
+    }
+
     fn build(self) -> TestEnv {
         let mounts = Mounts::new();
 
+        let mut system_update_committer = AppBuilder::new(SYSTEM_UPDATE_COMMITTER_CMX.to_owned());
+
         let mut fs = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
-            .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>();
+            .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>()
+            .add_proxy_service_to::<fidl_fuchsia_update::CommitStatusProviderMarker, _>(
+                system_update_committer.directory_request().unwrap().clone(),
+            );
 
         let server = OmahaServer::new(self.response);
         let url = server.start().expect("start server");
@@ -136,7 +155,7 @@ impl TestEnvBuilder {
             .to_string(),
         );
 
-        let paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let paver = Arc::new(self.paver.unwrap_or_else(|| MockPaverServiceBuilder::new().build()));
         fs.add_fidl_service(move |stream: PaverRequestStream| {
             fasync::Task::spawn(
                 Arc::clone(&paver)
@@ -217,6 +236,10 @@ impl TestEnvBuilder {
         };
         fasync::Task::spawn(fs.collect()).detach();
 
+        let system_update_committer = system_update_committer
+            .spawn(env.launcher())
+            .expect("system-update-committer to launch");
+
         let omaha_client = AppBuilder::new(OMAHA_CLIENT_CMX)
             .add_dir_to_namespace(
                 "/config/data".into(),
@@ -243,9 +266,13 @@ impl TestEnvBuilder {
                 channel_control: omaha_client
                     .connect_to_service::<ChannelControlMarker>()
                     .expect("connect to channel control"),
+                commit_status_provider: system_update_committer
+                    .connect_to_service::<CommitStatusProviderMarker>()
+                    .expect("connect to commit status provider"),
             },
             _omaha_client: omaha_client,
             _system_updater: system_updater,
+            _system_update_committer: system_update_committer,
             nested_environment_label,
             reboot_called,
         }
@@ -270,6 +297,7 @@ struct TestEnv {
     proxies: Proxies,
     _omaha_client: App,
     _system_updater: SystemUpdater,
+    _system_update_committer: App,
     nested_environment_label: String,
     reboot_called: oneshot::Receiver<()>,
 }
@@ -360,10 +388,7 @@ fn progress(fraction_completed: Option<f32>) -> Option<InstallationProgress> {
     Some(InstallationProgress { fraction_completed, ..InstallationProgress::EMPTY })
 }
 
-#[fasync::run_singlethreaded(test)]
-async fn test_omaha_client_update() {
-    let mut env = TestEnvBuilder::new().response(OmahaResponse::Update).build();
-
+async fn omaha_client_update(mut env: TestEnv, platform_metrics: TreeAssertion) {
     env.proxies
         .resolver
         .url("fuchsia-pkg://integration.test.fuchsia.com/update?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
@@ -435,25 +460,34 @@ async fn test_omaha_client_update() {
     assert_matches!(last_progress, Some(_));
     assert!(waiting_for_reboot);
 
-    env.assert_platform_metrics(tree_assertion!(
-        "children": {
-            "0": contains {
-                "event": "CheckingForUpdates",
-            },
-            "1": contains {
-                "event": "InstallingUpdate",
-                "target-version": "0.1.2.3",
-            },
-            "2": contains {
-                "event": "WaitingForReboot",
-                "target-version": "0.1.2.3",
-            }
-        }
-    ))
-    .await;
+    env.assert_platform_metrics(platform_metrics).await;
 
     // This will hang if reboot was not triggered.
     env.reboot_called.await.unwrap();
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_update() {
+    let env = TestEnvBuilder::new().response(OmahaResponse::Update).build();
+    omaha_client_update(
+        env,
+        tree_assertion!(
+            "children": {
+                "0": contains {
+                    "event": "CheckingForUpdates",
+                },
+                "1": contains {
+                    "event": "InstallingUpdate",
+                    "target-version": "0.1.2.3",
+                },
+                "2": contains {
+                    "event": "WaitingForReboot",
+                    "target-version": "0.1.2.3",
+                }
+            }
+        ),
+    )
+    .await;
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -554,6 +588,102 @@ async fn test_omaha_client_update_progress_with_mock_installer() {
                 ..InstallingData::EMPTY
             }),
         ],
+    )
+    .await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_installation_deferred() {
+    let (throttle_hook, throttler) = mphooks::throttle();
+    let config_status_response = Arc::new(Mutex::new(Some(paver::ConfigurationStatus::Pending)));
+    let config_status_response_clone = Arc::clone(&config_status_response);
+    let env = TestEnvBuilder::new()
+        .paver(
+            MockPaverServiceBuilder::new()
+                .insert_hook(mphooks::config_status(move |_| {
+                    Ok(config_status_response_clone.lock().as_ref().unwrap().clone())
+                }))
+                .insert_hook(throttle_hook)
+                .build(),
+        )
+        .response(OmahaResponse::Update)
+        .build();
+
+    // Allow the paver to emit enough events to unblock the CommitStatusProvider FIDL server, but
+    // few enough to guarantee the commit is still pending.
+    let () = throttler.emit_next_paver_events(&[
+        PaverEvent::QueryCurrentConfiguration,
+        PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A },
+    ]);
+
+    // The update attempt should start, but the install should be deferred b/c we're pending commit.
+    let mut stream = env.check_now().await;
+    expect_states(
+        &mut stream,
+        &[
+            State::CheckingForUpdates(CheckingForUpdatesData::EMPTY),
+            State::InstallationDeferredByPolicy(InstallationDeferredData {
+                update: update_info(),
+                deferral_reason: Some(InstallationDeferralReason::CurrentSystemNotCommitted),
+                ..InstallationDeferredData::EMPTY
+            }),
+        ],
+    )
+    .await;
+    assert_matches!(stream.next().await, None);
+    env.assert_platform_metrics(tree_assertion!(
+        "children": {
+            "0": contains {
+                "event": "CheckingForUpdates",
+            },
+            "1": contains {
+                "event": "InstallationDeferredByPolicy",
+            },
+        }
+    ))
+    .await;
+
+    // Unblock any subsequent paver requests so that the system can commit.
+    drop(throttler);
+
+    // Wait for system to commit.
+    let event_pair =
+        env.proxies.commit_status_provider.is_current_system_committed().await.unwrap();
+    assert_eq!(
+        fasync::OnSignals::new(&event_pair, zx::Signals::USER_0).await,
+        Ok(zx::Signals::USER_0)
+    );
+
+    // Now that the system is committed, we should be able to perform an update. Before we do the
+    // update, make sure QueryConfigurationStatus returns Healthy. Otherwise, the update will fail
+    // because the system-updater enforces the current slot is Healthy before applying an update.
+    assert_eq!(
+        config_status_response.lock().replace(paver::ConfigurationStatus::Healthy).unwrap(),
+        paver::ConfigurationStatus::Pending
+    );
+    omaha_client_update(
+        env,
+        tree_assertion!(
+            "children": {
+                "0": contains {
+                    "event": "CheckingForUpdates",
+                },
+                "1": contains {
+                    "event": "InstallationDeferredByPolicy",
+                },
+                "2": contains {
+                    "event": "CheckingForUpdates",
+                },
+                "3": contains {
+                    "event": "InstallingUpdate",
+                    "target-version": "0.1.2.3",
+                },
+                "4": contains {
+                    "event": "WaitingForReboot",
+                    "target-version": "0.1.2.3",
+                }
+            }
+        ),
     )
     .await;
 }

@@ -12,6 +12,7 @@
         ],
         "services": [
             "fuchsia.hardware.power.statecontrol.Admin",
+            "fuchsia.update.CommitStatusProvider",
             "fuchsia.update.installer.Installer"
         ]
     }

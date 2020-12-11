@@ -47,6 +47,7 @@ rustc_test("driver") {
 test_package("omaha-client-integration-tests") {
   deps = [
     ":driver",
+    "//src/sys/pkg/bin/grand-swd-binary",
     "//src/sys/pkg/bin/omaha-client:bin",
     "//src/sys/pkg/bin/system-updater:bin",
   ]
@@ -60,6 +61,10 @@ test_package("omaha-client-integration-tests") {
       name = "system_updater"
       dest = "system-updater"
     },
+    {
+      name = "grand_swd_binary"
+      dest = "system-update-committer"
+    },
   ]
 
   meta = [
@@ -72,6 +77,11 @@ test_package("omaha-client-integration-tests") {
       path = rebase_path(
               "//src/sys/pkg/bin/system-updater/meta/system-updater-isolated.cmx")
       dest = "system-updater-isolated.cmx"
+    },
+    {
+      path = rebase_path(
+              "//src/sys/pkg/tests/system-update-committer/meta/system-update-committer.cmx")
+      dest = "system-update-committer.cmx"
     },
   ]
 

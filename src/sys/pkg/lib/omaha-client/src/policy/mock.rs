@@ -62,10 +62,10 @@ impl PolicyEngine for MockPolicyEngine {
         future::ready(self.check_decision.clone()).boxed()
     }
 
-    fn update_can_start(
+    fn update_can_start<'p>(
         &mut self,
-        _proposed_install_plan: &impl Plan,
-    ) -> BoxFuture<'_, UpdateDecision> {
+        _proposed_install_plan: &'p impl Plan,
+    ) -> BoxFuture<'p, UpdateDecision> {
         future::ready(self.update_decision.clone()).boxed()
     }
 

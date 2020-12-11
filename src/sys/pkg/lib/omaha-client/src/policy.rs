@@ -105,6 +105,7 @@ impl Default for UpdateDecision {
 pub trait Policy {
     type UpdatePolicyData;
     type RebootPolicyData;
+    type UpdateCanStartPolicyData;
 
     /// When should the next update happen?
     fn compute_next_update_time(
@@ -130,7 +131,7 @@ pub trait Policy {
     /// Given the current State, the current PolicyData, can the proposed InstallPlan
     /// be executed at this time.
     fn update_can_start(
-        policy_data: &Self::UpdatePolicyData,
+        policy_data: &Self::UpdateCanStartPolicyData,
         proposed_install_plan: &impl Plan,
     ) -> UpdateDecision;
 
@@ -166,10 +167,10 @@ pub trait PolicyEngine {
 
     /// Given the current State, the current PolicyData, can the proposed InstallPlan
     /// be executed at this time.
-    fn update_can_start(
+    fn update_can_start<'p>(
         &mut self,
-        proposed_install_plan: &impl Plan,
-    ) -> BoxFuture<'_, UpdateDecision>;
+        proposed_install_plan: &'p impl Plan,
+    ) -> BoxFuture<'p, UpdateDecision>;
 
     /// Is reboot allowed right now.
     fn reboot_allowed(&mut self, check_options: &CheckOptions) -> BoxFuture<'_, bool>;

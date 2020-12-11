@@ -9,7 +9,7 @@ pub mod stub;
 
 /// The trait for the Install Plan that can be acted on by an Installer implementation.
 ///
-pub trait Plan: std::marker::Sized {
+pub trait Plan: std::marker::Sized + std::marker::Sync {
     type Error: std::error::Error + std::marker::Send + std::marker::Sync + 'static;
 
     /// Try to create a new Plan from the given response, returning a PlanError if unable to do

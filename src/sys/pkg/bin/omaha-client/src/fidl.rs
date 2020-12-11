@@ -13,9 +13,9 @@ use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_hardware_power_statecontrol::RebootReason;
 use fidl_fuchsia_update::{
     self as update, CheckNotStartedReason, CheckingForUpdatesData, ErrorCheckingForUpdateData,
-    Initiator, InstallationDeferredData, InstallationErrorData, InstallationProgress,
-    InstallingData, ManagerRequest, ManagerRequestStream, MonitorMarker, MonitorProxy,
-    MonitorProxyInterface, NoUpdateAvailableData, UpdateInfo,
+    Initiator, InstallationDeferralReason, InstallationDeferredData, InstallationErrorData,
+    InstallationProgress, InstallingData, ManagerRequest, ManagerRequestStream, MonitorMarker,
+    MonitorProxy, MonitorProxyInterface, NoUpdateAvailableData, UpdateInfo,
 };
 use fidl_fuchsia_update_channel::{ProviderRequest, ProviderRequestStream};
 use fidl_fuchsia_update_channelcontrol::{ChannelControlRequest, ChannelControlRequestStream};
@@ -67,7 +67,10 @@ impl From<State> for Option<update::State> {
             state_machine::State::InstallationDeferredByPolicy => {
                 Some(update::State::InstallationDeferredByPolicy(InstallationDeferredData {
                     update,
-                    deferral_reason: None,
+                    // For now, we deliberately only support one deferral reason. When we simplify
+                    // the StateMachine type parameters, consider modifying the binary to support
+                    // multiple deferral reasons.
+                    deferral_reason: Some(InstallationDeferralReason::CurrentSystemNotCommitted),
                     ..InstallationDeferredData::EMPTY
                 }))
             }
@@ -850,10 +853,10 @@ mod stub {
             .boxed()
         }
 
-        fn update_can_start(
+        fn update_can_start<'p>(
             &mut self,
-            _proposed_install_plan: &impl Plan,
-        ) -> BoxFuture<'_, UpdateDecision> {
+            _proposed_install_plan: &'p impl Plan,
+        ) -> BoxFuture<'p, UpdateDecision> {
             future::ready(UpdateDecision::Ok).boxed()
         }
 

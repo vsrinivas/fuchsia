@@ -18,6 +18,7 @@ pub struct StubPolicy;
 impl Policy for StubPolicy {
     type UpdatePolicyData = PolicyData;
     type RebootPolicyData = ();
+    type UpdateCanStartPolicyData = ();
 
     fn compute_next_update_time(
         policy_data: &Self::UpdatePolicyData,
@@ -42,7 +43,7 @@ impl Policy for StubPolicy {
     }
 
     fn update_can_start(
-        _policy_data: &Self::UpdatePolicyData,
+        _policy_data: &Self::UpdateCanStartPolicyData,
         _proposed_install_plan: &impl Plan,
     ) -> UpdateDecision {
         UpdateDecision::Ok
@@ -111,14 +112,11 @@ where
         future::ready(decision).boxed()
     }
 
-    fn update_can_start(
+    fn update_can_start<'p>(
         &mut self,
-        proposed_install_plan: &impl Plan,
-    ) -> BoxFuture<'_, UpdateDecision> {
-        let decision = StubPolicy::update_can_start(
-            &PolicyData::builder().use_timesource(&self.time_source).build(),
-            proposed_install_plan,
-        );
+        proposed_install_plan: &'p impl Plan,
+    ) -> BoxFuture<'p, UpdateDecision> {
+        let decision = StubPolicy::update_can_start(&(), proposed_install_plan);
         future::ready(decision).boxed()
     }
 
@@ -190,9 +188,7 @@ mod tests {
 
     #[test]
     fn test_update_can_start() {
-        let policy_data =
-            PolicyData::builder().use_timesource(&MockTimeSource::new_from_now()).build();
-        let result = StubPolicy::update_can_start(&policy_data, &StubPlan);
+        let result = StubPolicy::update_can_start(&(), &StubPlan);
         assert_eq!(result, UpdateDecision::Ok);
     }
 }

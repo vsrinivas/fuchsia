@@ -19,6 +19,7 @@
             "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.stash.Store2",
             "fuchsia.ui.activity.Provider",
+            "fuchsia.update.CommitStatusProvider",
             "fuchsia.update.installer.Installer"
         ]
     }

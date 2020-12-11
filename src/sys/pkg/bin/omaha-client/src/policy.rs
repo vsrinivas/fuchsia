@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 use crate::timer::FuchsiaTimer;
-use anyhow::{Context as _, Error};
+use anyhow::{anyhow, Context as _, Error};
 use fidl_fuchsia_ui_activity::{
     ListenerMarker, ListenerRequest, ProviderMarker, ProviderProxy, State,
 };
+use fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy};
 use fuchsia_component::client::connect_to_service;
-use futures::{future::BoxFuture, future::FutureExt, prelude::*};
+use fuchsia_zircon::{self as zx, AsHandleRef};
+use futures::{future::BoxFuture, future::FutureExt, lock::Mutex, prelude::*};
 use log::{error, info, warn};
 use omaha_client::{
     common::{App, CheckOptions, CheckTiming, ProtocolState, UpdateCheckSchedule},
@@ -20,7 +22,7 @@ use omaha_client::{
     unless::Unless,
 };
 use serde::Deserialize;
-use std::{cell::Cell, path::Path, rc::Rc, time::Duration};
+use std::{cell::Cell, path::Path, rc::Rc, sync::Arc, time::Duration};
 
 mod rate_limiter;
 use rate_limiter::UpdateCheckRateLimiter;
@@ -40,6 +42,7 @@ struct FuchsiaPolicy;
 impl Policy for FuchsiaPolicy {
     type UpdatePolicyData = FuchsiaUpdatePolicyData;
     type RebootPolicyData = FuchsiaRebootPolicyData;
+    type UpdateCanStartPolicyData = FuchsiaUpdateCanStartPolicyData;
 
     fn compute_next_update_time(
         policy_data: &Self::UpdatePolicyData,
@@ -175,10 +178,14 @@ impl Policy for FuchsiaPolicy {
     }
 
     fn update_can_start(
-        _policy_data: &Self::UpdatePolicyData,
+        policy_data: &Self::UpdateCanStartPolicyData,
         _proposed_install_plan: &impl Plan,
     ) -> UpdateDecision {
-        UpdateDecision::Ok
+        if policy_data.commit_status == Some(CommitStatus::Committed) {
+            UpdateDecision::Ok
+        } else {
+            UpdateDecision::DeferredByPolicy
+        }
     }
 
     /// Is reboot allowed right now.
@@ -221,6 +228,13 @@ pub struct FuchsiaPolicyEngine<T> {
     config: PolicyConfig,
     waiting_for_reboot_time: Option<ComplexTime>,
     update_check_rate_limiter: UpdateCheckRateLimiter,
+    // Status quo in the omaha-client binary is to use Rc<Cell<T>> because the binary is single
+    // threaded. Here, we must use an Arc<Mutex<T>> because it needs to be Send to get captured by
+    // the BoxFuture in `update_can_start`. Alternatively, we could have made `update_can_start`
+    // use a LocalBoxFuture. Instead, we choose to use an Arc to avoid imposing LocalBoxFuture
+    // restrictions on the omaha-client library. We will reassess this once we align on the
+    // library's mixed use of single and multithreaded primitives.
+    commit_status: Arc<Mutex<Option<CommitStatus>>>,
 }
 
 pub struct FuchsiaPolicyEngineBuilder;
@@ -238,7 +252,7 @@ impl FuchsiaPolicyEngineBuilder {
 }
 impl<T> FuchsiaPolicyEngineBuilderWithTime<T> {
     pub fn load_config_from(self, path: impl AsRef<Path>) -> Self {
-        Self { time_source: self.time_source, config: PolicyConfigJson::load_from(path).into() }
+        Self { config: PolicyConfigJson::load_from(path).into(), ..self }
     }
 
     /// Override the PolicyConfig periodic interval with a different value.
@@ -254,6 +268,7 @@ impl<T> FuchsiaPolicyEngineBuilderWithTime<T> {
             config: self.config,
             waiting_for_reboot_time: None,
             update_check_rate_limiter: UpdateCheckRateLimiter::new(),
+            commit_status: Arc::new(Mutex::new(None)),
         }
     }
 }
@@ -304,15 +319,13 @@ where
         future::ready(decision).boxed()
     }
 
-    fn update_can_start(
+    fn update_can_start<'p>(
         &mut self,
-        proposed_install_plan: &impl Plan,
-    ) -> BoxFuture<'_, UpdateDecision> {
-        let decision = FuchsiaPolicy::update_can_start(
-            &FuchsiaUpdatePolicyData::from_policy_engine(&self),
-            proposed_install_plan,
-        );
-        future::ready(decision).boxed()
+        proposed_install_plan: &'p impl Plan,
+    ) -> BoxFuture<'p, UpdateDecision> {
+        let data = FuchsiaUpdateCanStartPolicyData::from_policy_engine(&self);
+
+        async move { FuchsiaPolicy::update_can_start(&data.await, proposed_install_plan) }.boxed()
     }
 
     fn reboot_allowed(&mut self, check_options: &CheckOptions) -> BoxFuture<'_, bool> {
@@ -397,6 +410,12 @@ impl UiActivityState {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+enum CommitStatus {
+    Pending,
+    Committed,
+}
+
 #[derive(Clone, Debug)]
 struct FuchsiaUpdatePolicyData {
     current_time: ComplexTime,
@@ -413,6 +432,66 @@ impl FuchsiaUpdatePolicyData {
             interval_fuzz_seed: Some(rand::random()),
             update_check_rate_limiter: policy_engine.update_check_rate_limiter.clone(),
         }
+    }
+}
+
+struct FuchsiaUpdateCanStartPolicyData {
+    commit_status: Option<CommitStatus>,
+}
+
+impl FuchsiaUpdateCanStartPolicyData {
+    fn from_policy_engine<T: TimeSource>(
+        policy_engine: &FuchsiaPolicyEngine<T>,
+    ) -> BoxFuture<'static, Self> {
+        let engine_commit_status = Arc::clone(&policy_engine.commit_status);
+
+        async move {
+            let commit_status = match query_commit_status_and_update_status(
+                || connect_to_service::<CommitStatusProviderMarker>(),
+                &mut *engine_commit_status.lock().await,
+            )
+            .await
+            {
+                Ok(status) => Some(status),
+                Err(e) => {
+                    error!("got error with query_commit_status: {:#}", anyhow!(e));
+                    None
+                }
+            };
+            Self { commit_status }
+        }
+        .boxed()
+    }
+}
+
+/// Queries the commit status and updates the value in `engine_commit_status`.
+async fn query_commit_status_and_update_status<ProviderFn>(
+    provider_fn: ProviderFn,
+    engine_commit_status: &mut Option<CommitStatus>,
+) -> Result<CommitStatus, Error>
+where
+    ProviderFn: FnOnce() -> Result<CommitStatusProviderProxy, Error>,
+{
+    // If we're already committed, no need to do additional work.
+    if engine_commit_status.as_ref() == Some(&CommitStatus::Committed) {
+        return Ok(CommitStatus::Committed);
+    }
+
+    let provider = provider_fn().context("while connecting to commit status provider")?;
+    query_commit_status(&provider).await.map(|status| {
+        engine_commit_status.replace(status);
+        status
+    })
+}
+
+/// Queries the commit status using `provider`.
+async fn query_commit_status(provider: &CommitStatusProviderProxy) -> Result<CommitStatus, Error> {
+    let event_pair =
+        provider.is_current_system_committed().await.context("while getting event pair")?;
+    match event_pair.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST) {
+        Ok(_) => Ok(CommitStatus::Committed),
+        Err(zx::Status::TIMED_OUT) => Ok(CommitStatus::Pending),
+        Err(status) => Err(anyhow!("unexpected status while asserting signal: {:?}", status)),
     }
 }
 
@@ -500,11 +579,16 @@ mod tests {
     use super::*;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_ui_activity::ProviderRequest;
+    use fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderRequest};
     use fuchsia_async as fasync;
+    use fuchsia_zircon::Peered;
+    use matches::assert_matches;
     use omaha_client::installer::stub::StubPlan;
     use omaha_client::time::{ComplexTime, MockTimeSource, StandardTimeSource, TimeSource};
     use proptest::prelude::*;
+    use std::sync::atomic::{AtomicU8, Ordering};
     use std::{collections::VecDeque, time::Instant};
+    use zx::HandleBased;
 
     #[derive(Debug)]
     struct UpdatePolicyDataBuilder {
@@ -1089,13 +1173,88 @@ mod tests {
         );
     }
 
-    // Test that update_can_start returns Ok (always)
+    // Test that update_can_start returns Ok when the system is committed.
     #[test]
-    fn test_update_can_start_always_ok() {
-        let mock_time = MockTimeSource::new_from_now();
-        let policy_data = UpdatePolicyDataBuilder::new(mock_time.now()).build();
+    fn test_update_can_start_ok() {
+        let policy_data =
+            FuchsiaUpdateCanStartPolicyData { commit_status: Some(CommitStatus::Committed) };
         let result = FuchsiaPolicy::update_can_start(&policy_data, &StubPlan);
         assert_eq!(result, UpdateDecision::Ok);
+    }
+
+    // Test that update_can_start returns Deferred when the system is pending commit (or if we
+    // have no information on commit status).
+    #[test]
+    fn test_update_can_start_deferred() {
+        let policy_data = FuchsiaUpdateCanStartPolicyData { commit_status: None };
+        let result = FuchsiaPolicy::update_can_start(&policy_data, &StubPlan);
+        assert_eq!(result, UpdateDecision::DeferredByPolicy);
+
+        let policy_data =
+            FuchsiaUpdateCanStartPolicyData { commit_status: Some(CommitStatus::Pending) };
+        let result = FuchsiaPolicy::update_can_start(&policy_data, &StubPlan);
+        assert_eq!(result, UpdateDecision::DeferredByPolicy);
+    }
+
+    // Verifies that query_commit_status_and_update_status updates the commit status and stops
+    // calling the FIDL server once the system is committed.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_query_commit_status_and_update_status() {
+        let (proxy, mut stream) = create_proxy_and_stream::<CommitStatusProviderMarker>().unwrap();
+        let provider_fn = || Ok(proxy.clone());
+        let (p0, p1) = zx::EventPair::create().unwrap();
+        let fidl_call_count = Arc::new(AtomicU8::new(0));
+        let mut commit_status = None;
+
+        let fidl_call_count_clone = Arc::clone(&fidl_call_count);
+        let _fidl_server = fasync::Task::local(async move {
+            while let Some(Ok(req)) = stream.next().await {
+                fidl_call_count_clone.fetch_add(1, Ordering::SeqCst);
+                let CommitStatusProviderRequest::IsCurrentSystemCommitted { responder } = req;
+                let () = responder.send(p1.duplicate_handle(zx::Rights::BASIC).unwrap()).unwrap();
+            }
+        });
+
+        // When no signals are asserted, we should update commit status to Pending.
+        query_commit_status_and_update_status(provider_fn, &mut commit_status).await.unwrap();
+        assert_eq!(commit_status, Some(CommitStatus::Pending));
+        assert_eq!(fidl_call_count.load(Ordering::SeqCst), 1);
+
+        // When USER_0 is asserted, we should update commit status to Committed.
+        let () = p0.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).unwrap();
+        query_commit_status_and_update_status(provider_fn, &mut commit_status).await.unwrap();
+        assert_eq!(commit_status, Some(CommitStatus::Committed));
+        assert_eq!(fidl_call_count.load(Ordering::SeqCst), 2);
+
+        // Now that we're committed, additional calls should not query the FIDL server.
+        query_commit_status_and_update_status(provider_fn, &mut commit_status).await.unwrap();
+        assert_eq!(commit_status, Some(CommitStatus::Committed));
+        assert_eq!(fidl_call_count.load(Ordering::SeqCst), 2);
+    }
+
+    // Verifies that query_commit_status returns the expected CommitStatus on various conditions.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_query_commit_status() {
+        let (proxy, mut stream) = create_proxy_and_stream::<CommitStatusProviderMarker>().unwrap();
+        let (p0, p1) = zx::EventPair::create().unwrap();
+
+        let fidl_server = fasync::Task::local(async move {
+            while let Some(Ok(req)) = stream.next().await {
+                let CommitStatusProviderRequest::IsCurrentSystemCommitted { responder } = req;
+                let () = responder.send(p1.duplicate_handle(zx::Rights::BASIC).unwrap()).unwrap();
+            }
+        });
+
+        // When no signals are asserted, we should report Pending.
+        assert_eq!(query_commit_status(&proxy).await.unwrap(), CommitStatus::Pending);
+
+        // When USER_0 is asserted, we should report Committed.
+        let () = p0.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).unwrap();
+        assert_eq!(query_commit_status(&proxy).await.unwrap(), CommitStatus::Committed,);
+
+        // When there's an error with the FIDL server, we should return error.
+        drop(fidl_server);
+        assert_matches!(query_commit_status(&proxy).await, Err(_));
     }
 
     /// Prints a bunch of context about a test for proper CheckTiming generation, to stderr, for
