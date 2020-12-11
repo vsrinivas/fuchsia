@@ -88,10 +88,15 @@ zx_status_t create_valid_msi_vmo(fbl::RefPtr<VmObject>* out_vmo,
   }
 
   fbl::RefPtr<VmMapping> mapping;
-  if ((status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
-           /* mapping_offset= */ 0, /* size= */ vmo_size, /* align_pow2= */ 0, /* vmar_flags= */ 0,
-           vmo, /* vmo_offset= */ 0, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
-           /* name= */ nullptr, &mapping)) != ZX_OK) {
+  status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
+      /*mapping_offset=*/0, /*size=*/vmo_size, /*align_pow2=*/0, /*vmar_flags=*/0, vmo,
+      /*vmo_offset=*/0, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
+      /*name=*/nullptr, &mapping);
+  if (status == ZX_OK) {
+    // Prepopulate the mapping so no page faults are needed in kernel mode.
+    status = mapping->MapRange(/*offset=*/0, vmo_size, /*commit=*/true);
+  }
+  if (status != ZX_OK) {
     return status;
   }
 
