@@ -9,6 +9,12 @@ import(
 
 variant("asan") {
   common_flags = [ "-fsanitize=address" ]
+  cflags = [
+    # See https://fxbug.dev/66129 and
+    # https://github.com/google/sanitizers/issues/1017.
+    "-mllvm",
+    "-asan-use-private-alias=1",
+  ]
 
   # TODO(phosek): use runtime.json instead of invoking Clang.
   if (is_fuchsia) {
