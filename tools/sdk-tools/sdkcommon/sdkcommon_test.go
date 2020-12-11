@@ -281,23 +281,30 @@ func TestGetFuchsiaProperty(t *testing.T) {
 	}{
 		{"", "device-name", "fake-target-device-name", ""},
 		{"some-other-device", "device-name", "", ""},
-		{"some-other-device", "random-property", "", ""},
-		{"", "random-property", "", ""},
+		{"some-other-device", "random-property", "", "Could not find property some-other-device.random-property"},
+		{"", "random-property", "", "Could not find property fake-target-device-name.random-property"},
+		{"", PackageRepoKey, "fake-target-device-name/packages/amber-files", ""},
+		{"another-target-device-name", PackageRepoKey, "another-target-device-name/packages/amber-files", ""},
 	}
 
-	for _, data := range testData {
-		val, err := sdk.GetFuchsiaProperty(data.device, data.property)
-		if err != nil {
-			if data.errString == "" {
-				t.Fatalf("Unexpected error getting property %s.%s: %v", data.device, data.property, err)
-			} else if !strings.Contains(fmt.Sprintf("%v", err), data.errString) {
-				t.Fatalf("Expected error message %v not found in error %v", data.errString, err)
+	for i, data := range testData {
+		t.Run(fmt.Sprintf("TestGetFuchsiaProperty.%d", i), func(t *testing.T) {
+			val, err := sdk.GetFuchsiaProperty(data.device, data.property)
+			if err != nil {
+				if data.errString == "" {
+					t.Fatalf("Unexpected error getting property %s.%s: %v", data.device, data.property, err)
+				} else if !strings.Contains(fmt.Sprintf("%v", err), data.errString) {
+					t.Errorf("Expected error message %v not found in error %v", data.errString, err)
+				}
+			} else {
+				if val != data.expected {
+					t.Errorf("GetFuchsiaProperyFailed %s.%s = %s, expected %s", data.device, data.property, val, data.expected)
+				}
+				if data.errString != "" {
+					t.Errorf("Expected error %v, but got no error", data.errString)
+				}
 			}
-			t.Fatalf("unexpected err %v", err)
-		}
-		if val != data.expected {
-			t.Fatalf("GetFuchsiaProperyFailed %s.%s = %s, expected %s", data.device, data.property, val, data.expected)
-		}
+		})
 	}
 }
 
@@ -770,6 +777,10 @@ func handleGetFake(args []string) {
 	case "DeviceConfiguration.another-target-device-name":
 		fmt.Println(`DeviceConfiguration.another-target-device-name:{
 				"bucket":"fuchsia-bucket","device-ip":"","device-name":"another-target-device-name","image":"release","package-port":"","package-repo":"","ssh-port":"22"
+			}`)
+	case "DeviceConfiguration.fake-target-device-name":
+		fmt.Println(`DeviceConfiguration.fake-target-device-name:{
+				"bucket":"","device-ip":"","device-name":"fake-target-device-name","image":"","package-port":"","package-repo":"","ssh-port":""
 			}`)
 	default:
 		fmt.Printf("%v: none\n", args[0])

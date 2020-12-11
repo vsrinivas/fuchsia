@@ -106,7 +106,7 @@ func main() {
 
 	// Set the defaults from the SDK if not present.
 	if *repoFlag == "" {
-		repoDir, err := sdk.GetDefaultPackageRepoDir()
+		repoDir, err := sdk.GetFuchsiaProperty(*deviceNameFlag, sdkcommon.PackageRepoKey)
 		if err != nil {
 			log.Fatalf("Could not determine default package directory: %v\n", err)
 		}
@@ -114,7 +114,7 @@ func main() {
 	}
 
 	if *bucketFlag == "" {
-		bucket, err := sdk.GetDefaultGCSBucket()
+		bucket, err := sdk.GetFuchsiaProperty(*deviceNameFlag, sdkcommon.BucketKey)
 		if err != nil {
 			log.Fatalf("Could not determine default GCS bucket: %v\n", err)
 		}
@@ -122,7 +122,7 @@ func main() {
 	}
 
 	if *imageFlag == "" {
-		image, err := sdk.GetDefaultGCSImage()
+		image, err := sdk.GetFuchsiaProperty(*deviceNameFlag, sdkcommon.ImageKey)
 		if err != nil {
 			log.Fatalf("Could not determine default GCS image: %v\n", err)
 		}
@@ -130,7 +130,7 @@ func main() {
 	}
 
 	if *repoPortFlag == "" {
-		image, err := sdk.GetDefaultPackageServerPort()
+		image, err := sdk.GetFuchsiaProperty(*deviceNameFlag, sdkcommon.PackagePortKey)
 		if err != nil {
 			log.Fatalf("Could not determine default package server port: %v\n", err)
 		}

@@ -8,21 +8,38 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"go.fuchsia.dev/fuchsia/tools/sdk-tools/sdkcommon"
 )
 
 type testSDKProperties struct {
-	dataPath string
+	dataPath   string
+	err        error
+	properties map[string]string
 }
 
 func (testSDK testSDKProperties) GetToolsDir() (string, error) {
 	return "fake-tools", nil
 }
 
+func (testSDK testSDKProperties) GetFuchsiaProperty(deviceName string, property string) (string, error) {
+	if testSDK.err != nil {
+		return "", testSDK.err
+	}
+	var key string
+	if deviceName != "" {
+		key = fmt.Sprintf("%v.%v", deviceName, property)
+	} else {
+		key = property
+	}
+	return testSDK.properties[key], nil
+}
+
 // See exec_test.go for details, but effectively this runs the function called TestHelperProcess passing
 // the args.
 func helperCommandForFPublish(command string, s ...string) (cmd *exec.Cmd) {
-	//testenv.MustHaveExec(t)
 
 	cs := []string{"-test.run=TestFakeFPublish", "--"}
 	cs = append(cs, command)
@@ -58,9 +75,8 @@ func TestFakeFPublish(*testing.T) {
 		fmt.Fprintf(os.Stderr, "Unexpected command %v, expected 'pm'", cmd)
 		os.Exit(1)
 	}
-	expected := []string{
-		"publish", "-n", "-a", "-r", "/fake/repo/amber-files", "-f", "package.far",
-	}
+	expected := strings.Split(os.Getenv("TEST_EXPECTED_ARGS"), ",")
+
 	for i := range args {
 		if args[i] != expected[i] {
 			fmt.Fprintf(os.Stderr,
@@ -77,12 +93,62 @@ func TestFakeFPublish(*testing.T) {
 }
 
 func TestFPublish(t *testing.T) {
-	testSDK := testSDKProperties{dataPath: "/fake"}
 	ExecCommand = helperCommandForFPublish
 	defer func() { ExecCommand = exec.Command }()
-	output, err := publish(testSDK, "/fake/repo/amber-files", false)
-	if err != nil {
-		t.Fatalf("Error running fpublish: %v: %v",
-			output, err)
+	tests := []struct {
+		repoDir      string
+		deviceName   string
+		packages     []string
+		properties   map[string]string
+		expectedArgs []string
+	}{
+		{
+			repoDir:    "",
+			deviceName: "",
+			packages:   []string{"package.far"},
+			properties: map[string]string{
+				sdkcommon.PackageRepoKey: "/fake/repo/amber-files",
+			},
+			expectedArgs: []string{"publish", "-n", "-a", "-r", "/fake/repo/amber-files", "-f", "package.far"},
+		},
+		{
+			repoDir:    "",
+			deviceName: "test-device",
+			packages:   []string{"package.far"},
+			properties: map[string]string{
+				sdkcommon.PackageRepoKey:                                "/fake/repo/amber-files",
+				fmt.Sprintf("test-device.%v", sdkcommon.PackageRepoKey): "/fake/test-device/repo/amber-files",
+			},
+			expectedArgs: []string{"publish", "-n", "-a", "-r", "/fake/test-device/repo/amber-files", "-f", "package.far"},
+		},
+		{
+			repoDir:      "/fake/repo/amber-files",
+			deviceName:   "",
+			packages:     []string{"package.far"},
+			expectedArgs: []string{"publish", "-n", "-a", "-r", "/fake/repo/amber-files", "-f", "package.far"},
+		},
+		{
+			repoDir:    "/fake/repo/amber-files",
+			deviceName: "some-device",
+			properties: map[string]string{
+				sdkcommon.PackageRepoKey:                                "/invalid/repo/amber-files",
+				fmt.Sprintf("some-device.%v", sdkcommon.PackageRepoKey): "/fake/some-device/repo/amber-files",
+			},
+			packages:     []string{"package.far"},
+			expectedArgs: []string{"publish", "-n", "-a", "-r", "/fake/repo/amber-files", "-f", "package.far"},
+		},
+	}
+	for i, test := range tests {
+		os.Setenv("TEST_EXPECTED_ARGS", strings.Join(test.expectedArgs, ","))
+		testSDK := testSDKProperties{dataPath: "/fake",
+			properties: test.properties}
+		t.Run(fmt.Sprintf("Test case %d", i), func(t *testing.T) {
+			output, err := publish(testSDK, test.repoDir, test.deviceName, test.packages, false)
+			if err != nil {
+				t.Errorf("Error running fpublish: %v: %v",
+					output, err)
+			}
+		})
+
 	}
 }

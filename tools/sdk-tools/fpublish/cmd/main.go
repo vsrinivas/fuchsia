@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -19,6 +20,7 @@ var ExecCommand = exec.Command
 
 type sdkProvider interface {
 	GetToolsDir() (string, error)
+	GetFuchsiaProperty(deviceName string, property string) (string, error)
 }
 
 func main() {
@@ -28,14 +30,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	defaultRepoDir, err := sdk.GetDefaultPackageRepoDir()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not determine tools directory %v", err)
-		os.Exit(1)
-	}
 	helpFlag := flag.Bool("help", false, "Show the usage message")
 	verboseFlag := flag.Bool("verbose", false, "Print informational messages.")
-	repoFlag := flag.String("repo-dir", defaultRepoDir, "Specify the path to the package repository.")
+	deviceNameFlag := flag.String("device-name", "", `Specifies the device name to use to look up configuration information regarding the package repo location. If not specified, the default device configured using fconfig.sh is used.`)
+	repoFlag := flag.String("repo-dir", "", "Specify the path to the package repository. If not specified, the default device configured using fconfig.sh is used.")
 	flag.Parse()
 
 	if *helpFlag {
@@ -43,7 +41,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	message, err := publish(sdk, *repoFlag, *verboseFlag)
+	message, err := publish(sdk, *repoFlag, *deviceNameFlag, flag.Args(), *verboseFlag)
 	if err != nil {
 		exiterr := err.(*exec.ExitError)
 		log.Fatalf("%v%v", string(exiterr.Stderr), message)
@@ -53,15 +51,29 @@ func main() {
 	os.Exit(0)
 }
 
-func publish(sdk sdkProvider, repoPath string, verbose bool) (string, error) {
+func publish(sdk sdkProvider, packageRepo string, deviceName string, packages []string, verbose bool) (string, error) {
+	var err error
+	repoPath := packageRepo
+
+	if repoPath == "" {
+		repoPath, err = sdk.GetFuchsiaProperty(deviceName, sdkcommon.PackageRepoKey)
+		if err != nil {
+			return "", fmt.Errorf("could not lookup package repo directory %v", err)
+		}
+	}
+
+	if repoPath == "" {
+		return "", errors.New("could not determine package repo directory")
+	}
+
 	toolsDir, err := sdk.GetToolsDir()
 	if err != nil {
-		log.Fatalf("Could not determine tools directory %v", err)
+		return "", fmt.Errorf("Could not determine tools directory %v", err)
 	}
 	cmd := filepath.Join(toolsDir, "pm")
 	args := []string{
 		"publish", "-n", "-a", "-r", repoPath, "-f"}
-	args = append(args, flag.Args()...)
+	args = append(args, packages...)
 	if verbose {
 		args = append(args, "-v")
 		fmt.Printf("Running command: %v %v\n", cmd, args)

@@ -387,7 +387,7 @@ func TestFakeFServe(t *testing.T) {
 func fakeGSUtil(args []string) {
 	expected := []string{}
 	expectedLS := []string{"ls", "gs://test-bucket/path/on/GCS/theImage.tgz"}
-	expectsedCP := []string{"cp", "gs://test-bucket/path/on/GCS/theImage.tgz", "/.*/theImage.tgz"}
+	expectedCP := []string{"cp", "gs://test-bucket/path/on/GCS/theImage.tgz", "/.*/theImage.tgz"}
 
 	if len(args) == 0 {
 		fmt.Fprintf(os.Stderr, "Expected arguments to gsutil\n")
@@ -405,16 +405,22 @@ func fakeGSUtil(args []string) {
 			fmt.Fprintf(os.Stderr, "BucketNotFoundException: 404 %v bucket does not exist.", args[1])
 			os.Exit(2)
 		}
-		expected = expectsedCP
+		expected = expectedCP
 		// Copy the test data to the expected path.
 		testRoot := os.Getenv("FSERVE_TEST_TESTROOT")
-		if testRoot != "" {
-			testdata := filepath.Join(testRoot, "testdata", "testdata.tgz")
-			if err := copyFile(testdata, args[2]); err != nil {
-				fmt.Fprintf(os.Stderr, "Error linking testdata: %v\n", err)
-				os.Exit(1)
-			}
+		testdata := filepath.Join(testRoot, "testdata", "testdata.tgz")
+		if !sdkcommon.FileExists(testdata) {
+			testdata = filepath.Join("..", "testdata", "testdata.tgz")
 		}
+		if err := os.MkdirAll(filepath.Dir(args[2]), 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting mkdir temp dir: %v\n", err)
+			os.Exit(1)
+		}
+		if err := copyFile(testdata, args[2]); err != nil {
+			fmt.Fprintf(os.Stderr, "Error linking testdata: %v\n", err)
+			os.Exit(1)
+		}
+
 	}
 
 	ok := len(args) == len(expected)

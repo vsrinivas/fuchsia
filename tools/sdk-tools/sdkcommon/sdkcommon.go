@@ -56,6 +56,12 @@ const (
 	defaultDeviceKey       string = "_DEFAULT_DEVICE_"
 )
 
+const (
+	defaultBucketName  string = "fuchsia"
+	defaultSSHPort     string = "22"
+	defaultPackagePort string = "8083"
+)
+
 var validPropertyNames = [...]string{
 	DeviceNameKey,
 	BucketKey,
@@ -87,6 +93,25 @@ type SDKProperties struct {
 	dataPath                 string
 	version                  string
 	globalPropertiesFilename string
+}
+
+func (sdk SDKProperties) setDeviceDefaults(deviceConfig *DeviceConfig) DeviceConfig {
+	// no reasonable default for device-name
+	if deviceConfig.Bucket == "" {
+		deviceConfig.Bucket = defaultBucketName
+	}
+	// no reasonable default for image
+	// no reasonable default for device-ip
+	if deviceConfig.SSHPort == "" {
+		deviceConfig.SSHPort = defaultSSHPort
+	}
+	if deviceConfig.PackageRepo == "" {
+		deviceConfig.PackageRepo = sdk.getDefaultPackageRepoDir(deviceConfig.DeviceName)
+	}
+	if deviceConfig.PackagePort == "" {
+		deviceConfig.PackagePort = defaultPackagePort
+	}
+	return *deviceConfig
 }
 
 // Builds the data key for the given segments.
@@ -201,74 +226,15 @@ func readSDKVersion(manifestFilePath string) (string, error) {
 // Otherwise if there is a default target defined, return the target
 // specific path.
 // Lastly, if there is nothing, return the default repo path.
-func (sdk SDKProperties) GetDefaultPackageRepoDir() (string, error) {
-	value, err := sdk.GetFuchsiaProperty("", PackageRepoKey)
-
-	// An error from GetFuchsiaProperty will be caused by either a failure
-	// to execute `ffx` or the data returned from `ffx` is unable to be parsed.
-	// If that is the case, then it should be treated as an error.
-	if err != nil {
-		return "", err
+func (sdk SDKProperties) getDefaultPackageRepoDir(deviceName string) string {
+	if deviceName != "" {
+		return filepath.Join(sdk.GetSDKDataPath(), deviceName,
+			"packages", "amber-files")
 	}
-	if value == "" {
-		// If no default value is explicitly set for the default device,
-		// check for the name of the default device and if set, use it
-		// to create a default repo path specific for that device.
-		defaultTargetName, err := sdk.GetDefaultDeviceName()
-
-		// If there is an error getting the default device name,
-		// this is caused by a problem executing `ffx` or the data
-		// returned cannot be parsed. These are serious problems and
-		// are returned as errors.
-		if err != nil {
-			return "", err
-		}
-		if defaultTargetName != "" {
-			return filepath.Join(sdk.GetSDKDataPath(), defaultTargetName,
-				"packages", "amber-files"), nil
-		}
-	}
-
 	// As a last resort, `ffx` and the data are working as intended,
 	// but no default has been configured, so fall back to the generic
 	// legacy path.
-	return filepath.Join(sdk.GetSDKDataPath(), "packages", "amber-files"), nil
-}
-
-// GetDefaultGCSBucket returns the default GCS bucket name.
-func (sdk SDKProperties) GetDefaultGCSBucket() (string, error) {
-	value, err := sdk.GetFuchsiaProperty("", BucketKey)
-	if err != nil {
-		return "", err
-	}
-	if value != "" {
-		return value, nil
-	}
-	return "fuchsia", nil
-}
-
-// GetDefaultGCSImage returns the default GCS image name.
-func (sdk SDKProperties) GetDefaultGCSImage() (string, error) {
-	value, err := sdk.GetFuchsiaProperty("", ImageKey)
-	if err != nil {
-		return "", err
-	}
-	if value != "" {
-		return value, nil
-	}
-	return "", nil
-}
-
-// GetDefaultPackageServerPort returns the TCP port the package server should use.
-func (sdk SDKProperties) GetDefaultPackageServerPort() (string, error) {
-	value, err := sdk.GetFuchsiaProperty("", PackagePortKey)
-	if err != nil {
-		return "", err
-	}
-	if value != "" {
-		return value, nil
-	}
-	return "8083", nil
+	return filepath.Join(sdk.GetSDKDataPath(), "packages", "amber-files")
 }
 
 // GetDefaultDeviceName returns the name of the target device to use by default.
@@ -284,18 +250,6 @@ func (sdk SDKProperties) GetDefaultDeviceName() (string, error) {
 		return "", nil
 	}
 	return "", fmt.Errorf("Cannot parse default device from %v", data)
-}
-
-// GetDefaultDeviceIPAddress returns the default target device IP address.
-func (sdk SDKProperties) GetDefaultDeviceIPAddress() (string, error) {
-	value, err := sdk.GetFuchsiaProperty("", DeviceIPKey)
-	if err != nil {
-		return "", err
-	}
-	if value != "" {
-		return value, nil
-	}
-	return "", nil
 }
 
 // GetToolsDir returns the path to the SDK tools for the current
@@ -696,19 +650,26 @@ func (sdk SDKProperties) GetFuchsiaProperty(device string, property string) (str
 			return "", err
 		}
 	}
-	propertyKey := getDeviceDataKey([]string{deviceName, property})
-	configData, err := getDeviceConfiguationData(sdk, propertyKey)
+	deviceConfig, err := sdk.GetDeviceConfiguration(deviceName)
 	if err != nil {
-		return "", fmt.Errorf("Could not read configuration data : %v", err)
+		return "", fmt.Errorf("Could not read configuration data for %v : %v", deviceName, err)
 	}
-	if len(configData) == 0 {
-		return "", nil
-	}
-	if value, ok := configData[propertyKey]; ok {
-		if retval, ok := value.(string); ok {
-			return retval, nil
-		}
-		return "", fmt.Errorf("Could not get value from  %v", value)
+
+	switch property {
+	case BucketKey:
+		return deviceConfig.Bucket, nil
+	case DeviceIPKey:
+		return deviceConfig.DeviceIP, nil
+	case DeviceNameKey:
+		return deviceConfig.DeviceName, nil
+	case ImageKey:
+		return deviceConfig.Image, nil
+	case PackagePortKey:
+		return deviceConfig.PackagePort, nil
+	case PackageRepoKey:
+		return deviceConfig.PackageRepo, nil
+	case SSHPortKey:
+		return deviceConfig.SSHPort, nil
 	}
 	return "", fmt.Errorf("Could not find property %v.%v", deviceName, property)
 }
@@ -766,6 +727,9 @@ func (sdk SDKProperties) GetDeviceConfiguration(name string) (DeviceConfig, erro
 				return deviceConfig, err
 			}
 			deviceConfig.IsDefault = deviceConfig.DeviceName == defaultDeviceName
+			// Set the default values for the  device, even if not set explicitly
+			// This centralizes the configuration into 1 place.
+			sdk.setDeviceDefaults(&deviceConfig)
 			return deviceConfig, nil
 		}
 		return deviceConfig, fmt.Errorf("Cannot parse DeviceConfig from %v", configData)
@@ -776,15 +740,45 @@ func (sdk SDKProperties) GetDeviceConfiguration(name string) (DeviceConfig, erro
 // SaveDeviceConfiguration persists the given device configuration properties.
 func (sdk SDKProperties) SaveDeviceConfiguration(newConfig DeviceConfig) error {
 
-	// Create a map of key to value to store.
+	// Create a map of key to value to store. Only write out values that are explicitly set to something
+	// that is not the default.
+	origConfig, err := sdk.GetDeviceConfiguration(newConfig.DeviceName)
+	if err != nil {
+		return err
+	}
+
 	dataMap := make(map[string]string)
 	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, DeviceNameKey})] = newConfig.DeviceName
-	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, BucketKey})] = newConfig.Bucket
-	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, DeviceIPKey})] = newConfig.DeviceIP
-	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, ImageKey})] = newConfig.Image
-	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackagePortKey})] = newConfig.PackagePort
-	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackageRepoKey})] = newConfig.PackageRepo
-	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, SSHPortKey})] = newConfig.SSHPort
+	if origConfig.Bucket != newConfig.Bucket {
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, BucketKey})] = newConfig.Bucket
+	} else {
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, BucketKey})] = ""
+	}
+	if origConfig.DeviceIP != newConfig.DeviceIP {
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, DeviceIPKey})] = newConfig.DeviceIP
+	} else {
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, DeviceIPKey})] = ""
+	}
+	if origConfig.Image != newConfig.Image {
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, ImageKey})] = newConfig.Image
+	} else {
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, ImageKey})] = ""
+	}
+	if origConfig.PackagePort != newConfig.PackagePort {
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackagePortKey})] = newConfig.PackagePort
+	} else {
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackagePortKey})] = ""
+	}
+	if origConfig.PackageRepo != newConfig.PackageRepo {
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackageRepoKey})] = newConfig.PackageRepo
+	} else {
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackageRepoKey})] = ""
+	}
+	if origConfig.SSHPort != newConfig.SSHPort {
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, SSHPortKey})] = newConfig.SSHPort
+	} else {
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, SSHPortKey})] = ""
+	}
 	if newConfig.IsDefault {
 		dataMap[getDeviceDataKey([]string{defaultDeviceKey})] = newConfig.DeviceName
 	}
