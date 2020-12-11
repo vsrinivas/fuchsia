@@ -230,12 +230,13 @@ zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
 
   zx::channel svc;
   {
-    int devfd = openat(dirfd, fn, O_RDONLY);
-    if (devfd < 0) {
+    fbl::unique_fd devfd(openat(dirfd, fn, O_RDONLY));
+    if (!devfd) {
       return ZX_OK;
     }
 
-    zx_status_t status = fdio_get_service_handle(devfd, svc.reset_and_get_address());
+    // fdio_get_service_handles takes ownership of file descriptor.
+    zx_status_t status = fdio_get_service_handle(devfd.release(), svc.reset_and_get_address());
     if (status != ZX_OK) {
       return status;
     }
@@ -271,8 +272,8 @@ zx_status_t OpenEthertapDev(zx::channel* svc, EthertapClient* tap) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  int ethdir = open(kEthernetDir, O_RDONLY);
-  if (ethdir < 0) {
+  fbl::unique_fd ethdir(open(kEthernetDir, O_RDONLY));
+  if (!ethdir) {
     fprintf(stderr, "could not open %s: %s\n", kEthernetDir, strerror(errno));
     return ZX_ERR_IO;
   }
@@ -280,7 +281,7 @@ zx_status_t OpenEthertapDev(zx::channel* svc, EthertapClient* tap) {
   WatchCookie cookie;
   cookie.mac_search = tap->mac();
   zx_status_t status;
-  status = fdio_watch_directory(ethdir, WatchCb, zx_deadline_after(ZX_SEC(2)),
+  status = fdio_watch_directory(ethdir.get(), WatchCb, zx_deadline_after(ZX_SEC(30)),
                                 reinterpret_cast<void*>(&cookie));
   if (status == ZX_ERR_STOP) {
     *svc = std::move(cookie.device);
@@ -572,7 +573,7 @@ static void EthernetCleanupHelper(EthertapClient* tap, EthernetClient* client,
 TEST(EthernetSetupTests, EthernetImplStartTest) {
   EthertapClient tap;
   EthernetClient client;
-  EthernetOpenInfo info(__func__);
+  EthernetOpenInfo info("StartTest");
   info.online = false;
   ASSERT_NO_FATAL_FAILURES(OpenFirstClientHelper(&tap, &client, info));
 
@@ -612,7 +613,7 @@ TEST(EthernetSetupTests, EthernetLinkStatusTest) {
   // Create the ethertap device
   EthertapClient tap;
   EthernetClient client;
-  EthernetOpenInfo info(__func__);
+  EthernetOpenInfo info("LinkStatus");
   ASSERT_NO_FATAL_FAILURES(OpenFirstClientHelper(&tap, &client, info));
 
   // Verify that the ethernet driver signaled a status change for the initial state.
@@ -675,7 +676,7 @@ TEST(EthernetConfigTests, EthernetSetPromiscMultiClientTest) {
 TEST(EthernetConfigTests, EthernetSetPromiscClearOnCloseTest) {
   EthertapClient tap;
   EthernetClient client;
-  EthernetOpenInfo info(__func__);
+  EthernetOpenInfo info("PromiscClear");
   info.options = fuchsia_hardware_ethertap_OPT_REPORT_PARAM;
   ASSERT_NO_FATAL_FAILURES(OpenFirstClientHelper(&tap, &client, info));
 
@@ -699,7 +700,7 @@ TEST(EthernetConfigTests, EthernetSetPromiscClearOnCloseTest) {
 TEST(EthernetConfigTests, EthernetMulticastRejectsUnicastAddress) {
   EthertapClient tap;
   EthernetClient client;
-  EthernetOpenInfo info(__func__);
+  EthernetOpenInfo info("RejectUni");
   info.options = fuchsia_hardware_ethertap_OPT_REPORT_PARAM;
   info.multicast = true;
   ASSERT_NO_FATAL_FAILURES(OpenFirstClientHelper(&tap, &client, info));
@@ -822,7 +823,7 @@ TEST(EthernetConfigTests, EthernetSetMulticastPromiscMultiClientTest) {
 TEST(EthernetConfigTests, EthernetSetMulticastPromiscClearOnCloseTest) {
   EthertapClient tap;
   EthernetClient client;
-  EthernetOpenInfo info(__func__);
+  EthernetOpenInfo info("MCPromiscClear");
   info.options = fuchsia_hardware_ethertap_OPT_REPORT_PARAM;
   info.multicast = true;
   ASSERT_NO_FATAL_FAILURES(OpenFirstClientHelper(&tap, &client, info));
@@ -847,7 +848,7 @@ TEST(EthernetConfigTests, EthernetSetMulticastPromiscClearOnCloseTest) {
 TEST(EthernetDataTests, EthernetDataTest_Send) {
   EthertapClient tap;
   EthernetClient client;
-  EthernetOpenInfo info(__func__);
+  EthernetOpenInfo info("DataSend");
   ASSERT_NO_FATAL_FAILURES(OpenFirstClientHelper(&tap, &client, info));
 
   // Ensure that the fifo is writable
@@ -897,7 +898,7 @@ TEST(EthernetDataTests, EthernetDataTest_Send) {
 TEST(EthernetDataTests, EthernetDataTest_Recv) {
   EthertapClient tap;
   EthernetClient client;
-  EthernetOpenInfo info(__func__);
+  EthernetOpenInfo info("DataRecv");
   ASSERT_NO_FATAL_FAILURES(OpenFirstClientHelper(&tap, &client, info));
 
   // Send a buffer through the tap channel
