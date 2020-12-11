@@ -4,8 +4,9 @@
 
 # items included in bootfs
 group("debugging") {
-  deps = [
-    "//src/diagnostics/archivist:bootfs",
-    "//src/diagnostics/iquery:bootfs",
-  ]
+  deps = [ "//src/diagnostics/archivist:bootfs" ]
+}
+
+group("dev-tools") {
+  deps = [ "//src/diagnostics/iquery" ]
 }

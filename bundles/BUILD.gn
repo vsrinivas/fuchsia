@@ -159,6 +159,11 @@ group("debugging") {
   ]
 }
 
+# Diagnostics tools installed on the boot image.
+group("diagnostics-eng") {
+  deps = [ "//src/diagnostics/bundles:dev-tools" ]
+}
+
 # Group including all drivers in the fuchsia repo. Useful for ensuring
 # all driver continue to build without needing to build every board.
 group("drivers-build-only") {
