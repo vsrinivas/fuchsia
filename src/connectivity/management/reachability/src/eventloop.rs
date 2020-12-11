@@ -9,7 +9,6 @@
 
 use {
     crate::worker::{EventWorker, FidlWorker, TimerWorker},
-    anyhow::Error,
     fuchsia_async as fasync,
     fuchsia_inspect::health::Reporter,
     fuchsia_zircon as zx,
@@ -65,7 +64,7 @@ impl EventLoop {
     }
 
     /// `run` starts the event loop.
-    pub async fn run(&mut self) -> Result<(), Error> {
+    pub async fn run(&mut self) {
         debug!("starting event loop");
         fuchsia_inspect::component::health().set_ok();
         while let Some(e) = self.event_recv.next().await {
@@ -79,7 +78,10 @@ impl EventLoop {
             }
         }
         fuchsia_inspect::component::health().set_unhealthy("no events, exiting.");
-        Ok(())
+    }
+
+    pub async fn populate_state(&mut self) -> network_manager_core::error::Result<()> {
+        self.monitor.populate_state().await
     }
 
     async fn handle_timer_firing(&mut self, id: u64) {
@@ -107,6 +109,7 @@ impl EventLoop {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_trait::async_trait;
     use fidl_fuchsia_net as net;
     use fidl_fuchsia_netstack as netstack;
     use fuchsia_async as fasync;
@@ -159,8 +162,9 @@ mod tests {
         default_response: bool,
     }
 
+    #[async_trait]
     impl Pinger for Ping<'_> {
-        fn ping(&self, url: &str) -> bool {
+        async fn ping(&mut self, url: &str) -> bool {
             if self.gateway_url == url {
                 return self.gateway_response;
             }

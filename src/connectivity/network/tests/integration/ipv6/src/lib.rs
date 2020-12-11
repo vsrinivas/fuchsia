@@ -25,8 +25,9 @@ use netstack_testing_common::environments::{
     KnownServices, Netstack, Netstack2, TestSandboxExt as _,
 };
 use netstack_testing_common::{
-    sleep, write_ndp_message, EthertapName, Result, ASYNC_EVENT_CHECK_INTERVAL,
-    ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, NDP_MESSAGE_TTL,
+    send_ra_with_router_lifetime, sleep, write_ndp_message, EthertapName, Result,
+    ASYNC_EVENT_CHECK_INTERVAL, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
+    ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, NDP_MESSAGE_TTL,
 };
 use netstack_testing_macros::variants_test;
 use packet_formats::icmp::ndp::{
@@ -645,31 +646,6 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) -> Result
 
 #[variants_test]
 async fn router_and_prefix_discovery<E: netemul::Endpoint>(name: &str) -> Result {
-    async fn send_ra_with_router_lifetime<'a>(
-        fake_ep: &netemul::TestFakeEndpoint<'a>,
-        lifetime: u16,
-        options: &[NdpOption<'_>],
-    ) -> Result {
-        let ra = RouterAdvertisement::new(
-            0,        /* current_hop_limit */
-            false,    /* managed_flag */
-            false,    /* other_config_flag */
-            lifetime, /* router_lifetime */
-            0,        /* reachable_time */
-            0,        /* retransmit_timer */
-        );
-        write_ndp_message::<&[u8], _>(
-            eth_consts::MAC_ADDR,
-            Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
-            ipv6_consts::LINK_LOCAL_ADDR,
-            net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
-            ra,
-            options,
-            fake_ep,
-        )
-        .await
-    }
-
     async fn check_route_table<P>(netstack: &netstack::NetstackProxy, pred: P) -> Result<()>
     where
         P: Fn(&Vec<netstack::RouteTableEntry>) -> bool,

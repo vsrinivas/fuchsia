@@ -8,7 +8,9 @@
 extern crate fuchsia_syslog as syslog;
 #[macro_use]
 extern crate log;
-use reachability_core::{IcmpPinger, Monitor};
+use anyhow::Context as _;
+use fuchsia_async as fasync;
+use reachability_core::{ping_fut, IcmpPinger, Monitor};
 
 mod eventloop;
 mod worker;
@@ -24,14 +26,26 @@ fn main() -> Result<(), anyhow::Error> {
     info!("Starting reachability monitor!");
     let mut executor = fuchsia_async::Executor::new()?;
 
+    let (request_tx, request_rx) = futures::channel::mpsc::unbounded();
+    let (response_tx, response_rx) = futures::channel::mpsc::unbounded();
+    let ping_task = fasync::Task::blocking(ping_fut(request_rx, response_tx));
+
     info!("collecting initial state.");
-    let mut monitor = Monitor::new(Box::new(IcmpPinger))?;
-    executor.run_singlethreaded(monitor.populate_state())?;
+    let mut eventloop =
+        EventLoop::new(Monitor::new(Box::new(IcmpPinger::new(request_tx, response_rx)))?);
+    let () = executor
+        .run_singlethreaded(eventloop.populate_state())
+        .context("failed to populate initial reachability states")?;
 
     info!("monitoring");
-    let mut eventloop = EventLoop::new(monitor);
-    executor.run_singlethreaded(eventloop.run())?;
-
-    warn!("reachability monitor terminated");
-    Ok(())
+    let eventloop_fut = eventloop.run();
+    futures::pin_mut!(eventloop_fut);
+    match executor.run_singlethreaded(futures::future::select(eventloop_fut, ping_task)) {
+        futures::future::Either::Left(((), _)) => {
+            panic!("event loop ended unexpectedly");
+        }
+        futures::future::Either::Right((ping_res, _)) => {
+            panic!("ping backend ended unexpectedly with: {:?}", ping_res);
+        }
+    }
 }

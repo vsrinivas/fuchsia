@@ -7,18 +7,20 @@ mod ping;
 
 #[macro_use]
 extern crate log;
-pub use ping::{IcmpPinger, Pinger};
+pub use ping::{ping_fut, IcmpPinger, Pinger};
 use {
     anyhow::Error,
     fidl_fuchsia_net_stack as stack, fidl_fuchsia_netstack as netstack,
     fuchsia_inspect::Inspector,
     fuchsia_zircon::{self as zx},
     inspect::InspectInfo,
+    net_types::ScopeableAddress as _,
     network_manager_core::{address::LifIpAddr, error, hal},
     std::collections::{HashMap, HashSet},
 };
 
-const INTERNET_CONNECTIVITY_CHECK_ADDRESS: &str = "8.8.8.8";
+const IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS: &str = "8.8.8.8";
+const IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS: &str = "2001:4860:4860::8888";
 const PROBE_PERIOD_IN_SEC: i64 = 60;
 
 /// `Stats` keeps the monitoring service statistic counters.
@@ -369,7 +371,7 @@ impl Monitor {
         }
 
         let routes = self.hal.routes().await;
-        let mut new_info = match compute_state(interface_info, routes, &*self.pinger).await {
+        let mut new_info = match compute_state(interface_info, routes, &mut *self.pinger).await {
             Some(new_info) => new_info,
             None => return HashSet::new(),
         };
@@ -498,14 +500,12 @@ fn update_system_state(
 async fn compute_state(
     interface_info: &hal::Interface,
     routes: Option<Vec<hal::Route>>,
-    pinger: &dyn Pinger,
+    pinger: &mut dyn Pinger,
 ) -> Option<ReachabilityInfo> {
     let port_type = port_type(interface_info);
     if port_type == PortType::Loopback {
         return None;
     }
-
-    let ipv4_address = interface_info.get_address_v4();
 
     let mut info = ReachabilityInfo::new(
         port_type,
@@ -539,11 +539,24 @@ async fn compute_state(
     info.get_mut(Proto::IPv4).state = State::LinkLayerUp.into();
     info.get_mut(Proto::IPv6).state = State::LinkLayerUp.into();
 
-    info.get_mut(Proto::IPv4).state =
-        network_layer_state(ipv4_address.into_iter(), &routes, &info.get(Proto::IPv4), &*pinger)
-            .await;
-
-    // TODO(dpradilla): Add support for IPV6
+    // TODO(fxbug.dev/65581) Parallelize the following two calls for IPv4 and IPv6 respectively
+    // when the ping logic is implemented in Rust and async.
+    info.get_mut(Proto::IPv4).state = network_layer_state(
+        interface_info.get_address_v4(),
+        &routes,
+        &info.get(Proto::IPv4),
+        pinger,
+        IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS,
+    )
+    .await;
+    info.get_mut(Proto::IPv6).state = network_layer_state(
+        interface_info.get_address_v6(),
+        &routes,
+        &info.get(Proto::IPv6),
+        pinger,
+        IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS,
+    )
+    .await;
 
     Some(info)
 }
@@ -587,10 +600,11 @@ fn port_type(interface_info: &hal::Interface) -> PortType {
 
 // `network_layer_state` determines the L3 reachability state.
 async fn network_layer_state(
-    mut addresses: impl Iterator<Item = LifIpAddr>,
+    addresses: impl IntoIterator<Item = LifIpAddr>,
     routes: &Option<Vec<hal::Route>>,
     info: &NetworkInfo,
-    p: &dyn Pinger,
+    p: &mut dyn Pinger,
+    ping_address: &str,
 ) -> StateEvent {
     // This interface is not configured for L3, Nothing to check.
     if !info.is_l3 {
@@ -601,37 +615,45 @@ async fn network_layer_state(
         return info.state;
     }
 
-    // TODO(dpradilla): add support for multiple addresses.
-    let address = addresses.next();
-    if address.is_none() {
-        return info.state;
-    }
-
     let route_table = match routes {
         Some(r) => r,
-        _ => return State::Local.into(),
+        None => {
+            return if addresses.into_iter().count() > 0 { State::Local.into() } else { info.state }
+        }
     };
 
-    // Has local gateway.
-    let rs = local_routes(&address.unwrap(), &route_table);
-    if rs.is_empty() {
-        return State::Local.into();
-    }
-
-    let mut gateway_active = false;
-    for r in rs.iter() {
-        if let Some(gw_ip) = r.gateway {
-            if p.ping(&gw_ip.to_string()) {
-                gateway_active = true;
-                break;
+    let mut gateway_reachable = false;
+    'outer: for a in addresses {
+        for r in local_routes(&a, &route_table) {
+            if let Some(gw_ip) = r.gateway {
+                let gw_url = match gw_ip {
+                    std::net::IpAddr::V4(_) => gw_ip.to_string(),
+                    std::net::IpAddr::V6(v6) => {
+                        if let Some(id) = r.port_id {
+                            if net_types::ip::Ipv6Addr::new(v6.octets()).scope()
+                                != net_types::ip::Ipv6Scope::Global
+                            {
+                                format!("{}%{}", gw_ip, id.to_u64())
+                            } else {
+                                gw_ip.to_string()
+                            }
+                        } else {
+                            gw_ip.to_string()
+                        }
+                    }
+                };
+                if p.ping(&gw_url).await {
+                    gateway_reachable = true;
+                    break 'outer;
+                }
             }
         }
     }
-    if !gateway_active {
+    if !gateway_reachable {
         return State::Local.into();
     }
 
-    if !p.ping(INTERNET_CONNECTIVITY_CHECK_ADDRESS) {
+    if !p.ping(ping_address).await {
         return State::Gateway.into();
     }
     State::Internet.into()
@@ -639,7 +661,13 @@ async fn network_layer_state(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync, ping::IcmpPinger};
+    use {
+        super::*,
+        async_trait::async_trait,
+        fuchsia_async as fasync,
+        net_declare::std_ip,
+        std::net::{IpAddr, Ipv4Addr, Ipv6Addr},
+    };
 
     #[test]
     fn test_has_local_neighbors() {
@@ -996,81 +1024,121 @@ mod tests {
         assert_eq!(got, want, "route via local network not present.");
     }
 
+    #[derive(Default)]
     struct FakePing<'a> {
-        gateway_url: &'a str,
+        gateway_urls: Vec<&'a str>,
         gateway_response: bool,
-        internet_url: &'a str,
         internet_response: bool,
-        default_response: bool,
     }
 
+    #[async_trait]
     impl Pinger for FakePing<'_> {
-        fn ping(&self, url: &str) -> bool {
-            if self.gateway_url == url {
+        async fn ping(&mut self, url: &str) -> bool {
+            if self.gateway_urls.contains(&url) {
                 return self.gateway_response;
             }
-            if self.internet_url == url {
+            if IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS == url
+                || IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS == url
+            {
                 return self.internet_response;
             }
-            self.default_response
+            panic!("ping destination URL {} is not in the set of gateway URLs ({:?}) or equal to the IPv4/IPv6 internet connectivity check address", url, self.gateway_urls);
         }
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn test_network_layer_state() {
-        let address = Some(LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 });
-        let route_table = &vec![
+    async fn test_network_layer_state_ipv4() {
+        test_network_layer_state(
+            "1.2.3.0",
+            "1.2.3.4",
+            "1.2.3.1",
+            "2.2.3.0",
+            "2.2.3.1",
+            LifIpAddr { address: IpAddr::V4(Ipv4Addr::UNSPECIFIED), prefix: 0 },
+            IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS,
+            24,
+        )
+        .await
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_network_layer_state_ipv6() {
+        test_network_layer_state(
+            "123::",
+            "123::4",
+            "123::1",
+            "223::",
+            "223::1",
+            LifIpAddr { address: IpAddr::V6(Ipv6Addr::UNSPECIFIED), prefix: 0 },
+            IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS,
+            64,
+        )
+        .await
+    }
+
+    async fn test_network_layer_state(
+        net1: &str,
+        net1_addr: &str,
+        net1_gateway: &str,
+        net2: &str,
+        net2_gateway: &str,
+        unspecified_addr: LifIpAddr,
+        ping_url: &str,
+        prefix: u8,
+    ) {
+        let address = LifIpAddr { address: net1_addr.parse().unwrap(), prefix };
+        let route_table = vec![
             hal::Route {
-                gateway: Some("1.2.3.1".parse().unwrap()),
+                gateway: Some(net1_gateway.parse().unwrap()),
                 metric: None,
                 port_id: Some(hal::PortId::from(1)),
-                target: LifIpAddr { address: "0.0.0.0".parse().unwrap(), prefix: 0 },
+                target: unspecified_addr,
             },
             hal::Route {
                 gateway: None,
                 metric: None,
                 port_id: Some(hal::PortId::from(1)),
-                target: LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 24 },
+                target: LifIpAddr { address: net1.parse().unwrap(), prefix },
             },
         ];
         let route_table_2 = vec![
             hal::Route {
-                gateway: Some("2.2.3.1".parse().unwrap()),
+                gateway: Some(net2_gateway.parse().unwrap()),
                 metric: None,
                 port_id: Some(hal::PortId::from(1)),
-                target: LifIpAddr { address: "0.0.0.0".parse().unwrap(), prefix: 0 },
+                target: unspecified_addr,
             },
             hal::Route {
                 gateway: None,
                 metric: None,
                 port_id: Some(hal::PortId::from(1)),
-                target: LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 24 },
+                target: LifIpAddr { address: net1.parse().unwrap(), prefix },
             },
             hal::Route {
                 gateway: None,
                 metric: None,
                 port_id: Some(hal::PortId::from(1)),
-                target: LifIpAddr { address: "2.2.3.0".parse().unwrap(), prefix: 24 },
+                target: LifIpAddr { address: net2.parse().unwrap(), prefix },
             },
         ];
+        let network_info = NetworkInfo {
+            is_default: false,
+            is_l3: true,
+            state: State::LinkLayerUp.into(),
+            ..Default::default()
+        };
 
         assert_eq!(
             network_layer_state(
-                address.into_iter(),
-                &Some(route_table.to_vec()),
-                &NetworkInfo {
-                    is_default: false,
-                    is_l3: true,
-                    state: State::LinkLayerUp.into(),
-                    ..Default::default()
-                },
-                &FakePing {
-                    gateway_url: "1.2.3.1",
+                std::iter::once(address),
+                &Some(route_table.clone()),
+                &network_info,
+                &mut FakePing {
+                    gateway_urls: vec![net1_gateway],
                     gateway_response: true,
-                    internet_url: "8.8.8.8",
                     internet_response: true,
-                    default_response: true
                 },
+                ping_url,
             )
             .await,
             State::Internet,
@@ -1079,21 +1147,15 @@ mod tests {
 
         assert_eq!(
             network_layer_state(
-                address.into_iter(),
-                &Some(route_table.to_vec()),
-                &NetworkInfo {
-                    is_default: false,
-                    is_l3: true,
-                    state: State::LinkLayerUp.into(),
-                    ..Default::default()
-                },
-                &FakePing {
-                    gateway_url: "1.2.3.1",
+                std::iter::once(address),
+                &Some(route_table.clone()),
+                &network_info,
+                &mut FakePing {
+                    gateway_urls: vec![net1_gateway],
                     gateway_response: true,
-                    internet_url: "8.8.8.8",
                     internet_response: false,
-                    default_response: true
                 },
+                ping_url,
             )
             .await,
             State::Gateway,
@@ -1102,21 +1164,15 @@ mod tests {
 
         assert_eq!(
             network_layer_state(
-                address.into_iter(),
-                &Some(route_table.to_vec()),
-                &NetworkInfo {
-                    is_default: false,
-                    is_l3: true,
-                    state: State::LinkLayerUp.into(),
-                    ..Default::default()
-                },
-                &FakePing {
-                    gateway_url: "1.2.3.1",
+                std::iter::once(address),
+                &Some(route_table.clone()),
+                &network_info,
+                &mut FakePing {
+                    gateway_urls: vec![net1_gateway],
                     gateway_response: false,
-                    internet_url: "8.8.8.8",
                     internet_response: false,
-                    default_response: true
                 },
+                ping_url,
             )
             .await,
             State::Local,
@@ -1125,15 +1181,11 @@ mod tests {
 
         assert_eq!(
             network_layer_state(
-                address.into_iter(),
+                std::iter::once(address),
                 &None,
-                &NetworkInfo {
-                    is_default: false,
-                    is_l3: true,
-                    state: State::LinkLayerUp.into(),
-                    ..Default::default()
-                },
-                &IcmpPinger {},
+                &network_info,
+                &mut FakePing::default(),
+                ping_url,
             )
             .await,
             State::Local,
@@ -1142,345 +1194,168 @@ mod tests {
 
         assert_eq!(
             network_layer_state(
-                None.into_iter(),
+                std::iter::empty(),
                 &Some(route_table_2),
-                &NetworkInfo {
-                    is_default: false,
-                    is_l3: true,
-                    state: State::NetworkLayerUp.into(),
-                    ..Default::default()
-                },
-                &IcmpPinger {},
+                &network_info,
+                &mut FakePing::default(),
+                ping_url,
             )
             .await,
-            State::NetworkLayerUp,
-            "default route is not local"
+            State::Local,
+            "No default route"
         );
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_compute_state() {
+        let id = hal::PortId::from(1);
+        let interface = || hal::Interface {
+            id: id,
+            topo_path: "ethernet/eth0".to_string(),
+            name: "eth1".to_string(),
+            ipv4_addr: Some(hal::InterfaceAddress::Unknown(LifIpAddr {
+                address: std_ip!(1.2.3.4),
+                prefix: 24,
+            })),
+            ipv6_addr: vec![LifIpAddr { address: std_ip!(123::4), prefix: 64 }],
+            state: hal::InterfaceState::Up,
+            enabled: true,
+            dhcp_client_enabled: false,
+        };
+        let route_table = vec![
+            hal::Route {
+                gateway: Some(std_ip!(1.2.3.1)),
+                metric: None,
+                port_id: Some(id),
+                target: LifIpAddr { address: IpAddr::V4(Ipv4Addr::UNSPECIFIED), prefix: 0 },
+            },
+            hal::Route {
+                gateway: Some(std_ip!(123::1)),
+                metric: None,
+                port_id: Some(id),
+                target: LifIpAddr { address: IpAddr::V6(Ipv6Addr::UNSPECIFIED), prefix: 0 },
+            },
+        ];
+        let route_table2 = vec![
+            hal::Route {
+                gateway: Some(std_ip!(2.2.3.1)),
+                metric: None,
+                port_id: Some(id),
+                target: LifIpAddr { address: IpAddr::V4(Ipv4Addr::UNSPECIFIED), prefix: 0 },
+            },
+            hal::Route {
+                gateway: Some(std_ip!(223::1)),
+                metric: None,
+                port_id: Some(id),
+                target: LifIpAddr { address: IpAddr::V6(Ipv6Addr::UNSPECIFIED), prefix: 0 },
+            },
+        ];
+
         let got = compute_state(
             &hal::Interface {
-                id: hal::PortId::from(1),
                 topo_path: "ifname".to_string(),
-                name: "eth1".to_string(),
                 ipv4_addr: None,
                 ipv6_addr: Vec::new(),
                 state: hal::InterfaceState::Down,
                 enabled: false,
-                dhcp_client_enabled: false,
+                ..interface()
             },
             None,
-            &FakePing {
-                gateway_url: "1.2.3.1",
-                gateway_response: true,
-                internet_url: "8.8.8.8",
-                internet_response: false,
-                default_response: false,
-            },
-        )
-        .await;
-        assert_eq!(
-            got,
-            Some(ReachabilityInfo::new(
-                PortType::SVI,
-                "eth1",
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: false,
-                    state: State::Down.into(),
-                    ..Default::default()
-                },
-                NetworkInfo {
-                    is_default: false,
-                    is_l3: false,
-                    state: State::Down.into(),
-                    ..Default::default()
-                },
-            )),
-            "not an ethernet interface"
-        );
-
-        let got = compute_state(
-            &hal::Interface {
-                id: hal::PortId::from(1),
-                topo_path: "ethernet/eth0".to_string(),
-                name: "eth1".to_string(),
-                ipv4_addr: Some(hal::InterfaceAddress::Unknown(LifIpAddr {
-                    address: "1.2.3.4".parse().unwrap(),
-                    prefix: 24,
-                })),
-                ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Down,
-                enabled: false,
-                dhcp_client_enabled: false,
-            },
-            None,
-            &FakePing {
-                gateway_url: "1.2.3.1",
-                gateway_response: true,
-                internet_url: "8.8.8.8",
-                internet_response: false,
-                default_response: false,
-            },
+            &mut FakePing::default(),
         )
         .await;
         let want = Some(ReachabilityInfo::new(
-            PortType::Ethernet,
+            PortType::SVI,
             "eth1",
-            NetworkInfo {
-                is_default: false,
-                is_l3: true,
-                state: State::Down.into(),
-                ..Default::default()
-            },
-            NetworkInfo {
-                is_default: false,
-                is_l3: false,
-                state: State::Down.into(),
-                ..Default::default()
-            },
+            NetworkInfo { state: State::Down.into(), ..Default::default() },
+            NetworkInfo { state: State::Down.into(), ..Default::default() },
         ));
-        assert_eq!(got, want, "ethernet interface, ipv4 configured, interface down");
+        assert_eq!(got, want, "not an ethernet interface, no addresses, interface down");
 
         let got = compute_state(
-            &hal::Interface {
-                id: hal::PortId::from(1),
-                topo_path: "ethernet/eth0".to_string(),
-                name: "eth1".to_string(),
-                ipv4_addr: Some(hal::InterfaceAddress::Unknown(LifIpAddr {
-                    address: "1.2.3.4".parse().unwrap(),
-                    prefix: 24,
-                })),
-                ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Up,
-                enabled: true,
-                dhcp_client_enabled: false,
-            },
+            &hal::Interface { state: hal::InterfaceState::Down, enabled: false, ..interface() },
             None,
-            &FakePing {
-                gateway_url: "1.2.3.1",
-                gateway_response: true,
-                internet_url: "8.8.8.8",
-                internet_response: false,
-                default_response: false,
-            },
+            &mut FakePing::default(),
         )
         .await;
         let want = Some(ReachabilityInfo::new(
             PortType::Ethernet,
             "eth1",
-            NetworkInfo {
-                is_default: false,
-                is_l3: true,
-                state: State::Local.into(),
-                ..Default::default()
-            },
-            NetworkInfo {
-                is_default: false,
-                is_l3: false,
-                state: State::LinkLayerUp.into(),
-                ..Default::default()
-            },
+            NetworkInfo { is_l3: true, state: State::Down.into(), ..Default::default() },
+            NetworkInfo { is_l3: true, state: State::Down.into(), ..Default::default() },
         ));
-        assert_eq!(got, want, "ethernet interface, ipv4 configured, interface up");
+        assert_eq!(got, want, "ethernet interface, address configured, interface down");
+
+        let got = compute_state(&interface(), None, &mut FakePing::default()).await;
+        let want = Some(ReachabilityInfo::new(
+            PortType::Ethernet,
+            "eth1",
+            NetworkInfo { is_l3: true, state: State::Local.into(), ..Default::default() },
+            NetworkInfo { is_l3: true, state: State::Local.into(), ..Default::default() },
+        ));
+        assert_eq!(got, want, "ethernet interface, address configured, interface up");
 
         let got = compute_state(
-            &hal::Interface {
-                id: hal::PortId::from(1),
-                topo_path: "ethernet/eth0".to_string(),
-                name: "eth1".to_string(),
-                ipv4_addr: Some(hal::InterfaceAddress::Unknown(LifIpAddr {
-                    address: "1.2.3.4".parse().unwrap(),
-                    prefix: 24,
-                })),
-                ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Up,
-                enabled: true,
-                dhcp_client_enabled: false,
-            },
-            Some(vec![hal::Route {
-                gateway: Some("2.2.3.1".parse().unwrap()),
-                metric: None,
-                port_id: Some(hal::PortId::from(1)),
-                target: LifIpAddr { address: "0.0.0.0".parse().unwrap(), prefix: 0 },
-            }]),
-            &FakePing {
-                gateway_url: "1.2.3.1",
+            &interface(),
+            Some(route_table2),
+            &mut FakePing {
+                gateway_urls: vec!["1.2.3.1", "223::1"],
                 gateway_response: true,
-                internet_url: "8.8.8.8",
                 internet_response: false,
-                default_response: false,
             },
         )
         .await;
         let want = Some(ReachabilityInfo::new(
             PortType::Ethernet,
             "eth1",
-            NetworkInfo {
-                is_default: false,
-                is_l3: true,
-                state: State::Local.into(),
-                ..Default::default()
-            },
-            NetworkInfo {
-                is_default: false,
-                is_l3: false,
-                state: State::LinkLayerUp.into(),
-                ..Default::default()
-            },
+            NetworkInfo { is_l3: true, state: State::Local.into(), ..Default::default() },
+            NetworkInfo { is_l3: true, state: State::Local.into(), ..Default::default() },
         ));
         assert_eq!(
             got, want,
-            "ethernet interface, ipv4 configured, interface up, no local gateway"
+            "ethernet interface, address configured, interface up, no local gateway"
         );
 
         let got = compute_state(
-            &hal::Interface {
-                id: hal::PortId::from(1),
-                topo_path: "ethernet/eth0".to_string(),
-                name: "eth1".to_string(),
-                ipv4_addr: Some(hal::InterfaceAddress::Unknown(LifIpAddr {
-                    address: "1.2.3.4".parse().unwrap(),
-                    prefix: 24,
-                })),
-                ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Up,
-                enabled: true,
-                dhcp_client_enabled: false,
-            },
-            Some(vec![hal::Route {
-                gateway: Some("1.2.3.1".parse().unwrap()),
-                metric: None,
-                port_id: Some(hal::PortId::from(1)),
-                target: LifIpAddr { address: "0.0.0.0".parse().unwrap(), prefix: 0 },
-            }]),
-            &FakePing {
-                gateway_url: "1.2.3.1",
+            &interface(),
+            Some(route_table.clone()),
+            &mut FakePing {
+                gateway_urls: vec!["1.2.3.1", "123::1"],
                 gateway_response: true,
-                internet_url: "8.8.8.8",
                 internet_response: false,
-                default_response: false,
             },
         )
         .await;
         let want = Some(ReachabilityInfo::new(
             PortType::Ethernet,
             "eth1",
-            NetworkInfo {
-                is_default: false,
-                is_l3: true,
-                state: State::Gateway.into(),
-                ..Default::default()
-            },
-            NetworkInfo {
-                is_default: false,
-                is_l3: false,
-                state: State::LinkLayerUp.into(),
-                ..Default::default()
-            },
+            NetworkInfo { is_l3: true, state: State::Gateway.into(), ..Default::default() },
+            NetworkInfo { is_l3: true, state: State::Gateway.into(), ..Default::default() },
         ));
         assert_eq!(
             got, want,
-            "ethernet interface, ipv4 configured, interface up, with local gateway"
+            "ethernet interface, address configured, interface up, with local gateway"
         );
 
         let got = compute_state(
-            &hal::Interface {
-                id: hal::PortId::from(1),
-                topo_path: "ethernet/eth0".to_string(),
-                name: "eth1".to_string(),
-                ipv4_addr: Some(hal::InterfaceAddress::Unknown(LifIpAddr {
-                    address: "1.2.3.4".parse().unwrap(),
-                    prefix: 24,
-                })),
-                ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Up,
-                enabled: true,
-                dhcp_client_enabled: false,
-            },
-            Some(vec![hal::Route {
-                gateway: Some("1.2.3.1".parse().unwrap()),
-                metric: None,
-                port_id: Some(hal::PortId::from(1)),
-                target: LifIpAddr { address: "0.0.0.0".parse().unwrap(), prefix: 0 },
-            }]),
-            &FakePing {
-                gateway_url: "1.2.3.1",
+            &interface(),
+            Some(route_table.clone()),
+            &mut FakePing {
+                gateway_urls: vec!["1.2.3.1", "123::1"],
                 gateway_response: true,
-                internet_url: "8.8.8.8",
                 internet_response: true,
-                default_response: false,
             },
         )
         .await;
         let want = Some(ReachabilityInfo::new(
             PortType::Ethernet,
             "eth1",
-            NetworkInfo {
-                is_default: false,
-                is_l3: true,
-                state: State::Internet.into(),
-                ..Default::default()
-            },
-            NetworkInfo {
-                is_default: false,
-                is_l3: false,
-                state: State::LinkLayerUp.into(),
-                ..Default::default()
-            },
-        ));
-        assert_eq!(got, want, "ethernet interface, ipv4 configured, interface up, with internet");
-
-        let got = compute_state(
-            &hal::Interface {
-                id: hal::PortId::from(1),
-                topo_path: "ethernet/eth0".to_string(),
-                name: "eth1".to_string(),
-                ipv4_addr: Some(hal::InterfaceAddress::Unknown(LifIpAddr {
-                    address: "1.2.3.4".parse().unwrap(),
-                    prefix: 24,
-                })),
-                ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Up,
-                enabled: true,
-                dhcp_client_enabled: false,
-            },
-            Some(vec![hal::Route {
-                gateway: Some("fe80::2aad:3fe0:7436:5677".parse().unwrap()),
-                metric: None,
-                port_id: Some(hal::PortId::from(1)),
-                target: LifIpAddr { address: "::".parse().unwrap(), prefix: 0 },
-            }]),
-            &FakePing {
-                gateway_url: "1.2.3.1",
-                gateway_response: true,
-                internet_url: "8.8.8.8",
-                internet_response: false,
-                default_response: false,
-            },
-        )
-        .await;
-        let want = Some(ReachabilityInfo::new(
-            PortType::Ethernet,
-            "eth1",
-            NetworkInfo {
-                is_default: false,
-                is_l3: true,
-                state: State::Local.into(),
-                ..Default::default()
-            },
-            NetworkInfo {
-                is_default: false,
-                is_l3: false,
-                state: State::LinkLayerUp.into(),
-                ..Default::default()
-            },
+            NetworkInfo { is_l3: true, state: State::Internet.into(), ..Default::default() },
+            NetworkInfo { is_l3: true, state: State::Internet.into(), ..Default::default() },
         ));
         assert_eq!(
             got, want,
-            "ethernet interface, ipv4 configured, interface up, no local gateway"
+            "ethernet interface, address configured, interface up, with internet"
         );
     }
 

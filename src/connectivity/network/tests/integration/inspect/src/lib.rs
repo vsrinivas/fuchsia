@@ -9,7 +9,7 @@ use diagnostics_hierarchy::Property;
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
 use netemul::Endpoint as _;
 use netstack_testing_common::environments::{Netstack2, TestSandboxExt};
-use netstack_testing_common::Result;
+use netstack_testing_common::{get_inspect_data, Result};
 
 /// A helper type to provide address verification in inspect NIC data.
 ///
@@ -73,58 +73,6 @@ impl fuchsia_inspect::testing::PropertyAssertion for AddressMatcher {
             Err(anyhow::anyhow!("{} not in expected address set", actual))
         }
     }
-}
-
-/// Gets inspect data in environment.
-///
-/// Returns the resulting inspect data for `component`, filtered by
-/// `tree_selector` and with inspect file starting with `file_prefix`.
-async fn get_inspect_data<'a>(
-    env: &netemul::TestEnvironment<'a>,
-    component: impl Into<String>,
-    tree_selector: impl Into<String>,
-    file_prefix: &str,
-) -> Result<diagnostics_hierarchy::DiagnosticsHierarchy> {
-    let archive = env
-        .connect_to_service::<fidl_fuchsia_diagnostics::ArchiveAccessorMarker>()
-        .context("failed to connect to archive accessor")?;
-
-    fuchsia_inspect_contrib::reader::ArchiveReader::new()
-        .with_archive(archive)
-        .add_selector(
-            fuchsia_inspect_contrib::reader::ComponentSelector::new(vec![component.into()])
-                .with_tree_selector(tree_selector.into()),
-        )
-        // Enable `retry_if_empty` to prevent races in test environment bringup
-        // where we may end up reaching `ArchiveReader` before it has observed
-        // Netstack starting.
-        //
-        // Eventually there will be support for lifecycle streams, with which
-        // it will be possible to wait on the event of Archivist obtaining a
-        // handle to Netstack diagnostics, and then request the snapshot of
-        // inspect data once that event is received.
-        .retry_if_empty(true)
-        .get()
-        .await
-        .context("failed to get inspect data")?
-        .into_iter()
-        .find_map(
-            |diagnostics_data::InspectData {
-                 data_source: _,
-                 metadata,
-                 moniker: _,
-                 payload,
-                 version: _,
-             }| {
-                if metadata.filename.starts_with(file_prefix) {
-                    Some(payload)
-                } else {
-                    None
-                }
-            },
-        )
-        .ok_or_else(|| anyhow::anyhow!("failed to find inspect data"))?
-        .ok_or_else(|| anyhow::anyhow!("empty inspect payload"))
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

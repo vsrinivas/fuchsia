@@ -25,9 +25,10 @@ use futures::stream::{Stream, StreamExt, TryStreamExt};
 use futures::TryFutureExt as _;
 use net_types::ethernet::Mac;
 use net_types::ip as net_types_ip;
+use net_types::Witness as _;
 use packet::serialize::{InnerPacketBuilder, Serializer};
 use packet_formats::ethernet::{EtherType, EthernetFrameBuilder};
-use packet_formats::icmp::ndp::{self, options::NdpOption};
+use packet_formats::icmp::ndp::{self, options::NdpOption, RouterAdvertisement};
 use packet_formats::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
 use packet_formats::ip::IpProto;
 use packet_formats::ipv6::Ipv6PacketBuilder;
@@ -116,8 +117,7 @@ pub async fn write_ndp_message<
         .serialize_vec_outer()
         .map_err(|e| anyhow::anyhow!("failed to serialize NDP packet: {:?}", e))?
         .unwrap_b();
-    let () = ep.write(ser.as_ref()).await.context("failed to write to fake endpoint")?;
-    Ok(())
+    ep.write(ser.as_ref()).await.context("failed to write to fake endpoint")
 }
 
 /// Waits for a non-loopback interface to come up with an ID not in `exclude_ids`.
@@ -174,4 +174,82 @@ pub async fn wait_for_non_loopback_interface_up<
             Err(anyhow::anyhow!("the network manager unexpectedly exited with exit status = {:?}", wait_for_netmgr_res?))
         }
     }
+}
+
+/// Gets inspect data in environment.
+///
+/// Returns the resulting inspect data for `component`, filtered by
+/// `tree_selector` and with inspect file starting with `file_prefix`.
+pub async fn get_inspect_data<'a>(
+    env: &netemul::TestEnvironment<'a>,
+    component: impl Into<String>,
+    tree_selector: impl Into<String>,
+    file_prefix: &str,
+) -> Result<diagnostics_hierarchy::DiagnosticsHierarchy> {
+    let archive = env
+        .connect_to_service::<fidl_fuchsia_diagnostics::ArchiveAccessorMarker>()
+        .context("failed to connect to archive accessor")?;
+
+    fuchsia_inspect_contrib::reader::ArchiveReader::new()
+        .with_archive(archive)
+        .add_selector(
+            fuchsia_inspect_contrib::reader::ComponentSelector::new(vec![component.into()])
+                .with_tree_selector(tree_selector.into()),
+        )
+        // Enable `retry_if_empty` to prevent races in test environment bringup
+        // where we may end up reaching `ArchiveReader` before it has observed
+        // Netstack starting.
+        //
+        // Eventually there will be support for lifecycle streams, with which
+        // it will be possible to wait on the event of Archivist obtaining a
+        // handle to Netstack diagnostics, and then request the snapshot of
+        // inspect data once that event is received.
+        .retry_if_empty(true)
+        .get()
+        .await
+        .context("failed to get inspect data")?
+        .into_iter()
+        .find_map(
+            |diagnostics_data::InspectData {
+                 data_source: _,
+                 metadata,
+                 moniker: _,
+                 payload,
+                 version: _,
+             }| {
+                if metadata.filename.starts_with(file_prefix) {
+                    Some(payload)
+                } else {
+                    None
+                }
+            },
+        )
+        .ok_or_else(|| anyhow::anyhow!("failed to find inspect data"))?
+        .ok_or_else(|| anyhow::anyhow!("empty inspect payload"))
+}
+
+/// Send Router Advertisement NDP message with router lifetime.
+pub async fn send_ra_with_router_lifetime<'a>(
+    fake_ep: &netemul::TestFakeEndpoint<'a>,
+    lifetime: u16,
+    options: &[NdpOption<'_>],
+) -> Result {
+    let ra = RouterAdvertisement::new(
+        0,        /* current_hop_limit */
+        false,    /* managed_flag */
+        false,    /* other_config_flag */
+        lifetime, /* router_lifetime */
+        0,        /* reachable_time */
+        0,        /* retransmit_timer */
+    );
+    write_ndp_message::<&[u8], _>(
+        constants::eth::MAC_ADDR,
+        Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
+        constants::ipv6::LINK_LOCAL_ADDR,
+        net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+        ra,
+        options,
+        fake_ep,
+    )
+    .await
 }

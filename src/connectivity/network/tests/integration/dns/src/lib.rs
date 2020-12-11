@@ -241,7 +241,6 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
         net_types_ip::Ipv6Addr::new(std_ip_v6!(fe80::1).octets());
     /// DNS server served by DHCPv6.
     const DHCPV6_DNS_SERVER: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!(20a::1234:5678);
-    const DEFAULT_TTL: u8 = 64;
 
     /// Maximum number of times we'll poll `LookupAdmin` to check DNS configuration
     /// succeeded.
@@ -385,7 +384,12 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
             NonZeroU16::new(net_dhcpv6::DEFAULT_CLIENT_PORT)
                 .expect("default DHCPv6 client port is non-zero"),
         ))
-        .encapsulate(Ipv6PacketBuilder::new(DHCPV6_SERVER, src_ip, DEFAULT_TTL, IpProto::Udp))
+        .encapsulate(Ipv6PacketBuilder::new(
+            DHCPV6_SERVER,
+            src_ip,
+            ipv6_consts::DEFAULT_HOP_LIMIT,
+            IpProto::Udp,
+        ))
         .encapsulate(EthernetFrameBuilder::new(dst_mac, src_mac, EtherType::Ipv6))
         .serialize_vec_outer()
         .map_err(|_| anyhow::anyhow!("failed to serialize DHCPv6 packet"))?

@@ -196,6 +196,21 @@ impl Manager for NetworkManager {
     const TESTING_ARGS: &'static [&'static str] = &[];
 }
 
+/// Abstraction for a Fuchsia component which monitors reachability status.
+pub trait Reachability: Copy + Clone {
+    /// The Fuchsia package URL to the component.
+    const PKG_URL: &'static str;
+}
+
+/// Uninstantiable type that represents a reachability monitor.
+#[derive(Copy, Clone)]
+pub enum ReachabilityMonitor {}
+
+impl Reachability for ReachabilityMonitor {
+    const PKG_URL: &'static str =
+        "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/reachability.cmx";
+}
+
 /// Extensions to `netemul::TestSandbox`.
 #[async_trait]
 pub trait TestSandboxExt {

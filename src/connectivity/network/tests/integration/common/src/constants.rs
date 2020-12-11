@@ -4,9 +4,18 @@
 
 //! Useful constants for tests.
 
+/// IPv4 constants.
+pub mod ipv4 {
+    /// A default IPv4 time-to-live value.
+    pub const DEFAULT_TTL: u8 = 64;
+}
+
 /// IPv6 constants.
 pub mod ipv6 {
     use net_types::ip as net_types_ip;
+
+    /// A default IPv6 hop limit value.
+    pub const DEFAULT_HOP_LIMIT: u8 = 64;
 
     /// An IPv6 prefix.
     ///

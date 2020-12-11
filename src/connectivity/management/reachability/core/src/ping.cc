@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <netdb.h>
+#include <netinet/icmp6.h>
 #include <netinet/in.h>
 #include <netinet/ip_icmp.h>
 #include <poll.h>
@@ -78,11 +79,11 @@ struct PingStatistics {
 
 bool ValidateReceivedPacket(const packet_t& sent_packet, size_t sent_packet_size,
                             const packet_t& received_packet, size_t received_packet_size,
-                            const Options& options) {
+                            const Options& options, uint8_t expected_type) {
   if (received_packet_size != sent_packet_size) {
     return false;
   }
-  if (received_packet.hdr.type != ICMP_ECHOREPLY) {
+  if (received_packet.hdr.type != expected_type) {
     return false;
   }
   if (received_packet.hdr.code != 0) {
@@ -110,30 +111,38 @@ ssize_t c_ping(const char* url) {
   Options options(url, message_size);
   PingStatistics stats;
 
-  int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP);
-  if (s < 0) {
-    return ERR_SYSTEM_CANT_OPEN_SOCKET;
-  }
-
   struct addrinfo hints;
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_RAW;
   hints.ai_flags = 0;
-  hints.ai_protocol = IPPROTO_ICMP;
   struct addrinfo* info;
   if (getaddrinfo(options.host, NULL, &hints, &info)) {
     return ERR_UNKNOWN_HOST;
   }
 
-  struct sockaddr* saddr = info->ai_addr;
-  char buf[256];
-  if (saddr->sa_family == AF_INET) {
-    struct sockaddr_in* iaddr = reinterpret_cast<struct sockaddr_in*>(saddr);
-    inet_ntop(saddr->sa_family, &iaddr->sin_addr, buf, sizeof(buf));
-  } else {
-    struct sockaddr_in6* iaddr = reinterpret_cast<struct sockaddr_in6*>(saddr);
-    inet_ntop(saddr->sa_family, &iaddr->sin6_addr, buf, sizeof(buf));
+  int proto;
+  uint8_t type, response_type;
+  switch (info->ai_family) {
+    case AF_INET: {
+      proto = IPPROTO_ICMP;
+      type = ICMP_ECHO;
+      response_type = ICMP_ECHOREPLY;
+      break;
+    }
+    case AF_INET6: {
+      proto = IPPROTO_ICMPV6;
+      type = ICMP6_ECHO_REQUEST;
+      response_type = ICMP6_ECHO_REPLY;
+      break;
+    }
+    default:
+      return ERR_UNKNOWN_HOST;
+  }
+
+  int s = socket(info->ai_family, SOCK_DGRAM, proto);
+  if (s < 0) {
+    return ERR_SYSTEM_CANT_OPEN_SOCKET;
   }
 
   uint16_t sequence = 1;
@@ -144,7 +153,7 @@ ssize_t c_ping(const char* url) {
 
   while (options.count-- > 0) {
     memset(&packet, 0, sizeof(packet));
-    packet.hdr.type = ICMP_ECHO;
+    packet.hdr.type = type;
     packet.hdr.code = 0;
     packet.hdr.un.echo.id = 0;
     packet.hdr.un.echo.sequence = htons(sequence++);
@@ -152,7 +161,7 @@ ssize_t c_ping(const char* url) {
     // Netstack will overwrite the checksum
     zx_ticks_t before = zx_ticks_get();
     sent_packet_size = sizeof(packet.hdr) + options.payload_size_bytes;
-    if (sendto(s, &packet, sent_packet_size, 0, saddr, sizeof(*saddr)) < 0) {
+    if (sendto(s, &packet, sent_packet_size, 0, info->ai_addr, info->ai_addrlen) < 0) {
       r = ERR_SYSTEM_SENDTO;
       break;
     }
@@ -167,7 +176,7 @@ ssize_t c_ping(const char* url) {
           if (recvd < 0) {
             r = ERR_SYSTEM_RECVFROM;
           } else if (!ValidateReceivedPacket(packet, sent_packet_size, received_packet, recvd,
-                                             options)) {
+                                             options, response_type)) {
             r = ERR_RESPONSE_VALIDATION;
           }
           break;

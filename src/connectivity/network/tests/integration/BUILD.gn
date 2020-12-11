@@ -22,6 +22,7 @@ tests = [
   "ipv6",
   "management",
   "neighbor",
+  "reachability",
   "routes",
   "socket",
 ]
@@ -84,6 +85,9 @@ fuchsia_test_package("netstack-integration-tests") {
     # network_manager integration with netstack is tested.
     ":network-manager-config",
     "//src/connectivity/management/network-manager:component-netemul",
+
+    # reachability monitor is tested.
+    "//src/connectivity/management/reachability:component",
 
     # netemul-sandbox is used to create hermetic environments.
     "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
