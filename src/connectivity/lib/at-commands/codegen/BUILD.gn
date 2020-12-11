@@ -40,10 +40,10 @@ if (host_toolchain == current_toolchain) {
 
 group("tests") {
   testonly = true
-  deps = [ ":parser_tests($host_toolchain)" ]
+  deps = [ ":codegen_parser_tests($host_toolchain)" ]
 }
 
-rustc_test("parser_tests") {
+rustc_test("codegen_parser_tests") {
   source_root = "src/parser_tests.rs"
   deps = [ ":codegen_lib" ]
   sources = [ "src/parser_tests.rs" ]

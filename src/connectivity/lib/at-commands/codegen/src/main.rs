@@ -14,12 +14,12 @@ use {
     },
 };
 
-// This code just confirms we've correctly linked in the lowlevel module.
-static SOME_CODE: &'static str = r#"use crate::lowlevel::Unimplemented;
+// This code just confirms we've correctly linked in the parsers.
+static SOME_CODE: &'static str = r#"use crate::parser::{command_parser, response_parser};
 
-#[allow(dead_code, unused_variables)]
-fn unused() {
-    let _ = Unimplemented;
+pub fn unused() {
+    let _ = command_parser::parse(&String::from(""));
+    let _ = response_parser::parse(&String::from(""));
 }
 "#;
 

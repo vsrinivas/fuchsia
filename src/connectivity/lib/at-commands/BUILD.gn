@@ -14,7 +14,7 @@ compiled_action("generate_sources") {
     "definitions/example1.at",
     "definitions/example2.at",
   ]
-  output = "$target_gen_dir/generated.rs"
+  output = "$target_gen_dir/src/generated.rs"
   outputs = [ output ]
   args = [ "-o" ] + [ rebase_path(output) ]
   foreach(input, rebase_path(sources)) {
@@ -26,24 +26,45 @@ compiled_action("generate_sources") {
 copy("copy_sources") {
   sources = [
     "src/lib.rs",
-    "src/lowlevel.rs",
+    "src/lowlevel/arguments.rs",
+    "src/lowlevel/command.rs",
+    "src/lowlevel/response.rs",
+    "src/parser/arguments_parser.rs",
+    "src/parser/command_grammar.rs",
+    "src/parser/command_parser.rs",
+    "src/parser/common.rs",
+    "src/parser/response_grammar.rs",
+    "src/parser/response_parser.rs",
   ]
-  outputs = [ "$target_gen_dir/{{source_file_part}}" ]
+  outputs = [ "$target_gen_dir/{{source_target_relative}}" ]
 }
 
 # Build the at command library from the generated sources
 rustc_library("lib") {
   name = "at_commands"
   edition = "2018"
+  deps = [
+    "//third_party/rust_crates:pest",
+    "//third_party/rust_crates:pest_derive",
+    "//third_party/rust_crates:thiserror",
+  ]
   non_rust_deps = [
     ":copy_sources",
     ":generate_sources",
   ]
-  source_root = "$target_gen_dir/lib.rs"
+  source_root = "$target_gen_dir/src/lib.rs"
   sources = [
-    "$target_gen_dir/generated.rs",
-    "$target_gen_dir/lib.rs",
-    "$target_gen_dir/lowlevel.rs",
+    "$target_gen_dir/src/generated.rs",
+    "$target_gen_dir/src/lib.rs",
+    "$target_gen_dir/src/lowlevel/arguments.rs",
+    "$target_gen_dir/src/lowlevel/command.rs",
+    "$target_gen_dir/src/lowlevel/response.rs",
+    "$target_gen_dir/src/parser/arguments_parser.rs",
+    "$target_gen_dir/src/parser/command_grammar.rs",
+    "$target_gen_dir/src/parser/command_parser.rs",
+    "$target_gen_dir/src/parser/common.rs",
+    "$target_gen_dir/src/parser/response_grammar.rs",
+    "$target_gen_dir/src/parser/response_parser.rs",
   ]
 }
 
@@ -55,5 +76,31 @@ group("at-commands") {
 # Tests
 group("tests") {
   testonly = true
-  deps = [ "codegen:tests" ]
+  deps = [
+    ":lib_tests($host_toolchain)",
+    "codegen:tests",
+  ]
+}
+
+rustc_test("lib_tests") {
+  source_root = "src/tests.rs"
+  deps = [
+    "//third_party/rust_crates:pest",
+    "//third_party/rust_crates:pest_derive",
+    "//third_party/rust_crates:thiserror",
+  ]
+  sources = [
+    "src/lowlevel/arguments.rs",
+    "src/lowlevel/command.rs",
+    "src/lowlevel/response.rs",
+    "src/parser/arguments_parser.rs",
+    "src/parser/command_grammar.rs",
+    "src/parser/command_parser.rs",
+    "src/parser/command_parser_tests.rs",
+    "src/parser/common.rs",
+    "src/parser/response_grammar.rs",
+    "src/parser/response_parser.rs",
+    "src/parser/response_parser_tests.rs",
+    "src/tests.rs",
+  ]
 }

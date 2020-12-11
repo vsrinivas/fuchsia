@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Build lowlevel types into the library but don't let clients use them.
+/// Link all modules needed for tests for the AT command library.
 
 mod lowlevel {
     pub(crate) mod arguments;
@@ -13,12 +13,10 @@ mod lowlevel {
 mod parser {
     mod arguments_parser;
     mod command_grammar;
-    pub(crate) mod command_parser;
+    mod command_parser;
+    mod command_parser_tests;
     mod common;
     mod response_grammar;
-    pub(crate) mod response_parser;
+    mod response_parser;
+    mod response_parser_tests;
 }
-
-// Reexport generated high level types for use by clients.
-mod generated;
-pub use generated::*;
