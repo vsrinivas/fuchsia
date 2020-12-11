@@ -240,6 +240,7 @@ impl ProjectSampler {
             DataType::EventCount => {
                 self.metric_cache.insert(selector.clone(), new_sample.clone());
             }
+            DataType::Int => (),
         }
     }
 }
@@ -252,6 +253,15 @@ fn process_sample_for_data_type(
 ) -> Option<EventPayload> {
     let event_payload_res = match data_type {
         DataType::EventCount => process_event_count(new_sample, previous_sample_opt, selector),
+        DataType::Int => {
+            // If we previously cached a metric with an int-type, log a warning and ignore it.
+            // This may be a case of using a single selector for two metrics, one event count
+            // and one int.
+            if previous_sample_opt.is_some() {
+                error!("Lapis has erroneously cached an Int type metric: {:?}", selector);
+            }
+            process_int(new_sample, selector)
+        }
     };
 
     match event_payload_res {
@@ -263,27 +273,50 @@ fn process_sample_for_data_type(
     }
 }
 
-// It's possible for the first sample of an event count
-// to overflow, or for the diff of two samples to overflow.
-// Sanitize both of these cases so we can surface actionable
-// error logs to clients.
-fn sanitize_unsigned_diff(diff: u64, selector: &String) -> Result<i64, Error> {
+// It's possible for inspect numerical properties to experience overflows/conversion
+// errors when being mapped to cobalt types. Sanitize these numericals, and provide
+// meaningful errors.
+fn sanitize_unsigned_numerical(diff: u64, selector: &str) -> Result<i64, Error> {
     match diff.try_into() {
         Ok(diff) => Ok(diff),
-        Err(_) => {
+        Err(e) => {
             return Err(format_err!(
                 concat!(
                     "Selector used for EventCount type",
                     " refered to an unsigned int property,",
                     " but cobalt requires i64, and casting introduced overflow",
                     " which produces a negative int: {:?}. This could be due to",
-                    " the first sample being larger than i64, or a diff between",
-                    " samples being larger than i64."
+                    " a single sample being larger than i64, or a diff between",
+                    " samples being larger than i64. Error: {:?}"
                 ),
-                selector
+                selector,
+                e
             ));
         }
     }
+}
+
+fn process_int(new_sample: &Property, selector: &String) -> Result<Option<EventPayload>, Error> {
+    let sampled_int = match new_sample {
+        Property::Uint(_, val) => sanitize_unsigned_numerical(val.clone(), selector)?,
+        Property::Int(_, val) => val.clone(),
+        _ => {
+            return Err(format_err!(
+                concat!(
+                    "Selector referenced an inspect property",
+                    " that was specified as an Int type ",
+                    " but is unable to be encoded in an i64",
+                    " Selector: {:?}, Inspect type: {}"
+                ),
+                selector,
+                new_sample.discriminant_name()
+            ));
+        }
+    };
+
+    // TODO(lukenicholson): With Cobalt 1.1, we can encode ints in a proper int type rather
+    // than conflating event counts.
+    Ok(Some(EventPayload::EventCount(CountEvent { count: sampled_int, period_duration_micros: 0 })))
 }
 
 fn process_event_count(
@@ -317,7 +350,7 @@ fn process_event_count(
 
 fn compute_initial_event_count(new_sample: &Property, selector: &String) -> Result<i64, Error> {
     match new_sample {
-        Property::Uint(_, val) => sanitize_unsigned_diff(val.clone(), selector),
+        Property::Uint(_, val) => sanitize_unsigned_numerical(val.clone(), selector),
         Property::Int(_, val) => Ok(val.clone()),
         _ => Err(format_err!(
             concat!(
@@ -346,7 +379,7 @@ fn compute_event_count_diff(
         // produce an errorful state.
         (Property::Int(_, new_count), Property::Int(_, old_count)) => Ok(new_count - old_count),
         (Property::Uint(_, new_count), Property::Uint(_, old_count)) => {
-            sanitize_unsigned_diff(new_count - old_count, selector)
+            sanitize_unsigned_numerical(new_count - old_count, selector)
         }
         // If we have a correctly typed new sample, but it didn't match either of the above cases,
         // this means the new sample changed types compared to the old sample. We should just
@@ -373,141 +406,261 @@ fn compute_event_count_diff(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct EventCountTesterParams {
+        new_val: Property,
+        old_val: Option<Property>,
+        process_ok: bool,
+        event_made: bool,
+        diff: i64,
+        timespan: i64,
+    }
+
+    fn process_event_count_tester(params: EventCountTesterParams) {
+        let selector: String = "test:root:count".to_string();
+        let event_res = process_event_count(&params.new_val, params.old_val.as_ref(), &selector);
+
+        if !params.process_ok {
+            assert!(event_res.is_err());
+            return;
+        }
+
+        assert!(event_res.is_ok());
+
+        let event_opt = event_res.unwrap();
+
+        if !params.event_made {
+            assert!(event_opt.is_none());
+            return;
+        }
+
+        assert!(event_opt.is_some());
+
+        match event_opt.unwrap() {
+            EventPayload::EventCount(count_event) => {
+                assert_eq!(count_event.count, params.diff);
+                assert_eq!(count_event.period_duration_micros, params.timespan);
+            }
+            _ => panic!("Expecting event counts."),
+        }
+    }
+
     #[test]
     fn test_normal_process_event_count() {
-        let selector: String = "test:root:count".to_string();
-        let event_res =
-            process_event_count(&Property::Int("count".to_string(), 1), None, &selector);
-        assert!(event_res.is_ok());
-        let event_opt = event_res.unwrap();
-        assert!(event_opt.is_some());
+        process_event_count_tester(EventCountTesterParams {
+            new_val: Property::Int("count".to_string(), 1),
+            old_val: None,
+            process_ok: true,
+            event_made: true,
+            diff: 1,
+            timespan: 0,
+        });
 
-        match event_opt.unwrap() {
-            EventPayload::EventCount(count_event) => {
-                assert_eq!(count_event.count, 1);
-                assert_eq!(count_event.period_duration_micros, 0);
-            }
-            _ => panic!("Expecting event counts."),
-        }
+        process_event_count_tester(EventCountTesterParams {
+            new_val: Property::Int("count".to_string(), 1),
+            old_val: Some(Property::Int("count".to_string(), 1)),
+            process_ok: true,
+            event_made: false,
+            diff: -1,
+            timespan: -1,
+        });
 
-        let event_res = process_event_count(
-            &Property::Int("count".to_string(), 1),
-            Some(&Property::Int("count".to_string(), 1)),
-            &selector,
-        );
-
-        assert!(event_res.is_ok());
-        let event_opt = event_res.unwrap();
-        assert!(event_opt.is_none());
-
-        let event_res = process_event_count(
-            &Property::Int("count".to_string(), 3),
-            Some(&Property::Int("count".to_string(), 1)),
-            &selector,
-        );
-        assert!(event_res.is_ok());
-
-        let event_opt = event_res.unwrap();
-        assert!(event_opt.is_some());
-
-        match event_opt.unwrap() {
-            EventPayload::EventCount(count_event) => {
-                assert_eq!(count_event.count, 2);
-                assert_eq!(count_event.period_duration_micros, 0);
-            }
-            _ => panic!("Expecting event counts."),
-        }
+        process_event_count_tester(EventCountTesterParams {
+            new_val: Property::Int("count".to_string(), 3),
+            old_val: Some(Property::Int("count".to_string(), 1)),
+            process_ok: true,
+            event_made: true,
+            diff: 2,
+            timespan: 0,
+        });
     }
 
     #[test]
     fn test_data_type_changing_process_event_count() {
-        let selector: String = "test:root:count".to_string();
-        let event_res =
-            process_event_count(&Property::Int("count".to_string(), 1), None, &selector);
-        assert!(event_res.is_ok());
-        let event_opt = event_res.unwrap();
-        assert!(event_opt.is_some());
+        process_event_count_tester(EventCountTesterParams {
+            new_val: Property::Int("count".to_string(), 1),
+            old_val: None,
+            process_ok: true,
+            event_made: true,
+            diff: 1,
+            timespan: 0,
+        });
 
-        match event_opt.unwrap() {
-            EventPayload::EventCount(count_event) => {
-                assert_eq!(count_event.count, 1);
-                assert_eq!(count_event.period_duration_micros, 0);
-            }
-            _ => panic!("Expecting event counts."),
-        }
+        process_event_count_tester(EventCountTesterParams {
+            new_val: Property::Uint("count".to_string(), 1),
+            old_val: None,
+            process_ok: true,
+            event_made: true,
+            diff: 1,
+            timespan: 0,
+        });
 
-        let event_res =
-            process_event_count(&Property::Uint("count".to_string(), 1), None, &selector);
+        process_event_count_tester(EventCountTesterParams {
+            new_val: Property::Uint("count".to_string(), 3),
+            old_val: Some(Property::Int("count".to_string(), 1)),
+            process_ok: true,
+            event_made: true,
+            diff: 3,
+            timespan: 0,
+        });
 
-        assert!(event_res.is_ok());
-
-        let event_opt = event_res.unwrap();
-        assert!(event_opt.is_some());
-
-        match event_opt.unwrap() {
-            EventPayload::EventCount(count_event) => {
-                assert_eq!(count_event.count, 1);
-                assert_eq!(count_event.period_duration_micros, 0);
-            }
-            _ => panic!("Expecting event counts."),
-        }
-
-        let event_res = process_event_count(
-            &Property::Uint("count".to_string(), 1),
-            Some(&Property::Uint("count".to_string(), 1)),
-            &selector,
-        );
-
-        assert!(event_res.is_ok());
-        let event_opt = event_res.unwrap();
-        assert!(event_opt.is_none());
-
-        let event_res = process_event_count(
-            &Property::String("count".to_string(), "big_oof".to_string()),
-            Some(&Property::Uint("count".to_string(), 1)),
-            &selector,
-        );
-
-        assert!(event_res.is_err());
+        process_event_count_tester(EventCountTesterParams {
+            new_val: Property::String("count".to_string(), "big_oof".to_string()),
+            old_val: Some(Property::Int("count".to_string(), 1)),
+            process_ok: false,
+            event_made: false,
+            diff: -1,
+            timespan: -1,
+        });
     }
 
     #[test]
     fn test_event_count_negatives_and_overflows() {
-        let selector: String = "test:root:count".to_string();
+        process_event_count_tester(EventCountTesterParams {
+            new_val: Property::Int("count".to_string(), -11),
+            old_val: None,
+            process_ok: false,
+            event_made: false,
+            diff: -1,
+            timespan: -1,
+        });
 
-        let event_res =
-            process_event_count(&Property::Int("count".to_string(), -11), None, &selector);
-        assert!(event_res.is_err());
+        process_event_count_tester(EventCountTesterParams {
+            new_val: Property::Int("count".to_string(), 9),
+            old_val: Some(Property::Int("count".to_string(), 10)),
+            process_ok: false,
+            event_made: false,
+            diff: -1,
+            timespan: -1,
+        });
 
-        let event_res = process_event_count(
-            &Property::Int("count".to_string(), 9),
-            Some(&Property::Int("count".to_string(), 10)),
-            &selector,
-        );
-        assert!(event_res.is_err());
-
-        let event_res = process_event_count(
-            &Property::Uint("count".to_string(), std::u64::MAX),
-            None,
-            &selector,
-        );
-        assert!(event_res.is_err());
+        process_event_count_tester(EventCountTesterParams {
+            new_val: Property::Uint("count".to_string(), std::u64::MAX),
+            old_val: None,
+            process_ok: false,
+            event_made: false,
+            diff: -1,
+            timespan: -1,
+        });
 
         let i64_max_in_u64: u64 = std::i64::MAX.try_into().unwrap();
 
-        let event_res = process_event_count(
-            &Property::Uint("count".to_string(), i64_max_in_u64 + 1),
-            Some(&Property::Uint("count".to_string(), 1)),
-            &selector,
-        );
+        process_event_count_tester(EventCountTesterParams {
+            new_val: Property::Uint("count".to_string(), i64_max_in_u64 + 1),
+            old_val: Some(Property::Uint("count".to_string(), 1)),
+            process_ok: true,
+            event_made: true,
+            diff: std::i64::MAX,
+            timespan: 0,
+        });
+
+        process_event_count_tester(EventCountTesterParams {
+            new_val: Property::Uint("count".to_string(), i64_max_in_u64 + 2),
+            old_val: Some(Property::Uint("count".to_string(), 1)),
+            process_ok: false,
+            event_made: false,
+            diff: -1,
+            timespan: -1,
+        });
+    }
+
+    struct IntTesterParams {
+        new_val: Property,
+        process_ok: bool,
+        sample: i64,
+        timespan: i64,
+    }
+
+    fn process_int_tester(params: IntTesterParams) {
+        let selector: String = "test:root:count".to_string();
+        let event_res = process_int(&params.new_val, &selector);
+
+        if !params.process_ok {
+            assert!(event_res.is_err());
+            return;
+        }
+
         assert!(event_res.is_ok());
 
-        let event_res = process_event_count(
-            &Property::Uint("count".to_string(), i64_max_in_u64 + 2),
-            Some(&Property::Uint("count".to_string(), 1)),
-            &selector,
-        );
+        let event_opt = event_res.unwrap();
+        assert!(event_opt.is_some());
 
-        assert!(event_res.is_err());
+        match event_opt.unwrap() {
+            EventPayload::EventCount(count_event) => {
+                assert_eq!(count_event.count, params.sample);
+                assert_eq!(count_event.period_duration_micros, params.timespan);
+            }
+            _ => panic!("Expecting event counts."),
+        }
+    }
+    #[test]
+    fn test_normal_process_int() {
+        process_int_tester(IntTesterParams {
+            new_val: Property::Int("count".to_string(), 13),
+            process_ok: true,
+            sample: 13,
+            timespan: 0,
+        });
+
+        process_int_tester(IntTesterParams {
+            new_val: Property::Int("count".to_string(), -13),
+            process_ok: true,
+            sample: -13,
+            timespan: 0,
+        });
+
+        process_int_tester(IntTesterParams {
+            new_val: Property::Int("count".to_string(), 0),
+            process_ok: true,
+            sample: 0,
+            timespan: 0,
+        });
+
+        process_int_tester(IntTesterParams {
+            new_val: Property::Uint("count".to_string(), 13),
+            process_ok: true,
+            sample: 13,
+            timespan: 0,
+        });
+
+        process_int_tester(IntTesterParams {
+            new_val: Property::String("count".to_string(), "big_oof".to_string()),
+            process_ok: false,
+            sample: -1,
+            timespan: -1,
+        });
+    }
+
+    #[test]
+    fn test_int_edge_cases() {
+        process_int_tester(IntTesterParams {
+            new_val: Property::Int("count".to_string(), std::i64::MAX),
+            process_ok: true,
+            sample: std::i64::MAX,
+            timespan: 0,
+        });
+
+        process_int_tester(IntTesterParams {
+            new_val: Property::Int("count".to_string(), std::i64::MIN),
+            process_ok: true,
+            sample: std::i64::MIN,
+            timespan: 0,
+        });
+
+        let i64_max_in_u64: u64 = std::i64::MAX.try_into().unwrap();
+
+        process_int_tester(IntTesterParams {
+            new_val: Property::Uint("count".to_string(), i64_max_in_u64),
+            process_ok: true,
+            sample: std::i64::MAX,
+            timespan: 0,
+        });
+
+        process_int_tester(IntTesterParams {
+            new_val: Property::Uint("count".to_string(), i64_max_in_u64 + 1),
+            process_ok: false,
+            sample: -1,
+            timespan: -1,
+        });
     }
 }

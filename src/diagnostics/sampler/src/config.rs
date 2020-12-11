@@ -39,12 +39,12 @@ pub enum DataType {
     // NOTE: This does not use duration tracking. Durations
     //       are always set to 0.
     EventCount,
+    // Maps raw Int inspect types.
+    Int,
     // TODO(lukenicholson): Expand sampler support for new
     // data types.
     // Maps cached diffs from IntHistogram inspect type.
     // IntHistogram,
-    // Maps raw Int inspect types.
-    // IntCustomEvent,
     // Maps raw Double inspect types.
     // FloatCustomEvent,
     // Maps raw Uint inspect types.

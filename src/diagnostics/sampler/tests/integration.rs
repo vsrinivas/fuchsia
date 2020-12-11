@@ -2,18 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use fidl_fuchsia_cobalt::{CobaltEvent, EventPayload};
-use fidl_fuchsia_cobalt_test;
-use fidl_fuchsia_samplertestcontroller::SamplerTestControllerMarker;
+use fidl_fuchsia_cobalt_test::{self, LoggerQuerierProxy};
+use fidl_fuchsia_samplertestcontroller::{SamplerTestControllerMarker, SamplerTestControllerProxy};
 use fuchsia_async as fasync;
-use fuchsia_component::client::{launch, launcher};
+use fuchsia_component::client::{launch, launcher, App};
 use fuchsia_zircon::DurationNum;
 
-/// Runs the Lapis Sampler and a test component that can have its inspect properties
-/// manipulated by the test via fidl, and uses cobalt mock and log querier to
-/// verify that the sampler observers changes as expected, and logs them to
-/// cobalt as expected.
-#[fasync::run_singlethreaded(test)]
-async fn event_count_sampler_test() {
+async fn setup() -> (App, App, SamplerTestControllerProxy, LoggerQuerierProxy) {
     let package = "fuchsia-pkg://fuchsia.com/sampler-integration-tests#meta/";
     let sampler_manifest = "sampler.cmx";
     let test_component_manifest = "single_counter_test_component.cmx";
@@ -21,11 +16,7 @@ async fn event_count_sampler_test() {
     let sampler_url = format!("{}{}", package, sampler_manifest);
     let test_component_url = format!("{}{}", package, test_component_manifest);
 
-    let mut sampler_app = launch(&launcher().unwrap(), sampler_url.to_string(), None).unwrap();
-    let _sampler_app = fasync::Task::spawn(async move {
-        sampler_app.wait().await.unwrap();
-        panic!("sampler should not exit during test!");
-    });
+    let sampler_app = launch(&launcher().unwrap(), sampler_url.to_string(), None).unwrap();
 
     let test_component =
         launch(&launcher().unwrap(), test_component_url.to_string(), None).unwrap();
@@ -36,6 +27,22 @@ async fn event_count_sampler_test() {
         fidl_fuchsia_cobalt_test::LoggerQuerierMarker,
     >()
     .unwrap();
+
+    (sampler_app, test_component, test_app_controller, logger_querier)
+}
+
+/// Runs the Lapis Sampler and a test component that can have its inspect properties
+/// manipulated by the test via fidl, and uses cobalt mock and log querier to
+/// verify that the sampler observers changes as expected, and logs them to
+/// cobalt as expected.
+#[fasync::run_singlethreaded(test)]
+async fn event_count_sampler_test() {
+    let (mut sampler_app, _test_component, test_app_controller, logger_querier) = setup().await;
+
+    let _sampler_app = fasync::Task::spawn(async move {
+        sampler_app.wait().await.unwrap();
+        panic!("sampler should not exit during test!");
+    });
 
     // If we don't sleep, then calls to logger_querier.watch fail because
     // the logger isnt available.
