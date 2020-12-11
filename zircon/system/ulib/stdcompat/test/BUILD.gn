@@ -1,0 +1,29 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":stdcompat-test",
+    ":stdcompat-unittest($host_toolchain)",
+  ]
+}
+
+fuchsia_unittest_package("stdcompat-test") {
+  executable_path = "test/stdcompat-unittest"
+  deps = [ ":stdcompat-unittest" ]
+}
+
+test("stdcompat-unittest") {
+  sources = [ "version-test.cc" ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/stdcompat",
+  ]
+}

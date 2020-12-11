@@ -58,6 +58,7 @@ group("tests") {
     "pretty:tests",
     "ram-crashlog:tests",
     "static-pie:tests",
+    "stdcompat:tests",
     "storage/buffer:tests",
     "storage/operation:tests",
     "sysconfig-client:tests",
