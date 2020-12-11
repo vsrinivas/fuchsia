@@ -453,13 +453,14 @@ sdk("modular_testing") {
   ]
 }
 
-# Firmware SDK. See //src/firmware/README.md for info.
+# Firmware SDK.
 sdk("firmware") {
   category = "experimental"
 
   api = "firmware.manifest"
 
   deps = [
+    "//sdk/docs:firmware",
     "//src/firmware/lib/abr:abr_sdk",
     "//src/firmware/lib/zbi:zbi_sdk",
     "//third_party/android/platform/external/avb:avb_sdk",

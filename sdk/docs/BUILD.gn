@@ -52,3 +52,16 @@ sdk_documentation("modular_config_schema") {
     },
   ]
 }
+
+sdk_documentation("firmware") {
+  name = "firmware"
+
+  category = "experimental"
+
+  files = [
+    {
+      source = "//src/firmware/README.md"
+      dest = "README.md"
+    },
+  ]
+}
