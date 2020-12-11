@@ -285,7 +285,7 @@ impl SettingProxy {
 
         self.messenger_client
             .message(
-                core::Payload::Event(SettingEvent::Changed(self.setting_type)),
+                core::Payload::Event(SettingEvent::Changed),
                 Audience::Address(core::Address::Switchboard),
             )
             .send();

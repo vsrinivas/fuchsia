@@ -171,6 +171,8 @@ pub struct Switchboard {
     core_messenger: core::message::Messenger,
     /// Active setting proxies
     setting_proxies: HashMap<SettingType, core::message::Signature>,
+    /// Mapping from proxy to [`SettingType`].
+    proxy_settings: HashMap<core::message::Signature, SettingType>,
     /// Last requests for inspect to save.
     last_requests: HashMap<SettingType, SettingTypeInfo>,
     /// Inspect node to record last requests to.
@@ -201,12 +203,19 @@ impl Switchboard {
             .await
             .map_err(Error::new)?;
 
+        let mut proxy_settings = HashMap::new();
+
+        for (key, value) in &setting_proxies {
+            proxy_settings.insert(value.clone(), key.clone());
+        }
+
         let switchboard = Arc::new(Mutex::new(Self {
             next_action_id: 0,
             listen_cancellation_sender: cancel_listen_tx,
             listeners: HashMap::new(),
             core_messenger,
             setting_proxies,
+            proxy_settings,
             last_requests: HashMap::new(),
             inspect_node,
         }));
@@ -223,8 +232,8 @@ impl Switchboard {
                 futures::select! {
                     // Invoked when there is a new message from the proxies.
                     core_event = core_receptor => {
-                        if let Some(MessageEvent::Message(core::Payload::Event(event), _)) = core_event {
-                            switchboard_clone.lock().await.process_event(event);
+                        if let Some(MessageEvent::Message(core::Payload::Event(event), message_client)) = core_event {
+                            switchboard_clone.lock().await.process_event(event, message_client.get_author());
                         }
                     }
                     // Invoked when there is a new message from the switchboard
@@ -267,9 +276,11 @@ impl Switchboard {
         return return_id;
     }
 
-    fn process_event(&mut self, input: SettingEvent) {
+    fn process_event(&mut self, input: SettingEvent, author: core::message::Signature) {
         match input {
-            SettingEvent::Changed(setting_type) => {
+            SettingEvent::Changed => {
+                let setting_type =
+                    self.proxy_settings.get(&author).expect("should match setting type");
                 self.notify_listeners(setting_type);
             }
             _ => {}
@@ -417,11 +428,11 @@ impl Switchboard {
         Ok(())
     }
 
-    fn notify_listeners(&self, setting_type: SettingType) {
-        if let Some(clients) = self.listeners.get(&setting_type) {
+    fn notify_listeners(&self, setting_type: &SettingType) {
+        if let Some(clients) = self.listeners.get(setting_type) {
             for client in clients {
                 client
-                    .reply(switchboard::Payload::Listen(switchboard::Listen::Update(setting_type)))
+                    .reply(switchboard::Payload::Listen(switchboard::Listen::Update(*setting_type)))
                     .send()
                     .ack();
             }
@@ -698,7 +709,7 @@ mod tests {
 
         proxy_messenger
             .message(
-                core::Payload::Event(SettingEvent::Changed(setting_type)),
+                core::Payload::Event(SettingEvent::Changed),
                 Audience::Address(core::Address::Switchboard),
             )
             .send();

@@ -587,9 +587,11 @@ pub enum SettingActionData {
 /// The events generated in response to SettingAction.
 #[derive(PartialEq, Clone, Debug)]
 pub enum SettingEvent {
-    /// The backing data for the specified setting type has changed. Interested
-    /// parties can query through request to get the updated values.
-    Changed(SettingType),
+    /// The setting's data has changed. The setting type associated with this
+    /// event is implied by the association of the signature of the sending
+    /// proxy to the setting type. This mapping is maintained by the
+    /// Switchboard.
+    Changed,
     /// A response to a previous SettingActionData::Request is ready. The source
     /// SettingAction's id is provided alongside the result.
     Response(u64, SettingHandlerResult),

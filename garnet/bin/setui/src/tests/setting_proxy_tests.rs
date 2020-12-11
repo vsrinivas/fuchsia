@@ -21,7 +21,7 @@ use crate::handler::base::{
 };
 use crate::handler::setting_handler::ControllerError;
 use crate::handler::setting_proxy::SettingProxy;
-use crate::internal::core::message::{create_hub, Messenger, Receptor};
+use crate::internal::core::message::{create_hub, Messenger};
 use crate::internal::core::{self, Address, Payload};
 use crate::internal::event;
 use crate::internal::handler;
@@ -243,7 +243,7 @@ impl TestEnvironmentBuilder {
         )
         .await
         .expect("proxy creation should succeed");
-        let (messenger_client, receptor) = messenger_factory
+        let (messenger_client, _) = messenger_factory
             .create(MessengerType::Addressable(Address::Switchboard))
             .await
             .unwrap();
@@ -264,7 +264,6 @@ impl TestEnvironmentBuilder {
             proxy_signature,
             proxy_handler_signature,
             messenger_client,
-            messenger_receptor: receptor,
             handler_factory,
             setting_handler_rx: state_rx,
             setting_handler: handler,
@@ -278,7 +277,6 @@ pub struct TestEnvironment {
     proxy_signature: core::message::Signature,
     proxy_handler_signature: handler::message::Signature,
     messenger_client: Messenger,
-    messenger_receptor: Receptor,
     handler_factory: Arc<Mutex<FakeFactory>>,
     setting_handler_rx: UnboundedReceiver<State>,
     setting_handler: Arc<Mutex<SettingHandler>>,
@@ -327,15 +325,6 @@ async fn test_notify() {
             .is_ok());
 
         environment.setting_handler.lock().await.notify();
-
-        while let Some(event) = environment.messenger_receptor.next().await {
-            if let MessageEvent::Message(Payload::Event(SettingEvent::Changed(changed_type)), _) =
-                event
-            {
-                assert_eq!(changed_type, setting_type);
-                break;
-            }
-        }
     }
 
     if let Some(state) = environment.setting_handler_rx.next().await {
