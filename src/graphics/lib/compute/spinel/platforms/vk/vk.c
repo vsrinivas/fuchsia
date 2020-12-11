@@ -7,6 +7,7 @@
 #include <assert.h>  // REMOVE ME once we get DUTD integrated with scheduler
 #include <inttypes.h>
 #include <spinel/spinel_assert.h>
+#include <stdalign.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -581,23 +582,38 @@ spn_vk_create(struct spn_vk_environment * const  environment,
   //
   // DUTD POOLS
   //
-  size_t dutd_total = 0;
+  size_t dutd_dutds_size = 0;
+  size_t dutd_pool_size  = 0;
+  size_t dutd_ds_size    = 0;
 
-  // array of pointers + array of structs
 #undef SPN_VK_DS_EXPAND_X
 #define SPN_VK_DS_EXPAND_X(ds_idx_, ds_id_, ds_)                                                   \
   instance->dutdp.ds_id_.rem  = instance->config.ds.ds_id_.sets;                                   \
   instance->dutdp.ds_id_.size = instance->config.ds.ds_id_.sets;                                   \
-  dutd_total += instance->config.ds.ds_id_.sets *                                                  \
-                (sizeof(*instance->dutdp.ds_id_.dutds) + sizeof(*instance->dutdp.ds_id_.pool) +    \
-                 sizeof(*instance->dutdp.ds_id_.ds));
+  dutd_dutds_size += sizeof(*instance->dutdp.ds_id_.dutds) * instance->config.ds.ds_id_.sets;      \
+  dutd_pool_size += sizeof(*instance->dutdp.ds_id_.pool) * instance->config.ds.ds_id_.sets;        \
+  dutd_ds_size += sizeof(*instance->dutdp.ds_id_.ds) * instance->config.ds.ds_id_.sets;
 
   SPN_VK_DS_EXPAND();
 
-  void * dutd_base = malloc(dutd_total);
+#define ALIGN_TO(offset_, type_) (((offset_) + _Alignof(type_) - 1) & ~(_Alignof(type_) - 1))
+
+  size_t dutd_pool_offset = ALIGN_TO(dutd_dutds_size, uint32_t);  // .pool type
+  size_t dutd_ds_offset   = dutd_pool_offset + dutd_pool_size;
+  dutd_ds_offset          = ALIGN_TO(dutd_ds_offset, VkDescriptorSet);  // .ds type
+
+  size_t const dutd_size = dutd_ds_offset + dutd_ds_size;
+
+  // allocate the memory blob
+  void * dutd_base    = malloc(dutd_size);
 
   // save the memory blob
   instance->dutdp.mem = dutd_base;
+
+  // allocate from three separate aligned regions of the blob
+  uint8_t * dutd_dutds_base = dutd_base;
+  uint8_t * dutd_pool_base  = dutd_dutds_base + dutd_pool_offset;
+  uint8_t * dutd_ds_base    = dutd_dutds_base + dutd_ds_offset;
 
   VkDescriptorSetAllocateInfo dsai = {
     .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -608,30 +624,29 @@ spn_vk_create(struct spn_vk_environment * const  environment,
   };
 
 #undef SPN_VK_DS_EXPAND_X
-#define SPN_VK_DS_EXPAND_X(ds_idx_, ds_id_, ds_)                                                    \
-  {                                                                                                 \
-    uint32_t const size = instance->dutdp.ds_id_.size;                                              \
-                                                                                                    \
-    instance->dutdp.ds_id_.dutds = dutd_base;                                                       \
-    dutd_base = ((uint8_t *)dutd_base + sizeof(*instance->dutdp.ds_id_.dutds) * size);              \
-                                                                                                    \
-    instance->dutdp.ds_id_.pool = dutd_base;                                                        \
-    dutd_base = ((uint8_t *)dutd_base + sizeof(*instance->dutdp.ds_id_.pool) * size);               \
-                                                                                                    \
-    instance->dutdp.ds_id_.ds = dutd_base;                                                          \
-    dutd_base                 = ((uint8_t *)dutd_base + sizeof(*instance->dutdp.ds_id_.ds) * size); \
-                                                                                                    \
-    dsai.descriptorPool = instance->dp.array[ds_idx_];                                              \
-    dsai.pSetLayouts    = instance->dsl.array + ds_idx_;                                            \
-                                                                                                    \
-    for (uint32_t ii = 0; ii < size; ii++)                                                          \
-      {                                                                                             \
-        instance->dutdp.ds_id_.pool[ii] = ii;                                                       \
-                                                                                                    \
-        vk(AllocateDescriptorSets(environment->d, &dsai, instance->dutdp.ds_id_.ds + ii));          \
-      }                                                                                             \
-                                                                                                    \
-    SPN_VK_TRACE_DS_POOL_CREATE(STRINGIFY_MACRO(ds_id_), size);                                     \
+#define SPN_VK_DS_EXPAND_X(ds_idx_, ds_id_, ds_)                                                   \
+  {                                                                                                \
+    uint32_t const size = instance->dutdp.ds_id_.size;                                             \
+                                                                                                   \
+    instance->dutdp.ds_id_.dutds = (void *)dutd_dutds_base;                                        \
+    instance->dutdp.ds_id_.pool  = (void *)dutd_pool_base;                                         \
+    instance->dutdp.ds_id_.ds    = (void *)dutd_ds_base;                                           \
+                                                                                                   \
+    dutd_dutds_base += sizeof(*instance->dutdp.ds_id_.dutds) * size;                               \
+    dutd_pool_base += sizeof(*instance->dutdp.ds_id_.pool) * size;                                 \
+    dutd_ds_base += sizeof(*instance->dutdp.ds_id_.ds) * size;                                     \
+                                                                                                   \
+    dsai.descriptorPool = instance->dp.array[ds_idx_];                                             \
+    dsai.pSetLayouts    = instance->dsl.array + ds_idx_;                                           \
+                                                                                                   \
+    for (uint32_t ii = 0; ii < size; ii++)                                                         \
+      {                                                                                            \
+        instance->dutdp.ds_id_.pool[ii] = ii;                                                      \
+                                                                                                   \
+        vk(AllocateDescriptorSets(environment->d, &dsai, instance->dutdp.ds_id_.ds + ii));         \
+      }                                                                                            \
+                                                                                                   \
+    SPN_VK_TRACE_DS_POOL_CREATE(STRINGIFY_MACRO(ds_id_), size);                                    \
   }
 
   SPN_VK_DS_EXPAND();

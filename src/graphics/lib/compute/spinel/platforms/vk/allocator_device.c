@@ -63,9 +63,12 @@ spn_allocator_device_perm_create(struct spn_allocator_device_perm * const device
 {
   assert(queue_family_count <= SPN_ALLOCATOR_DEVICE_PERM_MAX_QUEUE_FAMILY_INDICES);
 
-  memcpy(device_perm->queue_family_indices,
-         queue_family_indices,
-         queue_family_count * sizeof(device_perm->queue_family_indices[0]));
+  if (queue_family_count > 0)
+    {
+      memcpy(device_perm->queue_family_indices,
+             queue_family_indices,
+             queue_family_count * sizeof(device_perm->queue_family_indices[0]));
+    }
 
   device_perm->queue_family_count = queue_family_count;
   device_perm->mpf                = mpf;
@@ -94,7 +97,7 @@ spn_allocator_device_perm_alloc(struct spn_allocator_device_perm * const device_
     .size                  = size,
     .usage                 = device_perm->buf,
     .sharingMode           = ((device_perm->queue_family_count == 0) ? VK_SHARING_MODE_EXCLUSIVE
-                                                           : VK_SHARING_MODE_CONCURRENT),
+                                                                     : VK_SHARING_MODE_CONCURRENT),
     .queueFamilyIndexCount = device_perm->queue_family_count,
     .pQueueFamilyIndices   = device_perm->queue_family_indices
   };

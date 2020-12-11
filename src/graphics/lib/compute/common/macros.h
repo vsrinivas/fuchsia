@@ -10,6 +10,7 @@
 //
 
 #include <assert.h>
+#include <stddef.h>
 #include <stdint.h>
 
 //
@@ -17,7 +18,7 @@
 //
 
 #define ARRAY_LENGTH_MACRO(x_)          (sizeof(x_)/sizeof(x_[0]))
-#define OFFSETOF_MACRO(t_,m_)           ((size_t)&(((t_*)0)->m_))
+#define OFFSETOF_MACRO(t_,m_)           offsetof(t_,m_)
 #define MEMBER_SIZE_MACRO(t_,m_)        sizeof(((t_*)0)->m_)
 
 //
