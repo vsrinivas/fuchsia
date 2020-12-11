@@ -13,3 +13,8 @@ zx_library("smbios") {
   sources = [ "smbios.cc" ]
   deps = [ "$zx/system/ulib/fbl" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

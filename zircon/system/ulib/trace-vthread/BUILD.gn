@@ -71,3 +71,8 @@ zx_library("trace-vthread-with-static-engine") {
   public = [ "include/trace-vthread/event_vthread.h" ]
   public_configs = [ ":library_headers_config" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("test") {
   testonly = true
@@ -50,7 +50,13 @@ test("simplehid") {
   ]
 }
 
-bootfs_test("simplehid-bootfs-test") {
-  name = "simplehid-test"
+fuchsia_unittest_package("simplehid-test-pkg") {
+  package_name = "simplehid-test"
+  executable_path = "test/simplehid-test"
   deps = [ ":simplehid" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":simplehid-test-pkg" ]
 }

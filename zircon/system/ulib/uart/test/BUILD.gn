@@ -4,6 +4,7 @@
 
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("test") {
   testonly = true
@@ -45,7 +46,13 @@ test("uart-unittests") {
   }
 }
 
-bootfs_test("uart-unittests-bootfs-test") {
-  name = "uart-unittests"
+fuchsia_unittest_package("uart-unittests-test-pkg") {
+  package_name = "uart-unittests"
+  executable_path = "test/uart-unittests"
   deps = [ ":uart-unittests" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":uart-unittests-test-pkg" ]
 }

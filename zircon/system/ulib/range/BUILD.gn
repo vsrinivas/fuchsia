@@ -21,3 +21,8 @@ zx_library("range") {
   public_deps = [ "//zircon/system/public" ]
   host = true
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

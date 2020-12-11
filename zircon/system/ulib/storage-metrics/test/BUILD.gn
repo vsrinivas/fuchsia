@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("test") {
   testonly = true
@@ -37,7 +37,13 @@ test("storage-metrics") {
   ]
 }
 
-bootfs_test("storage-metrics-bootfs-test") {
-  name = "storage-metrics"
+fuchsia_unittest_package("storage-metrics-test-pkg") {
+  package_name = "storage-metrics"
+  executable_path = "test/storage-metrics"
   deps = [ ":storage-metrics" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":storage-metrics-test-pkg" ]
 }

@@ -60,3 +60,8 @@ zx_library("unittest-static") {
     deps += [ "//zircon/system/ulib/test-exceptions" ]
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

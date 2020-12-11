@@ -203,3 +203,8 @@ zx_library("trace-provider-fdio-connect") {
   sources = trace_provider_fdio_connect_sources
   deps = trace_provider_fdio_connect_source_deps
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

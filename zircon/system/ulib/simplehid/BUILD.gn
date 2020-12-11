@@ -34,3 +34,8 @@ zx_library("simplehid") {
     "//zircon/public/lib/zx",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

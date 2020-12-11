@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("test") {
   testonly = true
@@ -34,7 +34,13 @@ test("range") {
   ]
 }
 
-bootfs_test("range-bootfs-test") {
-  name = "range"
+fuchsia_unittest_package("range-test-pkg") {
+  package_name = "range"
+  executable_path = "test/range"
   deps = [ ":range" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":range-test-pkg" ]
 }

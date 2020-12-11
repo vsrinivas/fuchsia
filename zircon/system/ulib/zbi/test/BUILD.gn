@@ -13,11 +13,14 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":zbi($host_toolchain)" ]
+  deps = [
+    ":zbi($host_toolchain)",
+    ":zbi-test-pkg",
+  ]
 }
 
 test("zbi") {
@@ -42,7 +45,8 @@ test("zbi") {
   }
 }
 
-bootfs_test("zbi-bootfs-test") {
-  name = "libzbi-test"
+fuchsia_unittest_package("zbi-test-pkg") {
+  package_name = "libzbi-test"
+  executable_path = "test/libzbi-test"
   deps = [ ":zbi" ]
 }

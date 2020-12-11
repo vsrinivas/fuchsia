@@ -14,11 +14,14 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":zircon-crypto-fuzzers" ]
+  deps = [
+    ":zircon-crypto-fuzzers",
+    ":zircon-crypto-test-pkg",
+  ]
 }
 
 test("zircon-crypto") {
@@ -49,11 +52,6 @@ test("zircon-crypto") {
   ]
 }
 
-bootfs_test("zircon-crypto-bootfs-test") {
-  name = "zircon-crypto-test"
-  deps = [ ":zircon-crypto" ]
-}
-
 fuzzer("hmac-fuzzer") {
   sources = [ "hmac-fuzzer.cc" ]
   deps = [
@@ -64,4 +62,10 @@ fuzzer("hmac-fuzzer") {
 
 fuzzers_package("zircon-crypto-fuzzers") {
   cpp_fuzzers = [ ":hmac-fuzzer" ]
+}
+
+fuchsia_unittest_package("zircon-crypto-test-pkg") {
+  package_name = "zircon-crypto-test"
+  executable_path = "test/zircon-crypto-test"
+  deps = [ ":zircon-crypto" ]
 }

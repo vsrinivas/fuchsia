@@ -14,11 +14,14 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":utf-conversion-fuzzers" ]
+  deps = [
+    ":utf-conversion-fuzzers",
+    ":utf-conversion-test-pkg",
+  ]
 }
 
 test("utf_conversion-test") {
@@ -41,11 +44,6 @@ test("utf_conversion-test") {
   ]
 }
 
-bootfs_test("utf_conversion-test-bootfs-test") {
-  name = "utf_conversion-test"
-  deps = [ ":utf_conversion-test" ]
-}
-
 fuzzer("utf-conversion-fuzzer") {
   sources = [ "utf_conversion-fuzzer.cc" ]
   deps = [ "//zircon/system/ulib/utf_conversion" ]
@@ -53,4 +51,10 @@ fuzzer("utf-conversion-fuzzer") {
 
 fuzzers_package("utf-conversion-fuzzers") {
   cpp_fuzzers = [ ":utf-conversion-fuzzer" ]
+}
+
+fuchsia_unittest_package("utf-conversion-test-pkg") {
+  package_name = "utf_conversion-test"
+  executable_path = "test/utf_conversion-test"
+  deps = [ ":utf_conversion-test" ]
 }

@@ -15,3 +15,8 @@ zx_library("region-alloc") {
     deps = [ "$zx/system/ulib/fbl" ]
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

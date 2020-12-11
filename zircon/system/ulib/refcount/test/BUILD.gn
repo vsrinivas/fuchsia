@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("test") {
   testonly = true
@@ -41,7 +41,13 @@ test("refcount-test") {
   ]
 }
 
-bootfs_test("refcount-test-bootfs-test") {
-  name = "refcount-test-test"
+fuchsia_unittest_package("refcount-test-pkg") {
+  package_name = "refcount-test-test"
+  executable_path = "test/refcount-test-test"
   deps = [ ":refcount-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":refcount-test-pkg" ]
 }

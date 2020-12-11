@@ -59,3 +59,8 @@ zx_library("uart-mock") {
     public_deps += [ "$zx/kernel/lib/ktl:headers" ]
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

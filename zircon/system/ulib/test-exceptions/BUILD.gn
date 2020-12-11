@@ -29,3 +29,8 @@ zx_library("test-exceptions") {
   public_deps = [ "//zircon/public/lib/zxc" ]
   deps = [ "//zircon/public/lib/zx" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}
