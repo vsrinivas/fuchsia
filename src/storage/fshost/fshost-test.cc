@@ -10,7 +10,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl-async/bind.h>
-#include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
@@ -79,8 +79,10 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   zx::channel registry_client, registry_server;
   ASSERT_OK(zx::channel::create(0, &registry_client, &registry_server));
   auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  auto fshost_vn = new fshost::RegistryVnode(loop.dispatcher(), dir);
-  fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(registry_server), fshost_vn);
+  auto fshost_vn = std::make_unique<fshost::RegistryVnode>(loop.dispatcher(), dir);
+  auto server_binding =
+      fidl::BindServer(loop.dispatcher(), std::move(registry_server), std::move(fshost_vn));
+  ASSERT_TRUE(server_binding.is_ok());
 
   // make a new "vfs" "client" that doesn't really point anywhere.
   zx::channel vfs_client, vfs_server;

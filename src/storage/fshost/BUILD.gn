@@ -234,9 +234,6 @@ test("fshost_test") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/mock-boot-arguments",
   ]
-
-  # TODO(fxbug.dev/46432): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 # Include this target from a product config if you want to allow authoring
