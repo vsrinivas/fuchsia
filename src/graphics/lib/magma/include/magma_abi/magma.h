@@ -73,16 +73,6 @@ void magma_release_buffer(
     magma_buffer_t buffer);
 
 ///
-/// \brief Duplicates the given handle, giving another handle that can be imported into a
-///        connection.
-/// \param buffer_handle A valid handle.
-/// \param buffer_handle_out The returned duplicate handle.
-///
-magma_status_t magma_duplicate_handle(
-    magma_handle_t buffer_handle,
-    magma_handle_t* buffer_handle_out);
-
-///
 /// \brief Releases the given handle.
 /// \param buffer_handle A valid handle.
 ///

@@ -13,8 +13,7 @@
 
 // TODO(fxbug.dev/13228): support an object that is a parent of magma_connection_t
 // This class is a temporary workaround to support magma APIs that do not
-// pass in generic objects capable of holding file descriptors, e.g.
-// magma_duplicate_handle.
+// pass in generic objects capable of holding file descriptors.
 std::map<uint32_t, virtmagma_handle_t*>& GlobalHandleTable() {
   static std::map<uint32_t, virtmagma_handle_t*> ht;
   return ht;

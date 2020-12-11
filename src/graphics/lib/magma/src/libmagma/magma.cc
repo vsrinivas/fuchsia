@@ -131,12 +131,6 @@ uint64_t magma_get_buffer_size(magma_buffer_t buffer) {
   return reinterpret_cast<magma::PlatformBuffer*>(buffer)->size();
 }
 
-magma_status_t magma_duplicate_handle(uint32_t buffer_handle, uint32_t* buffer_handle_out) {
-  if (!magma::PlatformHandle::duplicate_handle(buffer_handle, buffer_handle_out))
-    return DRET(MAGMA_STATUS_INTERNAL_ERROR);
-  return MAGMA_STATUS_OK;
-}
-
 magma_status_t magma_release_buffer_handle(uint32_t buffer_handle) {
   if (!magma::PlatformHandle::Create(buffer_handle)) {
     return DRET(MAGMA_STATUS_INTERNAL_ERROR);

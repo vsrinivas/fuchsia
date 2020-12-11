@@ -111,24 +111,6 @@
         ]
       },
       {
-        "ordinal": 10,
-        "name": "magma_duplicate_handle",
-        "type": "magma_status_t",
-        "description": "Duplicates the given handle, giving another handle that can be imported into a connection.",
-        "arguments": [
-          {
-            "name": "buffer_handle",
-            "type": "magma_handle_t",
-            "description": "A valid handle."
-          },
-          {
-            "name": "buffer_handle_out",
-            "type": "magma_handle_t*",
-            "description": "The returned duplicate handle."
-          }
-        ]
-      },
-      {
         "ordinal": 11,
         "name": "magma_release_buffer_handle",
         "type": "magma_status_t",
