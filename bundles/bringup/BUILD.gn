@@ -27,6 +27,7 @@ group("tests") {
     "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-integration-bootfs-test",  # HW-required.
     "//src/devices/usb/drivers/usb-bus:usb-device-bootfs-test",
     "//src/devices/usb/tests/usb:usb-bootfs-test",  # HW-required.
+    "//src/lib/framebuffer/test:framebuffer-test-bootfs-test",
     "//src/media/audio/drivers/intel-hda/test:intel-hda-bootfs-test",  # HW-required.
     "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-bootfs-test",  # HW-required.
     "//src/zircon/tests/entropy:entropy-bootfs-test",
@@ -56,7 +57,6 @@ group("tests") {
     "//zircon/system/ulib/disk_inspector/test:disk_inspector_unit-bootfs-test",
     "//zircon/system/ulib/elf-search/test:elf-search-bootfs-test",
     "//zircon/system/ulib/fbl/test:fbl-bootfs-test",
-    "//zircon/system/ulib/framebuffer/test:framebuffer-test-bootfs-test",
     "//zircon/system/ulib/gpt/test:gpt-unit-bootfs-test",
     "//zircon/system/ulib/launchpad/test:launchpad-bootfs-test",
     "//zircon/system/ulib/range/test:range-bootfs-test",

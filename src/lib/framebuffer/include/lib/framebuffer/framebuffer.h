@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_LIB_FRAMEBUFFER_INCLUDE_LIB_FRAMEBUFFER_FRAMEBUFFER_H_
+#define SRC_LIB_FRAMEBUFFER_INCLUDE_LIB_FRAMEBUFFER_FRAMEBUFFER_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,3 +35,5 @@ zx_handle_t fb_get_single_buffer(void);
 #ifdef __cplusplus
 }  // extern "C"
 #endif
+
+#endif  // SRC_LIB_FRAMEBUFFER_INCLUDE_LIB_FRAMEBUFFER_FRAMEBUFFER_H_

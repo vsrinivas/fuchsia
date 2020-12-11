@@ -14,8 +14,8 @@ executable("bin") {
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//src/lib/files",
+    "//src/lib/framebuffer",
     "//src/lib/fxl",
-    "//zircon/system/ulib/framebuffer",
     "//zircon/system/ulib/fzl",
   ]
 
