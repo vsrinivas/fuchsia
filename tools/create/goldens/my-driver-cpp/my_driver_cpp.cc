@@ -10,7 +10,10 @@ namespace my_driver_cpp {
 
 zx_status_t MyDriverCpp::Bind(void* ctx, zx_device_t* dev) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t MyDriverCpp::Bind() { return DdkAdd("my_driver_cpp"); }
+zx_status_t MyDriverCpp::Bind() {
+  is_bound.Set(true);
+  return DdkAdd(ddk::DeviceAddArgs("my_driver_cpp").set_inspect_vmo(inspect_.DuplicateVmo()));
+}
 
 void MyDriverCpp::DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
 

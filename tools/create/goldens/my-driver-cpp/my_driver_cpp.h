@@ -5,6 +5,8 @@
 #ifndef TOOLS_CREATE_GOLDENS_MY_DRIVER_CPP_MY_DRIVER_CPP_H_
 #define TOOLS_CREATE_GOLDENS_MY_DRIVER_CPP_MY_DRIVER_CPP_H_
 
+#include <lib/inspect/cpp/inspect.h>
+
 #include <ddktl/device.h>
 
 namespace my_driver_cpp {
@@ -21,6 +23,14 @@ class MyDriverCpp : public DeviceType {
   void DdkInit(ddk::InitTxn txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
+
+  // For inspect test.
+  zx::vmo inspect_vmo() { return inspect_.DuplicateVmo(); }
+
+ private:
+  inspect::Inspector inspect_;
+  // TODO: `is_bound` is an example property. Replace this with useful properties of the device.
+  inspect::BoolProperty is_bound = inspect_.GetRoot().CreateBool("is_bound", false);
 };
 
 }  // namespace my_driver_cpp

@@ -3,6 +3,8 @@
 #ifndef {{screaming_snake_case PROJECT_PATH}}_{{screaming_snake_case PROJECT_NAME}}_H_
 #define {{screaming_snake_case PROJECT_PATH}}_{{screaming_snake_case PROJECT_NAME}}_H_
 
+#include <lib/inspect/cpp/inspect.h>
+
 #include <ddktl/device.h>
 
 namespace {{snake_case PROJECT_NAME}} {
@@ -19,6 +21,14 @@ class {{pascal_case PROJECT_NAME}} : public DeviceType {
   void DdkInit(ddk::InitTxn txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
+
+  // For inspect test.
+  zx::vmo inspect_vmo() { return inspect_.DuplicateVmo(); }
+
+ private:
+  inspect::Inspector inspect_;
+  // TODO: `is_bound` is an example property. Replace this with useful properties of the device.
+  inspect::BoolProperty is_bound = inspect_.GetRoot().CreateBool("is_bound", false);
 };
 
 }  // namespace {{snake_case PROJECT_NAME}}

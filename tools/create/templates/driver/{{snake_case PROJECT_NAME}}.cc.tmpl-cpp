@@ -8,7 +8,10 @@ namespace {{snake_case PROJECT_NAME}} {
 
 zx_status_t {{pascal_case PROJECT_NAME}}::Bind(void* ctx, zx_device_t* dev) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t {{pascal_case PROJECT_NAME}}::Bind() { return DdkAdd("{{snake_case PROJECT_NAME}}"); }
+zx_status_t {{pascal_case PROJECT_NAME}}::Bind() {
+  is_bound.Set(true);
+  return DdkAdd(ddk::DeviceAddArgs("{{snake_case PROJECT_NAME}}").set_inspect_vmo(inspect_.DuplicateVmo()));
+}
 
 void {{pascal_case PROJECT_NAME}}::DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
 
