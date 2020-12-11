@@ -1,19 +1,21 @@
-# How-To: Write a Module in C++
+# Write a module in C++
 
 > DEPRECATION WARNING: The Modular framework is being deprecated in favor of
 > the [Session Framework](/docs/concepts/session/introduction.md).
 
 ## Overview
 
-A `Module` is a UI component that can participate in a [Story](link to story doc),
-potentially composed of many different `Module`s. A `Module`'s lifecycle is tightly
+Note: For more information on Modules, see [Module](/docs/concepts/modular/module.md).
+
+A `Module` is a UI component that can participate in a story potentially
+composed of many different `Module`s. A `Module`'s lifecycle is tightly
 bound to the story to which it was added. In addition to the capabilities
 provided to all Peridot components via `fuchsia::modular::ComponentContext`, a `Module` is given
-additional capabilities via its `fuchsia::modular::ModuleContext`.
+additional capabilities through its `fuchsia::modular::ModuleContext`.
 
 ## `SimpleMod`
 
-### Mod Initialization
+### Mod initialization
 
 The first step to writing a `Module` is implementing the initializer.
 
@@ -79,4 +81,3 @@ void Terminate(fit::function<void()> done);
 ```
 
 The module is responsible for calling `done` once its shutdown sequence is complete.
-
