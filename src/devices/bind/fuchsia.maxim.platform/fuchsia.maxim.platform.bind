@@ -1,0 +1,14 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.maxim.platform;
+
+extend uint fuchsia.BIND_PLATFORM_DEV_VID {
+  MAXIM = 21,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  MAX98373 = 1,
+  MAX98927 = 2,
+};

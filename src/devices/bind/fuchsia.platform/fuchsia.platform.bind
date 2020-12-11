@@ -26,7 +26,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   ARM = 18,
   QUALCOMM = 19,
   SYNAPTICS = 20,
-  MAXIM = 21,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {

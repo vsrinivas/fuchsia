@@ -11,7 +11,7 @@ bind_rules("max98927_bind") {
   tests = "tests.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",
-    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.maxim.platform",
   ]
 }
 

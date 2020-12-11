@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 using fuchsia.composite;
-using fuchsia.platform;
+using fuchsia.maxim.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
-fuchsia.BIND_PLATFORM_DEV_VID == 0x15; // PDEV_VID_MAXIM
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.maxim.platform.BIND_PLATFORM_DEV_VID.MAXIM;
 accept fuchsia.BIND_PLATFORM_DEV_DID {
-  1, // PDEV_DID_MAXIM_MAX98373
+  fuchsia.maxim.platform.BIND_PLATFORM_DEV_DID.MAX98373
 }
