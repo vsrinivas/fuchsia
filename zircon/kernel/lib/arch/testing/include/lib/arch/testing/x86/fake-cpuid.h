@@ -70,6 +70,7 @@ class FakeCpuidIo {
 
   const CpuidIo* Get(uint32_t leaf, uint32_t subleaf) const;
 
+  const CpuidIo empty_ = {};
   fbl::HashTable<uint64_t, std::unique_ptr<Hashable>> map_;
 };
 

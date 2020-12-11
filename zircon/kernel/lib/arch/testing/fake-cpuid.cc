@@ -13,9 +13,7 @@ namespace arch::testing {
 
 const CpuidIo* FakeCpuidIo::Get(uint32_t leaf, uint32_t subleaf) const {
   const auto it = map_.find(Key(leaf, subleaf));
-  ZX_ASSERT_MSG(it != map_.end(), "CPUID value for leaf, subleaf (%#x, %#x) not present", leaf,
-                subleaf);
-  return &(it->cpuid_);
+  return it == map_.end() ? &empty_ : &(it->cpuid_);
 }
 
 FakeCpuidIo& FakeCpuidIo::Populate(uint32_t leaf, uint32_t subleaf, uint32_t reg, uint32_t value) {
