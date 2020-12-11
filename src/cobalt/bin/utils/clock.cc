@@ -5,13 +5,15 @@
 #include "src/cobalt/bin/utils/clock.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/utc.h>
 
 namespace cobalt {
 
-FuchsiaSystemClock::FuchsiaSystemClock(
-    const std::shared_ptr<sys::ServiceDirectory>& service_directory) {
-  service_directory->Connect(utc_.NewRequest());
-}
+FuchsiaSystemClock::FuchsiaSystemClock(async_dispatcher_t* dispatcher)
+    : FuchsiaSystemClock(dispatcher, zx::unowned_clock(zx_utc_reference_get())) {}
+
+FuchsiaSystemClock::FuchsiaSystemClock(async_dispatcher_t* dispatcher, zx::unowned_clock clock)
+    : dispatcher_(dispatcher), utc_start_wait_(clock->get_handle(), ZX_CLOCK_STARTED, 0) {}
 
 std::optional<std::chrono::system_clock::time_point> FuchsiaSystemClock::now() {
   if (accurate_) {
@@ -21,32 +23,18 @@ std::optional<std::chrono::system_clock::time_point> FuchsiaSystemClock::now() {
 }
 
 void FuchsiaSystemClock::AwaitExternalSource(std::function<void()> callback) {
-  FX_LOGS(INFO) << "Making initial call to check the state of the system clock";
-  WatchExternalSource(std::move(callback));
-}
-
-void FuchsiaSystemClock::WatchExternalSource(std::function<void()> callback) {
-  utc_->WatchState([this, callback = std::move(callback)](const fuchsia::time::UtcState& state) {
-    switch (state.source()) {
-      case fuchsia::time::UtcSource::UNVERIFIED:
-        FX_LOGS(INFO) << "Clock has been initialized from an unverified source";
-        accurate_ = true;
-        utc_.Unbind();
-        callback();
-        break;
-      case fuchsia::time::UtcSource::EXTERNAL:
-        FX_LOGS(INFO) << "Clock has been initialized from an external source";
-        accurate_ = true;
-        utc_.Unbind();
-        callback();
-        break;
-      case fuchsia::time::UtcSource::BACKSTOP:
-        FX_LOGS(INFO) << "Clock is not accurate yet, "
-                      << "making another call to check the state of the "
-                      << "system clock. Expect response when clock becomes accurate.";
-        WatchExternalSource(callback);
-        break;
+  FX_LOGS(INFO) << "Checking the state of the system clock";
+  utc_start_wait_.Begin(dispatcher_, [this, callback = std::move(callback)](
+                                         async_dispatcher_t* dispatcher, async::WaitOnce* wait,
+                                         zx_status_t status, const zx_packet_signal_t* signal) {
+    if (status == ZX_ERR_CANCELED) {
+      FX_LOGS(ERROR) << "Failed to wait for clock initiialization";
+      return;
     }
+
+    this->accurate_ = true;
+    FX_LOGS(INFO) << "Clock has been initialized";
+    callback();
   });
 }
 

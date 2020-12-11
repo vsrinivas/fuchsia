@@ -123,7 +123,7 @@ CobaltApp CobaltApp::CreateCobaltApp(
 
   sys::ComponentContext* context_ptr = context.get();
 
-  auto validated_clock = std::make_unique<FuchsiaSystemClock>(context_ptr->svc());
+  auto validated_clock = std::make_unique<FuchsiaSystemClock>(dispatcher);
 
   auto cobalt_service = std::make_unique<CobaltService>(CreateCobaltConfig(
       dispatcher, kMetricsRegistryPath, configuration_data, validated_clock.get(),

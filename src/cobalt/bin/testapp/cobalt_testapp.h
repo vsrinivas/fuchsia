@@ -32,6 +32,7 @@ class CobaltTestApp {
   CobaltTestApp(bool use_network, bool test_for_prober)
       : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
         logger_(use_network, &cobalt_controller_),
+        use_network_(use_network),
         test_for_prober_(test_for_prober) {
     clock_.reset(new util::SystemClock);
     if (test_for_prober) {
@@ -58,6 +59,7 @@ class CobaltTestApp {
   fuchsia::cobalt::ControllerSyncPtr cobalt_controller_;
   fuchsia::cobalt::SystemDataUpdaterSyncPtr system_data_updater_;
   CobaltTestAppLogger logger_;
+  bool use_network_;
   bool test_for_prober_;
   std::unique_ptr<util::SystemClockInterface> clock_;
 

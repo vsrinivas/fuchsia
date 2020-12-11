@@ -211,7 +211,7 @@ executable("cobalt_app_unittests") {
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/cobalt/bin/testapp:fake_timekeeper_lib",
+    "//src/cobalt/bin/testing:fake_clock_lib",
     "//src/cobalt/bin/testing:fake_http_loader",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/cobalt/cpp:metric_event_builder",

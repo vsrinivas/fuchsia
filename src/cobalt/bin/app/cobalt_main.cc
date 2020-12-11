@@ -15,9 +15,11 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/clock.h>
 #include <stdlib.h>
 #include <zircon/boot/image.h>
 #include <zircon/types.h>
+#include <zircon/utc.h>
 
 #include <chrono>
 #include <fstream>
@@ -56,6 +58,8 @@ constexpr std::string_view kStartEventAggregatorWorkerFlagName = "start_event_ag
 constexpr std::string_view kUseMemoryObservationStore = "use_memory_observation_store";
 
 constexpr std::string_view kMaxBytesTotalFlagName = "max_bytes_per_observation_store";
+
+constexpr std::string_view kTestOnlyFakeClockFlagName = "test_only_use_fake_clock";
 
 // We want to only upload every hour. This is the interval that will be
 // approached by the uploader.
@@ -120,6 +124,23 @@ std::string ReadBuildInfo(std::string value) {
   } else {
     return "<" + value + " read failed>";
   }
+}
+
+// Replaces the UTC clock installed in the process' namespace with a fake one
+// that is always started. This is intended to simulate a synchronized clock in
+// test environments without network and should not be used outside of tests.
+void ReplaceRuntimeClock() {
+  zx::clock current_clock(zx_utc_reference_get());
+  zx::time start_time;
+  current_clock.read(start_time.get_address());
+
+  zx::clock replacement;
+  zx_clock_create_args_v1_t clock_args{.backstop_time = start_time.get()};
+  zx::clock::create(0u, &clock_args, &replacement);
+  zx::clock::update_args update_args;
+  update_args.set_value(start_time);
+  replacement.update(update_args);
+  zx_utc_reference_swap(replacement.release(), current_clock.reset_and_get_address());
 }
 
 int main(int argc, const char** argv) {
@@ -208,6 +229,8 @@ int main(int argc, const char** argv) {
     }
   }
 
+  bool use_fake_clock = command_line.HasOption(kTestOnlyFakeClockFlagName);
+
   FX_LOGS(INFO) << "Cobalt is starting with the following parameters: "
                 << "schedule_interval=" << schedule_interval.count()
                 << " seconds, min_interval=" << min_interval.count()
@@ -215,7 +238,13 @@ int main(int argc, const char** argv) {
                 << " seconds, upload_jitter=" << (upload_jitter * 100) << "%"
                 << ", max_bytes_per_observation_store=" << max_bytes_per_observation_store
                 << ", event_aggregator_backfill_days=" << event_aggregator_backfill_days
-                << ", start_event_aggregator_worker=" << start_event_aggregator_worker << ".";
+                << ", start_event_aggregator_worker=" << start_event_aggregator_worker
+                << ", test_only_use_fake_clock=" << use_fake_clock << ".";
+
+  if (use_fake_clock) {
+    FX_LOGS(WARNING) << "Using a fake clock. This should only be enabled in tests.";
+    ReplaceRuntimeClock();
+  }
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 

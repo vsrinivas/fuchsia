@@ -32,19 +32,6 @@ test_package("cobalt_tests") {
     "utils:cobalt_utils_unittests",
   ]
 
-  binaries = [
-    {
-      name = "fake_timekeeper"
-    },
-  ]
-
-  meta = [
-    {
-      path = "testapp/meta/timekeeper.cmx"
-      dest = "cobalt_fake_timekeeper.cmx"
-    },
-  ]
-
   tests = [
     {
       name = "cobalt_app_unittests"

@@ -1,11 +1,4 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.time.Utc": "fuchsia-pkg://fuchsia.com/cobalt_tests#meta/cobalt_fake_timekeeper.cmx"
-            }
-        }
-    },
     "include": [
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],

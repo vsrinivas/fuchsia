@@ -12,7 +12,7 @@
 #include "sdk/lib/sys/cpp/testing/service_directory_provider.h"
 #include "src/cobalt/bin/app/activity_listener_impl.h"
 #include "src/cobalt/bin/app/testapp_metrics_registry.cb.h"
-#include "src/cobalt/bin/testapp/fake_timekeeper.h"
+#include "src/cobalt/bin/testing/fake_clock.h"
 #include "src/cobalt/bin/testing/fake_http_loader.h"
 #include "src/lib/cobalt/cpp/metric_event_builder.h"
 #include "src/lib/files/directory.h"
@@ -33,9 +33,7 @@ bool WriteFile(const std::string& file, const std::string& to_write) {
 class CreateCobaltConfigTest : public gtest::TestLoopFixture {
  public:
   CreateCobaltConfigTest()
-      : ::gtest::TestLoopFixture(),
-        context_provider_(),
-        clock_(context_provider_.public_service_directory()) {}
+      : ::gtest::TestLoopFixture(), context_provider_(), clock_(dispatcher()) {}
 
  protected:
   void SetUp() override {
@@ -125,12 +123,11 @@ class CobaltAppTest : public gtest::TestLoopFixture {
   CobaltAppTest()
       : ::gtest::TestLoopFixture(),
         context_provider_(),
-        timekeeper_(context_provider_.context()),
-        clock_(new FuchsiaSystemClock(context_provider_.public_service_directory())),
+        clock_(new FakeFuchsiaSystemClock(dispatcher())),
         fake_service_(new testing::FakeCobaltService()),
         cobalt_app_(context_provider_.TakeContext(), dispatcher(),
                     std::unique_ptr<testing::FakeCobaltService>(fake_service_),
-                    std::unique_ptr<FuchsiaSystemClock>(clock_), true, false) {}
+                    std::unique_ptr<FakeFuchsiaSystemClock>(clock_), true, false) {}
 
  protected:
   void SetUp() override {
@@ -172,8 +169,7 @@ class CobaltAppTest : public gtest::TestLoopFixture {
   fuchsia::cobalt::Controller* GetCobaltController() { return cobalt_app_.controller_impl_.get(); }
 
   sys::testing::ComponentContextProvider context_provider_;
-  testapp::FakeTimekeeper timekeeper_;
-  FuchsiaSystemClock* clock_;
+  FakeFuchsiaSystemClock* clock_;
   testing::FakeCobaltService* fake_service_;
   CobaltApp cobalt_app_;
   fuchsia::cobalt::LoggerFactoryPtr factory_;
@@ -218,7 +214,7 @@ TEST_F(CobaltAppTest, SystemClockIsAccurate) {
   GetCobaltController()->ListenForInitialized([&callback_invoked]() { callback_invoked = true; });
   EXPECT_FALSE(callback_invoked);
 
-  // Give the fake_timekeeper/clock time to become accurate.
+  // Give the clock time to become accurate.
   RunLoopUntilIdle();
   EXPECT_EQ(fake_service_->system_clock_is_accurate(), true);
   EXPECT_TRUE(callback_invoked);

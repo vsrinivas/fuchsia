@@ -7,10 +7,7 @@ import("//third_party/cobalt/metrics_registry.gni")
 
 group("testapp") {
   testonly = true
-  public_deps = [
-    ":cobalt_testapp",
-    ":fake_timekeeper",
-  ]
+  public_deps = [ ":cobalt_testapp" ]
 }
 
 metrics_registry("testapp_metrics_registry") {
@@ -48,7 +45,6 @@ executable("cobalt_testapp") {
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.metrics",
-    "//sdk/fidl/fuchsia.time",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/cobalt/bin/utils:base64",
@@ -67,29 +63,4 @@ executable("cobalt_testapp") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
-}
-
-source_set("fake_timekeeper_lib") {
-  sources = [ "fake_timekeeper.h" ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.time",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
-  ]
-}
-
-executable("fake_timekeeper") {
-  sources = [ "fake_timekeeper_main.cc" ]
-
-  deps = [
-    ":fake_timekeeper_lib",
-    "//sdk/fidl/fuchsia.time",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
 }

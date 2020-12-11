@@ -91,17 +91,20 @@ bool CobaltTestApp::RunTests() {
 
 bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days) {
   uint32_t project_id =
-    (test_for_prober_ ? cobalt_prober_registry::kProjectId : cobalt_registry::kProjectId);
+      (test_for_prober_ ? cobalt_prober_registry::kProjectId : cobalt_registry::kProjectId);
   // TODO(fxbug.dev/52750): We try each of these tests twice in case the failure
   // reason is that the calendar date has changed mid-test.
   CONNECT_AND_TRY_TEST_TWICE(
-      TestLogEventWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
+      TestLogEventWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days,
+                                  project_id),
       backfill_days);
   CONNECT_AND_TRY_TEST_TWICE(
-      TestLogEventCountWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
+      TestLogEventCountWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days,
+                                       project_id),
       backfill_days);
   CONNECT_AND_TRY_TEST_TWICE(
-      TestLogElapsedTimeWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
+      TestLogElapsedTimeWithAggregation(&logger_, clock_.get(), &cobalt_controller_, backfill_days,
+                                        project_id),
       backfill_days);
   CONNECT_AND_TRY_TEST_TWICE(
       TestLogInteger(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
@@ -109,9 +112,9 @@ bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days) {
   CONNECT_AND_TRY_TEST_TWICE(
       TestLogOccurrence(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
       backfill_days);
-  CONNECT_AND_TRY_TEST_TWICE(
-      TestLogIntegerHistogram(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
-      backfill_days);
+  CONNECT_AND_TRY_TEST_TWICE(TestLogIntegerHistogram(&logger_, clock_.get(), &cobalt_controller_,
+                                                     backfill_days, project_id),
+                             backfill_days);
   CONNECT_AND_TRY_TEST_TWICE(
       TestLogString(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
       backfill_days);
@@ -162,6 +165,12 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds, uint32_t min_int
   {
     std::ostringstream stream;
     stream << "--verbose=" << syslog::GetVlogVerbosity();
+    launch_info.arguments->push_back(stream.str());
+  }
+
+  if (!use_network_) {
+    std::ostringstream stream;
+    stream << "--test_only_use_fake_clock";
     launch_info.arguments->push_back(stream.str());
   }
 
