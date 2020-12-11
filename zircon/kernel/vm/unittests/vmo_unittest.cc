@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <fbl/auto_call.h>
+
 #include "test_helper.h"
 
 namespace vm_unittest {
@@ -345,24 +347,38 @@ static bool vmo_precommitted_map_test() {
 // Creates a vm object, maps it, demand paged.
 static bool vmo_demand_paged_map_test() {
   BEGIN_TEST;
+
   static const size_t alloc_size = PAGE_SIZE * 16;
   fbl::RefPtr<VmObjectPaged> vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, alloc_size, &vmo);
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
 
-  auto ka = VmAspace::kernel_aspace();
-  void* ptr;
-  auto ret = ka->MapObjectInternal(vmo, "test", 0, alloc_size, &ptr, 0, 0, kArchRwFlags);
-  ASSERT_EQ(ret, ZX_OK, "mapping object");
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
+  ASSERT_NONNULL(aspace, "VmAspace::Create pointer");
+
+  VmAspace* old_aspace = Thread::Current::Get()->aspace();
+  auto cleanup_aspace = fbl::MakeAutoCall([&]() {
+    vmm_set_active_aspace(old_aspace);
+    ASSERT(aspace->Destroy() == ZX_OK);
+  });
+  vmm_set_active_aspace(aspace.get());
+
+  static constexpr const uint kArchFlags = kArchRwFlags | ARCH_MMU_FLAG_PERM_USER;
+  fbl::RefPtr<VmMapping> mapping;
+  status = aspace->RootVmar()->CreateVmMapping(0, alloc_size, 0, 0, vmo, 0, kArchFlags, "test",
+                                               &mapping);
+  ASSERT_EQ(status, ZX_OK, "mapping object");
+
+  auto uptr = make_user_inout_ptr(reinterpret_cast<void*>(mapping->base()));
 
   // fill with known pattern and test
-  if (!fill_and_test(ptr, alloc_size)) {
+  if (!fill_and_test_user(uptr, alloc_size)) {
     all_ok = false;
   }
 
-  auto err = ka->FreeRegion((vaddr_t)ptr);
-  EXPECT_EQ(ZX_OK, err, "unmapping object");
+  // cleanup_aspace destroys the whole space now.
+
   END_TEST;
 }
 
@@ -443,7 +459,8 @@ static bool vmo_double_remap_test() {
 
   auto ka = VmAspace::kernel_aspace();
   void* ptr;
-  auto ret = ka->MapObjectInternal(vmo, "test0", 0, alloc_size, &ptr, 0, 0, kArchRwFlags);
+  auto ret = ka->MapObjectInternal(vmo, "test0", 0, alloc_size, &ptr, 0, VmAspace::VMM_FLAG_COMMIT,
+                                   kArchRwFlags);
   ASSERT_EQ(ZX_OK, ret, "mapping object");
 
   // fill with known pattern and test
@@ -453,7 +470,8 @@ static bool vmo_double_remap_test() {
 
   // map it again
   void* ptr2;
-  ret = ka->MapObjectInternal(vmo, "test1", 0, alloc_size, &ptr2, 0, 0, kArchRwFlags);
+  ret = ka->MapObjectInternal(vmo, "test1", 0, alloc_size, &ptr2, 0, VmAspace::VMM_FLAG_COMMIT,
+                              kArchRwFlags);
   ASSERT_EQ(ret, ZX_OK, "mapping object second time");
   EXPECT_NE(ptr, ptr2, "second mapping is different");
 
@@ -464,8 +482,8 @@ static bool vmo_double_remap_test() {
   // map it a third time with an offset
   void* ptr3;
   static const size_t alloc_offset = PAGE_SIZE;
-  ret = ka->MapObjectInternal(vmo, "test2", alloc_offset, alloc_size - alloc_offset, &ptr3, 0, 0,
-                              kArchRwFlags);
+  ret = ka->MapObjectInternal(vmo, "test2", alloc_offset, alloc_size - alloc_offset, &ptr3, 0,
+                              VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
   ASSERT_EQ(ret, ZX_OK, "mapping object third time");
   EXPECT_NE(ptr3, ptr2, "third mapping is different");
   EXPECT_NE(ptr3, ptr, "third mapping is different");
@@ -527,7 +545,8 @@ static bool vmo_read_write_smoke_test() {
   // map the object
   auto ka = VmAspace::kernel_aspace();
   uint8_t* ptr;
-  err = ka->MapObjectInternal(vmo, "test", 0, alloc_size, (void**)&ptr, 0, 0, kArchRwFlags);
+  err = ka->MapObjectInternal(vmo, "test", 0, alloc_size, (void**)&ptr, 0,
+                              VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
   ASSERT_EQ(ZX_OK, err, "mapping object");
 
   // write to it at odd offsets
@@ -629,13 +648,15 @@ static bool vmo_cache_test() {
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
     ASSERT_EQ(ZX_OK,
-              ka->MapObjectInternal(vmo, "test", 0, PAGE_SIZE, (void**)&ptr, 0, 0, kArchRwFlags),
+              ka->MapObjectInternal(vmo, "test", 0, PAGE_SIZE, (void**)&ptr, 0,
+                                    VmAspace::VMM_FLAG_COMMIT, kArchRwFlags),
               "map vmo");
     EXPECT_EQ(ZX_ERR_BAD_STATE, vmo->SetMappingCachePolicy(cache_policy), "set flags while mapped");
     EXPECT_EQ(ZX_OK, ka->FreeRegion((vaddr_t)ptr), "unmap vmo");
     EXPECT_EQ(ZX_OK, vmo->SetMappingCachePolicy(cache_policy), "set flags after unmapping");
     ASSERT_EQ(ZX_OK,
-              ka->MapObjectInternal(vmo, "test", 0, PAGE_SIZE, (void**)&ptr, 0, 0, kArchRwFlags),
+              ka->MapObjectInternal(vmo, "test", 0, PAGE_SIZE, (void**)&ptr, 0,
+                                    VmAspace::VMM_FLAG_COMMIT, kArchRwFlags),
               "map vmo again");
     EXPECT_EQ(ZX_OK, ka->FreeRegion((vaddr_t)ptr), "unmap vmo");
   }
