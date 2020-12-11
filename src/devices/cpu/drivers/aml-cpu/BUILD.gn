@@ -54,6 +54,7 @@ test("aml-cpu-test") {
     "//sdk/banjo/ddk.protocol.thermal",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl_llcpp",
+    "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
@@ -70,7 +71,6 @@ test("aml-cpu-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/inspect",
   ]
 }
 

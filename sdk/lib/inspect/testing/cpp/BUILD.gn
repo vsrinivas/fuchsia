@@ -15,3 +15,15 @@ source_set("cpp") {
     "//zircon/system/ulib/inspect",
   ]
 }
+
+source_set("zxtest") {
+  sources = [
+    "zxtest/inspect.cc",
+    "zxtest/inspect.h",
+  ]
+  deps = [
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zxtest",
+  ]
+  public_deps = [ "//zircon/system/ulib/inspect" ]
+}

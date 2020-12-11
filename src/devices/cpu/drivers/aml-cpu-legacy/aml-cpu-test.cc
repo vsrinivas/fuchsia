@@ -8,7 +8,6 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fake_ddk/fidl-helper.h>
-#include <lib/inspect/cpp/reader.h>
 
 #include <memory>
 #include <vector>
@@ -20,6 +19,7 @@
 #include <ddktl/protocol/thermal.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <fbl/array.h>
+#include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
 namespace amlogic_cpu {
@@ -408,27 +408,7 @@ zx_status_t AmlCpuTest::MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_
 
 zx_status_t AmlCpuTest::Init() { return messenger_.SetMessageOp(this, AmlCpuTest::MessageOp); }
 
-class InspectTestHelper {
- public:
-  InspectTestHelper() {}
-
-  void ReadInspect(const zx::vmo& vmo) {
-    hierarchy_ = inspect::ReadFromVmo(vmo);
-    ASSERT_TRUE(hierarchy_.is_ok());
-  }
-
-  inspect::Hierarchy& hierarchy() { return hierarchy_.value(); }
-
-  template <typename T>
-  void CheckProperty(const inspect::NodeValue& node, std::string property, T expected_value) {
-    const T* actual_value = node.get_property<T>(property);
-    ASSERT_TRUE(actual_value);
-    EXPECT_EQ(expected_value.value(), actual_value->value());
-  }
-
- private:
-  fit::result<inspect::Hierarchy> hierarchy_;
-};
+using inspect::InspectTestHelper;
 
 class AmlCpuTestFixture : public InspectTestHelper, public zxtest::Test {
  public:

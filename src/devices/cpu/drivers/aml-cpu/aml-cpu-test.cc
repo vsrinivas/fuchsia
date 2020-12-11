@@ -5,7 +5,6 @@
 #include "aml-cpu.h"
 
 #include <lib/fake_ddk/fidl-helper.h>
-#include <lib/inspect/cpp/reader.h>
 
 #include <memory>
 #include <vector>
@@ -14,12 +13,14 @@
 #include <ddktl/fidl.h>
 #include <mock/ddktl/protocol/clock.h>
 #include <mock/ddktl/protocol/power.h>
+#include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
 namespace amlogic_cpu {
 
 using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
 using CpuCtrlClient = fuchsia_cpuctrl::Device::SyncClient;
+using inspect::InspectTestHelper;
 
 #define MHZ(x) ((x)*1000000)
 
@@ -34,28 +35,6 @@ const std::vector<operating_point_t> kTestOperatingPoints = {
     {.freq_hz = MHZ(3), .volt_uv = 450, .pd_id = 0},
     {.freq_hz = MHZ(2), .volt_uv = 300, .pd_id = 0},
     {.freq_hz = MHZ(1), .volt_uv = 150, .pd_id = 0},
-};
-
-class InspectTestHelper {
- public:
-  InspectTestHelper() {}
-
-  void ReadInspect(const zx::vmo& vmo) {
-    hierarchy_ = inspect::ReadFromVmo(vmo);
-    ASSERT_TRUE(hierarchy_.is_ok());
-  }
-
-  inspect::Hierarchy& hierarchy() { return hierarchy_.value(); }
-
-  template <typename T>
-  void CheckProperty(const inspect::NodeValue& node, std::string property, T expected_value) {
-    const T* actual_value = node.get_property<T>(property);
-    ASSERT_TRUE(actual_value);
-    EXPECT_EQ(expected_value.value(), actual_value->value());
-  }
-
- private:
-  fit::result<inspect::Hierarchy> hierarchy_;
 };
 
 class AmlCpuTest : public AmlCpu {

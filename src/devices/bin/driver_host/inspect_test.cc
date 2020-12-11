@@ -4,72 +4,14 @@
 
 #include "inspect.h"
 
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/async/cpp/executor.h>
-#include <lib/inspect/cpp/reader.h>
-
 #include <fs/dir_test_util.h>
+#include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
 #include "driver_host.h"
-#include "src/lib/testing/loop_fixture/real_loop.h"
 
-class InspectTestHelper : public loop_fixture::RealLoop {
- public:
-  InspectTestHelper() : executor_(dispatcher()) {}
-  // Run a promise to completion on the default async executor.
-  void RunPromiseToCompletion(fit::promise<> promise) {
-    bool done = false;
-    executor_.schedule_task(std::move(promise).and_then([&]() { done = true; }));
-    RunLoopUntil([&] { return done; });
-    ASSERT_TRUE(done);
-  }
-
-  void ReadInspect(inspect::Inspector inspector) {
-    hierarchy_ = fit::result<inspect::Hierarchy>();
-    RunPromiseToCompletion(inspect::ReadFromInspector(inspector).then(
-        [&](fit::result<inspect::Hierarchy>& result) { hierarchy_ = std::move(result); }));
-    ASSERT_TRUE(hierarchy_.is_ok());
-  }
-
-  inspect::Hierarchy& hierarchy() { return hierarchy_.value(); }
-
-  template <typename T>
-  void CheckProperty(const inspect::NodeValue& node, std::string property, T expected_value) {
-    const T* actual_value = node.get_property<T>(property);
-    ASSERT_TRUE(actual_value);
-    EXPECT_EQ(expected_value.value(), actual_value->value());
-  }
-
-  // For debugging purpose
-  void PrintAllProperties(const inspect::NodeValue& node) {
-    const auto& props = node.properties();
-    auto* log_sink = zxtest::Runner::GetInstance()->mutable_reporter()->mutable_log_sink();
-    for (const auto& p : props) {
-      log_sink->Write("%s", p.name().c_str());
-      switch (p.format()) {
-        case inspect::PropertyFormat::kInt:
-          log_sink->Write(" - %ld\n", p.Get<inspect::IntPropertyValue>().value());
-          break;
-        case inspect::PropertyFormat::kUint:
-          log_sink->Write(" - %lu\n", p.Get<inspect::UintPropertyValue>().value());
-          break;
-        case inspect::PropertyFormat::kString:
-          log_sink->Write(" - %s\n", p.Get<inspect::StringPropertyValue>().value().c_str());
-          break;
-        default:
-          log_sink->Write("format not supported\n");
-          break;
-      }
-    }
-  }
-
- private:
-  async::Executor executor_;
-  fit::result<inspect::Hierarchy> hierarchy_;
-};
-
+namespace {
+using inspect::InspectTestHelper;
 class DriverHostInspectTestCase : public InspectTestHelper, public zxtest::Test {
  public:
   DriverHostInspectTestCase() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
@@ -82,6 +24,7 @@ class DriverHostInspectTestCase : public InspectTestHelper, public zxtest::Test 
   DriverHostInspect inspect_;
   async::Loop loop_;
 };
+}  // namespace
 
 TEST_F(DriverHostInspectTestCase, DirectoryEntries) {
   // Check that root inspect is created
@@ -133,7 +76,7 @@ TEST_F(DriverInspectTestCase, AddRemoveDriver) {
   const auto* driver_count =
       hierarchy().node().get_property<inspect::UintPropertyValue>("driver_count");
   ASSERT_TRUE(driver_count);
-  uint32_t initial_count = driver_count->value();
+  auto initial_count = driver_count->value();
 
   // Add test-driver
   fbl::RefPtr<zx_driver> driver;
@@ -209,7 +152,7 @@ TEST_F(DeviceInspectTestCase, AddRemoveDevice) {
   const auto* device_count =
       test_driver->node().get_property<inspect::UintPropertyValue>("device_count");
   ASSERT_TRUE(device_count);
-  uint32_t initial_count = device_count->value();
+  auto initial_count = device_count->value();
   ASSERT_EQ(initial_count, 1);
 
   auto* test_device = hierarchy().GetByPath({"drivers", "test-driver", "devices", "test-device"});

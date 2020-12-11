@@ -8,41 +8,20 @@
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
-#include <lib/inspect/cpp/reader.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
+#include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
 namespace {
 using driver_integration_test::IsolatedDevmgr;
+using inspect::InspectTestHelper;
 using llcpp::fuchsia::device::Controller;
 using llcpp::fuchsia::device::inspect::test::TestInspect;
-
-class InspectTestHelper {
- public:
-  InspectTestHelper() {}
-
-  void ReadInspect(const zx::vmo& vmo) {
-    hierarchy_ = inspect::ReadFromVmo(vmo);
-    ASSERT_TRUE(hierarchy_.is_ok());
-  }
-
-  inspect::Hierarchy& hierarchy() { return hierarchy_.value(); }
-
-  template <typename T>
-  void CheckProperty(const inspect::NodeValue& node, std::string property, T expected_value) {
-    const T* actual_value = node.get_property<T>(property);
-    ASSERT_TRUE(actual_value);
-    EXPECT_EQ(expected_value.value(), actual_value->value());
-  }
-
- private:
-  fit::result<inspect::Hierarchy> hierarchy_;
-};
 
 class InspectTestCase : public InspectTestHelper, public zxtest::Test {
  public:

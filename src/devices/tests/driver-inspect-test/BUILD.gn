@@ -46,6 +46,7 @@ test("tests") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
