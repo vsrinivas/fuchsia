@@ -1,0 +1,14 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("kernel-unittests") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+
+  testonly = true
+  sources = [ "kernel-unittests.cc" ]
+  deps = [
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zircon",
+  ]
+}

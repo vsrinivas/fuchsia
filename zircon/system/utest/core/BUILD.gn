@@ -63,6 +63,7 @@ core_tests = [
 # they either call get_root_resource() or they need to run in a job
 # tree without any exception handler.
 unified_only = [
+  "kernel-unittests",
   "bad-syscall",
   "bti",
   "default-exception-handler",  # needs job tree w/o exception handler.
