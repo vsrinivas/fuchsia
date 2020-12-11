@@ -19,6 +19,7 @@ if (!is_host) {
       "//tools/debug/symbolize",
       "//tools/net/device-finder:host",
       "//tools/symbol-index:symbol-index",
+      "//tools/symbolizer",
 
       # For `fx format-code`.
       "//zircon/tools/fidl:fidl-format",
