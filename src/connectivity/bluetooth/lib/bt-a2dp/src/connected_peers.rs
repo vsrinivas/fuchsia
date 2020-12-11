@@ -206,7 +206,7 @@ impl Inspect for &mut ConnectedPeers {
         let peer_dir_str = format!("{:?}", self.preferred_direction());
         self.inspect_peer_direction =
             self.inspect.create_string("preferred_peer_direction", peer_dir_str);
-        Ok(())
+        self.streams.iattach(&self.inspect, "local_streams")
     }
 }
 
@@ -487,11 +487,13 @@ mod tests {
         let inspect = inspect::Inspector::new();
         peers.iattach(inspect.root(), "peers").expect("should attach to inspect tree");
 
-        assert_inspect_tree!(inspect, root: { peers: { preferred_peer_direction: "Sink" }});
+        assert_inspect_tree!(inspect, root: {
+            peers: { local_streams: contains {}, preferred_peer_direction: "Sink" }});
 
         peers.set_preferred_direction(avdtp::EndpointType::Source);
 
-        assert_inspect_tree!(inspect, root: { peers: { preferred_peer_direction: "Source" }});
+        assert_inspect_tree!(inspect, root: {
+            peers: { local_streams: contains {}, preferred_peer_direction: "Source" }});
 
         // Connect a peer, it should show up in the tree.
         let (_remote, channel) = Channel::create();
@@ -500,6 +502,7 @@ mod tests {
         assert_inspect_tree!(inspect, root: {
             peers: {
                 preferred_peer_direction: "Source",
+                local_streams: contains {},
                 peer_0: { id: "0000000000000001", local_streams: contains {} }
             }
         });
