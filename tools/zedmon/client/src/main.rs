@@ -77,8 +77,9 @@ fn main() -> Result<(), Error> {
                 Arg::with_name("duration")
                     .help(
                         &format!(
-                            "Duration of recording. If omitted, recording will continue until \
-                            ENTER is pressed. If specified, must match the regular expression {}",
+                            "Duration of time on the Zedmon device to be spanned by data \
+                            recording. If omitted, recording will continue until ENTER is pressed. \
+                            If specified, must match the regular expression {}",
                             DURATION_REGEX)
                         )
                     .short("d")
@@ -99,14 +100,12 @@ fn main() -> Result<(), Error> {
         .get_matches();
 
     match matches.subcommand() {
-        ("describe", Some(arg_matches)) => run_describe(arg_matches),
+        ("describe", Some(arg_matches)) => Ok(run_describe(arg_matches)),
         ("list", _) => run_list(),
-        ("record", Some(arg_matches)) => run_record(arg_matches)?,
-        ("relay", Some(arg_matches)) => run_relay(arg_matches)?,
+        ("record", Some(arg_matches)) => run_record(arg_matches),
+        ("relay", Some(arg_matches)) => run_relay(arg_matches),
         _ => panic!("Invalid subcommand"),
-    };
-
-    Ok(())
+    }
 }
 
 fn run_describe(arg_matches: &ArgMatches<'_>) {
@@ -124,14 +123,15 @@ fn run_describe(arg_matches: &ArgMatches<'_>) {
 }
 
 /// Runs the "list" subcommand.
-fn run_list() {
+fn run_list() -> Result<(), Error> {
     let serials = lib::list();
     if serials.is_empty() {
-        eprintln!("No Zedmon devices found");
+        Err(format_err!("No Zedmon devices found"))
     } else {
         for serial in serials {
             println!("{}", serial);
         }
+        Ok(())
     }
 }
 
@@ -164,7 +164,7 @@ impl StdinStopper {
 }
 
 impl lib::StopSignal for StdinStopper {
-    fn should_stop(&mut self) -> Result<bool, Error> {
+    fn should_stop(&mut self, _: u64) -> Result<bool, Error> {
         match self.receiver.try_recv() {
             Ok(()) => self.stopped = true,
             Err(mpsc::TryRecvError::Empty) => {}
@@ -173,24 +173,6 @@ impl lib::StopSignal for StdinStopper {
             }
         }
         Ok(self.stopped)
-    }
-}
-
-/// Raises a stop signal for Zedmon recording after a given duration elapses.
-struct TimedStopper {
-    duration: Duration,
-    start: std::time::Instant,
-}
-
-impl TimedStopper {
-    fn new(duration: Duration) -> TimedStopper {
-        TimedStopper { duration, start: std::time::Instant::now() }
-    }
-}
-
-impl lib::StopSignal for TimedStopper {
-    fn should_stop(&mut self) -> Result<bool, Error> {
-        Ok(self.start.elapsed() > self.duration)
     }
 }
 
@@ -214,7 +196,7 @@ fn run_record(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
     match arg_matches.value_of("duration") {
         Some(value) => {
             let duration = parse_duration(value);
-            zedmon.read_reports(output, TimedStopper::new(duration))
+            zedmon.read_reports(output, lib::DurationStopper::new(duration))
         }
         None => {
             println!("Press ENTER to stop.");
