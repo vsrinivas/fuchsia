@@ -5,13 +5,12 @@
                 "fuchsia.ui.input.ImeService": "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx",
                 "fuchsia.ui.policy.Presenter": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
                 "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
-            },
-            "system-services": [
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.vulkan.loader.Loader"
-            ]
+            }
         }
     },
+    "include": [
+        "src/lib/vulkan/test-application.shard.cmx"
+    ],
     "program": {
         "binary": "test/carnelian_integration_test"
     },
@@ -20,7 +19,6 @@
             "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic"

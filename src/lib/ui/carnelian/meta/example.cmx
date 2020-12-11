@@ -1,6 +1,7 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/application.shard.cmx"
     ],
     "program": {
         "binary": "bin/carnelian_example"
@@ -12,18 +13,15 @@
             "class/input-report"
         ],
         "features": [
-            "isolated-cache-storage",
-            "vulkan"
+            "isolated-cache-storage"
         ],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.input3.Keyboard",
             "fuchsia.ui.policy.Presenter",
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }

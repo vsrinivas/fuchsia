@@ -14,15 +14,13 @@
     },
     "sandbox": {
         "features": [
-            "isolated-cache-storage",
-            "vulkan"
+            "isolated-cache-storage"
         ],
         "services": [
             "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }
