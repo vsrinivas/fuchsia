@@ -17,7 +17,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   GENERIC = 0,
   QEMU = 1,
   GOOGLE = 3,
-  AMLOGIC = 5,
   NXP = 9,
   DESIGNWARE = 12,
   MEDIATEK = 13,
@@ -30,15 +29,10 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   RTC_PCF8563 = 0x05,
   RTC_PL031 = 0x06,
-  AMLOGIC_ETH = 0x09,
   ETH_MAC = 0x10,
   ETH_PHY = 0x11,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {
   GENERIC = 0,
-  RTL8211F = 0x01,
-  AMLOGIC_S912 = 0x02,
-  AMLOGIC_A311D = 0x06,
-  PBUS_TEST = 0x01,
 };
