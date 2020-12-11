@@ -53,8 +53,7 @@ extern "C" __LOCAL const char PHYS_LOAD_ADDRESS[];  // Address this file was loa
 inline void ApplyRelocations() {
 #if defined(ZX_STATIC_PIE)
   // If we are position-independent, apply any simple fixups required.
-  static_pie::ApplyDynamicRelocations(static_pie::_DYNAMIC,
-                                      reinterpret_cast<uintptr_t>(PHYS_LOAD_ADDRESS));
+  static_pie::ApplyDynamicRelocationsToSelf(reinterpret_cast<uintptr_t>(PHYS_LOAD_ADDRESS));
 #endif
 }
 

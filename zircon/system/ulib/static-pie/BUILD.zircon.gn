@@ -24,7 +24,10 @@ zx_library("static-pie") {
   kernel = true
   static = true
 
-  sources = [ "relocation.cc" ]
+  sources = [
+    "relocation.cc",
+    "static_pie.cc",
+  ]
 
   deps = [ ":relocation_h" ]
   if (is_kernel) {

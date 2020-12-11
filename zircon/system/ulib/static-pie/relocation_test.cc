@@ -6,8 +6,6 @@
 
 #include "relocation.h"
 
-#include <lib/static-pie/static-pie.h>
-
 #include <fbl/span.h>
 #include <gtest/gtest.h>
 

@@ -12,16 +12,10 @@
 
 namespace static_pie {
 
-struct Elf64DynamicEntry;
-
-// Beginning of the ELF ".dynamic" section.
-extern "C" __LOCAL const Elf64DynamicEntry _DYNAMIC[];
-
-// Apply relocations specified in the given `.dynamic` table to the
-// currently running binary, assuming that we have been loaded in at
-// `load_address`.
-extern "C" void ApplyDynamicRelocations(const Elf64DynamicEntry* dynamic_table,
-                                        uintptr_t load_address);
+// Apply relocations specified in the running executable's `.dynamic`
+// table to the currently running binary, assuming that we have been
+// loaded in at `load_address`.
+extern "C" void ApplyDynamicRelocationsToSelf(uintptr_t load_address);
 
 }  // namespace static_pie
 
