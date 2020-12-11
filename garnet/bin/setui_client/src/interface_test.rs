@@ -190,6 +190,15 @@ async fn main() -> Result<(), Error> {
     println!("  client calls set input");
     validate_input(Some(false)).await?;
 
+    println!("input2 service tests");
+    println!("  client calls input watch2");
+    validate_input2_watch().await?;
+
+    println!("  client calls set input with microphone");
+    validate_input2_set(DeviceType::Microphone, "microphone", 3, "Available | Active").await?;
+    println!("  client calls set input with camera");
+    validate_input2_set(DeviceType::Camera, "camera", 3, "Available | Active").await?;
+
     println!("do not disturb service tests");
     println!("  client calls dnd watch");
     validate_dnd(Some(false), Some(false)).await?;
@@ -292,6 +301,39 @@ macro_rules! create_service  {
         })).detach();
         env
     }};
+}
+
+/// Creates a one-item list of input devices with the given properties.
+fn create_input_devices(
+    device_type: DeviceType,
+    device_name: &str,
+    device_state: u64,
+) -> Vec<InputDevice> {
+    let mut devices = Vec::new();
+    let mut source_states = Vec::new();
+    source_states.push(SourceState {
+        source: Some(DeviceStateSource::Hardware),
+        state: Some(DeviceState {
+            toggle_flags: ToggleStateFlags::from_bits(1),
+            ..DeviceState::EMPTY
+        }),
+        ..SourceState::EMPTY
+    });
+    source_states.push(SourceState {
+        source: Some(DeviceStateSource::Software),
+        state: Some(u64_to_state(device_state)),
+        ..SourceState::EMPTY
+    });
+    let device = InputDevice {
+        device_name: Some(device_name.to_string()),
+        device_type: Some(device_type),
+        source_states: Some(source_states),
+        mutable_toggle_state: ToggleStateFlags::from_bits(12),
+        state: Some(u64_to_state(device_state)),
+        ..InputDevice::EMPTY
+    };
+    devices.push(device);
+    devices
 }
 
 async fn validate_intl_set() -> Result<(), Error> {
@@ -700,6 +742,78 @@ async fn validate_input(expected_mic_muted: Option<bool>) -> Result<(), Error> {
             format!("Successfully set mic mute to {}\n", expected_mic_muted.unwrap())
         );
     }
+
+    Ok(())
+}
+
+/// Transforms an u64 into an fuchsia_fidl_settings::DeviceState.
+fn u64_to_state(num: u64) -> DeviceState {
+    DeviceState { toggle_flags: ToggleStateFlags::from_bits(num), ..DeviceState::EMPTY }
+}
+
+async fn validate_input2_watch() -> Result<(), Error> {
+    let env = create_service!(Services::Input,
+        InputRequest::Watch2 { responder } => {
+            responder.send(InputSettings {
+                devices: Some(
+                    create_input_devices(
+                        DeviceType::Camera,
+                        "camera",
+                        1,
+                    )
+                ),
+                ..InputSettings::EMPTY
+            })?;
+        }
+    );
+
+    let input_service =
+        env.connect_to_service::<InputMarker>().context("Failed to connect to input service")?;
+
+    let output = input::command2(input_service, None, None, None).await?;
+    // Just check that the output contains some key strings that confirms the watch returned.
+    // The string representation may not necessarily be in the same order.
+    assert!(output.contains("Software"));
+    assert!(output.contains("source_states: Some"));
+    assert!(output.contains("toggle_flags: Some"));
+    assert!(output.contains("camera"));
+    assert!(output.contains("Available"));
+    Ok(())
+}
+
+async fn validate_input2_set(
+    device_type: DeviceType,
+    device_name: &'static str,
+    device_state: u64,
+    expected_state_string: &str,
+) -> Result<(), Error> {
+    let env = create_service!(Services::Input,
+        InputRequest::SetStates { input_states, responder } => {
+            input_states.iter().for_each(move |state| {
+                assert_eq!(Some(device_type), state.device_type);
+                assert_eq!(Some(device_name.to_string()), state.name);
+                assert_eq!(Some(u64_to_state(device_state)), state.state);
+            });
+            responder.send(&mut (Ok(())))?;
+        }
+    );
+
+    let input_service =
+        env.connect_to_service::<InputMarker>().context("Failed to connect to input service")?;
+
+    let output = input::command2(
+        input_service,
+        Some(device_type),
+        Some(device_name.to_string()),
+        Some(u64_to_state(device_state)),
+    )
+    .await?;
+
+    // Just check that the output contains some key strings that confirms the set returned.
+    // The string representation may not necessarily be in the same order.
+    assert!(output.contains(&format!("{:?}", device_type)));
+    assert!(output.contains(&format!("{:?}", device_name)));
+    assert!(output.contains(expected_state_string));
 
     Ok(())
 }

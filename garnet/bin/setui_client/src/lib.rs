@@ -92,6 +92,15 @@ pub enum SettingClient {
         mic_muted: Option<bool>,
     },
 
+    // TODO(fxbug.dev/65686): Move back into input when the clients are migrated over.
+    // TODO(fxbug.dev/66186): Support multiple input devices to be set.
+    // For simplicity, currently only supports setting one input device at a time.
+    #[structopt(name = "input2")]
+    Input2 {
+        #[structopt(flatten)]
+        input_device: InputDeviceOptions,
+    },
+
     #[structopt(name = "intl")]
     Intl {
         #[structopt(short = "z", long, parse(from_str = "str_to_time_zone"))]
@@ -252,6 +261,30 @@ pub struct CaptionFontStyle {
     /// Edge style for fonts as specified in 47 CFR §79.103(c)(7), valid options are none,
     /// drop_shadow, raised, depressed, and outline.
     pub char_edge_style: Option<fidl_fuchsia_settings::EdgeStyle>,
+}
+
+#[derive(StructOpt, Debug, Clone)]
+pub struct InputDeviceOptions {
+    #[structopt(short = "t", long = "type", parse(try_from_str = "str_to_device_type"))]
+    /// The type of input device, e.g. camera or microphone.
+    device_type: Option<fidl_fuchsia_settings::DeviceType>,
+
+    #[structopt(short = "n", long = "name")]
+    /// The name of the device. Must be unique within a device type.
+    device_name: Option<String>,
+
+    #[structopt(short = "s", long = "state", parse(try_from_str = "str_to_device_state"))]
+    /// The device state flags, represented by the integer value of the bitwise flags.
+    ///
+    /// Available = 1
+    /// Active = 2
+    /// Muted = 4
+    /// Disabled = 8
+    /// Error = 16
+    ///
+    /// For combinations of states, add these values together.
+    /// Ex: Available && Active -> 1 + 2 -> 3
+    device_state: Option<fidl_fuchsia_settings::DeviceState>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -445,6 +478,16 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let output = input::command(input_service, mic_muted).await?;
             println!("Input: {}", output);
         }
+        SettingClient::Input2 { input_device } => {
+            let input_service = connect_to_service::<fidl_fuchsia_settings::InputMarker>()
+                .context("Failed to connect to input2 service")?;
+            let device_type = input_device.device_type;
+            let device_name = input_device.device_name;
+            let device_state = input_device.device_state;
+            let output =
+                input::command2(input_service, device_type, device_name, device_state).await?;
+            println!("Input2: {}", output);
+        }
         SettingClient::Setup { configuration_interfaces } => {
             let setup_service = connect_to_service::<fidl_fuchsia_settings::SetupMarker>()
                 .context("Failed to connect to setup service")?;
@@ -468,6 +511,24 @@ fn str_to_time_zone(src: &&str) -> fidl_fuchsia_intl::TimeZoneId {
 
 fn str_to_locale(src: &str) -> fidl_fuchsia_intl::LocaleId {
     fidl_fuchsia_intl::LocaleId { id: src.to_string() }
+}
+
+fn str_to_device_type(src: &str) -> Result<fidl_fuchsia_settings::DeviceType, &str> {
+    let device_type = src.to_lowercase();
+    if device_type.contains("microphone") {
+        Ok(fidl_fuchsia_settings::DeviceType::Microphone)
+    } else if device_type.contains("camera") {
+        Ok(fidl_fuchsia_settings::DeviceType::Camera)
+    } else {
+        Err("Unidentified device type")
+    }
+}
+
+fn str_to_device_state(src: &str) -> Result<fidl_fuchsia_settings::DeviceState, &str> {
+    let bits = src.parse::<u64>().map_err(|_| "Failed to parse device state")?;
+    let mut device_state = fidl_fuchsia_settings::DeviceState::EMPTY;
+    device_state.toggle_flags = fidl_fuchsia_settings::ToggleStateFlags::from_bits(bits);
+    Ok(device_state)
 }
 
 fn str_to_low_light_mode(src: &str) -> Result<fidl_fuchsia_settings::LowLightMode, &str> {
