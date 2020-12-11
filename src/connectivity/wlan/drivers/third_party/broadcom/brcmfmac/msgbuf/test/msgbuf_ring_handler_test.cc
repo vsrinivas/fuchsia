@@ -31,7 +31,7 @@ namespace brcmfmac {
 namespace {
 
 // Time out value for test waits.
-constexpr zx::duration kTestTimeout = zx::msec(100);
+constexpr zx::duration kTestTimeout = zx::sec(1);
 
 // Sleep duration when spinning and and retrying a test operation.
 constexpr zx::duration kTestSpinSleep = zx::usec(100);
