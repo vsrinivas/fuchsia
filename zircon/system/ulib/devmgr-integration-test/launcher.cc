@@ -6,6 +6,7 @@
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/exception/llcpp/fidl.h>
 #include <fuchsia/kernel/c/fidl.h>
+#include <fuchsia/power/manager/llcpp/fidl.h>
 #include <fuchsia/scheduler/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -43,6 +44,22 @@ namespace {
 
 using GetBootItemFunction = devmgr_launcher::GetBootItemFunction;
 
+class FakePowerRegistrationServer
+    : public llcpp::fuchsia::power::manager::DriverManagerRegistration::Interface {
+ public:
+  void Register(zx::channel transition, zx::channel dir,
+                RegisterCompleter::Sync& completer) override {
+    // Store these so the other side doesn't see the channels close.
+    transition_ = std::move(transition);
+    dir_ = std::move(dir);
+    completer.ReplySuccess();
+  }
+
+ private:
+  zx::channel transition_;
+  zx::channel dir_;
+};
+
 zx_status_t ItemsGet(void* ctx, uint32_t type, uint32_t extra, fidl_txn_t* txn) {
   const auto& get_boot_item = *static_cast<GetBootItemFunction*>(ctx);
   zx::vmo vmo;
@@ -74,9 +91,9 @@ constexpr fuchsia_kernel_RootJob_ops kRootJobOps = {
     .Get = RootJobGet,
 };
 
+template <class FidlInterface>
 void CreateFakeCppService(fbl::RefPtr<fs::PseudoDir> root, const char* name,
-                          async_dispatcher_t* dispatcher,
-                          std::unique_ptr<llcpp::fuchsia::boot::Arguments::Interface> server) {
+                          async_dispatcher_t* dispatcher, std::unique_ptr<FidlInterface> server) {
   auto node = fbl::MakeRefCounted<fs::Service>(
       [dispatcher, server{std::move(server)}](zx::channel channel) {
         return fidl::BindSingleInFlightOnly(dispatcher, std::move(channel), server.get());
@@ -271,9 +288,15 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(zx::channel bootsvc_server,
   CreateFakeService(svc_loop_state_->root, fuchsia_kernel_RootJob_Name,
                     svc_loop_state_->loop.dispatcher(), root_job_dispatch, &job_, &kRootJobOps);
 
+  // Create fake Boot Arguments.
   CreateFakeCppService(svc_loop_state_->root, llcpp::fuchsia::boot::Arguments::Name,
                        svc_loop_state_->loop.dispatcher(),
                        std::make_unique<mock_boot_arguments::Server>(std::move(boot_args)));
+
+  // Create fake Power Registration.
+  CreateFakeCppService(
+      svc_loop_state_->root, llcpp::fuchsia::power::manager::DriverManagerRegistration::Name,
+      svc_loop_state_->loop.dispatcher(), std::make_unique<FakePowerRegistrationServer>());
 
   // Serve VFS on channel.
   svc_loop_state_->vfs.ServeDirectory(svc_loop_state_->root, std::move(bootsvc_server),
