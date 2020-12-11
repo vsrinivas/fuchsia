@@ -16,6 +16,10 @@ constexpr char kDailyPerProductQuotaKey[] = "daily_per_product_quota";
 constexpr char kCrashServerKey[] = "crash_server";
 constexpr char kCrashServerUploadPolicyKey[] = "upload_policy";
 
+constexpr char kHourlySnapshot[] = "hourly_snapshot";
+constexpr char kHourlySnapshotProgramName[] = "system";
+constexpr char kHourlySnapshotSignature[] = "fuchsia-hourly-snapshot";
+
 constexpr char kCrashServerUrl[] = "https://clients2.google.com/cr/report";
 
 // Snapshots can occupy up to 10 MB of memory.

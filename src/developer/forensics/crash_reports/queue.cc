@@ -36,9 +36,15 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirecto
   // distinguish archived reports from reports that have not been uploaded yet.
 }
 
+uint64_t Queue::Size() const {
+  return pending_reports_.size() + (uint64_t)hourly_report_.has_value();
+}
+bool Queue::IsEmpty() const { return pending_reports_.empty() && !hourly_report_.has_value(); }
+
 bool Queue::Contains(const ReportId report_id) const {
   return std::find(pending_reports_.begin(), pending_reports_.end(), report_id) !=
-         pending_reports_.end();
+             pending_reports_.end() ||
+         (hourly_report_.has_value() && hourly_report_.value() == report_id);
 }
 
 bool Queue::Add(Report report) {
@@ -55,6 +61,15 @@ bool Queue::Add(Report report) {
   }
 
   const auto report_id = report.Id();
+  const auto is_hourly_report = report.IsHourlyReport();
+
+  // If an hourly report is already present, don't delete it and don't store a new one. This is done
+  // to preserve the data from the first hourly report that wasn't successfully uploaded and will 
+  // have the best chance of containing data on why.
+  if (report.IsHourlyReport() && hourly_report_.has_value()) {
+    Delete(report.Id());
+    return true;
+  }
 
   std::vector<ReportId> garbage_collected_reports;
   const bool success = store_.Add(std::move(report), &garbage_collected_reports);
@@ -70,8 +85,13 @@ bool Queue::Add(Report report) {
 
   if (reporting_policy_ == ReportingPolicy::kArchive) {
     Archive(report_id);
-  } else {
+    return true;
+  }
+
+  if (!is_hourly_report) {
     pending_reports_.push_back(report_id);
+  } else {
+    hourly_report_ = report_id;
   }
 
   return true;
@@ -148,18 +168,41 @@ size_t Queue::UploadAll() {
 
   pending_reports_.swap(new_pending_reports);
 
+  bool uploaded_hourly_report{false};
+  if (hourly_report_.has_value()) {
+    const auto report_id = hourly_report_.value();
+    std::optional<Report> report = store_.Get(report_id);
+    if (!report.has_value()) {
+      // This should only happen if the report is deleted from the store by an external influence,
+      // e.g., the filesystem flushes /cache.
+      FreeResources(report_id);
+    } else if (Upload(report.value())) {
+      hourly_report_ = std::nullopt;
+      uploaded_hourly_report = true;
+    }
+  }
+
   // |new_pending_reports| now contains the pending reports before attempting to upload them.
-  return new_pending_reports.size() - pending_reports_.size();
+  return new_pending_reports.size() - pending_reports_.size() + (size_t)uploaded_hourly_report;
+}
+
+void Queue::Delete(const ReportId report_id) {
+  info_.MarkReportAsDeleted(upload_attempts_[report_id]);
+  FreeResources(report_id);
 }
 
 void Queue::DeleteAll() {
-  FX_LOGS(INFO) << fxl::StringPrintf("Deleting all %zu pending reports", pending_reports_.size());
+  FX_LOGS(INFO) << fxl::StringPrintf("Deleting all %zu pending reports", Size());
   for (const auto& report_id : pending_reports_) {
-    info_.MarkReportAsDeleted(upload_attempts_[report_id]);
-    FreeResources(report_id);
+    Delete(report_id);
   }
-
   pending_reports_.clear();
+
+  if (hourly_report_.has_value()) {
+    Delete(hourly_report_.value());
+  }
+  hourly_report_ = std::nullopt;
+
   store_.RemoveAll();
 }
 
@@ -197,7 +240,7 @@ void Queue::WatchNetwork(NetworkWatcher* network_watcher) {
   network_watcher->Register([this](const bool network_is_reachable) {
     if (network_is_reachable) {
       // Save the size of |pending_reports_| because UploadAll mutates |pending_reports_|.
-      if (const auto pending = pending_reports_.size();
+      if (const auto pending = Size();
           reporting_policy_ == ReportingPolicy::kUpload && pending > 0) {
         const auto uploaded = UploadAll();
         FX_LOGS(INFO) << fxl::StringPrintf(
@@ -209,8 +252,7 @@ void Queue::WatchNetwork(NetworkWatcher* network_watcher) {
 }
 
 void Queue::UploadAllEveryFifteenMinutes() {
-  if (const auto pending = pending_reports_.size();
-      reporting_policy_ == ReportingPolicy::kUpload && pending > 0) {
+  if (const auto pending = Size(); reporting_policy_ == ReportingPolicy::kUpload && pending > 0) {
     const auto uploaded = UploadAll();
     FX_LOGS(INFO) << fxl::StringPrintf(
         "Successfully uploaded %zu of %zu pending crash reports as part of the "

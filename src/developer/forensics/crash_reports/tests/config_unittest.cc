@@ -117,6 +117,35 @@ TEST_F(ConfigTest, ParseConfig_BadConfig_InvalidUploadPolicy) {
 })");
 }
 
+TEST_F(ConfigTest, ParseConfig_HourlySnapshots) {
+  {
+    PARSE_OR_ASSERT(config, R"({
+       "crash_server" : {
+           "upload_policy": "enabled"
+       },
+       "hourly_snapshot": true
+   })");
+    EXPECT_TRUE(config.hourly_snapshot);
+  }
+  {
+    PARSE_OR_ASSERT(config, R"({
+       "crash_server" : {
+           "upload_policy": "enabled"
+       },
+       "hourly_snapshot": false
+   })");
+    EXPECT_FALSE(config.hourly_snapshot);
+  }
+  {
+    PARSE_OR_ASSERT(config, R"({
+    "crash_server" : {
+        "upload_policy": "enabled"
+    }
+})");
+    EXPECT_FALSE(config.hourly_snapshot);
+  }
+}
+
 }  // namespace
 
 // Pretty-prints CrashServerConfig::UploadPolicy in gTest matchers instead of the default byte

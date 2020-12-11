@@ -11,6 +11,7 @@
 
 #include <string>
 
+#include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/errors.h"
 #include "src/developer/forensics/crash_reports/report.h"
 
@@ -236,7 +237,8 @@ std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report, const Re
                                  const SnapshotUuid& snapshot_uuid,
                                  const std::optional<zx::time_utc>& current_time,
                                  const ::fit::result<std::string, Error>& device_id,
-                                 const ErrorOr<std::string>& os_version, const Product& product) {
+                                 const ErrorOr<std::string>& os_version, const Product& product,
+                                 const bool is_hourly_report) {
   const std::string program_name = report.program_name();
   const std::string shortname = Shorten(program_name);
 
@@ -254,7 +256,7 @@ std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report, const Re
                             should_process, &annotations);
 
   return Report::MakeReport(report_id, shortname, annotations, std::move(attachments),
-                            snapshot_uuid, std::move(minidump));
+                            snapshot_uuid, std::move(minidump), is_hourly_report);
 }
 
 }  // namespace crash_reports

@@ -55,6 +55,9 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 
  private:
+  void File(fuchsia::feedback::CrashReport report, bool is_hourly_snapshot);
+  void ScheduleHourlySnapshot();
+
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;
   const std::shared_ptr<sys::ServiceDirectory> services_;

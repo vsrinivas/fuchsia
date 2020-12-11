@@ -53,6 +53,9 @@ const char kSchema[] = R"({
         "upload_policy"
       ],
       "additionalProperties": false
+    },
+    "hourly_snapshot": {
+      "type": "boolean"
     }
   },
   "required": [
@@ -95,6 +98,14 @@ std::optional<uint64_t> ParseCrashReporterConfig(const rapidjson::Document& doc)
   return doc[kCrashReporterKey][kDailyPerProductQuotaKey].GetUint64();
 }
 
+bool ParseHourlySnapshot(const rapidjson::Document& doc) {
+  if (!doc.HasMember(kHourlySnapshot)) {
+    return false;
+  }
+
+  return doc[kHourlySnapshot].GetBool();
+}
+
 std::optional<CrashServerConfig> ParseCrashServerConfig(const rapidjson::Document& doc) {
   CrashServerConfig config;
 
@@ -134,7 +145,8 @@ std::optional<Config> ParseConfig(const std::string& filepath) {
     return std::nullopt;
   }
 
-  Config config{.daily_per_product_quota = ParseCrashReporterConfig(doc)};
+  Config config{.daily_per_product_quota = ParseCrashReporterConfig(doc),
+                .hourly_snapshot = ParseHourlySnapshot(doc)};
   if (auto crash_server = ParseCrashServerConfig(doc); crash_server.has_value()) {
     config.crash_server = std::move(crash_server.value());
   } else {

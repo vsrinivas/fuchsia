@@ -27,12 +27,13 @@ class Report {
                                           const std::map<std::string, std::string>& annotations,
                                           std::map<std::string, fuchsia::mem::Buffer> attachments,
                                           forensics::crash_reports::SnapshotUuid snapshot_uuid,
-                                          std::optional<fuchsia::mem::Buffer> minidump);
+                                          std::optional<fuchsia::mem::Buffer> minidump,
+                                          bool is_hourly_report = false);
 
   Report(ReportId report_id, const std::string& program_shortname,
          const std::map<std::string, std::string>& annotations,
          std::map<std::string, SizedData> attachments, SnapshotUuid snapshot_uuid,
-         std::optional<SizedData> minidump);
+         std::optional<SizedData> minidump, bool is_hourly_report = false);
 
   ReportId Id() const { return id_; }
 
@@ -48,6 +49,8 @@ class Report {
   const forensics::crash_reports::SnapshotUuid& SnapshotUuid() const { return snapshot_uuid_; }
   forensics::crash_reports::SnapshotUuid& SnapshotUuid() { return snapshot_uuid_; }
 
+  bool IsHourlyReport() const { return is_hourly_report_; }
+
  private:
   ReportId id_;
   std::string program_shortname_;
@@ -55,6 +58,7 @@ class Report {
   std::map<std::string, SizedData> attachments_;
   forensics::crash_reports::SnapshotUuid snapshot_uuid_;
   std::optional<SizedData> minidump_;
+  bool is_hourly_report_;
 };
 
 }  // namespace crash_reports

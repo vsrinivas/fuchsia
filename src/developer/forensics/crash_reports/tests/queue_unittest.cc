@@ -21,6 +21,7 @@
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/stubs/network_reachability_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -105,6 +106,14 @@ Report MakeReport(const std::size_t report_id) {
   return std::move(report.value());
 }
 
+Report MakeHourlyReport(const std::size_t report_id) {
+  std::optional<Report> report = Report::MakeReport(
+      report_id, kHourlySnapshotProgramName, MakeAnnotations(), MakeAttachments(),
+      kSnapshotUuidValue, BuildAttachment(kMinidumpValue), /*is_hourly_report=*/true);
+  FX_CHECK(report.has_value());
+  return std::move(report.value());
+}
+
 class TestReportingPolicyWatcher : public ReportingPolicyWatcher {
  public:
   TestReportingPolicyWatcher() : ReportingPolicyWatcher(ReportingPolicy::kUndecided) {}
@@ -155,6 +164,7 @@ class QueueTest : public UnitTestFixture {
 
   enum class QueueOps {
     AddNewReport,
+    AddHourlyReport,
     DeleteOneReport,
     SetReportingPolicyArchive,
     SetReportingPolicyDelete,
@@ -167,6 +177,12 @@ class QueueTest : public UnitTestFixture {
       switch (op) {
         case QueueOps::AddNewReport:
           FX_CHECK(queue_->Add(MakeReport(report_id_)));
+          AddExpectedReport(report_id_);
+          RunLoopUntilIdle();
+          ++report_id_;
+          break;
+        case QueueOps::AddHourlyReport:
+          FX_CHECK(queue_->Add(MakeHourlyReport(report_id_)));
           AddExpectedReport(report_id_);
           RunLoopUntilIdle();
           ++report_id_;
@@ -280,6 +296,7 @@ class QueueTest : public UnitTestFixture {
       case QueueOps::SetReportingPolicyArchive:
         break;
       case QueueOps::AddNewReport:
+      case QueueOps::AddHourlyReport:
       case QueueOps::DeleteOneReport:
         FX_CHECK(false);
         break;
@@ -377,6 +394,26 @@ TEST_F(QueueTest, Check_Add_ReportingPolicyUpload_FailedEarlyUpload) {
               }));
 }
 
+TEST_F(QueueTest, Check_AddHourlyReport) {
+  SetUpQueue({kUploadFailed, kUploadFailed});
+  ApplyQueueOps({
+      QueueOps::SetReportingPolicyUpload,
+      QueueOps::AddHourlyReport,
+      QueueOps::AddHourlyReport,
+  });
+
+  // The new hourly report should overwrite the old one.
+  EXPECT_EQ(queue_->Size(), 1u);
+
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::CrashState::kDeleted),
+                  cobalt::Event(cobalt::UploadAttemptState::kDeleted, 1u),
+              }));
+}
+
 TEST_F(QueueTest, Check_UploadTaskRunsPeriodically) {
   SetUpQueue({kUploadSuccessful, kUploadSuccessful});
   ApplyQueueOps({
@@ -408,6 +445,26 @@ TEST_F(QueueTest, Check_UploadTaskRunsPeriodically) {
                   cobalt::Event(cobalt::CrashState::kUploaded),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+              }));
+}
+
+TEST_F(QueueTest, Check_HourlyReportUploadedPeriodically) {
+  SetUpQueue({kUploadFailed, kUploadSuccessful});
+  ApplyQueueOps({
+      QueueOps::AddHourlyReport,
+      QueueOps::SetReportingPolicyUpload,
+  });
+  EXPECT_FALSE(queue_->IsEmpty());
+  SimulatePerioidUpload();
+
+  EXPECT_TRUE(queue_->IsEmpty());
+
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 2u),
               }));
 }
 

@@ -307,7 +307,8 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
                                         {
                                             /*upload_policy=*/kConfigEnabled,
                                         },
-                                        /*daily_per_product_quota=*/100u});
+                                        /*daily_per_product_quota=*/100u,
+                                        /*hourly_snapshot=*/true});
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(
                   AllOf(NodeMatches(NameMatches("config")),
@@ -323,7 +324,8 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
                                         {
                                             /*upload_policy=*/kConfigDisabled,
                                         },
-                                        /*per_product_config=*/100});
+                                        /*per_product_config=*/100,
+                                        /*hourly_snapshot=*/true});
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(
                   AllOf(NodeMatches(NameMatches("config")),
@@ -338,7 +340,8 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadReadFromPrivacySettings) {
                                         {
                                             /*upload_policy=*/kConfigReadFromPrivacySettings,
                                         },
-                                        /*per_product_config=*/100u});
+                                        /*per_product_config=*/100u,
+                                        /*hourly_snapshot=*/true});
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(

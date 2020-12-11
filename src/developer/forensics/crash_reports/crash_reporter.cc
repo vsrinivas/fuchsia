@@ -5,6 +5,7 @@
 #include "src/developer/forensics/crash_reports/crash_reporter.h"
 
 #include <fuchsia/mem/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/result.h>
 #include <lib/syslog/cpp/macros.h>
@@ -137,6 +138,10 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
   queue_.WatchNetwork(&network_watcher_);
 
   info_.ExposeReportingPolicy(reporting_policy_watcher_.get());
+
+  if (config.hourly_snapshot) {
+    ScheduleHourlySnapshot();
+  }
 }
 
 void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
@@ -157,6 +162,10 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
   // can take quite some time and blocking clients would defeat the purpose of sharing the snapshot.
   callback(::fit::ok());
 
+  File(std::move(report), /*is_hourly_snapshot=*/false);
+};
+
+void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_hourly_snapshot) {
   const std::string program_name = report.program_name();
   const auto report_id = next_report_id_++;
 
@@ -171,7 +180,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
             return ::fit::error(
                 CrashReporterError{cobalt::CrashState::kDropped, "failed GetProduct"});
           })
-          .and_then([this, report_id](
+          .and_then([this, report_id, is_hourly_snapshot](
                         Product& product) -> ::fit::promise<promise_tuple_t, CrashReporterError> {
             if (!product_quotas_.HasQuotaRemaining(product)) {
               FX_LOGST(INFO, tags_->Get(report_id)) << "Daily report quota reached, won't retry";
@@ -188,7 +197,8 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
             auto device_id_promise = device_id_provider_ptr_.GetId(kChannelOrDeviceIdTimeout);
             auto product_promise = ::fit::make_ok_promise(std::move(product));
 
-            FX_LOGST(INFO, tags_->Get(report_id)) << "Generating report";
+            FX_LOGST(INFO, tags_->Get(report_id))
+                << ((is_hourly_snapshot) ? "Generating hourly snapshot" : "Generating report");
 
             return ::fit::join_promises(std::move(snapshot_uuid_promise),
                                         std::move(device_id_promise), std::move(product_promise))
@@ -199,27 +209,28 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
                   });
                 });
           })
-          .and_then([this, report = std::move(report), report_id](promise_tuple_t& results) mutable
-                    -> ::fit::result<void, CrashReporterError> {
-            auto snapshot_uuid = std::get<0>(results).take_value();
-            auto device_id = std::move(std::get<1>(results));
-            auto product = std::get<2>(results).take_value();
+          .and_then(
+              [this, report = std::move(report), report_id, is_hourly_snapshot](
+                  promise_tuple_t& results) mutable -> ::fit::result<void, CrashReporterError> {
+                auto snapshot_uuid = std::get<0>(results).take_value();
+                auto device_id = std::move(std::get<1>(results));
+                auto product = std::get<2>(results).take_value();
 
-            std::optional<Report> final_report =
-                MakeReport(std::move(report), report_id, snapshot_uuid, utc_provider_.CurrentTime(),
-                           device_id, build_version_, product);
-            if (!final_report.has_value()) {
-              return ::fit::error(
-                  CrashReporterError{cobalt::CrashState::kDropped, "failed MakeReport()"});
-            }
+                std::optional<Report> final_report = MakeReport(
+                    std::move(report), report_id, snapshot_uuid, utc_provider_.CurrentTime(),
+                    device_id, build_version_, product, is_hourly_snapshot);
+                if (!final_report.has_value()) {
+                  return ::fit::error(
+                      CrashReporterError{cobalt::CrashState::kDropped, "failed MakeReport()"});
+                }
 
-            if (!queue_.Add(std::move(final_report.value()))) {
-              return ::fit::error(
-                  CrashReporterError{cobalt::CrashState::kDropped, "failed Queue::Add()"});
-            }
+                if (!queue_.Add(std::move(final_report.value()))) {
+                  return ::fit::error(
+                      CrashReporterError{cobalt::CrashState::kDropped, "failed Queue::Add()"});
+                }
 
-            return ::fit::ok();
-          })
+                return ::fit::ok();
+              })
           .then([this, report_id](::fit::result<void, CrashReporterError>& result) {
             if (result.is_error()) {
               if (result.error().log_message) {
@@ -234,6 +245,26 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
           });
 
   executor_.schedule_task(std::move(promise));
+}
+
+void CrashReporter::ScheduleHourlySnapshot() {
+  async::PostDelayedTask(
+      dispatcher_,
+      [this]() {
+        fuchsia::feedback::GenericCrashReport generic_report;
+        generic_report.set_crash_signature(kHourlySnapshotSignature);
+        fuchsia::feedback::SpecificCrashReport specific_report;
+        specific_report.set_generic(std::move(generic_report));
+        fuchsia::feedback::CrashReport report;
+        report.set_program_name(kHourlySnapshotProgramName)
+            .set_program_uptime(zx_clock_get_monotonic())
+            .set_specific_report(std::move(specific_report));
+
+        File(std::move(report), /*is_hourly_snapshot=*/true);
+
+        ScheduleHourlySnapshot();
+      },
+      zx::hour(1));
 }
 
 }  // namespace crash_reports

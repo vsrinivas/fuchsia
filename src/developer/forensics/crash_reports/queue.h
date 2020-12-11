@@ -42,8 +42,8 @@ class Queue {
   // Add a report to the queue.
   bool Add(Report report);
 
-  uint64_t Size() const { return pending_reports_.size(); }
-  bool IsEmpty() const { return pending_reports_.empty(); }
+  uint64_t Size() const;
+  bool IsEmpty() const;
   bool Contains(ReportId report_id) const;
   ReportId LatestReport() { return pending_reports_.back(); }
 
@@ -54,6 +54,7 @@ class Queue {
 
   // Deletes all of the reports in the queue and store.
   void DeleteAll();
+  void Delete(ReportId report_id);
 
   // Attempts to upload a report
   //
@@ -81,6 +82,10 @@ class Queue {
   ReportingPolicy reporting_policy_{ReportingPolicy::kUndecided};
 
   std::vector<ReportId> pending_reports_;
+
+  // The hourly report is stored separately to avoid having more than one hourly report at a
+  // time.
+  std::optional<ReportId> hourly_report_;
 
   async::TaskClosure upload_all_every_fifteen_minutes_task_;
 

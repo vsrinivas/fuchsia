@@ -181,7 +181,8 @@ class CrashReporterTest : public UnitTestFixture {
                {
                    /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                },
-               /*daily_per_product_quota=*/kDailyPerProductQuota},
+               /*daily_per_product_quota=*/kDailyPerProductQuota,
+               /*houry_snapshot=*/true},
         upload_attempt_results);
   }
 
@@ -472,7 +473,8 @@ TEST_F(CrashReporterTest, NoQuota) {
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
              },
-             /*daily_per_product_quota=*/std::nullopt},
+             /*daily_per_product_quota=*/std::nullopt,
+             /*houry_snapshot=*/true},
       std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota, kUploadSuccessful));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
@@ -731,7 +733,8 @@ TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
              },
-             /*daily_per_product_quota=*/kDailyPerProductQuota},
+             /*daily_per_product_quota=*/kDailyPerProductQuota,
+             /*houry_snapshot=*/true},
       std::vector({kUploadSuccessful}));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
@@ -752,7 +755,8 @@ TEST_F(CrashReporterTest, Archive_OnUserAlreadyOptedOutDataSharing) {
       {
           /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
       },
-      /*daily_per_product_quota=*/kDailyPerProductQuota});
+      /*daily_per_product_quota=*/kDailyPerProductQuota,
+      /*houry_snapshot=*/true});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderTracksNumCalls>(0u));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
@@ -770,7 +774,8 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
              },
-             /*daily_per_product_quota=*/kDailyPerProductQuota},
+             /*daily_per_product_quota=*/kDailyPerProductQuota,
+             /*hourly_snapshot=*/true},
       std::vector({kUploadSuccessful}));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
@@ -795,7 +800,8 @@ TEST_F(CrashReporterTest, Succeed_OnFailedUpload) {
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
              },
-             /*daily_per_product_quota=*/kDailyPerProductQuota},
+             /*daily_per_product_quota=*/kDailyPerProductQuota,
+             /*hourly_snapshot=*/true},
       std::vector({kUploadFailed}));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
@@ -812,7 +818,8 @@ TEST_F(CrashReporterTest, Succeed_OnThrottledUpload) {
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
              },
-             /*daily_per_product_quota=*/kDailyPerProductQuota},
+             /*daily_per_product_quota=*/kDailyPerProductQuota,
+             /*hourly_snapshot=*/true},
       std::vector({kUploadThrottled}));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
@@ -828,7 +835,8 @@ TEST_F(CrashReporterTest, Succeed_OnDisabledUpload) {
                             {
                                 /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
                             },
-                            /*daily_per_product_quota=*/kDailyPerProductQuota});
+                            /*daily_per_product_quota=*/kDailyPerProductQuota,
+                            /*hourly_snapshot=*/true});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
@@ -892,6 +900,23 @@ TEST_F(CrashReporterTest, Succeed_OnDataProviderNotServing) {
   CheckAttachmentsOnServer({kSingleAttachmentKey});
 }
 
+TEST_F(CrashReporterTest, Upload_HourlySnapshot) {
+  SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
+  SetUpDataProviderServer(
+      std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+  SetUpUtcProviderServer({kExternalResponse});
+
+  RunLoopFor(zx::hour(1));
+  EXPECT_THAT(crash_server_->latest_annotations(),
+              IsSupersetOf(Linearize(std::map<std::string, testing::Matcher<std::string>>({
+                  {"ptime", Not(IsEmpty())},
+                  {"signature", kHourlySnapshotSignature},
+              }))));
+  CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
+}
+
 TEST_F(CrashReporterTest, Check_CobaltAfterSuccessfulUpload) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
@@ -916,7 +941,8 @@ TEST_F(CrashReporterTest, Check_CobaltAfterQuotaReached) {
                             {
                                 /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                             },
-                            /*daily_per_product_quota=*/0u});
+                            /*daily_per_product_quota=*/0u,
+                            /*hourly_snapshot=*/true});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));

@@ -1,5 +1,6 @@
 {
     "crash_server" : {
         "upload_policy": "read_from_privacy_settings"
-    }
+    },
+    "hourly_snapshot": true
 }

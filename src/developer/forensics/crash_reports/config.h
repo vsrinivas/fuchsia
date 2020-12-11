@@ -38,6 +38,7 @@ struct CrashServerConfig {
 struct Config {
   CrashServerConfig crash_server;
   std::optional<uint64_t> daily_per_product_quota;
+  bool hourly_snapshot;
 };
 
 // Parses the JSON config at |filepath|. Returns std::nullopt if an error occurs.
