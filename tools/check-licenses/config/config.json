@@ -180,6 +180,22 @@
     {
       "projectRoot": "third_party/imgtec-pvr-rgx-km",
       "licenseLocation": "MIT-COPYING"
+    },
+    {
+      "projectRoot": "zircon/third_party/ulib/boringssl",
+      "licenseLocation": "../../../../LICENSE"
+    },
+    {
+      "projectRoot": "zircon/third_party/ulib/lz4",
+      "licenseLocation": "../../../../LICENSE"
+    },
+    {
+      "projectRoot": "zircon/third_party/ulib/musl/third_party",
+      "licenseLocation": "../COPYRIGHT"
+    },
+    {
+      "projectRoot": "zircon/third_party/ulib/zstd",
+      "licenseLocation": "../../../../LICENSE"
     }
   ],
   "licensePatternDir": "tools/check-licenses/golden/patterns",

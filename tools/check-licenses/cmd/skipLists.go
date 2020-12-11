@@ -43,8 +43,6 @@ var additionalSkipDirs = []string{
 	"third_party/vim",                                                    // TODO(b/172066343): Remove once completed.
 	"third_party/zlib",                                                   // TODO(b/172069467): Remove once completed.
 	"zircon/third_party/scudo",                                           // TODO(b/172586985): Remove once completed.
-	"zircon/third_party/ulib",                                            // TODO(b/172586985): Remove once completed.
-	"zircon/third_party/ulib/musl/third_party",                           // TODO(b/172066115): Remove once completed.
 	"zircon/third_party/zstd",                                            // TODO(b/171584331): Remove once completed.
 	"src/devices/tools/banjo/src/backends/templates",                     // Skip template directories
 }
