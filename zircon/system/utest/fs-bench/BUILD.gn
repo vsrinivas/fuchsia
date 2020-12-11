@@ -45,9 +45,6 @@ test("fs-bench") {
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     "//zircon/system/ulib/unittest",
   ]
-
-  # TODO(fxbug.dev/46859): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 bootfs_test("fs-bench-bootfs-test") {
