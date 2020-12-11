@@ -18,9 +18,10 @@ import (
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
-	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/packet"
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
@@ -117,7 +118,15 @@ type Info struct {
 //
 // TODO: use (*stack.Stack).NICInfo()[nicid].LinkAddress instead of passing
 // linkAddr when broadcasting on multiple interfaces works.
-func NewClient(s *stack.Stack, nicid tcpip.NICID, linkAddr tcpip.LinkAddress, acquisition, backoff, retransmission time.Duration, acquiredFunc AcquiredFunc) *Client {
+func NewClient(
+	s *stack.Stack,
+	nicid tcpip.NICID,
+	linkAddr tcpip.LinkAddress,
+	acquisition,
+	backoff,
+	retransmission time.Duration,
+	acquiredFunc AcquiredFunc,
+) *Client {
 	c := &Client{
 		stack:          s,
 		acquiredFunc:   acquiredFunc,
@@ -187,11 +196,13 @@ func (c *Client) Run(ctx context.Context) {
 				c.stats.InitAcquire.Increment()
 			case renewing:
 				c.stats.RenewAcquire.Increment()
+				// TODO(fxbug.dev/49299): Use c.now here.
 				if tilRebind := time.Until(rebindTime); tilRebind < acquisitionTimeout {
 					acquisitionTimeout = tilRebind
 				}
 			case rebinding:
 				c.stats.RebindAcquire.Increment()
+				// TODO(fxbug.dev/49299): Use c.now here.
 				if tilLeaseExpire := time.Until(leaseExpirationTime); tilLeaseExpire < acquisitionTimeout {
 					acquisitionTimeout = tilLeaseExpire
 				}
@@ -282,7 +293,10 @@ func (c *Client) Run(ctx context.Context) {
 			case renewing, rebinding:
 				// This means the client is stuck in a bad state, because if
 				// the timers are correctly set, previous cases should have matched.
-				panic(fmt.Sprintf("invalid client state %s, now=%s, leaseExpirationTime=%s, renewTime=%s, rebindTime=%s", s, now, leaseExpirationTime, renewTime, rebindTime))
+				panic(fmt.Sprintf(
+					"invalid client state %s, now=%s, leaseExpirationTime=%s, renewTime=%s, rebindTime=%s",
+					s, now, leaseExpirationTime, renewTime, rebindTime,
+				))
 			}
 			waitDuration = renewTime.Sub(now)
 			next = renewing
@@ -369,23 +383,12 @@ func (c *Client) exponentialBackoff(iteration uint) time.Duration {
 	return backoff
 }
 
-// configureEP binds the endpoint to the given NIC and enables port reuse. The former option
-// prevents interference with DHCP clients running on other NICs and the latter allows endpoints
-// configured this way to bind to the ANY address (all zeroes, required before an address has been
-// allocated) and the unspecified address (empty string, required for receiving broadcast and
-// unicast on the same endpoint) simultaneously.
-func configureEP(ep tcpip.Endpoint, nicID tcpip.NICID, reuse bool) error {
-	opt := tcpip.BindToDeviceOption(nicID)
-	if err := ep.SetSockOpt(&opt); err != nil {
-		return fmt.Errorf("send ep SetSockOpt(&%T(%d)): %s", opt, opt, err)
-	}
-	if reuse {
-		ep.SocketOptions().SetReusePort(true)
-	}
-	return nil
-}
-
 func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
+	netEP, err := c.stack.GetNetworkEndpoint(info.NICID, header.IPv4ProtocolNumber)
+	if err != nil {
+		return Config{}, fmt.Errorf("stack.GetNetworkEndpoint(%d, header.IPv4ProtocolNumber): %s", info.NICID, err)
+	}
+
 	// https://tools.ietf.org/html/rfc2131#section-4.3.6 Client messages:
 	//
 	// ---------------------------------------------------------------------
@@ -396,89 +399,33 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 	// |requested-ip  |MUST         |MUST         |MUST NOT     |MUST NOT  |
 	// |ciaddr        |zero         |zero         |IP address   |IP address|
 	// ---------------------------------------------------------------------
-	writeOpts := tcpip.WriteOptions{
-		To: &tcpip.FullAddress{
-			Addr: header.IPv4Broadcast,
-			Port: ServerPort,
-			NIC:  info.NICID,
-		},
+	writeTo := tcpip.FullAddress{
+		Addr: header.IPv4Broadcast,
+		Port: ServerPort,
+		NIC:  info.NICID,
 	}
 
-	var sendEP tcpip.Endpoint
-	switch info.State {
-	case initSelecting:
-		protocolAddress := tcpip.ProtocolAddress{
-			Protocol: ipv4.ProtocolNumber,
-			AddressWithPrefix: tcpip.AddressWithPrefix{
-				Address:   header.IPv4Any,
-				PrefixLen: 0,
-			},
-		}
-		// The IPv4 unspecified/any address should never be used as a primary endpoint.
-		if err := c.stack.AddProtocolAddressWithOptions(info.NICID, protocolAddress, stack.NeverPrimaryEndpoint); err != nil {
-			panic(fmt.Sprintf("AddProtocolAddressWithOptions(%d, %+v, NeverPrimaryEndpoint): %s", info.NICID, protocolAddress, err))
-		}
-		defer func() {
-			if err := c.stack.RemoveAddress(info.NICID, protocolAddress.AddressWithPrefix.Address); err != nil {
-				panic(fmt.Sprintf("RemoveAddress(%d, %s): %s", info.NICID, protocolAddress.AddressWithPrefix.Address, err))
-			}
-		}()
-
-		// Create a dedicated endpoint for writes with an unspecified source address
-		// so it can explicitly bind to the IPv4 unspecified address. We do this so
-		// ep (the endpoint we receive on) can bind to the IPv4 broadcast address
-		// which is where replies will be sent in response to packets sent from this
-		// endpoint. The write endpoint needs to explicitly bind to the unspecified
-		// address because it is marked as NeverPrimaryEndpoint and will not be used
-		// unless explicitly bound to.
-		var err *tcpip.Error
-		sendEP, err = c.stack.NewEndpoint(header.UDPProtocolNumber, header.IPv4ProtocolNumber, &waiter.Queue{})
-		if err != nil {
-			return Config{}, fmt.Errorf("stack.NewEndpoint(%d, %d, _): %s", header.UDPProtocolNumber, header.IPv4ProtocolNumber, err)
-		}
-		defer sendEP.Close()
-		if err := configureEP(sendEP, info.NICID, true); err != nil {
-			return Config{}, fmt.Errorf("configureEP(sendEP, _): %w", err)
-		}
-		sendFrom := tcpip.FullAddress{
-			Addr: protocolAddress.AddressWithPrefix.Address,
-			Port: ClientPort,
-			NIC:  info.NICID,
-		}
-		if err := sendEP.Bind(sendFrom); err != nil {
-			return Config{}, fmt.Errorf("sendEP.Bind(%+v): %s", sendFrom, err)
-		}
-
-	case renewing:
-		writeOpts.To.Addr = info.Server
-	case rebinding:
-	default:
-		panic(fmt.Sprintf("unknown client state: c.State=%s", info.State))
-	}
-	ep, err := c.stack.NewEndpoint(header.UDPProtocolNumber, header.IPv4ProtocolNumber, &c.wq)
+	ep, err := packet.NewEndpoint(c.stack, true /* cooked */, header.IPv4ProtocolNumber, &c.wq)
 	if err != nil {
-		return Config{}, fmt.Errorf("stack.NewEndpoint(): %s", err)
+		return Config{}, fmt.Errorf("packet.NewEndpoint(_, true, header.IPv4ProtocolNumber, _): %s", err)
 	}
 	defer ep.Close()
-	if err := configureEP(ep, info.NICID, sendEP != nil); err != nil {
-		return Config{}, fmt.Errorf("configureEP(ep, _): %w", err)
-	}
-	// Bind to the unspecified address to receive both unicast and broadcast.
+
 	recvOn := tcpip.FullAddress{
-		Port: ClientPort,
-		NIC:  info.NICID,
+		NIC: info.NICID,
 	}
 	if err := ep.Bind(recvOn); err != nil {
 		return Config{}, fmt.Errorf("ep.Bind(%+v): %s", recvOn, err)
 	}
+	recvEP := ep.(tcpip.PacketEndpoint)
 
-	// If we don't have a dedicated send endpoint, use ep.
-	if sendEP == nil {
-		sendEP = ep
-	}
-
-	if writeOpts.To.Addr == header.IPv4Broadcast {
-		sendEP.SocketOptions().SetBroadcast(true)
+	switch info.State {
+	case initSelecting:
+	case renewing:
+		writeTo.Addr = info.Server
+	case rebinding:
+	default:
+		panic(fmt.Sprintf("unknown client state: c.State=%s", info.State))
 	}
 
 	we, ch := waiter.NewChannelEntry(nil)
@@ -506,16 +453,15 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 		if len(requestedAddr.Address) != 0 {
 			discOpts = append(discOpts, option{optReqIPAddr, []byte(requestedAddr.Address)})
 		}
-		// TODO(fxbug.dev/38166): Refactor retransmitDiscover and retransmitRequest
 
 	retransmitDiscover:
 		for i := uint(0); ; i++ {
 			if err := c.send(
 				ctx,
 				info,
-				sendEP,
+				netEP,
 				discOpts,
-				writeOpts,
+				writeTo,
 				xid[:],
 				// DHCPDISCOVER is only performed when the client cannot receive unicast
 				// (i.e. it does not have an allocated IP address), so a broadcast reply
@@ -529,34 +475,34 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 			c.stats.SendDiscovers.Increment()
 
 			// Receive a DHCPOFFER message from a responding DHCP server.
-			timeoutCh := c.retransTimeout(c.exponentialBackoff(i))
+			retransmit := c.retransTimeout(c.exponentialBackoff(i))
 			for {
-				srcAddr, addr, opts, typ, timedOut, err := c.recv(ctx, ep, ch, xid[:], timeoutCh)
+				result, retransmit, err := c.recv(ctx, recvEP, ch, xid[:], retransmit)
 				if err != nil {
-					if timedOut {
+					if retransmit {
 						c.stats.RecvOfferAcquisitionTimeout.Increment()
 					} else {
 						c.stats.RecvOfferErrors.Increment()
 					}
 					return Config{}, fmt.Errorf("recv %s: %w", dhcpOFFER, err)
 				}
-				if timedOut {
+				if retransmit {
 					c.stats.RecvOfferTimeout.Increment()
 					_ = syslog.DebugTf(tag, "recv timeout waiting for %s, retransmitting %s", dhcpOFFER, dhcpDISCOVER)
 					continue retransmitDiscover
 				}
 
-				if typ != dhcpOFFER {
+				if result.typ != dhcpOFFER {
 					c.stats.RecvOfferUnexpectedType.Increment()
-					_ = syslog.DebugTf(tag, "got DHCP type = %s, want = %s", typ, dhcpOFFER)
+					_ = syslog.DebugTf(tag, "got DHCP type = %s, want = %s", result.typ, dhcpOFFER)
 					continue
 				}
 				c.stats.RecvOffers.Increment()
 
 				var cfg Config
-				if err := cfg.decode(opts); err != nil {
+				if err := cfg.decode(result.options); err != nil {
 					c.stats.RecvOfferOptsDecodeErrors.Increment()
-					return Config{}, fmt.Errorf("%s decode: %w", typ, err)
+					return Config{}, fmt.Errorf("%s decode: %w", result.typ, err)
 				}
 
 				// We can overwrite the client's server notion, since there's no
@@ -572,11 +518,21 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 
 				prefixLen, _ := net.IPMask(cfg.SubnetMask).Size()
 				requestedAddr = tcpip.AddressWithPrefix{
-					Address:   addr,
+					Address:   result.yiaddr,
 					PrefixLen: prefixLen,
 				}
 
-				_ = syslog.InfoTf(tag, "got %s from %s: Address=%s, server=%s, leaseLength=%s, renewTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr, info.Server, cfg.LeaseLength, cfg.RenewTime, cfg.RebindTime)
+				_ = syslog.InfoTf(
+					tag,
+					"got %s from %s: Address=%s, server=%s, leaseLength=%s, renewTime=%s, rebindTime=%s",
+					result.typ,
+					result.source,
+					requestedAddr,
+					info.Server,
+					cfg.LeaseLength,
+					cfg.RenewTime,
+					cfg.RebindTime,
+				)
 
 				break retransmitDiscover
 			}
@@ -599,9 +555,9 @@ retransmitRequest:
 		if err := c.send(
 			ctx,
 			info,
-			sendEP,
+			netEP,
 			reqOpts,
-			writeOpts,
+			writeTo,
 			xid[:],
 			info.State == initSelecting, /* broadcast */
 			info.State != initSelecting, /* ciaddr */
@@ -612,93 +568,145 @@ retransmitRequest:
 		c.stats.SendRequests.Increment()
 
 		// Receive a DHCPACK/DHCPNAK from the server.
-		timeoutCh := c.retransTimeout(c.exponentialBackoff(i))
+		retransmit := c.retransTimeout(c.exponentialBackoff(i))
 		for {
-			fromAddr, addr, opts, typ, timedOut, err := c.recv(ctx, ep, ch, xid[:], timeoutCh)
+			result, retransmit, err := c.recv(ctx, recvEP, ch, xid[:], retransmit)
 			if err != nil {
-				if timedOut {
+				if retransmit {
 					c.stats.RecvAckAcquisitionTimeout.Increment()
 				} else {
 					c.stats.RecvAckErrors.Increment()
 				}
 				return Config{}, fmt.Errorf("recv %s: %w", dhcpACK, err)
 			}
-			if timedOut {
+			if retransmit {
 				c.stats.RecvAckTimeout.Increment()
 				_ = syslog.DebugTf(tag, "recv timeout waiting for %s, retransmitting %s", dhcpACK, dhcpREQUEST)
 				continue retransmitRequest
 			}
 
-			switch typ {
+			switch result.typ {
 			case dhcpACK:
 				var cfg Config
-				if err := cfg.decode(opts); err != nil {
+				if err := cfg.decode(result.options); err != nil {
 					c.stats.RecvAckOptsDecodeErrors.Increment()
-					return Config{}, fmt.Errorf("%s decode: %w", typ, err)
+					return Config{}, fmt.Errorf("%s decode: %w", result.typ, err)
 				}
 				prefixLen, _ := net.IPMask(cfg.SubnetMask).Size()
 				addr := tcpip.AddressWithPrefix{
-					Address:   addr,
+					Address:   result.yiaddr,
 					PrefixLen: prefixLen,
 				}
 				if addr != requestedAddr {
 					c.stats.RecvAckAddrErrors.Increment()
-					return Config{}, fmt.Errorf("%s with unexpected address=%s expected=%s", typ, addr, requestedAddr)
+					return Config{}, fmt.Errorf("%s with unexpected address=%s expected=%s", result.typ, addr, requestedAddr)
 				}
 				c.stats.RecvAcks.Increment()
 
 				// Now that we've successfully acquired the address, update the client state.
 				info.Addr = requestedAddr
-				_ = syslog.InfoTf(tag, "got %s from %s with leaseLength=%s", typ, fromAddr.Addr, cfg.LeaseLength)
+				_ = syslog.InfoTf(tag, "got %s from %s with leaseLength=%s", result.typ, result.source, cfg.LeaseLength)
 				return cfg, nil
 			case dhcpNAK:
-				if msg := opts.message(); len(msg) != 0 {
+				if msg := result.options.message(); len(msg) != 0 {
 					c.stats.RecvNakErrors.Increment()
-					return Config{}, fmt.Errorf("%s: %x", typ, msg)
+					return Config{}, fmt.Errorf("%s: %x", result.typ, msg)
 				}
 				c.stats.RecvNaks.Increment()
-				_ = syslog.InfoTf(tag, "got %s from %s", typ, fromAddr.Addr)
+				_ = syslog.InfoTf(tag, "got %s from %s", result.typ, result.source)
 				// We lost the lease.
 				return Config{
 					Declined: true,
 				}, nil
 			default:
 				c.stats.RecvAckUnexpectedType.Increment()
-				_ = syslog.DebugTf(tag, "got DHCP type = %s from %s, want = %s or %s", typ, fromAddr.Addr, dhcpACK, dhcpNAK)
+				_ = syslog.DebugTf(tag, "got DHCP type = %s from %s, want = %s or %s", result.typ, result.source, dhcpACK, dhcpNAK)
 				continue
 			}
 		}
 	}
 }
 
-func (c *Client) send(ctx context.Context, info *Info, ep tcpip.Endpoint, opts options, writeOpts tcpip.WriteOptions, xid []byte, broadcast, ciaddr bool) error {
-	h := make(hdr, headerBaseSize+opts.len()+1)
-	h.init()
-	h.setOp(opRequest)
-	copy(h.xidbytes(), xid)
+func (c *Client) send(
+	ctx context.Context,
+	info *Info,
+	ep stack.NetworkEndpoint,
+	opts options,
+	writeTo tcpip.FullAddress,
+	xid []byte,
+	broadcast,
+	ciaddr bool,
+) error {
+	dhcpLength := headerBaseSize + opts.len() + 1
+	b := buffer.NewPrependable(header.IPv4MinimumSize + header.UDPMinimumSize + dhcpLength)
+	dhcpPayload := hdr(b.Prepend(dhcpLength))
+	dhcpPayload.init()
+	dhcpPayload.setOp(opRequest)
+	if l := copy(dhcpPayload.xidbytes(), xid); l != len(xid) {
+		panic(fmt.Sprintf("failed to copy xid bytes, want=%d got=%d", len(xid), l))
+	}
 	if broadcast {
-		h.setBroadcast()
+		dhcpPayload.setBroadcast()
 	}
 	if ciaddr {
-		copy(h.ciaddr(), info.Addr.Address)
+		if l := copy(dhcpPayload.ciaddr(), info.Addr.Address); l != len(info.Addr.Address) {
+			panic(fmt.Sprintf("failed to copy info.Addr.Address bytes, want=%d got=%d", len(info.Addr.Address), l))
+		}
 	}
 
-	copy(h.chaddr(), info.LinkAddr)
-	h.setOptions(opts)
+	if l := copy(dhcpPayload.chaddr(), info.LinkAddr); l != len(info.LinkAddr) {
+		panic(fmt.Sprintf("failed to copy all info.LinkAddr bytes, want=%d got=%d", len(info.LinkAddr), l))
+	}
+	dhcpPayload.setOptions(opts)
 
 	typ, err := opts.dhcpMsgType()
 	if err != nil {
 		panic(err)
 	}
 
-	_ = syslog.DebugTf(tag, "send %s to %s:%d on NIC:%d (bcast=%t ciaddr=%t)", typ, writeOpts.To.Addr, writeOpts.To.Port, writeOpts.To.NIC, broadcast, ciaddr)
+	_ = syslog.DebugTf(
+		tag,
+		"send %s from %s:%d to %s:%d on NIC:%d (bcast=%t ciaddr=%t)",
+		typ,
+		info.Addr.Address, ClientPort,
+		writeTo.Addr, writeTo.Port, writeTo.NIC,
+		broadcast, ciaddr,
+	)
+
+	// TODO(https://gvisor.dev/issues/4957): Use more streamlined serialization
+	// functions when available.
+
+	// Initialize the UDP header.
+	udp := header.UDP(b.Prepend(header.UDPMinimumSize))
+	length := uint16(b.UsedLength())
+	udp.Encode(&header.UDPFields{
+		SrcPort: ClientPort,
+		DstPort: writeTo.Port,
+		Length:  length,
+	})
+	xsum := header.PseudoHeaderChecksum(header.UDPProtocolNumber, info.Addr.Address, writeTo.Addr, length)
+	xsum = header.Checksum(dhcpPayload, xsum)
+	udp.SetChecksum(^udp.CalculateChecksum(xsum))
+
+	// Initialize the IP header.
+	ip := header.IPv4(b.Prepend(header.IPv4MinimumSize))
+	ip.Encode(&header.IPv4Fields{
+		TotalLength: uint16(b.UsedLength()),
+		Flags:       header.IPv4FlagDontFragment,
+		ID:          0,
+		TTL:         ep.DefaultTTL(),
+		TOS:         stack.DefaultTOS,
+		Protocol:    uint8(header.UDPProtocolNumber),
+		SrcAddr:     info.Addr.Address,
+		DstAddr:     writeTo.Addr,
+	})
+	ip.SetChecksum(^ip.CalculateChecksum())
 
 	for {
-		payload := tcpip.SlicePayload(h)
-		n, resCh, err := ep.Write(payload, writeOpts)
+		linkAddress, resCh, err := c.stack.GetLinkAddress(info.NICID, writeTo.Addr, info.Addr.Address, header.IPv4ProtocolNumber, nil)
 		if resCh != nil {
-			if err != tcpip.ErrNoLinkAddress {
-				panic(fmt.Sprintf("err=%v inconsistent with presence of resCh", err))
+			if err != tcpip.ErrWouldBlock {
+				panic(fmt.Sprintf("err=%s inconsistent with presence of resCh", err))
 			}
 			select {
 			case <-resCh:
@@ -707,42 +715,96 @@ func (c *Client) send(ctx context.Context, info *Info, ep tcpip.Endpoint, opts o
 				return fmt.Errorf("client address resolution: %w", ctx.Err())
 			}
 		}
-		if err == tcpip.ErrWouldBlock {
-			panic(fmt.Sprintf("UDP writes are nonblocking; saw %d/%d", n, len(payload)))
-		}
 		if err != nil {
-			return fmt.Errorf("client write: %s", err)
+			return fmt.Errorf("failed to resolve link address: %s", err)
+		}
+		if err := c.stack.WritePacketToRemote(
+			writeTo.NIC,
+			linkAddress,
+			header.IPv4ProtocolNumber,
+			b.View().ToVectorisedView(),
+		); err != nil {
+			return fmt.Errorf("failed to write packet: %s", err)
 		}
 		return nil
 	}
 }
 
-func (c *Client) recv(ctx context.Context, ep tcpip.Endpoint, ch <-chan struct{}, xid []byte, timeoutCh <-chan time.Time) (tcpip.FullAddress, tcpip.Address, options, dhcpMsgType, bool, error) {
+type recvResult struct {
+	source  tcpip.Address
+	yiaddr  tcpip.Address
+	options options
+	typ     dhcpMsgType
+}
+
+func (c *Client) recv(
+	ctx context.Context,
+	ep tcpip.PacketEndpoint,
+	read <-chan struct{},
+	xid []byte,
+	retransmit <-chan time.Time,
+) (recvResult, bool, error) {
+	var info tcpip.LinkPacketInfo
 	for {
-		var srcAddr tcpip.FullAddress
-		v, _, err := ep.Read(&srcAddr)
+		v, _, err := ep.ReadPacket(nil, &info)
 		if err == tcpip.ErrWouldBlock {
 			select {
-			case <-ch:
+			case <-read:
 				continue
-			case <-timeoutCh:
-				return tcpip.FullAddress{}, "", nil, 0, true, nil
+			case <-retransmit:
+				return recvResult{}, true, nil
 			case <-ctx.Done():
-				return tcpip.FullAddress{}, "", nil, 0, true, fmt.Errorf("read: %w", ctx.Err())
+				return recvResult{}, true, fmt.Errorf("read: %w", ctx.Err())
 			}
 		}
 		if err != nil {
-			return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("read: %s", err)
+			return recvResult{}, false, fmt.Errorf("read: %s", err)
 		}
 
-		h := hdr(v)
+		if info.Protocol != header.IPv4ProtocolNumber {
+			continue
+		}
 
+		switch info.PktType {
+		case tcpip.PacketHost, tcpip.PacketBroadcast:
+		default:
+			continue
+		}
+
+		ip := header.IPv4(v)
+		if !ip.IsValid(len(v)) {
+			continue
+		}
+		// TODO(https://gvisor.dev/issues/5049): Abstract away checksum validation when possible.
+		if ip.CalculateChecksum() != 0xffff {
+			continue
+		}
+		udp := header.UDP(ip.Payload())
+		if len(udp) < header.UDPMinimumSize {
+			continue
+		}
+		if udp.DestinationPort() != ClientPort {
+			continue
+		}
+		if udp.Length() > uint16(len(udp)) {
+			continue
+		}
+		payload := udp.Payload()
+		if xsum := udp.Checksum(); xsum != 0 {
+			xsum := header.PseudoHeaderChecksum(header.UDPProtocolNumber, ip.DestinationAddress(), ip.SourceAddress(), udp.Length())
+			xsum = header.Checksum(payload, xsum)
+			if udp.CalculateChecksum(xsum) != 0xffff {
+				continue
+			}
+		}
+
+		h := hdr(payload)
 		if !h.isValid() {
-			return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("invalid hdr: %x", h)
+			return recvResult{}, false, fmt.Errorf("invalid hdr: %x", h)
 		}
 
 		if op := h.op(); op != opReply {
-			return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("op-code=%s, want=%s", h, opReply)
+			return recvResult{}, false, fmt.Errorf("op-code=%s, want=%s", h, opReply)
 		}
 
 		if !bytes.Equal(h.xidbytes(), xid[:]) {
@@ -753,15 +815,20 @@ func (c *Client) recv(ctx context.Context, ep tcpip.Endpoint, ch <-chan struct{}
 		{
 			opts, err := h.options()
 			if err != nil {
-				return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("invalid options: %w", err)
+				return recvResult{}, false, fmt.Errorf("invalid options: %w", err)
 			}
 
 			typ, err := opts.dhcpMsgType()
 			if err != nil {
-				return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("invalid type: %w", err)
+				return recvResult{}, false, fmt.Errorf("invalid type: %w", err)
 			}
 
-			return srcAddr, tcpip.Address(h.yiaddr()), opts, typ, false, nil
+			return recvResult{
+				source:  ip.SourceAddress(),
+				yiaddr:  tcpip.Address(h.yiaddr()),
+				options: opts,
+				typ:     typ,
+			}, false, nil
 		}
 	}
 }

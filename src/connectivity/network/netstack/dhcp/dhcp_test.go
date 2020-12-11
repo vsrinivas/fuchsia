@@ -23,6 +23,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/loopback"
 	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
+	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
@@ -59,6 +60,7 @@ var (
 func createTestStack() *stack.Stack {
 	return stack.New(stack.Options{
 		NetworkProtocols: []stack.NetworkProtocolFactory{
+			arp.NewProtocol,
 			ipv4.NewProtocol,
 		},
 		TransportProtocols: []stack.TransportProtocolFactory{
@@ -108,12 +110,14 @@ func (e *endpoint) IsAttached() bool {
 func (*endpoint) ARPHardwareType() header.ARPHardwareType { return header.ARPHardwareNone }
 
 func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
-	if fn := e.onWritePacket; fn != nil {
-		p := fn(pkt)
-		if p == nil {
-			return nil
+	if protocol == ipv4.ProtocolNumber {
+		if fn := e.onWritePacket; fn != nil {
+			p := fn(pkt)
+			if p == nil {
+				return nil
+			}
+			pkt = p
 		}
-		pkt = p
 	}
 	for _, remote := range e.remote {
 		if !remote.IsAttached() {
@@ -158,64 +162,6 @@ func newZeroJitterClient(s *stack.Stack, nicid tcpip.NICID, linkAddr tcpip.LinkA
 	// delays or channel select races.
 	c.rand = rand.New(&randSourceStub{src: int64(time.Second)})
 	return c
-}
-
-// TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP tests that the IPv4
-// unspecified address is not a primary address when doing DHCP.
-func TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP(t *testing.T) {
-	sent := make(chan struct{}, 1)
-	e := endpoint{
-		onWritePacket: func(b *stack.PacketBuffer) *stack.PacketBuffer {
-			select {
-			case sent <- struct{}{}:
-			default:
-			}
-			return b
-		},
-	}
-	s := createTestStack()
-	addEndpointToStack(t, nil, testNICID, s, &e)
-	c := newZeroJitterClient(s, testNICID, linkAddr1, defaultAcquireTimeout, defaultBackoffTime, defaultRetransTime, nil)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	errs := make(chan error)
-	defer close(errs)
-	go func() {
-		info := c.Info()
-		_, err := acquire(ctx, c, &info)
-		errs <- err
-	}()
-
-	select {
-	case err := <-errs:
-		if errors.Is(err, context.DeadlineExceeded) {
-			t.Fatal("timed out waiting for a DHCP packet to be sent")
-		}
-		t.Fatalf("acquire(_, _, _): %s", err)
-	case <-sent:
-		// Be careful not to do this if we read off the channel above to avoid
-		// deadlocking when the test fails in the clause above.
-		defer func() {
-			// Defers run inside-out, so this one will run before the context is
-			// cancelled; multiple cancellations are harmless.
-			cancel()
-			if err := <-errs; !errors.Is(err, context.Canceled) {
-				t.Error(err)
-			}
-		}()
-	}
-
-	nicInfo, ok := s.NICInfo()[testNICID]
-	if !ok {
-		t.Fatalf("stack.NICInfo()[%d]: %s", testNICID, tcpip.ErrUnknownNICID)
-	}
-	for _, p := range nicInfo.ProtocolAddresses {
-		if p.Protocol == header.IPv4ProtocolNumber && p.AddressWithPrefix.Address == header.IPv4Any {
-			t.Fatal("got unexpected IPv4 unspecified address")
-		}
-	}
 }
 
 // TestSimultaneousDHCPClients makes two clients that are trying to get DHCP
@@ -567,7 +513,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				// First acquisition.
 				0,
 				// Trasition to renew.
-				(defaultLeaseLength.Duration() / 2),
+				defaultLeaseLength.Duration() / 2,
 				// Retry after NAK.
 				0,
 				// Second acquisition after NAK.
@@ -588,7 +534,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				// First acquisition.
 				0,
 				// Trasition to renew.
-				(defaultLeaseLength.Duration() * 875 / 1000),
+				defaultLeaseLength.Duration() * 875 / 1000,
 				// Retry after NAK.
 				0,
 				// Second acquisition after NAK.
@@ -1156,7 +1102,7 @@ func TestStateTransition(t *testing.T) {
 				}
 
 				info.Addr = tcpip.AddressWithPrefix{
-					Address:   tcpip.Address("\xc0\xa8\x03\x02"),
+					Address:   "\xc0\xa8\x03\x02",
 					PrefixLen: 24,
 				}
 				return Config{
@@ -1263,7 +1209,7 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 		}
 		firstAcquisition = false
 		info.Addr = tcpip.AddressWithPrefix{
-			Address:   tcpip.Address("\xc0\xa8\x03\x02"),
+			Address:   "\xc0\xa8\x03\x02",
 			PrefixLen: 24,
 		}
 		return Config{LeaseLength: leaseLength}, nil

@@ -9,6 +9,7 @@ rustc_test("routes") {
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
+    "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor-rustc",
     "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
@@ -22,6 +23,7 @@ rustc_test("routes") {
     "//src/lib/network/fidl_fuchsia_netstack_ext",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:matches",
   ]
   sources = [ "src/lib.rs" ]
 }
