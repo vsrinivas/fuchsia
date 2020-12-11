@@ -1,0 +1,10 @@
+# Commits in this file will be ignored by git hyper-blame.
+
+# Reformat //zircon/kernel
+b45c83e0a3035f185d41e130956187826c30a086
+# Reformat most of the tree
+b1c2f508a59e6c87c617852ed3e424693a392646
+# Reformat //zircon/third_party/musl
+7c5e521391fddb98fd8f6970da7c410899ddf5cf
+# Reformat .c files in //zircon
+08ad01f521b1523b29fbacf281f3ce3317ef9063
