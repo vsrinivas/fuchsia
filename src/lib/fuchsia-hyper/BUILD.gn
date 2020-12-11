@@ -17,6 +17,7 @@ rustc_library("fuchsia-hyper") {
     "//third_party/rust_crates:http",
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:hyper-rustls",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:rustls",
     "//third_party/rust_crates:tokio",
   ]

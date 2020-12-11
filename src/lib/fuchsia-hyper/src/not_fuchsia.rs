@@ -11,13 +11,21 @@ use {
     futures::io,
     http::uri::{Scheme, Uri},
     hyper::service::Service,
+    log::warn,
     rustls::ClientConfig,
     std::net::ToSocketAddrs,
 };
 
 pub(crate) fn configure_cert_store(tls: &mut ClientConfig) {
-    tls.root_store =
-        rustls_native_certs::load_native_certs().expect("could not load platform certs");
+    tls.root_store = rustls_native_certs::load_native_certs().unwrap_or_else(|(certs, err)| {
+        if certs.is_some() {
+            warn!("One or more TLS certificates in root store failed to load: {}", err);
+        }
+        certs.expect(&format!(
+            "Unable to load any TLS CA certificates from platform root store: {}",
+            err
+        ))
+    })
 }
 
 /// A Async-std-compatible implementation of hyper's `Connect` trait which allows
