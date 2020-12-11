@@ -65,7 +65,7 @@ group("tests") {
     "core/bt-gap:tests",
     "core/bt-host:fuzzers",
     "hci:tests",
-    "lib/async-helpers:async-helpers-tests",
+    "lib/async-helpers:tests",
     "lib/bt-a2dp:tests",
     "lib/bt-avctp:tests",
     "lib/bt-avdtp:tests",
