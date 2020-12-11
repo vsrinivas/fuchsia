@@ -31,6 +31,24 @@ should build them all and make them available:
 The profile attempts to determine if encoding SBC audio will fail, and quits with a message on
 startup if it cannot.
 
+### Profile Startup
+
+There are two ways that the A2DP profile can be started on a fuchsia system: automatically started
+on boot, or through service discovery.
+
+When started through service discovery, the profile will
+not be started until the A2DP Audio Mode is set through the `fuchsia.bluetooth.a2dp.AudioMode` FIDL
+service. To start the profile through service discovery, include the `service_config` target in
+your fuchsia build set, for example by using
+`--with //src/connectivity/bluetooth/profiles/bt-a2dp:service_config` on an `fx set` line, or by
+depending on it alongside the bt-a2dp component in your product config target.
+
+When started automatically, the `fuchsia.bluetooth.a2dp.AudioMode` FIDL service will not be
+available. To start the A2DP profile automatically on startup include the `startup_config` target
+in your fuchsia build set by using
+`--with //src/connectivity/bluetooth/profiles/bt-a2dp:startup_config` on an `fx set` line, or by
+depending on it alongside the bt-a2dp component in your product config target.
+
 ## Inspection
 
 The `bt-a2dp.cmx` component implements

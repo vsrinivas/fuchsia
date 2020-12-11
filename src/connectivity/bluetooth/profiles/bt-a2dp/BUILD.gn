@@ -113,6 +113,12 @@ config_data("startup_config") {
   sources = [ "startup.config" ]
 }
 
+config_data("service_config") {
+  for_pkg = "sysmgr"
+  outputs = [ "bt-a2dp-manager.config" ]
+  sources = [ "service.config" ]
+}
+
 rustc_test("encoding_integration_bin") {
   name = "bt_a2dp_encoding_tests"
   edition = "2018"
