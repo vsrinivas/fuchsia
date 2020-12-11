@@ -21,7 +21,7 @@ macro_rules! tests {
             fn $fn() {
                 let mut filename = stringify!($fn).replace("_", "-");
                 filename.push_str(".far");
-                let file = File::open(Path::new("/pkg/data").join(filename)).unwrap();
+                let file = File::open(Path::new("/pkg/data/invalid-fars").join(filename)).unwrap();
                 assert_matches!(Reader::new(file), $err $(if $guard)?);
             }
         )+

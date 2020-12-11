@@ -48,7 +48,7 @@ var (
 
 func TestInvalidFars(t *testing.T) {
 	for _, fn := range invalidTestFiles {
-		f, err := os.Open("/pkg/data/" + fn)
+		f, err := os.Open("/pkg/data/invalid-fars/" + fn)
 		if err != nil {
 			t.Errorf("cannot open test file: %v", err)
 			continue

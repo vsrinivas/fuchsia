@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 if (current_toolchain == host_toolchain) {
   rustc_binary("generator") {
@@ -19,46 +19,51 @@ if (current_toolchain == host_toolchain) {
   }
 }
 
-output_dir = "$root_gen_dir/invalid-fars"
-
 compiled_action("generate-invalid-fars") {
   tool = ":generator"
-  outputs = [
-    "$output_dir/invalid-magic-bytes.far",
-    "$output_dir/index-entries-length-not-a-multiple-of-24-bytes.far",
-    "$output_dir/directory-names-index-entry-before-directory-index-entry.far",
-    "$output_dir/two-directory-index-entries.far",
-    "$output_dir/two-directory-names-index-entries.far",
-    "$output_dir/no-directory-index-entry.far",
-    "$output_dir/no-directory-names-index-entry.far",
-    "$output_dir/directory-chunk-length-not-a-multiple-of-32-bytes.far",
-    "$output_dir/directory-chunk-not-tightly-packed.far",
-    "$output_dir/path-data-offset-too-large.far",
-    "$output_dir/path-data-length-too-large.far",
-    "$output_dir/directory-entries-not-sorted.far",
-    "$output_dir/directory-entries-with-same-name.far",
-    "$output_dir/directory-names-chunk-length-not-a-multiple-of-8-bytes.far",
-    "$output_dir/directory-names-chunk-not-tightly-packed.far",
-    "$output_dir/directory-names-chunk-before-directory-chunk.far",
-    "$output_dir/directory-names-chunk-overlaps-directory-chunk.far",
-    "$output_dir/zero-length-name.far",
-    "$output_dir/name-with-null-character.far",
-    "$output_dir/name-with-leading-slash.far",
-    "$output_dir/name-with-trailing-slash.far",
-    "$output_dir/name-with-empty-segment.far",
-    "$output_dir/name-with-dot-segment.far",
-    "$output_dir/name-with-dot-dot-segment.far",
-    "$output_dir/content-chunk-starts-early.far",
-    "$output_dir/content-chunk-starts-late.far",
-    "$output_dir/second-content-chunk-starts-early.far",
-    "$output_dir/second-content-chunk-starts-late.far",
-    "$output_dir/content-chunk-not-zero-padded.far",
-    "$output_dir/content-chunk-overlap.far",
-    "$output_dir/content-chunk-not-tightly-packed.far",
-    "$output_dir/content-chunk-offset-past-end-of-file.far",
-  ]
   args = [
     "--output-dir",
-    rebase_path(output_dir, root_build_dir),
+    rebase_path(target_out_dir, root_build_dir),
   ]
+  outputs = [
+    "${target_out_dir}/invalid-magic-bytes.far",
+    "${target_out_dir}/index-entries-length-not-a-multiple-of-24-bytes.far",
+    "${target_out_dir}/directory-names-index-entry-before-directory-index-entry.far",
+    "${target_out_dir}/two-directory-index-entries.far",
+    "${target_out_dir}/two-directory-names-index-entries.far",
+    "${target_out_dir}/no-directory-index-entry.far",
+    "${target_out_dir}/no-directory-names-index-entry.far",
+    "${target_out_dir}/directory-chunk-length-not-a-multiple-of-32-bytes.far",
+    "${target_out_dir}/directory-chunk-not-tightly-packed.far",
+    "${target_out_dir}/path-data-offset-too-large.far",
+    "${target_out_dir}/path-data-length-too-large.far",
+    "${target_out_dir}/directory-entries-not-sorted.far",
+    "${target_out_dir}/directory-entries-with-same-name.far",
+    "${target_out_dir}/directory-names-chunk-length-not-a-multiple-of-8-bytes.far",
+    "${target_out_dir}/directory-names-chunk-not-tightly-packed.far",
+    "${target_out_dir}/directory-names-chunk-before-directory-chunk.far",
+    "${target_out_dir}/directory-names-chunk-overlaps-directory-chunk.far",
+    "${target_out_dir}/zero-length-name.far",
+    "${target_out_dir}/name-with-null-character.far",
+    "${target_out_dir}/name-with-leading-slash.far",
+    "${target_out_dir}/name-with-trailing-slash.far",
+    "${target_out_dir}/name-with-empty-segment.far",
+    "${target_out_dir}/name-with-dot-segment.far",
+    "${target_out_dir}/name-with-dot-dot-segment.far",
+    "${target_out_dir}/content-chunk-starts-early.far",
+    "${target_out_dir}/content-chunk-starts-late.far",
+    "${target_out_dir}/second-content-chunk-starts-early.far",
+    "${target_out_dir}/second-content-chunk-starts-late.far",
+    "${target_out_dir}/content-chunk-not-zero-padded.far",
+    "${target_out_dir}/content-chunk-overlap.far",
+    "${target_out_dir}/content-chunk-not-tightly-packed.far",
+    "${target_out_dir}/content-chunk-offset-past-end-of-file.far",
+  ]
+}
+
+resource("resource") {
+  testonly = true
+  deps = [ ":generate-invalid-fars" ]
+  sources = get_target_outputs(":generate-invalid-fars")
+  outputs = [ "data/invalid-fars/{{source_file_part}}" ]
 }
