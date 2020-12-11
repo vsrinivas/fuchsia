@@ -2276,10 +2276,18 @@ compiled_action("system_snapshot") {
   ]
 }
 
+# initialize and prepare the package repository.
+pm_prepare_publish("prepare_publish") {
+  testonly = true
+}
+
 # publish all packages to the package repository.
 pm_publish("publish") {
   testonly = true
-  deps = [ ":all_package_manifests.list" ]
+  deps = [
+    ":all_package_manifests.list",
+    ":prepare_publish",
+  ]
   inputs = [ all_package_manifests_list ]
 }
 
