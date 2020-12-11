@@ -16,7 +16,7 @@ static bool vmm_alloc_smoke_test() {
   // allocate a region of memory
   void* ptr;
   auto kaspace = VmAspace::kernel_aspace();
-  auto err = kaspace->Alloc("test", alloc_size, &ptr, 0, 0, kArchRwFlags);
+  auto err = kaspace->Alloc("test", alloc_size, &ptr, 0, VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
   ASSERT_EQ(ZX_OK, err, "VmAspace::Alloc region of memory");
   ASSERT_NONNULL(ptr, "VmAspace::Alloc region of memory");
 
