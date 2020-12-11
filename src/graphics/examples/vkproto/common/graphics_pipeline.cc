@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/graphics/examples/vkproto/common/pipeline.h"
+#include "src/graphics/examples/vkproto/common/graphics_pipeline.h"
 
 #include <unistd.h>
 
@@ -14,14 +14,14 @@
 
 namespace vkp {
 
-Pipeline::Pipeline(std::shared_ptr<vk::Device> device, const vk::Extent2D &extent,
-                   std::shared_ptr<RenderPass> vkp_render_pass)
+GraphicsPipeline::GraphicsPipeline(std::shared_ptr<vk::Device> device, const vk::Extent2D &extent,
+                                   std::shared_ptr<RenderPass> vkp_render_pass)
     : initialized_(false),
       device_(device),
       extent_(extent),
       vkp_render_pass_(std::move(vkp_render_pass)) {}
 
-Pipeline::~Pipeline() {
+GraphicsPipeline::~GraphicsPipeline() {
   if (initialized_) {
     device_->destroyPipelineLayout(pipeline_layout_);
     device_->destroyPipeline(pipeline_);
@@ -29,7 +29,7 @@ Pipeline::~Pipeline() {
   }
 }
 
-bool Pipeline::Init() {
+bool GraphicsPipeline::Init() {
   RTN_IF_MSG(false, initialized_, "Pipeline is already initialized.\n");
   RTN_IF_MSG(false, !device_, "Device must be initialized.\n");
 
@@ -110,6 +110,6 @@ bool Pipeline::Init() {
   return true;
 }
 
-const vk::Pipeline &Pipeline::get() const { return pipeline_; }
+const vk::Pipeline &GraphicsPipeline::get() const { return pipeline_; }
 
 }  // namespace vkp

@@ -58,7 +58,7 @@ bool VkLoopTest::Initialize() {
   }
 
   ctx_ = VulkanContext::Builder{}
-             .set_queue_flag_bits(vk::QueueFlagBits::eCompute)
+             .set_queue_flags(vk::QueueFlagBits::eCompute)
              .set_validation_errors_ignored(true)
              .Unique();
   if (!ctx_) {

@@ -49,21 +49,21 @@ class VulkanContext {
   class Builder;
   class ContextWithUserData;
   static constexpr int kInvalidQueueFamily = -1;
-  static constexpr vk::QueueFlagBits kDefaultQueueFlagBits = vk::QueueFlagBits::eGraphics;
+  static constexpr vk::QueueFlags kDefaultQueueFlags = vk::QueueFlagBits::eGraphics;
   static vk::DebugUtilsMessengerCreateInfoEXT default_debug_info_s_;
   static ContextWithUserData default_debug_callback_user_data_s_;
 
   VulkanContext(const vk::InstanceCreateInfo &instance_info, size_t physical_device_index,
                 const vk::DeviceCreateInfo &device_info,
                 const vk::DeviceQueueCreateInfo &queue_info,
-                const vk::QueueFlagBits &queue_flag_bits = vk::QueueFlagBits::eGraphics,
+                const vk::QueueFlags &queue_flags = vk::QueueFlagBits::eGraphics,
                 const vk::DebugUtilsMessengerCreateInfoEXT &debug_info = default_debug_info_s_,
                 ContextWithUserData debug_user_data = default_debug_callback_user_data_s_,
                 vk::Optional<const vk::AllocationCallbacks> allocator = nullptr,
                 bool validation_layers_enabled = true, bool validation_layers_ignored_ = false);
 
   explicit VulkanContext(size_t physical_device_index,
-                         const vk::QueueFlagBits &queue_flag_bits = vk::QueueFlagBits::eGraphics,
+                         const vk::QueueFlags &queue_flags = vk::QueueFlagBits::eGraphics,
                          vk::Optional<const vk::AllocationCallbacks> allocator = nullptr);
 
   bool Init();
@@ -74,7 +74,7 @@ class VulkanContext {
   bool set_instance_info(const vk::InstanceCreateInfo &v);
   bool set_device_info(const vk::DeviceCreateInfo &v);
   bool set_queue_info(const vk::DeviceQueueCreateInfo &v);
-  bool set_queue_flag_bits(const vk::QueueFlagBits &v);
+  bool set_queue_flags(const vk::QueueFlags &v);
   void set_validation_layers_enabled(bool v) { validation_layers_enabled_ = v; }
   // Set to true to ignore validation errors and allow the test to pass even with errors.
   void set_validation_errors_ignored(bool v) { validation_errors_ignored_ = v; }
@@ -91,7 +91,7 @@ class VulkanContext {
   const vk::UniqueDevice &device() const;
   const vk::Queue &queue() const;
   int queue_family_index() const;
-  const vk::QueueFlagBits &queue_flag_bits() const { return queue_flag_bits_; }
+  const vk::QueueFlags &queue_flag_bits() const { return queue_flags_; }
   bool validation_errors_ignored() const { return validation_errors_ignored_; }
 
   // Package up the vulkan context and the user data for the debug callback together.
@@ -139,7 +139,7 @@ class VulkanContext {
   vk::DebugUtilsMessengerCreateInfoEXT debug_info_;
 
   vk::Queue queue_;
-  vk::QueueFlagBits queue_flag_bits_;
+  vk::QueueFlags queue_flags_;
 
   vk::Optional<const vk::AllocationCallbacks> allocator_;
 
@@ -189,7 +189,7 @@ class VulkanContext::Builder {
   Builder &set_physical_device_index(size_t v);
   Builder &set_queue_info(const vk::DeviceQueueCreateInfo &v);
   Builder &set_device_info(const vk::DeviceCreateInfo &v);
-  Builder &set_queue_flag_bits(const vk::QueueFlagBits &v);
+  Builder &set_queue_flags(const vk::QueueFlags &v);
   Builder &set_validation_layers_enabled(bool v);
   Builder &set_validation_errors_ignored(bool v);
   Builder &set_debug_utils_messenger(const vk::DebugUtilsMessengerCreateInfoEXT &v0,
@@ -201,7 +201,7 @@ class VulkanContext::Builder {
   float queue_priority_;
   vk::DeviceQueueCreateInfo queue_info_;
   vk::DeviceCreateInfo device_info_;
-  vk::QueueFlagBits queue_flag_bits_;
+  vk::QueueFlags queue_flags_;
   bool validation_layers_enabled_ = true;
   bool validation_errors_ignored_ = false;
   vk::Optional<const vk::AllocationCallbacks> allocator_;

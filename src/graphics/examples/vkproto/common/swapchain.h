@@ -14,7 +14,6 @@
 #else
 #include "src/graphics/examples/vkproto/glfw/surface.h"
 #endif
-#include "src/graphics/examples/vkproto/common/surface_phys_device_params.h"
 
 #include <vulkan/vulkan.hpp>
 

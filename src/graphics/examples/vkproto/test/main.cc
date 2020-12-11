@@ -6,10 +6,10 @@
 
 #include "src/graphics/examples/vkproto/common/command_buffers.h"
 #include "src/graphics/examples/vkproto/common/debug_utils_messenger.h"
+#include "src/graphics/examples/vkproto/common/graphics_pipeline.h"
 #include "src/graphics/examples/vkproto/common/image_view.h"
 #include "src/graphics/examples/vkproto/common/instance.h"
 #include "src/graphics/examples/vkproto/common/physical_device.h"
-#include "src/graphics/examples/vkproto/common/pipeline.h"
 #include "src/graphics/examples/vkproto/common/render_pass.h"
 #include "src/graphics/examples/vkproto/common/swapchain.h"
 #include "src/graphics/examples/vkproto/common/utils.h"
@@ -66,7 +66,7 @@ void TestCommon(const vk::PhysicalDevice& physical_device, std::shared_ptr<vk::D
   ASSERT_TRUE(vkp_render_pass->Init()) << "Render pass initialization failed\n";
 
   // GRAPHICS PIPELINE
-  auto vkp_pipeline = std::make_unique<vkp::Pipeline>(device, extent, vkp_render_pass);
+  auto vkp_pipeline = std::make_unique<vkp::GraphicsPipeline>(device, extent, vkp_render_pass);
   ASSERT_TRUE(vkp_pipeline->Init()) << "Graphics pipeline initialization failed\n";
 
   // FRAMEBUFFER
@@ -81,8 +81,8 @@ void TestCommon(const vk::PhysicalDevice& physical_device, std::shared_ptr<vk::D
 
   // COMMAND BUFFER
   auto vkp_command_buffers = std::make_unique<vkp::CommandBuffers>(
-      device, vkp_command_pool, vkp_framebuffers->framebuffers(), extent, vkp_render_pass->get(),
-      vkp_pipeline->get());
+      device, vkp_command_pool, vkp_framebuffers->framebuffers(), vkp_pipeline->get(),
+      vkp_render_pass->get(), extent);
   ASSERT_TRUE(vkp_command_buffers->Init()) << "Command buffer initialization.\n";
 
   // SUBMISSION FENCE

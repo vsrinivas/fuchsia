@@ -12,10 +12,10 @@
 
 #include "src/graphics/examples/vkproto/common/command_buffers.h"
 #include "src/graphics/examples/vkproto/common/debug_utils_messenger.h"
+#include "src/graphics/examples/vkproto/common/graphics_pipeline.h"
 #include "src/graphics/examples/vkproto/common/image_view.h"
 #include "src/graphics/examples/vkproto/common/instance.h"
 #include "src/graphics/examples/vkproto/common/physical_device.h"
-#include "src/graphics/examples/vkproto/common/pipeline.h"
 #include "src/graphics/examples/vkproto/common/render_pass.h"
 #ifdef __Fuchsia__
 #include "src/graphics/examples/vkproto/fuchsia/surface.h"
@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
   RTN_IF_MSG(1, !vkp_render_pass->Init(), "Render pass initialization failed\n");
 
   // GRAPHICS PIPELINE
-  auto vkp_pipeline = std::make_unique<vkp::Pipeline>(device, extent, vkp_render_pass);
+  auto vkp_pipeline = std::make_unique<vkp::GraphicsPipeline>(device, extent, vkp_render_pass);
   RTN_IF_MSG(1, !vkp_pipeline->Init(), "Graphics pipeline initialization failed\n");
 
   // FRAMEBUFFER
@@ -135,8 +135,8 @@ int main(int argc, char* argv[]) {
 
   // COMMAND BUFFER
   auto vkp_command_buffers = std::make_unique<vkp::CommandBuffers>(
-      vkp_device.shared(), vkp_command_pool, vkp_framebuffers->framebuffers(), extent,
-      vkp_render_pass->get(), vkp_pipeline->get());
+      vkp_device.shared(), vkp_command_pool, vkp_framebuffers->framebuffers(), vkp_pipeline->get(),
+      vkp_render_pass->get(), extent);
   RTN_IF_MSG(1, !vkp_command_buffers->Init(), "Command buffer initialization.\n");
 
   // Offscreen drawing submission fence.

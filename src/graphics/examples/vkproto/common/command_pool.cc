@@ -6,17 +6,23 @@
 
 #include "src/graphics/examples/vkproto/common/utils.h"
 
+#include "vulkan/vulkan.hpp"
+
 namespace vkp {
 
-CommandPool::CommandPool(std::shared_ptr<vk::Device> device, uint32_t queue_family_index)
-    : initialized_(false), device_(device), queue_family_index_(queue_family_index) {}
+CommandPool::CommandPool(std::shared_ptr<vk::Device> device, uint32_t queue_family_index,
+                         vk::CommandPoolCreateFlags flags)
+    : initialized_(false),
+      device_(device),
+      queue_family_index_(queue_family_index),
+      flags_(flags) {}
 
 bool CommandPool::Init() {
   RTN_IF_MSG(false, initialized_, "CommandPool is already initialized.\n");
   RTN_IF_MSG(false, !device_, "Device must be initialized.\n");
 
   vk::CommandPoolCreateInfo pool_info;
-  pool_info.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+  pool_info.flags = flags_;
   pool_info.queueFamilyIndex = queue_family_index_;
 
   auto [r_command_pool, command_pool] = device_->createCommandPoolUnique(pool_info);

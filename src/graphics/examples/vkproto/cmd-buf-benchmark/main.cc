@@ -12,10 +12,10 @@
 #include "src/graphics/examples/vkproto/common/debug_utils_messenger.h"
 #include "src/graphics/examples/vkproto/common/device.h"
 #include "src/graphics/examples/vkproto/common/framebuffers.h"
+#include "src/graphics/examples/vkproto/common/graphics_pipeline.h"
 #include "src/graphics/examples/vkproto/common/image_view.h"
 #include "src/graphics/examples/vkproto/common/instance.h"
 #include "src/graphics/examples/vkproto/common/physical_device.h"
-#include "src/graphics/examples/vkproto/common/pipeline.h"
 #include "src/graphics/examples/vkproto/common/render_pass.h"
 #include "src/graphics/examples/vkproto/common/swapchain.h"
 #include "src/graphics/examples/vkproto/common/utils.h"
@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
   RTN_IF_MSG(1, !vkp_render_pass->Init(), "Render Pass Initialization Failed.\n");
 
   // GRAPHICS PIPELINE
-  auto vkp_pipeline = std::make_unique<vkp::Pipeline>(device, extent, vkp_render_pass);
+  auto vkp_pipeline = std::make_unique<vkp::GraphicsPipeline>(device, extent, vkp_render_pass);
   RTN_IF_MSG(1, !vkp_pipeline->Init(), "Graphics Pipeline Initialization Failed.\n");
 
   // FRAMEBUFFER
@@ -92,8 +92,8 @@ int main(int argc, char* argv[]) {
 
   // COMMAND BUFFER
   auto vkp_command_buffers = std::make_unique<vkp::CommandBuffers>(
-      device, vkp_command_pool, vkp_framebuffer->framebuffers(), extent, vkp_render_pass->get(),
-      vkp_pipeline->get());
+      device, vkp_command_pool, vkp_framebuffer->framebuffers(), vkp_pipeline->get(),
+      vkp_render_pass->get(), extent);
   RTN_IF_MSG(1, !vkp_command_buffers->Init(), "Command Buffer Initialization Failed.\n");
 
   sleep(1);

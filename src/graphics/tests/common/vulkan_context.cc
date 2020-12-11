@@ -23,7 +23,7 @@ VulkanContext::ContextWithUserData VulkanContext::default_debug_callback_user_da
 VulkanContext::VulkanContext(const vk::InstanceCreateInfo &instance_info,
                              size_t physical_device_index, const vk::DeviceCreateInfo &device_info,
                              const vk::DeviceQueueCreateInfo &queue_info,
-                             const vk::QueueFlagBits &queue_flag_bits,
+                             const vk::QueueFlags &queue_flags,
                              const vk::DebugUtilsMessengerCreateInfoEXT &debug_info,
                              ContextWithUserData debug_callback_user_data,
                              vk::Optional<const vk::AllocationCallbacks> allocator,
@@ -35,7 +35,7 @@ VulkanContext::VulkanContext(const vk::InstanceCreateInfo &instance_info,
       device_info_(device_info),
       debug_callback_user_data_(std::move(debug_callback_user_data)),
       debug_info_(debug_info),
-      queue_flag_bits_(queue_flag_bits),
+      queue_flags_(queue_flags),
       allocator_(allocator),
       validation_layers_enabled_(validation_layers_enabled),
       validation_errors_ignored_(validation_errors_ignored) {
@@ -43,14 +43,14 @@ VulkanContext::VulkanContext(const vk::InstanceCreateInfo &instance_info,
          "Debug callback user data must be only set in |debug_callback_user_data|.");
 }
 
-VulkanContext::VulkanContext(size_t physical_device_index, const vk::QueueFlagBits &queue_flag_bits,
+VulkanContext::VulkanContext(size_t physical_device_index, const vk::QueueFlags &queue_flags,
                              vk::Optional<const vk::AllocationCallbacks> allocator)
     : physical_device_index_(physical_device_index),
       queue_family_index_(kInvalidQueueFamily),
       queue_info_(vk::DeviceQueueCreateFlags(), queue_family_index_, 1 /* queueCount */,
                   &queue_priority_),
       debug_info_(default_debug_info_s_),
-      queue_flag_bits_(queue_flag_bits),
+      queue_flags_(queue_flags),
       allocator_(allocator) {}
 
 bool VulkanContext::InitInstance() {
@@ -134,7 +134,7 @@ bool VulkanContext::InitQueueFamily() {
   const auto queue_families = physical_device_.getQueueFamilyProperties();
   queue_family_index_ = queue_families.size();
   for (size_t i = 0; i < queue_families.size(); ++i) {
-    if (queue_families[i].queueFlags & queue_flag_bits_) {
+    if (queue_families[i].queueFlags & queue_flags_) {
       queue_family_index_ = i;
       break;
     }
@@ -212,11 +212,11 @@ bool VulkanContext::set_queue_info(const vk::DeviceQueueCreateInfo &v) {
   return true;
 }
 
-bool VulkanContext::set_queue_flag_bits(const vk::QueueFlagBits &v) {
+bool VulkanContext::set_queue_flags(const vk::QueueFlags &v) {
   if (queue_family_initialized_) {
     RTN_MSG(false, "set_queue_flag_bits ignored. Queue family is already initialized.\n");
   }
-  queue_flag_bits_ = v;
+  queue_flags_ = v;
   return true;
 }
 
@@ -269,7 +269,7 @@ VulkanContext::Builder::Builder()
       queue_info_(vk::DeviceQueueCreateFlags(), physical_device_index_, 1 /* queueCount */,
                   &queue_priority_),
       device_info_(vk::DeviceCreateFlags(), 1 /* queueCreateInfoCount */, &queue_info_),
-      queue_flag_bits_(kDefaultQueueFlagBits),
+      queue_flags_(kDefaultQueueFlags),
       allocator_(nullptr),
       debug_info_(VulkanContext::default_debug_info_s_) {}
 
@@ -303,8 +303,8 @@ VulkanContext::Builder &VulkanContext::Builder::set_queue_info(const vk::DeviceQ
   return *this;
 }
 
-VulkanContext::Builder &VulkanContext::Builder::set_queue_flag_bits(const vk::QueueFlagBits &v) {
-  queue_flag_bits_ = v;
+VulkanContext::Builder &VulkanContext::Builder::set_queue_flags(const vk::QueueFlags &v) {
+  queue_flags_ = v;
   return *this;
 }
 
@@ -330,8 +330,8 @@ VulkanContext::Builder &VulkanContext::Builder::set_debug_utils_messenger(
 
 std::unique_ptr<VulkanContext> VulkanContext::Builder::Unique() const {
   auto context = std::make_unique<VulkanContext>(
-      instance_info_, physical_device_index_, device_info_, queue_info_, queue_flag_bits_,
-      debug_info_, debug_callback_user_data_, allocator_, validation_layers_enabled_,
+      instance_info_, physical_device_index_, device_info_, queue_info_, queue_flags_, debug_info_,
+      debug_callback_user_data_, allocator_, validation_layers_enabled_,
       validation_errors_ignored_);
   if (!context->Init()) {
     RTN_MSG(nullptr, "Failed to initialize VulkanContext.\n")

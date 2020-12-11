@@ -6,7 +6,6 @@
 #define SRC_GRAPHICS_EXAMPLES_VKPROTO_COMMON_DEVICE_H_
 #include <vector>
 
-#include "src/graphics/examples/vkproto/common/surface_phys_device_params.h"
 #include "src/lib/fxl/macros.h"
 
 #include <vulkan/vulkan.hpp>
@@ -15,7 +14,8 @@ namespace vkp {
 
 class Device {
  public:
-  Device(const vk::PhysicalDevice &phys_device, VkSurfaceKHR surface = nullptr);
+  explicit Device(const vk::PhysicalDevice &physical_device, VkSurfaceKHR surface = nullptr,
+                  vk::QueueFlags queue_flags = vk::QueueFlagBits::eGraphics);
   ~Device();
 
   bool Init();
@@ -28,16 +28,14 @@ class Device {
  private:
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Device);
 
-  bool AssignSuitableDevice(const std::vector<VkDevice> &devices);
-
   bool initialized_;
-  std::unique_ptr<SurfacePhysDeviceParams> params_;
+  vk::PhysicalDevice physical_device_;
+  VkSurfaceKHR surface_;
   std::vector<const char *> layers_;
 
-  // Queue with support for both drawing and presentation.
   vk::Queue queue_;
-
   uint32_t queue_family_index_{};
+  vk::QueueFlags queue_flags_;
 
   std::shared_ptr<vk::Device> device_;
 };

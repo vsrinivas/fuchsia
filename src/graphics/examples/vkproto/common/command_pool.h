@@ -14,7 +14,9 @@ namespace vkp {
 
 class CommandPool {
  public:
-  CommandPool(std::shared_ptr<vk::Device> device, uint32_t queue_family_index);
+  CommandPool(
+      std::shared_ptr<vk::Device> device, uint32_t queue_family_index,
+      vk::CommandPoolCreateFlags flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
 
   bool Init();
   const vk::CommandPool &get() const { return command_pool_.get(); }
@@ -25,6 +27,7 @@ class CommandPool {
   bool initialized_;
   std::shared_ptr<vk::Device> device_;
   uint32_t queue_family_index_{};
+  vk::CommandPoolCreateFlags flags_{};
 
   vk::UniqueCommandPool command_pool_;
 };

@@ -15,10 +15,10 @@
 #include "src/graphics/examples/vkproto/common/debug_utils_messenger.h"
 #include "src/graphics/examples/vkproto/common/device.h"
 #include "src/graphics/examples/vkproto/common/framebuffers.h"
+#include "src/graphics/examples/vkproto/common/graphics_pipeline.h"
 #include "src/graphics/examples/vkproto/common/image_view.h"
 #include "src/graphics/examples/vkproto/common/instance.h"
 #include "src/graphics/examples/vkproto/common/physical_device.h"
-#include "src/graphics/examples/vkproto/common/pipeline.h"
 #include "src/graphics/examples/vkproto/common/render_pass.h"
 #include "src/graphics/examples/vkproto/common/swapchain.h"
 #include "src/graphics/examples/vkproto/common/utils.h"
@@ -130,7 +130,7 @@ TEST(TransactionElimination, ForeignQueue) {
   auto vkp_render_pass = std::make_shared<vkp::RenderPass>(device, image_format, true);
   ASSERT_TRUE(vkp_render_pass->Init());
 
-  auto vkp_pipeline = std::make_unique<vkp::Pipeline>(device, extent, vkp_render_pass);
+  auto vkp_pipeline = std::make_unique<vkp::GraphicsPipeline>(device, extent, vkp_render_pass);
   ASSERT_TRUE(vkp_pipeline->Init());
 
   auto vkp_framebuffer =
@@ -143,8 +143,8 @@ TEST(TransactionElimination, ForeignQueue) {
 
   // First command buffer does a transition to queue family foreign and back.
   auto vkp_command_buffers = std::make_unique<vkp::CommandBuffers>(
-      device, vkp_command_pool, vkp_framebuffer->framebuffers(), extent, vkp_render_pass->get(),
-      vkp_pipeline->get());
+      device, vkp_command_pool, vkp_framebuffer->framebuffers(), vkp_pipeline->get(),
+      vkp_render_pass->get(), extent);
   ASSERT_TRUE(vkp_command_buffers->Alloc());
   InitCommandBuffers(&(vkp_offscreen_image_view->image().get()), vkp_device.queue_family_index(),
                      vkp_command_buffers);
@@ -165,8 +165,8 @@ TEST(TransactionElimination, ForeignQueue) {
   ASSERT_TRUE(vkp_render_pass2->Init());
 
   auto vkp_command_buffers2 = std::make_unique<vkp::CommandBuffers>(
-      device, vkp_command_pool, vkp_framebuffer->framebuffers(), extent, vkp_render_pass2->get(),
-      vkp_pipeline->get());
+      device, vkp_command_pool, vkp_framebuffer->framebuffers(), vkp_pipeline->get(),
+      vkp_render_pass2->get(), extent);
   ASSERT_TRUE(vkp_command_buffers2->Alloc());
   InitCommandBuffers({} /* image_for_foreign_transition */, {} /* queue_family */,
                      vkp_command_buffers2);

@@ -23,8 +23,8 @@ const std::vector<const char *> s_required_physical_device_props = {
 #endif
 };
 
-bool ChooseGraphicsDevice(const vk::PhysicalDevice &physical_device_in, const VkSurfaceKHR &surface,
-                          vk::PhysicalDevice *physical_device_out) {
+bool ChooseDevice(const vk::PhysicalDevice &physical_device_in, const VkSurfaceKHR &surface,
+                  const vk::QueueFlags &queue_flags, vk::PhysicalDevice *physical_device_out) {
   if (!FindRequiredProperties(s_required_physical_device_props, vkp::PHYS_DEVICE_EXT_PROP,
                               kMagmaLayer, physical_device_in)) {
     return false;
@@ -37,8 +37,8 @@ bool ChooseGraphicsDevice(const vk::PhysicalDevice &physical_device_in, const Vk
     }
   }
 
-  if (!vkp::FindGraphicsQueueFamilyIndex(physical_device_in, surface)) {
-    RTN_MSG(false, "No graphics queue families found%s.\n", surface ? " with present support" : "");
+  if (!vkp::FindQueueFamilyIndex(physical_device_in, surface, queue_flags)) {
+    RTN_MSG(false, "No matching queue families found.\n");
   }
   *physical_device_out = physical_device_in;
   return true;
@@ -48,8 +48,9 @@ bool ChooseGraphicsDevice(const vk::PhysicalDevice &physical_device_in, const Vk
 
 namespace vkp {
 
-PhysicalDevice::PhysicalDevice(std::shared_ptr<vk::Instance> instance, VkSurfaceKHR surface)
-    : initialized_(false), instance_(instance), surface_(surface) {}
+PhysicalDevice::PhysicalDevice(std::shared_ptr<vk::Instance> instance, VkSurfaceKHR surface,
+                               const vk::QueueFlags &queue_flags)
+    : initialized_(false), instance_(instance), surface_(surface), queue_flags_(queue_flags) {}
 
 bool PhysicalDevice::Init() {
   RTN_IF_MSG(false, initialized_, "PhysicalDevice already initialized.\n");
@@ -61,7 +62,7 @@ bool PhysicalDevice::Init() {
   }
 
   for (const auto &phys_device : phys_devices) {
-    if (ChooseGraphicsDevice(phys_device, surface_, &physical_device_)) {
+    if (ChooseDevice(phys_device, surface_, queue_flags_, &physical_device_)) {
       LogMemoryProperties(physical_device_);
       initialized_ = true;
       break;

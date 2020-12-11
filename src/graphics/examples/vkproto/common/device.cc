@@ -10,10 +10,13 @@
 
 namespace vkp {
 
-Device::Device(const vk::PhysicalDevice &phys_device, VkSurfaceKHR surface)
-    : initialized_(false), queue_(nullptr) {
-  params_ = std::make_unique<SurfacePhysDeviceParams>(phys_device, surface);
-}
+Device::Device(const vk::PhysicalDevice &physical_device, VkSurfaceKHR surface,
+               vk::QueueFlags queue_flags)
+    : initialized_(false),
+      physical_device_(physical_device),
+      surface_(surface),
+      queue_(nullptr),
+      queue_flags_(queue_flags) {}
 
 Device::~Device() {
   if (initialized_) {
@@ -25,8 +28,7 @@ Device::~Device() {
 bool Device::Init() {
   RTN_IF_MSG(false, initialized_, "Logical device already initialized.\n");
 
-  if (!FindGraphicsQueueFamilyIndex(params_->phys_device_, params_->surface_,
-                                    &queue_family_index_)) {
+  if (!FindQueueFamilyIndex(physical_device_, surface_, queue_flags_, &queue_family_index_)) {
     return false;
   }
 
@@ -49,8 +51,7 @@ bool Device::Init() {
   device_info.enabledLayerCount = 0;
 
   vk::Device *device = new vk::Device;
-  auto r_device =
-      params_->phys_device_.createDevice(&device_info, nullptr /* pAllocator */, device);
+  auto r_device = physical_device_.createDevice(&device_info, nullptr /* pAllocator */, device);
   if (vk::Result::eSuccess != r_device) {
     delete device;
     RTN_MSG(false, "Failed to create logical device.\n");
@@ -63,7 +64,6 @@ bool Device::Init() {
   });
 
   queue_ = device_->getQueue(queue_family_index_, 0);
-  params_.reset();
   initialized_ = true;
 
   return true;

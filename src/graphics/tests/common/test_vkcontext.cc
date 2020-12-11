@@ -88,19 +88,19 @@ TEST(VkContext, Allocator) {
 }
 
 TEST(VkContext, Queue) {
-  vk::QueueFlagBits queue_flag_bits = vk::QueueFlagBits::eCompute;
+  vk::QueueFlags queue_flags = vk::QueueFlagBits::eCompute;
   std::unique_ptr<VulkanContext> ctx =
-      VulkanContext::Builder{}.set_queue_flag_bits(queue_flag_bits).Unique();
+      VulkanContext::Builder{}.set_queue_flags(queue_flags).Unique();
 
   // Failed to find a compute queue, use graphics instead.
   if (!ctx) {
     printf("VulkanContext: No compute queue found.\n");
     fflush(stdout);
-    queue_flag_bits = vk::QueueFlagBits::eGraphics;
-    ctx = VulkanContext::Builder{}.set_queue_flag_bits(queue_flag_bits).Unique();
+    queue_flags = vk::QueueFlagBits::eGraphics;
+    ctx = VulkanContext::Builder{}.set_queue_flags(queue_flags).Unique();
   }
   ASSERT_NE(ctx, nullptr);
-  EXPECT_EQ(queue_flag_bits, ctx->queue_flag_bits());
+  EXPECT_EQ(queue_flags, ctx->queue_flag_bits());
 
   int queue_family_index = ctx->queue_family_index();
   EXPECT_GT(queue_family_index, VulkanContext::kInvalidQueueFamily);

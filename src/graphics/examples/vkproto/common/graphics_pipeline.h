@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_EXAMPLES_VKPROTO_COMMON_PIPELINE_H_
-#define SRC_GRAPHICS_EXAMPLES_VKPROTO_COMMON_PIPELINE_H_
+#ifndef SRC_GRAPHICS_EXAMPLES_VKPROTO_COMMON_GRAPHICS_PIPELINE_H_
+#define SRC_GRAPHICS_EXAMPLES_VKPROTO_COMMON_GRAPHICS_PIPELINE_H_
 
 #include "src/graphics/examples/vkproto/common/device.h"
 #include "src/graphics/examples/vkproto/common/render_pass.h"
@@ -13,17 +13,17 @@
 
 namespace vkp {
 
-class Pipeline {
+class GraphicsPipeline {
  public:
-  Pipeline(std::shared_ptr<vk::Device> device, const vk::Extent2D &extent,
-           std::shared_ptr<RenderPass> vkp_render_pass);
-  ~Pipeline();
+  GraphicsPipeline(std::shared_ptr<vk::Device> device, const vk::Extent2D &extent,
+                   std::shared_ptr<RenderPass> vkp_render_pass);
+  ~GraphicsPipeline();
 
   bool Init();
   const vk::Pipeline &get() const;
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Pipeline);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GraphicsPipeline);
 
   bool initialized_;
   std::shared_ptr<vk::Device> device_;
@@ -36,4 +36,4 @@ class Pipeline {
 
 }  // namespace vkp
 
-#endif  // SRC_GRAPHICS_EXAMPLES_VKPROTO_COMMON_PIPELINE_H_
+#endif  // SRC_GRAPHICS_EXAMPLES_VKPROTO_COMMON_GRAPHICS_PIPELINE_H_

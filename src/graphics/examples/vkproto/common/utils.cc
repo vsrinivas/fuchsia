@@ -69,6 +69,10 @@ static bool EnumerateProperties(SearchProp search_prop, vk::PhysicalDevice physi
     }
   } else {
     for (auto &prop : ext_props) {
+      if (search_prop == PHYS_DEVICE_EXT_PROP && layer) {
+        printf("Phys Dev Props: layer(%s) prop(%s)\n", layer,
+               std::string(prop.extensionName).c_str());
+      }
       enumerated_props->insert(std::string(prop.extensionName));
     }
   }
@@ -93,7 +97,7 @@ bool FindRequiredProperties(const std::vector<const char *> &required_props, Sea
     RTN_MSG(false, "Unable to match vulkan properties.\n");
   }
 
-  // Match layer properties.
+  // Match |layer| specific properties.
   if (search_prop != INSTANCE_LAYER_PROP && layer &&
       enumerated_props_set.size() != required_props.size()) {
     success = EnumerateProperties(search_prop, physical_device, layer, &enumerated_props_set);
@@ -122,7 +126,7 @@ bool FindRequiredProperties(const std::vector<const char *> &required_props, Sea
         category = "instance layer";
         break;
       case PHYS_DEVICE_EXT_PROP:
-        category = "pysical device extension";
+        category = "physical device extension";
         break;
     }
     fprintf(stderr, "Missing %s properties\n", category.c_str());
@@ -132,8 +136,8 @@ bool FindRequiredProperties(const std::vector<const char *> &required_props, Sea
   return (success && !has_missing_props);
 }
 
-bool FindGraphicsQueueFamilyIndex(vk::PhysicalDevice physical_device, VkSurfaceKHR surface,
-                                  uint32_t *queue_family_index) {
+bool FindQueueFamilyIndex(vk::PhysicalDevice physical_device, VkSurfaceKHR surface,
+                          vk::QueueFlags queue_flags, uint32_t *queue_family_index) {
   auto queue_families = physical_device.getQueueFamilyProperties();
   for (uint32_t i = 0; i < queue_families.size(); ++i) {
     if (surface) {
@@ -144,14 +148,14 @@ bool FindGraphicsQueueFamilyIndex(vk::PhysicalDevice physical_device, VkSurfaceK
     }
 
     const auto &queue_family = queue_families[i];
-    if ((queue_family.queueCount > 0) && (queue_family.queueFlags & vk::QueueFlagBits::eGraphics)) {
+    if ((queue_family.queueCount > 0) && (queue_family.queueFlags & queue_flags)) {
       if (queue_family_index) {
         *queue_family_index = i;
       }
       return true;
     }
   }
-  RTN_MSG(false, "No graphics queue family index found.\n");
+  RTN_MSG(false, "No matching queue family index found.\n");
 }
 
 int FindMemoryIndex(const vk::PhysicalDevice &phys_dev, const uint32_t memory_type_bits,

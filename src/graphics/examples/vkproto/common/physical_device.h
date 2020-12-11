@@ -17,7 +17,8 @@ namespace vkp {
 
 class PhysicalDevice {
  public:
-  explicit PhysicalDevice(std::shared_ptr<vk::Instance> instance, VkSurfaceKHR surface = nullptr);
+  explicit PhysicalDevice(std::shared_ptr<vk::Instance> instance, VkSurfaceKHR surface = nullptr,
+                          const vk::QueueFlags &queue_flags = vk::QueueFlagBits::eGraphics);
 
   bool Init();
   const vk::PhysicalDevice &get() const;
@@ -31,6 +32,7 @@ class PhysicalDevice {
   bool initialized_;
   std::shared_ptr<vk::Instance> instance_;
   VkSurfaceKHR surface_ = nullptr;
+  vk::QueueFlags queue_flags_;
 
   vk::PhysicalDevice physical_device_;
 };
