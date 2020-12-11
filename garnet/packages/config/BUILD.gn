@@ -8,8 +8,8 @@
 group("thermd") {
   testonly = true
   public_deps = [
-    "//garnet/bin/thermd:config",
     "//garnet/packages/config:services",
+    "//src/power/thermd:config",
   ]
 }
 
