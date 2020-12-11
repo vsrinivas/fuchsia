@@ -8,7 +8,7 @@ use diagnostics_stream::{parse::parse_record, Record, Severity, Value};
 use fidl_fuchsia_logger::LogSinkRequest;
 use fidl_fuchsia_logger::LogSinkRequestStream;
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
-use fidl_fuchsia_validate_logs::{LogSinkPuppetMarker, LogSinkPuppetProxy, PuppetInfo};
+use fidl_fuchsia_validate_logs::{LogSinkPuppetMarker, LogSinkPuppetProxy, PuppetInfo, RecordSpec};
 use fuchsia_async::{Socket, Task};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
@@ -118,13 +118,28 @@ impl Puppet {
 
         let before = zx::Time::get_monotonic();
         // TODO(fxbug.dev/61538) validate we can log arbitrary messages
-        self.proxy.emit_log().await?;
+        let record = fidl_fuchsia_diagnostics_stream::Record {
+            arguments: vec![
+                fidl_fuchsia_diagnostics_stream::Argument {
+                    name: "message".to_string(),
+                    value: diagnostics_stream::Value::Text("test_log".to_string()),
+                },
+                fidl_fuchsia_diagnostics_stream::Argument {
+                    name: "foo".to_string(),
+                    value: diagnostics_stream::Value::Text("barstool".to_string()),
+                },
+            ],
+            severity: fidl_fuchsia_diagnostics::Severity::Warn,
+            timestamp: 0,
+        };
+        let mut spec = RecordSpec { file: "test".to_string(), line: 25, record: record };
+        self.proxy.emit_log(&mut spec).await?;
         let after = zx::Time::get_monotonic();
         assert_eq!(
             self.read_record().await?,
             RecordAssertion::new(&self.info, before..after, Severity::Warn)
                 .add_string("message", "test_log")
-                .add_string("foo", "bar")
+                .add_string("foo", "barstool")
                 .build()
         );
 

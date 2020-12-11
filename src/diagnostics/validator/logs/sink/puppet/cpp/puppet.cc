@@ -29,8 +29,51 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
     callback(info);
   }
 
-  void EmitLog(EmitLogCallback callback) override {
-    FX_SLOG(WARNING, "test_log", KV("foo", "bar"));
+  void EmitLog(fuchsia::validate::logs::RecordSpec spec, EmitLogCallback callback) override {
+    syslog_backend::LogBuffer buffer;
+    syslog::LogSeverity severity;
+    switch (spec.record.severity) {
+      case fuchsia::diagnostics::Severity::DEBUG:
+        severity = syslog::LOG_DEBUG;
+        break;
+      case fuchsia::diagnostics::Severity::ERROR:
+        severity = syslog::LOG_ERROR;
+        break;
+      case fuchsia::diagnostics::Severity::FATAL:
+        severity = syslog::LOG_FATAL;
+        break;
+      case fuchsia::diagnostics::Severity::INFO:
+        severity = syslog::LOG_INFO;
+        break;
+      case fuchsia::diagnostics::Severity::TRACE:
+        severity = syslog::LOG_TRACE;
+        break;
+      case fuchsia::diagnostics::Severity::WARN:
+        severity = syslog::LOG_WARNING;
+        break;
+    }
+    syslog_backend::BeginRecord(&buffer, severity, spec.file.data(), spec.line, nullptr, nullptr);
+    for (auto& arg : spec.record.arguments) {
+      switch (arg.value.Which()) {
+        case fuchsia::diagnostics::stream::Value::Empty:
+        case fuchsia::diagnostics::stream::Value::Invalid:
+          break;
+        case fuchsia::diagnostics::stream::Value::kFloating:
+          syslog_backend::WriteKeyValue(&buffer, arg.name.data(), arg.value.floating());
+          break;
+        case fuchsia::diagnostics::stream::Value::kSignedInt:
+          syslog_backend::WriteKeyValue(&buffer, arg.name.data(), arg.value.signed_int());
+          break;
+        case fuchsia::diagnostics::stream::Value::kUnsignedInt:
+          syslog_backend::WriteKeyValue(&buffer, arg.name.data(), arg.value.unsigned_int());
+          break;
+        case fuchsia::diagnostics::stream::Value::kText:
+          syslog_backend::WriteKeyValue(&buffer, arg.name.data(), arg.value.text().data());
+          break;
+      }
+    }
+    syslog_backend::EndRecord(&buffer);
+    syslog_backend::FlushRecord(&buffer);
     callback();
   }
 

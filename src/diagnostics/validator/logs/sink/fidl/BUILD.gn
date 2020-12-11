@@ -9,5 +9,8 @@ fidl("sink-puppet") {
 
   sources = [ "sink-puppet.test.fidl" ]
 
-  public_deps = [ "$zx/vdso/zx" ]
+  public_deps = [
+    "$zx/vdso/zx",
+    "//sdk/fidl/fuchsia.diagnostics.stream",
+  ]
 }

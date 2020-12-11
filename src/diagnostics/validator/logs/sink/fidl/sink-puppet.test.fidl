@@ -5,10 +5,21 @@
 library fuchsia.validate.logs;
 
 using zx;
+using fuchsia.diagnostics.stream;
+
+/// A small(ish) limit on the length of argument names is used because argument names are expected
+/// to be used repeatedly, many times.
+const uint32 MAX_ARG_NAME_LENGTH = 256;
 
 struct PuppetInfo {
     zx.koid pid;
     zx.koid tid;
+};
+
+struct RecordSpec {
+    string:MAX_ARG_NAME_LENGTH file;
+    uint32 line;
+    fuchsia.diagnostics.stream.Record record;
 };
 
 [Discoverable]
@@ -17,5 +28,5 @@ protocol LogSinkPuppet {
     GetInfo() -> (PuppetInfo info);
 
     /// Logs a record.
-    EmitLog() -> ();
+    EmitLog(RecordSpec spec) -> ();
 };
