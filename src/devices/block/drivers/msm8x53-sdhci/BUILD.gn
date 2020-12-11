@@ -9,7 +9,10 @@ bind_rules("msm8x53-sdhci-bind") {
   rules = "msm8x53-sdhci.bind"
   output = "msm8x53-sdhci-bind.h"
   tests = "msm8x53-sdhci-bind-test.json"
-  deps = [ "//src/devices/bind/fuchsia.platform" ]
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.qualcomm.platform",
+  ]
 }
 
 driver_module("msm8x53-sdhci") {

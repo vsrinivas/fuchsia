@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 using fuchsia.platform;
+using fuchsia.qualcomm.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
-fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.QUALCOMM;
-fuchsia.BIND_PLATFORM_DEV_DID == 0x03;  // PDEV_DID_QUALCOMM_SDC1
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.qualcomm.platform.BIND_PLATFORM_DEV_VID.QUALCOMM;
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.qualcomm.platform.BIND_PLATFORM_DEV_DID.SDC1;

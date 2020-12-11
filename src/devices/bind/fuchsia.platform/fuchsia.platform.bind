@@ -24,7 +24,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   SONY = 14,
   TI = 16,
   ARM = 18,
-  QUALCOMM = 19,
   SYNAPTICS = 20,
 };
 
