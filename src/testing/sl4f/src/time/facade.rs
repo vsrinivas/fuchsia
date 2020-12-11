@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Error};
-use fidl_fuchsia_time::{UtcMarker, UtcSource};
-use fuchsia_component::client::connect_to_service;
-use fuchsia_zircon as zx;
+use anyhow::Error;
+use fuchsia_zircon::{self as zx, AsHandleRef};
 use std::convert::TryInto;
 use std::time::SystemTime;
 
@@ -46,14 +44,11 @@ impl TimeFacade {
 
     /// Returns true iff system time has been synchronized with some source.
     pub async fn is_synchronized() -> Result<bool, Error> {
-        // Since we establish a new connection every time, watch should return immediately.
-        let utc_proxy = connect_to_service::<UtcMarker>()?;
-        let state = utc_proxy.watch_state().await?;
-        let source = state.source.ok_or(anyhow!("Utc service returned no source"))?;
-        Ok(match source {
-            UtcSource::Backstop => false,
-            UtcSource::Unverified => true,
-            UtcSource::External => true,
-        })
+        let clock = fuchsia_runtime::duplicate_utc_clock_handle(zx::Rights::WAIT)?;
+        match clock.wait_handle(zx::Signals::CLOCK_STARTED, zx::Time::ZERO) {
+            Ok(_) => Ok(true),
+            Err(zx::Status::TIMED_OUT) => Ok(false),
+            Err(e) => Err(e.into()),
+        }
     }
 }
