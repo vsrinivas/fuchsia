@@ -142,7 +142,8 @@
     "licence",
     "license",
     "notice",
-    "ofl"
+    "ofl",
+    "unicode_license.txt"
   ],
   "customProjectLicenses" : [
     {
@@ -156,6 +157,10 @@
     {
       "projectRoot": "prebuilt/third_party/cmake/linux-x64",
       "licenseLocation": "doc/cmake-3.10/Copyright.txt"
+    },
+    {
+      "projectRoot": "third_party/crashpad/third_party/lss",
+      "licenseLocation": "lss/linux_syscall_support.h"
     },
     {
       "projectRoot": "prebuilt/third_party/ffmpeg/pkg",
@@ -182,6 +187,18 @@
       "licenseLocation": "MIT-COPYING"
     },
     {
+      "projectRoot": "third_party/mesa",
+      "licenseLocation": "CREDITS.fuchsia"
+    },
+    {
+      "projectRoot": "third_party/openthread/third_party/mbedtls",
+      "licenseLocation": "repo/apache-2.0.txt"
+    },
+    {
+      "projectRoot": "third_party/zlib",
+      "licenseLocation": "README"
+    },
+    {
       "projectRoot": "zircon/third_party/ulib/boringssl",
       "licenseLocation": "../../../../LICENSE"
     },
@@ -196,6 +213,10 @@
     {
       "projectRoot": "zircon/third_party/ulib/zstd",
       "licenseLocation": "../../../../LICENSE"
+    },
+    {
+      "projectRoot": "zircon/third_party/scudo",
+      "licenseLocation": "src/LICENSE.TXT"
     }
   ],
   "licensePatternDir": "tools/check-licenses/golden/patterns",
