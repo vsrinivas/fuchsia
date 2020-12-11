@@ -17,21 +17,26 @@ use {
         InputReportsReaderMarker,
     },
     fidl_fuchsia_ui_input::{KeyboardReport, Touch},
-    futures::{future, StreamExt},
+    futures::{future, pin_mut, StreamExt, TryFutureExt},
 };
 
 /// Implements the `synthesizer::InputDevice` trait, and the server side of the
 /// `fuchsia.input.report.InputDevice` FIDL protocol. Used by
 /// `modern_backend::InputDeviceRegistry`.
 ///
-/// # Note
-/// Some of the methods of `fuchsia.input.report.InputDevice` are not relevant to
-/// input injection, so this implemnentation does not support them:
-/// * `GetFeatureReport` and `SetFeatureReport` are for sensors.
-/// * `SendOutputReport` provides a way to change keyboard LED state.
-///
-/// If these FIDL methods are invoked, `InputDevice::serve_reports()` will resolve
-/// to Err.
+/// # Notes
+/// * Some of the methods of `fuchsia.input.report.InputDevice` are not relevant to
+///   input injection, so this implemnentation does not support them:
+///   * `GetFeatureReport` and `SetFeatureReport` are for sensors.
+///   * `SendOutputReport` provides a way to change keyboard LED state.
+///   If these FIDL methods are invoked, `InputDevice::serve_reports()` will resolve
+///   to Err.
+/// * This implementation does not support multiple calls to `GetInputReportsReader`,
+///   since:
+///   * The ideal semantics for multiple calls are not obvious, and
+///   * Each `InputDevice` has a single FIDL client (an input pipeline implementation),
+///     and the current input pipeline implementation is happy to use a single
+///     `InputReportsReader` for the lifetime of the `InputDevice`.
 pub(super) struct InputDevice<F: Fn() -> DeviceDescriptor> {
     request_stream: InputDeviceRequestStream,
     /// Generates `fuchsia.input.report.DeviceDescriptor`s, to respond to
@@ -95,7 +100,8 @@ impl<F: Fn() -> DeviceDescriptor> synthesizer::InputDevice for self::InputDevice
     ///
     /// # Note
     /// When the `Future` resolves, `InputReports` may still be sitting unread in the
-    /// channel to the `fuchsia.input.InputReportsReader` client.
+    /// channel to the `fuchsia.input.InputReportsReader` client. (The client will
+    /// typically be an input pipeline implementation.)
     async fn serve_reports(mut self: Box<Self>) -> Result<(), Error> {
         // Destructure fields into independent variables, to avoid "partial-move" issues.
         let Self { request_stream, descriptor_generator, reports } = *self;
@@ -104,7 +110,7 @@ impl<F: Fn() -> DeviceDescriptor> synthesizer::InputDevice for self::InputDevice
         // client to provide a `ServerEnd<InputReportsReader>` by calling `GetInputReportsReader()`.
         let mut input_reports_reader_server_end_stream = request_stream
             .filter_map(|r| future::ready(Self::handle_device_request(r, &descriptor_generator)));
-        let _input_reports_reader_fut = {
+        let input_reports_reader_fut = {
             let reader_server_end = input_reports_reader_server_end_stream
                 .next()
                 .await
@@ -118,10 +124,38 @@ impl<F: Fn() -> DeviceDescriptor> synthesizer::InputDevice for self::InputDevice
             }
             .into_future()
         };
+        pin_mut!(input_reports_reader_fut);
 
-        // Now, serve both the `fuchsia.input.report.InputDevice` protocol, and the
-        // `fuchsia.input.report.InputReportsReader` protocol.
-        todo!();
+        // Create a `Future` to keep serving the `fuchsia.input.report.InputDevice` protocol.
+        // This time, receiving a `ServerEnd<InputReportsReaderMarker>` will be an `Err`.
+        let input_device_server_fut = async {
+            match input_reports_reader_server_end_stream.next().await {
+                Some(Ok(_server_end)) => {
+                    // There are no obvious "best" semantics for how to handle multiple
+                    // `GetInputReportsReader` calls, and there is no current need to
+                    // do so. Instead of taking a guess at what the client might want
+                    // in such a case, just return `Err`.
+                    Err(format_err!(
+                        "InputDevice does not support multiple GetInputReportsReader calls"
+                    ))
+                }
+                Some(Err(e)) => Err(e.context("handling InputDeviceRequest")),
+                None => Ok(()),
+            }
+        };
+        pin_mut!(input_device_server_fut);
+
+        // Now, process both `fuchsia.input.report.InputDevice` requests, and
+        // `fuchsia.input.report.InputReportsReader` requests. And keep processing
+        // `InputReportsReader` requests even if the `InputDevice` connection
+        // is severed.
+        future::select(
+            input_device_server_fut.and_then(|_: ()| future::pending()),
+            input_reports_reader_fut,
+        )
+        .await
+        .factor_first()
+        .0
     }
 }
 
@@ -190,8 +224,12 @@ mod tests {
 
     mod responds_to_get_descriptor_request {
         use {
-            super::{utils::make_keyboard_descriptor, *},
-            futures::task::Poll,
+            super::{
+                utils::{make_input_device_proxy_and_struct, make_keyboard_descriptor},
+                *,
+            },
+            fidl_fuchsia_input_report::InputReportsReaderMarker,
+            futures::{pin_mut, task::Poll},
         };
 
         #[fasync::run_until_stalled(test)]
@@ -240,13 +278,102 @@ mod tests {
 
             Ok(())
         }
+
+        #[test]
+        fn after_call_to_get_input_reports_reader_with_report_pending() -> Result<(), Error> {
+            let mut executor = fasync::Executor::new().context("creating executor")?;
+            let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device
+                .key_press(KeyboardReport { pressed_keys: vec![] }, DEFAULT_REPORT_TIMESTAMP)
+                .context("internal error queuing input event")?;
+
+            let input_device_server_fut = input_device.serve_reports();
+            pin_mut!(input_device_server_fut);
+
+            let (_input_reports_reader_proxy, input_reports_reader_server_end) =
+                endpoints::create_proxy::<InputReportsReaderMarker>()
+                    .context("internal error creating InputReportsReader proxy and server end")?;
+            input_device_proxy
+                .get_input_reports_reader(input_reports_reader_server_end)
+                .context("sending get_input_reports_reader request")?;
+            assert_matches!(
+                executor.run_until_stalled(&mut input_device_server_fut),
+                Poll::Pending
+            );
+
+            let mut get_descriptor_fut = input_device_proxy.get_descriptor();
+            assert_matches!(
+                executor.run_until_stalled(&mut input_device_server_fut),
+                Poll::Pending
+            );
+            assert_matches!(executor.run_until_stalled(&mut get_descriptor_fut), Poll::Ready(_));
+            Ok(())
+        }
     }
 
     mod future_resolution {
         use {
-            super::{utils::make_input_device_proxy_and_struct, *},
+            super::{
+                utils::{make_input_device_proxy_and_struct, make_input_reports_reader_proxy},
+                *,
+            },
             futures::task::Poll,
         };
+
+        mod yields_ok_after_all_reports_are_sent_to_input_reports_reader {
+            use {super::*, matches::assert_matches};
+
+            #[test]
+            fn if_device_request_channel_was_closed() {
+                let mut executor = fasync::Executor::new().expect("creating executor");
+                let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+                let input_reports_reader_proxy =
+                    make_input_reports_reader_proxy(&input_device_proxy);
+                input_device
+                    .key_press(KeyboardReport { pressed_keys: vec![] }, DEFAULT_REPORT_TIMESTAMP)
+                    .expect("queuing input report");
+
+                let _input_reports_fut = input_reports_reader_proxy.read_input_reports();
+                let mut input_device_fut = input_device.serve_reports();
+                std::mem::drop(input_device_proxy); // Close device request channel.
+                assert_matches!(
+                    executor.run_until_stalled(&mut input_device_fut),
+                    Poll::Ready(Ok(()))
+                );
+            }
+
+            #[test]
+            fn even_if_device_request_channel_is_open() {
+                let mut executor = fasync::Executor::new().expect("creating executor");
+                let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+                let input_reports_reader_proxy =
+                    make_input_reports_reader_proxy(&input_device_proxy);
+                input_device
+                    .key_press(KeyboardReport { pressed_keys: vec![] }, DEFAULT_REPORT_TIMESTAMP)
+                    .expect("queuing input report");
+
+                let _input_reports_fut = input_reports_reader_proxy.read_input_reports();
+                let mut input_device_fut = input_device.serve_reports();
+                assert_matches!(
+                    executor.run_until_stalled(&mut input_device_fut),
+                    Poll::Ready(Ok(()))
+                );
+            }
+
+            #[test]
+            fn even_if_reports_was_empty_and_device_request_channel_is_open() {
+                let mut executor = fasync::Executor::new().expect("creating executor");
+                let (input_device_proxy, input_device) = make_input_device_proxy_and_struct();
+                let input_reports_reader_proxy =
+                    make_input_reports_reader_proxy(&input_device_proxy);
+                let _input_reports_fut = input_reports_reader_proxy.read_input_reports();
+                let mut input_device_fut = input_device.serve_reports();
+                assert_matches!(
+                    executor.run_until_stalled(&mut input_device_fut),
+                    Poll::Ready(Ok(()))
+                );
+            }
+        }
 
         mod yields_err_if_peer_closed_device_channel_without_calling_get_input_reports_reader {
             use super::*;
@@ -312,9 +439,89 @@ mod tests {
                 assert_matches!(executor.run_until_stalled(&mut input_device_fut), Poll::Pending)
             }
         }
+
+        mod is_pending_if_peer_has_not_read_any_reports_when_a_report_is_available {
+            use super::*;
+
+            #[test]
+            fn if_device_request_channel_is_open() {
+                let mut executor = fasync::Executor::new().expect("creating executor");
+                let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+                let _input_reports_reader_proxy =
+                    make_input_reports_reader_proxy(&input_device_proxy);
+                input_device
+                    .key_press(KeyboardReport { pressed_keys: vec![] }, DEFAULT_REPORT_TIMESTAMP)
+                    .expect("queuing input report");
+
+                let mut input_device_fut = input_device.serve_reports();
+                assert_matches!(executor.run_until_stalled(&mut input_device_fut), Poll::Pending)
+            }
+
+            #[test]
+            fn even_if_device_channel_is_closed() {
+                let mut executor = fasync::Executor::new().expect("creating executor");
+                let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+                let _input_reports_reader_proxy =
+                    make_input_reports_reader_proxy(&input_device_proxy);
+                input_device
+                    .key_press(KeyboardReport { pressed_keys: vec![] }, DEFAULT_REPORT_TIMESTAMP)
+                    .expect("queuing input report");
+
+                let mut input_device_fut = input_device.serve_reports();
+                std::mem::drop(input_device_proxy); // Terminate `InputDeviceRequestStream`.
+                assert_matches!(executor.run_until_stalled(&mut input_device_fut), Poll::Pending)
+            }
+        }
+
+        mod is_pending_if_peer_did_not_read_all_reports {
+            use {super::*, fidl_fuchsia_input_report::MAX_DEVICE_REPORT_COUNT};
+
+            #[test]
+            fn if_device_request_channel_is_open() {
+                let mut executor = fasync::Executor::new().expect("creating executor");
+                let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+                let input_reports_reader_proxy =
+                    make_input_reports_reader_proxy(&input_device_proxy);
+                (0..=MAX_DEVICE_REPORT_COUNT).for_each(|_| {
+                    input_device
+                        .key_press(
+                            KeyboardReport { pressed_keys: vec![] },
+                            DEFAULT_REPORT_TIMESTAMP,
+                        )
+                        .expect("queuing input report");
+                });
+
+                // One query isn't enough to consume all of the reports queued above.
+                let _input_reports_fut = input_reports_reader_proxy.read_input_reports();
+                let mut input_device_fut = input_device.serve_reports();
+                assert_matches!(executor.run_until_stalled(&mut input_device_fut), Poll::Pending)
+            }
+
+            #[test]
+            fn even_if_device_request_channel_is_closed() {
+                let mut executor = fasync::Executor::new().expect("creating executor");
+                let (input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+                let input_reports_reader_proxy =
+                    make_input_reports_reader_proxy(&input_device_proxy);
+                (0..=MAX_DEVICE_REPORT_COUNT).for_each(|_| {
+                    input_device
+                        .key_press(
+                            KeyboardReport { pressed_keys: vec![] },
+                            DEFAULT_REPORT_TIMESTAMP,
+                        )
+                        .expect("queuing input report");
+                });
+
+                // One query isn't enough to consume all of the reports queued above.
+                let _input_reports_fut = input_reports_reader_proxy.read_input_reports();
+                let mut input_device_fut = input_device.serve_reports();
+                std::mem::drop(input_device_proxy); // Terminate `InputDeviceRequestStream`.
+                assert_matches!(executor.run_until_stalled(&mut input_device_fut), Poll::Pending)
+            }
+        }
     }
 
-    // Because `input_synthesis` is a library, unsupported features should yield `Error`s,
+    // Because `input_synthesis` is a library, unsupported features should yield `Err`s,
     // rather than panic!()-ing.
     mod unsupported_fidl_requests {
         use {
@@ -362,10 +569,45 @@ mod tests {
         }
     }
 
+    // Because `input_synthesis` is a library, unsupported use cases should yield `Error`s,
+    // rather than panic!()-ing.
+    mod unsupported_use_cases {
+        use {
+            super::{utils::make_input_device_proxy_and_struct, *},
+            fidl_fuchsia_input_report::InputReportsReaderMarker,
+        };
+
+        #[fasync::run_until_stalled(test)]
+        async fn multiple_get_input_reports_reader_requests_yield_error() -> Result<(), Error> {
+            let (input_device_proxy, input_device) = make_input_device_proxy_and_struct();
+
+            let (_input_reports_reader_proxy, input_reports_reader_server_end) =
+                endpoints::create_proxy::<InputReportsReaderMarker>()
+                    .context("creating InputReportsReader proxy and server end")?;
+            input_device_proxy
+                .get_input_reports_reader(input_reports_reader_server_end)
+                .expect("sending first get_input_reports_reader request");
+
+            let (_input_reports_reader_proxy, input_reports_reader_server_end) =
+                endpoints::create_proxy::<InputReportsReaderMarker>()
+                    .context("internal error creating InputReportsReader proxy and server end")?;
+            input_device_proxy
+                .get_input_reports_reader(input_reports_reader_server_end)
+                .expect("sending second get_input_reports_reader request");
+
+            let input_device_fut = input_device.serve_reports();
+            assert_matches!(input_device_fut.await, Err(_));
+            Ok(())
+        }
+    }
+
     mod utils {
         use {
             super::*,
-            fidl_fuchsia_input_report::{InputDeviceMarker, InputDeviceProxy},
+            fidl_fuchsia_input_report::{
+                InputDeviceMarker, InputDeviceProxy, InputReportsReaderMarker,
+                InputReportsReaderProxy,
+            },
         };
 
         /// Creates a `DeviceDescriptor` for a keyboard which has the keys enumerated
@@ -398,6 +640,24 @@ mod tests {
             let input_device =
                 Box::new(InputDevice::new(input_device_request_stream, || DeviceDescriptor::EMPTY));
             (input_device_proxy, input_device)
+        }
+
+        /// Creates an `InputReportsReaderProxy`, for sending
+        /// `fuchsia.input.report.InputReportsReader` reqests, and registers that
+        /// `InputReportsReader` with the `InputDevice` bound to `InputDeviceProxy`.
+        ///
+        /// # Returns
+        /// The newly created `InputReportsReaderProxy`.
+        pub(super) fn make_input_reports_reader_proxy(
+            input_device_proxy: &InputDeviceProxy,
+        ) -> InputReportsReaderProxy {
+            let (input_reports_reader_proxy, input_reports_reader_server_end) =
+                endpoints::create_proxy::<InputReportsReaderMarker>()
+                    .expect("internal error creating InputReportsReader proxy and server end");
+            input_device_proxy
+                .get_input_reports_reader(input_reports_reader_server_end)
+                .expect("sending get_input_reports_reader request");
+            input_reports_reader_proxy
         }
     }
 }
