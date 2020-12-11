@@ -519,7 +519,7 @@ zx_status_t OtStackApp::SetupOtRadioDev() {
   connected_to_device_ = true;
 
   status = zx_object_wait_async(device_channel_->get(), port_.get(), kPortRadioChannelRead,
-                                ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
+                                ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "failed to wait for events";
   }
@@ -576,7 +576,7 @@ void OtStackApp::EventThread() {
         }
         zx_status_t status =
             zx_object_wait_async(device_channel_->get(), port_.get(), kPortRadioChannelRead,
-                                 ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ZX_WAIT_ASYNC_ONCE);
+                                 ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
         if (status != ZX_OK) {
           FX_PLOGS(ERROR, status) << "failed to wait for events, terminating event thread";
           return;
