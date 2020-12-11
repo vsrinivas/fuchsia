@@ -337,7 +337,6 @@ class SimFirmware {
                                    const common::MacAddr& bssid, uint32_t reason);
   void HandleAuthReq(std::shared_ptr<const simulation::SimAuthFrame> frame);
   void HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame> frame);
-  zx_status_t HandleScbAssoc(const brcmf_ext_auth* ext_auth);
 
   // Generic scan operations
   zx_status_t ScanStart(std::unique_ptr<ScanOpts> opts);

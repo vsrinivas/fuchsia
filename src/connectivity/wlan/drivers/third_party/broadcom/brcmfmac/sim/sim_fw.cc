@@ -1116,37 +1116,6 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
   }
 }
 
-zx_status_t SimFirmware::HandleScbAssoc(const brcmf_ext_auth* ext_auth) {
-  if (auth_state_.state != AuthState::EXPECTING_EXTERNAL_HANDSHAKE_RESP) {
-    BRCMF_ERR("Unexpected HANDSHAKE_RESP from external supplicant.");
-    return ZX_ERR_BAD_STATE;
-  }
-
-  if (memcmp(assoc_state_.opts->bssid.byte, ext_auth->bssid, ETH_ALEN)) {
-    BRCMF_ERR("bssid does not match in SAE handshake resp.");
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  if (assoc_state_.opts->ssid.len != ext_auth->ssid.SSID_len ||
-      memcmp(ext_auth->ssid.SSID, assoc_state_.opts->ssid.ssid, ext_auth->ssid.SSID_len)) {
-    BRCMF_ERR("ssid does not match in SAE handshake resp.");
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  if (ext_auth->status != WLAN_AUTH_RESULT_SUCCESS) {
-    BRCMF_DBG(SIM, "SAE authentication failed from external supplicant.");
-    AssocHandleFailure();
-    return ZX_OK;
-  }
-
-  // Handshake resp received from AP, cancel timer.
-  hw_.CancelCallback(auth_state_.auth_timer_id);
-
-  auth_state_.state = AuthState::AUTHENTICATED;
-  AssocStart();
-  return ZX_OK;
-}
-
 zx_status_t SimFirmware::RemoteUpdateExternalSaeStatus(uint16_t seq_num, uint16_t status_code,
                                                        const uint8_t* sae_payload,
                                                        size_t text_len) {
