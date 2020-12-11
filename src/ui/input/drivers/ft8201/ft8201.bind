@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 using fuchsia.composite;
-using fuchsia.platform;
+using fuchsia.focaltech.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
-fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.FOCALTECH;
-fuchsia.BIND_PLATFORM_DEV_DID == 0x01;  // PDEV_DID_FOCALTECH_FT8201
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.focaltech.platform.BIND_PLATFORM_DEV_VID.FOCALTECH;
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.focaltech.platform.BIND_PLATFORM_DEV_DID.FT8201;
