@@ -16,6 +16,7 @@ var (
 	toolsToUpload = map[string]string{
 		"zbi":                   "zbi",
 		"fvm":                   "fvm",
+		"blobfs":                "blobfs",
 		"mtd-redundant-storage": "mtd-redundant-storage",
 		// TODO(fxbug.dev/38517): We can remove this different destination
 		// name once the go bootserver has replaced the old c bootserver
