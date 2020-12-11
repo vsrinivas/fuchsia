@@ -122,11 +122,11 @@ class Gt6853Device : public DeviceType,
   zx_status_t Init();
 
   zx_status_t DownloadConfigIfNeeded();
-  static zx::status<uint64_t> GetConfigOffset(const zx::vmo& config_vmo, size_t config_vmo_size,
+  static zx::status<uint64_t> GetConfigOffset(const fzl::VmoMapper& mapped_config,
                                               uint8_t sensor_id);
   zx_status_t PollCommandRegister(DeviceCommand command);
   zx_status_t SendCommand(HostCommand command);
-  zx_status_t SendConfig(const zx::vmo& config_vmo, uint64_t offset, size_t size);
+  zx_status_t SendConfig(fbl::Span<const uint8_t> config);
 
   zx_status_t UpdateFirmwareIfNeeded();
   // Returns the number of subsys entries found and populated.

@@ -447,6 +447,7 @@ TEST_F(Gt6853Test, ConfigDownload) {
 
   const uint32_t config_size_le = htole32(config_size);
   ASSERT_OK(config_vmo_.write(&config_size_le, 0, sizeof(config_size_le)));
+  ASSERT_OK(WriteConfigData({0x2b}, 4));  // Checksum
   ASSERT_OK(WriteConfigData({0x03}, 9));  // Number of config entries in the table
   ASSERT_OK(WriteConfigData({0x16, 0x00, 0x1a, 0x03, 0x1e, 0x06}, 16));  // Entry offsets
   ASSERT_OK(WriteConfigData({0x04, 0x03, 0x00, 0x00}, 0x0016));          // Entry 0 size
@@ -468,9 +469,7 @@ TEST_F(Gt6853Test, ConfigDownload) {
   EXPECT_EQ(fake_i2c_.get_config_data().size(), 0x0304 - 121);
 }
 
-TEST_F(Gt6853Test, ConfigDownloadSkipped) {
-  EXPECT_OK(Init());
-}
+TEST_F(Gt6853Test, ConfigDownloadSkipped) { EXPECT_OK(Init()); }
 
 TEST_F(Gt6853Test, NoConfigEntry) {
   config_size = 2338;
@@ -478,6 +477,7 @@ TEST_F(Gt6853Test, NoConfigEntry) {
 
   const uint32_t config_size_le = htole32(config_size);
   ASSERT_OK(config_vmo_.write(&config_size_le, 0, sizeof(config_size_le)));
+  ASSERT_OK(WriteConfigData({0x2b}, 4));
   ASSERT_OK(WriteConfigData({0x03}, 9));
   ASSERT_OK(WriteConfigData({0x16, 0x00, 0x1a, 0x03, 0x1e, 0x06}, 16));
   ASSERT_OK(WriteConfigData({0x04, 0x03, 0x00, 0x00}, 0x0016));
@@ -499,7 +499,7 @@ TEST_F(Gt6853Test, InvalidConfigEntry) {
   config_size = 2338;
   ASSERT_OK(zx::vmo::create(fbl::round_up(config_size, ZX_PAGE_SIZE), 0, &config_vmo_));
 
-  ASSERT_OK(WriteConfigData({0x1c, 0x03, 0x00, 0x00}, 0));
+  ASSERT_OK(WriteConfigData({0x1c, 0x03, 0x00, 0x00, 0x2b}, 0));
   ASSERT_OK(WriteConfigData({0x03}, 9));
   ASSERT_OK(WriteConfigData({0x16, 0x00, 0x1a, 0x03, 0x1e, 0x06}, 16));
   ASSERT_OK(WriteConfigData({0x04, 0x03, 0x00, 0x00}, 0x0016));
@@ -516,6 +516,30 @@ TEST_F(Gt6853Test, InvalidConfigEntry) {
 
   config_size = 0x031a + 2;
   EXPECT_NOT_OK(Init());
+}
+
+TEST_F(Gt6853Test, BadConfigChecksum) {
+  config_size = 2338;
+  ASSERT_OK(zx::vmo::create(fbl::round_up(config_size, ZX_PAGE_SIZE), 0, &config_vmo_));
+
+  const uint32_t config_size_le = htole32(config_size);
+  ASSERT_OK(config_vmo_.write(&config_size_le, 0, sizeof(config_size_le)));
+  ASSERT_OK(WriteConfigData({0x2b + 1}, 4));
+  ASSERT_OK(WriteConfigData({0x03}, 9));
+  ASSERT_OK(WriteConfigData({0x16, 0x00, 0x1a, 0x03, 0x1e, 0x06}, 16));
+  ASSERT_OK(WriteConfigData({0x04, 0x03, 0x00, 0x00}, 0x0016));
+  ASSERT_OK(WriteConfigData({0x02}, 0x0016 + 20));
+  ASSERT_OK(WriteConfigString("Config number two", 0x0016 + 121));
+  ASSERT_OK(WriteConfigData({0x04, 0x03, 0x00, 0x00}, 0x031a));
+  ASSERT_OK(WriteConfigData({0x00}, 0x031a + 20));
+  ASSERT_OK(WriteConfigString("Config number zero", 0x031a + 121));
+  ASSERT_OK(WriteConfigData({0x04, 0x03, 0x00, 0x00}, 0x061e));
+  ASSERT_OK(WriteConfigData({0x01}, 0x061e + 20));
+  ASSERT_OK(WriteConfigString("Config number one", 0x061e + 121));
+
+  fake_i2c_.set_sensor_id(1);
+
+  EXPECT_EQ(Init(), ZX_ERR_IO_DATA_INTEGRITY);
 }
 
 TEST_F(Gt6853Test, FirmwareDownload) {
