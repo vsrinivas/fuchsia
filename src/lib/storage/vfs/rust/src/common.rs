@@ -69,8 +69,6 @@ pub fn inherit_rights_for_clone(parent_flags: u32, mut flags: u32) -> Result<u32
 /// OnOpen dispatch.  `server_end` will be closed, so there will be some kind of indication of the
 /// issue.
 ///
-/// TODO Maybe send an epitaph on the `server_end`?
-///
 /// # Panics
 /// If `status` is `Status::OK`.  In this case `OnOpen` may need to contain a description of the
 /// object, and server_end should not be droppped.
@@ -80,14 +78,17 @@ pub fn send_on_open_with_error(flags: u32, server_end: ServerEnd<NodeMarker>, st
     }
 
     if flags & OPEN_FLAG_DESCRIBE == 0 {
+        // There is no reasonable way to report this error.  Assuming the `server_end` has just
+        // disconnected or failed in some other way why we are trying to send OnOpen.
+        let _ = server_end.close_with_epitaph(status);
         return;
     }
 
     match server_end.into_stream_and_control_handle() {
         Ok((_, control_handle)) => {
-            // There is no reasonable way to report this error.  Assuming the `server_end` has just
-            // disconnected or failed in some other way why we are trying to send OnOpen.
+            // Same as above, ignore the error.
             let _ = control_handle.send_on_open_(status.into_raw(), None);
+            control_handle.shutdown_with_epitaph(status);
         }
         Err(_) => {
             // Same as above, ignore the error.

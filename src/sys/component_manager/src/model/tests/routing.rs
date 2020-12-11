@@ -2461,13 +2461,13 @@ async fn use_not_exposed() {
     // Capability is only exposed from "c", so it only be usable from there.
 
     // When trying to open a capability that's not exposed to realm, there's no node for it in the
-    // exposed dir, so no routing takes place.  Hence we don't expect an epitaph.
+    // exposed dir, so no routing takes place.
     test.check_use_exposed_dir(
         vec!["b:0"].into(),
         CheckUse::Directory {
             path: "/hippo_data".try_into().unwrap(),
             file: PathBuf::from("hippo"),
-            expected_res: ExpectedResult::ErrWithNoEpitaph,
+            expected_res: ExpectedResult::Err(zx::Status::NOT_FOUND),
         },
     )
     .await;
@@ -2475,7 +2475,7 @@ async fn use_not_exposed() {
         vec!["b:0"].into(),
         CheckUse::Protocol {
             path: "/hippo_svc".try_into().unwrap(),
-            expected_res: ExpectedResult::ErrWithNoEpitaph,
+            expected_res: ExpectedResult::Err(zx::Status::NOT_FOUND),
         },
     )
     .await;

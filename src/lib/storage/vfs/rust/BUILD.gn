@@ -107,7 +107,10 @@ rustc_library("vfs") {
     "src/tree_builder.rs",
   ]
 
-  test_deps = [ "//src/testing/fidl:placeholders-rustc" ]
+  test_deps = [
+    "//src/testing/fidl:placeholders-rustc",
+    "//third_party/rust_crates:matches",
+  ]
 }
 
 fuchsia_unittest_package("vfs-tests") {

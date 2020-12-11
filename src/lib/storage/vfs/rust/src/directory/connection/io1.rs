@@ -535,3 +535,172 @@ where
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::directory::immutable::simple::simple,
+        fidl_fuchsia_io::{
+            DirectoryMarker, NodeEvent, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
+            OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE,
+        },
+        fuchsia_async as fasync, fuchsia_zircon as zx,
+        futures::prelude::*,
+        matches::assert_matches,
+    };
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_open_not_found() {
+        let (dir_proxy, dir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+
+        let dir = simple();
+        dir.open(
+            ExecutionScope::new(),
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            ServerEnd::new(dir_server_end.into_channel()),
+        );
+
+        let (node_proxy, node_server_end) =
+            fidl::endpoints::create_proxy().expect("Create proxy to succeed");
+
+        // Try to open a file that doesn't exist.
+        assert_matches!(
+            dir_proxy.open(OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo", node_server_end),
+            Ok(())
+        );
+
+        // The channel also be closed with a NOT_FOUND epitaph.
+        assert_matches!(
+            node_proxy.describe().await,
+            Err(fidl::Error::ClientChannelClosed {
+                status: zx::Status::NOT_FOUND,
+                service_name: "(anonymous) Node",
+            })
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_open_not_found_event_stream() {
+        let (dir_proxy, dir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+
+        let dir = simple();
+        dir.open(
+            ExecutionScope::new(),
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            ServerEnd::new(dir_server_end.into_channel()),
+        );
+
+        let (node_proxy, node_server_end) =
+            fidl::endpoints::create_proxy().expect("Create proxy to succeed");
+
+        // Try to open a file that doesn't exist.
+        assert_matches!(
+            dir_proxy.open(OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo", node_server_end),
+            Ok(())
+        );
+
+        // The event stream should be closed with the epitaph.
+        let mut event_stream = node_proxy.take_event_stream();
+        assert_matches!(
+            event_stream.try_next().await,
+            Err(fidl::Error::ClientChannelClosed {
+                status: zx::Status::NOT_FOUND,
+                service_name: "(anonymous) Node",
+            })
+        );
+        assert_matches!(event_stream.try_next().await, Ok(None));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_open_with_describe_not_found() {
+        let (dir_proxy, dir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+
+        let dir = simple();
+        dir.open(
+            ExecutionScope::new(),
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            ServerEnd::new(dir_server_end.into_channel()),
+        );
+
+        let (node_proxy, node_server_end) =
+            fidl::endpoints::create_proxy().expect("Create proxy to succeed");
+
+        // Try to open a file that doesn't exist.
+        assert_matches!(
+            dir_proxy.open(
+                OPEN_FLAG_DESCRIBE | OPEN_RIGHT_READABLE,
+                MODE_TYPE_FILE,
+                "foo",
+                node_server_end,
+            ),
+            Ok(())
+        );
+
+        // The channel should be closed with a NOT_FOUND epitaph.
+        assert_matches!(
+            node_proxy.describe().await,
+            Err(fidl::Error::ClientChannelClosed {
+                status: zx::Status::NOT_FOUND,
+                service_name: "(anonymous) Node",
+            })
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_open_describe_not_found_event_stream() {
+        let (dir_proxy, dir_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+
+        let dir = simple();
+        dir.open(
+            ExecutionScope::new(),
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            ServerEnd::new(dir_server_end.into_channel()),
+        );
+
+        let (node_proxy, node_server_end) =
+            fidl::endpoints::create_proxy().expect("Create proxy to succeed");
+
+        // Try to open a file that doesn't exist.
+        assert_matches!(
+            dir_proxy.open(
+                OPEN_FLAG_DESCRIBE | OPEN_RIGHT_READABLE,
+                MODE_TYPE_FILE,
+                "foo",
+                node_server_end,
+            ),
+            Ok(())
+        );
+
+        // The event stream should return that the file does not exist.
+        let mut event_stream = node_proxy.take_event_stream();
+        assert_matches!(
+            event_stream.try_next().await,
+            Ok(Some(NodeEvent::OnOpen_ {
+                s,
+                info: None,
+            }))
+            if Status::from_raw(s) == Status::NOT_FOUND
+        );
+        assert_matches!(
+            event_stream.try_next().await,
+            Err(fidl::Error::ClientChannelClosed {
+                status: zx::Status::NOT_FOUND,
+                service_name: "(anonymous) Node",
+            })
+        );
+        assert_matches!(event_stream.try_next().await, Ok(None));
+    }
+}
