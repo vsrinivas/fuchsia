@@ -16,9 +16,9 @@ namespace fidl {
 
 namespace internal {
 
-SimpleBinding::SimpleBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-                             TypeErasedDispatchFn dispatch_fn,
-                             TypeErasedOnChannelClosedFn on_channel_closed_fn)
+SimpleBinding::SimpleBinding(async_dispatcher_t* dispatcher, zx::channel channel,
+                             fidl::internal::IncomingMessageDispatcher* interface,
+                             AnyOnChannelClosedFn on_channel_closed_fn)
     : async_wait_t({
           .state = ASYNC_STATE_INIT,
           .handler = &MessageHandler,
@@ -27,8 +27,7 @@ SimpleBinding::SimpleBinding(async_dispatcher_t* dispatcher, zx::channel channel
           .options = 0,
       }),
       dispatcher_(dispatcher),
-      interface_(impl),
-      dispatch_fn_(dispatch_fn),
+      interface_(interface),
       on_channel_closed_fn_(std::move(on_channel_closed_fn)) {}
 
 SimpleBinding::~SimpleBinding() {
@@ -98,10 +97,10 @@ zx_status_t BeginWait(std::unique_ptr<SimpleBinding>* unique_binding) {
   return status;
 }
 
-zx_status_t TypeErasedBind(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-                           TypeErasedDispatchFn dispatch_fn,
-                           TypeErasedOnChannelClosedFn on_channel_closed_fn) {
-  auto binding = std::make_unique<SimpleBinding>(dispatcher, std::move(channel), impl, dispatch_fn,
+zx_status_t BindSingleInFlightOnlyImpl(async_dispatcher_t* dispatcher, zx::channel channel,
+                                       fidl::internal::IncomingMessageDispatcher* interface,
+                                       AnyOnChannelClosedFn on_channel_closed_fn) {
+  auto binding = std::make_unique<SimpleBinding>(dispatcher, std::move(channel), interface,
                                                  std::move(on_channel_closed_fn));
   auto status = BeginWait(&binding);
   return status;

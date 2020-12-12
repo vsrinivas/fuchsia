@@ -165,6 +165,11 @@ namespace entries {
   return dispatch_result;
 }
 
+::fidl::DispatchResult super::Interface::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return super::Dispatch(this, msg, txn);
+}
+
 ::fidl::Result super::Interface::fooCompleterBase::Reply(int64_t y) {
   fooResponse::OwnedEncodedMessage _response{y};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -336,6 +341,11 @@ namespace entries {
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return dispatch_result;
+}
+
+::fidl::DispatchResult sub::Interface::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return sub::Dispatch(this, msg, txn);
 }
 
 ::fidl::Result sub::Interface::fooCompleterBase::Reply(int64_t y) {

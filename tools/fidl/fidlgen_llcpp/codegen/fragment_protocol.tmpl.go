@@ -794,7 +794,7 @@ class {{ .Name }} final {
 
 {{ "" }}
   // Pure-virtual interface to be implemented by a server.
-  class Interface {
+  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
    public:
     Interface() = default;
     virtual ~Interface() = default;
@@ -846,6 +846,11 @@ class {{ .Name }} final {
 {{ "" }}
       {{- end }}
     {{- end }}
+
+   private:
+    {{- /* Note that this implementation is snake_case to avoid name conflicts. */}}
+    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                            ::fidl::Transaction* txn) final;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the server implementation.

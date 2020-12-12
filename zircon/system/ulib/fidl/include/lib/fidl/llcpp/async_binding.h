@@ -21,8 +21,9 @@
 
 namespace fidl {
 
-// The return value of various Dispatch, TryDispatch, or TypeErasedDispatch functions,
-// which call into the appropriate server message handlers based on the method ordinal.
+// The return value of various Dispatch, TryDispatch, or
+// |IncomingMessageDispatcher::dispatch_message| functions, which call into the
+// appropriate server message handlers based on the method ordinal.
 enum class __attribute__((enum_extensibility(closed))) DispatchResult {
   // The FIDL method ordinal was not recognized by the dispatch function.
   kNotFound = false,
@@ -35,9 +36,17 @@ enum class __attribute__((enum_extensibility(closed))) DispatchResult {
 
 namespace internal {
 
-using TypeErasedServerDispatchFn = DispatchResult (*)(void*, fidl_incoming_msg_t*,
-                                                      ::fidl::Transaction*);
-using TypeErasedOnUnboundFn = fit::callback<void(void*, UnbindInfo, zx::channel)>;
+class IncomingMessageDispatcher;
+
+// A generic callback type handling the completion of server unbinding.
+// Note that the first parameter is a pointer to |IncomingMessageDispatcher|,
+// which is the common base interface implemented by all server protocol
+// message handling interfaces.
+//
+// The bindings runtime need to convert this pointer to the specific server
+// implementation type before invoking the public unbinding completion callback
+// that is |fidl::OnUnboundFn<ServerImpl>|.
+using AnyOnUnboundFn = fit::callback<void(IncomingMessageDispatcher*, UnbindInfo, zx::channel)>;
 
 class AsyncTransaction;
 class ChannelRef;
@@ -130,11 +139,9 @@ class AsyncBinding : private async_wait_t {
 class AnyAsyncServerBinding : public AsyncBinding {
  public:
   AnyAsyncServerBinding(async_dispatcher_t* dispatcher, const zx::unowned_channel& borrowed_channel,
-                        void* impl, TypeErasedServerDispatchFn dispatch_fn,
-                        TypeErasedOnUnboundFn&& on_unbound_fn)
+                        IncomingMessageDispatcher* interface, AnyOnUnboundFn&& on_unbound_fn)
       : AsyncBinding(dispatcher, borrowed_channel),
-        interface_(impl),
-        dispatch_fn_(dispatch_fn),
+        interface_(interface),
         on_unbound_fn_(std::move(on_unbound_fn)) {}
 
   std::optional<UnbindInfo> Dispatch(fidl_incoming_msg_t* msg, bool* binding_released) override;
@@ -151,9 +158,8 @@ class AnyAsyncServerBinding : public AsyncBinding {
  private:
   friend fidl::internal::AsyncTransaction;
 
-  void* interface_ = nullptr;
-  TypeErasedServerDispatchFn dispatch_fn_ = nullptr;
-  TypeErasedOnUnboundFn on_unbound_fn_ = {};
+  IncomingMessageDispatcher* interface_ = nullptr;
+  AnyOnUnboundFn on_unbound_fn_ = {};
 };
 
 // The async server binding for |Protocol|.
@@ -162,11 +168,11 @@ template <typename Protocol>
 class AsyncServerBinding final : public AnyAsyncServerBinding {
  public:
   static std::shared_ptr<AsyncServerBinding> Create(async_dispatcher_t* dispatcher,
-                                                    zx::channel&& channel, void* impl,
-                                                    TypeErasedServerDispatchFn dispatch_fn,
-                                                    TypeErasedOnUnboundFn&& on_unbound_fn) {
+                                                    zx::channel&& channel,
+                                                    IncomingMessageDispatcher* interface,
+                                                    AnyOnUnboundFn&& on_unbound_fn) {
     auto ret = std::shared_ptr<AsyncServerBinding>(new AsyncServerBinding(
-        dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_unbound_fn)));
+        dispatcher, std::move(channel), interface, std::move(on_unbound_fn)));
     // We keep the binding alive until somebody decides to close the channel.
     ret->keep_alive_ = ret;
     return ret;
@@ -179,12 +185,12 @@ class AsyncServerBinding final : public AnyAsyncServerBinding {
   zx::unowned_channel channel() const { return zx::unowned_channel(event_sender_.channel()); }
 
  private:
-  AsyncServerBinding(async_dispatcher_t* dispatcher, zx::channel&& channel, void* impl,
-                     TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn&& on_unbound_fn)
-      : AnyAsyncServerBinding(dispatcher, channel.borrow(), impl, dispatch_fn,
-                              std::move(on_unbound_fn)),
+  AsyncServerBinding(async_dispatcher_t* dispatcher, zx::channel&& channel,
+                     IncomingMessageDispatcher* interface, AnyOnUnboundFn&& on_unbound_fn)
+      : AnyAsyncServerBinding(dispatcher, channel.borrow(), interface, std::move(on_unbound_fn)),
         event_sender_(std::move(channel)) {}
 
+  // |FinishUnbind| will be invoked on a dispatcher thread.
   void FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) override {
     AnyAsyncServerBinding::FinishUnbindHelper(std::move(calling_ref), info,
                                               std::move(event_sender_.channel()));

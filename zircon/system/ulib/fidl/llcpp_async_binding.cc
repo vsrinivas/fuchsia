@@ -182,7 +182,7 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref, U
 std::optional<UnbindInfo> AnyAsyncServerBinding::Dispatch(fidl_incoming_msg_t* msg,
                                                           bool* binding_released) {
   auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  AsyncTransaction txn(hdr->txid, dispatch_fn_, binding_released);
+  AsyncTransaction txn(hdr->txid, binding_released);
   return txn.Dispatch(std::move(keep_alive_), msg);
 }
 

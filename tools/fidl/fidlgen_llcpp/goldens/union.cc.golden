@@ -489,6 +489,11 @@ namespace entries {
   return dispatch_result;
 }
 
+::fidl::DispatchResult TestProtocol::Interface::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return TestProtocol::Dispatch(this, msg, txn);
+}
+
 ::fidl::Result TestProtocol::Interface::
     StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
         ::llcpp::fidl::test::union_::StrictBoundedXUnion xu) {

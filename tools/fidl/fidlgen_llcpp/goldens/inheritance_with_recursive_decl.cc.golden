@@ -111,6 +111,11 @@ namespace entries {
   return dispatch_result;
 }
 
+::fidl::DispatchResult Parent::Interface::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return Parent::Dispatch(this, msg, txn);
+}
+
 void Parent::FirstRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kParent_First_Ordinal);
 }
@@ -269,6 +274,11 @@ namespace entries {
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return dispatch_result;
+}
+
+::fidl::DispatchResult Child::Interface::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return Child::Dispatch(this, msg, txn);
 }
 
 void Child::FirstRequest::_InitHeader(zx_txid_t _txid) {

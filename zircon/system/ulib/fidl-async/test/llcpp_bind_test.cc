@@ -110,4 +110,60 @@ TEST(BindTestCase, CallbackDestroyOnServerClose) {
   ASSERT_OK(local.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr));
 }
 
+// These classes are used to create a server implementation with multiple
+// inheritance.
+class PlaceholderBase1 {
+ public:
+  virtual void Foo() = 0;
+  int a;
+};
+
+class PlaceholderBase2 {
+ public:
+  virtual void Bar() = 0;
+  int b;
+};
+
+class MultiInheritanceServer : public PlaceholderBase1,
+                               public ::llcpp::fidl::test::simple::Simple::Interface,
+                               public PlaceholderBase2 {
+ public:
+  explicit MultiInheritanceServer(sync_completion_t* destroyed) : destroyed_(destroyed) {}
+  MultiInheritanceServer(MultiInheritanceServer&& other) = delete;
+  MultiInheritanceServer(const MultiInheritanceServer& other) = delete;
+  MultiInheritanceServer& operator=(MultiInheritanceServer&& other) = delete;
+  MultiInheritanceServer& operator=(const MultiInheritanceServer& other) = delete;
+
+  ~MultiInheritanceServer() override { sync_completion_signal(destroyed_); }
+
+  void Echo(int32_t request, EchoCompleter::Sync& completer) override { completer.Reply(request); }
+  void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_OK); }
+
+  void Foo() override {}
+  void Bar() override {}
+
+ private:
+  sync_completion_t* destroyed_;
+};
+
+TEST(BindTestCase, MultipleInheritanceServer) {
+  sync_completion_t destroyed;
+  auto server = std::make_unique<MultiInheritanceServer>(&destroyed);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  // Launch a thread so we can make a blocking client call
+  ASSERT_OK(loop.StartThread());
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(remote), std::move(server)));
+  ASSERT_FALSE(sync_completion_signaled(&destroyed));
+
+  auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
+  ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
+  // Make sure the other end closed
+  ASSERT_OK(local.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr));
+  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
+}
+
 }  // namespace

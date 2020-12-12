@@ -86,6 +86,11 @@ namespace entries {
   return ::fidl::DispatchResult::kNotFound;
 }
 
+::fidl::DispatchResult SomeProtocol::Interface::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return SomeProtocol::Dispatch(this, msg, txn);
+}
+
 }  // namespace handles
 }  // namespace test
 }  // namespace fidl

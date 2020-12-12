@@ -5,6 +5,7 @@
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/async_transaction.h>
 #include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/server.h>
 #include <zircon/assert.h>
 
 namespace fidl {
@@ -22,7 +23,7 @@ std::optional<UnbindInfo> AsyncTransaction::Dispatch(std::shared_ptr<AsyncBindin
   owned_binding_ = std::move(binding);
   // Avoid static_pointer_cast for now since it results in atomic inc/dec.
   auto* binding_raw = static_cast<AnyAsyncServerBinding*>(owned_binding_.get());
-  fidl::DispatchResult dispatch_result = dispatch_fn_(binding_raw->interface_, msg, this);
+  fidl::DispatchResult dispatch_result = binding_raw->interface_->dispatch_message(msg, this);
   if (moved)
     return {};  // Return if `this` is no longer valid.
   moved_ = nullptr;

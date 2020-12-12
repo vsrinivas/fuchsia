@@ -914,4 +914,74 @@ TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {
   // but should not crash.
 }
 
+// These classes are used to create a server implementation with multiple
+// inheritance.
+class PlaceholderBase1 {
+ public:
+  virtual void Foo() = 0;
+  int a;
+};
+
+class PlaceholderBase2 {
+ public:
+  virtual void Bar() = 0;
+  int b;
+};
+
+class MultiInheritanceServer : public PlaceholderBase1,
+                               public Simple::Interface,
+                               public PlaceholderBase2 {
+ public:
+  explicit MultiInheritanceServer(sync_completion_t* destroyed) : destroyed_(destroyed) {}
+  MultiInheritanceServer(MultiInheritanceServer&& other) = delete;
+  MultiInheritanceServer(const MultiInheritanceServer& other) = delete;
+  MultiInheritanceServer& operator=(MultiInheritanceServer&& other) = delete;
+  MultiInheritanceServer& operator=(const MultiInheritanceServer& other) = delete;
+
+  ~MultiInheritanceServer() override { sync_completion_signal(destroyed_); }
+
+  void Echo(int32_t request, EchoCompleter::Sync& completer) override { completer.Reply(request); }
+  void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_OK); }
+
+  void Foo() override {}
+  void Bar() override {}
+
+ private:
+  sync_completion_t* destroyed_;
+};
+
+TEST(BindServerTestCase, MultipleInheritanceServer) {
+  sync_completion_t destroyed;
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  // Launch a thread so we can make a blocking client call
+  ASSERT_OK(loop.StartThread());
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  fidl::OnUnboundFn<MultiInheritanceServer> on_unbound =
+      [](MultiInheritanceServer* server, fidl::UnbindInfo info, zx::channel channel) {
+        EXPECT_EQ(fidl::UnbindInfo::kClose, info.reason);
+        EXPECT_OK(info.status);
+        EXPECT_TRUE(channel);
+        delete server;
+      };
+
+  fidl::BindServer(loop.dispatcher(), std::move(remote), new MultiInheritanceServer(&destroyed),
+                   std::move(on_unbound));
+  ASSERT_FALSE(sync_completion_signaled(&destroyed));
+
+  auto result = Simple::Call::Close(zx::unowned_channel{local});
+  EXPECT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
+
+  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
+  // Make sure the other end closed
+  ASSERT_OK(local.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr));
+
+  // Verify the epitaph from Close().
+  fidl_epitaph_t epitaph;
+  ASSERT_OK(local.read(0, &epitaph, nullptr, sizeof(fidl_epitaph_t), 0, nullptr, nullptr));
+  EXPECT_EQ(ZX_OK, epitaph.error);
+}
+
 }  // namespace

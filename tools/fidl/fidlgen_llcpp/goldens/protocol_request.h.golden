@@ -1333,7 +1333,7 @@ class Parent final {
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
-  class Interface {
+  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
    public:
     Interface() = default;
     virtual ~Interface() = default;
@@ -1398,6 +1398,10 @@ class Parent final {
 
     virtual void TakeChildRequest(
         ::zx::channel r, TakeChildRequestCompleter::Sync& _completer) = 0;
+
+   private:
+    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                            ::fidl::Transaction* txn) final;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -1477,13 +1481,17 @@ class Child final {
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
-  class Interface {
+  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
    public:
     Interface() = default;
     virtual ~Interface() = default;
 
     // The marker protocol type within which this |Interface| class is defined.
     using _EnclosingProtocol = Child;
+
+   private:
+    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                            ::fidl::Transaction* txn) final;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

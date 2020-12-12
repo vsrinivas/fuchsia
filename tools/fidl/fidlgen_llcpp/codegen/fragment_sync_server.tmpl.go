@@ -73,5 +73,11 @@ namespace entries {
   return ::fidl::DispatchResult::kNotFound;
   {{- end }}
 }
+
+::fidl::DispatchResult {{ .Name }}::Interface::dispatch_message(fidl_incoming_msg_t* msg,
+                                                         ::fidl::Transaction* txn) {
+  return {{ .Name }}::Dispatch(this, msg, txn);
+}
+
 {{- end }}
 `

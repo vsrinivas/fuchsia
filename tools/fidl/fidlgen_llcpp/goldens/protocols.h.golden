@@ -1615,7 +1615,7 @@ class Transitional final {
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
-  class Interface {
+  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
    public:
     Interface() = default;
     virtual ~Interface() = default;
@@ -1653,6 +1653,10 @@ class Transitional final {
     virtual void OneWay(int64_t x, OneWayCompleter::Sync& _completer) {
       _completer.Close(ZX_ERR_NOT_SUPPORTED);
     }
+
+   private:
+    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                            ::fidl::Transaction* txn) final;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -2920,7 +2924,7 @@ class ChannelProtocol final {
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
-  class Interface {
+  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
    public:
     Interface() = default;
     virtual ~Interface() = default;
@@ -2980,6 +2984,10 @@ class ChannelProtocol final {
 
     virtual void MutateSocket(::zx::socket a,
                               MutateSocketCompleter::Sync& _completer) = 0;
+
+   private:
+    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                            ::fidl::Transaction* txn) final;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -5392,7 +5400,7 @@ class WithAndWithoutRequestResponse final {
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
-  class Interface {
+  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
    public:
     Interface() = default;
     virtual ~Interface() = default;
@@ -5510,6 +5518,10 @@ class WithAndWithoutRequestResponse final {
     virtual void WithRequestWithResponse(
         ::fidl::StringView arg,
         WithRequestWithResponseCompleter::Sync& _completer) = 0;
+
+   private:
+    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                            ::fidl::Transaction* txn) final;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -6778,7 +6790,7 @@ class WithErrorSyntax final {
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
-  class Interface {
+  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
    public:
     Interface() = default;
     virtual ~Interface() = default;
@@ -6879,6 +6891,10 @@ class WithErrorSyntax final {
     using ErrorAsEnumCompleter = ::fidl::Completer<ErrorAsEnumCompleterBase>;
 
     virtual void ErrorAsEnum(ErrorAsEnumCompleter::Sync& _completer) = 0;
+
+   private:
+    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                            ::fidl::Transaction* txn) final;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

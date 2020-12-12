@@ -1274,7 +1274,7 @@ class Interface final {
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
-  class Interface {
+  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
    public:
     Interface() = default;
     virtual ~Interface() = default;
@@ -1285,6 +1285,10 @@ class Interface final {
     using MethodCompleter = ::fidl::Completer<>;
 
     virtual void Method(MethodCompleter::Sync& _completer) = 0;
+
+   private:
+    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                            ::fidl::Transaction* txn) final;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

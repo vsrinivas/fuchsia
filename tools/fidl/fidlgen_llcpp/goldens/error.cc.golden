@@ -181,6 +181,11 @@ namespace entries {
   return dispatch_result;
 }
 
+::fidl::DispatchResult Example::Interface::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return Example::Dispatch(this, msg, txn);
+}
+
 ::fidl::Result Example::Interface::fooCompleterBase::Reply(
     ::llcpp::fidl::test::error::Example_foo_Result result) {
   fooResponse::OwnedEncodedMessage _response{result};

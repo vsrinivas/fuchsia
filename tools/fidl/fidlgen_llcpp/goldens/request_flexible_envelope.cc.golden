@@ -371,6 +371,11 @@ namespace entries {
   return dispatch_result;
 }
 
+::fidl::DispatchResult Protocol::Interface::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return Protocol::Dispatch(this, msg, txn);
+}
+
 ::fidl::Result
 Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
     ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo f) {

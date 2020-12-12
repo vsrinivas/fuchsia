@@ -90,6 +90,11 @@ namespace entries {
   return dispatch_result;
 }
 
+::fidl::DispatchResult SecondProtocol::Interface::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return SecondProtocol::Dispatch(this, msg, txn);
+}
+
 void SecondProtocol::MethodOnSecondRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kSecondProtocol_MethodOnSecond_Ordinal);
 }
@@ -172,6 +177,11 @@ namespace entries {
         {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   }
   return dispatch_result;
+}
+
+::fidl::DispatchResult FirstProtocol::Interface::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return FirstProtocol::Dispatch(this, msg, txn);
 }
 
 void FirstProtocol::MethodOnFirstRequest::_InitHeader(zx_txid_t _txid) {

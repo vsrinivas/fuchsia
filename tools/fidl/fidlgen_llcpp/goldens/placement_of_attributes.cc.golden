@@ -149,6 +149,11 @@ namespace entries {
   return dispatch_result;
 }
 
+::fidl::DispatchResult ExampleProtocol::Interface::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ExampleProtocol::Dispatch(this, msg, txn);
+}
+
 void ExampleProtocol::MethodRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kExampleProtocol_Method_Ordinal);
 }

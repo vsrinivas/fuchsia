@@ -156,6 +156,11 @@ namespace entries {
   return dispatch_result;
 }
 
+::fidl::DispatchResult Top::Interface::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return Top::Dispatch(this, msg, txn);
+}
+
 ::fidl::Result Top::Interface::GetFooCompleterBase::Reply(
     ::llcpp::bottom::Foo foo) {
   GetFooResponse::OwnedEncodedMessage _response{foo};

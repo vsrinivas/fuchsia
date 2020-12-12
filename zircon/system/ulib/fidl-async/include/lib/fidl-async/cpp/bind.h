@@ -15,24 +15,22 @@
 
 namespace fidl {
 
-template <typename Interface>
-using OnChannelClosedFn = fit::callback<void(Interface*)>;
+template <typename ServerImpl>
+using OnChannelClosedFn = fit::callback<void(ServerImpl*)>;
 
 namespace internal {
 
-using TypeErasedDispatchFn = ::fidl::DispatchResult (*)(void*, fidl_incoming_msg_t*,
-                                                        ::fidl::Transaction*);
+using AnyOnChannelClosedFn = fit::callback<void(fidl::internal::IncomingMessageDispatcher*)>;
 
-using TypeErasedOnChannelClosedFn = fit::callback<void(void*)>;
-
-zx_status_t TypeErasedBind(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-                           TypeErasedDispatchFn dispatch_fn,
-                           TypeErasedOnChannelClosedFn on_channel_closed_fn);
+zx_status_t BindSingleInFlightOnlyImpl(async_dispatcher_t* dispatcher, zx::channel channel,
+                                       fidl::internal::IncomingMessageDispatcher* interface,
+                                       AnyOnChannelClosedFn on_channel_closed_fn);
 
 class SimpleBinding : private async_wait_t {
  public:
-  SimpleBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-                TypeErasedDispatchFn dispatch_fn, TypeErasedOnChannelClosedFn on_channel_closed_fn);
+  SimpleBinding(async_dispatcher_t* dispatcher, zx::channel channel,
+                fidl::internal::IncomingMessageDispatcher* interface,
+                AnyOnChannelClosedFn on_channel_closed_fn);
 
   ~SimpleBinding();
 
@@ -46,9 +44,8 @@ class SimpleBinding : private async_wait_t {
   zx::unowned_channel channel() const { return zx::unowned_channel(async_wait_t::object); }
 
   async_dispatcher_t* dispatcher_;
-  void* interface_;
-  TypeErasedDispatchFn dispatch_fn_;
-  TypeErasedOnChannelClosedFn on_channel_closed_fn_;
+  fidl::internal::IncomingMessageDispatcher* interface_;
+  AnyOnChannelClosedFn on_channel_closed_fn_;
 };
 
 // Attempts to attach the binding onto the async dispatcher.
@@ -91,31 +88,34 @@ zx_status_t BeginWait(std::unique_ptr<SimpleBinding>* unique_binding);
 //
 // It is unsafe to destroy the dispatcher from within a dispatch function.
 // It is unsafe to destroy the dispatcher while any fidl::Transaction objects are alive.
-template <typename Interface>
+template <typename ServerImpl>
 zx_status_t BindSingleInFlightOnly(async_dispatcher_t* dispatcher, zx::channel channel,
-                                   Interface* impl) {
-  return internal::TypeErasedBind(dispatcher, std::move(channel), impl,
-                                  &Interface::_EnclosingProtocol::TypeErasedDispatch, nullptr);
+                                   ServerImpl* impl) {
+  return internal::BindSingleInFlightOnlyImpl(dispatcher, std::move(channel), impl, nullptr);
 }
 
 // As above, but will invoke |on_channel_close_fn| on |impl| when either end of the channel
 // is closed.
-template <typename Interface>
+template <typename ServerImpl>
 zx_status_t BindSingleInFlightOnly(async_dispatcher_t* dispatcher, zx::channel channel,
-                                   Interface* impl,
-                                   OnChannelClosedFn<Interface> on_channel_close_fn) {
-  return internal::TypeErasedBind(dispatcher, std::move(channel), impl,
-                                  &Interface::_EnclosingProtocol::TypeErasedDispatch,
-                                  [fn = std::move(on_channel_close_fn)](void* impl) mutable {
-                                    fn(static_cast<Interface*>(impl));
-                                  });
+                                   ServerImpl* impl,
+                                   OnChannelClosedFn<ServerImpl> on_channel_close_fn) {
+  return internal::BindSingleInFlightOnlyImpl(
+      dispatcher, std::move(channel), impl,
+      [fn = std::move(on_channel_close_fn)](
+          fidl::internal::IncomingMessageDispatcher* interface) mutable {
+        fn(static_cast<ServerImpl*>(interface));
+      });
 }
 
 // As above, but will destroy |impl| when either end of the channel is closed.
-template <typename Interface>
+template <typename ServerImpl>
 zx_status_t BindSingleInFlightOnly(async_dispatcher_t* dispatcher, zx::channel channel,
-                                   std::unique_ptr<Interface> impl) {
-  OnChannelClosedFn<Interface> fn = [](Interface* impl) { delete impl; };
+                                   std::unique_ptr<ServerImpl> impl) {
+  OnChannelClosedFn<ServerImpl> fn = [](fidl::internal::IncomingMessageDispatcher* interface) {
+    auto* impl = static_cast<ServerImpl*>(interface);
+    delete impl;
+  };
   return BindSingleInFlightOnly(dispatcher, std::move(channel), impl.release(), std::move(fn));
 }
 

@@ -190,6 +190,11 @@ namespace entries {
   return dispatch_result;
 }
 
+::fidl::DispatchResult SimpleProtocol::Interface::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return SimpleProtocol::Dispatch(this, msg, txn);
+}
+
 ::fidl::Result SimpleProtocol::Interface::AddCompleterBase::Reply(int32_t sum) {
   AddResponse::OwnedEncodedMessage _response{sum};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());

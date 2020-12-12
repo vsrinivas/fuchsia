@@ -26,10 +26,29 @@ fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_
 
 namespace internal {
 
+// The interface for dispatching incoming FIDL messages. The code generator
+// will provide conforming implementations for relevant FIDL protocols.
+class IncomingMessageDispatcher {
+ public:
+  virtual ~IncomingMessageDispatcher() = default;
+
+  // Dispatches an incoming message to one of the handlers functions in the
+  // protocol. If there is no matching handler, closes all the handles in
+  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
+  // returning false. The message should then be discarded.
+  //
+  // Note that the |dispatch_message| name avoids conflicts with FIDL method
+  // names which would appear on the subclasses.
+  //
+  // Always consumes the handles in |msg|.
+  virtual ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                                  ::fidl::Transaction* txn) = 0;
+};
+
 template <typename Protocol>
-fit::result<ServerBindingRef<Protocol>, zx_status_t> TypeErasedBindServer(
-    async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-    TypeErasedServerDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound);
+fit::result<ServerBindingRef<Protocol>, zx_status_t> BindServerImpl(
+    async_dispatcher_t* dispatcher, zx::channel channel, IncomingMessageDispatcher* interface,
+    AnyOnUnboundFn on_unbound);
 
 // Defines an incoming method entry. Used by a server to dispatch an incoming message.
 struct MethodEntry {
@@ -94,11 +113,9 @@ class ServerBindingRef {
   const typename Protocol::WeakEventSender& operator*() const { return event_sender_; }
 
  private:
-  friend fit::result<ServerBindingRef<Protocol>, zx_status_t>
-  internal::TypeErasedBindServer<Protocol>(async_dispatcher_t* dispatcher, zx::channel channel,
-                                           void* impl,
-                                           internal::TypeErasedServerDispatchFn dispatch_fn,
-                                           internal::TypeErasedOnUnboundFn on_unbound);
+  friend fit::result<ServerBindingRef<Protocol>, zx_status_t> internal::BindServerImpl<Protocol>(
+      async_dispatcher_t* dispatcher, zx::channel channel,
+      internal::IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound);
 
   explicit ServerBindingRef(std::weak_ptr<internal::AsyncServerBinding<Protocol>> internal_binding)
       : event_sender_(std::move(internal_binding)) {}
@@ -175,12 +192,11 @@ class ServerBindingRef {
 //
 // The following |BindServer()| APIs infer the protocol type based on the server implementation
 // which must publicly inherit from the appropriate |<Protocol_Name>::Interface| class.
-template <typename Interface>
-fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_t> BindServer(
-    async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl) {
-  return internal::TypeErasedBindServer<typename Interface::_EnclosingProtocol>(
-      dispatcher, std::move(channel), impl, &Interface::_EnclosingProtocol::TypeErasedDispatch,
-      nullptr);
+template <typename ServerImpl>
+fit::result<ServerBindingRef<typename ServerImpl::_EnclosingProtocol>, zx_status_t> BindServer(
+    async_dispatcher_t* dispatcher, zx::channel channel, ServerImpl* impl) {
+  return internal::BindServerImpl<typename ServerImpl::_EnclosingProtocol>(
+      dispatcher, std::move(channel), impl, nullptr);
 }
 
 // As above, but will invoke |on_unbound| on |impl| when the channel is being unbound, either due to
@@ -190,14 +206,18 @@ fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_
 // |dispatcher| shutdown, any active bindings will be unbound, thus it may also be executed on the
 // thread invoking shutdown. The user must ensure that shutdown is never invoked while holding locks
 // which |on_unbound| may also take.
-template <typename Interface>
-fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_t> BindServer(
-    async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl,
-    OnUnboundFn<Interface> on_unbound) {
-  return internal::TypeErasedBindServer<typename Interface::_EnclosingProtocol>(
-      dispatcher, std::move(channel), impl, &Interface::_EnclosingProtocol::TypeErasedDispatch,
-      [fn = std::move(on_unbound)](void* impl, UnbindInfo info, zx::channel channel) mutable {
-        fn(static_cast<Interface*>(impl), info, std::move(channel));
+template <typename ServerImpl>
+fit::result<ServerBindingRef<typename ServerImpl::_EnclosingProtocol>, zx_status_t> BindServer(
+    async_dispatcher_t* dispatcher, zx::channel channel, ServerImpl* impl,
+    OnUnboundFn<ServerImpl> on_unbound) {
+  return internal::BindServerImpl<typename ServerImpl::_EnclosingProtocol>(
+      dispatcher, std::move(channel), impl,
+      [fn = std::move(on_unbound)](internal::IncomingMessageDispatcher* any_interface,
+                                   UnbindInfo info, zx::channel channel) mutable {
+        // Note: this cast may change the value of the pointer, due to how C++
+        // implements classes with virtual tables.
+        auto* impl = static_cast<ServerImpl*>(any_interface);
+        fn(impl, info, std::move(channel));
       });
 }
 
@@ -206,23 +226,36 @@ fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_
 // hook which will be automatically invoked during unbinding.
 //
 // NOTE: The same restriction on |on_unbound| in the previous variant applies to ~Interface().
-template <typename Interface>
-fit::result<ServerBindingRef<typename Interface::_EnclosingProtocol>, zx_status_t> BindServer(
-    async_dispatcher_t* dispatcher, zx::channel channel, std::unique_ptr<Interface> impl) {
-  Interface* impl_raw = impl.get();
-  return internal::TypeErasedBindServer<typename Interface::_EnclosingProtocol>(
-      dispatcher, std::move(channel), impl_raw, &Interface::_EnclosingProtocol::TypeErasedDispatch,
-      [intf = std::move(impl)](void*, UnbindInfo, zx::channel) {});
+template <typename ServerImpl>
+fit::result<ServerBindingRef<typename ServerImpl::_EnclosingProtocol>, zx_status_t> BindServer(
+    async_dispatcher_t* dispatcher, zx::channel channel, std::unique_ptr<ServerImpl> impl) {
+  ServerImpl* impl_raw = impl.get();
+  return internal::BindServerImpl<typename ServerImpl::_EnclosingProtocol>(
+      dispatcher, std::move(channel), impl_raw,
+      [impl = std::move(impl)](internal::IncomingMessageDispatcher* interface, UnbindInfo info,
+                               zx::channel channel) {});
 }
 
 namespace internal {
 
+// Binds an implementation of some FIDL server protocol |interface| to |channel|.
+//
+// |interface| should be a pointer to some |FidlProtocol::Interface| class.
+//
+// |dispatch_fn| looks up an incoming FIDL message in the associated protocol
+// and possibly invokes a handler on |interface|, which will be provided as
+// the first argument.
+//
+// |on_unbound| will be called with |interface| if |on_unbound| is specified.
+// The public |fidl::BindServer| functions should translate |interface| back to
+// the user pointer type, possibly at an offset, before invoking the
+// user-provided on-unbound handler.
 template <typename Protocol>
-fit::result<ServerBindingRef<Protocol>, zx_status_t> TypeErasedBindServer(
-    async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-    internal::TypeErasedServerDispatchFn dispatch_fn, internal::TypeErasedOnUnboundFn on_unbound) {
+fit::result<ServerBindingRef<Protocol>, zx_status_t> BindServerImpl(
+    async_dispatcher_t* dispatcher, zx::channel channel, IncomingMessageDispatcher* interface,
+    internal::AnyOnUnboundFn on_unbound) {
   auto internal_binding = internal::AsyncServerBinding<Protocol>::Create(
-      dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_unbound));
+      dispatcher, std::move(channel), interface, std::move(on_unbound));
   auto status = internal_binding->BeginWait();
   if (status == ZX_OK) {
     return fit::ok(fidl::ServerBindingRef<Protocol>(std::move(internal_binding)));

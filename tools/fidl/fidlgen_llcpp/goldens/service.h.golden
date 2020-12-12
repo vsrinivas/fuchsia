@@ -273,7 +273,7 @@ class SecondProtocol final {
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
-  class Interface {
+  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
    public:
     Interface() = default;
     virtual ~Interface() = default;
@@ -284,6 +284,10 @@ class SecondProtocol final {
     using MethodOnSecondCompleter = ::fidl::Completer<>;
 
     virtual void MethodOnSecond(MethodOnSecondCompleter::Sync& _completer) = 0;
+
+   private:
+    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                            ::fidl::Transaction* txn) final;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the
@@ -543,7 +547,7 @@ class FirstProtocol final {
   class ClientImpl;
 
   // Pure-virtual interface to be implemented by a server.
-  class Interface {
+  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
    public:
     Interface() = default;
     virtual ~Interface() = default;
@@ -554,6 +558,10 @@ class FirstProtocol final {
     using MethodOnFirstCompleter = ::fidl::Completer<>;
 
     virtual void MethodOnFirst(MethodOnFirstCompleter::Sync& _completer) = 0;
+
+   private:
+    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                            ::fidl::Transaction* txn) final;
   };
 
   // Attempts to dispatch the incoming message to a handler function in the

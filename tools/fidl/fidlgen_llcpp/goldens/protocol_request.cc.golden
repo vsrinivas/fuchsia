@@ -375,6 +375,11 @@ namespace entries {
   return dispatch_result;
 }
 
+::fidl::DispatchResult Parent::Interface::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return Parent::Dispatch(this, msg, txn);
+}
+
 ::fidl::Result Parent::Interface::GetChildCompleterBase::Reply(
     ::zx::channel c) {
   GetChildResponse::OwnedEncodedMessage _response{c};
@@ -469,6 +474,11 @@ namespace entries {
   txn->InternalError(
       {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   return ::fidl::DispatchResult::kNotFound;
+}
+
+::fidl::DispatchResult Child::Interface::dispatch_message(
+    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return Child::Dispatch(this, msg, txn);
 }
 
 }  // namespace protocolrequest
