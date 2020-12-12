@@ -6,6 +6,7 @@
 
 # TODO(fxbug.dev/54160): Keep this in sync with BUILD.gn
 
+import("$zx/kernel/lib/version/version_string.gni")
 import("$zx/public/gn/config/levels.gni")
 import("$zx/public/gn/config/standard.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
@@ -351,8 +352,9 @@ if (current_toolchain == default_toolchain) {
     output_path =
         rebase_path("$target_out_dir/$output_name.bin", root_build_dir)
     metadata = {
-      image_path_defines = [ "#define KERNEL_IMAGE \"${output_path}\"" ]
-      image_path_barrier = []
+      # Picked up by link_output_rspfile(), below.
+      link_output_path = [ output_path ]
+      link_output_barrier = []
     }
 
     # Use the same variant for the extraction that will have built the kernel.
@@ -363,15 +365,27 @@ if (current_toolchain == default_toolchain) {
     }
   }
 
-  # Use metadata to embed that file name in case it's a variant redirect.
-  kernel_image_h = "$target_gen_dir/kernel_image.h"
-  generated_file("kernel_image.h") {
+  image_rspfile = "$target_gen_dir/image.rsp"
+  link_output_rspfile("image.rsp") {
     visibility = [ ":*" ]
+    outputs = [ image_rspfile ]
     deps = [ ":raw" ]
-    outputs = [ kernel_image_h ]
-    data_keys = [ "image_path_defines" ]
-    walk_keys = [ "image_path_barrier" ]
-    output_conversion = "list lines"
+  }
+
+  toolchain_utils_action("kernel-image.h") {
+    visibility = [ ":*" ]
+    outputs = [ "$target_gen_dir/$target_name" ]
+    script = "gen-kernel-image-header.sh"
+    utils = [ "nm" ]
+    deps = [
+      ":image.rsp",
+      ":zircon.elf.rsp",
+    ]
+    sources = [
+      image_rspfile,
+      zircon_elf_rspfile,
+    ]
+    args = rebase_path(sources + outputs, root_build_dir)
   }
 
   # Use the --emit-relocs records to extract the fixups needed to relocate
@@ -387,7 +401,6 @@ if (current_toolchain == default_toolchain) {
     outputs = [ "$target_gen_dir/kernel-fixups.inc" ]
     depfile = "${outputs[0]}.d"
 
-    # TODO(mcgrathr): Move the script to this dir as it's private to this use.
     script = "gen-kaslr-fixups.sh"
     utils = [
       "readelf",
@@ -418,12 +431,20 @@ if (current_toolchain == default_toolchain) {
     deps = [
       ":fixups",
       ":gdb_extension",
-      ":kernel_image.h",
+      ":kernel-image.h",
       ":raw",
       ":zircon",
       ":zircon.elf.rsp",
+      "$zx/kernel/lib/version:headers",
     ]
     sources = [ "arch/$zircon_cpu/image.S" ]
+
+    # kernel-image.inc includes this via .incbin, which doesn't get automatic
+    # dependency tracking.
+    inputs = [ kernel_version_string_file ]
+    deps += kernel_version_string_deps
+
+    include_dirs = [ "." ]  # For kernel-image.inc.
 
     # These need to be here rather than in the config() below because they
     # refer directly to inputs related to deps.
@@ -431,7 +452,7 @@ if (current_toolchain == default_toolchain) {
       "-Wl,-T," + rebase_path("image.ld", root_build_dir),
       "-Wl,--just-symbols,@" + rebase_path(zircon_elf_rspfile, root_build_dir),
     ]
-    inputs = [
+    inputs += [
       "image.ld",
       zircon_elf_rspfile,
     ]

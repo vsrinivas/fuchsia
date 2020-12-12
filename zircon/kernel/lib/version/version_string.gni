@@ -1,0 +1,12 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# This is the file containing the raw version string to embed.
+kernel_version_string_file = "$root_build_dir/kernel-version-string.bin"
+
+# This is the target that produces that file.
+kernel_version_string_deps =
+    [ "$zx/kernel/lib/version:version-string.bin($default_toolchain)" ]

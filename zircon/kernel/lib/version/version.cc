@@ -8,6 +8,7 @@
 #include <debug.h>
 #include <lib/console.h>
 #include <lib/version.h>
+#include <lib/version/version-string.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,10 +16,12 @@
 #include <lk/init.h>
 #include <vm/vm.h>
 
-namespace {
+// This is allocated with sufficient size to be filled in later.  The contents
+// have to be nonzero so they get allocated but don't otherwise matter.  See
+// kernel-image.inc for more details.
+extern "C" const char kVersionString[VERSION_STRING_SIZE] = "...";
 
-// This defines `constexpr char kVersionString[]`.
-#include "version-string.inc"
+namespace {
 
 // If the build ID were SHA256, it would be 32 bytes.
 // (The algorithms used for build IDs today actually produce fewer than that.)

@@ -52,16 +52,8 @@ DATA(_zbi_kernel_payload)
     .quad IMAGE_MEMORY_END - boot_load_end
 END_DATA(_zbi_kernel_payload)
 
-// Pad out to the header size that was allocated in the kernel image layout.
-// This ensures that the kernel image is aligned correctly in memory.
-.org BOOT_HEADER_SIZE
-
 // Include the kernel image itself, skipping the padding left for the headers.
-DATA(kernel_image)
-#include "kernel_image.h"
-.incbin KERNEL_IMAGE, BOOT_HEADER_SIZE
-DATA(kernel_image_end)
-END_DATA(kernel_image)
+#include "kernel-image.inc"
 
 // Immediately after the kernel image comes the fixup code.
 // The start.S code sees this address as __data_end.
