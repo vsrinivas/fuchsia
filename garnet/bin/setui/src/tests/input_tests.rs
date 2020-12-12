@@ -65,9 +65,19 @@ async fn set_mic_mute(proxy: &InputProxy, mic_muted: bool) {
 }
 
 // Switch the hardware mic state to muted = [muted].
-async fn switch_hardware_mic_mute(fake_services: &FakeServices, muted: bool) {
+async fn switch_hardware_mic_mute(
+    env: &NestedEnvironment,
+    fake_services: &FakeServices,
+    muted: bool,
+) {
     let buttons_event = MediaButtonsEventBuilder::new().set_volume(1).set_mic_mute(muted).build();
     fake_services.input_device_registry.lock().await.send_media_button_event(buttons_event.clone());
+
+    // TODO(fxb/66313): We make a watch call here in order to force the previous
+    // operation (button change) through the setting service. The correct fix
+    // is to have an executor that we can loop until idle instead.
+    let input_proxy = env.connect_to_service::<InputMarker>().unwrap();
+    let _ = input_proxy.watch().await.expect("watch completed");
 }
 
 // Perform a watch and check that the mic mute state matches [expected_muted_state].
@@ -141,11 +151,11 @@ async fn test_set_watch_mic_mute() {
     set_mic_mute(&input_proxy, true).await;
     get_and_check_mic_mute(&input_proxy, true).await;
 
-    switch_hardware_mic_mute(&fake_services, true).await;
+    switch_hardware_mic_mute(&env, &fake_services, true).await;
     set_mic_mute(&input_proxy, false).await;
     get_and_check_mic_mute(&input_proxy, true).await;
 
-    switch_hardware_mic_mute(&fake_services, false).await;
+    switch_hardware_mic_mute(&env, &fake_services, false).await;
     get_and_check_mic_mute(&input_proxy, false).await;
 }
 
@@ -156,7 +166,7 @@ async fn test_mic_input() {
     let (env, _) = create_environment(service_registry).await;
     let input_proxy = env.connect_to_service::<InputMarker>().unwrap();
 
-    switch_hardware_mic_mute(&fake_services, true).await;
+    switch_hardware_mic_mute(&env, &fake_services, true).await;
     get_and_check_mic_mute(&input_proxy, true).await;
 }
 
@@ -169,7 +179,7 @@ async fn test_mute_combinations() {
     let input_proxy = env.connect_to_service::<InputMarker>().unwrap();
 
     // Hardware muted, software unmuted.
-    switch_hardware_mic_mute(&fake_services, true).await;
+    switch_hardware_mic_mute(&env, &fake_services, true).await;
     set_mic_mute(&input_proxy, false).await;
     get_and_check_mic_mute(&input_proxy, true).await;
 
@@ -178,11 +188,11 @@ async fn test_mute_combinations() {
     get_and_check_mic_mute(&input_proxy, true).await;
 
     // Hardware unmuted, software muted.
-    switch_hardware_mic_mute(&fake_services, false).await;
+    switch_hardware_mic_mute(&env, &fake_services, false).await;
     get_and_check_mic_mute(&input_proxy, true).await;
 
     // Hardware unmuted, software unmuted.
-    switch_hardware_mic_mute(&fake_services, false).await;
+    switch_hardware_mic_mute(&env, &fake_services, false).await;
     set_mic_mute(&input_proxy, false).await;
     get_and_check_mic_mute(&input_proxy, false).await;
 }

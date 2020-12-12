@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::base::SettingInfo,
     crate::internal::switchboard,
     crate::message::base::Audience,
     crate::message::receptor::extract_payload,
@@ -144,7 +145,7 @@ pub trait Sender<T> {
 }
 
 enum ListenCommand {
-    Change(SettingType),
+    Change(SettingInfo),
     Exit,
 }
 
@@ -193,10 +194,9 @@ where
             fasync::Task::spawn(async move {
                 while let Some(command) = on_command_receiver.next().await {
                     match command {
-                        ListenCommand::Change(setting_type) => {
-                            assert_eq!(setting_type, setting_type);
+                        ListenCommand::Change(setting_info) => {
                             let mut handler_lock = hanging_get_handler_clone.lock().await;
-                            handler_lock.on_change().await;
+                            handler_lock.on_change(setting_info).await;
                         }
                         ListenCommand::Exit => {
                             return;
@@ -271,8 +271,8 @@ where
 
                     futures::select! {
                         update = receptor_fuse => {
-                            if let Some(switchboard::Payload::Listen(switchboard::Listen::Update(setting, _))) = extract_payload(update) {
-                                command_tx_clone.unbounded_send(ListenCommand::Change(setting)).ok();
+                            if let Some(switchboard::Payload::Listen(switchboard::Listen::Update(_, setting_info))) = extract_payload(update) {
+                                command_tx_clone.unbounded_send(ListenCommand::Change(setting_info)).ok();
                             }
                         }
                         exit = exit_rx.next() => {
@@ -311,21 +311,15 @@ where
     }
 
     /// Called when receiving a notification that value has changed.
-    async fn on_change(&mut self) {
-        match self.get_response().await {
-            Ok(response) => {
-                for controller in self.controllers_by_key.values_mut() {
-                    if controller.on_change(&T::from(response.clone())) {
-                        controller.send_if_needed(response.clone()).await;
-                    }
-                }
-                if self.default_controller.on_change(&T::from(response.clone())) {
-                    self.default_controller.send_if_needed(response).await;
-                }
+    async fn on_change(&mut self, setting_info: SettingInfo) {
+        let response: SettingResponse = setting_info.into();
+        for controller in self.controllers_by_key.values_mut() {
+            if controller.on_change(&T::from(response.clone())) {
+                controller.send_if_needed(response.clone()).await;
             }
-            Err(error) => {
-                self.on_error(&error);
-            }
+        }
+        if self.default_controller.on_change(&T::from(response.clone())) {
+            self.default_controller.send_if_needed(response).await;
         }
     }
 
@@ -483,13 +477,19 @@ mod tests {
             self.id_to_send = Some(id);
         }
 
-        fn notify_listener(&self) {
+        fn notify_listener(&self, value: f32) {
             if let Some(setting_type_value) = self.setting_type {
                 if let Some(listener) = self.listener.clone() {
                     listener
                         .reply(switchboard::Payload::Listen(switchboard::Listen::Update(
                             setting_type_value,
-                            SettingInfo::Unknown,
+                            SettingInfo::Brightness(DisplayInfo::new(
+                                false,
+                                value,
+                                true,
+                                LowLightMode::Disable,
+                                None,
+                            )),
                         )))
                         .send();
                     return;
@@ -550,6 +550,15 @@ mod tests {
     impl From<SettingResponse> for TestStruct {
         fn from(response: SettingResponse) -> Self {
             if let SettingResponse::Brightness(info) = response {
+                return TestStruct { id: info.manual_brightness_value };
+            }
+            panic!("bad response:{:?}", response);
+        }
+    }
+
+    impl From<SettingInfo> for TestStruct {
+        fn from(response: SettingInfo) -> Self {
+            if let SettingInfo::Brightness(info) = response {
                 return TestStruct { id: info.manual_brightness_value };
             }
             panic!("bad response");
@@ -638,7 +647,7 @@ mod tests {
 
         switchboard_handle.lock().await.set_id(ID2);
 
-        switchboard_handle.lock().await.notify_listener();
+        switchboard_handle.lock().await.notify_listener(ID2);
 
         verify_id(hanging_get_listener.next().await.unwrap(), ID2);
     }
@@ -672,7 +681,7 @@ mod tests {
 
         switchboard_handle.lock().await.set_id(ID2);
 
-        switchboard_handle.lock().await.notify_listener();
+        switchboard_handle.lock().await.notify_listener(ID2);
 
         // Subsequent one should wait until new value is notified
         hanging_get_handler
@@ -722,7 +731,7 @@ mod tests {
 
         switchboard_handle.lock().await.set_id(ID2);
 
-        switchboard_handle.lock().await.notify_listener();
+        switchboard_handle.lock().await.notify_listener(ID2);
 
         // Subsequent watch should return ignoring change function
         hanging_get_handler
@@ -736,7 +745,7 @@ mod tests {
         // Subsequent watch with change function should only return if change is big enough
         switchboard_handle.lock().await.set_id(ID2 + 1.0);
 
-        switchboard_handle.lock().await.notify_listener();
+        switchboard_handle.lock().await.notify_listener(ID2 + 1.0);
 
         hanging_get_handler
             .lock()
@@ -755,7 +764,7 @@ mod tests {
 
         switchboard_handle.lock().await.set_id(ID2 + 3.0);
 
-        switchboard_handle.lock().await.notify_listener();
+        switchboard_handle.lock().await.notify_listener(ID2 + 3.0);
 
         verify_id(hanging_get_listener.next().await.unwrap(), ID2 + 3.0);
     }
@@ -840,7 +849,7 @@ mod tests {
 
         // Send a value big enough to trigger the smaller change function but not the larger one.
         switchboard_handle.lock().await.set_id(ID2);
-        switchboard_handle.lock().await.notify_listener();
+        switchboard_handle.lock().await.notify_listener(ID2);
 
         verify_id(hanging_get_listener2.next().await.unwrap(), ID2);
 
@@ -859,7 +868,7 @@ mod tests {
         // Send a value big enough to trigger both change functions.
         let big_value = ID1 + min_difference;
         switchboard_handle.lock().await.set_id(big_value);
-        switchboard_handle.lock().await.notify_listener();
+        switchboard_handle.lock().await.notify_listener(big_value);
 
         // Both hanging gets got the value.
         verify_id(hanging_get_listener.next().await.unwrap(), big_value);
