@@ -24,7 +24,7 @@ use std::{
 use zx_status::Status;
 
 /// Invalid handle value
-const INVALID_HANDLE: u32 = 0xffff_ffff;
+const INVALID_HANDLE: u32 = 0;
 
 /// The type of an object.
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Copy, Clone)]
@@ -1076,10 +1076,11 @@ fn pack_handle(shard: usize, slot: usize, ty: HdlType, side: Side) -> u32 {
     };
     let shard_bits = shard as u32;
     let slot_bits = slot as u32;
-    (slot_bits << 7) | (shard_bits << 3) | (ty_bits << 1) | side_bit
+    ((slot_bits << 7) | (shard_bits << 3) | (ty_bits << 1) | side_bit) + 1
 }
 
 fn unpack_handle(handle: u32) -> (usize, usize, HdlType, Side) {
+    let handle = handle - 1;
     let side = if handle & 1 == 0 { Side::Left } else { Side::Right };
     let ty = match (handle >> 1) & 0x3 {
         0 => HdlType::Channel,
