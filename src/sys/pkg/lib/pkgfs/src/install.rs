@@ -5,12 +5,14 @@
 //! Typesafe wrappers around the /pkgfs/install filesystem.
 
 use {
+    fidl::endpoints::RequestStream,
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, DirectoryRequestStream, FileMarker, FileProxy,
-        FileRequestStream,
+        DirectoryMarker, DirectoryProxy, DirectoryRequest, DirectoryRequestStream, FileMarker,
+        FileObject, FileProxy, FileRequest, FileRequestStream, NodeInfo,
     },
     fuchsia_hash::Hash,
     fuchsia_zircon::Status,
+    futures::prelude::*,
     thiserror::Error,
 };
 
@@ -88,6 +90,19 @@ impl Client {
         (Self { proxy }, stream)
     }
 
+    /// Creates a new client backed by the returned mock. This constructor should not be used
+    /// outside of tests.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub fn new_mock() -> (Self, Mock) {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+
+        (Self { proxy }, Mock { stream })
+    }
+
     /// Create a new blob with the given install intent. Returns an open file proxy to the blob.
     pub async fn create_blob(
         &self,
@@ -119,6 +134,168 @@ impl Client {
             Blob { proxy: Clone::clone(&blob), kind: blob_kind, state: NeedsTruncate },
             BlobCloser { proxy: blob, closed: false },
         ))
+    }
+}
+
+/// A testing server implementation of /pkgfs/install.
+///
+/// Mock does not handle requests until instructed to do so.
+pub struct Mock {
+    stream: DirectoryRequestStream,
+}
+
+impl Mock {
+    /// Consume the next directory request, verifying it is intended to create the blob identified
+    /// by `merkle` and `kind`.  Returns a `MockBlob` representing the open blob install file.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error or assertion violation (unexpected requests or a mismatched open call)
+    pub async fn expect_create_blob(&mut self, merkle: Hash, kind: BlobKind) -> MockBlob {
+        match self.stream.next().await {
+            Some(Ok(DirectoryRequest::Open {
+                flags: _,
+                mode: _,
+                path,
+                object,
+                control_handle: _,
+            })) => {
+                assert_eq!(path, kind.make_install_path(&merkle));
+
+                let stream = object.into_stream().unwrap().cast_stream();
+                MockBlob { stream }
+            }
+            other => panic!("unexpected request: {:?}", other),
+        }
+    }
+
+    /// Asserts that the request stream closes without any further requests.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub async fn expect_done(mut self) {
+        match self.stream.next().await {
+            None => {}
+            Some(request) => panic!("unexpected request: {:?}", request),
+        }
+    }
+}
+
+/// A testing server implementation of an open /pkgfs/install/{pkg,blob}/<merkle> file.
+///
+/// MockBlob does not send the OnOpen event or handle requests until instructed to do so.
+pub struct MockBlob {
+    stream: FileRequestStream,
+}
+
+impl MockBlob {
+    fn send_on_open(&mut self, status: Status) {
+        let mut info = NodeInfo::File(FileObject { event: None, stream: None });
+        let () =
+            self.stream.control_handle().send_on_open_(status.into_raw(), Some(&mut info)).unwrap();
+    }
+
+    async fn handle_truncate(&mut self, status: Status) -> u64 {
+        match self.stream.next().await {
+            Some(Ok(FileRequest::Truncate { length, responder })) => {
+                responder.send(status.into_raw()).unwrap();
+
+                length
+            }
+            other => panic!("unexpected request: {:?}", other),
+        }
+    }
+
+    async fn expect_truncate(&mut self) -> u64 {
+        self.handle_truncate(Status::OK).await
+    }
+
+    async fn handle_write(&mut self, status: Status) -> Vec<u8> {
+        match self.stream.next().await {
+            Some(Ok(FileRequest::Write { data, responder })) => {
+                responder.send(status.into_raw(), data.len() as u64).unwrap();
+
+                data
+            }
+            other => panic!("unexpected request: {:?}", other),
+        }
+    }
+
+    fn fail_open_with_error(mut self, status: Status) {
+        assert_ne!(status, Status::OK);
+        self.send_on_open(status);
+    }
+
+    /// Fail the open request with an error indicating the blob already exists.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub fn fail_open_with_already_exists(self) {
+        self.fail_open_with_error(Status::ALREADY_EXISTS);
+    }
+
+    /// Fail the open request with an error indicating the blob is open for concurrent write.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub fn fail_open_with_concurrent_write(self) {
+        self.fail_open_with_error(Status::ACCESS_DENIED);
+    }
+
+    async fn fail_write_with_status(mut self, status: Status) {
+        self.send_on_open(Status::OK);
+
+        let length = self.expect_truncate().await;
+        // divide rounding up
+        let expected_write_calls =
+            (length + (fidl_fuchsia_io::MAX_BUF - 1)) / fidl_fuchsia_io::MAX_BUF;
+        for _ in 0..(expected_write_calls - 1) {
+            self.handle_write(Status::OK).await;
+        }
+        self.handle_write(status).await;
+    }
+
+    /// Succeeds the open request, consumes the truncate request, the initial write calls, then
+    /// fails the final write indicating the written data was corrupt.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub async fn fail_write_with_corrupt(self) {
+        self.fail_write_with_status(Status::IO_DATA_INTEGRITY).await
+    }
+
+    /// Succeeds the open request, then verifies the blob is truncated, written, and closed with
+    /// the given `expected` payload.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub async fn expect_payload(mut self, expected: &[u8]) {
+        self.send_on_open(Status::OK);
+
+        assert_eq!(self.expect_truncate().await, expected.len() as u64);
+
+        let mut rest = expected;
+        while !rest.is_empty() {
+            let expected_chunk = if rest.len() > fidl_fuchsia_io::MAX_BUF as usize {
+                &rest[..fidl_fuchsia_io::MAX_BUF as usize]
+            } else {
+                rest
+            };
+            assert_eq!(self.handle_write(Status::OK).await, expected_chunk);
+            rest = &rest[expected_chunk.len()..];
+        }
+
+        match self.stream.next().await {
+            Some(Ok(FileRequest::Close { responder })) => {
+                responder.send(Status::OK.into_raw()).unwrap();
+            }
+            other => panic!("unexpected request: {:?}", other),
+        }
     }
 }
 

@@ -21,6 +21,15 @@ impl From<BlobKind> for pkgfs::install::BlobKind {
     }
 }
 
+impl From<pkgfs::install::BlobKind> for BlobKind {
+    fn from(x: pkgfs::install::BlobKind) -> Self {
+        match x {
+            pkgfs::install::BlobKind::Package => BlobKind::Package,
+            pkgfs::install::BlobKind::Data => BlobKind::Data,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum OpenBlobSuccess {
     /// The blob is still needed.
@@ -40,7 +49,6 @@ pub enum OpenBlobError {
 }
 
 /// Opens the requested blob for write.
-#[cfg_attr(not(test), allow(dead_code))]
 pub async fn open_blob(
     pkgfs_install: &pkgfs::install::Client,
     merkle: Hash,

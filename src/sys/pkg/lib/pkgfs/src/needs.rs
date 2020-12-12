@@ -66,6 +66,19 @@ impl Client {
         (Self { proxy }, stream)
     }
 
+    /// Creates a new client backed by the returned mock. This constructor should not be used
+    /// outside of tests.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub fn new_mock() -> (Self, Mock) {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+
+        (Self { proxy }, Mock { stream })
+    }
+
     /// Returns a stream of chunks of blobs that are needed to resolve the package specified by
     /// `pkg_merkle` provided that the `pkg_merkle` blob has previously been written to
     /// /pkgfs/install/pkg/. The package should be available in /pkgfs/versions when this stream
@@ -126,6 +139,27 @@ async fn enumerate_needs_dir(
             }
         })
         .collect::<Result<HashSet<Hash>, ListNeedsError>>()?)
+}
+
+/// A testing server implementation of /pkgfs/needs.
+///
+/// Mock does not handle requests until instructed to do so.
+pub struct Mock {
+    stream: DirectoryRequestStream,
+}
+
+impl Mock {
+    /// Asserts that the request stream closes without any further requests.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub async fn expect_done(mut self) {
+        match self.stream.next().await {
+            None => {}
+            Some(request) => panic!("unexpected request: {:?}", request),
+        }
+    }
 }
 
 #[cfg(test)]

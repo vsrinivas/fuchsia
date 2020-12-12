@@ -3,19 +3,20 @@
 // found in the LICENSE file.
 
 use {
-    crate::blobs::OpenBlob,
+    crate::blobs::{open_blob, BlobKind, OpenBlob, OpenBlobError, OpenBlobSuccess},
     anyhow::{anyhow, Context as _, Error},
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryMarker, FileRequest, FileRequestStream},
     fidl_fuchsia_pkg::{
         BlobInfoIteratorNextResponder, BlobInfoIteratorRequest, BlobInfoIteratorRequestStream,
-        NeededBlobsMarker, PackageCacheRequest, PackageCacheRequestStream, PackageIndexEntry,
-        PackageIndexIteratorNextResponder, PackageIndexIteratorRequest,
-        PackageIndexIteratorRequestStream, PackageUrl,
+        NeededBlobsMarker, NeededBlobsRequest, NeededBlobsRequestStream, PackageCacheRequest,
+        PackageCacheRequestStream, PackageIndexEntry, PackageIndexIteratorNextResponder,
+        PackageIndexIteratorRequest, PackageIndexIteratorRequestStream, PackageUrl,
     },
     fidl_fuchsia_pkg_ext::{BlobId, BlobInfo, Measurable},
     fuchsia_cobalt::CobaltSender,
+    fuchsia_hash::Hash,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
     fuchsia_zircon::{sys::ZX_CHANNEL_MAX_MSG_BYTES, Status},
@@ -176,6 +177,173 @@ async fn open<'a>(
 }
 
 #[derive(thiserror::Error, Debug)]
+enum ServeNeededBlobsError {
+    #[error("protocol violation: request stream terminated unexpectedly")]
+    UnexpectedClose,
+
+    #[error("protocol violation: expected {expected} request, got {received}")]
+    UnexpectedRequest { received: &'static str, expected: &'static str },
+
+    #[error("protocol violation: while reading next request")]
+    ReceiveRequest(#[source] fidl::Error),
+
+    #[error("protocol violation: while responding to last request")]
+    SendResponse(#[source] fidl::Error),
+
+    #[error("while opening {context} for write")]
+    OpenBlob {
+        context: BlobContext,
+        #[source]
+        source: OpenBlobError,
+    },
+
+    #[error("while writing {context}")]
+    WriteBlob {
+        context: BlobContext,
+        #[source]
+        source: ServeWriteBlobError,
+    },
+}
+
+#[derive(Debug)]
+struct BlobContext {
+    kind: BlobKind,
+    hash: Hash,
+}
+
+impl BlobContext {
+    fn kind_name(&self) -> &'static str {
+        match self.kind {
+            BlobKind::Package => "metadata",
+            BlobKind::Data => "data",
+        }
+    }
+}
+
+impl std::fmt::Display for BlobContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} blob ({})", self.kind_name(), self.hash)
+    }
+}
+
+#[cfg_attr(not(test), allow(dead_code))]
+async fn serve_needed_blobs(
+    mut stream: NeededBlobsRequestStream,
+    meta_far_info: BlobInfo,
+    pkgfs_install: &pkgfs::install::Client,
+    _pkgfs_needs: &pkgfs::needs::Client,
+) -> Result<(), ServeNeededBlobsError> {
+    enum State {
+        ExpectOpenMetaBlob,
+        ExpectGetMissingBlobs,
+    }
+
+    impl State {
+        fn expectation(&self) -> &'static str {
+            match self {
+                State::ExpectOpenMetaBlob => "open_meta_blob",
+                State::ExpectGetMissingBlobs => "get_missing_blobs",
+            }
+        }
+    }
+
+    let mut state = State::ExpectOpenMetaBlob;
+
+    loop {
+        let request = stream.try_next().await.map_err(ServeNeededBlobsError::ReceiveRequest)?;
+
+        state = match (state, request) {
+            (
+                state @ State::ExpectOpenMetaBlob,
+                Some(NeededBlobsRequest::OpenMetaBlob { file, responder }),
+            ) => {
+                let file_stream =
+                    file.into_stream().map_err(ServeNeededBlobsError::ReceiveRequest)?;
+
+                let open_res =
+                    open_blob(pkgfs_install, meta_far_info.blob_id.into(), BlobKind::Package).await;
+
+                // Always respond to the OpenMetaBlob request, then worry about actually handling
+                // the result.
+                responder
+                    .send(&mut match &open_res {
+                        Ok(OpenBlobSuccess::Needed(_)) => Ok(true),
+                        Ok(OpenBlobSuccess::AlreadyExists) => Ok(false),
+                        Err(OpenBlobError::ConcurrentWrite) => {
+                            Err(fidl_fuchsia_pkg::OpenBlobError::ConcurrentWrite)
+                        }
+                        Err(OpenBlobError::Io(_)) => {
+                            Err(fidl_fuchsia_pkg::OpenBlobError::UnspecifiedIo)
+                        }
+                    })
+                    .map_err(ServeNeededBlobsError::SendResponse)?;
+
+                match open_res {
+                    Ok(OpenBlobSuccess::Needed(blob)) => {
+                        match serve_write_blob(file_stream, blob).await {
+                            Ok(()) => State::ExpectGetMissingBlobs,
+                            Err(e) if e.is_fatal() => {
+                                return Err(ServeNeededBlobsError::WriteBlob {
+                                    context: BlobContext {
+                                        kind: BlobKind::Package,
+                                        hash: meta_far_info.blob_id.into(),
+                                    },
+                                    source: e,
+                                });
+                            }
+                            Err(e) => {
+                                fx_log_warn!(
+                                    "Non-fatal error while writing metadata blob: {:#}",
+                                    anyhow!(e)
+                                );
+                                state
+                            }
+                        }
+                    }
+                    Ok(OpenBlobSuccess::AlreadyExists) => State::ExpectGetMissingBlobs,
+                    Err(OpenBlobError::ConcurrentWrite) => {
+                        fx_log_warn!(
+                            "Non-fatal error while opening metadata blob: {:#}",
+                            anyhow!(OpenBlobError::ConcurrentWrite)
+                        );
+                        state
+                    }
+                    Err(e @ OpenBlobError::Io(_)) => {
+                        return Err(ServeNeededBlobsError::OpenBlob {
+                            context: BlobContext {
+                                kind: BlobKind::Package,
+                                hash: meta_far_info.blob_id.into(),
+                            },
+                            source: e,
+                        });
+                    }
+                }
+            }
+
+            (
+                State::ExpectGetMissingBlobs,
+                Some(NeededBlobsRequest::GetMissingBlobs { iterator, control_handle: _ }),
+            ) => {
+                // TODO(64620) implement
+                let _ = iterator;
+                todo!();
+            }
+
+            (state, Some(request)) => {
+                return Err(ServeNeededBlobsError::UnexpectedRequest {
+                    received: request.method_name(),
+                    expected: state.expectation(),
+                });
+            }
+
+            (_, None) => {
+                return Err(ServeNeededBlobsError::UnexpectedClose);
+            }
+        };
+    }
+}
+
+#[derive(thiserror::Error, Debug)]
 enum ServeWriteBlobError {
     #[error("protocol violation: file request stream terminated unexpectedly")]
     UnexpectedClose,
@@ -221,7 +389,6 @@ impl From<pkgfs::install::BlobWriteError> for ServeWriteBlobError {
 impl ServeWriteBlobError {
     /// Determines if this error should cancel the associated Get() operation (true) or should
     /// allow the NeededBlobs client retry the operation later (false).
-    #[allow(dead_code)]
     fn is_fatal(&self) -> bool {
         match self {
             ServeWriteBlobError::UnexpectedClose => true,
@@ -235,7 +402,6 @@ impl ServeWriteBlobError {
     }
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 async fn serve_write_blob(
     mut stream: FileRequestStream,
     blob: OpenBlob,
@@ -691,10 +857,250 @@ mod iter_tests {
 }
 
 #[cfg(test)]
+mod serve_needed_blobs_tests {
+    use {
+        super::*,
+        fidl_fuchsia_io::FileMarker,
+        fidl_fuchsia_pkg::{BlobInfoIteratorMarker, NeededBlobsProxy},
+        fuchsia_async::Task,
+        matches::assert_matches,
+    };
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn start_stop() {
+        let (_, stream) = fidl::endpoints::create_proxy_and_stream::<NeededBlobsMarker>().unwrap();
+
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+
+        let (pkgfs_install, _) = pkgfs::install::Client::new_test();
+        let (pkgfs_needs, _) = pkgfs::needs::Client::new_test();
+
+        assert_matches!(
+            serve_needed_blobs(stream, meta_blob_info, &pkgfs_install, &pkgfs_needs).await,
+            Err(ServeNeededBlobsError::UnexpectedClose)
+        );
+    }
+
+    fn spawn_serve_needed_blobs_with_mocks(
+        meta_blob_info: BlobInfo,
+    ) -> (
+        Task<Result<(), ServeNeededBlobsError>>,
+        NeededBlobsProxy,
+        pkgfs::install::Mock,
+        pkgfs::needs::Mock,
+    ) {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<NeededBlobsMarker>().unwrap();
+
+        let (pkgfs_install, pkgfs_install_mock) = pkgfs::install::Client::new_mock();
+        let (pkgfs_needs, pkgfs_needs_mock) = pkgfs::needs::Client::new_mock();
+
+        (
+            Task::spawn(async move {
+                serve_needed_blobs(stream, meta_blob_info, &pkgfs_install, &pkgfs_needs).await
+            }),
+            proxy,
+            pkgfs_install_mock,
+            pkgfs_needs_mock,
+        )
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn expects_open_meta_blob() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+
+        let (task, proxy, pkgfs_install, pkgfs_needs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+
+        let (iter, iter_server_end) =
+            fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
+        proxy.get_missing_blobs(iter_server_end).unwrap();
+        assert_matches!(iter.next().await, Err(_));
+
+        assert_matches!(
+            task.await,
+            Err(ServeNeededBlobsError::UnexpectedRequest {
+                received: "get_missing_blobs",
+                expected: "open_meta_blob"
+            })
+        );
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn expects_open_meta_blob_once() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+        let (task, proxy, mut pkgfs_install, pkgfs_needs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+
+        // Open a needed meta FAR blob and write it.
+        let ((), ()) = future::join(
+            async {
+                pkgfs_install
+                    .expect_create_blob([0; 32].into(), BlobKind::Package.into())
+                    .await
+                    .expect_payload(&[])
+                    .await;
+            },
+            async {
+                let (blob, blob_server_end) =
+                    fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+
+                assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(true)));
+
+                let _ = blob.truncate(0).await;
+                let _ = blob.write(&mut []).await;
+                let _ = blob.close().await;
+            },
+        )
+        .await;
+
+        // Trying to open the meta FAR blob again after writing it successfully is a protocol violation.
+        let (_blob, blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+        assert_matches!(proxy.open_meta_blob(blob_server_end).await, Err(_));
+
+        assert_matches!(
+            task.await,
+            Err(ServeNeededBlobsError::UnexpectedRequest {
+                received: "open_meta_blob",
+                expected: "get_missing_blobs"
+            })
+        );
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn handles_present_meta_blob() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+        let (task, proxy, mut pkgfs_install, pkgfs_needs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+
+        // Try to open the meta FAR blob, but report it is no longer needed.
+        let ((), ()) = future::join(
+            async {
+                pkgfs_install
+                    .expect_create_blob([0; 32].into(), BlobKind::Package.into())
+                    .await
+                    .fail_open_with_already_exists();
+            },
+            async {
+                let (blob, blob_server_end) =
+                    fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+
+                assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(false)));
+                assert_matches!(blob.truncate(0).await, Err(_));
+            },
+        )
+        .await;
+
+        // Trying to open the meta FAR blob again after being told it is not needed is a protocol
+        // violation.
+        let (_blob, blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+        assert_matches!(proxy.open_meta_blob(blob_server_end).await, Err(_));
+
+        assert_matches!(
+            task.await,
+            Err(ServeNeededBlobsError::UnexpectedRequest {
+                received: "open_meta_blob",
+                expected: "get_missing_blobs"
+            })
+        );
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn allows_retrying_nonfatal_open_meta_blob_errors() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 1 };
+        let (task, proxy, mut pkgfs_install, pkgfs_needs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+
+        // Try to open the meta FAR blob, but report it is already being written concurrently.
+        let ((), ()) = future::join(
+            async {
+                pkgfs_install
+                    .expect_create_blob([0; 32].into(), BlobKind::Package.into())
+                    .await
+                    .fail_open_with_concurrent_write();
+            },
+            async {
+                let (blob, blob_server_end) =
+                    fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+
+                assert_matches!(
+                    proxy.open_meta_blob(blob_server_end).await,
+                    Ok(Err(fidl_fuchsia_pkg::OpenBlobError::ConcurrentWrite))
+                );
+                assert_matches!(blob.truncate(1).await, Err(_));
+            },
+        )
+        .await;
+
+        // Try to write the meta FAR blob, but report the written contents are corrupt.
+        let ((), ()) = future::join(
+            async {
+                pkgfs_install
+                    .expect_create_blob([0; 32].into(), BlobKind::Package.into())
+                    .await
+                    .fail_write_with_corrupt()
+                    .await;
+            },
+            async {
+                let (blob, blob_server_end) =
+                    fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+
+                assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(true)));
+
+                let _ = blob.truncate(1).await;
+                let _ = blob.write(&mut [0]).await;
+                let _ = blob.close().await;
+            },
+        )
+        .await;
+
+        // Operation succeeds after pkgfs cooperates.
+        let ((), ()) = future::join(
+            async {
+                pkgfs_install
+                    .expect_create_blob([0; 32].into(), BlobKind::Package.into())
+                    .await
+                    .expect_payload(&[0])
+                    .await;
+            },
+            async {
+                let (blob, blob_server_end) =
+                    fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+
+                assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(true)));
+
+                let _ = blob.truncate(1).await;
+                let _ = blob.write(&mut [0]).await;
+                let _ = blob.close().await;
+            },
+        )
+        .await;
+
+        // Task moves to next state after retried write operation succeeds.
+        let (_blob, blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+        assert_matches!(proxy.open_meta_blob(blob_server_end).await, Err(_));
+        assert_matches!(
+            task.await,
+            Err(ServeNeededBlobsError::UnexpectedRequest {
+                received: "open_meta_blob",
+                expected: "get_missing_blobs"
+            })
+        );
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+    }
+}
+
+#[cfg(test)]
 mod serve_write_blob_tests {
     use {
         super::*,
-        crate::blobs::BlobKind,
         fidl_fuchsia_io::{FileMarker, FileProxy},
         futures::task::Poll,
         matches::assert_matches,
