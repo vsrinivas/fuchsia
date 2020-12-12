@@ -13,6 +13,8 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/i2c.h>
 
+#include "src/devices/rtc/drivers/nxp/pcf8563_rtc_bind.h"
+
 typedef struct {
   i2c_protocol_t i2c;
 } pcf8563_context;
