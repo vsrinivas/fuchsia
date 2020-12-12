@@ -17,7 +17,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   GENERIC = 0,
   QEMU = 1,
   GOOGLE = 3,
-  NXP = 9,
   DESIGNWARE = 12,
   MEDIATEK = 13,
   TI = 16,
@@ -26,7 +25,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
-  RTC_PCF8563 = 0x05,
   RTC_PL031 = 0x06,
   ETH_MAC = 0x10,
 };

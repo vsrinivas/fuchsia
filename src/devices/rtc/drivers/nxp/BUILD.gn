@@ -9,7 +9,7 @@ bind_rules("pcf8563_rtc_bind") {
   rules = "pcf8563_rtc.bind"
   output = "pcf8563_rtc_bind.h"
   tests = "bind-tests.json"
-  deps = [ "//src/devices/bind/fuchsia.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.nxp.platform" ]
 }
 
 driver_module("nxp") {

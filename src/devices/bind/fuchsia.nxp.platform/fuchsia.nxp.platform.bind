@@ -1,0 +1,13 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.nxp.platform;
+
+extend uint fuchsia.BIND_PLATFORM_DEV_VID {
+  NXP = 9,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  RTC_PCF8563 = 0x05,
+};
