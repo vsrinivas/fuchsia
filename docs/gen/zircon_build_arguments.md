@@ -325,14 +325,32 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 From //kernel/params.gni:62
 
+### kernel_version_git_checkout
+By default the kernel version string is generated based on the full git
+revision found by `git rev-parse HEAD` in this checkout directory.
+
+**Current value (from the default):** `"//.."`
+
+From //kernel/lib/version/BUILD.zircon.gn:18
+
+### kernel_version_git_dirty_check
+If this is true, then the kernel version string generated based on
+`kernel_version_git_checkout` also adds a "-dirty" suffix if any files in
+the checkout are modified from what's committed in git.
+
+**Current value (from the default):** `true`
+
+From //kernel/lib/version/BUILD.zircon.gn:23
+
 ### kernel_version_string
 Version string embedded in the kernel for `zx_system_get_version_string`.
-If set to the default "", a string is generated based on the fuchsia.git
-revision of the checkout.
+If set to the default "", a string is generated based on the
+`kernel_version_git_checkout` and `kernel_version_git_dirty_check`
+settings, which see.
 
 **Current value (from the default):** `""`
 
-From //kernel/lib/version/BUILD.zircon.gn:11
+From //kernel/lib/version/BUILD.zircon.gn:14
 
 ### lsan_default_options
 Default [LeakSanitizer](https://clang.llvm.org/docs/LeakSanitizer.html)
@@ -410,7 +428,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this defaults to the CIPD instance ID of the
 prebuilt.
 
-**Current value for `target_cpu = `:** `"hiBW1PvncaE9p_v8B7jYST7ykB4Nzw_2QdIlnyzoBkgC"`
+**Current value for `target_cpu = `:** `"qvyOtIUsHc70X6qL5yNk0tBLrkCnDLBqYQaX3ot8jmUC"`
 
 From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:17
 

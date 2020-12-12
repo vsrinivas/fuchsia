@@ -7,7 +7,7 @@ Enable debug output in the ACPI library (used by the ACPI bus driver).
 
 **Current value (from the default):** `false`
 
-From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_party/acpica/+/eca7067837b2ccdce0af78ad26fd124527eac964/BUILD.gn#9)
+From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_party/acpica/+/dde327c9993a4da339027737bb4cf56b05c7de6c/BUILD.gn#9)
 
 ### active_partition
 
@@ -652,13 +652,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/1e76cbbe5a4745312b61fd6f5e8c7781c125b2bd/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/44de18ca37f694ba6afe9cc409199224c09e3186/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/1e76cbbe5a4745312b61fd6f5e8c7781c125b2bd/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/44de18ca37f694ba6afe9cc409199224c09e3186/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -1276,7 +1276,7 @@ is produced by the build.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/devshell:fx"]`
 
-From //products/bringup.gni:46
+From //products/bringup.gni:47
 
 **Overridden from the default:** `[]`
 
@@ -1284,7 +1284,7 @@ From //BUILD.gn:59
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx"]`
 
-From //products/bringup.gni:46
+From //products/bringup.gni:47
 
 **Overridden from the default:** `[]`
 
@@ -2048,7 +2048,7 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:32
 ### product_bootfs_labels
 A list of binary labels to include in ZBIs built for this product.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//src/sys/base-resolver:bootfs", "//build/images:component_id_index_config"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//src/sys/base-resolver:bootfs", "//build/images:component_id_index_config"]`
 
 From //products/core.gni:108
 
@@ -2056,7 +2056,7 @@ From //products/core.gni:108
 
 From //build/product.gni:7
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//src/sys/base-resolver:bootfs", "//build/images:component_id_index_config"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//src/sys/base-resolver:bootfs", "//build/images:component_id_index_config"]`
 
 From //products/core.gni:108
 
@@ -2220,7 +2220,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"hiBW1PvncaE9p_v8B7jYST7ykB4Nzw_2QdIlnyzoBkgC"`
+**Current value (from the default):** `"qvyOtIUsHc70X6qL5yNk0tBLrkCnDLBqYQaX3ot8jmUC"`
 
 From //build/rust/config.gni:33
 
@@ -2926,7 +2926,7 @@ From //src/lib/vulkan/build/config.gni:16
 
 **Current value (from the default):** `""`
 
-From //src/graphics/examples/vkproto/common/common.gni:46
+From //src/graphics/examples/vkproto/common/common.gni:45
 
 ### warn_on_sdk_changes
 Whether to only warn when an SDK has been modified.
@@ -3049,7 +3049,7 @@ silently clobber the default value shown here.
   disable_kernel_pci = false
   goma_dir = "/b/s/w/ir/x/w/prebuilt/third_party/goma/linux-x64"
   output_gsym = false
-  rustc_version_string = "hiBW1PvncaE9p_v8B7jYST7ykB4Nzw_2QdIlnyzoBkgC"
+  rustc_version_string = "qvyOtIUsHc70X6qL5yNk0tBLrkCnDLBqYQaX3ot8jmUC"
   use_ccache = false
   use_goma = false
   variants = []
