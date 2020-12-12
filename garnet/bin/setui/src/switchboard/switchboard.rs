@@ -435,7 +435,6 @@ impl Switchboard {
             for client in clients {
                 client
                     .reply(switchboard::Payload::Listen(switchboard::Listen::Update(
-                        *setting_type,
                         setting_info.clone(),
                     )))
                     .send()
@@ -720,20 +719,14 @@ mod tests {
             .send();
 
         // Ensure both listeners receive notifications.
-        if let (switchboard::Payload::Listen(switchboard::Listen::Update(setting, _)), _) =
-            receptor_1.next_payload().await.unwrap()
-        {
-            assert_eq!(setting, setting_type);
-        } else {
-            panic!("should have received a switchboard::Listen::Update");
-        }
-        if let (switchboard::Payload::Listen(switchboard::Listen::Update(setting, _)), _) =
-            receptor_2.next_payload().await.unwrap()
-        {
-            assert_eq!(setting, setting_type);
-        } else {
-            panic!("should have received a switchboard::Listen::Update");
-        }
+        assert!(matches!(
+            receptor_1.next_payload().await.expect("update should be present").0,
+            switchboard::Payload::Listen(switchboard::Listen::Update(..))
+        ));
+        assert!(matches!(
+            receptor_2.next_payload().await.expect("update should be present").0,
+            switchboard::Payload::Listen(switchboard::Listen::Update(..))
+        ));
     }
 
     async fn send_request_and_wait(

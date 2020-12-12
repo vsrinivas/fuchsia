@@ -24,7 +24,7 @@ pub enum Listen {
     // `SettingType`.
     Request(SettingType),
     // Indicates an update is available for the specified `SettingType`.
-    Update(SettingType, SettingInfo),
+    Update(SettingInfo),
 }
 
 #[derive(Clone, Debug)]

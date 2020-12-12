@@ -97,7 +97,7 @@ impl VolumeChangeHandler {
                 futures::select! {
                     volume_change_event = listen_receptor.next() => {
                         if let Some(
-                            switchboard::Payload::Listen(switchboard::Listen::Update(setting, SettingInfo::Audio(audio_info)))
+                            switchboard::Payload::Listen(switchboard::Listen::Update(SettingInfo::Audio(audio_info)))
                         ) = extract_payload(volume_change_event) {
                             handler.on_audio_info(audio_info).await;
                         }

@@ -271,7 +271,7 @@ where
 
                     futures::select! {
                         update = receptor_fuse => {
-                            if let Some(switchboard::Payload::Listen(switchboard::Listen::Update(_, setting_info))) = extract_payload(update) {
+                            if let Some(switchboard::Payload::Listen(switchboard::Listen::Update(setting_info))) = extract_payload(update) {
                                 command_tx_clone.unbounded_send(ListenCommand::Change(setting_info)).ok();
                             }
                         }
@@ -478,22 +478,19 @@ mod tests {
         }
 
         fn notify_listener(&self, value: f32) {
-            if let Some(setting_type_value) = self.setting_type {
-                if let Some(listener) = self.listener.clone() {
-                    listener
-                        .reply(switchboard::Payload::Listen(switchboard::Listen::Update(
-                            setting_type_value,
-                            SettingInfo::Brightness(DisplayInfo::new(
-                                false,
-                                value,
-                                true,
-                                LowLightMode::Disable,
-                                None,
-                            )),
-                        )))
-                        .send();
-                    return;
-                }
+            if let Some(listener) = self.listener.clone() {
+                listener
+                    .reply(switchboard::Payload::Listen(switchboard::Listen::Update(
+                        SettingInfo::Brightness(DisplayInfo::new(
+                            false,
+                            value,
+                            true,
+                            LowLightMode::Disable,
+                            None,
+                        )),
+                    )))
+                    .send();
+                return;
             }
             panic!("Missing listener to notify");
         }
