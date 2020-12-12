@@ -91,6 +91,18 @@ zx_status_t FirmwareBlob::LoadFirmware(zx_device_t* device) {
     char firmware_format[sizeof(header->data.format) + 1] = {};
     memcpy(firmware_format, header->data.format, sizeof(header->data.format));
 
+    constexpr bool kLogFirmwares = false;
+    if (kLogFirmwares) {
+      // To help diagnose firmware loading problems.
+      char firmware_name[sizeof(header->data.name) + 1] = {};
+      char firmware_cpu[sizeof(header->data.cpu) + 1] = {};
+      memcpy(firmware_name, header->data.name, sizeof(header->data.name));
+      memcpy(firmware_cpu, header->data.cpu, sizeof(header->data.cpu));
+      LOG(INFO, "firmware_format: %s firmware_cpu: %s firmware_name: %s",
+          std::string(firmware_format).c_str(), std::string(firmware_cpu).c_str(),
+          std::string(firmware_name).c_str());
+    }
+
     FirmwareCode code = {offset + sizeof(FirmwareHeader), firmware_length};
     firmware_code_[std::string(firmware_format)] = code;
 

@@ -435,7 +435,13 @@ constexpr uint32_t kAuxBufSuffixSize = 0;
 zx_status_t H264MultiDecoder::InitializeBuffers() {
   // If the TEE is available, we'll do secure loading of the firmware in InitializeHardware().
   if (!owner_->is_tee_available()) {
-    FirmwareBlob::FirmwareType firmware_type = FirmwareBlob::FirmwareType::kDec_H264_Multi_Gxm;
+    // TODO(fxbug.dev/43496): Fix this up in "CL4" to filter to the current SoC as we're loading
+    // video_ucode.bin, similar to how the video_firmware TA does filtering.  That way
+    // kDec_H264_Multi will be for the correct SoC (assuming new video_ucode.bin).  At the moment,
+    // if we were to take this path (which we won't for now), we'd likely get the wrong firmware
+    // since there will be more than one firmware that matches kDec_H264_Multi, for different
+    // SoC(s).
+    FirmwareBlob::FirmwareType firmware_type = FirmwareBlob::FirmwareType::kDec_H264_Multi;
     uint8_t* data;
     uint32_t firmware_size;
     zx_status_t status =
@@ -559,11 +565,21 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
     return status;
 
   if (owner_->is_tee_available()) {
+    // Temporarily, try _Gxm first, in case we're still using the old video_ucode.bin.
     status = owner_->TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType::kDec_H264_Multi_Gxm,
                                              FirmwareBlob::FirmwareVdecLoadMode::kCompatible);
     if (status != ZX_OK) {
-      LOG(ERROR, "owner_->TeeSmcLoadVideoFirmware() failed - status: %d", status);
-      return status;
+      LOG(WARNING, "owner_->TeeSmcLoadVideoFirmware() failed (first try) - status: %d", status);
+      // If kDec_H264_Multi_Gxm didn't work, then assume we're using the new video_ucode.bin, which
+      // means we should load kDec_H264_Multi, which will be for the correct SoC if found since the
+      // video_firmware TA has already filtered down to the codec core firmwares that are for the
+      // current SoC.
+      status = owner_->TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType::kDec_H264_Multi,
+                                               FirmwareBlob::FirmwareVdecLoadMode::kCompatible);
+      if (status != ZX_OK) {
+        LOG(ERROR, "owner_->TeeSmcLoadVideoFirmware() failed (second try) - status: %d", status);
+        return status;
+      }
     }
 
     ResetHardware();

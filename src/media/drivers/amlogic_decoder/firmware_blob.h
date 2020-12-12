@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_FIRMWARE_BLOB_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_FIRMWARE_BLOB_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_FIRMWARE_BLOB_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_FIRMWARE_BLOB_H_
 
 #include <lib/zx/vmo.h>
 
@@ -35,14 +35,18 @@ class FirmwareBlob {
     kDec_Vc1 = 9,
     kDec_Avs = 10,
 
-    // Used by this driver:
+    // Used by this driver (for now):
     kDec_H264 = 11,
 
     // These are not used so far:
     kDec_H264_4k2k = 12,
     kDec_H264_4k2k_Single = 13,
     kDec_H264_Mvc = 14,
+
+    // Used by this driver:
     kDec_H264_Multi = 15,
+
+    // These are not used so far:
     kDec_Hevc = 16,
     kDec_Hevc_Mmu = 17,
     kDec_Vp9 = 18,
@@ -57,7 +61,7 @@ class FirmwareBlob {
     kDec_H264_Multi_Mmu = 23,
     kDec_Hevc_G12a = 24,
 
-    // Used by this driver:
+    // Used by this driver (for now):
     kDec_Vp9_G12a = 25,
 
     // These are not used so far:
@@ -65,7 +69,11 @@ class FirmwareBlob {
     kDec_Avs2_Mmu = 27,
     kDec_Avs_Gxm = 28,
     kDec_Avs_NoCabac = 29,
+
+    // Used by this driver (for now):
     kDec_H264_Multi_Gxm = 30,
+
+    // These are not used so far:
     kDec_H264_Mvc_Gxm = 31,
     kDec_Vc1_G12a = 32,
 
@@ -105,4 +113,4 @@ class FirmwareBlob {
   std::map<std::string, FirmwareCode> firmware_code_;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_FIRMWARE_BLOB_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_FIRMWARE_BLOB_H_
