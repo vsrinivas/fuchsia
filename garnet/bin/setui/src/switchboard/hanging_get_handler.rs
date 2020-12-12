@@ -271,7 +271,7 @@ where
 
                     futures::select! {
                         update = receptor_fuse => {
-                            if let Some(switchboard::Payload::Listen(switchboard::Listen::Update(setting))) = extract_payload(update) {
+                            if let Some(switchboard::Payload::Listen(switchboard::Listen::Update(setting, _))) = extract_payload(update) {
                                 command_tx_clone.unbounded_send(ListenCommand::Change(setting)).ok();
                             }
                         }
@@ -367,6 +367,7 @@ mod tests {
     use futures::channel::mpsc::UnboundedSender;
     use std::borrow::Cow;
 
+    use crate::base::SettingInfo;
     use crate::message::base::MessengerType;
     use crate::switchboard::base::{DisplayInfo, LowLightMode};
 
@@ -488,6 +489,7 @@ mod tests {
                     listener
                         .reply(switchboard::Payload::Listen(switchboard::Listen::Update(
                             setting_type_value,
+                            SettingInfo::Unknown,
                         )))
                         .send();
                     return;

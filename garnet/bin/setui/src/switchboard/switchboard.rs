@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::base::SettingInfo;
 use crate::clock;
 use crate::internal::core;
 use crate::internal::switchboard;
@@ -279,10 +280,10 @@ impl Switchboard {
     fn process_event(&mut self, input: SettingEvent, author: core::message::Signature) {
         match input {
             // TODO(fxb/66295): notify listeners of the new value directly.
-            SettingEvent::Changed(_) => {
+            SettingEvent::Changed(setting_info) => {
                 let setting_type =
                     self.proxy_settings.get(&author).expect("should match setting type");
-                self.notify_listeners(setting_type);
+                self.notify_listeners(setting_type, setting_info);
             }
             _ => {}
         }
@@ -429,11 +430,14 @@ impl Switchboard {
         Ok(())
     }
 
-    fn notify_listeners(&self, setting_type: &SettingType) {
+    fn notify_listeners(&self, setting_type: &SettingType, setting_info: SettingInfo) {
         if let Some(clients) = self.listeners.get(setting_type) {
             for client in clients {
                 client
-                    .reply(switchboard::Payload::Listen(switchboard::Listen::Update(*setting_type)))
+                    .reply(switchboard::Payload::Listen(switchboard::Listen::Update(
+                        *setting_type,
+                        setting_info.clone(),
+                    )))
                     .send()
                     .ack();
             }
@@ -490,7 +494,6 @@ impl Switchboard {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::base::SettingInfo;
     use crate::internal::core;
     use crate::message::base::Audience;
     use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
@@ -717,14 +720,14 @@ mod tests {
             .send();
 
         // Ensure both listeners receive notifications.
-        if let (switchboard::Payload::Listen(switchboard::Listen::Update(setting)), _) =
+        if let (switchboard::Payload::Listen(switchboard::Listen::Update(setting, _)), _) =
             receptor_1.next_payload().await.unwrap()
         {
             assert_eq!(setting, setting_type);
         } else {
             panic!("should have received a switchboard::Listen::Update");
         }
-        if let (switchboard::Payload::Listen(switchboard::Listen::Update(setting)), _) =
+        if let (switchboard::Payload::Listen(switchboard::Listen::Update(setting, _)), _) =
             receptor_2.next_payload().await.unwrap()
         {
             assert_eq!(setting, setting_type);

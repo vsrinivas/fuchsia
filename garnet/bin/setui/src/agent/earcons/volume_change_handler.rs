@@ -100,7 +100,7 @@ impl VolumeChangeHandler {
                 futures::select! {
                     volume_change_event = listen_receptor.next() => {
                         if let Some(
-                            switchboard::Payload::Listen(switchboard::Listen::Update(setting))
+                            switchboard::Payload::Listen(switchboard::Listen::Update(setting, _))
                         ) = extract_payload(volume_change_event) {
                             handler.on_changed_setting(setting, volume_tx.clone()).await;
                         }

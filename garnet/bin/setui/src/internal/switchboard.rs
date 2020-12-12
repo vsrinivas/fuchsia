@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::base::SettingInfo;
 use crate::message_hub_definition;
 use crate::switchboard::base::{SettingRequest, SettingResponseResult, SettingType};
 
@@ -23,7 +24,7 @@ pub enum Listen {
     // `SettingType`.
     Request(SettingType),
     // Indicates an update is available for the specified `SettingType`.
-    Update(SettingType),
+    Update(SettingType, SettingInfo),
 }
 
 #[derive(Clone, Debug)]
