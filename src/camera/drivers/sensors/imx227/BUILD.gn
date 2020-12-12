@@ -12,7 +12,7 @@ bind_rules("imx227_bind") {
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.sony.platform",
   ]
 }
 

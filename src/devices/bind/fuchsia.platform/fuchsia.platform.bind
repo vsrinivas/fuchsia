@@ -20,7 +20,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   NXP = 9,
   DESIGNWARE = 12,
   MEDIATEK = 13,
-  SONY = 14,
   TI = 16,
   ARM = 18,
   SYNAPTICS = 20,
@@ -30,7 +29,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   RTC_PCF8563 = 0x05,
   RTC_PL031 = 0x06,
   ETH_MAC = 0x10,
-  ETH_PHY = 0x11,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {
