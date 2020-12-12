@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::audio::ModifiedCounters;
+use crate::base::SettingInfo;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::setting_handler::ControllerError;
 use crate::input::{ButtonType, VolumeGain};
@@ -518,7 +519,14 @@ pub struct LightData {
     pub color: fidl_fuchsia_ui_types::ColorRgb,
 }
 
+impl Into<SettingInfo> for LightData {
+    fn into(self) -> SettingInfo {
+        SettingInfo::LightSensor(self)
+    }
+}
+
 /// The possible responses to a SettingRequest.
+/// TODO(fxb/66338): Replace usage with SettingInfo.
 #[derive(PartialEq, Debug, Clone)]
 pub enum SettingResponse {
     Unknown,
@@ -590,8 +598,9 @@ pub enum SettingEvent {
     /// The setting's data has changed. The setting type associated with this
     /// event is implied by the association of the signature of the sending
     /// proxy to the setting type. This mapping is maintained by the
-    /// Switchboard.
-    Changed,
+    /// Switchboard. The [`SettingInfo`] provided represents the most up-to-date
+    /// data at the time of this event.
+    Changed(SettingInfo),
     /// A response to a previous SettingActionData::Request is ready. The source
     /// SettingAction's id is provided alongside the result.
     Response(u64, SettingHandlerResult),

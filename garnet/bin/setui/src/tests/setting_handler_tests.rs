@@ -4,6 +4,7 @@
 #[cfg(test)]
 use {
     crate::agent::restore_agent,
+    crate::base::SettingInfo,
     crate::handler::base::{Command, ContextBuilder, SettingHandlerResult, State},
     crate::handler::device_storage::DeviceStorageFactory,
     crate::handler::device_storage::{testing::*, DeviceStorageCompatible},
@@ -209,7 +210,7 @@ async fn test_write_notify() {
     .await;
 }
 
-async fn verify_write_behavior<S: DeviceStorageCompatible + Send + Sync>(
+async fn verify_write_behavior<S: DeviceStorageCompatible + Into<SettingInfo> + Send + Sync>(
     proxy: &mut persist::ClientProxy<S>,
     value: S,
     notified: bool,

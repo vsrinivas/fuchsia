@@ -15,6 +15,7 @@ use futures::StreamExt;
 
 use async_trait::async_trait;
 
+use crate::base::SettingInfo;
 use crate::handler::base::{
     Command, Event, ExitResult, SettingHandlerFactory, SettingHandlerFactoryError,
     SettingHandlerResult, State,
@@ -61,7 +62,7 @@ impl SettingHandler {
     pub fn notify(&self) {
         self.messenger
             .message(
-                handler::Payload::Event(Event::Changed),
+                handler::Payload::Event(Event::Changed(SettingInfo::Unknown)),
                 Audience::Messenger(self.proxy_signature),
             )
             .send()

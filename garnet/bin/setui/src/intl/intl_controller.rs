@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::base::SettingInfo;
 use crate::call_async;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::DeviceStorageCompatible;
@@ -29,6 +30,12 @@ impl DeviceStorageCompatible for IntlInfo {
             time_zone_id: Some("UTC".to_string()),
             hour_cycle: Some(HourCycle::H12),
         }
+    }
+}
+
+impl Into<SettingInfo> for IntlInfo {
+    fn into(self) -> SettingInfo {
+        SettingInfo::Intl(self)
     }
 }
 

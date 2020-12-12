@@ -16,6 +16,7 @@ use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::{FutureExt, StreamExt};
 
+use crate::base::SettingInfo;
 use crate::internal::core;
 use crate::internal::event;
 use crate::internal::handler;
@@ -172,8 +173,8 @@ impl SettingProxy {
                                 continue;
                             }
                             match event {
-                                Event::Changed => {
-                                    proxy.notify();
+                                Event::Changed(setting_info) => {
+                                    proxy.notify(setting_info);
                                 }
                                 Event::Exited(result) => {
                                     proxy.process_exit(result);
@@ -278,14 +279,14 @@ impl SettingProxy {
 
     /// Called by the receiver task when a sink has reported a change to its
     /// setting type.
-    fn notify(&self) {
+    fn notify(&self, setting_info: SettingInfo) {
         if !self.has_active_listener {
             return;
         }
 
         self.messenger_client
             .message(
-                core::Payload::Event(SettingEvent::Changed),
+                core::Payload::Event(SettingEvent::Changed(setting_info)),
                 Audience::Address(core::Address::Switchboard),
             )
             .send();

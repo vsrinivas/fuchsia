@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::base::SettingInfo;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
@@ -16,6 +17,12 @@ impl DeviceStorageCompatible for PrivacyInfo {
 
     fn default_value() -> Self {
         PrivacyInfo { user_data_sharing_consent: None }
+    }
+}
+
+impl Into<SettingInfo> for PrivacyInfo {
+    fn into(self) -> SettingInfo {
+        SettingInfo::Privacy(self)
     }
 }
 

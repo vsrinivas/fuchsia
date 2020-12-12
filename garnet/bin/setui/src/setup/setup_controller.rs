@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::base::SettingInfo;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
@@ -18,6 +19,12 @@ impl DeviceStorageCompatible for SetupInfo {
 
     fn default_value() -> Self {
         SetupInfo { configuration_interfaces: ConfigurationInterfaceFlags::DEFAULT }
+    }
+}
+
+impl Into<SettingInfo> for SetupInfo {
+    fn into(self) -> SettingInfo {
+        SettingInfo::Setup(self)
     }
 }
 

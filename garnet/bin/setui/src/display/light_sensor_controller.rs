@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use crate::base::SettingInfo;
 use crate::display::light_sensor::{open_sensor, read_sensor, Sensor};
 use crate::handler::base::{Event, SettingHandlerResult, State};
 use crate::handler::setting_handler::{controller, ClientProxy, ControllerError};
@@ -97,7 +98,7 @@ impl controller::Handle for LightSensorController {
 
 #[async_trait]
 trait LightNotifier {
-    async fn notify(&self);
+    async fn notify(&self, setting_info: SettingInfo);
 }
 
 struct ClientNotifier {
@@ -112,8 +113,8 @@ impl ClientNotifier {
 
 #[async_trait]
 impl LightNotifier for ClientNotifier {
-    async fn notify(&self) {
-        self.client.notify(Event::Changed).await;
+    async fn notify(&self, setting_info: SettingInfo) {
+        self.client.notify(Event::Changed(setting_info)).await;
     }
 }
 
@@ -131,7 +132,7 @@ async fn notify_on_change(
             async move {
                 while let Some(value) = change_receiver.next().await {
                     *current_value.lock().await = value;
-                    notifier.lock().await.notify().await;
+                    notifier.lock().await.notify(value.into()).await;
                 }
             },
             abort_registration,
@@ -209,7 +210,7 @@ mod tests {
 
     #[async_trait]
     impl LightNotifier for TestNotifier {
-        async fn notify(&self) {
+        async fn notify(&self, _: SettingInfo) {
             self.notifier.unbounded_send(SettingType::LightSensor).ok();
         }
     }

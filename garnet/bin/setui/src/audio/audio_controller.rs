@@ -91,7 +91,8 @@ impl VolumeController {
         }
 
         if !(self.update_volume_streams(&volume, true).await?) {
-            self.client.notify(Event::Changed).await;
+            let info = self.get_info().await?.into();
+            self.client.notify(Event::Changed(info)).await;
         }
 
         Ok(None)

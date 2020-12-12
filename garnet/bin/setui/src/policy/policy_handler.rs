@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use crate::handler::base::SettingHandlerResult;
-use crate::handler::device_storage::DeviceStorage;
-use crate::handler::setting_handler::persist::Storage;
+use crate::handler::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::handler::setting_handler::StorageFactory;
 use crate::internal::core;
 use crate::policy::base::response::{Error as PolicyError, Response};
@@ -15,6 +14,9 @@ use async_trait::async_trait;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use std::sync::Arc;
+
+pub trait Storage: DeviceStorageCompatible + Send + Sync {}
+impl<T: DeviceStorageCompatible + Send + Sync> Storage for T {}
 
 /// PolicyHandlers are in charge of applying and persisting policies set by clients.
 #[async_trait]

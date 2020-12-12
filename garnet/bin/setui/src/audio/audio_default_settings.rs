@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::base::SettingInfo,
     crate::config::default_settings::DefaultSetting,
     crate::handler::device_storage::DeviceStorageCompatible,
     crate::switchboard::base::{
@@ -116,6 +117,12 @@ impl DeviceStorageCompatible for AudioInfo {
 
     fn deserialize_from(value: &String) -> Self {
         Self::extract(&value).unwrap_or_else(|_| Self::from(AudioInfoV1::deserialize_from(&value)))
+    }
+}
+
+impl Into<SettingInfo> for AudioInfo {
+    fn into(self) -> SettingInfo {
+        SettingInfo::Audio(self)
     }
 }
 

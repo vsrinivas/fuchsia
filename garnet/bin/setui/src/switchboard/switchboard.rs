@@ -278,7 +278,8 @@ impl Switchboard {
 
     fn process_event(&mut self, input: SettingEvent, author: core::message::Signature) {
         match input {
-            SettingEvent::Changed => {
+            // TODO(fxb/66295): notify listeners of the new value directly.
+            SettingEvent::Changed(_) => {
                 let setting_type =
                     self.proxy_settings.get(&author).expect("should match setting type");
                 self.notify_listeners(setting_type);
@@ -489,6 +490,7 @@ impl Switchboard {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::base::SettingInfo;
     use crate::internal::core;
     use crate::message::base::Audience;
     use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
@@ -709,7 +711,7 @@ mod tests {
 
         proxy_messenger
             .message(
-                core::Payload::Event(SettingEvent::Changed),
+                core::Payload::Event(SettingEvent::Changed(SettingInfo::Unknown)),
                 Audience::Address(core::Address::Switchboard),
             )
             .send();

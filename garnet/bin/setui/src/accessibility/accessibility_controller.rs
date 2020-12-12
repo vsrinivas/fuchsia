@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use crate::base::SettingInfo;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
@@ -24,6 +25,12 @@ impl DeviceStorageCompatible for AccessibilityInfo {
             color_correction: None,
             captions_settings: None,
         }
+    }
+}
+
+impl Into<SettingInfo> for AccessibilityInfo {
+    fn into(self) -> SettingInfo {
+        SettingInfo::Accessibility(self)
     }
 }
 

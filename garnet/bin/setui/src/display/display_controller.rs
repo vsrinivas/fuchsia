@@ -4,6 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::base::SettingInfo;
 use crate::call;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::DeviceStorageCompatible;
@@ -37,6 +38,12 @@ impl DeviceStorageCompatible for DisplayInfo {
     fn deserialize_from(value: &String) -> Self {
         Self::extract(&value)
             .unwrap_or_else(|_| Self::from(DisplayInfoV4::deserialize_from(&value)))
+    }
+}
+
+impl Into<SettingInfo> for DisplayInfo {
+    fn into(self) -> SettingInfo {
+        SettingInfo::Brightness(self)
     }
 }
 

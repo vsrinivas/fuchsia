@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::base::SettingInfo;
 use crate::call;
 use crate::handler::base::{SettingHandlerResult, State};
 use crate::handler::device_storage::DeviceStorageCompatible;
@@ -23,6 +24,12 @@ impl DeviceStorageCompatible for FactoryResetInfo {
 
     fn default_value() -> Self {
         FactoryResetInfo::new(true)
+    }
+}
+
+impl Into<SettingInfo> for FactoryResetInfo {
+    fn into(self) -> SettingInfo {
+        SettingInfo::FactoryReset(self)
     }
 }
 

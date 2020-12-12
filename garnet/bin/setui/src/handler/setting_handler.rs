@@ -242,10 +242,11 @@ impl<C: controller::Create + controller::Handle + Send + Sync + 'static> Handler
 pub mod persist {
     use super::ClientProxy as BaseProxy;
     use super::*;
+    use crate::base::SettingInfo;
     use crate::handler::device_storage::{DeviceStorage, DeviceStorageCompatible};
 
-    pub trait Storage: DeviceStorageCompatible + Send + Sync {}
-    impl<T: DeviceStorageCompatible + Send + Sync> Storage for T {}
+    pub trait Storage: DeviceStorageCompatible + Into<SettingInfo> + Send + Sync {}
+    impl<T: DeviceStorageCompatible + Into<SettingInfo> + Send + Sync> Storage for T {}
 
     #[derive(PartialEq, Clone, Debug)]
     /// Enum for describing whether writing affected persistent value.
@@ -307,7 +308,7 @@ pub mod persist {
 
             match self.storage.lock().await.write(&value, write_through).await {
                 Ok(_) => {
-                    self.notify(Event::Changed).await;
+                    self.notify(Event::Changed(value.into())).await;
                     Ok(UpdateState::Updated)
                 }
                 Err(_) => Err(ControllerError::WriteFailure(self.setting_type)),

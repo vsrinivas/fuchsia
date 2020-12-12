@@ -84,7 +84,8 @@ impl InspectBroker {
                         }
                         // Whenever we see a setting handler tell the proxy it changed, we ask it
                         // for its value again.
-                        Payload::Event(Event::Changed) => {
+                        // TODO(fxb/66294): Capture new value directly here.
+                        Payload::Event(Event::Changed(_)) => {
                             broker
                                 .lock()
                                 .await
@@ -172,6 +173,7 @@ impl InspectBroker {
 mod tests {
     use fuchsia_inspect::assert_inspect_tree;
 
+    use crate::base::SettingInfo as BaseSettingInfo;
     use crate::internal::handler::message::{create_hub, Receptor};
     use crate::internal::handler::Address;
     use crate::switchboard::base::SettingResponse;
@@ -282,9 +284,14 @@ mod tests {
             .await
             .expect("could not create inspect");
 
-        // Setting handler notifies proxy of setting changed.
+        // Setting handler notifies proxy of setting changed. The value does not
+        // matter as it is fetched.
+        // TODO(fxb/66294): Remove get call from inspect broker.
         setting_handler
-            .message(Payload::Event(Event::Changed), Audience::Messenger(proxy_signature))
+            .message(
+                Payload::Event(Event::Changed(BaseSettingInfo::Unknown)),
+                Audience::Messenger(proxy_signature),
+            )
             .send();
 
         // Inspect broker sends get request to setting handler, handler replies with value.

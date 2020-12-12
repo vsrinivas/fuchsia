@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::base::SettingInfo;
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::handler::setting_handler::ControllerError;
 use crate::internal::handler::message;
@@ -44,7 +45,7 @@ pub enum Command {
 pub enum Event {
     // Sent when the publicly perceived values of the setting
     // handler have been changed.
-    Changed,
+    Changed(SettingInfo),
     Exited(ExitResult),
 }
 

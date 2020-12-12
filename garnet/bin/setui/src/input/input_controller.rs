@@ -1,6 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use crate::base::SettingInfo;
 use crate::handler::base::{SettingHandlerResult, State};
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
@@ -25,6 +26,15 @@ impl DeviceStorageCompatible for InputInfoSources {
             sw_microphone: Microphone { muted: false },
             hw_camera: Camera { disabled: false },
         }
+    }
+}
+
+impl Into<SettingInfo> for InputInfoSources {
+    fn into(self) -> SettingInfo {
+        SettingInfo::Input(InputInfo {
+            microphone: Microphone { muted: self.hw_microphone.muted || self.sw_microphone.muted },
+            camera: Camera { disabled: self.hw_camera.disabled },
+        })
     }
 }
 

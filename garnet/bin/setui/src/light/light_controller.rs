@@ -5,6 +5,7 @@
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_light::{Info, LightMarker, LightProxy};
 
+use crate::base::SettingInfo;
 use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::DeviceStorageCompatible;
@@ -37,6 +38,12 @@ impl DeviceStorageCompatible for LightInfo {
     }
 
     const KEY: &'static str = "light_info";
+}
+
+impl Into<SettingInfo> for LightInfo {
+    fn into(self) -> SettingInfo {
+        SettingInfo::Light(self)
+    }
 }
 
 pub struct LightController {

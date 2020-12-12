@@ -107,6 +107,7 @@ rustc_library("lib") {
     "src/audio/policy/audio_policy_handler.rs",
     "src/audio/policy/volume_policy_fidl_handler.rs",
     "src/audio/stream_volume_control.rs",
+    "src/base.rs",
     "src/clock.rs",
     "src/config.rs",
     "src/config/base.rs",
