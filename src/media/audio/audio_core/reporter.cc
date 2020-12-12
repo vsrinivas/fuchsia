@@ -420,6 +420,10 @@ class Reporter::ThermalStateTracker {
   using CobaltStateTransition = AudioThermalStateTransitionsMetricDimensionStateTransition;
   static constexpr std::array kCobaltStateTransitions = {
       CobaltStateTransition::Normal, CobaltStateTransition::State1, CobaltStateTransition::State2};
+  // Ideally we'd record final cobalt metrics when the component exits, however we can't
+  // be notified of component exit until we've switched to Components v2. In the interim,
+  // we automatically restart sessions every 5 min.
+  static constexpr auto kCobaltDataCollectionInterval = zx::min(5);
 
   struct State {
     // Total duration this state has been active, not counting
@@ -427,6 +431,7 @@ class Reporter::ThermalStateTracker {
     zx::duration past_duration;
     // Set if this is the current thermal state.
     std::optional<zx::time> current_activation_time;
+    std::optional<zx::time> interval_start_time;  // Cobalt
     // Running total of transitions to State.
     uint32_t total_transitions;
 
@@ -437,15 +442,20 @@ class Reporter::ThermalStateTracker {
     void Deactivate();
   };
 
-  void LogCobaltStateTransition(State& state, CobaltStateTransition event);
+  void LogCobaltStateTransition(State& state, CobaltStateTransition event) FXL_REQUIRE(mutex_);
+  void LogCobaltStateDuration(State& old_state, State& new_state) FXL_REQUIRE(mutex_);
+  void ResetInterval();
 
   Reporter::Impl& impl_;
   Container<ThermalStateTransition, kThermalStatesToCache>& thermal_state_transitions_;
   inspect::Node root_;
   inspect::UintProperty num_thermal_states_;
 
-  uint32_t active_state_;
-  std::unordered_map<uint32_t, State> states_;
+  std::mutex mutex_;
+  uint32_t active_state_ FXL_GUARDED_BY(mutex_);
+  std::unordered_map<uint32_t, State> states_ FXL_GUARDED_BY(mutex_);
+  async::TaskClosureMethod<ThermalStateTracker, &ThermalStateTracker::ResetInterval>
+      restart_interval_timer_ FXL_GUARDED_BY(mutex_){this};
   Container<ThermalStateTransition, kThermalStatesToCache>::Ptr last_transition_;
 };
 
@@ -1114,6 +1124,7 @@ Reporter::ThermalStateTracker::ThermalStateTracker(
   states_[active_state_] = State({.node = root_.CreateChild("normal")});
   states_[active_state_].Activate();
   LogCobaltStateTransition(states_[active_state_], kCobaltStateTransitions[active_state_]);
+  LogCobaltStateDuration(states_[active_state_], states_[active_state_]);
 }
 
 void Reporter::ThermalStateTracker::SetNumThermalStates(size_t num) {
@@ -1121,6 +1132,7 @@ void Reporter::ThermalStateTracker::SetNumThermalStates(size_t num) {
 }
 
 void Reporter::ThermalStateTracker::SetThermalState(uint32_t state) {
+  std::lock_guard<std::mutex> lock(mutex_);
   if (active_state_ == state) {
     return;
   }
@@ -1132,6 +1144,7 @@ void Reporter::ThermalStateTracker::SetThermalState(uint32_t state) {
   states_[state].Activate();
   last_transition_ = thermal_state_transitions_.New(new ThermalStateTransition(impl_, state));
   LogCobaltStateTransition(states_[state], kCobaltStateTransitions[state]);
+  LogCobaltStateDuration(states_[active_state_], states_[state]);
 
   // Set |active_state_| after all activation steps are complete.
   active_state_ = state;
@@ -1163,7 +1176,8 @@ void Reporter::ThermalStateTracker::State::Deactivate() {
 ////////////////////////////////////////////////////////////////////////////////////////////////
 // Thermal State Cobalt Metrics
 //
-// A per-device histogram is generated for each thermal state. Transitions into the state are
+// `LogCobaltStateTransition`
+// A per-device histogram is generated for each thermal state. Transitions into |state| are
 // counted by marking "1" in each bucket up to N total transitions since boot.
 //
 // For example, if a device has N transitions to state 2 since boot, the state 2 histogram
@@ -1177,6 +1191,9 @@ void Reporter::ThermalStateTracker::State::Deactivate() {
 // thermal state count. Post-processing in the custom dashboard will reduce these histograms to
 // give an accurate representation of the total number of devices that have reached each thermal
 // state transition count.
+//
+// `LogCobaltStateDuration`
+// In addition, the total time spent in |old_state| is recorded (in ns).
 ////////////////////////////////////////////////////////////////////////////////////////////////
 void Reporter::ThermalStateTracker::LogCobaltStateTransition(State& state,
                                                              CobaltStateTransition event) {
@@ -1195,6 +1212,49 @@ void Reporter::ThermalStateTracker::LogCobaltStateTransition(State& state,
     logger->LogIntHistogram(kAudioThermalStateTransitionsMetricId, event, "" /*component*/,
                             histogram, [](auto) {});
   }
+}
+
+void Reporter::ThermalStateTracker::LogCobaltStateDuration(State& old_state, State& new_state) {
+  auto& logger = impl_.cobalt_logger;
+  if (!logger) {
+    return;
+  }
+
+  auto now = zx::clock::get_monotonic();
+
+  // Record duration of |old_state|, if interval has started.
+  if (auto start_time = old_state.interval_start_time; start_time) {
+    auto e = fuchsia::cobalt::CobaltEvent{
+        .metric_id = kAudioThermalStateDurationMetricId,
+        .event_codes = {active_state_},
+        .payload =
+            fuchsia::cobalt::EventPayload::WithElapsedMicros((now - start_time.value()).get()),
+    };
+
+    impl_.threading_model.FidlDomain().PostTask([&logger, e = std::move(e)]() mutable {
+      logger->LogCobaltEvent(std::move(e), [](fuchsia::cobalt::Status status) {
+        if (status == fuchsia::cobalt::Status::OK) {
+          return;
+        }
+        if (status == fuchsia::cobalt::Status::BUFFER_FULL) {
+          FX_LOGS_FIRST_N(WARNING, 50) << "Cobalt logger failed with buffer full";
+        } else {
+          FX_LOGS(ERROR) << "Cobalt logger failed with code " << static_cast<int>(status);
+        }
+      });
+    });
+  }
+
+  // End |old_state| and start |new_state| logging interval.
+  old_state.interval_start_time = std::nullopt;
+  new_state.interval_start_time = now;
+  restart_interval_timer_.PostDelayed(impl_.threading_model.IoDomain().dispatcher(),
+                                      kCobaltDataCollectionInterval);
+}
+
+void Reporter::ThermalStateTracker::ResetInterval() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  LogCobaltStateDuration(states_[active_state_], states_[active_state_]);
 }
 
 }  // namespace media::audio
