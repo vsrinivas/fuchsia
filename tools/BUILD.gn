@@ -45,11 +45,6 @@ group("build_infra") {
     "//tools/build/ninjago/buildstats($host_toolchain)",
     "//tools/build/ninjago/ninjatrace($host_toolchain)",
     "//tools/size_checker/cmd:host($host_toolchain)",
-
-    # TODO(fxbug.dev/63540): remove after
-    # https://fuchsia-review.googlesource.com/c/infra/recipes/+/460152 rolled.
-    "//tools/debug/covargs($host_toolchain)",
-    "//tools/debug/symbolize($host_toolchain)",
   ]
 }
 
