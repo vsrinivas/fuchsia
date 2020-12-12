@@ -417,19 +417,28 @@ class Reporter::ThermalStateTracker {
   void DropLastTransition() { last_transition_.Drop(); }
 
  private:
+  using CobaltStateTransition = AudioThermalStateTransitionsMetricDimensionStateTransition;
+  static constexpr std::array kCobaltStateTransitions = {
+      CobaltStateTransition::Normal, CobaltStateTransition::State1, CobaltStateTransition::State2};
+
   struct State {
     // Total duration this state has been active, not counting
     // the current activation if this is the current state.
     zx::duration past_duration;
     // Set if this is the current thermal state.
     std::optional<zx::time> current_activation_time;
+    // Running total of transitions to State.
+    uint32_t total_transitions;
 
-    inspect::Node node_;
-    inspect::LazyNode duration_;
+    inspect::Node node;
+    inspect::LazyNode duration;
 
     void Activate();
     void Deactivate();
   };
+
+  void LogCobaltStateTransition(State& state, CobaltStateTransition event);
+
   Reporter::Impl& impl_;
   Container<ThermalStateTransition, kThermalStatesToCache>& thermal_state_transitions_;
   inspect::Node root_;
@@ -1102,8 +1111,9 @@ Reporter::ThermalStateTracker::ThermalStateTracker(
       active_state_(0),
       last_transition_(
           thermal_state_transitions_.New(new ThermalStateTransition(impl_, active_state_))) {
-  states_[active_state_] = State({.node_ = root_.CreateChild("normal")});
+  states_[active_state_] = State({.node = root_.CreateChild("normal")});
   states_[active_state_].Activate();
+  LogCobaltStateTransition(states_[active_state_], kCobaltStateTransitions[active_state_]);
 }
 
 void Reporter::ThermalStateTracker::SetNumThermalStates(size_t num) {
@@ -1117,11 +1127,14 @@ void Reporter::ThermalStateTracker::SetThermalState(uint32_t state) {
   states_[active_state_].Deactivate();
 
   if (states_.find(state) == states_.end()) {
-    states_[state] = State({.node_ = root_.CreateChild(state ? std::to_string(state) : "normal")});
+    states_[state] = State({.node = root_.CreateChild(state ? std::to_string(state) : "normal")});
   }
   states_[state].Activate();
-  active_state_ = state;
   last_transition_ = thermal_state_transitions_.New(new ThermalStateTransition(impl_, state));
+  LogCobaltStateTransition(states_[state], kCobaltStateTransitions[state]);
+
+  // Set |active_state_| after all activation steps are complete.
+  active_state_ = state;
 }
 
 void Reporter::ThermalStateTracker::State::Activate() {
@@ -1129,7 +1142,7 @@ void Reporter::ThermalStateTracker::State::Activate() {
 
   // If state has never been activated, set duration LazyNode.
   if (!past_duration.get()) {
-    duration_ = node_.CreateLazyValues("TotalThermalStateDuration", [this] {
+    duration = node.CreateLazyValues("TotalThermalStateDuration", [this] {
       inspect::Inspector i;
       i.GetRoot().CreateUint("total duration (ns)",
                              (current_activation_time ? past_duration + zx::clock::get_monotonic() -
@@ -1145,6 +1158,43 @@ void Reporter::ThermalStateTracker::State::Activate() {
 void Reporter::ThermalStateTracker::State::Deactivate() {
   past_duration += (zx::clock::get_monotonic() - current_activation_time.value());
   current_activation_time = std::nullopt;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+// Thermal State Cobalt Metrics
+//
+// A per-device histogram is generated for each thermal state. Transitions into the state are
+// counted by marking "1" in each bucket up to N total transitions since boot.
+//
+// For example, if a device has N transitions to state 2 since boot, the state 2 histogram
+// will be:
+//
+//     value: [1] ... [1]  [0]  [0] ...
+//    bucket:  0  ...  N   N+1  N+2 ...
+//
+// For each thermal state, Cobalt will aggregate the per-device histograms into one for all
+// devices, such that each bucket counts the number of devices that have reached that bucket's
+// thermal state count. Post-processing in the custom dashboard will reduce these histograms to
+// give an accurate representation of the total number of devices that have reached each thermal
+// state transition count.
+////////////////////////////////////////////////////////////////////////////////////////////////
+void Reporter::ThermalStateTracker::LogCobaltStateTransition(State& state,
+                                                             CobaltStateTransition event) {
+  auto& logger = impl_.cobalt_logger;
+  if (!logger) {
+    return;
+  }
+
+  if (auto transition_count = ++state.total_transitions; transition_count > 50) {
+    FX_LOGS_FIRST_N(INFO, 10)
+        << "Cobalt logging of audio_thermal_state_transitions has exceeded maximum of 50: " << event
+        << " = " << transition_count << "transitions";
+  } else {
+    std::vector<fuchsia::cobalt::HistogramBucket> histogram{
+        {.index = transition_count, .count = 1}};
+    logger->LogIntHistogram(kAudioThermalStateTransitionsMetricId, event, "" /*component*/,
+                            histogram, [](auto) {});
+  }
 }
 
 }  // namespace media::audio
