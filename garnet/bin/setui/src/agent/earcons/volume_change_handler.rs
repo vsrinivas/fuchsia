@@ -6,6 +6,7 @@ use crate::agent::earcons::agent::CommonEarconsParams;
 use crate::agent::earcons::sound_ids::{VOLUME_CHANGED_SOUND_ID, VOLUME_MAX_SOUND_ID};
 use crate::agent::earcons::utils::{connect_to_sound_player, play_sound};
 use crate::audio::{create_default_modified_counters, ModifiedCounters};
+use crate::base::SettingInfo;
 use crate::internal::event;
 use crate::internal::switchboard;
 use crate::message::base::Audience;
@@ -16,7 +17,7 @@ use crate::switchboard::base::{
 
 use anyhow::Error;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log_debug, fx_log_err};
+use fuchsia_syslog::fx_log_debug;
 use futures::StreamExt;
 use std::collections::{HashMap, HashSet};
 
@@ -25,7 +26,6 @@ pub struct VolumeChangeHandler {
     common_earcons_params: CommonEarconsParams,
     last_user_volumes: HashMap<AudioStreamType, f32>,
     modified_counters: ModifiedCounters,
-    switchboard_messenger: switchboard::message::Messenger,
     publisher: event::Publisher,
 }
 
@@ -76,14 +76,11 @@ impl VolumeChangeHandler {
             HashMap::new()
         };
 
-        let (volume_tx, mut volume_rx) = futures::channel::mpsc::unbounded::<SettingResponse>();
-
         fasync::Task::spawn(async move {
             let mut handler = Self {
                 common_earcons_params: params,
                 last_user_volumes,
                 modified_counters: create_default_modified_counters(),
-                switchboard_messenger: switchboard_messenger.clone(),
                 publisher,
             };
 
@@ -100,13 +97,8 @@ impl VolumeChangeHandler {
                 futures::select! {
                     volume_change_event = listen_receptor.next() => {
                         if let Some(
-                            switchboard::Payload::Listen(switchboard::Listen::Update(setting, _))
+                            switchboard::Payload::Listen(switchboard::Listen::Update(setting, SettingInfo::Audio(audio_info)))
                         ) = extract_payload(volume_change_event) {
-                            handler.on_changed_setting(setting, volume_tx.clone()).await;
-                        }
-                    }
-                    volume_response = volume_rx.next() => {
-                        if let Some(SettingResponse::Audio(audio_info)) = volume_response {
                             handler.on_audio_info(audio_info).await;
                         }
                     }
@@ -117,36 +109,6 @@ impl VolumeChangeHandler {
         .detach();
 
         Ok(())
-    }
-
-    /// Called when a new value is indicated for a setting for which
-    /// `VolumeChangeHandler` has registered as a listener. Requests the
-    /// updated value from the `Switchboard`.
-    async fn on_changed_setting(
-        &mut self,
-        setting_type: SettingType,
-        response_sender: futures::channel::mpsc::UnboundedSender<SettingResponse>,
-    ) {
-        let mut receptor = self
-            .switchboard_messenger
-            .message(
-                switchboard::Payload::Action(switchboard::Action::Request(
-                    setting_type,
-                    SettingRequest::Get,
-                )),
-                Audience::Address(switchboard::Address::Switchboard),
-            )
-            .send();
-
-        if let Ok((
-            switchboard::Payload::Action(switchboard::Action::Response(Ok(Some(response)))),
-            _,
-        )) = receptor.next_payload().await
-        {
-            response_sender.unbounded_send(response).ok();
-        } else {
-            fx_log_err!("[earcons_agent] Failed to get volume state from switchboard");
-        }
     }
 
     /// Calculates and returns the streams that were changed based on
@@ -322,9 +284,6 @@ mod tests {
         let (fake_streams, old_timestamps, new_timestamps, expected_changed_streams) =
             fake_values();
         let event_messenger_factory = event::message::create_hub();
-        let switchboard_messenger_factory = switchboard::message::create_hub();
-        let (messenger, _) =
-            switchboard_messenger_factory.create(MessengerType::Unbound).await.unwrap();
         let publisher =
             event::Publisher::create(&event_messenger_factory, MessengerType::Unbound).await;
         let mut last_user_volumes = HashMap::new();
@@ -332,7 +291,6 @@ mod tests {
         last_user_volumes.insert(AudioStreamType::Interruption, 0.5);
 
         let mut handler = VolumeChangeHandler {
-            switchboard_messenger: messenger,
             common_earcons_params: CommonEarconsParams {
                 service_context: ServiceContext::create(None, None),
                 sound_player_added_files: Arc::new(Mutex::new(HashSet::new())),

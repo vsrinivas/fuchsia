@@ -133,6 +133,7 @@ impl VolumeController {
 
         let mut stored_value = self.client.read().await;
         stored_value.streams = get_streams_array_from_map(&self.stream_volume_controls);
+        stored_value.modified_counters = Some(self.modified_counters.clone());
 
         Ok(write(&self.client, stored_value, false).await.notified())
     }
