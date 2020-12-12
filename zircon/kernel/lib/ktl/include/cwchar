@@ -1,0 +1,25 @@
+// Copyright 2020 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
+
+#ifndef ZIRCON_KERNEL_LIB_KTL_INCLUDE_CWCHAR
+#define ZIRCON_KERNEL_LIB_KTL_INCLUDE_CWCHAR
+
+// The kernel doesn't want this file but some libc++ headers we need
+// wind up including it and they need these declarations.
+
+#include <wchar.h>
+
+#include <__config>
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+using ::wmemcpy;
+using ::wmemmove;
+using ::wmemset;
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE_CWCHAR
