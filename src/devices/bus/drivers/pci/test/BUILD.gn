@@ -52,6 +52,7 @@ isolated_devmgr_unittest_package("pci-driver-test") {
     ":pci_fake.proxy",
     ":pci_protocol_test_driver",
     "//src/devices/board/drivers/integration-test",
+    "//src/devices/bus/drivers/pci",
     "//src/devices/bus/drivers/platform",
   ]
   test_specs = {
