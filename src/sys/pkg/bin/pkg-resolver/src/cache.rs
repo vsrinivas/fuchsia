@@ -196,7 +196,7 @@ pub async fn cache_package<'a>(
         )
         .await
         .expect("processor exists")
-        .map_err(CacheError::FetchMetaFar)?;
+        .map_err(|e| CacheError::FetchMetaFar(e, merkle))?;
 
     cache
         .list_needs(merkle)
@@ -237,10 +237,10 @@ pub enum CacheError {
     #[error("while listing needed blobs for package")]
     ListNeeds(#[from] pkgfs::needs::ListNeedsError),
 
-    #[error("while fetching the meta.far")]
-    FetchMetaFar(#[source] Arc<FetchError>),
+    #[error("while fetching the meta.far: {1}")]
+    FetchMetaFar(#[source] Arc<FetchError>, BlobId),
 
-    #[error("while fetching content blob: {1}")]
+    #[error("while fetching content blob for meta.far {1}")]
     FetchContentBlob(#[source] Arc<FetchError>, BlobId),
 }
 
@@ -260,7 +260,7 @@ impl ToResolveStatus for CacheError {
             CacheError::Fidl(_) => Status::IO,
             CacheError::MerkleFor(err) => err.to_resolve_status(),
             CacheError::ListNeeds(err) => err.to_resolve_status(),
-            CacheError::FetchMetaFar(err) => err.to_resolve_status(),
+            CacheError::FetchMetaFar(err, ..) => err.to_resolve_status(),
             CacheError::FetchContentBlob(err, _) => err.to_resolve_status(),
         }
     }
@@ -332,8 +332,8 @@ impl ToResolveStatus for FetchError {
             FetchError::LocalMirror(_) => Status::INTERNAL,
             FetchError::NoBlobSource { .. } => Status::INTERNAL,
             FetchError::ConflictingBlobSources => Status::INTERNAL,
-            FetchError::BlobHeaderDeadlineExceeded => Status::UNAVAILABLE,
-            FetchError::BlobBodyDeadlineExceeded => Status::UNAVAILABLE,
+            FetchError::BlobHeaderDeadlineExceeded { .. } => Status::UNAVAILABLE,
+            FetchError::BlobBodyDeadlineExceeded { .. } => Status::UNAVAILABLE,
         }
     }
 }
@@ -703,7 +703,9 @@ async fn download_blob(
     let response = client
         .request(request)
         .map_err(|e| FetchError::Hyper { e, uri: uri.to_string() })
-        .on_timeout(blob_network_deadline, || Err(FetchError::BlobHeaderDeadlineExceeded))
+        .on_timeout(blob_network_deadline, || {
+            Err(FetchError::BlobHeaderDeadlineExceeded { uri: uri.to_string() })
+        })
         .await?;
 
     if response.status() != StatusCode::OK {
@@ -735,7 +737,9 @@ async fn download_blob(
     while let Some(chunk) = chunks
         .try_next()
         .map_err(|e| FetchError::Hyper { e, uri: uri.to_string() })
-        .on_timeout(blob_network_deadline, || Err(FetchError::BlobBodyDeadlineExceeded))
+        .on_timeout(blob_network_deadline, || {
+            Err(FetchError::BlobBodyDeadlineExceeded { uri: uri.to_string() })
+        })
         .await?
     {
         if written + chunk.len() as u64 > expected_len {
@@ -833,13 +837,13 @@ pub enum FetchError {
     #[error("Tried to request a blob with HTTP and local mirrors")]
     ConflictingBlobSources,
 
-    #[error("exceeded deadline waiting for http response header while downloading blob")]
-    BlobHeaderDeadlineExceeded,
+    #[error("exceeded deadline waiting for http response header while downloading blob: {uri}")]
+    BlobHeaderDeadlineExceeded { uri: String },
 
     #[error(
-        "exceeded deadline waiting for bytes from the http response body while downloading blob"
+        "exceeded deadline waiting for bytes from the http response body while downloading blob: {uri}"
     )]
-    BlobBodyDeadlineExceeded,
+    BlobBodyDeadlineExceeded { uri: String },
 }
 
 impl From<&FetchError> for metrics::FetchBlobMetricDimensionResult {
@@ -863,8 +867,8 @@ impl From<&FetchError> for metrics::FetchBlobMetricDimensionResult {
             FetchError::LocalMirror { .. } => EventCodes::LocalMirror,
             FetchError::NoBlobSource { .. } => EventCodes::NoBlobSource,
             FetchError::ConflictingBlobSources => EventCodes::ConflictingBlobSources,
-            FetchError::BlobHeaderDeadlineExceeded => EventCodes::BlobHeaderDeadlineExceeded,
-            FetchError::BlobBodyDeadlineExceeded => EventCodes::BlobBodyDeadlineExceeded,
+            FetchError::BlobHeaderDeadlineExceeded { .. } => EventCodes::BlobHeaderDeadlineExceeded,
+            FetchError::BlobBodyDeadlineExceeded { .. } => EventCodes::BlobBodyDeadlineExceeded,
         }
     }
 }
