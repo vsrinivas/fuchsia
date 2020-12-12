@@ -24,12 +24,12 @@ fn main() {
     let mut fc = FuchsiaCriterion::default();
     let c: &mut Criterion = &mut fc;
     *c = mem::take(c)
-        .warm_up_time(Duration::from_millis(50))
-        .measurement_time(Duration::from_millis(1000))
+        .warm_up_time(Duration::from_millis(1))
+        .measurement_time(Duration::from_millis(500))
         // We must reduce the sample size from the default of 100, otherwise
-        // Criterion will sometimes override the 50ms + 1000ms suggested times
+        // Criterion will sometimes override the 1ms + 500ms suggested times
         // and run for much longer.
-        .sample_size(10);
+        .sample_size(5);
     fc.bench("fuchsia.fidl_microbenchmarks", benchmark);
 }
 fn wall_time_label(base: &str) -> String {
