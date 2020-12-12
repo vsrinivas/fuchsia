@@ -15,7 +15,7 @@ use futures::{
     task::{Context, Poll},
     FutureExt, Stream, StreamExt,
 };
-use log::{info, trace};
+use log::info;
 use std::{collections::VecDeque, pin::Pin};
 
 pub struct EncodedStream {
@@ -154,11 +154,6 @@ impl Stream for EncodedStream {
                         }
                     }
                     if self.encoder_input_cursor != vec.len() {
-                        trace!(
-                            "{} left in {} byte buffer..",
-                            vec.len() - self.encoder_input_cursor,
-                            vec.len()
-                        );
                         self.encoder_input_buffers.push_front(vec);
                     } else {
                         // Reset to the front of the next buffer.

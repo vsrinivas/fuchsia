@@ -7,6 +7,7 @@ use {
     fidl_fuchsia_bluetooth as fidl_bt,
     fidl_fuchsia_bluetooth_bredr::{
         self as fidl_bredr, ProfileDescriptor, ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
+        ATTR_SERVICE_CLASS_ID_LIST,
     },
     std::{
         cmp::min,
@@ -15,6 +16,7 @@ use {
     },
 };
 
+use crate::assigned_numbers::{constants::SERVICE_CLASS_UUIDS, AssignedNumber};
 use crate::types::Uuid;
 
 /// Try to interpret a DataElement as a ProfileDesciptor.
@@ -58,34 +60,32 @@ pub fn elem_to_profile_descriptor(elem: &fidl_bredr::DataElement) -> Option<Prof
 pub fn find_profile_descriptors(
     attributes: &[fidl_bredr::Attribute],
 ) -> Result<Vec<ProfileDescriptor>, Error> {
-    for attr in attributes {
-        match attr.id {
-            ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST => {
-                if let fidl_bredr::DataElement::Sequence(profiles) = &attr.element {
-                    let mut result = Vec::new();
-                    for elem in profiles {
-                        let elem = elem
-                            .as_ref()
-                            .ok_or(format_err!("DataElements in sequences shouldn't be null"))?;
-                        result.push(
-                            elem_to_profile_descriptor(&*elem)
-                                .ok_or(format_err!("Couldn't convert to a ProfileDescriptor"))?,
-                        );
-                    }
-                    if result.is_empty() {
-                        return Err(format_err!("Profile Descriptor List had no profiles!"));
-                    }
-                    return Ok(result);
-                } else {
-                    return Err(format_err!(
-                        "Profile Descriptor List Element was not formatted correctly"
-                    ));
-                }
-            }
-            _ => {}
+    let attr = attributes
+        .iter()
+        .find(|a| a.id == ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST)
+        .ok_or(format_err!("Profile Descriptor not found"))?;
+
+    if let fidl_bredr::DataElement::Sequence(profiles) = &attr.element {
+        let mut result = Vec::new();
+        for elem in profiles {
+            let elem =
+                elem.as_ref().ok_or(format_err!("DataElements in sequences shouldn't be null"))?;
+            result.push(
+                elem_to_profile_descriptor(&*elem)
+                    .ok_or(format_err!("Couldn't convert to a ProfileDescriptor"))?,
+            );
         }
+        if result.is_empty() {
+            return Err(format_err!("Profile Descriptor List had no profiles!"));
+        }
+        Ok(result)
+    } else {
+        Err(format_err!("Profile Descriptor List Element was not formatted correctly"))
     }
-    Err(format_err!("Profile Descriptor not found"))
+}
+
+pub fn profile_descriptor_to_assigned(profile_desc: &ProfileDescriptor) -> Option<AssignedNumber> {
+    SERVICE_CLASS_UUIDS.iter().find(|scn| profile_desc.profile_id as u16 == scn.number).cloned()
 }
 
 /// Returns the PSM from the provided `protocol`. Returns None if the protocol
@@ -104,6 +104,37 @@ pub fn psm_from_protocol(protocol: &Vec<ProtocolDescriptor>) -> Option<u16> {
         }
     }
     None
+}
+
+/// Search for a Service Class UUID from a list of attributes (such as returned via Service Search)
+pub fn find_service_classes(
+    attributes: &[fidl_fuchsia_bluetooth_bredr::Attribute],
+) -> Vec<AssignedNumber> {
+    let attr = match attributes.iter().find(|a| a.id == ATTR_SERVICE_CLASS_ID_LIST) {
+        None => return vec![],
+        Some(attr) => attr,
+    };
+    if let fidl_fuchsia_bluetooth_bredr::DataElement::Sequence(elems) = &attr.element {
+        let uuids: Vec<Uuid> = elems
+            .iter()
+            .filter_map(|e| {
+                e.as_ref().and_then(|e| {
+                    if let fidl_fuchsia_bluetooth_bredr::DataElement::Uuid(uuid) = **e {
+                        Some(uuid.into())
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect();
+        SERVICE_CLASS_UUIDS
+            .iter()
+            .filter(|scn| uuids.contains(&Uuid::new16(scn.number)))
+            .cloned()
+            .collect()
+    } else {
+        return vec![];
+    }
 }
 
 /// Given two SecurityRequirements, combines both into requirements as strict as either.
@@ -609,6 +640,65 @@ mod tests {
         assert_eq!(fidl_bredr::ServiceClassProfileIdentifier::SerialPort, result[0].profile_id);
         assert_eq!(1, result[0].major_version);
         assert_eq!(3, result[0].minor_version);
+    }
+
+    #[test]
+    fn test_find_service_classes_attribute_missing() {
+        assert_eq!(find_service_classes(&[]), Vec::new());
+        let attributes = vec![fidl_bredr::Attribute {
+            id: fidl_bredr::ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
+            element: fidl_bredr::DataElement::Sequence(vec![
+                Some(Box::new(fidl_bredr::DataElement::Sequence(vec![
+                    Some(Box::new(fidl_bredr::DataElement::Uuid(Uuid::new16(0x1101).into()))),
+                    Some(Box::new(fidl_bredr::DataElement::Uint16(0x0103))),
+                ]))),
+                Some(Box::new(fidl_bredr::DataElement::Sequence(vec![
+                    Some(Box::new(fidl_bredr::DataElement::Uuid(Uuid::new16(0x113A).into()))),
+                    Some(Box::new(fidl_bredr::DataElement::Uint16(0x0302))),
+                ]))),
+            ]),
+        }];
+        assert_eq!(find_service_classes(&attributes), Vec::new());
+    }
+
+    #[test]
+    fn test_find_service_classes_wrong_type() {
+        let attributes = vec![fidl_bredr::Attribute {
+            id: fidl_bredr::ATTR_SERVICE_CLASS_ID_LIST,
+            element: fidl_bredr::DataElement::Uint32(0xc0defae5u32),
+        }];
+        assert_eq!(find_service_classes(&attributes), Vec::new());
+    }
+
+    #[test]
+    fn test_find_service_classes_returns_known_classes() {
+        let attribute = fidl_bredr::Attribute {
+            id: fidl_bredr::ATTR_SERVICE_CLASS_ID_LIST,
+            element: fidl_bredr::DataElement::Sequence(vec![Some(Box::new(
+                fidl_bredr::DataElement::Uuid(Uuid::new16(0x1101).into()),
+            ))]),
+        };
+
+        let result = find_service_classes(&[attribute]);
+        assert_eq!(1, result.len());
+        let assigned_num = result.first().unwrap();
+        assert_eq!(0x1101, assigned_num.number); // 0x1101 is the 16-bit UUID of SerialPort
+        assert_eq!("SerialPort", assigned_num.name);
+
+        let unknown_uuids = fidl_bredr::Attribute {
+            id: fidl_bredr::ATTR_SERVICE_CLASS_ID_LIST,
+            element: fidl_bredr::DataElement::Sequence(vec![
+                Some(Box::new(fidl_bredr::DataElement::Uuid(Uuid::new16(0x1101).into()))),
+                Some(Box::new(fidl_bredr::DataElement::Uuid(Uuid::new16(0xc0de).into()))),
+            ]),
+        };
+
+        // Discards unknown UUIDs
+        let result = find_service_classes(&[unknown_uuids]);
+        assert_eq!(1, result.len());
+        let assigned_num = result.first().unwrap();
+        assert_eq!(0x1101, assigned_num.number); // 0x1101 is the 16-bit UUID of SerialPort
+        assert_eq!("SerialPort", assigned_num.name);
     }
 
     #[test]

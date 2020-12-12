@@ -128,7 +128,7 @@ impl ConnectedPeers {
 
         let entry = self.connected.lazy_entry(&id);
 
-        info!("Adding new peer for {}", id);
+        info!("Adding new peer {}", id);
         let avdtp_peer = avdtp::Peer::new(channel);
 
         let mut peer = Peer::create(

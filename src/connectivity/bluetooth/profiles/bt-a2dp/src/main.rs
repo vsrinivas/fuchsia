@@ -23,7 +23,7 @@ use {
     fidl_fuchsia_media_sessions2 as sessions2,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_bluetooth::{
-        profile::find_profile_descriptors,
+        profile::{find_profile_descriptors, find_service_classes, profile_descriptor_to_assigned},
         types::{Channel, PeerId, Uuid},
     },
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
@@ -293,17 +293,13 @@ async fn connect_after_timeout(
     profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
 ) {
-    trace!(
-        "A2DP - waiting {}s before connecting to peer {}.",
-        INITIATOR_DELAY.into_seconds(),
-        peer_id
-    );
+    trace!("waiting {}s before connecting to peer {}.", INITIATOR_DELAY.into_seconds(), peer_id);
     fuchsia_async::Timer::new(INITIATOR_DELAY.after_now()).await;
     if peers.lock().is_connected(&peer_id) {
         return;
     }
 
-    trace!("Peer has not established connection. A2DP assuming the INT role.");
+    trace!("peer {} didn't connect - initiating connection", peer_id);
     let channel = match profile_svc
         .connect(
             &mut peer_id.into(),
@@ -319,7 +315,7 @@ async fn connect_after_timeout(
         .await
     {
         Err(e) => {
-            warn!("FIDL error creating channel: {:?}", e);
+            warn!("FIDL error on connect: {:?}", e);
             return;
         }
         Ok(Err(e)) => {
@@ -329,7 +325,7 @@ async fn connect_after_timeout(
         Ok(Ok(channel)) => channel,
     };
 
-    let channel = match channel.try_into() {
+    let channel: Channel = match channel.try_into() {
         Err(e) => {
             warn!("Didn't get channel from peer {}: {}", peer_id, e);
             return;
@@ -337,18 +333,15 @@ async fn connect_after_timeout(
         Ok(chan) => chan,
     };
 
-    handle_connection(&peer_id, channel, /* initiate = */ true, &mut peers.lock());
-}
-
-/// Handles incoming peer connections
-fn handle_connection(
-    peer_id: &PeerId,
-    channel: Channel,
-    initiate: bool,
-    peers: &mut ConnectedPeers,
-) {
-    info!("Connection from {}: {:?}!", peer_id, channel);
-    let _ = peers.connected(peer_id.clone(), channel, initiate);
+    info!(
+        "Connected to {}: mode {} max_tx {}",
+        peer_id,
+        channel.channel_mode(),
+        channel.max_tx_size()
+    );
+    if let Err(e) = peers.lock().connected(peer_id, channel, /* initiator = */ true) {
+        warn!("Problem connecting to peer: {}", e);
+    }
 }
 
 /// Handles found services. Stores the found information and then spawns a task which will
@@ -360,11 +353,24 @@ fn handle_services_found(
     profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
 ) {
-    info!("Audio profile found on {}, attributes: {:?}", peer_id, attributes);
+    let service_names: Vec<&str> =
+        find_service_classes(attributes).iter().map(|an| an.name).collect();
+    let profiles = find_profile_descriptors(attributes).unwrap_or(vec![]);
+    let profile_names: Vec<String> = profiles
+        .iter()
+        .filter_map(|p| {
+            profile_descriptor_to_assigned(p)
+                .map(|a| format!("{} ({}.{})", a.name, p.major_version, p.minor_version))
+        })
+        .collect();
+    info!(
+        "Audio profile found on {}, classes: {:?}, profiles: {:?}",
+        peer_id, service_names, profile_names
+    );
 
-    let profile = match find_profile_descriptors(attributes) {
-        Ok(profiles) => profiles.into_iter().next().expect("at least one profile descriptor"),
-        Err(_) => {
+    let profile = match profiles.first() {
+        Some(profile) => profile.clone(),
+        None => {
             info!("Couldn't find profile in peer {} search results, ignoring.", peer_id);
             return;
         }
@@ -411,7 +417,8 @@ struct Opt {
     source: AudioSourceType,
 
     #[argh(option, short = 'c', long = "channelmode")]
-    /// channel mode preferred for the AVDTP signaling channel (optional, defaults to "basic", values: "basic", "ertm").
+    /// channel mode preferred for the AVDTP signaling channel
+    /// (optional, defaults to "basic", values: "basic", "ertm").
     channel_mode: Option<String>,
 }
 
@@ -590,16 +597,18 @@ async fn handle_profile_events(
     loop {
         select! {
             connect_request = connect_requests.try_next() => {
-                let connected = match connect_request? {
-                    None => return Err(format_err!("BR/EDR ended service registration")),
-                    Some(request) => request,
+                let request = connect_request?.ok_or(format_err!("BR/EDR ended service registration"))?;
+                match request {
+                    bredr::ConnectionReceiverRequest::Connected { peer_id, channel, .. } => {
+                        let peer_id = peer_id.into();
+                        let channel: Channel = channel.try_into()?;
+                        info!("Connection from {}: mode {} max_tx {}", peer_id, channel.channel_mode(), channel.max_tx_size());
+                        if let Err(e) = peers.lock().connected(peer_id, channel, /* initiator= */ false) {
+                            warn!("Problem accepting peer connection: {}", e);
+                        }
+                    }
+                    x => info!("Unrecognized connection request: {:?}", x),
                 };
-                let bredr::ConnectionReceiverRequest::Connected { peer_id, channel, .. } = connected;
-                handle_connection(
-                    &peer_id.into(),
-                    channel.try_into()?,
-                    /* initiate = */ false,
-                    &mut peers.lock());
             }
             source_result = source_results.try_next() => {
                 let result = source_result?.ok_or(format_err!("BR/EDR ended source service search"))?;
@@ -859,10 +868,7 @@ mod tests {
 
         // A peer connects before the timeout.
         let (_remote, transport) = Channel::create();
-        {
-            let mut peers_lock = peers.lock();
-            handle_connection(&peer_id, transport, /* initiate = */ false, &mut peers_lock);
-        }
+        let _ = peers.lock().connected(peer_id.clone(), transport, /* initiator= */ false);
 
         run_to_stalled(&mut exec);
 

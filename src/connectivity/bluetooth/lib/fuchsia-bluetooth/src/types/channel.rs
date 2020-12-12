@@ -13,6 +13,7 @@ use {
     futures::{io, stream::Stream, Future, TryFutureExt},
     std::convert::TryFrom,
     std::{
+        fmt,
         ops::Deref,
         pin::Pin,
         task::{Context, Poll},
@@ -24,6 +25,15 @@ use {
 pub enum ChannelMode {
     Basic,
     EnhancedRetransmissionMode,
+}
+
+impl fmt::Display for ChannelMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ChannelMode::Basic => write!(f, "Basic"),
+            ChannelMode::EnhancedRetransmissionMode => write!(f, "ERTM"),
+        }
+    }
 }
 
 pub enum A2dpDirection {
