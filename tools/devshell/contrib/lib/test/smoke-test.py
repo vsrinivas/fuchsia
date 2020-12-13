@@ -64,28 +64,17 @@ def main():
     with open(os.path.join(args.out_dir, "tests.json")) as tests_json:
         tests = json.load(tests_json)
 
-    phony_rule_to_test_name = collections.defaultdict(set)
-    for entry in tests:
-        label = entry["test"]["label"]
-        # Remove leading "//" and toolchain part
-        # "//my/gn:path(//build/toolchain:host_x64)" -> "my/gn:path"
-        no_toolchain = label[2:].partition("(")[0]
-        # Convert label to rule path
-        # "my/gn:path" -> "my/gn/path"
-        # "foo/bar:bar" -> "foo/bar"
-        directory, _, name = no_toolchain.partition(":")
-        if not name:
-            # "foo/bar" -> "foo/bar"
-            rule = directory
-        elif directory.rpartition("/")[2] == name:
-            # "foo/bar:bar" -> "foo/bar"
-            rule = directory
-        else:
-            # "foo/bar:qux" -> "foo/bar/qux"
-            rule = directory + "/" + name
-        phony_rule_to_test_name[rule + " is dirty"].add(entry["test"]["name"])
+    # Find stamps for all tests
+    stamp_to_test_label = {
+        "touch " + os.path.join(
+            # Transform GN label to stamp file path, for example:
+            # //my/gn:path($my_toolchain) -> obj/my/gn/path.stamp
+            "obj",
+            label[2:].partition("(")[0].replace(":", "/") + ".stamp"): label
+        for label in (entry["test"]["label"] for entry in tests)
+    }
 
-    # Touch all modified files so they're newer than any rules
+    # Touch all modified files so they're newer than any stamps
     git_base = subprocess.check_output(
         ["git", "rev-parse", "--show-toplevel"], encoding="UTF-8").strip()
     for path in modified.splitlines():
@@ -93,40 +82,29 @@ def main():
         if p.exists() and not path.endswith("BUILD.gn"):
             p.touch()
 
-    # Find all stale rules
+    # Find all stale stamps
     ninja = []
     for buildtype in ("", ".zircon"):
         ninja += subprocess.check_output(
-            [
-                "fx",
-                "ninja",
-                "-C",
-                args.out_dir + buildtype,
-                "-d",
-                "explain",
-                "-n",
-            ],
+            ["fx", "ninja", "-C", args.out_dir + buildtype, "-n", "-v"],
             encoding="UTF-8",
             stderr=subprocess.STDOUT,
         ).splitlines()
+    stale_stamps = [line.partition("] ")[2] for line in ninja]
 
-    # Check stale rules against test names
-    affected_tests = set()
-    for line in ninja:
-        if not line.startswith("ninja explain: "):
-            continue
-        rule = line.partition("phony/")[2]
-        if not rule:
-            continue
-        affected_tests.update(phony_rule_to_test_name[rule])
+    # Check stale stamps against test labels
+    affected_labels = {
+        stamp_to_test_label.get(stamp, None) for stamp in stale_stamps
+    }
+    affected_labels.discard(None)
 
-    if not affected_tests:
+    if not affected_labels:
         if args.verbose:
             print("No affected tests")
         return 0
     if args.verbose:
         print("Affected tests:")
-        print("\n".join(sorted(affected_tests)))
+        print("\n".join(sorted(affected_labels)))
         print()
 
     # Run affected tests
@@ -136,7 +114,7 @@ def main():
         return 0
 
     return subprocess.run(
-        ["fx", "test"] + sorted(affected_tests) + args.test_args,
+        ["fx", "test"] + sorted(affected_labels) + args.test_args,
     ).returncode
 
 
