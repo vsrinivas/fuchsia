@@ -22,6 +22,7 @@ typedef enum disk_format_type {
   DISK_FORMAT_BLOCK_VERITY,
   DISK_FORMAT_VBMETA,
   DISK_FORMAT_BOOTPART,
+  DISK_FORMAT_FXFS,
   DISK_FORMAT_COUNT_,
 } disk_format_t;
 
@@ -37,6 +38,7 @@ static const char* disk_format_string_[DISK_FORMAT_COUNT_] = {
     [DISK_FORMAT_FACTORYFS] = "factoryfs",
     [DISK_FORMAT_VBMETA] = "vbmeta",
     [DISK_FORMAT_BOOTPART] = "bootpart",
+    [DISK_FORMAT_FXFS] = "fxfs",
 };
 
 static inline const char* disk_format_string(disk_format_t fs_type) {

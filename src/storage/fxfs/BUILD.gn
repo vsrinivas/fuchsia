@@ -10,6 +10,7 @@ fxfs_deps = [
   "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
   "//src/lib/fidl/rust/fidl",
   "//src/lib/fuchsia-async",
+  "//src/lib/storage/block_client/rust:remote-block-device",
   "//src/lib/storage/vfs/rust:vfs",
   "//src/lib/zircon/rust:fuchsia-zircon",
   "//third_party/rust_crates:anyhow",
@@ -29,7 +30,7 @@ fxfs_sources = [
   "src/lsm_tree/single_item_layer.rs",
   "src/lsm_tree/skip_list_layer.rs",
   "src/lsm_tree/tests.rs",
-  "src/main.rs",
+  "src/mkfs.rs",
   "src/object_handle.rs",
   "src/object_store.rs",
   "src/object_store/allocator.rs",
@@ -70,6 +71,14 @@ group("tests") {
 
 rustc_binary("fxfs") {
   edition = "2018"
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/storage/block_client/rust:remote-block-device",
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh"
+  ]
   sources = [ "src/main.rs" ]
 }

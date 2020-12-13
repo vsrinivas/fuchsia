@@ -387,8 +387,7 @@ impl Log {
                             if !found_end_of_super_block {
                                 let root_parent = stores.root_parent_store();
                                 println!("opening object store");
-                                stores.set_root_store(ObjectStore::open_store(
-                                    root_parent.clone(),
+                                stores.set_root_store(root_parent.open_store(
                                     super_block.root_store_object_id,
                                     StoreOptions {
                                         use_parent_to_allocate_object_ids: true,

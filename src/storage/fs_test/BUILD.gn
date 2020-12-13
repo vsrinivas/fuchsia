@@ -22,6 +22,8 @@ static_library("fs_test") {
     "fs_test.cc",
     "fs_test_fixture.cc",
     "misc.cc",
+    "fxfs.cc",
+    "fxfs.h",
   ]
   deps = [
     "//sdk/fidl/fuchsia.fs",
@@ -29,6 +31,7 @@ static_library("fs_test") {
     "//sdk/lib/sys/cpp",
     "//src/storage/fuchsia-fatfs:fatfs",
     "//src/storage/fvm",
+    "//src/storage/fxfs",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fdio-caller",

@@ -88,6 +88,8 @@ zx_status_t fsck(const char* device_path, disk_format_t df, const fsck_options_t
                           fs_management::GetBinaryPath("factoryfs").c_str());
     case DISK_FORMAT_MINFS:
       return FsckNativeFs(device_path, options, cb, fs_management::GetBinaryPath("minfs").c_str());
+    case DISK_FORMAT_FXFS:
+      return FsckNativeFs(device_path, options, cb, fs_management::GetBinaryPath("fxfs").c_str());
     case DISK_FORMAT_FAT:
       return FsckFat(device_path, options, cb);
     case DISK_FORMAT_BLOBFS:

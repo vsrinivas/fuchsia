@@ -36,6 +36,7 @@
 #include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/fs_test/blobfs_test.h"
 #include "src/storage/fs_test/minfs_test.h"
+#include "src/storage/fs_test/fxfs.h"
 
 namespace fs_test {
 namespace {
@@ -166,8 +167,6 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
   return zx::ok(std::make_pair(*std::move(ram_nand), std::move(ftl_path)));
 }
 
-using RamDevice = std::variant<isolated_devmgr::RamDisk, ramdevice_client::RamNand>;
-
 // Returns device and device path.
 zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
     const TestFilesystemOptions& options) {
@@ -195,81 +194,6 @@ zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
     auto [device, device_path] = std::move(ram_disk_or).value();
     return zx::ok(std::make_pair(std::move(device), std::move(device_path)));
   }
-}
-
-// Returns device and device path.
-zx::status<std::pair<ramdevice_client::RamNand, std::string>> OpenRamNand(
-    const TestFilesystemOptions& options) {
-  if (!options.use_ram_nand || !options.ram_nand_vmo->is_valid()) {
-    return zx::error(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  // First create the ram-nand device.
-  auto ram_nand_or = CreateRamNand(options);
-  if (ram_nand_or.is_error()) {
-    return ram_nand_or.take_error();
-  }
-  auto [ram_nand, ftl_device_path] = std::move(ram_nand_or).value();
-
-  // Now bind FVM to it.
-  fbl::unique_fd ftl_device(open(ftl_device_path.c_str(), O_RDWR));
-  if (!ftl_device)
-    return zx::error(ZX_ERR_BAD_STATE);
-  auto status = isolated_devmgr::BindFvm(ftl_device.get());
-  if (status.is_error()) {
-    std::cout << "Unable to bind FVM: " << status.status_string() << std::endl;
-    return status.take_error();
-  }
-
-  // Wait for the partition to show up.
-  std::string device_path = ftl_device_path + "/fvm/fs-test-partition-p-1/block";
-  status = zx::make_status(wait_for_device(device_path.c_str(), zx::sec(10).get()));
-  if (status.is_error()) {
-    std::cout << "Timed out waiting for partition to show up" << std::endl;
-    return status.take_error();
-  }
-
-  return zx::ok(std::make_pair(std::move(ram_nand), std::move(device_path)));
-}
-
-// A wrapper around fs-management that can be used by filesytems if they so wish.
-zx::status<> FsMount(const std::string& device_path, const std::string& mount_path,
-                     disk_format_t format, const mount_options_t& mount_options,
-                     zx::channel* outgoing_directory = nullptr) {
-  auto fd = fbl::unique_fd(open(device_path.c_str(), O_RDWR));
-  if (!fd) {
-    std::cout << "Could not open device: " << device_path << ": errno=" << errno << std::endl;
-    return zx::error(ZX_ERR_BAD_STATE);
-  }
-
-  mount_options_t options = mount_options;
-  options.register_fs = false;
-  options.bind_to_namespace = true;
-  if (outgoing_directory) {
-    zx::channel server;
-    auto status = zx::make_status(zx::channel::create(0, outgoing_directory, &server));
-    if (status.is_error()) {
-      std::cout << "Unable to create channel for outgoing directory: " << status.status_string()
-                << std::endl;
-      return status;
-    }
-    options.outgoing_directory.client = outgoing_directory->get();
-    options.outgoing_directory.server = server.release();
-  }
-
-  // Uncomment the following line to force an fsck at the end of every transaction (where
-  // supported).
-  // options.fsck_after_every_transaction = true;
-
-  // |fd| is consumed by mount.
-  auto status = zx::make_status(mount(fd.release(), StripTrailingSlash(mount_path).c_str(), format,
-                                      &options, launch_stdio_async));
-  if (status.is_error()) {
-    std::cout << "Could not mount " << disk_format_string(format)
-              << " file system: " << status.status_string() << std::endl;
-    return status;
-  }
-  return zx::ok();
 }
 
 zx::status<> FsUnbind(const std::string& mount_path) {
@@ -307,8 +231,10 @@ zx::status<> FsDirectoryAdminUnmount(const std::string& mount_path) {
   return zx::ok();
 }
 
-zx::status<> DefaultFormat(const std::string& device_path, disk_format_t format,
-                           const mkfs_options_t& options) {
+}  // namespace
+
+zx::status<> FsFormat(const std::string& device_path, disk_format_t format,
+                      const mkfs_options_t& options) {
   auto status = zx::make_status(mkfs(device_path.c_str(), format, launch_stdio_sync, &options));
   if (status.is_error()) {
     std::cout << "Could not format " << disk_format_string(format)
@@ -318,7 +244,79 @@ zx::status<> DefaultFormat(const std::string& device_path, disk_format_t format,
   return zx::ok();
 }
 
-}  // namespace
+zx::status<> FsMount(const std::string& device_path, const std::string& mount_path,
+                     disk_format_t format, const mount_options_t& mount_options,
+                     zx::channel* outgoing_directory) {
+  auto fd = fbl::unique_fd(open(device_path.c_str(), O_RDWR));
+  if (!fd) {
+    std::cout << "Could not open device: " << device_path << ": errno=" << errno << std::endl;
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+
+  mount_options_t options = mount_options;
+  options.register_fs = false;
+  options.bind_to_namespace = true;
+  if (outgoing_directory) {
+    zx::channel server;
+    auto status = zx::make_status(zx::channel::create(0, outgoing_directory, &server));
+    if (status.is_error()) {
+      std::cout << "Unable to create channel for outgoing directory: " << status.status_string()
+                << std::endl;
+      return status;
+    }
+    options.outgoing_directory.client = outgoing_directory->get();
+    options.outgoing_directory.server = server.release();
+  }
+
+  // Uncomment the following line to force an fsck at the end of every transaction (where
+  // supported).
+  // options.fsck_after_every_transaction = true;
+
+  // |fd| is consumed by mount.
+  auto status = zx::make_status(mount(fd.release(), StripTrailingSlash(mount_path).c_str(), format,
+                                      &options, launch_stdio_async));
+  if (status.is_error()) {
+    std::cout << "Could not mount " << disk_format_string(format)
+              << " file system: " << status.status_string() << std::endl;
+    return status;
+  }
+  return zx::ok();
+}
+
+// Returns device and device path.
+zx::status<std::pair<ramdevice_client::RamNand, std::string>> OpenRamNand(
+    const TestFilesystemOptions& options) {
+  if (!options.use_ram_nand || !options.ram_nand_vmo->is_valid()) {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  // First create the ram-nand device.
+  auto ram_nand_or = CreateRamNand(options);
+  if (ram_nand_or.is_error()) {
+    return ram_nand_or.take_error();
+  }
+  auto [ram_nand, ftl_device_path] = std::move(ram_nand_or).value();
+
+  // Now bind FVM to it.
+  fbl::unique_fd ftl_device(open(ftl_device_path.c_str(), O_RDWR));
+  if (!ftl_device)
+    return zx::error(ZX_ERR_BAD_STATE);
+  auto status = isolated_devmgr::BindFvm(ftl_device.get());
+  if (status.is_error()) {
+    std::cout << "Unable to bind FVM: " << status.status_string() << std::endl;
+    return status.take_error();
+  }
+
+  // Wait for the partition to show up.
+  std::string device_path = ftl_device_path + "/fvm/fs-test-partition-p-1/block";
+  status = zx::make_status(wait_for_device(device_path.c_str(), zx::sec(10).get()));
+  if (status.is_error()) {
+    std::cout << "Timed out waiting for partition to show up" << std::endl;
+    return status.take_error();
+  }
+
+  return zx::ok(std::make_pair(std::move(ram_nand), std::move(device_path)));
+}
 
 TestFilesystemOptions TestFilesystemOptions::DefaultMinfs() {
   return TestFilesystemOptions{.description = "MinfsWithFvm",
@@ -379,7 +377,8 @@ std::vector<TestFilesystemOptions> AllTestMinfs() {
 std::vector<TestFilesystemOptions> AllTestFilesystems() {
   return std::vector<TestFilesystemOptions>{
       TestFilesystemOptions::DefaultMinfs(), TestFilesystemOptions::MinfsWithoutFvm(),
-      TestFilesystemOptions::DefaultMemfs(), TestFilesystemOptions::DefaultFatfs()};
+      TestFilesystemOptions::DefaultMemfs(), TestFilesystemOptions::DefaultFatfs(),
+      DefaultFxfsTestOptions()};
 }
 
 std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
@@ -405,21 +404,9 @@ zx::status<> FilesystemInstance::Unmount(const std::string& mount_path) {
   return FsUnbind(mount_path);
 }
 
-template <typename T, typename Instance>
-zx::status<std::unique_ptr<FilesystemInstance>> FilesystemImplWithDefaultMake<T, Instance>::Make(
-    const TestFilesystemOptions& options) const {
-  auto result = CreateRamDevice(options);
-  if (result.is_error()) {
-    return result.take_error();
-  }
-  auto [device, device_path] = std::move(result).value();
-  auto instance = std::make_unique<Instance>(std::move(device), std::move(device_path));
-  zx::status<> status = instance->Format(options);
-  if (status.is_error()) {
-    return status.take_error();
-  }
-  return zx::ok(std::move(instance));
-}
+template
+zx::status<std::unique_ptr<FilesystemInstance>> FilesystemImplWithDefaultMake<FxfsFilesystem, FxfsInstance>::Make(
+    const TestFilesystemOptions& options) const;
 
 // -- Minfs --
 
@@ -429,7 +416,7 @@ class MinfsInstance : public FilesystemInstance {
       : device_(std::move(device)), device_path_(std::move(device_path)) {}
 
   virtual zx::status<> Format(const TestFilesystemOptions& options) override {
-    return DefaultFormat(device_path_, DISK_FORMAT_MINFS, default_mkfs_options);
+    return FsFormat(device_path_, DISK_FORMAT_MINFS, default_mkfs_options);
   }
 
   zx::status<> Mount(const std::string& mount_path, const mount_options_t& options) override {
@@ -536,7 +523,7 @@ class FatfsInstance : public FilesystemInstance {
   zx::status<> Format(const TestFilesystemOptions&) override {
     mkfs_options_t mkfs_options = default_mkfs_options;
     mkfs_options.sectors_per_cluster = 2;  // 1 KiB cluster size
-    return DefaultFormat(device_path_, DISK_FORMAT_FAT, mkfs_options);
+    return FsFormat(device_path_, DISK_FORMAT_FAT, mkfs_options);
   }
 
   zx::status<> Mount(const std::string& mount_path, const mount_options_t& base_options) override {
@@ -618,7 +605,7 @@ class BlobfsInstance : public FilesystemInstance {
       mkfs_options.blob_layout_format =
           blobfs::GetBlobLayoutFormatCommandLineArg(options.blob_layout_format.value());
     }
-    return DefaultFormat(device_path_, DISK_FORMAT_BLOBFS, mkfs_options);
+    return FsFormat(device_path_, DISK_FORMAT_BLOBFS, mkfs_options);
   }
 
   zx::status<> Mount(const std::string& mount_path, const mount_options_t& options) override {

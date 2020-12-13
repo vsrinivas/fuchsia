@@ -9,6 +9,7 @@ mod record;
 pub use directory::Directory;
 pub use filesystem::Filesystem;
 pub use log::Transaction;
+pub use record::ObjectType;
 
 #[cfg(test)]
 mod tests;
@@ -22,9 +23,7 @@ use {
     anyhow::Error,
     bincode::{deserialize_from, serialize_into},
     log::{Log, Mutation},
-    record::{
-        decode_extent, ExtentKey, ObjectItem, ObjectKey, ObjectKeyData, ObjectType, ObjectValue,
-    },
+    record::{decode_extent, ExtentKey, ObjectItem, ObjectKey, ObjectKeyData, ObjectValue},
     serde::{Deserialize, Serialize},
     std::{
         cmp::min,
@@ -487,31 +486,31 @@ impl ObjectStore {
     }
 
     pub fn open_store(
-        parent_store: Arc<ObjectStore>,
+        self: &Arc<ObjectStore>,
         store_object_id: u64,
         options: StoreOptions,
     ) -> Result<Arc<ObjectStore>, Error> {
         println!("opening handle");
-        let handle = parent_store.clone().open_object(store_object_id, HandleOptions::default())?;
+        let handle = self.clone().open_object(store_object_id, HandleOptions::default())?;
         println!("deserializing");
         let store_info: StoreInfo =
             deserialize_from(ObjectHandleCursor::new(&handle as &dyn ObjectHandle, 0))?;
         println!("opening handles");
         let mut handles = Vec::new();
         for object_id in &store_info.layers {
-            handles.push(parent_store.clone().open_object(*object_id, HandleOptions::default())?);
+            handles.push(self.clone().open_object(*object_id, HandleOptions::default())?);
         }
         if options.use_parent_to_allocate_object_ids {
-            if store_info.last_object_id > parent_store.store_info.lock().unwrap().last_object_id {
-                parent_store.store_info.lock().unwrap().last_object_id = store_info.last_object_id;
+            if store_info.last_object_id > self.store_info.lock().unwrap().last_object_id {
+                self.store_info.lock().unwrap().last_object_id = store_info.last_object_id;
             }
         }
         Ok(Self::new(
-            Some(parent_store.clone()),
+            Some(self.clone()),
             store_object_id,
-            parent_store.device.clone(),
-            parent_store.allocator.clone(),
-            parent_store.log.clone(),
+            self.device.clone(),
+            self.allocator.clone(),
+            self.log.clone(),
             store_info,
             LSMTree::open(merge::merge, handles.into_boxed_slice()),
             StoreOptions::default(),

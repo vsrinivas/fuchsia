@@ -1,14 +1,14 @@
 use {
-    crate::object_store,
-    // crate::object_store,
+    crate::object_store::{self,  ObjectStore, ObjectType, StoreOptions},
+    anyhow::Error,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self as fio, NodeAttributes, NodeMarker},
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
-    std::{any::Any, sync::Arc},
+    std::{any::Any, collections::HashMap, sync::{Arc, Mutex}},
     vfs::{
-        // common::send_on_open_with_error,
+        common::send_on_open_with_error,
         directory::{
             // connection::{io1::DerivedConnection},
             dirents_sink::{self, Sink},
@@ -26,7 +26,55 @@ use {
     },
 };
 
-struct FxVolume {}
+trait FxNode: std::any::Any + Send + Sync + 'static {
+    fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static>;
+
+    fn is_directory(&self) -> bool {
+        self.type_id() == std::any::TypeId::of::<FxDirectory>()
+    }
+}
+
+/*
+impl<T> FxNode for T {
+    fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
+        self
+    }
+}
+ */
+
+#[allow(dead_code)] // TODO
+pub struct FxVolumeAndRoot {
+    volume: Arc<FxVolume>,
+    root: Arc<FxDirectory>,
+}
+
+impl FxVolumeAndRoot {
+    pub fn new(parent: &Arc<ObjectStore>, root_object_id: u64) -> Result<Self, Error> {
+        let store = parent.open_store(root_object_id, StoreOptions::default())?;
+        let volume = Arc::new(FxVolume { nodes: Mutex::new(HashMap::new()), store });
+        // TODO: There should be a volume info object here that contains information that points at
+        // the root directory.
+        let root = Arc::new(FxDirectory { volume: volume.clone(), directory: volume.store.open_directory(0)? });
+        Ok(FxVolumeAndRoot{ volume, root })
+    }
+
+    pub fn root(&self) -> &Arc<FxDirectory> {
+        &self.root
+    }
+}
+
+struct FxVolume {
+    nodes: Mutex<HashMap<u64, Arc<dyn FxNode>>>,
+    store: Arc<ObjectStore>,
+}
+
+// TODO: Status here should be anyhow::Error
+
+impl FxVolume {
+    fn open_node(&self, object_id: u64) -> Result<Arc<dyn FxNode>, Status> {
+        self.nodes.lock().unwrap().get(&object_id).ok_or(Status::NOT_FOUND).map(|x| x.clone())
+    }
+}
 
 impl FilesystemRename for FxVolume {
     fn rename(
@@ -42,38 +90,50 @@ impl FilesystemRename for FxVolume {
 
 impl Filesystem for FxVolume {}
 
-struct FxDirectory {
-    filesystem: Arc<FxVolume>,
+pub struct FxDirectory {
+    volume: Arc<FxVolume>,
     directory: object_store::Directory,
 }
 
-fn map_to_status(std::io::Error) -> Status {
-    Status::NOT_FOUND  // TODO
+impl FxNode for FxDirectory {
+    fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
+        self
+    }
+}
+
+fn map_to_status(_error: std::io::Error) -> Status {
+    Status::NOT_FOUND // TODO
 }
 
 impl FxDirectory {
     fn lookup(
         self: &Arc<Self>,
-        flags: u32,
-        mode: u32,
-        mut path: Path) -> Result<FxNode, Status> {
-        let current_entry = self;
-        while !path.is_empty() {
+        _flags: u32,
+        _mode: u32,
+        mut path: Path,
+    ) -> Result<Arc<dyn FxNode>, Status> {
+        let mut current_entry = self.clone();
+        loop {
             let name = path.next().unwrap();
-            let object_id = self.directory.lookup(name).map_err(map_to_status)?;
-            
-        }
-            
-            
-        if !path.is_single_component() {
-            send_on_open_with_error(flags, server_end, Status::NOT_FOUND)
-        }
-        self.directory.lookup(name)
-        /*
-
+            let (object_id, object_type) =
+                current_entry.directory.lookup(name).map_err(map_to_status)?;
+            if path.is_empty() {
+                if path.is_dir() {
+                    if let ObjectType::Directory = object_type {
+                    } else {
+                        return Err(Status::NOT_DIR)
+                    }
+                }
+                return self.volume.open_node(object_id);
+            }
+            if let ObjectType::Directory = object_type {
+                return Err(Status::NOT_DIR);
+            }
+            current_entry =
+                Arc::downcast::<FxDirectory>(self.volume.open_node(object_id)?.as_any())
+                    .map_err(|_| Status::IO_DATA_INTEGRITY)?;
         }
     }
-
 }
 
 impl MutableDirectory for FxDirectory {
@@ -90,7 +150,7 @@ impl MutableDirectory for FxDirectory {
     }
 
     fn get_filesystem(&self) -> &dyn Filesystem {
-        &*self.filesystem
+        &*self.volume
     }
 
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Sync + Send> {
@@ -107,13 +167,19 @@ impl DirectoryEntry for FxDirectory {
     fn open(
         self: Arc<Self>,
         _scope: ExecutionScope,
-        _flags: u32,
-        _mode: u32,
-        _path: Path,
-        _server_end: ServerEnd<NodeMarker>,
+        flags: u32,
+        mode: u32,
+        path: Path,
+        server_end: ServerEnd<NodeMarker>,
     ) {
+        match self.lookup(flags, mode, path) {
+            Err(e) => send_on_open_with_error(flags, server_end, e),
+            Ok(_node) => {}
+        }
+            
+        /*
         // TODO: empty path
-        let mut closer = Closer::new(&self.filesystem);
+        // let mut closer = Closer::new(&self.filesystem);
 
         match self.lookup(flags, mode, path, &mut closer) {
             Err(e) => send_on_open_with_error(flags, server_end, e),

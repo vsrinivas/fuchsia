@@ -4,7 +4,7 @@ use {
         object_store::{
             log::{Mutation, Transaction},
             map_to_io_error,
-            record::{ObjectItem, ObjectKey, ObjectValue},
+            record::{ObjectItem, ObjectKey, ObjectType, ObjectValue},
             HandleOptions, ObjectStore,
         },
     },
@@ -29,7 +29,7 @@ impl<'a> Directory {
             Mutation::Insert {
                 item: ObjectItem {
                     key: ObjectKey::child(self.object_id, name),
-                    value: ObjectValue::child(handle.object_id()),
+                    value: ObjectValue::child(handle.object_id(), ObjectType::File),
                 },
             },
         );
@@ -41,15 +41,15 @@ impl<'a> Directory {
         return self.object_id;
     }
 
-    pub fn lookup(&self, name: &str) -> std::io::Result<u64> {
+    pub fn lookup(&self, name: &str) -> std::io::Result<(u64, ObjectType)> {
         let item = self
             .store
             .tree()
             .find(&ObjectKey::child(self.object_id, name))
             .map_err(map_to_io_error)?
             .ok_or(std::io::Error::new(ErrorKind::NotFound, "Not found"))?;
-        if let ObjectValue::Child { object_id } = item.value {
-            Ok(object_id)
+        if let ObjectValue::Child { object_id, object_type } = item.value {
+            Ok((object_id, object_type))
         } else {
             Err(std::io::Error::new(ErrorKind::InvalidData, "Expected child"))
         }

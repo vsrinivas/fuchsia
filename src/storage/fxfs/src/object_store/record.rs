@@ -132,7 +132,7 @@ pub enum ObjectValue {
     Object { object_type: ObjectType },
     Attribute { size: u64 },
     Extent(ExtentValue),
-    Child { object_id: u64 },
+    Child { object_id: u64, object_type: ObjectType },
 }
 
 impl ObjectValue {
@@ -146,8 +146,8 @@ impl ObjectValue {
         ObjectValue::Extent(ExtentValue { device_offset })
     }
 
-    pub fn child(object_id: u64) -> ObjectValue {
-        ObjectValue::Child { object_id }
+    pub fn child(object_id: u64, object_type: ObjectType) -> ObjectValue {
+        ObjectValue::Child { object_id, object_type }
     }
 }
 
