@@ -113,11 +113,11 @@ func udpV6Packet(payload []byte, p *udpParams) (buffer.View, buffer.VectorisedVi
 	// Create the IPv6 header.
 	ip := header.IPv6(hdr.Prepend(header.IPv6MinimumSize))
 	ip.Encode(&header.IPv6Fields{
-		PayloadLength: uint16(header.UDPMinimumSize + len(payload)),
-		NextHeader:    uint8(header.UDPProtocolNumber),
-		HopLimit:      1,
-		SrcAddr:       p.srcAddr,
-		DstAddr:       p.dstAddr,
+		PayloadLength:     uint16(header.UDPMinimumSize + len(payload)),
+		TransportProtocol: header.UDPProtocolNumber,
+		HopLimit:          1,
+		SrcAddr:           p.srcAddr,
+		DstAddr:           p.dstAddr,
 	})
 
 	return hdr.View(), buffer.View(payload).ToVectorisedView()
@@ -194,11 +194,11 @@ func tcpV6Packet(payload []byte, p *tcpParams) (buffer.View, buffer.VectorisedVi
 	// Create the IPv6 header.
 	ip := header.IPv6(hdr.Prepend(header.IPv6MinimumSize))
 	ip.Encode(&header.IPv6Fields{
-		PayloadLength: uint16(header.TCPMinimumSize + len(payload)),
-		NextHeader:    uint8(header.TCPProtocolNumber),
-		HopLimit:      1,
-		SrcAddr:       p.srcAddr,
-		DstAddr:       p.dstAddr,
+		PayloadLength:     uint16(header.TCPMinimumSize + len(payload)),
+		TransportProtocol: header.TCPProtocolNumber,
+		HopLimit:          1,
+		SrcAddr:           p.srcAddr,
+		DstAddr:           p.dstAddr,
 	})
 
 	return hdr.View(), buffer.View(payload).ToVectorisedView()
