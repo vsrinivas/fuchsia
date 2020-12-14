@@ -484,7 +484,7 @@ func TestNewSerialSocket(t *testing.T) {
 		t.Errorf("clientSocket.Close() returned: %v", err)
 	}
 	// First newline should be sent by newSerialSocket to trigger a cursor.
-	if diff := cmp.Diff("\r\n"+server.shutdownString, string(server.received)); diff != "" {
+	if diff := cmp.Diff("\r\n\r\n"+server.shutdownString, string(server.received)); diff != "" {
 		t.Errorf("Unexpected server.received (-want +got):\n%s", diff)
 	}
 }
@@ -502,7 +502,7 @@ func TestSerialTester(t *testing.T) {
 			Path: "foo",
 		},
 	}
-	expectedCmd := "runtests --output /data/infra/testrunner foo\r\n"
+	expectedCmd := "\r\nruntests --output /data/infra/testrunner foo\r\n"
 
 	t.Run("test passes", func(t *testing.T) {
 		errs := make(chan error)

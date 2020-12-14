@@ -273,7 +273,9 @@ func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, local
 
 func asSerialCmd(cmd []string) string {
 	// The UART kernel driver expects a command to be followed by \r\n.
-	return fmt.Sprintf("%s\r\n", strings.Join(cmd, " "))
+	// Send a leading \r\n for all commands as there may be characters in the buffer already
+	// that we need to clear first.
+	return fmt.Sprintf("\r\n%s\r\n", strings.Join(cmd, " "))
 }
 
 type serialDiagnosticCmd struct {
