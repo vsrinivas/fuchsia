@@ -35,6 +35,15 @@ using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerDelegateImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningSvrImpl;
 
+// Provide a TSM delegate that overrides InitThreadStack to be an no-op. This is because TSM
+// connects to fuchsia.lowpan, which isn't provided in this test. It is unneccessary to fake out
+// fuchsia.lowpan here since that should be tested in TSM tests.
+class TestThreadStackManagerDelegate : public ThreadStackManagerDelegateImpl {
+  WEAVE_ERROR InitThreadStack() override {
+    // Simulate successful init.
+    return WEAVE_NO_ERROR;
+  }
+};
 }  // namespace
 
 class FakeWlanNetworkConfigProvider
@@ -73,7 +82,7 @@ class StackProviderImplTest : public gtest::TestLoopFixture {
     PlatformMgrImpl().SetDispatcher(dispatcher());
     ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
     ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerDelegateImpl>());
-    ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
+    ThreadStackMgrImpl().SetDelegate(std::make_unique<TestThreadStackManagerDelegate>());
     NetworkProvisioningSvrImpl().SetDelegate(
         std::make_unique<NetworkProvisioningServerDelegateImpl>());
     ASSERT_EQ(PlatformMgrImpl().InitWeaveStack(), WEAVE_NO_ERROR);

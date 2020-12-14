@@ -8,6 +8,7 @@
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/PlatformManager.h>
 #include "generic_platform_manager_impl_fuchsia.h"
+#include "thread_stack_manager_impl.h"
 
 // Include the non-inline definitions for the GenericPlatformManagerImpl<> template,
 // from which the GenericPlatformManagerImpl_Fuchsia<> template inherits.
@@ -185,6 +186,14 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       FX_LOGS(ERROR) << "TraitMgr init failed: " << ErrorStr(err);
       return err;
     }
+
+#if WEAVE_DEVICE_CONFIG_ENABLE_THREAD
+    err = ThreadStackMgr().InitThreadStack();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "ThreadStackMgr init failed: " << ErrorStr(err);
+      return err;
+    }
+#endif
 
     return WEAVE_NO_ERROR;
 }

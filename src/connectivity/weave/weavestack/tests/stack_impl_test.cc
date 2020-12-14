@@ -11,6 +11,9 @@
 // clang-format off
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/PlatformManager.h>
+#include <Weave/DeviceLayer/ConnectivityManager.h>
+#include <Weave/DeviceLayer/ThreadStackManager.h>
+#include "thread_stack_manager_delegate_impl.h"
 
 #include "generic_platform_manager_impl_fuchsia.ipp"
 #include "configuration_manager_delegate_impl.h"
@@ -23,6 +26,7 @@
 #include <gtest/gtest.h>
 
 namespace weavestack {
+namespace testing {
 namespace {
 using fuchsia::weave::Host;
 using fuchsia::weave::HostPort;
@@ -37,6 +41,7 @@ using nl::Weave::DeviceLayer::ConfigurationManagerDelegateImpl;
 using nl::Weave::DeviceLayer::ConfigurationMgrImpl;
 using nl::Weave::DeviceLayer::ConnectivityManagerDelegateImpl;
 using nl::Weave::DeviceLayer::ConnectivityMgrImpl;
+using nl::Weave::DeviceLayer::PlatformMgr;
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
 using nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
 using nl::Weave::DeviceLayer::ThreadStackMgrImpl;
@@ -44,6 +49,17 @@ using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerDelegateImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningSvrImpl;
 using nl::Weave::Profiles::DeviceControl::DeviceControlDelegate;
+
+// Provide a TSM delegate that overrides InitThreadStack to be an no-op. This is because TSM
+// connects to fuchsia.lowpan, which isn't provided in this test. It is unneccessary to fake out
+// fuchsia.lowpan here since that should be tested in TSM tests.
+class TestThreadStackManagerDelegate : public ThreadStackManagerDelegateImpl {
+  WEAVE_ERROR InitThreadStack() override {
+    // Simulate successful init.
+    return WEAVE_NO_ERROR;
+  }
+};
+
 }  // namespace
 
 class FakeWeaveFactoryDataManager : public fuchsia::weave::testing::FactoryDataManager_TestBase {
@@ -178,7 +194,7 @@ class StackImplTest : public gtest::TestLoopFixture {
     ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerDelegateImpl>());
     NetworkProvisioningSvrImpl().SetDelegate(
         std::make_unique<NetworkProvisioningServerDelegateImpl>());
-    ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
+    ThreadStackMgrImpl().SetDelegate(std::make_unique<TestThreadStackManagerDelegate>());
     ASSERT_EQ(PlatformMgrImpl().InitWeaveStack(), WEAVE_NO_ERROR);
 
     // Set up StackImpl
@@ -412,4 +428,5 @@ TEST_F(StackImplTest, ResetConfig) {
   EXPECT_FALSE(result.is_err());
 }
 
+}  // namespace testing
 }  // namespace weavestack

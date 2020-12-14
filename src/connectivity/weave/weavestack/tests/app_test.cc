@@ -9,7 +9,9 @@
 
 // clang-format off
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
+#include <Weave/DeviceLayer/ConnectivityManager.h>
 #include <Weave/DeviceLayer/PlatformManager.h>
+#include <Weave/DeviceLayer/ThreadStackManager.h>
 
 #include "generic_platform_manager_impl_fuchsia.ipp"
 #include "configuration_manager_delegate_impl.h"
@@ -21,6 +23,7 @@
 #include <gtest/gtest.h>
 
 namespace weavestack {
+namespace testing {
 namespace {
 using nl::Weave::DeviceLayer::ConfigurationManagerDelegateImpl;
 using nl::Weave::DeviceLayer::ConfigurationMgrImpl;
@@ -46,15 +49,27 @@ class ConnectivityManagerTestDelegate : public ConnectivityManagerImpl::Delegate
   void OnPlatformEvent(const WeaveDeviceEvent* event) {}
 };
 
+// Provide a TSM delegate that overrides InitThreadStack to be an no-op. This is because TSM
+// connects to fuchsia.lowpan, which isn't provided in this test. It is unneccessary to fake out
+// fuchsia.lowpan here since that should be tested in TSM tests.
+class TestThreadStackManagerDelegate : public ThreadStackManagerDelegateImpl {
+  WEAVE_ERROR InitThreadStack() override {
+    // Simulate successful init.
+    return WEAVE_NO_ERROR;
+  }
+};
+
 void SetDefaultDelegates() {
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
   NetworkProvisioningSvrImpl().SetDelegate(
       std::make_unique<NetworkProvisioningServerDelegateImpl>());
-  ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
   // The default delegate for the ConnectivityManager is replaced with a test
   // delegate that does not initialize. This is to prevent the failure of
   // binding to the net interface from immediately shutting down the stack.
   ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerTestDelegate>());
+  // Similarly, the ThreadStackManager delegate is replaced with a delegate that
+  // does not initialize.
+  ThreadStackMgrImpl().SetDelegate(std::make_unique<TestThreadStackManagerDelegate>());
 }
 
 void ClearDelegates() {
@@ -63,7 +78,9 @@ void ClearDelegates() {
   NetworkProvisioningSvrImpl().SetDelegate(nullptr);
   ThreadStackMgrImpl().SetDelegate(nullptr);
 }
+
 }  // namespace
+
 
 class AppTest : public ::gtest::RealLoopFixture {
  public:
@@ -163,4 +180,5 @@ TEST_F(AppTest, WakeSelectTest) {
   EXPECT_EQ(1, GetSelectResult());
 }
 
+}  // namespace testing
 }  // namespace weavestack
