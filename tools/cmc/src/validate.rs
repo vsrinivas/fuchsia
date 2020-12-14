@@ -4,13 +4,14 @@
 
 use {
     crate::error::{Error, Location},
+    crate::include,
     crate::{cml, one_or_many::OneOrMany},
     cm_json::{JsonSchema, CMX_SCHEMA},
     directed_graph::{self, DirectedGraph},
     serde_json::Value,
     serde_json5,
     std::{
-        collections::{HashMap, HashSet, VecDeque},
+        collections::{HashMap, HashSet},
         fmt,
         fs::File,
         hash::Hash,
@@ -46,25 +47,12 @@ pub fn parse_cml(file: &Path, includepath: Option<&PathBuf>) -> Result<cml::Docu
     let mut document: cml::Document = read_cml(file)?;
 
     if let Some(include_path) = includepath {
-        // Recursively merge includes
-        let mut includes_to_merge = VecDeque::from(document.includes());
-        let mut seen_includes = HashSet::new();
-        while let Some(include_to_merge) = includes_to_merge.pop_front() {
-            // Check for cycles
-            if !seen_includes.insert(include_to_merge.clone()) {
-                return Err(Error::parse(
-                    format!("Includes cycle at {}", include_to_merge),
-                    None,
-                    Some(&file),
-                ));
-            }
-            let mut include_document = read_cml(&include_path.join(include_to_merge))?;
-            includes_to_merge.extend(include_document.includes());
+        for include in include::transitive_includes(&file.into(), include_path)? {
+            let mut include_document = read_cml(&include_path.join(&include))?;
             document.merge_from(&mut include_document);
         }
     }
 
-    // Validate
     let mut ctx = ValidationContext::new(&document);
     let mut res = ctx.validate();
     if let Err(Error::Validate { filename, .. }) = &mut res {

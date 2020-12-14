@@ -857,6 +857,8 @@ matching extension.
    ```
 
 Include paths are resolved relative to the source root.
+Transitive includes (includes of includes) are allowed.
+Cycles are not allowed.
 
 By convention, component manifest shard files are named with the suffix
 `.shard.cmx` or `.shard.cml`.

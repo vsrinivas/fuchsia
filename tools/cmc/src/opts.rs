@@ -91,6 +91,10 @@ pub enum Commands {
         /// If specified, additional includes to expect will be read from the path provided.
         /// The input format is delimited by newlines.
         fromfile: Option<PathBuf>,
+
+        #[structopt(short = "i", long = "includepath", parse(from_os_str))]
+        /// base path for resolving includes
+        includepath: PathBuf,
     },
 
     #[structopt(name = "format")]

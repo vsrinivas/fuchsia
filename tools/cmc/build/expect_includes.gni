@@ -132,6 +132,8 @@ template("cmc_check_includes") {
       rebase_path(invoker.manifest, root_build_dir),
       "--fromfile",
       rebase_path(inputs[1], root_build_dir),
+      "--includepath",
+      rebase_path("//", root_build_dir),
     ]
   }
 }

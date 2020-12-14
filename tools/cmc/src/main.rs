@@ -40,8 +40,8 @@ fn run_cmc() -> Result<(), Error> {
         opts::Commands::Include { file, output, depfile, includepath } => {
             include::merge_includes(&file, output.as_ref(), depfile.as_ref(), &includepath)?
         }
-        opts::Commands::CheckIncludes { file, expected_includes, fromfile } => {
-            include::check_includes(&file, expected_includes, fromfile.as_ref())?
+        opts::Commands::CheckIncludes { file, expected_includes, fromfile, includepath } => {
+            include::check_includes(&file, expected_includes, fromfile.as_ref(), &includepath)?
         }
         opts::Commands::Format { file, pretty, cml, inplace, mut output } => {
             if inplace {
