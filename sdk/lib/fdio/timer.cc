@@ -88,7 +88,7 @@ static zx_status_t fdio_timer_readv(zxio_t* io, const zx_iovec_t* vector, size_t
         zx_time_add_duration(timer->current_deadline, count * timer->interval);
     // After reading the current value, the timer will no longer be readable until we reach the next
     // deadline. Calling zx_timer_set will clear the ZX_TIMER_SIGNALED signal until at least then.
-    zx_status_t status = zx_timer_set(timer->handle, timer->current_deadline, ZX_TIMER_SLACK_LATE);
+    zx_status_t status = zx_timer_set(timer->handle, timer->current_deadline, 0);
     ZX_ASSERT(status == ZX_OK);
   } else {
     timer->current_deadline = 0;
@@ -186,7 +186,7 @@ int timerfd_create(int clockid, int flags) {
   }
 
   zx::timer timer;
-  zx_status_t status = zx::timer::create(0, zx_clock_id, &timer);
+  zx_status_t status = zx::timer::create(ZX_TIMER_SLACK_LATE, zx_clock_id, &timer);
   if (status != ZX_OK) {
     return ERROR(status);
   }
@@ -262,7 +262,7 @@ __EXPORT int timerfd_settime(int fd, int flags, const struct itimerspec* new_val
   zx_status_t status = ZX_OK;
 
   if (current_deadline > 0) {
-    status = zx_timer_set(timer->handle, current_deadline, ZX_TIMER_SLACK_LATE);
+    status = zx_timer_set(timer->handle, current_deadline, 0);
   } else {
     status = zx_timer_cancel(timer->handle);
   }
