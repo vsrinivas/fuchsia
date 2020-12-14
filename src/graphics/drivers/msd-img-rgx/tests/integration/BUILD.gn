@@ -50,6 +50,7 @@ executable("msd_img_rgx_no_hardware_integration_tests_executable") {
     "//src/graphics/lib/magma/src/libmagma",
     "//src/graphics/lib/magma/src/magma_util:macros",
     "//src/graphics/lib/magma/tests/helper:logger_init_helper",
+    "//src/graphics/lib/magma/tests/helper:magma_map_cpu",
     "//src/graphics/lib/magma/tests/helper:test_device_helper",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
@@ -74,10 +75,11 @@ test_package("msd-img-rgx-no-hardware-integration-tests") {
     {
       name = "msd_img_rgx_no_hardware_integration_tests"
 
-      # Disable the test if internal_access (from //build/cipd.gni) is false,
-      # which means that the firmware wasn't downloaded and the driver can't
-      # be started.
-      disabled = !internal_access
+      # The test requires the nonhardware MSD (which can be built using
+      # dev_system_image_deps = [
+      #  "//src/graphics/lib/magma/gnbuild/magma-img-rgx:magma-vulkan-no-hardware"
+      # ]
+      disabled = true
     },
   ]
 }

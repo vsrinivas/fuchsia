@@ -10,6 +10,7 @@
 
 #include <gtest/gtest.h>
 
+#include "helper/magma_map_cpu.h"
 #include "helper/test_device_helper.h"
 #include "magma.h"
 #include "magma_util/macros.h"
@@ -35,8 +36,10 @@ TEST(ImgtecNoHardware, QueryReturnsBuffer) {
   magma_buffer_t buffer;
   EXPECT_EQ(MAGMA_STATUS_OK, magma_import(connection, buffer_id, &buffer));
   void* data;
-  EXPECT_EQ(MAGMA_STATUS_OK, magma_map(connection, buffer, &data));
+  uint64_t buffer_size = magma_get_buffer_size(buffer);
+  EXPECT_TRUE(magma::MapCpuHelper(connection, buffer, 0, buffer_size, &data));
   EXPECT_EQ(no_hardware_testing::kDummyQueryResult, *reinterpret_cast<uint32_t*>(data));
+  EXPECT_TRUE(magma::UnmapCpuHelper(data, buffer_size));
 
   magma_release_buffer(connection, buffer);
   magma_release_connection(connection);

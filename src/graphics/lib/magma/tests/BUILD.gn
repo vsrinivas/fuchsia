@@ -22,6 +22,7 @@ group("tests") {
   # Add driver dependencies:
   public_deps += [
     "//garnet/packages/prod:vulkan",
+    "//src/graphics/drivers/msd-img-rgx/tests/integration:msd-img-rgx-no-hardware-integration-tests",
     "//src/graphics/drivers/msd-img-rgx/tests/integration:msd_img_rgx_integration_tests",
     "//src/graphics/drivers/msd-img-rgx/tests/unit_tests:msd_img_rgx_nonhardware_tests",
     "//src/graphics/drivers/msd-vsi-vip/tests/integration",
