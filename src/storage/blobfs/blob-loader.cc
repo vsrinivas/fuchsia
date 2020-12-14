@@ -122,7 +122,7 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
 
   uint64_t file_block_aligned_size = blob_layout->FileBlockAlignedSize();
   fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
-  FormatBlobDataVmoName(node_index, &data_vmo_name);
+  FormatBlobDataVmoName(*inode, &data_vmo_name);
 
   fzl::OwnedVmoMapper data_mapper;
   status = data_mapper.CreateAndMap(file_block_aligned_size, data_vmo_name.c_str());
@@ -202,7 +202,7 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   auto page_watcher = std::make_unique<pager::PageWatcher>(pager_, std::move(userpager_info));
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
-  FormatBlobDataVmoName(node_index, &data_vmo_name);
+  FormatBlobDataVmoName(*inode, &data_vmo_name);
 
   zx::vmo data_vmo;
   if ((status = page_watcher->CreatePagedVmo(blob_layout->FileBlockAlignedSize(), &data_vmo)) !=
@@ -239,7 +239,7 @@ zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& ino
   std::unique_ptr<BlobVerifier> verifier;
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> merkle_vmo_name;
-  FormatBlobMerkleVmoName(node_index, &merkle_vmo_name);
+  FormatBlobMerkleVmoName(inode, &merkle_vmo_name);
 
   zx_status_t status;
   if ((status = merkle_mapper.CreateAndMap(blob_layout.MerkleTreeBlockAlignedSize(),

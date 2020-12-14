@@ -83,10 +83,11 @@ inline void* GetRawBitmapData(const RawBitmap& bm, uint64_t n) {
 // format.
 BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info);
 
-// Fills |out| with the VMO names for a blob with inode index |node_index|.
-void FormatBlobDataVmoName(uint32_t node_index, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
-void FormatBlobCompressedVmoName(uint32_t node_index, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
-void FormatBlobMerkleVmoName(uint32_t node_index, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
+// Fills |out| with the VMO names for the blob at |node|.
+// Name collisions are possible, but rare; the name is based on a prefix of the merkle root
+// hash of |node|.
+void FormatBlobDataVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
+void FormatBlobMerkleVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
 
 }  // namespace blobfs
 

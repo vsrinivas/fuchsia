@@ -967,7 +967,7 @@ zx_status_t Blob::PrepareDataVmoForWriting() {
     return ZX_OK;
   fzl::OwnedVmoMapper data_mapping;
   fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
-  FormatBlobDataVmoName(Ino(), &data_vmo_name);
+  FormatBlobDataVmoName(inode_, &data_vmo_name);
   if (zx_status_t status = data_mapping.CreateAndMap(
           fbl::round_up(inode_.blob_size, kBlobfsBlockSize), data_vmo_name.c_str());
       status != ZX_OK) {

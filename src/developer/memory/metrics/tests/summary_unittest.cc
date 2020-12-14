@@ -417,7 +417,7 @@ TEST_F(SummaryUnitTest, NameMatch) {
               .vmos =
                   {
                       {.koid = 1, .name = "blob-12a", .committed_bytes = 100},
-                      {.koid = 2, .name = "blob-merkle-12a", .committed_bytes = 100},
+                      {.koid = 2, .name = "mrkl-12a", .committed_bytes = 100},
                       {.koid = 3, .name = "blob-de", .committed_bytes = 100},
                       {.koid = 4, .name = "pthread_t:0x59853000/TLS=0x548", .committed_bytes = 100},
                       {.koid = 5, .name = "thrd_t:0x59853000/TLS=0x548", .committed_bytes = 100},

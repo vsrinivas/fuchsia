@@ -260,22 +260,20 @@ BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info) {
 }
 
 constexpr char kBlobVmoNamePrefix[] = "blob";
-constexpr char kBlobCompressedVmoNamePrefix[] = "blobCompressed";
-constexpr char kBlobMerkleVmoNamePrefix[] = "blob-merkle";
+constexpr char kBlobMerkleVmoNamePrefix[] = "mrkl";
 
-void FormatBlobDataVmoName(uint32_t node_index, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
+void FormatVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out, const char* prefix) {
+  digest::Digest digest(node.merkle_root_hash);
   out->Clear();
-  out->AppendPrintf("%s-%x", kBlobVmoNamePrefix, node_index);
+  out->AppendPrintf("%s-%.8s", prefix, digest.ToString().c_str());
 }
 
-void FormatBlobCompressedVmoName(uint32_t node_index, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
-  out->Clear();
-  out->AppendPrintf("%s-%x", kBlobCompressedVmoNamePrefix, node_index);
+void FormatBlobDataVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
+  FormatVmoName(node, out, kBlobVmoNamePrefix);
 }
 
-void FormatBlobMerkleVmoName(uint32_t node_index, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
-  out->Clear();
-  out->AppendPrintf("%s-%x", kBlobMerkleVmoNamePrefix, node_index);
+void FormatBlobMerkleVmoName(const Inode& node, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
+  FormatVmoName(node, out, kBlobMerkleVmoNamePrefix);
 }
 
 }  // namespace blobfs
