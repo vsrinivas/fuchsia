@@ -207,7 +207,7 @@ async fn main() -> Result<(), Error> {
 
     fuchsia_syslog::init_with_tags(&["lowpan-spinel-driver"]).context("initialize logging")?;
 
-    let (_app, spinel_device) = if args.is_integration_test {
+    let (app, spinel_device) = if args.is_integration_test {
         connect_to_spinel_device_proxy_test().context("connect_to_spinel_device_proxy_test")?
     } else if args.use_ot_stack {
         connect_to_spinel_device_proxy().context("connect_to_spinel_device_proxy")?
@@ -221,13 +221,30 @@ async fn main() -> Result<(), Error> {
         .await
         .context("Unable to start TUN driver")?;
 
-    run_driver(
+    let driver_future = run_driver(
         args.name,
         connect_to_service_at::<RegisterMarker>(args.service_prefix.as_str())
             .context("Failed to connect to Lowpan Registry service")?,
         connect_to_service_at::<FactoryRegisterMarker>(args.service_prefix.as_str()).ok(),
         spinel_device,
         network_device_interface,
-    )
-    .await
+    );
+
+    if let Some(app) = app {
+        futures::select! {
+        ret = driver_future.fuse()
+            => {
+            fx_log_err!("run_driver stopped: {:?}", ret);
+            ret
+            },
+        ret = app.wait_with_output().fuse()
+            => {
+            let ret = ret.map(|out|out.ok());
+            fx_log_err!("ot-stack stopped: {:?}", ret);
+            ret.map(|_|())
+            },
+        }
+    } else {
+        driver_future.await
+    }
 }
