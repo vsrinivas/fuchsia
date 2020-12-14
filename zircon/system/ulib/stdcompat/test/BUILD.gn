@@ -9,17 +9,25 @@ group("tests") {
   testonly = true
   deps = [
     ":stdcompat-test",
-    ":stdcompat-unittest($host_toolchain)",
+    ":stdcompat-unit-test($host_toolchain)",
   ]
 }
 
 fuchsia_unittest_package("stdcompat-test") {
-  executable_path = "test/stdcompat-unittest"
-  deps = [ ":stdcompat-unittest" ]
+  executable_path = "test/stdcompat-unit-test"
+  deps = [ ":stdcompat-unit-test" ]
 }
 
-test("stdcompat-unittest") {
-  sources = [ "version-test.cc" ]
+test("stdcompat-fit-transition-unittest") {
+  sources = [ "string_view_test.cc" ]
+  deps = [
+    "//zircon/system/ulib/stdcompat",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+test("stdcompat-unit-test") {
+  sources = [ "version_test.cc" ]
   deps = [
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",

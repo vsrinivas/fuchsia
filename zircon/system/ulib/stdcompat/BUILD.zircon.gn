@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/zx_library.gni")
+import("$zx_build/public/gn/migrated_targets.gni")
 
 group("tests") {
   testonly = true

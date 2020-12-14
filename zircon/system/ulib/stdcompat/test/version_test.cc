@@ -12,7 +12,7 @@ namespace {
 
 #if __cplusplus > 201703L
 
-TEST(StdCompatTest, FeatureTestMacrosForCpp20) {
+TEST(VersionTest, FeatureTestMacrosForCpp20) {
 #if __cplusplus >= 201803L
   static_assert(__cpp_lib_string_view == 201803L);
 #else
@@ -22,7 +22,7 @@ TEST(StdCompatTest, FeatureTestMacrosForCpp20) {
 
 #elif __cplusplus > 201402L
 
-TEST(StdCompatTest, FeatureTestMacrosForCpp17) {
+TEST(VersionTest, FeatureTestMacrosForCpp17) {
 #if __cplusplus >= 201606L
   static_assert(__cpp_lib_string_view == 201606L);
 #endif
@@ -30,7 +30,7 @@ TEST(StdCompatTest, FeatureTestMacrosForCpp17) {
 
 #elif __cplusplus > 201103L
 
-TEST(StdCompatTest, FeatureTestMacrosForCpp14) {
+TEST(VersionTest, FeatureTestMacrosForCpp14) {
 #if defined(__cpp_lib_string_view)
   static_assert(false, "'__cpp_lib_string_view' should not be defined in std14.")
 #endif
