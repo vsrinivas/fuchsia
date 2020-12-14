@@ -11,6 +11,8 @@ use {
     io_conformance::io1_request_logger_factory::Io1RequestLoggerFactory,
 };
 
+const TEST_FILE: &str = "testing.txt";
+
 pub async fn connect_to_harness() -> io_test::Io1HarnessProxy {
     // Connect to the realm to get acccess to the outgoing directory for the harness.
     let (client, server) = zx::Channel::create().expect("Cannot create channel");
@@ -310,15 +312,13 @@ async fn file_read_with_sufficient_rights() {
     let harness = connect_to_harness().await;
     let all_rights = all_rights_for_harness(&harness).await;
 
-    let filename = "testing.txt";
-
     for file_flags in build_flag_combinations(io::OPEN_RIGHT_READABLE, all_rights) {
-        let root = root_directory(all_rights, vec![file(filename, file_flags, vec![])]);
+        let root = root_directory(all_rights, vec![file(TEST_FILE, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, filename).await;
-        let (status, _data) = file.read(0).await.expect("Read failed");
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
+        let (status, _data) = file.read(0).await.expect("read failed");
         assert_eq!(Status::from_raw(status), Status::OK);
     }
 }
@@ -328,17 +328,15 @@ async fn file_read_with_insufficient_rights() {
     let harness = connect_to_harness().await;
     let all_rights = all_rights_for_harness(&harness).await;
 
-    let filename = "testing.txt";
-
     let not_readable_flags = all_rights & !io::OPEN_RIGHT_READABLE;
 
     for file_flags in build_flag_combinations(0, not_readable_flags) {
-        let root = root_directory(all_rights, vec![file(filename, file_flags, vec![])]);
+        let root = root_directory(all_rights, vec![file(TEST_FILE, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, filename).await;
-        let (status, _data) = file.read(0).await.expect("Read failed");
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
+        let (status, _data) = file.read(0).await.expect("read failed");
         assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
     }
 }
@@ -348,15 +346,13 @@ async fn file_read_at_with_sufficient_rights() {
     let harness = connect_to_harness().await;
     let all_rights = all_rights_for_harness(&harness).await;
 
-    let filename = "testing.txt";
-
     for file_flags in build_flag_combinations(io::OPEN_RIGHT_READABLE, all_rights) {
-        let root = root_directory(all_rights, vec![file(filename, file_flags, vec![])]);
+        let root = root_directory(all_rights, vec![file(TEST_FILE, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, filename).await;
-        let (status, _data) = file.read_at(0, 0).await.expect("Read at failed");
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
+        let (status, _data) = file.read_at(0, 0).await.expect("read_at failed");
         assert_eq!(Status::from_raw(status), Status::OK);
     }
 }
@@ -366,17 +362,15 @@ async fn file_read_at_with_insufficient_rights() {
     let harness = connect_to_harness().await;
     let all_rights = all_rights_for_harness(&harness).await;
 
-    let filename = "testing.txt";
-
     let not_readable_flags = all_rights & !io::OPEN_RIGHT_READABLE;
 
     for file_flags in build_flag_combinations(0, not_readable_flags) {
-        let root = root_directory(all_rights, vec![file(filename, file_flags, vec![])]);
+        let root = root_directory(all_rights, vec![file(TEST_FILE, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, filename).await;
-        let (status, _data) = file.read_at(0, 0).await.expect("Read at failed");
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
+        let (status, _data) = file.read_at(0, 0).await.expect("read_at failed");
         assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
     }
 }
@@ -386,15 +380,13 @@ async fn file_write_with_sufficient_rights() {
     let harness = connect_to_harness().await;
     let all_rights = all_rights_for_harness(&harness).await;
 
-    let filename = "testing.txt";
-
     for file_flags in build_flag_combinations(io::OPEN_RIGHT_WRITABLE, all_rights) {
-        let root = root_directory(all_rights, vec![file(filename, file_flags, vec![])]);
+        let root = root_directory(all_rights, vec![file(TEST_FILE, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, filename).await;
-        let (status, _actual) = file.write("".as_bytes()).await.expect("Failed to write file");
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
+        let (status, _actual) = file.write("".as_bytes()).await.expect("write failed");
         assert_eq!(Status::from_raw(status), Status::OK);
     }
 }
@@ -404,17 +396,83 @@ async fn file_write_with_insufficient_rights() {
     let harness = connect_to_harness().await;
     let all_rights = all_rights_for_harness(&harness).await;
 
-    let filename = "testing.txt";
+    let non_writable_flags = all_rights & !io::OPEN_RIGHT_WRITABLE;
+
+    for file_flags in build_flag_combinations(0, non_writable_flags) {
+        let root = root_directory(all_rights, vec![file(TEST_FILE, file_flags, vec![])]);
+        let test_dir = get_directory_from_harness(&harness, root);
+
+        let file =
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
+        let (status, _actual) = file.write("".as_bytes()).await.expect("write failed");
+        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn file_write_at_with_sufficient_rights() {
+    let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
+
+    for file_flags in build_flag_combinations(io::OPEN_RIGHT_WRITABLE, all_rights) {
+        let root = root_directory(all_rights, vec![file(TEST_FILE, file_flags, vec![])]);
+        let test_dir = get_directory_from_harness(&harness, root);
+
+        let file =
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
+        let (status, _actual) = file.write_at("".as_bytes(), 0).await.expect("write_at failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn file_write_at_with_insufficient_rights() {
+    let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
 
     let non_writable_flags = all_rights & !io::OPEN_RIGHT_WRITABLE;
 
     for file_flags in build_flag_combinations(0, non_writable_flags) {
-        let root = root_directory(all_rights, vec![file(filename, file_flags, vec![])]);
+        let root = root_directory(all_rights, vec![file(TEST_FILE, file_flags, vec![])]);
         let test_dir = get_directory_from_harness(&harness, root);
 
         let file =
-            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, filename).await;
-        let (status, _actual) = file.write("".as_bytes()).await.expect("Failed to write file");
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
+        let (status, _actual) = file.write_at("".as_bytes(), 0).await.expect("write_at failed");
+        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn file_truncate_with_sufficient_rights() {
+    let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
+
+    for file_flags in build_flag_combinations(io::OPEN_RIGHT_WRITABLE, all_rights) {
+        let root = root_directory(all_rights, vec![file(TEST_FILE, file_flags, vec![])]);
+        let test_dir = get_directory_from_harness(&harness, root);
+
+        let file =
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
+        let status = file.truncate(0).await.expect("truncate failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn file_truncate_with_insufficient_rights() {
+    let harness = connect_to_harness().await;
+    let all_rights = all_rights_for_harness(&harness).await;
+
+    let non_writable_flags = all_rights & !io::OPEN_RIGHT_WRITABLE;
+
+    for file_flags in build_flag_combinations(0, non_writable_flags) {
+        let root = root_directory(all_rights, vec![file(TEST_FILE, file_flags, vec![])]);
+        let test_dir = get_directory_from_harness(&harness, root);
+
+        let file =
+            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
+        let status = file.truncate(0).await.expect("truncate failed");
         assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
     }
 }
