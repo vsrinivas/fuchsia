@@ -725,7 +725,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/3e8ccea2e449257de06cda4182b2aef53e96b779/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/db7f3dcb53009b93f05c4b38859c3fa96074de85/runtime/dart/config.gni#10)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -1242,22 +1242,6 @@ attributing code generation bugs.
 **Current value (from the default):** `true`
 
 From //src/graphics/lib/compute/gn/glsl_shader_rules.gni:38
-
-### graphics_compute_verbose_compile
-The glslangValidator compiler is noisy by default.  A cleanly
-compiling shader still prints out its filename.
-
-This negatively impacts the GN build.
-
-For this reason, we silence the compiler with the "-s" option but
-unfortunately this also disables all error reporting.
-
-Set to true to see detailed error reporting.
-
-
-**Current value (from the default):** `false`
-
-From //src/graphics/lib/compute/gn/glsl_shader_rules.gni:50
 
 ### host_byteorder
 
