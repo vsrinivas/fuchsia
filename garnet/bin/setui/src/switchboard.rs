@@ -21,3 +21,6 @@ pub mod light_types;
 
 /// This mod provides the service's internal representations of internationalization info.
 pub mod intl_types;
+
+/// This mod provides the service's internal representations of input info.
+pub mod input_types;

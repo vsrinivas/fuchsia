@@ -7,8 +7,8 @@ use argh::FromArgs;
 use fuchsia_syslog::fx_log_info;
 use serde::de::DeserializeOwned;
 use settings::{
-    AgentConfiguration, EnabledServicesConfiguration, LightHardwareConfiguration,
-    LightSensorConfig, ServiceFlags,
+    AgentConfiguration, EnabledServicesConfiguration, InputConfiguration,
+    LightHardwareConfiguration, LightSensorConfig, ServiceFlags,
 };
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
@@ -25,6 +25,10 @@ struct TestConfig {
     /// these configurations are the one that will determine the behavior of individual controllers.
     #[argh(option, short = 'f')]
     controller_flags: Vec<OsString>,
+
+    /// these configurations control the default input devices for a product.
+    #[argh(option, short = 'i')]
+    input_device_config: Vec<OsString>,
 
     /// these configurations control specific settings within the light sensor controller.
     #[argh(option, short = 'l')]
@@ -59,6 +63,10 @@ fn main() -> Result<(), Error> {
 
     for config in test_config.controller_flags.into_iter() {
         read_config::<ServiceFlags>(&config)?;
+    }
+
+    for config in test_config.input_device_config.into_iter() {
+        read_config::<InputConfiguration>(&config)?;
     }
 
     for config in test_config.light_sensor_config.into_iter() {

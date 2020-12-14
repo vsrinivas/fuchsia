@@ -85,6 +85,7 @@ mod setup;
 pub mod task;
 
 pub use display::LightSensorConfig;
+pub use input::input_device_configuration::InputConfiguration;
 pub use light::light_hardware_configuration::LightHardwareConfiguration;
 use std::sync::atomic::AtomicU64;
 

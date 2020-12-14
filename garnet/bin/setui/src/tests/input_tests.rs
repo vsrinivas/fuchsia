@@ -28,14 +28,20 @@ use {
     std::sync::Arc,
 };
 
-const DEFAULT_INPUT_INFO: InputInfoSources = InputInfoSources {
-    hw_microphone: Microphone { muted: false },
-    sw_microphone: Microphone { muted: false },
-    hw_camera: Camera { disabled: false },
-};
 const DEFAULT_MIC_STATE: bool = false;
 const ENV_NAME: &str = "settings_service_input_test_environment";
 const CONTEXT_ID: u64 = 0;
+
+// TODO(fxbug.dev/60682): add input_device_sources. The change from
+// a constant to a function is in preparation for input_device_sources,
+// which is not a const.
+fn create_default_input_info() -> InputInfoSources {
+    InputInfoSources {
+        hw_microphone: Microphone { muted: false },
+        sw_microphone: Microphone { muted: false },
+        hw_camera: Camera { disabled: false },
+    }
+}
 
 // Creates an environment that will fail on a get request.
 async fn create_input_test_env_with_failures(
@@ -96,7 +102,7 @@ async fn create_storage(
         .get_device_storage::<InputInfoSources>(StorageAccessContext::Test, CONTEXT_ID);
     {
         let mut store_lock = store.lock().await;
-        let input_info = DEFAULT_INPUT_INFO;
+        let input_info = create_default_input_info();
         store_lock.write(&input_info, false).await.unwrap();
     }
     store
@@ -207,7 +213,7 @@ async fn test_restore() {
             .lock()
             .await
             .get_device_storage::<InputInfoSources>(StorageAccessContext::Test, CONTEXT_ID);
-        let mut stored_info = DEFAULT_INPUT_INFO.clone();
+        let mut stored_info = create_default_input_info().clone();
         stored_info.sw_microphone.muted = true;
         assert!(store.lock().await.write(&stored_info, false).await.is_ok());
     }
@@ -239,7 +245,7 @@ async fn test_bringup_without_input_registry() {
 // Test that cloning works.
 #[test]
 fn test_input_info_copy() {
-    let input_info = DEFAULT_INPUT_INFO;
+    let input_info = create_default_input_info();
     let copy_input_info = input_info.clone();
     assert_eq!(input_info, copy_input_info);
 }

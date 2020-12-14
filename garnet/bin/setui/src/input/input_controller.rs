@@ -1,13 +1,16 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 use crate::base::SettingInfo;
+use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::{SettingHandlerResult, State};
 use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
+use crate::input::input_device_configuration::InputConfiguration;
 use crate::input::ButtonType;
 use crate::switchboard::base::{
     Camera, ControllerStateResult, InputInfo, InputInfoSources, Microphone, SettingRequest,
@@ -111,6 +114,7 @@ impl InputControllerInner {
     }
 }
 
+// TODO(fxbug.dev/60682): Add static create method that takes in a config.
 pub struct InputController {
     /// Handle so that a lock can be used in the Handle trait implementation.
     inner: InputControllerInnerHandle,
@@ -120,6 +124,12 @@ pub struct InputController {
 impl data_controller::Create<InputInfoSources> for InputController {
     /// Creates the controller.
     async fn create(client: ClientProxy<InputInfoSources>) -> Result<Self, ControllerError> {
+        let _input_device_config = DefaultSetting::<InputConfiguration, &str>::new(
+            None,
+            "/config/data/input_device_config.json",
+        )
+        .get_default_value();
+        // TODO(fxbug.dev/60682): Use config for the default state.
         Ok(Self {
             inner: Arc::new(Mutex::new(InputControllerInner {
                 client: client.clone(),

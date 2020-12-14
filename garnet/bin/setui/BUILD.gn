@@ -142,6 +142,7 @@ rustc_library("lib") {
     "src/input.rs",
     "src/input/common.rs",
     "src/input/input_controller.rs",
+    "src/input/input_device_configuration.rs",
     "src/input/input_fidl_handler.rs",
     "src/inspect.rs",
     "src/inspect/inspect_broker.rs",
@@ -195,6 +196,7 @@ rustc_library("lib") {
     "src/switchboard/accessibility_types.rs",
     "src/switchboard/base.rs",
     "src/switchboard/hanging_get_handler.rs",
+    "src/switchboard/input_types.rs",
     "src/switchboard/intl_types.rs",
     "src/switchboard/light_types.rs",
     "src/switchboard/switchboard.rs",
@@ -377,6 +379,10 @@ unittest_package("sample-setui-config-test") {
       dest = "service_flags.json"
     },
     {
+      path = rebase_path("src/tests/testdata/input_device_configuration.json")
+      dest = "input_device_configuration.json"
+    },
+    {
       path = rebase_path("src/tests/testdata/light_sensor_configuration.json")
       dest = "light_sensor_configuration.json"
     },
@@ -399,6 +405,8 @@ unittest_package("sample-setui-config-test") {
         "/pkg/data/service_configuration.json",
         "--controller-flags",
         "/pkg/data/service_flags.json",
+        "--input-device-config",
+        "/pkg/data/input_device_configuration.json",
         "--light-sensor-config",
         "/pkg/data/light_sensor_configuration.json",
         "--light-hardware-config",
@@ -415,6 +423,8 @@ unittest_package("sample-setui-config-test") {
         "/pkg/data/service_configuration.json",
         "-f",
         "/pkg/data/service_flags.json",
+        "-i",
+        "/pkg/data/input_device_configuration.json",
         "-l",
         "/pkg/data/light_sensor_configuration.json",
         "-h",

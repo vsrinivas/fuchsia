@@ -1,0 +1,49 @@
+{
+  "devices": [
+    {
+      "device_name": "camera_1",
+      "device_type": "CAMERA",
+      "source_states": [
+        {
+          "source": "HARDWARE",
+          "state": 1
+        },
+        {
+          "source": "SOFTWARE",
+          "state": 3
+        }
+      ],
+      "mutable_toggle_state": 12
+    },
+    {
+      "device_name": "camera_2",
+      "device_type": "CAMERA",
+      "source_states": [
+        {
+          "source": "HARDWARE",
+          "state": 4
+        },
+        {
+          "source": "SOFTWARE",
+          "state": 1
+        }
+      ],
+      "mutable_toggle_state": 12
+    },
+    {
+      "device_name": "",
+      "device_type": "MICROPHONE",
+      "source_states": [
+        {
+          "source": "HARDWARE",
+          "state": 1
+        },
+        {
+          "source": "SOFTWARE",
+          "state": 3
+        }
+      ],
+      "mutable_toggle_state": 12
+    }
+  ]
+}
