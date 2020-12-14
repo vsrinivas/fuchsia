@@ -26,6 +26,21 @@ class MockDockyardStub : public dockyard_proto::Dockyard::StubInterface {
               (::grpc::ClientContext*, const DockyardPaths&, DockyardIds*),
               (override));
 
+  MOCK_METHOD((::grpc::ClientReaderWriterInterface<
+                  ::dockyard_proto::LogBatch, ::dockyard_proto::EmptyMessage>*),
+              SendLogsRaw, (::grpc::ClientContext*), (override));
+
+  MOCK_METHOD((::grpc::ClientAsyncReaderWriterInterface<
+                  ::dockyard_proto::LogBatch, ::dockyard_proto::EmptyMessage>*),
+              AsyncSendLogsRaw,
+              (::grpc::ClientContext*, ::grpc::CompletionQueue*, void*),
+              (override));
+
+  MOCK_METHOD((::grpc::ClientAsyncReaderWriterInterface<
+                  ::dockyard_proto::LogBatch, ::dockyard_proto::EmptyMessage>*),
+              PrepareAsyncSendLogsRaw,
+              (::grpc::ClientContext*, ::grpc::CompletionQueue*), (override));
+
   MOCK_METHOD(
       (::grpc::ClientReaderWriterInterface<::dockyard_proto::InspectJson,
                                            ::dockyard_proto::EmptyMessage>*),

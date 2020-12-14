@@ -146,6 +146,9 @@ executable("system_monitor_harvester_test") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+
+    # TODO(fxbug.dev/57392): Move back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 

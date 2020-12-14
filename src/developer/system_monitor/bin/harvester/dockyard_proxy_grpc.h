@@ -24,6 +24,8 @@ void BuildSampleListById(SampleListById* by_id,
                          const std::vector<dockyard::DockyardId>& id_list,
                          const SampleList& sample_list);
 
+dockyard_proto::LogBatch BuildLogBatch(
+    const std::vector<const std::string>& batch, uint64_t mono, uint64_t time);
 }  // namespace internal
 
 class DockyardProxyGrpc : public DockyardProxy {
@@ -37,6 +39,10 @@ class DockyardProxyGrpc : public DockyardProxy {
 
   // |DockyardProxy|.
   DockyardProxyStatus Init() override;
+
+  // |DockyardProxy|.
+  DockyardProxyStatus SendLogs(
+      const std::vector<const std::string>& batch) override;
 
   // |DockyardProxy|.
   DockyardProxyStatus SendInspectJson(const std::string& dockyard_path,

@@ -5,6 +5,7 @@
 #include "dockyard_proxy_grpc.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/clock.h>
 #include <zircon/status.h>
 
 #include <chrono>
@@ -46,6 +47,18 @@ void BuildSampleListById(SampleListById* by_id,
   }
 }
 
+dockyard_proto::LogBatch BuildLogBatch(
+    const std::vector<const std::string>& batch, uint64_t mono, uint64_t time) {
+  dockyard_proto::LogBatch logs;
+  for (const auto& json : batch) {
+    auto log = logs.add_log_json();
+    log->set_json(json);
+  }
+  logs.set_time(time);
+  logs.set_mono(mono);
+  return logs;
+}
+
 }  // namespace internal
 
 DockyardProxyStatus DockyardProxyGrpc::Init() {
@@ -75,6 +88,30 @@ DockyardProxyStatus DockyardProxyGrpc::Init() {
     return DockyardProxyStatus::ERROR;
   }
   return DockyardProxyStatus::OK;
+}
+
+DockyardProxyStatus DockyardProxyGrpc::SendLogs(
+    const std::vector<const std::string>& batch) {
+  uint64_t mono = zx::clock::get_monotonic().get();
+
+  // TODO(fxbug.dev/65180): Add a check for ZX_CLOCK_STARTED.
+  auto now = std::chrono::system_clock::now();
+  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                             now.time_since_epoch())
+                             .count();
+
+  // Data we are sending to the server.
+  dockyard_proto::LogBatch logs =
+      internal::BuildLogBatch(batch, mono, nanoseconds);
+
+  grpc::ClientContext context;
+  std::shared_ptr<grpc::ClientReaderWriterInterface<dockyard_proto::LogBatch,
+                                           dockyard_proto::EmptyMessage>>
+      stream(stub_->SendLogs(&context));
+
+  stream->Write(logs);
+  stream->WritesDone();
+  return ToDockyardProxyStatus(stream->Finish());
 }
 
 DockyardProxyStatus DockyardProxyGrpc::SendInspectJson(

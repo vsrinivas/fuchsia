@@ -5,6 +5,8 @@
 #include "dockyard_proxy_fake.h"
 
 #include <gtest/gtest.h>
+#include <rapidjson/document.h>
+#include <rapidjson/pointer.h>
 
 namespace harvester {
 
@@ -18,6 +20,14 @@ DockyardProxyStatus DockyardProxyFake::Init() {
 DockyardProxyStatus DockyardProxyFake::SendInspectJson(
     const std::string& stream_name, const std::string& json) {
   sent_json_.insert_or_assign(stream_name, json);
+  return DockyardProxyStatus::OK;
+}
+
+DockyardProxyStatus DockyardProxyFake::SendLogs(
+    const std::vector<const std::string>& batch) {
+  for (const auto& log : batch) {
+    sent_logs_.emplace_back(log);
+  }
   return DockyardProxyStatus::OK;
 }
 
@@ -113,6 +123,28 @@ bool DockyardProxyFake::CheckValueSubstringSent(
       *key = iter.first;
       *value = iter.second;
       return true;
+    }
+  }
+  return false;
+}
+
+bool DockyardProxyFake::CheckLogSubstringSent(
+    const std::string& log_message) const {
+  auto expectedMessage =
+      rapidjson::Value(log_message.c_str(), log_message.size());
+
+  for (const auto& json_array : sent_logs_) {
+    rapidjson::Document document;
+    document.Parse(json_array);
+    assert(document.IsArray());
+    for (auto& json_log : document.GetArray()) {
+      std::string message(
+          rapidjson::GetValueByPointerWithDefault(
+              json_log, "/payload/root/message", "", document.GetAllocator())
+              .GetString());
+      if (message.find(log_message) != std::string::npos) {
+        return true;
+      }
     }
   }
   return false;

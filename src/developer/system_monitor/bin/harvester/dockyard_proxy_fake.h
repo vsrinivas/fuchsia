@@ -21,6 +21,10 @@ class DockyardProxyFake : public DockyardProxy {
   DockyardProxyStatus Init() override;
 
   // |DockyardProxy|.
+  DockyardProxyStatus SendLogs(
+      const std::vector<const std::string>& batch) override;
+
+  // |DockyardProxy|.
   DockyardProxyStatus SendInspectJson(const std::string& stream_name,
                                       const std::string& json) override;
 
@@ -54,6 +58,9 @@ class DockyardProxyFake : public DockyardProxy {
                        std::string* string) const;
   bool CheckStringPrefixSent(const std::string& dockyard_path_prefix,
                              std::string* string) const;
+  // Returns true if the substring appears the message body of any recieved
+  // logs.
+  bool CheckLogSubstringSent(const std::string& log_message) const;
 
   size_t ValuesSentCount() { return sent_values_.size(); }
   size_t StringsSentCount() { return sent_strings_.size(); }
@@ -63,6 +70,7 @@ class DockyardProxyFake : public DockyardProxy {
   std::map<std::string, dockyard::SampleValue> sent_values_;
   std::map<std::string, std::string> sent_strings_;
   std::map<std::string, std::string> sent_json_;
+  std::vector<std::string> sent_logs_;
 
   friend std::ostream& operator<<(std::ostream& out,
                                   const DockyardProxyFake& dockyard);

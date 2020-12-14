@@ -13,6 +13,12 @@ DockyardProxyStatus DockyardProxyLocal::Init() {
   return DockyardProxyStatus::OK;
 }
 
+DockyardProxyStatus DockyardProxyLocal::SendLogs(
+    const std::vector<const std::string>& batch) {
+  FX_LOGS(INFO) << "DockyardProxyLocal::SendLogs";
+  return DockyardProxyStatus::OK;
+}
+
 DockyardProxyStatus DockyardProxyLocal::SendInspectJson(
     const std::string& /*stream_name*/, const std::string& /*json*/) {
   FX_LOGS(INFO) << "DockyardProxyLocal::SendInspectJson";

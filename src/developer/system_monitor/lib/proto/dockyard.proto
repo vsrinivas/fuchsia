@@ -14,6 +14,9 @@ service Dockyard {
   // Ask the Dockyard what the ID is for the given path.
   rpc GetDockyardIdsForPaths(DockyardPaths) returns (DockyardIds) {}
 
+  // Sends a batch of log messages.
+  rpc SendLogs(stream LogBatch) returns (stream EmptyMessage) {}
+
   // Sends a single JSON inspection message.
   rpc SendInspectJson(stream InspectJson) returns (stream EmptyMessage) {}
 
@@ -91,4 +94,20 @@ message InspectJson {
   uint64 time = 1;
   uint64 dockyard_id = 2;
   string json = 3;
+}
+
+// Structured log message(s) in a JSON array.
+// |json| is a JSON format utf-8 string.
+message LogJson {
+  string json = 1;
+}
+
+// A batch of log messages.
+// |mono| The current monotonic time in nanoseconds.
+// |time| The current nanoseconds since epoch.
+// |log| The list of logs in this batch.
+message LogBatch {
+  uint64 mono = 1;
+  uint64 time = 2;
+  repeated LogJson log_json = 3;
 }

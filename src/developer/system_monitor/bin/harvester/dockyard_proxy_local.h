@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_LOCAL_H_
-#define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_LOCAL_H_
+#ifndef SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_DOCKYARD_PROXY_LOCAL_H_
+#define SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_DOCKYARD_PROXY_LOCAL_H_
 
 #include <string>
 
@@ -19,6 +19,10 @@ class DockyardProxyLocal : public DockyardProxy {
 
   // |DockyardProxy|.
   DockyardProxyStatus Init() override;
+
+  // |DockyardProxy|.
+  DockyardProxyStatus SendLogs(
+      const std::vector<const std::string>& batch) override;
 
   // |DockyardProxy|.
   DockyardProxyStatus SendInspectJson(const std::string& stream_name,
@@ -43,4 +47,4 @@ class DockyardProxyLocal : public DockyardProxy {
 
 }  // namespace harvester
 
-#endif  // GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_LOCAL_H_
+#endif  // SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_DOCKYARD_PROXY_LOCAL_H_
