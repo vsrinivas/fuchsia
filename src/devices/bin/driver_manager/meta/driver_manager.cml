@@ -57,8 +57,6 @@
                 "fuchsia.process.Launcher",
                 "fuchsia.process.Resolver",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Launcher",
                 "fuchsia.tracing.provider.Registry",
             ],
         },

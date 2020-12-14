@@ -148,8 +148,6 @@
                 "fuchsia.kernel.RootJob",
                 "fuchsia.process.Launcher",
                 "fuchsia.process.Resolver",
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Launcher",
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
