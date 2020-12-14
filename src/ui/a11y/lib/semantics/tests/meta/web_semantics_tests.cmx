@@ -24,14 +24,13 @@
             },
             "system-services": [
                 "fuchsia.device.NameProvider",
-                "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.vulkan.loader.Loader"
+                "fuchsia.scheduler.ProfileProvider"
             ]
         }
     },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
         "binary": "test/web_semantics_tests"
@@ -52,7 +51,6 @@
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
-            "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.ImeVisibilityService",
@@ -61,7 +59,6 @@
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.policy.accessibility.PointerEventRegistry",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.vulkan.loader.Loader",
             "fuchsia.web.ContextProvider"
         ]
     }
