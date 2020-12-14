@@ -110,7 +110,7 @@ template("assemble_system") {
     compress_blobs = invoker.compress_blobs
   }
 
-  blob_layout_format = "padded"
+  blob_layout_format = "compact"
   if (defined(invoker.blob_layout_format)) {
     blob_layout_format = invoker.blob_layout_format
   }
