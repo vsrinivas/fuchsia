@@ -241,6 +241,9 @@ source_set("virtio_magma_lib") {
   if (virtmagma_debug) {
     defines = [ "VIRTMAGMA_DEBUG=1" ]
   }
+
+  # TODO(fxbug.dev/66436): Fix instances of undefined behavior.
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 executable("virtio_magma_bin") {
