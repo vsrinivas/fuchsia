@@ -105,5 +105,8 @@ sdk_atom("gen_snapshot_sdk") {
 group("tests") {
   testonly = true
 
-  deps = [ "zircon:tests" ]
+  deps = [
+    "fuchsia_vfs:tests",
+    "zircon:tests",
+  ]
 }
