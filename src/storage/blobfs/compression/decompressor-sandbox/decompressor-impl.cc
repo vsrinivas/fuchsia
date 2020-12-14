@@ -39,14 +39,8 @@ struct FifoInfo {
 
 namespace blobfs {
 
-// This will only decompress a single chunk. In order to do multiple chunks
-// you'll need to do multiple calls. The main downside is the mapping and
-// unmapping of the compressed mapper. If we want to use FIFOs we need fixed
-// length messages, which means that we either have to oversize the messages to
-// fit the compression mapping tables, or we need to sequence them. These are
-// both unfavourable. Better to hurt the use case that we don't currently
-// use, with a path to optimize it later.
-// TODO(fxbug.dev/62395): Remove the need to repeatedly map and unmap the compressed mapper.
+// This will only decompress a set of complete chunks, if the beginning or end
+// of the range are not chunk aligned this operation will fail.
 zx_status_t DecompressChunkedPartial(const fzl::OwnedVmoMapper& decompressed_mapper,
                                      const fzl::OwnedVmoMapper& compressed_mapper,
                                      const llcpp::fuchsia::blobfs::internal::Range decompressed,

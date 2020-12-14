@@ -9,6 +9,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/io.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/service/cpp/reader.h>
@@ -212,6 +213,49 @@ TEST_F(ExternalDecompressorE2ePagedTest, VerifyRemoteDecompression) {
   ASSERT_NO_FATAL_FAILURE(
       GetUintMetric({"paged_read_stats"}, "remote_decompressions", &after_decompressions));
   ASSERT_GT(after_decompressions, before_decompressions);
+}
+
+TEST_F(ExternalDecompressorE2ePagedTest, MultiframeDecompression) {
+  std::unique_ptr<BlobInfo> info;
+  ASSERT_NO_FATAL_FAILURE(
+      GenerateRealisticBlob(".", kDataSize, BlobLayoutFormat::kPaddedMerkleTreeAtStart, &info));
+  {
+    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd.is_valid());
+    ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
+    ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0)
+        << "Failed to write Data";
+  }
+
+  uint64_t decompressions;
+  ASSERT_NO_FATAL_FAILURE(
+      GetUintMetric({"paged_read_stats"}, "remote_decompressions", &decompressions));
+  ASSERT_EQ(decompressions, 0ul);
+
+  {
+    fbl::unique_fd fd(openat(root_fd(), info->path, O_RDONLY));
+    ASSERT_TRUE(fd.is_valid());
+    // Retrieve a read-only COW child of the pager-backed VMO. No way I know of
+    // to get a writable one.
+    zx_handle_t handle;
+    ASSERT_EQ(fdio_get_vmo_clone(fd.get(), &handle), ZX_OK);
+    zx::vmo parent(handle);
+    ASSERT_TRUE(parent.is_valid());
+
+    // Can't call ZX_VMO_OP_COMMIT on a readonly vmo. Creating a writeable COW
+    // child of the COW child.
+    zx::vmo vmo;
+    ASSERT_EQ(parent.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0, kDataSize, &vmo),
+              ZX_OK);
+    ASSERT_TRUE(vmo.is_valid());
+
+    ASSERT_EQ(vmo.op_range(ZX_VMO_OP_COMMIT, 0, kDataSize, nullptr, 0), ZX_OK);
+  }
+
+  // Decompressed it all in a single decompression instead of many 32K chunks.
+  ASSERT_NO_FATAL_FAILURE(
+      GetUintMetric({"paged_read_stats"}, "remote_decompressions", &decompressions));
+  ASSERT_EQ(decompressions, 1ul);
 }
 
 class ExternalDecompressorE2eUnpagedTest : public FdioTest {
