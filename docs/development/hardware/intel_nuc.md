@@ -91,8 +91,10 @@ use the board configuration `x64` when running `fx set`. For example `fx set cor
 1. Create a Zedboot USB by running `fx mkzedboot /path/to/usb/disk`.
 1. Plug the Zedboot USB key into the NUC and boot it.
 1. When Zedboot is started, press Alt+F3 to switch to a command line prompt.
-1. Run `lsblk` on the device. Take note of the HDD or SSD's device path.
+1. Run `lsblk` on the device. Take note of the HDD or SSD's block device path.
     1. An example path looks like `/dev/sys/pci/00:17.0/ahci/sata0/block`
-1. Run `install-disk-image init-partition-tables --block-device <BLOCK_DEVICE_PATH>` on the device.
-1. Run `fx serve` on your workstation.
+1. Run `install-disk-image init-partition-tables --block-device <BLOCK_DEVICE_PATH>` on the device to
+   wipe and initialize the partition tables on the NUC. Use the block device path from the previous
+   step.
+1. Run `fx serve` on your workstation to install Fuchsia on the NUC.
 1. After paving is completed, disconnect the USB key.
