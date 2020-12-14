@@ -4,13 +4,14 @@
 
 use {
     crate::component::*,
-    crate::io::*,
+    crate::io::{DirectoryProxyExt, MapChildren},
     anyhow::{Context, Result},
     async_trait::async_trait,
     ffx_component_list_args::ComponentListCommand,
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
+    futures::future::ready,
     std::io::{stdout, Write},
 };
 
@@ -64,12 +65,12 @@ impl DirectoryProxyComponentExt for fio::DirectoryProxy {
         )?;
 
         let children = match url.as_ref() {
-            V1_ROOT_COMPONENT => {
-                vec![Component::V1(V1_HUB_PATH.to_dir_proxy(&self)?.to_realm().await?)]
-            }
-            _ => "children"
-                .to_dir_proxy(&self)?
-                .map_children(|c| c.to_component_v2())
+            V1_ROOT_COMPONENT => vec![Component::V1(
+                self.open_dir(V1_HUB_PATH, fio::OPEN_RIGHT_READABLE)?.to_realm().await?,
+            )],
+            _ => self
+                .open_dir("children", fio::OPEN_RIGHT_READABLE)?
+                .map_children(fio::OPEN_RIGHT_READABLE, |c| c.to_component_v2())
                 .await?
                 .drain(..)
                 .map(|c| Component::V2(c))
@@ -95,9 +96,14 @@ impl DirectoryProxyComponentExt for fio::DirectoryProxy {
         let (id, name, mut realms_stacked, components) = futures::try_join!(
             self.read_file("job-id"),
             self.read_file("name"),
-            "r".to_dir_proxy(&self)?.map_children(|realm_name| {
-                realm_name.map_children(|realm_instance| realm_instance.to_realm())
-            }),
+            self.open_dir("r", fio::OPEN_RIGHT_READABLE)?.map_children(
+                fio::OPEN_RIGHT_READABLE,
+                |realm_name| {
+                    realm_name.map_children(fio::OPEN_RIGHT_READABLE, |realm_instance| {
+                        realm_instance.to_realm()
+                    })
+                }
+            ),
             self.component_v1_children(),
         )?;
         let id = id.parse::<u32>()?;
@@ -106,27 +112,28 @@ impl DirectoryProxyComponentExt for fio::DirectoryProxy {
     }
 
     async fn component_v1_children(&self) -> Result<Vec<ComponentVersion1>> {
-        if let Some(c) = self.get_dirent("c").await? {
-            Ok(c.to_dir_proxy(&self)?
-                .map_children(|child_name| {
-                    child_name.map_children(|child_instance| child_instance.to_component_v1())
+        Ok(self
+            .open_dir_checked("c", fio::OPEN_RIGHT_READABLE)
+            .await?
+            .map(|c| {
+                c.map_children(fio::OPEN_RIGHT_READABLE, |child_name| {
+                    child_name.map_children(fio::OPEN_RIGHT_READABLE, |child_instance| {
+                        child_instance.to_component_v1()
+                    })
                 })
-                .await?
-                .drain(..)
-                .flatten()
-                .collect())
-        } else {
-            // "c" directory doesn't exist, therefore no CFv1 children.
-            Ok(vec![])
-        }
+            })
+            .unwrap_or(Box::pin(ready(Ok(vec![]))))
+            .await?
+            .drain(..)
+            .flatten()
+            .collect())
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use io::test as io_test;
-    use io::test::TreeBuilder;
+    use crate::io::testing::{self as io_test, TreeBuilder};
 
     trait ComponentExt {
         fn as_v2<'a>(&'a self) -> Option<&'a ComponentVersion2>;
