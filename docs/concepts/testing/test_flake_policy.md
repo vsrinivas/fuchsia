@@ -71,15 +71,4 @@ reproducing the failure. This will enable them to find the root cause, and fix t
 issue. Once the issue has been fixed, the bug can be closed, and the test can be
 re-enabled. If any reverted patches need to re-land, they can re-land safely.
 
-## Improvements and Tooling
-
-Ongoing efforts to improve tooling surrounding flakes are actively underway.
-
-These include:
-
--   Automatically assigning issues for resolving flakes, based on information present in OWNERs
-    files.
--   "Deflaking" infrastructure, to re-run tests in high volume before they are
-    committed.
-
-As improvements are made, this document will be updated with the latest policy.
+When fixing a flake, verify the fix by [testing for flakiness in CQ](/docs/development/testing/testing_for_flakiness_in_cq.md).

@@ -34,3 +34,5 @@ toc:
   - include: /docs/development/testing/fuzzing/_toc.yaml
 - title: "Host-target interaction tests"
   path: /docs/development/testing/host_target_interaction_tests.md
+- title: "Testing for flakiness in CQ"
+  path: /docs/development/testing/testing_for_flakiness_in_cq.md
