@@ -85,6 +85,26 @@ flexible union ClientSelectorConfiguration {
     2: bool select_all;
 };
 
+/// Parameters which configure a diagnostics stream's performance properties.
+table PerformanceConfiguration {
+    /// Maximum aggregate size of all formatted contents returned by
+    /// the batch iterator for a diagnostics stream. If this value is set for a stream
+    /// configured in subscribe mode, the stream will terminate when the max size has
+    /// been reached.
+    /// NOTE: OPTIONAL
+    1: uint64 max_aggregate_content_size_bytes;
+
+    /// Configuration specifying max number of seconds to wait for a single
+    /// component to have its diagnostics data "pumped". This value can used
+    /// for testing or if you know the component you are interested is in under
+    /// heavy load.
+    /// If not provided, then PER_COMPONENT_ASYNC_TIMEOUT_SECONDS as defined in
+    /// https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/diagnostics/archivist/src/constants.rs
+    /// will be used.
+    /// NOTE: OPTIONAL
+    2: int64 batch_retrieval_timeout_seconds;
+};
+
 /// Parameters needed to configure a stream of diagnostics information.
 table StreamParameters {
     /// A [fuchsia.diagnostics/DataType] that specifies the diagnostics data type
@@ -112,10 +132,15 @@ table StreamParameters {
     /// component to have its diagnostics data "pumped". This value can used
     /// for testing or if you know the component you are interested is in under
     /// heavy load.
-    /// If not provided, then PER_COMPONENT_ASYNC_TIMEOUT_SECONDS as defined
-    /// in //src/diagnostics/archivist/src/constants.rs will be used.
+    /// If not provided, then PER_COMPONENT_ASYNC_TIMEOUT_SECONDS as defined in
+    /// https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/diagnostics/archivist/src/constants.rs
+    /// will be used.
     /// NOTE: OPTIONAL
     5: int64 batch_retrieval_timeout_seconds;
+
+    /// Parameters which configure a diagnostics stream's performance properties.
+    /// NOTE: OPTIONAL
+    6: PerformanceConfiguration performance_configuration;
 };
 
 /// Outer protocol for interacting with the different diagnostics data sources.
