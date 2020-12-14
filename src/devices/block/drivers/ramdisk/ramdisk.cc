@@ -16,6 +16,7 @@
 #include <atomic>
 #include <limits>
 #include <memory>
+#include <random>
 
 #include <ddk/driver.h>
 #include <fbl/auto_lock.h>
@@ -124,10 +125,11 @@ void Ramdisk::BlockImplQueue(block_op_t* bop, block_impl_queue_callback completi
   bool read = false;
 
   switch ((txn.operation()->command &= BLOCK_OP_MASK)) {
-    case BLOCK_OP_READ:
+    case BLOCK_OP_READ: {
       read = true;
       __FALLTHROUGH;
-    case BLOCK_OP_WRITE:
+    }
+    case BLOCK_OP_WRITE: {
       if ((txn.operation()->rw.offset_dev >= block_count_) ||
           ((block_count_ - txn.operation()->rw.offset_dev) < txn.operation()->rw.length)) {
         txn.Complete(ZX_ERR_OUT_OF_RANGE);
@@ -150,12 +152,25 @@ void Ramdisk::BlockImplQueue(block_op_t* bop, block_impl_queue_callback completi
         sync_completion_signal(&signal_);
       }
       break;
-    case BLOCK_OP_FLUSH:
-      txn.Complete(ZX_OK);
+    }
+    case BLOCK_OP_FLUSH: {
+      {
+        fbl::AutoLock lock(&lock_);
+        if (!(dead = dead_)) {
+          txn_list_.push(std::move(txn));
+        }
+      }
+      if (dead) {
+        txn.Complete(ZX_ERR_BAD_STATE);
+      } else {
+        sync_completion_signal(&signal_);
+      }
       break;
-    default:
+    }
+    default: {
       txn.Complete(ZX_ERR_NOT_SUPPORTED);
       break;
+    }
   }
 }
 
@@ -170,6 +185,17 @@ zx_status_t Ramdisk::FidlSetFlags(uint32_t flags, fidl_txn_t* txn) {
 zx_status_t Ramdisk::FidlWake(fidl_txn_t* txn) {
   {
     fbl::AutoLock lock(&lock_);
+
+    if (flags_ & fuchsia_hardware_ramdisk_RAMDISK_FLAG_DISCARD_NOT_FLUSHED_ON_WAKE) {
+      // Fill all blocks with a fill pattern.
+      for (uint64_t block : blocks_written_since_last_flush_) {
+        void* addr = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mapping_.start()) +
+                                             block * block_size_);
+        memset(addr, 0xaf, block_size_);
+      }
+      blocks_written_since_last_flush_.clear();
+    }
+
     asleep_ = false;
     memset(&block_counts_, 0, sizeof(block_counts_));
     pre_sleep_write_block_count_ = 0;
@@ -239,6 +265,8 @@ zx_status_t Ramdisk::FidlGrow(uint64_t required_size, fidl_txn_t* txn) {
 
 void Ramdisk::ProcessRequests() {
   block::BorrowedOperationQueue<> deferred_list;
+  std::random_device random;
+  std::uniform_int_distribution<bool> distribution;
 
   for (;;) {
     std::optional<Transaction> txn;
@@ -281,6 +309,18 @@ void Ramdisk::ProcessRequests() {
       }
     } while (!txn);
 
+    if (txn->operation()->command == BLOCK_OP_FLUSH) {
+      zx_status_t status = ZX_OK;
+      if (block_write_limit == 0) {
+        status = ZX_ERR_UNAVAILABLE;
+      } else {
+        fbl::AutoLock lock(&lock_);
+        blocks_written_since_last_flush_.clear();
+      }
+      txn->Complete(status);
+      continue;
+    }
+
     uint32_t blocks = txn->operation()->rw.length;
     if (txn->operation()->command == BLOCK_OP_WRITE && blocks > block_write_limit) {
       // Limit the number of blocks we write.
@@ -318,6 +358,16 @@ void Ramdisk::ProcessRequests() {
         if (pre_sleep_write_block_count_ == block_write_limit) {
           pre_sleep_write_block_count_ -= blocks;
           asleep_ = (pre_sleep_write_block_count_ == 0);
+
+          if (flags_ & fuchsia_hardware_ramdisk_RAMDISK_FLAG_DISCARD_NOT_FLUSHED_ON_WAKE) {
+            for (uint64_t block = txn->operation()->rw.offset_dev, count = blocks; count > 0;
+                 ++block, --count) {
+              if (!(flags_ & fuchsia_hardware_ramdisk_RAMDISK_FLAG_DISCARD_RANDOM) ||
+                  distribution(random)) {
+                blocks_written_since_last_flush_.push_back(block);
+              }
+            }
+          }
         }
 
         if (blocks < txn->operation()->rw.length) {

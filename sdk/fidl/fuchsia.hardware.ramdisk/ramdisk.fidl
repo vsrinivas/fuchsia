@@ -9,7 +9,16 @@ using zx;
 /// Identifies if requests which are sent ot the ramdisk while it is
 /// considered "asleep" should be processed when the ramdisk wakes up.
 /// If this flag is not set, those requests are failed immediately.
-const uint32 RAMDISK_FLAG_RESUME_ON_WAKE = 0xFF000001;
+const uint32 RAMDISK_FLAG_RESUME_ON_WAKE = 0x00000001;
+
+// If set, blocks written after the last flush are filled with an
+// indeterminate value when waking after sleeping.
+const uint32 RAMDISK_FLAG_DISCARD_NOT_FLUSHED_ON_WAKE = 0x00000002;
+
+// If set, blocks written after the last flush are filled at random
+// rather than all blocks.  This can be used to simulate out-of-order
+// writes.
+const uint32 RAMDISK_FLAG_DISCARD_RANDOM = 0x00000004;
 
 /// Counters for the number of write requests since the last call to either
 /// "SleepAfter" or "Wake". All units are in individual blocks.

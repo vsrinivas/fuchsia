@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_RAMDISK_RAMDISK_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_RAMDISK_RAMDISK_H_
+
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
@@ -15,6 +18,7 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <vector>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
@@ -31,7 +35,8 @@ class Ramdisk : public RamdiskDeviceType,
                 public ddk::BlockImplProtocol<Ramdisk, ddk::base_protocol>,
                 public ddk::BlockPartitionProtocol<Ramdisk> {
  public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(Ramdisk);
+  Ramdisk(const Ramdisk&) = delete;
+  Ramdisk& operator=(const Ramdisk&) = delete;
 
   static zx_status_t Create(zx_device_t* parent, zx::vmo vmo, uint64_t block_size,
                             uint64_t block_count, const uint8_t* type_guid,
@@ -134,5 +139,10 @@ class Ramdisk : public RamdiskDeviceType,
 
   thrd_t worker_ = {};
   char name_[ZBI_PARTITION_NAME_LEN];
+
+  std::vector<uint64_t> blocks_written_since_last_flush_ TA_GUARDED(lock_);
 };
+
 }  // namespace ramdisk
+
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_RAMDISK_RAMDISK_H_

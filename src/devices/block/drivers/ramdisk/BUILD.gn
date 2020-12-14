@@ -38,5 +38,5 @@ driver_module("ramdisk") {
 
 group("tests") {
   testonly = true
-  deps = [ "test:ramdisk-test" ]
+  deps = [ "test:tests" ]
 }

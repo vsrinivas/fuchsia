@@ -4,7 +4,8 @@
 
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
 
 test("ramdisk") {
   output_name = "ramdisk-test"
@@ -16,12 +17,12 @@ test("ramdisk") {
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//sdk/lib/fdio",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/isolated_devmgr/v2_component:client",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/block-client",
-    "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fzl",
@@ -29,7 +30,7 @@ test("ramdisk") {
   ]
 }
 
-isolated_devmgr_unittest_package("ramdisk-test") {
+isolated_devmgr_unittest_v2_component("ramdisk-test") {
   executable_path = "test/ramdisk-test"
 
   deps = [
@@ -38,5 +39,17 @@ isolated_devmgr_unittest_package("ramdisk-test") {
     "//src/devices/block/drivers/ramdisk",
     "//src/devices/misc/drivers/test",
     "//src/devices/tests/sysdev",
+  ]
+}
+
+fuchsia_test_package("ramdisk-tests") {
+  test_components = [ ":ramdisk-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":ramdisk-tests",
+    "//src/lib/isolated_devmgr/v2_component",
   ]
 }
