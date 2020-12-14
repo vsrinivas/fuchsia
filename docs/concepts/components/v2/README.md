@@ -54,7 +54,7 @@ the transition to the new architecture is complete.
 - [Life of a protocol open](life_of_a_protocol_open.md): How components connect
   to protocols in their namespaces.
 
-# Components (either version)
+## Components (either version)
 
 - [Component URLs][doc-component-urls] are URLs that identify components.
 
