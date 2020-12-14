@@ -522,6 +522,10 @@ void CodecAdapterVp9::CoreCodecStartStream() {
                                           /*use_parser=*/use_parser_,
                                           /*is_secure=*/IsPortSecure(kInputPort));
     if (status != ZX_OK) {
+      // Log here instead of in AllocateStreamBuffer() because video_ doesn't know which codec this
+      // is about.
+      events_->onCoreCodecLogEvent(
+          media_metrics::StreamProcessorEvents2MetricDimensionEvent::AllocationError);
       events_->onCoreCodecFailCodec("AllocateStreamBuffer() failed");
       return;
     }

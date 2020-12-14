@@ -251,6 +251,10 @@ void CodecAdapterH264Multi::CoreCodecStartStream() {
     video_->AddNewDecoderInstance(std::move(decoder_instance));
     if (video_->AllocateStreamBuffer(buffer, kStreamBufferSize, /*use_parser=*/true,
                                      IsOutputSecure()) != ZX_OK) {
+      // Log here instead of in AllocateStreamBuffer() since video_ doesn't know which codec this is
+      // for.
+      events_->onCoreCodecLogEvent(
+          media_metrics::StreamProcessorEvents2MetricDimensionEvent::AllocationError);
       events_->onCoreCodecFailCodec("AllocateStreamBuffer() failed");
       return;
     }
