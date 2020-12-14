@@ -52,6 +52,7 @@ Flatland::Flatland(
       binding_(this, std::move(request), dispatcher_),
       session_id_(session_id),
       destroy_instance_function_(std::move(destroy_instance_function)),
+      peer_closed_waiter_(binding_.channel().get(), ZX_CHANNEL_PEER_CLOSED),
       present2_helper_([this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
         if (binding_.is_bound()) {
           binding_.events().OnFramePresented(std::move(info));
@@ -63,7 +64,12 @@ Flatland::Flatland(
       buffer_collection_importers_(buffer_collection_importers),
       sysmem_allocator_(std::move(sysmem_allocator)),
       transform_graph_(session_id_),
-      local_root_(transform_graph_.CreateTransform()) {}
+      local_root_(transform_graph_.CreateTransform()) {
+  zx_status_t status = peer_closed_waiter_.Begin(
+      dispatcher_, [this](async_dispatcher_t* dispatcher, async::WaitOnce* wait, zx_status_t status,
+                          const zx_packet_signal_t* signal) { destroy_instance_function_(); });
+  FX_DCHECK(status == ZX_OK);
+}
 
 Flatland::~Flatland() {
   // TODO(fxbug.dev/55374): consider if Link tokens should be returned or not.
@@ -73,10 +79,7 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
                        std::vector<zx::event> release_fences, PresentCallback callback) {
   if (present_tokens_remaining_ == 0) {
     callback(fit::error(Error::NO_PRESENTS_REMAINING));
-    // Calling this function will cancel any Waits that might be attached to the handle in
-    // |binding_|, which must be cancelled before the handle is destroyed.
-    destroy_instance_function_();
-    binding_.Close(ZX_ERR_BAD_STATE);
+    CloseConnection();
     return;
   }
   present_tokens_remaining_--;
@@ -992,6 +995,17 @@ std::optional<TransformHandle> Flatland::GetContentHandle(ContentId content_id) 
 }
 
 void Flatland::ReportError() { failure_since_previous_present_ = true; }
+
+void Flatland::CloseConnection() {
+  // Cancel the async::Wait before closing the connection, or it will assert on destruction.
+  zx_status_t status = peer_closed_waiter_.Cancel();
+
+  // Immediately close the FIDL interface to prevent future requests.
+  binding_.Close(ZX_ERR_BAD_STATE);
+
+  // Finally, trigger the destruction of this instance.
+  destroy_instance_function_();
+}
 
 void Flatland::UpdateLinkScale(const ChildLinkData& link_data) {
   FX_DCHECK(link_data.properties.has_logical_size());

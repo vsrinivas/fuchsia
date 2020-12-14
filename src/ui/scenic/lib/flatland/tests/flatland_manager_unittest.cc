@@ -115,9 +115,11 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
     // Triggers cleanup of manager resources for Flatland instances that have exited.
     RunLoopUntilIdle();
 
-    // |manager_| may have been reset during the test.
+    // |manager_| may have been reset during the test. If not, run until all sessions have closed,
+    // which depends on the worker threads receiving "peer closed" for the clients created in
+    // the tests.
     if (manager_) {
-      EXPECT_EQ(manager_->GetSessionCount(), 0ul);
+      EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return manager_->GetSessionCount() == 0; }));
     }
 
     auto snapshot = uber_struct_system_->Snapshot();
@@ -169,10 +171,10 @@ namespace test {
 
 TEST_F(FlatlandManagerTest, CreateFlatlands) {
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1;
-  manager_->CreateFlatland(flatland1.NewRequest());
+  manager_->CreateFlatland(flatland1.NewRequest(dispatcher()));
 
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2;
-  manager_->CreateFlatland(flatland2.NewRequest());
+  manager_->CreateFlatland(flatland2.NewRequest(dispatcher()));
 
   RunLoopUntilIdle();
 
@@ -184,7 +186,7 @@ TEST_F(FlatlandManagerTest, CreateFlatlands) {
 
 TEST_F(FlatlandManagerTest, ManagerDiesBeforeClients) {
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
-  manager_->CreateFlatland(flatland.NewRequest());
+  manager_->CreateFlatland(flatland.NewRequest(dispatcher()));
 
   RunLoopUntilIdle();
 
@@ -202,7 +204,7 @@ TEST_F(FlatlandManagerTest, ManagerDiesBeforeClients) {
 TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {
   // Setup a Flatland instance with an OnPresentTokensReturned() callback.
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
-  manager_->CreateFlatland(flatland.NewRequest());
+  manager_->CreateFlatland(flatland.NewRequest(dispatcher()));
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens = 0;
@@ -219,7 +221,7 @@ TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {
 TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
   // Setup two Flatland instances with OnPresentTokensReturned() callbacks.
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1;
-  manager_->CreateFlatland(flatland1.NewRequest());
+  manager_->CreateFlatland(flatland1.NewRequest(dispatcher()));
   const scheduling::SessionId id1 = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens1 = 0;
@@ -228,7 +230,7 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
   };
 
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2;
-  manager_->CreateFlatland(flatland2.NewRequest());
+  manager_->CreateFlatland(flatland2.NewRequest(dispatcher()));
   const scheduling::SessionId id2 = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens2 = 0;
@@ -300,7 +302,7 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
 TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   // Setup a Flatland instance with an OnPresentTokensReturned() callback.
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
-  manager_->CreateFlatland(flatland.NewRequest());
+  manager_->CreateFlatland(flatland.NewRequest(dispatcher()));
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t tokens_remaining = 1;
@@ -322,13 +324,16 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   // Present one more time and ensure the session is closed.
   PRESENT(flatland, id, false);
 
-  EXPECT_FALSE(flatland.is_bound());
+  // The instance will eventually be unbound, but it takes a pair of thread hops to complete since
+  // the destroy_instance_function() posts a task from the worker to the main and that task
+  // ultimately posts the destruction back onto the worker.
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&flatland]() { return !flatland.is_bound(); }));
 }
 
 TEST_F(FlatlandManagerTest, OnFramePresentedEvent) {
   // Setup two Flatland instances with OnFramePresented() callbacks.
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1;
-  manager_->CreateFlatland(flatland1.NewRequest());
+  manager_->CreateFlatland(flatland1.NewRequest(dispatcher()));
   const scheduling::SessionId id1 = uber_struct_system_->GetLatestInstanceId();
 
   std::optional<fuchsia::scenic::scheduling::FramePresentedInfo> info1;
@@ -336,7 +341,7 @@ TEST_F(FlatlandManagerTest, OnFramePresentedEvent) {
       [&info1](fuchsia::scenic::scheduling::FramePresentedInfo info) { info1 = std::move(info); };
 
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2;
-  manager_->CreateFlatland(flatland2.NewRequest());
+  manager_->CreateFlatland(flatland2.NewRequest(dispatcher()));
   const scheduling::SessionId id2 = uber_struct_system_->GetLatestInstanceId();
 
   std::optional<fuchsia::scenic::scheduling::FramePresentedInfo> info2;

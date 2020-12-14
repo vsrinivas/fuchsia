@@ -16,11 +16,11 @@ FlatlandManager::FlatlandManager(
     const std::shared_ptr<UberStructSystem>& uber_struct_system,
     const std::shared_ptr<LinkSystem>& link_system,
     const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers)
-    : dispatcher_(dispatcher),
-      flatland_presenter_(flatland_presenter),
+    : flatland_presenter_(flatland_presenter),
       uber_struct_system_(uber_struct_system),
       link_system_(link_system),
-      buffer_collection_importers_(buffer_collection_importers) {}
+      buffer_collection_importers_(buffer_collection_importers),
+      executor_(dispatcher) {}
 
 void FlatlandManager::CreateFlatland(
     fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request) {
@@ -33,8 +33,7 @@ void FlatlandManager::CreateFlatland(
   FX_DCHECK(status == ZX_OK);
 
   // Allocate the worker Loop first so that the Flatland impl can be bound to it's dispatcher.
-  auto result =
-      flatland_instances_.emplace(id, std::make_unique<FlatlandInstance>(request.channel()));
+  auto result = flatland_instances_.emplace(id, std::make_unique<FlatlandInstance>());
   FX_DCHECK(result.second);
 
   auto& instance = result.first->second;
@@ -43,14 +42,6 @@ void FlatlandManager::CreateFlatland(
       std::bind(&FlatlandManager::DestroyInstanceFunction, this, id), flatland_presenter_,
       link_system_, uber_struct_system_->AllocateQueueForSession(id), buffer_collection_importers_,
       std::move(sysmem_allocator));
-
-  // Run the waiter on the main thread, not the instance thread, so that it can clean up and join
-  // the instance thread.
-  status = instance->peer_closed_waiter.Begin(
-      dispatcher_,
-      [this, id](async_dispatcher_t* dispatcher, async::WaitOnce* wait, zx_status_t status,
-                 const zx_packet_signal_t* signal) { this->RemoveFlatlandInstance(id); });
-  FX_DCHECK(status == ZX_OK);
 
   const std::string name = "Flatland ID=" + std::to_string(id);
   status = instance->loop.StartThread(name.c_str());
@@ -143,15 +134,10 @@ void FlatlandManager::RemoveFlatlandInstance(scheduling::SessionId session_id) {
 }
 
 void FlatlandManager::DestroyInstanceFunction(scheduling::SessionId session_id) {
-  // Cancel the wait associated with this Flatland instance since its destruction has already been
-  // triggered.
-  auto instance_kv = flatland_instances_.find(session_id);
-  FX_DCHECK(instance_kv != flatland_instances_.end());
-  instance_kv->second->peer_closed_waiter.Cancel();
-
   // This function is called on the Flatland instance thread, but the instance removal must be
-  // triggered from the main thread.
-  async::PostTask(dispatcher_, [this, session_id] { this->RemoveFlatlandInstance(session_id); });
+  // triggered from the main thread since it accesses and modifies the |flatland_instances_| map.
+  executor_.schedule_task(
+      fit::make_promise([this, session_id] { this->RemoveFlatlandInstance(session_id); }));
 }
 
 }  // namespace flatland

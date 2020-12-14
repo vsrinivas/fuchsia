@@ -8,6 +8,7 @@
 #include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/binding.h>
 
 #include <map>
@@ -53,7 +54,6 @@ class FlatlandManager : public scheduling::SessionUpdater {
   // Removes the Flatland instance associated with |session_id|.
   void RemoveFlatlandInstance(scheduling::SessionId session_id);
 
-  async_dispatcher_t* dispatcher_;
   std::shared_ptr<FlatlandPresenter> flatland_presenter_;
   std::shared_ptr<UberStructSystem> uber_struct_system_;
   std::shared_ptr<LinkSystem> link_system_;
@@ -71,19 +71,15 @@ class FlatlandManager : public scheduling::SessionUpdater {
     // before |peer_closed_waiter| so that the Wait is destroyed, and therefore cancelled, before
     // the impl is destroyed in the default destruction order.
     std::shared_ptr<Flatland> impl;
-
-    // Waits for the invalidation of the bound channel on the main thread to perform cleanup for
-    // clients that have closed their connections. Uses WaitOnce since the handler will delete
-    // this FlatlandInstance.
-    async::WaitOnce peer_closed_waiter;
-
-    // The |channel| for the request that will be used to construct |impl|.
-    explicit FlatlandInstance(const zx::channel& channel)
-        : peer_closed_waiter(channel.get(), ZX_CHANNEL_PEER_CLOSED) {}
   };
 
   // FlatlandInstances must be dynamically allocated because fidl::Binding is not movable.
   std::unordered_map<scheduling::SessionId, std::unique_ptr<FlatlandInstance>> flatland_instances_;
+
+  // Stores and executes async tasks on the dispatcher provided in this object's constructor. This
+  // object is the final member of this class to ensure that async tasks are cancelled and
+  // destroyed first during destruction, else they might access already-destroyed members.
+  async::Executor executor_;
 
   // Sends |num_present_tokens| to a particular Flatland |instance|.
   void SendPresentTokens(FlatlandInstance* instance, uint32_t num_present_tokens);

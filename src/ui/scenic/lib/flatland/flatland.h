@@ -45,9 +45,14 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   using BufferCollectionId = uint64_t;
   using ContentId = uint64_t;
 
-  // Passing the same LinkSystem and UberStructSystem to multiple Flatland instances will allow
-  // them to link to each other through operations that involve tokens and parent/child
-  // relationships (e.g., by calling LinkToParent() and CreateLink()).
+  // Binds this Flatland object to serve |request| on |dispatcher|. The |destroy_instance_function|
+  // will be invoked from the Looper that owns |dispatcher| when this object is ready to be cleaned
+  // up (e.g. when the client closes their side of the channel or encounters makes an unrecoverable
+  // API call error).
+  //
+  // |flatland_presenter|, |link_system|, |uber_struct_queue|, and |buffer_collection_importers|
+  // allow this Flatland object to access resources shared by all Flatland instances for actions
+  // like frame scheduling, linking, buffer allocation, and presentation to the global scene graph.
   explicit Flatland(
       async_dispatcher_t* dispatcher,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
@@ -143,6 +148,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
 
  private:
   void ReportError();
+  void CloseConnection();
 
   // The dispatcher this Flatland instance is running on.
   async_dispatcher_t* dispatcher_;
@@ -162,6 +168,10 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // only wait on peer channel destruction, not "this" channel destruction, so the FlatlandManager
   // cannot detect if this instance closes |binding_|.
   std::function<void()> destroy_instance_function_;
+
+  // Waits for the invalidation of the bound channel, then triggers the destruction of this client.
+  // Uses WaitOnce since calling the handler will result in the destruction of this object.
+  async::WaitOnce peer_closed_waiter_;
 
   // A Present2Helper to facilitate sendng the appropriate OnFramePresented() callback to FIDL
   // clients when frames are presented to the display.
