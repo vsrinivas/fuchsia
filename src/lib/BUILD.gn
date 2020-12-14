@@ -78,6 +78,7 @@ group("tests") {
     "fidl_codec:tests",
     "fidl_table_validation:tests",
     "files:tests",
+    "framebuffer:tests",
     "fuchsia-async:tests",
     "fuchsia-async-testloop:tests",
     "fuchsia-component:tests",

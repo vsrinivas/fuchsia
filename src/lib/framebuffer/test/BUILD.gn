@@ -14,9 +14,10 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/components.gni")
 
 test("framebuffer-test") {
-  output_name = "framebuffer-test-test"
+  output_name = "framebuffer-test"
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -41,6 +42,18 @@ group("test") {
 }
 
 bootfs_test("framebuffer-test-bootfs-test") {
-  name = "framebuffer-test-test"
+  name = "framebuffer-test"
   deps = [ ":framebuffer-test" ]
+}
+
+fuchsia_component("framebuffer-test-component") {
+  component_name = "framebuffer-test"
+  testonly = true
+  manifest = "meta/framebuffer-test.cmx"
+  deps = [ ":framebuffer-test" ]
+}
+
+fuchsia_test_package("framebuffer-test-package") {
+  package_name = "framebuffer-test"
+  test_components = [ ":framebuffer-test-component" ]
 }

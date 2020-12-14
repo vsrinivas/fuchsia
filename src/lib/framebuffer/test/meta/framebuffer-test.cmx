@@ -1,0 +1,23 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysmem.Allocator"
+            ]
+        }
+    },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/framebuffer-test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/display-controller"
+        ],
+        "services": [
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}

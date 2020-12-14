@@ -14,6 +14,11 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/unification/zx_library.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ "test:framebuffer-test-package" ]
+}
+
 zx_library("framebuffer") {
   sdk = "static"
   sdk_headers = [ "lib/framebuffer/framebuffer.h" ]
