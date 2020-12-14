@@ -42,34 +42,38 @@ import 'package:flutter_driver/driver_extension.dart';
         (args.main_package, args.main))
     outfile.write(
         '''
-void main() async {
-  assert((()  {
+void main(List<String> args) async {
+  // TODO(awdavies): Use the logger instead.
+  print('Overriding app main method because flutter_driver_extendable '
+      'is enabled in the build file');
+
+  try {
+    // Enables Flutter Driver VM service extension
+    //
+    // This extension is required for tests that use package:flutter_driver
+    // to drive applications from a separate process.
+    enableFlutterDriverExtension();
+
     // TODO(awdavies): Use the logger instead.
-    print('Overriding app main method because flutter_driver_extendable '
-        'is enabled in the build file');
+    print('flutter driver extensions enabled.');
+    //ignore: avoid_catches_without_on_clauses
+  } catch (e) {
+    // TODO(awdavies): Use the logger instead.
+    // Noop.
+    print('flutter driver extensions not enabled. $e');
+  }
 
-    try {
-      // Enables Flutter Driver VM service extension
-      //
-      // This extension is required for tests that use package:flutter_driver
-      // to drive applications from a separate process.
-      enableFlutterDriverExtension();
-
-      // TODO(awdavies): Use the logger instead.
-      print('flutter driver extensions enabled.');
-      //ignore: avoid_catches_without_on_clauses
-    } catch (e) {
-      // TODO(awdavies): Use the logger instead.
-      // Noop.
-      print('flutter driver extensions not enabled. $e');
-    }
-    // Always return true so that the assert succeeds.
-    return true;
-  }()));
   // Execute the main method of the app under test
-  var res = (flutter_app_main.main as dynamic)();
-  if (res != null && res is Future) {
-    await res;
+  try {
+    var res = (flutter_app_main.main as dynamic)(args);
+    if (res != null && res is Future) {
+      await res;
+    }
+  } on NoSuchMethodError catch(_) {
+    var res = (flutter_app_main.main as dynamic)();
+    if (res != null && res is Future) {
+      await res;
+    }
   }
 }
 ''')

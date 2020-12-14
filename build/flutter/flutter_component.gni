@@ -123,11 +123,8 @@ template("flutter_component") {
   }
 
   _flutter_driver_extendable = false
-  if (_build_cfg.is_aot) {
-    not_needed(invoker, [ "flutter_driver_extendable" ])
-  } else if (defined(invoker.flutter_driver_extendable)) {
-    # flutter driver is only available to JIT builds
-    _flutter_driver_extendable = invoker.flutter_driver_extendable && is_debug
+  if (defined(invoker.flutter_driver_extendable)) {
+    _flutter_driver_extendable = invoker.flutter_driver_extendable
   }
 
   if (_flutter_driver_extendable) {
