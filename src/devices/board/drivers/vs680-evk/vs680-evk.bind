@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 using fuchsia.platform;
+using fuchsia.google.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.BUS;
-fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.GOOGLE;
-fuchsia.BIND_PLATFORM_DEV_PID == 0x0B;  // PDEV_PID_VS680_EVK
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE;
+fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.google.platform.BIND_PLATFORM_DEV_PID.VS680_EVK;

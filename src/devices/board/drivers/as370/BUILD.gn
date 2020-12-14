@@ -9,7 +9,10 @@ bind_rules("as370-bind") {
   rules = "as370.bind"
   output = "as370-bind.h"
   tests = "as370-bind-test.json"
-  deps = [ "//src/devices/bind/fuchsia.platform" ]
+  deps = [
+    "//src/devices/bind/fuchsia.google.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
 }
 
 driver_module("as370") {

@@ -16,7 +16,6 @@ extend uint fuchsia.BIND_PROTOCOL {
 extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   GENERIC = 0,
   QEMU = 1,
-  GOOGLE = 3,
   DESIGNWARE = 12,
   MEDIATEK = 13,
   TI = 16,

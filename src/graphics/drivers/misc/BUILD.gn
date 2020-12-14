@@ -15,5 +15,6 @@ group("tests") {
   deps = [
     "goldfish:tests",
     "goldfish_address_space:tests",
+    "goldfish_control:tests",
   ]
 }

@@ -4,8 +4,8 @@
         "expected": "match",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.BUS",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
-            "fuchsia.BIND_PLATFORM_DEV_PID": "0x0B"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.VS680_EVK"
         }
     },
     {
@@ -13,8 +13,8 @@
         "expected": "abort",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
-            "fuchsia.BIND_PLATFORM_DEV_PID": "0x0B"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.VS680_EVK"
         }
     }
 ]
