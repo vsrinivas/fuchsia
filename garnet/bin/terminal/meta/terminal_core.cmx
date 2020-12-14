@@ -1,6 +1,7 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/application.shard.cmx"
     ],
     "program": {
         "binary": "bin/terminal"
@@ -16,8 +17,7 @@
         ],
         "features": [
             "hub",
-            "shell-commands",
-            "vulkan"
+            "shell-commands"
         ],
         "pkgfs": [
             "packages"
@@ -37,10 +37,8 @@
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
             "fuchsia.sys.index.FuzzySearch",
-            "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.update.Manager",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.update.Manager"
         ]
     }
 }
