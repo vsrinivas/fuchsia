@@ -19,3 +19,31 @@ zbi_result_t AppendCurrentSlotZbiItem(zbi_header_t* image, size_t capacity, AbrS
   return zbi_create_entry_with_payload(image, capacity, ZBI_TYPE_CMDLINE, 0, 0, buffer,
                                        sizeof(buffer));
 }
+
+zbi_result_t AppendZbiFile(zbi_header_t* zbi, size_t capacity, const char* name,
+                           const void* file_data, size_t file_data_size) {
+  size_t name_len = strlen(name);
+  if (name_len > 0xFFU) {
+    zircon_boot_dlog("ZBI filename too long");
+    return ZBI_RESULT_ERROR;
+  }
+
+  size_t payload_length = 1 + name_len + file_data_size;
+  if (payload_length < file_data_size) {
+    zircon_boot_dlog("ZBI file data too large");
+    return ZBI_RESULT_TOO_BIG;
+  }
+
+  uint8_t* payload = NULL;
+  zbi_result_t result = zbi_create_entry(zbi, capacity, ZBI_TYPE_BOOTLOADER_FILE, 0, 0,
+                                         payload_length, (void**)&payload);
+  if (result != ZBI_RESULT_OK) {
+    zircon_boot_dlog("Failed to create ZBI file entry: %d\n", result);
+    return result;
+  }
+  payload[0] = (uint8_t)name_len;
+  memcpy(&payload[1], name, name_len);
+  memcpy(&payload[1 + name_len], file_data, file_data_size);
+
+  return ZBI_RESULT_OK;
+}

@@ -12,6 +12,7 @@ group("test") {
 test("firmware_zircon_boot_test") {
   sources = [
     "mock_zircon_boot_ops.cc",
+    "zbi_utils.cc",
     "zircon_boot.cc",
   ]
   deps = [
