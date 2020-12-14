@@ -36,18 +36,6 @@ declare_args() {
   # attributing code generation bugs.
   #
   graphics_compute_skip_spirv_opt = true
-
-  # The glslangValidator compiler is noisy by default.  A cleanly
-  # compiling shader still prints out its filename.
-  #
-  # This negatively impacts the GN build.
-  #
-  # For this reason, we silence the compiler with the "-s" option but
-  # unfortunately this also disables all error reporting.
-  #
-  # Set to true to see detailed error reporting.
-  #
-  graphics_compute_verbose_compile = false
 }
 
 # Generate a human-readable version of a set of compute shaders.
@@ -149,12 +137,8 @@ template("graphics_compute_compile_glsl_shader_foreach") {
                            ])
     tool = graphics_compute_glslangValidator_tool_target
     outputs = [ "${_output_dir}/spv/{{source_name_part}}.spv" ]
-    if (graphics_compute_verbose_compile) {
-      args = []
-    } else {
-      args = [ "-s" ]
-    }
-    args += [
+    args = [
+      "--quiet",
       "-o",
       rebase_path(outputs[0], root_build_dir),
       "{{source}}",
