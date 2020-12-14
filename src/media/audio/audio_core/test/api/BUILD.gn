@@ -145,6 +145,7 @@ fuchsia_test_package("audio-core-api-tests") {
   test_components = [
     ":activity-reporter-test",
     ":audio-capturer-test",
+
     # TODO(fxbug.dev/62126): Temporarily disabled
     #":audio-device-enumerator-test",
     ":audio-renderer-test",
