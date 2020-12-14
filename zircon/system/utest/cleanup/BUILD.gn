@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("cleanup") {
   output_name = "cleanup-test"
@@ -26,7 +26,13 @@ test("cleanup") {
   ]
 }
 
-bootfs_test("cleanup-bootfs-test") {
-  name = "cleanup-test"
+fuchsia_unittest_package("cleanup-test-pkg") {
+  package_name = "cleanup-test"
+  executable_path = "test/cleanup-test"
   deps = [ ":cleanup" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":cleanup-test-pkg" ]
 }

@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("cprng") {
   output_name = "cprng-test"
@@ -25,7 +25,13 @@ test("cprng") {
   ]
 }
 
-bootfs_test("cprng-bootfs-test") {
-  name = "cprng-test"
+fuchsia_unittest_package("cprng-test-pkg") {
+  package_name = "cprng-test"
+  executable_path = "test/cprng-test"
   deps = [ ":cprng" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":cprng-test-pkg" ]
 }

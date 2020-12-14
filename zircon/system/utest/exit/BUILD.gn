@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("exit") {
   output_name = "exit-test"
@@ -29,7 +29,13 @@ test("exit") {
   ]
 }
 
-bootfs_test("exit-bootfs-test") {
-  name = "exit-test"
+fuchsia_unittest_package("exit-test-pkg") {
+  package_name = "exit-test"
+  executable_path = "test/exit-test"
   deps = [ ":exit" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":exit-test-pkg" ]
 }

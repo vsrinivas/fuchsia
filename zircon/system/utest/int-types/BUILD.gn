@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("int-types") {
   output_name = "int-types-test"
@@ -41,7 +41,13 @@ config("config") {
   cflags = [ "-Wno-type-limits" ]
 }
 
-bootfs_test("int-types-bootfs-test") {
-  name = "int-types-test"
+fuchsia_unittest_package("int-types-test-pkg") {
+  package_name = "int-types-test"
+  executable_path = "test/int-types-test"
   deps = [ ":int-types" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":int-types-test-pkg" ]
 }

@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("qsort") {
   output_name = "qsort-test"
@@ -25,7 +25,13 @@ test("qsort") {
   ]
 }
 
-bootfs_test("qsort-bootfs-test") {
-  name = "qsort-test"
+fuchsia_unittest_package("qsort-test-pkg") {
+  package_name = "qsort-test"
+  executable_path = "test/qsort-test"
   deps = [ ":qsort" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":qsort-test-pkg" ]
 }

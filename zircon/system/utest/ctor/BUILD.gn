@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("ctor") {
   output_name = "ctor-test"
@@ -34,7 +34,13 @@ shared_library("dso-ctor") {
   deps = [ "//zircon/system/ulib/unittest" ]
 }
 
-bootfs_test("ctor-bootfs-test") {
-  name = "ctor-test"
+fuchsia_unittest_package("ctor-test-pkg") {
+  package_name = "ctor-test"
+  executable_path = "test/ctor-test"
   deps = [ ":ctor" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":ctor-test-pkg" ]
 }

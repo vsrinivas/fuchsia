@@ -14,6 +14,7 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 # Common pieces.
 source_set("common") {
@@ -97,7 +98,13 @@ bootfs_test("trace-bootfs-test") {
   deps = [ ":trace" ]
 }
 
-bootfs_test("trace-static-engine-bootfs-test") {
-  name = "trace-static-engine"
+fuchsia_unittest_package("trace-static-engine-test-pkg") {
+  package_name = "trace-static-engine"
+  executable_path = "test/trace-static-engine"
   deps = [ ":trace-static-engine" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":trace-static-engine-test-pkg" ]
 }

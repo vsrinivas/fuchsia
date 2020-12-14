@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("cmdline") {
   output_name = "cmdline-test"
@@ -29,7 +29,13 @@ test("cmdline") {
   ]
 }
 
-bootfs_test("cmdline-bootfs-test") {
-  name = "cmdline-test"
+fuchsia_unittest_package("cmdline-test-pkg") {
+  package_name = "cmdline-test"
+  executable_path = "test/cmdline-test"
   deps = [ ":cmdline" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":cmdline-test-pkg" ]
 }

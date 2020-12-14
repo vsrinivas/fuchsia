@@ -10,15 +10,36 @@
 group("tests") {
   testonly = true
   deps = [
+    "cleanup:tests",
+    "cmdline:tests",
     "cmdline($host_toolchain)",
+    "compiler:tests",
+    "cprng:tests",
+    "ctor:tests",
     "dash",
+    "dlopen-indirect-deps:tests",
+    "errno:tests",
+    "exit:tests",
+    "fidl-utils:tests",
+    "fpu:tests",
     "fs-management:tests",
     "fs-recovery:tests",
     "fs-test-utils:tests",
     "fvm:tests",
+    "getentropy:tests",
+    "inspector:tests",
+    "int-types:tests",
     "libc:tests",
+    "logger:tests",
+    "posixio:tests",
+    "psutils:tests",
+    "qsort:tests",
     "service:tests",
     "stdio:stdio-test-package",
+    "syscall-generation:tests",
+    "sysconf:tests",
+    "thread-safe-deleter:tests",
+    "trace:tests",
   ]
   if (current_os == "linux") {
     deps += [

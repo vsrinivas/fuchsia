@@ -14,7 +14,7 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("fidl-utils") {
   output_name = "fidl-utils-test"
@@ -41,7 +41,13 @@ fidl("fidl.test.fidlutils") {
   sources = [ "binding_tests.fidl" ]
 }
 
-bootfs_test("fidl-utils-bootfs-test") {
-  name = "fidl-utils-test"
+fuchsia_unittest_package("fidl-utils-test-pkg") {
+  package_name = "fidl-utils-test"
+  executable_path = "test/fidl-utils-test"
   deps = [ ":fidl-utils" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fidl-utils-test-pkg" ]
 }

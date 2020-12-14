@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("getentropy") {
   output_name = "getentropy-test"
@@ -25,7 +25,13 @@ test("getentropy") {
   ]
 }
 
-bootfs_test("getentropy-bootfs-test") {
-  name = "getentropy-test"
+fuchsia_unittest_package("getentropy-test-pkg") {
+  package_name = "getentropy-test"
+  executable_path = "test/getentropy-test"
   deps = [ ":getentropy" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":getentropy-test-pkg" ]
 }

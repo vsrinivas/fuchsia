@@ -14,6 +14,7 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("psutils") {
   testonly = true
@@ -49,12 +50,18 @@ test("handles") {
   ]
 }
 
-bootfs_test("handles-bootfs-test") {
-  name = "handles-test"
-  deps = [ ":handles" ]
-}
-
 bootfs_test("ps-bootfs-test") {
   name = "ps-test"
   deps = [ ":ps" ]
+}
+
+fuchsia_unittest_package("handles-test-pkg") {
+  package_name = "handles-test"
+  executable_path = "test/handles-test"
+  deps = [ ":handles" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":handles-test-pkg" ]
 }

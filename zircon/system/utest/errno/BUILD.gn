@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("errno") {
   output_name = "errno-test"
@@ -26,7 +26,13 @@ test("errno") {
   ]
 }
 
-bootfs_test("errno-bootfs-test") {
-  name = "errno-test"
+fuchsia_unittest_package("errno-test-pkg") {
+  package_name = "errno-test"
+  executable_path = "test/errno-test"
   deps = [ ":errno" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":errno-test-pkg" ]
 }

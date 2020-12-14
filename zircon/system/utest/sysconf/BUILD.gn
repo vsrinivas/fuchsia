@@ -13,7 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("sysconf") {
   output_name = "sysconf-test"
@@ -25,7 +25,13 @@ test("sysconf") {
   ]
 }
 
-bootfs_test("sysconf-bootfs-test") {
-  name = "sysconf-test"
+fuchsia_unittest_package("sysconf-test-pkg") {
+  package_name = "sysconf-test"
+  executable_path = "test/sysconf-test"
   deps = [ ":sysconf" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":sysconf-test-pkg" ]
 }
