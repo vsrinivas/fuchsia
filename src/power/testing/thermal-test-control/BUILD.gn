@@ -18,10 +18,10 @@ executable("thermal_test_control_bin") {
   sources = [ "thermal_test_control.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.thermal",
-    "//sdk/fidl/fuchsia.thermal.test",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/power/fidl/testing:test.thermal",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

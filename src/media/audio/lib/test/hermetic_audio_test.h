@@ -5,12 +5,15 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_TEST_HERMETIC_AUDIO_TEST_H_
 #define SRC_MEDIA_AUDIO_LIB_TEST_HERMETIC_AUDIO_TEST_H_
 
+#include <fuchsia/thermal/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/device/audio.h>
 
 #include <queue>
 #include <unordered_map>
 #include <unordered_set>
+
+#include <test/thermal/cpp/fidl.h>
 
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/test/capturer_shim.h"
@@ -105,6 +108,8 @@ class HermeticAudioTest : public TestFixture {
   fuchsia::media::AudioCorePtr audio_core_;
   fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
 
+  ::test::thermal::ControlSyncPtr& thermal_test_control() { return thermal_test_control_sync_; }
+
  private:
   // Configurable for an entire test suite by calling `SetUpTestSuiteWithOptions()`.
   static std::optional<HermeticAudioEnvironment::Options> test_suite_options_;
@@ -141,6 +146,8 @@ class HermeticAudioTest : public TestFixture {
 
   std::unique_ptr<HermeticAudioEnvironment> environment_;
   fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync_;
+  fuchsia::thermal::ControllerPtr thermal_controller_;
+  ::test::thermal::ControlSyncPtr thermal_test_control_sync_;
   fuchsia::ultrasound::FactoryPtr ultrasound_factory_;
 
   size_t capturer_shim_next_inspect_id_ = 1;

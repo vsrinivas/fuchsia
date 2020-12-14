@@ -5,7 +5,9 @@
 #include "src/media/audio/lib/test/hermetic_fidelity_test.h"
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/thermal/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/types.h>
 
 #include <array>
 #include <cmath>
@@ -14,6 +16,9 @@
 #include <set>
 #include <string>
 
+#include <test/thermal/cpp/fidl.h>
+
+#include "lib/zx/time.h"
 #include "src/media/audio/lib/analysis/analysis.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
@@ -27,30 +32,37 @@ namespace {
 struct ResultsIndex {
   HermeticFidelityTest::RenderPath path;
   size_t channel;
+  uint32_t thermal_state;
 
   bool operator<(const ResultsIndex& rhs) const {
-    return std::tie(path, channel) < std::tie(rhs.path, rhs.channel);
+    return std::tie(path, channel, thermal_state) <
+           std::tie(rhs.path, rhs.channel, rhs.thermal_state);
   }
 };
+
 };  // namespace
 
-// For each path|channel, we maintain results arrays for Frequency Response and for Sinad.
-// A map of these array results is saved as a function-local static variable. If
-// kRetainWorstCaseResults is set, we persist results across repeated test runs.
+// For each path|channel|thermal_state, we maintain two results arrays: Frequency Response and
+// Signal-to-Noise-and-Distortion (sinad). A map of array results is saved as a function-local
+// static variable. If kRetainWorstCaseResults is set, we persist results across repeated test runs.
 //
-// Note: two test cases must not collide on the same path/channel. Thus, this must be refactored if
-// two test cases need to specify the same path and output_channels (e.g. Dynamic Range testing that
-// runs these same tests at different volumes).
+// Note: two test cases must not collide on the same path/channel/thermal_state. Thus, this must be
+// refactored if two test cases need to specify the same path|output_channels|thermal_state (an
+// example would be Dynamic Range testing -- the same measurements, but at different volumes).
 
 // static
 // Retrieve (initially allocating, if necessary) the array of level results for this path|channel.
 std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& HermeticFidelityTest::level_results(
-    RenderPath path, size_t channel) {
+    RenderPath path, size_t channel, uint32_t thermal_state) {
   // Allocated only when first needed, and automatically cleaned up when process exits.
   static auto results_level_db =
       new std::map<ResultsIndex, std::array<double, HermeticFidelityTest::kNumReferenceFreqs>>();
 
-  ResultsIndex index{.path = path, .channel = channel};
+  ResultsIndex index{
+      .path = path,
+      .channel = channel,
+      .thermal_state = thermal_state,
+  };
   if (results_level_db->find(index) == results_level_db->end()) {
     auto& results = (*results_level_db)[index];
     std::fill(results.begin(), results.end(), std::numeric_limits<double>::infinity());
@@ -63,12 +75,16 @@ std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& HermeticFidelityTe
 // Retrieve (initially allocating, if necessary) the array of sinad results for this path|channel.
 // A map of these array results is saved as a function-local static variable.
 std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& HermeticFidelityTest::sinad_results(
-    RenderPath path, size_t channel) {
+    RenderPath path, size_t channel, uint32_t thermal_state) {
   // Allocated only when first needed, and automatically cleaned up when process exits.
   static auto results_sinad_db =
       new std::map<ResultsIndex, std::array<double, HermeticFidelityTest::kNumReferenceFreqs>>();
 
-  ResultsIndex index{.path = path, .channel = channel};
+  ResultsIndex index{
+      .path = path,
+      .channel = channel,
+      .thermal_state = thermal_state,
+  };
   if (results_sinad_db->find(index) == results_sinad_db->end()) {
     auto& results = (*results_sinad_db)[index];
     std::fill(results.begin(), results.end(), std::numeric_limits<double>::infinity());
@@ -118,6 +134,58 @@ void HermeticFidelityTest::TranslateReferenceFrequencies(uint32_t device_frame_r
   }
 }
 
+// Retrieve the number of thermal subscribers, and set them all to the specified thermal state.
+// thermal_test_control is synchronous: when SetThermalState returns, a change is committed.
+zx_status_t HermeticFidelityTest::ConfigurePipelineForThermal(uint32_t state) {
+  constexpr size_t kMaxRetries = 100;
+  constexpr zx::duration kRetryPeriod = zx::msec(10);
+
+  std::optional<size_t> audio_subscriber;
+
+  std::vector<::test::thermal::SubscriberInfo> subscriber_data;
+  // We might query thermal::test::Control before AudioCore has subscribed, so wait for it.
+  for (size_t retries = 0u; retries < kMaxRetries; ++retries) {
+    auto status = thermal_test_control()->GetSubscriberInfo(&subscriber_data);
+    if (status != ZX_OK) {
+      ADD_FAILURE() << "GetSubscriberInfo failed: " << status;
+      return status;
+    }
+
+    // There is only one thermal subscriber for audio; there might be others of non-audio types.
+    for (auto subscriber_num = 0u; subscriber_num < subscriber_data.size(); ++subscriber_num) {
+      if (subscriber_data[subscriber_num].actor_type == fuchsia::thermal::ActorType::AUDIO) {
+        audio_subscriber = subscriber_num;
+        break;
+      }
+    }
+    if (audio_subscriber.has_value()) {
+      break;
+    }
+    zx::nanosleep(zx::deadline_after(kRetryPeriod));
+  }
+
+  if (!audio_subscriber.has_value()) {
+    ADD_FAILURE() << "No audio-related thermal subscribers. "
+                     "Don't set thermal_state if a pipeline has no thermal support";
+    return ZX_ERR_TIMED_OUT;
+  }
+
+  auto max_state = subscriber_data[audio_subscriber.value()].num_thermal_states - 1;
+  if (state > max_state) {
+    ADD_FAILURE() << "Subscriber cannot be put into thermal state " << state
+                  << " (max: " << max_state << ")";
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  auto status = this->thermal_test_control()->SetThermalState(audio_subscriber.value(), state);
+  if (status != ZX_OK) {
+    ADD_FAILURE() << "SetThermalState failed: " << status;
+    return status;
+  }
+
+  return ZX_OK;
+}
+
 template <ASF InputFormat, ASF OutputFormat>
 AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
     TypedFormat<InputFormat> input_format, size_t input_buffer_frames, RenderPath path,
@@ -155,20 +223,22 @@ void HermeticFidelityTest::DisplaySummaryResults(
   // Loop by channel, displaying summary results, in a separate loop from checking each result.
   for (const auto& channel_spec : test_case.channels_to_measure) {
     // Show results in tabular forms, for easy copy into hermetic_fidelity_results.cc.
-    const auto& chan_level_results_db = level_results(test_case.path, channel_spec.channel);
+    const auto& chan_level_results_db =
+        level_results(test_case.path, channel_spec.channel, test_case.thermal_state.value_or(0));
     printf("\n\tFull-spectrum Frequency Response - %s - output channel %zu",
            test_case.test_name.c_str(), channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
-      printf("%s%9.4f,", (freq_idx % 10 == 0 ? "\n" : ""),
+      printf("%s%8.3f,", (freq_idx % 10 == 0 ? "\n" : ""),
              floor(chan_level_results_db[freq_idx] / kFidelityDbTolerance) * kFidelityDbTolerance);
     }
     printf("\n");
 
-    const auto& chan_sinad_results_db = sinad_results(test_case.path, channel_spec.channel);
+    const auto& chan_sinad_results_db =
+        sinad_results(test_case.path, channel_spec.channel, test_case.thermal_state.value_or(0));
     printf("\n\tSignal-to-Noise and Distortion -   %s - output channel %zu",
            test_case.test_name.c_str(), channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
-      printf("%s%9.4f,", (freq_idx % 10 == 0 ? "\n" : ""),
+      printf("%s%8.3f,", (freq_idx % 10 == 0 ? "\n" : ""),
              floor(chan_sinad_results_db[freq_idx] / kFidelityDbTolerance) * kFidelityDbTolerance);
     }
     printf("\n\n");
@@ -179,7 +249,8 @@ template <ASF InputFormat, ASF OutputFormat>
 void HermeticFidelityTest::VerifyResults(const TestCase<InputFormat, OutputFormat>& test_case) {
   // Loop by channel_to_measure
   for (const auto& channel_spec : test_case.channels_to_measure) {
-    const auto& chan_level_results_db = level_results(test_case.path, channel_spec.channel);
+    const auto& chan_level_results_db =
+        level_results(test_case.path, channel_spec.channel, test_case.thermal_state.value_or(0));
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
       EXPECT_GE(chan_level_results_db[freq_idx],
                 channel_spec.freq_resp_lower_limits_db[freq_idx] - kFidelityDbTolerance)
@@ -189,7 +260,8 @@ void HermeticFidelityTest::VerifyResults(const TestCase<InputFormat, OutputForma
           << floor(chan_level_results_db[freq_idx] / kFidelityDbTolerance) * kFidelityDbTolerance;
     }
 
-    const auto& chan_sinad_results_db = sinad_results(test_case.path, channel_spec.channel);
+    const auto& chan_sinad_results_db =
+        sinad_results(test_case.path, channel_spec.channel, test_case.thermal_state.value_or(0));
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
       EXPECT_GE(chan_sinad_results_db[freq_idx],
                 channel_spec.sinad_lower_limits_db[freq_idx] - kFidelityDbTolerance)
@@ -251,6 +323,12 @@ void HermeticFidelityTest::Run(
 
   // Generate the device-rate-specific internal frequency values for our power-of-two-sized buffer.
   TranslateReferenceFrequencies(tc.output_format.frames_per_second());
+
+  if (tc.thermal_state.has_value()) {
+    if (ConfigurePipelineForThermal(tc.thermal_state.value()) != ZX_OK) {
+      return;
+    }
+  }
 
   //
   // Now iterate through the spectrum, completely processing one frequency at a time.
@@ -373,8 +451,10 @@ void HermeticFidelityTest::Run(
       }
 
       // Retrieve the arrays of measurements for this path and channel
-      auto& curr_level_db = level_results(tc.path, channel_spec.channel);
-      auto& curr_sinad_db = sinad_results(tc.path, channel_spec.channel);
+      auto& curr_level_db =
+          level_results(tc.path, channel_spec.channel, tc.thermal_state.value_or(0));
+      auto& curr_sinad_db =
+          sinad_results(tc.path, channel_spec.channel, tc.thermal_state.value_or(0));
       if constexpr (kRetainWorstCaseResults) {
         curr_level_db[freq_idx] = std::min(curr_level_db[freq_idx], level_db);
         curr_sinad_db[freq_idx] = std::min(curr_sinad_db[freq_idx], sinad_db);

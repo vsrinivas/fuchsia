@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/thermal/cpp/fidl.h>
-#include <fuchsia/thermal/test/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
@@ -13,7 +12,9 @@
 
 #include <vector>
 
-class ControllerImpl : public fuchsia::thermal::Controller, public fuchsia::thermal::test::Control {
+#include <test/thermal/cpp/fidl.h>
+
+class ControllerImpl : public fuchsia::thermal::Controller, public ::test::thermal::Control {
   struct Subscriber {
     fidl::InterfacePtr<fuchsia::thermal::Actor> actor;
     fuchsia::thermal::ActorType type;
@@ -34,19 +35,28 @@ class ControllerImpl : public fuchsia::thermal::Controller, public fuchsia::ther
     }
 
     auto interface = actor.Bind();
-    subscribers_.push_back(
-        {.actor = std::move(interface), .type = actor_type, .points = std::move(trip_points)});
+    interface.set_error_handler([](zx_status_t status) {
+      FX_PLOGS(ERROR, status) << "fuchsia::thermal::Actor disconnected";
+    });
+    subscribers_.push_back({
+        .actor = std::move(interface),
+        .type = actor_type,
+        .points = std::move(trip_points),
+    });
 
     callback({fit::ok()});
   }
 
-  void GetSupportedThermalStates(GetSupportedThermalStatesCallback callback) override {
-    std::vector<uint32_t> subscribers;
+  // For each thermal subscriber, return its type and number of supported thermal states.
+  void GetSubscriberInfo(GetSubscriberInfoCallback callback) override {
+    std::vector<::test::thermal::SubscriberInfo> subscribers;
 
-    // For each thermal subscriber, return the number of supported thermal states.
     for (auto i = 0u; i < subscribers_.size(); ++i) {
-      // All subscribers support thermal state 0, so 'N' trip_points implies 'N+1' thermal states.
-      subscribers.push_back(static_cast<uint32_t>(subscribers_[i].points.size() + 1));
+      subscribers.push_back({
+          .actor_type = subscribers_[i].type,
+          // All subscribers support state 0; 'N' trip_points implies 'N+1' thermal states.
+          .num_thermal_states = static_cast<uint32_t>(subscribers_[i].points.size() + 1),
+      });
     }
 
     callback(std::move(subscribers));
@@ -54,8 +64,13 @@ class ControllerImpl : public fuchsia::thermal::Controller, public fuchsia::ther
 
   void SetThermalState(uint32_t subscriber_index, uint32_t state,
                        SetThermalStateCallback callback) override {
-    FX_CHECK(subscriber_index < subscribers_.size());
-    FX_CHECK(state <= subscribers_[subscriber_index].points.size());
+    FX_CHECK(subscriber_index < subscribers_.size())
+        << "Subscriber index out of range (requested " << subscriber_index << " > max "
+        << subscribers_.size() - 1 << ")";
+
+    FX_CHECK(state <= subscribers_[subscriber_index].points.size())
+        << "Thermal state out of range (requested " << state << " > max "
+        << subscribers_[subscriber_index].points.size() - 1 << ")";
 
     subscribers_[subscriber_index].actor->SetThermalState(state,
                                                           [cbk = std::move(callback)]() { cbk(); });
@@ -80,9 +95,9 @@ int main(int argc, const char** argv) {
       };
   context->outgoing()->AddPublicService(std::move(thermal_handler));
 
-  fidl::Binding<fuchsia::thermal::test::Control> test_control_binding(&impl);
-  fidl::InterfaceRequestHandler<fuchsia::thermal::test::Control> test_control_handler =
-      [&](fidl::InterfaceRequest<fuchsia::thermal::test::Control> request) {
+  fidl::Binding<::test::thermal::Control> test_control_binding(&impl);
+  fidl::InterfaceRequestHandler<::test::thermal::Control> test_control_handler =
+      [&](fidl::InterfaceRequest<::test::thermal::Control> request) {
         test_control_binding.Bind(std::move(request));
       };
   context->outgoing()->AddPublicService(std::move(test_control_handler));

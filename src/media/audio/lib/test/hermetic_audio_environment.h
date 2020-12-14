@@ -57,6 +57,7 @@ class HermeticAudioEnvironment {
   enum ComponentType {
     kAudioCoreComponent,
     kVirtualAudioComponent,
+    kThermalTestControlComponent,
   };
 
   // Read the exported inspect info for the given component.

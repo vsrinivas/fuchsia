@@ -2,28 +2,38 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.thermal.test;
+library test.thermal;
+
+using fuchsia.thermal;
+
+struct SubscriberInfo {
+    /// A value to indicate which type of subsystem an Actor connection represents.
+    fuchsia.thermal.ActorType actor_type;
+
+    /// The number of states (including 0) supported by this subscriber.
+    uint32 num_thermal_states;
+};
 
 /// This arbitrarily-chosen value is the maximum number of entries in the vector
 /// `thermal_states_for_subscribers` returned by `GetSupportedThermalStates`.
 const uint32 MAX_SUBSCRIBER_COUNT = 256;
 
-/// fuchsia.thermal.test.Control
+/// test.thermal.Control
 ///
 /// This protocol enables tests to manipulate thermal states via a test service.
-/// A service would implement this protocol and fuchsia::thermal::Controller,
-/// and would be injected into the environment of the component under test. Once
+/// A service would implement both this protocol and fuchsia::thermal::Controller.
+/// It would be injected into the environment of the component under test. Once
 /// thermal actors have subscribed, a test suite would retrieve the number of
 /// subscribed thermal actors and their supported thermal states, and would
 /// directly trigger state-change commands sent to subscribed actors.
 [Discoverable]
 protocol Control {
-    /// Retrieve the number of thermal states (including 0) supported by each
-    /// subscriber, sorted by time of subscription (from earliest to latest).
-    GetSupportedThermalStates()
-        -> (vector<uint32>:MAX_SUBSCRIBER_COUNT thermal_states_for_subscribers);
+    /// Retrieve the subscriber type and the number of thermal states supported by
+    /// each subscriber, sorted by time of subscription (from earliest to latest).
+    GetSubscriberInfo()
+        -> (vector<SubscriberInfo>:MAX_SUBSCRIBER_COUNT subscribers);
 
-    /// Send a thermal state change to the subscriber at the specified index.
+    /// Send a thermal state change to the specified subscriber.
     /// This method's completion occurs only after its internal
     /// fuchsia.thermal.Agent.SetThermalState call has completed.
     SetThermalState(uint32 subscriber, uint32 state) -> ();

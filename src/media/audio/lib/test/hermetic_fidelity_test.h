@@ -56,6 +56,7 @@ class HermeticFidelityTest : public HermeticPipelineTest {
     PipelineConstants pipeline;
     uint32_t low_cut_frequency = 0;
     uint32_t low_pass_frequency = fuchsia::media::MAX_PCM_FRAMES_PER_SECOND;
+    std::optional<uint32_t> thermal_state = std::nullopt;
 
     TypedFormat<OutputFormat> output_format;
     const std::set<ChannelMeasurement> channels_to_measure;
@@ -106,9 +107,9 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   static inline double DoubleToDb(double val) { return std::log10(val) * 20.0; }
 
   static std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& level_results(
-      RenderPath path, size_t channel);
+      RenderPath path, size_t channel, uint32_t thermal_state);
   static std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& sinad_results(
-      RenderPath path, size_t channel);
+      RenderPath path, size_t channel, uint32_t thermal_state);
 
   void TranslateReferenceFrequencies(uint32_t device_frame_rate);
 
@@ -129,6 +130,9 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
   void VerifyResults(const TestCase<InputFormat, OutputFormat>& test_case);
+
+  // Change the output pipeline's thermal state, blocking until the state change completes.
+  zx_status_t ConfigurePipelineForThermal(uint32_t state);
 
  private:
   // Ref frequencies, internally translated to values corresponding to a buffer[kFreqTestBufSize].

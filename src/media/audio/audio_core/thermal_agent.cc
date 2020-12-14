@@ -98,14 +98,15 @@ std::unordered_map<std::string, std::vector<std::string>> PopulateTargetConfigur
 std::unique_ptr<ThermalAgent> ThermalAgent::CreateAndServe(Context* context) {
   auto& thermal_config = context->process_config().thermal_config();
   if (thermal_config.entries().empty()) {
-    // No thermal config so we don't start the thermal agent.
+    FX_LOGS(INFO) << "No thermal config found, so we won't start the thermal agent";
     return nullptr;
   }
   return std::make_unique<ThermalAgent>(
       context->component_context().svc()->Connect<fuchsia::thermal::Controller>(), thermal_config,
       context->process_config().device_config(),
       [context](const std::string& target_name, const std::string& config) {
-        auto promise = context->device_manager().UpdateEffect(target_name, config);
+        auto promise =
+            context->device_manager().UpdateEffect(target_name, config, true /* persist */);
         context->threading_model().FidlDomain().executor()->schedule_task(
             promise.then([target_name, config](
                              fit::result<void, fuchsia::media::audio::UpdateEffectError>& result) {
@@ -132,7 +133,7 @@ ThermalAgent::ThermalAgent(fuchsia::thermal::ControllerPtr thermal_controller,
   FX_DCHECK(set_config_callback_);
 
   if (thermal_config.entries().empty()) {
-    // No thermal config. Nothing to do.
+    FX_LOGS(ERROR) << "No thermal config, so we won't start the thermal agent";
     thermal_controller_ = nullptr;
     return;
   }
@@ -164,21 +165,31 @@ ThermalAgent::ThermalAgent(fuchsia::thermal::ControllerPtr thermal_controller,
       });
 }
 
+// Handle a thermal state change from fuchsia::thermal::Controller.
+// After doing the actual work, update our telemetry and invoke the FIDL completion.
 void ThermalAgent::SetThermalState(uint32_t state, SetThermalStateCallback callback) {
-  if (current_state_ != state) {
-    for (auto& [target_name, configs_by_state] : targets_) {
-      FX_CHECK(state < configs_by_state.size());
-      FX_CHECK(current_state_ < configs_by_state.size());
-      if (configs_by_state[state] != configs_by_state[current_state_]) {
-        set_config_callback_(target_name, configs_by_state[state]);
-      }
-    }
-
-    current_state_ = state;
-    Reporter::Singleton().SetThermalState(current_state_);
+  if (current_state_ == state) {
+    callback();
+    FX_LOGS(INFO) << "No thermal state change (was already " << state << ")";
+    return;
   }
 
+  for (auto& [target_name, configs_by_state] : targets_) {
+    FX_CHECK(state < configs_by_state.size());
+    FX_CHECK(current_state_ < configs_by_state.size());
+    if (configs_by_state[state] != configs_by_state[current_state_]) {
+      set_config_callback_(target_name, configs_by_state[state]);
+    }
+  }
+
+  auto previous_state = current_state_;
+  current_state_ = state;
+
+  Reporter::Singleton().SetThermalState(state);
+
   callback();
+  FX_LOGS(INFO) << "Thermal state change (from " << previous_state << " to " << state
+                << ") is complete";
 }
 
 }  // namespace media::audio

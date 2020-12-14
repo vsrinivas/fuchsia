@@ -19,6 +19,7 @@ group("tests") {
     "battery-manager",
     "battery-manager:tests",
     "battery-manager/battery-cli:tests",
+    "fidl/testing",
     "power-manager:tests",
     "shutdown-shim/tests",
     "temperature-logger:tests",

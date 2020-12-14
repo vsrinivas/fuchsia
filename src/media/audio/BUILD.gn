@@ -61,5 +61,6 @@ group("tests") {
     "//src/media/audio/examples:tests",
     "//src/media/audio/lib:tests",
     "//src/media/audio/lib/audio_test_devmgr",
+    "//src/power/testing/thermal-test-control",
   ]
 }

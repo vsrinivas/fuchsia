@@ -76,6 +76,7 @@ source_set("hermetic_audio_test") {
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/logging",
     "//src/media/audio/lib/wav",
+    "//src/power/fidl/testing:test.thermal",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/inspect",
   ]

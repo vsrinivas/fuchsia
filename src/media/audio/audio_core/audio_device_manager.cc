@@ -75,7 +75,10 @@ void AudioDeviceManager::AddDeviceEnumeratorClient(
 }
 
 fit::promise<void, fuchsia::media::audio::UpdateEffectError> AudioDeviceManager::UpdateEffect(
-    const std::string& instance_name, const std::string& config) {
+    const std::string& instance_name, const std::string& config, bool persist) {
+  if (persist) {
+    persisted_effects_updates_[instance_name] = config;
+  }
   std::vector<fit::promise<void, fuchsia::media::audio::UpdateEffectError>> promises;
   for (auto& [_, device] : devices_) {
     promises.push_back(device->UpdateEffect(instance_name, config));
@@ -203,6 +206,24 @@ void AudioDeviceManager::ActivateDevice(const std::shared_ptr<AudioDevice>& devi
 
   devices_.insert(std::move(dev));
   device->SetActivated();
+
+  // Apply persisted effects updates.
+  std::vector<fit::promise<void, void>> promises;
+  for (auto it : persisted_effects_updates_) {
+    std::string instance_name = it.first;
+    std::string config = it.second;
+    promises.push_back(
+        device->UpdateEffect(instance_name, config)
+            .then([instance_name,
+                   config](fit::result<void, fuchsia::media::audio::UpdateEffectError>& result) {
+              if (result.is_error()) {
+                FX_LOGS_FIRST_N(ERROR, 10) << "Unable to update effect " << instance_name
+                                           << ", error code " << static_cast<int>(result.error());
+              }
+            }));
+  }
+  threading_model_.FidlDomain().executor()->schedule_task(
+      fit::join_promise_vector(std::move(promises)));
 
   // Notify interested users of the new device.
   auto info = device->GetDeviceInfo();

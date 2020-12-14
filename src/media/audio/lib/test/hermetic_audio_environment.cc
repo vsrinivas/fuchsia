@@ -9,6 +9,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/media/tuning/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
+#include <fuchsia/thermal/cpp/fidl.h>
 #include <fuchsia/ultrasound/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -17,6 +18,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/device/vfs.h>
 #include <zircon/status.h>
+
+#include <test/thermal/cpp/fidl.h>
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/glob.h"
@@ -152,6 +155,9 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
       "fuchsia-pkg://fuchsia.com/virtual-audio-service-for-test#meta/virtual_audio_service_nodevfs.cmx";
   // clang-format on
 
+  std::string thermal_test_control_url =
+      "fuchsia-pkg://fuchsia.com/thermal-test-control#meta/thermal_test_control.cmx";
+
   // Add in the services that will be available in our hermetic environment.
   struct ComponentLaunchInfo {
     ComponentType type;
@@ -188,6 +194,17 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
                   fuchsia::virtualaudio::Control::Name_,
                   fuchsia::virtualaudio::Input::Name_,
                   fuchsia::virtualaudio::Output::Name_,
+              },
+      },
+      {
+          .type = kThermalTestControlComponent,
+          .url = thermal_test_control_url,
+          .launch_info =
+              LaunchInfoWithIsolatedDevmgrForUrl(thermal_test_control_url, devmgr_services_),
+          .service_names =
+              {
+                  fuchsia::thermal::Controller::Name_,
+                  ::test::thermal::Control::Name_,
               },
       },
   };

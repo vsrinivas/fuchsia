@@ -32,8 +32,12 @@ void HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment:
 void HermeticAudioTest::SetUpEnvironment() {
   auto options = test_suite_options_.value_or(HermeticAudioEnvironment::Options());
   environment_ = std::make_unique<HermeticAudioEnvironment>(options);
+
   environment_->ConnectToService(virtual_audio_control_sync_.NewRequest());
   virtual_audio_control_sync_->Enable();
+
+  environment_->ConnectToService(thermal_controller_.NewRequest());
+  environment_->ConnectToService(thermal_test_control_sync_.NewRequest());
 }
 
 void HermeticAudioTest::TearDownEnvironment() {
