@@ -1,0 +1,11 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/bt_hfp_audio_gateway"
+    },
+    "sandbox": {
+        "services": []
+    }
+}

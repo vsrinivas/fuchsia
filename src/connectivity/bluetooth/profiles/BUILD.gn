@@ -17,6 +17,8 @@ group("profiles") {
     "bt-avrcp:tests",
     "bt-avrcp-target",
     "bt-avrcp-target:tests",
+    "bt-hfp-audio-gateway",
+    "bt-hfp-audio-gateway:tests",
     "bt-hog",
     "bt-rfcomm",
     "bt-rfcomm:tests",

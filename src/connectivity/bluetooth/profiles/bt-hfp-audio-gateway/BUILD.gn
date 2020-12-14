@@ -1,0 +1,43 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
+
+rustc_binary("bin") {
+  name = "bt_hfp_audio_gateway"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("component") {
+  deps = [ ":bin" ]
+  manifest = "meta/bt-hfp-audio-gateway.cmx"
+}
+
+fuchsia_package("bt-hfp-audio-gateway") {
+  deps = [ ":component" ]
+}
+
+fuchsia_unittest_package("bt-hfp-audio-gateway-tests") {
+  deps = [ ":bin_test" ]
+  manifest = "meta/bt-hfp-audio-gateway-unittests.cmx"
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":bt-hfp-audio-gateway-tests" ]
+}

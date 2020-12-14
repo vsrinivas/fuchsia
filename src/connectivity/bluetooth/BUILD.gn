@@ -79,6 +79,7 @@ group("tests") {
     "profiles/bt-a2dp-source:tests",
     "profiles/bt-avrcp:tests",
     "profiles/bt-avrcp-target:tests",
+    "profiles/bt-hfp-audio-gateway:tests",
     "profiles/bt-rfcomm:tests",
     "profiles/tests:tests",
     "tests",
