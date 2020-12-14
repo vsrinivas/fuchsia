@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("events") {
   output_name = "events-test"
@@ -19,7 +19,13 @@ test("events") {
   ]
 }
 
-bootfs_test("events-bootfs-test") {
-  name = "events-test"
+fuchsia_unittest_package("events-test-pkg") {
+  package_name = "events-test"
+  executable_path = "test/events-test"
   deps = [ ":events" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":events-test-pkg" ]
 }

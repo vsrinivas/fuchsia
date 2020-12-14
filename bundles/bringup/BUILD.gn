@@ -25,13 +25,11 @@ group("tests") {
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-bootfs-test",
     "//src/devices/tests/devfs:devfs-bootfs-test",
     "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-integration-bootfs-test",  # HW-required.
-    "//src/devices/usb/drivers/usb-bus:usb-device-bootfs-test",
     "//src/devices/usb/tests/usb:usb-bootfs-test",  # HW-required.
     "//src/lib/framebuffer/test:framebuffer-test-bootfs-test",
     "//src/media/audio/drivers/intel-hda/test:intel-hda-bootfs-test",  # HW-required.
     "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-bootfs-test",  # HW-required.
     "//src/zircon/tests/entropy:entropy-bootfs-test",
-    "//src/zircon/tests/events:events-bootfs-test",
     "//src/zircon/tests/exception:exception-bootfs-test",
     "//src/zircon/tests/futex-ownership:futex-ownership-bootfs-test",
     "//src/zircon/tests/job-policy:policy-bootfs-test",
