@@ -131,6 +131,7 @@ executable("system_monitor_harvester_test") {
     "gather_vmos_test.cc",
     "harvester_fake.h",
     "harvester_test.cc",
+    "mock_dockyard_stub.h",
     "root_resource_test.cc",
     "sample_bundle_test.cc",
     "task_tree_test.cc",

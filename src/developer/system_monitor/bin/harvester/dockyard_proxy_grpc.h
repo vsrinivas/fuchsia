@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_GRPC_H_
-#define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_GRPC_H_
+#ifndef SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_DOCKYARD_PROXY_GRPC_H_
+#define SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_DOCKYARD_PROXY_GRPC_H_
 
 #include "dockyard_proxy.h"
 #include "src/developer/system_monitor/lib/dockyard/dockyard.h"
@@ -31,6 +31,10 @@ class DockyardProxyGrpc : public DockyardProxy {
   DockyardProxyGrpc(std::shared_ptr<grpc::Channel> channel)
       : stub_(dockyard_proto::Dockyard::NewStub(channel)) {}
 
+  explicit DockyardProxyGrpc(
+      std::unique_ptr<dockyard_proto::Dockyard::StubInterface> stub)
+      : stub_(std::move(stub)) {}
+
   // |DockyardProxy|.
   DockyardProxyStatus Init() override;
 
@@ -56,7 +60,7 @@ class DockyardProxyGrpc : public DockyardProxy {
 
  private:
   // A local stub for the remote Dockyard instance.
-  std::unique_ptr<dockyard_proto::Dockyard::Stub> stub_;
+  std::unique_ptr<dockyard_proto::Dockyard::StubInterface> stub_;
 
   // The dockyard_path_to_id_ may be accessed by multiple threads.
   std::mutex dockyard_path_to_id_mutex_;
@@ -95,4 +99,4 @@ class DockyardProxyGrpc : public DockyardProxy {
 
 }  // namespace harvester
 
-#endif  // GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_GRPC_H_
+#endif  // SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_DOCKYARD_PROXY_GRPC_H_

@@ -203,8 +203,8 @@ grpc::Status DockyardProxyGrpc::SendInspectJsonById(
   inspect.set_json(json);
 
   grpc::ClientContext context;
-  std::shared_ptr<grpc::ClientReaderWriter<dockyard_proto::InspectJson,
-                                           dockyard_proto::EmptyMessage>>
+  std::shared_ptr<grpc::ClientReaderWriterInterface<
+      dockyard_proto::InspectJson, dockyard_proto::EmptyMessage>>
       stream(stub_->SendInspectJson(&context));
 
   stream->Write(inspect);
@@ -222,8 +222,8 @@ grpc::Status DockyardProxyGrpc::SendSampleById(uint64_t time,
   sample.mutable_sample()->set_value(value);
 
   grpc::ClientContext context;
-  std::shared_ptr<grpc::ClientReaderWriter<dockyard_proto::RawSample,
-                                           dockyard_proto::EmptyMessage>>
+  std::shared_ptr<grpc::ClientReaderWriterInterface<
+      dockyard_proto::RawSample, dockyard_proto::EmptyMessage>>
       stream(stub_->SendSample(&context));
 
   stream->Write(sample);
@@ -243,8 +243,8 @@ grpc::Status DockyardProxyGrpc::SendSampleListById(uint64_t time,
   }
 
   grpc::ClientContext context;
-  std::shared_ptr<grpc::ClientReaderWriter<dockyard_proto::RawSamples,
-                                           dockyard_proto::EmptyMessage>>
+  std::shared_ptr<grpc::ClientReaderWriterInterface<
+      dockyard_proto::RawSamples, dockyard_proto::EmptyMessage>>
       stream(stub_->SendSamples(&context));
 
   stream->Write(samples);
