@@ -260,6 +260,8 @@ template("test_spec") {
     allowed_device_types = [ "Sherlock" ]
   } else if (board_name == "nelson") {
     allowed_device_types = [ "Nelson" ]
+  } else if (board_name == "vim3") {
+    allowed_device_types = [ "Vim3" ]
   }
 
   _environments = []
