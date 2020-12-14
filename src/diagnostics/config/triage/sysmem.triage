@@ -3,6 +3,14 @@
         contiguous_allocations_failed: "INSPECT:bootstrap/driver_manager:root/sysmem/heaps/SysmemContiguousPool:allocations_failed",
         protected_allocations_failed: "INSPECT:bootstrap/driver_manager:root/sysmem/heaps/SysmemAmlogicProtectedPool:allocations_failed",
         tee_secure_allocations_failed: "INSPECT:bootstrap/driver_manager:root/sysmem/heaps/tee_secure:allocations_failed",
+        contiguous_size: "INSPECT:bootstrap/driver_manager:root/sysmem/heaps/SysmemContiguousPool:size",
+        protected_size: "INSPECT:bootstrap/driver_manager:root/sysmem/heaps/SysmemAmlogicProtectedPool:size",
+        contiguous_high_water: "INSPECT:bootstrap/driver_manager:root/sysmem/heaps/SysmemContiguousPool:high_water_mark",
+        protected_high_water: "INSPECT:bootstrap/driver_manager:root/sysmem/heaps/SysmemAmlogicProtectedPool:high_water_mark",
+    },
+    eval: {
+        contiguous_high_water_ratio: "contiguous_high_water / contiguous_size",
+        protected_high_water_ratio: "protected_high_water / protected_size",
     },
     act: {
         contiguous_failed: {
@@ -19,6 +27,16 @@
             type: "Warning",
             trigger: "tee_secure_allocations_failed > 0",
             print: "The sysmem amlogic tee secure pool has run out of memory at some point. Please file a bug under Graphics",
+        },
+        contiguous_high_water_ratio: {
+            type: "Gauge",
+            value: "contiguous_high_water_ratio",
+            format: "percentage",
+        },
+        protected_high_water_ratio: {
+            type: "Gauge",
+            value: "protected_high_water_ratio",
+            format: "percentage",
         },
     },
     test: {
