@@ -22,10 +22,9 @@ zx_status_t FifoDispatcher::Create(size_t count, size_t elemsize, uint32_t optio
                                    KernelHandle<FifoDispatcher>* handle0,
                                    KernelHandle<FifoDispatcher>* handle1, zx_rights_t* rights) {
   // count and elemsize must be nonzero
-  // count must be a power of two
   // total size must be <= kMaxSizeBytes
-  if (!count || !elemsize || (count & (count - 1)) || (count > kMaxSizeBytes) ||
-      (elemsize > kMaxSizeBytes) || ((count * elemsize) > kMaxSizeBytes)) {
+  if (!count || !elemsize || (count > kMaxSizeBytes) || (elemsize > kMaxSizeBytes) ||
+      ((count * elemsize) > kMaxSizeBytes)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -69,7 +68,6 @@ FifoDispatcher::FifoDispatcher(fbl::RefPtr<PeerHolder<FifoDispatcher>> holder, u
     : PeeredDispatcher(ktl::move(holder), ZX_FIFO_WRITABLE),
       elem_count_(count),
       elem_size_(elem_size),
-      mask_(count - 1),
       head_(0u),
       tail_(0u),
       data_(ktl::move(data)) {
@@ -134,7 +132,7 @@ zx_status_t FifoDispatcher::WriteSelfLocked(size_t elem_size, user_in_ptr<const 
     count = avail;
 
   while (count > 0) {
-    uint32_t offset = (head_ & mask_);
+    uint32_t offset = (head_ % elem_count_);
 
     // number of slots from target to end, inclusive
     uint32_t n = elem_count_ - offset;
@@ -194,7 +192,7 @@ zx_status_t FifoDispatcher::ReadToUser(size_t elem_size, user_out_ptr<uint8_t> p
     count = avail;
 
   while (count > 0) {
-    uint32_t offset = (tail_ & mask_);
+    uint32_t offset = (tail_ % elem_count_);
 
     // number of slots from target to end, inclusive
     uint32_t n = elem_count_ - offset;

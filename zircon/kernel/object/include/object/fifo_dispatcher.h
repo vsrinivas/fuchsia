@@ -44,7 +44,6 @@ class FifoDispatcher final : public PeeredDispatcher<FifoDispatcher, ZX_DEFAULT_
 
   const uint32_t elem_count_;
   const uint32_t elem_size_;
-  const uint32_t mask_;
 
   uint32_t head_ TA_GUARDED(get_lock());
   uint32_t tail_ TA_GUARDED(get_lock());

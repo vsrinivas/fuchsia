@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/zx/fifo.h>
+
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -27,14 +28,10 @@ TEST(FifoTest, InvalidParametersReturnOutOfRange) {
   // ensure parameter validation works
   EXPECT_EQ(zx::fifo::create(0, 0, 0, &fifo_a, &fifo_b),
             ZX_ERR_OUT_OF_RANGE);  // too small
-  EXPECT_EQ(zx::fifo::create(35, 32, 0, &fifo_a, &fifo_b),
-            ZX_ERR_OUT_OF_RANGE);  // not power of two
   EXPECT_EQ(zx::fifo::create(128, 33, 0, &fifo_a, &fifo_b),
             ZX_ERR_OUT_OF_RANGE);  // too large
   EXPECT_EQ(zx::fifo::create(0, 0, 1, &fifo_a, &fifo_b),
             ZX_ERR_OUT_OF_RANGE);  // invalid options
-  EXPECT_EQ(zx::fifo::create(23, 8, 8, &fifo_a, &fifo_b),
-            ZX_ERR_OUT_OF_RANGE);  // bad option
 }
 
 TEST(FifoTest, EndpointsAreRelated) {
@@ -236,6 +233,30 @@ TEST(FifoTest, EndpointCloseSignalsPeerClosed) {
   EXPECT_SIGNALS(fifo_b, ZX_FIFO_PEER_CLOSED);
   ASSERT_EQ(fifo_b.read(kElementSize, actual_elements, 8, &actual_count), ZX_ERR_PEER_CLOSED);
   ASSERT_EQ(fifo_b.signal_peer(0u, ZX_USER_SIGNAL_0), ZX_ERR_PEER_CLOSED);
+}
+
+TEST(FifoTest, NonPowerOfTwoCountSupported) {
+  zx::fifo fifo_a, fifo_b;
+  ASSERT_OK(zx::fifo::create(10, kElementSize, 0, &fifo_a, &fifo_b));
+
+  ElementType expected_elements[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+  ElementType actual_elements[9] = {};
+  size_t actual_count;
+
+  // Write to, then drain, the FIFO.
+  // Intentionally write one element less than the FIFO can hold, so the next write will wrap.
+  ASSERT_OK(
+      fifo_a.write(kElementSize, &expected_elements, countof(expected_elements), &actual_count));
+  ASSERT_EQ(actual_count, 9u);
+  ASSERT_OK(fifo_b.read(kElementSize, actual_elements, countof(actual_elements), &actual_count));
+  ASSERT_EQ(actual_count, 9u);
+
+  // Repeat the process. This write spans the buffer wrap.
+  ASSERT_OK(
+      fifo_a.write(kElementSize, &expected_elements, countof(expected_elements), &actual_count));
+  ASSERT_EQ(actual_count, 9u);
+  ASSERT_OK(fifo_b.read(kElementSize, actual_elements, countof(actual_elements), &actual_count));
+  ASSERT_EQ(actual_count, 9u);
 }
 
 }  // namespace
