@@ -81,6 +81,13 @@ fuzzer("sysmem_fuzzer_multi") {
     "sysmem_fuzz_multi.cc",
   ]
   corpus = "corpus_multi"
+
+  # The fuzzer requires 2 BufferCollectionConstraints inputs, so the input must
+  # be at least that big (at the time of writing, around 14000 bytes). Choose
+  # 20000 bytes as a margin in case the size of the struct changes; the fuzzer
+  # should by able to determine the exact size needed as long as it's <=
+  # max_len.
+  options = [ "max_len=20000" ]
   deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
