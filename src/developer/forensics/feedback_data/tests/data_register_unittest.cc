@@ -28,7 +28,8 @@ using testing::UnorderedElementsAreArray;
 class DataRegisterTest : public UnitTestFixture {
  public:
   DataRegisterTest()
-      : datastore_(dispatcher(), services()), data_register_(&datastore_, RegisterJsonPath()) {}
+      : datastore_(dispatcher(), services(), "unused"),
+        data_register_(&datastore_, RegisterJsonPath()) {}
 
  protected:
   void Upsert(ComponentData data) {

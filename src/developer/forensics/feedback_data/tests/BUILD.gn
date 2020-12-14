@@ -274,6 +274,20 @@ executable("inspect_exe") {
   ]
 }
 
+executable("inspect_data_budget_unittest_exe") {
+  testonly = true
+
+  sources = [ "inspect_data_budget_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback_data/attachments:attachment_providers",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/lib/files",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("inspect_ptr_unittest_exe") {
   testonly = true
 
@@ -586,6 +600,14 @@ fuchsia_component("feedback_data_integration_test") {
   deps = [ ":feedback_data_integration_test_exe" ]
 }
 
+fuchsia_component("inspect_data_budget_unittest") {
+  testonly = true
+
+  manifest = "meta/inspect_data_budget_unittest.cmx"
+
+  deps = [ ":inspect_data_budget_unittest_exe" ]
+}
+
 fuchsia_component("inspect_ptr_unittest") {
   testonly = true
 
@@ -675,6 +697,7 @@ fuchsia_test_package("feedback-data-tests") {
     ":datastore_unittest",
     ":device_id_provider_unittest",
     ":feedback_data_integration_test",
+    ":inspect_data_budget_unittest",
     ":inspect_ptr_unittest",
     ":metadata_unittest",
     ":kernel_log_ptr_integration_test",

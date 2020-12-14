@@ -22,7 +22,8 @@ namespace feedback_data {
 ArchiveAccessor::ArchiveAccessor(async_dispatcher_t* dispatcher,
                                  std::shared_ptr<sys::ServiceDirectory> services,
                                  fuchsia::diagnostics::DataType data_type,
-                                 fuchsia::diagnostics::StreamMode stream_mode)
+                                 fuchsia::diagnostics::StreamMode stream_mode,
+                                 std::optional<size_t> data_budget)
     : archive_(dispatcher, services, kArchiveAccessorName) {
   // Setup stream parameters
   stream_parameters_.set_data_type(data_type);
@@ -30,6 +31,8 @@ ArchiveAccessor::ArchiveAccessor(async_dispatcher_t* dispatcher,
   stream_parameters_.set_format(fuchsia::diagnostics::Format::JSON);
   stream_parameters_.set_client_selector_configuration(
       fuchsia::diagnostics::ClientSelectorConfiguration::WithSelectAll(true));
+
+  // TODO(fxbug.dev/65226) Connect data_budget to diagnostics after fxbug.dev/66085.
 
   // We set up the connection and all the error handlers.
   snapshot_iterator_.set_error_handler([this](zx_status_t status) {

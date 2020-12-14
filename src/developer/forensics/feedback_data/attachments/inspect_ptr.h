@@ -22,7 +22,8 @@ namespace feedback_data {
 // fuchsia.diagnostics.Archive is expected to be in |services|.
 ::fit::promise<AttachmentValue> CollectInspectData(async_dispatcher_t* dispatcher,
                                                    std::shared_ptr<sys::ServiceDirectory> services,
-                                                   fit::Timeout timeout);
+                                                   fit::Timeout timeout,
+                                                   std::optional<size_t> data_budget);
 
 }  // namespace feedback_data
 }  // namespace forensics

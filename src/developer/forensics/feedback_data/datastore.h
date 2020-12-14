@@ -10,8 +10,11 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
 
+#include <memory>
+
 #include "src/developer/forensics/feedback_data/annotations/annotation_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
+#include "src/developer/forensics/feedback_data/attachments/inspect_data_budget.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
@@ -48,7 +51,8 @@ class Datastore {
   bool TrySetNonPlatformAnnotations(const Annotations& non_platform_annotations);
 
   // Exposed for testing purposes.
-  Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
+  Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+            const char* limit_data_flag_path);
 
   const Annotations& GetStaticAnnotations() const { return static_annotations_; }
   const Attachments& GetStaticAttachments() const { return static_attachments_; }
@@ -75,6 +79,8 @@ class Datastore {
 
   bool is_missing_non_platform_annotations_ = false;
   Annotations non_platform_annotations_;
+
+  InspectDataBudget inspect_data_budget_;
 };
 
 }  // namespace feedback_data

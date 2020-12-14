@@ -48,7 +48,7 @@ class CollectInspectDataTest : public UnitTestFixture {
     ::fit::result<AttachmentValue> result;
     executor_.schedule_task(
         feedback_data::CollectInspectData(dispatcher(), services(),
-                                          fit::Timeout(timeout, /*action=*/[] {}))
+                                          fit::Timeout(timeout, /*action=*/[] {}), {})
             .then([&result](::fit::result<AttachmentValue>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;

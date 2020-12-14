@@ -12,6 +12,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -34,7 +35,8 @@ class ArchiveAccessor {
  public:
   ArchiveAccessor(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                   fuchsia::diagnostics::DataType data_type,
-                  fuchsia::diagnostics::StreamMode stream_mode);
+                  fuchsia::diagnostics::StreamMode stream_mode,
+                  std::optional<size_t> data_budget = {});
 
   void Collect(std::function<void(fuchsia::diagnostics::FormattedContent)> write_formatted_content);
 

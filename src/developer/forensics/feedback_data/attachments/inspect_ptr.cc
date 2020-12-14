@@ -26,10 +26,11 @@ namespace feedback_data {
 
 ::fit::promise<AttachmentValue> CollectInspectData(async_dispatcher_t* dispatcher,
                                                    std::shared_ptr<sys::ServiceDirectory> services,
-                                                   fit::Timeout timeout) {
+                                                   fit::Timeout timeout,
+                                                   std::optional<size_t> data_budget) {
   std::unique_ptr<ArchiveAccessor> inspect = std::make_unique<ArchiveAccessor>(
       dispatcher, services, fuchsia::diagnostics::DataType::INSPECT,
-      fuchsia::diagnostics::StreamMode::SNAPSHOT);
+      fuchsia::diagnostics::StreamMode::SNAPSHOT, data_budget);
 
   // Accumulated Inspect data. Each element corresponds to one valid Inspect "block" in JSON format.
   // A block would typically be the Inspect data for one component.
