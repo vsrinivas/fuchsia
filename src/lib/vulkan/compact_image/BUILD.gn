@@ -21,6 +21,7 @@ template("compile_glsl_shader_foreach") {
     tool = "//third_party/glslang:glslang_validator"
     outputs = [ "${_output_dir}/{{source_name_part}}.spv.h" ]
     args = [
+      "--quiet",
       "-o",
       rebase_path(outputs[0], root_build_dir),
       "--vn",
