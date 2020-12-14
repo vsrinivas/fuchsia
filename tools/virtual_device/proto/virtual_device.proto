@@ -38,9 +38,7 @@ message VirtualDevice {
   // The device characterics.
   HardwareProfile hw = 6;
 
-  // An optional device nodename.
-  //
-  // Defaults to fuchsia-virtual-device.
+  // The device nodename.
   string nodename = 7;
 }
 
@@ -100,9 +98,7 @@ message HardwareProfile {
   // - g|G for gigabytes.
   string ram = 3;
 
-  // The optional MAC address to use for the device.
-  //
-  // If this is unset, an address is randomly generated at runtime.
+  // The MAC address to use for the device.
   string mac = 4;
 
   // Optional Tap device.

@@ -1,7 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-package main
+
+package virtual_device
 
 import (
 	"testing"
@@ -10,17 +11,21 @@ import (
 	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
 )
 
-func TestValidateFVD(t *testing.T) {
+func TestValidate(t *testing.T) {
 	// An ImageManifest shared by all test cases. This is not modified during testing.
 	testImageManifest := build.ImageManifest{
 		{Name: "qemu-kernel", Path: "/kernel"},
 		{Name: "storage-full", Path: "/fvm"},
 		{Name: "zircon-a", Path: "/ramdisk"},
+		// Images for testing error cases.
+		{Name: "no-path"},
+		{Name: "duplicate", Path: "/duplicate"},
+		{Name: "duplicate", Path: "/duplicate"},
 	}
 
 	// Test cases.
 	//
-	// setupFVD is used to initialize the FVD to pass to validateFVD. It is called with a
+	// setupFVD is used to initialize the FVD to pass to Validate. It is called with a
 	// known-good FVD as input, during test setup.
 	tests := []struct {
 		name     string
@@ -34,8 +39,20 @@ func TestValidateFVD(t *testing.T) {
 		setupFVD: func(fvd *fvdpb.VirtualDevice) { fvd.Kernel = "" },
 		wantErr:  true,
 	}, {
-		name:     "missing drive",
+		name:     "missing drive name",
 		setupFVD: func(fvd *fvdpb.VirtualDevice) { fvd.Drive.Image = "" },
+		wantErr:  true,
+	}, {
+		name:     "nil drive",
+		setupFVD: func(fvd *fvdpb.VirtualDevice) { fvd.Drive = nil },
+		wantErr:  true,
+	}, {
+		name:     "missing nodename",
+		setupFVD: func(fvd *fvdpb.VirtualDevice) { fvd.Nodename = "" },
+		wantErr:  true,
+	}, {
+		name:     "missing MAC",
+		setupFVD: func(fvd *fvdpb.VirtualDevice) { fvd.Hw.Mac = "" },
 		wantErr:  true,
 	}, {
 		name:     "missing initial ramdisk",
@@ -53,19 +70,35 @@ func TestValidateFVD(t *testing.T) {
 		name:     "invalid mac",
 		setupFVD: func(fvd *fvdpb.VirtualDevice) { fvd.Hw.Mac = "0::12345" },
 		wantErr:  true,
+	}, {
+		name:     "image is missing path",
+		setupFVD: func(fvd *fvdpb.VirtualDevice) { fvd.Kernel = "no-path" },
+		wantErr:  true,
+	}, {
+		name:     "image has non-unique name",
+		setupFVD: func(fvd *fvdpb.VirtualDevice) { fvd.Kernel = "duplicate" },
+		wantErr:  true,
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			inputFVD := knownGoodFVD()
+			inputFVD := Default()
 			tt.setupFVD(inputFVD)
 
-			if err := validateFVD(inputFVD, testImageManifest); err != nil != tt.wantErr {
+			if err := Validate(inputFVD, testImageManifest); err != nil != tt.wantErr {
 				if tt.wantErr {
 					t.Fatalf("wanted an error but got nil")
 				}
 				t.Fatalf("got error %v", err)
 			}
 		})
+	}
+
+	// Nil cases.
+	if err := Validate(nil, testImageManifest); err == nil {
+		t.Fatalf("Validate(nil, /*images*/) wanted an error but got nil")
+	}
+	if err := Validate(Default(), nil); err == nil {
+		t.Fatalf("Validate(Default(), nil) wanted an error but got nil")
 	}
 }
 
@@ -74,6 +107,7 @@ func TestIsValidRAM(t *testing.T) {
 		ram  string
 		want bool
 	}{
+		{"", false},
 		{"0", false},
 		{"1", false},
 		{"1Z", false},
@@ -103,6 +137,7 @@ func TestIsValidArch(t *testing.T) {
 		arch string
 		want bool
 	}{
+		{"", false},
 		{"MIPS", false},
 
 		{"x64", true},
@@ -144,13 +179,39 @@ func TestIsValidMAC(t *testing.T) {
 	}
 }
 
-func knownGoodFVD() *fvdpb.VirtualDevice {
-	return &fvdpb.VirtualDevice{
-		Kernel: "qemu-kernel",
-		Drive:  &fvdpb.Drive{Image: "storage-full"},
-		Initrd: "zircon-a",
-		Hw: &fvdpb.HardwareProfile{
-			Ram: "5G",
-		},
+func TestParseRAMBytes(t *testing.T) {
+	tests := []struct {
+		ram       string
+		wantBytes float64 // float64 simplfies using math.Pow without casting to int.
+		wantErr   bool
+	}{
+		{"5b", 5, false},
+		{"5B", 5, false},
+		{"5k", 1024 * 5, false},
+		{"5K", 1024 * 5, false},
+		{"5m", 1024 * 1024 * 5, false},
+		{"5M", 1024 * 1024 * 5, false},
+		{"5g", 1024 * 1024 * 1024 * 5, false},
+		{"5G", 1024 * 1024 * 1024 * 5, false},
+
+		{"", -1, true},
+		{"-5G", -1, true},
+		{"5z", -1, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.ram, func(t *testing.T) {
+			gotBytes, err := parseRAMBytes(tt.ram)
+			if err != nil != tt.wantErr {
+				if tt.wantErr {
+					t.Fatalf("parseRAMBytes(%q) wanted an error but got nil", tt.ram)
+				}
+				t.Fatalf("parseRAMBytes(%q) got error %v", tt.ram, err)
+			}
+
+			wantBytes := int(tt.wantBytes)
+			if gotBytes != wantBytes {
+				t.Fatalf("parseRAMBytes(%q) got %d but wanted %d", tt.ram, gotBytes, wantBytes)
+			}
+		})
 	}
 }

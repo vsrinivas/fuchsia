@@ -8,32 +8,43 @@ import("//build/go/go_test.gni")
 import("//build/testing/golden_file.gni")
 import("//third_party/protobuf/proto_library.gni")
 
-go_library("fvd_lib") {
-  source_dir = "cmd/fvd"
+go_library("virtual_device") {
   sources = [
-    "main.go",
-    "main_test.go",
+    "common.go",
+    "common_test.go",
+    "qemu.go",
+    "qemu_test.go",
   ]
   deps = [
     ":proto",
-    "//third_party/golibs:github.com/golang/protobuf",
     "//third_party/golibs:github.com/google/go-cmp",
-    "//third_party/golibs:google.golang.org/protobuf",
     "//tools/build",
+    "//tools/qemu",
   ]
 }
 
-go_test("fvd_test") {
-  output_name = "fvd_test"
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/virtual_device/cmd/fvd" ]
-  deps = [ ":fvd_lib" ]
+go_test("virtual_device_test") {
+  output_name = "virtual_device_test"
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/virtual_device" ]
+  deps = [ ":virtual_device" ]
+}
+
+go_library("fvd_lib") {
+  source_dir = "cmd/fvd"
+  sources = [ "main.go" ]
+  deps = [
+    ":proto",
+    ":virtual_device",
+    "//third_party/golibs:github.com/golang/protobuf",
+    "//tools/build",
+  ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":fvd_test",
     ":pb_go_diff",
+    ":virtual_device_test",
   ]
 }
 

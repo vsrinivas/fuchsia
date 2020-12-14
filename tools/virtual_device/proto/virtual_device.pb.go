@@ -57,9 +57,7 @@ type VirtualDevice struct {
 	Drive *Drive `protobuf:"bytes,5,opt,name=drive,proto3" json:"drive,omitempty"`
 	// The device characterics.
 	Hw *HardwareProfile `protobuf:"bytes,6,opt,name=hw,proto3" json:"hw,omitempty"`
-	// An optional device nodename.
-	//
-	// Defaults to fuchsia-virtual-device.
+	// The device nodename.
 	Nodename string `protobuf:"bytes,7,opt,name=nodename,proto3" json:"nodename,omitempty"`
 }
 
@@ -311,9 +309,7 @@ type HardwareProfile struct {
 	// - m|M for megabytes
 	// - g|G for gigabytes.
 	Ram string `protobuf:"bytes,3,opt,name=ram,proto3" json:"ram,omitempty"`
-	// The optional MAC address to use for the device.
-	//
-	// If this is unset, an address is randomly generated at runtime.
+	// The MAC address to use for the device.
 	Mac string `protobuf:"bytes,4,opt,name=mac,proto3" json:"mac,omitempty"`
 	// Optional Tap device.
 	//
