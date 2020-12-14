@@ -636,7 +636,7 @@ if (dev_fuchsia_zbi_kernel_cmdline_golden != "") {
       "--fuchsia-dir",
       rebase_path("//", root_build_dir),
       "--stamp",
-      rebase_path(stamp_file),
+      rebase_path(stamp_file, root_build_dir),
     ]
 
     deps = [

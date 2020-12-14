@@ -5,8 +5,10 @@
 '''Runs the zbi tool, taking care of unwrapping response files.'''
 
 import argparse
+import os
 import subprocess
 import sys
+import tempfile
 
 
 def main(input_args):
@@ -40,23 +42,29 @@ def main(input_args):
 
 def verify_kernel_cmdline(
         scrutiny_path, zbi_path, kernel_cmdline_golden_file, fuchsia_dir):
-    try:
-        cmdline = subprocess.check_output(
-            [scrutiny_path, '-c', 'zbi.cmdline --input ' + zbi_path],
-            env={
-                'FUCHSIA_DIR': fuchsia_dir
-            }).decode().strip()
-        if cmdline[0] != '"' or cmdline[-1] != '"':
-            print('Expect quotes around the scrutiny cmdline output')
+    for file in [scrutiny_path, zbi_path, kernel_cmdline_golden_file,
+                 fuchsia_dir]:
+        if not os.path.exists(file):
+            print('Path ' + file + ' not found')
             return False
-        cmdline = cmdline[1:-1]
-    except subprocess.CalledProcessError as e:
-        print('Error: Failed to run scrutiny: {0}'.format(e))
-        return False
-    with open(kernel_cmdline_golden_file, 'r') as f:
-        cmdline_golden_file = f.read().strip()
-    return compare_cmdline(
-        cmdline, cmdline_golden_file, kernel_cmdline_golden_file)
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            subprocess.check_call(
+                [
+                    scrutiny_path, '-c',
+                    'tool.zbi.extract --input ' + zbi_path + ' --output ' + tmp
+                ],
+                env={'FUCHSIA_DIR': fuchsia_dir})
+        except subprocess.CalledProcessError as e:
+            print('Error: Failed to run scrutiny: {0}'.format(e))
+            return False
+        with open(os.path.join(tmp, 'sections', 'cmdline.blk'), 'r') as f:
+            # The cmdline.blk contains a trailing \x00.
+            cmdline = f.read().strip().rstrip('\x00')
+        with open(kernel_cmdline_golden_file, 'r') as f:
+            cmdline_golden_file = f.read().strip()
+        return compare_cmdline(
+            cmdline, cmdline_golden_file, kernel_cmdline_golden_file)
 
 
 class CmdlineFormatException(Exception):

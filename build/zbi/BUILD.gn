@@ -2,11 +2,52 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/python/python_host_test.gni")
+import("//build/python/python.gni")
+import("//build/testing/environments.gni")
+import("//build/testing/host_test.gni")
+import("//build/testing/host_test_data.gni")
 
-python_host_test("verify_zbi_kernel_cmdline_test") {
-  main_source = "verify_zbi_kernel_cmdline_test.py"
-  sources = [ "verify_zbi_kernel_cmdline.py" ]
+scrutiny_target = "//src/security/scrutiny/bin($host_toolchain)"
+scrutiny_tool = get_label_info(scrutiny_target, "root_out_dir") + "/scrutiny"
+zbi_target = "//zircon/tools/zbi($host_toolchain)"
+zbi_tool = get_label_info(zbi_target, "root_out_dir") + "/zbi"
+if (host_os == "win") {
+  zbi_tool += ".exe"
+}
+
+host_test("verify_zbi_kernel_cmdline_test") {
+  binary_path = python_exe_path
+  args = [
+    rebase_path("${target_out_dir}/test_wrapper.py", root_build_dir),
+    rebase_path("${python_exe_path}", root_build_dir),
+    rebase_path("${target_out_dir}/verify_zbi_kernel_cmdline_test.py",
+                root_build_dir),
+    rebase_path(scrutiny_tool, root_build_dir),
+    rebase_path(zbi_tool, root_build_dir),
+  ]
+  deps = [
+    ":tools($host_toolchain)",
+    ":verify_zbi_kernel_cmdline_test_data($host_toolchain)",
+    "//build/python:interpreter",
+    scrutiny_target,
+    zbi_target,
+  ]
+}
+
+host_test_data("verify_zbi_kernel_cmdline_test_data") {
+  sources = [
+    "test_wrapper.py",
+    "verify_zbi_kernel_cmdline.py",
+    "verify_zbi_kernel_cmdline_test.py",
+  ]
+  outputs = [ "${target_out_dir}/{{source_file_part}}" ]
+}
+
+host_test_data("tools") {
+  sources = [
+    scrutiny_tool,
+    zbi_tool,
+  ]
 }
 
 group("tests") {
