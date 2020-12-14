@@ -46,7 +46,7 @@ static bool verbose = false;
       printf(fmt);      \
   } while (0)
 
-enum class Command { read, readall, get, set, descriptor };
+enum class Command { read, read_all, get, set, descriptor, descriptor_all };
 
 void usage(void) {
   printf("usage: hid [-v] <command> [<args>]\n\n");
@@ -54,7 +54,7 @@ void usage(void) {
   printf("    read [<devpath> [num reads]]\n");
   printf("    get <devpath> <in|out|feature> <id>\n");
   printf("    set <devpath> <in|out|feature> <id> [0xXX *]\n");
-  printf("    descriptor <devpath>\n");
+  printf("    descriptor [<devpath>]\n");
 }
 
 constexpr size_t kDevPathSize = 128;
@@ -73,8 +73,6 @@ struct input_args_t {
   const char** data;
   size_t data_size;
 };
-
-static thrd_t input_poll_thread;
 
 static mtx_t print_lock = MTX_INIT;
 #define lprintf(fmt...)      \
@@ -157,10 +155,10 @@ static zx_status_t print_report_desc(input_args_t* args) {
 
   mtx_lock(&print_lock);
   printf("hid: %s report descriptor:\n", args->devpath);
+  print_hex(result->desc.data(), result->desc.count());
   if (verbose) {
-    print_hex(result->desc.data(), result->desc.count());
+    print_report_descriptor(result->desc.data(), result->desc.count());
   }
-  print_report_descriptor(result->desc.data(), result->desc.count());
   mtx_unlock(&print_lock);
   return ZX_OK;
 }
@@ -283,9 +281,16 @@ static int hid_read_reports(input_args_t* args) {
 
 static int hid_input_thread(void* arg) {
   input_args_t* args = (input_args_t*)arg;
-  lprintf("hid: input thread started for %s\n", args->devpath);
+  lprintf("hid: thread started for %s\n", args->devpath);
 
-  zx_status_t status = hid_read_reports(args);
+  zx_status_t status = ZX_OK;
+  if (args->command == Command::read) {
+    status = hid_read_reports(args);
+  } else if (args->command == Command::descriptor) {
+    status = parse_rpt_descriptor(args);
+  } else {
+    lprintf("hid: thread found wrong command %d\n", args->command);
+  }
 
   delete args;
   return status;
@@ -302,6 +307,7 @@ static zx_status_t hid_input_device_added(int dirfd, int event, const char* fn, 
   }
 
   input_args_t* args = new input_args_t;
+  args->command = *reinterpret_cast<Command*>(cookie);
 
   zx::channel chan;
   zx_status_t status = fdio_get_service_handle(fd, chan.reset_and_get_address());
@@ -318,7 +324,7 @@ static zx_status_t hid_input_device_added(int dirfd, int event, const char* fn, 
   thrd_t t;
   int ret = thrd_create_with_name(&t, hid_input_thread, (void*)args, args->devpath);
   if (ret != thrd_success) {
-    printf("hid: input thread %s did not start (error=%d)\n", args->devpath, ret);
+    printf("hid: thread %s did not start (error=%d)\n", args->devpath, ret);
     close(fd);
     return thrd_status_to_zx_status(ret);
   }
@@ -326,25 +332,14 @@ static zx_status_t hid_input_device_added(int dirfd, int event, const char* fn, 
   return ZX_OK;
 }
 
-static int hid_input_devices_poll_thread(void* arg) {
+int watch_all_devices(Command command) {
   int dirfd = open(DEV_INPUT, O_DIRECTORY | O_RDONLY);
   if (dirfd < 0) {
     printf("hid: error opening %s\n", DEV_INPUT);
     return ZX_ERR_INTERNAL;
   }
-  fdio_watch_directory(dirfd, hid_input_device_added, ZX_TIME_INFINITE, NULL);
+  fdio_watch_directory(dirfd, hid_input_device_added, ZX_TIME_INFINITE, &command);
   close(dirfd);
-  return -1;
-}
-
-int readall_reports() {
-  int ret = thrd_create_with_name(&input_poll_thread, hid_input_devices_poll_thread, NULL,
-                                  "hid-inputdev-poll");
-  if (ret != thrd_success) {
-    return -1;
-  }
-
-  thrd_join(input_poll_thread, NULL);
   return 0;
 }
 
@@ -412,7 +407,7 @@ zx_status_t parse_input_args(int argc, const char** argv, input_args_t* args) {
   // Parse the command name.
   if (!strcmp("read", argv[0])) {
     if (argc == 1) {
-      args->command = Command::readall;
+      args->command = Command::read_all;
       return ZX_OK;
     }
     args->command = Command::read;
@@ -421,6 +416,10 @@ zx_status_t parse_input_args(int argc, const char** argv, input_args_t* args) {
   } else if (!strcmp("set", argv[0])) {
     args->command = Command::set;
   } else if (!strcmp("descriptor", argv[0])) {
+    if (argc == 1) {
+      args->command = Command::descriptor_all;
+      return ZX_OK;
+    }
     args->command = Command::descriptor;
   } else {
     return ZX_ERR_INVALID_ARGS;
@@ -516,8 +515,10 @@ int main(int argc, const char** argv) {
     return set_report(&args);
   } else if (args.command == Command::read) {
     return hid_read_reports(&args);
-  } else if (args.command == Command::readall) {
-    return readall_reports();
+  } else if (args.command == Command::read_all) {
+    return watch_all_devices(Command::read);
+  } else if (args.command == Command::descriptor_all) {
+    return watch_all_devices(Command::descriptor);
   }
 
   return 1;
