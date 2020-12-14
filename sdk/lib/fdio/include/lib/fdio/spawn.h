@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/analyzer.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -69,8 +70,8 @@ __BEGIN_CDECLS
 // ZX_ERR_BAD_HANDLE: |path| cannot be opened as an executable VMO.
 //
 // Returns the result of |fdio_spawn_vmo| in all other cases.
-zx_status_t fdio_spawn(zx_handle_t job, uint32_t flags, const char* path, const char* const* argv,
-                       zx_handle_t* process_out);
+zx_status_t fdio_spawn(ZX_HANDLE_USE zx_handle_t job, uint32_t flags, const char* path,
+                       const char* const* argv, ZX_HANDLE_ACQUIRE zx_handle_t* process_out);
 
 // The |fdio_spawn_etc| function allows the running process to control the file
 // descriptor table in the process being spawned.
@@ -226,9 +227,10 @@ struct fdio_spawn_action {
 // ZX_ERR_BAD_HANDLE: |path| cannot be opened as an executable VMO.
 //
 // Returns the result of |fdio_spawn_vmo| in all other cases.
-zx_status_t fdio_spawn_etc(zx_handle_t job, uint32_t flags, const char* path,
+zx_status_t fdio_spawn_etc(ZX_HANDLE_USE zx_handle_t job, uint32_t flags, const char* path,
                            const char* const* argv, const char* const* environ, size_t action_count,
-                           const fdio_spawn_action_t* actions, zx_handle_t* process_out,
+                           ZX_HANDLE_RELEASE const fdio_spawn_action_t* actions,
+                           ZX_HANDLE_ACQUIRE zx_handle_t* process_out,
                            char err_msg_out[FDIO_SPAWN_ERR_MSG_MAX_LENGTH]);
 
 // Spawn a process using the given executable in the given job.
@@ -256,9 +258,11 @@ zx_status_t fdio_spawn_etc(zx_handle_t job, uint32_t flags, const char* path,
 // ZX_ERR_INTERNAL: Cannot connect to process launcher.
 //
 // May return other errors.
-zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executable_vmo,
-                           const char* const* argv, const char* const* environ, size_t action_count,
-                           const fdio_spawn_action_t* actions, zx_handle_t* process_out,
+zx_status_t fdio_spawn_vmo(ZX_HANDLE_USE zx_handle_t job, uint32_t flags,
+                           zx_handle_t executable_vmo, const char* const* argv,
+                           const char* const* environ, size_t action_count,
+                           ZX_HANDLE_RELEASE const fdio_spawn_action_t* actions,
+                           ZX_HANDLE_ACQUIRE zx_handle_t* process_out,
                            char err_msg_out[FDIO_SPAWN_ERR_MSG_MAX_LENGTH]);
 
 __END_CDECLS

@@ -83,6 +83,7 @@ sysroot_uninstrumented_libc_entries = [
       include_dir = "//zircon/system/public"
       headers = [
         "zircon/assert.h",
+        "zircon/analyzer.h",
         "zircon/boot/bootfs.h",
         "zircon/boot/crash-reason.h",
         "zircon/boot/driver-config.h",
