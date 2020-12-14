@@ -75,7 +75,6 @@ group("all_tests") {
     ":tests",
     "examples",
     "hotsort:tests",
-    "spinel:tests",
     "tests:tests",
   ]
   if (_build_host_tests) {
