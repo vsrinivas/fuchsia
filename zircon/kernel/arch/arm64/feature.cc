@@ -37,13 +37,22 @@ static void parse_ccsid(arm64_cache_desc_t* desc, uint64_t ccsid) {
 void arm64_get_cache_info(arm64_cache_info_t* info) {
   uint64_t temp = 0;
 
-  uint64_t sysreg = __arm_rsr64("clidr_el1");
-  info->inner_boundary = (uint8_t)BITS_SHIFT(sysreg, 32, 30);
-  info->lou_u = (uint8_t)BITS_SHIFT(sysreg, 29, 27);
-  info->loc = (uint8_t)BITS_SHIFT(sysreg, 26, 24);
-  info->lou_is = (uint8_t)BITS_SHIFT(sysreg, 23, 21);
+  uint64_t clidr = __arm_rsr64("clidr_el1");
+  info->inner_boundary = (uint8_t)BITS_SHIFT(clidr, 32, 30);
+  info->lou_u = (uint8_t)BITS_SHIFT(clidr, 29, 27);
+  info->loc = (uint8_t)BITS_SHIFT(clidr, 26, 24);
+  info->lou_is = (uint8_t)BITS_SHIFT(clidr, 23, 21);
+
+  uint64_t ctr = __arm_rsr64("ctr_el0");
+  info->imin_line = (uint8_t)BITS(ctr, 3, 0);
+  info->dmin_line = (uint8_t)BITS_SHIFT(ctr, 19, 16);
+  info->l1_instruction_cache_policy = (uint8_t)BITS_SHIFT(ctr, 15, 14);
+  info->cache_writeback_granule = (uint8_t)BITS_SHIFT(ctr, 27, 24);
+  info->idc = BIT(ctr, 28) == 0;  // inverted logic
+  info->dic = BIT(ctr, 29) == 0;  // inverted logic
+
   for (int i = 0; i < 7; i++) {
-    uint8_t ctype = (sysreg >> (3 * i)) & 0x07;
+    uint8_t ctype = (clidr >> (3 * i)) & 0x07;
     if (ctype == 0) {
       info->level_data_type[i].ctype = 0;
       info->level_inst_type[i].ctype = 0;
@@ -79,29 +88,48 @@ void arm64_dump_cache_info(cpu_num_t cpu) {
   printf("Level of Unification Uniprocessor = L%u\n", info->lou_u);
   printf("Level of Coherence = L%u\n", info->loc);
   printf("Level of Unification Inner Shareable = L%u\n", info->lou_is);
+  printf("Instruction/Data cache minimum line = %u/%u\n", (1U << info->imin_line) * 4,
+         (1U << info->dmin_line) * 4);
+  printf("Cache Writeback Granule = %u\n", (1U << info->cache_writeback_granule) * 4);
+  const char* icp = "";
+  switch (info->l1_instruction_cache_policy) {
+    case 0:
+      icp = "VPIPT";
+      break;
+    case 1:
+      icp = "AIVIVT";
+      break;
+    case 2:
+      icp = "VIPT";
+      break;
+    case 3:
+      icp = "PIPT";
+      break;
+  }
+  printf("L1 Instruction cache policy = %s, ", icp);
+  printf("IDC = %i, DIC = %i\n", info->idc, info->dic);
   for (int i = 0; i < 7; i++) {
-    printf("L%d Details:", i + 1);
     if ((info->level_data_type[i].ctype == 0) && (info->level_inst_type[i].ctype == 0)) {
-      printf("\tNot Implemented\n");
+      break;  // not implemented
+    }
+    printf("L%d Details:", i + 1);
+    if (info->level_data_type[i].ctype == 4) {
+      printf("\tUnified Cache, sets=%u, associativity=%u, line size=%u bytes\n",
+             info->level_data_type[i].num_sets, info->level_data_type[i].associativity,
+             info->level_data_type[i].line_size);
     } else {
-      if (info->level_data_type[i].ctype == 4) {
-        printf("\tUnified Cache, sets=%u, associativity=%u, line size=%u bytes\n",
+      if (info->level_data_type[i].ctype & 0x02) {
+        printf("\tData Cache, sets=%u, associativity=%u, line size=%u bytes\n",
                info->level_data_type[i].num_sets, info->level_data_type[i].associativity,
                info->level_data_type[i].line_size);
-      } else {
+      }
+      if (info->level_inst_type[i].ctype & 0x01) {
         if (info->level_data_type[i].ctype & 0x02) {
-          printf("\tData Cache, sets=%u, associativity=%u, line size=%u bytes\n",
-                 info->level_data_type[i].num_sets, info->level_data_type[i].associativity,
-                 info->level_data_type[i].line_size);
+          printf("\t");
         }
-        if (info->level_inst_type[i].ctype & 0x01) {
-          if (info->level_data_type[i].ctype & 0x02) {
-            printf("\t");
-          }
-          printf("\tInstruction Cache, sets=%u, associativity=%u, line size=%u bytes\n",
-                 info->level_inst_type[i].num_sets, info->level_inst_type[i].associativity,
-                 info->level_inst_type[i].line_size);
-        }
+        printf("\tInstruction Cache, sets=%u, associativity=%u, line size=%u bytes\n",
+               info->level_inst_type[i].num_sets, info->level_inst_type[i].associativity,
+               info->level_inst_type[i].line_size);
       }
     }
   }
@@ -372,7 +400,7 @@ static void print_feature() {
 
   printf("ARM ISA Features: ");
   uint col = 0;
-  for (const auto & feature : features) {
+  for (const auto& feature : features) {
     if (arm64_feature_test(feature.bit)) {
       col += printf("%s ", feature.name);
     }

@@ -34,10 +34,19 @@ typedef struct {
 } arm64_cache_desc_t;
 
 typedef struct {
+  // from CLIDR_EL1
   uint8_t inner_boundary;
   uint8_t lou_u;
   uint8_t loc;
   uint8_t lou_is;
+  // from CTR_EL0
+  uint8_t imin_line;
+  uint8_t dmin_line;
+  uint8_t cache_writeback_granule;
+  uint8_t l1_instruction_cache_policy;
+  bool idc;  // requires icache invalidate to pou for instruction to data coherence
+  bool dic;  // requires data clean to pou for data to instruction coherence
+  // via iterating each cache level
   arm64_cache_desc_t level_data_type[7];
   arm64_cache_desc_t level_inst_type[7];
 } arm64_cache_info_t;
