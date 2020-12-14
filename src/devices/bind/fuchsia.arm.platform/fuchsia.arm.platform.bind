@@ -1,0 +1,20 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.arm.platform;
+
+extend uint fuchsia.BIND_PLATFORM_DEV_VID {
+  ARM = 18,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  ARM_ISP = 0x01,
+  GDC = 0x02,
+  GE2D = 0x03,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  MALI_IV009 = 0x01,
+  MALI_IV010 = 0x02,
+};
