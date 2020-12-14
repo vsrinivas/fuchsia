@@ -245,6 +245,9 @@ void AudioDeviceManager::RemoveDevice(const std::shared_ptr<AudioDevice>& device
   TRACE_DURATION("audio", "AudioDeviceManager::RemoveDevice");
   FX_DCHECK(device != nullptr);
 
+  FX_LOGS(INFO) << "Removing " << (device->is_input() ? "input" : "output") << " '"
+                << device->name() << "'";
+
   // If device was active: reset the default (based on most-recently-plugged).
   OnPlugStateChanged(device, false, device->plug_time());
   device->Shutdown();
@@ -382,6 +385,8 @@ void AudioDeviceManager::OnDeviceUnplugged(const std::shared_ptr<AudioDevice>& d
                                            zx::time plug_time) {
   TRACE_DURATION("audio", "AudioDeviceManager::OnDeviceUnplugged");
   FX_DCHECK(device);
+  FX_LOGS(INFO) << "Unplugged " << (device->is_input() ? "input" : "output") << " '"
+                << device->name() << "'";
 
   device->UpdatePlugState(/*plugged=*/false, plug_time);
 
@@ -395,6 +400,8 @@ void AudioDeviceManager::OnDevicePlugged(const std::shared_ptr<AudioDevice>& dev
                                          zx::time plug_time) {
   TRACE_DURATION("audio", "AudioDeviceManager::OnDevicePlugged");
   FX_DCHECK(device);
+  FX_LOGS(INFO) << "Plugged " << (device->is_input() ? "input" : "output") << " '" << device->name()
+                << "'";
 
   device->UpdatePlugState(/*plugged=*/true, plug_time);
 
@@ -422,6 +429,9 @@ void AudioDeviceManager::UpdateDefaultDevice(bool input) {
   uint64_t& old_id = input ? default_input_token_ : default_output_token_;
 
   if (old_id != new_id) {
+    FX_LOGS(INFO) << "Default " << (input ? "input" : "output") << " '"
+                  << (new_dev ? new_dev->name() : "none") << "'";
+
     for (auto& client : bindings_.bindings()) {
       client->events().OnDefaultDeviceChanged(old_id, new_id);
     }
@@ -446,7 +456,7 @@ void AudioDeviceManager::AddDeviceByVersion(zx::channel device_channel, std::str
 void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::string device_name,
                                             bool is_input) {
   TRACE_DURATION("audio", "AudioDeviceManager::AddDeviceByChannel");
-  AUDIO_LOG(DEBUG) << " adding " << (is_input ? "input" : "output") << " '" << device_name << "'";
+  FX_LOGS(INFO) << "Adding " << (is_input ? "input" : "output") << " '" << device_name << "'";
 
   // Hand the stream off to the proper type of class to manage.
   std::shared_ptr<AudioDevice> new_device;
@@ -471,7 +481,7 @@ void AudioDeviceManager::AddDeviceByChannel2(
     std::string device_name, bool is_input,
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config) {
   TRACE_DURATION("audio", "AudioDeviceManager::AddDeviceByChannel2");
-  AUDIO_LOG(DEBUG) << " adding2 " << (is_input ? "input" : "output") << " '" << device_name << "'";
+  FX_LOGS(INFO) << "Adding " << (is_input ? "input" : "output") << " '" << device_name << "'";
 
   // Hand the stream off to the proper type of class to manage.
   std::shared_ptr<AudioDevice> new_device;

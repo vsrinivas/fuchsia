@@ -69,7 +69,7 @@ zx_status_t AudioDriverV2::Init(zx::channel stream_channel) {
   }
   stream_config_fidl_.set_error_handler([this](zx_status_t status) -> void {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
-    ShutdownSelf("Stream channel closed unexpectedly", status);
+    ShutdownSelf("Stream channel closed", status);
   });
 
   cmd_timeout_.set_handler([this] {
@@ -650,7 +650,7 @@ void AudioDriverV2::ShutdownSelf(const char* reason, zx_status_t status) {
     return;
   }
 
-  if (reason != nullptr) {
+  if (reason != nullptr && status != ZX_ERR_PEER_CLOSED) {
     FX_PLOGS(INFO, status) << (owner_->is_input() ? " Input" : "Output") << " shutting down '"
                            << reason << "'";
   }
