@@ -10,7 +10,8 @@ import 'package:logging/logging.dart';
 import 'helpers.dart';
 
 const _testName = 'fuchsia.rust_inspect.reader_benchmarks';
-const _appPath = 'rust_inspect_benchmarks';
+const _appPath =
+    'fuchsia-pkg://fuchsia.com/rust-inspect-benchmarks#meta/rust_inspect_benchmarks.cmx';
 const _catapultConverterPath = 'runtime_deps/catapult_converter';
 const _trace2jsonPath = 'runtime_deps/trace2json';
 
@@ -58,8 +59,11 @@ void main() {
     _log.info(
         'Running: $_appPath --iterations $_iterations --benchmark reader');
     stopwatch.start();
-    await helper.component.launch(
+    final result = await helper.component.launch(
         _appPath, ['--iterations', '$_iterations', '--benchmark', 'reader']);
+    if (result != 'Success') {
+      throw Exception('Failed to launch $_appPath.');
+    }
     stopwatch.stop();
     _log.info('Completed $_iterations iterations in '
         '${stopwatch.elapsed.inSeconds} seconds.');

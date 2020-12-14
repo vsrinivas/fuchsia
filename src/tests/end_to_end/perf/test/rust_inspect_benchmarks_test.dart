@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:io';
-
 import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
 
@@ -11,7 +9,7 @@ import 'helpers.dart';
 
 const _testName = 'fuchsia.rust_inspect.benchmarks';
 const _appPath =
-    'fuchsia-pkg://fuchsia.com/rust_inspect_benchmarks#meta/rust_inspect_benchmarks.cmx';
+    'fuchsia-pkg://fuchsia.com/rust-inspect-benchmarks#meta/rust_inspect_benchmarks.cmx';
 const _catapultConverterPath = 'runtime_deps/catapult_converter';
 const _trace2jsonPath = 'runtime_deps/trace2json';
 
@@ -49,15 +47,14 @@ void main() {
         await helper.performance.initializeTracing(categories: ['benchmark']);
     await traceSession.start();
 
-    // TODO(fxbug.dev/53552): Use launch facade instead of SSH.
-    final benchmarkProcess = await helper.sl4fDriver.ssh
-        .start('/bin/run $_appPath --iterations 50000 --benchmark writer');
-    // 50000 iterations to ensure the benchmark runs longer than 30 seconds.
+    final result = await helper.component
+        .launch(_appPath, ['--iterations', '300', '--benchmark', 'writer']);
+    if (result != 'Success') {
+      throw Exception('Failed to launch $_appPath.');
+    }
 
-    sleep(Duration(seconds: 30));
-    benchmarkProcess.kill();
-
-    await traceSession.stop();
+    // TODO(fxbug.dev/54931): Explicitly stop tracing.
+    // await traceSession.stop();
 
     final fxtTraceFile = await traceSession.terminateAndDownload(_testName);
     final jsonTraceFile = await helper.performance
@@ -74,5 +71,5 @@ void main() {
         'rust_inspect': _rustInspectBenchmarksMetricsProcessor,
       },
     );
-  }, timeout: Timeout.none);
+  }, timeout: Timeout(Duration(minutes: 2)));
 }
