@@ -11,7 +11,10 @@ bind_rules("vs680-clk-bind") {
   rules = "vs680-clk.bind"
   output = "vs680-clk-bind.h"
   tests = "vs680-clk-bind-test.json"
-  deps = [ "//src/devices/bind/fuchsia.platform" ]
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.synaptics.platform",
+  ]
 }
 
 driver_module("vs680-clk") {

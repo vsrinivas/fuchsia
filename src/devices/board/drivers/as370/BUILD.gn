@@ -12,6 +12,7 @@ bind_rules("as370-bind") {
   deps = [
     "//src/devices/bind/fuchsia.google.platform",
     "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.synaptics.platform",
   ]
 }
 

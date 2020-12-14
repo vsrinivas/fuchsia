@@ -20,7 +20,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   MEDIATEK = 13,
   TI = 16,
   ARM = 18,
-  SYNAPTICS = 20,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {

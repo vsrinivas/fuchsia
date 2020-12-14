@@ -4,11 +4,12 @@
 
 using fuchsia.platform;
 using fuchsia.google.platform;
+using fuchsia.synaptics.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.BUS;
 
-if fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS {
-  fuchsia.BIND_PLATFORM_DEV_PID == 0x01;  // PDEV_PID_SYNAPTICS_AS370
+if fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.synaptics.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS {
+  fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.synaptics.platform.BIND_PLATFORM_DEV_PID.AS370;
 } else if fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE {
   fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.google.platform.BIND_PLATFORM_DEV_PID.VISALIA;
 } else {

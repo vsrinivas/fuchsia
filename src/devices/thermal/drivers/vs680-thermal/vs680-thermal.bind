@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 using fuchsia.composite;
-using fuchsia.platform;
+using fuchsia.synaptics.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
-fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS;
-fuchsia.BIND_PLATFORM_DEV_DID == 0x0F;  // PDEV_DID_VS680_THERMAL
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.synaptics.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS;
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.synaptics.platform.BIND_PLATFORM_DEV_DID.VS680_THERMAL;

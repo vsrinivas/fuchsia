@@ -13,7 +13,7 @@ bind_rules("as370_power-bind") {
   tests = "tests.json"
   deps = [
     "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.synaptics.platform",
   ]
 }
 

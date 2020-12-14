@@ -4,8 +4,8 @@
         "expected": "match",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS",
-            "fuchsia.BIND_PLATFORM_DEV_DID": "0x0E"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.synaptics.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.synaptics.platform.BIND_PLATFORM_DEV_DID.VS680_CLOCK"
         }
     },
     {
@@ -13,7 +13,7 @@
         "expected": "abort",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.synaptics.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS",
             "fuchsia.BIND_PLATFORM_DEV_DID": "0x05"
         }
     }

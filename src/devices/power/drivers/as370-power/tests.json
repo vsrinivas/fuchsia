@@ -12,8 +12,8 @@
         "expected": "match",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS",
-            "fuchsia.BIND_PLATFORM_DEV_DID": "7"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.synaptics.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.synaptics.platform.BIND_PLATFORM_DEV_DID.AS370_POWER"
         }
     }
 ]

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-using fuchsia.platform;
 using fuchsia.composite;
+using fuchsia.synaptics.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
-fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS;
-fuchsia.BIND_PLATFORM_DEV_PID == 1; // PDEV_PID_SYNAPTICS_AS370
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.synaptics.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS;
+fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.synaptics.platform.BIND_PLATFORM_DEV_PID.AS370;
 accept fuchsia.BIND_PLATFORM_DEV_DID {
-  3, // PDEV_DID_AS370_AUDIO_OUT
+  fuchsia.synaptics.platform.BIND_PLATFORM_DEV_DID.AS370_AUDIO_OUT,
 }

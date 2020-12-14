@@ -11,7 +11,7 @@ bind_rules("as370-gpio-bind") {
   rules = "as370-gpio.bind"
   output = "as370-gpio-bind.h"
   tests = "as370-gpio-bind-test.json"
-  deps = [ "//src/devices/bind/fuchsia.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.synaptics.platform" ]
 }
 
 driver_module("as370-gpio") {

@@ -1,0 +1,33 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.synaptics.platform;
+
+extend uint fuchsia.BIND_PLATFORM_DEV_VID {
+  SYNAPTICS = 20,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  AS370 = 0x01,
+  VS680 = 0x02,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  GPIO = 0x01,
+  AS370_USB_PHY = 0x02,
+  AS370_AUDIO_OUT = 0x03,
+  AS370_AUDIO_IN = 0x04,
+  AS370_CLOCK = 0x05,
+  AS370_DHUB = 0x06,
+  AS370_POWER = 0x07,
+  AS370_THERMAL = 0x08,
+  AS370_TOUCH = 0x09,
+  AS370_SDHCI0 = 0x0A,
+  VS680_SDHCI0 = 0x0B,
+  VS680_SDHCI1 = 0x0C,
+  VS680_USB_PHY = 0x0D,
+  VS680_CLOCK = 0x0E,
+  VS680_THERMAL = 0x0F,
+  VS680_POWER = 0x10,
+};

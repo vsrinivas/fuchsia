@@ -3,15 +3,15 @@
         "name": "Match",
         "expected": "match",
         "device": {
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS",
-            "fuchsia.BIND_PLATFORM_DEV_DID": "0x01"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.synaptics.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.synaptics.platform.BIND_PLATFORM_DEV_DID.GPIO"
         }
     },
     {
         "name": "No DID",
         "expected": "abort",
         "device": {
-            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS"
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.synaptics.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS"
         }
     }
 ]

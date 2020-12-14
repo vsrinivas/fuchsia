@@ -12,6 +12,7 @@ bind_rules("as370-sdhci-bind") {
   deps = [
     "//src/devices/bind/fuchsia.composite",
     "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.synaptics.platform",
   ]
 }
 
