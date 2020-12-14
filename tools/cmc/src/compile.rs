@@ -2919,7 +2919,8 @@ mod tests {
         // Include protocol "foo" again
         fs::File::create(&foo2_path)
             .unwrap()
-            .write_all(format!("{}", json!({ "use": [ { "protocol": "foo" } ] })).as_bytes())
+            // Use different but equivalent syntax to further stress any overlap affordances
+            .write_all(format!("{}", json!({ "use": [ { "protocol": [ "foo" ] } ] })).as_bytes())
             .unwrap();
 
         let in_path = tmp_dir.path().join("test.cml");

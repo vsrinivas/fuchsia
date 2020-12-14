@@ -9,7 +9,7 @@ use std::{
 
 /// Represents either a single value, or multiple values of T.
 /// Useful for differentiating between an array of length 1 and a single value.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum OneOrMany<T> {
     /// A single instance of T.
     One(T),
@@ -32,6 +32,15 @@ impl<T> OneOrMany<T> {
             OneOrMany::One(item) => Iter { inner_one: Some(item), inner_many: None },
             OneOrMany::Many(items) => Iter { inner_one: None, inner_many: Some(items.iter()) },
         }
+    }
+}
+
+impl<T> PartialEq for OneOrMany<T>
+where
+    T: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.iter().eq(other.into_iter())
     }
 }
 
