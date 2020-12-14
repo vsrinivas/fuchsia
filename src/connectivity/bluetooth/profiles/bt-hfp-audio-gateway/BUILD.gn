@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
@@ -18,9 +19,32 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
   ]
 
-  sources = [ "src/main.rs" ]
+  sources = [
+    "src/config.rs",
+    "src/main.rs",
+  ]
+}
+
+# A default configuration for bt-hfp-audio-gateway. There is no stability guarantee
+# provided with the default config. It should only be used for local development and testing
+# purposes. A product integrator should always define a product specific configuration.
+config_data("default_config") {
+  for_pkg = "bt-hfp-audio-gateway"
+  sources = [ "config/default_supported_features.config" ]
+  outputs = [ "supported_features.config" ]
+}
+
+# A test configuration that can be used to check that configuration
+# parsing is wired up correctly and that the config file is in the
+# expected format.
+config_data("test_config") {
+  for_pkg = "bt-hfp-audio-gateway-tests"
+  sources = [ "config/default_supported_features.config" ]
+  outputs = [ "supported_features.config" ]
 }
 
 fuchsia_component("component") {
@@ -33,8 +57,20 @@ fuchsia_package("bt-hfp-audio-gateway") {
 }
 
 fuchsia_unittest_package("bt-hfp-audio-gateway-tests") {
-  deps = [ ":bin_test" ]
+  deps = [
+    ":bin_test",
+    ":test_config",
+  ]
   manifest = "meta/bt-hfp-audio-gateway-unittests.cmx"
+}
+
+# This group can be used for local development environments when the user does not care
+# precisely what configuration is used.
+group("bt-hfp-audio-gateway-default") {
+  deps = [
+    ":bt-hfp-audio-gateway",
+    ":default_config",
+  ]
 }
 
 group("tests") {

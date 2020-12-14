@@ -4,5 +4,10 @@
     ],
     "program": {
         "binary": "bin/bt_hfp_audio_gateway_bin_test"
+    },
+    "sandbox": {
+        "features": [
+            "config-data"
+        ]
     }
 }

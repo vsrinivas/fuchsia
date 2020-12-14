@@ -6,6 +6,8 @@
         "binary": "bin/bt_hfp_audio_gateway"
     },
     "sandbox": {
-        "services": []
+        "features": [
+            "config-data"
+        ]
     }
 }

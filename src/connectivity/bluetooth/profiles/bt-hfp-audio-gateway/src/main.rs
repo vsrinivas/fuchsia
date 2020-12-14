@@ -10,9 +10,15 @@ use {
     log::warn,
 };
 
+use crate::config::AudioGatewayFeatureSupport;
+
+mod config;
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init().context("Could not initialize logger")?;
+
+    let _feature_support = AudioGatewayFeatureSupport::load()?;
 
     let mut fs = ServiceFs::new();
 
