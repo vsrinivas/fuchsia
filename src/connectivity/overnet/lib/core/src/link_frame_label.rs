@@ -3,17 +3,24 @@
 // found in the LICENSE file.
 
 use crate::{labels::NodeId, ping_tracker::Pong};
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use rand::Rng;
 
-/// Labels where a packet is coming from/going to
+/// Labels where a packet is going to
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RoutingDestination {
+    /// Messages can be routed over links - argument is the destination node.
+    Message(NodeId),
+    /// Link control messages are always peer-to-peer.
+    Control,
+}
+
+/// Labels where a packet is coming from and going to
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RoutingTarget {
-    /// Source node
     pub src: NodeId,
-    /// Destination node
-    pub dst: NodeId,
+    pub dst: RoutingDestination,
 }
 
 /// Labels a link frame
@@ -25,28 +32,8 @@ pub struct LinkFrameLabel {
     pub ping: Option<u64>,
     /// Pong id (if a pong is being sent)
     pub pong: Option<Pong>,
-    /// What kind of frame is this?
-    pub frame_type: FrameType,
     /// Debug string
     pub debug_token: Option<u64>,
-}
-
-/// Designator for a control packet or not.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FrameType {
-    /// Control message between links.
-    Control,
-    /// Peer layer message.
-    Message,
-}
-
-impl FrameType {
-    pub fn is_routable(&self) -> bool {
-        match self {
-            FrameType::Control => false,
-            FrameType::Message => true,
-        }
-    }
 }
 
 const LINK_FRAME_LABEL_HAS_SRC: u8 = 0x01;
@@ -71,26 +58,37 @@ impl LinkFrameLabel {
     pub fn encode_for_link(
         &self,
         link_src: NodeId,
-        link_dst: NodeId,
+        force_write_src: bool,
+        link_dst: Option<NodeId>,
         mut buf: impl std::io::Write,
     ) -> Result<usize, Error> {
         log::trace!("ENCODE {:?}", self);
-        if self.target.src == self.target.dst {
-            anyhow::bail!("Routing labels cannot have the same source and destination address");
-        }
         let mut control: u8 = 0;
         let mut length: usize = 0;
-        if link_src != self.target.src {
+        let src = self.target.src;
+        match self.target.dst {
+            RoutingDestination::Message(dst) => {
+                let link_dst = link_dst.unwrap();
+                if src == dst {
+                    anyhow::bail!(
+                        "Routing labels cannot have the same source and destination address"
+                    );
+                }
+                assert!(src != link_dst);
+                if link_dst != dst {
+                    control |= LINK_FRAME_LABEL_HAS_DST;
+                    length += 8;
+                    buf.write_u64::<byteorder::LittleEndian>(dst.0)?;
+                }
+            }
+            RoutingDestination::Control => {
+                control |= LINK_FRAME_LABEL_IS_CONTROL;
+            }
+        }
+        if force_write_src || link_src != src {
             control |= LINK_FRAME_LABEL_HAS_SRC;
             length += 8;
-            assert!(self.frame_type.is_routable());
-            buf.write_u64::<byteorder::LittleEndian>(self.target.src.0)?;
-        }
-        if link_dst != self.target.dst {
-            control |= LINK_FRAME_LABEL_HAS_DST;
-            length += 8;
-            assert!(self.frame_type.is_routable());
-            buf.write_u64::<byteorder::LittleEndian>(self.target.dst.0)?;
+            buf.write_u64::<byteorder::LittleEndian>(src.0)?;
         }
         if let Some(id) = self.ping {
             control |= LINK_FRAME_LABEL_HAS_PING;
@@ -108,10 +106,6 @@ impl LinkFrameLabel {
             length += 8;
             buf.write_u64::<byteorder::LittleEndian>(id)?;
         }
-        match self.frame_type {
-            FrameType::Control => control |= LINK_FRAME_LABEL_IS_CONTROL,
-            FrameType::Message => (),
-        }
         log::trace!("control={:x} link_src={:?} link_dst={:?}", control, link_src, link_dst);
         length += 1;
         buf.write_u8(control)?;
@@ -123,7 +117,7 @@ impl LinkFrameLabel {
     /// Since there are compression options available for the endpoints in the wire format, these
     /// are necessary to decode the encoded form.
     pub fn decode(
-        link_src: NodeId,
+        link_src: Option<NodeId>,
         link_dst: NodeId,
         buf: &[u8],
     ) -> Result<(LinkFrameLabel, usize), Error> {
@@ -131,8 +125,8 @@ impl LinkFrameLabel {
         let control = r.rd_u8()?;
         log::trace!("control={:x} link_src={:?} link_dst={:?}", control, link_src, link_dst);
         if control & LINK_FRAME_LABEL_IS_CONTROL != 0 {
-            if control & (LINK_FRAME_LABEL_HAS_SRC | LINK_FRAME_LABEL_HAS_DST) != 0 {
-                anyhow::bail!("Control messages cannot specify src/dst");
+            if control & LINK_FRAME_LABEL_HAS_DST != 0 {
+                anyhow::bail!("Control messages cannot specify dst");
             }
         }
         let h = LinkFrameLabel {
@@ -151,27 +145,32 @@ impl LinkFrameLabel {
             } else {
                 None
             },
-            frame_type: if control & LINK_FRAME_LABEL_IS_CONTROL != 0 {
-                FrameType::Control
-            } else {
-                FrameType::Message
-            },
-            target: RoutingTarget {
-                dst: if (control & LINK_FRAME_LABEL_HAS_DST) != 0 {
+            target: {
+                let src = if (control & LINK_FRAME_LABEL_HAS_SRC) != 0 {
                     r.rd_u64()?.into()
                 } else {
-                    link_dst
-                },
-                src: if (control & LINK_FRAME_LABEL_HAS_SRC) != 0 {
-                    r.rd_u64()?.into()
+                    link_src.ok_or(format_err!(
+                        "Received routable message with compressed source address and no known link source"
+                    ))?
+                };
+                let dst = if (control & LINK_FRAME_LABEL_IS_CONTROL) != 0 {
+                    RoutingDestination::Control
                 } else {
-                    link_src
-                },
+                    let dst = if (control & LINK_FRAME_LABEL_HAS_DST) != 0 {
+                        r.rd_u64()?.into()
+                    } else {
+                        link_dst
+                    };
+                    if src == dst {
+                        anyhow::bail!(
+                            "Routing labels cannot have the same source and destination address"
+                        );
+                    }
+                    RoutingDestination::Message(dst)
+                };
+                RoutingTarget { src, dst }
             },
         };
-        if h.target.src == h.target.dst {
-            anyhow::bail!("Routing labels cannot have the same source and destination address");
-        }
         Ok((h, r.0.len()))
     }
 }
@@ -211,11 +210,12 @@ mod test {
     fn round_trips_buf(r: LinkFrameLabel, link_src: NodeId, link_dst: NodeId) {
         log::trace!("Check roundtrips: {:?} with src={:?} dst={:?}", r, link_src, link_dst);
         let mut buf: [u8; 128] = [0; 128];
-        let suffix_len = r.encode_for_link(link_src, link_dst, &mut buf[10..]).unwrap();
+        let suffix_len =
+            r.encode_for_link(link_src, false, Some(link_dst), &mut buf[10..]).unwrap();
         log::trace!("Encodes to: {:?}", &buf[10..10 + suffix_len]);
         assert_eq!(buf[0..10].to_vec(), vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
         let (q, len) =
-            LinkFrameLabel::decode(link_src, link_dst, &buf[0..10 + suffix_len]).unwrap();
+            LinkFrameLabel::decode(Some(link_src), link_dst, &buf[0..10 + suffix_len]).unwrap();
         assert_eq!(len, 10);
         assert_eq!(r, q);
     }
@@ -228,88 +228,80 @@ mod test {
     fn round_trip_examples() {
         round_trips(
             LinkFrameLabel {
-                target: RoutingTarget { src: 1.into(), dst: 2.into() },
+                target: RoutingTarget { src: 1.into(), dst: RoutingDestination::Message(2.into()) },
                 ping: Some(3),
                 pong: None,
                 debug_token: None,
-                frame_type: FrameType::Message,
             },
             1.into(),
             2.into(),
         );
         round_trips(
             LinkFrameLabel {
-                target: RoutingTarget { src: 1.into(), dst: 2.into() },
+                target: RoutingTarget { src: 1.into(), dst: RoutingDestination::Control },
                 ping: None,
                 pong: None,
                 debug_token: None,
-                frame_type: FrameType::Control,
             },
             1.into(),
             2.into(),
         );
         round_trips(
             LinkFrameLabel {
-                target: RoutingTarget { src: 1.into(), dst: 3.into() },
+                target: RoutingTarget { src: 1.into(), dst: RoutingDestination::Message(3.into()) },
                 ping: None,
                 pong: None,
                 debug_token: None,
-                frame_type: FrameType::Message,
             },
             1.into(),
             2.into(),
         );
         round_trips(
             LinkFrameLabel {
-                target: RoutingTarget { src: 1.into(), dst: 3.into() },
+                target: RoutingTarget { src: 1.into(), dst: RoutingDestination::Message(3.into()) },
                 ping: None,
                 pong: None,
                 debug_token: LinkFrameLabel::new_debug_token(),
-                frame_type: FrameType::Message,
             },
             1.into(),
             2.into(),
         );
         round_trips(
             LinkFrameLabel {
-                target: RoutingTarget { src: 3.into(), dst: 2.into() },
+                target: RoutingTarget { src: 3.into(), dst: RoutingDestination::Message(2.into()) },
                 ping: Some(1),
                 pong: None,
                 debug_token: LinkFrameLabel::new_debug_token(),
-                frame_type: FrameType::Message,
             },
             1.into(),
             2.into(),
         );
         round_trips(
             LinkFrameLabel {
-                target: RoutingTarget { src: 3.into(), dst: 2.into() },
+                target: RoutingTarget { src: 3.into(), dst: RoutingDestination::Message(2.into()) },
                 ping: None,
                 pong: Some(Pong { id: 1, queue_time: 999 }),
                 debug_token: LinkFrameLabel::new_debug_token(),
-                frame_type: FrameType::Message,
             },
             1.into(),
             2.into(),
         );
         round_trips(
             LinkFrameLabel {
-                target: RoutingTarget { src: 1.into(), dst: 2.into() },
+                target: RoutingTarget { src: 1.into(), dst: RoutingDestination::Message(2.into()) },
                 ping: Some(123),
                 pong: Some(Pong { id: 456, queue_time: 789 }),
                 debug_token: LinkFrameLabel::new_debug_token(),
-                frame_type: FrameType::Message,
             },
             3.into(),
             4.into(),
         );
         round_trips(
             LinkFrameLabel {
-                target: RoutingTarget { src: 1.into(), dst: 2.into() },
+                target: RoutingTarget { src: 1.into(), dst: RoutingDestination::Message(2.into()) },
                 ping: None,
                 pong: None,
                 debug_token: LinkFrameLabel::new_debug_token(),
-                frame_type: FrameType::Message,
             },
             3.into(),
             4.into(),

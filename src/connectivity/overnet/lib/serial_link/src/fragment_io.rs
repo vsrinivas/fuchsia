@@ -11,7 +11,7 @@ use fuchsia_async::TimeoutExt;
 use futures::channel::{mpsc, oneshot};
 use futures::lock::Mutex;
 use futures::prelude::*;
-use overnet_core::{DeframerReader, FrameType, FramerWriter};
+use overnet_core::{DeframerReader, FramerWriter, ReadBytes};
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -34,8 +34,8 @@ pub fn new_fragment_io(
 }
 
 async fn run_fragment_io(
-    rx_write: mpsc::Receiver<(FrameType, Vec<u8>)>,
-    tx_read: mpsc::Sender<(Option<FrameType>, Vec<u8>)>,
+    rx_write: mpsc::Receiver<Vec<u8>>,
+    tx_read: mpsc::Sender<ReadBytes>,
     framer_writer: FramerWriter<LossyText>,
     deframer_reader: DeframerReader<LossyText>,
 ) -> Result<(), Error> {
@@ -48,7 +48,7 @@ async fn run_fragment_io(
 
     futures::future::try_join5(
         read_fragments(tx_read, framer_writer, deframer_reader, ack_set),
-        split_fragments(rx_write, framer_writer, tx_frag),
+        split_fragments(rx_write, tx_frag),
         fragment_sender(rx_bat1, tx_bat2, framer_writer, ack_set),
         fragment_sender(rx_bat2, tx_bat3, framer_writer, ack_set),
         async move {
@@ -62,17 +62,16 @@ async fn run_fragment_io(
 }
 
 async fn read_fragments(
-    mut tx_read: mpsc::Sender<(Option<FrameType>, Vec<u8>)>,
+    mut tx_read: mpsc::Sender<ReadBytes>,
     framer_writer: &Mutex<FramerWriter<LossyText>>,
     mut deframer_reader: DeframerReader<LossyText>,
     ack_set: &Mutex<HashMap<(u8, u8), oneshot::Sender<()>>>,
 ) -> Result<(), Error> {
     let mut reassembler = Reassembler::new();
     loop {
-        let (frame_type, mut frame) = deframer_reader.read().await?;
-        match frame_type {
-            None | Some(FrameType::OvernetHello) => tx_read.send((frame_type, frame)).await?,
-            Some(FrameType::Overnet) => {
+        match deframer_reader.read().await? {
+            ReadBytes::Unframed(bytes) => tx_read.send(ReadBytes::Unframed(bytes)).await?,
+            ReadBytes::Framed(mut frame) => {
                 let fragment_id =
                     frame.pop().ok_or_else(|| format_err!("packet too short (no fragment id)"))?;
                 let msg_id =
@@ -86,13 +85,10 @@ async fn read_fragments(
                     }
                     continue;
                 }
-                framer_writer
-                    .lock()
-                    .await
-                    .write(FrameType::Overnet, &[msg_id, fragment_id | ACK])
-                    .await?;
+                log::trace!("READ FRAG: msg_id={} fragment_id={} {:?}", msg_id, fragment_id, frame);
+                framer_writer.lock().await.write(&[msg_id, fragment_id | ACK]).await?;
                 if let Some(frame) = reassembler.recv(msg_id, fragment_id, frame) {
-                    tx_read.send((Some(FrameType::Overnet), frame)).await?;
+                    tx_read.send(ReadBytes::Framed(frame)).await?;
                 }
             }
         }
@@ -100,32 +96,24 @@ async fn read_fragments(
 }
 
 async fn split_fragments(
-    mut rx_write: mpsc::Receiver<(FrameType, Vec<u8>)>,
-    framer_writer: &Mutex<FramerWriter<LossyText>>,
+    mut rx_write: mpsc::Receiver<Vec<u8>>,
     mut tx_frag: mpsc::Sender<(u8, u8, Vec<u8>)>,
 ) -> Result<(), Error> {
     let mut msg_id = 0u8;
     const MAX_FRAGMENT_SIZE: usize = 160;
-    while let Some((frame_type, frame)) = rx_write.next().await {
-        match frame_type {
-            FrameType::OvernetHello => framer_writer.lock().await.write(frame_type, &frame).await?,
-            FrameType::Overnet => {
-                if frame.len() > 64 * MAX_FRAGMENT_SIZE {
-                    continue;
-                }
-                msg_id = msg_id.wrapping_add(1);
-                let mut fragment_id = 0u8;
-                let mut frame: &[u8] = &frame;
-                while frame.len() > MAX_FRAGMENT_SIZE {
-                    tx_frag
-                        .send((msg_id, fragment_id, frame[..MAX_FRAGMENT_SIZE].to_vec()))
-                        .await?;
-                    frame = &frame[MAX_FRAGMENT_SIZE..];
-                    fragment_id += 1;
-                }
-                tx_frag.send((msg_id, fragment_id | END_OF_MSG, frame.to_vec())).await?;
-            }
+    while let Some(frame) = rx_write.next().await {
+        if frame.len() > 64 * MAX_FRAGMENT_SIZE {
+            continue;
         }
+        msg_id = msg_id.wrapping_add(1);
+        let mut fragment_id = 0u8;
+        let mut frame: &[u8] = &frame;
+        while frame.len() > MAX_FRAGMENT_SIZE {
+            tx_frag.send((msg_id, fragment_id, frame[..MAX_FRAGMENT_SIZE].to_vec())).await?;
+            frame = &frame[MAX_FRAGMENT_SIZE..];
+            fragment_id += 1;
+        }
+        tx_frag.send((msg_id, fragment_id | END_OF_MSG, frame.to_vec())).await?;
     }
     Ok(())
 }
@@ -147,6 +135,13 @@ async fn fragment_sender(
         let tag = (msg_id, fragment_id);
         ack_set.lock().await.insert(tag, tx_ack);
 
+        log::trace!(
+            "SEND FRAG: msg_id={:?} fragment_id={:?} bytes={:?}",
+            msg_id,
+            fragment_id,
+            fragment
+        );
+
         fragment.push(msg_id);
         fragment.push(fragment_id);
 
@@ -156,7 +151,7 @@ async fn fragment_sender(
         }
 
         'retry_fragment: for _ in 0..10 {
-            framer_writer.lock().await.write(FrameType::Overnet, &fragment).await?;
+            framer_writer.lock().await.write(&fragment).await?;
             match (&mut rx_ack)
                 .map_err(|_| RxError::Canceled)
                 .on_timeout(Duration::from_millis(100), || Err(RxError::Timeout))
@@ -174,21 +169,21 @@ async fn fragment_sender(
 }
 
 pub struct FragmentWriter {
-    frame_sender: mpsc::Sender<(FrameType, Vec<u8>)>,
+    frame_sender: mpsc::Sender<Vec<u8>>,
 }
 
 impl FragmentWriter {
-    pub async fn write(&mut self, frame_type: FrameType, bytes: Vec<u8>) -> Result<(), Error> {
-        Ok(self.frame_sender.send((frame_type, bytes)).await?)
+    pub async fn write(&mut self, bytes: Vec<u8>) -> Result<(), Error> {
+        Ok(self.frame_sender.send(bytes).await?)
     }
 }
 
 pub struct FragmentReader {
-    frame_receiver: mpsc::Receiver<(Option<FrameType>, Vec<u8>)>,
+    frame_receiver: mpsc::Receiver<ReadBytes>,
 }
 
 impl FragmentReader {
-    pub async fn read(&mut self) -> Result<(Option<FrameType>, Vec<u8>), Error> {
+    pub async fn read(&mut self) -> Result<ReadBytes, Error> {
         Ok(self
             .frame_receiver
             .next()
@@ -207,7 +202,7 @@ mod test {
     use fuchsia_async::TimeoutExt;
     use futures::future::{try_join, try_join4};
     use futures::prelude::*;
-    use overnet_core::{new_deframer, new_framer, DeframerWriter, FrameType, FramerReader};
+    use overnet_core::{new_deframer, new_framer, DeframerWriter, FramerReader, ReadBytes};
     use std::collections::HashSet;
     use std::time::Duration;
 
@@ -237,8 +232,10 @@ mod test {
 
     async fn must_not_become_readable(mut rx: FragmentReader) -> Result<(), Error> {
         loop {
-            let (frame_type, _) = rx.read().await?;
-            assert_eq!(frame_type, None);
+            match rx.read().await? {
+                ReadBytes::Unframed(_) => (),
+                ReadBytes::Framed(_) => panic!("Expected to see no framed data"),
+            }
         }
     }
 
@@ -246,7 +243,6 @@ mod test {
         name: &'static str,
         run: usize,
         failures_per_64kib: u16,
-        frame_type: FrameType,
         messages: &'static [&[u8]],
     ) -> Result<(), Error> {
         init();
@@ -273,7 +269,7 @@ mod test {
                 Ok(())
             },
             async move {
-                one_test(name, run, frame_type, &messages, &mut c_tx, &mut s_rx)
+                one_test(name, run, &messages, &mut c_tx, &mut s_rx)
                     .on_timeout(Duration::from_secs(120), || Err(format_err!("timeout")))
                     .await?;
                 drop(support_handle);
@@ -287,7 +283,6 @@ mod test {
     async fn one_test(
         name: &str,
         iteration: usize,
-        frame_type: FrameType,
         messages: &[&[u8]],
         tx: &mut FragmentWriter,
         rx: &mut FragmentReader,
@@ -296,7 +291,7 @@ mod test {
             async move {
                 for (i, message) in messages.iter().enumerate() {
                     log::info!("{}[run {}, msg {}] begin write", name, iteration, i);
-                    tx.write(frame_type, message.to_vec()).await?;
+                    tx.write(message.to_vec()).await?;
                     log::info!("{}[run {}, msg {}] done write", name, iteration, i);
                 }
                 Ok(())
@@ -306,19 +301,10 @@ mod test {
                 let mut found = HashSet::new();
                 while found.len() != n {
                     log::info!("{}[run {}, msg {}] begin read", name, iteration, found.len());
-                    let (got_frame_type, msg) = rx.read().await?;
-                    log::info!(
-                        "{}[run {}, msg {}] got frame {:?} len {}",
-                        name,
-                        iteration,
-                        found.len(),
-                        got_frame_type,
-                        msg.len()
-                    );
-                    if got_frame_type.is_none() {
-                        continue;
-                    }
-                    assert_eq!(got_frame_type.unwrap(), frame_type);
+                    let msg = match rx.read().await? {
+                        ReadBytes::Unframed(_) => continue,
+                        ReadBytes::Framed(msg) => msg,
+                    };
                     let index = messages
                         .iter()
                         .enumerate()
@@ -337,22 +323,17 @@ mod test {
     const LONG_PACKET: &'static [u8; 8192] = std::include_bytes!("long_packet.bin");
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn hello(run: usize) -> Result<(), Error> {
-        run_test("hello", run, 0, FrameType::OvernetHello, &[b"hello world"]).await
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
     async fn simple(run: usize) -> Result<(), Error> {
-        run_test("simple", run, 0, FrameType::Overnet, &[b"hello world"]).await
+        run_test("simple", run, 0, &[b"hello world"]).await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn long(run: usize) -> Result<(), Error> {
-        run_test("long", run, 0, FrameType::Overnet, &[LONG_PACKET]).await
+        run_test("long", run, 0, &[LONG_PACKET]).await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn long_flaky(run: usize) -> Result<(), Error> {
-        run_test("long_flaky", run, 10, FrameType::Overnet, &[LONG_PACKET]).await
+        run_test("long_flaky", run, 10, &[LONG_PACKET]).await
     }
 }

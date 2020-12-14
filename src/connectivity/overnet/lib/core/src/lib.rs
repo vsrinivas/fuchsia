@@ -38,8 +38,8 @@ mod stream_framer;
 // Export selected types from modules.
 pub use coding::{decode_fidl, encode_fidl};
 pub use future_help::log_errors;
-pub use labels::{Endpoint, NodeId, NodeLinkId};
-pub use link::{LinkReceiver, LinkSender};
+pub use labels::{ConnectionId, Endpoint, NodeId, NodeLinkId};
+pub use link::{LinkReceiver, LinkSender, MAX_FRAME_LENGTH};
 pub use quic_link::{new_quic_link, QuicReceiver, QuicSender};
 pub use router::{generate_node_id, ListPeersContext, Router, RouterOptions};
 pub use security_context::{SecurityContext, SimpleSecurityContext};

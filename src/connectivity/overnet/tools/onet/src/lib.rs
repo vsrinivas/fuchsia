@@ -6,6 +6,7 @@ use {
     anyhow::{format_err, Error},
     argh::FromArgs,
     fidl_fuchsia_overnet_protocol::LinkConfig,
+    fuchsia_async::Timer,
     futures::prelude::*,
     std::{fmt::Write, time::Duration},
 };
@@ -83,10 +84,21 @@ fn fmtq<T: std::fmt::Display>(a: Option<T>) -> String {
 async fn list_links(args: ListLinks) -> Result<(), Error> {
     list_peers::list_peers_from_argument(&args.nodes)?
         .try_for_each_concurrent(None, |node| async move {
-            let mut links = probe_node::probe_node(node, probe_node::Selector::Links)
-                .await?
-                .links
-                .ok_or_else(|| format_err!("No links in probe result"))?;
+            let mut links = loop {
+                let probe = probe_node::probe_node(
+                    node,
+                    probe_node::Selector::Links | probe_node::Selector::ConnectingLinkCount,
+                )
+                .await?;
+                let connecting_link_count = probe
+                    .connecting_link_count
+                    .ok_or_else(|| format_err!("No connecting link count in probe result"))?;
+                if connecting_link_count > 0 {
+                    Timer::new(Duration::from_millis(100)).await;
+                    continue;
+                }
+                break probe.links.ok_or_else(|| format_err!("No links in probe result"))?;
+            };
             links.sort_by(|a, b| a.source_local_id.cmp(&b.source_local_id));
             for link in links {
                 println!(

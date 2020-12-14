@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::future_help::{log_errors, PollMutex};
-use crate::labels::Endpoint;
+use crate::labels::{ConnectionId, Endpoint};
 use crate::link::{LinkReceiver, LinkSender, SendFrame, MAX_FRAME_LENGTH};
 use crate::security_context::quiche_config_from_security_context;
 use anyhow::Error;
@@ -11,7 +11,6 @@ use fuchsia_async::{Task, Timer};
 use futures::future::{poll_fn, Either};
 use futures::lock::Mutex;
 use futures::ready;
-use rand::Rng;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
@@ -114,11 +113,8 @@ pub async fn new_quic_link(
     sender: LinkSender,
     receiver: LinkReceiver,
     endpoint: Endpoint,
-) -> Result<(QuicSender, QuicReceiver), Error> {
-    let scid: Vec<u8> = rand::thread_rng()
-        .sample_iter(&rand::distributions::Standard)
-        .take(quiche::MAX_CONN_ID_LEN)
-        .collect();
+) -> Result<(QuicSender, QuicReceiver, ConnectionId), Error> {
+    let scid = ConnectionId::new();
     let mut config =
         quiche_config_from_security_context(sender.router().security_context()).await?;
     config.set_application_protos(b"\x10overnet.link/0.2")?;
@@ -133,8 +129,8 @@ pub async fn new_quic_link(
 
     let quic = Arc::new(Mutex::new(Quic {
         connection: match endpoint {
-            Endpoint::Client => quiche::connect(None, &scid, &mut config)?,
-            Endpoint::Server => quiche::accept(&scid, None, &mut config)?,
+            Endpoint::Client => quiche::connect(None, &scid.to_array(), &mut config)?,
+            Endpoint::Server => quiche::accept(&scid.to_array(), None, &mut config)?,
         },
         timeout: None,
         new_timeout: Default::default(),
@@ -152,23 +148,26 @@ pub async fn new_quic_link(
             )),
             quic,
         },
+        scid,
     ))
 }
 
 impl QuicReceiver {
     /// Report a packet was received.
     /// An error processing a packet does not indicate that the link should be closed.
-    pub async fn received_packet(&self, packet: &mut [u8]) -> Result<(), Error> {
+    pub async fn received_frame(&self, packet: &mut [u8]) {
         let mut q = self.quic.lock().await;
         match q.connection.recv(packet) {
             Ok(_) => (),
             Err(quiche::Error::Done) => (),
-            Err(x) => return Err(x.into()),
+            Err(x) => {
+                log::info!("Bad packet received: {:?}", x);
+                return;
+            }
         }
         q.update_timeout();
         q.conn_send.ready();
         q.dgram_recv.ready();
-        Ok(())
     }
 }
 
@@ -203,7 +202,7 @@ async fn run_link(
     Ok(())
 }
 
-async fn link_to_quic(link: LinkSender, quic: Arc<Mutex<Quic>>) -> Result<(), Error> {
+async fn link_to_quic(mut link: LinkSender, quic: Arc<Mutex<Quic>>) -> Result<(), Error> {
     fn drop_frame<S: std::fmt::Display>(
         p: &SendFrame<'_>,
         make_reason: impl FnOnce() -> S,
@@ -243,9 +242,7 @@ async fn quic_to_link(mut link: LinkReceiver, quic: Arc<Mutex<Quic>>) -> Result<
             Err(e) => Poll::Ready(Err(e)),
         })
         .await?;
-        if let Err(e) = link.received_packet(&mut frame[..n]).await {
-            log::info!("Receive packet failed: {:?}", e);
-        }
+        link.received_frame(&mut frame[..n]).await
     }
 }
 

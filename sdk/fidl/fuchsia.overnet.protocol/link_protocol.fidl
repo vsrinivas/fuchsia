@@ -18,11 +18,13 @@ struct LinkControlMessage {
 
 /// Control message payload.
 union LinkControlPayload {
+    /// Initial message.
+    1: LinkIntroduction introduction;
     /// Configure some routes.
     /// Since the complete routing table might be longer than can fit in one frame, it may take
     /// multiple set_route messages to update a routing table. is_end will be set on the last frame
     /// of a given update round to signify that the update is done.
-    1: SetRoute set_route;
+    2: SetRoute set_route;
 };
 
 /// Partial send of new routes.
@@ -47,4 +49,8 @@ table RouteMetrics {
     1: vector<NodeId>:MAX intermediate_hops;
     /// Round trip time to the destination and back (in microseconds).
     2: uint64 round_trip_time_us;
+};
+
+/// Introduction data for a link - basic configuration stuff will go here.
+table LinkIntroduction {
 };

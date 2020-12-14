@@ -4,18 +4,6 @@
 
 library fuchsia.overnet.protocol;
 
-/// Introduction packet sent on stream oriented links between Overnet nodes
-table StreamSocketGreeting {
-    /// Protocol identification string; different kinds of streams might choose a different value here
-    1: string:32 magic_string;
-    /// Overnet NodeId of the sender
-    2: NodeId node_id;
-    /// Optional label for debugging
-    3: string:32 connection_label;
-    /// Optional key (used on lossy connections to uniquely identify a handshake pair)
-    4: uint64 key;
-};
-
 /// Extra arguments for attaching a socket link to an Overnet mesh.
 table SocketLinkOptions {
     /// A label that might be used for debugging purposes.

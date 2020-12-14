@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_net_mdns::{
     Media, Publication, PublicationResponder_Request, PublicationResponder_RequestStream,
@@ -12,78 +12,82 @@ use fidl_fuchsia_net_mdns::{
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
-use overnet_core::NodeId;
 
-const SERVICE_NAME: &str = "_rustic_overnet._udp.";
+const SERVICE_NAME: &str = "_overnet._udp.";
+const INSTANCE_NAME: &str = "quic-v0";
 
 async fn connect_to_proxy(
     publisher: PublisherProxy,
-    node_id: NodeId,
     port: u16,
     proxy: zx::Channel,
-) {
+) -> Result<(), Error> {
     log::info!("Publish overnet service on port {}", port);
 
-    match publisher
+    publisher
         .publish_service_instance(
             SERVICE_NAME,
-            &format!("{}", node_id.0),
+            INSTANCE_NAME,
             Media::Wired | Media::Wireless,
             true,
             fidl::endpoints::ClientEnd::new(proxy),
         )
-        .await
-    {
-        Ok(Ok(())) => log::warn!("Published overnet service"),
-        Err(e) => log::warn!("FIDL failure: {:?}", e),
-        Ok(Err(e)) => log::warn!("Mdns failure: {:?}", e),
-    }
+        .await?
+        .map_err(|e| format_err!("{:?}", e))?;
+    Ok(())
 }
 
 /// Run main loop to publish a udp socket to mdns.
-pub async fn publish(node_id: NodeId, port: u16) -> Result<(), Error> {
+pub async fn publish(port: u16) -> Result<(), Error> {
     let (server, proxy) = zx::Channel::create()?;
     let server = fasync::Channel::from_channel(server)?;
-    let mut stream = PublicationResponder_RequestStream::from_channel(server);
 
     let publisher = fuchsia_component::client::connect_to_service::<PublisherMarker>()?;
 
-    fasync::Task::local(connect_to_proxy(publisher, node_id, port, proxy)).detach();
+    futures::future::try_join(
+        connect_to_proxy(publisher, port, proxy),
+        PublicationResponder_RequestStream::from_channel(server).map_err(Into::into).try_for_each(
+            |request| async move {
+                let mut ok_publication = Publication {
+                    port,
+                    text: vec![],
+                    srv_priority: fidl_fuchsia_net_mdns::DEFAULT_SRV_PRIORITY,
+                    srv_weight: fidl_fuchsia_net_mdns::DEFAULT_SRV_WEIGHT,
+                    ptr_ttl: fidl_fuchsia_net_mdns::DEFAULT_PTR_TTL,
+                    srv_ttl: fidl_fuchsia_net_mdns::DEFAULT_SRV_TTL,
+                    txt_ttl: fidl_fuchsia_net_mdns::DEFAULT_TXT_TTL,
+                };
+                let ok_response = &mut ok_publication;
+                let response = |ok| {
+                    if ok {
+                        Some(ok_response)
+                    } else {
+                        None
+                    }
+                };
 
-    log::info!("Waiting for mdns requests");
+                match request {
+                    PublicationResponder_Request::OnPublication {
+                        responder,
+                        subtype: None,
+                        ..
+                    } => {
+                        responder.send(response(true))?;
+                    }
+                    PublicationResponder_Request::OnPublication {
+                        responder,
+                        subtype: Some(s),
+                        ..
+                    } => {
+                        responder.send(response(s == ""))?;
+                    }
+                }
 
-    while let Some(request) = stream.try_next().await? {
-        let mut ok_publication = Publication {
-            port,
-            text: vec![],
-            srv_priority: fidl_fuchsia_net_mdns::DEFAULT_SRV_PRIORITY,
-            srv_weight: fidl_fuchsia_net_mdns::DEFAULT_SRV_WEIGHT,
-            ptr_ttl: fidl_fuchsia_net_mdns::DEFAULT_PTR_TTL,
-            srv_ttl: fidl_fuchsia_net_mdns::DEFAULT_SRV_TTL,
-            txt_ttl: fidl_fuchsia_net_mdns::DEFAULT_TXT_TTL,
-        };
-        let ok_response = &mut ok_publication;
-        let response = |ok| {
-            if ok {
-                Some(ok_response)
-            } else {
-                None
-            }
-        };
-
-        match request {
-            PublicationResponder_Request::OnPublication { responder, subtype: None, .. } => {
-                responder.send(response(true))?;
-            }
-            PublicationResponder_Request::OnPublication { responder, subtype: Some(s), .. } => {
-                responder.send(response(s == ""))?;
-            }
-        }
-    }
-
-    log::info!("Mdns publisher finishes");
-
-    Ok(())
+                Ok(())
+            },
+        ),
+    )
+    .await
+    .map(drop)
 }
 
 fn convert_ipv6_buffer(in_arr: [u8; 16]) -> [u16; 8] {
@@ -96,110 +100,78 @@ fn convert_ipv6_buffer(in_arr: [u8; 16]) -> [u16; 8] {
     out_arr
 }
 
-fn fuchsia_to_rust_ipaddr4(addr: fidl_fuchsia_net::Ipv4Address) -> std::net::IpAddr {
-    std::net::IpAddr::V4(std::net::Ipv4Addr::new(
-        addr.addr[0],
-        addr.addr[1],
-        addr.addr[2],
-        addr.addr[3],
-    ))
+fn fuchsia_to_rust_ipaddr4(addr: fidl_fuchsia_net::Ipv4Address) -> std::net::Ipv4Addr {
+    std::net::Ipv4Addr::new(addr.addr[0], addr.addr[1], addr.addr[2], addr.addr[3])
 }
 
-fn fuchsia_to_rust_ipaddr6(addr: fidl_fuchsia_net::Ipv6Address) -> std::net::IpAddr {
+fn fuchsia_to_rust_ipaddr6(addr: fidl_fuchsia_net::Ipv6Address) -> std::net::Ipv6Addr {
     let addr = convert_ipv6_buffer(addr.addr);
-    std::net::IpAddr::V6(std::net::Ipv6Addr::new(
-        addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7],
-    ))
+    std::net::Ipv6Addr::new(addr[0], addr[1], addr[2], addr[3], addr[4], addr[5], addr[6], addr[7])
 }
 
-fn endpoint4_to_socket(ep: fidl_fuchsia_net::Ipv4SocketAddress) -> std::net::SocketAddr {
-    std::net::SocketAddr::new(fuchsia_to_rust_ipaddr4(ep.address), ep.port)
+fn endpoint4_to_socket(ep: fidl_fuchsia_net::Ipv4SocketAddress) -> std::net::SocketAddrV6 {
+    std::net::SocketAddrV6::new(fuchsia_to_rust_ipaddr4(ep.address).to_ipv6_mapped(), ep.port, 0, 0)
 }
 
-fn endpoint6_to_socket(ep: fidl_fuchsia_net::Ipv6SocketAddress) -> std::net::SocketAddr {
-    std::net::SocketAddr::new(fuchsia_to_rust_ipaddr6(ep.address), ep.port)
+fn endpoint6_to_socket(ep: fidl_fuchsia_net::Ipv6SocketAddress) -> std::net::SocketAddrV6 {
+    std::net::SocketAddrV6::new(fuchsia_to_rust_ipaddr6(ep.address), ep.port, 0, 0)
 }
 
 /// Run main loop to look for overnet mdns advertisements and add them to the mesh.
 pub async fn subscribe(
-    mut found: futures::channel::mpsc::Sender<(std::net::SocketAddr, NodeId)>,
+    found: futures::channel::mpsc::Sender<std::net::SocketAddrV6>,
 ) -> Result<(), Error> {
-    let (server, proxy) = zx::Channel::create()?;
-    let server = fasync::Channel::from_channel(server)?;
-    let mut stream = ServiceSubscriberRequestStream::from_channel(server);
+    let is_compatible_instance = |instance: &fidl_fuchsia_net_mdns::ServiceInstance| {
+        instance.instance.as_ref().map(|s| s == INSTANCE_NAME).unwrap_or(false)
+    };
 
     log::info!("Query for overnet services");
 
+    let (server, proxy) = zx::Channel::create()?;
     fuchsia_component::client::connect_to_service::<SubscriberMarker>()?
         .subscribe_to_service(SERVICE_NAME, fidl::endpoints::ClientEnd::new(proxy))?;
 
     log::info!("Wait for overnet services");
+    let found = &found;
 
-    while let Some(request) = stream.try_next().await? {
-        match request {
-            ServiceSubscriberRequest::OnInstanceDiscovered { instance, responder } => {
-                log::info!("Discovered: {:?}", instance);
-                let parsed_instance = instance
-                    .instance
-                    .ok_or(anyhow::format_err!("ServiceInstance.instance not supplied"))?
-                    .parse::<u64>()?
-                    .into();
-                if let Some(ipv4_endpoint) = instance.ipv4_endpoint {
-                    if found
-                        .send((endpoint4_to_socket(ipv4_endpoint), parsed_instance))
-                        .await
-                        .is_err()
-                    {
-                        break;
+    ServiceSubscriberRequestStream::from_channel(fasync::Channel::from_channel(server)?)
+        .map_err(Into::into)
+        .try_for_each(|request| async move {
+            match request {
+                ServiceSubscriberRequest::OnInstanceDiscovered { instance, responder } => {
+                    if is_compatible_instance(&instance) {
+                        if let Some(ipv4_endpoint) = instance.ipv4_endpoint {
+                            found.clone().send(endpoint4_to_socket(ipv4_endpoint)).await?;
+                        }
+                        if let Some(ipv6_endpoint) = instance.ipv6_endpoint {
+                            found.clone().send(endpoint6_to_socket(ipv6_endpoint)).await?;
+                        }
                     }
+                    responder.send()?;
                 }
-                if let Some(ipv6_endpoint) = instance.ipv6_endpoint {
-                    if found
-                        .send((endpoint6_to_socket(ipv6_endpoint), parsed_instance))
-                        .await
-                        .is_err()
-                    {
-                        break;
+                ServiceSubscriberRequest::OnInstanceChanged { instance, responder } => {
+                    if is_compatible_instance(&instance) {
+                        log::info!("Changed: {:?}", instance);
+                        if let Some(ipv4_endpoint) = instance.ipv4_endpoint {
+                            found.clone().send(endpoint4_to_socket(ipv4_endpoint)).await?;
+                        }
+                        if let Some(ipv6_endpoint) = instance.ipv6_endpoint {
+                            found.clone().send(endpoint6_to_socket(ipv6_endpoint)).await?;
+                        }
                     }
+                    responder.send()?;
                 }
-                responder.send()?;
-            }
-            ServiceSubscriberRequest::OnInstanceChanged { instance, responder } => {
-                log::info!("Changed: {:?}", instance);
-                let parsed_instance = instance
-                    .instance
-                    .ok_or(anyhow::format_err!("ServiceInstance.instance not supplied"))?
-                    .parse::<u64>()?
-                    .into();
-                if let Some(ipv4_endpoint) = instance.ipv4_endpoint {
-                    if found
-                        .send((endpoint4_to_socket(ipv4_endpoint), parsed_instance))
-                        .await
-                        .is_err()
-                    {
-                        break;
-                    }
+                ServiceSubscriberRequest::OnInstanceLost { responder, .. } => {
+                    log::info!("Removed a thing");
+                    responder.send()?;
                 }
-                if let Some(ipv6_endpoint) = instance.ipv6_endpoint {
-                    if found
-                        .send((endpoint6_to_socket(ipv6_endpoint), parsed_instance))
-                        .await
-                        .is_err()
-                    {
-                        break;
-                    }
+                ServiceSubscriberRequest::OnQuery { responder, .. } => {
+                    responder.send()?;
                 }
-                responder.send()?;
             }
-            ServiceSubscriberRequest::OnInstanceLost { responder, .. } => {
-                log::info!("Removed a thing");
-                responder.send()?;
-            }
-            ServiceSubscriberRequest::OnQuery { responder, .. } => {
-                responder.send()?;
-            }
-        }
-    }
+            Ok::<_, Error>(())
+        })
+        .await?;
 
     log::info!("Mdns subscriber finishes");
 

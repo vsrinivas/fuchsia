@@ -5,14 +5,10 @@
 mod serial;
 
 use crate::serial::run_serial_link_handlers;
-use anyhow::{bail, ensure, format_err, Error};
+use anyhow::{bail, format_err, Error};
 use argh::FromArgs;
-use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
 use futures::prelude::*;
-use overnet_core::{
-    new_deframer, new_framer, DeframerReader, DeframerWriter, FrameType, FramerReader,
-    FramerWriter, LosslessBinary, Router, RouterOptions,
-};
+use overnet_core::{new_deframer, new_framer, LosslessBinary, ReadBytes, Router, RouterOptions};
 use std::sync::Arc;
 
 #[derive(FromArgs, Default)]
@@ -31,140 +27,62 @@ pub struct Opt {
     pub serial: Option<String>,
 }
 
-async fn read_incoming(
-    mut stream: &async_std::os::unix::net::UnixStream,
-    mut incoming_writer: DeframerWriter<LosslessBinary>,
-) -> Result<(), Error> {
-    let mut buf = [0u8; 16384];
-
-    loop {
-        let n = stream.read(&mut buf).await?;
-        if n == 0 {
-            return Err(format_err!("Incoming socket closed"));
-        }
-        incoming_writer.write(&buf[..n]).await?;
-    }
-}
-
-async fn write_outgoing(
-    mut outgoing_reader: FramerReader<LosslessBinary>,
-    mut stream: &async_std::os::unix::net::UnixStream,
-) -> Result<(), Error> {
-    loop {
-        let out = outgoing_reader.read().await?;
-        stream.write_all(&out).await?;
-    }
-}
-
-async fn process_incoming(
-    node: Arc<Router>,
-    mut rx_frames: DeframerReader<LosslessBinary>,
-    mut tx_frames: FramerWriter<LosslessBinary>,
-    sockpath: &str,
-) -> Result<(), Error> {
-    let node_id = node.node_id();
-
-    // Send first frame
-    let mut greeting = StreamSocketGreeting {
-        magic_string: Some(hoist::ASCENDD_SERVER_CONNECTION_STRING.to_string()),
-        node_id: Some(node_id.into()),
-        connection_label: Some(format!(
-            "ascendd via {:?} pid:{}",
-            std::env::current_exe(),
-            std::process::id()
-        )),
-        key: None,
-        ..StreamSocketGreeting::EMPTY
-    };
-    let mut bytes = Vec::new();
-    let mut handles = Vec::new();
-    fidl::encoding::Encoder::encode(&mut bytes, &mut handles, &mut greeting)?;
-    assert_eq!(handles.len(), 0);
-    tx_frames.write(FrameType::Overnet, bytes.as_slice()).await?;
-
-    let (frame_type, mut frame) = rx_frames.read().await?;
-    ensure!(frame_type == Some(FrameType::Overnet), "Expect only overnet frames");
-
-    let mut greeting = StreamSocketGreeting::EMPTY;
-    // WARNING: Since we are decoding without a transaction header, we have to
-    // provide a context manually. This could cause problems in future FIDL wire
-    // format migrations, which are driven by header flags.
-    let context = fidl::encoding::Context {};
-    fidl::encoding::Decoder::decode_with_context(&context, frame.as_mut(), &mut [], &mut greeting)?;
-
-    log::trace!("Ascendd gets greeting: {:?}", greeting);
-
-    let node_id = match greeting {
-        StreamSocketGreeting { magic_string: None, .. } => anyhow::bail!(
-            "Required magic string '{}' not present in greeting",
-            hoist::ASCENDD_CLIENT_CONNECTION_STRING
-        ),
-        StreamSocketGreeting { magic_string: Some(ref x), .. }
-            if x != hoist::ASCENDD_CLIENT_CONNECTION_STRING =>
-        {
-            anyhow::bail!(
-                "Expected magic string '{}' in greeting, got '{}'",
-                hoist::ASCENDD_CLIENT_CONNECTION_STRING,
-                x
-            )
-        }
-        StreamSocketGreeting { node_id: None, .. } => anyhow::bail!("No node id in greeting"),
-        StreamSocketGreeting { node_id: Some(n), .. } => n.id,
-    };
-
-    // Register our new link!
-    let sockpath = sockpath.to_string();
-    let (link_sender, mut link_receiver) = node
-        .new_link(
-            node_id.into(),
-            Box::new(move || {
-                Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddServer(
-                    fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
-                        path: Some(sockpath.clone()),
-                        connection_label: None,
-                        ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
-                    },
-                ))
-            }),
-        )
-        .await?;
-    let _: ((), ()) = futures::future::try_join(
-        async move {
-            while let Some(frame) = link_sender.next_send().await {
-                tx_frames.write(FrameType::Overnet, frame.bytes()).await?;
-            }
-            Ok(())
-        },
-        async move {
-            loop {
-                let (frame_type, mut frame) = rx_frames.read().await?;
-                ensure!(frame_type == Some(FrameType::Overnet), "Expect only overnet frames");
-                if let Err(err) = link_receiver.received_packet(frame.as_mut()).await {
-                    log::info!("Failed handling packet: {:?}", err);
-                }
-            }
-        },
-    )
-    .await?;
-    Ok(())
-}
-
 async fn run_stream(
     node: Arc<Router>,
     stream: Result<async_std::os::unix::net::UnixStream, std::io::Error>,
     sockpath: &str,
 ) -> Result<(), Error> {
-    let stream = stream?;
-    let (framer, outgoing_reader) = new_framer(LosslessBinary, 4096);
-    let (incoming_writer, deframer) = new_deframer(LosslessBinary);
+    let mut stream = &stream?;
+    let (mut framer, mut outgoing_reader) = new_framer(LosslessBinary, 4096);
+    let (mut incoming_writer, mut deframer) = new_deframer(LosslessBinary);
+    let sockpath = sockpath.to_string();
+    let (mut link_sender, mut link_receiver) = node.new_link(Box::new(move || {
+        Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddServer(
+            fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
+                path: Some(sockpath.clone()),
+                connection_label: None,
+                ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
+            },
+        ))
+    }));
     log::trace!("Processing new Ascendd socket");
-    futures::future::try_join3(
-        read_incoming(&stream, incoming_writer),
-        write_outgoing(outgoing_reader, &stream),
-        process_incoming(node, deframer, framer, sockpath),
+    let ((), (), (), ()) = futures::future::try_join4(
+        async move {
+            loop {
+                let mut buf = [0u8; 16384];
+                let n = stream.read(&mut buf).await?;
+                if n == 0 {
+                    return Err(format_err!("Incoming socket closed"));
+                }
+                incoming_writer.write(&buf[..n]).await?;
+            }
+        },
+        async move {
+            loop {
+                let out = outgoing_reader.read().await?;
+                stream.write_all(&out).await?;
+            }
+        },
+        async move {
+            while let Some(frame) = link_sender.next_send().await {
+                framer.write(frame.bytes()).await?;
+            }
+            Ok::<_, Error>(())
+        },
+        async move {
+            loop {
+                let mut frame = match deframer.read().await? {
+                    ReadBytes::Framed(framed) => framed,
+                    ReadBytes::Unframed(unframed) => {
+                        panic!("Should not see unframed bytes here, but got {:?}", unframed)
+                    }
+                };
+                link_receiver.received_frame(frame.as_mut()).await;
+            }
+        },
     )
-    .await
-    .map(drop)
+    .await?;
+    Ok(())
 }
 
 pub async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin + Send) -> Result<(), Error> {
