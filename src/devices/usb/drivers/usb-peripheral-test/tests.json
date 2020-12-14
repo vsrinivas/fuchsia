@@ -1,0 +1,19 @@
+[
+    {
+        "name": "Invalid VID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.FUNCTION"
+        }
+    },
+    {
+        "name": "usb-peripheral-test",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.FUNCTION",
+            "fuchsia.BIND_USB_VID": "0x18D1",
+            "fuchsia.BIND_USB_PID": "0xA022",
+            "fuchsia.BIND_USB_PID": "0xA023"
+        }
+    }
+]

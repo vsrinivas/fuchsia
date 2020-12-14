@@ -2,6 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
+
+bind_rules("usb_peripheral_test-bind") {
+  rules = "usb_peripheral_test.bind"
+  output = "usb_peripheral_test-bind.h"
+  tests = "tests.json"
+  deps = [ "//src/devices/bind/fuchsia.usb" ]
+}
+
 if (is_fuchsia) {
   import("//build/config/fuchsia/rules.gni")
 
@@ -15,15 +24,13 @@ if (is_fuchsia) {
     }
     sources = [ "driver.cc" ]
     deps = [
+      ":usb_peripheral_test-bind",
       "//sdk/banjo/ddk.protocol.usb",
       "//sdk/banjo/ddk.protocol.usb.function",
       "//sdk/banjo/ddk.protocol.usb.request",
       "//src/devices/lib/driver",
       "//src/devices/usb/lib/usb",
       "//src/lib/ddk",
-
-      # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-      "//src/lib/ddk:ddk-deprecated-binding-headers",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/sync",
     ]
@@ -31,7 +38,10 @@ if (is_fuchsia) {
 
   group("tests") {
     testonly = true
-    deps = [ ":tests($host_toolchain)" ]
+    deps = [
+      ":tests($host_toolchain)",
+      ":usb_peripheral_test-bind_test",
+    ]
   }
 } else if (current_os == "linux") {
   import("//build/test.gni")
