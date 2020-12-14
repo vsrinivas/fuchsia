@@ -1,0 +1,19 @@
+[
+  {
+    "name": "Protocol",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+    }
+  },
+  {
+    "name": "T931 GPU",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+      "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.T931",
+      "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.MALI_INIT"
+    }
+  }
+]

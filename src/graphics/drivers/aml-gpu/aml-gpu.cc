@@ -16,7 +16,6 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -29,6 +28,7 @@
 
 #include "s905d2-gpu.h"
 #include "s912-gpu.h"
+#include "src/graphics/drivers/aml-gpu/aml_gpu-bind.h"
 #include "t931-gpu.h"
 
 namespace aml_gpu {
@@ -306,12 +306,4 @@ static zx_driver_ops_t aml_gpu_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_gpu, aml_gpu_driver_ops, "zircon", "0.1", 6)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_MALI_INIT),
-    // we support multiple SOC variants
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S912),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
-ZIRCON_DRIVER_END(aml_gpu)
+ZIRCON_DRIVER(aml_gpu, aml_gpu_driver_ops, "zircon", "0.1");

@@ -9,7 +9,7 @@ group("drivers") {
 group("tests") {
   testonly = true
   deps = [
-    "aml-gpu:aml-gpu-test",
+    "aml-gpu:tests",
     "misc:tests",
     "virtio:tests",
   ]
