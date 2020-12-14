@@ -194,14 +194,7 @@ impl Inspector {
     /// The output will be truncated to only those bytes that are needed to accurately read the
     /// stored data.
     pub fn copy_vmo_data(&self) -> Option<Vec<u8>> {
-        self.root_node
-            .inner
-            .inner_ref()
-            .map(|inner_ref| {
-                let state = inner_ref.state.lock();
-                Some(state.heap.bytes())
-            })
-            .unwrap_or(None)
+        self.root_node.inner.inner_ref().map(|inner_ref| inner_ref.state.copy_vmo_bytes())
     }
 
     /// Spawns a server for handling inspect `Tree` requests in the diagnostics directory.
@@ -216,7 +209,10 @@ impl Inspector {
             TreeMarker::SERVICE_NAME => pseudo_fs_service::host(move |stream| {
                 let inspector_clone_clone = inspector_clone.clone();
                 async move {
-                    service::handle_request_stream(inspector_clone_clone, service::TreeServerSettings::default(), stream).await
+                    service::handle_request_stream(
+                        inspector_clone_clone, service::TreeServerSettings::default(), stream
+                        )
+                        .await
                         .unwrap_or_else(|e| error!("failed to run server: {:?}", e));
                 }
                 .boxed()
@@ -236,7 +232,7 @@ impl Inspector {
         &self.root_node
     }
 
-    fn state(&self) -> Option<Arc<Mutex<State>>> {
+    fn state(&self) -> Option<State> {
         self.root().inner.inner_ref().map(|inner_ref| inner_ref.state.clone())
     }
 
@@ -257,7 +253,7 @@ impl Inspector {
             .map_err(|status| Error::AllocateVmo(status))?;
         let heap = Heap::new(Arc::new(mapping)).map_err(|e| Error::CreateHeap(Box::new(e)))?;
         let state = State::create(heap).map_err(|e| Error::CreateState(Box::new(e)))?;
-        Ok((vmo, Node::new_root(Arc::new(Mutex::new(state)))))
+        Ok((vmo, Node::new_root(state)))
     }
 
     /// Creates an no-op inspector from the given Vmo. If the VMO is corrupted, reading can fail.
@@ -272,7 +268,7 @@ pub trait InspectType: Send + Sync {}
 /// Trait implemented by all inspect types. It provides constructor functions that are not
 /// intended for use outside the crate.
 trait InspectTypeInternal {
-    fn new(state: Arc<Mutex<State>>, block_index: u32) -> Self;
+    fn new(state: State, block_index: u32) -> Self;
     fn new_no_op() -> Self;
     fn is_valid(&self) -> bool;
 }
@@ -296,7 +292,7 @@ enum Inner<T: InnerType> {
 
 impl<T: InnerType> Inner<T> {
     /// Create a new Inner with the desired block index within the inspect VMO
-    fn new(state: Arc<Mutex<State>>, block_index: u32) -> Self {
+    fn new(state: State, block_index: u32) -> Self {
         Self::Strong(Arc::new(InnerRef { state, block_index, data: T::Data::default() }))
     }
 
@@ -353,7 +349,7 @@ struct InnerRef<T: InnerType> {
     block_index: u32,
 
     /// Reference to the VMO heap.
-    state: Arc<Mutex<State>>,
+    state: State,
 
     /// Associated data for this type.
     data: T::Data,
@@ -363,7 +359,7 @@ impl<T: InnerType> Drop for InnerRef<T> {
     /// InnerRef has a manual drop impl, to guarantee a single deallocation in
     /// the case of multiple strong references.
     fn drop(&mut self) {
-        T::free(&mut *self.state.lock(), self.block_index).unwrap();
+        T::free(&self.state, self.block_index).unwrap();
     }
 }
 
@@ -373,7 +369,7 @@ trait InnerType {
     type Data: Default + Debug;
 
     /// De-allocation behavior for when the InnerRef gets dropped
-    fn free(state: &mut State, block_index: u32) -> Result<(), Error>;
+    fn free(state: &State, block_index: u32) -> Result<(), Error>;
 }
 
 #[derive(Default, Debug)]
@@ -383,11 +379,12 @@ impl InnerType for InnerNodeType {
     // Each node has a list of recorded values.
     type Data = ValueList;
 
-    fn free(state: &mut State, block_index: u32) -> Result<(), Error> {
+    fn free(state: &State, block_index: u32) -> Result<(), Error> {
         if block_index == 0 {
             return Ok(());
         }
-        state.free_value(block_index).map_err(|err| Error::free("node", block_index, err))
+        let mut state_lock = state.try_lock()?;
+        state_lock.free_value(block_index).map_err(|err| Error::free("node", block_index, err))
     }
 }
 
@@ -396,8 +393,9 @@ struct InnerValueType;
 
 impl InnerType for InnerValueType {
     type Data = ();
-    fn free(state: &mut State, block_index: u32) -> Result<(), Error> {
-        state.free_value(block_index).map_err(|err| Error::free("value", block_index, err))
+    fn free(state: &State, block_index: u32) -> Result<(), Error> {
+        let mut state_lock = state.try_lock()?;
+        state_lock.free_value(block_index).map_err(|err| Error::free("value", block_index, err))
     }
 }
 
@@ -406,8 +404,11 @@ struct InnerPropertyType;
 
 impl InnerType for InnerPropertyType {
     type Data = ();
-    fn free(state: &mut State, block_index: u32) -> Result<(), Error> {
-        state.free_property(block_index).map_err(|err| Error::free("property", block_index, err))
+    fn free(state: &State, block_index: u32) -> Result<(), Error> {
+        let mut state_lock = state.try_lock()?;
+        state_lock
+            .free_property(block_index)
+            .map_err(|err| Error::free("property", block_index, err))
     }
 }
 
@@ -416,8 +417,11 @@ struct InnerLazyNodeType;
 
 impl InnerType for InnerLazyNodeType {
     type Data = ();
-    fn free(state: &mut State, block_index: u32) -> Result<(), Error> {
-        state.free_lazy_node(block_index).map_err(|err| Error::free("lazy node", block_index, err))
+    fn free(state: &State, block_index: u32) -> Result<(), Error> {
+        let mut state_lock = state.try_lock()?;
+        state_lock
+            .free_lazy_node(block_index)
+            .map_err(|err| Error::free("lazy node", block_index, err))
     }
 }
 
@@ -444,7 +448,8 @@ macro_rules! inspect_type_impl {
                 #[allow(missing_docs)]
                 pub fn get_block(&self) -> Option<Block<Arc<Mapping>>> {
                     self.inner.inner_ref().and_then(|inner_ref| {
-                        inner_ref.state.lock().heap.get_block(inner_ref.block_index).ok()
+                        inner_ref.state.try_lock()
+                            .and_then(|state| state.heap().get_block(inner_ref.block_index)).ok()
                     })
                 }
 
@@ -457,7 +462,7 @@ macro_rules! inspect_type_impl {
             impl InspectType for $name {}
 
             impl InspectTypeInternal for $name {
-                fn new(state: Arc<Mutex<State>>, block_index: u32) -> Self {
+                fn new(state: State, block_index: u32) -> Self {
                     Self {
                         inner: Inner::new(state, block_index),
                     }
@@ -488,8 +493,11 @@ macro_rules! create_numeric_property_fn {
                 -> [<$name_cap Property>] {
                     self.inner.inner_ref().and_then(|inner_ref| {
                         inner_ref.state
-                            .lock()
-                            .[<create_ $name _metric>](name.as_ref(), value, inner_ref.block_index)
+                            .try_lock()
+                            .and_then(|mut state| {
+                                state.[<create_ $name _metric>](
+                                    name.as_ref(), value, inner_ref.block_index)
+                            })
                             .map(|block| {
                                 [<$name_cap Property>]::new(inner_ref.state.clone(), block.index())
                             })
@@ -520,12 +528,16 @@ macro_rules! create_array_property_fn {
                     self.[<create_ $name _array_internal>](name, slots, ArrayFormat::Default)
             }
 
-            fn [<create_ $name _array_internal>](&self, name: impl AsRef<str>, slots: usize, format: ArrayFormat)
+            fn [<create_ $name _array_internal>](
+                &self, name: impl AsRef<str>, slots: usize, format: ArrayFormat)
                 -> [<$name_cap ArrayProperty>] {
                     self.inner.inner_ref().and_then(|inner_ref| {
                         inner_ref.state
-                            .lock()
-                            .[<create_ $name _array>](name.as_ref(), slots, format, inner_ref.block_index)
+                            .try_lock()
+                            .and_then(|mut state| {
+                                state.[<create_ $name _array>](
+                                    name.as_ref(), slots, format, inner_ref.block_index)
+                            })
                             .map(|block| {
                                 [<$name_cap ArrayProperty>]::new(inner_ref.state.clone(), block.index())
                             })
@@ -550,7 +562,8 @@ macro_rules! create_linear_histogram_property_fn {
                 &self, name: impl AsRef<str>, params: LinearHistogramParams<$type>)
                 -> [<$name_cap LinearHistogramProperty>] {
                 let slots = params.buckets + constants::LINEAR_HISTOGRAM_EXTRA_SLOTS;
-                let array = self.[<create_ $name _array_internal>](name, slots, ArrayFormat::LinearHistogram);
+                let array = self.[<create_ $name _array_internal>](
+                    name, slots, ArrayFormat::LinearHistogram);
                 array.set(0, params.floor);
                 array.set(1, params.step_size);
                 [<$name_cap LinearHistogramProperty>] {
@@ -577,7 +590,8 @@ macro_rules! create_exponential_histogram_property_fn {
               &self, name: impl AsRef<str>, params: ExponentialHistogramParams<$type>)
               -> [<$name_cap ExponentialHistogramProperty>] {
                 let slots = params.buckets + constants::EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS;
-                let array = self.[<create_ $name _array_internal>](name, slots, ArrayFormat::ExponentialHistogram);
+                let array = self.[<create_ $name _array_internal>](
+                    name, slots, ArrayFormat::ExponentialHistogram);
                 array.set(0, params.floor);
                 array.set(1, params.initial_step);
                 array.set(2, params.step_multiplier);
@@ -605,13 +619,13 @@ macro_rules! create_lazy_property_fn {
                 self.inner.inner_ref().and_then(|inner_ref| {
                     inner_ref
                         .state
-                        .lock()
-                        .create_lazy_node(
+                        .try_lock()
+                        .and_then(|mut state| state.create_lazy_node(
                             name.as_ref(),
                             inner_ref.block_index,
                             LinkNodeDisposition::$disposition,
                             callback,
-                        )
+                        ))
                         .map(|block| LazyNode::new(inner_ref.state.clone(), block.index()))
                         .ok()
 
@@ -642,7 +656,7 @@ inspect_type_impl!(
 );
 
 impl Node {
-    pub(in crate) fn new_root(state: Arc<Mutex<State>>) -> Node {
+    pub(in crate) fn new_root(state: State) -> Node {
         Node::new(state, 0)
     }
 
@@ -671,8 +685,8 @@ impl Node {
             .and_then(|inner_ref| {
                 inner_ref
                     .state
-                    .lock()
-                    .create_node(name.as_ref(), inner_ref.block_index)
+                    .try_lock()
+                    .and_then(|mut state| state.create_node(name.as_ref(), inner_ref.block_index))
                     .map(|block| Node::new(inner_ref.state.clone(), block.index()))
                     .ok()
             })
@@ -742,13 +756,15 @@ impl Node {
             .and_then(|inner_ref| {
                 inner_ref
                     .state
-                    .lock()
-                    .create_property(
-                        name.as_ref(),
-                        value.as_ref().as_bytes(),
-                        PropertyFormat::String,
-                        inner_ref.block_index,
-                    )
+                    .try_lock()
+                    .and_then(|mut state| {
+                        state.create_property(
+                            name.as_ref(),
+                            value.as_ref().as_bytes(),
+                            PropertyFormat::String,
+                            inner_ref.block_index,
+                        )
+                    })
                     .map(|block| StringProperty::new(inner_ref.state.clone(), block.index()))
                     .ok()
             })
@@ -769,13 +785,15 @@ impl Node {
             .and_then(|inner_ref| {
                 inner_ref
                     .state
-                    .lock()
-                    .create_property(
-                        name.as_ref(),
-                        value.as_ref(),
-                        PropertyFormat::Bytes,
-                        inner_ref.block_index,
-                    )
+                    .try_lock()
+                    .and_then(|mut state| {
+                        state.create_property(
+                            name.as_ref(),
+                            value.as_ref(),
+                            PropertyFormat::Bytes,
+                            inner_ref.block_index,
+                        )
+                    })
                     .map(|block| BytesProperty::new(inner_ref.state.clone(), block.index()))
                     .ok()
             })
@@ -796,8 +814,10 @@ impl Node {
             .and_then(|inner_ref| {
                 inner_ref
                     .state
-                    .lock()
-                    .create_bool(name.as_ref(), value, inner_ref.block_index)
+                    .try_lock()
+                    .and_then(|mut state| {
+                        state.create_bool(name.as_ref(), value, inner_ref.block_index)
+                    })
                     .map(|block| BoolProperty::new(inner_ref.state.clone(), block.index()))
                     .ok()
             })
@@ -846,7 +866,10 @@ macro_rules! numeric_property_fn {
         paste::paste! {
             fn $fn_name(&self, value: $type) {
                 if let Some(ref inner_ref) = self.inner.inner_ref() {
-                    inner_ref.state.lock().[<$fn_name _ $name _metric>](inner_ref.block_index, value)
+                    inner_ref.state.try_lock()
+                        .and_then(|state| {
+                            state.[<$fn_name _ $name _metric>](inner_ref.block_index, value)
+                        })
                         .unwrap_or_else(|e| {
                             error!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
                         });
@@ -882,7 +905,9 @@ macro_rules! numeric_property {
 
                 fn get(&self) -> Result<$type, Error> {
                     if let Some(ref inner_ref) = self.inner.inner_ref() {
-                        inner_ref.state.lock().[<get_ $name _metric>](inner_ref.block_index)
+                        inner_ref.state
+                            .try_lock()
+                            .and_then(|state| state.[<get_ $name _metric>](inner_ref.block_index))
                     } else {
                         Err(Error::NoOp("Property"))
                     }
@@ -914,7 +939,11 @@ macro_rules! property {
 
                 fn set(&'t self, value: &'t $type) {
                     if let Some(ref inner_ref) = self.inner.inner_ref() {
-                        inner_ref.state.lock().set_property(inner_ref.block_index, value$(.$bytes())?)
+                        inner_ref.state
+                            .try_lock()
+                            .and_then(|mut state| {
+                                state.set_property(inner_ref.block_index, value$(.$bytes())?)
+                            })
                             .unwrap_or_else(|e| error!("Failed to set property. Error: {:?}", e));
                     }
                 }
@@ -938,9 +967,13 @@ impl<'t> Property<'t> for BoolProperty {
 
     fn set(&self, value: bool) {
         if let Some(ref inner_ref) = self.inner.inner_ref() {
-            inner_ref.state.lock().set_bool(inner_ref.block_index, value).unwrap_or_else(|e| {
-                error!("Failed to set property. Error: {:?}", e);
-            });
+            inner_ref
+                .state
+                .try_lock()
+                .and_then(|state| state.set_bool(inner_ref.block_index, value))
+                .unwrap_or_else(|e| {
+                    error!("Failed to set property. Error: {:?}", e);
+                });
         }
     }
 }
@@ -972,7 +1005,12 @@ macro_rules! array_property_fn {
         paste::paste! {
             fn $fn_name(&self, index: usize, value: $type) {
                 if let Some(ref inner_ref) = self.inner.inner_ref() {
-                    inner_ref.state.lock().[<$fn_name _array_ $name _slot>](inner_ref.block_index, index, value)
+                    inner_ref.state
+                        .try_lock()
+                        .and_then(|mut state| {
+                            state.[<$fn_name _array_ $name _slot>](
+                                inner_ref.block_index, index, value)
+                        })
                         .unwrap_or_else(|e| {
                             error!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
                         });
@@ -1006,7 +1044,9 @@ macro_rules! array_property {
 
                 fn clear(&self) {
                     if let Some(ref inner_ref) = self.inner.inner_ref() {
-                        inner_ref.state.lock().clear_array(inner_ref.block_index, 0)
+                        inner_ref.state
+                            .try_lock()
+                            .and_then(|mut state| state.clear_array(inner_ref.block_index, 0))
                             .unwrap_or_else(|e| {
                                 error!("Failed to clear property. Error: {:?}", e);
                             });
@@ -1053,7 +1093,11 @@ macro_rules! histogram_property {
                 fn clear(&self) {
                     if let Some(ref inner_ref) = self.array.inner.inner_ref() {
                         // Ensure we don't delete the array slots that contain histogram metadata.
-                        inner_ref.state.lock().clear_array(inner_ref.block_index, $clear_start_index)
+                        inner_ref.state
+                            .try_lock()
+                            .and_then(|mut state| {
+                                state.clear_array(inner_ref.block_index, $clear_start_index)
+                            })
                             .unwrap_or_else(|e| {
                                 error!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
                             });
@@ -1711,9 +1755,9 @@ mod tests {
         );
     }
 
-    fn get_state(mapping: Arc<Mapping>) -> Arc<Mutex<State>> {
+    fn get_state(mapping: Arc<Mapping>) -> State {
         let heap = Heap::new(mapping).unwrap();
-        Arc::new(Mutex::new(State::create(heap).unwrap()))
+        State::create(heap).expect("create state")
     }
 
     #[test]

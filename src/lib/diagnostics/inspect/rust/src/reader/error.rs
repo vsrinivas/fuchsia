@@ -69,4 +69,7 @@ pub enum ReaderError {
 
     #[error("Failed to load tree name {0}")]
     FailedToLoadTree(String),
+
+    #[error("Failed to lock inspector state")]
+    FailedToLockState(#[source] error::Error),
 }

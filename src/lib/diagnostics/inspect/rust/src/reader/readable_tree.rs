@@ -27,17 +27,18 @@ impl ReadableTree for Inspector {
             // A no-op inspector.
             None => Ok(vec![]),
             Some(state) => {
-                let state = state.lock();
-                let names = state.callbacks.keys().map(|k| k.to_string()).collect::<Vec<String>>();
+                let state = state.try_lock().map_err(ReaderError::FailedToLockState)?;
+                let names =
+                    state.callbacks().keys().map(|k| k.to_string()).collect::<Vec<String>>();
                 Ok(names)
             }
         }
     }
 
     async fn read_tree(&self, name: &str) -> Result<Self, ReaderError> {
-        let result = self.state().and_then(|state| {
-            let state = state.lock();
-            state.callbacks.get(name).map(|cb| cb())
+        let result = self.state().and_then(|state| match state.try_lock() {
+            Err(_) => None,
+            Ok(state) => state.callbacks().get(name).map(|cb| cb()),
         });
         match result {
             Some(cb_result) => cb_result.await.map_err(ReaderError::LazyCallback),

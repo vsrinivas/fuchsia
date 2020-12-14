@@ -191,7 +191,7 @@ mod tests {
     async fn missing_value_not_found() -> Result<(), anyhow::Error> {
         let inspector = Inspector::new();
         inspector.state().map(|state| {
-            let mut state = state.lock();
+            let mut state = state.try_lock().expect("lock state");
             state.allocate_link("missing", "missing-404", LinkNodeDisposition::Child, 0).unwrap();
         });
         let hierarchy = reader::read_from_inspector(&inspector).await?;

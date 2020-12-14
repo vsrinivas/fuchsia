@@ -31,7 +31,7 @@ pub enum PropertyFormat {
     Bytes = 1,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Block<T> {
     index: u32,
     container: T,
