@@ -28,8 +28,6 @@ toc:
     path: /docs/concepts/components/v2/topology.md
   - title: "Monikers"
     path: /docs/concepts/components/v2/monikers.md
-  - title: "The difference between components and processes"
-    path: /docs/concepts/components/v2/components_and_processes.md
   - title: "Realms"
     path: /docs/concepts/components/v2/realms.md
   - title: "Environments"
@@ -59,5 +57,7 @@ toc:
         path: /docs/concepts/components/v2/design_principles.md
       - title: "Life of a protocol open"
         path: /docs/concepts/components/v2/life_of_a_protocol_open.md
+  - title: "Components vs. processes"
+    path: /docs/concepts/components/v2/components_vs_processes.md
 - title: "Component URLs"
   path: /docs/concepts/components/component_urls.md

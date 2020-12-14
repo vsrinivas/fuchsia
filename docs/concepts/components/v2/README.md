@@ -23,8 +23,6 @@ the transition to the new architecture is complete.
 - [Realms](realms.md): Sub-trees of the component instance topology.
 - [Monikers](monikers.md): Identifiers for component instances based on
   the component topology.
-- [The difference between components and processes](components_and_processes.md):
-  The relationship between components and processes.
 
 ## Developing components
 
@@ -57,6 +55,7 @@ the transition to the new architecture is complete.
 ## Components (either version)
 
 - [Component URLs][doc-component-urls] are URLs that identify components.
+- [Components vs. processes](components_vs_processes.md): how the concepts differ
 
 [doc-component-urls]: /docs/concepts/components/component_urls.md
 [glossary-components-v1]: /docs/glossary.md#components-v1
