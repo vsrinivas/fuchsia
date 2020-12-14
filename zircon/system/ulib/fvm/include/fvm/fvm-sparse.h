@@ -62,7 +62,7 @@ enum SparseFlags {
                         kSparseFlagZeroFillNotRequired | kSparseFlagSnapshotMetadataPartition,
 };
 
-struct __attribute__((packed)) SparseImage {
+struct __attribute__((packed)) alignas(8) SparseImage {
   uint64_t magic;
   uint64_t version;
   uint64_t header_length;
@@ -77,7 +77,7 @@ struct __attribute__((packed)) SparseImage {
 
 constexpr uint64_t kPartitionDescriptorMagic = 0x0bde4df7cf5c4c5dull;
 
-struct __attribute__((packed)) PartitionDescriptor {
+struct __attribute__((packed)) alignas(8) PartitionDescriptor {
   uint64_t magic;
   uint8_t type[fvm::kGuidSize];
   uint8_t name[fvm::kMaxVPartitionNameLength];
@@ -87,7 +87,7 @@ struct __attribute__((packed)) PartitionDescriptor {
 
 constexpr uint64_t kExtentDescriptorMagic = 0xa5b8742906e8382eull;
 
-struct __attribute__((packed)) ExtentDescriptor {
+struct __attribute__((packed)) alignas(8) ExtentDescriptor {
   uint64_t magic;
   uint64_t slice_start;    // Unit: slice
   uint64_t slice_count;    // Unit: slice
