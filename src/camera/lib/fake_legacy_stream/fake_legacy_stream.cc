@@ -120,6 +120,12 @@ class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::S
     return outstanding_buffer_ids_.find(buffer_id) != outstanding_buffer_ids_.end();
   };
 
+  std::tuple<float, float, float, float> GetRegionOfInterest() override {
+    return region_of_interest_;
+  }
+
+  uint32_t GetImageFormat() override { return image_format_; }
+
  private:
   std::stringstream& ClientErrors() {
     if (client_error_count_ > 0) {
@@ -168,6 +174,7 @@ class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::S
                      << y_min << ", " << x_max << ", " << y_max;
       callback(ZX_ERR_INVALID_ARGS);
     } else {
+      region_of_interest_ = {x_min, y_min, x_max, y_max};
       callback(ZX_OK);
     }
   }
@@ -177,6 +184,7 @@ class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::S
       ClientErrors() << "Client called SetImageFormat with invalid index: " << image_format_index;
       callback(ZX_ERR_INVALID_ARGS);
     } else {
+      image_format_ = image_format_index;
       callback(ZX_OK);
     }
   }
@@ -191,14 +199,18 @@ class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::S
   bool outstanding_error_frame_ = false;
   uint32_t client_error_count_ = 0;
   std::stringstream client_error_explanation_;
+  std::tuple<float, float, float, float> region_of_interest_{0.0f, 0.0f, 1.0f, 1.0f};
+  uint32_t image_format_ = 0;
 
   friend class FakeLegacyStream;
 };
 
 fit::result<std::unique_ptr<FakeLegacyStream>, zx_status_t> FakeLegacyStream::Create(
-    fidl::InterfaceRequest<fuchsia::camera2::Stream> request, async_dispatcher_t* dispatcher) {
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> request, uint32_t format_index,
+    async_dispatcher_t* dispatcher) {
   auto impl = std::make_unique<FakeLegacyStreamImpl>();
   zx_status_t status = impl->binding_.Bind(std::move(request), dispatcher);
+  impl->image_format_ = format_index;
   if (status) {
     return fit::error(status);
   }

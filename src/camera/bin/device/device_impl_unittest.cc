@@ -43,9 +43,19 @@ class DeviceImplTest : public gtest::RealLoopFixture {
   DeviceImplTest()
       : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
         fake_listener_registry_(async_get_default_dispatcher()) {
-    fake_properties_.set_image_format({});
+    fake_properties_.set_image_format(
+        {.pixel_format{.type = fuchsia::sysmem::PixelFormatType::NV12},
+         .coded_width = 1920,
+         .coded_height = 1080,
+         .bytes_per_row = 1920,
+         .color_space{.type = fuchsia::sysmem::ColorSpaceType::REC601_NTSC}});
+    fake_properties_.set_supported_resolutions(
+        {{.width = 1920, .height = 1080}, {.width = 1280, .height = 720}});
     fake_properties_.set_frame_rate({});
-    fake_properties_.set_supports_crop_region({});
+    fake_properties_.set_supports_crop_region(true);
+    fake_legacy_config_.image_formats.resize(2, fake_properties_.image_format());
+    fake_legacy_config_.image_formats[1].coded_width = 1280;
+    fake_legacy_config_.image_formats[1].coded_height = 720;
   }
 
   void SetUp() override {
@@ -171,7 +181,7 @@ TEST_F(DeviceImplTest, GetFrames) {
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
           fit::function<void(uint32_t)> callback, uint32_t format_index) {
-        auto result = FakeLegacyStream::Create(std::move(request), dispatcher());
+        auto result = FakeLegacyStream::Create(std::move(request));
         ASSERT_TRUE(result.is_ok());
         legacy_stream_fake = result.take_value();
         token.BindSync()->Close();
@@ -890,7 +900,7 @@ TEST_F(DeviceImplTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
           fit::function<void(uint32_t)> callback, uint32_t format_index) {
-        auto result = FakeLegacyStream::Create(std::move(request), dispatcher());
+        auto result = FakeLegacyStream::Create(std::move(request));
         ASSERT_TRUE(result.is_ok());
         legacy_stream_fakes[cycle] = result.take_value();
         token.BindSync()->Close();
@@ -1069,7 +1079,7 @@ TEST_F(DeviceImplTest, GetFramesMultiClient) {
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
           fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
           fit::function<void(uint32_t)> callback, uint32_t format_index) {
-        auto result = FakeLegacyStream::Create(std::move(request), dispatcher());
+        auto result = FakeLegacyStream::Create(std::move(request));
         ASSERT_TRUE(result.is_ok());
         legacy_stream_fake = result.take_value();
         token.BindSync()->Close();
@@ -1159,6 +1169,52 @@ TEST_F(DeviceImplTest, GetFramesMultiClient) {
     client.stream = nullptr;
   }
   stream_impl = nullptr;
+}
+
+TEST_F(DeviceImplTest, LegacyStreamPropertiesRestored) {
+  constexpr struct {
+    fuchsia::math::Size resolution{.width = 1280, .height = 720};
+    uint32_t format_index = 1;
+  } kLegacyStreamFormatAssociation;
+  constexpr fuchsia::math::RectF kCropRegion{.x = 0.1f, .y = 0.2f, .width = 0.6f, .height = 0.4f};
+  fuchsia::camera3::StreamPtr stream;
+  stream.set_error_handler(MakeErrorHandler("Stream"));
+  auto request = stream.NewRequest();
+  // Send these messages first on the channel, before buffers have been negotiated.
+  stream->SetCropRegion(std::make_unique<fuchsia::math::RectF>(kCropRegion));
+  stream->SetResolution(kLegacyStreamFormatAssociation.resolution);
+  std::unique_ptr<FakeLegacyStream> legacy_stream_fake;
+  bool legacy_stream_created = false;
+  auto stream_impl = std::make_unique<StreamImpl>(
+      dispatcher(), fake_properties_, fake_legacy_config_, std::move(request), check_stream_valid,
+      [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+          fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+          fit::function<void(uint32_t)> callback, uint32_t format_index) {
+        auto result = FakeLegacyStream::Create(std::move(request), format_index, dispatcher());
+        ASSERT_TRUE(result.is_ok());
+        legacy_stream_fake = result.take_value();
+        token.BindSync()->Close();
+        legacy_stream_created = true;
+        callback(1);
+      },
+      nop);
+  fuchsia::sysmem::BufferCollectionTokenPtr token;
+  allocator_->AllocateSharedCollection(token.NewRequest());
+  token->Sync([&] { stream->SetBufferCollection(std::move(token)); });
+  stream->WatchBufferCollection(
+      [](fuchsia::sysmem::BufferCollectionTokenHandle token) { token.BindSync()->Close(); });
+  RunLoopUntil([&]() {
+    return HasFailure() || (legacy_stream_created && legacy_stream_fake->IsStreaming());
+  });
+  ASSERT_FALSE(HasFailure());
+  auto [x_min, y_min, x_max, y_max] = legacy_stream_fake->GetRegionOfInterest();
+  EXPECT_EQ(x_min, kCropRegion.x);
+  EXPECT_EQ(y_min, kCropRegion.y);
+  constexpr float kEpsilon = 0.001f;
+  EXPECT_NEAR(x_max - x_min, kCropRegion.width, kEpsilon);
+  EXPECT_NEAR(y_max - y_min, kCropRegion.height, kEpsilon);
+  auto image_format = legacy_stream_fake->GetImageFormat();
+  EXPECT_EQ(image_format, kLegacyStreamFormatAssociation.format_index);
 }
 
 }  // namespace camera

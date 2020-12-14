@@ -213,6 +213,7 @@ void StreamImpl::SetBufferCollection(
               std::move(token), legacy_stream_.NewRequest(),
               [this](uint32_t max_camping_buffers) { max_camping_buffers_ = max_camping_buffers; },
               legacy_stream_format_index_);
+          RestoreLegacyStreamState();
           legacy_stream_->Start();
         });
       });
@@ -301,5 +302,16 @@ void StreamImpl::SetCropRegion(uint64_t id, std::unique_ptr<fuchsia::math::RectF
       region = std::make_unique<fuchsia::math::RectF>(*current_crop_region_);
     }
     client->ReceiveCropRegion(std::move(region));
+  }
+}
+
+void StreamImpl::RestoreLegacyStreamState() {
+  TRACE_DURATION("camera", "StreamImpl::RestoreLegacyStreamState");
+  // Note that image format does not need restoration as it is passed to the driver during creation.
+  if (current_crop_region_) {
+    legacy_stream_->SetRegionOfInterest(current_crop_region_->x, current_crop_region_->y,
+                                        current_crop_region_->x + current_crop_region_->width,
+                                        current_crop_region_->y + current_crop_region_->height,
+                                        [](zx_status_t) {});
   }
 }

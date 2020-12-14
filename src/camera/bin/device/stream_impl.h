@@ -68,6 +68,9 @@ class StreamImpl {
   // Change the crop region of the stream.
   void SetCropRegion(uint64_t id, std::unique_ptr<fuchsia::math::RectF> region);
 
+  // Restores previously-sent state to the legacy stream.
+  void RestoreLegacyStreamState();
+
   // Represents a single client connection to the StreamImpl class.
   class Client : public fuchsia::camera3::Stream {
    public:

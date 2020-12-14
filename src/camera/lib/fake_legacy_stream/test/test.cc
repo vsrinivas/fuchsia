@@ -15,7 +15,7 @@
 class FakeLegacyStreamTest : public gtest::TestLoopFixture {
  protected:
   void SetUp() override {
-    auto result = camera::FakeLegacyStream::Create(stream_.NewRequest(), dispatcher());
+    auto result = camera::FakeLegacyStream::Create(stream_.NewRequest(), 0, dispatcher());
     ASSERT_TRUE(result.is_ok());
     fake_legacy_stream_ = result.take_value();
     stream_.set_error_handler(
@@ -117,7 +117,7 @@ TEST_F(FakeLegacyStreamTest, BadClient3) {
 TEST_F(FakeLegacyStreamTest, WrongDispatcher) {
   fuchsia::camera2::StreamPtr stream;
   async::Loop other(&kAsyncLoopConfigNoAttachToCurrentThread);
-  auto result = camera::FakeLegacyStream::Create(stream.NewRequest(), other.dispatcher());
+  auto result = camera::FakeLegacyStream::Create(stream.NewRequest(), 0, other.dispatcher());
   ASSERT_TRUE(result.is_ok());
   auto fake = result.take_value();
   ASSERT_DEATH(fake->IsStreaming(), ".*thread.*");
