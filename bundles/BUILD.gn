@@ -67,15 +67,6 @@ group("tools-system") {
   deps = [ "//src/connectivity/bluetooth/hci/emulator" ]
 }
 
-# TODO(fxbug.dev/63540): delete this. Use build_infra and test_infra directly.
-group("infratools") {
-  testonly = true
-  public_deps = [
-    ":build_infra",
-    ":test_infra",
-  ]
-}
-
 group("build_infra") {
   testonly = true
   public_deps = [ "//tools:build_infra" ]
