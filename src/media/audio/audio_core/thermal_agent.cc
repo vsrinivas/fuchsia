@@ -134,6 +134,8 @@ ThermalAgent::ThermalAgent(fuchsia::thermal::ControllerPtr thermal_controller,
   FX_DCHECK(thermal_controller_);
   FX_DCHECK(set_config_callback_);
 
+  TRACE_DURATION_BEGIN("audio", "ThermalState_0");
+
   if (thermal_config.entries().empty()) {
     FX_LOGS(ERROR) << "No thermal config, so we won't start the thermal agent";
     thermal_controller_ = nullptr;
@@ -187,6 +189,10 @@ void ThermalAgent::SetThermalState(uint32_t state, SetThermalStateCallback callb
     FX_LOGS(INFO) << "No thermal state change (was already " << state << ")";
     return;
   }
+
+  TRACE_DURATION_END("audio",
+                     std::string("ThermalState_" + std::to_string(current_state_)).c_str());
+  TRACE_DURATION_BEGIN("audio", std::string("ThermalState_" + std::to_string(state)).c_str());
 
   for (auto& [target_name, configs_by_state] : targets_) {
     FX_CHECK(state < configs_by_state.size());
