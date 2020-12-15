@@ -12,6 +12,7 @@ import("//build/toolchain/ccache.gni")
 import("//build/toolchain/concurrent_jobs.gni")
 import("//build/toolchain/goma.gni")
 import("//build/unification/global_variables.gni")
+import("//zircon/public/gn/config/experimental_cxx_version.gni")
 
 declare_args() {
   if (is_fuchsia) {
@@ -97,7 +98,7 @@ config("rust_v0_symbol_mangling") {
 
 config("language") {
   cflags_c = [ "-std=c11" ]
-  cflags_cc = [ "-std=c++17" ]
+  cflags_cc = [ "-std=c++$experimental_cxx_version" ]
   if (current_os == "mac") {
     # macOS needs this to not complain about C++17isms that older macOS
     # system libc++ doesn't support.  But we use our own toolchain's static

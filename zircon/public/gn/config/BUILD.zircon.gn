@@ -7,6 +7,7 @@ import("$zx/public/gn/toolchain/goma.gni")
 import("$zx/public/gn/toolchain/rustc.gni")
 import("$zx_build_config/instrumentation/sanitizer_default_options.gni")
 import("$zx_build_config/standard.gni")
+import("experimental_cxx_version.gni")
 import("levels.gni")
 
 declare_args() {
@@ -228,7 +229,7 @@ config("compiler") {
 
 config("language") {
   cflags_c = [ "-std=c11" ]
-  cflags_cc = [ "-std=c++17" ]
+  cflags_cc = [ "-std=c++$experimental_cxx_version" ]
   if (current_os == "mac") {
     # macOS needs this to not complain about C++17isms that older macOS
     # system libc++ doesn't support.  But we use our own toolchain's static

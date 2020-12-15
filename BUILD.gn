@@ -13,6 +13,7 @@ import("//build/testing/platforms.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
 import("//build/toolchain/zircon/clang.gni")
+import("//zircon/public/gn/config/experimental_cxx_version.gni")
 
 # TODO(fxbug.dev/60410): remove import when the ZN build is gone.
 import("//build/zbi/zbi.gni")
@@ -111,6 +112,7 @@ declare_args() {
   # Any individual Zircon build argument set in `zircon_extra_args` will
   # silently clobber the default value shown here.
   zircon_args = {
+    experimental_cxx_version = experimental_cxx_version
     use_ccache = use_ccache
     use_goma = use_goma
     output_gsym = output_gsym
