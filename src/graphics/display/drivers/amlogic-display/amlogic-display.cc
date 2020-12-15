@@ -19,7 +19,6 @@
 #include <cstddef>
 #include <iterator>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
@@ -37,6 +36,7 @@
 #include <fbl/vector.h>
 
 #include "common.h"
+#include "src/graphics/display/drivers/amlogic-display/amlogic-display-bind.h"
 #include "vpp-regs.h"
 
 namespace sysmem = llcpp::fuchsia::sysmem;
@@ -992,9 +992,4 @@ static constexpr zx_driver_ops_t amlogic_display_ops = []() {
 }  // namespace amlogic_display
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(amlogic_display, amlogic_display::amlogic_display_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_DISPLAY),
-ZIRCON_DRIVER_END(amlogic_display)
+ZIRCON_DRIVER(amlogic_display, amlogic_display::amlogic_display_ops, "zircon", "0.1");
