@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Implementation of the `fuchsia.inspect.Tree` protocol server.
+
 use {
     crate::{reader::ReadableTree, Inspector},
     anyhow::{Context as _, Error},
@@ -17,6 +19,7 @@ use {
     tracing::error,
 };
 
+/// Optional settings for serving `fuchsia.inspect.Tree`
 #[derive(Default, Clone)]
 pub struct TreeServerSettings {
     /// If true, snapshots of trees returned by the handler must be private

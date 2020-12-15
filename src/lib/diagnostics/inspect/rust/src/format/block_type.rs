@@ -2,51 +2,53 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Definitions for all the block types.
+
 use {
     num_derive::{FromPrimitive, ToPrimitive},
     std::fmt,
 };
 
-#[allow(missing_docs)]
+/// The type of a block.
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, FromPrimitive, ToPrimitive)]
 pub enum BlockType {
-    // Contains index of the next free block of the same order.
+    /// Contains index of the next free block of the same order.
     Free = 0,
 
-    // Available to be changed to a different class. Transitonal.
+    /// Available to be changed to a different class. Transitonal.
     Reserved = 1,
 
-    // One header at the beginning of the VMO region. Index 0.
+    /// One header at the beginning of the VMO region. Index 0.
     Header = 2,
 
-    // An entry in the tree, which might hold nodes, metrics or properties.
-    // Contains a reference count.
+    /// An entry in the tree, which might hold nodes, metrics or properties.
+    /// Contains a reference count.
     NodeValue = 3,
 
-    // Metrics.
+    /// Numeric properties.
     IntValue = 4,
     UintValue = 5,
     DoubleValue = 6,
 
-    // String or bytevector property value.
+    /// String or bytevector property value.
     BufferValue = 7,
 
-    // Contains a string payload.
+    /// Contains a string payload.
     Extent = 8,
 
-    // Gives blocks a human-readable identifier.
+    /// Gives blocks a human-readable identifier.
     Name = 9,
 
-    // A deleted object
+    /// A deleted object
     Tombstone = 10,
 
-    // An array value
+    /// An array value
     ArrayValue = 11,
 
-    // A link value
+    /// A link value
     LinkValue = 12,
 
-    // A boolean value
+    /// A boolean value
     BoolValue = 13,
 }
 
@@ -72,7 +74,7 @@ impl fmt::Display for BlockType {
 }
 
 impl BlockType {
-    #[allow(missing_docs)]
+    /// Returns whether the type is for a `*_VALUE` block or not.
     pub fn is_any_value(&self) -> bool {
         match *self {
             BlockType::NodeValue
@@ -87,7 +89,7 @@ impl BlockType {
         }
     }
 
-    #[allow(missing_docs)]
+    /// Returns whether the type is of a numeric `*_VALUE` block or not.
     pub fn is_numeric_value(&self) -> bool {
         match *self {
             BlockType::IntValue | BlockType::UintValue | BlockType::DoubleValue => true,
@@ -95,7 +97,7 @@ impl BlockType {
         }
     }
 
-    #[allow(missing_docs)]
+    /// Returns whether the type is node or tombstone or not.
     pub fn is_node_or_tombstone(&self) -> bool {
         match *self {
             BlockType::NodeValue | BlockType::Tombstone => true,
@@ -103,6 +105,7 @@ impl BlockType {
         }
     }
 
+    /// Returns an array of all the types.
     #[cfg(test)]
     pub fn all() -> [BlockType; 14] {
         [

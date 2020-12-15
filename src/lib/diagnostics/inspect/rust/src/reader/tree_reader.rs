@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//!
+
 use {
     crate::{
         reader::{
@@ -82,6 +84,7 @@ fn expand(
     hierarchy
 }
 
+/// Reads the given `ReadableTree` into a DiagnosticsHierarchy.
 pub async fn read<T>(tree: &T) -> Result<DiagnosticsHierarchy, ReaderError>
 where
     T: ReadableTree + Send + Sync,

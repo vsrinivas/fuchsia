@@ -2,13 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! # Standardized component inspection
+//! # Component inspection utilities
 //!
-//! This mod contains standardized entry points to the Fuchsia inspect subsystem.  The `inspector()`
-//! function can be used to get a top level inspector, which ensures consistent inspect behavior
-//! across components.
 //!
-//! Use the `health()` function to report the component health state through the component inspector.
+//! This module contains standardized entry points to the Fuchsia inspect subsystem. It works based
+//! on the assumpton that a top-level static [`Inspector`][Inspector] is desirable.
+//!
+//! The [`inspector()`][inspector] function can be used to get a top level inspector, which ensures
+//! consistent inspect behavior across components.
+//!
+//! Use the [`health()`][health] function to report the component health state through the
+//! component inspector.
 //!
 //! While using the component inspector is not mandatory, it is probably a good idea from the
 //! standpoint of uniform reporting.

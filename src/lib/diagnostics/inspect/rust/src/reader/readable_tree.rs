@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Provides implementations for common structs that can be read in its entirety. These are structs
+//! that can be interpreted using the `fuchsia.inspect.Tree` protocol.
+
 use {
     crate::{reader::ReaderError, Inspector},
     async_trait::async_trait,
@@ -9,10 +12,16 @@ use {
     fuchsia_zircon as zx,
 };
 
+/// Trait implemented by structs that can provide inspect data and their lazy links.
 #[async_trait]
 pub trait ReadableTree: Sized {
+    /// Returns the lazy links names.
     async fn tree_names(&self) -> Result<Vec<String>, ReaderError>;
+
+    /// Returns the vmo of the current root node.
     async fn vmo(&self) -> Result<zx::Vmo, ReaderError>;
+
+    /// Loads the lazy link of the given `name`.
     async fn read_tree(&self, name: &str) -> Result<Self, ReaderError>;
 }
 

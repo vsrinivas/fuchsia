@@ -6,6 +6,7 @@ use crate::format::block_type::BlockType;
 use anyhow;
 use fuchsia_zircon as zx;
 
+/// Errors that Inspect API functions can return.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("FIDL error")]

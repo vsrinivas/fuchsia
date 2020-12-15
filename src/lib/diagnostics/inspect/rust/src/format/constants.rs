@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Various constants used for Inspect.
+
 pub use diagnostics_hierarchy::{EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS, LINEAR_HISTOGRAM_EXTRA_SLOTS};
 
 /// Bytes per page

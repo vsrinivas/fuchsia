@@ -2,20 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Defines multiple types of inspect containers: Mapped VMO for production and byte arrays
+//! for testing.
+
 use {
     mapped_vmo::Mapping,
     std::{cmp::min, ptr, sync::Arc},
 };
 
+/// Trait implemented by an Inspect container that can be read from.
 pub trait ReadableBlockContainer {
+    /// Writes the container at the given `offset` into the given `bytes`.
     fn read_bytes(&self, offset: usize, bytes: &mut [u8]) -> usize;
 }
 
+/// Trait implemented by an Inspect container that can be written to.
 pub trait WritableBlockContainer {
+    /// Writes the given `bytes` at the given `offset` in the container.
     fn write_bytes(&self, offset: usize, bytes: &[u8]) -> usize;
 }
 
+/// Trait implemented to compare two inspect containers for equality.
 pub trait BlockContainerEq<RHS = Self> {
+    /// Returns true if the other container is the same.
     fn ptr_eq(&self, other: &RHS) -> bool;
 }
 

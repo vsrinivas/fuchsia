@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Implements the buddy allocation algorithm for the [Inspect VMO][inspect-vmo]
+//!
+//! [inspect-vmo]: https://fuchsia.dev/fuchsia-src/reference/diagnostics/inspect/vmo-format
+
 use {
     crate::{
         error::Error,
@@ -13,6 +17,7 @@ use {
     std::{cmp::min, sync::Arc},
 };
 
+/// The inspect heap.
 #[derive(Debug)]
 pub struct Heap {
     mapping: Arc<Mapping>,
@@ -21,6 +26,7 @@ pub struct Heap {
 }
 
 impl Heap {
+    /// Creates a new heap on the underlying mapped VMO.
     pub fn new(mapping: Arc<Mapping>) -> Result<Self, Error> {
         let mut heap = Heap {
             mapping: mapping,
@@ -31,6 +37,7 @@ impl Heap {
         Ok(heap)
     }
 
+    /// Allocates a new block of the given `min_size`.
     pub fn allocate_block(&mut self, min_size: usize) -> Result<Block<Arc<Mapping>>, Error> {
         let min_fit_order = utils::fit_order(min_size);
         if min_fit_order >= constants::NUM_ORDERS {
@@ -56,6 +63,7 @@ impl Heap {
         Ok(block)
     }
 
+    /// Marks the memory region pointed by the given `block` as free.
     pub fn free_block(&mut self, block: Block<Arc<Mapping>>) -> Result<(), Error> {
         let block_type = block.block_type();
         if block_type == BlockType::Free {
@@ -81,6 +89,7 @@ impl Heap {
         Ok(())
     }
 
+    /// Returns the block at the given `index` or an error if the index is out of bounds.
     pub fn get_block(&self, index: u32) -> Result<Block<Arc<Mapping>>, Error> {
         let offset = utils::offset_for_index(index);
         if offset >= self.current_size_bytes {

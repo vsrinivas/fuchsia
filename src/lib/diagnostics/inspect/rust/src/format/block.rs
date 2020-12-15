@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Utilities for writing VMO blocks in a type-safe way.
+
 use {
     crate::{
         error::Error,
@@ -31,6 +33,7 @@ pub enum PropertyFormat {
     Bytes = 1,
 }
 
+/// Points to an index in the VMO and reads it according to the bytes in it.
 #[derive(Debug, Clone)]
 pub struct Block<T> {
     index: u32,

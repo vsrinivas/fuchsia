@@ -2,6 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! # Reading inspect data
+//!
+//! Provides an API for reading inspect data from a given [`Inspector`][Inspector], VMO, byte
+//! vectors, etc.
+//!
+//! ## Concepts
+//!
+//! ### Diagnostics hierarchy
+//!
+//! Represents the inspect VMO as a regular tree of data. The API ensures that this structure
+//! always contains the lazy values loaded as well.
+//!
+//! ### Partial node hierarchy
+//!
+//! Represents the inspect VMO as a regular tree of data, but unlike the Diagnostics Hierarchy, it
+//! won't contain the lazy values loaded. An API is provided for converting this to a diagnostics
+//! hierarchy ([`Into<DiagnosticsHierarchy>`](impl-Into<DiagnosticsHierarchy<String>>)), but keep
+//! in mind that the resulting diagnostics hierarchy won't contain any of the lazy values.
+//!
+//! ## Example usage
+//!
+//! ```rust
+//! use fuchsia_inspect::{Inspector, reader};
+//!
+//! let inspector = Inspector::new();
+//! ...
+//! let hierarchy = reader::read_from_inspector(&inspector)?;
+//! ```
+
 use {
     crate::{
         format::{block::PropertyFormat, block_type::BlockType},
@@ -28,7 +57,6 @@ pub use {
 
 mod error;
 mod readable_tree;
-#[allow(missing_docs)]
 pub mod snapshot;
 mod tree_reader;
 

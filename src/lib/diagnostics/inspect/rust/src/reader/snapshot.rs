@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! A snapshot represents all the loaded blocks of the VMO in a way that we can reconstruct the
+//! implicit tree.
+
 use {
     crate::{
         format::{block::Block, block_type::BlockType, constants},

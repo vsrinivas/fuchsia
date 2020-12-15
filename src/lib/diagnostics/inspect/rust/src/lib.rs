@@ -2,11 +2,85 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! The Fuchsia Inspect format for structured metrics trees.
+//! # fuchsia-inspect
+//!
+//! Components in Fuchsia may expose structured information about themselves conforming to the
+//! [Inspect API][inspect]. This crate is the core library for writing inspect data in Rust
+//! components.
+//!
+//! For a comprehensive guide on how to start using inspect, please refer to the
+//! [codelab].
+//!
+//! ## Library concepts
+//!
+//! There's two types of inspect values: nodes and properties. These have the following
+//! characteristics:
+//!
+//!   - A Node may have any number of key/value pairs called Properties.
+//!   - A Node may have any number of children, which are also Nodes.
+//!   - Properties and nodes are created under a parent node. Inspect is already initialized with a
+//!     root node.
+//!   - The key for a value in a Node is always a UTF-8 string, the value may be one of the
+//!     supported types (a node or a property of any type).
+//!   - Nodes and properties have strict ownership semantics. Whenever a node or property is
+//!     created, it is written to the backing [VMO][inspect-vmo] and whenever it is dropped it is
+//!     removed from the VMO.
+//!   - Inspection is best effort, if an error occurs, no panic will happen and nodes and properties
+//!     might become No-Ops. For example, when the VMO becomes full, any further creation of a
+//!     property or a node will result in no changes in the VMO and a silent failure. However,
+//!     mutation of existing properties in the VMO will continue to work.
+//!
+//! ### Creating vs Recording
+//!
+//! There are two functions each for initializing nodes and properties:
+//!
+//!   - `create_*`: returns the created node/property and it's up to the caller to handle its
+//!     lifetime.
+//!   - `record_*`: creates the node/property but doesn't return it and ties its lifetime to
+//!     the node where the function was called.
+//!
+//! ### Lazy value support
+//!
+//! Lazy (or dynamic) values are values that are created on demand, this is, whenever they are read.
+//! Unlike regular nodes, they don't take any space on the VMO until a reader comes and requests
+//! its data.
+//!
+//! There's two ways of creating lazy values:
+//!
+//!   - **Lazy node**: creates a child node of root with the given name. The callback returns a
+//!     future for an [`Inspector`][inspector] whose root node is spliced into the parent node when
+//!     read.
+//!   - **Lazy values**: works like the previous one, except that all properties and nodes under the
+//!     future root node node are added directly as children of the parent node.
+//!
+//! ## Quickstart
+//!
+//! Add the following to your component main:
+//!
+//! ```rust
+//! use fuchsia_inspect::component;
+//! use fuchsia_component::server::ServiceFs;
+//!
+//! fn main() -> Result<(), Error> {
+//!   let mut fs = ServiceFs::new();
+//!   component::inspector().root().serve(&mut fs)?;
+//!
+//!   // Now you can create nodes and properties anywhere!
+//!   let child = component::inspector().root().create_child("foo");
+//!   child.record_uint("bar", 42);
+//!   ...
+//!   fs.take_and_serve_directory_handle()?;
+//!   fs.collect::<()>().map(Ok).await
+//! }
+//! ```
+//!
+//! [inspect]: https://fuchsia.dev/fuchsia-src/development/diagnostics/inspect
+//! [codelab]: https://fuchsia.dev/fuchsia-src/development/diagnostics/inspect/codelab
+//! [inspect-vmo]: https://fuchsia.dev/fuchsia-src/reference/diagnostics/inspect/vmo-format
+//! [inspector]: Inspector
 
 use {
     crate::{
-        error::Error,
         format::{
             block::{ArrayFormat, LinkNodeDisposition, PropertyFormat},
             constants,
@@ -52,8 +126,10 @@ pub use diagnostics_hierarchy::{
 };
 pub use testing::{assert_inspect_tree, tree_assertion};
 
+pub use crate::error::Error;
+
 pub mod component;
-pub mod error;
+mod error;
 pub mod format;
 pub mod health;
 pub mod heap;
@@ -74,15 +150,17 @@ pub mod testing {
     };
 }
 
-/// Directory where the diagnostics service should be added.
-pub const SERVICE_DIR: &str = "diagnostics";
+/// Directiory within the outgoing directory of a component where the diagnostics service should be
+/// added.
+pub const DIAGNOSTICS_DIR: &str = "diagnostics";
 
 lazy_static! {
   // Suffix used for unique names.
   static ref UNIQUE_NAME_SUFFIX: AtomicUsize = AtomicUsize::new(0);
 }
 
-/// Root of the Inspect API
+/// Root of the Inspect API. Through this API, further nodes can be created and inspect can be
+/// served.
 #[derive(Clone)]
 pub struct Inspector {
     /// The root node.
@@ -136,10 +214,9 @@ impl ValueList {
     }
 }
 
-/// Root API for inspect. Used to create the VMO, export to ServiceFs, and get
-/// the root node.
 impl Inspector {
-    /// Create a new Inspect VMO object with the default maximum size.
+    /// Initializes a new Inspect VMO object with the
+    /// [`defalt maximum size`][constants::DEFAULT_VMO_SIZE_BYTES].
     pub fn new() -> Self {
         Inspector::new_with_size(constants::DEFAULT_VMO_SIZE_BYTES)
     }
@@ -149,7 +226,7 @@ impl Inspector {
         self.vmo.is_some() && self.root_node.is_valid()
     }
 
-    /// Create a new Inspect VMO object with the given maximum size. If the
+    /// Initializes a new Inspect VMO object with the given maximum size. If the
     /// given size is less than 4K, it will be made 4K which is the minimum size
     /// the VMO should have.
     pub fn new_with_size(max_size: usize) -> Self {
@@ -164,7 +241,7 @@ impl Inspector {
         }
     }
 
-    /// Returns a duplicate of the underlying VMO for this inspector.
+    /// Returns a duplicate of the underlying VMO for this Inspector.
     ///
     /// The duplicated VMO will be read-only, and is suitable to send to clients over FIDL.
     pub fn duplicate_vmo(&self) -> Option<zx::Vmo> {
@@ -197,7 +274,8 @@ impl Inspector {
         self.root_node.inner.inner_ref().map(|inner_ref| inner_ref.state.copy_vmo_bytes())
     }
 
-    /// Spawns a server for handling inspect `Tree` requests in the diagnostics directory.
+    /// Spawns a server for handling `fuchsia.inspect.Tree` requests in the outgoing diagnostics
+    /// directory.
     pub fn serve<'a, ServiceObjTy: ServiceObjTrait>(
         &self,
         service_fs: &mut ServiceFs<ServiceObjTy>,
@@ -222,12 +300,12 @@ impl Inspector {
         let server_end = server.into_channel().into();
         let scope = ExecutionScope::new();
         dir.open(scope, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, 0, Path::empty(), server_end);
-        service_fs.add_remote(SERVICE_DIR, proxy);
+        service_fs.add_remote(DIAGNOSTICS_DIR, proxy);
 
         Ok(())
     }
 
-    /// Get the root of the VMO object.
+    /// Returns the root node of the inspect hierarchy.
     pub fn root(&self) -> &Node {
         &self.root_node
     }
@@ -291,7 +369,7 @@ enum Inner<T: InnerType> {
 }
 
 impl<T: InnerType> Inner<T> {
-    /// Create a new Inner with the desired block index within the inspect VMO
+    /// Creates a new Inner with the desired block index within the inspect VMO
     fn new(state: State, block_index: u32) -> Self {
         Self::Strong(Arc::new(InnerRef { state, block_index, data: T::Data::default() }))
     }
@@ -425,15 +503,16 @@ impl InnerType for InnerLazyNodeType {
     }
 }
 
-/// Utility for generating the implementation of all inspect types (including the struct):
-///  - All Inspect Types (*Property, Node) can be No-Op. This macro generates the
-///    appropiate internal constructors.
-///  - All Inspect Types derive PartialEq, Eq. This generates the dummy implementation
-///    for the wrapped type.
+// Utility for generating the implementation of all inspect types (including the struct):
+//  - All Inspect Types (*Property, Node) can be No-Op. This macro generates the
+//    appropiate internal constructors.
+//  - All Inspect Types derive PartialEq, Eq. This generates the dummy implementation
+//    for the wrapped type.
 macro_rules! inspect_type_impl {
     ($(#[$attr:meta])* struct $name:ident, $type:ident) => {
         paste::paste! {
             $(#[$attr])*
+            ///
             /// NOTE: do not rely on PartialEq implementation for true comparison.
             /// Instead leverage the reader.
             ///
@@ -445,7 +524,7 @@ macro_rules! inspect_type_impl {
 
             #[cfg(test)]
             impl $name {
-                #[allow(missing_docs)]
+                /// Returns the [`Block`][Block] associated with this value.
                 pub fn get_block(&self) -> Option<Block<Arc<Mapping>>> {
                     self.inner.inner_ref().and_then(|inner_ref| {
                         inner_ref.state.try_lock()
@@ -453,7 +532,7 @@ macro_rules! inspect_type_impl {
                     })
                 }
 
-                #[allow(missing_docs)]
+                /// Returns the index of the value's block in the VMO.
                 pub fn block_index(&self) -> u32 {
                     self.inner.inner_ref().unwrap().block_index
                 }
@@ -480,15 +559,15 @@ macro_rules! inspect_type_impl {
     }
 }
 
-/// Utility for generating functions to create a numeric property.
-///   `name`: identifier for the name (example: double)
-///   `name_cap`: identifier for the name capitalized (example: Double)
-///   `type`: the type of the numeric property (example: f64)
+// Utility for generating functions to create a numeric property.
+//   `name`: identifier for the name (example: double)
+//   `name_cap`: identifier for the name capitalized (example: Double)
+//   `type`: the type of the numeric property (example: f64)
 macro_rules! create_numeric_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::paste! {
+            #[doc = "Creates a new `" $name_cap "` with the given `name` and `value`."]
             #[must_use]
-            #[allow(missing_docs)]
             pub fn [<create_ $name >](&self, name: impl AsRef<str>, value: $type)
                 -> [<$name_cap Property>] {
                     self.inner.inner_ref().and_then(|inner_ref| {
@@ -506,6 +585,7 @@ macro_rules! create_numeric_property_fn {
                     .unwrap_or([<$name_cap Property>]::new_no_op())
             }
 
+            #[doc = "Records a new `" $name_cap "` with the given `name` and `value`."]
             pub fn [<record_ $name >](&self, name: impl AsRef<str>, value: $type) {
                 let property = self.[<create_ $name>](name, value);
                 self.record(property);
@@ -514,15 +594,15 @@ macro_rules! create_numeric_property_fn {
     };
 }
 
-/// Utility for generating functions to create an array property.
-///   `name`: identifier for the name (example: double)
-///   `name_cap`: identifier for the name capitalized (example: Double)
-///   `type`: the type of the numeric property (example: f64)
+// Utility for generating functions to create an array property.
+//   `name`: identifier for the name (example: double)
+//   `name_cap`: identifier for the name capitalized (example: Double)
+//   `type`: the type of the numeric property (example: f64)
 macro_rules! create_array_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::paste! {
+            #[doc = "Creates a new `" $name_cap "ArrayProperty` with the given `name` and `slots`."]
             #[must_use]
-            #[allow(missing_docs)]
             pub fn [<create_ $name _array>](&self, name: impl AsRef<str>, slots: usize)
                 -> [<$name_cap ArrayProperty>] {
                     self.[<create_ $name _array_internal>](name, slots, ArrayFormat::Default)
@@ -549,15 +629,16 @@ macro_rules! create_array_property_fn {
     };
 }
 
-/// Utility for generating functions to create a linear histogram property.
-///   `name`: identifier for the name (example: double)
-///   `name_cap`: identifier for the name capitalized (example: Double)
-///   `type`: the type of the numeric property (example: f64)
+// Utility for generating functions to create a linear histogram property.
+//   `name`: identifier for the name (example: double)
+//   `name_cap`: identifier for the name capitalized (example: Double)
+//   `type`: the type of the numeric property (example: f64)
 macro_rules! create_linear_histogram_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::paste! {
+            #[doc = "Creates a new `" $name_cap
+               "LinearHistogramProperty` with the given `name` and `params`."]
             #[must_use]
-            #[allow(missing_docs)]
             pub fn [<create_ $name _linear_histogram>](
                 &self, name: impl AsRef<str>, params: LinearHistogramParams<$type>)
                 -> [<$name_cap LinearHistogramProperty>] {
@@ -577,15 +658,16 @@ macro_rules! create_linear_histogram_property_fn {
     };
 }
 
-/// Utility for generating functions to create an exponential histogram property.
-///   `name`: identifier for the name (example: double)
-///   `name_cap`: identifier for the name capitalized (example: Double)
-///   `type`: the type of the numeric property (example: f64)
+// Utility for generating functions to create an exponential histogram property.
+//   `name`: identifier for the name (example: double)
+//   `name_cap`: identifier for the name capitalized (example: Double)
+//   `type`: the type of the numeric property (example: f64)
 macro_rules! create_exponential_histogram_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::paste! {
+            #[doc = "Creates a new `" $name_cap
+               "ExponentialHistogramProperty` with the given `name` and `params`."]
             #[must_use]
-            #[allow(missing_docs)]
             pub fn [<create_ $name _exponential_histogram>](
               &self, name: impl AsRef<str>, params: ExponentialHistogramParams<$type>)
               -> [<$name_cap ExponentialHistogramProperty>] {
@@ -614,6 +696,7 @@ macro_rules! create_lazy_property_fn {
     ($fn_suffix:ident, $disposition:ident) => {
         paste::paste! {
             #[must_use]
+            #[doc = "Creates a new lazy " $fn_suffix " link with the given `name` and `callback`."]
             pub fn [<create_lazy_ $fn_suffix>]<F>(&self, name: impl AsRef<str>, callback: F) -> LazyNode
             where F: Fn() -> BoxFuture<'static, Result<Inspector, anyhow::Error>> + Sync + Send + 'static {
                 self.inner.inner_ref().and_then(|inner_ref| {
@@ -633,6 +716,7 @@ macro_rules! create_lazy_property_fn {
                 .unwrap_or(LazyNode::new_no_op())
             }
 
+            #[doc = "Records a new lazy " $fn_suffix " link with the given `name` and `callback`."]
             pub fn [<record_lazy_ $fn_suffix>]<F>(
                 &self, name: impl AsRef<str>, callback: F)
             where F: Fn() -> BoxFuture<'static, Result<Inspector, anyhow::Error>> + Sync + Send + 'static {
@@ -644,18 +728,19 @@ macro_rules! create_lazy_property_fn {
 }
 
 inspect_type_impl!(
-    /// Inspect API Node data type.
+    /// Inspect Node data type.
     struct Node,
     InnerNodeType
 );
 
 inspect_type_impl!(
-    /// Inspect API Lazy Node data type.
+    /// Inspect Lazy Node data type.
     struct LazyNode,
     InnerLazyNodeType
 );
 
 impl Node {
+    /// Creates a new root node.
     pub(in crate) fn new_root(state: State) -> Node {
         Node::new(state, 0)
     }
@@ -833,14 +918,14 @@ impl Node {
 
 /// Trait implemented by properties.
 pub trait Property<'t> {
-    #[allow(missing_docs)]
+    /// The type of the property.
     type Type;
 
     /// Set the property value to |value|.
     fn set(&'t self, value: Self::Type);
 }
 
-/// Trait implemented by numeric properties.
+/// Trait implemented by numeric properties providing common operations.
 pub trait NumericProperty {
     /// The type the property is handling.
     type Type;
@@ -857,13 +942,14 @@ pub trait NumericProperty {
     fn get(&self) -> Result<Self::Type, Error>;
 }
 
-/// Utility for generating numeric property functions (example: set, add, subtract)
-///   `fn_name`: the name of the function to generate (example: set)
-///   `type`: the type of the argument of the function to generate (example: f64)
-///   `name`: the readble name of the type of the function (example: double)
+// Utility for generating numeric property functions (example: set, add, subtract)
+//   `fn_name`: the name of the function to generate (example: set)
+//   `type`: the type of the argument of the function to generate (example: f64)
+//   `name`: the readble name of the type of the function (example: double)
 macro_rules! numeric_property_fn {
     ($fn_name:ident, $type:ident, $name:ident) => {
         paste::paste! {
+            // Docs here come from the trait docs.
             fn $fn_name(&self, value: $type) {
                 if let Some(ref inner_ref) = self.inner.inner_ref() {
                     inner_ref.state.try_lock()
@@ -879,10 +965,10 @@ macro_rules! numeric_property_fn {
     };
 }
 
-/// Utility for generating a numeric property datatype impl
-///   `name`: the readble name of the type of the function (example: double)
-///   `name_cap`: the capitalized readble name of the type of the function (example: Double)
-///   `type`: the type of the argument of the function to generate (example: f64)
+// Utility for generating a numeric property datatype impl
+//   `name`: the readble name of the type of the function (example: double)
+//   `name_cap`: the capitalized readble name of the type of the function (example: Double)
+//   `type`: the type of the argument of the function to generate (example: f64)
 macro_rules! numeric_property {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::paste! {
@@ -921,10 +1007,10 @@ numeric_property!(int, Int, i64);
 numeric_property!(uint, Uint, u64);
 numeric_property!(double, Double, f64);
 
-/// Utility for generating a byte/string property datatype impl
-///   `name`: the readable name of the type of the function (example: String)
-///   `type`: the type of the argument of the function to generate (example: str)
-///   `bytes`: an optional method to get the bytes of the property
+// Utility for generating a byte/string property datatype impl
+//   `name`: the readable name of the type of the function (example: String)
+//   `type`: the type of the argument of the function to generate (example: str)
+//   `bytes`: an optional method to get the bytes of the property
 macro_rules! property {
     ($name:ident, $type:ty $(, $bytes:ident)?) => {
         paste::paste! {
@@ -978,31 +1064,32 @@ impl<'t> Property<'t> for BoolProperty {
     }
 }
 
-#[allow(missing_docs)]
+/// Trait implemented by all array properties providing common operations on arrays.
 pub trait ArrayProperty {
-    #[allow(missing_docs)]
+    /// The type of the array entries.
     type Type;
 
-    /// Set the array value to |value| at the given |index|.
+    /// Sets the array value to `value` at the given `index`.
     fn set(&self, index: usize, value: Self::Type);
 
-    /// Add the given |value| to the property current value at the given |index|.
+    /// Adds the given `value` to the property current value at the given `index`.
     fn add(&self, index: usize, value: Self::Type);
 
-    /// Subtract the given |value| to the property current value at the given |index|.
+    /// Subtracts the given `value` to the property current value at the given `index`.
     fn subtract(&self, index: usize, value: Self::Type);
 
     /// Sets all slots of the array to 0.
     fn clear(&self);
 }
 
-/// Utility for generating array property functions (example: set, add, subtract)
-///   `fn_name`: the name of the function to generate (example: set)
-///   `type`: the type of the argument of the function to generate (example: f64)
-///   `name`: the readble name of the type of the function (example: double)
+// Utility for generating array property functions (example: set, add, subtract)
+//   `fn_name`: the name of the function to generate (example: set)
+//   `type`: the type of the argument of the function to generate (example: f64)
+//   `name`: the readble name of the type of the function (example: double)
 macro_rules! array_property_fn {
     ($fn_name:ident, $type:ident, $name:ident) => {
         paste::paste! {
+            // Docs here come from the trait docs.
             fn $fn_name(&self, index: usize, value: $type) {
                 if let Some(ref inner_ref) = self.inner.inner_ref() {
                     inner_ref.state
@@ -1020,9 +1107,9 @@ macro_rules! array_property_fn {
     };
 }
 
-/// Utility for generating a numeric array datatype impl
-///   `name`: the readble name of the type of the function (example: double)
-///   `type`: the type of the argument of the function to generate (example: f64)
+// Utility for generating a numeric array datatype impl
+//   `name`: the readble name of the type of the function (example: double)
+//   `type`: the type of the argument of the function to generate (example: f64)
 macro_rules! array_property {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::paste! {
@@ -1061,15 +1148,15 @@ array_property!(int, Int, i64);
 array_property!(uint, Uint, u64);
 array_property!(double, Double, f64);
 
-#[allow(missing_docs)]
+/// Trait implemented by all hitogram properties providing common operations.
 pub trait HistogramProperty {
-    #[allow(missing_docs)]
+    /// The type of each value added to the histogram.
     type Type;
 
-    /// Inserts a new value in the histogram.
+    /// Inserts the given `value` in the histogram.
     fn insert(&self, value: Self::Type);
 
-    /// Inserts the given value in the histogram |count| times.
+    /// Inserts the given `value` in the histogram `count` times.
     fn insert_multiple(&self, value: Self::Type, count: usize);
 
     /// Clears all buckets of the histogram.
@@ -1112,6 +1199,7 @@ macro_rules! linear_histogram_property {
     ($name_cap:ident, $type:ident) => {
         paste::paste! {
             #[derive(Debug)]
+            #[doc = "A linear histogram property for " $type " values."]
             pub struct [<$name_cap LinearHistogramProperty>] {
                 array: [<$name_cap ArrayProperty>],
                 floor: $type,
@@ -1149,6 +1237,7 @@ macro_rules! exponential_histogram_property {
     ($name_cap:ident, $type:ident) => {
         paste::paste! {
             #[derive(Debug)]
+            #[doc = "An exponential histogram property for " $type " values."]
             pub struct [<$name_cap ExponentialHistogramProperty>] {
                 array: [<$name_cap ArrayProperty>],
                 floor: $type,
@@ -1192,7 +1281,8 @@ exponential_histogram_property!(Double, f64);
 exponential_histogram_property!(Int, i64);
 exponential_histogram_property!(Uint, u64);
 
-/// Generates a unique name that can be used in inspect nodes and properties.
+/// Generates a unique name that can be used in inspect nodes and properties that will be prefixed
+/// by the given `prefix`.
 pub fn unique_name(prefix: &str) -> String {
     let suffix = UNIQUE_NAME_SUFFIX.fetch_add(1, Ordering::Relaxed);
     format!("{}{}", prefix, suffix)
