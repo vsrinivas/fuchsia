@@ -18,7 +18,8 @@
   },
   "proactive_log": {
         "cache_directory": "$DATA/target_logs",
-        "max_log_size_bytes": 10485760,
+        "max_log_size_bytes": 5242880,
+        "max_session_size_bytes": 104857600,
         "enabled": false
   }
 }

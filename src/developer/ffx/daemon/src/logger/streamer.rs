@@ -5,12 +5,12 @@
 use {
     anyhow::{anyhow, Context, Result},
     async_std::{
-        fs::{create_dir_all, read_dir, File, OpenOptions},
+        fs::{create_dir_all, read_dir, remove_file, File, OpenOptions},
         io::{BufReader, Lines},
         path::PathBuf,
         prelude::*,
         stream::{Stream, StreamExt},
-        sync::RwLock,
+        sync::{RwLock, RwLockWriteGuard},
         task::Poll,
     },
     async_trait::async_trait,
@@ -25,6 +25,7 @@ use {
 
 const CACHE_DIRECTORY_CONFIG: &str = "proactive_log.cache_directory";
 const MAX_LOG_SIZE_CONFIG: &str = "proactive_log.max_log_size_bytes";
+const MAX_SESSION_SIZE_CONFIG: &str = "proactive_log.max_session_size_bytes";
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum EventType {
@@ -153,6 +154,12 @@ impl LogFile {
         Ok(self.get_file().await?.metadata().await?.len().try_into()?)
     }
 
+    async fn remove(&mut self) -> Result<()> {
+        remove_file(self.path.clone()).await?;
+        self.file = None;
+        Ok(())
+    }
+
     async fn write_entries(&mut self, entries: Vec<&'_ Vec<u8>>) -> Result<()> {
         let f = self.get_file().await?;
 
@@ -176,6 +183,7 @@ struct DiagnosticsStreamerInner {
     target_dir: Option<PathBuf>,
     current_file: Option<LogFile>,
     max_file_size_bytes: usize,
+    max_session_size_bytes: usize,
 }
 
 impl Clone for DiagnosticsStreamerInner {
@@ -184,6 +192,7 @@ impl Clone for DiagnosticsStreamerInner {
             target_dir: self.target_dir.clone(),
             current_file: None,
             max_file_size_bytes: self.max_file_size_bytes,
+            max_session_size_bytes: self.max_session_size_bytes,
         }
     }
 }
@@ -230,6 +239,7 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
             target_boot_time_nanos,
             get::<std::path::PathBuf, &str>(CACHE_DIRECTORY_CONFIG).await?.into(),
             get::<u64, &str>(MAX_LOG_SIZE_CONFIG).await? as usize,
+            get::<u64, &str>(MAX_SESSION_SIZE_CONFIG).await? as usize,
         )
         .await
     }
@@ -298,6 +308,8 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer {
         }
 
         inner.current_file = Some(file);
+
+        self.cleanup_logs(inner).await?;
         Ok(())
     }
 
@@ -333,6 +345,7 @@ impl DiagnosticsStreamer {
         target_boot_time_nanos: u64,
         cache_directory: PathBuf,
         max_file_size_bytes: usize,
+        max_session_size_bytes: usize,
     ) -> Result<()> {
         // The ticks=>time conversion isn't accurate enough to use units smaller than milliseconds here.
         let t = target_boot_time_nanos / 1_000_000;
@@ -349,6 +362,27 @@ impl DiagnosticsStreamer {
         let mut inner = self.inner.write().await;
         inner.target_dir.replace(output_path);
         inner.max_file_size_bytes = max_file_size_bytes;
+        inner.max_session_size_bytes = max_session_size_bytes;
+        Ok(())
+    }
+
+    async fn cleanup_logs(
+        &self,
+        inner: RwLockWriteGuard<'_, DiagnosticsStreamerInner>,
+    ) -> Result<()> {
+        let parent_path = inner.target_dir.as_ref().context("no stream setup")?.clone();
+        let mut entries = LogFile::sort_directory(&parent_path).await?;
+
+        // We approximate the need to garbage collect by multiplying the number of files by
+        // the max file size, *excluding* the most recent file.
+        if entries.len() > 1
+            && (entries.len() - 1) * inner.max_file_size_bytes > inner.max_session_size_bytes
+        {
+            let to_remove = entries.first_mut().unwrap();
+            log::info!("logger: garbage collecting log file: {:?}", to_remove);
+            to_remove.remove().await?;
+        }
+
         Ok(())
     }
 }
@@ -367,6 +401,8 @@ mod test {
     const FAKE_DIR_NAME: &str = "fake_logs";
     const SMALL_MAX_LOG_SIZE: usize = 10;
     const LARGE_MAX_LOG_SIZE: usize = 1_000_000;
+    const SMALL_MAX_SESSION_SIZE: usize = 11;
+    const LARGE_MAX_SESSION_SIZE: usize = 1_000_001;
     const NODENAME: &str = "my-cool-node";
     const BOOT_TIME_NANOS: u64 = 123456789000000000;
     const BOOT_TIME_MILLIS: u64 = 123456789000;
@@ -427,6 +463,7 @@ mod test {
     async fn setup_default_streamer_with_temp(
         temp_parent: &TempDir,
         max_log_size: usize,
+        max_session_size: usize,
     ) -> Result<DiagnosticsStreamer> {
         let mut root: PathBuf = temp_parent.path().to_path_buf().into();
         root.push(FAKE_DIR_NAME.to_string());
@@ -438,22 +475,28 @@ mod test {
                 BOOT_TIME_NANOS,
                 root.clone(),
                 max_log_size,
+                max_session_size,
             )
             .await?;
 
         Ok(streamer)
     }
 
-    async fn setup_default_streamer(max_log_size: usize) -> Result<(TempDir, DiagnosticsStreamer)> {
+    async fn setup_default_streamer(
+        max_log_size: usize,
+        max_session_size: usize,
+    ) -> Result<(TempDir, DiagnosticsStreamer)> {
         let temp_parent = tempdir()?;
-        let streamer = setup_default_streamer_with_temp(&temp_parent, max_log_size).await?;
+        let streamer =
+            setup_default_streamer_with_temp(&temp_parent, max_log_size, max_session_size).await?;
 
         Ok((temp_parent, streamer))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_single_log_exceeds_max_size() -> Result<()> {
-        let (temp, streamer) = setup_default_streamer(SMALL_MAX_LOG_SIZE).await?;
+        let (temp, streamer) =
+            setup_default_streamer(SMALL_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE).await?;
         let root: PathBuf = temp.path().to_path_buf().into();
         let log = make_malformed_log(TIMESTAMP);
         streamer.append_logs(vec![log.clone()]).await?;
@@ -470,7 +513,8 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_two_logs_exceeds_max_size() -> Result<()> {
-        let (temp, streamer) = setup_default_streamer(SMALL_MAX_LOG_SIZE).await?;
+        let (temp, streamer) =
+            setup_default_streamer(SMALL_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE).await?;
         let root: PathBuf = temp.path().to_path_buf().into();
         let log = make_malformed_log(TIMESTAMP);
         let log2 = make_malformed_log(TIMESTAMP + 1);
@@ -488,7 +532,8 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_two_logs_with_two_calls_exceeds_max_size() -> Result<()> {
-        let (temp, streamer) = setup_default_streamer(SMALL_MAX_LOG_SIZE).await?;
+        let (temp, streamer) =
+            setup_default_streamer(SMALL_MAX_LOG_SIZE, SMALL_MAX_SESSION_SIZE).await?;
         let root: PathBuf = temp.path().to_path_buf().into();
         let log = make_malformed_log(TIMESTAMP);
         let log2 = make_malformed_log(TIMESTAMP + 1);
@@ -506,6 +551,49 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_garbage_collection_doesnt_count_latest_file() -> Result<()> {
+        let (temp, streamer) =
+            setup_default_streamer(SMALL_MAX_LOG_SIZE, SMALL_MAX_LOG_SIZE).await?;
+        let root: PathBuf = temp.path().to_path_buf().into();
+        let log = make_malformed_log(TIMESTAMP);
+        let log2 = make_malformed_log(TIMESTAMP + 1);
+        streamer.append_logs(vec![log.clone()]).await?;
+        streamer.append_logs(vec![log2.clone()]).await?;
+
+        let results = collect_default_logs(&root).await.unwrap();
+        assert_eq!(results.len(), 2, "{:?}", results);
+        let mut values = results.values().collect::<Vec<_>>();
+        values.sort();
+        assert_eq!(serde_json::from_str::<LogEntry>(values.get(0).unwrap()).unwrap(), log);
+        assert_eq!(serde_json::from_str::<LogEntry>(values.get(1).unwrap()).unwrap(), log2);
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_two_logs_with_two_calls_exceeds_max_session_size() -> Result<()> {
+        let (temp, streamer) =
+            setup_default_streamer(SMALL_MAX_LOG_SIZE, SMALL_MAX_LOG_SIZE).await?;
+        let root: PathBuf = temp.path().to_path_buf().into();
+        let log = make_malformed_log(TIMESTAMP);
+        let log2 = make_malformed_log(TIMESTAMP + 1);
+        let log3 = make_malformed_log(TIMESTAMP + 2);
+        streamer.append_logs(vec![log.clone()]).await?;
+        streamer.append_logs(vec![log2.clone()]).await?;
+        // This call should delete the first log file.
+        streamer.append_logs(vec![log3.clone()]).await?;
+
+        let results = collect_default_logs(&root).await.unwrap();
+        assert_eq!(results.len(), 2, "{:?}", results);
+        let mut values = results.values().collect::<Vec<_>>();
+        values.sort();
+        assert_eq!(serde_json::from_str::<LogEntry>(values.get(0).unwrap()).unwrap(), log2);
+        assert_eq!(serde_json::from_str::<LogEntry>(values.get(1).unwrap()).unwrap(), log3);
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_new_streamer_appends_to_existing_file() -> Result<()> {
         let temp = tempdir()?;
         let root: PathBuf = temp.path().to_path_buf().into();
@@ -513,13 +601,17 @@ mod test {
         let log2 = make_malformed_log(TIMESTAMP + 1);
         {
             let streamer =
-                setup_default_streamer_with_temp(&temp, LARGE_MAX_LOG_SIZE).await.unwrap();
+                setup_default_streamer_with_temp(&temp, LARGE_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE)
+                    .await
+                    .unwrap();
             streamer.append_logs(vec![log.clone()]).await.unwrap();
         }
 
         {
             let streamer =
-                setup_default_streamer_with_temp(&temp, LARGE_MAX_LOG_SIZE).await.unwrap();
+                setup_default_streamer_with_temp(&temp, LARGE_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE)
+                    .await
+                    .unwrap();
             streamer.append_logs(vec![log2.clone()]).await.unwrap();
         }
 
@@ -548,7 +640,8 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_simple_read() -> Result<()> {
-        let (_temp, streamer) = setup_default_streamer(SMALL_MAX_LOG_SIZE).await?;
+        let (_temp, streamer) =
+            setup_default_streamer(SMALL_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE).await?;
 
         let early_log = make_valid_log(TIMESTAMP - 1, String::default());
         let log = make_valid_log(TIMESTAMP, String::default());
@@ -561,7 +654,8 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_read_timestamp_returns_none_if_no_logs() -> Result<()> {
-        let (_temp, streamer) = setup_default_streamer(SMALL_MAX_LOG_SIZE).await?;
+        let (_temp, streamer) =
+            setup_default_streamer(SMALL_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE).await?;
 
         assert!(streamer.read_most_recent_timestamp().await?.is_none());
         Ok(())
@@ -569,7 +663,8 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_read_timestamp_returns_none_if_logs_malformed() -> Result<()> {
-        let (_temp, streamer) = setup_default_streamer(SMALL_MAX_LOG_SIZE).await?;
+        let (_temp, streamer) =
+            setup_default_streamer(SMALL_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE).await?;
 
         let log = make_malformed_log(TIMESTAMP);
         let log2 = make_malformed_log(TIMESTAMP + 1);
@@ -581,7 +676,8 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_read_timestamp_returns_valid_log() -> Result<()> {
-        let (_temp, streamer) = setup_default_streamer(SMALL_MAX_LOG_SIZE).await?;
+        let (_temp, streamer) =
+            setup_default_streamer(SMALL_MAX_LOG_SIZE, LARGE_MAX_SESSION_SIZE).await?;
 
         let log = make_valid_log(TIMESTAMP, String::default());
         let log2 = make_malformed_log(TIMESTAMP + 1);

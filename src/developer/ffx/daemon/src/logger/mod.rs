@@ -137,6 +137,7 @@ impl Logger {
                 log::info!("proactive logger disabled. exiting...");
                 return Ok(());
             }
+
             self.run_logger()
                 .map_err(|e| {
                     log::error!("error running logger: {:?}", e);
