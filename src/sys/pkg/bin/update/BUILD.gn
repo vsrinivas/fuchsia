@@ -36,6 +36,10 @@ rustc_library("lib") {
   source_root = "src/main.rs"
   sources = [
     "src/args.rs",
+    "src/channel.rs",
+    "src/check.rs",
+    "src/commit.rs",
+    "src/install.rs",
     "src/main.rs",
   ]
 
