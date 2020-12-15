@@ -22,13 +22,13 @@
             "system-services": [
                 "fuchsia.device.NameProvider",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.vulkan.loader.Loader"
+                "fuchsia.sysmem.Allocator"
             ]
         }
     },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application-container.shard.cmx"
     ],
     "program": {
         "binary": "test/web_runner_pixel_tests"
@@ -57,7 +57,6 @@
             "fuchsia.ui.pointerinjector.Registry",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.vulkan.loader.Loader",
             "fuchsia.web.ContextProvider"
         ]
     }
