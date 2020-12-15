@@ -1,6 +1,7 @@
 {
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/application-container.shard.cmx"
     ],
     "program": {
         "binary": "bin/flutter_runner_launch_smoke_test_bin_test"
@@ -14,8 +15,7 @@
             "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Launcher",
             "fuchsia.ui.input.ImeService",
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }
