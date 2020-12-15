@@ -13,7 +13,6 @@
 #include <unistd.h>
 #include <zircon/pixelformat.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -22,6 +21,7 @@
 #include <fbl/auto_lock.h>
 
 #include "dmc-regs.h"
+#include "src/graphics/display/drivers/aml-canvas/aml_canvas-bind.h"
 
 namespace aml_canvas {
 
@@ -212,9 +212,4 @@ static constexpr zx_driver_ops_t aml_canvas_driver_ops = []() {
 }  // namespace
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_canvas, aml_canvas_driver_ops, "zircon", "0.1", 4)
-  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_CANVAS),
-ZIRCON_DRIVER_END(aml_canvas)
+ZIRCON_DRIVER(aml_canvas, aml_canvas_driver_ops, "zircon", "0.1");
