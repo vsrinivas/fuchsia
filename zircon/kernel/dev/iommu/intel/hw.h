@@ -14,7 +14,7 @@
 
 #include <arch/ops.h>
 #include <hwreg/bitfields.h>
-#include <kernel/atomic.h>
+#include <fbl/atomic_ref.h>
 #include <ktl/type_traits.h>
 
 namespace intel_iommu {
@@ -469,16 +469,23 @@ struct PasidState {
   // DEF_SUBFIELD(raw, 47, 32, active_ref_count);
   // DEF_SUBBIT(raw, 63, deferred_invld);
 
-  uint64_t active_ref_count() { return (atomic_load_u64(&raw) >> 32) & 0xffff; }
+  uint64_t active_ref_count() {
+    fbl::atomic_ref<volatile uint64_t> state(raw);
+    return (state.load() >> 32) & 0xffff;
+  }
 
-  uint64_t deferred_invld() { return atomic_load_u64(&raw) >> 63; }
+  uint64_t deferred_invld() {
+    fbl::atomic_ref<volatile uint64_t> state(raw);
+    return state.load() >> 63;
+  }
   void set_deferred_invld() {
     // The specification is unclear as to how to update this field.  This is
     // an in-memory data structure, and the active_ref_count field is specified
     // as being updated atomically by hardware.  Reading that "atomically"
     // to be an atomic memory access, this atomic_or should be the right
     // thing.
-    atomic_or_u64(&raw, 1ull << 63);
+    fbl::atomic_ref<volatile uint64_t> state(raw);
+    state.fetch_or(1ull << 63);
   }
 };
 static_assert(ktl::is_pod<PasidState>::value, "not POD");
