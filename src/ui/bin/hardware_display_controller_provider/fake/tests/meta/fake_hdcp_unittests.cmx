@@ -1,0 +1,22 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
+                "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
+            }
+        }
+    },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/fake_hdcp_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

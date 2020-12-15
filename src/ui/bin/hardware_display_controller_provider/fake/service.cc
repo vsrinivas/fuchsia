@@ -12,45 +12,89 @@
 
 namespace fake_display {
 
-ProviderService::ProviderService(sys::ComponentContext* app_context, async_dispatcher_t* dispatcher)
-    : dispatcher_(dispatcher) {
-  FX_DCHECK(dispatcher_);
+ProviderService::ProviderService(sys::ComponentContext* app_context,
+                                 async_dispatcher_t* dispatcher) {
+  FX_DCHECK(dispatcher);
 
-  app_context->outgoing()->AddPublicService(bindings_.GetHandler(this));
+  // |app_context| may be null for in-process tests.
+  if (app_context) {
+    app_context->outgoing()->AddPublicService(bindings_.GetHandler(this));
+  }
 
   auto sysmem = std::make_unique<display::GenericSysmemDeviceWrapper<display::SysmemProxyDevice>>();
-  tree_ = std::make_unique<display::FakeDisplayDeviceTree>(std::move(sysmem), /*start_vsync=*/true);
+  state_ = std::make_shared<State>(State{.dispatcher = dispatcher,
+                                         .tree = std::make_unique<display::FakeDisplayDeviceTree>(
+                                             std::move(sysmem), /*start_vsync=*/true)});
 }
+
+ProviderService::~ProviderService() { state_->tree->AsyncShutdown(); }
 
 void ProviderService::OpenController(
     zx::channel device,
     ::fidl::InterfaceRequest<fuchsia::hardware::display::Controller> controller_request,
     OpenControllerCallback callback) {
-  callback(ConnectClient(/*is_virtcon=*/false, std::move(device), std::move(controller_request)));
+  ConnectOrDeferClient(Request{.is_virtcon = false,
+                               .device = std::move(device),
+                               .controller_request = std::move(controller_request),
+                               .callback = std::move(callback)});
 }
 
 void ProviderService::OpenVirtconController(
     zx::channel device,
     ::fidl::InterfaceRequest<fuchsia::hardware::display::Controller> controller_request,
     OpenControllerCallback callback) {
-  callback(ConnectClient(/*is_virtcon=*/true, std::move(device), std::move(controller_request)));
+  ConnectOrDeferClient(Request{.is_virtcon = true,
+                               .device = std::move(device),
+                               .controller_request = std::move(controller_request),
+                               .callback = std::move(callback)});
 }
 
-zx_status_t ProviderService::ConnectClient(
-    bool is_virtcon, zx::channel device,
-    ::fidl::InterfaceRequest<fuchsia::hardware::display::Controller> controller) {
-  auto& num_clients = is_virtcon ? num_virtcon_clients_ : num_clients_;
-  if (num_clients++ > 0) {
-    // If this occurs then test tried to connect a client before the previous client's channel had
-    // was destroyed.  It may prove desirable to defer the latter connection until the previous one
-    // has been torn down, but for now we just log an error (to help decipher test failures, should
-    // they occur).
-    FX_LOGS(ERROR) << "Multiple simultaneous display controller connections.  Most recent one will "
-                      "likely fail.";
+void ProviderService::ConnectOrDeferClient(Request req) {
+  bool claimed = req.is_virtcon ? state_->virtcon_controller_claimed : state_->controller_claimed;
+  if (claimed) {
+    auto& queue = req.is_virtcon ? state_->virtcon_queued_requests : state_->queued_requests;
+    queue.push(std::move(req));
+  } else {
+    ConnectClient(std::move(req), state_);
+  }
+}
+
+void ProviderService::ConnectClient(Request req, const std::shared_ptr<State>& state) {
+  FX_DCHECK(state);
+
+  // Claim the connection type specified in the request, which MUST not already be claimed.
+  {
+    auto& claimed = req.is_virtcon ? state->virtcon_controller_claimed : state->controller_claimed;
+    FX_CHECK(!claimed) << "controller already claimed.";
+    claimed = true;
   }
 
-  return tree_->controller()->CreateClient(is_virtcon, std::move(device), controller.TakeChannel(),
-                                           [&num_clients]() mutable { --num_clients; });
+  zx_status_t status = state->tree->controller()->CreateClient(
+      req.is_virtcon, std::move(req.device), req.controller_request.TakeChannel(),
+      [weak = std::weak_ptr<State>(state), is_virtcon{req.is_virtcon}]() mutable {
+        // Redispatch, in case this callback is invoked on a different thread (this depends
+        // on the implementation of FakeDisplayDeviceTree, which makes no guarantees).
+        if (auto state = weak.lock()) {
+          async::PostTask(state->dispatcher, [weak, is_virtcon]() mutable {
+            if (auto state = weak.lock()) {
+              // Obtain the claim status and queue matching the connection that was just released.
+              auto& claimed =
+                  is_virtcon ? state->virtcon_controller_claimed : state->controller_claimed;
+              auto& queue = is_virtcon ? state->virtcon_queued_requests : state->queued_requests;
+
+              // The connection is no longer claimed.  If there is a queued connection request of
+              // the same type (i.e. virtcon or not virtcon), then establish a connection.
+              claimed = false;
+              if (!queue.empty()) {
+                Request req = std::move(queue.front());
+                queue.pop();
+                ConnectClient(std::move(req), state);
+              }
+            }
+          });
+        }
+      });
+  req.callback(status);
 }
 
 }  // namespace fake_display

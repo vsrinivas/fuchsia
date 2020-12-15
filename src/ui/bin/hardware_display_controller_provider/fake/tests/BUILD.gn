@@ -1,0 +1,40 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("tests") {
+  testonly = true
+
+  public_deps = [ ":fake_hdcp_tests" ]
+}
+
+executable("unittests") {
+  output_name = "fake_hdcp_unittests"
+  testonly = true
+
+  configs += [ "//build/config:all_source" ]
+
+  sources = [ "fake_hdcp_unittest.cc" ]
+
+  deps = [
+    "..:lib",
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+test_package("fake_hdcp_tests") {
+  deps = [ ":unittests" ]
+
+  tests = [
+    {
+      name = "fake_hdcp_unittests"
+      environments = basic_envs
+    },
+  ]
+}

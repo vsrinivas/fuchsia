@@ -10,21 +10,30 @@ executable("bin") {
 
   configs += [ "//build/config:all_source" ]
 
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":lib",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+  ]
+}
+
+source_set("lib") {
+  testonly = true
+
+  configs += [ "//build/config:all_source" ]
+
   sources = [
-    "main.cc",
     "service.cc",
     "service.h",
   ]
 
-  deps = [
+  public_deps = [
     "//sdk/fidl/fuchsia.hardware.display",
     "//sdk/lib/sys/cpp",
     "//src/graphics/display/drivers/fake:fake-display-device-tree",
     "//src/graphics/display/drivers/fake:sysmem-proxy-device",
-    "//src/lib/fxl",
-    "//src/ui/lib/display:hdcp_service",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 }

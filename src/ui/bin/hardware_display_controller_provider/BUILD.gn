@@ -49,3 +49,9 @@ package("hardware-display-controller-provider") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+
+  public_deps = [ "fake/tests" ]
+}

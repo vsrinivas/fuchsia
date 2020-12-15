@@ -19,6 +19,7 @@ group("tests") {
   deps = [
     "brightness_manager:brightness_manager_tests",
     "default_hardware_ime:tests",
+    "hardware_display_controller_provider:tests",
     "headless_root_presenter/tests",
     "ime:tests",
     "root_presenter:tests",

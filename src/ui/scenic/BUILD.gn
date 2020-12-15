@@ -40,6 +40,11 @@ group("tests") {
     "lib/gfx/tests/rotated_square_test",
     "lib/scenic/util/tests:tests",
     "lib/utils:tests",
+
+    # These are included in //src/ui/bin:tests, but I don't see that included anywhere.
+    # If these tests fail, then other Scenic tests are likely to fail, so we want to guarantee that
+    # they are always run whenever Scenic tests are.
+    "//src/ui/bin/hardware_display_controller_provider:tests",
   ]
 }
 
