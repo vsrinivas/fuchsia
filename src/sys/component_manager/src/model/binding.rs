@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        actions::{start, Action, ActionSet},
+        actions::{start, StartAction, ActionSet},
         error::ModelError,
         model::Model,
         realm::{BindReason, Realm},
@@ -91,7 +91,7 @@ pub async fn bind_at(realm: Arc<Realm>, reason: &BindReason) -> Result<(), Model
             return res;
         }
     }
-    ActionSet::register(realm.clone(), Action::Start(reason.clone())).await?;
+    ActionSet::register(realm.clone(), StartAction::new(reason.clone())).await?;
 
     let eager_children: Vec<_> = {
         let mut state = realm.lock_state().await;
@@ -135,7 +135,7 @@ mod tests {
             builtin_environment::BuiltinEnvironment,
             config::RuntimeConfig,
             model::{
-                actions::{Action, ActionSet},
+                actions::{ActionSet},
                 events::event::SyncMode,
                 hooks::{EventPayload, EventType, HooksRegistration},
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::TestHook},
@@ -237,7 +237,7 @@ mod tests {
         // action. Allow the original bind to proceed, then check the result of both bindings.
         let m: AbsoluteMoniker = vec!["system:0"].into();
         let realm = model.look_up_realm(&m).await.expect("failed realm lookup");
-        let f = ActionSet::register(realm, Action::Start(BindReason::Eager));
+        let f = ActionSet::register(realm, StartAction::new(BindReason::Eager));
         let (f, action_handle) = f.remote_handle();
         fasync::Task::spawn(f).detach();
         event.resume();

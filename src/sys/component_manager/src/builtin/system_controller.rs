@@ -7,7 +7,7 @@ use {
         capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         model::{
-            actions::{Action, ActionSet},
+            actions::{ShutdownAction, ActionSet},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
@@ -126,7 +126,7 @@ impl SystemControllerCapabilityProvider {
                         .ok_or(format_err!("model is dropped"))?
                         .root_realm
                         .clone();
-                    ActionSet::register(root_realm, Action::Shutdown)
+                    ActionSet::register(root_realm, ShutdownAction::new())
                         .await
                         .context("got error waiting for shutdown action to complete")?;
                     match responder.send() {

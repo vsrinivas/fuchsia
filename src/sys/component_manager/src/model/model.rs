@@ -6,7 +6,7 @@ use {
     crate::capability::NamespaceCapabilities,
     crate::config::RuntimeConfig,
     crate::model::{
-        actions::Action,
+        actions::{ActionKey},
         binding::Binder,
         context::ModelContext,
         environment::Environment,
@@ -85,7 +85,7 @@ impl Model {
             // ok. The system is tearing down, so it doesn't matter any more if we never got
             // everything started that we wanted to.
             let action_set = self.root_realm.lock_actions().await;
-            if !action_set.contains(&Action::Shutdown) {
+            if !action_set.contains(&ActionKey::Shutdown) {
                 panic!(
                     "failed to bind to root component {}: {:?}",
                     self.root_realm.component_url, e
@@ -100,7 +100,7 @@ pub mod tests {
     use {
         crate::{
             config::RuntimeConfig,
-            model::actions::Action,
+            model::actions::ShutdownAction,
             model::testing::test_helpers::{new_test_model, ComponentDeclBuilder, TestModelResult},
         },
         fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
@@ -127,7 +127,7 @@ pub mod tests {
             .root_realm
             .lock_actions()
             .await
-            .register_inner(&model.root_realm, Action::Shutdown);
+            .register_inner(&model.root_realm, ShutdownAction::new());
 
         model.start().await;
     }

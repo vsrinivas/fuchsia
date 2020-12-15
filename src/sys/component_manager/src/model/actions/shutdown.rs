@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        actions::{Action, ActionSet},
+        actions::{ShutdownAction, ActionSet},
         error::ModelError,
         realm::{Realm, RealmState},
     },
@@ -54,7 +54,7 @@ fn find_storage_provider(
 }
 
 async fn shutdown_component(child: ShutdownInfo) -> Result<ChildMoniker, ModelError> {
-    ActionSet::register(child.realm, Action::Shutdown).await?;
+    ActionSet::register(child.realm, ShutdownAction::new()).await?;
     Ok(child.moniker.clone())
 }
 
@@ -223,7 +223,7 @@ impl ShutdownJob {
     }
 }
 
-pub async fn do_shutdown(realm: Arc<Realm>) -> Result<(), ModelError> {
+pub async fn do_shutdown(realm: &Arc<Realm>) -> Result<(), ModelError> {
     {
         let state_lock = realm.lock_state().await;
         {

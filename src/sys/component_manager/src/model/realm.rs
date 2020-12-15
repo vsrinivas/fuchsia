@@ -7,7 +7,7 @@ use {
         capability::NamespaceCapabilities,
         channel,
         model::{
-            actions::{Action, ActionSet},
+            actions::{ActionSet, DeleteChildAction, MarkDeletingAction, StopAction},
             binding,
             context::{ModelContext, WeakModelContext},
             environment::Environment,
@@ -457,8 +457,9 @@ impl Realm {
         if let Some(tup) = tup {
             let (instance, _) = tup;
             let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
-            ActionSet::register(self.clone(), Action::MarkDeleting(child_moniker.clone())).await?;
-            let fut = ActionSet::register(self.clone(), Action::DeleteChild(child_moniker));
+            ActionSet::register(self.clone(), MarkDeletingAction::new(child_moniker.clone()))
+                .await?;
+            let fut = ActionSet::register(self.clone(), DeleteChildAction::new(child_moniker));
             Ok(fut)
         } else {
             Err(ModelError::instance_not_found_in_realm(
@@ -572,8 +573,8 @@ impl Realm {
             // above.
             if let Some(coll) = m.collection() {
                 if transient_colls.contains(coll) {
-                    ActionSet::register(self.clone(), Action::MarkDeleting(m.clone())).await?;
-                    let nf = ActionSet::register(self.clone(), Action::DeleteChild(m));
+                    ActionSet::register(self.clone(), MarkDeletingAction::new(m.clone())).await?;
+                    let nf = ActionSet::register(self.clone(), DeleteChildAction::new(m));
                     futures.push(nf);
                 }
             }
@@ -1022,7 +1023,7 @@ impl Runtime {
                 async move {
                     if let Ok(_) = controller_clone.on_closed().await {
                         if let Ok(realm) = realm.upgrade() {
-                            let _ = ActionSet::register(realm, Action::Stop).await;
+                            let _ = ActionSet::register(realm, StopAction::new()).await;
                         }
                     }
                 },
@@ -1177,6 +1178,7 @@ pub mod tests {
     use {
         super::*,
         crate::model::{
+            actions::ShutdownAction,
             binding::Binder,
             events::{event::SyncMode, stream::EventStream},
             hooks::{EventErrorPayload, EventType},
@@ -1839,7 +1841,7 @@ pub mod tests {
 
         // Verify that a parent of the exited component can still be stopped
         // properly.
-        ActionSet::register(test.look_up(a_moniker.clone()).await, Action::Shutdown)
+        ActionSet::register(test.look_up(a_moniker.clone()).await, ShutdownAction::new())
             .await
             .expect("Couldn't trigger shutdown");
         // Check that we get a stop even which corresponds to the parent.
