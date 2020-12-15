@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <zircon/errors.h>
 
 #include <cstdint>
 #include <unordered_map>
@@ -36,25 +37,24 @@ class UtilsTest : public gtest::TestLoopFixture {
 
 TEST_F(UtilsTest, AcquireAudioCoreImplProfile) {
   ASSERT_TRUE(profile_provider()->SetProfile(24));
+  zx_status_t status = ZX_ERR_NOT_FOUND;
 
-  zx::profile profile;
-  ASSERT_FALSE(profile);
-  AcquireAudioCoreImplProfile(context(), [&profile](zx::profile p) { profile = std::move(p); });
+  AcquireAudioCoreImplProfile(context(), [&status](zx_status_t s, zx::profile p) { status = s; });
   RunLoopUntilIdle();
 
-  ASSERT_TRUE(profile);
+  ASSERT_EQ(status, ZX_OK);
 }
 
 TEST_F(UtilsTest, AcquireAudioCoreImplProfile_ProfileUnavailable) {
-  zx::profile profile;
   bool callback_invoked = false;
-  AcquireAudioCoreImplProfile(context(), [&](zx::profile p) {
-    profile = std::move(p);
+  zx_status_t status = ZX_ERR_NOT_FOUND;
+  AcquireAudioCoreImplProfile(context(), [&](zx_status_t s, zx::profile p) {
+    status = s;
     callback_invoked = true;
   });
   RunLoopUntilIdle();
 
-  ASSERT_FALSE(profile);
+  ASSERT_NE(status, ZX_OK);
   ASSERT_TRUE(callback_invoked);
 }
 

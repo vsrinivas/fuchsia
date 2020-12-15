@@ -9,7 +9,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 
 #include <cstdint>
-#include <unordered_map>
+#include <unordered_set>
 
 namespace media::audio {
 
@@ -24,24 +24,16 @@ class FakeProfileProvider : public fuchsia::scheduler::ProfileProvider {
   //
   // Note that currently the only works for a single |GetProfile| call since we don't duplicate
   // a new handle before sending it back to the client.
-  bool SetProfile(uint32_t priority) {
-    // Since there's no easy way to create a profile handle in a test context, we'll just use an
-    // event handle. This will be sufficient to allow the handle to be sent over the channel back
-    // to the caller, but it will obviously not work of the caller is doing anything that requires
-    // a zx::profile. This limitation is sufficient for the purposes of our tests.
-    zx::event e;
-    zx::event::create(0, &e);
-    return profiles_by_priority_.insert({priority, zx::profile(e.release())}).second;
-  }
+  bool SetProfile(uint32_t priority) { return valid_priorities_.insert(priority).second; }
 
  private:
   // |fuchsia::scheduler::ProfileProvider|
   void GetProfile(uint32_t priority, std::string name, GetProfileCallback callback) override {
-    auto it = profiles_by_priority_.find(priority);
-    if (it == profiles_by_priority_.end()) {
+    auto it = valid_priorities_.find(priority);
+    if (it == valid_priorities_.end()) {
       callback(ZX_ERR_NOT_FOUND, zx::profile());
     } else {
-      callback(ZX_OK, std::move(it->second));
+      callback(ZX_OK, zx::profile());
     }
   }
 
@@ -51,16 +43,14 @@ class FakeProfileProvider : public fuchsia::scheduler::ProfileProvider {
                           GetProfileCallback callback) override {
     // This will fail if used (ex: zx_object_set_profile), but allows us to do some testing of the
     // consuming code.
-    zx::event e;
-    zx::event::create(0, &e);
-    callback(ZX_OK, zx::profile(e.release()));
+    callback(ZX_OK, zx::profile());
   }
 
   // |fuchsia::scheduler::ProfileProvider|
   void GetCpuAffinityProfile(fuchsia::scheduler::CpuSet cpu_mask,
                              GetProfileCallback callback) override {}
 
-  std::unordered_map<uint32_t, zx::profile> profiles_by_priority_;
+  std::unordered_set<uint32_t> valid_priorities_;
   fidl::BindingSet<fuchsia::scheduler::ProfileProvider> bindings_;
 };
 

@@ -24,13 +24,15 @@ AudioCoreImpl::AudioCoreImpl(Context* context) : context_(*context) {
   // has real time requirements just like mixing threads. Ideally, this task would not run on the
   // same thread that processes *all* non-mix audio service jobs (even non-realtime ones), but that
   // will take more significant restructuring, when we can deal with realtime requirements in place.
-  AcquireAudioCoreImplProfile(&context_.component_context(), [](zx::profile profile) {
-    FX_DCHECK(profile);
-    if (profile) {
-      zx_status_t status = zx::thread::self()->set_profile(profile, 0);
-      FX_DCHECK(status == ZX_OK);
-    }
-  });
+  AcquireAudioCoreImplProfile(&context_.component_context(),
+                              [](zx_status_t status, zx::profile profile) {
+                                FX_DCHECK(profile);
+                                FX_DCHECK(status == ZX_OK);
+                                if (status == ZX_OK && profile) {
+                                  status = zx::thread::self()->set_profile(profile, 0);
+                                  FX_DCHECK(status == ZX_OK);
+                                }
+                              });
 
   // Set up our audio policy.
   LoadDefaults();

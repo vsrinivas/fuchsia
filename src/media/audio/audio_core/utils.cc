@@ -479,7 +479,7 @@ zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
 }
 
 void AcquireRelativePriorityProfile(uint32_t priority, sys::ComponentContext* context,
-                                    fit::function<void(zx::profile)> callback) {
+                                    fit::function<void(zx_status_t, zx::profile)> callback) {
   auto nonce = TRACE_NONCE();
   TRACE_DURATION("audio", "AcquireRelativePriorityProfile");
   TRACE_FLOW_BEGIN("audio", "GetProfile", nonce);
@@ -493,15 +493,15 @@ void AcquireRelativePriorityProfile(uint32_t priority, sys::ComponentContext* co
         TRACE_DURATION("audio", "GetProfile callback");
         TRACE_FLOW_END("audio", "GetProfile", nonce);
         if (status == ZX_OK) {
-          callback(std::move(profile));
+          callback(status, std::move(profile));
         } else {
-          callback(zx::profile());
+          callback(status, zx::profile());
         }
       });
 }
 
 void AcquireAudioCoreImplProfile(sys::ComponentContext* context,
-                                 fit::function<void(zx::profile)> callback) {
+                                 fit::function<void(zx_status_t, zx::profile)> callback) {
   AcquireRelativePriorityProfile(/* HIGH_PRIORITY in zircon */ 24, context, std::move(callback));
 }
 

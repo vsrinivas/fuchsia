@@ -83,10 +83,10 @@ class RefCountedVmoMapper : public PinExecutableMemory::VmoMapper,
 zx_status_t AcquireHighPriorityProfile(zx::profile* profile);
 
 void AcquireAudioCoreImplProfile(sys::ComponentContext* context,
-                                 fit::function<void(zx::profile)> callback);
+                                 fit::function<void(zx_status_t, zx::profile)> callback);
 
 void AcquireRelativePriorityProfile(uint32_t priority, sys::ComponentContext* context,
-                                    fit::function<void(zx::profile)> callback);
+                                    fit::function<void(zx_status_t, zx::profile)> callback);
 
 // A timer which computes the amount of time the current thread spends scheduled
 // (running) on a CPU, or queued.

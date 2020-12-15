@@ -20,10 +20,10 @@ void ProfileProvider::RegisterHandler(zx::thread thread_handle, std::string name
                                       RegisterHandlerCallback callback) {
   AcquireRelativePriorityProfile(
       /* HIGH_PRIORITY in zircon */ 24, &context_,
-      [callback = std::move(callback),
-       thread_handle = std::move(thread_handle)](zx::profile profile) {
-        FX_DCHECK(profile);
-        if (profile) {
+      [callback = std::move(callback), thread_handle = std::move(thread_handle)](
+          zx_status_t status, zx::profile profile) {
+        FX_DCHECK(status == ZX_OK);
+        if (status == ZX_OK) {
           zx_status_t status = thread_handle.set_profile(profile, 0);
           if (status != ZX_OK) {
             FX_LOGS(WARNING) << "Failed to set profile";
@@ -52,7 +52,6 @@ void ProfileProvider::RegisterHandlerWithCapacity(zx::thread thread_handle, std:
           callback(0, 0);
           return;
         }
-        FX_CHECK(profile);
         status = thread_handle.set_profile(profile, 0);
         if (status != ZX_OK) {
           FX_PLOGS(WARNING, status) << "Failed to set thread profile";
