@@ -137,7 +137,7 @@ impl ArchiveAccessor {
             }
             DataType::Logs => {
                 let stats = Arc::new(ConnectionStats::for_logs(accessor_stats));
-                let logs = Pipeline::logs(&pipeline, mode).await;
+                let logs = pipeline.read().logs(mode);
                 BatchIterator::new_serving_arrays(logs, requests, mode, stats)?.run().await
             }
         }

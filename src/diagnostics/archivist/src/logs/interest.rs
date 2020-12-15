@@ -99,7 +99,7 @@ impl InterestDispatcher {
 
     /// Update the set of selectors that archivist uses to control the log
     /// levels associated with any active LogSink clients.
-    pub async fn update_selectors<'a>(&mut self, selectors: Vec<LogInterestSelector>) {
+    pub fn update_selectors<'a>(&mut self, selectors: Vec<LogInterestSelector>) {
         if !self.selectors.is_empty() {
             warn!(existing = ?self.selectors, new = ?selectors, "Overriding selectors");
         }
@@ -154,11 +154,11 @@ impl InterestDispatcher {
 mod tests {
     use super::*;
     use fidl::endpoints::{create_request_stream, RequestStream};
-    use fuchsia_async as fasync;
     use std::sync::Arc;
 
-    #[fasync::run_singlethreaded(test)]
-
+    /// This test does not await any futures but it creates FIDL types which expect to have
+    /// an executor available.
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn interest_listeners() {
         let mut source_id = SourceIdentity::EMPTY;
         source_id.component_name = Some("foo.cmx".to_string());

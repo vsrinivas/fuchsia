@@ -7,7 +7,7 @@ use diagnostics_data::LogsData;
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_inspect_derive::Inspect;
-use futures::lock::Mutex;
+use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -43,8 +43,8 @@ impl LogStatsByComponent {
         Self { components, inspect_node }
     }
 
-    pub async fn get_component_log_stats(&self, url: &str) -> Arc<ComponentLogStats> {
-        let mut components = self.components.lock().await;
+    pub fn get_component_log_stats(&self, url: &str) -> Arc<ComponentLogStats> {
+        let mut components = self.components.lock();
         match components.get(url) {
             Some(stats) => stats.clone(),
             None => {
@@ -125,8 +125,8 @@ impl LogManagerStats {
     }
 
     /// Returns the stats for a particular component specified by `identity`.
-    pub async fn get_component_log_stats(&self, url: &str) -> Arc<ComponentLogStats> {
-        self.by_component.get_component_log_stats(url).await
+    pub fn get_component_log_stats(&self, url: &str) -> Arc<ComponentLogStats> {
+        self.by_component.get_component_log_stats(url)
     }
 
     /// Record that we rejected a message.

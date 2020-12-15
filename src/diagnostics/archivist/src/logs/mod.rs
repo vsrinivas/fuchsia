@@ -14,11 +14,12 @@ use fidl_fuchsia_sys2 as fsys;
 use fidl_fuchsia_sys_internal::{
     LogConnection, LogConnectionListenerRequest, LogConnectorProxy, SourceIdentity,
 };
-use fuchsia_async::{self as fasync, Task};
+use fuchsia_async::Task;
 use fuchsia_inspect as inspect;
 use fuchsia_inspect_derive::Inspect;
 use fuchsia_zircon as zx;
-use futures::{channel::mpsc, lock::Mutex, prelude::*};
+use futures::{channel::mpsc, prelude::*};
+use parking_lot::Mutex;
 use std::sync::Arc;
 use tracing::{debug, error, trace, warn};
 
@@ -89,10 +90,8 @@ impl LogManager {
         K: debuglog::DebugLog + Send + Sync + 'static,
     {
         debug!("Draining debuglog.");
-        let component_log_stats = {
-            let inner = self.inner.lock().await;
-            inner.stats.get_component_log_stats("fuchsia-boot://klog").await
-        };
+        let component_log_stats =
+            { self.inner.lock().stats.get_component_log_stats("fuchsia-boot://klog") };
         let mut kernel_logger = debuglog::DebugLogBridge::create(klog_reader);
         let mut messages = match kernel_logger.existing_logs().await {
             Ok(messages) => messages,
@@ -104,17 +103,15 @@ impl LogManager {
         messages.sort_by_key(|m| m.metadata.timestamp);
         for message in messages {
             component_log_stats.record_log(&message);
-            self.ingest_message(message, LogSource::Kernel).await;
+            self.ingest_message(message, LogSource::Kernel);
         }
 
         let res = kernel_logger
             .listen()
-            .try_for_each(|message| {
-                async {
-                    component_log_stats.clone().record_log(&message);
-                    self.ingest_message(message, LogSource::Kernel).await
-                }
-                .map(Ok)
+            .try_for_each(|message| async {
+                component_log_stats.clone().record_log(&message);
+                self.ingest_message(message, LogSource::Kernel);
+                Ok(())
             })
             .await;
         if let Err(e) = res {
@@ -124,7 +121,7 @@ impl LogManager {
 
     /// Drain log sink for messages sent by the archivist itself.
     pub async fn drain_internal_log_sink(self, socket: zx::Socket, name: &str) {
-        let forwarder = self.inner.lock().await.legacy_forwarder.clone();
+        let forwarder = self.inner.lock().legacy_forwarder.clone();
         // TODO(fxbug.dev/50105): Figure out how to properly populate SourceIdentity
         let mut source = SourceIdentity::EMPTY;
         source.component_name = Some(name.to_owned());
@@ -183,16 +180,16 @@ impl LogManager {
         sender: mpsc::UnboundedSender<Task<()>>,
     ) {
         if source.component_name.is_none() {
-            self.inner.lock().await.stats.record_unattributed();
+            self.inner.lock().stats.record_unattributed();
         }
 
         while let Some(next) = stream.next().await {
             match next {
                 Ok(LogSinkRequest::Connect { socket, control_handle }) => {
-                    let forwarder = { self.inner.lock().await.legacy_forwarder.clone() };
+                    let forwarder = { self.inner.lock().legacy_forwarder.clone() };
                     match LogMessageSocket::new(socket, source.clone(), forwarder) {
                         Ok(log_stream) => {
-                            self.try_add_interest_listener(&source, control_handle).await;
+                            self.try_add_interest_listener(&source, control_handle);
                             let task = Task::spawn(self.clone().drain_messages(log_stream));
                             sender.unbounded_send(task).expect("channel alive for whole program");
                         }
@@ -203,10 +200,10 @@ impl LogManager {
                     };
                 }
                 Ok(LogSinkRequest::ConnectStructured { socket, control_handle }) => {
-                    let forwarder = { self.inner.lock().await.structured_forwarder.clone() };
+                    let forwarder = { self.inner.lock().structured_forwarder.clone() };
                     match LogMessageSocket::new_structured(socket, source.clone(), forwarder) {
                         Ok(log_stream) => {
-                            self.try_add_interest_listener(&source, control_handle).await;
+                            self.try_add_interest_listener(&source, control_handle);
                             let task = Task::spawn(self.clone().drain_messages(log_stream));
                             sender.unbounded_send(task).expect("channel alive for whole program");
                         }
@@ -227,19 +224,17 @@ impl LogManager {
     where
         E: Encoding + Unpin,
     {
-        let component_log_stats = {
-            let inner = self.inner.lock().await;
-            inner.stats.get_component_log_stats(log_stream.source_url()).await
-        };
+        let component_log_stats =
+            { self.inner.lock().stats.get_component_log_stats(log_stream.source_url()) };
         loop {
             match log_stream.next().await {
                 Ok(message) => {
                     component_log_stats.record_log(&message);
-                    self.ingest_message(message, stats::LogSource::LogSink).await;
+                    self.ingest_message(message, stats::LogSource::LogSink);
                 }
                 Err(error::StreamError::Closed) => return,
                 Err(e) => {
-                    self.inner.lock().await.stats.record_closed_stream();
+                    self.inner.lock().stats.record_closed_stream();
                     warn!(source = ?log_stream.source_url(), %e, "closing socket");
                     return;
                 }
@@ -252,7 +247,7 @@ impl LogManager {
     /// Interest listeners are only supported for log connections where the
     /// SourceIdentity includes an attributed component name. If no component
     /// name is present, this function will exit without adding any listener.
-    async fn try_add_interest_listener(
+    fn try_add_interest_listener(
         &self,
         source: &Arc<SourceIdentity>,
         control_handle: LogSinkControlHandle,
@@ -265,7 +260,6 @@ impl LogManager {
         let event_listener = control_handle.clone();
         self.inner
             .lock()
-            .await
             .interest_dispatcher
             .add_interest_listener(source, Arc::downgrade(&event_listener));
 
@@ -360,9 +354,9 @@ impl LogManager {
             let listener = Listener::new(listener, options)?;
             let mode =
                 if dump_logs { StreamMode::Snapshot } else { StreamMode::SnapshotThenSubscribe };
-            let logs = self.cursor(mode).await;
+            let logs = self.cursor(mode);
             if let Some(s) = selectors {
-                self.inner.lock().await.interest_dispatcher.update_selectors(s).await;
+                self.inner.lock().interest_dispatcher.update_selectors(s);
             }
 
             sender.send(listener.spawn(logs, dump_logs)).await.ok();
@@ -370,16 +364,16 @@ impl LogManager {
         Ok(())
     }
 
-    pub async fn cursor(&self, mode: StreamMode) -> impl Stream<Item = Arc<Message>> {
-        self.inner.lock().await.log_msg_buffer.cursor(mode).map(|item| match item {
+    pub fn cursor(&self, mode: StreamMode) -> impl Stream<Item = Arc<Message>> {
+        self.inner.lock().log_msg_buffer.cursor(mode).map(|item| match item {
             LazyItem::Next(m) => m,
             LazyItem::ItemsDropped(n) => Arc::new(Message::for_dropped(n)),
         })
     }
 
     /// Ingest an individual log message.
-    async fn ingest_message(&self, log_msg: Message, source: stats::LogSource) {
-        let mut inner = self.inner.lock().await;
+    fn ingest_message(&self, log_msg: Message, source: stats::LogSource) {
+        let mut inner = self.inner.lock();
         trace!("Ingesting {:?}", log_msg.id);
 
         // We always record the log before pushing onto the buffer and waking listeners because
@@ -390,27 +384,25 @@ impl LogManager {
 
     /// Stop accepting new messages, ensuring that pending Cursors return Poll::Ready(None) after
     /// consuming any messages received before this call.
-    pub async fn terminate(&self) {
-        self.inner.lock().await.log_msg_buffer.terminate();
+    pub fn terminate(&self) {
+        self.inner.lock().log_msg_buffer.terminate();
     }
 
     /// Initializes internal log forwarders.
     pub fn forward_logs(self) {
-        fasync::Task::spawn(async move {
-            if let Err(e) = self.init_forwarders().await {
-                error!(%e, "couldn't forward logs");
-            }
-        })
-        .detach();
-        debug!("Log forwarding initialized.");
+        if let Err(e) = self.init_forwarders() {
+            error!(%e, "couldn't forward logs");
+        } else {
+            debug!("Log forwarding initialized.");
+        }
     }
 
-    async fn init_forwarders(self) -> Result<(), LogsError> {
+    fn init_forwarders(self) -> Result<(), LogsError> {
         let sink =
             fuchsia_component::client::connect_to_service::<LogSinkMarker>().map_err(|source| {
                 LogsError::ConnectingToService { protocol: LogSinkMarker::NAME, source }
             })?;
-        let mut inner = self.inner.lock().await;
+        let mut inner = self.inner.lock();
 
         let (send, recv) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
             .map_err(|source| ForwardError::Create { source })?;
@@ -486,6 +478,7 @@ mod tests {
     use diagnostics_data::{DROPPED_LABEL, MESSAGE_LABEL, PID_LABEL, TAG_LABEL, TID_LABEL};
     use diagnostics_stream::{Argument, Record, Severity as StreamSeverity, Value};
     use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage, LogSinkMarker};
+    use fuchsia_async as fasync;
     use fuchsia_inspect::assert_inspect_tree;
     use fuchsia_zircon as zx;
     use matches::assert_matches;

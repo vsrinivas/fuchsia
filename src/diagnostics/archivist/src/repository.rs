@@ -64,24 +64,9 @@ impl Pipeline {
         }
     }
 
-    pub async fn logs(
-        pipeline: &Arc<RwLock<Self>>,
-        mode: StreamMode,
-    ) -> impl Stream<Item = RedactedItem<Message>> {
-        let (redactor, manager) = {
-            let locked_pipeline = pipeline.read();
-            // Without this variable, the temporary is part of an expression at the end of a block;
-            // Here, we force the temporary to be dropped sooner,
-            // before the block's local variables are dropped
-            // by saving the expression's value in a new local variable
-            // and then placing the expression at the end of the block
-            let unlocked_tuple = (
-                locked_pipeline.log_redactor.clone(),
-                locked_pipeline.data_repo.read().log_manager.clone(),
-            );
-            unlocked_tuple
-        };
-        redactor.redact_stream(manager.cursor(mode).await)
+    pub fn logs(&self, mode: StreamMode) -> impl Stream<Item = RedactedItem<Message>> {
+        let repo = self.data_repo.read();
+        self.log_redactor.clone().redact_stream(repo.log_manager.cursor(mode))
     }
 
     pub fn remove(&mut self, component_id: &ComponentIdentifier) {

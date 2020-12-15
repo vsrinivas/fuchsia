@@ -421,7 +421,7 @@ impl Archivist {
         let all_msg = async {
             log_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
             debug!("Log ingestion stopped.");
-            log_manager.terminate().await;
+            log_manager.terminate();
             debug!("Flushing to listeners.");
             listen_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
             debug!("Log listeners stopped.");
