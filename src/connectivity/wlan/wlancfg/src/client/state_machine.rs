@@ -213,7 +213,18 @@ async fn disconnecting_state(
     mut common_options: CommonStateOptions,
     options: DisconnectingOptions,
 ) -> Result<State, ExitReason> {
-    debug!("Entering disconnecting state");
+    // Log a message with the disconnect reason
+    match options.reason {
+        types::DisconnectReason::FailedToConnect
+        | types::DisconnectReason::Startup
+        | types::DisconnectReason::DisconnectDetectedFromSme => {
+            // These are either just noise or have separate logging, so keep the level at debug.
+            debug!("Disconnected due to {:?}", options.reason);
+        }
+        reason => {
+            info!("Disconnected due to {:?}", reason);
+        }
+    }
 
     // TODO(fxbug.dev/53505): either make this fire-and-forget in the SME, or spawn a thread for this,
     // so we don't block on it
