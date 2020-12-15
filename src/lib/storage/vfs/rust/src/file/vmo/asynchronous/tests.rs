@@ -726,7 +726,7 @@ fn truncate_large_file_beyond_capacity() {
             assert_read!(proxy, "Content");
             assert_truncate_err!(proxy, 40, Status::OUT_OF_RANGE);
             assert_truncate!(proxy, 16);
-            assert_truncate!(proxy, 14);
+            assert_truncate!(proxy, 15);
             assert_truncate_err!(proxy, 16, Status::OUT_OF_RANGE);
             assert_close!(proxy);
         },

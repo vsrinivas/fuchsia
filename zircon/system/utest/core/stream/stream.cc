@@ -32,6 +32,8 @@ TEST(StreamTestCase, Create) {
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(PAGE_SIZE * 4, 0, &vmo));
+  size_t content_size = 0u;
+  ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
 
   static_assert(!(ZX_DEFAULT_STREAM_RIGHTS & ZX_RIGHT_WRITE),
                 "Streams are not writable by default");
@@ -379,6 +381,8 @@ TEST(StreamTestCase, WriteExtendsContentSize) {
 TEST(StreamTestCase, WriteExtendsVMOSize) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo));
+  size_t content_size = 0u;
+  ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
 
   zx::stream stream;
   char buffer[17] = "0123456789ABCDEF";
@@ -579,6 +583,8 @@ TEST(StreamTestCase, ExtendFillsWithZeros) {
   const size_t kVmoSize = PAGE_SIZE * kPageCount;
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+  size_t content_size = 0u;
+  ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
 
   zx::stream stream;
   ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_WRITE, vmo, 0, &stream));

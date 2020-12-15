@@ -23,6 +23,15 @@ zx_status_t zx_vmo_set_size(zx_handle_t handle, uint64_t size);
 The size will be rounded up to the next page size boundary.
 Subsequent calls to [`zx_vmo_get_size()`] will return the rounded up size.
 
+The content size of the VMO will be set to the given (unrounded) size.
+Use [`zx_object_get_property()`] with **ZX_PROP_VMO_CONTENT_SIZE** to read the
+content size of the VMO. Use [`zx_object_set_property()`] with
+**ZX_PROP_VMO_CONTENT_SIZE** to set the content size of the VMO without
+actually resizing the VMO.
+
+The data in the VMO between the given size and the end of the VMO (i.e., the next page boundary)
+will be overritten with zeros.
+
 ## RIGHTS
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
@@ -62,6 +71,8 @@ or **ZX_VMO_CHILD_RESIZABLE**.
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
+[`zx_object_get_property()`]: object_get_property.md
+[`zx_object_set_property()`]: object_set_property.md
 [`zx_vmo_create()`]: vmo_create.md
 [`zx_vmo_create_child()`]: vmo_create_child.md
 [`zx_vmo_get_size()`]: vmo_get_size.md

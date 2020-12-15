@@ -41,10 +41,6 @@ fitx::result<zx_status_t> StorageTraits<zx::vmo>::EnsureCapacity(const zx::vmo& 
   if (auto status = vmo.set_size(cap); status != ZX_OK) {
     return fitx::error{status};
   }
-  if (auto status = vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &cap, sizeof(cap));
-      status != ZX_OK) {
-    return fitx::error{status};
-  }
   return fitx::ok();
 }
 
@@ -85,12 +81,6 @@ fitx::result<zx_status_t, zx::vmo> StorageTraits<zx::vmo>::Create(const zx::vmo&
   if (zx_status_t status = zx::vmo::create(size, ZX_VMO_RESIZABLE, &vmo); status != ZX_OK) {
     return fitx::error{status};
   }
-  // Setting ZX_PROP_VMO_CONTENT_SIZE expectes a 64-bit user-pointer.
-  auto size64 = static_cast<uint64_t>(size);
-  if (zx_status_t status = vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &size64, sizeof(size64));
-      status != ZX_OK) {
-    return fitx::error{status};
-  }
   return fitx::ok(std::move(vmo));
 }
 
@@ -112,11 +102,6 @@ StorageTraits<zx::vmo>::DoClone(const zx::vmo& original, uint32_t offset, uint32
     status = clone.op_range(ZX_VMO_OP_ZERO, clone_size, ZX_PAGE_SIZE - (clone_size % ZX_PAGE_SIZE),
                             nullptr, 0);
   }
-  if (status == ZX_OK) {
-    const uint64_t content_size = slop + length;
-    status = clone.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
-  }
-
   if (status != ZX_OK) {
     return fitx::error{status};
   }

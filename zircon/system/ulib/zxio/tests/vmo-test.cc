@@ -20,7 +20,6 @@ class VmoTest : public zxtest::Test {
  public:
   void SetUp() override {
     ASSERT_OK(zx::vmo::create(kSize, 0u, &backing));
-    ASSERT_OK(backing.set_property(ZX_PROP_VMO_CONTENT_SIZE, &kSize, sizeof(kSize)));
     ASSERT_OK(backing.write(ALPHABET, 0, len));
     ASSERT_OK(backing.write(ALPHABET, len, len + len));
     zx::stream stream;
@@ -159,7 +158,6 @@ class HugeVmoTest : public zxtest::Test {
  public:
   void SetUp() override {
     ASSERT_OK(zx::vmo::create(kHugeSize, 0u, &backing));
-    ASSERT_OK(backing.set_property(ZX_PROP_VMO_CONTENT_SIZE, &kHugeSize, sizeof(kHugeSize)));
     ASSERT_OK(backing.write(ALPHABET, 0, len));
     ASSERT_OK(backing.write(ALPHABET, len, len + len));
     zx::stream stream;

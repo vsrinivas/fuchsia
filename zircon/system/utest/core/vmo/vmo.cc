@@ -557,13 +557,13 @@ TEST(VmoTestCase, ContentSize) {
   zx::vmo vmo;
 
   size_t len = PAGE_SIZE * 4;
-  status = zx::vmo::create(len, 0, &vmo);
+  status = zx::vmo::create(len, ZX_VMO_RESIZABLE, &vmo);
   EXPECT_OK(status, "zx::vmo::create");
 
   uint64_t content_size = 42;
   status = vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
   EXPECT_OK(status, "get_property");
-  EXPECT_EQ(0u, content_size);
+  EXPECT_EQ(len, content_size);
 
   uint64_t target_size = len / 3;
   status = vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &target_size, sizeof(target_size));
@@ -577,6 +577,15 @@ TEST(VmoTestCase, ContentSize) {
   target_size = len + 15643;
   status = vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &target_size, sizeof(target_size));
   EXPECT_OK(status, "set_property");
+
+  content_size = 42;
+  status = vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
+  EXPECT_OK(status, "get_property");
+  EXPECT_EQ(target_size, content_size);
+
+  target_size = 5461;
+  status = vmo.set_size(target_size);
+  EXPECT_OK(status, "set_size");
 
   content_size = 42;
   status = vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));

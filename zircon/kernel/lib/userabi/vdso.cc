@@ -342,7 +342,7 @@ void VDso::CreateVariant(Variant variant, KernelHandle<VmObjectDispatcher>* vmo_
   }
 
   zx_rights_t rights;
-  status = VmObjectDispatcher::Create(ktl::move(new_vmo), vmo_kernel_handle, &rights);
+  status = VmObjectDispatcher::Create(ktl::move(new_vmo), size(), vmo_kernel_handle, &rights);
   ASSERT(status == ZX_OK);
 
   status = vmo_kernel_handle->dispatcher()->set_name(name, strlen(name));
