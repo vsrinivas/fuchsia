@@ -19,13 +19,6 @@ use {
 
 // List peers, but wait for things to settle out first
 pub fn list_peers() -> impl Stream<Item = Result<NodeId, Error>> {
-    // On Fuchsia, we'll connect to overnetstack, and so we should at least see that.
-    #[cfg(target_os = "fuchsia")]
-    const MIN_PEERS: usize = 1;
-    // Whereas on host, we'll connect to ascendd from the overnet library, so we should see the current process & ascendd at least.
-    #[cfg(not(target_os = "fuchsia"))]
-    const MIN_PEERS: usize = 2;
-
     Generator::new(move |mut tx| async move {
         let r: Result<(), Error> = async {
             let svc = hoist::connect_as_service_consumer()?;
@@ -35,7 +28,7 @@ pub fn list_peers() -> impl Stream<Item = Result<NodeId, Error>> {
                 move || async move {
                     let seen_peers = Arc::new(seen_peers.lock().await.clone());
                     log::trace!("check if more to do after seeing: {:?}", seen_peers);
-                    if seen_peers.len() < MIN_PEERS {
+                    if seen_peers.is_empty() {
                         return true;
                     }
                     futures::future::select_ok(seen_peers.iter().map(|&id| {

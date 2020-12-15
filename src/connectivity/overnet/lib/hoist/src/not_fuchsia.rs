@@ -5,18 +5,19 @@
 #![cfg(not(target_os = "fuchsia"))]
 
 use {
-    anyhow::Error,
+    anyhow::{bail, ensure, Error},
     fidl::endpoints::{create_proxy, create_proxy_and_stream},
     fidl_fuchsia_overnet::{
         HostOvernetMarker, HostOvernetProxy, HostOvernetRequest, HostOvernetRequestStream,
         MeshControllerMarker, MeshControllerRequest, ServiceConsumerMarker, ServiceConsumerRequest,
         ServicePublisherMarker, ServicePublisherRequest,
     },
+    fidl_fuchsia_overnet_protocol::StreamSocketGreeting,
     fuchsia_async::{Task, Timer},
-    futures::prelude::*,
+    futures::{lock::Mutex, prelude::*},
     overnet_core::{
-        log_errors, new_deframer, new_framer, ListPeersContext, LosslessBinary, ReadBytes, Router,
-        RouterOptions, SecurityContext,
+        log_errors, new_deframer, new_framer, DeframerWriter, FrameType, FramerReader,
+        ListPeersContext, LosslessBinary, Router, RouterOptions, SecurityContext,
     },
     std::{
         sync::atomic::{AtomicU64, Ordering},
@@ -49,7 +50,35 @@ fn start_overnet() -> Result<Overnet, Error> {
     })
 }
 
-async fn run_ascendd_connection(node: Arc<Router>) -> Result<(), Error> {
+async fn read_incoming(
+    mut stream: &async_std::os::unix::net::UnixStream,
+    mut incoming_writer: DeframerWriter<LosslessBinary>,
+) -> Result<(), Error> {
+    let mut buf = [0u8; 16384];
+
+    loop {
+        let n = stream.read(&mut buf).await?;
+        if n == 0 {
+            return Ok(());
+        }
+        incoming_writer.write(&buf[..n]).await?;
+    }
+}
+
+async fn write_outgoing(
+    mut outgoing_reader: FramerReader<LosslessBinary>,
+    mut stream: &async_std::os::unix::net::UnixStream,
+) -> Result<(), Error> {
+    loop {
+        let out = outgoing_reader.read().await?;
+        stream.write_all(&out).await?;
+    }
+}
+
+async fn run_ascendd_connection(
+    node: Arc<Router>,
+    tx_ready: Arc<Mutex<Option<futures::channel::oneshot::Sender<()>>>>,
+) -> Result<(), Error> {
     let ascendd_path = std::env::var("ASCENDD").unwrap_or(DEFAULT_ASCENDD_PATH.to_string());
     let mut connection_label = std::env::var("OVERNET_CONNECTION_LABEL").ok();
     if connection_label.is_none() {
@@ -63,57 +92,104 @@ async fn run_ascendd_connection(node: Arc<Router>) -> Result<(), Error> {
 
     log::trace!("Ascendd path: {}", ascendd_path);
     log::trace!("Overnet connection label: {:?}", connection_label);
-    let mut uds = &async_std::os::unix::net::UnixStream::connect(ascendd_path.clone()).await?;
-    let (mut framer, mut outgoing_reader) = new_framer(LosslessBinary, 4096);
-    let (mut incoming_writer, mut deframer) = new_deframer(LosslessBinary);
+    let uds = async_std::os::unix::net::UnixStream::connect(ascendd_path.clone()).await?;
+    let (mut framer, outgoing_reader) = new_framer(LosslessBinary, 4096);
+    let (incoming_writer, mut deframer) = new_deframer(LosslessBinary);
 
-    let (mut link_sender, mut link_receiver) = node.new_link(Box::new(move || {
-        Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddClient(
-            fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
-                path: Some(ascendd_path.clone()),
+    let _ = futures::future::try_join3(
+        read_incoming(&uds, incoming_writer),
+        write_outgoing(outgoing_reader, &uds),
+        async move {
+            // Send first frame
+            let mut greeting = StreamSocketGreeting {
+                magic_string: Some(ASCENDD_CLIENT_CONNECTION_STRING.to_string()),
+                node_id: Some(fidl_fuchsia_overnet_protocol::NodeId { id: node.node_id().0 }),
                 connection_label: connection_label.clone(),
-                ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
-            },
-        ))
-    }));
+                key: None,
+                ..StreamSocketGreeting::EMPTY
+            };
+            let mut bytes = Vec::new();
+            let mut handles = Vec::new();
+            fidl::encoding::Encoder::encode(&mut bytes, &mut handles, &mut greeting)?;
+            assert_eq!(handles.len(), 0);
+            framer.write(FrameType::Overnet, bytes.as_slice()).await?;
 
-    let ((), (), (), ()) = futures::future::try_join4(
-        async move {
-            let mut buf = [0u8; 16384];
+            log::trace!("Wait for greeting & first frame write");
+            let (frame_type, mut frame) = deframer.read().await?;
+            ensure!(frame_type == Some(FrameType::Overnet), "Expect Overnet frame as first frame");
 
-            loop {
-                let n = uds.read(&mut buf).await?;
-                if n == 0 {
-                    return Ok(());
+            let mut greeting = StreamSocketGreeting::EMPTY;
+            // WARNING: Since we are decoding without a transaction header, we have to
+            // provide a context manually. This could cause problems in future FIDL wire
+            // format migrations, which are driven by header flags.
+            let context = fidl::encoding::Context {};
+            fidl::encoding::Decoder::decode_with_context(
+                &context,
+                frame.as_mut(),
+                &mut [],
+                &mut greeting,
+            )?;
+
+            log::trace!("Got greeting: {:?}", greeting);
+            let ascendd_node_id = match greeting {
+                StreamSocketGreeting { magic_string: None, .. } => bail!(
+                    "Required magic string '{}' not present in greeting",
+                    ASCENDD_SERVER_CONNECTION_STRING
+                ),
+                StreamSocketGreeting { magic_string: Some(ref x), .. }
+                    if x != ASCENDD_SERVER_CONNECTION_STRING =>
+                {
+                    bail!(
+                        "Expected magic string '{}' in greeting, got '{}'",
+                        ASCENDD_SERVER_CONNECTION_STRING,
+                        x
+                    )
                 }
-                incoming_writer.write(&buf[..n]).await?;
+                StreamSocketGreeting { node_id: None, .. } => bail!("No node id in greeting"),
+                StreamSocketGreeting { node_id: Some(n), .. } => n.id,
+            };
+
+            let (link_sender, mut link_receiver) = node
+                .new_link(
+                    ascendd_node_id.into(),
+                    Box::new(move || {
+                        Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddClient(
+                            fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
+                                path: Some(ascendd_path.clone()),
+                                connection_label: connection_label.clone(),
+                                ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
+                            },
+                        ))
+                    }),
+                )
+                .await?;
+
+            if let Some(tx_ready) = tx_ready.lock().await.take() {
+                let _ = tx_ready.send(());
             }
-        },
-        async move {
-            loop {
-                let out = outgoing_reader.read().await?;
-                uds.write_all(&out).await?;
-            }
-        },
-        async move {
-            loop {
-                let mut frame = match deframer.read().await? {
-                    ReadBytes::Framed(frame) => frame,
-                    ReadBytes::Unframed(unframed) => {
-                        panic!(
-                            "Should not see unframed bytes from ascendd, but got {:?}",
-                            unframed
+
+            let _: ((), ()) = futures::future::try_join(
+                async move {
+                    loop {
+                        let (frame_type, mut frame) = deframer.read().await?;
+                        ensure!(
+                            frame_type == Some(FrameType::Overnet),
+                            "Should only see Overnet frames"
                         );
+                        if let Err(e) = link_receiver.received_packet(frame.as_mut_slice()).await {
+                            log::warn!("Error receiving packet: {}", e);
+                        }
                     }
-                };
-                link_receiver.received_frame(frame.as_mut_slice()).await;
-            }
-        },
-        async move {
-            while let Some(frame) = link_sender.next_send().await {
-                framer.write(frame.bytes()).await?;
-            }
-            Ok::<_, Error>(())
+                },
+                async move {
+                    while let Some(frame) = link_sender.next_send().await {
+                        framer.write(FrameType::Overnet, frame.bytes()).await?;
+                    }
+                    Ok::<_, Error>(())
+                },
+            )
+            .await?;
+            Ok(())
         },
     )
     .await?;
@@ -251,15 +327,20 @@ async fn run_overnet(rx: HostOvernetRequestStream) -> Result<(), Error> {
         Box::new(hard_coded_security_context()),
     )?;
 
+    let (tx_ready, rx_ready) = futures::channel::oneshot::channel();
+
     let _connect = Task::spawn({
         let node = node.clone();
+        let tx_ready = Arc::new(Mutex::new(Some(tx_ready)));
         async move {
             retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), || {
-                run_ascendd_connection(node.clone())
+                run_ascendd_connection(node.clone(), tx_ready.clone())
             })
             .await
         }
     });
+
+    rx_ready.await?;
 
     // Run application loop
     rx.map_err(Into::into)

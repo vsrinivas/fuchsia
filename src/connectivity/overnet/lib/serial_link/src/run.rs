@@ -4,14 +4,16 @@
 
 use crate::fragment_io::{new_fragment_io, FragmentReader, FragmentWriter};
 use crate::lossy_text::LossyText;
-use anyhow::{format_err, Context as _, Error};
+use anyhow::{bail, ensure, format_err, Context as _, Error};
+use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
 use fuchsia_async::TimeoutExt;
 use future::Either;
 use futures::prelude::*;
 use overnet_core::{
-    new_deframer, new_framer, DeframerWriter, FramerReader, LinkReceiver, LinkSender, ReadBytes,
-    Router,
+    decode_fidl, encode_fidl, new_deframer, new_framer, DeframerWriter, FrameType, FramerReader,
+    LinkReceiver, LinkSender, NodeId, Router,
 };
+use rand::Rng;
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 
@@ -32,7 +34,7 @@ pub async fn run(
     let router = WeakRouter(router);
     let mut file_handler = FileHandler { read, write, skipped };
     loop {
-        let _ = file_handler
+        file_handler
             .run(|fragment_reader, fragment_writer| async {
                 if let Err(e) = main(
                     role,
@@ -47,7 +49,8 @@ pub async fn run(
                 }
                 Ok(())
             })
-            .await;
+            .await
+            .expect("no errors allowed from main loop");
         if let Err(e) = file_handler
             .run(|fragment_reader, fragment_writer| reset(role, fragment_reader, fragment_writer))
             .await
@@ -95,15 +98,15 @@ impl<R: AsyncRead + Unpin + Send, W: AsyncWrite + Unpin + Send, S: AsyncWrite + 
 
         match future::select(fut, support).await {
             Either::Left((r, _)) => {
-                eprintln!("main task finished: {:?}", r);
+                log::trace!("main task finished: {:?}", r);
                 r
             }
             Either::Right((r, m)) => {
                 if let Some(r) = m.now_or_never() {
-                    eprintln!("main task finished at the last moment: {:?}", r);
+                    log::trace!("main task finished at the last moment: {:?}", r);
                     r
                 } else {
-                    eprintln!("support task finished: {:?}", r);
+                    log::trace!("support task finished: {:?}", r);
                     match r {
                         Err(e) => Err(e),
                         Ok(_) => unreachable!(),
@@ -128,11 +131,11 @@ struct StreamSplitter<OutputSink> {
 }
 
 impl<OutputSink: AsyncWrite + Unpin> StreamSplitter<OutputSink> {
-    async fn read(&mut self) -> Result<Vec<u8>, Error> {
+    async fn read(&mut self) -> Result<(FrameType, Vec<u8>), Error> {
         loop {
             match self.fragment_reader.read().await? {
-                ReadBytes::Unframed(frame) => self.skipped_bytes.write_all(&frame).await?,
-                ReadBytes::Framed(frame) => return Ok(frame),
+                (None, frame) => self.skipped_bytes.write_all(&frame).await?,
+                (Some(frame_type), frame) => return Ok((frame_type, frame)),
             }
         }
     }
@@ -168,16 +171,98 @@ async fn read_bytes(
     }
 }
 
+const GREETING_STRING: &str = "serial_link";
+
+async fn send_greeting(
+    fragment_writer: &mut FragmentWriter,
+    node_id: NodeId,
+    key: u64,
+) -> Result<u64, Error> {
+    let mut greeting = StreamSocketGreeting {
+        magic_string: Some(GREETING_STRING.to_string()),
+        node_id: Some(node_id.into()),
+        connection_label: Some(format!("fuchsia serial")),
+        key: Some(key),
+        ..StreamSocketGreeting::EMPTY
+    };
+    fragment_writer.write(FrameType::OvernetHello, encode_fidl(&mut greeting)?).await?;
+    Ok(key)
+}
+
+#[derive(Debug, thiserror::Error)]
+enum ReadGreetingError {
+    #[error("empty greeting")]
+    EmptyGreeting,
+    #[error("received non-greeting bytes in a frame of type {:?}: {:?}", .0, .1)]
+    SkippedBytes(FrameType, Vec<u8>),
+    #[error("no magic string present in greeting")]
+    NoMagicString,
+    #[error("got bad magic string '{0}'")]
+    BadMagicString(String),
+    #[error("no node id in greeting")]
+    NoNodeId,
+    #[error("deframing error {0}")]
+    Deframing(#[from] anyhow::Error),
+    #[error("no key in greeting")]
+    NoKey,
+    #[error("timeout")]
+    Timeout,
+}
+
+fn parse_greeting(mut frame: Vec<u8>) -> Result<(NodeId, u64), ReadGreetingError> {
+    if frame.is_empty() {
+        return Err(ReadGreetingError::EmptyGreeting);
+    }
+    match decode_fidl(frame.as_mut_slice())? {
+        StreamSocketGreeting { magic_string: None, .. } => Err(ReadGreetingError::NoMagicString),
+        StreamSocketGreeting { magic_string: Some(ref x), .. } if x != GREETING_STRING => {
+            Err(ReadGreetingError::BadMagicString(x.to_string()))
+        }
+        StreamSocketGreeting { node_id: None, .. } => Err(ReadGreetingError::NoNodeId),
+        StreamSocketGreeting { key: None, .. } => Err(ReadGreetingError::NoKey),
+        StreamSocketGreeting { node_id: Some(node_id), key: Some(key), .. } => {
+            Ok((node_id.into(), key))
+        }
+    }
+}
+
+async fn read_greeting<OutputSink: AsyncWrite + Unpin>(
+    fragment_reader: &mut StreamSplitter<OutputSink>,
+) -> Result<(NodeId, u64), ReadGreetingError> {
+    let (frame_type, frame) = fragment_reader.read().await?;
+    if frame_type != FrameType::OvernetHello {
+        Err(ReadGreetingError::SkippedBytes(frame_type, frame))
+    } else {
+        parse_greeting(frame)
+    }
+}
+
 async fn reset<OutputSink: AsyncWrite + Unpin>(
     role: Role,
     mut fragment_reader: StreamSplitter<OutputSink>,
     mut fragment_writer: FragmentWriter,
 ) -> Result<(), Error> {
-    log::info!("RESET SERIAL BEGIN");
     let drain_time = match role {
         Role::Client => Duration::from_secs(3),
-        Role::Server => Duration::from_secs(3),
+        Role::Server => Duration::from_secs(1),
     };
+    // This will fail only if I/O fails, and if that fails we cannot recover.
+    futures::future::try_join(
+        drain(&mut fragment_reader, drain_time),
+        send_reset(&mut fragment_writer),
+    )
+    .await?;
+    // Explicitly drop here to remind us that we don't want to inadvertently close
+    // one side of the fragment reader/writer until both drain and send_reset are done.
+    drop(fragment_reader);
+    drop(fragment_writer);
+    Ok(())
+}
+
+async fn drain<OutputSink: AsyncWrite + Unpin>(
+    fragment_reader: &mut StreamSplitter<OutputSink>,
+    drain_time: Duration,
+) -> Result<(), Error> {
     enum DrainError {
         FromRead(Error),
         Timeout,
@@ -189,71 +274,90 @@ async fn reset<OutputSink: AsyncWrite + Unpin>(
             .on_timeout(drain_time, || Err(DrainError::Timeout))
             .await
         {
-            Err(DrainError::Timeout) => break,
-            Ok(frame) => {
-                eprintln!("discard frame during drain: {:?}", frame);
-                fragment_writer.write(vec![]).await?;
-                continue;
-            }
+            Err(DrainError::Timeout) => return Ok(()),
+            Ok(_) => continue,
             Err(DrainError::FromRead(e)) => return Err(e),
         }
     }
-    log::info!("RESET SERIAL END");
+}
+
+async fn send_reset(fragment_writer: &mut FragmentWriter) -> Result<(), Error> {
+    for _ in 0..5 {
+        fragment_writer.write(FrameType::OvernetHello, vec![]).await?;
+    }
     Ok(())
 }
 
 async fn link_to_framer(
-    mut link_sender: LinkSender,
+    link_sender: LinkSender,
     mut fragment_writer: FragmentWriter,
 ) -> Result<(), Error> {
     while let Some(frame) = link_sender.next_send().await {
-        fragment_writer.write(frame.bytes().to_vec()).await?;
+        fragment_writer.write(FrameType::Overnet, frame.bytes().to_vec()).await?;
     }
     Ok(())
 }
 
 async fn deframer_to_link<OutputSink: AsyncWrite + Unpin>(
-    role: Role,
     mut fragment_reader: StreamSplitter<OutputSink>,
     mut link_receiver: LinkReceiver,
 ) -> Result<(), Error> {
-    let mut know_peer_id = false;
     loop {
-        let mut frame = fragment_reader.read().await?;
-        log::trace!("READ FRAME: {:?}", frame);
-        if frame.is_empty() {
-            return Err(format_err!("reset received"));
-        }
-        link_receiver.received_frame(frame.as_mut()).await;
-        if !know_peer_id {
-            if let Some(peer_node_id) = link_receiver.peer_node_id() {
-                log::info!(
-                    "Established {:?} Overnet serial connection to peer {:?}",
-                    role,
-                    peer_node_id
-                );
-                know_peer_id = true;
+        let (frame_type, mut frame) = fragment_reader.read().await?;
+        match frame_type {
+            FrameType::Overnet => {
+                if let Err(e) = link_receiver.received_packet(frame.as_mut()).await {
+                    log::warn!("Error reading packet: {:#?}", e);
+                }
             }
+            FrameType::OvernetHello => bail!("Hello packet"),
         }
     }
 }
 
 async fn main<OutputSink: AsyncWrite + Unpin>(
     role: Role,
-    fragment_reader: StreamSplitter<OutputSink>,
-    fragment_writer: FragmentWriter,
+    mut fragment_reader: StreamSplitter<OutputSink>,
+    mut fragment_writer: FragmentWriter,
     router: &WeakRouter,
     descriptor: Option<String>,
 ) -> Result<(), Error> {
-    let (link_sender, link_receiver) = router.get()?.new_link(Box::new(move || {
-        descriptor.clone().map(|d| match role {
-            Role::Server => fidl_fuchsia_overnet_protocol::LinkConfig::SerialServer(d),
-            Role::Client => fidl_fuchsia_overnet_protocol::LinkConfig::SerialClient(d),
-        })
-    }));
+    let my_node_id = router.get()?.node_id();
+    let peer_node_id = match role {
+        Role::Client => {
+            let key = rand::thread_rng().gen();
+            send_greeting(&mut fragment_writer, my_node_id, key).await?;
+            let (peer_node_id, read_key) = read_greeting(&mut fragment_reader)
+                .on_timeout(Duration::from_secs(10), || Err(ReadGreetingError::Timeout))
+                .await?;
+
+            ensure!(key == read_key, "connection key mismatch");
+            peer_node_id
+        }
+        Role::Server => {
+            let (peer_node_id, read_key) = read_greeting(&mut fragment_reader).await?;
+            send_greeting(&mut fragment_writer, my_node_id, read_key).await?;
+            peer_node_id
+        }
+    };
+
+    log::info!("Established {:?} Overnet serial connection to peer {:?}", role, peer_node_id);
+
+    let (link_sender, link_receiver) = router
+        .get()?
+        .new_link(
+            peer_node_id,
+            Box::new(move || {
+                descriptor.clone().map(|d| match role {
+                    Role::Server => fidl_fuchsia_overnet_protocol::LinkConfig::SerialServer(d),
+                    Role::Client => fidl_fuchsia_overnet_protocol::LinkConfig::SerialClient(d),
+                })
+            }),
+        )
+        .await?;
     futures::future::try_join(
         link_to_framer(link_sender, fragment_writer),
-        deframer_to_link(role, fragment_reader, link_receiver),
+        deframer_to_link(fragment_reader, link_receiver),
     )
     .map_ok(drop)
     .await

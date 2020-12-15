@@ -145,8 +145,6 @@ table ProbeResult {
     2: vector<PeerConnectionDiagnosticInfo>:MAX peer_connections;
     /// Link list, obtained by probing ProbeSelector.LINKS
     3: vector<LinkDiagnosticInfo>:MAX links;
-    /// Count of how many links are still negotiating, obtained by probing ProbeSelector.CONNECTING_LINK_COUNT
-    4: uint64 connecting_link_count;
 };
 
 /// Selector bits for what to probe during Diagnostic/Probe.
@@ -157,8 +155,6 @@ bits ProbeSelector : uint64 {
     PEER_CONNECTIONS = 0x02;
     /// Request ProbeResult.links is present in the result
     LINKS = 0x04;
-    /// Request ProbeResult.connecting_link_count is present in the result
-    CONNECTING_LINK_COUNT = 0x08;
 };
 
 /// Diagnostic information exported by Overnet peers.

@@ -7,6 +7,7 @@ use futures::{
     lock::{Mutex, MutexGuard, MutexLockFuture},
     prelude::*,
 };
+use pin_project::pin_project;
 use rental::*;
 use std::collections::HashMap;
 use std::pin::Pin;
@@ -298,6 +299,13 @@ impl<T: std::fmt::Debug> Observable<T> {
     }
 }
 
+impl<T: Clone + std::fmt::Debug> Observer<T> {
+    /// Get the current value, don't move forward the most recent observed value.
+    pub async fn peek(&mut self) -> Option<T> {
+        self.lock.with_lock(|state| state.current.clone()).await
+    }
+}
+
 impl<T: Clone + std::fmt::Debug> futures::Stream for Observer<T> {
     type Item = T;
     fn poll_next(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -342,5 +350,39 @@ mod test {
         assert_eq!(observer.next().await, Some(4));
         drop(observable);
         assert_eq!(observer.next().await, None);
+    }
+}
+
+/// Wait for two futures: A & B.
+/// Poll, biased towards A.
+/// Whenever one completes, invoke now_or_never() on the other, and return a tuple of (optional)
+/// results - the future that triggered completion will always be Some, the future that did not
+/// be Some or None depending on whether it also completed.
+#[pin_project]
+pub struct SelectThenNowOrNever<A, B> {
+    #[pin]
+    a: A,
+    #[pin]
+    b: B,
+}
+
+impl<A: Future, B: Future> SelectThenNowOrNever<A, B> {
+    pub fn new(a: A, b: B) -> Self {
+        Self { a, b }
+    }
+}
+
+impl<A: Future, B: Future> Future for SelectThenNowOrNever<A, B> {
+    type Output = (Option<A::Output>, Option<B::Output>);
+
+    fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
+        let mut this = self.project();
+        match this.a.as_mut().poll(ctx) {
+            Poll::Ready(a) => Poll::Ready((Some(a), this.b.now_or_never())),
+            Poll::Pending => match this.b.poll(ctx) {
+                Poll::Ready(b) => Poll::Ready((this.a.now_or_never(), Some(b))),
+                Poll::Pending => Poll::Pending,
+            },
+        }
     }
 }

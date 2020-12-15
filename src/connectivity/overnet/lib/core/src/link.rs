@@ -6,30 +6,25 @@
 
 use crate::{
     coding::{decode_fidl, encode_fidl},
-    future_help::{log_errors, Observable, Observer},
+    future_help::{log_errors, Observer, SelectThenNowOrNever},
     labels::{NodeId, NodeLinkId},
-    link_frame_label::{
-        LinkFrameLabel, RoutingDestination, RoutingTarget, LINK_FRAME_LABEL_MAX_SIZE,
-    },
-    ping_tracker::PingTracker,
-    router::{ConnectingLinkToken, Router},
+    link_frame_label::{FrameType, LinkFrameLabel, RoutingTarget, LINK_FRAME_LABEL_MAX_SIZE},
+    ping_tracker::{PingSender, PingTracker},
+    router::Router,
     routes::ForwardingTable,
 };
 use anyhow::{bail, format_err, Context as _, Error};
 use cutex::{AcquisitionPredicate, Cutex, CutexGuard, CutexTicket};
 use fidl_fuchsia_overnet_protocol::{
-    LinkControlFrame, LinkControlMessage, LinkControlPayload, LinkDiagnosticInfo, LinkIntroduction,
-    Route, SetRoute,
+    LinkControlFrame, LinkControlMessage, LinkControlPayload, LinkDiagnosticInfo, Route, SetRoute,
 };
-use fuchsia_async::{Task, TimeoutExt, Timer};
-use futures::{channel::mpsc, future::Either, lock::Mutex, pin_mut, prelude::*};
-use rand::Rng;
+use fuchsia_async::{Task, Timer};
+use futures::{future::Either, lock::Mutex, pin_mut, prelude::*};
 use std::{
     convert::TryInto,
-    num::NonZeroU64,
     pin::Pin,
     sync::atomic::{AtomicU64, Ordering},
-    sync::{Arc, Weak},
+    sync::Arc,
     time::Duration,
 };
 
@@ -42,8 +37,17 @@ struct LinkStats {
     sent_packets: AtomicU64,
 }
 
+/// Runner for a link - once this goes, the link is shutdown
+/// NOTE: Router never holds an Arc<LinkRunner>
+struct LinkRunner {
+    ping_tracker: PingTracker,
+    router: Arc<Router>,
+    // Maintenance tasks for the link - once the link is dropped, these should stop.
+    _task: Task<()>,
+}
+
 /// Maximum length of a frame that can be sent over a link.
-pub const MAX_FRAME_LENGTH: usize = 1400;
+pub(crate) const MAX_FRAME_LENGTH: usize = 1400;
 /// Maximum payload length that's encodable (allowing frame space for labelling from the link).
 const MAX_PAYLOAD_LENGTH: usize = MAX_FRAME_LENGTH - LINK_FRAME_LABEL_MAX_SIZE;
 /// Maximum length of a SetRoute payload
@@ -51,13 +55,9 @@ const MAX_SET_ROUTE_LENGTH: usize = MAX_PAYLOAD_LENGTH - 64;
 /// Maximum number of frames queued in OutputQueue
 const MAX_QUEUED_FRAMES: usize = 32;
 
-/// Maximum retries for a control message
-const MAX_CONTROL_MESSAGE_RETRIES: usize = 20;
-/// Maximum time to try and send a control message
-const MAX_CONTROL_MESSAGE_RETRY_TIME: Duration = Duration::from_secs(30);
-
 #[derive(Debug)]
 struct OutputFrame {
+    frame_type: FrameType,
     target: RoutingTarget,
     length: usize,
     bytes: [u8; MAX_FRAME_LENGTH],
@@ -66,7 +66,8 @@ struct OutputFrame {
 impl Default for OutputFrame {
     fn default() -> OutputFrame {
         OutputFrame {
-            target: RoutingTarget { src: 0.into(), dst: RoutingDestination::Control },
+            frame_type: FrameType::Message,
+            target: RoutingTarget { dst: 0.into(), src: 0.into() },
             bytes: [0u8; MAX_FRAME_LENGTH],
             length: 0,
         }
@@ -77,11 +78,9 @@ impl Default for OutputFrame {
 /// control structure around that.
 pub(crate) struct OutputQueue {
     // Links peer - here to assert no loop sends.
-    peer_node_id: Option<NodeId>,
+    peer_node_id: NodeId,
     /// Is the link open?
     open: bool,
-    /// Has this link received an ack ever?
-    received_any_ack: bool,
     /// Control frame emitted sequence number.
     control_sent_seq: u64,
     /// Control frame acked sequence number - we can send when acked == sent.
@@ -92,25 +91,26 @@ pub(crate) struct OutputQueue {
     first_frame: usize,
     /// Number of frames queued.
     num_frames: usize,
-    /// Ping tracker
-    ping_tracker: PingTracker,
 }
 
 impl std::fmt::Debug for OutputQueue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         #[derive(Debug)]
         struct OutputFrameView {
+            frame_type: FrameType,
             target: RoutingTarget,
             length: usize,
         };
         let mut frames = Vec::new();
         for i in self.first_frame..self.first_frame + self.num_frames {
             let frame = &self.frames[i % MAX_QUEUED_FRAMES];
-            frames.push(OutputFrameView { target: frame.target, length: frame.length });
+            frames.push(OutputFrameView {
+                frame_type: frame.frame_type,
+                target: frame.target,
+                length: frame.length,
+            });
         }
         f.debug_struct("OutputQueue")
-            .field("open", &self.open)
-            .field("received_any_ack", &self.received_any_ack)
             .field("control_sent_seq", &self.control_sent_seq)
             .field("control_acked_seq", &self.control_acked_seq)
             .field("frames", &frames)
@@ -120,14 +120,20 @@ impl std::fmt::Debug for OutputQueue {
 
 impl OutputQueue {
     /// Update state machine to note readiness to send.
-    pub fn send<'a>(&'a mut self, target: RoutingTarget) -> Result<PartialSend<'a>, Error> {
+    pub fn send<'a>(
+        &'a mut self,
+        target: RoutingTarget,
+        frame_type: FrameType,
+    ) -> Result<PartialSend<'a>, Error> {
         if !self.open {
             return Err(format_err!("link closed"));
         }
+        assert_ne!(self.peer_node_id, target.src);
         assert!(self.num_frames < MAX_QUEUED_FRAMES);
         let frame = (self.first_frame + self.num_frames) % MAX_QUEUED_FRAMES;
         let output_frame = &mut self.frames[frame];
         output_frame.target = target;
+        output_frame.frame_type = frame_type;
         output_frame.length = 0;
         Ok(PartialSend { output_frame, num_frames: &mut self.num_frames })
     }
@@ -164,29 +170,31 @@ impl<'a> PartialSend<'a> {
     }
 }
 
-/// Cutex predicate to wait until no packet is queued to send and the link has become routable
-/// before acquisition of the cutex.
-struct ReadyToSendMessage;
-impl AcquisitionPredicate<OutputQueue> for ReadyToSendMessage {
+/// Cutex predicate to wait until no packet is queued to send before acquisition of the cutex.
+struct ReadyToSend;
+impl AcquisitionPredicate<OutputQueue> for ReadyToSend {
     fn can_lock(&self, output_queue: &OutputQueue) -> bool {
-        !output_queue.open
-            || (output_queue.num_frames < MAX_QUEUED_FRAMES && output_queue.peer_node_id.is_some())
+        !output_queue.open || output_queue.num_frames < MAX_QUEUED_FRAMES
     }
 
     fn debug(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         fmt.write_str("ready-to-send")
     }
 }
-const READY_TO_SEND_MESSAGE: ReadyToSendMessage = ReadyToSendMessage;
+const READY_TO_SEND: ReadyToSend = ReadyToSend;
 
 /// Cutex predicate to wait until no packet is queued to send AND existing control packets have
 /// been acked before acquisition of the cutex.
 struct ReadyToSendNewControl;
 impl AcquisitionPredicate<OutputQueue> for ReadyToSendNewControl {
     fn can_lock(&self, output_queue: &OutputQueue) -> bool {
-        !output_queue.open
-            || (output_queue.num_frames < MAX_QUEUED_FRAMES
-                && output_queue.control_sent_seq == output_queue.control_acked_seq)
+        if !output_queue.open {
+            return true;
+        }
+        if output_queue.num_frames == MAX_QUEUED_FRAMES {
+            return false;
+        }
+        return output_queue.control_sent_seq == output_queue.control_acked_seq;
     }
 
     fn debug(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -194,19 +202,6 @@ impl AcquisitionPredicate<OutputQueue> for ReadyToSendNewControl {
     }
 }
 const READY_TO_SEND_NEW_CONTROL: ReadyToSendNewControl = ReadyToSendNewControl;
-
-/// Cutex predicate to wait until no packet is queued to send so we can resend a control message.
-struct ReadyToResendControl;
-impl AcquisitionPredicate<OutputQueue> for ReadyToResendControl {
-    fn can_lock(&self, output_queue: &OutputQueue) -> bool {
-        !output_queue.open || output_queue.num_frames < MAX_QUEUED_FRAMES
-    }
-
-    fn debug(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        fmt.write_str("ready-to-resend-control")
-    }
-}
-const READY_TO_RESEND_CONTROL: ReadyToResendControl = ReadyToResendControl;
 
 /// Cutex predicate to wait until a particular control message sequence number is acknowledged.
 struct AckedControlSeq(u64);
@@ -220,26 +215,11 @@ impl AcquisitionPredicate<OutputQueue> for AckedControlSeq {
     }
 }
 
-/// Cutex predicate to wait until a peer node id is known.
-struct HasPeerNodeId;
-impl AcquisitionPredicate<OutputQueue> for HasPeerNodeId {
-    fn can_lock(&self, output_queue: &OutputQueue) -> bool {
-        output_queue.peer_node_id.is_some()
-    }
-
-    fn debug(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        fmt.write_str("has-peer-node-id")
-    }
-}
-const HAS_PEER_NODE_ID: HasPeerNodeId = HasPeerNodeId;
-
 /// A frame that ought to be sent by a link implementation.
 /// Potentially holds an interior lock to the underlying link, so this should be released before
 /// calling into another link.
-#[derive(Debug)]
 pub struct SendFrame<'a>(SendFrameInner<'a>);
 
-#[derive(Debug)]
 enum SendFrameInner<'a> {
     /// Send the frame that's been queued up in the frame output.
     FromFrameOutput(CutexGuard<'a, OutputQueue>, usize),
@@ -263,17 +243,6 @@ impl<'a> SendFrame<'a> {
         }
     }
 
-    pub fn bytes_mut(&mut self) -> &mut [u8] {
-        match &mut self.0 {
-            SendFrameInner::FromFrameOutput(g, frame) => {
-                let frame = &mut g.frames[*frame];
-                &mut frame.bytes[..frame.length]
-            }
-            SendFrameInner::Raw { bytes, length } => &mut bytes[..*length],
-            SendFrameInner::LargeRaw(ref mut bytes) => bytes,
-        }
-    }
-
     pub fn drop_inner_locks(&mut self) {
         if let SendFrameInner::FromFrameOutput(g, frame) = &self.0 {
             let frame = &g.frames[*frame];
@@ -289,41 +258,39 @@ pub type ConfigProducer =
 
 /// Sender for a link
 pub struct LinkSender {
-    output: Arc<LinkOutput>,
-    router: Arc<Router>,
-    force_send_source_node_id: bool,
+    runner: Arc<LinkRunner>,
+    routing: Arc<LinkRouting>,
 }
 
 /// Receiver for a link
 pub struct LinkReceiver {
-    output: Arc<LinkOutput>,
-    router: Arc<Router>,
+    runner: Arc<LinkRunner>,
+    routing: Arc<LinkRouting>,
     forwarding_table: Arc<Mutex<ForwardingTable>>,
-    received_seq: Option<NonZeroU64>,
-    tx_control: mpsc::Sender<LinkControlPayload>,
-    peer_node_id: Option<NodeId>,
+    route_updates: Vec<Route>,
+    received_seq: u64,
 }
 
 pub(crate) fn new_link(
+    peer_node_id: NodeId,
     node_link_id: NodeLinkId,
     router: &Arc<Router>,
     config: ConfigProducer,
-    connecting_link_token: ConnectingLinkToken,
-) -> (LinkSender, LinkReceiver) {
-    let forwarding_table = Arc::new(Mutex::new(ForwardingTable::empty()));
-    let (tx_control, rx_control) = mpsc::channel(0);
-    let first_seq = rand::thread_rng().gen_range(1u64, 0xff00_0000_0000_0000);
-    let output = Arc::new(LinkOutput {
-        queue: Cutex::new(OutputQueue {
-            control_acked_seq: first_seq,
-            control_sent_seq: first_seq,
-            received_any_ack: false,
+) -> (LinkSender, LinkReceiver, Arc<LinkRouting>, Observer<Option<Duration>>) {
+    let (ping_tracker, observer1, observer2) = PingTracker::new();
+    let routing = Arc::new(LinkRouting {
+        own_node_id: router.node_id(),
+        peer_node_id,
+        node_link_id,
+        rtt_observer: Mutex::new(observer2),
+        output: Cutex::new(OutputQueue {
+            peer_node_id,
+            control_acked_seq: 0,
+            control_sent_seq: 0,
             frames: Default::default(),
             first_frame: 0,
             num_frames: 0,
             open: true,
-            peer_node_id: None,
-            ping_tracker: PingTracker::new(),
         }),
         stats: LinkStats {
             packets_forwarded: AtomicU64::new(0),
@@ -333,283 +300,156 @@ pub(crate) fn new_link(
             received_packets: AtomicU64::new(0),
             sent_packets: AtomicU64::new(0),
         },
-        own_node_id: router.node_id(),
-        node_link_id,
-        task: Mutex::new(None),
         config,
     });
-    let run_link = futures::future::try_join(
-        run_link(
-            Arc::downgrade(&router),
-            output.clone(),
-            rx_control,
-            router.new_forwarding_table_observer(),
-            forwarding_table.clone(),
-            connecting_link_token,
-        ),
-        check_ping_timeouts(output.clone()),
-    )
-    .map_ok(drop);
-    *output.task.lock().now_or_never().unwrap() =
-        Some(Task::spawn(log_errors(run_link, format!("link {:?} run_loop failed", node_link_id))));
-    (
-        LinkSender {
-            output: output.clone(),
-            router: router.clone(),
-            force_send_source_node_id: true,
-        },
-        LinkReceiver {
-            output,
-            peer_node_id: None,
-            router: router.clone(),
-            forwarding_table,
-            received_seq: None,
-            tx_control,
-        },
-    )
-}
-
-async fn run_link(
-    router: Weak<Router>,
-    output: Arc<LinkOutput>,
-    mut input: mpsc::Receiver<LinkControlPayload>,
-    forwarding_table: Observer<ForwardingTable>,
-    forwarding_forwarding_table: Arc<Mutex<ForwardingTable>>,
-    connecting_link_token: ConnectingLinkToken,
-) -> Result<(), Error> {
-    let get_router = || -> Result<Arc<Router>, Error> {
-        Weak::upgrade(&router).ok_or(format_err!("router gone"))
-    };
-
-    log::trace!("{:?} perform link handshake", (get_router()?.node_id(), output.debug_id()));
-    let peer_node_id = link_handshake(&output, &mut input).await?;
-    log::trace!(
-        "{:?} link handshake completed: peer_node_id={:?}",
-        (get_router()?.node_id(), output.debug_id()),
-        peer_node_id
+    let forwarding_table = Arc::new(Mutex::new(ForwardingTable::empty()));
+    let run_loop = log_errors(
+        futures::future::try_join(
+            ping_tracker.run(),
+            send_state(
+                routing.clone(),
+                router.new_forwarding_table_observer(),
+                forwarding_table.clone(),
+            ),
+        )
+        .map_ok(drop),
+        format_err!("link {:?} run_loop failed", routing.debug_id()),
     );
-
-    let link_routing = Arc::new(LinkRouting { peer_node_id, output: output.clone() });
-
-    let rtt_observable = Observable::new(None);
-
-    futures::future::try_join4(
-        get_router()?.publish_link(
-            link_routing.clone(),
-            rtt_observable.new_observer(),
-            connecting_link_token,
-        ),
-        publish_rtt(output.clone(), rtt_observable),
-        send_state(output, peer_node_id, forwarding_table, forwarding_forwarding_table),
-        process_control(input, peer_node_id, router),
+    let runner =
+        Arc::new(LinkRunner { ping_tracker, router: router.clone(), _task: Task::spawn(run_loop) });
+    (
+        LinkSender { routing: routing.clone(), runner: runner.clone() },
+        LinkReceiver {
+            routing: routing.clone(),
+            runner,
+            forwarding_table,
+            route_updates: Vec::new(),
+            received_seq: 0,
+        },
+        routing,
+        observer1,
     )
-    .await
-    .map(drop)
-}
-
-async fn check_ping_timeouts(output: Arc<LinkOutput>) -> Result<(), Error> {
-    loop {
-        let mut timeout = output
-            .queue
-            .lock_when(|output_queue: &OutputQueue| {
-                output_queue.ping_tracker.next_timeout().is_some()
-            })
-            .await
-            .ping_tracker
-            .next_timeout()
-            .unwrap();
-        let timeout_expired = loop {
-            let timeout_changed = output.queue.lock_when(move |output_queue: &OutputQueue| {
-                output_queue.ping_tracker.next_timeout() != Some(timeout)
-            });
-            pin_mut!(timeout_changed);
-            match futures::future::select(&mut timeout_changed, Timer::new(timeout)).await {
-                Either::Left((output_queue, _)) => {
-                    if let Some(new_timeout) = output_queue.ping_tracker.next_timeout() {
-                        timeout = new_timeout;
-                    } else {
-                        // Wait until there's an actual timeout again.
-                        break false;
-                    }
-                }
-                Either::Right(_) => break true,
-            }
-        };
-        if timeout_expired {
-            output.queue.lock().await.ping_tracker.on_timeout();
-        }
-    }
-}
-
-async fn publish_rtt(
-    output: Arc<LinkOutput>,
-    rtt_observable: Observable<Option<Duration>>,
-) -> Result<(), Error> {
-    let mut last_rtt = None;
-    loop {
-        let rtt = output
-            .queue
-            .lock_when(|output_queue: &OutputQueue| {
-                output_queue.ping_tracker.round_trip_time() != last_rtt
-            })
-            .await
-            .ping_tracker
-            .round_trip_time();
-        rtt_observable.push(rtt).await;
-        last_rtt = rtt;
-    }
-}
-
-async fn link_handshake(
-    output: &Arc<LinkOutput>,
-    input: &mut mpsc::Receiver<LinkControlPayload>,
-) -> Result<NodeId, Error> {
-    futures::future::try_join3(
-        async move {
-            output
-                .send_control_message(LinkControlPayload::Introduction(LinkIntroduction {
-                    ..LinkIntroduction::EMPTY
-                }))
-                .await?;
-            Ok(())
-        },
-        async move {
-            match input.next().await {
-                None => bail!("No introduction received"),
-                Some(LinkControlPayload::Introduction { .. }) => (),
-                Some(x) => bail!("Bad initial payload; expected introduction, got {:?}", x),
-            }
-            Ok(())
-        },
-        async move {
-            let peer_node_id = output
-                .queue
-                .lock_when_pinned(Pin::new(&HAS_PEER_NODE_ID))
-                .await
-                .peer_node_id
-                .unwrap();
-            Ok(peer_node_id)
-        },
-    )
-    .await
-    .map(|((), (), id)| id)
-}
-
-/// Process control messages and react to them
-async fn process_control(
-    mut input: mpsc::Receiver<LinkControlPayload>,
-    peer_node_id: NodeId,
-    router: Weak<Router>,
-) -> Result<(), Error> {
-    let get_router = || -> Result<Arc<Router>, Error> {
-        Weak::upgrade(&router).ok_or(format_err!("router gone"))
-    };
-
-    let mut route_updates = Vec::new();
-    loop {
-        let payload = input.next().await.ok_or(format_err!("control message channel closed"))?;
-        log::trace!("got control payload from {:?}: {:?}", peer_node_id, payload);
-        match payload {
-            LinkControlPayload::Introduction { .. } => bail!("Received second introduction"),
-            LinkControlPayload::SetRoute(SetRoute { routes, is_end }) => {
-                route_updates.extend_from_slice(&*routes);
-                if is_end {
-                    get_router()?
-                        .update_routes(
-                            peer_node_id,
-                            std::mem::take(&mut route_updates).into_iter().map(
-                                |Route { destination, route_metrics }| {
-                                    (destination.into(), route_metrics)
-                                },
-                            ),
-                        )
-                        .await
-                }
-            }
-        }
-    }
 }
 
 /// Background task that watches for forwarding table updates from the router and sends them
 /// to this links peer.
 async fn send_state(
-    output: Arc<LinkOutput>,
-    peer_node_id: NodeId,
+    routing: Arc<LinkRouting>,
     mut forwarding_table: Observer<ForwardingTable>,
     forwarding_forwarding_table: Arc<Mutex<ForwardingTable>>,
 ) -> Result<(), Error> {
     let mut last_emitted = ForwardingTable::empty();
-    loop {
-        log::trace!("{:?} await forwarding_table", output.debug_id());
-        let forwarding_table = forwarding_table
-            .next()
-            .await
-            .ok_or(format_err!("forwarding tables no longer being produced"))?;
-        log::trace!(
-            "{:?} got forwarding_table: {:?}; peer_node_id={:?}",
-            output.debug_id(),
-            forwarding_table,
-            peer_node_id
-        );
+    while let Some(forwarding_table) = forwarding_table.next().await {
         *forwarding_forwarding_table.lock().await = forwarding_table.clone();
         // Remove any routes that would cause a loop to form.
-        let forwarding_table = forwarding_table.filter_out_via(peer_node_id);
+        let forwarding_table = forwarding_table.filter_out_via(routing.peer_node_id);
         // Only send an update if the delta is 'significant' -- either routes have changed,
         // or metrics have changed so significantly that downstream routes are likely to need
         // to be updated (this is a heuristic).
         if forwarding_table.is_significantly_different_to(&last_emitted) {
             log::trace!(
                 "[{:?}] Send new forwarding table: {:?}",
-                output.debug_id(),
+                routing.debug_id(),
                 forwarding_table
             );
             let empty_output = || SetRoute { is_end: false, routes: Vec::new() };
-            let mut set_route = empty_output();
+            let mut output = empty_output();
             for (destination, metrics) in forwarding_table.iter() {
-                set_route
+                output
                     .routes
                     .push(Route { destination: destination.into(), route_metrics: metrics.into() });
-                if encode_fidl(&mut set_route)?.len() > MAX_SET_ROUTE_LENGTH {
-                    let route = set_route.routes.pop().unwrap();
-                    output
+                if encode_fidl(&mut output)?.len() > MAX_SET_ROUTE_LENGTH {
+                    let route = output.routes.pop().unwrap();
+                    routing
                         .send_control_message(LinkControlPayload::SetRoute(std::mem::replace(
-                            &mut set_route,
+                            &mut output,
                             empty_output(),
                         )))
                         .await?;
-                    set_route.routes.push(route);
-                    assert!(encode_fidl(&mut set_route)?.len() <= MAX_SET_ROUTE_LENGTH);
+                    output.routes.push(route);
+                    assert!(encode_fidl(&mut output)?.len() <= MAX_SET_ROUTE_LENGTH);
                 }
             }
-            set_route.is_end = true;
-            output.send_control_message(LinkControlPayload::SetRoute(set_route)).await?;
+            output.is_end = true;
+            routing.send_control_message(LinkControlPayload::SetRoute(output)).await?;
             last_emitted = forwarding_table;
         }
     }
+    Ok(())
 }
 
-/// IO for a link
-struct LinkOutput {
-    queue: Cutex<OutputQueue>,
-    task: Mutex<Option<Task<()>>>,
-    stats: LinkStats,
+/// Routing data gor a link
+pub(crate) struct LinkRouting {
     own_node_id: NodeId,
+    peer_node_id: NodeId,
     node_link_id: NodeLinkId,
+    output: Cutex<OutputQueue>,
+    stats: LinkStats,
+    rtt_observer: Mutex<Observer<Option<Duration>>>,
     config: ConfigProducer,
 }
 
-impl LinkOutput {
-    fn debug_id(&self) -> impl std::fmt::Debug {
+impl std::fmt::Debug for LinkRouting {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "LINK({:?}:{:?}->{:?})", self.node_link_id, self.own_node_id, self.peer_node_id)
+    }
+}
+
+impl LinkRouting {
+    pub(crate) fn id(&self) -> NodeLinkId {
         self.node_link_id
     }
 
+    pub(crate) fn own_node_id(&self) -> NodeId {
+        self.own_node_id
+    }
+
+    pub(crate) fn debug_id(&self) -> impl std::fmt::Debug {
+        (self.node_link_id, self.own_node_id, self.peer_node_id)
+    }
+
+    /// Construct a routing target to send to this links peer from this link.
+    pub(crate) fn peer_target(&self) -> RoutingTarget {
+        RoutingTarget { dst: self.peer_node_id, src: self.own_node_id }
+    }
+
+    pub(crate) async fn diagnostic_info(&self) -> LinkDiagnosticInfo {
+        let stats = &self.stats;
+        LinkDiagnosticInfo {
+            source: Some(self.own_node_id.into()),
+            destination: Some(self.peer_node_id.into()),
+            source_local_id: Some(self.node_link_id.0),
+            sent_packets: Some(stats.sent_packets.load(Ordering::Relaxed)),
+            received_packets: Some(stats.received_packets.load(Ordering::Relaxed)),
+            sent_bytes: Some(stats.sent_bytes.load(Ordering::Relaxed)),
+            received_bytes: Some(stats.received_bytes.load(Ordering::Relaxed)),
+            pings_sent: Some(stats.pings_sent.load(Ordering::Relaxed)),
+            packets_forwarded: Some(stats.packets_forwarded.load(Ordering::Relaxed)),
+            round_trip_time_microseconds: self
+                .rtt_observer
+                .lock()
+                .await
+                .peek()
+                .await
+                .flatten()
+                .map(|d| d.as_micros().try_into().unwrap_or(std::u64::MAX)),
+            config: (self.config)(),
+            ..LinkDiagnosticInfo::EMPTY
+        }
+    }
+
+    /// Produce a ticket to acquire a cutex once it becomes sendable.
+    pub(crate) fn new_send_ticket<'a>(&'a self) -> CutexTicket<'a, 'static, OutputQueue> {
+        CutexTicket::new_when_pinned(&self.output, Pin::new(&READY_TO_SEND))
+    }
+
     pub(crate) async fn is_closed(&self) -> bool {
-        !self.queue.lock().await.open
+        !self.output.lock().await.open
     }
 
     async fn close(&self) {
-        self.queue.lock().await.open = false;
-        *self.task.lock().await = None;
+        log::trace!("CLOSE LINK: {:?}", self.debug_id());
+        self.output.lock().await.open = false;
     }
 
     fn close_in_background(self: Arc<Self>) {
@@ -619,163 +459,106 @@ impl LinkOutput {
     /// Send a control message to our peer with some payload.
     /// Implements periodic resends until an ack is received.
     async fn send_control_message(&self, payload: LinkControlPayload) -> Result<(), Error> {
-        let mut output = self.queue.lock_when_pinned(Pin::new(&READY_TO_SEND_NEW_CONTROL)).await;
+        let mut output = self.output.lock_when_pinned(Pin::new(&READY_TO_SEND_NEW_CONTROL)).await;
         let seq = output.control_sent_seq + 1;
         let mut frame = LinkControlFrame::Message(LinkControlMessage { seq, payload });
         let message = encode_fidl(&mut frame)?;
-        output
-            .send(RoutingTarget { src: self.own_node_id, dst: RoutingDestination::Control })?
-            .commit_copy(&message)?;
+        log::trace!("[{:?}] send control frame {:?}", self.debug_id(), frame);
+        output.send(self.peer_target(), FrameType::Control)?.commit_copy(&message)?;
         output.control_sent_seq = seq;
-        const DEFAULT_RTT: Duration = Duration::from_secs(1);
-        let mut rtt = output.ping_tracker.round_trip_time().unwrap_or(DEFAULT_RTT);
         drop(output);
 
-        // Resend periodically until acked or we convince ourselves it's never going to happen.
-        async move {
-            let mut retries = 0;
-            let done_predicate = AckedControlSeq(seq);
-            pin_mut!(done_predicate);
-            loop {
-                match futures::future::select(
-                    self.queue.lock_when_pinned(done_predicate.as_ref()),
-                    Timer::new(8 * rtt),
-                )
+        // Resend periodically until acked.
+        let done_predicate = AckedControlSeq(seq);
+        pin_mut!(done_predicate);
+        loop {
+            let rtt = self
+                .rtt_observer
+                .lock()
                 .await
-                {
-                    Either::Left(_) => {
-                        return Ok(());
+                .peek()
+                .await
+                .flatten()
+                .unwrap_or(Duration::from_secs(1));
+            match futures::future::select(
+                self.output.lock_when_pinned(done_predicate.as_ref()),
+                Timer::new(8 * rtt),
+            )
+            .await
+            {
+                Either::Left(_) => break,
+                Either::Right((_, lock)) => {
+                    drop(lock);
+                    let mut output = self.output.lock_when_pinned(Pin::new(&READY_TO_SEND)).await;
+                    if output.control_acked_seq >= seq {
+                        break;
                     }
-                    Either::Right((_, lock)) => {
-                        drop(lock);
-                        retries += 1;
-                        if retries > MAX_CONTROL_MESSAGE_RETRIES {
-                            return Err(format_err!("Too many retries sending control message"));
-                        }
-                        let mut output =
-                            self.queue.lock_when_pinned(Pin::new(&READY_TO_RESEND_CONTROL)).await;
-                        if output.control_acked_seq >= seq {
-                            return Ok(());
-                        }
-                        output
-                            .send(RoutingTarget {
-                                src: self.own_node_id,
-                                dst: RoutingDestination::Control,
-                            })?
-                            .commit_copy(&message)?;
-                        rtt = output.ping_tracker.round_trip_time().unwrap_or(DEFAULT_RTT);
-                    }
+                    log::trace!(
+                        "[{:?}] re-send control frame {:?} [rtt={:?}]",
+                        self.debug_id(),
+                        frame,
+                        rtt
+                    );
+                    output.send(self.peer_target(), FrameType::Control)?.commit_copy(&message)?;
                 }
             }
         }
-        .on_timeout(MAX_CONTROL_MESSAGE_RETRY_TIME, || {
-            Err(format_err!("Timeout sending control message"))
-        })
-        .await
-    }
-}
 
-/// Routing data for a link
-pub(crate) struct LinkRouting {
-    peer_node_id: NodeId,
-    output: Arc<LinkOutput>,
-}
-
-impl std::fmt::Debug for LinkRouting {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "LINK({:?}:{:?}->{:?})", self.id(), self.own_node_id(), self.peer_node_id())
-    }
-}
-
-impl LinkRouting {
-    pub(crate) fn id(&self) -> NodeLinkId {
-        self.output.node_link_id
-    }
-
-    pub(crate) fn own_node_id(&self) -> NodeId {
-        self.output.own_node_id
-    }
-
-    pub(crate) fn peer_node_id(&self) -> NodeId {
-        self.peer_node_id
-    }
-
-    pub(crate) fn debug_id(&self) -> impl std::fmt::Debug {
-        (self.id(), self.own_node_id(), self.peer_node_id())
-    }
-
-    pub(crate) async fn is_closed(&self) -> bool {
-        self.output.is_closed().await
-    }
-
-    pub(crate) async fn diagnostic_info(&self) -> LinkDiagnosticInfo {
-        let stats = &self.output.stats;
-        LinkDiagnosticInfo {
-            source: Some(self.own_node_id().into()),
-            destination: Some(self.peer_node_id().into()),
-            source_local_id: Some(self.id().0),
-            sent_packets: Some(stats.sent_packets.load(Ordering::Relaxed)),
-            received_packets: Some(stats.received_packets.load(Ordering::Relaxed)),
-            sent_bytes: Some(stats.sent_bytes.load(Ordering::Relaxed)),
-            received_bytes: Some(stats.received_bytes.load(Ordering::Relaxed)),
-            pings_sent: Some(stats.pings_sent.load(Ordering::Relaxed)),
-            packets_forwarded: Some(stats.packets_forwarded.load(Ordering::Relaxed)),
-            round_trip_time_microseconds: self
-                .output
-                .queue
-                .lock()
-                .await
-                .ping_tracker
-                .round_trip_time()
-                .map(|d| d.as_micros().try_into().unwrap_or(std::u64::MAX)),
-            config: (self.output.config)(),
-            ..LinkDiagnosticInfo::EMPTY
-        }
-    }
-
-    /// Produce a ticket to acquire a cutex once it becomes sendable for a message.
-    pub(crate) fn new_message_send_ticket<'a>(&'a self) -> CutexTicket<'a, 'static, OutputQueue> {
-        CutexTicket::new_when_pinned(&self.output.queue, Pin::new(&READY_TO_SEND_MESSAGE))
+        Ok(())
     }
 }
 
 impl Drop for LinkReceiver {
     fn drop(&mut self) {
-        self.output.clone().close_in_background()
+        self.routing.clone().close_in_background()
     }
 }
 
 impl LinkReceiver {
     /// Returns some moniker identifying the underlying link, for use in debugging.
     pub fn debug_id(&self) -> impl std::fmt::Debug {
-        self.output.node_link_id
+        self.routing.debug_id()
     }
 
     /// Remove the label from a frame.
     async fn remove_label<'a>(
         &mut self,
         frame: &'a mut [u8],
-    ) -> Result<Option<(LinkFrameLabel, &'a mut [u8])>, RecvError> {
-        let output = &*self.output;
-        let stats = &output.stats;
+    ) -> Result<Option<(LinkFrameLabel, &'a mut [u8])>, Error> {
+        let runner = &*self.runner;
+        let routing = &*self.routing;
 
-        stats.received_packets.fetch_add(1, Ordering::Relaxed);
-        stats.received_bytes.fetch_add(frame.len() as u64, Ordering::Relaxed);
+        routing.stats.received_packets.fetch_add(1, Ordering::Relaxed);
+        routing.stats.received_bytes.fetch_add(frame.len() as u64, Ordering::Relaxed);
         if frame.len() < 1 {
-            return Err(RecvError::Warning(format_err!("Received empty frame")));
+            bail!("Received empty frame");
         }
         let (routing_label, frame_length) =
-            LinkFrameLabel::decode(self.peer_node_id, output.own_node_id, frame)
-                .with_context(|| format_err!("Decoding routing label"))
-                .map_err(RecvError::Fatal)?;
+            LinkFrameLabel::decode(routing.peer_node_id, routing.own_node_id, frame).with_context(
+                || {
+                    format_err!(
+                        "Decoding routing label because {:?} received frame from {:?}",
+                        routing.own_node_id,
+                        routing.peer_node_id,
+                    )
+                },
+            )?;
         let frame = &mut frame[..frame_length];
-        if routing_label.ping.is_some() || routing_label.pong.is_some() {
-            output
-                .queue
-                .lock()
-                .await
-                .ping_tracker
-                .on_received_frame(routing_label.ping, routing_label.pong);
+        if routing_label.target.src == routing.own_node_id {
+            // Got a frame that was sourced here: break the infinite loop by definitely not
+            // processing it.
+            bail!(
+                "[{:?}] Received looped frame; routing_label={:?} frame_length={}",
+                routing.debug_id(),
+                routing_label,
+                frame_length
+            );
+        }
+        if let Some(ping) = routing_label.ping {
+            runner.ping_tracker.got_ping(ping).await;
+        }
+        if let Some(pong) = routing_label.pong {
+            runner.ping_tracker.got_pong(pong).await;
         }
         if frame.len() == 0 {
             // Packet was just control bits
@@ -785,108 +568,122 @@ impl LinkReceiver {
         Ok(Some((routing_label, frame)))
     }
 
-    async fn handle_control(&mut self, src: NodeId, frame: &mut [u8]) -> Result<(), RecvError> {
-        let output = &self.output;
+    async fn handle_control(
+        &mut self,
+        routing_label: LinkFrameLabel,
+        frame: &mut [u8],
+    ) -> Result<(), Error> {
+        let runner = &*self.runner;
+        let routing = &*self.routing;
 
-        if let Some(last_seen_src) = self.peer_node_id {
-            if last_seen_src != src {
-                return Err(RecvError::Fatal(format_err!(
-                    "[{:?}] link source address changed from {:?} to {:?}",
-                    self.debug_id(),
-                    last_seen_src,
-                    src
-                )));
-            }
-        } else {
-            self.peer_node_id = Some(src);
-            output.queue.lock().await.peer_node_id = Some(src);
+        if routing_label.target.dst != routing.own_node_id
+            || routing_label.target.src != routing.peer_node_id
+        {
+            bail!(
+                "[{:?}] Received routed control frame; routing_label={:?}",
+                routing.debug_id(),
+                routing_label
+            );
         }
-
         let frame = decode_fidl(frame)?;
+        log::trace!("[{:?}] Received control frame {:?}", routing.debug_id(), frame);
         match frame {
             LinkControlFrame::Ack(seq) => {
-                let mut frame_output = output.queue.lock().await;
+                let mut frame_output = self.routing.output.lock().await;
                 if seq == frame_output.control_sent_seq {
-                    frame_output.received_any_ack = true;
                     frame_output.control_acked_seq = seq;
                 }
             }
-            LinkControlFrame::Message(LinkControlMessage { seq: 0, .. }) => {
-                return Err(RecvError::Fatal(format_err!(
-                    "[{:?}] Saw a control message with seq 0",
-                    self.debug_id()
-                )));
-            }
             LinkControlFrame::Message(LinkControlMessage { seq, payload }) => {
-                if let Some(received_seq) = self.received_seq {
-                    let received_seq = received_seq.into();
-                    if seq == received_seq {
-                        // Ignore but fall through to ack code below.
-                    } else if seq == received_seq + 1 {
-                        self.tx_control.send(payload).await.map_err(|_| {
-                            format_err!("failed queueing control message for processing")
-                        })?;
-                    } else if seq > received_seq {
-                        return Err(RecvError::Fatal(format_err!(
-                            "[{:?}] saw future message seq={} but we are at {}",
-                            self.debug_id(),
-                            seq,
-                            received_seq
-                        )));
-                    } else if seq >= received_seq - 2 {
-                        return Err(RecvError::Fatal(format_err!(
-                            "[{:?}] saw ancient message seq={} but we are at {}",
-                            self.debug_id(),
-                            seq,
-                            received_seq
-                        )));
-                    } else {
-                        return Err(RecvError::Warning(format_err!(
-                            "[{:?}] saw old message seq={} but we are at {}",
-                            self.debug_id(),
-                            seq,
-                            received_seq
-                        )));
+                if seq == self.received_seq {
+                    // Ignore but fall through to ack code below.
+                } else if seq == self.received_seq + 1 {
+                    match payload {
+                        LinkControlPayload::SetRoute(SetRoute { routes, is_end }) => {
+                            self.route_updates.extend_from_slice(&*routes);
+                            if is_end {
+                                runner
+                                    .router
+                                    .update_routes(
+                                        routing.peer_node_id,
+                                        std::mem::take(&mut self.route_updates).into_iter().map(
+                                            |Route { destination, route_metrics }| {
+                                                (destination.into(), route_metrics)
+                                            },
+                                        ),
+                                    )
+                                    .await
+                            }
+                        }
                     }
+                } else if seq > self.received_seq {
+                    bail!(
+                        "[{:?}] saw future message seq={} but we are at {}",
+                        routing.debug_id(),
+                        seq,
+                        self.received_seq
+                    );
                 } else {
-                    self.tx_control.send(payload).await.map_err(|_| {
-                        format_err!("failed queueing control message for processing")
-                    })?;
+                    bail!(
+                        "[{:?}] saw ancient message seq={} but we are at {}",
+                        routing.debug_id(),
+                        seq,
+                        self.received_seq
+                    );
                 }
-                self.received_seq = Some(seq.try_into().unwrap());
+                self.received_seq = seq;
                 let ack = encode_fidl(&mut LinkControlFrame::Ack(seq))?;
-                output
-                    .queue
-                    .lock_when_pinned(Pin::new(&READY_TO_RESEND_CONTROL))
+                self.routing
+                    .output
+                    .lock_when_pinned(Pin::new(&READY_TO_SEND))
                     .await
-                    .send(RoutingTarget {
-                        src: output.own_node_id,
-                        dst: RoutingDestination::Control,
-                    })?
+                    .send(routing.peer_target(), FrameType::Control)?
                     .commit_copy(&ack)?;
             }
         }
         Ok(())
     }
 
-    async fn handle_message(&mut self, src: NodeId, frame: &mut [u8]) -> Result<(), Error> {
+    async fn handle_message(
+        &mut self,
+        routing_label: LinkFrameLabel,
+        frame: &mut [u8],
+    ) -> Result<(), Error> {
+        let runner = &*self.runner;
+        let routing = &*self.routing;
+
         let hdr =
             quiche::Header::from_slice(frame, quiche::MAX_CONN_ID_LEN).with_context(|| {
-                format!("Decoding quic header; link={:?}; src={:?}", self.debug_id(), src)
+                format!(
+                    "Decoding quic header; link={:?}; routing_label={:?}",
+                    routing.debug_id(),
+                    routing_label
+                )
             })?;
-        let peer =
-            self.router.lookup_peer(&hdr.dcid, hdr.ty, src).await.with_context(|| {
-                format!("link={:?}; src={:?}; hdr={:?}", self.debug_id(), src, hdr)
+        let peer = runner
+            .router
+            .lookup_peer(&hdr.dcid, hdr.ty, routing_label.target.src)
+            .await
+            .with_context(|| {
+                format!(
+                    "link={:?}; routing_label={:?}; hdr={:?}",
+                    routing.debug_id(),
+                    routing_label,
+                    hdr
+                )
             })?;
         peer.receive_frame(frame).await.with_context(|| {
             format!(
                 concat!(
                     "Receiving frame on quic connection;",
                     " peer node={:?} endpoint={:?};",
+                    " link node={:?} peer={:?};",
                     " hdr={:?}"
                 ),
                 peer.node_id(),
                 peer.endpoint(),
+                routing.own_node_id,
+                routing.peer_node_id,
                 hdr,
             )
         })?;
@@ -895,179 +692,137 @@ impl LinkReceiver {
 
     async fn forward_message(
         &mut self,
-        src: NodeId,
-        dst: NodeId,
+        routing_label: LinkFrameLabel,
         frame: &mut [u8],
     ) -> Result<(), Error> {
-        if let Some(via) = self.forwarding_table.lock().await.route_for(dst) {
-            log::trace!("[{:?}] fwd {:?} -> {:?} via {:?}", self.debug_id(), src, dst, via);
-            if let Some(via) = self.router.get_link(via).await {
-                if via.output.node_link_id == self.output.node_link_id || via.peer_node_id == src {
+        let runner = &*self.runner;
+        let routing = &*self.routing;
+
+        if let Some(via) = self.forwarding_table.lock().await.route_for(routing_label.target.dst) {
+            log::trace!("[{:?}] fwd {:?} via {:?}", self.debug_id(), routing_label, via);
+            if let Some(via) = runner.router.get_link(via).await {
+                if via.node_link_id == routing.node_link_id
+                    || via.peer_node_id == routing_label.target.src
+                {
                     // This is a looped frame - signal to the sender to avoid this and drop it
                     log::trace!("[{:?}] Dropping frame due to routing loop", self.debug_id());
                     return Ok(());
                 }
                 via.output
-                    .queue
-                    .lock_when_pinned(Pin::new(&READY_TO_SEND_MESSAGE))
+                    .lock_when_pinned(Pin::new(&READY_TO_SEND))
                     .await
-                    .send(RoutingTarget { src, dst: RoutingDestination::Message(dst) })?
+                    .send(routing_label.target, FrameType::Message)?
                     .commit_copy(frame)?;
             } else {
                 log::trace!("[{:?}] Dropping frame because no via", self.debug_id());
             }
         } else {
-            log::trace!("Drop forwarded packet {:?} -> {:?} - no route to dest", src, dst);
-        }
-        Ok(())
-    }
-
-    async fn received_frame_inner(&mut self, frame: &mut [u8]) -> Result<(), RecvError> {
-        if let Some((routing_label, frame)) = self.remove_label(frame).await? {
-            let src = routing_label.target.src;
-            match routing_label.target.dst {
-                RoutingDestination::Control => self.handle_control(src, frame).await?,
-                RoutingDestination::Message(dst) => {
-                    let own_node_id = self.output.own_node_id;
-                    if src == own_node_id {
-                        // Got a frame that was sourced here: break the infinite loop by definitely not
-                        // processing it.
-                        return Err(RecvError::Warning(format_err!(
-                            "[{:?}] Received looped frame; routing_label={:?}",
-                            self.debug_id(),
-                            routing_label
-                        )));
-                    }
-                    if dst == own_node_id {
-                        self.handle_message(src, frame).await?;
-                    } else {
-                        self.forward_message(src, dst, frame).await?;
-                    }
-                }
-            };
+            log::trace!("Drop forwarded packet {:?} - no route to dest", routing_label);
         }
         Ok(())
     }
 
     /// Report a frame was received.
-    pub async fn received_frame(&mut self, frame: &mut [u8]) {
-        match self.received_frame_inner(frame).await {
-            Ok(()) => (),
-            Err(RecvError::Warning(err)) => {
-                log::info!("[{:?}] Recoverable error receiving frame: {:?}", self.debug_id(), err)
-            }
-            Err(RecvError::Fatal(err)) => {
-                log::warn!("[{:?}] Link-fatal error receiving frame: {:?}", self.debug_id(), err);
-                self.output.close().await;
-            }
+    /// An error processing a frame does not indicate that the link should be closed.
+    /// TODO: rename to received_frame for consistency.
+    pub async fn received_packet(&mut self, frame: &mut [u8]) -> Result<(), Error> {
+        if let Some((routing_label, frame)) = self.remove_label(frame).await? {
+            return match (
+                routing_label.frame_type,
+                routing_label.target.dst == self.routing.own_node_id,
+            ) {
+                (FrameType::Control, _) => self.handle_control(routing_label, frame).await,
+                (FrameType::Message, true) => self.handle_message(routing_label, frame).await,
+                (FrameType::Message, false) => self.forward_message(routing_label, frame).await,
+            };
         }
-    }
-
-    /// Report the peer's node id if it is known, or None if it is not yet.
-    pub fn peer_node_id(&self) -> Option<NodeId> {
-        self.peer_node_id
-    }
-}
-
-enum RecvError {
-    Warning(Error),
-    Fatal(Error),
-}
-
-impl From<Error> for RecvError {
-    fn from(err: Error) -> Self {
-        Self::Warning(err)
+        Ok(())
     }
 }
 
 impl Drop for LinkSender {
     fn drop(&mut self) {
-        self.output.clone().close_in_background()
+        self.routing.clone().close_in_background()
     }
 }
 
 impl LinkSender {
-    /// Returns a reference to the router
-    pub fn router(&self) -> &Router {
-        &*self.router
+    pub(crate) fn router(&self) -> &Arc<Router> {
+        &self.runner.router
     }
 
     /// Returns some moniker identifying the underlying link, for use in debugging.
     pub fn debug_id(&self) -> impl std::fmt::Debug {
-        self.output.node_link_id
+        self.routing.debug_id()
     }
 
     /// Retrieve the next frame that should be sent via this link.
     /// Returns: Some(p) to send a packet `p`
     ///          None to indicate link closure
-    pub async fn next_send(&mut self) -> Option<SendFrame<'_>> {
-        let output = &self.output;
-        let stats = &output.stats;
-        let mut output_queue = output
-            .queue
-            .lock_when(|output_queue: &OutputQueue| {
-                !output_queue.open
-                    || output_queue.num_frames > 0
-                    || output_queue.ping_tracker.needs_send()
-            })
-            .await;
-        let (ping, pong) = output_queue.ping_tracker.pull_send();
-        if !output_queue.open {
-            None
-        } else if output_queue.num_frames > 0 {
-            if ping.is_some() {
-                stats.pings_sent.fetch_add(1, Ordering::Relaxed);
+    pub async fn next_send(&self) -> Option<SendFrame<'_>> {
+        let runner = &self.runner;
+        let routing = &self.routing;
+        let lock_send = self.routing.output.lock_when(|output_queue: &OutputQueue| {
+            !output_queue.open || output_queue.num_frames > 0
+        });
+        let ping_pong = PingSender::new(&runner.ping_tracker);
+        let (output_queue, ping_pong) = SelectThenNowOrNever::new(lock_send, ping_pong).await;
+        let (ping, pong) = match ping_pong {
+            None => (None, None),
+            Some((ping, pong)) => (ping, pong),
+        };
+        if ping.is_some() {
+            routing.stats.pings_sent.fetch_add(1, Ordering::Relaxed);
+        }
+        if let Some(mut output_queue) = output_queue {
+            if !output_queue.open {
+                None
+            } else {
+                assert_ne!(output_queue.num_frames, 0);
+                let frame_index = output_queue.first_frame;
+                let frame = &mut output_queue.frames[frame_index];
+                let target = frame.target;
+                let frame_type = frame.frame_type;
+                assert_ne!(target.src, routing.peer_node_id);
+                let label = LinkFrameLabel {
+                    target,
+                    ping,
+                    pong,
+                    frame_type,
+                    debug_token: LinkFrameLabel::new_debug_token(),
+                };
+                let original_length = frame.length;
+                let n_tail = label
+                    .encode_for_link(
+                        routing.own_node_id,
+                        routing.peer_node_id,
+                        &mut frame.bytes[original_length..],
+                    )
+                    .expect("encode_for_link should always succeed");
+                frame.length += n_tail;
+                routing.stats.sent_packets.fetch_add(1, Ordering::Relaxed);
+                routing.stats.sent_bytes.fetch_add(frame.length as u64, Ordering::Relaxed);
+                output_queue.first_frame = (output_queue.first_frame + 1) % MAX_QUEUED_FRAMES;
+                output_queue.num_frames -= 1;
+                // SendFrame continues to hold the OutputQueue cutex.
+                Some(SendFrame(SendFrameInner::FromFrameOutput(output_queue, frame_index)))
             }
-            let peer_node_id = output_queue.peer_node_id;
-            self.force_send_source_node_id = !output_queue.received_any_ack;
-            let frame_index = output_queue.first_frame;
-            let frame = &mut output_queue.frames[frame_index];
-            let target = frame.target;
-            let label = LinkFrameLabel {
-                target,
-                ping,
-                pong,
-                debug_token: LinkFrameLabel::new_debug_token(),
-            };
-            let original_length = frame.length;
-            let n_tail = label
-                .encode_for_link(
-                    output.own_node_id,
-                    self.force_send_source_node_id,
-                    peer_node_id,
-                    &mut frame.bytes[original_length..],
-                )
-                .expect("encode_for_link should always succeed");
-            frame.length += n_tail;
-            stats.sent_packets.fetch_add(1, Ordering::Relaxed);
-            stats.sent_bytes.fetch_add(frame.length as u64, Ordering::Relaxed);
-            output_queue.first_frame = (output_queue.first_frame + 1) % MAX_QUEUED_FRAMES;
-            output_queue.num_frames -= 1;
-            // SendFrame continues to hold the OutputQueue cutex.
-            Some(SendFrame(SendFrameInner::FromFrameOutput(output_queue, frame_index)))
         } else {
             assert!(ping.is_some() || pong.is_some());
-            if ping.is_some() {
-                stats.pings_sent.fetch_add(1, Ordering::Relaxed);
-            }
             let label = LinkFrameLabel {
-                target: RoutingTarget { src: output.own_node_id, dst: RoutingDestination::Control },
+                target: RoutingTarget { src: routing.own_node_id, dst: routing.peer_node_id },
                 ping,
                 pong,
+                frame_type: FrameType::Message,
                 debug_token: LinkFrameLabel::new_debug_token(),
             };
-            log::trace!("link {:?} deliver {:?}", self.debug_id(), label);
+            log::trace!("link {:?} deliver {:?}", routing.debug_id(), label);
             let mut bytes = [0u8; LINK_FRAME_LABEL_MAX_SIZE];
             let length = label
-                .encode_for_link(
-                    output.own_node_id,
-                    self.force_send_source_node_id,
-                    None,
-                    &mut bytes[..],
-                )
+                .encode_for_link(routing.own_node_id, routing.peer_node_id, &mut bytes[..])
                 .expect("encode_for_link should always succeed");
-            stats.sent_packets.fetch_add(1, Ordering::Relaxed);
-            stats.sent_bytes.fetch_add(length as u64, Ordering::Relaxed);
+            routing.stats.sent_packets.fetch_add(1, Ordering::Relaxed);
+            routing.stats.sent_bytes.fetch_add(length as u64, Ordering::Relaxed);
             Some(SendFrame(SendFrameInner::Raw { bytes, length }))
         }
     }

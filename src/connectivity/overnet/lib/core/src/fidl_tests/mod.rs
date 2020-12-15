@@ -55,17 +55,31 @@ struct Fixture {
     _service_task: Task<()>,
 }
 
-async fn forward(mut sender: LinkSender, mut receiver: LinkReceiver) -> Result<(), Error> {
-    while let Some(mut packet) = sender.next_send().await {
-        packet.drop_inner_locks();
-        receiver.received_frame(packet.bytes_mut()).await;
-    }
-    Ok(())
+async fn forward(sender: LinkSender, mut receiver: LinkReceiver) -> Result<(), Error> {
+    let (mut tx, mut rx) = futures::channel::mpsc::channel(16);
+    futures::future::try_join(
+        async move {
+            while let Some(packet) = sender.next_send().await {
+                tx.send(packet.bytes().to_vec()).await?;
+            }
+            Ok(())
+        },
+        async move {
+            while let Some(mut bytes) = rx.next().await {
+                if let Err(e) = receiver.received_packet(&mut bytes).await {
+                    log::warn!("Packet receive error: {:?}", e);
+                }
+            }
+            Ok(())
+        },
+    )
+    .map_ok(drop)
+    .await
 }
 
 async fn link(a: Arc<Router>, b: Arc<Router>) {
-    let (ab_tx, ab_rx) = a.new_link(Box::new(|| None));
-    let (ba_tx, ba_rx) = b.new_link(Box::new(|| None));
+    let (ab_tx, ab_rx) = a.new_link(b.node_id(), Box::new(|| None)).await.unwrap();
+    let (ba_tx, ba_rx) = b.new_link(a.node_id(), Box::new(|| None)).await.unwrap();
     futures::future::try_join(forward(ab_tx, ba_rx), forward(ba_tx, ab_rx)).await.map(drop).unwrap()
 }
 

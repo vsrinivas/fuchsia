@@ -43,7 +43,6 @@ pub(crate) async fn run_link_status_updater(
                 let mut i = 0;
                 while i != recv_state.incoming.len() {
                     let (node_link_id, node_id, stream) = &mut recv_state.incoming[i];
-                    let node_link_id = *node_link_id;
                     loop {
                         match stream.poll_next_unpin(ctx) {
                             Poll::Pending => {
@@ -52,11 +51,11 @@ pub(crate) async fn run_link_status_updater(
                             }
                             Poll::Ready(Some(duration)) => {
                                 updated = true;
-                                link_status.insert(node_link_id, (*node_id, duration));
+                                link_status.insert(*node_link_id, (*node_id, duration));
                             }
                             Poll::Ready(None) => {
                                 updated = true;
-                                link_status.remove(&node_link_id);
+                                link_status.remove(node_link_id);
                                 recv_state.incoming.remove(i);
                                 break;
                             }

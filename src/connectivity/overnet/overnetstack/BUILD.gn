@@ -30,7 +30,6 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust-mirrors/quiche",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
@@ -43,7 +42,6 @@ rustc_binary("bin") {
     "src/main.rs",
     "src/mdns.rs",
     "src/serial.rs",
-    "src/udp.rs",
   ]
 }
 

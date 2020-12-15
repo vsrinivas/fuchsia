@@ -5,7 +5,7 @@
 use anyhow::{format_err, Error};
 use byteorder::WriteBytesExt;
 use crc::crc32;
-use overnet_core::{Deframed, Format};
+use overnet_core::{Deframed, Format, FrameType};
 use std::convert::TryInto;
 use std::time::Duration;
 
@@ -24,8 +24,17 @@ impl LossyText {
 }
 
 impl Format for LossyText {
-    fn frame(&self, bytes: &[u8], outgoing: &mut Vec<u8>) -> Result<(), Error> {
+    fn frame(
+        &self,
+        frame_type: FrameType,
+        bytes: &[u8],
+        outgoing: &mut Vec<u8>,
+    ) -> Result<(), Error> {
         outgoing.write_u8(b'*')?;
+        match frame_type {
+            FrameType::Overnet => outgoing.write_u8(b'O')?,
+            FrameType::OvernetHello => outgoing.write_u8(b'H')?,
+        }
         let start_len = outgoing.len();
         // reserve space for length
         outgoing.extend_from_slice(&[0u8, 0u8]);
@@ -67,33 +76,47 @@ impl Format for LossyText {
             if buf.len() <= 1 {
                 return Ok(Deframed { frame: None, unframed_bytes: start, new_start_pos: start });
             }
-            if buf[1] < 32 || buf[1] >= 127 {
-                // Not a start marker: remove and continue
-                log::trace!("skip non-length byte {:?}", buf[2]);
-                start += 2;
-                continue;
-            }
-            if buf.len() <= 3 {
+            let frame_type = match buf[1] {
+                b'O' => FrameType::Overnet,
+                b'H' => FrameType::OvernetHello,
+                _ => {
+                    // Not a start marker: remove and continue
+                    log::trace!("skip non-frame marker {:?}", buf[1]);
+                    start += 2;
+                    continue;
+                }
+            };
+            log::trace!("frame_type={:?}", frame_type);
+            if buf.len() <= 2 {
                 return Ok(Deframed { frame: None, unframed_bytes: start, new_start_pos: start });
             }
             if buf[2] < 32 || buf[2] >= 127 {
                 // Not a start marker: remove and continue
-                log::trace!("skip non-length2 byte {:?}", buf[3]);
+                log::trace!("skip non-length byte {:?}", buf[2]);
                 start += 3;
                 continue;
             }
-            let len = 1usize + ((buf[1] - 32) as usize * 95) + (buf[2] - 32) as usize;
+            if buf.len() <= 4 {
+                return Ok(Deframed { frame: None, unframed_bytes: start, new_start_pos: start });
+            }
+            if buf[3] < 32 || buf[3] >= 127 {
+                // Not a start marker: remove and continue
+                log::trace!("skip non-length2 byte {:?}", buf[3]);
+                start += 4;
+                continue;
+            }
+            let len = 1usize + ((buf[2] - 32) as usize * 95) + (buf[3] - 32) as usize;
             log::trace!("len={:?} have:{:?}", len, buf.len());
-            if buf.len() < 3 + len + 1 {
+            if buf.len() < 4 + len + 1 {
                 log::trace!("insufficient bytes; start:{}", start);
                 // Not enough bytes to deframe: done for now
                 return Ok(Deframed { frame: None, unframed_bytes: start, new_start_pos: start });
             }
-            log::trace!("Tail: {:?}", buf[3 + len]);
-            let tail_bytes = match buf[3 + len] {
+            log::trace!("Tail: {:?}", buf[4 + len]);
+            let tail_bytes = match buf[4 + len] {
                 b'\r' => {
                     // We allow our '\n' to be replaced with a '\r\n'.
-                    if buf.len() < 3 + len + 2 {
+                    if buf.len() < 4 + len + 2 {
                         log::trace!("insufficient bytes; start:{}", start);
                         // Not enough bytes to deframe: done for now
                         return Ok(Deframed {
@@ -102,14 +125,14 @@ impl Format for LossyText {
                             new_start_pos: start,
                         });
                     }
-                    if buf[3 + len + 1] != b'\n' {
+                    if buf[4 + len + 1] != b'\n' {
                         // Does not end with an end marker: remove start bytes and continue
                         log::trace!(
                             "skip no end marker after \\r {:?}; len={}",
-                            buf[3 + len + 1],
+                            buf[4 + len + 1],
                             len
                         );
-                        start += 1;
+                        start += 2;
                         continue;
                     }
                     2
@@ -119,21 +142,21 @@ impl Format for LossyText {
                     // Does not end with an end marker: remove start bytes and continue
                     log::trace!(
                         "skip no end marker {:?}; len={}; buf={:?}",
-                        buf[3 + len],
+                        buf[4 + len],
                         len,
                         buf
                     );
-                    start += 1;
+                    start += 2;
                     continue;
                 }
             };
-            let enc_frame = &buf[3..3 + len];
+            let enc_frame = &buf[4..4 + len];
             log::trace!("enc_frame={:?}", enc_frame);
             let dec = match base64::decode(enc_frame) {
                 Ok(dec) => dec,
                 Err(_) => {
                     // base64 decoding failed: skip start marker and continue
-                    start += 1;
+                    start += 2;
                     continue;
                 }
             };
@@ -145,13 +168,13 @@ impl Format for LossyText {
             if crc != crc_actual {
                 log::trace!("skip crc mismatch {} vs {}", crc, crc_actual);
                 // CRC mismatch: skip start marker and continue
-                start += 1;
+                start += 2;
                 continue;
             }
             return Ok(Deframed {
-                frame: Some(frame.to_vec()),
+                frame: Some((frame_type, frame.to_vec())),
                 unframed_bytes: start,
-                new_start_pos: start + 3 + len + tail_bytes,
+                new_start_pos: start + 4 + len + tail_bytes,
             });
         }
     }
@@ -169,7 +192,7 @@ impl Format for LossyText {
 mod test {
     use super::*;
     use futures::prelude::*;
-    use overnet_core::{new_deframer, new_framer, ReadBytes};
+    use overnet_core::{new_deframer, new_framer};
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn simple_frame_lossy_text() {
@@ -181,19 +204,19 @@ mod test {
                 let test: Vec<_> = std::iter::repeat(b'a').take(n).collect();
                 let (mut framer_writer, mut framer_reader) =
                     new_framer(LossyText::new(Duration::from_millis(100)), 1024);
-                framer_writer.write(&test).await.unwrap();
+                framer_writer.write(FrameType::Overnet, &test).await.unwrap();
                 let (mut deframer_writer, mut deframer_reader) =
                     new_deframer(LossyText::new(Duration::from_millis(100)));
                 let encoded = framer_reader.read().await.unwrap();
                 println!("encoded = {:?}", std::str::from_utf8(&encoded).unwrap());
                 deframer_writer.write(&encoded).await.unwrap();
-                assert_eq!(deframer_reader.read().await.unwrap(), ReadBytes::Framed(test));
+                assert_eq!(deframer_reader.read().await.unwrap(), (Some(FrameType::Overnet), test));
                 let test: Vec<_> = std::iter::repeat(b'b').take(n).collect();
-                framer_writer.write(&test).await.unwrap();
+                framer_writer.write(FrameType::Overnet, &test).await.unwrap();
                 let encoded = framer_reader.read().await.unwrap();
                 println!("encoded = {:?}", std::str::from_utf8(&encoded).unwrap());
                 deframer_writer.write(&encoded).await.unwrap();
-                assert_eq!(deframer_reader.read().await.unwrap(), ReadBytes::Framed(test));
+                assert_eq!(deframer_reader.read().await.unwrap(), (Some(FrameType::Overnet), test));
             })
             .await
     }
