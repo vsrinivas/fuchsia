@@ -169,23 +169,27 @@ class Ndm final : public ftl::NdmBaseDriver {
       size_t page_offset = i * kPageSize;
       size_t oob_offset = i * kOobBytesSize;
 
-      auto page_view =
-          fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(page_buffer) + page_offset, kPageSize);
-      auto oob_view =
-          fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(oob_buffer) + oob_offset, kOobBytesSize);
       if (raw_nand_->page_data.find(page_number) == raw_nand_->page_data.end()) {
         if (page_buffer != nullptr) {
+          auto page_view =
+              fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(page_buffer) + page_offset, kPageSize);
           std::fill(page_view.begin(), page_view.end(), 0xFF);
         }
         if (oob_buffer != nullptr) {
+          auto oob_view = fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(oob_buffer) + oob_offset,
+                                             kOobBytesSize);
           std::fill(oob_view.begin(), oob_view.end(), 0xFF);
         }
       } else {
         if (page_buffer != nullptr) {
+          auto page_view =
+              fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(page_buffer) + page_offset, kPageSize);
           memcpy(page_view.data(), raw_nand_->page_data.at(page_number).data(), page_view.size());
         }
 
         if (oob_buffer != nullptr) {
+          auto oob_view = fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(oob_buffer) + oob_offset,
+                                             kOobBytesSize);
           memcpy(oob_view.data(), raw_nand_->page_oob.at(page_number).data(), oob_view.size());
         }
       }
