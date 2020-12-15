@@ -2,7 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("display_bind") {
+  rules = "display.bind"
+  output = "display-bind.h"
+  tests = "bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.hardware.display" ]
+}
 
 driver_module("display") {
   configs += [
@@ -32,6 +40,7 @@ source_set("shared") {
     "layer.cc",
   ]
   public_deps = [
+    ":display_bind",
     "//sdk/banjo/ddk.protocol.display.capture",
     "//sdk/banjo/ddk.protocol.display.clamprgb",
     "//sdk/banjo/ddk.protocol.display.controller",
@@ -41,9 +50,6 @@ source_set("shared") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/lib/fsl",
     "//zircon/public/lib/async-cpp",
@@ -72,5 +78,8 @@ source_set("preferred-scanout-image-type") {
 
 group("tests") {
   testonly = true
-  deps = [ "tests" ]
+  deps = [
+    ":display_bind_test",
+    "tests",
+  ]
 }

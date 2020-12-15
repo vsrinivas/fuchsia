@@ -17,7 +17,6 @@
 #include <vector>
 
 #include <audio-proto-utils/format-utils.h>
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/display/capture.h>
@@ -30,6 +29,7 @@
 #include <fbl/auto_lock.h>
 
 #include "client.h"
+#include "src/graphics/display/drivers/display/display-bind.h"
 
 namespace fidl_display = llcpp::fuchsia::hardware::display;
 
@@ -849,15 +849,14 @@ zx_status_t Controller::DdkOpen(zx_device_t** dev_out, uint32_t flags) { return 
 static void PrintChannelKoids(bool is_vc, const zx::channel& channel) {
   zx_info_handle_basic_t info{};
   size_t actual, avail;
-  zx_status_t status = channel.get_info(
-      ZX_INFO_HANDLE_BASIC, &info, sizeof(info), &actual, &avail);
+  zx_status_t status = channel.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), &actual, &avail);
   if (status != ZX_OK || info.type != ZX_OBJ_TYPE_CHANNEL) {
     zxlogf(DEBUG, "Could not get koids for handle(type=%d): %d", info.type, status);
     return;
   }
   ZX_DEBUG_ASSERT(actual == avail);
-  zxlogf(INFO, "%s client connecting on channel (c=0x%lx, s=0x%lx)",
-         is_vc ? "vc" : "dc", info.related_koid, info.koid);
+  zxlogf(INFO, "%s client connecting on channel (c=0x%lx, s=0x%lx)", is_vc ? "vc" : "dc",
+         info.related_koid, info.koid);
 }
 
 zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
@@ -1088,6 +1087,4 @@ static constexpr zx_driver_ops_t display_controller_ops = []() {
 }();
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(display_controller, display_controller_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL),
-ZIRCON_DRIVER_END(display_controller)
+ZIRCON_DRIVER(display_controller, display_controller_ops, "zircon", "0.1");
