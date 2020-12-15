@@ -1596,8 +1596,14 @@ func Compile(r fidl.Root) Root {
 		root.Protocols = append(root.Protocols, c.compileProtocol(v))
 	}
 
-	for _, hmw := range c.handleMetadataWrappers {
-		root.HandleMetadataWrappers = append(root.HandleMetadataWrappers, hmw)
+	// Sort by wrapper name for deterministic output order.
+	handleMetadataWrapperNames := make([]string, 0, len(c.handleMetadataWrappers))
+	for name := range c.handleMetadataWrappers {
+		handleMetadataWrapperNames = append(handleMetadataWrapperNames, name)
+	}
+	sort.Strings(handleMetadataWrapperNames)
+	for _, name := range handleMetadataWrapperNames {
+		root.HandleMetadataWrappers = append(root.HandleMetadataWrappers, c.handleMetadataWrappers[name])
 	}
 
 	c.fillDerives(&root)

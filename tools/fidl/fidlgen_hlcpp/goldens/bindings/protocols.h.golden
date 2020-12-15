@@ -500,6 +500,8 @@ extern "C" const fidl_type_t
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodBRequestTable;
 extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
+extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
 }  // namespace _internal
 
@@ -535,6 +537,20 @@ class ChannelProtocol_RequestEncoder {
 
     return _encoder->GetMessage();
   }
+  static ::fidl::HLCPPOutgoingMessage TakeHandle(::fidl::Encoder* _encoder,
+                                                 ::zx::handle* h) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, h, 16);
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::fidl_test_protocols_ChannelProtocolTakeHandleRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
   static ::fidl::HLCPPOutgoingMessage MutateSocket(::fidl::Encoder* _encoder,
                                                    ::zx::socket* a) {
     fidl_trace(WillHLCPPEncode);
@@ -556,6 +572,8 @@ extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolEventAEventTable;
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodBResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
 }  // namespace _internal
@@ -584,6 +602,17 @@ class ChannelProtocol_ResponseEncoder {
     fidl_trace(
         DidHLCPPEncode,
         &_internal::fidl_test_protocols_ChannelProtocolMethodBResponseTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
+  static ::fidl::HLCPPOutgoingMessage TakeHandle(::fidl::Encoder* _encoder) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::fidl_test_protocols_ChannelProtocolTakeHandleResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1524,6 +1553,7 @@ namespace internal {
 constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 0x7d92c10fb2d002elu;
 constexpr uint64_t kChannelProtocol_EventA_Ordinal = 0x52c2fa481a687dfalu;
 constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 0x5da1d2ed00055cealu;
+constexpr uint64_t kChannelProtocol_TakeHandle_Ordinal = 0xc25674355065c28lu;
 constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 0x7dd036a18b33b76alu;
 
 }  // namespace internal
@@ -1747,6 +1777,9 @@ class ChannelProtocol {
   using MethodBCallback = fit::function<void(int64_t)>;
 
   virtual void MethodB(int64_t a, int64_t b, MethodBCallback callback) = 0;
+  using TakeHandleCallback = fit::function<void()>;
+
+  virtual void TakeHandle(::zx::handle h, TakeHandleCallback callback) = 0;
   using MutateSocketCallback = fit::function<void(::zx::socket)>;
 
   virtual void MutateSocket(::zx::socket a, MutateSocketCallback callback) = 0;
@@ -1782,6 +1815,10 @@ class ChannelProtocol_RequestDecoder {
                 ::fidl::DecodeAs<int64_t>(&request_decoder, 24));
         break;
       }
+      case internal::kChannelProtocol_TakeHandle_Ordinal: {
+        TakeHandle(::fidl::DecodeAs<::zx::handle>(&request_decoder, 16));
+        break;
+      }
       case internal::kChannelProtocol_MutateSocket_Ordinal: {
         MutateSocket(::fidl::DecodeAs<::zx::socket>(&request_decoder, 16));
         break;
@@ -1795,6 +1832,7 @@ class ChannelProtocol_RequestDecoder {
   }
   virtual void MethodA(int64_t a, int64_t b) = 0;
   virtual void MethodB(int64_t a, int64_t b) = 0;
+  virtual void TakeHandle(::zx::handle h) = 0;
   virtual void MutateSocket(::zx::socket a) = 0;
 };
 
@@ -1825,6 +1863,10 @@ class ChannelProtocol_ResponseDecoder {
         MethodB(::fidl::DecodeAs<int64_t>(&response_decoder, 16));
         break;
       }
+      case internal::kChannelProtocol_TakeHandle_Ordinal: {
+        TakeHandle();
+        break;
+      }
       case internal::kChannelProtocol_MutateSocket_Ordinal: {
         MutateSocket(::fidl::DecodeAs<::zx::socket>(&response_decoder, 16));
         break;
@@ -1837,6 +1879,7 @@ class ChannelProtocol_ResponseDecoder {
   }
   virtual void EventA(int64_t a, int64_t b) = 0;
   virtual void MethodB(int64_t result) = 0;
+  virtual void TakeHandle() = 0;
   virtual void MutateSocket(::zx::socket b) = 0;
 };
 
@@ -1852,6 +1895,7 @@ class ChannelProtocol_Sync {
   virtual ~ChannelProtocol_Sync();
   virtual zx_status_t MethodA(int64_t a, int64_t b) = 0;
   virtual zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) = 0;
+  virtual zx_status_t TakeHandle(::zx::handle h) = 0;
   virtual zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) = 0;
 };
 
@@ -1865,6 +1909,7 @@ class ChannelProtocol_Proxy final : public ::fidl::internal::Proxy,
   void MethodA(int64_t a, int64_t b) override;
   EventACallback EventA;
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override;
+  void TakeHandle(::zx::handle h, TakeHandleCallback callback) override;
   void MutateSocket(::zx::socket a, MutateSocketCallback callback) override;
 
  private:
@@ -1895,6 +1940,7 @@ class ChannelProtocol_SyncProxy : public ChannelProtocol_Sync {
   ~ChannelProtocol_SyncProxy() override;
   zx_status_t MethodA(int64_t a, int64_t b) override;
   zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
+  zx_status_t TakeHandle(::zx::handle h) override;
   zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) override;
 
  private:

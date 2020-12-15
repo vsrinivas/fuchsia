@@ -41,6 +41,7 @@ protocol ChannelProtocol {
     MethodA(int64 a, int64 b);
     -> EventA(int64 a, int64 b);
     MethodB(int64 a, int64 b) -> (int64 result);
+    TakeHandle(handle h) -> ();
     MutateSocket(handle:SOCKET a) -> (handle:SOCKET b);
 };
 

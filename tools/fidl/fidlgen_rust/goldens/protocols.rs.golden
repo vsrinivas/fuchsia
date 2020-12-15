@@ -111,6 +111,12 @@ pub struct WithErrorSyntaxErrorAsEnumResponse;
 
 fidl_empty_struct!(WithErrorSyntaxErrorAsEnumResponse);
 wrap_handle_metadata!(
+    HandleWrapperObjectTypeNONERights2147483648,
+    fidl::ObjectType::NONE,
+    fidl::Rights::from_bits_const(2147483648).unwrap()
+);
+
+wrap_handle_metadata!(
     HandleWrapperObjectTypeSOCKETRights2147483648,
     fidl::ObjectType::SOCKET,
     fidl::Rights::from_bits_const(2147483648).unwrap()
@@ -2372,6 +2378,8 @@ pub trait ChannelProtocolProxyInterface: Send + Sync {
     type EventAResponseFut: std::future::Future<Output = Result<(i64, i64), fidl::Error>> + Send;
     type MethodBResponseFut: std::future::Future<Output = Result<(i64), fidl::Error>> + Send;
     fn method_b(&self, a: i64, b: i64) -> Self::MethodBResponseFut;
+    type TakeHandleResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
+    fn take_handle(&self, h: fidl::Handle) -> Self::TakeHandleResponseFut;
     type MutateSocketResponseFut: std::future::Future<Output = Result<(fidl::Socket), fidl::Error>>
         + Send;
     fn mutate_socket(&self, a: fidl::Socket) -> Self::MutateSocketResponseFut;
@@ -2404,6 +2412,14 @@ impl ChannelProtocolSynchronousProxy {
         let _value: (i64,) =
             self.client.send_query(&mut (a, b), 0x5da1d2ed00055cea, ___deadline)?;
         Ok(_value.0)
+    }
+    pub fn take_handle(
+        &mut self,
+        mut h: fidl::Handle,
+        ___deadline: zx::Time,
+    ) -> Result<(), fidl::Error> {
+        let _value: () = self.client.send_query(&mut (h), 0xc25674355065c28, ___deadline)?;
+        Ok(())
     }
     pub fn mutate_socket(
         &mut self,
@@ -2458,6 +2474,9 @@ impl ChannelProtocolProxy {
     pub fn method_b(&self, mut a: i64, mut b: i64) -> fidl::client::QueryResponseFut<(i64)> {
         ChannelProtocolProxyInterface::method_b(self, a, b)
     }
+    pub fn take_handle(&self, mut h: fidl::Handle) -> fidl::client::QueryResponseFut<()> {
+        ChannelProtocolProxyInterface::take_handle(self, h)
+    }
     pub fn mutate_socket(
         &self,
         mut a: fidl::Socket,
@@ -2477,6 +2496,19 @@ impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
             result.map(|_value| _value.0)
         }
         let send_result = self.client.call_send_raw_query(&mut (a, b), 0x5da1d2ed00055cea);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
+    }
+    type TakeHandleResponseFut = fidl::client::QueryResponseFut<()>;
+    fn take_handle(&self, mut h: fidl::Handle) -> Self::TakeHandleResponseFut {
+        fn transform(result: Result<(), fidl::Error>) -> Result<(), fidl::Error> {
+            result.map(|_value| ())
+        }
+        let send_result = self.client.call_send_raw_query(&mut (h), 0xc25674355065c28);
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
                 res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
@@ -2615,6 +2647,19 @@ impl<'a> ChannelProtocolServerSender<'a> {
             Ok(())
         })
     }
+    pub fn send_take_handle_response(&self, txid: fidl::client::Txid) -> Result<(), fidl::Error> {
+        fidl::encoding::with_tls_encode_buf(|bytes_, handles_| {
+            ChannelProtocolEncoder::encode_take_handle_response(
+                bytes_,
+                handles_,
+                txid.as_raw_id(),
+            )?;
+            self.channel
+                .write_etc(&*bytes_, &mut *handles_)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
     pub fn send_mutate_socket_response(
         &self,
         txid: fidl::client::Txid,
@@ -2739,6 +2784,24 @@ impl futures::Stream for ChannelProtocolRequestStream {
                         },
                     })
                 }
+                0xc25674355065c28 => {
+                    let mut req: (HandleWrapperObjectTypeNONERights2147483648<fidl::Handle>,) =
+                        fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolTakeHandleRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
+                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+                    let control_handle = ChannelProtocolControlHandle { inner: this.inner.clone() };
+
+                    Ok(ChannelProtocolRequest::TakeHandle {
+                        h: req.0.into_inner(),
+                        responder: ChannelProtocolTakeHandleResponder {
+                            control_handle: std::mem::ManuallyDrop::new(control_handle),
+                            tx_id: header.tx_id(),
+                            ordinal: header.ordinal(),
+                        },
+                    })
+                }
                 0x7dd036a18b33b76a => {
                     let mut req: (HandleWrapperObjectTypeSOCKETRights2147483648<fidl::Socket>,) =
                         fidl::encoding::Decodable::new_empty();
@@ -2776,6 +2839,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
 pub enum ChannelProtocolRequestMessage {
     MethodA { a: i64, b: i64 },
     MethodB { a: i64, b: i64, tx_id: fidl::client::Txid },
+    TakeHandle { h: fidl::Handle, tx_id: fidl::client::Txid },
     MutateSocket { a: fidl::Socket, tx_id: fidl::client::Txid },
 }
 
@@ -2819,6 +2883,24 @@ impl ChannelProtocolRequestMessage {
                     tx_id: header.tx_id().into(),
                 })
             }
+            0xc25674355065c28 => {
+                let mut out_tuple: (HandleWrapperObjectTypeNONERights2147483648<fidl::Handle>,) =
+                    fidl::encoding::Decodable::new_empty();
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolTakeHandleRequest");
+                fidl::trace_blob!("fidl:blob", "decode", bytes);
+                fidl::encoding::Decoder::decode_into(
+                    &header,
+                    _body_bytes,
+                    _handles,
+                    &mut out_tuple,
+                )?;
+                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
+
+                Ok(ChannelProtocolRequestMessage::TakeHandle {
+                    h: out_tuple.0.into_inner(),
+                    tx_id: header.tx_id().into(),
+                })
+            }
             0x7dd036a18b33b76a => {
                 let mut out_tuple: (HandleWrapperObjectTypeSOCKETRights2147483648<fidl::Socket>,) =
                     fidl::encoding::Decodable::new_empty();
@@ -2848,6 +2930,7 @@ impl ChannelProtocolRequestMessage {
 pub enum ChannelProtocolRequest {
     MethodA { a: i64, b: i64, control_handle: ChannelProtocolControlHandle },
     MethodB { a: i64, b: i64, responder: ChannelProtocolMethodBResponder },
+    TakeHandle { h: fidl::Handle, responder: ChannelProtocolTakeHandleResponder },
     MutateSocket { a: fidl::Socket, responder: ChannelProtocolMutateSocketResponder },
 }
 
@@ -2871,6 +2954,15 @@ impl ChannelProtocolRequest {
     }
 
     #[allow(irrefutable_let_patterns)]
+    pub fn into_take_handle(self) -> Option<(fidl::Handle, ChannelProtocolTakeHandleResponder)> {
+        if let ChannelProtocolRequest::TakeHandle { h, responder } = self {
+            Some((h, responder))
+        } else {
+            None
+        }
+    }
+
+    #[allow(irrefutable_let_patterns)]
     pub fn into_mutate_socket(
         self,
     ) -> Option<(fidl::Socket, ChannelProtocolMutateSocketResponder)> {
@@ -2886,6 +2978,7 @@ impl ChannelProtocolRequest {
         match *self {
             ChannelProtocolRequest::MethodA { .. } => "method_a",
             ChannelProtocolRequest::MethodB { .. } => "method_b",
+            ChannelProtocolRequest::TakeHandle { .. } => "take_handle",
             ChannelProtocolRequest::MutateSocket { .. } => "mutate_socket",
         }
     }
@@ -2953,6 +3046,37 @@ impl ChannelProtocolEncoder {
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMethodBResponse");
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+
+        Ok(())
+    }
+    pub fn encode_take_handle_request<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
+        tx_id: u32,
+        mut in_h: fidl::Handle,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0xc25674355065c28);
+        let mut body = (in_h,);
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolTakeHandleRequest");
+        fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+        Ok(())
+    }
+    pub fn encode_take_handle_response<'a>(
+        out_bytes: &'a mut Vec<u8>,
+        out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
+        tx_id: u32,
+    ) -> Result<(), fidl::Error> {
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0xc25674355065c28);
+        let mut body = ();
+        let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolTakeHandleResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -3091,6 +3215,84 @@ impl ChannelProtocolMethodBResponder {
 
         fidl::encoding::with_tls_encode_buf(|bytes, handles| {
             fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMethodBResponse");
+            fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+            fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+            fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
+            self.control_handle
+                .inner
+                .channel()
+                .write_etc(&*bytes, &mut *handles)
+                .map_err(fidl::Error::ServerResponseWrite)?;
+            Ok(())
+        })
+    }
+}
+#[must_use = "FIDL methods require a response to be sent"]
+#[derive(Debug)]
+pub struct ChannelProtocolTakeHandleResponder {
+    control_handle: std::mem::ManuallyDrop<ChannelProtocolControlHandle>,
+    tx_id: u32,
+    ordinal: u64,
+}
+
+/// Set the the channel to be shutdown (see [`ChannelProtocolControlHandle::shutdown`])
+/// if the responder is dropped without sending a response, so that the client
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
+impl std::ops::Drop for ChannelProtocolTakeHandleResponder {
+    fn drop(&mut self) {
+        self.control_handle.shutdown();
+        // Safety: drops once, never accessed again
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+    }
+}
+
+impl ChannelProtocolTakeHandleResponder {
+    pub fn control_handle(&self) -> &ChannelProtocolControlHandle {
+        &self.control_handle
+    }
+
+    /// Drop the Responder without setting the channel to shutdown.
+    ///
+    /// This method shouldn't normally be used-- instead, send a response
+    /// to prevent the channel from shutting down.
+    pub fn drop_without_shutdown(mut self) {
+        // Safety: drops once, never accessed again due to mem::forget
+        unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+        // Prevent Drop from running (which would shut down the channel)
+        std::mem::forget(self);
+    }
+
+    /// Sends a response to the FIDL transaction.
+    ///
+    /// Sets the channel to shutdown if an error occurs.
+    pub fn send(self) -> Result<(), fidl::Error> {
+        let r = self.send_raw();
+        if r.is_err() {
+            self.control_handle.shutdown();
+        }
+        self.drop_without_shutdown();
+        r
+    }
+
+    /// Similar to "send" but does not shutdown the channel if
+    /// an error occurs.
+    pub fn send_no_shutdown_on_err(self) -> Result<(), fidl::Error> {
+        let r = self.send_raw();
+        self.drop_without_shutdown();
+        r
+    }
+
+    fn send_raw(&self) -> Result<(), fidl::Error> {
+        let mut response = ();
+
+        let mut msg = fidl::encoding::TransactionMessage {
+            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            body: &mut response,
+        };
+
+        fidl::encoding::with_tls_encode_buf(|bytes, handles| {
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolTakeHandleResponse");
             fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);

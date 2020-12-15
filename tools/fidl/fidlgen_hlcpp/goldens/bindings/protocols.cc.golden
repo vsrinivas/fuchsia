@@ -1000,6 +1000,11 @@ extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodBResponseTable;
 
 extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
+
+extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
@@ -1017,6 +1022,9 @@ const fidl_type_t* ChannelProtocol_RequestDecoder::GetType(
     case internal::kChannelProtocol_MethodB_Ordinal:
       *out_needs_response = true;
       return &fidl_test_protocols_ChannelProtocolMethodBRequestTable;
+    case internal::kChannelProtocol_TakeHandle_Ordinal:
+      *out_needs_response = true;
+      return &fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
     case internal::kChannelProtocol_MutateSocket_Ordinal:
       *out_needs_response = true;
       return &fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
@@ -1032,6 +1040,8 @@ const fidl_type_t* ChannelProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
       return &fidl_test_protocols_ChannelProtocolEventAEventTable;
     case internal::kChannelProtocol_MethodB_Ordinal:
       return &fidl_test_protocols_ChannelProtocolMethodBResponseTable;
+    case internal::kChannelProtocol_TakeHandle_Ordinal:
+      return &fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
     case internal::kChannelProtocol_MutateSocket_Ordinal:
       return &fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
     default:
@@ -1117,6 +1127,31 @@ void ChannelProtocol_Proxy::MethodB(int64_t a, int64_t b,
 namespace {
 
 ::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
+ChannelProtocol_TakeHandle_ResponseHandler(
+    ChannelProtocol::TakeHandleCallback&& callback) {
+  ZX_DEBUG_ASSERT_MSG(
+      callback, "Callback must not be empty for ChannelProtocol::TakeHandle\n");
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ =
+           std::move(callback)](::fidl::HLCPPIncomingMessage&& message) {
+        callback_();
+        return ZX_OK;
+      },
+      &fidl_test_protocols_ChannelProtocolTakeHandleResponseTable);
+}
+
+}  // namespace
+void ChannelProtocol_Proxy::TakeHandle(::zx::handle h,
+                                       TakeHandleCallback callback) {
+  ::fidl::Encoder _encoder(internal::kChannelProtocol_TakeHandle_Ordinal);
+  controller_->Send(
+      &fidl_test_protocols_ChannelProtocolTakeHandleRequestTable,
+      ChannelProtocol_RequestEncoder::TakeHandle(&_encoder, &h),
+      ChannelProtocol_TakeHandle_ResponseHandler(std::move(callback)));
+}
+namespace {
+
+::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
 ChannelProtocol_MutateSocket_ResponseHandler(
     ChannelProtocol::MutateSocketCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(
@@ -1161,6 +1196,22 @@ class ChannelProtocol_MethodB_Responder final {
     response_.Send(
         &fidl_test_protocols_ChannelProtocolMethodBResponseTable,
         ChannelProtocol_ResponseEncoder::MethodB(&_encoder, &result));
+  }
+
+ private:
+  ::fidl::internal::PendingResponse response_;
+};
+
+class ChannelProtocol_TakeHandle_Responder final {
+ public:
+  ChannelProtocol_TakeHandle_Responder(
+      ::fidl::internal::PendingResponse response)
+      : response_(std::move(response)) {}
+
+  void operator()() {
+    ::fidl::Encoder _encoder(internal::kChannelProtocol_TakeHandle_Ordinal);
+    response_.Send(&fidl_test_protocols_ChannelProtocolTakeHandleResponseTable,
+                   ChannelProtocol_ResponseEncoder::TakeHandle(&_encoder));
   }
 
  private:
@@ -1226,6 +1277,13 @@ zx_status_t ChannelProtocol_Stub::Dispatch_(
                      ChannelProtocol_MethodB_Responder(std::move(response)));
       break;
     }
+    case internal::kChannelProtocol_TakeHandle_Ordinal: {
+      ::fidl::Decoder decoder(std::move(message));
+      impl_->TakeHandle(
+          ::fidl::DecodeAs<::zx::handle>(&decoder, 16),
+          ChannelProtocol_TakeHandle_Responder(std::move(response)));
+      break;
+    }
     case internal::kChannelProtocol_MutateSocket_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->MutateSocket(
@@ -1270,6 +1328,18 @@ zx_status_t ChannelProtocol_SyncProxy::MethodB(int64_t a, int64_t b,
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_result = ::fidl::DecodeAs<int64_t>(&decoder_, 16);
+  return ZX_OK;
+}
+
+zx_status_t ChannelProtocol_SyncProxy::TakeHandle(::zx::handle h) {
+  ::fidl::Encoder _encoder(internal::kChannelProtocol_TakeHandle_Ordinal);
+  ::fidl::IncomingMessageBuffer buffer_;
+  ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
+  zx_status_t status_ = proxy_.Call(
+      &fidl_test_protocols_ChannelProtocolTakeHandleRequestTable,
+      &fidl_test_protocols_ChannelProtocolTakeHandleResponseTable,
+      ChannelProtocol_RequestEncoder::TakeHandle(&_encoder, &h), &response_);
+  if (status_ != ZX_OK) return status_;
   return ZX_OK;
 }
 

@@ -268,6 +268,17 @@ func (msg *channelProtocolWithCtxMethodBResponse) Marshaler() _bindings.Marshale
 	return _mchannelProtocolWithCtxMethodBResponse
 }
 
+type channelProtocolWithCtxTakeHandleRequest struct {
+	_ struct{}   `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	H _zx.Handle `fidl_offset_v1:"0" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+}
+
+var _mchannelProtocolWithCtxTakeHandleRequest = _bindings.CreateLazyMarshaler(channelProtocolWithCtxTakeHandleRequest{})
+
+func (msg *channelProtocolWithCtxTakeHandleRequest) Marshaler() _bindings.Marshaler {
+	return _mchannelProtocolWithCtxTakeHandleRequest
+}
+
 type channelProtocolWithCtxMutateSocketRequest struct {
 	_ struct{}   `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
 	A _zx.Socket `fidl_offset_v1:"0" fidl_handle_subtype:"14" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
@@ -735,6 +746,7 @@ const (
 	ChannelProtocolMethodAOrdinal      uint64 = 0x7d92c10fb2d002e
 	ChannelProtocolEventAOrdinal       uint64 = 0x52c2fa481a687dfa
 	ChannelProtocolMethodBOrdinal      uint64 = 0x5da1d2ed00055cea
+	ChannelProtocolTakeHandleOrdinal   uint64 = 0xc25674355065c28
 	ChannelProtocolMutateSocketOrdinal uint64 = 0x7dd036a18b33b76a
 )
 
@@ -765,6 +777,15 @@ func (p *ChannelProtocolWithCtxInterface) MethodB(ctx_ _bindings.Context, a int6
 	return resp_.Result, err_
 }
 
+func (p *ChannelProtocolWithCtxInterface) TakeHandle(ctx_ _bindings.Context, h _zx.Handle) error {
+	req_ := &channelProtocolWithCtxTakeHandleRequest{
+		H: h,
+	}
+	var resp_ _bindings.Message
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(ChannelProtocolTakeHandleOrdinal, req_, resp_)
+	return err_
+}
+
 func (p *ChannelProtocolWithCtxInterface) MutateSocket(ctx_ _bindings.Context, a _zx.Socket) (_zx.Socket, error) {
 	req_ := &channelProtocolWithCtxMutateSocketRequest{
 		A: a,
@@ -777,6 +798,7 @@ func (p *ChannelProtocolWithCtxInterface) MutateSocket(ctx_ _bindings.Context, a
 type ChannelProtocolWithCtx interface {
 	MethodA(ctx_ _bindings.Context, a int64, b int64) error
 	MethodB(ctx_ _bindings.Context, a int64, b int64) (int64, error)
+	TakeHandle(ctx_ _bindings.Context, h _zx.Handle) error
 	MutateSocket(ctx_ _bindings.Context, a _zx.Socket) (_zx.Socket, error)
 }
 
@@ -819,6 +841,17 @@ func (s_ *ChannelProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 		out_ := channelProtocolWithCtxMethodBResponse{}
 		out_.Result = result
 		return &out_, true, err_
+	case ChannelProtocolTakeHandleOrdinal:
+		in_ := channelProtocolWithCtxTakeHandleRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		err_ := s_.Impl.TakeHandle(args_.Ctx, in_.H)
+		return nil, true, err_
 	case ChannelProtocolMutateSocketOrdinal:
 		in_ := channelProtocolWithCtxMutateSocketRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)

@@ -26,6 +26,9 @@ class ChannelProtocol_TestBase : public ChannelProtocol {
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override {
     NotImplemented_("MethodB");
   }
+  void TakeHandle(::zx::handle h, TakeHandleCallback callback) override {
+    NotImplemented_("TakeHandle");
+  }
   void MutateSocket(::zx::socket a, MutateSocketCallback callback) override {
     NotImplemented_("MutateSocket");
   }

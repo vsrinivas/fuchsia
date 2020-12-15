@@ -40,6 +40,18 @@ const struct FidlCodedStruct fidl_test_protocols_ChannelProtocolMethodBRequestTa
 extern const struct FidlCodedStruct fidl_test_protocols_ChannelProtocolMethodBResponseTable;
 const struct FidlCodedStruct fidl_test_protocols_ChannelProtocolMethodBResponseTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=24u, .name="fidl.test.protocols/ChannelProtocolMethodBResponse"};
 
+static const struct FidlCodedHandle HandlehandlenonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
+
+extern const struct FidlCodedStruct fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
+static const struct FidlStructElement Fields52fidl_test_protocols_ChannelProtocolTakeHandleRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=16u, .field_type=(fidl_type_t*)(&HandlehandlenonnullableTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
+};
+const struct FidlCodedStruct fidl_test_protocols_ChannelProtocolTakeHandleRequestTable = {.tag=kFidlTypeStruct, .elements=Fields52fidl_test_protocols_ChannelProtocolTakeHandleRequest, .element_count=2u, .size=24u, .name="fidl.test.protocols/ChannelProtocolTakeHandleRequest"};
+
+extern const struct FidlCodedStruct fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
+const struct FidlCodedStruct fidl_test_protocols_ChannelProtocolTakeHandleResponseTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.protocols/ChannelProtocolTakeHandleResponse"};
+
 static const struct FidlCodedHandle HandlesocketnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_SOCKET, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
 extern const struct FidlCodedStruct fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;

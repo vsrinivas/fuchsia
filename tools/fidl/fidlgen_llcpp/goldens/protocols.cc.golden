@@ -415,6 +415,12 @@ extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodBRequestTable;
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodBResponseTable;
+[[maybe_unused]] constexpr uint64_t kChannelProtocol_TakeHandle_Ordinal =
+    875219241480379432lu;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal =
     9065806117349865322lu;
 extern "C" const fidl_type_t
@@ -470,6 +476,41 @@ ChannelProtocol::UnownedResultOf::MethodB::MethodB(
       _request_bytes, _request_byte_capacity, 0, a, b);
   _request.GetOutgoingMessage().Call<MethodBResponse>(_client, _response_bytes,
                                                       _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
+ChannelProtocol::ResultOf::TakeHandle::TakeHandle(zx_handle_t _client,
+                                                  ::zx::handle& h) {
+  TakeHandleRequest::OwnedEncodedMessage _request(zx_txid_t(0), h);
+  _request.GetOutgoingMessage().Call<TakeHandleResponse>(
+      _client, bytes_,
+      TakeHandleResponse::PrimarySize + TakeHandleResponse::MaxOutOfLine);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
+ChannelProtocol::ResultOf::TakeHandle::TakeHandle(zx_handle_t _client,
+                                                  ::zx::handle& h,
+                                                  zx_time_t _deadline) {
+  TakeHandleRequest::OwnedEncodedMessage _request(zx_txid_t(0), h);
+  _request.GetOutgoingMessage().Call<TakeHandleResponse>(
+      _client, bytes_,
+      TakeHandleResponse::PrimarySize + TakeHandleResponse::MaxOutOfLine,
+      _deadline);
+  status_ = _request.status();
+  error_ = _request.error();
+}
+
+ChannelProtocol::UnownedResultOf::TakeHandle::TakeHandle(
+    zx_handle_t _client, uint8_t* _request_bytes,
+    uint32_t _request_byte_capacity, ::zx::handle& h, uint8_t* _response_bytes,
+    uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  TakeHandleRequest::UnownedEncodedMessage _request(
+      _request_bytes, _request_byte_capacity, 0, h);
+  _request.GetOutgoingMessage().Call<TakeHandleResponse>(
+      _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -591,6 +632,71 @@ void ChannelProtocol::MethodBResponseContext::OnReply(uint8_t* reply) {
 
   MethodBRequest::UnownedEncodedMessage _request(
       _request_buffer.data, _request_buffer.capacity, _context->Txid(), a, b);
+  return _request.GetOutgoingMessage().Write(this, _context);
+}
+
+ChannelProtocol::ResultOf::TakeHandle
+ChannelProtocol::ClientImpl::TakeHandle_Sync(::zx::handle h) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return ResultOf::TakeHandle(_channel->handle(), h);
+  }
+  return ChannelProtocol::ResultOf::TakeHandle(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+}
+
+ChannelProtocol::UnownedResultOf::TakeHandle
+ChannelProtocol::ClientImpl::TakeHandle_Sync(
+    ::fidl::BufferSpan _request_buffer, ::zx::handle h,
+    ::fidl::BufferSpan _response_buffer) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    return UnownedResultOf::TakeHandle(
+        _channel->handle(), _request_buffer.data, _request_buffer.capacity, h,
+        _response_buffer.data, _response_buffer.capacity);
+  }
+  return ChannelProtocol::UnownedResultOf::TakeHandle(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+}
+
+ChannelProtocol::TakeHandleResponseContext::TakeHandleResponseContext()
+    : ::fidl::internal::ResponseContext(TakeHandleResponse::Type,
+                                        kChannelProtocol_TakeHandle_Ordinal) {}
+
+void ChannelProtocol::TakeHandleResponseContext::OnReply(uint8_t* reply) {
+  OnReply(reinterpret_cast<TakeHandleResponse*>(reply));
+}
+
+::fidl::Result ChannelProtocol::ClientImpl::TakeHandle(
+    ::zx::handle h, ::fit::callback<void(TakeHandleResponse* response)> _cb) {
+  class ResponseContext final : public TakeHandleResponseContext {
+   public:
+    ResponseContext(::fit::callback<void(TakeHandleResponse* response)> cb)
+        : cb_(std::move(cb)) {}
+
+    void OnReply(TakeHandleResponse* response) override {
+      cb_(response);
+
+      delete this;
+    }
+
+    void OnError() override { delete this; }
+
+   private:
+    ::fit::callback<void(TakeHandleResponse* response)> cb_;
+  };
+
+  auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  TakeHandleRequest::OwnedEncodedMessage _request(_context->Txid(), h);
+  return _request.GetOutgoingMessage().Write(this, _context);
+}
+
+::fidl::Result ChannelProtocol::ClientImpl::TakeHandle(
+    ::fidl::BufferSpan _request_buffer, ::zx::handle h,
+    TakeHandleResponseContext* _context) {
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+
+  TakeHandleRequest::UnownedEncodedMessage _request(
+      _request_buffer.data, _request_buffer.capacity, _context->Txid(), h);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -782,6 +888,14 @@ void ChannelProtocolDispatchMethodB(void* interface, void* bytes,
       std::move(message->a), std::move(message->b), completer);
 }
 
+void ChannelProtocolDispatchTakeHandle(void* interface, void* bytes,
+                                       ::fidl::Transaction* txn) {
+  auto message = reinterpret_cast<ChannelProtocol::TakeHandleRequest*>(bytes);
+  ChannelProtocol::Interface::TakeHandleCompleter::Sync completer(txn);
+  reinterpret_cast<ChannelProtocol::Interface*>(interface)->TakeHandle(
+      std::move(message->h), completer);
+}
+
 void ChannelProtocolDispatchMutateSocket(void* interface, void* bytes,
                                          ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<ChannelProtocol::MutateSocketRequest*>(bytes);
@@ -799,6 +913,9 @@ namespace entries {
      methods::ChannelProtocolDispatchMethodA},
     {kChannelProtocol_MethodB_Ordinal, ChannelProtocol::MethodBRequest::Type,
      methods::ChannelProtocolDispatchMethodB},
+    {kChannelProtocol_TakeHandle_Ordinal,
+     ChannelProtocol::TakeHandleRequest::Type,
+     methods::ChannelProtocolDispatchTakeHandle},
     {kChannelProtocol_MutateSocket_Ordinal,
      ChannelProtocol::MutateSocketRequest::Type,
      methods::ChannelProtocolDispatchMutateSocket},
@@ -861,6 +978,11 @@ zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _channel,
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 
+::fidl::Result ChannelProtocol::Interface::TakeHandleCompleterBase::Reply() {
+  TakeHandleResponse::OwnedEncodedMessage _response{};
+  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
+}
+
 ::fidl::Result ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(
     ::zx::socket b) {
   MutateSocketResponse::OwnedEncodedMessage _response{b};
@@ -888,6 +1010,16 @@ void ChannelProtocol::MethodBRequest::_InitHeader(zx_txid_t _txid) {
 
 void ChannelProtocol::MethodBResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kChannelProtocol_MethodB_Ordinal);
+}
+
+void ChannelProtocol::TakeHandleRequest::_InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(&_hdr, _txid, kChannelProtocol_TakeHandle_Ordinal);
+}
+
+void ChannelProtocol::TakeHandleRequest::_CloseHandles() { h.reset(); }
+
+void ChannelProtocol::TakeHandleResponse::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0, kChannelProtocol_TakeHandle_Ordinal);
 }
 
 void ChannelProtocol::MutateSocketRequest::_InitHeader(zx_txid_t _txid) {

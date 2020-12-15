@@ -102,8 +102,27 @@
             </td>
         </tr></table>
 
+### TakeHandle {#fidl.test.protocols/ChannelProtocol.TakeHandle}
+
+
+#### Request
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>h</code></td>
+            <td>
+                <code>handle&lt;handle&gt;</code>
+            </td>
+        </tr></table>
+
+
+#### Response
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    </table>
+
 ## Transitional {#Transitional}
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/protocols.test.fidl#47)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/protocols.test.fidl#48)*
 
 
 ### Event {#fidl.test.protocols/Transitional.Event}

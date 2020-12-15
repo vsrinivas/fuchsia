@@ -30,6 +30,7 @@
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/handle.h>
 #include <lib/zx/socket.h>
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
@@ -1708,6 +1709,10 @@ extern "C" const fidl_type_t
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodBResponseTable;
 extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
+extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
@@ -2282,6 +2287,295 @@ class ChannelProtocol final {
     void _InitHeader(zx_txid_t _txid);
   };
 
+  struct TakeHandleResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    TakeHandleResponse() { _InitHeader(); }
+
+    static constexpr const fidl_type_t* Type =
+        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 16;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+
+    class UnownedEncodedMessage final {
+     public:
+      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size)
+          : message_(_bytes, _byte_size, sizeof(TakeHandleResponse), nullptr, 0,
+                     0) {
+        FIDL_ALIGNDECL TakeHandleResponse _response{};
+        message_.LinearizeAndEncode<TakeHandleResponse>(&_response);
+      }
+      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                            TakeHandleResponse* response)
+          : message_(bytes, byte_size, sizeof(TakeHandleResponse), nullptr, 0,
+                     0) {
+        message_.LinearizeAndEncode<TakeHandleResponse>(response);
+      }
+      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+      zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
+      bool ok() const { return message_.status() == ZX_OK; }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      TakeHandleResponse& Message() {
+        return *reinterpret_cast<TakeHandleResponse*>(message_.bytes());
+      }
+      ::fidl::OutgoingMessage message_;
+    };
+
+    class OwnedEncodedMessage final {
+     public:
+      explicit OwnedEncodedMessage() : message_(bytes_, sizeof(bytes_)) {}
+      explicit OwnedEncodedMessage(TakeHandleResponse* response)
+          : message_(bytes_, sizeof(bytes_), response) {}
+      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+      zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
+      bool ok() const { return message_.ok(); }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+        return message_.GetOutgoingMessage();
+      }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      FIDL_ALIGNDECL
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      UnownedEncodedMessage message_;
+    };
+
+    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                     zx_handle_info_t* handles = nullptr,
+                     uint32_t handle_actual = 0)
+          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                              handle_actual) {
+        Decode<TakeHandleResponse>();
+      }
+      DecodedMessage(fidl_incoming_msg_t* msg)
+          : ::fidl::internal::IncomingMessage(msg) {
+        Decode<TakeHandleResponse>();
+      }
+      DecodedMessage(const DecodedMessage&) = delete;
+      DecodedMessage(DecodedMessage&&) = delete;
+      DecodedMessage* operator=(const DecodedMessage&) = delete;
+      DecodedMessage* operator=(DecodedMessage&&) = delete;
+
+      TakeHandleResponse* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<TakeHandleResponse*>(bytes());
+      }
+
+      // Release the ownership of the decoded message. That means that the
+      // handles won't be closed When the object is destroyed. After calling
+      // this method, the DecodedMessage object should not be used anymore.
+      void ReleasePrimaryObject() { ResetBytes(); }
+
+      // These methods should only be used for testing purpose.
+      // They create an DecodedMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static DecodedMessage FromOutgoingWithRawHandleCopy(
+          UnownedEncodedMessage* outgoing_message) {
+        return DecodedMessage(outgoing_message->GetOutgoingMessage());
+      }
+      static DecodedMessage FromOutgoingWithRawHandleCopy(
+          OwnedEncodedMessage* outgoing_message) {
+        return DecodedMessage(outgoing_message->GetOutgoingMessage());
+      }
+
+     private:
+      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+        Init(outgoing_message, nullptr, 0);
+        if (ok()) {
+          Decode<TakeHandleResponse>();
+        }
+      }
+    };
+
+   private:
+    void _InitHeader();
+  };
+  struct TakeHandleRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::handle h;
+    explicit TakeHandleRequest(zx_txid_t _txid, ::zx::handle& h)
+        : h(std::move(h)) {
+      _InitHeader(_txid);
+    }
+    explicit TakeHandleRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+    static constexpr const fidl_type_t* Type =
+        &fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr bool IsResource = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    void _CloseHandles();
+
+    class UnownedEncodedMessage final {
+     public:
+      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
+                            zx_txid_t _txid, ::zx::handle& h)
+          : message_(_bytes, _byte_size, sizeof(TakeHandleRequest), handles_,
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+        FIDL_ALIGNDECL TakeHandleRequest _request(_txid, h);
+        message_.LinearizeAndEncode<TakeHandleRequest>(&_request);
+      }
+      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                            TakeHandleRequest* request)
+          : message_(bytes, byte_size, sizeof(TakeHandleRequest), handles_,
+                     std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
+        message_.LinearizeAndEncode<TakeHandleRequest>(request);
+      }
+      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+      zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
+      bool ok() const { return message_.status() == ZX_OK; }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      TakeHandleRequest& Message() {
+        return *reinterpret_cast<TakeHandleRequest*>(message_.bytes());
+      }
+      zx_handle_disposition_t
+          handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+      ::fidl::OutgoingMessage message_;
+    };
+
+    class OwnedEncodedMessage final {
+     public:
+      explicit OwnedEncodedMessage(zx_txid_t _txid, ::zx::handle& h)
+          : message_(bytes_, sizeof(bytes_), _txid, h) {}
+      explicit OwnedEncodedMessage(TakeHandleRequest* request)
+          : message_(bytes_, sizeof(bytes_), request) {}
+      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+      zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
+      bool ok() const { return message_.ok(); }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+        return message_.GetOutgoingMessage();
+      }
+
+      void Write(zx_handle_t client) { message_.Write(client); }
+
+     private:
+      FIDL_ALIGNDECL
+      uint8_t bytes_[PrimarySize + MaxOutOfLine];
+      UnownedEncodedMessage message_;
+    };
+
+    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                     zx_handle_info_t* handles = nullptr,
+                     uint32_t handle_actual = 0)
+          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                              handle_actual) {
+        Decode<TakeHandleRequest>();
+      }
+      DecodedMessage(fidl_incoming_msg_t* msg)
+          : ::fidl::internal::IncomingMessage(msg) {
+        Decode<TakeHandleRequest>();
+      }
+      DecodedMessage(const DecodedMessage&) = delete;
+      DecodedMessage(DecodedMessage&&) = delete;
+      DecodedMessage* operator=(const DecodedMessage&) = delete;
+      DecodedMessage* operator=(DecodedMessage&&) = delete;
+      ~DecodedMessage() {
+        if (ok() && (PrimaryObject() != nullptr)) {
+          PrimaryObject()->_CloseHandles();
+        }
+      }
+
+      TakeHandleRequest* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<TakeHandleRequest*>(bytes());
+      }
+
+      // Release the ownership of the decoded message. That means that the
+      // handles won't be closed When the object is destroyed. After calling
+      // this method, the DecodedMessage object should not be used anymore.
+      void ReleasePrimaryObject() { ResetBytes(); }
+
+      // These methods should only be used for testing purpose.
+      // They create an DecodedMessage using the bytes of an outgoing message
+      // and copying the handles.
+      static DecodedMessage FromOutgoingWithRawHandleCopy(
+          UnownedEncodedMessage* encoded_message) {
+        return DecodedMessage(encoded_message->GetOutgoingMessage());
+      }
+      static DecodedMessage FromOutgoingWithRawHandleCopy(
+          OwnedEncodedMessage* encoded_message) {
+        return DecodedMessage(encoded_message->GetOutgoingMessage());
+      }
+
+     private:
+      DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+        zx_handle_info_t
+            handles[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
+        Init(outgoing_message, handles,
+             std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles));
+        if (ok()) {
+          Decode<TakeHandleRequest>();
+        }
+      }
+    };
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
+  };
+
   struct MutateSocketResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -2656,6 +2950,41 @@ class ChannelProtocol final {
       uint8_t
           bytes_[MethodBResponse::PrimarySize + MethodBResponse::MaxOutOfLine];
     };
+    class TakeHandle final : public ::fidl::Result {
+     public:
+      explicit TakeHandle(zx_handle_t _client, ::zx::handle& h);
+      TakeHandle(zx_handle_t _client, ::zx::handle& h, zx_time_t _deadline);
+      explicit TakeHandle(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      TakeHandle(TakeHandle&&) = delete;
+      TakeHandle(const TakeHandle&) = delete;
+      TakeHandle* operator=(TakeHandle&&) = delete;
+      TakeHandle* operator=(const TakeHandle&) = delete;
+      ~TakeHandle() = default;
+
+      TakeHandleResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<TakeHandleResponse*>(bytes_);
+      }
+      const TakeHandleResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const TakeHandleResponse*>(bytes_);
+      }
+
+      TakeHandleResponse& value() { return *Unwrap(); }
+      const TakeHandleResponse& value() const { return *Unwrap(); }
+
+      TakeHandleResponse* operator->() { return &value(); }
+      const TakeHandleResponse* operator->() const { return &value(); }
+
+      TakeHandleResponse& operator*() { return value(); }
+      const TakeHandleResponse& operator*() const { return value(); }
+
+     private:
+      FIDL_ALIGNDECL
+      uint8_t bytes_[TakeHandleResponse::PrimarySize +
+                     TakeHandleResponse::MaxOutOfLine];
+    };
     class MutateSocket final : public ::fidl::Result {
      public:
       explicit MutateSocket(zx_handle_t _client, ::zx::socket& a);
@@ -2748,6 +3077,41 @@ class ChannelProtocol final {
      private:
       uint8_t* bytes_;
     };
+    class TakeHandle final : public ::fidl::Result {
+     public:
+      explicit TakeHandle(zx_handle_t _client, uint8_t* _request_bytes,
+                          uint32_t _request_byte_capacity, ::zx::handle& h,
+                          uint8_t* _response_bytes,
+                          uint32_t _response_byte_capacity);
+      explicit TakeHandle(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      TakeHandle(TakeHandle&&) = delete;
+      TakeHandle(const TakeHandle&) = delete;
+      TakeHandle* operator=(TakeHandle&&) = delete;
+      TakeHandle* operator=(const TakeHandle&) = delete;
+      ~TakeHandle() = default;
+
+      TakeHandleResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<TakeHandleResponse*>(bytes_);
+      }
+      const TakeHandleResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const TakeHandleResponse*>(bytes_);
+      }
+
+      TakeHandleResponse& value() { return *Unwrap(); }
+      const TakeHandleResponse& value() const { return *Unwrap(); }
+
+      TakeHandleResponse* operator->() { return &value(); }
+      const TakeHandleResponse* operator->() const { return &value(); }
+
+      TakeHandleResponse& operator*() { return value(); }
+      const TakeHandleResponse& operator*() const { return value(); }
+
+     private:
+      uint8_t* bytes_;
+    };
     class MutateSocket final : public ::fidl::Result {
      public:
       explicit MutateSocket(zx_handle_t _client, uint8_t* _request_bytes,
@@ -2828,6 +3192,23 @@ class ChannelProtocol final {
           b, _response_buffer.data, _response_buffer.capacity);
     }
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::TakeHandle TakeHandle(::zx::unowned_channel _client_end,
+                                           ::zx::handle h) {
+      return ResultOf::TakeHandle(_client_end->get(), h);
+    }
+
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    static UnownedResultOf::TakeHandle TakeHandle(
+        ::zx::unowned_channel _client_end, ::fidl::BufferSpan _request_buffer,
+        ::zx::handle h, ::fidl::BufferSpan _response_buffer) {
+      return UnownedResultOf::TakeHandle(
+          _client_end->get(), _request_buffer.data, _request_buffer.capacity, h,
+          _response_buffer.data, _response_buffer.capacity);
+    }
+
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     static ResultOf::MutateSocket MutateSocket(
@@ -2889,6 +3270,22 @@ class ChannelProtocol final {
           a, b, _response_buffer.data, _response_buffer.capacity);
     }
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    ResultOf::TakeHandle TakeHandle(::zx::handle h) {
+      return ResultOf::TakeHandle(this->channel().get(), h);
+    }
+
+    // Caller provides the backing storage for FIDL message via request and
+    // response buffers.
+    UnownedResultOf::TakeHandle TakeHandle(
+        ::fidl::BufferSpan _request_buffer, ::zx::handle h,
+        ::fidl::BufferSpan _response_buffer) {
+      return UnownedResultOf::TakeHandle(
+          this->channel().get(), _request_buffer.data, _request_buffer.capacity,
+          h, _response_buffer.data, _response_buffer.capacity);
+    }
+
     // Allocates 48 bytes of message buffer on the stack. No heap allocation
     // necessary.
     ResultOf::MutateSocket MutateSocket(::zx::socket a) {
@@ -2920,6 +3317,7 @@ class ChannelProtocol final {
 
   struct AsyncEventHandlers;
   class MethodBResponseContext;
+  class TakeHandleResponseContext;
   class MutateSocketResponseContext;
   class ClientImpl;
 
@@ -2960,6 +3358,29 @@ class ChannelProtocol final {
 
     virtual void MethodB(int64_t a, int64_t b,
                          MethodBCompleter::Sync& _completer) = 0;
+
+    class TakeHandleCompleterBase : public ::fidl::CompleterBase {
+     public:
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      ::fidl::Result Reply();
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using TakeHandleCompleter = ::fidl::Completer<TakeHandleCompleterBase>;
+
+    virtual void TakeHandle(::zx::handle h,
+                            TakeHandleCompleter::Sync& _completer) = 0;
 
     class MutateSocketCompleterBase : public ::fidl::CompleterBase {
      public:
@@ -7158,6 +7579,37 @@ static_assert(
 
 template <>
 struct IsFidlType<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleRequest>
+    : public std::true_type {};
+static_assert(
+    sizeof(
+        ::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleRequest) ==
+    ::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleRequest::
+        PrimarySize);
+static_assert(
+    offsetof(::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleRequest,
+             h) == 16);
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleResponse>
+    : public std::true_type {};
+static_assert(
+    sizeof(
+        ::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleResponse) ==
+    ::llcpp::fidl::test::protocols::ChannelProtocol::TakeHandleResponse::
+        PrimarySize);
+
+template <>
+struct IsFidlType<
     ::llcpp::fidl::test::protocols::ChannelProtocol::MutateSocketRequest>
     : public std::true_type {};
 template <>
@@ -7626,6 +8078,17 @@ class ChannelProtocol::MethodBResponseContext
   void OnReply(uint8_t* reply) override;
 };
 
+class ChannelProtocol::TakeHandleResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  TakeHandleResponseContext();
+
+  virtual void OnReply(ChannelProtocol::TakeHandleResponse* message) = 0;
+
+ private:
+  void OnReply(uint8_t* reply) override;
+};
+
 class ChannelProtocol::MutateSocketResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
@@ -7667,6 +8130,26 @@ class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   UnownedResultOf::MethodB MethodB_Sync(::fidl::BufferSpan _request_buffer,
                                         int64_t a, int64_t b,
                                         ::fidl::BufferSpan _response_buffer);
+
+  // Asynchronous variant of |ChannelProtocol.TakeHandle()|. Allocates 24 bytes
+  // of request buffer on the stack. The callback is stored on the heap.
+  ::fidl::Result TakeHandle(
+      ::zx::handle h, ::fit::callback<void(TakeHandleResponse* response)> _cb);
+  // Asynchronous variant of |ChannelProtocol.TakeHandle()|. Caller provides the
+  // backing storage for FIDL message via request buffer. Ownership of _context
+  // is given unsafely to the binding until OnError() or OnReply() are called on
+  // it.
+  ::fidl::Result TakeHandle(::fidl::BufferSpan _request_buffer, ::zx::handle h,
+                            TakeHandleResponseContext* _context);
+  // Synchronous variant of |ChannelProtocol.TakeHandle()|. Allocates 40 bytes
+  // of message buffer on the stack. No heap allocation necessary.
+  ResultOf::TakeHandle TakeHandle_Sync(::zx::handle h);
+
+  // Synchronous variant of |ChannelProtocol.TakeHandle()|. Caller provides the
+  // backing storage for FIDL message via request and response buffers.
+  UnownedResultOf::TakeHandle TakeHandle_Sync(
+      ::fidl::BufferSpan _request_buffer, ::zx::handle h,
+      ::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of |ChannelProtocol.MutateSocket()|. Allocates 24
   // bytes of request buffer on the stack. The callback is stored on the heap.

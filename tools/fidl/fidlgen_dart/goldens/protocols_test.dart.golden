@@ -101,6 +101,11 @@ class ChannelProtocol$TestBase extends ChannelProtocol {
   }
 
   @override
+  $async.Future<void> takeHandle($zircon.Handle h) {
+    return $async.Future.error(UnimplementedError(), StackTrace.current);
+  }
+
+  @override
   $async.Future<$zircon.Socket> mutateSocket($zircon.Socket a) {
     return $async.Future.error(UnimplementedError(), StackTrace.current);
   }

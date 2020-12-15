@@ -251,6 +251,19 @@ fidl_test_protocols_ChannelProtocolMethodBResponse {
 fidl_test_protocols_ChannelProtocolMethodBResponseHandles {
        void void
 } [packed]
+fidl_test_protocols_ChannelProtocolTakeHandleRequest {
+       hdr fidl_message_header[875219241480379432]
+       h flags[fidl_handle_presence, int32]
+} [packed]
+fidl_test_protocols_ChannelProtocolTakeHandleRequestHandles {
+       h zx_handle
+} [packed]
+fidl_test_protocols_ChannelProtocolTakeHandleResponse {
+       hdr fidl_message_header[875219241480379432]
+} [packed]
+fidl_test_protocols_ChannelProtocolTakeHandleResponseHandles {
+       void void
+} [packed]
 fidl_test_protocols_ChannelProtocolMutateSocketRequest {
        hdr fidl_message_header[9065806117349865322]
        a flags[fidl_handle_presence, int32]
@@ -274,6 +287,7 @@ fdio_service_connect$fidl_test_protocols_ChannelProtocol(path ptr[in, string["/s
 zx_channel_write$fidl_test_protocols_ChannelProtocolMethodA(handle zx_chan_fidl_test_protocols_ChannelProtocol_client, options const[0], bytes ptr[in, fidl_test_protocols_ChannelProtocolMethodARequest], num_bytes bytesize[bytes], handles ptr[in, fidl_test_protocols_ChannelProtocolMethodARequestHandles], num_handles bytesize[handles])
 zx_channel_read$fidl_test_protocols_ChannelProtocolEventA(handle zx_chan_fidl_test_protocols_ChannelProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, fidl_test_protocols_ChannelProtocolEventAEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$fidl_test_protocols_ChannelProtocolMethodB(handle zx_chan_fidl_test_protocols_ChannelProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[fidl_test_protocols_ChannelProtocolMethodBRequest, fidl_test_protocols_ChannelProtocolMethodBRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], fidl_test_protocols_ChannelProtocolMethodBResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$fidl_test_protocols_ChannelProtocolTakeHandle(handle zx_chan_fidl_test_protocols_ChannelProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[fidl_test_protocols_ChannelProtocolTakeHandleRequest, fidl_test_protocols_ChannelProtocolTakeHandleRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], fidl_test_protocols_ChannelProtocolTakeHandleResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$fidl_test_protocols_ChannelProtocolMutateSocket(handle zx_chan_fidl_test_protocols_ChannelProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[fidl_test_protocols_ChannelProtocolMutateSocketRequest, fidl_test_protocols_ChannelProtocolMutateSocketRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], fidl_test_protocols_ChannelProtocolMutateSocketResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 
 

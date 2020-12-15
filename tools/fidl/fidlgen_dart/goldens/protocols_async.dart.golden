@@ -1769,6 +1769,17 @@ const $fidl.MethodType _kChannelProtocol_MethodB_Type = $fidl.MethodType(
   requestInlineSize: 16,
   responseInlineSize: 8,
 );
+// takeHandle: ($zircon.Handle h) -> ()
+const int _kChannelProtocol_TakeHandle_Ordinal = 0xc25674355065c28;
+const $fidl.MethodType _kChannelProtocol_TakeHandle_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<$zircon.Handle>(type: $fidl.HandleType(), offset: 0),
+  ],
+  response: [],
+  name: r"ChannelProtocol.TakeHandle",
+  requestInlineSize: 8,
+  responseInlineSize: 0,
+);
 // mutateSocket: ($zircon.Socket a) -> ($zircon.Socket b)
 const int _kChannelProtocol_MutateSocket_Ordinal = 0x7dd036a18b33b76a;
 const $fidl.MethodType _kChannelProtocol_MutateSocket_Type = $fidl.MethodType(
@@ -1797,6 +1808,7 @@ abstract class ChannelProtocol {
   $async.Future<void> methodA(int a, int b);
   $async.Stream<ChannelProtocol$EventA$Response>? get eventA;
   $async.Future<int> methodB(int a, int b);
+  $async.Future<void> takeHandle($zircon.Handle h);
   $async.Future<$zircon.Socket> mutateSocket($zircon.Socket a);
 }
 
@@ -1897,6 +1909,27 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
           Timeline.finishSync();
         }
         break;
+      case _kChannelProtocol_TakeHandle_Ordinal:
+        final String _name = _kChannelProtocol_TakeHandle_Type.name;
+        try {
+          Timeline.startSync(_name);
+          final List<$fidl.MemberType> $types =
+              _kChannelProtocol_TakeHandle_Type.response!;
+          $decoder.claimMemory(_kChannelProtocol_TakeHandle_Type
+              .decodeResponseInlineSize($decoder));
+          // ignore: prefer_const_declarations
+          final $response = null;
+
+          $completer.complete($response);
+        } catch (_e) {
+          ctrl.proxyError($fidl.FidlError(
+              'Exception handling method response $_name: $_e'));
+          ctrl.close();
+          rethrow;
+        } finally {
+          Timeline.finishSync();
+        }
+        break;
       case _kChannelProtocol_MutateSocket_Ordinal:
         final String _name = _kChannelProtocol_MutateSocket_Type.name;
         try {
@@ -1971,6 +2004,26 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
     $types[0].encode($encoder, a, $fidl.kMessageHeaderSize);
     $types[1].encode($encoder, b, $fidl.kMessageHeaderSize);
     final $completer = $async.Completer<int>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  @override
+  $async.Future<void> takeHandle($zircon.Handle h) async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder();
+    $encoder.encodeMessageHeader(_kChannelProtocol_TakeHandle_Ordinal, 0);
+    $encoder.alloc(
+        _kChannelProtocol_TakeHandle_Type.encodingRequestInlineSize($encoder));
+    final List<$fidl.MemberType> $types =
+        _kChannelProtocol_TakeHandle_Type.request!;
+    $types[0].encode($encoder, h, $fidl.kMessageHeaderSize);
+    final $completer = $async.Completer<void>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
   }
@@ -2075,6 +2128,34 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
             final List<$fidl.MemberType> $types =
                 _kChannelProtocol_MethodB_Type.response!;
             $types[0].encode($encoder, $response, $fidl.kMessageHeaderSize);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            close();
+            print('Exception handling method call $_name: $_e');
+          });
+        } catch (_e) {
+          close();
+          print('Exception handling method call $_name: $_e');
+          rethrow;
+        } finally {
+          Timeline.finishSync();
+        }
+        break;
+      case _kChannelProtocol_TakeHandle_Ordinal:
+        final String _name = _kChannelProtocol_TakeHandle_Type.name;
+        try {
+          Timeline.startSync(_name);
+          final List<$fidl.MemberType> $types =
+              _kChannelProtocol_TakeHandle_Type.request!;
+          $decoder.claimMemory(_kChannelProtocol_TakeHandle_Type
+              .decodeRequestInlineSize($decoder));
+          final $async.Future<void> $future = impl!.takeHandle(
+            $types[0].decode($decoder, $fidl.kMessageHeaderSize),
+          );
+          $future.then(($response) {
+            final $fidl.Encoder $encoder = $fidl.Encoder();
+            $encoder.encodeMessageHeader(
+                _kChannelProtocol_TakeHandle_Ordinal, $message.txid);
             $respond($encoder.message);
           }, onError: (_e) {
             close();
