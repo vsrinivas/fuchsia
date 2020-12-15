@@ -17,58 +17,79 @@ import("//build/driver_package.gni")
 # All files that must be included as libraries in the driver_driver_package() target are added to the
 # driver_library_files list.
 
-template("brcmfmac_copy") {
+template("brcmfmac_driver") {
   forward_variables_from(invoker,
                          [
                            "board",
                            "chip",
                            "bus",
+                           "clm_present",
                          ])
+  orig_target_name = target_name
+
   driver_library_files = [
     "${chip}-${bus}.bin",
     "${chip}-${bus}.txt",
     "${chip}-${bus}.clm_blob",
   ]
-  copy("brcmfmac-firmware-copy-${target_name}") {
+  copy("brcmfmac-firmware-copy-${orig_target_name}") {
     sources = [ "firmware/${chip}-${bus}-${board}.bin" ]
-    outputs =
-        [ "$root_out_dir/firmware/${target_name}/brcmfmac/${chip}-${bus}.bin" ]
-  }
-  copy("brcmfmac-nvram-copy-${target_name}") {
-    sources = [ "firmware/${chip}-${bus}-${board}.txt" ]
-    outputs =
-        [ "$root_out_dir/firmware/${target_name}/brcmfmac/${chip}-${bus}.txt" ]
-  }
-  copy("brcmfmac-clm-copy-${target_name}") {
-    sources = [ "firmware/${chip}-${bus}-${board}.clm_blob" ]
     outputs = [
-      "$root_out_dir/firmware/${target_name}/brcmfmac/${chip}-${bus}.clm_blob",
+      "$root_out_dir/firmware/${orig_target_name}/brcmfmac/${chip}-${bus}.bin",
+    ]
+  }
+  copy("brcmfmac-nvram-copy-${orig_target_name}") {
+    sources = [ "firmware/${chip}-${bus}-${board}.txt" ]
+    outputs = [
+      "$root_out_dir/firmware/${orig_target_name}/brcmfmac/${chip}-${bus}.txt",
+    ]
+  }
+  copy("brcmfmac-clm-copy-${orig_target_name}") {
+    sources = [ "firmware/${chip}-${bus}-${board}.clm_blob" ]
+    outputs = [ "$root_out_dir/firmware/${orig_target_name}/brcmfmac/${chip}-${bus}.clm_blob" ]
+  }
+
+  _deps = [
+    ":brcmfmac-firmware-copy-${orig_target_name}($shlib_toolchain)",
+    ":brcmfmac-nvram-copy-${orig_target_name}($shlib_toolchain)",
+  ]
+  if (clm_present) {
+    _deps += [ ":brcmfmac-clm-copy-${orig_target_name}($shlib_toolchain)" ]
+  }
+
+  _libraries = []
+  foreach(file, driver_library_files) {
+    _libraries += [
+      {
+        name = "firmware/brcmfmac/$file"
+        source = get_label_info(shlib_toolchain, "name")
+        source += "/firmware/${orig_target_name}/brcmfmac/$file"
+      },
     ]
   }
 
   # Driver package for the brcmfmac driver.
-  # Note that shlib_toolchain is not being used anymore.
-  driver_package(target_name) {
-    deps = [
-      ":brcmfmac-clm-copy-${target_name}",
-      ":brcmfmac-firmware-copy-${target_name}",
-      ":brcmfmac-nvram-copy-${target_name}",
-      ":driver_module",
-    ]
+  driver_package(orig_target_name) {
+    deps = _deps
+    deps += [ ":driver_module" ]
     drivers = [
       {
         name = "brcmfmac.so"
       },
     ]
-    libraries = []
-    foreach(file, driver_library_files) {
-      libraries += [
-        {
-          name = "firmware/brcmfmac/$file"
-          source = "firmware/${target_name}/brcmfmac/$file"
-        },
-      ]
-    }
+    libraries = _libraries
+    visibility = [ "*" ]
+  }
+
+  driver_package("test-${orig_target_name}") {
+    deps = _deps
+    deps += [ ":test_driver_module" ]
+    drivers = [
+      {
+        name = "brcmfmac-test.so"
+      },
+    ]
+    libraries = _libraries
     visibility = [ "*" ]
   }
 }

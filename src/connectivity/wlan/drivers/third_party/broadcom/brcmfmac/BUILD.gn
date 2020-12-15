@@ -268,175 +268,54 @@ driver_module("test_driver_module") {
 # All files that must be included as libraries in the driver_driver_package() target are added to the
 # driver_library_files list.
 
-driver_library_files = []
-if (internal_access) {
-  # Firmware files from git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
-  if (board_name == "astro") {
-    copy("brcmfmac-firmware-copy") {
-      sources = [ "firmware/brcmfmac43455-sdio-astro.bin" ]
-      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.bin" ]
-    }
-    copy("brcmfmac-nvram-copy") {
-      sources = [ "firmware/brcmfmac43455-sdio-astro.txt" ]
-      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.txt" ]
-    }
-    copy("brcmfmac-clm-copy") {
-      sources = [ "firmware/brcmfmac43455-sdio-astro.clm_blob" ]
-      outputs =
-          [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.clm_blob" ]
-    }
-    driver_library_files += [
-      "brcmfmac43455-sdio.bin",
-      "brcmfmac43455-sdio.txt",
-      "brcmfmac43455-sdio.clm_blob",
-    ]
-  } else if (board_name == "sherlock") {
-    copy("brcmfmac-firmware-copy") {
-      sources = [ "firmware/brcmfmac43455-sdio-sherlock.bin" ]
-      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.bin" ]
-    }
-    copy("brcmfmac-nvram-copy") {
-      sources = [ "firmware/brcmfmac43455-sdio-sherlock.txt" ]
-      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.txt" ]
-    }
-    copy("brcmfmac-clm-copy") {
-      sources = [ "firmware/brcmfmac43455-sdio-sherlock.clm_blob" ]
-      outputs =
-          [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.clm_blob" ]
-    }
-    driver_library_files += [
-      "brcmfmac43455-sdio.bin",
-      "brcmfmac43455-sdio.txt",
-      "brcmfmac43455-sdio.clm_blob",
-    ]
-  } else if (board_name == "nelson") {
-    copy("brcmfmac-firmware-copy") {
-      sources = [ "firmware/brcmfmac43455-sdio-nelson.bin" ]
-      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.bin" ]
-    }
-    copy("brcmfmac-nvram-copy") {
-      sources = [ "firmware/brcmfmac43455-sdio-nelson.txt" ]
-      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.txt" ]
-    }
-    copy("brcmfmac-clm-copy") {
-      sources = [ "firmware/brcmfmac43455-sdio-nelson.clm_blob" ]
-      outputs =
-          [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.clm_blob" ]
-    }
-    driver_library_files += [
-      "brcmfmac43455-sdio.bin",
-      "brcmfmac43455-sdio.txt",
-      "brcmfmac43455-sdio.clm_blob",
-    ]
-  } else if (board_name == "luis") {
-    copy("brcmfmac-firmware-copy") {
-      sources = [ "firmware/brcmfmac43455-sdio-luis.bin" ]
-      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.bin" ]
-    }
-    copy("brcmfmac-nvram-copy") {
-      sources = [ "firmware/brcmfmac43455-sdio-luis.txt" ]
-      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.txt" ]
-    }
-    copy("brcmfmac-clm-copy") {
-      sources = [ "firmware/brcmfmac43455-sdio-luis.clm_blob" ]
-      outputs =
-          [ "$root_out_dir/firmware/brcmfmac/brcmfmac43455-sdio.clm_blob" ]
-    }
-    driver_library_files += [
-      "brcmfmac43455-sdio.bin",
-      "brcmfmac43455-sdio.txt",
-      "brcmfmac43455-sdio.clm_blob",
-    ]
-  } else if (target_cpu == "x64") {
-    # Assume for now that x64 boards use the PCIE interface.
-    copy("brcmfmac-firmware-copy") {
-      sources = [ "firmware/brcmfmac4356-pcie-ap6356sdp.bin" ]
-      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac4356-pcie.bin" ]
-    }
-    copy("brcmfmac-nvram-copy") {
-      sources = [ "firmware/brcmfmac4356-pcie-ap6356sdp.txt" ]
-      outputs = [ "$root_out_dir/firmware/brcmfmac/brcmfmac4356-pcie.txt" ]
-    }
-    group("brcmfmac-clm-copy") {
-    }
-    driver_library_files += [
-      "brcmfmac4356-pcie.bin",
-      "brcmfmac4356-pcie.txt",
-    ]
-  } else {
-    copy("brcmfmac-firmware-copy") {
-      sources = [
-        "firmware/brcmfmac43242a.bin",
-        "firmware/brcmfmac43455-sdio.bin",
-        "firmware/brcmfmac43455-sdio.txt",
-        "firmware/brcmfmac4356-pcie.bin",
-        "firmware/brcmfmac4356-sdio.bin",
-        "firmware/brcmfmac4356-sdio.txt",
-        "firmware/brcmfmac4359-sdio.bin",
-        "firmware/brcmfmac4359-sdio.txt",
-      ]
-      outputs = [ "$root_out_dir/firmware/brcmfmac/{{source_file_part}}" ]
-    }
-    group("brcmfmac-nvram-copy") {
-    }
-    group("brcmfmac-clm-copy") {
-    }
-    driver_library_files += [
-      "brcmfmac43242a.bin",
-      "brcmfmac43455-sdio.bin",
-      "brcmfmac43455-sdio.txt",
-      "brcmfmac4356-pcie.bin",
-      "brcmfmac4356-sdio.bin",
-      "brcmfmac4356-sdio.txt",
-      "brcmfmac4359-sdio.bin",
-      "brcmfmac4359-sdio.txt",
-    ]
-  }
-} else {
-  # Provide an empty target, in case no firmware is available.
-  group("brcmfmac-firmware-copy") {
-  }
-  group("brcmfmac-nvram-copy") {
-  }
-  group("brcmfmac-clm-copy") {
-  }
-}
-
-brcmfmac_copy("brcmfmac-astro") {
+brcmfmac_driver("brcmfmac-astro") {
   board = "astro"
   bus = "sdio"
   chip = "brcmfmac43455"
+  clm_present = true
 }
 
-brcmfmac_copy("brcmfmac-astro-mfg") {
+brcmfmac_driver("brcmfmac-astro-mfg") {
   board = "astro-mfg"
   bus = "sdio"
   chip = "brcmfmac43455"
+  clm_present = true
 }
 
-brcmfmac_copy("brcmfmac-sherlock") {
+brcmfmac_driver("brcmfmac-sherlock") {
   board = "sherlock"
   bus = "sdio"
   chip = "brcmfmac43455"
+  clm_present = true
 }
 
-brcmfmac_copy("brcmfmac-sherlock-mfg") {
+brcmfmac_driver("brcmfmac-sherlock-mfg") {
   board = "sherlock-mfg"
   bus = "sdio"
   chip = "brcmfmac43455"
+  clm_present = true
 }
 
-brcmfmac_copy("brcmfmac-luis") {
+brcmfmac_driver("brcmfmac-luis") {
   board = "luis"
   bus = "sdio"
   chip = "brcmfmac43455"
+  clm_present = true
 }
 
-brcmfmac_copy("brcmfmac-luis-mfg") {
+brcmfmac_driver("brcmfmac-luis-mfg") {
   board = "luis-mfg"
   bus = "sdio"
   chip = "brcmfmac43455"
+  clm_present = true
 }
+
+#brcmfmac_driver("brcmfmac-x64") {
+#  board = "x64"
+#  bus = "pcie"
+#  chip = "brcmfmac4356"
+#  clm_present = false
+#}
 
 # The test package, including tests in subdirs.
 group("brcmfmac_tests") {
@@ -454,57 +333,5 @@ group("brcmfmac_tests") {
 # Driver packages.  Depend on one or the other, depending on whether the board definition would like
 # runtime tests in the driver or not.
 
-# Driver package for the brcmfmac driver.
 driver_package("brcmfmac") {
-  deps = [
-    # The copy step has to be in the shared-library toolchain to use the
-    # expected output directory, since we treat firmware blobs as if they
-    # were libraries which always use the shared-library toolchain to build.
-    ":brcmfmac-clm-copy($shlib_toolchain)",
-    ":brcmfmac-firmware-copy($shlib_toolchain)",
-    ":brcmfmac-nvram-copy($shlib_toolchain)",
-    ":driver_module",
-  ]
-  drivers = [
-    {
-      name = "brcmfmac.so"
-    },
-  ]
-  libraries = []
-  foreach(file, driver_library_files) {
-    libraries += [
-      {
-        name = "firmware/brcmfmac/$file"
-      },
-    ]
-  }
-  visibility += [ "*" ]
-}
-
-# Driver package for the test version of the brcmfmac driver.
-# TODO: Need to look into including the test-driver in the template as well.
-driver_package("brcmfmac-test-driver") {
-  deps = [
-    # The copy step has to be in the shared-library toolchain to use the
-    # expected output directory, since we treat firmware blobs as if they
-    # were libraries which always use the shared-library toolchain to build.
-    ":brcmfmac-clm-copy($shlib_toolchain)",
-    ":brcmfmac-firmware-copy($shlib_toolchain)",
-    ":brcmfmac-nvram-copy($shlib_toolchain)",
-    ":test_driver_module",
-  ]
-  drivers = [
-    {
-      name = "brcmfmac-test.so"
-    },
-  ]
-  libraries = []
-  foreach(file, driver_library_files) {
-    libraries += [
-      {
-        name = "firmware/brcmfmac/$file"
-      },
-    ]
-  }
-  visibility += [ "*" ]
 }
