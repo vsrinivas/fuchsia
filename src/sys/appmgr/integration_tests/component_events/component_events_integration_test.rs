@@ -312,6 +312,8 @@ async fn launch_app(
 // 4. Listen for events
 // 5. Even though there's a component running under A, we are never notified about it given that
 //    given that there's already a listener there.
+// TODO(fxbug.dev/66572): reenable
+#[ignore]
 #[fasync::run_singlethreaded(test)]
 async fn test_register_listener_in_subrealm() -> Result<(), Error> {
     let env = connect_to_service::<EnvironmentMarker>().expect("connect to current environment");
