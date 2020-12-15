@@ -11,6 +11,7 @@
     "name": "AmlG12TdmAstroDai",
     "expected": "match",
     "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
       "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
       "fuchsia.BIND_PLATFORM_DEV_PID": "3",
       "fuchsia.BIND_PLATFORM_DEV_DID": "0x2A"
@@ -21,6 +22,7 @@
     "name": "AmlG12TdmSherlockDai",
     "expected": "match",
     "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
       "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
       "fuchsia.BIND_PLATFORM_DEV_PID": "4",
       "fuchsia.BIND_PLATFORM_DEV_DID": "0x29"
