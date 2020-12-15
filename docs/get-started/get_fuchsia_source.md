@@ -7,13 +7,12 @@ This guide provides instructions for the following tasks:
 
 ## Prerequisites
 
-The Fuchsia project requires `python`, `curl`, `unzip`, and `git` to be
-up-to-date:
+The Fuchsia project requires `curl`, `unzip`, and `git` to be up-to-date:
 
 *   For **Linux**, install or update the following packages:
 
     ```posix-terminal
-    sudo apt-get install build-essential curl git python unzip
+    sudo apt-get install curl git unzip
     ```
 
     Note: Fuchsia requires the version of Git to be 2.28 or higher.
