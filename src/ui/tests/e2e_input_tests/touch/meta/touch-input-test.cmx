@@ -5,14 +5,13 @@
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
             },
             "system-services": [
-                "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.vulkan.loader.Loader"
+                "fuchsia.scheduler.ProfileProvider"
             ]
         }
     },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
         "binary": "test/touch-input-test"
@@ -25,10 +24,8 @@
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
-            "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.ui.pointerinjector.Registry",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.ui.pointerinjector.Registry"
         ]
     }
 }
