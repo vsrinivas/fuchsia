@@ -253,7 +253,11 @@ static void process_mem_range(const zbi_mem_range_t* mem_range) {
       boot_reserve_add_range(mem_range->paddr, mem_range->length);
       break;
     default:
-      panic("bad mem_range->type in process_mem_range\n");
+      // Treat unknown memory range types as reserved.
+      dprintf(INFO,
+              "ZBI: unknown mem range base %#" PRIx64 " size %#" PRIx64 " (type %" PRIu32 ")\n",
+              mem_range->paddr, mem_range->length, mem_range->type);
+      boot_reserve_add_range(mem_range->paddr, mem_range->length);
       break;
   }
 }
