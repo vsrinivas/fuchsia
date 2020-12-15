@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Context, Error};
+use anyhow::{bail, format_err, Context, Error};
 use argh::FromArgs;
 use log::{error, info, LevelFilter};
 use std::collections::{HashMap, HashSet};
@@ -72,6 +72,9 @@ struct Opt {
     #[argh(switch, short = 'v')]
     /// generate verbose output
     verbose: bool,
+    #[argh(switch)]
+    /// do not generate any output
+    silent: bool,
 }
 
 static LOGGER: SimpleLogger = SimpleLogger;
@@ -97,6 +100,10 @@ fn run(opt: Opt) -> Result<(), Error> {
     let template_type = &opt.template;
     let template = select_template(template_type, &output_path)
         .with_context(|| format!("Unable to instantiate template {:?}", template_type))?;
+
+    if opt.silent && opt.verbose {
+        bail!("cannot use --silent and --verbose together");
+    }
 
     if opt.verbose {
         log::set_max_level(LevelFilter::Info);
@@ -155,7 +162,9 @@ fn run(opt: Opt) -> Result<(), Error> {
         })
         .expect("Unable to write FIDL reference files");
 
-    println!("Generated documentation at {}", &output_path_string);
+    if !opt.silent {
+        println!("Generated documentation at {}", &output_path_string);
+    }
     Ok(())
 }
 

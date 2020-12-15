@@ -119,6 +119,7 @@ compiled_action("generate_goldens") {
   deps = [ ":config_for_tests" ]
   sources = []
   args = [
+    "--silent",
     "--config",
     rebase_path(target_gen_dir, root_build_dir) + "/fidldoc.config.json",
     "--out",
