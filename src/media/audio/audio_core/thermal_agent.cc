@@ -8,6 +8,8 @@
 
 #include <unordered_set>
 
+#include <rapidjson/document.h>
+
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/reporter.h"
 
@@ -165,6 +167,18 @@ ThermalAgent::ThermalAgent(fuchsia::thermal::ControllerPtr thermal_controller,
       });
 }
 
+namespace {
+std::optional<std::string> ParseThermalConfigComment(std::string& config) {
+  rapidjson::Document doc;
+  rapidjson::ParseResult result = doc.Parse(config);
+  if (!result.IsError() && doc["_comment"].IsString()) {
+    return doc["_comment"].GetString();
+  } else {
+    return std::nullopt;
+  }
+}
+}  // namespace
+
 // Handle a thermal state change from fuchsia::thermal::Controller.
 // After doing the actual work, update our telemetry and invoke the FIDL completion.
 void ThermalAgent::SetThermalState(uint32_t state, SetThermalStateCallback callback) {
@@ -178,6 +192,8 @@ void ThermalAgent::SetThermalState(uint32_t state, SetThermalStateCallback callb
     FX_CHECK(state < configs_by_state.size());
     FX_CHECK(current_state_ < configs_by_state.size());
     if (configs_by_state[state] != configs_by_state[current_state_]) {
+      auto comment = ParseThermalConfigComment(configs_by_state[state]);
+      FX_LOGS(INFO) << "Set thermal state to " << state << (comment ? " - " + comment.value() : "");
       set_config_callback_(target_name, configs_by_state[state]);
     }
   }
