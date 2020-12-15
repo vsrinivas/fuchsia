@@ -834,7 +834,29 @@ impl Display for TargetAddr {
         write!(f, "{}", self.ip())?;
 
         if self.ip.is_link_local_addr() && self.scope_id() > 0 {
-            write!(f, "%{}", self.scope_id())?;
+            let mut buf = vec![0; libc::IF_NAMESIZE];
+            let res = unsafe {
+                libc::if_indextoname(self.scope_id(), buf.as_mut_ptr() as *mut libc::c_char)
+            };
+            if res.is_null() {
+                // TODO(awdavies): This will likely happen if the interface
+                // is unplugged before being removed from the target cache.
+                // There should be a clear error for the user indicating why
+                // the interface name wasn't shown as a string.
+                log::warn!(
+                    "error getting interface name: {}",
+                    nix::Error::from_errno(nix::errno::Errno::from_i32(nix::errno::errno())),
+                );
+                write!(f, "%{}", self.scope_id())?;
+            } else {
+                let string =
+                    String::from_utf8_lossy(&buf.split(|&c| c == 0u8).next().unwrap_or(&[0u8]));
+                if !string.is_empty() {
+                    write!(f, "%{}", string)?;
+                } else {
+                    log::warn!("empty string for iface idx: {}", self.scope_id());
+                }
+            }
         }
 
         Ok(())

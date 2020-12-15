@@ -309,11 +309,11 @@ mod test {
                     ip: IpAddress::Ipv6(Ipv6Address {
                         addr: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                     }),
-                    scope_id: 2,
+                    scope_id: 198,
                 }),
                 bridge::TargetAddrInfo::Ip(bridge::TargetIp {
                     ip: IpAddress::Ipv4(Ipv4Address { addr: [122, 24, 25, 25] }),
-                    scope_id: 4,
+                    scope_id: 186,
                 }),
             ]),
             age_ms: Some(62345), // 1m2s
@@ -343,7 +343,7 @@ mod test {
                     ip: IpAddress::Ipv6(Ipv6Address {
                         addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
                     }),
-                    scope_id: 2,
+                    scope_id: 137,
                 })]),
                 age_ms: Some(120345), // 2m3s
                 rcs_state: Some(bridge::RemoteControlState::Unknown),
@@ -363,7 +363,7 @@ mod test {
             &lines[1],
             "fooberdoober*   Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N"
         );
-        assert_eq!(&lines[2], "lorberding      Unknown    Unknown    [fe80::101:101:101:101%2]                          2m0s    N");
+        assert_eq!(&lines[2], "lorberding      Unknown    Unknown    [fe80::101:101:101:101%137]                        2m0s    N");
 
         let lines = formatter.lines(None);
         assert_eq!(lines.len(), 3);
@@ -373,7 +373,7 @@ mod test {
             &lines[1],
             "fooberdoober    Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N"
         );
-        assert_eq!(&lines[2], "lorberding      Unknown    Unknown    [fe80::101:101:101:101%2]                          2m0s    N");
+        assert_eq!(&lines[2], "lorberding      Unknown    Unknown    [fe80::101:101:101:101%137]                        2m0s    N");
     }
 
     #[test]
