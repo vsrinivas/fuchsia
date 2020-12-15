@@ -9,11 +9,11 @@
 
 #include <memory>
 
-#include <blobfs/format.h>
 #include <lz4/lz4frame.h>
 
 #include "src/storage/blobfs/compression/compressor.h"
 #include "src/storage/blobfs/compression/decompressor.h"
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 

@@ -1,6 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include "src/storage/blobfs/blob-layout.h"
+
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
@@ -8,11 +10,11 @@
 #include <ostream>
 #include <sstream>
 
-#include <blobfs/blob-layout.h>
-#include <blobfs/format.h>
 #include <digest/digest.h>
 #include <digest/node-digest.h>
 #include <gtest/gtest.h>
+
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 namespace {

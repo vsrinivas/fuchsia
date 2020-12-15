@@ -8,12 +8,12 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include <blobfs/blob-layout.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/macros.h>
 
 #include "src/storage/blobfs/blob-corruption-notifier.h"
+#include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/blobfs/metrics.h"
 
 namespace blobfs {

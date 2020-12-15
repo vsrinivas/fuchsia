@@ -24,10 +24,6 @@
 #include <shared_mutex>
 
 #include <bitmap/raw-bitmap.h>
-#include <blobfs/common.h>
-#include <blobfs/compression-settings.h>
-#include <blobfs/format.h>
-#include <blobfs/mount.h>
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/client.h>
 #include <digest/digest.h>
@@ -47,12 +43,16 @@
 #include "src/storage/blobfs/allocator/node-reserver.h"
 #include "src/storage/blobfs/blob-cache.h"
 #include "src/storage/blobfs/blob-loader.h"
+#include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/directory.h"
+#include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/iterator/allocated-extent-iterator.h"
 #include "src/storage/blobfs/iterator/block-iterator-provider.h"
 #include "src/storage/blobfs/iterator/block-iterator.h"
 #include "src/storage/blobfs/iterator/extent-iterator.h"
 #include "src/storage/blobfs/metrics.h"
+#include "src/storage/blobfs/mount.h"
 #include "src/storage/blobfs/pager/user-pager.h"
 #include "src/storage/blobfs/transaction-manager.h"
 #include "src/storage/blobfs/transaction.h"

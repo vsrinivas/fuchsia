@@ -12,8 +12,9 @@
 
 #include <mutex>
 
-#include <blobfs/compression-settings.h>
 #include <fs/ticker.h>
+
+#include "src/storage/blobfs/compression-settings.h"
 
 namespace blobfs {
 

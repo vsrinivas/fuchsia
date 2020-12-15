@@ -15,11 +15,11 @@ static_assert(false, "Fuchsia only header");
 #include <memory>
 #include <optional>
 
-#include <blobfs/compression-settings.h>
 #include <fbl/macros.h>
 #include <lz4/lz4frame.h>
 #include <zstd/zstd.h>
 
+#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/compressor.h"
 
 namespace blobfs {

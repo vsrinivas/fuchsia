@@ -26,10 +26,6 @@
 #include <utility>
 #include <vector>
 
-#include <blobfs/blob-layout.h>
-#include <blobfs/common.h>
-#include <blobfs/compression-settings.h>
-#include <blobfs/format.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <digest/node-digest.h>
@@ -45,9 +41,13 @@
 #include <fs/vfs_types.h>
 #include <safemath/checked_math.h>
 
+#include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/blobfs/blob-verifier.h"
 #include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/chunked.h"
+#include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/iterator/allocated-extent-iterator.h"
 #include "src/storage/blobfs/iterator/block-iterator.h"
 #include "src/storage/blobfs/iterator/extent-iterator.h"

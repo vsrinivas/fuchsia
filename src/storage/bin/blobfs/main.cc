@@ -23,18 +23,19 @@
 #include <optional>
 #include <utility>
 
-#include <blobfs/blob-layout.h>
-#include <blobfs/cache-policy.h>
-#include <blobfs/compression-settings.h>
-#include <blobfs/fsck.h>
-#include <blobfs/mkfs.h>
-#include <blobfs/mount.h>
 #include <block-client/cpp/remote-block-device.h>
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <fs/vfs.h>
+
+#include "src/storage/blobfs/blob-layout.h"
+#include "src/storage/blobfs/cache-policy.h"
+#include "src/storage/blobfs/compression-settings.h"
+#include "src/storage/blobfs/fsck.h"
+#include "src/storage/blobfs/mkfs.h"
+#include "src/storage/blobfs/mount.h"
 
 namespace {
 

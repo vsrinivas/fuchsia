@@ -10,9 +10,9 @@
 
 #include <cstdlib>
 
-#include <blobfs/compression-settings.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/chunked.h"
 #include "src/storage/blobfs/compression/decompressor-sandbox/decompressor-impl.h"
 #include "src/storage/blobfs/compression/external-decompressor.h"

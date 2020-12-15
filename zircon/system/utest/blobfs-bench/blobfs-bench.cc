@@ -11,7 +11,6 @@
 #include <memory>
 #include <utility>
 
-#include <blobfs/format.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/algorithm.h>
@@ -25,6 +24,8 @@
 #include <fs-test-utils/perftest.h>
 #include <perftest/perftest.h>
 #include <unittest/unittest.h>
+
+#include "src/storage/blobfs/format.h"
 
 namespace {
 

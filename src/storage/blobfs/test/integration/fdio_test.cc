@@ -12,7 +12,7 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/service/cpp/reader.h>
 
-#include <blobfs/mkfs.h>
+#include "src/storage/blobfs/mkfs.h"
 
 namespace blobfs {
 

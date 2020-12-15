@@ -10,7 +10,6 @@
 #include <memory>
 #include <optional>
 
-#include <blobfs/format.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/compression/blob-compressor.h"
@@ -18,6 +17,7 @@
 #include "src/storage/blobfs/compression/compressor.h"
 #include "src/storage/blobfs/compression/seekable-decompressor.h"
 #include "src/storage/blobfs/compression/zstd-seekable.h"
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 namespace {

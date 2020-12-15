@@ -4,7 +4,7 @@
 
 #include "fs_block_client.h"
 
-#include <blobfs/format.h>
+#include "src/storage/blobfs/format.h"
 
 using block_client::BlockDevice;
 
@@ -71,7 +71,9 @@ zx_status_t FsBlockClient::WriteBlock(uint64_t block, const void* data) {
 FsBlockClient::FsBlockClient(std::unique_ptr<BlockDevice> device,
                              fuchsia_hardware_block_BlockInfo block_info, zx::vmo vmo,
                              storage::Vmoid vmoid)
-    : device_(std::move(device)), block_info_(block_info), vmo_(std::move(vmo)),
+    : device_(std::move(device)),
+      block_info_(block_info),
+      vmo_(std::move(vmo)),
       vmoid_(std::move(vmoid)) {}
 
 FsBlockClient::~FsBlockClient() {

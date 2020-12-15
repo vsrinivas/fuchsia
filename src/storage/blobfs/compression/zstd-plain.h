@@ -9,12 +9,12 @@
 
 #include <memory>
 
-#include <blobfs/compression-settings.h>
-#include <blobfs/format.h>
 #include <zstd/zstd.h>
 
+#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/compressor.h"
 #include "src/storage/blobfs/compression/decompressor.h"
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 

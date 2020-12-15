@@ -6,9 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include <blobfs/format.h>
-
 #include "fs_block_client.h"
+#include "src/storage/blobfs/format.h"
 
 using block_client::BlockDevice;
 

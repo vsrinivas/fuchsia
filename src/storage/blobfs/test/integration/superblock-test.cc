@@ -4,10 +4,10 @@
 
 #include <fcntl.h>
 
-#include <blobfs/format.h>
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
 
 namespace blobfs {

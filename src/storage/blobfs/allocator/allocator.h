@@ -18,9 +18,6 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
-#include <blobfs/common.h>
-#include <blobfs/format.h>
-#include <blobfs/node-finder.h>
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
 #include <fbl/vector.h>
@@ -30,6 +27,9 @@
 
 #include "src/storage/blobfs/allocator/extent-reserver.h"
 #include "src/storage/blobfs/allocator/node-reserver.h"
+#include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/node-finder.h"
 
 namespace blobfs {
 

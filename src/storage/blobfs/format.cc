@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/blobfs/format.h"
+
 #include <lib/cksum.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <iterator>
 #include <utility>
 
-#include <blobfs/common.h>
-#include <blobfs/format.h>
-#include <blobfs/mkfs.h>
 #include <fbl/ref_ptr.h>
 #include <fs/journal/initializer.h>
 #include <safemath/checked_math.h>
 #include <storage/buffer/owned_vmoid.h>
 
+#include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/mkfs.h"
 #include "src/storage/fvm/client.h"
 
 namespace blobfs {

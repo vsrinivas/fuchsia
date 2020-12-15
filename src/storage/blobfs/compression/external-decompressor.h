@@ -11,8 +11,7 @@
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 
-#include <blobfs/compression-settings.h>
-
+#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/seekable-decompressor.h"
 
 namespace blobfs {

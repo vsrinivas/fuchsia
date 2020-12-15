@@ -11,8 +11,8 @@
 
 #include <optional>
 
-#include <blobfs/cache-policy.h>
-#include <blobfs/compression-settings.h>
+#include "src/storage/blobfs/cache-policy.h"
+#include "src/storage/blobfs/compression-settings.h"
 #include <block-client/cpp/block-device.h>
 #include <fbl/function.h>
 

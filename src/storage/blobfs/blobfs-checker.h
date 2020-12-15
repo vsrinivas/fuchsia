@@ -8,7 +8,7 @@
 #ifdef __Fuchsia__
 #include "src/storage/blobfs/blobfs.h"
 #else
-#include <blobfs/host.h>
+#include "src/storage/blobfs/host.h"
 #endif
 
 #include <memory>

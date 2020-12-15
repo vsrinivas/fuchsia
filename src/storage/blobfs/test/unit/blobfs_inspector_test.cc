@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/blobfs/blobfs_inspector.h"
+
 #include <iostream>
 #include <memory>
 
-#include <blobfs/blob-layout.h>
-#include <blobfs/blobfs_inspector.h>
-#include <blobfs/common.h>
-#include <blobfs/format.h>
 #include <disk_inspector/buffer_factory.h>
 #include <fs/journal/format.h>
 #include <fs/journal/initializer.h>
@@ -16,6 +14,10 @@
 #include <gtest/gtest.h>
 #include <safemath/checked_math.h>
 #include <storage/buffer/array_buffer.h>
+
+#include "src/storage/blobfs/blob-layout.h"
+#include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 namespace {

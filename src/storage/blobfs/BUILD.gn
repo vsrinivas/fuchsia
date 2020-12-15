@@ -2,18 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxbug.dev/36548.                   #
-##########################################
-
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
 import("//build/fidl/fidl.gni")
-import("//build/unification/zx_library.gni")
 import("//src/sys/build/components.gni")
 
 declare_args() {
@@ -24,85 +13,67 @@ declare_args() {
   blobfs_page_in_metrics_recording = false
 }
 
-source_set("private_headers") {
-  visibility = [ "./*" ]
-  sources = [
-    "allocator/extent-reserver.h",
-    "allocator/node-reserver.h",
-    "compression/chunked.h",
-    "compression/compressor.h",
-    "compression/decompressor.h",
-    "compression/lz4.h",
-    "compression/seekable-decompressor.h",
-    "compression/zstd-plain.h",
-    "compression/zstd-seekable.h",
-    "inspector/parser.h",
-    "iterator/allocated-extent-iterator.h",
-    "iterator/allocated-node-iterator.h",
-    "iterator/block-iterator-provider.h",
-    "iterator/block-iterator.h",
-    "iterator/extent-iterator.h",
-    "iterator/vector-extent-iterator.h",
+static_library("blobfs") {
+  friend = [
+    ":decompressor-impl",
+    "test:*",
   ]
-  deps = [
-    "//src/lib/chunked-compression",
-    "//src/storage/lib/watchdog",
+  visibility = [
+    "//src/storage/*",
+    "//zircon/system/ulib/fvm-host",
+    "//zircon/system/utest/blobfs-bench",
+    "//zircon/system/utest/fs-management",
+    "//zircon/system/utest/fs-test-utils",
+    "//zircon/system/utest/fvm",
+    "//zircon/tools/blobfs",
   ]
-  if (is_fuchsia) {
-    sources += [
-      "allocator/allocator.h",
-      "compression/blob-compressor.h",
-      "compression/external-decompressor.h",
-      "iterator/node-populator.h",
-      "metrics.h",
-      "pager/page-watcher.h",
-      "pager/transfer-buffer.h",
-      "pager/user-pager.h",
-      "read-metrics.h",
-      "verification-metrics.h",
-    ]
-    deps += [
-      ":fuchsia.blobfs.internal",
-      ":fuchsia.blobfs.internal_llcpp",
-      "//zircon/system/ulib/async:async-cpp",
-    ]
-  }
-}
-
-zx_library("blobfs") {
-  host = true
-  sdk = "source"
-  sdk_headers = [
-    "blobfs/common.h",
-    "blobfs/host.h",
-    "blobfs/format.h",
-    "blobfs/mount.h",
-    "blobfs/host/fsck.h",
-    "blobfs/node-finder.h",
-    "blobfs/fsck.h",
-    "blobfs/cache-policy.h",
-    "blobfs/mkfs.h",
-    "blobfs/blobfs_inspector.h",
-    "blobfs/blob-layout.h",
+  public = [
+    "blob-layout.h",
+    "blobfs_inspector.h",
+    "cache-policy.h",
+    "common.h",
+    "format.h",
+    "fsck-host.h",
+    "fsck.h",
+    "host.h",
+    "mkfs.h",
+    "mount.h",
+    "node-finder.h",
   ]
   sources = [
     "allocator/extent-reserver.cc",
+    "allocator/extent-reserver.h",
     "allocator/node-reserver.cc",
+    "allocator/node-reserver.h",
     "blob-layout.cc",
     "blobfs-checker.cc",
     "common.cc",
     "compression-settings.cc",
     "compression/chunked.cc",
+    "compression/chunked.h",
+    "compression/compressor.h",
     "compression/decompressor.cc",
+    "compression/decompressor.h",
     "compression/lz4.cc",
+    "compression/lz4.h",
+    "compression/seekable-decompressor.h",
     "compression/zstd-plain.cc",
+    "compression/zstd-plain.h",
     "compression/zstd-seekable.cc",
+    "compression/zstd-seekable.h",
     "inspector/blobfs_inspector.cc",
     "inspector/parser.cc",
+    "inspector/parser.h",
     "iterator/allocated-extent-iterator.cc",
+    "iterator/allocated-extent-iterator.h",
     "iterator/allocated-node-iterator.cc",
+    "iterator/allocated-node-iterator.h",
+    "iterator/block-iterator-provider.h",
     "iterator/block-iterator.cc",
+    "iterator/block-iterator.h",
+    "iterator/extent-iterator.h",
     "iterator/vector-extent-iterator.cc",
+    "iterator/vector-extent-iterator.h",
   ]
   public_deps = [
     "//src/storage/lib/watchdog",
@@ -115,7 +86,7 @@ zx_library("blobfs") {
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/buffer",
 
-    # <blobfs/format.h> has #include <digest/digest.h>.
+    # format.h has #include <digest/digest.h>.
     "//zircon/system/ulib/digest",
 
     # Seekable zstd include_dirs config required for all compilation units that incorporate it.
@@ -123,7 +94,6 @@ zx_library("blobfs") {
     "//zircon/third_party/ulib/zstd:zstdseek",
   ]
   deps = [
-    ":private_headers",
     "//src/lib/chunked-compression",
     "//src/storage/fvm",
     "//third_party/boringssl",
@@ -249,7 +219,6 @@ source_set("decompressor-impl") {
     ":blobfs",
     ":fuchsia.blobfs.internal",
     ":fuchsia.blobfs.internal_llcpp",
-    ":private_headers",
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/lib/fidl/cpp:cpp",
     "//sdk/lib/sys/cpp:cpp",

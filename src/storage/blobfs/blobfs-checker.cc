@@ -17,7 +17,7 @@
 
 #else
 
-#include <blobfs/host.h>
+#include "src/storage/blobfs/host.h"
 
 #endif
 

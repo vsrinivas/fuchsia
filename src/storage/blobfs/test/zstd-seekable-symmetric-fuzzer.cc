@@ -10,9 +10,9 @@
 #include <memory>
 #include <vector>
 
-#include <blobfs/compression-settings.h>
 #include <fuzzer/FuzzedDataProvider.h>
 
+#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/zstd-seekable.h"
 
 // Compression/decompression symmetry fuzzer for zstd seekable. The fuzzer compresses and then

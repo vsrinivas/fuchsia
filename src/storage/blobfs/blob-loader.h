@@ -12,17 +12,17 @@
 
 #include <memory>
 
-#include <blobfs/blob-layout.h>
-#include <blobfs/format.h>
-#include <blobfs/node-finder.h>
 #include <fbl/function.h>
 #include <fbl/macros.h>
 #include <storage/buffer/owned_vmoid.h>
 
+#include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/blobfs/compression/external-decompressor.h"
 #include "src/storage/blobfs/compression/seekable-decompressor.h"
+#include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/iterator/block-iterator-provider.h"
 #include "src/storage/blobfs/metrics.h"
+#include "src/storage/blobfs/node-finder.h"
 #include "src/storage/blobfs/pager/page-watcher.h"
 #include "src/storage/blobfs/transaction-manager.h"
 

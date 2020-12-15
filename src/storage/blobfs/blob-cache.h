@@ -9,7 +9,6 @@
 #error Fuchsia-only Header
 #endif
 
-#include <blobfs/cache-policy.h>
 #include <digest/digest.h>
 #include <fbl/condition_variable.h>
 #include <fbl/function.h>
@@ -19,6 +18,7 @@
 #include <fs/vnode.h>
 
 #include "src/storage/blobfs/cache-node.h"
+#include "src/storage/blobfs/cache-policy.h"
 #include "src/storage/blobfs/metrics.h"
 
 namespace blobfs {

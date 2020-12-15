@@ -7,9 +7,10 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
-#include <blobfs/format.h>
 #include <fbl/auto_lock.h>
 #include <fs/trace.h>
+
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 namespace pager {

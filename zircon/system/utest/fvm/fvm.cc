@@ -45,7 +45,6 @@
 #include <new>
 #include <utility>
 
-#include <blobfs/format.h>
 #include <block-client/client.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
@@ -59,6 +58,7 @@
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
+#include "src/storage/blobfs/format.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_check.h"
 #include "src/storage/minfs/format.h"

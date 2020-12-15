@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
+#include "src/storage/blobfs/fsck-host.h"
 
-#include <blobfs/host/fsck.h>
+#include <memory>
 
 #include "src/storage/blobfs/blobfs-checker.h"
 

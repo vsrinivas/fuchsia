@@ -16,8 +16,8 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-#include <blobfs/blob-layout.h>
-#include <blobfs/format.h>
+#include "src/storage/blobfs/blob-layout.h"
+#include "src/storage/blobfs/format.h"
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/string_buffer.h>

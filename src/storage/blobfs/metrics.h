@@ -12,7 +12,6 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/time.h>
 
-#include <blobfs/format.h>
 #include <cobalt-client/cpp/collector.h>
 #include <fs/journal/journal.h>
 #include <fs/metrics/cobalt_metrics.h>
@@ -22,6 +21,7 @@
 #include <fs/ticker.h>
 #include <fs/vnode.h>
 
+#include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/read-metrics.h"
 #include "src/storage/blobfs/verification-metrics.h"
 

@@ -6,13 +6,13 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
 
-#include <blobfs/mkfs.h>
-#include <blobfs/mount.h>
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/mkfs.h"
+#include "src/storage/blobfs/mount.h"
 #include "src/storage/blobfs/runner.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"

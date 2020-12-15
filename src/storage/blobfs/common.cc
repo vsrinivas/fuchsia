@@ -12,9 +12,10 @@
 #include <iomanip>
 #include <limits>
 
-#include <blobfs/blob-layout.h>
-#include <blobfs/format.h>
 #include <safemath/checked_math.h>
+
+#include "src/storage/blobfs/blob-layout.h"
+#include "src/storage/blobfs/format.h"
 
 #ifdef __Fuchsia__
 #include <fuchsia/hardware/block/c/fidl.h>
@@ -23,7 +24,7 @@
 #include "src/storage/fvm/client.h"
 #endif
 
-#include <blobfs/common.h>
+#include "src/storage/blobfs/common.h"
 
 namespace blobfs {
 namespace {

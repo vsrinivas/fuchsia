@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/blobfs/host.h"
+
 #include <fcntl.h>
 #include <inttypes.h>
 #include <lib/cksum.h>
@@ -23,12 +25,6 @@
 #include <string>
 #include <utility>
 
-#include <blobfs/blob-layout.h>
-#include <blobfs/common.h>
-#include <blobfs/compression-settings.h>
-#include <blobfs/format.h>
-#include <blobfs/host.h>
-#include <blobfs/host/fsck.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <digest/node-digest.h>
@@ -42,9 +38,14 @@
 #include <safemath/checked_math.h>
 #include <safemath/safe_conversions.h>
 
+#include "src/storage/blobfs/blob-layout.h"
+#include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/chunked.h"
 #include "src/storage/blobfs/compression/compressor.h"
 #include "src/storage/blobfs/compression/decompressor.h"
+#include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/fsck-host.h"
 
 using digest::Digest;
 using digest::MerkleTreeCreator;

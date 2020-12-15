@@ -8,7 +8,8 @@
 #include <zircon/types.h>
 
 #include <bitmap/rle-bitmap.h>
-#include <blobfs/format.h>
+
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 

@@ -15,9 +15,6 @@
 #include <random>
 #include <thread>
 
-#include <blobfs/blob-layout.h>
-#include <blobfs/compression-settings.h>
-#include <blobfs/format.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/algorithm.h>
@@ -25,9 +22,12 @@
 #include <fbl/auto_call.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/blobfs/blob-verifier.h"
+#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/blob-compressor.h"
 #include "src/storage/blobfs/compression/chunked.h"
+#include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/pager/page-watcher.h"
 #include "src/storage/blobfs/pager/user-pager.h"
 

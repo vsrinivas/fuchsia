@@ -9,12 +9,12 @@
 #include <lib/async-loop/default.h>
 #include <lib/inspect/cpp/hierarchy.h>
 
-#include <blobfs/mount.h>
 #include <block-client/cpp/fake-device.h>
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/mount.h"
 #include "src/storage/blobfs/runner.h"
 
 namespace blobfs {

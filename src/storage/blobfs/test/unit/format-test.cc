@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/format.h>
-#include <blobfs/mkfs.h>
+#include "src/storage/blobfs/format.h"
+
 #include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/mkfs.h"
 
 namespace blobfs {
 namespace {

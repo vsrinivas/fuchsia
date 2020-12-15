@@ -28,10 +28,6 @@
 #include <memory>
 #include <utility>
 
-#include <blobfs/common.h>
-#include <blobfs/compression-settings.h>
-#include <blobfs/format.h>
-#include <blobfs/fsck.h>
 #include <block-client/cpp/pass-through-read-only-device.h>
 #include <block-client/cpp/remote-block-device.h>
 #include <cobalt-client/cpp/collector.h>
@@ -51,7 +47,11 @@
 #include "src/storage/blobfs/blob-loader.h"
 #include "src/storage/blobfs/blob.h"
 #include "src/storage/blobfs/blobfs-checker.h"
+#include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/compressor.h"
+#include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/fsck.h"
 #include "src/storage/blobfs/iterator/allocated-node-iterator.h"
 #include "src/storage/blobfs/iterator/block-iterator.h"
 #include "src/storage/blobfs/pager/transfer-buffer.h"

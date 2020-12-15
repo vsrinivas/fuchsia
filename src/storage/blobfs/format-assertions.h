@@ -7,7 +7,7 @@
 
 #include <cstddef>
 
-#include <blobfs/format.h>
+#include "src/storage/blobfs/format.h"
 
 // This file tests the on-disk structures of Blobfs.
 

@@ -11,9 +11,10 @@
 #include <memory>
 #include <string>
 
-#include <blobfs/blob-layout.h>
 #include <digest/digest.h>
 #include <fbl/unique_fd.h>
+
+#include "src/storage/blobfs/blob-layout.h"
 
 namespace blobfs {
 

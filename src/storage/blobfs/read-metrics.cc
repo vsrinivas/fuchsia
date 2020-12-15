@@ -4,7 +4,7 @@
 
 #include "src/storage/blobfs/read-metrics.h"
 
-#include <blobfs/compression-settings.h>
+#include "src/storage/blobfs/compression-settings.h"
 
 namespace blobfs {
 

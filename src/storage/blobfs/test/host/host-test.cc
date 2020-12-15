@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/blobfs/host.h"
+
 #include <dirent.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -15,17 +17,16 @@
 #include <memory>
 #include <optional>
 
-#include <blobfs/blob-layout.h>
-#include <blobfs/common.h>
-#include <blobfs/format.h>
-#include <blobfs/host.h>
-#include <blobfs/node-finder.h>
 #include <digest/digest.h>
 #include <digest/node-digest.h>
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/blobfs/blobfs-checker.h"
+#include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/node-finder.h"
 
 namespace blobfs {
 namespace {

@@ -20,7 +20,6 @@
 #include <utility>
 #include <vector>
 
-#include <blobfs/blob-layout.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/admin.h>
 #include <fs-management/format.h>
@@ -28,6 +27,7 @@
 #include <ramdevice-client/ramnand.h>
 
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
+#include "src/storage/blobfs/blob-layout.h"
 
 namespace fs_test {
 

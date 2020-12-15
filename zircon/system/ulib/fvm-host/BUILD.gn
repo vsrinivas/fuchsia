@@ -43,7 +43,7 @@ zx_library("fvm-host") {
     # library is not really meant for host code.
     "//zircon/system/ulib/fs-management",
 
-    # <fvm-host/format.h> has #include <blobfs/format.h>.
+    # <fvm-host/format.h> has #include "src/storage/blobfs/format.h".
     "//src/storage/blobfs",
 
     # <fvm-host/format.h> has #include "src/storage/minfs/bcache.h".

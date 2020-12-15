@@ -7,13 +7,13 @@
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
-#include <blobfs/mount.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <gtest/gtest.h>
 
 #include "fs-manager.h"
 #include "fshost-fs-provider.h"
 #include "metrics.h"
+#include "src/storage/blobfs/mount.h"
 #include "src/storage/fshost/block-watcher.h"
 
 namespace devmgr {

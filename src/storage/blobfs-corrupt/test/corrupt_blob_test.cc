@@ -6,11 +6,12 @@
 
 #include <iterator>
 
-#include <blobfs/format.h>
-#include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <storage/buffer/owned_vmoid.h>
 #include <zxtest/zxtest.h>
+
+#include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/mkfs.h"
 
 namespace {
 

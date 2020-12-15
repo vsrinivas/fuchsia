@@ -9,12 +9,12 @@
 
 #include <climits>
 
-#include <blobfs/format.h>
-#include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {

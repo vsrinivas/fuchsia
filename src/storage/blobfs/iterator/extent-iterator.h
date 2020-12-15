@@ -9,8 +9,8 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <blobfs/format.h>
-#include <blobfs/node-finder.h>
+#include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/node-finder.h"
 
 namespace blobfs {
 

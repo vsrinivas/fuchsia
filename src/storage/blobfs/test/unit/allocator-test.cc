@@ -6,13 +6,13 @@
 
 #include <memory>
 
-#include <blobfs/common.h>
-#include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <fbl/vector.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/unit/utils.h"
 

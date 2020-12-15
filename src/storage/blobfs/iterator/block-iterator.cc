@@ -10,7 +10,7 @@
 
 #include <algorithm>
 
-#include <blobfs/format.h>
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 

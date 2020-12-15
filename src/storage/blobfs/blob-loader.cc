@@ -16,20 +16,20 @@
 #include <algorithm>
 #include <memory>
 
-#include <blobfs/blob-layout.h>
-#include <blobfs/common.h>
-#include <blobfs/compression-settings.h>
-#include <blobfs/format.h>
 #include <digest/digest.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
 #include <fs/trace.h>
 #include <storage/buffer/owned_vmoid.h>
 
+#include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/blobfs/blob-verifier.h"
+#include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/chunked.h"
 #include "src/storage/blobfs/compression/decompressor.h"
 #include "src/storage/blobfs/compression/seekable-decompressor.h"
+#include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/iterator/block-iterator.h"
 
 namespace blobfs {

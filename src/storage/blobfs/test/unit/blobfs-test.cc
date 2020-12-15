@@ -6,15 +6,15 @@
 
 #include <lib/sync/completion.h>
 
-#include <blobfs/format.h>
-#include <blobfs/fsck.h>
-#include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 #include <storage/buffer/vmo_buffer.h>
 
 #include "src/storage/blobfs/blob.h"
 #include "src/storage/blobfs/directory.h"
+#include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/fsck.h"
+#include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 
 namespace blobfs {

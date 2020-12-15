@@ -14,12 +14,12 @@
 
 #include <memory>
 
-#include <blobfs/node-finder.h>
 #include <fbl/macros.h>
 #include <storage/buffer/owned_vmoid.h>
 
 #include "src/storage/blobfs/iterator/block-iterator-provider.h"
 #include "src/storage/blobfs/metrics.h"
+#include "src/storage/blobfs/node-finder.h"
 #include "src/storage/blobfs/pager/user-pager-info.h"
 #include "src/storage/blobfs/transaction-manager.h"
 

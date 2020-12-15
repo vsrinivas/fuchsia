@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdint.h>
+#include "src/storage/blobfs/compression-settings.h"
+
 #include <lib/zx/status.h>
+#include <stdint.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
-#include <blobfs/compression-settings.h>
-#include <blobfs/format.h>
 #include <src/lib/chunked-compression/compression-params.h>
 #include <zstd/zstd.h>
+
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 

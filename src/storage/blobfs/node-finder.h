@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_NODE_FINDER_H_
 #define SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_NODE_FINDER_H_
 
-#include <blobfs/format.h>
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 

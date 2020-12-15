@@ -15,13 +15,13 @@
 #include <utility>
 #include <vector>
 
-#include <blobfs/blob-layout.h>
-#include <blobfs/format.h>
-#include <blobfs/host.h>
-#include <blobfs/host/fsck.h>
 #include <fbl/auto_call.h>
 
 #include "blobfs.h"
+#include "src/storage/blobfs/blob-layout.h"
+#include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/fsck-host.h"
+#include "src/storage/blobfs/host.h"
 
 namespace {
 

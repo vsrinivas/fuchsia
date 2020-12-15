@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include <blobfs/format.h>
+#include "src/storage/blobfs/format.h"
 #include <disk_inspector/buffer_factory.h>
 #include <disk_inspector/common_types.h>
 #include <disk_inspector/loader.h>

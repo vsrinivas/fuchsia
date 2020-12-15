@@ -7,10 +7,10 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <blobfs/format.h>
 #include <fbl/vector.h>
 
 #include "src/storage/blobfs/allocator/allocator.h"
+#include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/iterator/extent-iterator.h"
 
 namespace blobfs {

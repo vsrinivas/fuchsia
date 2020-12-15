@@ -21,9 +21,9 @@
 #include <array>
 #include <thread>
 
-#include <blobfs/format.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/read-metrics.h"
 #include "src/storage/blobfs/verification-metrics.h"
 

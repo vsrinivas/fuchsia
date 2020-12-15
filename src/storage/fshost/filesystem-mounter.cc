@@ -8,12 +8,12 @@
 #include <lib/zx/process.h>
 #include <zircon/status.h>
 
-#include <blobfs/mount.h>
 #include <fs-management/mount.h>
 
 #include "fdio.h"
 #include "fshost-fs-provider.h"
 #include "pkgfs-launcher.h"
+#include "src/storage/blobfs/mount.h"
 #include "src/storage/minfs/minfs.h"
 
 namespace devmgr {

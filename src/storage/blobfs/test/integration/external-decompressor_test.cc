@@ -19,9 +19,9 @@
 
 #include <cstdlib>
 
-#include <blobfs/compression-settings.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/chunked.h"
 #include "src/storage/blobfs/compression/zstd-plain.h"
 #include "src/storage/blobfs/test/blob_utils.h"

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/blobfs/mount.h"
+
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -14,7 +16,6 @@
 #include <zircon/errors.h>
 #include <zircon/rights.h>
 
-#include <blobfs/mount.h>
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/remote-block-device.h>
 #include <fbl/auto_call.h>

@@ -6,10 +6,10 @@
 
 #include <random>
 
-#include <blobfs/blob-layout.h>
 #include <digest/merkle-tree.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/unit/utils.h"
 

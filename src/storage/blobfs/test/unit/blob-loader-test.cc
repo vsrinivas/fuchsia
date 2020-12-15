@@ -12,11 +12,6 @@
 
 #include <set>
 
-#include <blobfs/blob-layout.h>
-#include <blobfs/common.h>
-#include <blobfs/compression-settings.h>
-#include <blobfs/format.h>
-#include <blobfs/mkfs.h>
 #include <block-client/cpp/fake-device.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
@@ -24,8 +19,13 @@
 #include <fbl/auto_call.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/blobfs/blob-layout.h"
 #include "src/storage/blobfs/blob.h"
 #include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/compression-settings.h"
+#include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/unit/utils.h"
 

@@ -10,13 +10,13 @@
 
 #include <memory>
 
-#include <blobfs/compression-settings.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fs/trace.h>
 #include <zstd/zstd.h>
 
+#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/compressor.h"
 
 namespace blobfs {

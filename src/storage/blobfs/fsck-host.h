@@ -10,7 +10,7 @@
 
 #include <memory>
 
-#include <blobfs/host.h>
+#include "src/storage/blobfs/host.h"
 
 namespace blobfs {
 

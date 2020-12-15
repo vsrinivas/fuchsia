@@ -4,9 +4,10 @@
 
 #include "src/storage/blobfs/inspector/parser.h"
 
-#include <blobfs/format.h>
 #include <gtest/gtest.h>
 #include <storage/buffer/array_buffer.h>
+
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 namespace {

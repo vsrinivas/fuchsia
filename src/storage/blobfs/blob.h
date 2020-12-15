@@ -20,9 +20,6 @@
 #include <memory>
 #include <mutex>
 
-#include <blobfs/blob-layout.h>
-#include <blobfs/common.h>
-#include <blobfs/format.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -39,9 +36,12 @@
 #include "src/storage/blobfs/allocator/extent-reserver.h"
 #include "src/storage/blobfs/allocator/node-reserver.h"
 #include "src/storage/blobfs/blob-cache.h"
+#include "src/storage/blobfs/blob-layout.h"
+#include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/compression/blob-compressor.h"
 #include "src/storage/blobfs/compression/compressor.h"
 #include "src/storage/blobfs/format-assertions.h"
+#include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/metrics.h"
 #include "src/storage/blobfs/pager/page-watcher.h"
 #include "src/storage/blobfs/transaction.h"

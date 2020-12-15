@@ -7,7 +7,7 @@
 #ifndef SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_FSCK_H_
 #define SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_FSCK_H_
 
-#include <blobfs/mount.h>
+#include "src/storage/blobfs/mount.h"
 #include <block-client/cpp/block-device.h>
 
 namespace blobfs {

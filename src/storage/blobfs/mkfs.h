@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_MKFS_H_
 #define SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_MKFS_H_
 
-#include <blobfs/common.h>
+#include "src/storage/blobfs/common.h"
 #include <block-client/cpp/block-device.h>
 
 namespace blobfs {

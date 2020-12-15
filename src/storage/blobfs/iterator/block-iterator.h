@@ -11,9 +11,9 @@
 
 #include <memory>
 
-#include <blobfs/format.h>
 #include <fbl/function.h>
 
+#include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/iterator/allocated-extent-iterator.h"
 #include "src/storage/blobfs/iterator/extent-iterator.h"
 

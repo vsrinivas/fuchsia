@@ -9,8 +9,9 @@
 
 #include <memory>
 
-#include <blobfs/compression-settings.h>
 #include <fbl/macros.h>
+
+#include "src/storage/blobfs/compression-settings.h"
 
 namespace blobfs {
 

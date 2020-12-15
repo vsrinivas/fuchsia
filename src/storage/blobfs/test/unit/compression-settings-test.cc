@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/compression-settings.h>
-#include <blobfs/format.h>
+#include "src/storage/blobfs/compression-settings.h"
+
 #include <gtest/gtest.h>
 #include <src/lib/chunked-compression/compression-params.h>
 #include <zstd/zstd.h>
+
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 namespace {

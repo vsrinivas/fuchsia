@@ -1,18 +1,20 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include "src/storage/blobfs/blob-layout.h"
+
 #include <lib/zx/status.h>
 #include <zircon/errors.h>
 
 #include <limits>
 #include <memory>
 
-#include <blobfs/blob-layout.h>
-#include <blobfs/format.h>
 #include <digest/merkle-tree.h>
 #include <digest/node-digest.h>
 #include <fbl/algorithm.h>
 #include <safemath/checked_math.h>
+
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 

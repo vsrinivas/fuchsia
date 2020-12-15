@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/blobfs/fsck.h"
+
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <memory>
-
-#include <blobfs/fsck.h>
 
 #include "src/storage/blobfs/blobfs-checker.h"
 #include "src/storage/blobfs/blobfs.h"

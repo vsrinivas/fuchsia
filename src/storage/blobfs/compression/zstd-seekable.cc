@@ -10,8 +10,6 @@
 
 #include <memory>
 
-#include <blobfs/compression-settings.h>
-#include <blobfs/format.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
@@ -19,7 +17,9 @@
 #include <zstd/zstd.h>
 #include <zstd/zstd_seekable.h>
 
+#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/compressor.h"
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 
@@ -153,8 +153,7 @@ zx_status_t ZSTDSeekableDecompressor::DecompressArchive(void* uncompressed_buf,
                                            offset + decompressed);
     decompressed += zstd_return;
     if (ZSTD_isError(zstd_return)) {
-      FX_LOGS(ERROR) << "[zstd-seekable] Failed to decompress: "
-                     << ZSTD_getErrorName(zstd_return);
+      FX_LOGS(ERROR) << "[zstd-seekable] Failed to decompress: " << ZSTD_getErrorName(zstd_return);
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
     // From the ZSTD_seekable_decompress Documentation:

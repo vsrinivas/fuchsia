@@ -6,9 +6,8 @@
 
 #include <lib/fidl-async/cpp/bind.h>
 
-#include <blobfs/format.h>
-
 #include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/runner.h"
 
 namespace fuchsia_fs = ::llcpp::fuchsia::fs;

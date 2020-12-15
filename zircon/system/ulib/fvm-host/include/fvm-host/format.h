@@ -14,12 +14,12 @@
 #include <memory>
 #include <optional>
 
-#include <blobfs/format.h>
-#include <blobfs/host.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <fs-management/mount.h>
 
+#include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/host.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/fvm/snapshot_metadata.h"

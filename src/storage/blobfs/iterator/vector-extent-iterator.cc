@@ -7,8 +7,9 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <blobfs/format.h>
 #include <fbl/vector.h>
+
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 

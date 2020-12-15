@@ -22,10 +22,10 @@
 #include <zircon/threads.h>
 #include <zircon/types.h>
 
-#include <blobfs/compression-settings.h>
 #include <fbl/auto_call.h>
 #include <src/lib/chunked-compression/chunked-decompressor.h>
 
+#include "src/storage/blobfs/compression-settings.h"
 #include "src/storage/blobfs/compression/decompressor.h"
 #include "src/storage/blobfs/compression/external-decompressor.h"
 

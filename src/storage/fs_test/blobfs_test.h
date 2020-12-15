@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_FS_TEST_BLOBFS_TEST_H_
 #define SRC_STORAGE_FS_TEST_BLOBFS_TEST_H_
 
-#include "src/storage/blobfs/include/blobfs/format.h"
+#include "src/storage/blobfs/format.h"
 #include "src/storage/fs_test/fs_test.h"
 
 namespace fs_test {

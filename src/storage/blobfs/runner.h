@@ -10,12 +10,12 @@
 #include <lib/trace/event.h>
 #include <lib/zx/resource.h>
 
-#include <blobfs/mount.h>
 #include <fs/managed_vfs.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 
 #include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/mount.h"
 
 namespace blobfs {
 

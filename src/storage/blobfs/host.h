@@ -28,9 +28,9 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-#include <blobfs/common.h>
-#include <blobfs/format.h>
-#include <blobfs/node-finder.h>
+#include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/format.h"
+#include "src/storage/blobfs/node-finder.h"
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
