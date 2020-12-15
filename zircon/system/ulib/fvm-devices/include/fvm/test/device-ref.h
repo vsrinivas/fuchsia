@@ -17,8 +17,9 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <fvm/fvm.h>
 #include <ramdevice-client/ramdisk.h>
+
+#include "src/storage/fvm/fvm.h"
 
 // This utility library introduces objects wrapping the devices we interact with, to make it clear
 // what we are interacting with, and avoid references to global variables.

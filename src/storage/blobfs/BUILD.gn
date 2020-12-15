@@ -125,6 +125,7 @@ zx_library("blobfs") {
   deps = [
     ":private_headers",
     "//src/lib/chunked-compression",
+    "//src/storage/fvm",
     "//third_party/boringssl",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/cksum",
@@ -138,7 +139,6 @@ zx_library("blobfs") {
     "//zircon/system/ulib/disk_inspector",
     "//zircon/system/ulib/fs/journal",
     "//zircon/system/ulib/fs/transaction",
-    "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",

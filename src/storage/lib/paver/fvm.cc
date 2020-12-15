@@ -30,14 +30,14 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
-#include <fvm/format.h>
-#include <fvm/fvm-sparse.h>
-#include <fvm/fvm.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxcrypt/fdio-volume.h>
 
 #include "pave-logging.h"
 #include "src/lib/uuid/uuid.h"
+#include "src/storage/fvm/format.h"
+#include "src/storage/fvm/fvm.h"
+#include "src/storage/fvm/fvm_sparse.h"
 
 namespace paver {
 namespace {

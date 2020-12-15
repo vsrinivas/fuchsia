@@ -8,10 +8,11 @@
 
 #include <fvm-host/format.h>
 #include <fvm-host/fvm-info.h>
-#include <fvm/format.h>
-#include <fvm/fvm.h>
-#include <fvm/metadata.h>
 #include <safemath/safe_math.h>
+
+#include "src/storage/fvm/format.h"
+#include "src/storage/fvm/fvm.h"
+#include "src/storage/fvm/metadata.h"
 
 zx_status_t FvmInfo::Reset(size_t disk_size, size_t slice_size) {
   if (slice_size == 0) {

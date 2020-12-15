@@ -45,7 +45,6 @@
 #include <fs/pseudo_dir.h>
 #include <fs/ticker.h>
 #include <fs/vfs_types.h>
-#include <fvm/client.h>
 
 #include "src/storage/blobfs/allocator/extent-reserver.h"
 #include "src/storage/blobfs/allocator/node-reserver.h"
@@ -57,6 +56,7 @@
 #include "src/storage/blobfs/iterator/block-iterator.h"
 #include "src/storage/blobfs/pager/transfer-buffer.h"
 #include "src/storage/blobfs/pager/user-pager-info.h"
+#include "src/storage/fvm/client.h"
 
 namespace blobfs {
 namespace {

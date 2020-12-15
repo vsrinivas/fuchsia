@@ -16,8 +16,6 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <fvm/fvm-sparse.h>
-#include <fvm/sparse-reader.h>
 #include <lz4/lz4frame.h>
 
 #include "fbl/macros.h"
@@ -25,6 +23,8 @@
 #include "format.h"
 #include "fvm-info.h"
 #include "sparse-paver.h"
+#include "src/storage/fvm/fvm_sparse.h"
+#include "src/storage/fvm/sparse_reader.h"
 
 // The number of additional slices a partition will need to become zxcrypt'd.
 // TODO(planders): Replace this with a value supplied by ulib/zxcrypt.

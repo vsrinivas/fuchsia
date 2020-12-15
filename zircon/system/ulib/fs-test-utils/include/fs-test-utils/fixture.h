@@ -19,8 +19,9 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <fs-management/mount.h>
-#include <fvm/format.h>
 #include <ramdevice-client/ramdisk.h>
+
+#include "src/storage/fvm/format.h"
 
 // Macro for printing more information in error logs.
 // "[File:Line] Error(error_name): Message\n"

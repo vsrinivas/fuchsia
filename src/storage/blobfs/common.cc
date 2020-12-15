@@ -20,7 +20,7 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 
-#include <fvm/client.h>
+#include "src/storage/fvm/client.h"
 #endif
 
 #include <blobfs/common.h>

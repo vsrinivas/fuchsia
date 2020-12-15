@@ -18,12 +18,12 @@ test("fvm-driver-integration") {
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//src/devices/block/drivers/fvm:shared",
     "//src/devices/testing/no_ddk",
+    "//src/storage/fvm",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",
-    "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/fvm-devices",
   ]
 }

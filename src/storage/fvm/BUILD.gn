@@ -1,0 +1,108 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//src/sys/build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fvm_unit($host_toolchain)",
+    ":test_package",
+  ]
+}
+
+static_library("fvm") {
+  sources = [
+    "format.cc",
+    "fvm.cc",
+    "fvm_check.cc",
+    "metadata.cc",
+    "metadata_buffer.cc",
+    "snapshot_metadata.cc",
+    "snapshot_metadata_format.cc",
+    "sparse_reader.cc",
+  ]
+
+  deps = [
+    "//third_party/boringssl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/system/ulib/digest",
+    "//zircon/system/ulib/range",
+    "//zircon/third_party/ulib/lz4",
+    "//zircon/third_party/ulib/safemath",
+  ]
+  public_deps = [
+    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/digest",
+    "//zircon/system/ulib/gpt",
+    "//zircon/third_party/ulib/lz4",
+  ]
+
+  if (is_fuchsia) {
+    sources += [
+      "client.cc",
+      "vmo_metadata_buffer.cc",
+    ]
+
+    deps += [
+      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
+      "//zircon/public/lib/sync",
+      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/block-client",
+      "//zircon/system/ulib/fzl",
+      "//zircon/system/ulib/gpt",
+    ]
+  } else {
+    # fvm-check.cpp has #include <zircon/status.h> even when built for host.
+    public_deps += [ "//zircon/system/ulib/zircon:zircon-headers" ]
+  }
+
+  public_configs = [
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+    "//build/config:Wno-conversion",
+  ]
+}
+
+test("fvm_unit") {
+  output_name = "fvm-unit-test"
+  sources = [
+    "format_test.cc",
+    "integrity_validation_test.cc",
+    "metadata_test.cc",
+    "partition_entry_test.cc",
+    "slice_entry_test.cc",
+    "snapshot_metadata_test.cc",
+  ]
+
+  deps = [
+    "//src/storage/fvm",
+    "//zircon/public/lib/zxtest",
+  ]
+
+  if (is_fuchsia) {
+    sources += [ "client_test.cc" ]
+    deps += [
+      "//sdk/lib/fdio",
+      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/block-client",
+      "//zircon/system/ulib/fdio-caller",
+    ]
+  }
+}
+
+fuchsia_component("fvm_unit_test_component") {
+  component_name = "fvm-unit-test"
+  testonly = true
+
+  manifest = "fvm_unit_test.cmx"
+
+  deps = [ ":fvm_unit" ]
+}
+
+fuchsia_test_package("test_package") {
+  package_name = "fvm-tests"
+  test_components = [ ":fvm_unit_test_component" ]
+}

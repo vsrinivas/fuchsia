@@ -13,9 +13,10 @@
 
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
-#include <fvm/format.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
+
+#include "src/storage/fvm/format.h"
 
 namespace {
 

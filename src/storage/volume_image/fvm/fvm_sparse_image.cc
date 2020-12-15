@@ -11,9 +11,9 @@
 #include <string>
 
 #include <fbl/algorithm.h>
-#include <fvm/format.h>
-#include <fvm/fvm-sparse.h>
 
+#include "src/storage/fvm/format.h"
+#include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/utils/block_utils.h"
 #include "src/storage/volume_image/utils/compressor.h"

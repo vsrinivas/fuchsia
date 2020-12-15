@@ -7,12 +7,13 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include <fbl/unique_fd.h>
-#include <fvm/fvm-check.h>
 #include <zircon/status.h>
 
 #include <utility>
+
+#include <fbl/unique_fd.h>
+
+#include "src/storage/fvm/fvm_check.h"
 
 namespace {
 

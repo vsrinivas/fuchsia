@@ -8,8 +8,9 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <fbl/auto_lock.h>
-#include <fvm/format.h>
 #include <zxtest/zxtest.h>
+
+#include "src/storage/fvm/format.h"
 
 namespace block_client {
 

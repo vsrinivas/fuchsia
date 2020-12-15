@@ -11,13 +11,13 @@
 #include <memory>
 #include <utility>
 
-#include <fvm/format.h>
-#include <fvm/snapshot-metadata-format.h>
-#include <fvm/sparse-reader.h>
 #include <safemath/checked_math.h>
 
 #include "fvm-host/container.h"
 #include "fvm-host/format.h"
+#include "src/storage/fvm/format.h"
+#include "src/storage/fvm/snapshot_metadata_format.h"
+#include "src/storage/fvm/sparse_reader.h"
 
 #if defined(__APPLE__)
 #include <sys/disk.h>

@@ -28,10 +28,10 @@ static_library("fs_test") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/storage/fuchsia-fatfs:fatfs",
+    "//src/storage/fvm",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/memfs",
   ]
   public_deps = [
@@ -240,10 +240,10 @@ test("minfs_tests") {
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
+    "//src/storage/fvm",
     "//src/storage/minfs",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fvm",
   ]
 }
 
@@ -344,10 +344,10 @@ test("resize_tests") {
     ":fs_test",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/storage/fvm",
     "//src/storage/minfs",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fvm",
   ]
 }
 

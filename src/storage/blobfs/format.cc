@@ -13,9 +13,10 @@
 #include <blobfs/mkfs.h>
 #include <fbl/ref_ptr.h>
 #include <fs/journal/initializer.h>
-#include <fvm/client.h>
 #include <safemath/checked_math.h>
 #include <storage/buffer/owned_vmoid.h>
+
+#include "src/storage/fvm/client.h"
 
 namespace blobfs {
 namespace {

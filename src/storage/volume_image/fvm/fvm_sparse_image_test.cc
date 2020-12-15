@@ -14,11 +14,11 @@
 #include <memory>
 
 #include <fbl/auto_call.h>
-#include <fvm/fvm-sparse.h>
-#include <fvm/sparse-reader.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/fvm/fvm_sparse.h"
+#include "src/storage/fvm/sparse_reader.h"
 #include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
 #include "src/storage/volume_image/fvm/options.h"

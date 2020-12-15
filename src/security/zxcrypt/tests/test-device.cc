@@ -37,11 +37,12 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
-#include <fvm/format.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxcrypt/fdio-volume.h>
 #include <zxcrypt/volume.h>
 #include <zxtest/zxtest.h>
+
+#include "src/storage/fvm/format.h"
 
 #define ZXDEBUG 0
 

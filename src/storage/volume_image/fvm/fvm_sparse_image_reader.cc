@@ -11,10 +11,10 @@
 #include <string>
 
 #include <digest/digest.h>
-#include <fvm/format.h>
-#include <fvm/fvm-sparse.h>
-#include <fvm/metadata.h>
 
+#include "src/storage/fvm/format.h"
+#include "src/storage/fvm/fvm_sparse.h"
+#include "src/storage/fvm/metadata.h"
 #include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_sparse_image.h"
 #include "src/storage/volume_image/utils/lz4_decompressor.h"

@@ -12,7 +12,7 @@
 
 #include <memory>
 
-#include <fvm/sparse-reader.h>
+#include "src/storage/fvm/sparse_reader.h"
 
 namespace paver {
 

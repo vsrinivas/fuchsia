@@ -38,6 +38,7 @@ test("minfs_unit") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
+    "//src/storage/fvm",
     "//src/storage/minfs",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
@@ -49,7 +50,6 @@ test("minfs_unit") {
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/disk_inspector",
     "//zircon/system/ulib/fs-management",
-    "//zircon/system/ulib/fvm",
     "//zircon/third_party/ulib/cksum",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
@@ -68,6 +68,7 @@ test("minfs-integration") {
     "//src/devices/tests/sysdev",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/fs_test",
+    "//src/storage/fvm",
     "//src/storage/minfs",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async",
@@ -81,7 +82,6 @@ test("minfs-integration") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",
-    "//zircon/system/ulib/fvm",
   ]
 }
 
@@ -139,6 +139,7 @@ test("minfs_micro_benchmark") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/isolated_devmgr/v2_component:client",
     "//src/storage/fs_test",
+    "//src/storage/fvm",
     "//src/storage/minfs",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async",
@@ -155,7 +156,6 @@ test("minfs_micro_benchmark") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs-management",
-    "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/memfs",

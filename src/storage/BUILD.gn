@@ -20,6 +20,7 @@ group("tests") {
     "fs_test:tests",
     "fshost:tests",
     "fuchsia-fatfs:tests",
+    "fvm:tests",
     "host_fs_test:tests",
     "lib:tests",
     "minfs:tests",

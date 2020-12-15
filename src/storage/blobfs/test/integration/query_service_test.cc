@@ -14,11 +14,11 @@
 #include <thread>
 #include <vector>
 
-#include <fvm/format.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
+#include "src/storage/fvm/format.h"
 #include "src/storage/lib/utils/topological_path.h"
 
 namespace blobfs {

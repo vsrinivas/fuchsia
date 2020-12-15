@@ -5,9 +5,8 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_FVM_FVM_SPARSE_IMAGE_H_
 #define SRC_STORAGE_VOLUME_IMAGE_FVM_FVM_SPARSE_IMAGE_H_
 
-#include <fvm/fvm-sparse.h>
-
-#include "fvm/format.h"
+#include "src/storage/fvm/format.h"
+#include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
 #include "src/storage/volume_image/options.h"

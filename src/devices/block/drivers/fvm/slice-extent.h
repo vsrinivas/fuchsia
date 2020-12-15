@@ -12,7 +12,8 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/vector.h>
-#include <fvm/format.h>
+
+#include "src/storage/fvm/format.h"
 
 namespace fvm {
 

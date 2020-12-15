@@ -13,12 +13,12 @@ executable("fvm-check") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/storage/fvm",
     "//third_party/boringssl",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/digest",
-    "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/ramdevice-client",

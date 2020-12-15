@@ -8,10 +8,10 @@
 #include <memory>
 
 #include <fvm-host/file-wrapper.h>
-#include <fvm/sparse-reader.h>
 
 #include "format.h"
 #include "fvm-host/fvm-info.h"
+#include "src/storage/fvm/sparse_reader.h"
 
 struct SparsePartitionInfo {
   fvm::PartitionDescriptor descriptor;

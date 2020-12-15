@@ -8,10 +8,10 @@
 
 #include <blobfs/common.h>
 #include <fbl/auto_call.h>
-#include <fvm/format.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
+#include "src/storage/fvm/format.h"
 
 namespace blobfs {
 namespace {

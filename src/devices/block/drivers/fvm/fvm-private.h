@@ -30,11 +30,11 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
-#include <fvm/fvm.h>
-#include <fvm/metadata.h>
 
 #include "diagnostics.h"
 #include "slice-extent.h"
+#include "src/storage/fvm/fvm.h"
+#include "src/storage/fvm/metadata.h"
 #include "vpartition.h"
 
 namespace fvm {

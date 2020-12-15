@@ -25,9 +25,9 @@
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
-#include <fvm/format.h>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
+#include "src/storage/fvm/format.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/transaction_limits.h"
 

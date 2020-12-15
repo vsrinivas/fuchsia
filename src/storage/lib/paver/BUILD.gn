@@ -50,11 +50,11 @@ source_set("paver-core") {
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//src/firmware/lib/abr",
     "//src/lib/uuid",
+    "//src/storage/fvm",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/block-client",
-    "//zircon/system/ulib/fvm",
   ]
 
   # TODO(fxbug.dev/57974): UBSan has found an instance of undefined behavior in this target.

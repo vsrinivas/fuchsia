@@ -281,7 +281,7 @@ If a slice belongs to a partition then FVM maintains metadata about which
 partition is using the slice, and the virtual address of the slice within
 that partition.
 
-[Superblock](/zircon/system/ulib/fvm/include/fvm/format.h#27)
+[Superblock](/src/storage/fvm/format.h#27)
 at block zero describe the on-disk layout of the FVM, which may look like
 
 ```c
@@ -326,7 +326,7 @@ The slice allocation table is made up of tightly packed slice entries
    * what logical slice within partition the slice maps to
 
 FVM library can be found
-[here](/zircon/system/ulib/fvm/). During
+[here](/src/storage/fvm/). During
 [paving](/docs/development/hardware/paving.md),
 some partitions are copied from host to target. So the partitions and FVM
 file itself may be created on host. To do this there is host side utility

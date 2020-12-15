@@ -46,6 +46,7 @@ if (is_fuchsia) {
       "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+      "//src/storage/fvm",
       "//third_party/boringssl",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/pretty",
@@ -54,7 +55,6 @@ if (is_fuchsia) {
       "//zircon/system/ulib/digest",
       "//zircon/system/ulib/fdio-caller",
       "//zircon/system/ulib/fs",
-      "//zircon/system/ulib/fvm",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/gpt",
     ]

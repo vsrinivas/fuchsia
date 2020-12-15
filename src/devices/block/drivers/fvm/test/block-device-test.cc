@@ -8,11 +8,11 @@
 #include <vector>
 
 #include <ddktl/protocol/block.h>
-#include <fvm/format.h>
-#include <fvm/metadata.h>
 #include <zxtest/zxtest.h>
 
 #include "fvm-private.h"
+#include "src/storage/fvm/format.h"
+#include "src/storage/fvm/metadata.h"
 #include "vpartition.h"
 
 namespace {

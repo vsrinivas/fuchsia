@@ -37,8 +37,9 @@
 #include <fs/journal/journal.h>
 #include <fs/journal/replay.h>
 #include <fs/pseudo_dir.h>
-#include <fvm/client.h>
 #include <storage/buffer/owned_vmoid.h>
+
+#include "src/storage/fvm/client.h"
 #endif
 
 #include <utility>

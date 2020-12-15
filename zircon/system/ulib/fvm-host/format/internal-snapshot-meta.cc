@@ -10,7 +10,7 @@
 #include <safemath/checked_math.h>
 
 #include "fvm-host/format.h"
-#include "fvm/snapshot-metadata-format.h"
+#include "src/storage/fvm/snapshot_metadata_format.h"
 #include "zircon/errors.h"
 
 namespace {

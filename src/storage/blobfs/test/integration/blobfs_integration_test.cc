@@ -38,11 +38,11 @@
 #include <fbl/auto_call.h>
 #include <fs-management/launch.h>
 #include <fs-management/mount.h>
-#include <fvm/format.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
 #include "src/storage/blobfs/test/integration/fdio_test.h"
+#include "src/storage/fvm/format.h"
 #include "src/storage/lib/utils/topological_path.h"
 
 namespace blobfs {

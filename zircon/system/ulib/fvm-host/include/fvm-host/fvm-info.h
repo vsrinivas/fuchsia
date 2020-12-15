@@ -12,9 +12,10 @@
 #include <fbl/unique_fd.h>
 #include <fvm-host/file-wrapper.h>
 #include <fvm-host/format.h>
-#include <fvm/format.h>
-#include <fvm/fvm-sparse.h>
-#include <fvm/metadata.h>
+
+#include "src/storage/fvm/format.h"
+#include "src/storage/fvm/fvm_sparse.h"
+#include "src/storage/fvm/metadata.h"
 
 // Wrapper around FVM metadata which attempts to read existing metadata from disk, allows
 // new partitions and slices to be allocated, and writes updated metadata back to disk.

@@ -7,10 +7,10 @@
 #include <lib/zx/status.h>
 
 #include <block-client/cpp/client.h>
-#include <fvm/sparse-reader.h>
 
-#include "fvm/fvm-sparse.h"
 #include "partition-client.h"
+#include "src/storage/fvm/fvm_sparse.h"
+#include "src/storage/fvm/sparse_reader.h"
 
 namespace paver {
 

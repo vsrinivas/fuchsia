@@ -56,11 +56,11 @@
 #include <fbl/vector.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
-#include <fvm/format.h>
-#include <fvm/fvm-check.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
+#include "src/storage/fvm/format.h"
+#include "src/storage/fvm/fvm_check.h"
 #include "src/storage/minfs/format.h"
 #include "zircon/errors.h"
 

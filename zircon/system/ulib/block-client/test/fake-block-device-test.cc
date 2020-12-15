@@ -6,9 +6,10 @@
 #include <iterator>
 
 #include <block-client/cpp/fake-device.h>
-#include <fvm/format.h>
 #include <storage/buffer/owned_vmoid.h>
 #include <zxtest/zxtest.h>
+
+#include "src/storage/fvm/format.h"
 
 namespace block_client {
 namespace {

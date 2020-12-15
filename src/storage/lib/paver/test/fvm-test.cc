@@ -7,10 +7,10 @@
 #include <lib/devmgr-integration-test/fixture.h>
 
 #include <fs-management/fvm.h>
-#include <fvm/format.h>
-#include <fvm/fvm-sparse.h>
 #include <zxtest/zxtest.h>
 
+#include "src/storage/fvm/format.h"
+#include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/lib/paver/test/test-utils.h"
 
 namespace {

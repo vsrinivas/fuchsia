@@ -24,9 +24,10 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
-#include <fvm/format.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxcrypt/fdio-volume.h>
+
+#include "src/storage/fvm/format.h"
 
 // TODO(fxbug.dev/34273): Replace these with *_STATUS in zxtest.
 #define EXPECT_ZX(expr, status) EXPECT_EQ(expr, status)

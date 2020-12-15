@@ -28,6 +28,7 @@ test("fs-management") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//sdk/lib/fdio",
+    "//src/storage/fvm",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -40,7 +41,6 @@ test("fs-management") {
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs-management",
     "//zircon/system/ulib/fs-test-utils",
-    "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/gpt",
     "//zircon/system/ulib/memfs",

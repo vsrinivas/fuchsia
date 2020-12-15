@@ -12,8 +12,8 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fvm/format.h>
 
+#include "src/storage/fvm/format.h"
 #include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/options.h"
 #include "src/storage/volume_image/options.h"

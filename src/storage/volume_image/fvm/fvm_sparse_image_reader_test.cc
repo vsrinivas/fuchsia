@@ -14,12 +14,12 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/admin.h>
 #include <fs-management/fvm.h>
-#include <fvm/format.h>
-#include <fvm/fvm-sparse.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/isolated_devmgr/v2_component/fvm.h"
 #include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
+#include "src/storage/fvm/format.h"
+#include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/volume_image/ftl/ftl_image.h"
 #include "src/storage/volume_image/ftl/options.h"
 #include "src/storage/volume_image/utils/fd_reader.h"

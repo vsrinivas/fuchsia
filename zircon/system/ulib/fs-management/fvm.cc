@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/fvm/fvm.h"
+
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -31,8 +33,8 @@
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
-#include <fvm/format.h>
-#include <fvm/fvm.h>
+
+#include "src/storage/fvm/format.h"
 
 namespace {
 

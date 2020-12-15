@@ -11,8 +11,7 @@
 #include <string>
 #include <vector>
 
-#include <fvm/fvm.h>
-
+#include "src/storage/fvm/fvm.h"
 #include "src/storage/volume_image/fvm/options.h"
 #include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/partition.h"

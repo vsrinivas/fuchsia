@@ -9,10 +9,10 @@
 #include <algorithm>
 #include <utility>
 
-#include <fvm/fvm-sparse.h>
 #include <safemath/checked_math.h>
 
 #include "fvm-host/format.h"
+#include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/minfs/transaction_limits.h"
 
 MinfsFormat::MinfsFormat(fbl::unique_fd fd, const char* type) : Format() {

@@ -22,8 +22,8 @@ source_set("fvm-descriptor") {
     "//zircon/public/lib/fit",
   ]
   deps = [
+    "//src/storage/fvm",
     "//src/storage/volume_image/utils:block-utils",
-    "//zircon/system/ulib/fvm",
   ]
 }
 
@@ -35,9 +35,9 @@ source_set("fvm-sparse-image") {
   public = [ "fvm_sparse_image.h" ]
   public_deps = [
     ":fvm-descriptor",
+    "//src/storage/fvm",
     "//src/storage/volume_image/utils:compression-interfaces",
     "//src/storage/volume_image/utils:io-interfaces",
-    "//zircon/system/ulib/fvm",
   ]
   deps = [
     "//src/storage/volume_image/utils:block-utils",
@@ -56,13 +56,13 @@ source_set("fvm-test") {
     ":fvm-descriptor",
     ":fvm-sparse-image",
     "//src/lib/json_parser",
+    "//src/storage/fvm",
     "//src/storage/volume_image/serialization:schema",
     "//src/storage/volume_image/utils:guid",
     "//src/storage/volume_image/utils:lz4-compression",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/lz4",
-    "//zircon/system/ulib/fvm",
   ]
 }
 

@@ -29,13 +29,13 @@ test("fs-recovery") {
   sources = [ "recovery.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//src/storage/fvm",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",
-    "//zircon/system/ulib/fvm",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",
   ]

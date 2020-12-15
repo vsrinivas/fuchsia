@@ -19,10 +19,10 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <fs-management/mount.h>
-#include <fvm/format.h>
-#include <fvm/fvm-sparse.h>
-#include <fvm/snapshot-metadata.h>
 
+#include "src/storage/fvm/format.h"
+#include "src/storage/fvm/fvm_sparse.h"
+#include "src/storage/fvm/snapshot_metadata.h"
 #include "src/storage/minfs/bcache.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/fsck.h"
