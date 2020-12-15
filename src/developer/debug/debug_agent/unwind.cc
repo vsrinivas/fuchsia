@@ -203,12 +203,17 @@ zx_status_t UnwindStackNgUnwind(const ProcessHandle& process, const ModuleList& 
 
   unw_addr_space_t remote_aspace =
       unw_create_addr_space(const_cast<unw_accessors_t*>(&_UFuchsia_accessors), 0);
-  if (!remote_aspace)
+  if (!remote_aspace) {
+    unw_destroy_fuchsia(fuchsia);
     return ZX_ERR_INTERNAL;
+  }
 
   unw_cursor_t cursor;
-  if (unw_init_remote(&cursor, remote_aspace, fuchsia) < 0)
+  if (unw_init_remote(&cursor, remote_aspace, fuchsia) < 0) {
+    unw_destroy_addr_space(remote_aspace);
+    unw_destroy_fuchsia(fuchsia);
     return ZX_ERR_INTERNAL;
+  }
 
   // Compute the register IDs for this platform's IP/SP.
   auto arch = arch::GetCurrentArch();
@@ -262,6 +267,8 @@ zx_status_t UnwindStackNgUnwind(const ProcessHandle& process, const ModuleList& 
   // will hold the initial stack pointer for the thread, which in turn allows computation of the
   // first real frame's fingerprint.
 
+  unw_destroy_addr_space(remote_aspace);
+  unw_destroy_fuchsia(fuchsia);
   return ZX_OK;
 }
 
