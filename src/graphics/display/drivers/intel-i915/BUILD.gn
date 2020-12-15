@@ -2,11 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
-driver_module("intel-i915") {
+bind_rules("intel-i915-bind") {
+  rules = "intel-i915.bind"
+  output = "intel-i915-bind.h"
+  tests = "bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.pci" ]
+}
+
+source_set("common_srcs") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -23,7 +31,8 @@ driver_module("intel-i915") {
     "pipe.cc",
     "power.cc",
   ]
-  deps = [
+  public_deps = [
+    ":intel-i915-bind",
     "//sdk/banjo/ddk.protocol.display.controller",
     "//sdk/banjo/ddk.protocol.i2cimpl",
     "//sdk/banjo/ddk.protocol.intelgpucore",
@@ -35,9 +44,6 @@ driver_module("intel-i915") {
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
@@ -47,6 +53,10 @@ driver_module("intel-i915") {
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/region-alloc",
   ]
+}
+
+driver_module("intel-i915") {
+  deps = [ ":common_srcs" ]
 }
 
 test("intel-i915-test") {
@@ -54,55 +64,25 @@ test("intel-i915-test") {
     "//build/unification/config:zircon-migrated",
     "//build/config:all_source",
   ]
-  sources = [
-    "display-device.cc",
-    "dp-display.cc",
-    "gtt.cc",
-    "hdmi-display.cc",
-    "igd.cc",
-    "intel-i915-test.cc",
-    "intel-i915.cc",
-    "interrupts.cc",
-    "pipe.cc",
-    "power.cc",
-  ]
+  sources = [ "intel-i915-test.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.display.controller",
-    "//sdk/banjo/ddk.protocol.i2cimpl",
-    "//sdk/banjo/ddk.protocol.intelgpucore",
-    "//sdk/banjo/ddk.protocol.pci",
-    "//sdk/banjo/ddk.protocol.sysmem",
-    "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
-    "//src/devices/lib/mmio",
-    "//src/devices/lib/mmio",
-    "//src/devices/pci/lib/device-protocol-pci",
+    ":common_srcs",
     "//src/devices/sysmem/testing/mock-sysmem",
     "//src/devices/testing/fake_ddk",
-    "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
-    "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/edid",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
-    "//zircon/system/ulib/region-alloc",
   ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":intel-i915-test-package" ]
+  deps = [
+    ":intel-i915-bind_test",
+    ":intel-i915-test-package",
+  ]
 }
 
 unittest_package("intel-i915-test-package") {

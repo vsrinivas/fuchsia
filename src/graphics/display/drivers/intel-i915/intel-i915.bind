@@ -1,0 +1,39 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.pci;
+
+fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.INTEL;
+accept fuchsia.BIND_PCI_DID {
+  // Skylake DIDs
+  0x191b,
+  0x1912,
+  0x191d,
+  0x1902,
+  0x1916,
+  0x191e,
+  0x1906,
+  0x190b,
+  0x1926,
+  0x1927,
+  0x1923,
+  0x193b,
+  0x192d,
+  0x193d,
+
+  // Kaby lake DIDs
+  0x5916,
+  0x591c,
+  0x591e,
+  0x591b,
+  0x5912,
+  0x5926,
+  0x5906,
+  0x5927,
+  0x5902,
+  0x591a,
+  0x591d,
+  0x3ea5,
+}
