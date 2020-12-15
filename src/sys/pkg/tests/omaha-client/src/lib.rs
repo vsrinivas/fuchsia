@@ -34,7 +34,7 @@ use {
     mock_installer::MockUpdateInstallerService,
     mock_omaha_server::{OmahaResponse, OmahaServer},
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
-    mock_reboot::MockRebootService,
+    mock_reboot::{MockRebootService, RebootReason},
     mock_resolver::MockResolverService,
     parking_lot::Mutex,
     serde_json::json,
@@ -185,7 +185,8 @@ impl TestEnvBuilder {
 
         let (send, reboot_called) = oneshot::channel();
         let send = Mutex::new(Some(send));
-        let reboot_service = Arc::new(MockRebootService::new(Box::new(move || {
+        let reboot_service = Arc::new(MockRebootService::new(Box::new(move |reason| {
+            assert_eq!(reason, RebootReason::SystemUpdate);
             send.lock().take().unwrap().send(()).unwrap();
             Ok(())
         })));

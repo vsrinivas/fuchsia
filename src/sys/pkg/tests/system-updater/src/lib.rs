@@ -22,7 +22,7 @@ use {
     futures::prelude::*,
     matches::assert_matches,
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
-    mock_reboot::MockRebootService,
+    mock_reboot::{MockRebootService, RebootReason},
     mock_resolver::MockResolverService,
     parking_lot::Mutex,
     pretty_assertions::assert_eq,
@@ -165,7 +165,8 @@ impl TestEnvBuilder {
 
         let reboot_service = {
             let interactions = Arc::clone(&interactions);
-            Arc::new(MockRebootService::new(Box::new(move || {
+            Arc::new(MockRebootService::new(Box::new(move |reason| {
+                assert_eq!(reason, RebootReason::SystemUpdate);
                 interactions.lock().push(Reboot);
                 Ok(())
             })))

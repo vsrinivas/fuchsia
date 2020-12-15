@@ -5,21 +5,23 @@
 use {
     anyhow::Error,
     fidl_fuchsia_hardware_power_statecontrol::{
-        AdminProxy, AdminRebootResult, AdminRequest, AdminRequestStream, RebootReason,
+        AdminProxy, AdminRebootResult, AdminRequest, AdminRequestStream,
     },
     fuchsia_async::{self as fasync, futures::TryFutureExt, futures::TryStreamExt},
     std::sync::Arc,
 };
 
+pub use fidl_fuchsia_hardware_power_statecontrol::RebootReason;
+
 pub struct MockRebootService {
-    call_hook: Box<dyn Fn() -> AdminRebootResult + Send + Sync>,
+    call_hook: Box<dyn Fn(RebootReason) -> AdminRebootResult + Send + Sync>,
 }
 
 impl MockRebootService {
     /// Creates a new MockRebootService with a given callback to run per call to the service.
     /// `call_hook` must return a `Result` for each call, which will be sent to
     /// the caller as the result of the reboot call.
-    pub fn new(call_hook: Box<dyn Fn() -> AdminRebootResult + Send + Sync>) -> Self {
+    pub fn new(call_hook: Box<dyn Fn(RebootReason) -> AdminRebootResult + Send + Sync>) -> Self {
         Self { call_hook }
     }
 
@@ -32,11 +34,7 @@ impl MockRebootService {
         while let Some(event) = stream.try_next().await? {
             match event {
                 AdminRequest::Reboot { reason, responder } => {
-                    // This mock should probably be only used for SWD tests, for now, all
-                    // of which use RebootReason::SystemUpdate
-                    assert_eq!(reason, RebootReason::SystemUpdate);
-
-                    let mut result = (self.call_hook)();
+                    let mut result = (self.call_hook)(reason);
                     responder.send(&mut result)?;
                 }
                 _ => {
@@ -74,7 +72,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_mock_reboot() {
-        let reboot_service = Arc::new(MockRebootService::new(Box::new(|| Ok(()))));
+        let reboot_service = Arc::new(MockRebootService::new(Box::new(|_| Ok(()))));
 
         let reboot_service_clone = Arc::clone(&reboot_service);
         let proxy = reboot_service_clone.spawn_reboot_service();
@@ -89,7 +87,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_mock_reboot_fails() {
         let reboot_service =
-            Arc::new(MockRebootService::new(Box::new(|| Err(zx::Status::INTERNAL.into_raw()))));
+            Arc::new(MockRebootService::new(Box::new(|_| Err(zx::Status::INTERNAL.into_raw()))));
 
         let reboot_service_clone = Arc::clone(&reboot_service);
         let proxy = reboot_service_clone.spawn_reboot_service();
@@ -100,10 +98,33 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_mock_reboot_call_hook() {
+        let reboot_service = Arc::new(MockRebootService::new(Box::new(|reason| match reason {
+            RebootReason::UserRequest => Ok(()),
+            _ => Err(zx::Status::NOT_SUPPORTED.into_raw()),
+        })));
+
+        let reboot_service_clone = Arc::clone(&reboot_service);
+        let proxy = reboot_service_clone.spawn_reboot_service();
+
+        // Succeed when given expected reboot reason.
+        let () = proxy
+            .reboot(RebootReason::UserRequest)
+            .await
+            .expect("made reboot call")
+            .expect("reboot call succeeded");
+
+        // Error when given unexpected reboot reason.
+        let error_reboot_result =
+            proxy.reboot(RebootReason::SystemUpdate).await.expect("made reboot call");
+        assert_eq!(error_reboot_result, Err(zx::Status::NOT_SUPPORTED.into_raw()));
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_mock_reboot_with_external_state() {
         let called = Arc::new(AtomicU32::new(0));
         let called_clone = Arc::clone(&called);
-        let reboot_service = Arc::new(MockRebootService::new(Box::new(move || {
+        let reboot_service = Arc::new(MockRebootService::new(Box::new(move |_| {
             called_clone.fetch_add(1, Ordering::SeqCst);
             Ok(())
         })));
