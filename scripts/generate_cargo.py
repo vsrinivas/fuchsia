@@ -111,30 +111,16 @@ class Project(object):
 
         return result
 
-    def dereference_group(self, target):
-        """Dereference proc macro shims.
-
-        If the target happens to be a group which just redirects you to a
-        different target, returns the real target label. Otherwise, returns
-        target.
-        """
-        meta = self.targets[target]
-        if meta["type"] == "group":
-            if len(meta["deps"]) == 1:
-                dep = meta["deps"][0]
-                dep_meta = self.targets[dep]
-                return dep
-        return target
-
-    def expand_source_set(self, target):
+    def expand_source_set_or_group(self, target):
         """Returns a list of dependencies if the target is a source_set.
 
         Returns dependencies as a list of strings if the target is a
         source_set, or None otherwise.
         """
         meta = self.targets[target]
-        if meta["type"] == "source_set":
+        if meta["type"] in ("source_set", "group"):
             return meta["deps"]
+
 
     def find_test_targets(self, source_root):
         overlapping_targets = self.rust_targets_by_source_root.get(
@@ -243,14 +229,12 @@ def write_toml_file(
     def write_deps(deps, dep_type):
         while deps:
             dep = deps.pop()
-            # handle proc macro shims:
-            dep = project.dereference_group(dep)
 
-            # If a dependency points to a source set, expand it into a list
+            # If a dependency points to a source set or group, expand it into a list
             # of its deps, and append them to the deps list. Finally, continue
             # to the next item, since a source set itself is not considered a
             # dependency for our purposes.
-            expanded_deps = project.expand_source_set(dep)
+            expanded_deps = project.expand_source_set_or_group(dep)
             if expanded_deps:
                 deps.extend(expanded_deps)
                 continue
