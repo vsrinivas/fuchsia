@@ -31,7 +31,6 @@
 #include <arch/x86/mmu.h>
 #include <dev/hw_rng.h>
 #include <dev/interrupt.h>
-#include <kernel/atomic.h>
 #include <kernel/cpu.h>
 #include <kernel/event.h>
 #include <kernel/timer.h>
