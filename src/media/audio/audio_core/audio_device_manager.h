@@ -58,10 +58,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   // something has gone Very Seriously Wrong.
   void Shutdown();
 
-  // Add a new device-enumerator client. Called from service framework when a new client connects.
-  void AddDeviceEnumeratorClient(
-      fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request);
-
   // Sends an update message to each effect with the name 'instance_name' across all devices.
   // If 'persist' is true, the effect update is persisted and applied to new devices as they are
   // plugged. Only the latest update will be persisted for each 'instance_name'.

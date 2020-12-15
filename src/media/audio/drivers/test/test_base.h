@@ -7,8 +7,13 @@
 
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/async-loop/default.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/testing/enclosing_environment.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/device/audio.h>
 
+#include "src/media/audio/drivers/test/audio_device_enumerator_stub.h"
 #include "src/media/audio/lib/test/test_fixture.h"
 
 namespace media::audio::drivers::test {
@@ -20,6 +25,9 @@ struct DeviceEntry {
   std::string filename;
   DeviceType dev_type;
 
+  // File descriptors only use the non-negative range, leaving room for special values such as A2DP.
+  static constexpr int kA2dp = -1;
+
   bool operator<(const DeviceEntry& rhs) const {
     return std::tie(dir_fd, filename, dev_type) < std::tie(rhs.dir_fd, rhs.filename, rhs.dev_type);
   }
@@ -28,7 +36,14 @@ struct DeviceEntry {
 // Used in registering separate test case instances for each enumerated device
 //
 // See googletest/docs/advanced.md for details
+//
+// Devices are displayed in the 'audio-output-2/000' format, or simply the filename, if the
+// special dir_fd value is observed (an example might be 'Bluetooth-A2DP' for Bluetooth devices).
 std::string inline DevNameForEntry(const DeviceEntry& device_entry) {
+  if (device_entry.dir_fd == DeviceEntry::kA2dp) {
+    return device_entry.filename;
+  }
+
   return std::string(device_entry.dev_type == DeviceType::Input ? "audio-input-2"
                                                                 : "audio-output-2") +
          "/" + device_entry.filename;
@@ -47,6 +62,9 @@ class TestBase : public media::audio::test::TestFixture {
   void TearDown() override;
 
   void ConnectToDevice(const DeviceEntry& device_entry);
+  void ConnectToBluetoothDevice();
+  void CreateStreamConfigFromChannel(
+      fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel);
 
   const DeviceEntry& device_entry() const { return device_entry_; }
   void set_device_type(DeviceType device_type) {}
@@ -68,7 +86,16 @@ class TestBase : public media::audio::test::TestFixture {
   void set_failed() { failed_ = true; }
   bool failed() const { return failed_; }
 
+  void WaitForError(zx::duration wait_duration = kWaitForErrorDuration) {
+    RunLoopWithTimeoutOrUntil([this]() { return failed(); }, wait_duration);
+  }
+
  private:
+  static constexpr zx::duration kWaitForErrorDuration = zx::msec(100);
+
+  std::unique_ptr<sys::testing::EnclosingEnvironment> test_env_;
+  fuchsia::sys::ComponentControllerPtr bt_harness_;
+
   bool failed_ = false;
   const DeviceEntry& device_entry_;
 

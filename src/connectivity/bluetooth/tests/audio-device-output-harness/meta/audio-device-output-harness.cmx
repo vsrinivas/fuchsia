@@ -1,0 +1,16 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/audio_device_output_harness"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.media.AudioDeviceEnumerator",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

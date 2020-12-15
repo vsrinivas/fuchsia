@@ -69,11 +69,6 @@ void AudioDeviceManager::Shutdown() {
   fit::run_single_threaded(fit::join_promise_vector(std::move(device_promises)));
 }
 
-void AudioDeviceManager::AddDeviceEnumeratorClient(
-    fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request) {
-  bindings_.AddBinding(this, std::move(request));
-}
-
 fit::promise<void, fuchsia::media::audio::UpdateEffectError> AudioDeviceManager::UpdateEffect(
     const std::string& instance_name, const std::string& config, bool persist) {
   if (persist) {
@@ -441,6 +436,8 @@ void AudioDeviceManager::UpdateDefaultDevice(bool input) {
 
 void AudioDeviceManager::AddDeviceByVersion(zx::channel device_channel, std::string device_name,
                                             bool is_input, AudioDriverVersion version) {
+  FX_LOGS(DEBUG) << "AddingByVersion (" << (version == AudioDriverVersion::V1 ? "V1" : "V2") << ")"
+                 << (is_input ? "input" : "output") << " '" << device_name << "'";
   switch (version) {
     case AudioDriverVersion::V1:
       AddDeviceByChannel(std::move(device_channel), std::move(device_name), is_input);

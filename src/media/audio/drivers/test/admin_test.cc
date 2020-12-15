@@ -63,7 +63,8 @@ void AdminTest::RequestRingBufferChannel() {
   zx::channel channel = ring_buffer_handle.TakeChannel();
   ring_buffer_ =
       fidl::InterfaceHandle<fuchsia::hardware::audio::RingBuffer>(std::move(channel)).Bind();
-  ring_buffer_.set_error_handler([](zx_status_t status) {
+  ring_buffer_.set_error_handler([this](zx_status_t status) {
+    set_failed();
     if (status == ZX_ERR_PEER_CLOSED) {
       FAIL() << "RingBuffer channel error " << status
              << ": is another client already connected to the RingBuffer interface?";
@@ -137,6 +138,9 @@ void AdminTest::RequestBuffer(uint32_t min_ring_buffer_frames, uint32_t notifica
       });
 
   RunLoopUntil([this]() { return received_get_buffer_ || failed(); });
+  if (failed()) {
+    return;
+  }
 
   ring_buffer_mapper_.Unmap();
   const zx_vm_option_t option_flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
@@ -219,12 +223,19 @@ void AdminTest::RequestStart() {
     received_start_ = true;
   });
   RunLoopUntil([this]() { return received_start_ || failed(); });
+  if (failed()) {
+    return;
+  }
+
   EXPECT_GT(start_time_, send_time);
 }
 
 // Request that driver stop the ring buffer, including quieting position notifications.
 // This method assumes that the ring buffer engine has previously been successfully started.
 void AdminTest::RequestStop() {
+  if (failed()) {
+    return;
+  }
   ASSERT_TRUE(received_start_);
 
   ring_buffer_->Stop([this]() { received_stop_ = true; });
@@ -236,26 +247,34 @@ void AdminTest::RequestStop() {
 // we call Stop and register a position notification that FAILs if called.
 // Within the next position notification, Stop and fail on any subsequent position notification.
 void AdminTest::RequestStopAndExpectNoPositionNotifications() {
+  if (failed()) {
+    return;
+  }
+
   ASSERT_TRUE(received_start_);
 
   // Disable any last pending notification from re-queueing itself.
   watch_for_next_position_notification_ = false;
+
   ring_buffer_->WatchClockRecoveryPositionInfo(
       [this](fuchsia::hardware::audio::RingBufferPositionInfo) {
         ring_buffer_->Stop([this]() { received_stop_ = true; });
 
         SetFailingPositionNotification();
       });
+
   RunLoopUntil([this]() { return received_stop_ || failed(); });
 
-  // We should NOT receive further position notifications. Wait a bit to give them a chance to run.
-  zx::nanosleep(zx::deadline_after(zx::msec(200)));
-  RunLoopUntilIdle();
+  // We should NOT receive further position notifications. If we do, it triggers an error.
 }
 
 // Wait for the specified number of position notifications.
 void AdminTest::ExpectPositionNotifyCount(uint32_t count) {
   RunLoopUntil([this, count]() { return position_notification_count_ >= count || failed(); });
+  if (failed()) {
+    return;
+  }
+
   ClearPositionNotification();
 
   auto timestamp_duration = position_info_.timestamp - start_time_;
@@ -323,6 +342,7 @@ DEFINE_ADMIN_TEST_CLASS(Stop, {
   RequestBuffer(100, 0);
   RequestStart();
   RequestStop();
+  WaitForError();
 });
 
 // Verify position notifications at fast (~180/sec) and slow (2/sec) rate.
@@ -333,7 +353,9 @@ DEFINE_ADMIN_TEST_CLASS(PositionNotifyFast, {
   SetPositionNotification();
   RequestStart();
   ExpectPositionNotifyCount(16);
+  WaitForError();
 });
+// Notifications arrive every 500 msec; we must wait longer than the default 100 msec.
 DEFINE_ADMIN_TEST_CLASS(PositionNotifySlow, {
   RequestFormats();
   RequestMinFormat();
@@ -341,6 +363,7 @@ DEFINE_ADMIN_TEST_CLASS(PositionNotifySlow, {
   SetPositionNotification();
   RequestStart();
   ExpectPositionNotifyCount(3);
+  WaitForError(zx::msec(600));
 });
 
 // Verify no position notifications arrive after stop, or if notifications_per_ring is 0.
@@ -352,6 +375,7 @@ DEFINE_ADMIN_TEST_CLASS(NoPositionNotifyAfterStop, {
   RequestStart();
   ExpectPositionNotifyCount(3);
   RequestStopAndExpectNoPositionNotifications();
+  WaitForError();
 });
 DEFINE_ADMIN_TEST_CLASS(PositionNotifyNone, {
   RequestFormats();
@@ -359,8 +383,7 @@ DEFINE_ADMIN_TEST_CLASS(PositionNotifyNone, {
   RequestBuffer(8000, 0);
   SetFailingPositionNotification();
   RequestStart();
-  zx::nanosleep(zx::deadline_after(zx::msec(200)));
-  RunLoopUntilIdle();
+  WaitForError();
 });
 
 // Register separate test case instances for each enumerated device
@@ -371,15 +394,26 @@ DEFINE_ADMIN_TEST_CLASS(PositionNotifyNone, {
                         DevNameForEntry(DEVICE).c_str(), __FILE__, __LINE__,                 \
                         [=]() -> AdminTest* { return new CLASS_NAME(DEVICE); })
 
-void RegisterAdminTestsForDevice(const DeviceEntry& device_entry) {
-  REGISTER_ADMIN_TEST(GetRingBufferProperties, device_entry);
-  REGISTER_ADMIN_TEST(GetBuffer, device_entry);
-  REGISTER_ADMIN_TEST(Start, device_entry);
-  REGISTER_ADMIN_TEST(Stop, device_entry);
-  REGISTER_ADMIN_TEST(PositionNotifyFast, device_entry);
-  REGISTER_ADMIN_TEST(PositionNotifySlow, device_entry);
-  REGISTER_ADMIN_TEST(NoPositionNotifyAfterStop, device_entry);
-  REGISTER_ADMIN_TEST(PositionNotifyNone, device_entry);
+void RegisterAdminTestsForDevice(const DeviceEntry& device_entry,
+                                 bool expect_audio_core_connected) {
+  // If audio_core is connected to the audio driver, admin tests will fail.
+  // We test a hermetic instance of the A2DP driver, so audio_core is never connected.
+  if (!expect_audio_core_connected || device_entry.dir_fd == DeviceEntry::kA2dp) {
+    REGISTER_ADMIN_TEST(GetRingBufferProperties, device_entry);
+    REGISTER_ADMIN_TEST(GetBuffer, device_entry);
+    REGISTER_ADMIN_TEST(Start, device_entry);
+    REGISTER_ADMIN_TEST(Stop, device_entry);
+
+    // For now, the following test cases fail on a2dp-source.
+    // TODO(fxbug.dev/66431): fix a2dp-source and enable these test cases for all devices.
+    if (device_entry.dir_fd != DeviceEntry::kA2dp) {
+      REGISTER_ADMIN_TEST(PositionNotifyFast, device_entry);
+      REGISTER_ADMIN_TEST(PositionNotifySlow, device_entry);
+      REGISTER_ADMIN_TEST(NoPositionNotifyAfterStop, device_entry);
+    }
+
+    REGISTER_ADMIN_TEST(PositionNotifyNone, device_entry);
+  }
 }
 
 }  // namespace media::audio::drivers::test

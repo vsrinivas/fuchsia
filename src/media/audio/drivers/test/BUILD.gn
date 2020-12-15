@@ -39,6 +39,8 @@ executable("audio_driver_tests_bin") {
   sources = [
     "admin_test.cc",
     "admin_test.h",
+    "audio_device_enumerator_stub.cc",
+    "audio_device_enumerator_stub.h",
     "basic_test.cc",
     "basic_test.h",
     "main.cc",
@@ -49,6 +51,8 @@ executable("audio_driver_tests_bin") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//src/lib/fsl",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/testing/loop_fixture",

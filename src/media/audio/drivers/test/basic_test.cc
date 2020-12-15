@@ -76,7 +76,7 @@ void BasicTest::RequestStreamProperties() {
 
     received_get_stream_properties_ = true;
   });
-  RunLoopUntil([this]() { return received_get_stream_properties_; });
+  RunLoopUntil([this]() { return received_get_stream_properties_ || failed(); });
 }
 
 // Request that the driver return its gain capabilities and current state.
@@ -112,7 +112,7 @@ void BasicTest::RequestGain() {
 
     received_get_gain_ = true;
   });
-  RunLoopUntil([this]() { return received_get_gain_; });
+  RunLoopUntil([this]() { return received_get_gain_ || failed(); });
 }
 
 // Determine an appropriate gain state to request, then call other method to request that driver set
@@ -155,7 +155,7 @@ void BasicTest::RequestPlugDetect() {
     AUDIO_LOG(DEBUG) << "Plug_state_time: " << plug_state_.plug_state_time();
     received_plug_detect_ = true;
   });
-  RunLoopUntil([this]() { return received_plug_detect_; });
+  RunLoopUntil([this]() { return received_plug_detect_ || failed(); });
 }
 
 #define DEFINE_BASIC_TEST_CLASS(CLASS_NAME, CODE)                               \

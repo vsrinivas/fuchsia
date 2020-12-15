@@ -5,7 +5,9 @@
 #include "src/media/audio/drivers/test/test_base.h"
 
 #include <fuchsia/hardware/audio/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 #include <cstring>
@@ -14,7 +16,7 @@
 #include <fbl/unique_fd.h>
 
 #include "lib/zx/time.h"
-#include "src/media/audio/lib/logging/logging.h"
+#include "src/media/audio/drivers/test/audio_device_enumerator_stub.h"
 
 namespace media::audio::drivers::test {
 
@@ -22,7 +24,11 @@ namespace media::audio::drivers::test {
 void TestBase::SetUp() {
   media::audio::test::TestFixture::SetUp();
 
-  ConnectToDevice(device_entry());
+  if (device_entry().dir_fd == DeviceEntry::kA2dp) {
+    ConnectToBluetoothDevice();
+  } else {
+    ConnectToDevice(device_entry());
+  }
 }
 
 void TestBase::TearDown() {
@@ -38,6 +44,41 @@ void TestBase::TearDown() {
   zx::nanosleep(zx::deadline_after(zx::msec(10)));
 
   TestFixture::TearDown();
+}
+
+void TestBase::ConnectToBluetoothDevice() {
+  std::unique_ptr<AudioDeviceEnumeratorStub> audio_device_enumerator_impl =
+      std::make_unique<AudioDeviceEnumeratorStub>();
+
+  auto real_services = sys::ServiceDirectory::CreateFromNamespace();
+  auto real_env = real_services->Connect<fuchsia::sys::Environment>();
+  auto test_services = sys::testing::EnvironmentServices::Create(real_env);
+
+  // Make the AudioDeviceEnumerator stub visible in the nested environment
+  test_services->AddService(
+      std::make_unique<vfs::Service>(audio_device_enumerator_impl->DevEnumFidlRequestHandler()),
+      fuchsia::media::AudioDeviceEnumerator::Name_);
+
+  // Create the nested test environment, and launch the audio harness there.
+  // test_env_ and harness_ must be kept alive during test execution
+  test_env_ = sys::testing::EnclosingEnvironment::Create("audio_driver_test_env", real_env,
+                                                         std::move(test_services));
+  bt_harness_ = test_env_->CreateComponentFromUrl(
+      "fuchsia-pkg://fuchsia.com/audio-device-output-harness#meta/audio-device-output-harness.cmx");
+
+  bt_harness_.events().OnTerminated = [this](int64_t return_code,
+                                             fuchsia::sys::TerminationReason reason) {
+    set_failed();
+    FAIL() << "OnTerminated: " << return_code << ", reason " << static_cast<int64_t>(reason);
+  };
+
+  // Wait for the Bluetooth harness to AddDeviceByChannel, then pass it on
+  RunLoopUntil([this, impl = audio_device_enumerator_impl.get()]() {
+    return impl->channel_available() || failed();
+  });
+  CreateStreamConfigFromChannel(audio_device_enumerator_impl->TakeChannel());
+
+  // audio_device_enumerator_impl can fall out of scope, now that it has passed the channel onward.
 }
 
 // Given this device_entry, open the device and set the FIDL config_channel
@@ -73,8 +114,14 @@ void TestBase::ConnectToDevice(const DeviceEntry& device_entry) {
   FX_LOGS(TRACE) << "Successfully opened devnode '" << device_entry.filename << "' for audio "
                  << ((device_type() == DeviceType::Input) ? "input" : "output");
 
-  stream_config_ =
-      fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(std::move(channel)).Bind();
+  CreateStreamConfigFromChannel(
+      fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>(std::move(channel)));
+}
+
+void TestBase::CreateStreamConfigFromChannel(
+    fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel) {
+  stream_config_ = channel.Bind();
+
   // If no device was enumerated, don't waste further time.
   if (!stream_config_.is_bound()) {
     FAIL() << "Failed to get stream channel for this device";
@@ -123,7 +170,7 @@ void TestBase::RequestFormats() {
 
         received_get_formats_ = true;
       });
-  RunLoopUntil([this]() { return received_get_formats_; });
+  RunLoopUntil([this]() { return received_get_formats_ || failed(); });
 }
 
 }  // namespace media::audio::drivers::test

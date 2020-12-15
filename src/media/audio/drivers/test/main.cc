@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
+
 #include <set>
 
 #include "gtest/gtest.h"
@@ -9,7 +13,6 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/test/test_settings.h"
 #include "src/media/audio/drivers/test/test_base.h"
-#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio::drivers::test {
 
@@ -59,6 +62,9 @@ void DetectDevices() {
       loop.Run(zx::deadline_after(zx::msec(1)));
     }
   }
+
+  // Also add a device entry for the a2dp-source output device driver, which we always test.
+  device_entries().insert({DeviceEntry::kA2dp, "Bluetooth-A2DP", DeviceType::Output});
 }
 
 // TODO(fxbug.dev/65580): Convert to value-parameterized testing and the INSTANTIATE_TEST_SUITE_P
@@ -67,16 +73,14 @@ void DetectDevices() {
 // them at runtime based on the cmdline flag.
 
 extern void RegisterBasicTestsForDevice(const DeviceEntry& device_entry);
-extern void RegisterAdminTestsForDevice(const DeviceEntry& device_entry);
+extern void RegisterAdminTestsForDevice(const DeviceEntry& device_entry,
+                                        bool expect_audio_core_connected);
 
 // Create testcase instances for each device entry.
-void RegisterTests(bool test_admin_functions) {
+void RegisterTests(bool expect_audio_core_connected) {
   for (auto& device_entry : device_entries()) {
     RegisterBasicTestsForDevice(device_entry);
-
-    if (test_admin_functions) {
-      RegisterAdminTestsForDevice(device_entry);
-    }
+    RegisterAdminTestsForDevice(device_entry, expect_audio_core_connected);
   }
 }
 
@@ -94,10 +98,10 @@ int main(int argc, char** argv) {
   syslog::SetTags({"audio_driver_tests"});
 
   // --admin  Validate commands that require the privileged channel, such as SetFormat.
-  bool test_admin_functions = command_line.HasOption("admin");
+  bool expect_audio_core_connected = !command_line.HasOption("admin");
 
   media::audio::drivers::test::DetectDevices();
-  media::audio::drivers::test::RegisterTests(test_admin_functions);
+  media::audio::drivers::test::RegisterTests(expect_audio_core_connected);
 
   return RUN_ALL_TESTS();
 }
