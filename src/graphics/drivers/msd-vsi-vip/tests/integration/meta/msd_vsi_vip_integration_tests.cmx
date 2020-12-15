@@ -13,8 +13,7 @@
             "vulkan"
         ],
         "services": [
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }
