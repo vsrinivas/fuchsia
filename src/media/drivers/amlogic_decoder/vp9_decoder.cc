@@ -1072,6 +1072,7 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
     SkipFrameAfterFirmwareSlow();
     return;
   }
+
   // stream_offset points to an offset within the header of the frame. With
   // superframes, the offset stored in the PTS manager will be the start of the
   // superframe, but since the offset here is less than the start of the next
@@ -1079,7 +1080,7 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
   //
   // When show_existing_frame is set, the original PTS from when the reference
   // frame was decoded is ignored.
-  uint32_t stream_offset = HevcShiftByteCount::Get().ReadFrom(owner_->dosbus()).reg_value();
+  uint32_t stream_offset = HevcAssistScratchC::Get().ReadFrom(owner_->dosbus()).reg_value();
 
   // PtsManager does bit-extension to 64 bit stream offset.
   PtsManager::LookupResult result = pts_manager_->Lookup(stream_offset);
