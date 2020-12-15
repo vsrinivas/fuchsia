@@ -11,8 +11,8 @@
 
 #include <arch/hypervisor.h>
 #include <arch/x86/pv.h>
+#include <fbl/atomic_ref.h>
 #include <hypervisor/guest_physical_address_space.h>
-#include <kernel/atomic.h>
 #include <ktl/atomic.h>
 #include <vm/physmap.h>
 
@@ -91,12 +91,13 @@ zx_status_t pv_clock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpa
   Guard<Mutex> guard(UpdateBootTimeLock::Get());
   zx_time_t time = utc_offset.load();
   // See the comment for pv_clock_boot_time structure in arch/x86/pv.h
-  atomic_store_relaxed_u32(&boot_time->version, version + 1);
+  fbl::atomic_ref<uint32_t> guest_version(boot_time->version);
+  guest_version.store(version + 1, fbl::memory_order_relaxed);
   ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
   boot_time->seconds = static_cast<uint32_t>(time / ZX_SEC(1));
   boot_time->nseconds = static_cast<uint32_t>(time % ZX_SEC(1));
   ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
-  atomic_store_relaxed_u32(&boot_time->version, version + 2);
+  guest_version.store(version + 2, fbl::memory_order_relaxed);
   version += 2;
   return ZX_OK;
 }
@@ -128,7 +129,8 @@ void pv_clock_update_system_time(PvClockState* pv_clock,
 
   // See the comment for pv_clock_boot_time structure in arch/x86/pv.h
   pv_clock_system_time* system_time = pv_clock->system_time;
-  atomic_store_relaxed_u32(&system_time->version, pv_clock->version + 1);
+  fbl::atomic_ref<uint32_t> guest_version(system_time->version);
+  guest_version.store(pv_clock->version + 1, fbl::memory_order_relaxed);
   ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
   system_time->tsc_mul = tsc_mul;
   system_time->tsc_shift = tsc_shift;
@@ -136,7 +138,7 @@ void pv_clock_update_system_time(PvClockState* pv_clock,
   system_time->tsc_timestamp = _rdtsc();
   system_time->flags = pv_clock->is_stable ? kKvmSystemTimeStable : 0;
   ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
-  atomic_store_relaxed_u32(&system_time->version, pv_clock->version + 2);
+  guest_version.store(pv_clock->version + 2, fbl::memory_order_relaxed);
   pv_clock->version += 2;
 }
 
