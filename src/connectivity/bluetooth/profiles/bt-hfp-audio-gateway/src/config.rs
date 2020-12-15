@@ -13,6 +13,7 @@ pub const SUPPORTED_FEATURES_FILE_PATH: &str = "/config/data/supported_features.
 /// Configuration of optional feature support.
 /// This list of features is derived from the optional features in HFP v1.8, Table 3.1.
 #[derive(Deserialize, Clone, Copy)]
+#[cfg_attr(test, derive(Default))]
 #[serde(deny_unknown_fields)]
 pub struct AudioGatewayFeatureSupport {
     pub reject_incoming_voice_call: bool,

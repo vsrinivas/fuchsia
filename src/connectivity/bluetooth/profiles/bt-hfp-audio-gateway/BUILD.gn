@@ -12,11 +12,15 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:serde",
@@ -26,6 +30,7 @@ rustc_binary("bin") {
   sources = [
     "src/config.rs",
     "src/main.rs",
+    "src/service_definitions.rs",
   ]
 }
 
