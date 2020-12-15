@@ -107,6 +107,7 @@ function format-file() {
     *.gn) format-full-file "${GN_CMD}" "$1" ;;
     *.gni) format-full-file "${GN_CMD}" "$1" ;;
     *.go) format-full-file "${GO_CMD}" "$1" ;;
+    *.json) format-full-file "${JSON_FMT_CMD}" "$1" ;;
     *.py) format-full-file "${PY_CMD}" "$1" ;;
     *.rs) format-full-file "${RUST_FMT_CMD}" "$1" ;;
     *.triage) format-full-file "${JSON5_FMT_CMD}" "$1";;
