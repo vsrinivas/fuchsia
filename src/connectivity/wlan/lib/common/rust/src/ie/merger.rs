@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    super::{Header, Id},
+    super::{Header, Id, IeType},
     crate::buffer_reader::BufferReader,
     std::{
         collections::{btree_map, BTreeMap},
         convert::TryInto,
-        hash::Hash,
         mem::size_of,
         ops::Range,
     },
@@ -36,47 +35,6 @@ pub struct IesMerger {
     // corresponding bytes in the underlying buffer.
     ies_summaries: BTreeMap<IeType, Range<usize>>,
     ies_buf: Vec<u8>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum IeType {
-    Ieee {
-        id: Id,
-        extension: Option<u8>,
-    },
-    Vendor {
-        vendor_ie_hdr: [u8; 6], // OUI, OUI type, version
-    },
-}
-
-impl IeType {
-    fn id(&self) -> Id {
-        match self {
-            IeType::Ieee { id, .. } => *id,
-            IeType::Vendor { .. } => Id::VENDOR_SPECIFIC,
-        }
-    }
-}
-
-impl std::cmp::PartialOrd for IeType {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl std::cmp::Ord for IeType {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match (self, other) {
-            (
-                IeType::Ieee { extension: Some(ext_id), .. },
-                IeType::Ieee { extension: Some(other_ext_id), .. },
-            ) => ext_id.cmp(other_ext_id),
-            (IeType::Vendor { vendor_ie_hdr }, IeType::Vendor { vendor_ie_hdr: other_hdr }) => {
-                vendor_ie_hdr.cmp(other_hdr)
-            }
-            _ => self.id().0.cmp(&other.id().0),
-        }
-    }
 }
 
 impl IesMerger {
@@ -125,7 +83,7 @@ fn should_add_new(ie_type: IeType, old: &[u8], new: &[u8]) -> bool {
     }
 
     // If the new SSID is blank (hidden SSID), prefer the old one
-    if ie_type.id() == Id::SSID {
+    if ie_type == IeType::SSID {
         if new.len() < size_of::<Header>() {
             return false;
         }
@@ -171,19 +129,19 @@ impl<B: ByteSlice> Iterator for IeSummaryIter<B> {
             let ie_type = match header.id {
                 Id::VENDOR_SPECIFIC => {
                     if body.len() >= 6 {
-                        Some(IeType::Vendor { vendor_ie_hdr: body[0..6].try_into().unwrap() })
+                        Some(IeType::new_vendor(body[0..6].try_into().unwrap()))
                     } else {
                         None
                     }
                 }
                 Id::EXTENSION => {
                     if body.len() >= 1 {
-                        Some(IeType::Ieee { id: header.id, extension: Some(body[0]) })
+                        Some(IeType::new_extended(body[0]))
                     } else {
                         None
                     }
                 }
-                _ => Some(IeType::Ieee { id: header.id, extension: None }),
+                _ => Some(IeType::new_basic(header.id)),
             };
             // If IE type is valid, return the IE block. Otherwise, skip to the next one.
             match ie_type {

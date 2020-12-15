@@ -29,3 +29,98 @@ impl Id {
     pub const VENDOR_SPECIFIC: Self = Self(221);
     pub const EXTENSION: Self = Self(255);
 }
+
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
+pub enum IeType {
+    Ieee {
+        id: Id,
+        extension: Option<u8>,
+    },
+    Vendor {
+        vendor_ie_hdr: [u8; 6], // OUI, OUI type, version
+    },
+}
+
+macro_rules! ie_type_basic_const {
+    ($id:ident) => {
+        pub const $id: Self = Self::new_basic(Id::$id);
+    };
+}
+
+impl IeType {
+    ie_type_basic_const!(SSID);
+    ie_type_basic_const!(SUPPORTED_RATES);
+    ie_type_basic_const!(DSSS_PARAM_SET);
+    ie_type_basic_const!(TIM);
+    ie_type_basic_const!(COUNTRY);
+    ie_type_basic_const!(HT_CAPABILITIES);
+    ie_type_basic_const!(RSNE);
+    ie_type_basic_const!(EXT_SUPPORTED_RATES);
+    ie_type_basic_const!(HT_OPERATION);
+    ie_type_basic_const!(BSS_MAX_IDLE_PERIOD);
+    ie_type_basic_const!(MESH_PEERING_MGMT);
+    ie_type_basic_const!(PREQ);
+    ie_type_basic_const!(PREP);
+    ie_type_basic_const!(PERR);
+    ie_type_basic_const!(VHT_CAPABILITIES);
+    ie_type_basic_const!(VHT_OPERATION);
+
+    pub const fn new_basic(id: Id) -> Self {
+        Self::Ieee { id, extension: None }
+    }
+
+    pub const fn new_extended(ext_id: u8) -> Self {
+        Self::Ieee { id: Id::EXTENSION, extension: Some(ext_id) }
+    }
+
+    pub const fn new_vendor(vendor_ie_hdr: [u8; 6]) -> Self {
+        Self::Vendor { vendor_ie_hdr }
+    }
+
+    pub const fn basic_id(&self) -> Id {
+        match self {
+            Self::Ieee { id, .. } => *id,
+            Self::Vendor { .. } => Id::VENDOR_SPECIFIC,
+        }
+    }
+}
+
+impl std::cmp::PartialOrd for IeType {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl std::cmp::Ord for IeType {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (
+                Self::Ieee { extension: Some(ext_id), .. },
+                Self::Ieee { extension: Some(other_ext_id), .. },
+            ) => ext_id.cmp(other_ext_id),
+            (Self::Vendor { vendor_ie_hdr }, Self::Vendor { vendor_ie_hdr: other_hdr }) => {
+                vendor_ie_hdr.cmp(other_hdr)
+            }
+            _ => self.basic_id().0.cmp(&other.basic_id().0),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ie_type() {
+        let basic = IeType::new_basic(Id::SSID);
+        let extended = IeType::new_extended(2);
+        let vendor = IeType::new_vendor([1, 2, 3, 4, 5, 6]);
+
+        assert_eq!(basic, IeType::Ieee { id: Id::SSID, extension: None });
+        assert_eq!(extended, IeType::Ieee { id: Id::EXTENSION, extension: Some(2) });
+        assert_eq!(vendor, IeType::Vendor { vendor_ie_hdr: [1, 2, 3, 4, 5, 6] });
+        assert_eq!(basic.basic_id(), Id::SSID);
+        assert_eq!(extended.basic_id(), Id::EXTENSION);
+        assert_eq!(vendor.basic_id(), Id::VENDOR_SPECIFIC);
+    }
+}
