@@ -6,8 +6,8 @@ The Fuchsia RFC process is intended to provide a consistent and transparent path
 for making project-wide, technical decisions. For example, the RFC process can
 be used to evolve the project roadmap and the system architecture.
 
-The RFC process is detailed in [RFC-0001: Fuchsia Request for Comments process](0001_rfc_process.md),
-along with [RFC-0006: Addendum of the RFC process for Zircon](0006_addendum_to_rfc_process_for_zircon.md).
+The RFC process evolves over time, and can be read here in its [detailed current form]
+(current_rfc_process.md). It is also summarized below.
 
 ## Summary of the process
 
