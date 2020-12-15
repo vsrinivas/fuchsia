@@ -9,8 +9,9 @@ how the Fuchsia project develops the SDK.
 ## Governance
 
 The contents of the Fuchsia IDK are governed by the [Fuchsia API Council]. The
-IDK does not contain libraries developed outside the Fuchsia project because
-those libraries are not subject to the governance of the Fuchsia API Council.
+IDK does not contain elements (libraries, tools, images, etc) developed outside
+the Fuchsia project because those libraries are not subject to the governance
+of the Fuchsia API Council.
 
 Client libraries in the IDK do not depend on libraries outside the IDK unless
 the external library has been approved by the Fuchsia API Council. Typically,
