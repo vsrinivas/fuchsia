@@ -70,7 +70,7 @@ group("tests") {
     "lib/bt-avctp:tests",
     "lib/bt-avdtp:tests",
     "lib/bt-fidl-mocks:tests",
-    "lib/fuchsia-audio-device-output:fuchsia-audio-device-output-tests",
+    "lib/fuchsia-audio-device-output:tests",
     "lib/fuchsia-bluetooth:tests",
     "lib/test-harness-tests:test-harness-crate-tests",
     "profiles/bt-a2dp:tests",

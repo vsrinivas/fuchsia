@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_hardware_audio::PcmFormat,
-    fidl_fuchsia_hardware_audio::SampleFormat,
-    fuchsia_zircon::{self as zx},
+    fidl_fuchsia_hardware_audio::{PcmFormat, SampleFormat},
+    fuchsia_zircon as zx,
     futures::{
         stream::{FusedStream, Stream},
         task::{Context, Poll},

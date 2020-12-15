@@ -291,8 +291,7 @@ impl FrameVmo {
 mod tests {
     use super::*;
 
-    use fuchsia_async as fasync;
-    use fuchsia_zircon::{self as zx};
+    use fuchsia_zircon as zx;
 
     // Convenience choice because one byte = one frame.
     const TEST_FORMAT: AudioSampleFormat = AudioSampleFormat::Eight { unsigned: false };

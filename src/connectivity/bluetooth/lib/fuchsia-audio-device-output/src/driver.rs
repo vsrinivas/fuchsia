@@ -4,8 +4,7 @@
 
 use {
     anyhow::format_err,
-    fidl::endpoints::ClientEnd,
-    fidl::endpoints::RequestStream,
+    fidl::endpoints::{ClientEnd, RequestStream},
     fidl_fuchsia_hardware_audio::*,
     fidl_fuchsia_media, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, DurationNum},
