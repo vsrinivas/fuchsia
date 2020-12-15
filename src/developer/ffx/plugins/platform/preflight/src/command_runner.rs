@@ -7,6 +7,8 @@ use {
     std::process::Command,
 };
 
+pub static SYSTEM_COMMAND_RUNNER: CommandRunner = system_run_command;
+
 pub struct ExitStatus(pub i32);
 
 impl ExitStatus {

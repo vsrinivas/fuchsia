@@ -8,15 +8,17 @@ use async_trait::async_trait;
 
 pub mod build_prereqs;
 
-/// The result of execution of a `PreflightCheck`. In all cases, the `String` parameter
+/// The result of execution of a `PreflightCheck`. In all cases, the first `String` parameter
 /// contains a message for the end user explaining the result.
 #[derive(Debug)]
 pub enum PreflightCheckResult {
     /// Everything checked out!
     Success(String),
 
-    /// An unsupported condition or configuration was detected.
-    Failure(String),
+    /// An unsupported condition or configuration was detected. The optional
+    /// second parameter contains instructions for resolving the issue. `None`
+    /// indicates the issue cannot be resolved.
+    Failure(String, Option<String>),
 }
 
 #[async_trait(?Send)]

@@ -12,6 +12,7 @@ ffx_plugin("ffx_preflight") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:termion",
     "//third_party/rust_crates:thiserror",
   ]
 

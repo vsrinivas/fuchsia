@@ -4,16 +4,29 @@
 
 use {
     anyhow::{anyhow, Result},
-    check::PreflightCheck,
+    check::{PreflightCheck, PreflightCheckResult},
     config::*,
-    ffx_core::ffx_plugin,
+    ffx_core::{ffx_bail, ffx_plugin},
     ffx_preflight_args::PreflightCommand,
     regex::Regex,
+    std::fmt,
+    std::io::{stdout, Write},
+    termion::color,
 };
 
 mod check;
 mod command_runner;
 mod config;
+
+// Unicode characters
+static CHECK_MARK: &str = "\u{2713}";
+static BALLOT_X: &str = "\u{2717}";
+static RUNNING_CHECKS_PREAMBLE: &str = "Running pre-flight checks...";
+static SOME_CHECKS_FAILED_RECOVERABLE: &str =
+    "Some checks failed :(. Follow the instructions above and try running again.";
+static SOME_CHECKS_FAILED_FATAL: &str = "Some checks failed :(. Sorry!";
+static EVERYTING_CHECKS_OUT: &str =
+    "Everything checks out! Continue at https://fuchsia.dev/fuchsia-src/get-started.";
 
 #[cfg(target_os = "linux")]
 fn get_operating_system() -> Result<OperatingSystem> {
@@ -22,8 +35,7 @@ fn get_operating_system() -> Result<OperatingSystem> {
 
 #[cfg(target_os = "macos")]
 fn get_operating_system() -> Result<OperatingSystem> {
-    let command_runner: command_runner::CommandRunner = command_runner::system_run_command;
-    get_operating_system_macos(&command_runner)
+    get_operating_system_macos(&command_runner::SYSTEM_COMMAND_RUNNER)
 }
 
 #[allow(dead_code)]
@@ -45,18 +57,87 @@ fn get_operating_system_macos(
 #[ffx_plugin()]
 pub async fn preflight_cmd(_cmd: PreflightCommand) -> Result<()> {
     let config = PreflightConfig { system: get_operating_system()? };
-    let command_runner: command_runner::CommandRunner = command_runner::system_run_command;
-    let checks: Vec<Box<dyn PreflightCheck>> =
-        vec![Box::new(check::build_prereqs::BuildPrereqs::new(&command_runner))];
+    let checks: Vec<Box<dyn PreflightCheck>> = vec![Box::new(
+        check::build_prereqs::BuildPrereqs::new(&command_runner::SYSTEM_COMMAND_RUNNER),
+    )];
+
+    run_preflight_checks(&mut stdout(), &checks, &config).await
+}
+
+async fn run_preflight_checks<W: Write>(
+    writer: &mut W,
+    checks: &Vec<Box<dyn PreflightCheck>>,
+    config: &PreflightConfig,
+) -> Result<()> {
+    writeln!(writer, "{}", RUNNING_CHECKS_PREAMBLE)?;
+    writeln!(writer)?;
+    // Run the checks, and keep track of failures.
+    let mut failures = vec![];
     for check in checks {
-        println!("{:?}", check.run(&config).await?);
+        let result = check.run(&config).await?;
+        writeln!(writer, "{}", result)?;
+        if matches!(result, PreflightCheckResult::Failure(..)) {
+            failures.push(result);
+        }
+        writeln!(writer)?;
+    }
+
+    if !failures.is_empty() {
+        // Collect the failures that are recoverable. If all failures are recoverable,
+        // tell the user to try again after resolving them.
+        let recoverable_failures: Vec<&PreflightCheckResult> = failures
+            .iter()
+            .take_while(|f| match *f {
+                PreflightCheckResult::Failure(_, message) => match message {
+                    Some(_) => true,
+                    None => false,
+                },
+                _ => false,
+            })
+            .collect();
+        if recoverable_failures.len() == failures.len() {
+            ffx_bail!("{}", SOME_CHECKS_FAILED_RECOVERABLE);
+        } else {
+            ffx_bail!("{}", SOME_CHECKS_FAILED_FATAL);
+        }
+    } else {
+        writeln!(writer, "{}", EVERYTING_CHECKS_OUT)?;
     }
     Ok(())
 }
 
+impl fmt::Display for PreflightCheckResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PreflightCheckResult::Success(message) => write!(
+                f,
+                "  {}[{}]{} {}",
+                color::Fg(color::Green),
+                CHECK_MARK,
+                color::Fg(color::Reset),
+                message
+            ),
+            PreflightCheckResult::Failure(message, resolution) => {
+                write!(
+                    f,
+                    "  {}[{}]{} {}",
+                    color::Fg(color::Red),
+                    BALLOT_X,
+                    color::Fg(color::Reset),
+                    message
+                )?;
+                match resolution {
+                    Some(resolution_message) => write!(f, "\n\n      {}", resolution_message),
+                    None => Ok(()),
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use {super::*, crate::command_runner::ExitStatus};
+    use {super::*, crate::command_runner::ExitStatus, async_trait::async_trait};
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_parse_macos_version() -> Result<()> {
@@ -70,5 +151,105 @@ mod test {
 
         assert_eq!(OperatingSystem::MacOS(10, 15), get_operating_system_macos(&run_command)?);
         Ok(())
+    }
+
+    struct SuccessCheck {}
+
+    #[async_trait(?Send)]
+    impl PreflightCheck for SuccessCheck {
+        async fn run(&self, _config: &PreflightConfig) -> Result<PreflightCheckResult> {
+            Ok(PreflightCheckResult::Success("This check passed!".to_string()))
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_checks_success() -> Result<()> {
+        let config = PreflightConfig { system: OperatingSystem::Linux };
+        let checks: Vec<Box<dyn PreflightCheck>> = vec![Box::new(SuccessCheck {})];
+        let mut buf = Vec::new();
+        let result = run_preflight_checks(&mut buf, &checks, &config).await;
+        let output = String::from_utf8(buf)?;
+        // Check for the various output strings.
+        assert!(output.starts_with(RUNNING_CHECKS_PREAMBLE));
+        assert!(output.contains("This check passed!"));
+        assert!(output.contains(EVERYTING_CHECKS_OUT));
+        result
+    }
+
+    struct FailPermanentCheck {}
+    struct FailRecoverableCheck {}
+
+    #[async_trait(?Send)]
+    impl PreflightCheck for FailPermanentCheck {
+        async fn run(&self, _config: &PreflightConfig) -> Result<PreflightCheckResult> {
+            Ok(PreflightCheckResult::Failure("Oh no...".to_string(), None))
+        }
+    }
+
+    #[async_trait(?Send)]
+    impl PreflightCheck for FailRecoverableCheck {
+        async fn run(&self, _config: &PreflightConfig) -> Result<PreflightCheckResult> {
+            Ok(PreflightCheckResult::Failure(
+                "We will get through this.".to_string(),
+                Some("Take a deep breath and try again.".to_string()),
+            ))
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_checks_fail_nonrecoverable() -> Result<()> {
+        let config = PreflightConfig { system: OperatingSystem::Linux };
+        let checks: Vec<Box<dyn PreflightCheck>> = vec![
+            Box::new(SuccessCheck {}),
+            Box::new(FailPermanentCheck {}),
+            Box::new(FailRecoverableCheck {}),
+        ];
+        let mut buf = Vec::new();
+        let result = run_preflight_checks(&mut buf, &checks, &config).await;
+        let output = String::from_utf8(buf)?;
+        // Check for the various output strings.
+        assert!(output.starts_with(RUNNING_CHECKS_PREAMBLE), output);
+        assert!(output.contains("This check passed!"), output);
+        assert!(output.contains("Oh no..."), output);
+        match result {
+            Err(error) => {
+                assert!(error.to_string().contains(SOME_CHECKS_FAILED_FATAL), error.to_string());
+                assert!(
+                    !error.to_string().contains(SOME_CHECKS_FAILED_RECOVERABLE),
+                    error.to_string()
+                );
+                Ok(())
+            }
+            Ok(()) => unreachable!(),
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn run_checks_fail_recoverable() -> Result<()> {
+        let config = PreflightConfig { system: OperatingSystem::Linux };
+        let checks: Vec<Box<dyn PreflightCheck>> = vec![
+            Box::new(SuccessCheck {}),
+            Box::new(FailRecoverableCheck {}),
+            Box::new(FailRecoverableCheck {}),
+        ];
+        let mut buf = Vec::new();
+        let result = run_preflight_checks(&mut buf, &checks, &config).await;
+        let output = String::from_utf8(buf)?;
+        // Check for the various output strings.
+        assert!(output.starts_with(RUNNING_CHECKS_PREAMBLE), output);
+        assert!(output.contains("This check passed!"), output);
+        assert!(output.contains("We will get through this."), output);
+        assert!(output.contains("Take a deep breath and try again."), output);
+        match result {
+            Err(error) => {
+                assert!(!error.to_string().contains(SOME_CHECKS_FAILED_FATAL), error.to_string());
+                assert!(
+                    error.to_string().contains(SOME_CHECKS_FAILED_RECOVERABLE),
+                    error.to_string()
+                );
+                Ok(())
+            }
+            Ok(()) => unreachable!(),
+        }
     }
 }

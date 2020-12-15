@@ -29,6 +29,7 @@ impl<'a> BuildPrereqs<'a> {
         if !dpkg_status.success() {
             return Ok(PreflightCheckResult::Failure(
                 "Non-Debian linux distributions are not supported".to_string(),
+                None,
             ));
         }
 
@@ -41,10 +42,10 @@ impl<'a> BuildPrereqs<'a> {
             }
         }
         if !missing.is_empty() {
-            return Ok(Failure(format!(
-                "Some build dependencies are missing: {}",
-                missing.join(", ")
-            )));
+            return Ok(Failure(
+                format!("Some build dependencies are missing: {}", missing.join(", ")),
+                Some(format!("To resolve, run: sudo apt-get install {}", missing.join(" "))),
+            ));
         }
         Ok(Success(format!("Found all needed build dependencies: {}", LINUX_PACKAGES.join(", "))))
     }
@@ -57,13 +58,16 @@ impl<'a> BuildPrereqs<'a> {
         if *major_version < MACOS_MINIMUM_MAJOR_VERSION
             || *minor_version < MACOS_MINIMUM_MINOR_VERSION
         {
-            return Ok(Failure(format!(
-                "MacOS version {}.{} is less than the minimum required version {}.{}",
-                major_version,
-                minor_version,
-                MACOS_MINIMUM_MAJOR_VERSION,
-                MACOS_MINIMUM_MINOR_VERSION
-            )));
+            return Ok(Failure(
+                format!(
+                    "MacOS version {}.{} is less than the minimum required version {}.{}",
+                    major_version,
+                    minor_version,
+                    MACOS_MINIMUM_MAJOR_VERSION,
+                    MACOS_MINIMUM_MINOR_VERSION
+                ),
+                None,
+            ));
         }
 
         let (status, stdout, _stderr) = (self.command_runner)(&vec!["xcode-select", "-p"])
@@ -72,7 +76,11 @@ impl<'a> BuildPrereqs<'a> {
             Success(format!("Xcode command line tools found at {}", stdout.trim()))
         } else {
             Failure(
-                "Xcode command line tools not installed. Run `xcode-select --install`".to_string(),
+                "Xcode command line tools not installed.".to_string(),
+                Some(
+                    "Download Xcode from the App Store and run `xcode-select --install`."
+                        .to_string(),
+                ),
             )
         })
     }
