@@ -196,14 +196,16 @@ func (c *Client) Run(ctx context.Context) {
 				c.stats.InitAcquire.Increment()
 			case renewing:
 				c.stats.RenewAcquire.Increment()
-				// TODO(fxbug.dev/49299): Use c.now here.
-				if tilRebind := time.Until(rebindTime); tilRebind < acquisitionTimeout {
+				// Instead of `time.Until`, use `now` stored on the client so
+				// it can be stubbed out in test for consistency.
+				if tilRebind := rebindTime.Sub(c.now()); tilRebind < acquisitionTimeout {
 					acquisitionTimeout = tilRebind
 				}
 			case rebinding:
 				c.stats.RebindAcquire.Increment()
-				// TODO(fxbug.dev/49299): Use c.now here.
-				if tilLeaseExpire := time.Until(leaseExpirationTime); tilLeaseExpire < acquisitionTimeout {
+				// Instead of `time.Until`, use `now` stored on the client so
+				// it can be stubbed out in test for consistency.
+				if tilLeaseExpire := leaseExpirationTime.Sub(c.now()); tilLeaseExpire < acquisitionTimeout {
 					acquisitionTimeout = tilLeaseExpire
 				}
 			default:
@@ -307,18 +309,21 @@ func (c *Client) Run(ctx context.Context) {
 			waitDuration = info.Backoff
 		}
 
-		if timer == nil {
-			timer = time.NewTimer(waitDuration)
-		} else if waitDuration != 0 {
-			timer.Reset(waitDuration)
-		}
-
 		if info.State != next && next != renewing {
 			// Transition immediately for RENEW->REBIND, REBIND->INIT.
 			if ctx.Err() != nil {
 				return
 			}
 		} else {
+			// Only (re)set timer if we actually wait on it, otherwise subsequent
+			// `timer.Reset` may not work as expected because of undrained `timer.C`.
+			//
+			// https://golang.org/pkg/time/#Timer.Reset
+			if timer == nil {
+				timer = time.NewTimer(waitDuration)
+			} else if waitDuration != 0 {
+				timer.Reset(waitDuration)
+			}
 			select {
 			case <-ctx.Done():
 				return

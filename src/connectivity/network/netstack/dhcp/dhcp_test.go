@@ -516,6 +516,8 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				defaultLeaseLength.Duration() / 2,
 				// Retry after NAK.
 				0,
+				// Calculate renew acquisition timeout.
+				0,
 				// Second acquisition after NAK.
 				0,
 			},
@@ -533,9 +535,11 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 			durations: []time.Duration{
 				// First acquisition.
 				0,
-				// Trasition to renew.
+				// Trasition to rebind.
 				defaultLeaseLength.Duration() * 875 / 1000,
 				// Retry after NAK.
+				0,
+				// Calculate rebind acquisition timeout.
 				0,
 				// Second acquisition after NAK.
 				0,
@@ -995,6 +999,8 @@ func TestStateTransition(t *testing.T) {
 				0,
 				// Transition to renew.
 				renewTime.Duration(),
+				// Calculate renew acquisition timeout.
+				0,
 				// Second acquisition from renew.
 				0,
 			},
@@ -1006,10 +1012,14 @@ func TestStateTransition(t *testing.T) {
 			durations: []time.Duration{
 				// First acquisition.
 				0,
-				// Transition to renew. Acquisition from renew should fail.
+				// Transition to renew.
 				renewTime.Duration(),
+				// Give renew acquisition 10ms timeout, and expect it to timeout.
+				(rebindTime - renewTime).Duration() - 10*time.Millisecond,
 				// Transition to rebind.
-				(rebindTime - renewTime).Duration(),
+				10 * time.Millisecond,
+				// Calculate rebind acquisition timeout.
+				0,
 				// Second acquisition from rebind.
 				0,
 			},
@@ -1026,10 +1036,14 @@ func TestStateTransition(t *testing.T) {
 			durations: []time.Duration{
 				// First acquisition.
 				0,
-				// Transition to renew. Acquisition from renew should fail.
+				// Transition to renew.
 				renewTime.Duration(),
+				// Give renew acquisition 10ms timeout, and expect it to timeout.
+				(rebindTime - renewTime).Duration() - 10*time.Millisecond,
 				// Transition to rebind.
-				(rebindTime - renewTime).Duration(),
+				10 * time.Millisecond,
+				// Calculate rebind acquisition timeout.
+				0,
 				// Second acquisition from rebind.
 				0,
 			},
@@ -1041,12 +1055,16 @@ func TestStateTransition(t *testing.T) {
 			durations: []time.Duration{
 				// First acquisition.
 				0,
-				// Transition to renew. Acquisition from renew should fail.
+				// Transition to renew.
 				renewTime.Duration(),
-				// Transition to rebind. Acquisition from rebind should fail.
-				(rebindTime - renewTime).Duration(),
+				// Give renew acquisition 10ms timeout, and expect it to timeout.
+				(rebindTime - renewTime).Duration() - 10*time.Millisecond,
+				// Transition to rebind.
+				10 * time.Millisecond,
+				// Give rebind acquisition 10ms timeout, and expect it to timeout.
+				(leaseLength - rebindTime).Duration() - 10*time.Millisecond,
 				// Transition to lease expiration.
-				(leaseLength - rebindTime).Duration(),
+				10 * time.Millisecond,
 				// Second acquisition after lease expiration.
 				0,
 			},
@@ -1063,12 +1081,16 @@ func TestStateTransition(t *testing.T) {
 			durations: []time.Duration{
 				// First acquisition.
 				0,
-				// Transition to renew. Acquisition from renew should fail.
+				// Transition to renew.
 				renewTime.Duration(),
-				// Transition to rebind. Acquisition from rebind should fail.
-				(rebindTime - renewTime).Duration(),
+				// Give renew acquisition 10ms timeout, and expect it to timeout.
+				(rebindTime - renewTime).Duration() - 10*time.Millisecond,
+				// Transition to rebind.
+				10 * time.Millisecond,
+				// Give rebind acquisition 10ms timeout, and expect it to timeout.
+				(leaseLength - rebindTime).Duration() - 10*time.Millisecond,
 				// Transition to lease expiration.
-				(leaseLength - rebindTime).Duration(),
+				10 * time.Millisecond,
 				// Second acquisition after lease expiration.
 				0,
 			},
