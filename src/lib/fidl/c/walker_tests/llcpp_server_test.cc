@@ -598,11 +598,99 @@ TEST(BindServerTestCase, ExplicitUnbindWithPendingTransaction) {
   // Unbind the server end of the channel.
   binding_ref.value().Unbind();
 
-  // The unboudn hook will not run until the thread inside Echo() returns.
+  // The unbound hook will not run until the thread inside Echo() returns.
   sync_completion_signal(&worker_done);
 
   // Wait for the unbound hook.
   ASSERT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
+}
+
+// Checks that sending an event may be performed concurrently from different
+// threads while unbinding is occurring, and that those event sending operations
+// return |ZX_ERR_CANCELED| after the server has been unbound.
+TEST(BindServerTestCase, ConcurrentSendEventWhileUnbinding) {
+  using ::llcpp::fidl::test::coding::fuchsia::Example;
+  class Server : public Example::Interface {
+   public:
+    void TwoWay(fidl::StringView in, TwoWayCompleter::Sync& completer) override {
+      ADD_FAILURE("Not used in this test");
+    }
+
+    void OneWay(fidl::StringView in, OneWayCompleter::Sync& completer) override {
+      ADD_FAILURE("Not used in this test");
+    }
+  };
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  // Repeat the test until at least one failure is observed.
+  for (;;) {
+    Server server;
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ASSERT_OK(loop.StartThread());
+
+    auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote), &server);
+    ASSERT_TRUE(server_binding.is_ok());
+
+    // Start sending events from multiple threads.
+    constexpr size_t kNumEventsPerThread = 170;
+    constexpr size_t kNumThreads = 10;
+    std::atomic<size_t> num_failures = 0;
+
+    std::array<std::thread, kNumThreads> sender_threads;
+    sync_completion_t worker_start;
+    sync_completion_t worker_running;
+    for (size_t i = 0; i < kNumThreads; ++i) {
+      sender_threads[i] =
+          std::thread([&worker_start, &worker_running, &server_binding, &num_failures]() {
+            ZX_ASSERT(ZX_OK == sync_completion_wait(&worker_start, ZX_TIME_INFINITE));
+            for (size_t i = 0; i < kNumEventsPerThread; i++) {
+              zx_status_t status = server_binding.value()->OnEvent(fidl::StringView("a"));
+              if (status != ZX_OK) {
+                // |ZX_ERR_CANCELED| indicates unbinding has happened.
+                ZX_ASSERT_MSG(status == ZX_ERR_CANCELED, "Unexpected status: %d", status);
+                num_failures.fetch_add(1);
+              }
+              if (i == 0) {
+                sync_completion_signal(&worker_running);
+              }
+            }
+          });
+    }
+
+    sync_completion_signal(&worker_start);
+    ASSERT_OK(sync_completion_wait(&worker_running, ZX_TIME_INFINITE));
+
+    // Unbinds the server before all the threads have been able to send all
+    // their events.
+    server_binding.value().Unbind();
+
+    for (auto& t : sender_threads) {
+      t.join();
+    }
+
+    // The total number of events and failures must add up to the right amount.
+    size_t num_success = 0;
+    {
+      uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+      // Consumes (reads) all the events sent by all the server threads without
+      // decoding them.
+      while (ZX_OK == local.read(0, bytes, nullptr, sizeof(bytes), 0, nullptr, nullptr)) {
+        num_success++;
+      }
+    }
+
+    ASSERT_GT(num_success, 0);
+    ASSERT_EQ(num_success + num_failures, kNumEventsPerThread * kNumThreads);
+
+    // Retry the test if there were no failures due to |Unbind| happening
+    // too late.
+    if (num_failures.load() > 0) {
+      break;
+    }
+  }
 }
 
 TEST(BindServerTestCase, ConcurrentSyncReply) {
