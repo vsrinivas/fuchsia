@@ -38,10 +38,27 @@ group("deprecated_package") {
   #
   # Maintainers will accept changes to the allowlist below that support
   # refactors, such as moving a legacy target to a different directory.
-  #
+  driver_package_users = [ "//src/connectivity/ethernet/drivers/rndis-host" ]
+
+  shell_true_users = [
+    "//src/connectivity/management/network-manager-cli",
+    "//src/connectivity/network/dhcpd-cli",
+    "//src/connectivity/network/mdns/util:mdns-util",
+    "//src/connectivity/network/net-cli",
+    "//src/connectivity/network/netdump",
+    "//src/connectivity/network/netstack:tools",
+    "//src/connectivity/network/netstack/tests/manual:netstack-manual-tests",
+    "//src/connectivity/network/tools/nc",
+    "//src/connectivity/network/tools/sockscripter:package",
+    "//third_party/network-conformance/vendor/MNTCPApp:mntcpapp",
+    "//third_party/network-conformance/vendor/UDPStub:udpstub",
+  ]
+
+  visibility = driver_package_users + shell_true_users
+
   # To regenerate:
-  # fx gn refs out/default //build:deprecated_package | sed -E 's|([^:]*):.*|"\1\/*",|g' | sed 's|.*//vendor/.*|"//vendor/*",|' | sort | uniq
-  visibility = [
+  # fx gn refs $(fx get-build-dir) //build:deprecated_package | sed -E 's|([^:]*):.*|"\1\/*",|g' | sed 's|.*//vendor/.*|"//vendor/*",|' | sort | uniq
+  visibility += [
     "//build/images/*",
     "//build/images/guest/*",
     "//build/images/overnet/*",
@@ -219,7 +236,6 @@ group("deprecated_package") {
     "//src/connectivity/bluetooth/tools/bt-snoop-cli/*",
     "//src/connectivity/bluetooth/tools/bt-snoop/*",
     "//src/connectivity/bluetooth/tools/tests/bt-tool-cli-tests/*",
-    "//src/connectivity/ethernet/drivers/rndis-host/*",
     "//src/connectivity/location/emergency/*",
     "//src/connectivity/location/regulatory_region/*",
     "//src/connectivity/location/regulatory_region/tests/*",
@@ -231,15 +247,6 @@ group("deprecated_package") {
     "//src/connectivity/lowpan/service/*",
     "//src/connectivity/lowpan/tests/*",
     "//src/connectivity/lowpan/tools/lowpanctl/*",
-    "//src/connectivity/management/network-manager-cli/*",
-    "//src/connectivity/network/dhcpd-cli/*",
-    "//src/connectivity/network/mdns/util/*",
-    "//src/connectivity/network/net-cli/*",
-    "//src/connectivity/network/netdump/*",
-    "//src/connectivity/network/netstack/*",
-    "//src/connectivity/network/netstack/tests/manual/*",
-    "//src/connectivity/network/tools/nc/*",
-    "//src/connectivity/network/tools/sockscripter/*",
     "//src/connectivity/openthread/drivers/ot-radio/*",
     "//src/connectivity/openthread/tests/fake-drivers/fake-ot-radio/*",
     "//src/connectivity/openthread/tests/test-components/*",
