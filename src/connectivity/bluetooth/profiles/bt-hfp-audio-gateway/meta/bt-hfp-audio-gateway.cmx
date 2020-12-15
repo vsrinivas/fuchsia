@@ -8,6 +8,9 @@
     "sandbox": {
         "features": [
             "config-data"
+        ],
+        "services": [
+            "fuchsia.bluetooth.bredr.Profile"
         ]
     }
 }
