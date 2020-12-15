@@ -2,9 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("i2c_bind") {
+  rules = "i2c.bind"
+  output = "i2c_bind.h"
+  tests = "tests.json"
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+}
 
 driver_module("i2c") {
   configs += [
@@ -18,17 +26,15 @@ driver_module("i2c") {
     "i2c.cc",
   ]
   deps = [
+    ":i2c_bind",
     "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.i2cimpl",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-    "//src/lib/listnode",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
+    "//src/lib/listnode",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
@@ -46,17 +52,15 @@ test("i2c-test") {
     "i2c-child.cc",
   ]
   deps = [
+    ":i2c_bind",
     "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.i2cimpl",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
-    "//src/lib/listnode",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
+    "//src/lib/listnode",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
@@ -67,7 +71,10 @@ test("i2c-test") {
 
 unittest_package("i2c-test-package") {
   package_name = "i2c-test"
-  deps = [ ":i2c-test" ]
+  deps = [
+    ":i2c-test",
+    ":i2c_bind_test",
+  ]
 
   tests = [
     {

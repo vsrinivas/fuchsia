@@ -6,7 +6,6 @@
 
 #include <lib/fake_ddk/fake_ddk.h>
 
-#include <ddk/binding.h>
 #include <zxtest/zxtest.h>
 
 #include "i2c-bus.h"

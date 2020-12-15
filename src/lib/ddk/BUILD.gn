@@ -182,8 +182,6 @@ zx_library("ddk-deprecated-binding-headers") {
     "//src/devices/gpio/drivers/mt-8167:*",
     "//src/devices/gpio/drivers/qcom-gpio:*",
     "//src/devices/i2c/drivers/aml-i2c:*",
-    "//src/devices/i2c/drivers/i2c:*",
-    "//src/devices/i2c/drivers/i2c:i2c-test",
     "//src/devices/i2c/drivers/intel-i2c:*",
     "//src/devices/i2c/drivers/mt8167-i2c:*",
     "//src/devices/internal/drivers/fragment:*",

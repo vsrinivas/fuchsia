@@ -10,7 +10,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -19,6 +18,7 @@
 #include <fbl/mutex.h>
 
 #include "i2c-child.h"
+#include "src/devices/i2c/drivers/i2c/i2c_bind.h"
 
 namespace i2c {
 
@@ -171,5 +171,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace i2c
 
-ZIRCON_DRIVER_BEGIN(i2c, i2c::driver_ops, "zircon", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_I2C_IMPL), ZIRCON_DRIVER_END(i2c)
+ZIRCON_DRIVER(i2c, i2c::driver_ops, "zircon", "0.1");
