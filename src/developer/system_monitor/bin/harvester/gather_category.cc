@@ -6,7 +6,6 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
-#include "gather_cpu.h"
 #include "harvester.h"
 
 namespace harvester {

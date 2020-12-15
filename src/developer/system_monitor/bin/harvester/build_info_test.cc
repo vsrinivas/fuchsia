@@ -20,6 +20,17 @@ TEST_F(BuildInfoTest, FuchsiaBuildVersion) {
                           [](unsigned char c) { return std::isxdigit(c); }));
 }
 
+class AnnotationsProviderTest : public ::testing::Test {};
+
+TEST_F(AnnotationsProviderTest, GetAnnotations) {
+  harvester::AnnotationsProvider provider;
+  harvester::BuildAnnotations annotations = provider.GetAnnotations();
+
+  EXPECT_TRUE(annotations.buildBoard.HasValue());
+  EXPECT_TRUE(annotations.buildProduct.HasValue());
+  EXPECT_TRUE(annotations.deviceBoardName.HasValue());
+}
+
 class ManifestFinderTest : public ::testing::Test {};
 
 TEST_F(ManifestFinderTest, NoContent) {

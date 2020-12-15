@@ -17,6 +17,7 @@
             "fuchsia.kernel.Stats",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
+            "fuchsia.sysinfo.SysInfo",
             "fuchsia.tracing.provider.Registry"
         ]
     }

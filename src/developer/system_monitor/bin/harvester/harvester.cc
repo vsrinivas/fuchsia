@@ -14,6 +14,7 @@
 
 #include "gather_channels.h"
 #include "gather_cpu.h"
+#include "gather_device_info.h"
 #include "gather_inspectable.h"
 #include "gather_introspection.h"
 #include "gather_memory.h"
@@ -33,6 +34,7 @@ Harvester::Harvester(zx_handle_t root_resource,
 
 void Harvester::GatherDeviceProperties() {
   FX_VLOGS(1) << "Harvester::GatherDeviceProperties";
+  gather_device_info_.GatherDeviceProperties();
   gather_cpu_.GatherDeviceProperties();
   // TODO(fxbug.dev/40872): re-enable once we need this data.
   // gather_inspectable_.GatherDeviceProperties();
@@ -67,6 +69,7 @@ void Harvester::GatherSlowData(async_dispatcher_t* dispatcher) {
   gather_channels_.PostUpdate(dispatcher, now, zx::sec(1));
   gather_processes_and_memory_.PostUpdate(dispatcher, now, zx::sec(2));
   gather_vmos_.PostUpdate(dispatcher, now, zx::sec(2));
+  gather_device_info_.PostUpdate(dispatcher, now, zx::sec(5));
 }
 
 }  // namespace harvester

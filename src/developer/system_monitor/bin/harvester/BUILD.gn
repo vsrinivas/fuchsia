@@ -29,6 +29,8 @@ source_set("lib") {
     "gather_channels.h",
     "gather_cpu.cc",
     "gather_cpu.h",
+    "gather_device_info.cc",
+    "gather_device_info.h",
     "gather_inspectable.cc",
     "gather_inspectable.h",
     "gather_introspection.cc",
@@ -60,6 +62,8 @@ source_set("lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
+    "//sdk/fidl/fuchsia.sysinfo",
+    "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/developer/memory/metrics",
     "//src/developer/system_monitor/lib/dockyard:lib",
@@ -121,6 +125,7 @@ executable("system_monitor_harvester_test") {
     "dockyard_proxy_grpc_test.cc",
     "gather_channels_test.cc",
     "gather_cpu_test.cc",
+    "gather_device_info_test.cc",
     "gather_inspectable_test.cc",
     "gather_introspection_test.cc",
     "gather_memory_digest_test.cc",
@@ -163,6 +168,9 @@ test_package("system_monitor_harvester_tests") {
 
   tests = [
     {
+      log_settings = {
+        max_severity = "ERROR"
+      }
       name = "system_monitor_harvester_test"
       environments = basic_envs
     },

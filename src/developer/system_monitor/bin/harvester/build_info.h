@@ -12,17 +12,27 @@
 namespace harvester {
 
 enum class BuildInfoError {
+  kBadValue,
+  kConnectionError,
   kEmptyFile,
+  kFileReadError,
   kMalformedFile,
   kMissingAttribute,
   kMissingFile,
   kMissingProject,
+  kMissingValue,
 };
 
 inline std::string ToString(BuildInfoError error) {
   switch (error) {
+    case BuildInfoError::kBadValue:
+      return "BuildInfoError::kBadValue";
+    case BuildInfoError::kConnectionError:
+      return "BuildInfoError::kConnectionError";
     case BuildInfoError::kEmptyFile:
       return "BuildInfoError::kEmptyFile";
+    case BuildInfoError::kFileReadError:
+      return "BuildInfoError::kFileReadError";
     case BuildInfoError::kMalformedFile:
       return "BuildInfoError::kMalformedFile";
     case BuildInfoError::kMissingAttribute:
@@ -31,6 +41,8 @@ inline std::string ToString(BuildInfoError error) {
       return "BuildInfoError::kMissingProject";
     case BuildInfoError::kMissingFile:
       return "BuildInfoError::kMissingFile";
+    case BuildInfoError::kMissingValue:
+      return "BuildInfoError::kMissingValue";
   }
 }
 
@@ -106,6 +118,25 @@ class ManifestFinder {
 // manifest/projects/project[@name="fuchsia"]/@revision
 // Returns an error upon failure.
 BuildInfoValue GetFuchsiaBuildVersion();
+
+struct BuildAnnotations {
+  // The value of /config/build-info/board if available.
+  BuildInfoValue buildBoard;
+  // The value of /config/build-info/product if available.
+  BuildInfoValue buildProduct;
+  // The value returned from fuchsia.sysinfo.SysInfo.GetBoardName if available.
+  BuildInfoValue deviceBoardName;
+};
+
+class AnnotationsProvider {
+ public:
+  virtual ~AnnotationsProvider() = default;
+  virtual BuildAnnotations GetAnnotations();
+
+ private:
+  BuildInfoValue GetDeviceBoardName();
+  BuildInfoValue ReadAnnotationFromFilepath(const std::string& filepath);
+};
 
 }  // namespace harvester
 

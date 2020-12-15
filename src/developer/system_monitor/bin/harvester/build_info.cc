@@ -4,7 +4,15 @@
 
 #include "build_info.h"
 
+#include <fuchsia/sysinfo/cpp/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fidl/cpp/string.h>
+#include <lib/fidl/cpp/synchronous_interface_ptr.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
+
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/strings/trim.h"
 
 namespace harvester {
 
@@ -117,6 +125,50 @@ BuildInfoValue GetFuchsiaBuildVersion() {
   }
 
   return ManifestFinder(content, "fuchsia", "revision").Find();
+}
+
+BuildInfoValue AnnotationsProvider::GetDeviceBoardName() {
+  fuchsia::sysinfo::SysInfoSyncPtr sysinfo;
+
+  if (const zx_status_t status =
+          fdio_service_connect("/svc/fuchsia.sysinfo.SysInfo",
+                               sysinfo.NewRequest().TakeChannel().release());
+      status != ZX_OK) {
+    return BuildInfoValue(BuildInfoError::kConnectionError);
+  }
+
+  ::fidl::StringPtr out_board_name;
+  zx_status_t out_status;
+  if (const zx_status_t status =
+          sysinfo->GetBoardName(&out_status, &out_board_name);
+      status != ZX_OK) {
+    return BuildInfoValue(BuildInfoError::kConnectionError);
+  }
+  if (out_status != ZX_OK) {
+    return BuildInfoValue(BuildInfoError::kBadValue);
+  }
+  if (!out_board_name) {
+    return BuildInfoValue(BuildInfoError::kMissingValue);
+  }
+
+  return BuildInfoValue(out_board_name.value());
+}
+
+BuildInfoValue AnnotationsProvider::ReadAnnotationFromFilepath(
+    const std::string& filepath) {
+  std::string content;
+  if (!files::ReadFileToString(filepath, &content)) {
+    return BuildInfoValue(BuildInfoError::kMissingFile);
+  }
+  return BuildInfoValue(std::string(fxl::TrimString(content, "\r\n")));
+}
+
+BuildAnnotations AnnotationsProvider::GetAnnotations() {
+  return BuildAnnotations{
+      .buildBoard = ReadAnnotationFromFilepath("/config/build-info/board"),
+      .buildProduct = ReadAnnotationFromFilepath("/config/build-info/product"),
+      .deviceBoardName = GetDeviceBoardName(),
+  };
 }
 
 }  // namespace harvester

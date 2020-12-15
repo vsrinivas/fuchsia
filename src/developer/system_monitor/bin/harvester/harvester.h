@@ -8,6 +8,7 @@
 #include "dockyard_proxy.h"
 #include "gather_channels.h"
 #include "gather_cpu.h"
+#include "gather_device_info.h"
 #include "gather_inspectable.h"
 #include "gather_introspection.h"
 #include "gather_memory.h"
@@ -45,6 +46,7 @@ class Harvester {
 
   GatherChannels gather_channels_{root_resource_, dockyard_proxy_.get()};
   GatherCpu gather_cpu_{root_resource_, dockyard_proxy_.get()};
+  GatherDeviceInfo gather_device_info_{root_resource_, dockyard_proxy_.get()};
   GatherInspectable gather_inspectable_{root_resource_, dockyard_proxy_.get()};
   GatherIntrospection gather_introspection_{root_resource_,
                                             dockyard_proxy_.get()};

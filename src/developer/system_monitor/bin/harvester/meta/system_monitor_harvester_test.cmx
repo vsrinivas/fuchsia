@@ -5,7 +5,8 @@
                 "fuchsia.boot.RootResource",
                 "fuchsia.kernel.RootJob",
                 "fuchsia.kernel.RootJobForInspect",
-                "fuchsia.kernel.Stats"
+                "fuchsia.kernel.Stats",
+                "fuchsia.sysinfo.SysInfo"
             ]
         }
     },
@@ -24,7 +25,8 @@
             "fuchsia.boot.RootResource",
             "fuchsia.kernel.RootJob",
             "fuchsia.kernel.RootJobForInspect",
-            "fuchsia.kernel.Stats"
+            "fuchsia.kernel.Stats",
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }
