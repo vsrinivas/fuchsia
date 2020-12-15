@@ -37,7 +37,7 @@ zx_status_t DaiTest::InitPDev() {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  proto_client_ = ddk::DaiProtocolClient(composite, is_input ? "dai-in" : "dai-out");
+  proto_client_ = ddk::DaiProtocolClient(composite, is_input_ ? "dai-in" : "dai-out");
   if (!proto_client_.is_valid()) {
     zxlogf(ERROR, "%s could not get DAI fragment", __FILE__);
     return ZX_ERR_NO_RESOURCES;
