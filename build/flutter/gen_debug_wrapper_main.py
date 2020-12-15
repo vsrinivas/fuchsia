@@ -36,6 +36,7 @@ def main():
 import 'dart:async';
 
 import 'package:flutter_driver/driver_extension.dart';
+import 'package:flutter/services.dart';
 ''')
     outfile.write(
         "import 'package:%s/%s' as flutter_app_main;\n" %
@@ -52,7 +53,10 @@ void main(List<String> args) async {
     //
     // This extension is required for tests that use package:flutter_driver
     // to drive applications from a separate process.
-    enableFlutterDriverExtension();
+    final handler = OptionalMethodChannel('flutter_driver/handler');
+    enableFlutterDriverExtension(handler: (String data) async {
+      return handler.invokeMethod(data);
+    });
 
     // TODO(awdavies): Use the logger instead.
     print('flutter driver extensions enabled.');

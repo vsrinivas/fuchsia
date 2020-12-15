@@ -160,8 +160,10 @@ template("flutter_component") {
                                "visibility",
                              ])
 
-      deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter_driver" ] +
-             _component_deps
+      deps = [
+               "//third_party/dart-pkg/git/flutter/packages/flutter",
+               "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+             ] + _component_deps
 
       package_root = _generated_package_root
 
