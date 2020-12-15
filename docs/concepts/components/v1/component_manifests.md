@@ -22,8 +22,8 @@ Here's a simple example of a cmx for an ELF binary component:
     "sandbox": {
         "system": [ "data/sysmgr" ],
         "services": [
-            "fuchsia.sys.Launcher",
-            "fuchsia.netstack.Netstack"
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.sys.Launcher"
         ]
     }
 }
@@ -216,7 +216,7 @@ packages fully cached on the system.
 The `services` array defines a list of services from `/svc` that the
 component may access. A typical component will require a number services from
 `/svc` in order to play some useful role in the system. For example, if
-`"services" = [ "fuchsia.sys.Launcher", "fuchsia.netstack.Netstack" ]`, the
+`"services" = [ "fuchsia.posix.socket.Provider", "fuchsia.sys.Launcher" ]`, the
 component will have the ability to launch other components and access network
 services. A component may declare any list of services in its `services`,
 but it will only be able to access services present in its
