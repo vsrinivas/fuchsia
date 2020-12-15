@@ -85,6 +85,11 @@ config("kasan-defines") {
   defines = [
     "ASAN_MAPPING_SCALE=$asan_mapping_scale",
     "ASAN_MAPPING_OFFSET=${asan_mapping_offset}UL",
+
+    # TODO(fxbug.dev/64808): KASAN may raise the amount of required kernel stack
+    # space, particularly in interruptible kernel code. Raise the stack size to
+    # avoid blowouts.
+    "CUSTOM_DEFAULT_STACK_SIZE=12288",
   ]
 }
 
