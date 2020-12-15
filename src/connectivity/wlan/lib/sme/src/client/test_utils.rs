@@ -243,26 +243,26 @@ impl Supplicant for MockSupplicant {
         _update_sink: &mut UpdateSink,
         _pmk: &[u8],
         _pmkid: &[u8],
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         unimplemented!()
     }
 
-    fn on_sae_handshake_ind(&mut self, update_sink: &mut UpdateSink) -> Result<(), anyhow::Error> {
-        populate_update_sink(update_sink, &self.on_sae_handshake_ind).map_err(|e| e.into())
+    fn on_sae_handshake_ind(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
+        populate_update_sink(update_sink, &self.on_sae_handshake_ind)
     }
     fn on_sae_frame_rx(
         &mut self,
         update_sink: &mut UpdateSink,
         _frame: fidl_mlme::SaeFrame,
-    ) -> Result<(), anyhow::Error> {
-        populate_update_sink(update_sink, &self.on_sae_frame_rx).map_err(|e| e.into())
+    ) -> Result<(), Error> {
+        populate_update_sink(update_sink, &self.on_sae_frame_rx)
     }
     fn on_sae_timeout(
         &mut self,
         update_sink: &mut UpdateSink,
         _event_id: u64,
-    ) -> Result<(), anyhow::Error> {
-        populate_update_sink(update_sink, &self.on_sae_timeout).map_err(|e| e.into())
+    ) -> Result<(), Error> {
+        populate_update_sink(update_sink, &self.on_sae_timeout)
     }
     fn get_auth_cfg(&self) -> &auth::Config {
         &self.auth_cfg

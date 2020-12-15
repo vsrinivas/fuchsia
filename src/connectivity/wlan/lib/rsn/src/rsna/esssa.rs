@@ -365,27 +365,24 @@ impl EssSa {
         Ok(())
     }
 
-    pub fn on_sae_handshake_ind(
-        &mut self,
-        update_sink: &mut UpdateSink,
-    ) -> Result<(), auth::AuthError> {
-        self.auth_method().on_sae_handshake_ind(update_sink)
+    pub fn on_sae_handshake_ind(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
+        self.auth_method().on_sae_handshake_ind(update_sink).map_err(Error::AuthError)
     }
 
     pub fn on_sae_frame_rx(
         &mut self,
         update_sink: &mut UpdateSink,
         frame: SaeFrame,
-    ) -> Result<(), auth::AuthError> {
-        self.auth_method().on_sae_frame_rx(update_sink, frame)
+    ) -> Result<(), Error> {
+        self.auth_method().on_sae_frame_rx(update_sink, frame).map_err(Error::AuthError)
     }
 
     pub fn on_sae_timeout(
         &mut self,
         update_sink: &mut UpdateSink,
         event_id: u64,
-    ) -> Result<(), auth::AuthError> {
-        self.auth_method().on_sae_timeout(update_sink, event_id)
+    ) -> Result<(), Error> {
+        self.auth_method().on_sae_timeout(update_sink, event_id).map_err(Error::AuthError)
     }
 
     pub fn on_eapol_frame<B: ByteSlice>(

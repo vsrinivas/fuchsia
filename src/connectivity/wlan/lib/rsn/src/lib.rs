@@ -122,31 +122,28 @@ impl Supplicant {
         update_sink: &mut UpdateSink,
         pmk: &[u8],
         pmkid: &[u8],
-    ) -> Result<(), anyhow::Error> {
-        self.esssa.on_pmk_available(update_sink, pmk, pmkid).map_err(|e| e.into())
+    ) -> Result<(), Error> {
+        self.esssa.on_pmk_available(update_sink, pmk, pmkid)
     }
 
-    pub fn on_sae_handshake_ind(
-        &mut self,
-        update_sink: &mut UpdateSink,
-    ) -> Result<(), anyhow::Error> {
-        self.esssa.on_sae_handshake_ind(update_sink).map_err(|e| e.into())
+    pub fn on_sae_handshake_ind(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
+        self.esssa.on_sae_handshake_ind(update_sink)
     }
 
     pub fn on_sae_frame_rx(
         &mut self,
         update_sink: &mut UpdateSink,
         frame: SaeFrame,
-    ) -> Result<(), anyhow::Error> {
-        self.esssa.on_sae_frame_rx(update_sink, frame).map_err(|e| e.into())
+    ) -> Result<(), Error> {
+        self.esssa.on_sae_frame_rx(update_sink, frame)
     }
 
     pub fn on_sae_timeout(
         &mut self,
         update_sink: &mut UpdateSink,
         event_id: u64,
-    ) -> Result<(), anyhow::Error> {
-        self.esssa.on_sae_timeout(update_sink, event_id).map_err(|e| e.into())
+    ) -> Result<(), Error> {
+        self.esssa.on_sae_timeout(update_sink, event_id)
     }
 }
 

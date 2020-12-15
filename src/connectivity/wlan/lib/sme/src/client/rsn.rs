@@ -42,18 +42,14 @@ pub trait Supplicant: std::fmt::Debug + std::marker::Send {
         update_sink: &mut UpdateSink,
         pmk: &[u8],
         pmkid: &[u8],
-    ) -> Result<(), anyhow::Error>;
-    fn on_sae_handshake_ind(&mut self, update_sink: &mut UpdateSink) -> Result<(), anyhow::Error>;
+    ) -> Result<(), Error>;
+    fn on_sae_handshake_ind(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error>;
     fn on_sae_frame_rx(
         &mut self,
         update_sink: &mut UpdateSink,
         frame: SaeFrame,
-    ) -> Result<(), anyhow::Error>;
-    fn on_sae_timeout(
-        &mut self,
-        update_sink: &mut UpdateSink,
-        event_id: u64,
-    ) -> Result<(), anyhow::Error>;
+    ) -> Result<(), Error>;
+    fn on_sae_timeout(&mut self, update_sink: &mut UpdateSink, event_id: u64) -> Result<(), Error>;
     fn get_auth_cfg(&self) -> &auth::Config;
     fn get_auth_method(&self) -> auth::MethodName;
 }
@@ -80,11 +76,11 @@ impl Supplicant for wlan_rsn::Supplicant {
         update_sink: &mut UpdateSink,
         pmk: &[u8],
         pmkid: &[u8],
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         wlan_rsn::Supplicant::on_pmk_available(self, update_sink, pmk, pmkid)
     }
 
-    fn on_sae_handshake_ind(&mut self, update_sink: &mut UpdateSink) -> Result<(), anyhow::Error> {
+    fn on_sae_handshake_ind(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
         wlan_rsn::Supplicant::on_sae_handshake_ind(self, update_sink)
     }
 
@@ -92,15 +88,11 @@ impl Supplicant for wlan_rsn::Supplicant {
         &mut self,
         update_sink: &mut UpdateSink,
         frame: SaeFrame,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), Error> {
         wlan_rsn::Supplicant::on_sae_frame_rx(self, update_sink, frame)
     }
 
-    fn on_sae_timeout(
-        &mut self,
-        update_sink: &mut UpdateSink,
-        event_id: u64,
-    ) -> Result<(), anyhow::Error> {
+    fn on_sae_timeout(&mut self, update_sink: &mut UpdateSink, event_id: u64) -> Result<(), Error> {
         wlan_rsn::Supplicant::on_sae_timeout(self, update_sink, event_id)
     }
 
