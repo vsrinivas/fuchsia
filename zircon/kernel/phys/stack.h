@@ -30,7 +30,7 @@ extern BootStack boot_stack;
 // This considers the limit to be "on".
 bool IsOnStack(uintptr_t sp);
 
-#if __has_feature(safe__stack)
+#if __has_feature(safe_stack)
 extern BootStack boot_unsafe_stack;
 #endif  // __has_feature(safe_stack)
 
