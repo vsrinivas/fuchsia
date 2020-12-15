@@ -5,18 +5,26 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/testing/emulator"
-	"go.fuchsia.dev/fuchsia/src/tests/disable_shell/support"
 )
 
 func TestShellEnabled(t *testing.T) {
-	distro, err := emulator.Unpack()
+	exPath := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exPath, "test_data"), emulator.DistributionParams{Emulator: emulator.Qemu})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer distro.Delete()
+	defer func() {
+		if err = distro.Delete(); err != nil {
+			t.Error(err)
+		}
+	}()
 	arch, err := distro.TargetCPU()
 	if err != nil {
 		t.Fatal(err)
@@ -24,48 +32,85 @@ func TestShellEnabled(t *testing.T) {
 
 	i := distro.Create(emulator.Params{
 		Arch:          arch,
-		ZBI:           support.ZbiPath(t),
+		ZBI:           filepath.Join(exPath, "..", "fuchsia.zbi"),
 		AppendCmdline: "devmgr.log-to-debuglog console.shell=true",
 	})
 
-	i.Start()
-	if err != nil {
+	if err = i.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	defer func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
 
-	i.WaitForLogMessage("console.shell: enabled")
-	tokenFromSerial := support.RandomTokenAsString()
-	i.RunCommand("echo '" + tokenFromSerial + "'")
-	i.WaitForLogMessage(tokenFromSerial)
+	if err = i.WaitForLogMessage("console.shell: enabled"); err != nil {
+		t.Fatal(err)
+	}
+	tokenFromSerial := randomTokenAsString(t)
+	if err = i.RunCommand("echo '" + tokenFromSerial + "'"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage(tokenFromSerial); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestAutorunEnabled(t *testing.T) {
-	distro, err := emulator.Unpack()
+	exPath := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exPath, "test_data"), emulator.DistributionParams{Emulator: emulator.Qemu})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer distro.Delete()
+	defer func() {
+		if err = distro.Delete(); err != nil {
+			t.Error(err)
+		}
+	}()
 	arch, err := distro.TargetCPU()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tokenFromSerial := support.RandomTokenAsString()
+	tokenFromSerial := randomTokenAsString(t)
 	i := distro.Create(emulator.Params{
 		Arch: arch,
-		ZBI:  support.ZbiPath(t),
+		ZBI:  filepath.Join(exPath, "..", "fuchsia.zbi"),
 		AppendCmdline: "devmgr.log-to-debuglog console.shell=true " +
 			"zircon.autorun.boot=/boot/bin/sh+-c+echo+" + tokenFromSerial,
 	})
 
-	i.Start()
+	if err = i.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err = i.Kill(); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	// Wait for console-launcher to come up before waiting for the autorun output.
+	if err = i.WaitForLogMessage("console-launcher: running"); err != nil {
+		t.Fatal(err)
+	}
+	if err = i.WaitForLogMessage(tokenFromSerial); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func execDir(t *testing.T) string {
+	ex, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer i.Kill()
+	return filepath.Dir(ex)
+}
 
-	// Wait for console-launcher to come up before waiting for the autorun output.
-	i.WaitForLogMessage("console-launcher: running")
-	i.WaitForLogMessage(tokenFromSerial)
+func randomTokenAsString(t *testing.T) string {
+	b := [32]byte{}
+	if _, err := rand.Read(b[:]); err != nil {
+		t.Fatal(err)
+	}
+	return hex.EncodeToString(b[:])
 }
