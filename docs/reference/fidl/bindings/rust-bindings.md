@@ -229,8 +229,8 @@ pub struct Color {
 }
 ```
 
-Note: The default values for struct members are not yet supported in the Rust
-bindings, and therefore do not affect the generated Rust `struct`.
+Note: The Rust bindings do not support default values for FIDL struct members,
+so the default value for `name` does not affect the generated Rust `struct`.
 
 The generated `Color` `struct` follows the [`#[derive]` rules](#derives).
 
