@@ -64,7 +64,9 @@ bool TestCreateWriteReadClose() {
   EXPECT_EQ(info.rx_buf_available, kSize);
 
   // Read out data from the peer byte-at-a-time; this is a stream socket, allowing that.
-  unsigned char read_buffer[kSize] = {};
+  fbl::AllocChecker ac;
+  auto read_buffer = ktl::make_unique<ktl::array<unsigned char, kSize>>(&ac);
+  ASSERT_TRUE(ac.check());
   for (uint i = 0; i < kSize; i++) {
     size_t bytes_read = 0;
     auto read_status = dispatcher1.dispatcher()->Read(
@@ -74,10 +76,10 @@ bool TestCreateWriteReadClose() {
     // Expect consuming 1-byte reads to reduce rx_buf_available.
     dispatcher1.dispatcher()->GetInfo(&info);
     EXPECT_EQ(info.rx_buf_available, kSize - (i + 1));
-    read_buffer[i] = read->get<unsigned char>();
+    (*read_buffer)[i] = read->get<unsigned char>();
   }
   for (unsigned int i = 0; i < kSize; ++i) {
-    EXPECT_EQ(read_buffer[i], static_cast<unsigned char>(i));
+    EXPECT_EQ((*read_buffer)[i], static_cast<unsigned char>(i));
   }
 
   // Test that shutting down a socket for writes still allows reads from the paired dispatcher
