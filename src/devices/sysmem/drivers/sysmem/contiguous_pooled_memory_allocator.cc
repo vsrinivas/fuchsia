@@ -5,6 +5,7 @@
 #include "contiguous_pooled_memory_allocator.h"
 
 #include <fuchsia/sysmem2/llcpp/fidl.h>
+#include <lib/zx/clock.h>
 
 #include <ddk/trace/event.h>
 #include <fbl/string_printf.h>
@@ -57,6 +58,8 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
   high_water_mark_property_ = node_.CreateUint("high_water_mark", 0);
   used_size_property_ = node_.CreateUint("used_size", 0);
   allocations_failed_property_ = node_.CreateUint("allocations_failed", 0);
+  last_allocation_failed_timestamp_ns_property_ =
+      node_.CreateUint("last_allocation_failed_timestamp_ns", 0);
   allocations_failed_fragmentation_property_ =
       node_.CreateUint("allocations_failed_fragmentation", 0);
   max_free_at_high_water_property_ = node_.CreateUint("max_free_at_high_water", size);
@@ -208,6 +211,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
     LOG(WARNING, "GetRegion failed (out of space?) - size: %zu status: %d", size, status);
     DumpPoolStats();
     allocations_failed_property_.Add(1);
+    last_allocation_failed_timestamp_ns_property_.Set(zx::clock::get_monotonic().get());
     uint64_t unused_size = 0;
     region_allocator_.WalkAvailableRegions([&unused_size](const ralloc_region_t* r) -> bool {
       unused_size += r->size;

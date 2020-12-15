@@ -6,6 +6,7 @@
 
 #include <lib/fake-bti/bti.h>
 #include <lib/inspect/cpp/reader.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/vmar.h>
 
 #include <vector>
@@ -70,6 +71,10 @@ TEST_F(ContiguousPooledSystem, Full) {
   EXPECT_OK(allocator_.Init());
   allocator_.set_ready();
 
+  auto hierarchy = inspect::ReadFromVmo(inspector_.DuplicateVmo());
+  auto* value = hierarchy.value().GetByPath({"test-pool"});
+  ASSERT_TRUE(value);
+
   std::vector<zx::vmo> vmos;
   for (uint32_t i = 0; i < kVmoCount; ++i) {
     zx::vmo vmo;
@@ -77,8 +82,25 @@ TEST_F(ContiguousPooledSystem, Full) {
     vmos.push_back(std::move(vmo));
   }
 
+  EXPECT_EQ(0u, value->node()
+                    .get_property<inspect::UintPropertyValue>("last_allocation_failed_timestamp_ns")
+                    ->value());
+  auto before_time = zx::clock::get_monotonic();
   zx::vmo vmo;
   EXPECT_NOT_OK(allocator_.Allocate(kVmoSize, {}, &vmo));
+
+  auto after_time = zx::clock::get_monotonic();
+
+  hierarchy = inspect::ReadFromVmo(inspector_.DuplicateVmo());
+  value = hierarchy.value().GetByPath({"test-pool"});
+  EXPECT_LE(before_time.get(),
+            value->node()
+                .get_property<inspect::UintPropertyValue>("last_allocation_failed_timestamp_ns")
+                ->value());
+  EXPECT_GE(after_time.get(),
+            value->node()
+                .get_property<inspect::UintPropertyValue>("last_allocation_failed_timestamp_ns")
+                ->value());
 
   allocator_.Delete(std::move(vmos[0]));
 
@@ -101,9 +123,8 @@ TEST_F(ContiguousPooledSystem, Full) {
   // fragmentation.:
   EXPECT_NOT_OK(allocator_.Allocate(kVmoSize * kVmoCount - 1, {}, &vmo));
 
-  auto hierarchy = inspect::ReadFromVmo(inspector_.DuplicateVmo());
-  auto* value = hierarchy.value().GetByPath({"test-pool"});
-  ASSERT_TRUE(value);
+  hierarchy = inspect::ReadFromVmo(inspector_.DuplicateVmo());
+  value = hierarchy.value().GetByPath({"test-pool"});
   EXPECT_EQ(3u,
             value->node().get_property<inspect::UintPropertyValue>("allocations_failed")->value());
   EXPECT_EQ(1u, value->node()

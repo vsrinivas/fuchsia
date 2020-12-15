@@ -97,6 +97,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   inspect::UintProperty high_water_mark_property_;
   inspect::UintProperty used_size_property_;
   inspect::UintProperty allocations_failed_property_;
+  inspect::UintProperty last_allocation_failed_timestamp_ns_property_;
   // Keeps track of how many allocations would have succeeded but failed due to fragmentation.
   inspect::UintProperty allocations_failed_fragmentation_property_;
   // This is the size of a the largest free contiguous region when high_water_mark_property_ was
