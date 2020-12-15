@@ -7,7 +7,10 @@
 mod lowlevel {
     pub(crate) mod arguments;
     pub(crate) mod command;
+    mod command_tests;
     pub(crate) mod response;
+    mod response_tests;
+    mod write_to;
 }
 
 mod parser {

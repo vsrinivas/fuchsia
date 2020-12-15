@@ -2,57 +2,49 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Tests for the AT command parser.
-use crate::{
-    lowlevel::{
-        arguments::{Argument, Arguments, PrimitiveArgument},
-        command::{Command, ExecuteArguments},
-    },
-    parser::command_parser,
+//! Tests for the AT command AST.
+#![cfg(test)]
+
+use crate::lowlevel::{
+    arguments::{Argument, Arguments, PrimitiveArgument},
+    command::{Command, ExecuteArguments},
+    write_to::WriteTo,
 };
 
-#[test]
-fn parse_empty() {
-    let string = String::from("");
-    let parse_result = command_parser::parse(&string);
-    assert!(parse_result.is_err());
+fn cr_terminate(str: &str) -> String {
+    format!("{}\r", str)
 }
 
-#[test]
-fn parse_fail() {
-    let string = String::from("unparseable");
-    let parse_result = command_parser::parse(&string);
-    assert!(parse_result.is_err());
-}
-
-fn test_parse(str_to_parse: &str, expected_result: Command) {
-    let parse_result = command_parser::parse(&String::from(str_to_parse)).unwrap();
-    assert_eq!(expected_result, parse_result);
+fn test_write(command_to_serialize: Command, expected_string: String) {
+    let mut sink = Vec::new();
+    assert!(command_to_serialize.write_to(&mut sink).is_ok());
+    // Convert to a String so errors are human readable, not just hex.
+    let actual_string = String::from_utf8(sink).unwrap();
+    assert_eq!(expected_string, actual_string);
 }
 
 // Execute command with no arguments
 #[test]
 fn exec_no_args() {
-    test_parse(
-        "ATTEST",
+    test_write(
         Command::Execute { name: String::from("TEST"), is_extension: false, arguments: None },
+        cr_terminate("ATTEST"),
     )
 }
 
 // Extension execute command with no arguments
 #[test]
 fn exec_ext_no_args() {
-    test_parse(
-        "AT+TEST",
+    test_write(
         Command::Execute { name: String::from("TEST"), is_extension: true, arguments: None },
+        cr_terminate("AT+TEST"),
     )
 }
 
-// Extension execute command with one integer argument, no trailing comma
+// Extension execute command with one integer argument
 #[test]
-fn exec_one_int_arg_no_comma() {
-    test_parse(
-        "AT+TEST=1",
+fn exec_one_int_arg() {
+    test_write(
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
@@ -63,14 +55,14 @@ fn exec_one_int_arg_no_comma() {
                 )]),
             }),
         },
+        cr_terminate("AT+TEST=1"),
     )
 }
 
 // Extension execute command with one integer argument and a > delimiter
 #[test]
 fn exec_one_int_arg_nonstandard_delimiter() {
-    test_parse(
-        "AT+TEST>1",
+    test_write(
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
@@ -81,13 +73,13 @@ fn exec_one_int_arg_nonstandard_delimiter() {
                 )]),
             }),
         },
+        cr_terminate("AT+TEST>1"),
     )
 }
-// Extension execute command with one string argument, no trailing comma
+// Extension execute command with one string argument
 #[test]
-fn exec_one_string_arg_no_comma() {
-    test_parse(
-        "AT+TEST=abc",
+fn exec_one_string_arg() {
+    test_write(
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
@@ -98,14 +90,14 @@ fn exec_one_string_arg_no_comma() {
                 )]),
             }),
         },
+        cr_terminate("AT+TEST=abc"),
     )
 }
 
-// Extension execute command with one key-value argument, no trailing comma
+// Extension execute command with one key-value argument
 #[test]
-fn exec_one_kv_arg_no_comma() {
-    test_parse(
-        "AT+TEST=1=abc",
+fn exec_one_kv_arg() {
+    test_write(
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
@@ -117,68 +109,14 @@ fn exec_one_kv_arg_no_comma() {
                 }]),
             }),
         },
-    )
-}
-// Extension execute command with one integer argument, with trailing comma
-#[test]
-fn exec_one_int_arg_with_comma() {
-    test_parse(
-        "AT+TEST=1,",
-        Command::Execute {
-            name: String::from("TEST"),
-            is_extension: true,
-            arguments: Some(ExecuteArguments {
-                nonstandard_delimiter: None,
-                arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::Integer(1),
-                )]),
-            }),
-        },
+        cr_terminate("AT+TEST=1=abc"),
     )
 }
 
-// Extension execute command with one string argument, with trailing comma
+// Extension execute command with multiple arguments
 #[test]
-fn exec_one_string_arg_with_comma() {
-    test_parse(
-        "AT+TEST=abc,",
-        Command::Execute {
-            name: String::from("TEST"),
-            is_extension: true,
-            arguments: Some(ExecuteArguments {
-                nonstandard_delimiter: None,
-                arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::String(String::from("abc")),
-                )]),
-            }),
-        },
-    )
-}
-
-// Extension execute command with one key-value argument, with trailing comma
-#[test]
-fn exec_one_kv_arg_with_comma() {
-    test_parse(
-        "AT+TEST=abc=1,",
-        Command::Execute {
-            name: String::from("TEST"),
-            is_extension: true,
-            arguments: Some(ExecuteArguments {
-                nonstandard_delimiter: None,
-                arguments: Arguments::ArgumentList(vec![Argument::KeyValueArgument {
-                    key: PrimitiveArgument::String(String::from("abc")),
-                    value: PrimitiveArgument::Integer(1),
-                }]),
-            }),
-        },
-    )
-}
-
-// Extension execute command with multiple arguments, no trailing comma
-#[test]
-fn exec_args_no_comma() {
-    test_parse(
-        "AT+TEST=abc,1",
+fn exec_args() {
+    test_write(
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
@@ -190,33 +128,14 @@ fn exec_args_no_comma() {
                 ]),
             }),
         },
-    )
-}
-
-// Extension execute command with multiple arguments with trailing comma
-#[test]
-fn exec_args_with_comma() {
-    test_parse(
-        "AT+TEST=abc,1,",
-        Command::Execute {
-            name: String::from("TEST"),
-            is_extension: true,
-            arguments: Some(ExecuteArguments {
-                nonstandard_delimiter: None,
-                arguments: Arguments::ArgumentList(vec![
-                    Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
-                    Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
-                ]),
-            }),
-        },
+        cr_terminate("AT+TEST=abc,1"),
     )
 }
 
 // Paren delimited argument list
 #[test]
 fn paren_args() {
-    test_parse(
-        "AT+TEST=(1)",
+    test_write(
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
@@ -227,14 +146,14 @@ fn paren_args() {
                 ]]),
             }),
         },
+        cr_terminate("AT+TEST=(1)"),
     )
 }
 
 // Paren delimited multiple argument lists
 #[test]
 fn multiple_paren_args() {
-    test_parse(
-        "AT+TEST=(1)(2,abc)",
+    test_write(
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
@@ -249,14 +168,14 @@ fn multiple_paren_args() {
                 ]),
             }),
         },
+        cr_terminate("AT+TEST=(1)(2,abc)"),
     )
 }
 
 // Paren delimited multiple argument lists with key-value elements
 #[test]
 fn multiple_paren_kv_args() {
-    test_parse(
-        "AT+TEST=(1=abc)(2,xyz=3)",
+    test_write(
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
@@ -277,29 +196,42 @@ fn multiple_paren_kv_args() {
                 ]),
             }),
         },
+        cr_terminate("AT+TEST=(1=abc)(2,xyz=3)"),
     )
 }
 
 // Read command
 #[test]
 fn read() {
-    test_parse("ATTEST?", Command::Read { name: String::from("TEST"), is_extension: false })
+    test_write(
+        Command::Read { name: String::from("TEST"), is_extension: false },
+        cr_terminate("ATTEST?"),
+    )
 }
 
 // Extension read command
 #[test]
 fn read_ext() {
-    test_parse("AT+TEST?", Command::Read { name: String::from("TEST"), is_extension: true })
+    test_write(
+        Command::Read { name: String::from("TEST"), is_extension: true },
+        cr_terminate("AT+TEST?"),
+    )
 }
 
 // Test command
 #[test]
 fn test() {
-    test_parse("ATTEST=?", Command::Test { name: String::from("TEST"), is_extension: false })
+    test_write(
+        Command::Test { name: String::from("TEST"), is_extension: false },
+        cr_terminate("ATTEST=?"),
+    )
 }
 
 // Extension test command
 #[test]
 fn test_ext() {
-    test_parse("AT+TEST=?", Command::Test { name: String::from("TEST"), is_extension: true })
+    test_write(
+        Command::Test { name: String::from("TEST"), is_extension: true },
+        cr_terminate("AT+TEST=?"),
+    )
 }
