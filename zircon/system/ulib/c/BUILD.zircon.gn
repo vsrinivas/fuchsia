@@ -75,8 +75,20 @@ if (zx == "/") {
 }
 
 if (zx != "/" && zircon_toolchain == false) {
+  import("libc_toolchain.gni")
+
+  # When in a toolchain variant of the Fuchsia base toolchain, find the
+  # corresponding toolchain variant of user.libc_$target_cpu to build
+  # the C library with it.
+  _libc_toolchain = sysroot_libc_base_toolchain
+  if (toolchain_variant.suffix != "") {
+    _libc_toolchain += string_replace(toolchain_variant.suffix, "-fuzzer", "")
+  } else {
+    _libc_toolchain = system_libc_toolchain
+  }
+
   group("c") {
-    public_deps = [ ":c(//zircon/system/ulib/c:user.libc_$target_cpu)" ]
+    public_deps = [ ":c($_libc_toolchain)" ]
   }
 } else {
   zx_library("c") {
@@ -164,9 +176,9 @@ if (zx != "/" && zircon_toolchain == false) {
   # Don't build the C runtime startup object in the Fuchsia user
   # toolchain, because this adds many unwanted dependencies to fdio,
   # trace-engine and whatnot that are completely un-needed and also
-  # interfere with sysroot generation.
+  # interfere with sysroot generation. Use the C library toolchain instead.
   group("crt1") {
-    public_deps = [ ":crt1(//zircon/system/ulib/c:user.libc_$current_cpu)" ]
+    public_deps = [ ":crt1($_libc_toolchain)" ]
   }
 } else {
   source_set("crt1") {

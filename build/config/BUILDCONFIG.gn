@@ -1559,6 +1559,10 @@ template("variant_target") {
                "target_type",
              ])
 
+  # IMPORTANT: The computations below are duplicated in several other
+  # files. Please keep them in sync, see:
+  #   //zircon/system/ulib/c/libc_toolchain.gni
+  #   //zircon/system/ulib/zircon/vdso_toolchain.gni
   target_variant = false
   if (select_variant_canonical != []) {
     # See if there is a selector that matches this target.

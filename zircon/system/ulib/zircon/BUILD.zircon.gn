@@ -62,8 +62,13 @@ if (current_toolchain == default_toolchain) {
           configs = [ "//zircon/system/ulib/zircon:user.vdso.config" ]
         }
 
-        # The vDSO can't use instrumentation runtimes.
-        exclude_variant_tags = [ "instrumented" ]
+        exclude_variant_tags = [
+          # The vDSO can't use instrumentation runtimes.
+          "instrumented",
+
+          # The vDSO cannot be built with GCC.
+          "gcc",
+        ]
       }
     }
   }
@@ -110,6 +115,9 @@ if (_can_redirect_to_zircon) {
   if (zx == "/") {
     environment_redirect("headers") {
       environment_label = ":user.vdso"
+
+      # NOTE: The 'direct = true' below means that ths VDSO will never
+      # be built with GCC.
       direct = true
       shlib = true
       deps = [ ":headers" ]

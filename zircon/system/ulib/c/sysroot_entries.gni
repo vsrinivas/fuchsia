@@ -47,12 +47,18 @@ if (zx == "/") {
   _sysroot_libc_out_dir = get_label_info(sysroot_libc_target, "target_out_dir")
   sysroot_libc_stripped = _sysroot_libc_out_dir + "/libc.so"
   sysroot_libc_unstripped = _sysroot_libc_out_dir + "/libc.so.debug"
+
+  sysroot_crt1_toolchain = sysroot_libc_toolchain
+  sysroot_crt1_target = "$zx/system/ulib/c:crt1($sysroot_crt1_toolchain)"
+
+  sysroot_crt1_obj =
+      get_label_info(sysroot_crt1_target, "target_out_dir") + "/crt1.Scrt1.cc.o"
 } else {
   import("//zircon/system/ulib/c/libc_toolchain.gni")
 }
 
-_rebased_libc_unstripped = rebase_path(sysroot_libc_unstripped, root_build_dir)
 _rebased_libc_stripped = rebase_path(sysroot_libc_stripped, root_build_dir)
+_rebased_libc_unstripped = rebase_path(sysroot_libc_unstripped, root_build_dir)
 
 sysroot_libc_deps = [ sysroot_libc_target ]
 
@@ -421,40 +427,38 @@ if (zx == "/") {
             "asan",
             "asan-ubsan",
           ]) {
-    _libprefix = ""
-    if (variant != "") {
+    if (variant == "") {
+      # Ensure that the non-instrumented version of libc.so distributed with
+      # the SDK is the same as the system one (i.e. potentially built with
+      # non instrumented toolchains like "gcc" or "thinlto"). This avoids
+      # conflicts later when creating Fuchsia packages which contains binaries
+      # who indirectly depend on the core SDK.
+      _libprefix = ""
+      _libc_target = system_libc_target
+      _libc_stripped = system_libc_stripped
+      _libc_unstripped = system_libc_unstripped
+    } else {
       _libprefix = "$variant/"
+      _libc_toolchain =
+          "//zircon/system/ulib/c:user.libc_${current_cpu}-$variant"
+      _libc_target = "$sysroot_libc_label($_libc_toolchain)"
+      _libc_stripped = get_label_info(_libc_target, "root_out_dir") + "/libc.so"
+      _libc_unstripped = _libc_stripped + ".debug"
     }
-    _libc_instrumented_toolchain =
-        "//zircon/system/ulib/c:user.libc_$current_cpu"
-    if (variant != "") {
-      _libc_instrumented_toolchain += "-$variant"
-    }
-    _libc_instrumented_target =
-        "//zircon/system/ulib/c($_libc_instrumented_toolchain)"
-    sysroot_libc_deps += [ _libc_instrumented_target ]
-
-    _libc_instrumented_stripped =
-        get_label_info(_libc_instrumented_target, "root_out_dir") + "/libc.so"
-    _libc_instrumented_unstripped = _libc_instrumented_stripped + ".debug"
-    _rebased_instrumented_libc_unstripped =
-        rebase_path(_libc_instrumented_unstripped, root_build_dir)
-    _rebased_instrumented_libc_stripped =
-        rebase_path(_libc_instrumented_stripped, root_build_dir)
 
     sysroot_instrumented_libc_entries += [
       {
         sdk = {
-          source = _rebased_instrumented_libc_unstripped
+          source = rebase_path(_libc_unstripped, root_build_dir)
           debug = "debug/${_libprefix}libc.so"
-          deps = [ _libc_instrumented_target ]
+          deps = [ _libc_target ]
         }
       },
       {
         sdk = {
-          source = _rebased_instrumented_libc_stripped
+          source = rebase_path(_libc_stripped, root_build_dir)
           dist = "dist/lib/${_libprefix}ld.so.1"
-          deps = [ _libc_instrumented_target ]
+          deps = [ _libc_target ]
         }
       },
     ]
@@ -462,12 +466,6 @@ if (zx == "/") {
 }
 
 # The C runtime startup object file (a.k.a. 'crt1', or 'Scrt1.o').
-sysroot_crt1_toolchain = sysroot_libc_toolchain
-sysroot_crt1_target = "$zx/system/ulib/c:crt1($sysroot_crt1_toolchain)"
-
-sysroot_crt1_obj =
-    get_label_info(sysroot_crt1_target, "target_out_dir") + "/crt1.Scrt1.cc.o"
-
 if (zx == "/") {
   _libprefix = toolchain.libprefix
 } else {

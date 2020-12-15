@@ -1,0 +1,114 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file is used to define these important variables:
+#
+#   zircon_vdso_toolchain: The GN toolchain() instance that will build
+#     the VDSO binary (libzircon.so) according to the current toolchain
+#     and build variant selectors.
+#
+#  zircon_vdso_target: The GN label of the target that generates the
+#     VDSO binary, includes zircon_vdso_toolchain.
+#
+#   zircon_vdso_unstripped, zircon_vdso_stripped:
+#     The paths to the unstripped and stripped VDSO libraries generated
+#     by the build for zircon_vdso_target.
+#
+# To do so, it needs to duplicate the build variant selection logic
+# normally found in BUILDCONFIG.gn (see below).
+
+# The variant selector fields corresponding to the Zircon VDSO
+# Keep it in sync with the definitions of user.vdso_${target_cpu}
+# in //zircon/system/ulib/zircon/BUILD.gn!
+#
+_select_host = false
+_select_testonly = false
+_select_target_type = [ "shared_library" ]
+_select_output_name = [ "libzircon.so" ]
+_select_name = [ "zircon" ]
+_select_dir = [ "//zircon/system/ulib/zircon" ]
+_select_exclude_toolchain_tags = [
+  "instrumented",
+  "gcc",
+]
+_with_shared = false
+
+# ======================================================================
+# START OF CODE TO KEEP IN SYNC WITH BUILDCONFIG.gn
+#
+# IMPORTANT: Always keep the code below in sync with the computations
+# performed by variant_target() within //build/config/BUILDCONFIG.gn.
+#
+_target_variant = ""
+if (select_variant_canonical != []) {
+  _selected = false
+
+  foreach(selector, select_variant_canonical) {
+    if (!_selected) {
+      _selector = {
+      }
+      _selector = {
+        target_type = []
+        output_name = []
+        label = []
+        name = []
+        dir = []
+        forward_variables_from(selector, "*")
+      }
+
+      _selected = true
+      if (_selected && defined(_selector.host)) {
+        _selected = _selector.host == _select_host
+      }
+
+      if (_selected && defined(_selector.testonly)) {
+        _selected = _selector.testonly == _select_testonly
+      }
+
+      if (_selected && _selector.target_type != []) {
+        _selected = _selector.target_type + _select_target_type -
+                    _select_target_type != _selector.target_type
+      }
+
+      if (_selected && _selector.output_name != []) {
+        _selected = _selector.output_name + _select_output_name -
+                    _select_output_name != _selector.output_name
+      }
+
+      if (_selected && _selector.name != []) {
+        _selected =
+            _selector.name + _select_name - _select_name != _selector.name
+      }
+
+      if (_selected && _selector.dir != []) {
+        _selected = _selector.dir + _select_dir - _select_dir != _selector.dir
+      }
+
+      if (_selected && _select_exclude_toolchain_tags != []) {
+        _selected = _select_exclude_toolchain_tags + _selector.variant_tags -
+                    _selector.variant_tags == _select_exclude_toolchain_tags
+      }
+
+      if (_selected && _selector.variant != false) {
+        _target_variant = "-${_selector.variant}"
+      }
+    }
+  }
+}
+
+if (_with_shared) {
+  _target_variant += "-shared"
+}
+
+# END OF CODE TO KEEP IN SYNC WITH BUILDCONFIG.gn!
+# ==================================================================
+
+# Define the zircon_vdso_xxx variables now.
+zircon_vdso_label = "//zircon/system/ulib/zircon"
+zircon_vdso_toolchain =
+    "//zircon/system/ulib/zircon:user.vdso_${target_cpu}${_target_variant}"
+zircon_vdso_target = "$zircon_vdso_label($zircon_vdso_toolchain)"
+zircon_vdso_stripped =
+    get_label_info(zircon_vdso_target, "root_out_dir") + "/libzircon.so"
+zircon_vdso_unstripped = zircon_vdso_stripped + ".debug"

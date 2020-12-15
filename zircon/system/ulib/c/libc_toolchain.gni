@@ -3,9 +3,10 @@
 # found in the LICENSE file.
 
 # This file exists to find the GN toolchain() instance used to build
-# the uninstrumented version of the C library, required for the Fuchsia
-# system package (even if an instrumented variant is enabled for the build)
-# as well as used by the sysroot.
+# the version of the C library used for regular Fuchsia packages (which is
+# potentially instrumented), as well as the version used by the Fuchsia
+# system package (which may be different, as it must not be instrumented,
+# but could still be built with a variant like "gcc" or "thinlto").
 #
 # For more details, see the extensive TECHNICAL NOTE in the comments at
 # the end of this file.
@@ -17,29 +18,36 @@ sysroot_libc_label = "//zircon/system/ulib/c"
 # when no variant is selected by the user through `select_variant` in args.gn.
 sysroot_libc_base_toolchain = "//zircon/system/ulib/c:user.libc_$target_cpu"
 
-# The toolchain that is used to build the C library, after variant selection has been
-# applied. The computation mimics those in variant_target(), but with a set of hard-coded
-# target properties as:
+# The variant selector fields corresponding to the C library.
+# Keep it in sync with the definitions of user.libc_${target_cpu}
+# in //zircon/system/ulib/c/BUILD.gn!
 #
-# - host = false
-# - target_type = [ "shared_library" ]
-# - output_name = [ "libc.so" ]
-# - label = [ "//zircon/system/ulib/c" ]
-# - name = [ "c" ]
-# - dir = [ "//zircon/system/ulib/c" ]
-# - exclude_variant_tags = [ "fuzzer" ]
+_select_host = false
+_select_testonly = false
+_select_target_type = [ "shared_library" ]
+_select_output_name = [ "libc.so" ]
+_select_name = [ "c" ]
+_select_dir = [ "//zircon/system/ulib/c" ]
+_select_exclude_toolchain_tags = [ "fuzzer" ]
+
+# ======================================================================
+# START OF CODE TO KEEP IN SYNC WITH BUILDCONFIG.gn
 #
-# IMPORTANT: Always keep this in sync with variant_target() in //build/config/BUILDCONFIG.gn.
+# IMPORTANT: Always keep the code below in sync with the computations
+# performed by variant_target() within //build/config/BUILDCONFIG.gn.
+#
 _instrumented_target_variant = ""
 _uninstrumented_target_variant = ""
-_libprefix = ""
+
 if (select_variant_canonical != []) {
-  selected = false
+  _selected = false
+
   foreach(selector, select_variant_canonical) {
-    if (_instrumented_target_variant == "") {
-      select = {
+    if (_instrumented_target_variant == "" ||
+        _uninstrumented_target_variant == "") {
+      _selector = {
       }
-      select = {
+      _selector = {
         target_type = []
         output_name = []
         label = []
@@ -47,54 +55,56 @@ if (select_variant_canonical != []) {
         dir = []
         forward_variables_from(selector, "*")
       }
-      selected = true
-      if (selected && defined(selector.host)) {
-        selected = selector.host == false
+
+      _selected = true
+      if (_selected && defined(_selector.host)) {
+        _selected = _selector.host == _select_host
       }
 
-      if (selected && defined(selector.testonly)) {
-        selected = selector.testonly == false
+      if (_selected && defined(_selector.testonly)) {
+        _selected = _selector.testonly == _select_testonly
       }
 
-      if (selected && select.target_type != []) {
-        selected = select.target_type + [ "shared_library" ] -
-                   [ "shared_library" ] != select.target_type
+      if (_selected && _selector.target_type != []) {
+        _selected = _selector.target_type + _select_target_type -
+                    _select_target_type != _selector.target_type
       }
-      if (selected && select.output_name != []) {  # installed as ld.so.1.
-        # NOTE: The C library's output name is always libc.so, even if it is later
-        selected = select.output_name + [ "libc.so" ] - [ "libc.so" ] !=
-                   select.output_name
+
+      if (_selected && _selector.output_name != []) {
+        _selected = _selector.output_name + _select_output_name -
+                    _select_output_name != _selector.output_name
       }
-      if (selected && select.label != []) {
-        selected = select.label + [ sysroot_libc_label ] -
-                   [ sysroot_libc_label ] != select.label
+
+      if (_selected && _selector.name != []) {
+        _selected =
+            _selector.name + _select_name - _select_name != _selector.name
       }
-      if (selected && select.name != []) {
-        selected = select.name + [ "c" ] - [ "c" ] != select.name
+
+      if (_selected && _selector.dir != []) {
+        _selected = _selector.dir + _select_dir - _select_dir != _selector.dir
       }
-      if (selected && select.dir != []) {
-        selected = select.dir + [ "//zircon/system/ulib/c" ] -
-                   [ "//zircon/system/ulib/c" ] != select.dir
+
+      if (_selected && _select_exclude_toolchain_tags != []) {
+        _selected = _select_exclude_toolchain_tags + _selector.variant_tags -
+                    _selector.variant_tags == _select_exclude_toolchain_tags
       }
-      if (selected) {  # We hack here the fact that "fuzzer" is in the
-                       # user.libc_$cpu exclude_variant_tags list.
-        if (select.variant_tags + [ "fuzzer" ] - [ "fuzzer" ] !=
-            select.variant_tags) {
-          selected = false
-        }
-      }
-      if (selected && selector.variant != false) {
-        if (selector.variant_tags + [ "instrumented" ] - [ "instrumented" ] !=
-            selector.variant_tags) {
-          _instrumented_target_variant = "-${selector.variant}"
-          _libprefix = "${selector.variant}/"
-        } else {
-          _uninstrumented_target_variant = "-${selector.variant}"
+
+      if (_selected && _selector.variant != false) {
+        if (_selector.variant_tags + [ "instrumented" ] - [ "instrumented" ] !=
+            _selector.variant_tags) {
+          if (_instrumented_target_variant == "") {
+            _instrumented_target_variant = "-${_selector.variant}"
+          }
+        } else if (_uninstrumented_target_variant == "") {
+          _uninstrumented_target_variant = "-${_selector.variant}"
         }
       }
     }
   }
 }
+
+# END OF CODE TO KEEP IN SYNC WITH BUILDCONFIG.gn!
+# ==================================================================
 
 # See technical note below to understand why these computations are necessary.
 if (_instrumented_target_variant != "") {
@@ -115,14 +125,8 @@ sysroot_libc_toolchain = sysroot_libc_base_toolchain + _user_target_variant
 # the library, though a variant like "gcc" might be applied to it.
 system_libc_toolchain = sysroot_libc_base_toolchain + _system_target_variant
 
-# This is the 'libprefix' value for the C library's toolchain.
-# In a nutshell, this is an empty string, except for instrumented variants
-# where it will be the variant name, without a -fuzzer suffix.
-# The library is typically installed as lib/${_libprefix}ld.so.1 in packages.
-sysroot_libc_libprefix = _libprefix
-
 # The GN target that builds the C library for the current variant selection.
-sysroot_libc_target = "${sysroot_libc_label}(${sysroot_libc_toolchain})"
+sysroot_libc_target = "$sysroot_libc_label($sysroot_libc_toolchain)"
 
 # The paths to the binaries generated by the C library target. Note that these
 # are called libc.so, but are installed in packages or the system as ld.so.1.
@@ -130,13 +134,21 @@ sysroot_libc_stripped =
     get_label_info(sysroot_libc_target, "root_out_dir") + "/libc.so"
 sysroot_libc_unstripped = sysroot_libc_stripped + ".debug"
 
-# The GN target that builds the system C library.
-# This is required for certain binaries that are placed in the system package, and
-# expect to find the library under lib/ld.so.1, instead of lib/<variant>/ld.so.1
-system_libc_target = "${sysroot_libc_label}(${system_libc_toolchain})"
+# The GN target that builds the system C library. This is required for certain
+# binaries that are placed in the system package, and expect to find the library
+# under lib/ld.so.1, instead of lib/<variant>/ld.so.1
+system_libc_target = "$sysroot_libc_label($system_libc_toolchain)"
 system_libc_stripped =
     get_label_info(system_libc_target, "root_out_dir") + "/libc.so"
 system_libc_unstripped = system_libc_stripped + ".debug"
+
+# The C runtime startup object, which must be linked to all Fuchsia executable
+# binaries.
+sysroot_crt1_toolchain = sysroot_libc_toolchain
+sysroot_crt1_target = "//zircon/system/ulib/c:crt1($sysroot_crt1_toolchain)"
+
+sysroot_crt1_obj =
+    get_label_info(sysroot_crt1_target, "target_out_dir") + "/crt1.Scrt1.cc.o"
 
 # TECHNICAL NOTE
 #
@@ -177,8 +189,7 @@ system_libc_unstripped = system_libc_stripped + ".debug"
 #   and this file should be a copy of 'out/default/user.libc_x64-asan/libc.so'.
 #
 #   Hence, which version of the C library is associated with a given
-#   executable binary (or loadable_module), depends on the variant used to
-#   build it.
+#   executable binary depends on the variant used to build it.
 #
 #   As a reminder, our build system provides the ability to enable different
 #   variants for different targets, e.g.:
