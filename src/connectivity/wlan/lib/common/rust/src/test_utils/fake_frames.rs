@@ -316,6 +316,17 @@ pub fn fake_wpa3_rsne() -> Vec<u8> {
     ]
 }
 
+pub fn fake_wpa3_transition_rsne() -> Vec<u8> {
+    vec![
+        48, 18, // Element header
+        1, 0, // Version
+        0x00, 0x0F, 0xAC, 2, // Group Cipher: TKIP
+        1, 0, 0x00, 0x0F, 0xAC, 4, // Pairwise Cipher: CCMP-128
+        1, 0, 0x00, 0x0F, 0xAC, 8, // 1 AKM: SAE
+        0xCC, 0x00, // RSN capabilities: MFP capable + required, 16 PTKSA replay counters
+    ]
+}
+
 // Valid except for management frame protection (MFP) required flag not being set
 pub fn invalid_wpa3_rsne() -> Vec<u8> {
     vec![

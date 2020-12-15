@@ -454,8 +454,7 @@ impl Rsne {
     /// AKM: PSK, SAE
     pub fn is_wpa2_rsn_compatible(&self) -> bool {
         let group_data_supported = self.group_data_cipher_suite.as_ref().map_or(false, |c| {
-            // IEEE allows TKIP usage only in GTKSAs for compatibility reasons.
-            // TKIP is considered broken and should never be used in a PTKSA or IGTKSA.
+            // IEEE allows TKIP usage only for compatibility reasons.
             c.has_known_usage()
                 && (c.suite_type == cipher::CCMP_128 || c.suite_type == cipher::TKIP)
         });
@@ -472,14 +471,16 @@ impl Rsne {
         group_data_supported && pairwise_supported && akm_supported && caps_supported
     }
 
-    /// WFA WPA3 Specification 1.0 requires SAE and MFP.
-    /// THe MFPR bit is required, except for Wpa2/Wpa3 compatibility mode.
-    /// Group data and pairwise cipher are CCMP-128 -- we choose not to allow legacy TKIP is this case.
+    /// Supported Ciphers and AKMs:
+    /// Group Data Ciphers: CCMP-128, TKIP
+    /// Pairwise Cipher: CCMP-128
+    /// AKM: SAE
+    /// The MFPR bit is required, except for Wpa2/Wpa3 compatibility mode.
     pub fn is_wpa3_rsn_compatible(&self) -> bool {
-        let group_data_supported = self
-            .group_data_cipher_suite
-            .as_ref()
-            .map_or(false, |c| c.has_known_usage() && c.suite_type == cipher::CCMP_128);
+        let group_data_supported = self.group_data_cipher_suite.as_ref().map_or(false, |c| {
+            c.has_known_usage()
+                && (c.suite_type == cipher::CCMP_128 || c.suite_type == cipher::TKIP)
+        });
         let pairwise_supported = self
             .pairwise_cipher_suites
             .iter()

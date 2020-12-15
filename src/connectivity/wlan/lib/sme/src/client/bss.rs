@@ -138,6 +138,7 @@ mod tests {
         assert!(!cfg.is_bss_compatible(&fake_bss!(Wpa1)));
         assert!(!cfg.is_bss_compatible(&fake_bss!(Wpa2NoPrivacy)));
         assert!(!cfg.is_bss_compatible(&fake_bss!(Wpa3)));
+        assert!(!cfg.is_bss_compatible(&fake_bss!(Wpa3Transition)));
         assert!(!cfg.is_bss_compatible(&fake_bss!(Eap)));
 
         // WEP support is configurable to be on or off:
@@ -147,6 +148,7 @@ mod tests {
         // WPA3 support is configurable to be on or off:
         let cfg = ClientConfig::from_config(Config::default(), true);
         assert!(cfg.is_bss_compatible(&fake_bss!(Wpa3)));
+        assert!(cfg.is_bss_compatible(&fake_bss!(Wpa3Transition)));
     }
 
     #[test]

@@ -108,7 +108,7 @@ pub const WPA2_PERSONAL: SuiteFilter = SuiteFilter {
 
 /// WFA, WPA3 Spec. 1.0, Chapter 3
 pub const WPA3_PERSONAL: SuiteFilter = SuiteFilter {
-    known_group_data_ciphers: &[cipher::CCMP_128],
+    known_group_data_ciphers: &[cipher::CCMP_128, cipher::TKIP],
     // WPA3 spec doesn't mention Fast BSS Transition, thus akm::FT_SAE is likely not supported.
     // For some reason, An AP we use for testing provide an option to turn on FT for WPA3 network,
     // but even then it still uses akm::SAE.
