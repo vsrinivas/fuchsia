@@ -14,7 +14,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/platform_access.h>
 #include <arch/x86/registers.h>
-#include <kernel/atomic.h>
+#include <fbl/atomic_ref.h>
 #include <ktl/atomic.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
@@ -77,15 +77,16 @@ uint64_t pv_clock_get_tsc_freq() {
   uint32_t tsc_mul = 0;
   int8_t tsc_shift = 0;
   uint32_t pre_version = 0, post_version = 0;
+  fbl::atomic_ref<volatile uint32_t> version(system_time->version);
   do {
-    pre_version = atomic_load_u32(&system_time->version);
+    pre_version = version.load();
     if (pre_version % 2 != 0) {
       arch::Yield();
       continue;
     }
     tsc_mul = system_time->tsc_mul;
     tsc_shift = system_time->tsc_shift;
-    post_version = atomic_load_u32(&system_time->version);
+    post_version = version.load();
   } while (pre_version != post_version);
 
   uint64_t tsc_khz = 1000000ULL << 32;
