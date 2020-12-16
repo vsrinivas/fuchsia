@@ -287,10 +287,6 @@ pub struct Executor {
     inner: Arc<Inner>,
     // A packet that has been dequeued but not processed. This is used by `run_one_step`.
     next_packet: Option<zx::Packet>,
-    // Synthetic main task, representing the main futures during the executor's lifetime.
-    main_task: Arc<MainTask>,
-    // Waker for the main task, cached for performance reasons.
-    main_waker: Waker,
 }
 
 impl fmt::Debug for Executor {
@@ -322,23 +318,21 @@ impl Executor {
     fn new_with_time(time: ExecutorTime) -> Result<Self, zx::Status> {
         let collector = Collector::new();
         collector.task_created(MAIN_TASK_ID);
-        let inner = Arc::new(Inner {
-            port: zx::Port::create()?,
-            done: AtomicBool::new(false),
-            threadiness: Threadiness::default(),
-            threads: Mutex::new(Vec::new()),
-            receivers: Mutex::new(PacketReceiverMap::new()),
-            task_count: AtomicUsize::new(MAIN_TASK_ID + 1),
-            active_tasks: Mutex::new(HashMap::new()),
-            ready_tasks: SegQueue::new(),
-            time: time,
-            collector,
-        });
-        let main_task =
-            Arc::new(MainTask { executor: Arc::downgrade(&inner), notifier: Notifier::default() });
-
-        let main_waker = futures::task::waker(main_task.clone());
-        let executor = Executor { inner, next_packet: None, main_task, main_waker };
+        let executor = Executor {
+            inner: Arc::new(Inner {
+                port: zx::Port::create()?,
+                done: AtomicBool::new(false),
+                threadiness: Threadiness::default(),
+                threads: Mutex::new(Vec::new()),
+                receivers: Mutex::new(PacketReceiverMap::new()),
+                task_count: AtomicUsize::new(MAIN_TASK_ID + 1),
+                active_tasks: Mutex::new(HashMap::new()),
+                ready_tasks: SegQueue::new(),
+                time: time,
+                collector,
+            }),
+            next_packet: None,
+        };
 
         executor.ehandle().set_local(TimerHeap::new());
 
@@ -372,6 +366,10 @@ impl Executor {
         EHandle { inner: self.inner.clone() }
     }
 
+    fn singlethreaded_main_task_wake(&self) -> Waker {
+        futures::task::waker(Arc::new(SingleThreadedMainTaskWake(Arc::downgrade(&self.inner))))
+    }
+
     /// Run a single future to completion on a single thread.
     // Takes `&mut self` to ensure that only one thread-manager is running at a time.
     pub fn run_singlethreaded<F>(&mut self, main_future: F) -> F::Output
@@ -387,7 +385,9 @@ impl Executor {
         let mut local_collector = self.inner.collector.create_local_collector();
 
         pin_mut!(main_future);
-        let mut res = self.main_task.poll(&mut main_future, &self.main_waker);
+        let waker = self.singlethreaded_main_task_wake();
+        let main_cx = &mut Context::from_waker(&waker);
+        let mut res = main_future.as_mut().poll(main_cx);
         local_collector.task_polled(
             MAIN_TASK_ID,
             /* complete */ false,
@@ -421,7 +421,7 @@ impl Executor {
                 match packet.key() {
                     EMPTY_WAKEUP_ID => {
                         local_collector.woke_up(WakeupReason::Notification);
-                        res = self.main_task.poll(&mut main_future, &self.main_waker);
+                        res = main_future.as_mut().poll(main_cx);
                         local_collector.task_polled(
                             MAIN_TASK_ID,
                             /* complete */ false,
@@ -474,7 +474,7 @@ impl Executor {
     /// Schedule the main future for being woken up. This is useful in conjunction with
     /// `run_one_step`.
     pub fn wake_main_future(&mut self) {
-        ArcWake::wake_by_ref(&self.main_task);
+        self.inner.notify_empty()
     }
 
     /// Run one iteration of the loop: dispatch the first available packet or timer. Returns `None`
@@ -530,7 +530,7 @@ impl Executor {
             self.next_packet.take().expect("consume_packet called but no packet available");
         match packet.key() {
             EMPTY_WAKEUP_ID => {
-                let res = self.main_task.poll(main_future, &self.main_waker);
+                let res = self.poll_main_future(main_future);
                 local_collector.task_polled(
                     MAIN_TASK_ID,
                     /* complete */ false,
@@ -547,6 +547,15 @@ impl Executor {
                 Poll::Pending
             }
         }
+    }
+
+    fn poll_main_future<F>(&mut self, main_future: &mut F) -> Poll<F::Output>
+    where
+        F: Future + Unpin,
+    {
+        let waker = self.singlethreaded_main_task_wake();
+        let main_cx = &mut Context::from_waker(&waker);
+        main_future.poll_unpin(main_cx)
     }
 
     fn next_step(
@@ -796,6 +805,17 @@ fn is_defunct_timer(timer: Option<&TimeWaker>) -> bool {
     match timer {
         None => false,
         Some(timer) => timer.waker_and_bool.upgrade().is_none(),
+    }
+}
+
+// Since there are no other threads running, we don't have to use the EMPTY_WAKEUP_ID,
+// so instead we save it for use as the main task wakeup id.
+struct SingleThreadedMainTaskWake(Weak<Inner>);
+impl ArcWake for SingleThreadedMainTaskWake {
+    fn wake_by_ref(arc_self: &Arc<Self>) {
+        if let Some(executor) = Weak::upgrade(&arc_self.0) {
+            executor.notify_empty();
+        }
     }
 }
 
@@ -1131,36 +1151,15 @@ impl Inner {
     }
 }
 
-/// Notifier is a helper which de-duplicates task wakeups. When embedded in a task, it keeps
-/// track of whether the task has been notified or not. This optimization is possible due
-/// to the futures contract which specifies that poll can occur any number of times, and as
-/// such the poll count must not be relied upon.
-#[derive(Default)]
-struct Notifier {
-    notified: AtomicBool,
-}
-
-impl Notifier {
-    /// Prepare for notification and enqueuing the task. If true, the caller should proceed with
-    /// scheduling the task. If false, another worker will ensure that this happens.
-    fn prepare_notify(&self) -> bool {
-        !self.notified.compare_and_swap(false, true, Ordering::AcqRel)
-    }
-
-    /// Reset the notification. Should be called prior to polling the task again.
-    fn reset(&self) {
-        self.notified.store(false, Ordering::Release);
-    }
+struct Task {
+    id: usize,
+    future: AtomicFuture,
+    executor: Arc<Inner>,
 }
 
 impl Task {
     fn new(id: usize, future: FutureObj<'static, ()>, executor: Arc<Inner>) -> Arc<Self> {
-        Arc::new(Self {
-            id,
-            future: AtomicFuture::new(future),
-            executor,
-            notifier: Notifier::default(),
-        })
+        Arc::new(Self { id, future: AtomicFuture::new(future), executor })
     }
 
     fn waker(self: &Arc<Self>) -> Arc<TaskWaker> {
@@ -1170,45 +1169,7 @@ impl Task {
     fn try_poll(self: &Arc<Self>) -> bool {
         let task_waker = self.waker();
         let w = waker_ref(&task_waker);
-        self.notifier.reset();
         self.future.try_poll(&mut Context::from_waker(&w)) == AttemptPollResult::IFinished
-    }
-}
-
-struct Task {
-    id: usize,
-    future: AtomicFuture,
-    executor: Arc<Inner>,
-    notifier: Notifier,
-}
-
-/// A synthetic main task which represents the "main future" as passed by the user.
-/// The main future can change during the lifetime of the executor, but the notification
-/// mechanism is shared.
-struct MainTask {
-    executor: Weak<Inner>,
-    notifier: Notifier,
-}
-
-impl ArcWake for MainTask {
-    fn wake_by_ref(arc_self: &Arc<Self>) {
-        if arc_self.notifier.prepare_notify() {
-            if let Some(executor) = Weak::upgrade(&arc_self.executor) {
-                executor.notify_empty();
-            }
-        }
-    }
-}
-
-impl MainTask {
-    /// Poll the main future using the notification semantics of the main task.
-    fn poll<F>(self: &Arc<Self>, main_future: &mut F, main_waker: &Waker) -> Poll<F::Output>
-    where
-        F: Future + Unpin,
-    {
-        self.notifier.reset();
-        let main_cx = &mut Context::from_waker(&main_waker);
-        main_future.poll_unpin(main_cx)
     }
 }
 
@@ -1219,10 +1180,8 @@ struct TaskWaker {
 impl ArcWake for TaskWaker {
     fn wake_by_ref(arc_self: &Arc<Self>) {
         if let Some(task) = Weak::upgrade(&arc_self.task) {
-            if task.notifier.prepare_notify() {
-                task.executor.ready_tasks.push(task.clone());
-                task.executor.notify_task_ready();
-            }
+            task.executor.ready_tasks.push(task.clone());
+            task.executor.notify_task_ready();
         }
     }
 }
@@ -1561,32 +1520,5 @@ mod tests {
         assert!(executor.run_until_stalled(&mut fut).is_ready());
         let snapshot = executor.inner.collector.snapshot();
         snapshot_sanity_check(&snapshot, 0);
-    }
-
-    // This future wakes itself up a number of times during the same cycle
-    async fn multi_wake(n: usize) {
-        let mut done = false;
-        futures::future::poll_fn(|cx| {
-            if done {
-                return Poll::Ready(());
-            }
-            for _ in 1..n {
-                cx.waker().wake_by_ref()
-            }
-            done = true;
-            Poll::Pending
-        })
-        .await;
-    }
-
-    #[test]
-    fn dedup_wakeups() {
-        let run = |n| {
-            let mut executor = Executor::new().unwrap();
-            executor.run_singlethreaded(multi_wake(n));
-            let snapshot = executor.inner.collector.snapshot();
-            snapshot.wakeups_notification
-        };
-        assert_eq!(run(5), run(10)); // Same number of notifications independent of wakeup calls
     }
 }
