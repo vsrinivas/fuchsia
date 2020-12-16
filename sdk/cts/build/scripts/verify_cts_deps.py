@@ -2,7 +2,6 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """A helper script for CTS dependency verification.
 
 The Compatibility Test Suite (CTS) has strict rules on GN dependencies. A CTS target may only depend
@@ -16,6 +15,7 @@ that the target may verify its own dependencies.
 """
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -31,11 +31,15 @@ class VerifyCtsDeps:
       cts_file (string): The path to (including) the file to be generated.
       invoker_label (string): The label of the invoker of cts_element.
       deps (list(string)): A list of fully qualified GN labels.
+      allowed_cts_deps(list(string)): A list of allowed deps found in //sdk/cts/allowed_cts_deps.gni"
+      allowed_cts_dirs(list(string)): A list of allowed directories found in //sdk/cts/allowed_cts_dirs.gni"
+      sdk_manifests(list(string)): A list of absolute paths to SDK manifest files.
 
-    Raises: ValueError if any parameter is empty or if root_build_dir does not exist.
+    Raises: ValueError if any parameter is empty, if root_build_dir does not exist, or if the sdk_manifests do not exist.
     """
 
-    def __init__(self, root_build_dir, cts_file, invoker_label, deps, allowed_cts_deps, allowed_cts_dirs):
+    def __init__(self, root_build_dir, cts_file, invoker_label, deps,
+                 allowed_cts_deps, allowed_cts_dirs, sdk_manifests):
         if root_build_dir and os.path.exists(root_build_dir):
             self.root_build_dir = root_build_dir
         else:
@@ -66,6 +70,14 @@ class VerifyCtsDeps:
         else:
             raise ValueError('allowed_cts_dirs cannot be empty')
 
+        if sdk_manifests:
+            for manifest in sdk_manifests:
+                if not os.path.isfile(manifest):
+                    raise ValueError('manifest %s does not exist' % manifest)
+            self.sdk_manifests = sdk_manifests
+        else:
+            raise ValueError('sdk_manifests cannot be empty')
+
     def get_file_path(self, dep):
         """Returns the path to a CTS file.
 
@@ -92,29 +104,6 @@ class VerifyCtsDeps:
 
         return self.root_build_dir + '/cts/' + dep + '/' + target_name + CTS_EXTENSION
 
-    def get_sdk_meta_path(self, dep):
-        """Returns the path to the targets ${target_name}_sdk.meta.json file.
-
-        Args:
-          dep (string): A GN label.
-
-        Returns:
-          A string containing the absolute path to the target's _sdk.meta.json file.
-        """
-        dep = dep[2:]
-
-        if ':' in dep:
-            # //sdk:core
-            dep, target_name = dep.split(':')
-        elif '/' in dep:
-            # //sdk/cts
-            _, target_name = dep.rsplit('/', 1)
-        else:
-            # //sdk
-            target_name = dep
-
-        return self.root_build_dir + '/gen/' + dep + '/' + target_name + '_sdk.meta.json'
-
     def verify_deps(self):
         """Verifies the element's dependencies are allowed in CTS.
 
@@ -128,7 +117,8 @@ class VerifyCtsDeps:
         for dep in self.deps:
             dep_found = False
 
-            if dep in self.allowed_cts_deps or os.path.exists(self.get_file_path(dep)):
+            if dep in self.allowed_cts_deps or os.path.exists(
+                    self.get_file_path(dep)):
                 dep_found = True
             else:
                 # Dep isn't in the allow list and a CTS file doesn't exist. Check if
@@ -139,13 +129,39 @@ class VerifyCtsDeps:
                         dep_found = True
 
                 # Check if dep is an SDK target.
-                if not dep_found and os.path.exists(self.get_sdk_meta_path(dep)):
-                    dep_found = True
+                if not dep_found:
+                    dep_found = self.verify_dep_in_sdk(dep)
 
             if not dep_found:
                 unaccepted_deps.append(dep)
 
         return unaccepted_deps
+
+    def verify_dep_in_sdk(self, dep):
+        """Verifies that a dependency is released in an SDK.
+
+        Looks for the dependency in the the list of SDK manifests.
+
+        Returns:
+            A boolean determining whether the dependency is released in an SDK.
+        """
+
+        sdk_atom_labels = {}
+        for sdk_manifest in self.sdk_manifests:
+            try:
+                with open(sdk_manifest, 'r') as manifest:
+                    data = json.load(manifest)
+            except json.JSONDecodeError:
+                continue
+            for atom in data['atoms']:
+                # SDK atoms are appended with one of the following and a
+                # toolchain, so we want to ignore them to match against the
+                # provided label.
+                match_label = re.compile("(?:(_sdk)|(_sdk_manifest)|(_sdk_legacy))\(.*\)")
+                label = re.sub(match_label, '', atom['gn-label'])
+                sdk_atom_labels[label] = atom['category']
+
+        return dep in sdk_atom_labels and sdk_atom_labels[dep] in [ 'partner', 'public' ]
 
     def create_cts_dep_file(self):
         """Create a CTS file containing the verified dependencies.
@@ -191,15 +207,19 @@ def main():
         '--allowed_cts_dirs',
         nargs='+',
         required=True,
-        help='The list of allowed CTS dependency directories in allowed_cts_deps.gni')
+        help=
+        'The list of allowed CTS dependency directories in allowed_cts_deps.gni'
+    )
+    parser.add_argument(
+        '--sdk_manifests',
+        nargs='+',
+        required=True,
+        help='The list of paths to public and partner SDK manifests')
     args = parser.parse_args()
     try:
-        cts_element = VerifyCtsDeps(args.root_build_dir,
-                                    args.output,
-                                    args.invoker_label,
-                                    args.deps,
-                                    args.allowed_cts_deps,
-                                    args.allowed_cts_dirs)
+        cts_element = VerifyCtsDeps(
+            args.root_build_dir, args.output, args.invoker_label, args.deps,
+            args.allowed_cts_deps, args.allowed_cts_dirs, args.sdk_manifests)
     except ValueError as e:
         print('ValueError: %s' % e)
         return 1

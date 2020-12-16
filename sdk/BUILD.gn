@@ -11,6 +11,8 @@ import("//build/sdk/sdk_documentation.gni")
 import("config.gni")
 
 # This default target should contain all public or partner SDKs.
+# Any public or partner SDKs added to this target should also be
+# added to ALLOWED_CTS_SDKS in //sdk/cts/build/allowed_cts_deps.gni.
 group("sdk") {
   testonly = true
 

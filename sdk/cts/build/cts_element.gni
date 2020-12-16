@@ -20,6 +20,16 @@ template("cts_element") {
 
   action(target_name) {
     forward_variables_from(invoker, "*")
+
+    inputs = []
+    foreach(sdk, ALLOWED_CTS_SDKS) {
+      sdk_manifest_copy = sdk + "_copy($target_toolchain)"
+      sdk_manifest = get_label_info(sdk_manifest_copy, "root_out_dir") +
+                     "/sdk/manifest/" + get_label_info(sdk, "name")
+      deps += [ sdk_manifest_copy ]
+      inputs += [ sdk_manifest ]
+    }
+
     testonly = true
 
     script = "//sdk/cts/build/scripts/verify_cts_deps.py"
@@ -36,6 +46,7 @@ template("cts_element") {
              invoker_label,
              "--deps",
            ] + fully_qualified_deps + [ "--allowed_cts_deps" ] +
-           ALLOWED_CTS_DEPS + [ "--allowed_cts_dirs" ] + ALLOWED_CTS_DIRS
+           ALLOWED_CTS_DEPS + [ "--allowed_cts_dirs" ] + ALLOWED_CTS_DIRS +
+           [ "--sdk_manifests" ] + rebase_path(inputs)
   }
 }

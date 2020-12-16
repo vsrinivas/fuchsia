@@ -7,19 +7,21 @@ ALLOWED_CTS_DEPS = [
   "//sdk/cts/tests/pkg/fidl/cpp:conformance_test_sources",
   "//sdk/cts/tests/pkg/fidl/cpp:union_migration_test_fidl",
   "//sdk/cts/tests/tools/package_manager:pm_test_package_gather_deps",
-  "//sdk/fidl/fuchsia.io:fuchsia.io",
-  "//sdk/lib/fdio:fdio",
   "//sdk/lib/fidl/cpp/test:collision_test",
+
+  # TODO(johnshamoon): Remove this and add a cts_fidl template.
   "//sdk/lib/fidl/cpp/test:fidl_test",
-  "//sdk/lib/fidl/cpp:cpp",
-  "//sdk/lib/fidl/cpp:cpp_base",
-  "//sdk/testing/sl4f/client:client",
   "//src/sys/pkg/bin/pm:host",
   "//zircon/public/lib/zxtest:zxtest",
-  "//zircon/system/ulib/async-loop:async-loop",
-  "//zircon/system/ulib/async-loop:async-loop-cpp",
-  "//zircon/system/ulib/async-loop:async-loop-default",
 ]
 
 # All targets in these directories and their subdirectories are approved for use in CTS.
 ALLOWED_CTS_DIRS = [ "//third_party/dart-pkg/pub/*" ]
+
+# This list should be kept up to date with the public and partner SDKs in //sdk:sdk.
+ALLOWED_CTS_SDKS = [
+  "//sdk:bootstrap",
+  "//sdk:core",
+  "//sdk:e2e_testing",
+  "//sdk:modular_testing",
+]
