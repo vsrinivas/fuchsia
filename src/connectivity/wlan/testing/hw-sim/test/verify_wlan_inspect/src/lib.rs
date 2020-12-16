@@ -181,9 +181,6 @@ async fn verify_wlan_inspect() {
             "1": contains {},
         },
         "iface-0": contains {
-            join_scan_events: contains {
-                "0": contains {},
-            },
             last_pulse: contains {
                 status: contains {
                     status_str: "connected",
@@ -261,9 +258,6 @@ async fn verify_wlan_inspect() {
             "1": contains {},
         },
         "iface-0": contains {
-            join_scan_events: contains {
-                "0": contains {},
-            },
             last_pulse: contains {
                 status: contains {
                     status_str: "idle",

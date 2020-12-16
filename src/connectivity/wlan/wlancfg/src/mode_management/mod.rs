@@ -36,6 +36,7 @@ pub(crate) fn create_iface_manager(
         ap_update_sender,
         dev_svc_proxy,
         saved_networks,
+        network_selector.clone(),
         cobalt_api,
     );
     let iface_manager_service = iface_manager::serve_iface_manager_requests(

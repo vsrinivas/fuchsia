@@ -340,15 +340,16 @@ impl ClientSme {
                 }
                 Ok(protection) => ViableBss { bss: &bss_desc, protection },
             };
-            self.context.info.report_candidate_network(bss_desc.clone());
             let protection = viable_bss.protection;
             let cmd = ConnectCommand {
-                bss: Box::new(bss_desc),
+                bss: Box::new(bss_desc.clone()),
                 responder: Some(responder),
                 protection,
                 radio_cfg: RadioConfig::from_fidl(req.radio_cfg),
             };
 
+            self.context.info.report_connect_started(ssid);
+            self.context.info.report_candidate_network(bss_desc);
             self.state = self.state.take().map(|state| state.connect(cmd, &mut self.context));
             return receiver;
         }

@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        client::{sme_credential_from_policy, types},
+        client::{network_selection, sme_credential_from_policy, types},
         config_management::SavedNetworksManager,
         util::{
             listener::{
@@ -16,18 +16,17 @@ use {
     },
     anyhow::format_err,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_async as fasync,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::{
         channel::{mpsc, oneshot},
-        future::FutureExt,
+        future::{self, FutureExt},
         select,
         stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
     },
     log::{debug, error, info, warn},
-    pin_utils::pin_mut,
     std::sync::Arc,
     void::ResultVoidErrExt,
     wlan_common::RadioConfig,
@@ -120,6 +119,7 @@ pub async fn serve(
     update_sender: ClientListenerMessageSender,
     saved_networks_manager: Arc<SavedNetworksManager>,
     connect_request: Option<(types::ConnectRequest, oneshot::Sender<()>)>,
+    network_selector: Arc<network_selection::NetworkSelector>,
     cobalt_api: CobaltSender,
 ) {
     let next_network = match connect_request {
@@ -141,6 +141,7 @@ pub async fn serve(
         req_stream: req_stream.fuse(),
         update_sender: update_sender,
         saved_networks_manager: saved_networks_manager,
+        network_selector,
         cobalt_api,
     };
     let state_machine =
@@ -168,6 +169,7 @@ struct CommonStateOptions {
     req_stream: ReqStream,
     update_sender: ClientListenerMessageSender,
     saved_networks_manager: Arc<SavedNetworksManager>,
+    network_selector: Arc<network_selection::NetworkSelector>,
     cobalt_api: CobaltSender,
 }
 
@@ -280,7 +282,53 @@ struct ConnectingOptions {
     attempt_counter: u8,
 }
 
-/// The CONNECTING state requests an SME connect. It handles the SME connect response:
+enum SmeOperation {
+    ConnectResult(Result<fidl_sme::ConnectResultCode, anyhow::Error>),
+    ScanResult(Option<Box<fidl_internal::BssDescription>>),
+}
+
+fn handle_connecting_error_and_retry(
+    common_options: CommonStateOptions,
+    options: ConnectingOptions,
+) -> Result<State, ExitReason> {
+    // Check if the limit for connection attempts to this network has been
+    // exceeded.
+    let new_attempt_count = options.attempt_counter + 1;
+    if new_attempt_count >= MAX_CONNECTION_ATTEMPTS {
+        info!("Exceeded maximum connection attempts, will not retry");
+        send_listener_state_update(
+            &common_options.update_sender,
+            ClientNetworkState {
+                id: options.connect_request.target.network,
+                state: types::ConnectionState::Failed,
+                status: Some(types::DisconnectStatus::ConnectionFailed),
+            },
+        );
+        return Err(ExitReason(Err(format_err!("exceeded connection attempt limit"))));
+    } else {
+        // Limit not exceeded, retry.
+        let next_connecting_options = ConnectingOptions {
+            connect_responder: None,
+            connect_request: types::ConnectRequest {
+                reason: types::ConnectReason::RetryAfterFailedConnectAttempt,
+                ..options.connect_request
+            },
+            attempt_counter: new_attempt_count,
+        };
+        let disconnecting_options = DisconnectingOptions {
+            disconnect_responder: None,
+            previous_network: None,
+            next_network: Some(next_connecting_options),
+            reason: types::DisconnectReason::FailedToConnect,
+        };
+        return Ok(to_disconnecting_state(common_options, disconnecting_options));
+    }
+}
+
+/// The CONNECTING state checks for the required bss information in the connection request. If not
+/// present, the state first requests an SME scan. For a failed scan, retry connection by passing a
+/// next_network to the DISCONNECTING state, as long as there haven't been too many attempts.
+/// Next, it requests an SME connect. It handles the SME connect response:
 /// - for a successful connection, transition to CONNECTED state
 /// - for a failed connection, retry connection by passing a next_network to the
 ///       DISCONNECTING state, as long as there haven't been too many connection attempts
@@ -290,31 +338,16 @@ struct ConnectingOptions {
 /// - disconnect requests cause a transition to DISCONNECTING state
 async fn connecting_state(
     mut common_options: CommonStateOptions,
-    options: ConnectingOptions,
+    mut options: ConnectingOptions,
 ) -> Result<State, ExitReason> {
     debug!("Entering connecting state");
+
     if options.attempt_counter > 0 {
         info!(
             "Retrying connection, {} attempts remaining",
             MAX_CONNECTION_ATTEMPTS - options.attempt_counter
         );
     }
-
-    // Send a connect request to the SME
-    let (connect_txn, remote) = create_proxy()
-        .map_err(|e| ExitReason(Err(format_err!("Failed to create proxy: {:?}", e))))?;
-    let mut sme_connect_request = fidl_sme::ConnectRequest {
-        ssid: options.connect_request.target.network.ssid.clone(),
-        bss_desc: options.connect_request.target.bss.clone(),
-        credential: sme_credential_from_policy(&options.connect_request.target.credential),
-        radio_cfg: RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl(),
-        deprecated_scan_type: fidl_fuchsia_wlan_common::ScanType::Active,
-    };
-    common_options.proxy.connect(&mut sme_connect_request, Some(remote)).map_err(|e| {
-        ExitReason(Err(format_err!("Failed to send command to wlanstack: {:?}", e)))
-    })?;
-    let pending_connect_request = wait_until_connected(connect_txn).fuse();
-    pin_mut!(pending_connect_request);
 
     // Send a "Connecting" update to listeners, unless this is a retry
     if options.attempt_counter == 0 {
@@ -334,102 +367,143 @@ async fn connecting_state(
         .log_event(CONNECTION_ATTEMPT_METRIC_ID, options.connect_request.reason);
 
     // Let the responder know we've successfully started this connection attempt
-    match options.connect_responder {
+    match options.connect_responder.take() {
         Some(responder) => responder.send(()).unwrap_or_else(|_| ()),
         None => {}
     }
 
+    // If detailed bss information was not provided, perform a scan to discover it
+    let network_selector = common_options.network_selector.clone();
+    let scan_future = match options.connect_request.target.bss {
+        Some(ref bss_desc) => {
+            future::ready(SmeOperation::ScanResult(Some(bss_desc.clone()))).boxed()
+        }
+        None => {
+            info!("Connection requested, scanning to find a BSS for the network");
+            network_selector
+                .find_connection_candidate_for_network(
+                    common_options.proxy.clone(),
+                    options.connect_request.target.network.clone(),
+                )
+                .map(|find_result| {
+                    SmeOperation::ScanResult(
+                        find_result
+                            .map(|types::ConnectionCandidate { bss, .. }| bss)
+                            .unwrap_or(None),
+                    )
+                })
+                .boxed()
+        }
+    };
+    let mut internal_futures = FuturesUnordered::new();
+    internal_futures.push(scan_future);
+
     loop {
         select! {
-            // Monitor the SME connection attempt
-            connected = pending_connect_request => {
-                let code = connected.map_err({
-                    |e| ExitReason(Err(format_err!("failed to send connect to sme: {:?}", e)))
-                })?;
-                // Notify the saved networks manager. observed_in_passive_scan will be false if
-                // network was seen in active scan, or None if no scan was performed.
-                let scan_type =
-                    options.connect_request.target.observed_in_passive_scan.map(|observed_in_passive_scan| {
-                        if observed_in_passive_scan {fidl_common::ScanType::Passive}
-                        else {fidl_common::ScanType::Active}
-                    });
-                common_options.saved_networks_manager.record_connect_result(
-                    options.connect_request.target.network.clone().into(),
-                    &options.connect_request.target.credential,
-                    code,
-                    scan_type
-                ).await;
-                match code {
-                    fidl_sme::ConnectResultCode::Success => {
-                        info!("Successfully connected to network");
-                        send_listener_state_update(
-                            &common_options.update_sender,
-                            ClientNetworkState {
-                                id: options.connect_request.target.network.clone(),
-                                state: types::ConnectionState::Connected,
-                                status: None
-                            },
-                        );
-                        return Ok(
-                            connected_state(common_options, options.connect_request).into_state()
-                        );
-                    },
-                    fidl_sme::ConnectResultCode::CredentialRejected => {
-                        info!("Failed to connect. Will not retry because of credential error: {:?}", code);
-                        send_listener_state_update(
-                            &common_options.update_sender,
-                            ClientNetworkState {
-                                id: options.connect_request.target.network,
-                                state: types::ConnectionState::Failed,
-                                status: Some(types::DisconnectStatus::CredentialsFailed),
-                            },
-                        );
-                        return Err(ExitReason(Err(format_err!("bad credentials"))));
-                    },
-                    other => {
-                        info!("Failed to connect: {:?}", other);
-                        // Check if the limit for connection attempts to this network has been
-                        // exceeded.
-                        let new_attempt_count = options.attempt_counter + 1;
-                        if new_attempt_count >= MAX_CONNECTION_ATTEMPTS {
-                            info!("Exceeded maximum connection attempts, will not retry");
+            // Monitor the SME operations
+            completed_future = internal_futures.select_next_some() => match completed_future {
+                SmeOperation::ScanResult(bss_desc) => {
+                    if bss_desc.is_none() {
+                        info!("Failed to find a BSS to connect to.");
+                        return handle_connecting_error_and_retry(common_options, options);
+                    }
+                    // Send a connect request to the SME
+                    let (connect_txn, remote) = create_proxy()
+                        .map_err(|e| ExitReason(Err(format_err!("Failed to create proxy: {:?}", e))))?;
+                    let mut sme_connect_request = fidl_sme::ConnectRequest {
+                        ssid: options.connect_request.target.network.ssid.clone(),
+                        bss_desc: bss_desc,
+                        credential: sme_credential_from_policy(&options.connect_request.target.credential),
+                        radio_cfg: RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl(),
+                        deprecated_scan_type: fidl_fuchsia_wlan_common::ScanType::Active,
+                    };
+                    common_options.proxy.connect(&mut sme_connect_request, Some(remote)).map_err(|e| {
+                        ExitReason(Err(format_err!("Failed to send command to wlanstack: {:?}", e)))
+                    })?;
+                    let pending_connect_request = wait_until_connected(connect_txn)
+                        .map(|res| SmeOperation::ConnectResult(res))
+                        .boxed();
+                    internal_futures.push(pending_connect_request);
+                },
+                SmeOperation::ConnectResult(connect_result) => {
+                    let code = connect_result.map_err({
+                        |e| ExitReason(Err(format_err!("failed to send connect to sme: {:?}", e)))
+                    })?;
+                    // Notify the saved networks manager. observed_in_passive_scan will be false if
+                    // network was seen in active scan, or None if no scan was performed.
+                    let scan_type =
+                        options.connect_request.target.observed_in_passive_scan.map(|observed_in_passive_scan| {
+                            if observed_in_passive_scan {fidl_common::ScanType::Passive}
+                            else {fidl_common::ScanType::Active}
+                        });
+                    common_options.saved_networks_manager.record_connect_result(
+                        options.connect_request.target.network.clone().into(),
+                        &options.connect_request.target.credential,
+                        code,
+                        scan_type
+                    ).await;
+                    match code {
+                        fidl_sme::ConnectResultCode::Success => {
+                            info!("Successfully connected to network");
+                            send_listener_state_update(
+                                &common_options.update_sender,
+                                ClientNetworkState {
+                                    id: options.connect_request.target.network.clone(),
+                                    state: types::ConnectionState::Connected,
+                                    status: None
+                                },
+                            );
+                            return Ok(
+                                connected_state(common_options, options.connect_request).into_state()
+                            );
+                        },
+                        fidl_sme::ConnectResultCode::CredentialRejected => {
+                            info!("Failed to connect. Will not retry because of credential error: {:?}", code);
                             send_listener_state_update(
                                 &common_options.update_sender,
                                 ClientNetworkState {
                                     id: options.connect_request.target.network,
                                     state: types::ConnectionState::Failed,
-                                    status: Some(types::DisconnectStatus::ConnectionFailed)
+                                    status: Some(types::DisconnectStatus::CredentialsFailed),
                                 },
                             );
-                            return Err(
-                                ExitReason(Err(format_err!("exceeded connection attempt limit")))
-                            );
-                        } else {
-                            // Limit not exceeded, retry.
-                            let next_connecting_options = ConnectingOptions {
-                                connect_responder: None,
-                                connect_request: types::ConnectRequest {
-                                    reason: types::ConnectReason::RetryAfterFailedConnectAttempt,
-                                    ..options.connect_request
-                                },
-                                attempt_counter: new_attempt_count,
-                            };
-                            let disconnecting_options = DisconnectingOptions {
-                                disconnect_responder: None,
-                                previous_network: None,
-                                next_network: Some(next_connecting_options),
-                                reason: types::DisconnectReason::FailedToConnect
-                            };
-                            return Ok(to_disconnecting_state(common_options, disconnecting_options));
+                            return Err(ExitReason(Err(format_err!("bad credentials"))));
+                        },
+                        other => {
+                            info!("Failed to connect: {:?}", other);
+                            return handle_connecting_error_and_retry(common_options, options);
                         }
-                    }
-                };
+                    };
+                },
             },
             // Monitor incoming ManualRequests
-            new_req = common_options.req_stream.next() => {
-                match new_req {
-                    Some(ManualRequest::Disconnect((reason, responder))) => {
-                        info!("Cancelling pending connect due to disconnect request");
+            new_req = common_options.req_stream.next() => match new_req {
+                Some(ManualRequest::Disconnect((reason, responder))) => {
+                    info!("Cancelling pending connect due to disconnect request");
+                    send_listener_state_update(
+                        &common_options.update_sender,
+                        ClientNetworkState {
+                            id: options.connect_request.target.network,
+                            state: types::ConnectionState::Disconnected,
+                            status: Some(types::DisconnectStatus::ConnectionStopped)
+                        },
+                    );
+                    let options = DisconnectingOptions {
+                        disconnect_responder: Some(responder),
+                        previous_network: None,
+                        next_network: None,
+                        reason
+                    };
+                    return Ok(to_disconnecting_state(common_options, options));
+                }
+                Some(ManualRequest::Connect((new_connect_request, new_responder))) => {
+                    // Check if it's the same network as we're currently connected to.
+                    // If yes, dedupe the request.
+                    if (new_connect_request.target.network == options.connect_request.target.network) {
+                        info!("Received duplicate connection request, deduping");
+                        new_responder.send(()).unwrap_or_else(|_| ());
+                    } else {
+                        info!("Cancelling pending connect due to new connection request");
                         send_listener_state_update(
                             &common_options.update_sender,
                             ClientNetworkState {
@@ -438,53 +512,28 @@ async fn connecting_state(
                                 status: Some(types::DisconnectStatus::ConnectionStopped)
                             },
                         );
-                        let options = DisconnectingOptions {
-                            disconnect_responder: Some(responder),
-                            previous_network: None,
-                            next_network: None,
-                            reason
+                        let next_connecting_options = ConnectingOptions {
+                            connect_responder: Some(new_responder),
+                            connect_request: new_connect_request.clone(),
+                            attempt_counter: 0,
                         };
-                        return Ok(to_disconnecting_state(common_options, options));
-                    }
-                    Some(ManualRequest::Connect((new_connect_request, new_responder))) => {
-                        // Check if it's the same network as we're currently connected to.
-                        // If yes, dedupe the request.
-                        if (new_connect_request.target.network == options.connect_request.target.network) {
-                            info!("Received duplicate connection request, deduping");
-                            new_responder.send(()).unwrap_or_else(|_| ());
-                        } else {
-                            info!("Cancelling pending connect due to new connection request");
-                            send_listener_state_update(
-                                &common_options.update_sender,
-                                ClientNetworkState {
-                                    id: options.connect_request.target.network,
-                                    state: types::ConnectionState::Disconnected,
-                                    status: Some(types::DisconnectStatus::ConnectionStopped)
-                                },
-                            );
-                            let next_connecting_options = ConnectingOptions {
-                                connect_responder: Some(new_responder),
-                                connect_request: new_connect_request.clone(),
-                                attempt_counter: 0,
-                            };
-                            let disconnecting_options = DisconnectingOptions {
-                                disconnect_responder: None,
-                                previous_network: None,
-                                next_network: Some(next_connecting_options),
-                                reason: match new_connect_request.reason {
-                                    types::ConnectReason::ProactiveNetworkSwitch => types::DisconnectReason::ProactiveNetworkSwitch,
-                                    types::ConnectReason::FidlConnectRequest => types::DisconnectReason::FidlConnectRequest,
-                                    _ => {
-                                        error!("Unexpected connection reason: {:?}", new_connect_request.reason);
-                                        types::DisconnectReason::Unknown
-                                    }
+                        let disconnecting_options = DisconnectingOptions {
+                            disconnect_responder: None,
+                            previous_network: None,
+                            next_network: Some(next_connecting_options),
+                            reason: match new_connect_request.reason {
+                                types::ConnectReason::ProactiveNetworkSwitch => types::DisconnectReason::ProactiveNetworkSwitch,
+                                types::ConnectReason::FidlConnectRequest => types::DisconnectReason::FidlConnectRequest,
+                                _ => {
+                                    error!("Unexpected connection reason: {:?}", new_connect_request.reason);
+                                    types::DisconnectReason::Unknown
                                 }
-                            };
-                            return Ok(to_disconnecting_state(common_options, disconnecting_options));
-                        }
+                            }
+                        };
+                        return Ok(to_disconnecting_state(common_options, disconnecting_options));
                     }
-                    None => return handle_none_request(),
-                };
+                }
+                None => return handle_none_request(),
             },
         }
     }
@@ -531,7 +580,12 @@ async fn connected_state(
                             connect_responder: None,
                             connect_request: types::ConnectRequest {
                                 reason: types::ConnectReason::RetryAfterDisconnectDetected,
-                                ..currently_fulfilled_request.clone()
+                                target: types::ConnectionCandidate {
+                                    // strip out the bss info to force a new scan
+                                    bss: None,
+                                    observed_in_passive_scan: None,
+                                    ..currently_fulfilled_request.target.clone()
+                                }
                             },
                             attempt_counter: 0,
                         };
@@ -609,7 +663,8 @@ mod tests {
                 logger::set_logger_for_test,
                 testing::{
                     create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
-                    generate_random_bss_desc, poll_sme_req,
+                    generate_random_bss_desc, generate_random_bss_info, poll_sme_req,
+                    validate_sme_scan_request_and_send_results,
                 },
             },
             validate_cobalt_events, validate_no_cobalt_events,
@@ -621,6 +676,7 @@ mod tests {
         fuchsia_cobalt::CobaltEventExt,
         fuchsia_zircon,
         futures::{task::Poll, Future},
+        pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
         wlan_common::assert_variant,
     };
@@ -646,6 +702,10 @@ mod tests {
                 .expect("Failed to create saved networks manager"),
         );
         let (cobalt_api, cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            saved_networks_manager.clone(),
+            create_mock_cobalt_sender(),
+        ));
 
         TestValues {
             common_options: CommonStateOptions {
@@ -653,6 +713,7 @@ mod tests {
                 req_stream: client_req_stream.fuse(),
                 update_sender: update_sender,
                 saved_networks_manager: saved_networks_manager,
+                network_selector,
                 cobalt_api,
             },
             sme_req_stream,
@@ -709,6 +770,10 @@ mod tests {
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks_manager = Arc::new(saved_networks);
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            saved_networks_manager.clone(),
+            create_mock_cobalt_sender(),
+        ));
         let next_network_ssid = "bar";
         let bss_desc = generate_random_bss_desc();
         let connect_request = types::ConnectRequest {
@@ -752,6 +817,7 @@ mod tests {
             req_stream: client_req_stream.fuse(),
             update_sender: update_sender,
             saved_networks_manager: saved_networks_manager.clone(),
+            network_selector,
             cobalt_api: cobalt_api,
         };
         let initial_state = connecting_state(common_options, connecting_options);
@@ -833,6 +899,187 @@ mod tests {
             network_config::PROB_HIDDEN_IF_CONNECT_PASSIVE,
             saved_networks[0].hidden_probability
         );
+
+        // Progress the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Ensure no further updates were sent to listeners
+        assert_variant!(exec.run_until_stalled(&mut update_receiver.into_future()), Poll::Pending);
+
+        // Cobalt metrics logged
+        validate_cobalt_events!(
+            cobalt_events,
+            CONNECTION_ATTEMPT_METRIC_ID,
+            types::ConnectReason::FidlConnectRequest
+        );
+    }
+
+    #[test]
+    fn connecting_state_successfully_scans_and_connects() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        // Do test set up manually to get stash server
+        set_logger_for_test();
+        let (_client_req_sender, client_req_stream) = mpsc::channel(1);
+        let (update_sender, mut update_receiver) = mpsc::unbounded();
+        let (sme_proxy, sme_server) =
+            create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
+        let mut sme_req_stream =
+            sme_server.into_stream().expect("could not create SME request stream");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join(rand_string());
+        let tmp_path = temp_dir.path().join(rand_string());
+        let (saved_networks, mut stash_server) =
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+        let saved_networks_manager = Arc::new(saved_networks);
+        let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            saved_networks_manager.clone(),
+            create_mock_cobalt_sender(),
+        ));
+        let next_network_ssid = "bar";
+        let bss_desc = generate_random_bss_desc();
+        let connect_request = types::ConnectRequest {
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: next_network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wep,
+                },
+                credential: Credential::Password("Anything".as_bytes().to_vec()),
+                observed_in_passive_scan: None,
+                bss: None,
+            },
+            reason: types::ConnectReason::FidlConnectRequest,
+        };
+
+        // Store the network in the saved_networks_manager, so we can record connection success
+        let save_fut = saved_networks_manager.store(
+            connect_request.target.network.clone().into(),
+            connect_request.target.credential.clone(),
+        );
+        pin_mut!(save_fut);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
+        process_stash_write(&mut exec, &mut stash_server);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
+
+        // Check that the saved networks manager has the expected initial data
+        let saved_networks = exec.run_singlethreaded(
+            saved_networks_manager.lookup(connect_request.target.network.clone().into()),
+        );
+        assert_eq!(false, saved_networks[0].has_ever_connected);
+        assert!(saved_networks[0].hidden_probability > 0.0);
+
+        let (connect_sender, mut connect_receiver) = oneshot::channel();
+        let connecting_options = ConnectingOptions {
+            connect_responder: Some(connect_sender),
+            connect_request: connect_request.clone(),
+            attempt_counter: 0,
+        };
+        let common_options = CommonStateOptions {
+            proxy: sme_proxy,
+            req_stream: client_req_stream.fuse(),
+            update_sender: update_sender,
+            saved_networks_manager: saved_networks_manager.clone(),
+            network_selector,
+            cobalt_api: cobalt_api,
+        };
+        let initial_state = connecting_state(common_options, connecting_options);
+        let fut = run_state_machine(initial_state);
+        pin_mut!(fut);
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Ensure a scan request is sent to the SME and send back a result
+        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: vec![next_network_ssid.as_bytes().to_vec()],
+            channels: vec![],
+        });
+        let scan_results = vec![fidl_sme::BssInfo {
+            ssid: next_network_ssid.as_bytes().to_vec(),
+            bss_desc: bss_desc.clone(),
+            compatible: true,
+            protection: fidl_sme::Protection::Wep,
+            ..generate_random_bss_info()
+        }];
+        validate_sme_scan_request_and_send_results(
+            &mut exec,
+            &mut sme_req_stream,
+            &expected_scan_request,
+            scan_results,
+        );
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Ensure a connect request is sent to the SME
+        let sme_fut = sme_req_stream.into_future();
+        pin_mut!(sme_fut);
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
+                assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
+                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(req.bss_desc, bss_desc);
+                assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
+                assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
+                // Send connection response.
+                let (_stream, ctrl) = txn.expect("connect txn unused")
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_finished(fidl_sme::ConnectResultCode::Success)
+                    .expect("failed to send connection completion");
+            }
+        );
+
+        // Check for a connecting update
+        let client_state_update = ClientStateUpdate {
+            state: None,
+            networks: vec![ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: String::from(next_network_ssid).into_bytes(),
+                    type_: fidl_policy::SecurityType::Wep,
+                },
+                state: fidl_policy::ConnectionState::Connecting,
+                status: None,
+            }],
+        };
+        assert_variant!(
+            update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert_eq!(updates, client_state_update);
+        });
+
+        // Progress the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+        process_stash_write(&mut exec, &mut stash_server);
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Check the responder was acknowledged
+        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
+
+        // Check for a connect update
+        let client_state_update = ClientStateUpdate {
+            state: None,
+            networks: vec![ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: String::from(next_network_ssid).into_bytes(),
+                    type_: fidl_policy::SecurityType::Wep,
+                },
+                state: fidl_policy::ConnectionState::Connected,
+                status: None,
+            }],
+        };
+        assert_variant!(
+            update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert_eq!(updates, client_state_update);
+        });
+
+        // Check that the saved networks manager has the connection recorded
+        let saved_networks = exec.run_singlethreaded(
+            saved_networks_manager.lookup(connect_request.target.network.clone().into()),
+        );
+        assert_eq!(true, saved_networks[0].has_ever_connected);
+        assert_eq!(network_config::PROB_HIDDEN_DEFAULT, saved_networks[0].hidden_probability);
 
         // Progress the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -993,6 +1240,177 @@ mod tests {
     }
 
     #[test]
+    fn connecting_state_fails_to_scan_and_retries() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        // Do test set up manually to get stash server
+        set_logger_for_test();
+        let (_client_req_sender, client_req_stream) = mpsc::channel(1);
+        let (update_sender, mut update_receiver) = mpsc::unbounded();
+        let (sme_proxy, sme_server) =
+            create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
+        let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join(rand_string());
+        let tmp_path = temp_dir.path().join(rand_string());
+        let (saved_networks, mut stash_server) =
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+        let saved_networks_manager = Arc::new(saved_networks);
+        let (cobalt_api, _cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            saved_networks_manager.clone(),
+            create_mock_cobalt_sender(),
+        ));
+        let next_network_ssid = "bar";
+        let bss_desc = generate_random_bss_desc();
+        let connect_request = types::ConnectRequest {
+            target: types::ConnectionCandidate {
+                network: types::NetworkIdentifier {
+                    ssid: next_network_ssid.as_bytes().to_vec(),
+                    type_: types::SecurityType::Wpa2,
+                },
+                credential: Credential::Password("Anything".as_bytes().to_vec()),
+                observed_in_passive_scan: None,
+                bss: None,
+            },
+            reason: types::ConnectReason::FidlConnectRequest,
+        };
+
+        // Store the network in the saved_networks_manager, so we can record connection success
+        let save_fut = saved_networks_manager.store(
+            connect_request.target.network.clone().into(),
+            connect_request.target.credential.clone(),
+        );
+        pin_mut!(save_fut);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
+        process_stash_write(&mut exec, &mut stash_server);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
+
+        let (connect_sender, mut connect_receiver) = oneshot::channel();
+        let connecting_options = ConnectingOptions {
+            connect_responder: Some(connect_sender),
+            connect_request: connect_request.clone(),
+            attempt_counter: 0,
+        };
+        let common_options = CommonStateOptions {
+            proxy: sme_proxy,
+            req_stream: client_req_stream.fuse(),
+            update_sender: update_sender,
+            saved_networks_manager: saved_networks_manager.clone(),
+            network_selector,
+            cobalt_api: cobalt_api,
+        };
+        let initial_state = connecting_state(common_options, connecting_options);
+        let fut = run_state_machine(initial_state);
+        pin_mut!(fut);
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Check the responder was acknowledged
+        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
+
+        // Ensure a scan request is sent to the SME
+        let sme_fut = sme_req_stream.into_future();
+        pin_mut!(sme_fut);
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Scan{ txn, .. }) => {
+                // Send failed scan response.
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_error(&mut fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::InternalError,
+                    message: "Failed to scan".to_string()
+                })
+                    .expect("failed to send scan error");
+            }
+        );
+
+        // Check for a connecting update
+        let client_state_update = ClientStateUpdate {
+            state: None,
+            networks: vec![ClientNetworkState {
+                id: fidl_policy::NetworkIdentifier {
+                    ssid: String::from(next_network_ssid).into_bytes(),
+                    type_: fidl_policy::SecurityType::Wpa2,
+                },
+                state: fidl_policy::ConnectionState::Connecting,
+                status: None,
+            }],
+        };
+        assert_variant!(
+            update_receiver.try_next(),
+            Ok(Some(listener::Message::NotifyListeners(updates))) => {
+            assert_eq!(updates, client_state_update);
+        });
+
+        // Progress the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Ensure a disconnect request is sent to the SME
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Disconnect{ responder }) => {
+                responder.send().expect("could not send sme response");
+            }
+        );
+
+        // Progress the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Ensure a new scan request is sent to the SME
+        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: vec![next_network_ssid.as_bytes().to_vec()],
+            channels: vec![],
+        });
+        let mut scan_results = vec![fidl_sme::BssInfo {
+            ssid: next_network_ssid.as_bytes().to_vec(),
+            bss_desc: bss_desc.clone(),
+            compatible: true,
+            protection: fidl_sme::Protection::Wpa2Personal,
+            ..generate_random_bss_info()
+        }];
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Scan {
+                txn, req, control_handle: _
+            }) => {
+                // Validate the request
+                assert_eq!(req, expected_scan_request);
+                // Send all the APs
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_result(&mut scan_results.iter_mut())
+                    .expect("failed to send scan data");
+
+                // Send the end of data
+                ctrl.send_on_finished()
+                    .expect("failed to send scan data");
+            }
+        );
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Ensure a connect request is sent to the SME
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
+                assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
+                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(req.bss_desc, bss_desc);
+                assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
+                assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
+                 // Send connection response.
+                let (_stream, ctrl) = txn.expect("connect txn unused")
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_finished(fidl_sme::ConnectResultCode::Success)
+                    .expect("failed to send connection completion");
+            }
+        );
+    }
+
+    #[test]
     fn connecting_state_fails_to_connect_at_max_retries() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         // Don't use test_values() because of issue with KnownEssStore
@@ -1016,11 +1434,16 @@ mod tests {
         );
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            saved_networks_manager.clone(),
+            create_mock_cobalt_sender(),
+        ));
         let common_options = CommonStateOptions {
             proxy: sme_proxy,
             req_stream: client_req_stream.fuse(),
             update_sender: update_sender,
             saved_networks_manager: saved_networks_manager.clone(),
+            network_selector,
             cobalt_api: cobalt_api,
         };
 
@@ -1146,11 +1569,17 @@ mod tests {
         );
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            saved_networks_manager.clone(),
+            create_mock_cobalt_sender(),
+        ));
+
         let common_options = CommonStateOptions {
             proxy: sme_proxy,
             req_stream: client_req_stream.fuse(),
             update_sender: update_sender,
             saved_networks_manager: saved_networks_manager.clone(),
+            network_selector,
             cobalt_api: cobalt_api,
         };
 
@@ -1258,6 +1687,7 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let next_network_ssid = "bar";
+        let bss_desc = generate_random_bss_desc();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1266,7 +1696,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss: bss_desc.clone(),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
@@ -1309,7 +1739,17 @@ mod tests {
         // Send a duplicate connect request
         let mut client = Client::new(test_values.client_req_sender);
         let (connect_sender2, mut connect_receiver2) = oneshot::channel();
-        client.connect(connect_request.clone(), connect_sender2).expect("failed to make request");
+        let duplicate_request = types::ConnectRequest {
+            target: {
+                types::ConnectionCandidate {
+                    bss: None, // this incoming request should be deduped regardless of the bss info
+                    ..connect_request.clone().target
+                }
+            },
+            // this incoming request should be deduped regardless of the reason
+            reason: types::ConnectReason::ProactiveNetworkSwitch,
+        };
+        client.connect(duplicate_request, connect_sender2).expect("failed to make request");
 
         // Progress the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -1325,6 +1765,7 @@ mod tests {
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential.clone()));
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_chan: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
+                assert_eq!(req.bss_desc, bss_desc);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -1721,8 +2162,8 @@ mod tests {
         // Ensure the state machine exits
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
 
-        // Expect the responder to have an error
-        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Err(_)));
+        // Expect the responder to have a success, since the connection was attempted
+        assert_variant!(exec.run_until_stalled(&mut connect_receiver), Poll::Ready(Ok(())));
     }
 
     #[test]
@@ -2077,8 +2518,24 @@ mod tests {
     #[test]
     fn connected_state_detects_network_disconnect() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
-
+        // Do test set up manually to get stash server
+        set_logger_for_test();
+        let (_client_req_sender, client_req_stream) = mpsc::channel(1);
+        let (update_sender, mut update_receiver) = mpsc::unbounded();
+        let (sme_proxy, sme_server) =
+            create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
+        let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join(rand_string());
+        let tmp_path = temp_dir.path().join(rand_string());
+        let (saved_networks, mut stash_server) =
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+        let saved_networks_manager = Arc::new(saved_networks);
+        let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let network_selector = Arc::new(network_selection::NetworkSelector::new(
+            saved_networks_manager.clone(),
+            create_mock_cobalt_sender(),
+        ));
         let network_ssid = "foo";
         let bss_desc = generate_random_bss_desc();
         let connect_request = types::ConnectRequest {
@@ -2087,16 +2544,35 @@ mod tests {
                     ssid: network_ssid.as_bytes().to_vec(),
                     type_: types::SecurityType::Wpa2,
                 },
-                credential: Credential::None,
+                credential: Credential::Password("Anything".as_bytes().to_vec()),
                 observed_in_passive_scan: Some(true),
                 bss: bss_desc.clone(),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
-        let initial_state = connected_state(test_values.common_options, connect_request.clone());
+
+        // Store the network in the saved_networks_manager, so we can record connection success
+        let save_fut = saved_networks_manager.store(
+            connect_request.target.network.clone().into(),
+            connect_request.target.credential.clone(),
+        );
+        pin_mut!(save_fut);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Pending);
+        process_stash_write(&mut exec, &mut stash_server);
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
+
+        let common_options = CommonStateOptions {
+            proxy: sme_proxy,
+            req_stream: client_req_stream.fuse(),
+            update_sender: update_sender,
+            saved_networks_manager: saved_networks_manager.clone(),
+            network_selector,
+            cobalt_api: cobalt_api,
+        };
+        let initial_state = connected_state(common_options, connect_request.clone());
         let fut = run_state_machine(initial_state);
         pin_mut!(fut);
-        let sme_fut = test_values.sme_req_stream.into_future();
+        let sme_fut = sme_req_stream.into_future();
         pin_mut!(sme_fut);
 
         // Run the state machine
@@ -2140,17 +2616,52 @@ mod tests {
             }],
         };
         assert_variant!(
-            test_values.update_receiver.try_next(),
+            update_receiver.try_next(),
             Ok(Some(listener::Message::NotifyListeners(updates))) => {
             assert_eq!(updates, client_state_update);
         });
+
+        // Check for a scan to find a new BSS to reconnect with
+        let new_bss_desc = generate_random_bss_desc();
+        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: vec![network_ssid.as_bytes().to_vec()],
+            channels: vec![],
+        });
+        let mut scan_results = vec![fidl_sme::BssInfo {
+            ssid: network_ssid.as_bytes().to_vec(),
+            bss_desc: new_bss_desc.clone(),
+            compatible: true,
+            protection: fidl_sme::Protection::Wpa2Personal,
+            ..generate_random_bss_info()
+        }];
+        assert_variant!(
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Scan {
+                txn, req, control_handle: _
+            }) => {
+                // Validate the request
+                assert_eq!(req, expected_scan_request);
+                // Send all the APs
+                let (_stream, ctrl) = txn
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_result(&mut scan_results.iter_mut())
+                    .expect("failed to send scan data");
+
+                // Send the end of data
+                ctrl.send_on_finished()
+                    .expect("failed to send scan data");
+            }
+        );
+
+        // Run the state machine
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // Check for an SME request to reconnect
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, network_ssid.as_bytes().to_vec());
-                assert_eq!(req.bss_desc, bss_desc.clone());
+                assert_eq!(req.bss_desc, new_bss_desc.clone());
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -2172,19 +2683,19 @@ mod tests {
             }],
         };
         assert_variant!(
-            test_values.update_receiver.try_next(),
+            update_receiver.try_next(),
             Ok(Some(listener::Message::NotifyListeners(updates))) => {
             assert_eq!(updates, client_state_update);
         });
 
         // Cobalt metrics logged
         validate_cobalt_events!(
-            test_values.cobalt_events,
+            cobalt_events,
             DISCONNECTION_METRIC_ID,
             types::DisconnectReason::DisconnectDetectedFromSme
         );
         validate_cobalt_events!(
-            test_values.cobalt_events,
+            cobalt_events,
             CONNECTION_ATTEMPT_METRIC_ID,
             types::ConnectReason::RetryAfterDisconnectDetected
         );
@@ -2401,6 +2912,7 @@ mod tests {
             test_values.common_options.update_sender,
             test_values.common_options.saved_networks_manager,
             Some((connect_req, sender)),
+            test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
         );
         pin_mut!(fut);
@@ -2459,6 +2971,7 @@ mod tests {
             test_values.common_options.update_sender,
             test_values.common_options.saved_networks_manager,
             Some((connect_req, sender)),
+            test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
         );
         pin_mut!(fut);
@@ -2515,6 +3028,7 @@ mod tests {
             test_values.common_options.update_sender,
             test_values.common_options.saved_networks_manager,
             Some((connect_req, sender)),
+            test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
         );
         pin_mut!(fut);
@@ -2639,6 +3153,7 @@ mod tests {
             test_values.common_options.update_sender,
             test_values.common_options.saved_networks_manager,
             Some((connect_req, sender)),
+            test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
         );
         pin_mut!(fut);

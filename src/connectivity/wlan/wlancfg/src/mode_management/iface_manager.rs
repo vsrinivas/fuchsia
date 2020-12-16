@@ -66,6 +66,7 @@ async fn create_client_state_machine(
     dev_svc_proxy: &mut fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
     client_update_sender: listener::ClientListenerMessageSender,
     saved_networks: Arc<SavedNetworksManager>,
+    network_selector: Arc<NetworkSelector>,
     connect_req: Option<(client_types::ConnectRequest, oneshot::Sender<()>)>,
     cobalt_api: CobaltSender,
 ) -> Result<
@@ -95,6 +96,7 @@ async fn create_client_state_machine(
         client_update_sender,
         saved_networks,
         connect_req,
+        network_selector,
         cobalt_api,
     );
 
@@ -115,6 +117,7 @@ pub(crate) struct IfaceManagerService {
     clients: Vec<ClientIfaceContainer>,
     aps: Vec<ApIfaceContainer>,
     saved_networks: Arc<SavedNetworksManager>,
+    network_selector: Arc<NetworkSelector>,
     fsm_futures:
         FuturesUnordered<future_with_metadata::FutureWithMetadata<(), StateMachineMetadata>>,
     cobalt_api: CobaltSender,
@@ -127,6 +130,7 @@ impl IfaceManagerService {
         ap_update_sender: listener::ApListenerMessageSender,
         dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
         saved_networks: Arc<SavedNetworksManager>,
+        network_selector: Arc<NetworkSelector>,
         cobalt_api: CobaltSender,
     ) -> Self {
         IfaceManagerService {
@@ -137,6 +141,7 @@ impl IfaceManagerService {
             clients: Vec::new(),
             aps: Vec::new(),
             saved_networks: saved_networks,
+            network_selector,
             fsm_futures: FuturesUnordered::new(),
             cobalt_api,
         }
@@ -360,6 +365,7 @@ impl IfaceManagerService {
                     &mut self.dev_svc_proxy,
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
+                    self.network_selector.clone(),
                     Some((connect_req, sender)),
                     self.cobalt_api.clone(),
                 )
@@ -445,6 +451,7 @@ impl IfaceManagerService {
                     &mut self.dev_svc_proxy,
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
+                    self.network_selector.clone(),
                     Some((connect_req.clone(), sender)),
                     self.cobalt_api.clone(),
                 )
@@ -487,6 +494,7 @@ impl IfaceManagerService {
                     &mut self.dev_svc_proxy,
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
+                    self.network_selector.clone(),
                     None,
                     self.cobalt_api.clone(),
                 )
@@ -950,7 +958,8 @@ mod tests {
             util::{
                 logger::set_logger_for_test,
                 testing::{
-                    create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver, poll_sme_req,
+                    create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
+                    generate_random_bss_desc, poll_sme_req,
                 },
             },
         },
@@ -999,7 +1008,7 @@ mod tests {
                 network,
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss: generate_random_bss_desc(),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
         }
@@ -1025,6 +1034,7 @@ mod tests {
         pub ap_update_sender: listener::ApListenerMessageSender,
         pub ap_update_receiver: mpsc::UnboundedReceiver<listener::ApMessage>,
         pub saved_networks: Arc<SavedNetworksManager>,
+        pub network_selector: Arc<NetworkSelector>,
         pub node: inspect::Node,
         pub cobalt_api: CobaltSender,
         pub cobalt_receiver: mpsc::Receiver<CobaltEvent>,
@@ -1052,6 +1062,8 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let node = inspector.root().create_child("phy_manager");
         let (cobalt_api, cobalt_receiver) = create_mock_cobalt_sender_and_receiver();
+        let network_selector =
+            Arc::new(NetworkSelector::new(saved_networks.clone(), cobalt_api.clone()));
 
         TestValues {
             device_service_proxy: proxy,
@@ -1062,6 +1074,7 @@ mod tests {
             ap_update_receiver: ap_receiver,
             saved_networks: saved_networks,
             node: node,
+            network_selector,
             cobalt_api,
             cobalt_receiver,
         }
@@ -1252,6 +1265,7 @@ mod tests {
             test_values.ap_update_sender.clone(),
             test_values.device_service_proxy.clone(),
             test_values.saved_networks.clone(),
+            test_values.network_selector.clone(),
             test_values.cobalt_api.clone(),
         );
 
@@ -1297,6 +1311,7 @@ mod tests {
             test_values.ap_update_sender.clone(),
             test_values.device_service_proxy.clone(),
             test_values.saved_networks.clone(),
+            test_values.network_selector.clone(),
             test_values.cobalt_api.clone(),
         );
 
@@ -1368,6 +1383,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.network_selector,
             test_values.cobalt_api,
         );
         let scan_fut = iface_manager.scan(fidl_fuchsia_wlan_sme::ScanRequest::Passive(
@@ -1482,14 +1498,15 @@ mod tests {
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         // Configure the mock CSM with the expected connect request
+        let connect_request = create_connect_request(other_test_ssid, TEST_PASSWORD);
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: false,
             is_alive: true,
-            expected_connect_request: Some(create_connect_request(other_test_ssid, TEST_PASSWORD)),
+            expected_connect_request: Some(connect_request.clone()),
         }));
 
         // Ask the IfaceManager to connect.
-        let config = create_connect_request(other_test_ssid, TEST_PASSWORD);
+        let config = connect_request;
         let connect_response_fut = {
             let connect_fut = iface_manager.connect(config);
             pin_mut!(connect_fut);
@@ -1635,6 +1652,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.network_selector,
             test_values.cobalt_api,
         );
 
@@ -1761,6 +1779,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.network_selector,
             test_values.cobalt_api,
         );
 
@@ -1889,6 +1908,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.network_selector,
             test_values.cobalt_api,
         );
 
@@ -2074,6 +2094,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.network_selector,
             test_values.cobalt_api,
         );
 
@@ -2160,6 +2181,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.network_selector,
             test_values.cobalt_api,
         );
 
@@ -2267,6 +2289,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.network_selector,
             test_values.cobalt_api,
         );
         let fut =
@@ -2377,6 +2400,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.network_selector,
             test_values.cobalt_api,
         );
 
@@ -2506,6 +2530,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.network_selector,
             test_values.cobalt_api,
         );
 
@@ -2585,6 +2610,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.network_selector,
             test_values.cobalt_api,
         );
 
@@ -2652,6 +2678,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks,
+            test_values.network_selector,
             test_values.cobalt_api,
         );
 
@@ -2779,7 +2806,7 @@ mod tests {
 
     fn run_service_test<T: std::fmt::Debug>(
         mut exec: fuchsia_async::Executor,
-        saved_networks: Arc<SavedNetworksManager>,
+        network_selector: Arc<NetworkSelector>,
         iface_manager: IfaceManagerService,
         req: IfaceManagerRequest,
         mut req_receiver: oneshot::Receiver<Result<T, Error>>,
@@ -2788,8 +2815,6 @@ mod tests {
     ) {
         // Create other components to run the service.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
-        let network_selector =
-            Arc::new(NetworkSelector::new(saved_networks, create_mock_cobalt_sender()));
 
         // Start the service loop
         let (mut sender, receiver) = mpsc::channel(1);
@@ -2847,7 +2872,7 @@ mod tests {
 
     fn run_service_test_with_unit_return(
         mut exec: fuchsia_async::Executor,
-        saved_networks: Arc<SavedNetworksManager>,
+        network_selector: Arc<NetworkSelector>,
         iface_manager: IfaceManagerService,
         req: IfaceManagerRequest,
         mut req_receiver: oneshot::Receiver<()>,
@@ -2855,8 +2880,6 @@ mod tests {
     ) {
         // Create other components to run the service.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
-        let network_selector =
-            Arc::new(NetworkSelector::new(saved_networks, create_mock_cobalt_sender()));
 
         // Start the service loop
         let (mut sender, receiver) = mpsc::channel(1);
@@ -2924,7 +2947,7 @@ mod tests {
 
         run_service_test(
             exec,
-            test_values.saved_networks,
+            test_values.network_selector,
             iface_manager,
             req,
             ack_receiver,
@@ -2943,19 +2966,17 @@ mod tests {
         // Create a configured ClientIfaceContainer.
         let test_values = test_setup(&mut exec);
         let (mut iface_manager, _stream) = create_iface_manager_with_client(&test_values, false);
+        let connect_req = fake_client.expected_connect_request.clone().unwrap();
         iface_manager.clients[0].client_state_machine = Some(Box::new(fake_client));
 
         // Send a connect request.
         let (ack_sender, ack_receiver) = oneshot::channel();
-        let req = ConnectRequest {
-            request: create_connect_request(TEST_SSID, TEST_PASSWORD),
-            responder: ack_sender,
-        };
+        let req = ConnectRequest { request: connect_req, responder: ack_sender };
         let req = IfaceManagerRequest::Connect(req);
 
         run_service_test(
             exec,
-            test_values.saved_networks,
+            test_values.network_selector,
             iface_manager,
             req,
             ack_receiver,
@@ -3195,6 +3216,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks.clone(),
+            test_values.network_selector,
             test_values.cobalt_api,
         );
 
@@ -3290,6 +3312,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks.clone(),
+            test_values.network_selector.clone(),
             test_values.cobalt_api,
         );
 
@@ -3303,7 +3326,7 @@ mod tests {
 
         run_service_test_with_unit_return(
             exec,
-            test_values.saved_networks,
+            test_values.network_selector,
             iface_manager,
             req,
             new_iface_receiver,
@@ -3328,7 +3351,7 @@ mod tests {
 
         run_service_test_with_unit_return(
             exec,
-            test_values.saved_networks,
+            test_values.network_selector,
             iface_manager,
             req,
             remove_iface_receiver,
@@ -3360,6 +3383,7 @@ mod tests {
                     test_values.ap_update_sender,
                     test_values.device_service_proxy,
                     test_values.saved_networks.clone(),
+                    test_values.network_selector.clone(),
                     test_values.cobalt_api,
                 );
                 (iface_manager, None)
@@ -3378,7 +3402,7 @@ mod tests {
 
         run_service_test(
             exec,
-            test_values.saved_networks,
+            test_values.network_selector,
             iface_manager,
             req,
             scan_receiver,
@@ -3403,6 +3427,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks.clone(),
+            test_values.network_selector.clone(),
             test_values.cobalt_api,
         );
 
@@ -3413,7 +3438,7 @@ mod tests {
 
         run_service_test(
             exec,
-            test_values.saved_networks,
+            test_values.network_selector,
             iface_manager,
             req,
             start_receiver,
@@ -3438,6 +3463,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks.clone(),
+            test_values.network_selector.clone(),
             test_values.cobalt_api,
         );
 
@@ -3451,7 +3477,7 @@ mod tests {
 
         run_service_test(
             exec,
-            test_values.saved_networks,
+            test_values.network_selector,
             iface_manager,
             req,
             stop_receiver,
@@ -3480,7 +3506,7 @@ mod tests {
 
         run_service_test(
             exec,
-            test_values.saved_networks,
+            test_values.network_selector,
             iface_manager,
             req,
             start_receiver,
@@ -3512,7 +3538,7 @@ mod tests {
 
         run_service_test(
             exec,
-            test_values.saved_networks,
+            test_values.network_selector,
             iface_manager,
             req,
             stop_receiver,
@@ -3538,7 +3564,7 @@ mod tests {
 
         run_service_test(
             exec,
-            test_values.saved_networks,
+            test_values.network_selector,
             iface_manager,
             req,
             stop_receiver,
@@ -3653,6 +3679,7 @@ mod tests {
             test_values.ap_update_sender,
             test_values.device_service_proxy,
             test_values.saved_networks.clone(),
+            test_values.network_selector,
             test_values.cobalt_api,
         );
 

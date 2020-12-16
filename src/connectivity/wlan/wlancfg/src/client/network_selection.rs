@@ -187,14 +187,14 @@ impl NetworkSelector {
     }
 
     /// Find a suitable BSS for the given network.
-    #[allow(unused)]
     pub(crate) async fn find_connection_candidate_for_network(
         &self,
-        sme_proxy: &fidl_sme::ClientSmeProxy,
-        network: &types::NetworkIdentifier,
+        sme_proxy: fidl_sme::ClientSmeProxy,
+        network: types::NetworkIdentifier,
     ) -> Option<types::ConnectionCandidate> {
         // TODO: check if we have recent enough scan results that we can pull from instead?
-        let scan_results = scan::perform_directed_active_scan(sme_proxy, &network.ssid, None).await;
+        let scan_results =
+            scan::perform_directed_active_scan(&sme_proxy, &network.ssid, None).await;
 
         match scan_results {
             Err(()) => None,
@@ -1773,7 +1773,7 @@ mod tests {
 
         // Kick off network selection
         let network_selection_fut =
-            network_selector.find_connection_candidate_for_network(&sme_proxy, &test_id_1);
+            network_selector.find_connection_candidate_for_network(sme_proxy, test_id_1.clone());
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 
@@ -1855,7 +1855,7 @@ mod tests {
 
         // Kick off network selection
         let network_selection_fut =
-            network_selector.find_connection_candidate_for_network(&sme_proxy, &test_id_1);
+            network_selector.find_connection_candidate_for_network(sme_proxy, test_id_1);
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 
