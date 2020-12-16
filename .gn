@@ -49,4 +49,5 @@ exec_script_whitelist = [
   "//src/graphics/lib/compute/spinel-rs-sys/BUILD.gn",
   "//topaz/runtime/sky_engine/BUILD.gn",
   "//topaz/tools/protobuf/protobuf_dart.gni",
+  "//zircon/kernel/arch/x86/phys/BUILD.gn",
 ]

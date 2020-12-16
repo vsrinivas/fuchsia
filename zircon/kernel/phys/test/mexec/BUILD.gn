@@ -4,7 +4,6 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/testing/zircon_zbi_tests.gni")
 import("//src/bringup/lib/mexec/testing/zbi_test.gni")
 import("../common_tests.gni")
 
@@ -18,26 +17,14 @@ import("../common_tests.gni")
 # directly, instead of sifting through zircon's zbi_tests.json to synthesize
 # targets in this build.
 test_deps = []
-foreach(test, zircon_zbi_tests) {
-  # The ZBI test names prepend a "zbi-" to the common_test names.
-  name = string_replace(test.name, "zbi-", "")
-  if (test.cpu == current_cpu &&
-      common_tests + [ name ] - [ name ] != common_tests) {
-    # `mexec_zbi_test` expects a label to which `get_target_outputs` may be
-    # applied to get a hold of the path to the child ZBI. Once the phys ZBI
-    # tests are moved to the fuchsia build, we can skip the copy rule and just
-    # supply the `zbi_test` labels directly.
-    copy(name) {
-      sources = [ "$zircon_root_build_dir/${test.path}" ]
-      outputs = [ "$target_out_dir/{{source_file_part}}" ]
-    }
-
-    mexec_zbi_test("mexec-$name") {
-      child_zbi = ":$name"
-    }
-
-    test_deps += [ ":mexec-$name" ]
+foreach(test, common_tests) {
+  mexec_zbi_test("mexec-$test") {
+    child_zbi = "//zircon/kernel/phys/test:zbi-$test(//zircon/kernel/phys:kernel.phys_$current_cpu)"
+    child_zbi_file =
+        get_label_info(child_zbi, "target_out_dir") + "/zbi-$test.zbi"
   }
+
+  test_deps += [ ":mexec-$test" ]
 }
 
 group("mexec") {

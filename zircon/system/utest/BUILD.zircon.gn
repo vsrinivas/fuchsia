@@ -21,9 +21,7 @@ if (current_cpu != "") {
     #
     # Where "test" is a group containing all unittest labels.
     deps = [
-      "$zx/kernel/phys:tests",
       "abi-type-validator",
-
       # disabled for now:
       #"bad-kernel-access",
     ]

@@ -81,6 +81,10 @@ template("phys_executable") {
       foreach(ldscript, _phys_linker_scripts) {
         ldflags += [ "-Wl,-T," + rebase_path(ldscript, root_build_dir) ]
       }
+      if (zx == "/") {
+        # Don't generate a binaries.json entry for this binary.
+        sdk_migrated = true
+      }
     }
 
     # This is the main target of the template, a raw binary load image file.
