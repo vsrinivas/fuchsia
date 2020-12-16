@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
@@ -90,4 +91,12 @@ package("monitor") {
       dest = "memory_monitor.cmx"
     },
   ]
+}
+
+config_data("userdebug_config") {
+  for_pkg = "memory_monitor"
+
+  sources = [ "config/send_critical_pressure_crash_reports" ]
+
+  outputs = [ "send_critical_pressure_crash_reports" ]
 }

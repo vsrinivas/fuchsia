@@ -99,7 +99,7 @@ uint64_t TotalReadWriteCycles(const fuchsia::hardware::ram::metrics::BandwidthIn
 
 Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
                  const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher,
-                 bool send_metrics, bool watch_memory_pressure)
+                 bool send_metrics, bool watch_memory_pressure, bool send_critical_pressure_crash_reports)
     : high_water_(
           "/cache", kHighWaterPollFrequency, kHighWaterThreshold, dispatcher,
           [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); }),
@@ -181,8 +181,8 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
   if (send_metrics)
     CreateMetrics();
 
-  pressure_notifier_ = std::make_unique<PressureNotifier>(watch_memory_pressure,
-                                                          component_context_.get(), dispatcher);
+  pressure_notifier_ = std::make_unique<PressureNotifier>(
+      watch_memory_pressure, send_critical_pressure_crash_reports, component_context_.get(), dispatcher);
 
   SampleAndPost();
 }

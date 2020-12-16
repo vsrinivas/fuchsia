@@ -8,11 +8,11 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <src/cobalt/bin/testing/fake_logger.h>
 
 #include <future>
 
 #include <gtest/gtest.h>
+#include <src/cobalt/bin/testing/fake_logger.h>
 
 #include "src/developer/memory/monitor/monitor.h"
 
@@ -27,7 +27,7 @@ class MonitorFidlUnitTest : public gtest::TestLoopFixture {
  protected:
   MonitorFidlUnitTest()
       : monitor_(std::make_unique<Monitor>(context_provider_.TakeContext(), fxl::CommandLine{},
-                                           dispatcher(), false, false)) {}
+                                           dispatcher(), false, false, false)) {}
 
   void TearDown() override {
     monitor_.reset();
@@ -77,8 +77,9 @@ class FakeRamDevice : public fuchsia::hardware::ram::metrics::testing::Device_Te
   FakeRamDevice() = default;
 
   fidl::InterfaceRequestHandler<fuchsia::hardware::ram::metrics::Device> GetHandler(
-    async_dispatcher_t* dispatcher = nullptr) {
-    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::hardware::ram::metrics::Device> request) {
+      async_dispatcher_t* dispatcher = nullptr) {
+    return [this,
+            dispatcher](fidl::InterfaceRequest<fuchsia::hardware::ram::metrics::Device> request) {
       binding_.Bind(std::move(request), dispatcher);
     };
   }
@@ -161,11 +162,11 @@ class MockLoggerFactory : public ::fuchsia::cobalt::testing::LoggerFactory_TestB
   fidl::BindingSet<fuchsia::cobalt::Logger> logger_bindings_;
 };
 
-class MemoryBandwidthInspectTest: public gtest::TestLoopFixture {
+class MemoryBandwidthInspectTest : public gtest::TestLoopFixture {
  public:
   MemoryBandwidthInspectTest()
       : monitor_(std::make_unique<Monitor>(context_provider_.TakeContext(), fxl::CommandLine{},
-                                           dispatcher(), false, false)),
+                                           dispatcher(), false, false, false)),
         executor_(dispatcher()),
         ram_binding_(&fake_device_),
         logger_factory_(new MockLoggerFactory()) {
@@ -203,7 +204,7 @@ class MemoryBandwidthInspectTest: public gtest::TestLoopFixture {
     // The Monitor will make asynchronous calls to the MockLogger*s that are also running in this
     // class/tests thread. So the call to the Monitor needs to be made on a different thread, such
     // that the MockLogger*s running on the main thread can respond to those calls.
-    std::future<void/*fuchsia::cobalt::Logger_Sync**/> result = std::async([this]() {
+    std::future<void /*fuchsia::cobalt::Logger_Sync**/> result = std::async([this]() {
       monitor_->CreateMetrics();
     });
     while (result.wait_for(std::chrono::milliseconds(1)) != std::future_status::ready) {

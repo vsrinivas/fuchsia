@@ -12,9 +12,12 @@ namespace monitor {
 // |dispatcher| is the dispatcher associated with memory_monitor's main thread.
 // The fuchsia::memorypressure::Provider service which the |PressureNotifier| class implements runs
 // on this thread.
-PressureNotifier::PressureNotifier(bool watch_for_changes, sys::ComponentContext* context,
-                                   async_dispatcher_t* dispatcher)
-    : provider_dispatcher_(dispatcher), context_(context), observer_(watch_for_changes, this) {
+PressureNotifier::PressureNotifier(bool watch_for_changes, bool send_critical_pressure_crash_reports,
+                                   sys::ComponentContext* context, async_dispatcher_t* dispatcher)
+    : provider_dispatcher_(dispatcher),
+      context_(context),
+      observer_(watch_for_changes, this),
+      send_critical_pressure_crash_reports_(send_critical_pressure_crash_reports) {
   if (context) {
     context->outgoing()->AddPublicService(bindings_.GetHandler(this));
   }
@@ -32,7 +35,8 @@ void PressureNotifier::PostLevelChange() {
   if (level_to_send == Level::kNormal) {
     // See comments about |observed_normal_level_| in the definition of |FileCrashReport()|.
     observed_normal_level_ = true;
-  } else if (level_to_send == Level::kCritical && CanGenerateNewCrashReports()) {
+  } else if (send_critical_pressure_crash_reports_ && level_to_send == Level::kCritical &&
+             CanGenerateNewCrashReports()) {
     // File crash report before notifying watchers, so that we can capture the state *before*
     // watchers can respond to memory pressure, thereby changing the state that caused the memory
     // pressure in the first place.

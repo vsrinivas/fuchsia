@@ -28,12 +28,13 @@ namespace monitor {
 namespace test {
 class MonitorUnitTest;
 class MemoryBandwidthInspectTest;
-}
+}  // namespace test
 
 class Monitor : public fuchsia::memory::Monitor {
  public:
   Monitor(std::unique_ptr<sys::ComponentContext> context, const fxl::CommandLine& command_line,
-          async_dispatcher_t* dispatcher, bool send_metrics, bool watch_memory_pressure);
+          async_dispatcher_t* dispatcher, bool send_metrics, bool watch_memory_pressure,
+          bool send_critical_pressure_crash_reports);
   ~Monitor();
 
   // For memory bandwidth measurement, SetRamDevice should be called once

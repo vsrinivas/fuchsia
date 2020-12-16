@@ -25,7 +25,8 @@ struct WatcherState {
 
 class PressureNotifier : public fuchsia::memorypressure::Provider {
  public:
-  explicit PressureNotifier(bool watch_for_changes, sys::ComponentContext* context = nullptr,
+  explicit PressureNotifier(bool watch_for_changes, bool send_critical_pressure_crash_reports,
+                            sys::ComponentContext* context = nullptr,
                             async_dispatcher_t* dispatcher = nullptr);
   PressureNotifier(const PressureNotifier&) = delete;
   PressureNotifier& operator=(const PressureNotifier&) = delete;
@@ -55,6 +56,7 @@ class PressureNotifier : public fuchsia::memorypressure::Provider {
   bool observed_normal_level_ = true;
   zx::time prev_crash_report_time_ = zx::time(ZX_TIME_INFINITE_PAST);
   zx::duration crash_report_interval_ = zx::min(30);
+  const bool send_critical_pressure_crash_reports_;
 
   friend class test::PressureNotifierUnitTest;
 };

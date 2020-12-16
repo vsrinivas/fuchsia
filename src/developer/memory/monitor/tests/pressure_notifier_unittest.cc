@@ -52,11 +52,16 @@ class PressureNotifierUnitTest : public gtest::TestLoopFixture {
     context_provider_ =
         std::make_unique<sys::testing::ComponentContextProvider>(async_get_default_dispatcher());
     context_provider_->service_directory_provider()->AddService(crash_reporter_.GetHandler());
-    notifier_ = std::make_unique<PressureNotifier>(false, context_provider_->context(),
-                                                   async_get_default_dispatcher());
+    SetUpNewPressureNotifier(true /*notify_crash_reproter*/);
   }
 
  protected:
+  void SetUpNewPressureNotifier(bool send_critical_pressure_crash_reports) {
+    notifier_ = std::make_unique<PressureNotifier>(false, send_critical_pressure_crash_reports,
+                                                   context_provider_->context(),
+                                                   async_get_default_dispatcher());
+  }
+
   fmp::ProviderPtr Provider() {
     fmp::ProviderPtr provider;
     context_provider_->ConnectToPublicService(provider.NewRequest());
@@ -433,6 +438,16 @@ TEST_F(PressureNotifierUnitTest, CrashReportOnCriticalAfterLong) {
   // No new crash reports for Warning -> Critical
   ASSERT_EQ(num_crash_reports(), 2ul);
   ASSERT_FALSE(CanGenerateNewCrashReports());
+}
+
+TEST_F(PressureNotifierUnitTest, DoNotSendCriticalPressureCrashReport) {
+  SetUpNewPressureNotifier(false /*send_critical_pressure_crash_reports*/);
+  ASSERT_EQ(num_crash_reports(), 0ul);
+  ASSERT_TRUE(CanGenerateNewCrashReports());
+
+  TriggerLevelChange(Level::kCritical);
+
+  ASSERT_EQ(num_crash_reports(), 0ul);
 }
 
 }  // namespace test

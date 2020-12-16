@@ -5,9 +5,9 @@
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
-#include <lib/fdio/directory.h>
 
 #include <filesystem>
 
@@ -29,16 +29,22 @@ void SetRamDevice(monitor::Monitor* app) {
         if (status == ZX_OK) {
           ram_device.Bind(std::move(handle));
           app->SetRamDevice(std::move(ram_device));
-          FX_LOGS(INFO) <<"Will collect memory bandwidth measurements.";
+          FX_LOGS(INFO) << "Will collect memory bandwidth measurements.";
           return;
         }
         break;
       }
     }
   }
-  FX_LOGS(INFO) <<"CANNOT collect memory bandwidth measurements.";
+  FX_LOGS(INFO) << "CANNOT collect memory bandwidth measurements.";
 }
+bool NotifyCrashReporter() {
+  // TODO(fxbug.dev/65472): Return true if "/config/data/send_critical_pressure_crash_reports"
+  // exists. We can only do this once we are including the config in the products we still want
+  // reporting in.
+  return true;
 }
+}  // namespace
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -66,7 +72,8 @@ int main(int argc, const char** argv) {
   FX_CHECK(set_status == ZX_OK);
 
   monitor::Monitor app(std::move(startup_context), command_line, loop.dispatcher(),
-                       true /* send_metrics */, true /* watch_memory_pressure */);
+                       true /* send_metrics */, true /* watch_memory_pressure */,
+                       NotifyCrashReporter());
   SetRamDevice(&app);
   loop.Run();
 
