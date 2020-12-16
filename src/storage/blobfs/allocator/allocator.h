@@ -72,7 +72,7 @@ class Allocator : private ExtentReserver, private NodeReserverInterface, public 
   // TODO(smklein): It may be possible to convert NodeFinder from an interface
   // to a concrete base class if we can reconcile the differences with host.
 
-  InodePtr GetNode(uint32_t node_index) final;
+  zx::status<InodePtr> GetNode(uint32_t node_index) final;
 
   ////////////////
   // Other interfaces.
@@ -135,14 +135,16 @@ class Allocator : private ExtentReserver, private NodeReserverInterface, public 
   void MarkInodeAllocated(ReservedNode node);
 
   // Marks a reserved node by updating the node map to indicate it is an
-  // allocated extent container.  Makes |node| follow |previous_node| in the extent container list.
-  void MarkContainerNodeAllocated(ReservedNode node, uint32_t previous_node);
+  // allocated extent container.  Makes |node| follow |previous_node_index| in the extent container
+  // list.
+  zx_status_t MarkContainerNodeAllocated(ReservedNode node, uint32_t previous_node_index);
 
   // Mark a node allocated. The node may or may not be reserved.
   void MarkNodeAllocated(uint32_t node_index);
 
   // Frees a node which has already been committed.
-  void FreeNode(uint32_t node_index);
+  // Returns an error if the node could not be freed.
+  zx_status_t FreeNode(uint32_t node_index);
 
   // Record the location and size of all non-free block regions.
   fbl::Vector<BlockRegion> GetAllocatedRegions() const;

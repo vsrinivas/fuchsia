@@ -34,7 +34,10 @@ zx_status_t NodePopulator::Walk(OnNodeCallback on_node, OnExtentCallback on_exte
   size_t node_count = 0;
   uint32_t node_index = nodes_[node_count].index();
 
-  InodePtr inode = allocator_->GetNode(node_index);
+  auto inode = allocator_->GetNode(node_index);
+  if (inode.is_error()) {
+    return inode.status_value();
+  }
   allocator_->MarkInodeAllocated(std::move(nodes_[node_count]));
   on_node(node_index);
 

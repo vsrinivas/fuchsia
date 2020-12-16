@@ -5,6 +5,7 @@
 #include "src/storage/blobfs/blobfs.h"
 
 #include <lib/sync/completion.h>
+#include <zircon/errors.h>
 
 #include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
@@ -16,6 +17,7 @@
 #include "src/storage/blobfs/fsck.h"
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
+#include "src/storage/blobfs/transaction.h"
 
 namespace blobfs {
 namespace {
@@ -227,6 +229,24 @@ TEST_F(BlobfsTest, TrimsData) {
   EXPECT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
 
   ASSERT_TRUE(device_->saw_trim());
+}
+
+TEST_F(BlobfsTest, GetNodeWithAnInvalidNodeIndexIsAnError) {
+  uint32_t invalid_node_index = kMaxNodeId - 1;
+  auto node = fs_->GetNode(invalid_node_index);
+  EXPECT_EQ(node.status_value(), ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(BlobfsTest, FreeInodeWithAnInvalidNodeIndexIsAnError) {
+  BlobTransaction transaction;
+  uint32_t invalid_node_index = kMaxNodeId - 1;
+  EXPECT_EQ(fs_->FreeInode(invalid_node_index, transaction), ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(BlobfsTest, BlockIteratorByNodeIndexWithAnInvalidNodeIndexIsAnError) {
+  uint32_t invalid_node_index = kMaxNodeId - 1;
+  auto block_iterator = fs_->BlockIteratorByNodeIndex(invalid_node_index);
+  EXPECT_EQ(block_iterator.status_value(), ZX_ERR_INVALID_ARGS);
 }
 
 class MockFvmDevice : public block_client::FakeFVMBlockDevice {

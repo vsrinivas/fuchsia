@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 
 #include <cstring>
 #include <limits>
@@ -69,7 +70,8 @@ std::unique_ptr<Blobfs> CreateBlobfs(uint64_t block_count, FilesystemOptions opt
 
 std::optional<Inode> FindInodeByMerkleDigest(Blobfs& blobfs, digest::Digest& digest) {
   for (uint32_t i = 0; i < blobfs.Info().alloc_inode_count; ++i) {
-    InodePtr inode = blobfs.GetNode(i);
+    auto inode = blobfs.GetNode(i);
+    ZX_ASSERT(inode.is_ok());
     if (inode == nullptr) {
       return std::nullopt;
     }
@@ -77,7 +79,7 @@ std::optional<Inode> FindInodeByMerkleDigest(Blobfs& blobfs, digest::Digest& dig
       continue;
     }
     if (digest == inode->merkle_root_hash) {
-      return *inode;
+      return *inode.value();
     }
   }
   return std::nullopt;
@@ -440,6 +442,14 @@ TEST(BlobfsHostTest, ExportBlobsCreatesBlobsWithTheCorrectContentAndName) {
     CheckBlobContents(*blobs[index_or.value()], contents);
   }
   closedir(output);
+}
+
+TEST(BlobfsHostTest, GetNodeWithAnInvalidNodeIndexIsAnError) {
+  auto blobfs = CreateBlobfs(/*block_count=*/500, {});
+  ASSERT_TRUE(blobfs != nullptr);
+  uint32_t invalid_node_index = kMaxNodeId - 1;
+  auto node = blobfs->GetNode(invalid_node_index);
+  EXPECT_EQ(node.status_value(), ZX_ERR_INVALID_ARGS);
 }
 
 }  // namespace

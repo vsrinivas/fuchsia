@@ -15,11 +15,18 @@
 
 namespace blobfs {
 
-AllocatedExtentIterator::AllocatedExtentIterator(NodeFinder* finder, uint32_t node_index)
-    : finder_(finder),
-      inode_(finder_->GetNode(node_index)),
-      node_index_(node_index),
-      node_iterator_(finder, inode_.get()) {}
+AllocatedExtentIterator::AllocatedExtentIterator(NodeFinder* finder, InodePtr inode,
+                                                 uint32_t node_index)
+    : inode_(std::move(inode)), node_index_(node_index), node_iterator_(finder, inode_.get()) {}
+
+zx::status<AllocatedExtentIterator> AllocatedExtentIterator::Create(NodeFinder* finder,
+                                                                    uint32_t node_index) {
+  auto inode = finder->GetNode(node_index);
+  if (inode.is_error()) {
+    return inode.take_error();
+  }
+  return zx::ok(AllocatedExtentIterator(finder, std::move(inode.value()), node_index));
+}
 
 bool AllocatedExtentIterator::Done() const { return ExtentIndex() == inode_->extent_count; }
 

@@ -46,7 +46,8 @@ zx_status_t BlobfsChecker::CheckBackupSuperblock() {
 
 void BlobfsChecker::TraverseInodeBitmap() {
   for (unsigned n = 0; n < blobfs_->info_.inode_count; n++) {
-    InodePtr inode = blobfs_->GetNode(n);
+    auto inode = blobfs_->GetNode(n);
+    ZX_ASSERT_MSG(inode.is_ok(), "Failed to get node %u: status=%d", n, inode.status_value());
     if (inode->header.IsAllocated()) {
       alloc_inodes_++;
       if (inode->header.IsExtentContainer()) {
@@ -56,12 +57,15 @@ void BlobfsChecker::TraverseInodeBitmap() {
 
       bool valid = true;
 
-      AllocatedExtentIterator extents = AllocatedExtentIterator(blobfs_->GetNodeFinder(), n);
-      while (!extents.Done()) {
+      auto extents = AllocatedExtentIterator::Create(blobfs_->GetNodeFinder(), n);
+      ZX_ASSERT_MSG(extents.is_ok(), "Failed to create extent iterator for inode %u: status=%d", n,
+                    extents.status_value());
+
+      while (!extents->Done()) {
         const Extent* extent;
-        zx_status_t status = extents.Next(&extent);
+        zx_status_t status = extents->Next(&extent);
         if (status != ZX_OK) {
-          FX_LOGS(ERROR) << "check: Failed to acquire extent " << extents.ExtentIndex()
+          FX_LOGS(ERROR) << "check: Failed to acquire extent " << extents->ExtentIndex()
                          << " within inode " << n;
           valid = false;
           break;

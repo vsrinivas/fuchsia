@@ -9,6 +9,7 @@
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 
 #include <set>
 
@@ -347,6 +348,38 @@ TEST_P(BlobLoaderTest, NullBlobWithCorruptedMerkleRootFailsToLoad) {
 
   // Verify the null blob with a corrupted Merkle root fails to load.
   ASSERT_EQ(loader().LoadBlob(inode_index, nullptr, &data, &merkle), ZX_ERR_IO_DATA_INTEGRITY);
+}
+
+TEST_P(BlobLoaderTest, LoadBlobWithAnInvalidNodeIndexIsAnError) {
+  uint32_t invalid_node_index = kMaxNodeId - 1;
+  fzl::OwnedVmoMapper data, merkle;
+  EXPECT_EQ(loader().LoadBlob(invalid_node_index, nullptr, &data, &merkle), ZX_ERR_INVALID_ARGS);
+}
+
+TEST_P(BlobLoaderPagedTest, LoadBlobPagedWithAnInvalidNodeIndexIsAnError) {
+  uint32_t invalid_node_index = kMaxNodeId - 1;
+  fzl::OwnedVmoMapper data, merkle;
+  std::unique_ptr<pager::PageWatcher> page_watcher;
+  EXPECT_EQ(loader().LoadBlobPaged(invalid_node_index, nullptr, &page_watcher, &data, &merkle),
+            ZX_ERR_INVALID_ARGS);
+}
+
+TEST_P(BlobLoaderTest, LoadBlobWithACorruptNextNodeIndexIsAnError) {
+  std::unique_ptr<BlobInfo> info = AddBlob(1 << 14);
+  ASSERT_EQ(Remount(), ZX_OK);
+
+  // Corrupt the next node index of the inode.
+  uint32_t invalid_node_index = kMaxNodeId - 1;
+  uint32_t node_index = LookupInode(*info);
+  auto inode = fs_->GetAllocator()->GetNode(node_index);
+  ASSERT_TRUE(inode.is_ok());
+  inode->header.next_node = invalid_node_index;
+  inode->extent_count = 2;
+
+  fzl::OwnedVmoMapper data, merkle;
+  std::unique_ptr<pager::PageWatcher> page_watcher;
+  EXPECT_EQ(loader().LoadBlobPaged(node_index, nullptr, &page_watcher, &data, &merkle),
+            ZX_ERR_IO_DATA_INTEGRITY);
 }
 
 std::string GetCompressionAlgorithmName(CompressionAlgorithm compression_algorithm) {

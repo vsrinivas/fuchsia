@@ -52,6 +52,7 @@
 #include "src/storage/blobfs/compression/compressor.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/fsck.h"
+#include "src/storage/blobfs/iterator/allocated-extent-iterator.h"
 #include "src/storage/blobfs/iterator/allocated-node-iterator.h"
 #include "src/storage/blobfs/iterator/block-iterator.h"
 #include "src/storage/blobfs/pager/transfer-buffer.h"
@@ -417,36 +418,50 @@ void Blobfs::FreeExtent(const Extent& extent, BlobTransaction& transaction) {
   }
 }
 
-void Blobfs::FreeNode(uint32_t node_index, BlobTransaction& transaction) {
-  allocator_->FreeNode(node_index);
+zx_status_t Blobfs::FreeNode(uint32_t node_index, BlobTransaction& transaction) {
+  if (zx_status_t status = allocator_->FreeNode(node_index); status != ZX_OK) {
+    return status;
+  }
   info_.alloc_inode_count--;
   WriteNode(node_index, transaction);
+  return ZX_OK;
 }
 
-void Blobfs::FreeInode(uint32_t node_index, BlobTransaction& transaction) {
+zx_status_t Blobfs::FreeInode(uint32_t node_index, BlobTransaction& transaction) {
   TRACE_DURATION("blobfs", "Blobfs::FreeInode", "node_index", node_index);
-  InodePtr mapped_inode = GetNode(node_index);
+  auto mapped_inode = GetNode(node_index);
+  if (mapped_inode.is_error()) {
+    return mapped_inode.status_value();
+  }
 
   if (mapped_inode->header.IsAllocated()) {
     // Always write back the first node.
-    FreeNode(node_index, transaction);
+    if (zx_status_t status = FreeNode(node_index, transaction); status != ZX_OK) {
+      return status;
+    }
 
-    AllocatedExtentIterator extent_iter(allocator_.get(), node_index);
-    while (!extent_iter.Done()) {
+    auto extent_iter = AllocatedExtentIterator::Create(allocator_.get(), node_index);
+    if (extent_iter.is_error()) {
+      return extent_iter.status_value();
+    }
+    while (!extent_iter->Done()) {
       // If we're observing a new node, free it.
-      if (extent_iter.NodeIndex() != node_index) {
-        node_index = extent_iter.NodeIndex();
-        FreeNode(node_index, transaction);
+      if (extent_iter->NodeIndex() != node_index) {
+        node_index = extent_iter->NodeIndex();
+        if (zx_status_t status = FreeNode(node_index, transaction); status != ZX_OK) {
+          return status;
+        }
       }
 
       const Extent* extent;
-      ZX_ASSERT(extent_iter.Next(&extent) == ZX_OK);
+      ZX_ASSERT(extent_iter->Next(&extent) == ZX_OK);
 
       // Free the extent.
       FreeExtent(*extent, transaction);
     }
     WriteInfo(transaction);
   }
+  return ZX_OK;
 }
 
 void Blobfs::PersistNode(uint32_t node_index, BlobTransaction& transaction) {
@@ -619,8 +634,9 @@ zx_status_t Blobfs::AddInodes(Allocator* allocator) {
   uint64_t zeroed_nodes_blocks = inoblks - inoblks_old;
   // Use GetNode to get a pointer to the first node we need to zero and also to keep the map locked
   // whilst we zero them.
-  InodePtr new_nodes = allocator->GetNode(inoblks_old * kBlobfsInodesPerBlock);
-  memset(&*new_nodes, 0, kBlobfsBlockSize * zeroed_nodes_blocks);
+  auto new_nodes = allocator->GetNode(inoblks_old * kBlobfsInodesPerBlock);
+  ZX_ASSERT_MSG(new_nodes.is_ok(), "The new nodes should be valid: %s", new_nodes.status_string());
+  memset(&*new_nodes.value(), 0, kBlobfsBlockSize * zeroed_nodes_blocks);
 
   BlobTransaction transaction;
   WriteInfo(transaction);
@@ -722,8 +738,13 @@ void Blobfs::GetFilesystemInfo(FilesystemInfo* info) const {
           ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER);
 }
 
-BlockIterator Blobfs::BlockIteratorByNodeIndex(uint32_t node_index) {
-  return BlockIterator(std::make_unique<AllocatedExtentIterator>(GetAllocator(), node_index));
+zx::status<BlockIterator> Blobfs::BlockIteratorByNodeIndex(uint32_t node_index) {
+  auto extent_iter = AllocatedExtentIterator::Create(GetAllocator(), node_index);
+  if (extent_iter.is_error()) {
+    return extent_iter.take_error();
+  }
+  return zx::ok(
+      BlockIterator(std::make_unique<AllocatedExtentIterator>(std::move(extent_iter.value()))));
 }
 
 void Blobfs::Sync(SyncCallback cb) {
@@ -815,7 +836,8 @@ zx_status_t Blobfs::InitializeVnodes() {
   uint32_t total_allocated = 0;
 
   for (uint32_t node_index = 0; node_index < info_.inode_count; node_index++) {
-    const InodePtr inode = GetNode(node_index);
+    auto inode = GetNode(node_index);
+    ZX_ASSERT_MSG(inode.is_ok(), "Failed to get node %u: %s", node_index, inode.status_string());
     // We are not interested in free nodes.
     if (!inode->header.IsAllocated()) {
       continue;
@@ -830,14 +852,14 @@ zx_status_t Blobfs::InitializeVnodes() {
     }
 
     zx_status_t validation_status =
-        AllocatedExtentIterator::VerifyIteration(GetNodeFinder(), inode.get());
+        AllocatedExtentIterator::VerifyIteration(GetNodeFinder(), inode.value().get());
     if (validation_status != ZX_OK) {
       // Whatever the more differentiated error is here, the real root issue is
       // the integrity of the data that was just mirrored from the disk.
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
-    fbl::RefPtr<Blob> vnode = fbl::MakeRefCounted<Blob>(this, node_index, *inode);
+    fbl::RefPtr<Blob> vnode = fbl::MakeRefCounted<Blob>(this, node_index, *inode.value());
 
     // This blob is added to the cache, where it will quickly be relocated into the "closed
     // set" once we drop our reference to |vnode|. Although we delay reading any of the
@@ -850,7 +872,7 @@ zx_status_t Blobfs::InitializeVnodes() {
                      << node_index - 1;
       return status;
     }
-    metrics_->IncrementCompressionFormatMetric(*inode);
+    metrics_->IncrementCompressionFormatMetric(*inode.value());
   }
 
   if (total_allocated != info_.alloc_inode_count) {

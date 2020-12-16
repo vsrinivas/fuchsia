@@ -19,8 +19,12 @@ namespace blobfs {
 // been written to disk.
 class AllocatedNodeIterator {
  public:
+  AllocatedNodeIterator& operator=(const AllocatedNodeIterator&) = delete;
+  AllocatedNodeIterator(const AllocatedNodeIterator&) = delete;
+  AllocatedNodeIterator(AllocatedNodeIterator&&) = default;
+  AllocatedNodeIterator& operator=(AllocatedNodeIterator&&) = default;
+
   AllocatedNodeIterator(NodeFinder* finder, Inode* inode);
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AllocatedNodeIterator);
 
   // Returns true when there are no more nodes to traverse.
   bool Done() const;

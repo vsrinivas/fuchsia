@@ -9,6 +9,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/iterator/block-iterator.h"
 #include "src/storage/blobfs/iterator/node-populator.h"
 #include "src/storage/blobfs/test/unit/utils.h"
@@ -67,14 +68,16 @@ TEST(AllocatedExtentIteratorTest, Null) {
 
   // After walking, observe that the inode is allocated.
   const uint32_t node_index = allocated_nodes[0];
-  const InodePtr inode = allocator->GetNode(node_index);
+  auto inode = allocator->GetNode(node_index);
+  ASSERT_TRUE(inode.is_ok());
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_EQ(kAllocatedExtents, inode->extent_count);
 
-  AllocatedExtentIterator iter(allocator.get(), node_index);
-  ASSERT_TRUE(iter.Done());
-  ASSERT_EQ(0ul, iter.BlockIndex());
-  ASSERT_EQ(0u, iter.ExtentIndex());
+  auto iter = AllocatedExtentIterator::Create(allocator.get(), node_index);
+  ASSERT_TRUE(iter.is_ok());
+  ASSERT_TRUE(iter->Done());
+  ASSERT_EQ(0ul, iter->BlockIndex());
+  ASSERT_EQ(0u, iter->ExtentIndex());
 }
 
 // Iterate over a blob with inline extents.
@@ -91,29 +94,30 @@ TEST(AllocatedExtentIteratorTest, InlineNode) {
 
   // After walking, observe that the inode is allocated.
   const uint32_t node_index = allocated_nodes[0];
-  const InodePtr inode = allocator->GetNode(node_index);
+  auto inode = allocator->GetNode(node_index);
+  ASSERT_TRUE(inode.is_ok());
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_EQ(kAllocatedExtents, inode->extent_count);
 
-  AllocatedExtentIterator iter(allocator.get(), node_index);
-  ASSERT_EQ(0ul, iter.BlockIndex());
+  auto iter = AllocatedExtentIterator::Create(allocator.get(), node_index);
+  ASSERT_EQ(0ul, iter->BlockIndex());
   uint32_t blocks_seen = 0;
 
   for (size_t i = 0; i < allocated_extents.size(); i++) {
-    ASSERT_FALSE(iter.Done());
-    ASSERT_EQ(node_index, iter.NodeIndex());
-    ASSERT_EQ(i, iter.ExtentIndex());
-    ASSERT_EQ(blocks_seen, iter.BlockIndex());
+    ASSERT_FALSE(iter->Done());
+    ASSERT_EQ(node_index, iter->NodeIndex());
+    ASSERT_EQ(i, iter->ExtentIndex());
+    ASSERT_EQ(blocks_seen, iter->BlockIndex());
 
     const Extent* extent;
-    ASSERT_EQ(iter.Next(&extent), ZX_OK);
+    ASSERT_EQ(iter->Next(&extent), ZX_OK);
     ASSERT_TRUE(allocated_extents[i] == *extent);
     blocks_seen += extent->Length();
   }
 
-  ASSERT_TRUE(iter.Done());
-  ASSERT_EQ(allocated_extents.size(), iter.ExtentIndex());
-  ASSERT_EQ(blocks_seen, iter.BlockIndex());
+  ASSERT_TRUE(iter->Done());
+  ASSERT_EQ(allocated_extents.size(), iter->ExtentIndex());
+  ASSERT_EQ(blocks_seen, iter->BlockIndex());
 }
 
 // Iterate over a blob with multiple nodes.
@@ -130,36 +134,37 @@ TEST(AllocatedExtentIteratorTest, MultiNode) {
 
   // After walking, observe that the inode is allocated.
   const uint32_t node_index = allocated_nodes[0];
-  const InodePtr inode = allocator->GetNode(node_index);
+  auto inode = allocator->GetNode(node_index);
+  ASSERT_TRUE(inode.is_ok());
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_EQ(kAllocatedExtents, inode->extent_count);
 
-  AllocatedExtentIterator iter(allocator.get(), node_index);
-  ASSERT_EQ(0u, iter.ExtentIndex());
-  ASSERT_EQ(0ul, iter.BlockIndex());
+  auto iter = AllocatedExtentIterator::Create(allocator.get(), node_index);
+  ASSERT_EQ(0u, iter->ExtentIndex());
+  ASSERT_EQ(0ul, iter->BlockIndex());
   uint32_t blocks_seen = 0;
 
   for (size_t i = 0; i < allocated_extents.size(); i++) {
-    ASSERT_FALSE(iter.Done());
+    ASSERT_FALSE(iter->Done());
     if (i < kInlineMaxExtents) {
-      ASSERT_EQ(allocated_nodes[0], iter.NodeIndex());
+      ASSERT_EQ(allocated_nodes[0], iter->NodeIndex());
     } else if (i < kInlineMaxExtents + kContainerMaxExtents) {
-      ASSERT_EQ(allocated_nodes[1], iter.NodeIndex());
+      ASSERT_EQ(allocated_nodes[1], iter->NodeIndex());
     } else {
-      ASSERT_EQ(allocated_nodes[2], iter.NodeIndex());
+      ASSERT_EQ(allocated_nodes[2], iter->NodeIndex());
     }
-    ASSERT_EQ(i, iter.ExtentIndex());
-    ASSERT_EQ(blocks_seen, iter.BlockIndex());
+    ASSERT_EQ(i, iter->ExtentIndex());
+    ASSERT_EQ(blocks_seen, iter->BlockIndex());
 
     const Extent* extent;
-    ASSERT_EQ(iter.Next(&extent), ZX_OK);
+    ASSERT_EQ(iter->Next(&extent), ZX_OK);
     ASSERT_TRUE(allocated_extents[i] == *extent);
     blocks_seen += extent->Length();
   }
 
-  ASSERT_TRUE(iter.Done());
-  ASSERT_EQ(allocated_extents.size(), iter.ExtentIndex());
-  ASSERT_EQ(blocks_seen, iter.BlockIndex());
+  ASSERT_TRUE(iter->Done());
+  ASSERT_EQ(allocated_extents.size(), iter->ExtentIndex());
+  ASSERT_EQ(blocks_seen, iter->BlockIndex());
 }
 
 // Demonstrate that the allocated extent iterator won't let us access invalid
@@ -177,7 +182,8 @@ TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
 
   // After walking, observe that the inode is allocated.
   const uint32_t node_index = allocated_nodes[0];
-  InodePtr inode = allocator->GetNode(node_index);
+  auto inode = allocator->GetNode(node_index);
+  ASSERT_TRUE(inode.is_ok());
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_EQ(kAllocatedExtents, inode->extent_count);
 
@@ -187,13 +193,14 @@ TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
   // The iterator should reflect this corruption by returning an error during
   // traversal from the node to the container.
   {
-    AllocatedExtentIterator iter(allocator.get(), node_index);
-    ASSERT_TRUE(!iter.Done());
+    auto iter = AllocatedExtentIterator::Create(allocator.get(), node_index);
+    ASSERT_TRUE(iter.is_ok());
+    ASSERT_TRUE(!iter->Done());
     const Extent* extent;
     for (size_t i = 0; i < kInlineMaxExtents - 1; i++) {
-      ASSERT_EQ(iter.Next(&extent), ZX_OK);
+      ASSERT_EQ(iter->Next(&extent), ZX_OK);
     }
-    ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter.Next(&extent));
+    ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter->Next(&extent));
   }
 
   // Manually corrupt the next inode to point to an unallocated (but otherwise
@@ -203,32 +210,31 @@ TEST(AllocatedExtentIteratorTest, BadInodeNextNode) {
   // The iterator should reflect this corruption by returning an error during
   // traversal from the node to the container.
   {
-    AllocatedExtentIterator iter(allocator.get(), node_index);
-    ASSERT_TRUE(!iter.Done());
+    auto iter = AllocatedExtentIterator::Create(allocator.get(), node_index);
+    ASSERT_TRUE(iter.is_ok());
+    ASSERT_TRUE(!iter->Done());
     const Extent* extent;
     for (size_t i = 0; i < kInlineMaxExtents - 1; i++) {
-      ASSERT_EQ(iter.Next(&extent), ZX_OK);
+      ASSERT_EQ(iter->Next(&extent), ZX_OK);
     }
-    ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter.Next(&extent));
+    ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter->Next(&extent));
   }
 
-  // TODO(smklein): Currently, this fails because Allocator::GetNode asserts on failure,
-  // rather than returning a status.
-  //
-  //    // Manually corrupt the next inode to point to a completely invalid node.
-  //    inode->header.next_node = 0xFFFFFFFF;
-  //
-  //    // The iterator should reflect this corruption by returning an error during
-  //    // traversal from the node to the container.
-  //    {
-  //        AllocatedExtentIterator iter(allocator.get(), node_index);
-  //        ASSERT_TRUE(!iter.Done());
-  //        const Extent* extent;
-  //        for (size_t i = 0; i < kInlineMaxExtents - 1; i++) {
-  //            ASSERT_EQ(iter.Next(&extent), ZX_OK);
-  //        }
-  //        ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter.Next(&extent));
-  //    }
+  // Manually corrupt the next inode to point to a completely invalid node.
+  inode->header.next_node = kMaxNodeId - 1;
+
+  // The iterator should reflect this corruption by returning an error during
+  // traversal from the node to the container.
+  {
+    auto iter = AllocatedExtentIterator::Create(allocator.get(), node_index);
+    ASSERT_TRUE(iter.is_ok());
+    ASSERT_TRUE(!iter->Done());
+    const Extent* extent;
+    for (size_t i = 0; i < kInlineMaxExtents - 1; i++) {
+      ASSERT_EQ(iter->Next(&extent), ZX_OK);
+    }
+    ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, iter->Next(&extent));
+  }
 }
 
 // Test utilization of the BlockIterator over the allocated extent iterator
@@ -246,11 +252,14 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorFragmented) {
 
   // After walking, observe that the inode is allocated.
   const uint32_t node_index = allocated_nodes[0];
-  const InodePtr inode = allocator->GetNode(node_index);
+  auto inode = allocator->GetNode(node_index);
+  ASSERT_TRUE(inode.is_ok());
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_EQ(kAllocatedExtents, inode->extent_count);
 
-  BlockIterator iter(std::make_unique<AllocatedExtentIterator>(allocator.get(), node_index));
+  auto extent_iter = AllocatedExtentIterator::Create(allocator.get(), node_index);
+  ASSERT_TRUE(extent_iter.is_ok());
+  BlockIterator iter(std::make_unique<AllocatedExtentIterator>(std::move(extent_iter.value())));
   ASSERT_EQ(0ul, iter.BlockIndex());
   ASSERT_FALSE(iter.Done());
 
@@ -290,7 +299,8 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
 
   // After walking, observe that the inode is allocated.
   const uint32_t node_index = allocated_nodes[0];
-  const InodePtr inode = allocator->GetNode(node_index);
+  auto inode = allocator->GetNode(node_index);
+  ASSERT_TRUE(inode.is_ok());
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_EQ(1u, inode->extent_count);
 
@@ -299,7 +309,9 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
 
   // Try asking for all the blocks.
   {
-    BlockIterator iter(std::make_unique<AllocatedExtentIterator>(allocator.get(), node_index));
+    auto extent_iter = AllocatedExtentIterator::Create(allocator.get(), node_index);
+    ASSERT_TRUE(extent_iter.is_ok());
+    BlockIterator iter(std::make_unique<AllocatedExtentIterator>(std::move(extent_iter.value())));
     ASSERT_EQ(0ul, iter.BlockIndex());
     ASSERT_FALSE(iter.Done());
     uint32_t actual_length;
@@ -312,7 +324,9 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
 
   // Try asking for some of the blocks (in a linearly increasing size).
   {
-    BlockIterator iter(std::make_unique<AllocatedExtentIterator>(allocator.get(), node_index));
+    auto extent_iter = AllocatedExtentIterator::Create(allocator.get(), node_index);
+    ASSERT_TRUE(extent_iter.is_ok());
+    BlockIterator iter(std::make_unique<AllocatedExtentIterator>(std::move(extent_iter.value())));
     ASSERT_EQ(0ul, iter.BlockIndex());
     ASSERT_FALSE(iter.Done());
 
@@ -345,49 +359,49 @@ TEST(AllocatedEXtentIteratorTest, VerifyIteration) {
 
   // After walking, observe that the inode is allocated.
   const uint32_t node_index = allocated_nodes[0];
-  const InodePtr inode = allocator->GetNode(node_index);
-  ASSERT_TRUE(inode->header.IsAllocated());
-  ASSERT_EQ(kAllocatedExtents, inode->extent_count);
+  auto inode_ptr = allocator->GetNode(node_index);
+  ASSERT_TRUE(inode_ptr.is_ok());
+  ASSERT_TRUE(inode_ptr->header.IsAllocated());
+  ASSERT_EQ(kAllocatedExtents, inode_ptr->extent_count);
+  Inode* inode = inode_ptr.value().get();
 
   // Normal successful iteration
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()), ZX_OK);
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode), ZX_OK);
 
   // Corrupt last node extent count to be too high.
   allocator->GetNode(allocated_nodes[3])->AsExtentContainer()->extent_count++;
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()),
-            ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode), ZX_ERR_OUT_OF_RANGE);
 
   // Correct extent count.
   allocator->GetNode(allocated_nodes[3])->AsExtentContainer()->extent_count--;
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()), ZX_OK);
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode), ZX_OK);
 
   // Skip to the last node from the second, should notice a non-packed node.
   allocator->GetNode(allocated_nodes[1])->AsExtentContainer()->header.next_node =
       allocated_nodes[3];
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()),
-            ZX_ERR_BAD_STATE);
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode), ZX_ERR_BAD_STATE);
 
   // Correct the node pointer.
   allocator->GetNode(allocated_nodes[1])->AsExtentContainer()->header.next_node =
       allocated_nodes[2];
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()), ZX_OK);
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode), ZX_OK);
 
   // Loop node 2 to point at node 1 to detect the cycle on fast iteration.
   allocator->GetNode(allocated_nodes[2])->AsExtentContainer()->header.next_node =
       allocated_nodes[1];
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()),
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode),
             ZX_ERR_IO_DATA_INTEGRITY);
 
   // Correct the list pointer.
   allocator->GetNode(allocated_nodes[2])->AsExtentContainer()->header.next_node =
       allocated_nodes[3];
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()), ZX_OK);
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode), ZX_OK);
 
   // Loop node 2 to point at itself to detect the cycle on slow iteration.
   inode->extent_count = 999;
   allocator->GetNode(allocated_nodes[2])->AsExtentContainer()->header.next_node =
       allocated_nodes[2];
-  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode.get()),
+  ASSERT_EQ(AllocatedExtentIterator::VerifyIteration(allocator.get(), inode),
             ZX_ERR_IO_DATA_INTEGRITY);
 }
 

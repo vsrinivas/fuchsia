@@ -4,6 +4,8 @@
 
 #include "src/storage/blobfs/allocator/allocator.h"
 
+#include <zircon/errors.h>
+
 #include <memory>
 
 #include <block-client/cpp/fake-device.h>
@@ -503,7 +505,8 @@ TEST(AllocatorTest, LiveInodePtrBlocksGrow) {
                       std::move(nodes_bitmap));
 
   // Whilst inode pointer is alive, we cannot grow the node_map.
-  InodePtr inode = allocator.GetNode(0);
+  auto inode = allocator.GetNode(0);
+  ASSERT_TRUE(inode.is_ok());
   bool done = false;
   std::thread thread([&]() {
     ASSERT_EQ(allocator.GrowNodeMap(kBlobfsBlockSize * 5), ZX_OK);
@@ -514,7 +517,7 @@ TEST(AllocatorTest, LiveInodePtrBlocksGrow) {
   EXPECT_FALSE(done);
 
   // Reset the pointer and the thread should be unblocked.
-  inode.reset();
+  inode.value().reset();
 
   thread.join();
   EXPECT_TRUE(done);
@@ -530,8 +533,10 @@ TEST(AllocatorTest, TwoInodePtrsDontBlock) {
   Allocator allocator(&space_manager, std::move(block_map), std::move(node_map),
                       std::move(nodes_bitmap));
 
-  InodePtr inode1 = allocator.GetNode(0);
-  InodePtr inode2 = allocator.GetNode(1);
+  auto inode1 = allocator.GetNode(0);
+  ASSERT_TRUE(inode1.is_ok());
+  auto inode2 = allocator.GetNode(1);
+  ASSERT_TRUE(inode2.is_ok());
 }
 
 TEST(AllocatorTest, FreedBlocksAreReservedUntilTransactionCommits) {
@@ -652,6 +657,46 @@ TEST(AllocatorTest, MarkContainerNodeAllocatedIsCorrect) {
   auto inode = allocator->GetNode(inode_index);
   ASSERT_NE(inode, nullptr);
   EXPECT_EQ(inode->header.next_node, node_index);
+}
+
+TEST(AllocatorTest, MarkContainerNodeAllocatedWithAnInvalidPreviousNodeIsAnError) {
+  MockSpaceManager space_manager;
+  std::unique_ptr<Allocator> allocator;
+  InitializeAllocator(/*blocks=*/1, /*nodes=*/1, &space_manager, &allocator);
+
+  uint32_t invalid_node_index = kMaxNodeId - 1;
+  auto reserved_node = allocator->ReserveNode();
+  ASSERT_TRUE(reserved_node.is_ok());
+  zx_status_t status =
+      allocator->MarkContainerNodeAllocated(std::move(reserved_node).value(), invalid_node_index);
+  EXPECT_NE(status, ZX_OK);
+}
+
+TEST(AllocatorTest, GetNodeWithAnInvalidIndexReturnsAnError) {
+  MockSpaceManager space_manager;
+  std::unique_ptr<Allocator> allocator;
+  InitializeAllocator(/*blocks=*/1, /*nodes=*/1, &space_manager, &allocator);
+
+  uint32_t invalid_node_index = kMaxNodeId - 1;
+  auto inode = allocator->GetNode(invalid_node_index);
+  EXPECT_TRUE(inode.is_error());
+}
+
+TEST(AllocatorTest, FreeNodeWithAnInvalidIndexReturnsAnError) {
+  MockSpaceManager space_manager;
+  std::unique_ptr<Allocator> allocator;
+  InitializeAllocator(/*blocks=*/1, /*nodes=*/1, &space_manager, &allocator);
+
+  uint32_t invalid_node_index = kMaxNodeId - 1;
+  EXPECT_EQ(allocator->FreeNode(invalid_node_index), ZX_ERR_INVALID_ARGS);
+}
+
+TEST(AllocatorTest, FreeNodeWithNonAllocatedNodeReturnsAnError) {
+  MockSpaceManager space_manager;
+  std::unique_ptr<Allocator> allocator;
+  InitializeAllocator(/*blocks=*/1, /*nodes=*/5, &space_manager, &allocator);
+
+  EXPECT_EQ(allocator->FreeNode(/*node_index=*/0), ZX_ERR_BAD_STATE);
 }
 
 }  // namespace

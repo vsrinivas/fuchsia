@@ -6,6 +6,7 @@
 
 #include <lib/zx/status.h>
 #include <stdint.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include "src/storage/blobfs/format.h"
@@ -23,7 +24,11 @@ bool AllocatedNodeIterator::Done() const {
 zx::status<ExtentContainer*> AllocatedNodeIterator::Next() {
   ZX_DEBUG_ASSERT(!Done());
 
-  ExtentContainer* next = finder_->GetNode(NextNodeIndex())->AsExtentContainer();
+  auto next_node = finder_->GetNode(NextNodeIndex());
+  if (next_node.is_error()) {
+    return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
+  }
+  ExtentContainer* next = next_node->AsExtentContainer();
 
   ZX_DEBUG_ASSERT(next != nullptr);
   bool is_container = next->header.IsAllocated() && next->header.IsExtentContainer();

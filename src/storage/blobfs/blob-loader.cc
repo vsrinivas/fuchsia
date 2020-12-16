@@ -90,7 +90,10 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
                                  const BlobCorruptionNotifier* corruption_notifier,
                                  fzl::OwnedVmoMapper* data_out, fzl::OwnedVmoMapper* merkle_out) {
   ZX_DEBUG_ASSERT(read_mapper_.vmo().is_valid());
-  const InodePtr inode = node_finder_->GetNode(node_index);
+  auto inode = node_finder_->GetNode(node_index);
+  if (inode.is_error()) {
+    return inode.status_value();
+  }
   // LoadBlob should only be called for Inodes. If this doesn't hold, one of two things happened:
   //   - Programmer error
   //   - Corruption of a blob's Inode
@@ -101,8 +104,8 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
 
   TRACE_DURATION("blobfs", "BlobLoader::LoadBlob", "blob_size", inode->blob_size);
 
-  auto blob_layout = BlobLayout::CreateFromInode(GetBlobLayoutFormat(txn_manager_->Info()), *inode,
-                                                 GetBlockSize());
+  auto blob_layout = BlobLayout::CreateFromInode(GetBlobLayoutFormat(txn_manager_->Info()),
+                                                 *inode.value(), GetBlockSize());
   if (blob_layout.is_error()) {
     FX_LOGS(ERROR) << "Failed to create blob layout: " << blob_layout.status_string();
     return blob_layout.status_value();
@@ -115,14 +118,14 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
   fzl::OwnedVmoMapper merkle_mapper;
   std::unique_ptr<BlobVerifier> verifier;
   zx_status_t status;
-  if ((status = InitMerkleVerifier(node_index, *inode, *blob_layout.value(), corruption_notifier,
-                                   &merkle_mapper, &verifier)) != ZX_OK) {
+  if ((status = InitMerkleVerifier(node_index, *inode.value(), *blob_layout.value(),
+                                   corruption_notifier, &merkle_mapper, &verifier)) != ZX_OK) {
     return status;
   }
 
   uint64_t file_block_aligned_size = blob_layout->FileBlockAlignedSize();
   fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
-  FormatBlobDataVmoName(*inode, &data_vmo_name);
+  FormatBlobDataVmoName(*inode.value(), &data_vmo_name);
 
   fzl::OwnedVmoMapper data_mapper;
   status = data_mapper.CreateAndMap(file_block_aligned_size, data_vmo_name.c_str());
@@ -130,9 +133,9 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
     FX_LOGS(ERROR) << "Failed to initialize data vmo; error: " << zx_status_get_string(status);
     return status;
   }
-  status = inode->IsCompressed()
-               ? LoadAndDecompressData(node_index, *inode, *blob_layout.value(), data_mapper)
-               : LoadData(node_index, *blob_layout.value(), data_mapper);
+  status = inode->IsCompressed() ? LoadAndDecompressData(node_index, *inode.value(),
+                                                         *blob_layout.value(), data_mapper)
+                                 : LoadData(node_index, *blob_layout.value(), data_mapper);
   if (status != ZX_OK) {
     return status;
   }
@@ -155,7 +158,10 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
                                       fzl::OwnedVmoMapper* data_out,
                                       fzl::OwnedVmoMapper* merkle_out) {
   ZX_DEBUG_ASSERT(read_mapper_.vmo().is_valid());
-  const InodePtr inode = node_finder_->GetNode(node_index);
+  auto inode = node_finder_->GetNode(node_index);
+  if (inode.is_error()) {
+    return inode.status_value();
+  }
   // LoadBlobPaged should only be called for Inodes. If this doesn't hold, one of two things
   // happened:
   //   - Programmer error
@@ -167,8 +173,8 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
 
   TRACE_DURATION("blobfs", "BlobLoader::LoadBlobPaged", "blob_size", inode->blob_size);
 
-  auto blob_layout = BlobLayout::CreateFromInode(GetBlobLayoutFormat(txn_manager_->Info()), *inode,
-                                                 GetBlockSize());
+  auto blob_layout = BlobLayout::CreateFromInode(GetBlobLayoutFormat(txn_manager_->Info()),
+                                                 *inode.value(), GetBlockSize());
   if (blob_layout.is_error()) {
     FX_LOGS(ERROR) << "Failed to create blob layout: "
                    << zx_status_get_string(blob_layout.error_value());
@@ -182,13 +188,13 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   fzl::OwnedVmoMapper merkle_mapper;
   std::unique_ptr<BlobVerifier> verifier;
   zx_status_t status;
-  if ((status = InitMerkleVerifier(node_index, *inode, *blob_layout.value(), corruption_notifier,
-                                   &merkle_mapper, &verifier)) != ZX_OK) {
+  if ((status = InitMerkleVerifier(node_index, *inode.value(), *blob_layout.value(),
+                                   corruption_notifier, &merkle_mapper, &verifier)) != ZX_OK) {
     return status;
   }
 
   std::unique_ptr<SeekableDecompressor> decompressor;
-  if ((status = InitForDecompression(node_index, *inode, *blob_layout.value(), *verifier,
+  if ((status = InitForDecompression(node_index, *inode.value(), *blob_layout.value(), *verifier,
                                      &decompressor)) != ZX_OK) {
     return status;
   }
@@ -202,7 +208,7 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   auto page_watcher = std::make_unique<pager::PageWatcher>(pager_, std::move(userpager_info));
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
-  FormatBlobDataVmoName(*inode, &data_vmo_name);
+  FormatBlobDataVmoName(*inode.value(), &data_vmo_name);
 
   zx::vmo data_vmo;
   if ((status = page_watcher->CreatePagedVmo(blob_layout->FileBlockAlignedSize(), &data_vmo)) !=
@@ -464,17 +470,21 @@ zx::status<uint64_t> BlobLoader::LoadBlocks(uint32_t node_index, uint32_t block_
   fs::ReadTxn txn(txn_manager_);
 
   const uint64_t kDataStart = DataStartBlock(txn_manager_->Info());
-  BlockIterator block_iter = block_iter_provider_->BlockIteratorByNodeIndex(node_index);
-  if ((status = IterateToBlock(&block_iter, block_offset)) != ZX_OK) {
+  auto block_iter = block_iter_provider_->BlockIteratorByNodeIndex(node_index);
+  if (block_iter.is_error()) {
+    return block_iter.take_error();
+  }
+  if ((status = IterateToBlock(&block_iter.value(), block_offset)) != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to seek to starting block: " << zx_status_get_string(status);
     return zx::error(status);
   }
 
-  status = StreamBlocks(
-      &block_iter, block_count, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-        txn.Enqueue(vmoid.get(), vmo_offset - block_offset, kDataStart + dev_offset, length);
-        return ZX_OK;
-      });
+  status = StreamBlocks(&block_iter.value(), block_count,
+                        [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
+                          txn.Enqueue(vmoid.get(), vmo_offset - block_offset,
+                                      kDataStart + dev_offset, length);
+                          return ZX_OK;
+                        });
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to stream blocks: " << zx_status_get_string(status);
     return zx::error(status);

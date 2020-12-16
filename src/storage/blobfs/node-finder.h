@@ -5,6 +5,8 @@
 #ifndef SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_NODE_FINDER_H_
 #define SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_NODE_FINDER_H_
 
+#include <lib/zx/status.h>
+
 #include "src/storage/blobfs/format.h"
 
 namespace blobfs {
@@ -29,10 +31,8 @@ class NodeFinder {
  public:
   virtual ~NodeFinder() = default;
 
-  // Returns a pointer to the requested node.
-  //
-  // TODO(smklein): Return a zx_status_t to allow for invalid |ino| values.
-  virtual InodePtr GetNode(uint32_t node_index) = 0;
+  // Returns a pointer to the requested node or an error if |node_index| is out of range.
+  virtual zx::status<InodePtr> GetNode(uint32_t node_index) = 0;
 
   // Called when an InodePtr goes out of scope.
   virtual void DropInodePtr() {}

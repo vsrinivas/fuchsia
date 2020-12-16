@@ -12,6 +12,7 @@
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/iterator/allocated-node-iterator.h"
 #include "src/storage/blobfs/iterator/extent-iterator.h"
+#include "src/storage/blobfs/node-finder.h"
 
 namespace blobfs {
 
@@ -22,8 +23,14 @@ namespace blobfs {
 // to disk.
 class AllocatedExtentIterator : public ExtentIterator {
  public:
-  AllocatedExtentIterator(NodeFinder* finder, uint32_t node_index);
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AllocatedExtentIterator);
+  AllocatedExtentIterator& operator=(const AllocatedExtentIterator&) = delete;
+  AllocatedExtentIterator(const AllocatedExtentIterator&) = delete;
+  AllocatedExtentIterator(AllocatedExtentIterator&&) = default;
+  AllocatedExtentIterator& operator=(AllocatedExtentIterator&&) = default;
+
+  // Creates an AllocatedExtentIterator.  Returns an error if |node_index| isn't a valid index in
+  // |finder|.
+  static zx::status<AllocatedExtentIterator> Create(NodeFinder* finder, uint32_t node_index);
 
   ////////////////
   // ExtentIterator interface.
@@ -47,6 +54,8 @@ class AllocatedExtentIterator : public ExtentIterator {
   static zx_status_t VerifyIteration(NodeFinder* finder, Inode* inode);
 
  private:
+  AllocatedExtentIterator(NodeFinder* finder, InodePtr inode, uint32_t node_index);
+
   // Indicates if the current node is the inode (as opposed to a container).
   bool IsInode() const;
 
@@ -64,7 +73,6 @@ class AllocatedExtentIterator : public ExtentIterator {
   // Returns an error if this container is unallocated, or not marked as a container.
   zx_status_t NextContainer();
 
-  NodeFinder* finder_;
   InodePtr inode_;
   // The index of the node we're currently observing.
   uint32_t node_index_;

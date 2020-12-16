@@ -786,20 +786,17 @@ zx_status_t Blobfs::ResetCache() {
   return ZX_OK;
 }
 
-InodePtr Blobfs::GetNode(uint32_t index) {
+zx::status<InodePtr> Blobfs::GetNode(uint32_t index) {
+  if (index >= info_.inode_count) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
   size_t bno = node_map_start_block_ + index / kBlobfsInodesPerBlock;
-
-  if (bno >= data_start_block_) {
-    // Set cache to 0 so we can return a pointer to an empty inode
-    if (ResetCache() != ZX_OK) {
-      return {};
-    }
-  } else if (ReadBlock(bno) < 0) {
-    return {};
+  if (zx_status_t status = ReadBlock(bno); status != ZX_OK) {
+    return zx::error(status);
   }
 
   auto iblock = reinterpret_cast<Inode*>(cache_.blk);
-  return InodePtr(&iblock[index % kBlobfsInodesPerBlock], InodePtrDeleter(this));
+  return zx::ok(InodePtr(&iblock[index % kBlobfsInodesPerBlock], InodePtrDeleter(this)));
 }
 
 fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadAndVerifyBlob(Inode& inode) {
@@ -878,7 +875,11 @@ fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadAndVerifyBlob(Inode& 
 }
 
 zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
-  Inode inode = *GetNode(node_index);
+  auto inode_ptr = GetNode(node_index);
+  if (inode_ptr.is_error()) {
+    return inode_ptr.status_value();
+  }
+  Inode inode = *inode_ptr.value();
   auto load_result = LoadAndVerifyBlob(inode);
   return load_result.is_ok() ? ZX_OK : ZX_ERR_INTERNAL;
 }
@@ -889,8 +890,8 @@ fit::result<void, std::string> Blobfs::VisitBlobs(BlobVisitor visitor) {
   for (uint64_t inode_index = 0, allocated_nodes = 0;
        inode_index < info_.inode_count && allocated_nodes < info_.alloc_inode_count;
        ++inode_index) {
-    InodePtr inode_ptr = GetNode(inode_index);
-    if (!inode_ptr) {
+    auto inode_ptr = GetNode(inode_index);
+    if (inode_ptr.is_error()) {
       return fit::error("Failed to retrieve inode.");
     }
     if (!inode_ptr->header.IsAllocated()) {
@@ -899,7 +900,7 @@ fit::result<void, std::string> Blobfs::VisitBlobs(BlobVisitor visitor) {
 
     // Required copy to preven additional calls to ReadBlock or GetNode to replace the contents
     // of |cache_.blk| where inode_ptr comes from.
-    Inode inode = *inode_ptr;
+    Inode inode = *inode_ptr.value();
     allocated_nodes++;
     auto load_result = LoadAndVerifyBlob(inode);
     if (load_result.is_error()) {

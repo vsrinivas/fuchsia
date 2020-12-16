@@ -26,6 +26,8 @@ class BlockIterator {
   explicit BlockIterator(std::unique_ptr<ExtentIterator> iterator);
   BlockIterator(const BlockIterator&) = delete;
   BlockIterator& operator=(const BlockIterator&) = delete;
+  BlockIterator(BlockIterator&&) = default;
+  BlockIterator& operator=(BlockIterator&&) = default;
 
   // Returns true if there are no more blocks to be consumed.
   bool Done() const;

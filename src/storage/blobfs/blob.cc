@@ -523,7 +523,11 @@ zx_status_t Blob::WriteMetadata(BlobTransaction& transaction) {
       return NodePopulator::IterationCommand::Continue;
     };
 
-    InodePtr mapped_inode = blobfs_->GetNode(map_index_);
+    auto mapped_inode_or_error = blobfs_->GetNode(map_index_);
+    if (mapped_inode_or_error.is_error()) {
+      return mapped_inode_or_error.status_value();
+    }
+    InodePtr mapped_inode = std::move(mapped_inode_or_error).value();
     *mapped_inode = inode_;
     NodePopulator populator(blobfs_->GetAllocator(), std::move(write_info_->extents),
                             std::move(write_info_->node_indices));
@@ -541,7 +545,12 @@ zx_status_t Blob::WriteMetadata(BlobTransaction& transaction) {
   } else {
     // Special case: Empty node.
     ZX_DEBUG_ASSERT(write_info_->node_indices.size() == 1);
-    *(blobfs_->GetNode(map_index_)) = inode_;
+    auto mapped_inode_or_error = blobfs_->GetNode(map_index_);
+    if (mapped_inode_or_error.is_error()) {
+      return mapped_inode_or_error.status_value();
+    }
+    InodePtr mapped_inode = std::move(mapped_inode_or_error).value();
+    *mapped_inode = inode_;
     blobfs_->GetAllocator()->MarkInodeAllocated(std::move(write_info_->node_indices[0]));
     blobfs_->PersistNode(map_index_, transaction);
   }
@@ -994,7 +1003,11 @@ zx_status_t Blob::CommitDataBuffer() {
 }
 
 zx_status_t Blob::LoadAndVerifyBlob(Blobfs* bs, uint32_t node_index) {
-  fbl::RefPtr<Blob> vn = fbl::MakeRefCounted<Blob>(bs, node_index, *bs->GetNode(node_index));
+  auto inode = bs->GetNode(node_index);
+  if (inode.is_error()) {
+    return inode.status_value();
+  }
+  fbl::RefPtr<Blob> vn = fbl::MakeRefCounted<Blob>(bs, node_index, *inode.value());
 
   auto status = vn->LoadVmosFromDisk();
   if (status != ZX_OK) {
@@ -1216,7 +1229,7 @@ zx_status_t Blob::Purge() {
     // A readable blob should only be purged if it has been unlinked.
     ZX_ASSERT(DeletionQueued());
     BlobTransaction transaction;
-    blobfs_->FreeInode(GetMapIndex(), transaction);
+    ZX_ASSERT(blobfs_->FreeInode(GetMapIndex(), transaction) == ZX_OK);
     transaction.Commit(*blobfs_->journal());
   }
   ZX_ASSERT(Cache().Evict(fbl::RefPtr(this)) == ZX_OK);

@@ -85,7 +85,8 @@ TEST(NodePopulatorTest, WalkOne) {
   };
 
   // Before walking, observe that the node is not allocated.
-  const InodePtr inode = allocator->GetNode(node_index);
+  auto inode = allocator->GetNode(node_index);
+  ASSERT_TRUE(inode.is_ok());
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
   ASSERT_EQ(0ul, inode->blob_size);
@@ -139,7 +140,8 @@ TEST(NodePopulatorTest, WalkAllInlineExtents) {
   };
 
   // Before walking, observe that the node is not allocated.
-  const InodePtr inode = allocator->GetNode(allocated_nodes[0]);
+  auto inode = allocator->GetNode(allocated_nodes[0]);
+  ASSERT_TRUE(inode.is_ok());
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
   ASSERT_EQ(0ul, inode->blob_size);
@@ -197,7 +199,8 @@ TEST(NodePopulatorTest, WalkManyNodes) {
   };
 
   // Before walking, observe that the node is not allocated.
-  InodePtr inode = allocator->GetNode(allocated_nodes[0]);
+  auto inode = allocator->GetNode(allocated_nodes[0]);
+  ASSERT_TRUE(inode.is_ok());
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
   ASSERT_EQ(0ul, inode->blob_size);
@@ -218,10 +221,11 @@ TEST(NodePopulatorTest, WalkManyNodes) {
   }
 
   // Additionally, observe that a container node is allocated.
-  inode = allocator->GetNode(allocated_nodes[1]);
-  ASSERT_TRUE(inode->header.IsAllocated());
-  ASSERT_TRUE(inode->header.IsExtentContainer());
-  const ExtentContainer* container = inode->AsExtentContainer();
+  auto container_node = allocator->GetNode(allocated_nodes[1]);
+  ASSERT_TRUE(container_node.is_ok());
+  ASSERT_TRUE(container_node->header.IsAllocated());
+  ASSERT_TRUE(container_node->header.IsExtentContainer());
+  const ExtentContainer* container = container_node->AsExtentContainer();
   ASSERT_EQ(allocated_nodes[0], container->previous_node);
   ASSERT_EQ(1u, container->extent_count);
   ASSERT_TRUE(allocated_extents[kInlineMaxExtents] == container->extents[0]);
@@ -254,7 +258,8 @@ TEST(NodePopulatorTest, WalkManyContainers) {
   CopyNodes(nodes, &allocated_nodes);
 
   // Before walking, observe that the node is not allocated.
-  InodePtr inode = allocator->GetNode(allocated_nodes[0]);
+  auto inode = allocator->GetNode(allocated_nodes[0]);
+  ASSERT_TRUE(inode.is_ok());
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
   ASSERT_EQ(0ul, inode->blob_size);
@@ -289,20 +294,22 @@ TEST(NodePopulatorTest, WalkManyContainers) {
   }
 
   // Additionally, observe that two container nodes are allocated.
-  inode = allocator->GetNode(allocated_nodes[1]);
-  ASSERT_TRUE(inode->header.IsAllocated());
-  ASSERT_TRUE(inode->header.IsExtentContainer());
-  const ExtentContainer* container = inode->AsExtentContainer();
+  auto container_node1 = allocator->GetNode(allocated_nodes[1]);
+  ASSERT_TRUE(container_node1.is_ok());
+  ASSERT_TRUE(container_node1->header.IsAllocated());
+  ASSERT_TRUE(container_node1->header.IsExtentContainer());
+  const ExtentContainer* container = container_node1->AsExtentContainer();
   ASSERT_EQ(allocated_nodes[2], container->header.next_node);
   ASSERT_EQ(allocated_nodes[0], container->previous_node);
   ASSERT_EQ(kContainerMaxExtents, container->extent_count);
   for (size_t i = 0; i < kContainerMaxExtents; i++) {
     ASSERT_TRUE(allocated_extents[kInlineMaxExtents + i] == container->extents[i]);
   }
-  inode = allocator->GetNode(allocated_nodes[2]);
-  ASSERT_TRUE(inode->header.IsAllocated());
-  ASSERT_TRUE(inode->header.IsExtentContainer());
-  container = inode->AsExtentContainer();
+  auto container_node2 = allocator->GetNode(allocated_nodes[2]);
+  ASSERT_TRUE(container_node1.is_ok());
+  ASSERT_TRUE(container_node2->header.IsAllocated());
+  ASSERT_TRUE(container_node2->header.IsExtentContainer());
+  container = container_node2->AsExtentContainer();
   ASSERT_EQ(allocated_nodes[1], container->previous_node);
   ASSERT_EQ(1, container->extent_count);
   ASSERT_TRUE(allocated_extents[kInlineMaxExtents + kContainerMaxExtents] == container->extents[0]);
@@ -337,7 +344,8 @@ TEST(NodePopulatorTest, WalkExtraNodes) {
   CopyNodes(nodes, &allocated_nodes);
 
   // Before walking, observe that the node is not allocated.
-  InodePtr inode = allocator->GetNode(allocated_nodes[0]);
+  auto inode = allocator->GetNode(allocated_nodes[0]);
+  ASSERT_TRUE(inode.is_ok());
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
   ASSERT_EQ(0ul, inode->blob_size);
@@ -371,10 +379,12 @@ TEST(NodePopulatorTest, WalkExtraNodes) {
   }
 
   // Observe that the other nodes are not allocated.
-  inode = allocator->GetNode(allocated_nodes[1]);
-  ASSERT_FALSE(inode->header.IsAllocated());
-  inode = allocator->GetNode(allocated_nodes[2]);
-  ASSERT_FALSE(inode->header.IsAllocated());
+  auto container_node1 = allocator->GetNode(allocated_nodes[1]);
+  ASSERT_TRUE(container_node1.is_ok());
+  ASSERT_FALSE(container_node1->header.IsAllocated());
+  auto container_node2 = allocator->GetNode(allocated_nodes[1]);
+  ASSERT_TRUE(container_node2.is_ok());
+  ASSERT_FALSE(container_node2->header.IsAllocated());
 }
 
 // Test walking when extra extents are left unused. This simulates a case where
@@ -408,7 +418,8 @@ TEST(NodePopulatorTest, WalkExtraExtents) {
   CopyNodes(nodes, &allocated_nodes);
 
   // Before walking, observe that the node is not allocated.
-  InodePtr inode = allocator->GetNode(allocated_nodes[0]);
+  auto inode = allocator->GetNode(allocated_nodes[0]);
+  ASSERT_TRUE(inode.is_ok());
   ASSERT_FALSE(inode->header.IsAllocated());
   ASSERT_FALSE(inode->header.IsExtentContainer());
   ASSERT_EQ(0ul, inode->blob_size);
@@ -445,10 +456,12 @@ TEST(NodePopulatorTest, WalkExtraExtents) {
   }
 
   // Observe that the other nodes are not allocated.
-  inode = allocator->GetNode(allocated_nodes[1]);
-  ASSERT_FALSE(inode->header.IsAllocated());
-  inode = allocator->GetNode(allocated_nodes[2]);
-  ASSERT_FALSE(inode->header.IsAllocated());
+  auto container_node1 = allocator->GetNode(allocated_nodes[1]);
+  ASSERT_TRUE(container_node1.is_ok());
+  ASSERT_FALSE(container_node1->header.IsAllocated());
+  auto container_node2 = allocator->GetNode(allocated_nodes[1]);
+  ASSERT_TRUE(container_node2.is_ok());
+  ASSERT_FALSE(container_node2->header.IsAllocated());
 }
 
 }  // namespace

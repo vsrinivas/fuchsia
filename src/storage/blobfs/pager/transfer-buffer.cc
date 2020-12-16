@@ -55,7 +55,10 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
   }
 
   fs::ReadTxn txn(txn_manager_);
-  BlockIterator block_iter = block_iter_provider_->BlockIteratorByNodeIndex(info.identifier);
+  auto block_iter = block_iter_provider_->BlockIteratorByNodeIndex(info.identifier);
+  if (block_iter.is_error()) {
+    return block_iter.take_error();
+  }
 
   auto start_block = static_cast<uint32_t>((offset + info.data_start_bytes) / kBlobfsBlockSize);
   auto block_count =
@@ -65,7 +68,7 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
                  start_block * kBlobfsBlockSize, "length", block_count * kBlobfsBlockSize);
 
   // Navigate to the start block.
-  zx_status_t status = IterateToBlock(&block_iter, start_block);
+  zx_status_t status = IterateToBlock(&block_iter.value(), start_block);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to navigate to start block " << start_block << ": "
                    << zx_status_get_string(status);
@@ -74,11 +77,12 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
 
   // Enqueue operations to read in the required blocks to the transfer buffer.
   const uint64_t data_start = DataStartBlock(txn_manager_->Info());
-  status = StreamBlocks(
-      &block_iter, block_count, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-        txn.Enqueue(vmoid_.get(), vmo_offset - start_block, dev_offset + data_start, length);
-        return ZX_OK;
-      });
+  status = StreamBlocks(&block_iter.value(), block_count,
+                        [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
+                          txn.Enqueue(vmoid_.get(), vmo_offset - start_block,
+                                      dev_offset + data_start, length);
+                          return ZX_OK;
+                        });
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to enqueue read operations: " << zx_status_get_string(status);
     return zx::error(status);

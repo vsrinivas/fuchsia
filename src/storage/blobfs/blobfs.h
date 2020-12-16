@@ -128,7 +128,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   //
   // Allows clients to acquire a block iterator for a given node index.
 
-  BlockIterator BlockIteratorByNodeIndex(uint32_t node_index) final;
+  zx::status<BlockIterator> BlockIteratorByNodeIndex(uint32_t node_index) final;
 
   ////////////////
   // Other methods.
@@ -153,7 +153,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   Allocator* GetAllocator() { return allocator_.get(); }
 
-  InodePtr GetNode(uint32_t node_index) { return allocator_->GetNode(node_index); }
+  zx::status<InodePtr> GetNode(uint32_t node_index) { return allocator_->GetNode(node_index); }
 
   // Invokes "open" on the root directory.
   // Acts as a special-case to bootstrap filesystem mounting.
@@ -179,8 +179,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   // Frees an inode, from both the reserved map and the inode table. If the
   // inode was allocated in the inode table, write the deleted inode out to
-  // disk.
-  void FreeInode(uint32_t node_index, BlobTransaction& transaction);
+  // disk. Returns an error if the inode could not be freed.
+  zx_status_t FreeInode(uint32_t node_index, BlobTransaction& transaction);
 
   // Writes node data to the inode table and updates disk.
   void PersistNode(uint32_t node_index, BlobTransaction& transaction);
@@ -251,7 +251,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   // Free a single node. Doesn't attempt to parse the type / traverse nodes;
   // this function just deletes a single node.
-  void FreeNode(uint32_t node_index, BlobTransaction& transaction);
+  zx_status_t FreeNode(uint32_t node_index, BlobTransaction& transaction);
 
   // Given a contiguous number of blocks after a starting block,
   // write out the bitmap to disk for the corresponding blocks.
