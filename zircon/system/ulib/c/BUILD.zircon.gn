@@ -70,10 +70,6 @@ if (zx != "/" && zircon_toolchain == false) {
   }
 }
 
-if (zx == "/") {
-  import("sysroot_entries.gni")
-}
-
 if (zx != "/" && zircon_toolchain == false) {
   import("libc_toolchain.gni")
 
@@ -99,21 +95,15 @@ if (zx != "/" && zircon_toolchain == false) {
     sdk_headers = []
     sdk_migrated = true
 
-    if (zx == "/") {
-      # Do not export the C library to the Fuchsia build system anymore.
-      install_path = false
-      sdk_migrated = true
-    } else {
-      # At link time and in DT_SONAME, musl is known as libc.so.  But the
-      # (only) place it needs to be installed at runtime is where the
-      # PT_INTERP strings embedded in executables point, which is ld.so.1.
-      install_name = "ld.so.1"
+    # At link time and in DT_SONAME, musl is known as libc.so.  But the
+    # (only) place it needs to be installed at runtime is where the
+    # PT_INTERP strings embedded in executables point, which is ld.so.1.
+    install_name = "ld.so.1"
 
-      metadata = {
-        runtime_deps_manifest_lines =
-            [ "lib/${toolchain.libprefix}ld.so.1=" +
-              rebase_path("$root_out_dir/libc.so", root_build_dir) ]
-      }
+    metadata = {
+      runtime_deps_manifest_lines =
+          [ "lib/${toolchain.libprefix}ld.so.1=" +
+            rebase_path("$root_out_dir/libc.so", root_build_dir) ]
     }
 
     public_configs = [ "$zx/third_party/ulib/musl:headers" ]
@@ -132,39 +122,8 @@ if (zx != "/" && zircon_toolchain == false) {
       "zircon",
     ]
 
-    if (zx == "/") {
-      # Suppress the ${toolchain.implicit_deps} that points back to here.
-      no_implicit_deps = true
-    }
-
     # Don't link against the shared libc++.
     configs += [ "$zx_build_config:static-libc++" ]
-
-    if (zx == "/") {
-      libc_stripped = "$target_out_dir/libc.so"
-    } else {
-      libc_stripped = "$root_build_dir/libc.so"
-    }
-    libc_unstripped = libc_stripped + ".debug"
-
-    rebased_libc_stripped = rebase_path(libc_stripped, root_build_dir)
-    rebased_libc_unstripped = rebase_path(libc_unstripped, root_build_dir)
-
-    not_needed([
-                 "rebased_libc_stripped",
-                 "rebased_libc_unstripped",
-               ])
-
-    if (zx == "/") {
-      metadata = {
-        # TODO(BLD-353): temporary kludges; see //zircon/public/sysroot
-        legacy_sysroot = sysroot_instrumented_libc_entries
-        if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] ==
-            toolchain.tags) {
-          legacy_sysroot += sysroot_uninstrumented_libc_entries
-        }
-      }
-    }
   }
 }
 
@@ -192,16 +151,6 @@ if (zx != "/" && zircon_toolchain == false) {
     # worthwhile to have PLT entries for main or __libc_start_main, since
     # they are always used eagerly anyway.
     cflags = [ "-fno-plt" ]
-
-    if (zx == "/") {
-      metadata = {
-        # TODO(fxbug.dev/3156): temporary kludges
-        if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] ==
-            toolchain.tags) {
-          legacy_sysroot = sysroot_crt1_entries
-        }
-      }
-    }
   }
 }
 

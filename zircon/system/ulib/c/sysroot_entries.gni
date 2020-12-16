@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/vdso/vdso.gni")
+import("//zircon/vdso/vdso.gni")
 
 # This file is used to describe the sysroot entries contributed by the
 # C library. For historical reasons, it currently includes some Zircon
@@ -29,33 +29,7 @@ import("$zx/vdso/vdso.gni")
 #   populate the sysroot directory properly though).
 #
 
-# The toolchain used to build the C library, without any variant suffix.
-# This is used to locate the built binaries (stripped and unstripped) as
-# well as the corresponding dependency. And the label info for the
-# directory label info that contains the gemerated C library binaries.
-if (zx == "/") {
-  # NOTE: Due to the way variants are implemented in the Zircon build, it
-  # is not possible to compute the location of the C library binaries,
-  # so this assumes this file is only included in the Zircon build
-  # from the toolchain that actually builds the C library.
-  sysroot_libc_toolchain = current_toolchain
-
-  # The GN label used to build the C library
-  sysroot_libc_target = "$zx/system/ulib/c($sysroot_libc_toolchain)"
-
-  # The stripped and unstripped paths to the C library binaries.
-  _sysroot_libc_out_dir = get_label_info(sysroot_libc_target, "target_out_dir")
-  sysroot_libc_stripped = _sysroot_libc_out_dir + "/libc.so"
-  sysroot_libc_unstripped = _sysroot_libc_out_dir + "/libc.so.debug"
-
-  sysroot_crt1_toolchain = sysroot_libc_toolchain
-  sysroot_crt1_target = "$zx/system/ulib/c:crt1($sysroot_crt1_toolchain)"
-
-  sysroot_crt1_obj =
-      get_label_info(sysroot_crt1_target, "target_out_dir") + "/crt1.Scrt1.cc.o"
-} else {
-  import("//zircon/system/ulib/c/libc_toolchain.gni")
-}
+import("//zircon/system/ulib/c/libc_toolchain.gni")
 
 _rebased_libc_stripped = rebase_path(sysroot_libc_stripped, root_build_dir)
 _rebased_libc_unstripped = rebase_path(sysroot_libc_unstripped, root_build_dir)
@@ -373,9 +347,7 @@ sysroot_uninstrumented_libc_entries = [
       # zircon_library().
       source = _rebased_libc_unstripped
       link = "lib/libc.so"
-      if (zx != "/") {
-        deps = [ sysroot_libc_target ]
-      }
+      deps = [ sysroot_libc_target ]
     }
   },
 ]
@@ -400,87 +372,57 @@ foreach(lib,
 # This corresponds to the metadata that will go into each instrumented
 # (and non-instrumented) version of the C library.
 
-if (zx == "/") {
-  # For the Zircon build, the same definition is added repeatedly
-  # to different instances of the zx_library(), under different
-  # toolchains.
-  sysroot_instrumented_libc_entries = [
+sysroot_instrumented_libc_entries = []
+foreach(variant,
+        [
+          "",
+          "asan",
+          "asan-ubsan",
+        ]) {
+  if (variant == "") {
+    # Ensure that the non-instrumented version of libc.so distributed with
+    # the SDK is the same as the system one (i.e. potentially built with
+    # non instrumented toolchains like "gcc" or "thinlto"). This avoids
+    # conflicts later when creating Fuchsia packages which contains binaries
+    # who indirectly depend on the core SDK.
+    _libprefix = ""
+    _libc_target = system_libc_target
+    _libc_stripped = system_libc_stripped
+    _libc_unstripped = system_libc_unstripped
+  } else {
+    _libprefix = "$variant/"
+    _libc_toolchain = "//zircon/system/ulib/c:user.libc_${current_cpu}-$variant"
+    _libc_target = "$sysroot_libc_label($_libc_toolchain)"
+    _libc_stripped = get_label_info(_libc_target, "root_out_dir") + "/libc.so"
+    _libc_unstripped = _libc_stripped + ".debug"
+  }
+
+  sysroot_instrumented_libc_entries += [
     {
       sdk = {
-        source = _rebased_libc_unstripped
-        debug = "debug/${toolchain.libprefix}libc.so"
+        source = rebase_path(_libc_unstripped, root_build_dir)
+        debug = "debug/${_libprefix}libc.so"
+        deps = [ _libc_target ]
       }
     },
     {
       sdk = {
-        source = _rebased_libc_stripped
-        dist = "dist/lib/${toolchain.libprefix}ld.so.1"
+        source = rebase_path(_libc_stripped, root_build_dir)
+        dist = "dist/lib/${_libprefix}ld.so.1"
+        deps = [ _libc_target ]
       }
     },
   ]
-} else {
-  # For the Fuchsia build, add all entries at once to the list.
-  sysroot_instrumented_libc_entries = []
-  foreach(variant,
-          [
-            "",
-            "asan",
-            "asan-ubsan",
-          ]) {
-    if (variant == "") {
-      # Ensure that the non-instrumented version of libc.so distributed with
-      # the SDK is the same as the system one (i.e. potentially built with
-      # non instrumented toolchains like "gcc" or "thinlto"). This avoids
-      # conflicts later when creating Fuchsia packages which contains binaries
-      # who indirectly depend on the core SDK.
-      _libprefix = ""
-      _libc_target = system_libc_target
-      _libc_stripped = system_libc_stripped
-      _libc_unstripped = system_libc_unstripped
-    } else {
-      _libprefix = "$variant/"
-      _libc_toolchain =
-          "//zircon/system/ulib/c:user.libc_${current_cpu}-$variant"
-      _libc_target = "$sysroot_libc_label($_libc_toolchain)"
-      _libc_stripped = get_label_info(_libc_target, "root_out_dir") + "/libc.so"
-      _libc_unstripped = _libc_stripped + ".debug"
-    }
-
-    sysroot_instrumented_libc_entries += [
-      {
-        sdk = {
-          source = rebase_path(_libc_unstripped, root_build_dir)
-          debug = "debug/${_libprefix}libc.so"
-          deps = [ _libc_target ]
-        }
-      },
-      {
-        sdk = {
-          source = rebase_path(_libc_stripped, root_build_dir)
-          dist = "dist/lib/${_libprefix}ld.so.1"
-          deps = [ _libc_target ]
-        }
-      },
-    ]
-  }
 }
 
 # The C runtime startup object file (a.k.a. 'crt1', or 'Scrt1.o').
-if (zx == "/") {
-  _libprefix = toolchain.libprefix
-} else {
-  _libprefix = ""
-}
-
 sysroot_crt1_entries = [
   {
     crt1 = rebase_path(sysroot_crt1_obj, root_build_dir)
     sdk = {
       source = crt1
-      link = "lib/${_libprefix}Scrt1.o"
-      if (zx != "/") {
-        deps = [ sysroot_crt1_target ]
-      }
+      link = "lib/Scrt1.o"
+      deps = [ sysroot_crt1_target ]
     }
   },
 ]

@@ -2,35 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/vdso/vdso.gni")
+import("//zircon/vdso/vdso.gni")
 
 # This file defines the sysroot entries corresponding to the Zircon VDSO
 # (a.k.a. libzircon.so). More details about how these are used are in
 # //zircon/system/ulib/c/sysroot_entries.gni.
 
-if (zx == "/") {
-  # The target that generates the VDSO and the directory for its binaries.
-  sysroot_vdso_target = "$zx/system/ulib/zircon"
-  _sysroot_vdso_out_dir = get_label_info(sysroot_vdso_target, "target_out_dir")
-
-  sysroot_vdso_stripped = _sysroot_vdso_out_dir + "/libzircon.so"
-  sysroot_vdso_unstripped = _sysroot_vdso_out_dir + "/libzircon.so.debug"
-} else {
-  import("vdso_toolchain.gni")
-  sysroot_vdso_stripped = zircon_vdso_stripped
-  sysroot_vdso_unstripped = zircon_vdso_unstripped
-  sysroot_vdso_target = zircon_vdso_target
-}
+import("vdso_toolchain.gni")
+sysroot_vdso_stripped = zircon_vdso_stripped
+sysroot_vdso_unstripped = zircon_vdso_unstripped
+sysroot_vdso_target = zircon_vdso_target
 
 _rebased_vdso_stripped = rebase_path(sysroot_vdso_stripped, root_build_dir)
 _rebased_vdso_unstripped = rebase_path(sysroot_vdso_unstripped, root_build_dir)
 
-_vdso_generated_headers_dep = "$zx/vdso:public($default_toolchain)"
+_vdso_generated_headers_dep = "//zircon/vdso:public($default_toolchain)"
 _gen_include_dir =
     get_label_info(_vdso_generated_headers_dep, "root_gen_dir") + "/include"
 
 _rebased_include_dir =
-    rebase_path("$zx/system/ulib/zircon/include", root_build_dir)
+    rebase_path("//zircon/system/ulib/zircon/include", root_build_dir)
 _rebased_gen_include_dir = rebase_path(_gen_include_dir, root_build_dir)
 
 sysroot_vdso_entries = [
@@ -51,9 +42,7 @@ sysroot_vdso_entries = [
         "zircon/syscalls/internal/cdecls.inc",
         # Note not included in SDK: "zircon/syscalls/definitions.rs",
       ]
-      if (zx != "/") {
-        deps = [ _vdso_generated_headers_dep ]
-      }
+      deps = [ _vdso_generated_headers_dep ]
     }
   },
   {
@@ -82,9 +71,7 @@ sysroot_vdso_entries = [
     sdk = {
       source = _rebased_vdso_unstripped
       link = "lib/libzircon.so"
-      if (zx != "/") {
-        deps = [ sysroot_vdso_target ]
-      }
+      deps = [ sysroot_vdso_target ]
     }
   },
   {
