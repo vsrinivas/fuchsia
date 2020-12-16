@@ -33,22 +33,19 @@ PROJECT_DEPENDENCIES = [
     'sdk/testing/sl4f/client',
     'src/testing',
     'topaz/public/dart',
-    'topaz/public/lib',
     'topaz/tools',
 ]
 
 
 def main():
     parser = argparse.ArgumentParser('Update third-party Dart packages')
-    parser.add_argument('--changelog',
-                        help='Path to the changelog file to write',
-                        default=None)
-    parser.add_argument('--debug',
-                        help='Turns on debugging mode',
-                        action='store_true')
+    parser.add_argument(
+        '--changelog', help='Path to the changelog file to write', default=None)
+    parser.add_argument(
+        '--debug', help='Turns on debugging mode', action='store_true')
     # Accept an optional flutter commit/revision id.
-    parser.add_argument('--flutter-revision',
-                        help='A git hash within the flutter repo')
+    parser.add_argument(
+        '--flutter-revision', help='A git hash within the flutter repo')
     script_args = parser.parse_args()
 
     if sys.platform.startswith('linux'):
@@ -58,12 +55,13 @@ def main():
     else:
         print('Unsupported platform: %s' % sys.platform)
         return 1
-    pub_path = os.path.join(paths.FUCHSIA_ROOT, 'prebuilt', 'third_party',
-                            'dart', platform, 'bin', 'pub')
-    importer_path = os.path.join(paths.FUCHSIA_ROOT, 'scripts', 'dart',
-                                 'package_importer.py')
-    output_path = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',
-                               'pub')
+    pub_path = os.path.join(
+        paths.FUCHSIA_ROOT, 'prebuilt', 'third_party', 'dart', platform, 'bin',
+        'pub')
+    importer_path = os.path.join(
+        paths.FUCHSIA_ROOT, 'scripts', 'dart', 'package_importer.py')
+    output_path = os.path.join(
+        paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg', 'pub')
     flutter_absolute_root = os.path.join(paths.FUCHSIA_ROOT, FLUTTER_ROOT)
 
     # flutter --version has the side effect of creating a version file that pub
@@ -83,7 +81,12 @@ def main():
     if script_args.flutter_revision:
         args.append('--git-pubspecs')
         for flutter_pubspec in FLUTTER_PUBSPECS:
-            args.append(','.join([flutter_pubspec.split('/').pop(), FLUTTER_GIT, script_args.flutter_revision, flutter_pubspec]))
+            args.append(
+                ','.join(
+                    [
+                        flutter_pubspec.split('/').pop(), FLUTTER_GIT,
+                        script_args.flutter_revision, flutter_pubspec
+                    ]))
     else:
         for flutter_pubspec in FLUTTER_PUBSPECS:
             args.append(os.path.join(flutter_absolute_root, flutter_pubspec))
