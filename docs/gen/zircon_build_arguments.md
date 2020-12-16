@@ -16,7 +16,7 @@ injected that way can override that option's setting in this list.
 
 **Current value for `target_cpu = `:** `["detect_stack_use_after_return=1"]`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:4
+From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:4
 
 **Overridden from the default:** `["detect_stack_use_after_return=1"]`
 
@@ -42,7 +42,7 @@ hexadecimal of any length), `xx/yyy` is a hard link to the stripped
 file and `xx/yyy.debug` is a hard link to the unstripped file.
 Symbolization tools and debuggers find symbolic information this way.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/root_build_dir.zircon/.build-id"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/out/not-default.zircon/.build-id"`
 
 From //public/gn/toolchain/c_toolchain.gni:20
 
@@ -54,7 +54,7 @@ default format is used.
 
 **Current value (from the default):** `""`
 
-From //public/gn/config/BUILD.zircon.gn:26
+From //public/gn/config/BUILD.zircon.gn:27
 
 ### clang_embed_bitcode
 Embed LLVM bitcode as .llvmbc section in ELF files. This is intended
@@ -84,9 +84,9 @@ From //public/gn/toolchain/clang.gni:17
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/root_build_dir.zircon/clang-crashreports"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/out/not-default.zircon/clang-crashreports"`
 
-From //public/gn/config/BUILD.zircon.gn:14
+From //public/gn/config/BUILD.zircon.gn:15
 
 ### current_cpu
 
@@ -111,7 +111,7 @@ TODO(fxbug.dev/3156): This must be set by the controlling Fuchsia GN build.
 
 **Current value for `target_cpu = `:** `["//:legacy_unification-x64"]`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:13
+From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:13
 
 **Overridden from the default:** `false`
 
@@ -123,7 +123,7 @@ flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:14
+From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:14
 
 **Overridden from the default:** `false`
 
@@ -256,6 +256,18 @@ If true, excludes syscalls with the [testonly] attribute.
 
 From //vdso/vdso.gni:7
 
+### experimental_cxx_version
+**NOTE:** This is for **experimentation only** and should not normally be
+changed.  Set the version of the C++ standard to compile for, 17 or 20.
+
+**Current value for `target_cpu = `:** `17`
+
+From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:15
+
+**Overridden from the default:** `17`
+
+From //public/gn/config/experimental_cxx_version.gni:8
+
 ### gcc_tool_dir
 Directory where the GCC toolchain binaries ("gcc", "nm", etc.) are
 found.  If this is "", then the behavior depends on $use_prebuilt_gcc.
@@ -274,7 +286,7 @@ source-absolute path ("//...") or a system absolute path.
 
 **Current value for `target_cpu = `:** `"/b/s/w/ir/x/w/prebuilt/third_party/goma/linux-x64"`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:15
+From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:16
 
 **Overridden from the default:** `"//prebuilt/third_party/goma/linux-x64"`
 
@@ -366,7 +378,7 @@ injected that way can override that option's setting in this list.
 
 **Current value for `target_cpu = `:** `[]`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:5
+From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:5
 
 **Overridden from the default:** `[]`
 
@@ -404,7 +416,7 @@ Controls whether we should output GSYM files for Fuchsia binaries.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:16
+From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:17
 
 **Overridden from the default:** `false`
 
@@ -430,7 +442,7 @@ prebuilt.
 
 **Current value for `target_cpu = `:** `"qvyOtIUsHc70X6qL5yNk0tBLrkCnDLBqYQaX3ot8jmUC"`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:17
+From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:18
 
 **Overridden from the default:** `""`
 
@@ -476,7 +488,7 @@ tests) can use the sanitizer_extra_options() mechanism instead.
 
 **Current value for `target_cpu = `:** `[]`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:10
+From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:10
 
 **Overridden from the default:** `[]`
 
@@ -507,7 +519,7 @@ The empty list (or empty string) means don't use `--sysroot` at all.
 }]
 ```
 
-From //public/gn/config/BUILD.zircon.gn:20
+From //public/gn/config/BUILD.zircon.gn:21
 
 ### target_cpu
 
@@ -548,7 +560,7 @@ injected that way can override that option's setting in this list.
 
 **Current value for `target_cpu = `:** `["print_stacktrace=1", "halt_on_error=1"]`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:6
+From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:6
 
 **Overridden from the default:** `["print_stacktrace=1", "halt_on_error=1"]`
 
@@ -559,7 +571,7 @@ Set to true to enable compiling with ccache.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:18
+From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:19
 
 **Overridden from the default:** `false`
 
@@ -570,7 +582,7 @@ Set to true to enable distributed compilation using Goma.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:19
+From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:20
 
 **Overridden from the default:** `false`
 
@@ -814,7 +826,7 @@ Variant scope parameters
 
 **Current value for `target_cpu = `:** `[]`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:20
+From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:21
 
 **Overridden from the default:** `[]`
 
@@ -844,7 +856,7 @@ compression available) probably makes sense.
 
 **Current value for `target_cpu = `:** `"zstd"`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:21
+From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:22
 
 **Overridden from the default:** `"zstd"`
 
@@ -886,7 +898,7 @@ does.
 
 **Current value for `target_cpu = `:** `0`
 
-From /b/s/w/ir/x/w/root_build_dir.zircon/args.gn:22
+From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:23
 
 **Overridden from the default:** `0`
 

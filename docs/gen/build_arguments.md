@@ -7,7 +7,7 @@ Enable debug output in the ACPI library (used by the ACPI bus driver).
 
 **Current value (from the default):** `false`
 
-From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_party/acpica/+/dde327c9993a4da339027737bb4cf56b05c7de6c/BUILD.gn#9)
+From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_party/acpica/+/15e06b553cd334277b85d8a663ff7b4d8c85b199/BUILD.gn#9)
 
 ### active_partition
 
@@ -121,7 +121,7 @@ production builds to avoid accidental inclusion of testing targets.
 
 **Current value (from the default):** `true`
 
-From //BUILD.gn:88
+From //BUILD.gn:89
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -130,21 +130,21 @@ of an OTA. These pacakages are updated as an atomic unit during an OTA
 process and are immutable and are a superset of the TCB (Trusted Computing
 Base) for a product. These packages are never evicted by the system.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:build-info", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//src/intl/intl_services:small", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/build_info:build-info-service", "//src/developer/forensics:pkg", "//src/developer/forensics/feedback_data:sysmgr_config", "//src/developer/forensics/snapshot:pkg", "//src/diagnostics/log-stats:package", "//src/diagnostics/detect:triage-detect", "//src/diagnostics/sampler", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/activity", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:component_id_index_no_restrict_storage", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/time/network_time_service:network-time-service", "//src/sys/time/httpsdate_time_source:httpsdate-time-source", "//src/sys/time/timekeeper", "//src/sys/universe-resolver", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "arm64"`:** `["//bundles:kitchen_sink"]`
 
-From //root_build_dir/args.gn:3
-
-**Overridden from the default:** `[]`
-
-From //BUILD.gn:32
-
-**Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//src/intl/intl_services:small", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/build_info:build-info-service", "//src/developer/forensics:pkg", "//src/developer/forensics/feedback_data:sysmgr_config", "//src/developer/forensics/snapshot:pkg", "//src/diagnostics/log-stats:package", "//src/diagnostics/detect:triage-detect", "//src/diagnostics/sampler", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/activity", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:component_id_index_no_restrict_storage", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/time/network_time_service:network-time-service", "//src/sys/time/httpsdate_time_source:httpsdate-time-source", "//src/sys/time/timekeeper", "//src/sys/universe-resolver", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
-
-From //root_build_dir/args.gn:3
+From //out/not-default/args.gn:7
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:32
+From //BUILD.gn:33
+
+**Current value for `target_cpu = "x64"`:** `["//bundles:kitchen_sink"]`
+
+From //out/not-default/args.gn:7
+
+**Overridden from the default:** `[]`
+
+From //BUILD.gn:33
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -177,7 +177,7 @@ From //build/images/fvm.gni:57
 ### blob_layout_format
 The format blobfs should store blobs in.
 
-**Current value (from the default):** `"padded"`
+**Current value (from the default):** `"compact"`
 
 From //build/images/args.gni:111
 
@@ -234,7 +234,7 @@ to accommodate the large number of metrics entries.
 
 **Current value (from the default):** `false`
 
-From //src/storage/blobfs/BUILD.gn:24
+From //src/storage/blobfs/BUILD.gn:13
 
 ### board_bootfs_labels
 A list of binary labels to include in the ZBI.
@@ -394,17 +394,17 @@ From //build/board.gni:19
 Put the "system image" package in the BOOTFS.  Hence what would
 otherwise be /system/... at runtime is /boot/... instead.
 
-**Current value for `target_cpu = "arm64"`:** `false`
+**Current value for `target_cpu = "arm64"`:** `true`
 
-From //products/core.gni:7
+From //products/bringup.gni:5
 
 **Overridden from the default:** `false`
 
 From //build/images/args.gni:14
 
-**Current value for `target_cpu = "x64"`:** `false`
+**Current value for `target_cpu = "x64"`:** `true`
 
-From //products/core.gni:7
+From //products/bringup.gni:5
 
 **Overridden from the default:** `false`
 
@@ -429,14 +429,38 @@ From //build/config/build_id.gni:10
 ### build_info_board
 Board configuration of the current build
 
-**Current value (from the default):** `"qemu-arm64"`
+**Current value for `target_cpu = "arm64"`:** `"arm64"`
+
+From //out/not-default/args.gn:8
+
+**Overridden from the default:** `"qemu-arm64"`
+
+From //build/info/info.gni:12
+
+**Current value for `target_cpu = "x64"`:** `"x64"`
+
+From //out/not-default/args.gn:8
+
+**Overridden from the default:** `"x64"`
 
 From //build/info/info.gni:12
 
 ### build_info_product
 Product configuration of the current build
 
-**Current value (from the default):** `""`
+**Current value for `target_cpu = "arm64"`:** `"bringup"`
+
+From //out/not-default/args.gn:9
+
+**Overridden from the default:** `""`
+
+From //build/info/info.gni:9
+
+**Current value for `target_cpu = "x64"`:** `"bringup"`
+
+From //out/not-default/args.gn:9
+
+**Overridden from the default:** `""`
 
 From //build/info/info.gni:9
 
@@ -496,7 +520,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:2186
+From //build/config/BUILDCONFIG.gn:2188
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -513,21 +537,21 @@ flows. These packages are not updated with an OTA, but instead are updated
 ephemerally. This cache of software can be evicted by the system if storage
 pressure arises or other policies indicate.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/developer/ffx:runtime"]`
+**Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/core.gni:103
-
-**Overridden from the default:** `[]`
-
-From //BUILD.gn:40
-
-**Current value for `target_cpu = "x64"`:** `["//src/developer/ffx:runtime"]`
-
-From //products/core.gni:103
+From //products/bringup.gni:43
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:40
+From //BUILD.gn:41
+
+**Current value for `target_cpu = "x64"`:** `[]`
+
+From //products/bringup.gni:43
+
+**Overridden from the default:** `[]`
+
+From //BUILD.gn:41
 
 ### camera_debug
 
@@ -577,7 +601,7 @@ From //build/config/clang/clang.gni:16
 ### clang_lib_dir
 Path to Clang lib directory.
 
-**Current value (from the default):** `"../build/prebuilt/third_party/clang/linux-x64/lib"`
+**Current value (from the default):** `"../../prebuilt/third_party/clang/linux-x64/lib"`
 
 From //build/images/manifest.gni:12
 
@@ -593,7 +617,7 @@ From //build/config/compiler.gni:41
 The default clang toolchain provided by the prebuilt. This variable is
 additionally consumed by the Go toolchain.
 
-**Current value (from the default):** `"../prebuilt/third_party/clang/linux-x64/bin"`
+**Current value (from the default):** `"../../prebuilt/third_party/clang/linux-x64/bin"`
 
 From //build/config/clang/clang.gni:12
 
@@ -644,7 +668,7 @@ From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.c
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
 
-**Current value (from the default):** `"//root_build_dir/clang-crashreports"`
+**Current value (from the default):** `"//out/not-default/clang-crashreports"`
 
 From //build/config/clang/crash_diagnostics.gni:7
 
@@ -652,13 +676,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/44de18ca37f694ba6afe9cc409199224c09e3186/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/8bf3cdd977a0d6542963c704cadc85e03bbe4e94/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/44de18ca37f694ba6afe9cc409199224c09e3186/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/8bf3cdd977a0d6542963c704cadc85e03bbe4e94/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -725,7 +749,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/db7f3dcb53009b93f05c4b38859c3fa96074de85/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/5f8c74542b3512690cee771f76c13e113a6365cc/runtime/dart/config.gni#10)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -828,9 +852,9 @@ It applies only for Fuchsia targets (see below where it is unset).
 TODO(fxbug.dev/32216): Theoretically unwind tables should be good enough so we can
 remove this option when the issues are addressed.
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
-From //build/config/BUILD.gn:25
+From //build/config/BUILD.gn:26
 
 ### enable_gfx_subsystem
 
@@ -913,6 +937,14 @@ From //zircon/vdso/vdso.gni:7
 
 From //src/graphics/lib/magma/gnbuild/magma.gni:14
 
+### experimental_cxx_version
+**NOTE:** This is for **experimentation only** and should not normally be
+changed.  Set the version of the C++ standard to compile for, 17 or 20.
+
+**Current value (from the default):** `17`
+
+From //zircon/public/gn/config/experimental_cxx_version.gni:8
+
 ### experimental_wlan_client_mlme
 Selects the SoftMAC client implementation to use. Choices:
   false (default) - C++ Client MLME implementation
@@ -981,21 +1013,21 @@ that users can easily switch revisions using a single arg.
 From //build/images/args.gni:52
 
 ### flutter_default_build_cfg
-Non-product JIT
+Non-product AOT
 
 **Current value (from the default):**
 ```
 {
-  enable_asserts = true
-  is_aot = false
+  enable_asserts = false
+  is_aot = true
   is_product = false
   platform_name = "flutter_runner"
-  runner_dep = "//topaz/runtime/flutter_runner:flutter_jit_runner"
-  runtime_meta = "//build/flutter/meta/jit_runtime"
+  runner_dep = "//topaz/runtime/flutter_runner:flutter_aot_runner"
+  runtime_meta = "//build/flutter/meta/aot_runtime"
 }
 ```
 
-From //build/flutter/config.gni:19
+From //build/flutter/config.gni:22
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -1137,13 +1169,13 @@ From //build/images/fvm.gni:30
 From //build/images/args.gni:86
 
 ### fvm_reserved_slices
-Number of slices reserved by FVM for internal usage. If set, a dummy
-partition will be addded to the FVM image, containing this many slices.
-If unset, then no reservation partition will be added.
-TODO(jfsulliv): Set to 1 by default so that we exercise this feature on all
-product configurations.
+Number of slices reserved by FVM for internal usage. A reservation
+partition will be added to the FVM image, containing this many slices.
+If set to the empty string, then no reservation partition will be added.
+Set to 1 by default so that we exercise this feature on all product
+configurations.
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `"1"`
 
 From //build/images/fvm.gni:44
 
@@ -1170,7 +1202,7 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:17
 
 **Current value (from the default):** `false`
 
-From //build/go/go_build.gni:21
+From //build/go/go_build.gni:22
 
 ### gocache_dir
   gocache_dir
@@ -1178,9 +1210,9 @@ From //build/go/go_build.gni:21
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/root_build_dir/dartlang/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/out/not-default/dartlang/.gocache"`
 
-From //build/go/go_build.gni:17
+From //build/go/go_build.gni:18
 
 ### goldfish_control_use_composite_device
 
@@ -1264,7 +1296,7 @@ From //products/bringup.gni:47
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:59
+From //BUILD.gn:60
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx"]`
 
@@ -1272,7 +1304,7 @@ From //products/bringup.gni:47
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:59
+From //BUILD.gn:60
 
 ### host_os
 
@@ -1287,7 +1319,7 @@ things that are generally useful for testing or debugging or
 whatnot outside of the GN build itself.  These are only installed
 by an explicit install_host_tools() rule (see //build/host.gni).
 
-**Current value (from the default):** `"//root_build_dir/host-tools"`
+**Current value (from the default):** `"//out/not-default/host-tools"`
 
 From //build/host.gni:13
 
@@ -1407,7 +1439,19 @@ From //build/config/BUILDCONFIG.gn:32
 ### is_debug
 Debug build.
 
-**Current value (from the default):** `true`
+**Current value for `target_cpu = "arm64"`:** `false`
+
+From //out/not-default/args.gn:10
+
+**Overridden from the default:** `true`
+
+From //build/config/BUILDCONFIG.gn:35
+
+**Current value for `target_cpu = "x64"`:** `false`
+
+From //out/not-default/args.gn:10
+
+**Overridden from the default:** `true`
 
 From //build/config/BUILDCONFIG.gn:35
 
@@ -1422,17 +1466,17 @@ List of kernel command line arguments to bake into the boot image.
 See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
 [`devmgr_config`](#devmgr_config).
 
-**Current value for `target_cpu = "arm64"`:** `["blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "arm64"`:** `["blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "kernel.oom.behavior=jobkill", "netsvc.all-features=true", "netsvc.disable=false"]`
 
-From //products/core.gni:13
+From //products/bringup.gni:7
 
 **Overridden from the default:** `[]`
 
 From //build/images/args.gni:26
 
-**Current value for `target_cpu = "x64"`:** `["blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "x64"`:** `["blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "kernel.oom.behavior=jobkill", "netsvc.all-features=true", "netsvc.disable=false"]`
 
-From //products/core.gni:13
+From //products/bringup.gni:7
 
 **Overridden from the default:** `[]`
 
@@ -1833,17 +1877,17 @@ From //build/images/filesystem_limits.gni:34
 ### meta_package_labels
 A list of labels for meta packages to be included in the monolith.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
+**Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/core.gni:15
+From //products/bringup.gni:39
 
 **Overridden from the default:** `[]`
 
 From //build/images/args.gni:69
 
-**Current value for `target_cpu = "x64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
+**Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/core.gni:15
+From //products/bringup.gni:39
 
 **Overridden from the default:** `[]`
 
@@ -1959,7 +2003,7 @@ From //src/sys/pkg/bin/omaha-client/BUILD.gn:15
 * `sanitizer`: optimized for sanitizers (ASan, etc.)
 * `profile`: optimized for coverage/profile data collection
 
-**Current value (from the default):** `"debug"`
+**Current value (from the default):** `"speed"`
 
 From //build/config/compiler.gni:22
 
@@ -2032,17 +2076,17 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:32
 ### product_bootfs_labels
 A list of binary labels to include in ZBIs built for this product.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//src/sys/base-resolver:bootfs", "//build/images:component_id_index_config"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/core.gni:108
+From //products/bringup.gni:36
 
 **Overridden from the default:** `[]`
 
 From //build/product.gni:7
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//src/sys/base-resolver:bootfs", "//build/images:component_id_index_config"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/core.gni:108
+From //products/bringup.gni:36
 
 **Overridden from the default:** `[]`
 
@@ -2060,19 +2104,7 @@ From //build/product.gni:15
 ### product_system_image_deps
 A list of binary labels to include in the system_image package.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/connectivity/bluetooth:core-system", "//src/graphics/lib/magma/tests:test-drivers", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//bundles:tools-system"]`
-
-From //products/core.gni:105
-
-**Overridden from the default:** `[]`
-
-From //build/product.gni:10
-
-**Current value for `target_cpu = "x64"`:** `["//src/connectivity/bluetooth:core-system", "//src/graphics/lib/magma/tests:test-drivers", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//bundles:tools-system"]`
-
-From //products/core.gni:105
-
-**Overridden from the default:** `[]`
+**Current value (from the default):** `[]`
 
 From //build/product.gni:10
 
@@ -2149,7 +2181,7 @@ From //build/rust/config.gni:59
 Sets a custom base directory for where rust tooling
 looks for the standard library
 
-**Current value (from the default):** `"../prebuilt/third_party/rust/linux-x64"`
+**Current value (from the default):** `"../../prebuilt/third_party/rust/linux-x64"`
 
 From //build/rust/config.gni:43
 
@@ -2169,12 +2201,12 @@ TODO(fxbug.dev/57302): Enable v0 mangling by default.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILD.gn:33
+From //build/config/BUILD.gn:34
 
 ### rustc_lib_dir
 Path to rustc lib directory.
 
-**Current value (from the default):** `"../build/prebuilt/third_party/rust/linux-x64/lib"`
+**Current value (from the default):** `"../../prebuilt/third_party/rust/linux-x64/lib"`
 
 From //build/images/manifest.gni:15
 
@@ -2182,7 +2214,7 @@ From //build/images/manifest.gni:15
 Sets a custom base directory for `rustc` and `cargo`.
 This can be used to test custom Rust toolchains.
 
-**Current value (from the default):** `"../prebuilt/third_party/rust/linux-x64/bin"`
+**Current value (from the default):** `"../../prebuilt/third_party/rust/linux-x64/bin"`
 
 From //build/rust/config.gni:25
 
@@ -2218,9 +2250,9 @@ From //src/ui/scenic/lib/gfx/BUILD.gn:11
 ### scenic_enable_vulkan_validation
 Include the vulkan validation layers in scenic.
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
-From //src/ui/scenic/BUILD.gn:146
+From //src/ui/scenic/BUILD.gn:151
 
 ### scenic_ignore_vsync
 
@@ -2504,13 +2536,13 @@ From //src/testing/fuzzing/syzkaller/BUILD.gn:11
 
 **Current value for `target_cpu = "arm64"`:** `"arm64"`
 
-From //boards/arm64.gni:7
+From //out/not-default/args.gn:11
 
 **Overridden from the default:** `""`
 
 **Current value for `target_cpu = "x64"`:** `"x64"`
 
-From //boards/x64.gni:7
+From //out/not-default/args.gn:11
 
 **Overridden from the default:** `""`
 
@@ -2553,7 +2585,7 @@ afterwards.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:46
+From //BUILD.gn:47
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -2656,14 +2688,14 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 ```
 [{
   configs = []
-  name = "release"
+  name = "debug"
   toolchain_args = {
-  is_debug = false
+  is_debug = true
 }
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1054
+From //build/config/BUILDCONFIG.gn:1064
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2673,21 +2705,21 @@ the build. The build system ensures that the universe package set includes
 the base and cache package sets, which means you do not need to redundantly
 include those labels in this variable.
 
-**Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//bundles:tools"]`
+**Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host"]`
 
-From //products/core.gni:106
-
-**Overridden from the default:** `[]`
-
-From //BUILD.gn:54
-
-**Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//bundles:tools"]`
-
-From //products/core.gni:106
+From //products/bringup.gni:45
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:54
+From //BUILD.gn:55
+
+**Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host"]`
+
+From //products/bringup.gni:45
+
+**Overridden from the default:** `[]`
+
+From //BUILD.gn:55
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
@@ -2735,7 +2767,19 @@ From //src/chromium/BUILD.gn:16
 ### use_goma
 Set to true to enable distributed compilation using Goma.
 
-**Current value (from the default):** `false`
+**Current value for `target_cpu = "arm64"`:** `false`
+
+From //out/not-default/args.gn:12
+
+**Overridden from the default:** `false`
+
+From //build/toolchain/goma.gni:11
+
+**Current value for `target_cpu = "x64"`:** `false`
+
+From //out/not-default/args.gn:12
+
+**Overridden from the default:** `false`
 
 From //build/toolchain/goma.gni:11
 
@@ -3031,6 +3075,7 @@ silently clobber the default value shown here.
 {
   default_deps = ["//:legacy_unification-arm64"]
   disable_kernel_pci = false
+  experimental_cxx_version = 17
   goma_dir = "/b/s/w/ir/x/w/prebuilt/third_party/goma/linux-x64"
   output_gsym = false
   rustc_version_string = "qvyOtIUsHc70X6qL5yNk0tBLrkCnDLBqYQaX3ot8jmUC"
@@ -3042,13 +3087,13 @@ silently clobber the default value shown here.
 }
 ```
 
-From //BUILD.gn:113
+From //BUILD.gn:114
 
 ### zircon_asserts
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:187
+From //build/config/fuchsia/BUILD.gn:136
 
 ### zircon_b_partition
 
@@ -3067,7 +3112,7 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 **Current value (from the default):** `"default"`
 
-From //BUILD.gn:83
+From //BUILD.gn:84
 
 ### zircon_extra_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -3082,16 +3127,28 @@ default [`zircon_args`](#zircon_args) uses a `variants` value derived from
 [`select_variant`](#select_variant) so for simple cases there is no need
 to explicitly set Zircon's `variants` here.
 
-**Current value (from the default):** `{ }`
+**Current value for `target_cpu = "arm64"`:** `{ }`
 
-From //BUILD.gn:72
+From //out/not-default/args.gn:4
+
+**Overridden from the default:** `{ }`
+
+From //BUILD.gn:73
+
+**Current value for `target_cpu = "x64"`:** `{ }`
+
+From //out/not-default/args.gn:4
+
+**Overridden from the default:** `{ }`
+
+From //BUILD.gn:73
 
 ### zircon_extra_deps
 Additional Zircon GN labels to include in the Zircon build.
 
 **Current value (from the default):** `[]`
 
-From //BUILD.gn:76
+From //BUILD.gn:77
 
 ### zircon_optimize
 Zircon optimization level. Same acceptable values as `optimize`.
@@ -3131,9 +3188,21 @@ From //build/config/BUILDCONFIG.gn:154
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
 given the empty string. Path can be source-absolute or system-absolute.
 
-**Current value (from the default):** `""`
+**Current value for `target_cpu = "arm64"`:** `"/b/s/w/ir/x/w/out/not-default/zircon_gn_trace.json"`
 
-From //BUILD.gn:80
+From //out/not-default/args.gn:13
+
+**Overridden from the default:** `""`
+
+From //BUILD.gn:81
+
+**Current value for `target_cpu = "x64"`:** `"/b/s/w/ir/x/w/out/not-default/zircon_gn_trace.json"`
+
+From //out/not-default/args.gn:13
+
+**Overridden from the default:** `""`
+
+From //BUILD.gn:81
 
 ### zvb_partition_name
 Partition name from where image will be verified
