@@ -44,6 +44,9 @@ func NewLicenses(ctx context.Context, root string, prohibitedLicenseTypes []stri
 		}
 		regex := string(bytes)
 		// Update regex to ignore multiple white spaces, newlines, comments.
+		// But first, trim whitespace away so we don't include unnecessary
+		// comment syntax.
+		regex = strings.Trim(regex, "\n ")
 		regex = strings.ReplaceAll(regex, "\n", `[\s\\#\*\/]*`)
 		regex = strings.ReplaceAll(regex, " ", `[\s\\#\*\/]*`)
 
