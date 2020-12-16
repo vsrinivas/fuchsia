@@ -8,8 +8,6 @@
 #include <lib/async/dispatcher.h>
 #include <lib/async/task.h>
 #include <lib/async/wait.h>
-#include <lib/fidl/epitaph.h>
-#include <lib/fidl/llcpp/extract_resource_on_destruction.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/types.h>
 #include <lib/fit/function.h>
@@ -61,7 +59,7 @@ class ClientBase;
 // ensure the channel is not destroyed while there are outstanding waits.
 class AsyncBinding : private async_wait_t {
  public:
-  ~AsyncBinding() __TA_EXCLUDES(lock_) = default;
+  ~AsyncBinding() __TA_EXCLUDES(lock_);
 
   zx_status_t BeginWait() __TA_EXCLUDES(lock_);
 
@@ -96,13 +94,8 @@ class AsyncBinding : private async_wait_t {
     static_assert(std::is_standard_layout<UnbindTask>::value, "Need offsetof.");
     static_assert(offsetof(UnbindTask, task) == 0, "Cast async_task_t* to UnbindTask*.");
     auto* unbind_task = reinterpret_cast<UnbindTask*>(task);
-    if (auto binding = unbind_task->binding.lock()) {
-      // Backup the |binding| pointer before moving it into |OnUnbind|.
-      // Using a raw pointer to ensure that there is only one strong reference
-      // to the binding object during unbinding.
-      auto* binding_ptr = binding.get();
-      binding_ptr->OnUnbind(std::move(binding), {UnbindInfo::kUnbind, ZX_OK}, true);
-    }
+    if (auto binding = unbind_task->binding.lock())
+      binding->OnUnbind(std::move(binding), {UnbindInfo::kUnbind, ZX_OK}, true);
     delete unbind_task;
   }
 
@@ -127,13 +120,11 @@ class AsyncBinding : private async_wait_t {
 
   // Waits for all references to the binding to be released. Sends epitaph and invokes
   // on_unbound_fn_ as required. Behavior differs between server and client.
-  // |FinishUnbind| will be invoked on a dispatcher thread if the dispatcher
-  // is running, and will be invoked on the thread that is calling shutdown
-  // if the dispatcher is shutting down.
   virtual void FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) = 0;
 
   async_dispatcher_t* dispatcher_ = nullptr;
   std::shared_ptr<AsyncBinding> keep_alive_ = {};
+  sync_completion_t* on_delete_ = nullptr;
 
   std::mutex lock_;
   UnbindInfo unbind_info_ __TA_GUARDED(lock_) = {UnbindInfo::kUnbind, ZX_OK};
@@ -148,8 +139,10 @@ class AsyncBinding : private async_wait_t {
 class AnyAsyncServerBinding : public AsyncBinding {
  public:
   AnyAsyncServerBinding(async_dispatcher_t* dispatcher, const zx::unowned_channel& borrowed_channel,
-                        IncomingMessageDispatcher* interface)
-      : AsyncBinding(dispatcher, borrowed_channel), interface_(interface) {}
+                        IncomingMessageDispatcher* interface, AnyOnUnboundFn&& on_unbound_fn)
+      : AsyncBinding(dispatcher, borrowed_channel),
+        interface_(interface),
+        on_unbound_fn_(std::move(on_unbound_fn)) {}
 
   std::optional<UnbindInfo> Dispatch(fidl_incoming_msg_t* msg, bool* binding_released) override;
 
@@ -159,31 +152,27 @@ class AnyAsyncServerBinding : public AsyncBinding {
   }
 
  protected:
-  friend fidl::internal::AsyncTransaction;
-
-  IncomingMessageDispatcher* interface() const { return interface_; }
+  void FinishUnbindHelper(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info,
+                          zx::channel channel);
 
  private:
   friend fidl::internal::AsyncTransaction;
 
   IncomingMessageDispatcher* interface_ = nullptr;
+  AnyOnUnboundFn on_unbound_fn_ = {};
 };
 
 // The async server binding for |Protocol|.
 // Contains an event sender for that protocol, which directly owns the channel.
 template <typename Protocol>
 class AsyncServerBinding final : public AnyAsyncServerBinding {
-  struct ConstructionKey {};
-
  public:
-  using EventSender = typename Protocol::EventSender;
-
   static std::shared_ptr<AsyncServerBinding> Create(async_dispatcher_t* dispatcher,
                                                     zx::channel&& channel,
                                                     IncomingMessageDispatcher* interface,
                                                     AnyOnUnboundFn&& on_unbound_fn) {
-    auto ret = std::make_shared<AsyncServerBinding>(dispatcher, std::move(channel), interface,
-                                                    std::move(on_unbound_fn), ConstructionKey{});
+    auto ret = std::shared_ptr<AsyncServerBinding>(new AsyncServerBinding(
+        dispatcher, std::move(channel), interface, std::move(on_unbound_fn)));
     // We keep the binding alive until somebody decides to close the channel.
     ret->keep_alive_ = ret;
     return ret;
@@ -191,53 +180,24 @@ class AsyncServerBinding final : public AnyAsyncServerBinding {
 
   virtual ~AsyncServerBinding() = default;
 
-  const EventSender& event_sender() const { return event_sender_.get(); }
+  const typename Protocol::EventSender& event_sender() const { return event_sender_; }
 
-  zx::unowned_channel channel() const { return zx::unowned_channel(event_sender_.get().channel()); }
-
-  // Do not construct this object outside of this class. This constructor takes
-  // a private type following the pass-key idiom.
-  AsyncServerBinding(async_dispatcher_t* dispatcher, zx::channel&& channel,
-                     IncomingMessageDispatcher* interface, AnyOnUnboundFn&& on_unbound_fn,
-                     ConstructionKey key)
-      : AnyAsyncServerBinding(dispatcher, channel.borrow(), interface),
-        event_sender_(EventSender(std::move(channel))),
-        on_unbound_fn_(std::move(on_unbound_fn)) {}
+  zx::unowned_channel channel() const { return zx::unowned_channel(event_sender_.channel()); }
 
  private:
+  AsyncServerBinding(async_dispatcher_t* dispatcher, zx::channel&& channel,
+                     IncomingMessageDispatcher* interface, AnyOnUnboundFn&& on_unbound_fn)
+      : AnyAsyncServerBinding(dispatcher, channel.borrow(), interface, std::move(on_unbound_fn)),
+        event_sender_(std::move(channel)) {}
+
+  // |FinishUnbind| will be invoked on a dispatcher thread.
   void FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) override {
-    // Stash required state after deleting the binding, since the binding
-    // will be destroyed as part of this function.
-    auto* the_interface = interface();
-    auto on_unbound_fn = std::move(on_unbound_fn_);
-
-    // Downcast to our class.
-    std::shared_ptr<AsyncServerBinding> server_binding =
-        std::static_pointer_cast<AsyncServerBinding>(calling_ref);
-    calling_ref.reset();
-
-    // Delete the calling reference.
-    // Wait for any transient references to be released.
-    DestroyAndExtract(std::move(server_binding), &AsyncServerBinding::event_sender_,
-                      [&info, the_interface, &on_unbound_fn](EventSender event_sender) {
-                        // `this` is no longer valid.
-
-                        // If required, send the epitaph.
-                        zx::channel channel = std::move(event_sender.channel());
-                        if (info.reason == UnbindInfo::kClose)
-                          info.status = fidl_epitaph_write(channel.get(), info.status);
-
-                        // Execute the unbound hook if specified.
-                        if (on_unbound_fn)
-                          on_unbound_fn(the_interface, info, std::move(channel));
-                      });
+    AnyAsyncServerBinding::FinishUnbindHelper(std::move(calling_ref), info,
+                                              std::move(event_sender_.channel()));
   }
 
   // The channel is owned by AsyncServerBinding.
-  ExtractedOnDestruction<EventSender> event_sender_;
-
-  // The user callback to invoke after unbinding has completed.
-  AnyOnUnboundFn on_unbound_fn_ = {};
+  typename Protocol::EventSender event_sender_;
 };
 
 // The async client binding. The client supports both synchronous and

@@ -27,6 +27,11 @@ AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, const zx::unowned_cha
   ZX_ASSERT(handle() != ZX_HANDLE_INVALID);
 }
 
+AsyncBinding::~AsyncBinding() {
+  if (on_delete_)
+    sync_completion_signal(on_delete_);
+}
+
 void AsyncBinding::OnUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info,
                             bool is_unbind_task) {
   ZX_DEBUG_ASSERT(calling_ref.get() == this);
@@ -179,6 +184,30 @@ std::optional<UnbindInfo> AnyAsyncServerBinding::Dispatch(fidl_incoming_msg_t* m
   auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   AsyncTransaction txn(hdr->txid, binding_released);
   return txn.Dispatch(std::move(keep_alive_), msg);
+}
+
+void AnyAsyncServerBinding::FinishUnbindHelper(std::shared_ptr<AsyncBinding>&& calling_ref,
+                                               UnbindInfo info, zx::channel channel) {
+  auto binding = std::move(calling_ref);  // Move binding into scope.
+
+  // Stash state required after deleting the binding.
+  auto on_unbound_fn = std::move(on_unbound_fn_);
+  auto* intf = interface_;
+
+  sync_completion_t on_delete;
+  on_delete_ = &on_delete;
+  // Delete the calling reference. Wait for any transient references to be released.
+  binding = nullptr;
+  ZX_ASSERT(sync_completion_wait(&on_delete, ZX_TIME_INFINITE) == ZX_OK);
+  // `this` is no longer valid.
+
+  // If required, send the epitaph.
+  if (info.reason == UnbindInfo::kClose)
+    info.status = fidl_epitaph_write(channel.get(), info.status);
+
+  // Execute the unbound hook if specified.
+  if (on_unbound_fn)
+    on_unbound_fn(intf, info, std::move(channel));
 }
 
 std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(async_dispatcher_t* dispatcher,

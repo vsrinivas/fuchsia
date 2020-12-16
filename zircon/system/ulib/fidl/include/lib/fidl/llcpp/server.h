@@ -68,9 +68,9 @@ struct MethodEntry {
 
 }  // namespace internal
 
-// This class manages a server connection and its binding to an
-// async_dispatcher_t* (which may be multi-threaded). See the detailed
-// documentation on the |BindServer()| APIs below.
+// This class owns and manages the lifetime of the server end of a channel and its binding to an
+// async_dispatcher_t* (which may be multi-threaded). See the detailed documentation on the
+// |BindServer()| APIs below.
 template <typename Protocol>
 class ServerBindingRef {
  public:
