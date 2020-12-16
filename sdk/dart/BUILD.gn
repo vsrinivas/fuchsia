@@ -41,12 +41,11 @@ sdk_atom("kernel_compiler_sdk") {
       dest = "tools/dart"
     },
     {
-      source = "$root_out_dir/dart_runner_patched_sdk_nnbd/platform_strong.dill"
+      source = "$root_out_dir/dart_runner_patched_sdk/platform_strong.dill"
       dest = "tools/dart_prebuilts/dart_runner/platform_strong.dill"
     },
     {
-      source =
-          "$root_out_dir/flutter_runner_patched_sdk_nnbd/platform_strong.dill"
+      source = "$root_out_dir/flutter_runner_patched_sdk/platform_strong.dill"
       dest = "tools/dart_prebuilts/flutter_runner/platform_strong.dill"
     },
     {

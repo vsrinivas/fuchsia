@@ -71,12 +71,19 @@ template("_convert_kernel_manifest") {
 #  packages_path (required)
 #    Path to the package_config.json file.
 #
-#  main_dart (required)
-#    Path to Dart source file containing main(). This is relative the source_dir
-#    and should exist in the main_package.
+#  main_dart (required, mutually exclusive)
+#    Path to Dart source file containing main(). Mutually exclusive with
+#    main_dart_file. This is relative to source_dir, should exist in the
+#    main_package, and uses a package: URI.
 #
-#  main_package (required)
-#    The name of the package which contains main.
+#  main_package (required, mutually exclusive)
+#    The name of the package which contains main. Mutually exclusive with
+#    main_dart_file.
+#
+#  main_dart_file (required, mutually exclusive)
+#    Path to Dart source file containing main(). Mutually exclusive with
+#    main_dart. This doesn't need to necessarily exist in main_package and uses
+#    a fuchsia-source: URI.
 #
 #  product (required)
 #    Whether this should be built with the product runner.
@@ -109,8 +116,10 @@ template("dart_kernel2") {
   assert(defined(invoker.platform_name), "dart_kernel() requires platform_name")
   assert(defined(invoker.packages_path),
          "dart_kernel() requires the path to the package config")
-  assert(defined(invoker.main_dart), "dart_kernel() requires main_dart")
-  assert(defined(invoker.main_package), "dart_kernel() requires main_package")
+  assert(
+      (defined(invoker.main_dart) && defined(invoker.main_package)) !=
+          defined(invoker.main_dart_file),
+      "dart_kernel() requires either (main_dart and main_package) or main_dart_file")
   assert(defined(invoker.product), "dart_kernel() requires product")
   assert(defined(invoker.is_aot), "dart_kernel() requires is_aot")
 
@@ -179,10 +188,10 @@ template("dart_kernel2") {
 
     if (invoker.platform_name == flutter_platform_name) {
       _kernel_deps += [ "//build/flutter:platform_files" ]
-      _platform_path = "$root_out_dir/flutter_runner_patched_sdk_nnbd"
+      _platform_path = "$root_out_dir/flutter_runner_patched_sdk"
     } else if (invoker.platform_name == dart_platform_name) {
       _kernel_deps += [ "//build/dart:platform_files" ]
-      _platform_path = "$root_out_dir/dart_runner_patched_sdk_nnbd"
+      _platform_path = "$root_out_dir/dart_runner_patched_sdk"
     } else {
       assert(false,
              "platform_name must be either dart_runner or flutter_runner")
@@ -264,7 +273,12 @@ template("dart_kernel2") {
       }
     }
 
-    args += [ "package:${invoker.main_package}/${invoker.main_dart}" ]
+    if (defined(invoker.main_dart)) {
+      args += [ "package:${invoker.main_package}/${invoker.main_dart}" ]
+    } else {
+      rebased_main_dart = rebase_path(invoker.main_dart_file, "//")
+      args += [ "$_multi_root_scheme:///$rebased_main_dart" ]
+    }
 
     deps = _kernel_deps
   }

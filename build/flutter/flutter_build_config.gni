@@ -10,7 +10,7 @@
 # launch the vm service in the runner.
 flutter_debug_build_cfg = {
   runtime_meta = "//build/flutter/meta/jit_runtime"
-  runner_dep = "//topaz/runtime/flutter_runner:flutter_jit_runner"
+  runner_dep = "//src/flutter:flutter_jit_runner"
   platform_name = "flutter_runner"
   is_aot = false
   is_product = false
@@ -23,7 +23,7 @@ flutter_debug_build_cfg = {
 # profile aot runner is built without asserts.
 flutter_aot_debug_build_cfg = {
   runtime_meta = "//build/flutter/meta/aot_runtime"
-  runner_dep = "//topaz/runtime/flutter_runner:flutter_aot_runner"
+  runner_dep = "//src/flutter:flutter_aot_runner"
   platform_name = "flutter_runner"
   is_aot = true
   is_product = false
@@ -34,7 +34,7 @@ flutter_aot_debug_build_cfg = {
 # launch the vm service in the runner.
 flutter_profile_build_cfg = {
   runtime_meta = "//build/flutter/meta/aot_runtime"  # profile runner
-  runner_dep = "//topaz/runtime/flutter_runner:flutter_aot_runner"
+  runner_dep = "//src/flutter:flutter_aot_runner"
   platform_name = "flutter_runner"
   is_aot = true
   is_product = false
@@ -45,7 +45,7 @@ flutter_profile_build_cfg = {
 # not launch the vm service in the runner.
 flutter_release_build_cfg = {
   runtime_meta = "//build/flutter/meta/aot_product_runtime"
-  runner_dep = "//topaz/runtime/flutter_runner:flutter_aot_product_runner"
+  runner_dep = "//src/flutter:flutter_aot_product_runner"
   platform_name = "flutter_runner"
   is_aot = true
   is_product = true

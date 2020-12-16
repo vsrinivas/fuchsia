@@ -4,13 +4,10 @@
 
 import("//build/dart/dart_build_config.gni")
 
-# Temporary import to allow for soft transition
-import("//topaz/runtime/dart/config.gni")
 declare_args() {
   # Forces all Dart apps to build in product mode which is a
   # stripped down version of the VM running in AOT mode.
-  # TODO uncomment this once references to //topaz/runtime/dart/config.gni are converted
-  #dart_force_product = false
+  dart_force_product = false
 
   # TODO(fxbug.dev/64153) renable aot builds
   #  if (dart_force_product) {

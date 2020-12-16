@@ -61,15 +61,13 @@ group("deprecated_dart_app_allowlist") {
 }
 
 # Copies the patched SDK files for the dart runner
-# NOTE: copies to an _nnbd directory to allow for soft transition
 copy("platform_files") {
   sources = [
     "//prebuilt/third_party/flutter/$target_cpu/release/aot/dart_runner_patched_sdk/platform_strong.dill",
     "//prebuilt/third_party/flutter/$target_cpu/release/aot/dart_runner_patched_sdk/platform_strong.dill.d",
     "//prebuilt/third_party/flutter/$target_cpu/release/aot/dart_runner_patched_sdk/vm_outline_strong.dill",
   ]
-  outputs =
-      [ "$root_out_dir/dart_runner_patched_sdk_nnbd/{{source_file_part}}" ]
+  outputs = [ "$root_out_dir/dart_runner_patched_sdk/{{source_file_part}}" ]
 }
 
 if (current_toolchain == dart_toolchain) {

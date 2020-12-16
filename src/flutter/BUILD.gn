@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
+import("//build/packages/prebuilt_package.gni")
 
 runner_config_file = "flutter_runner_config"
 runner_types = [
@@ -12,6 +13,29 @@ runner_types = [
   "aot_product",
 ]
 
+prebuilt_package("flutter_jit_runner") {
+  archive = "//prebuilt/third_party/flutter/$target_cpu/debug/jit/flutter_jit_runner-0.far"
+}
+
+prebuilt_package("flutter_jit_product_runner") {
+  archive = "//prebuilt/third_party/flutter/$target_cpu/release/jit/flutter_jit_product_runner-0.far"
+}
+
+prebuilt_package("flutter_aot_runner") {
+  # The debug runner is compiled with --enable-asserts but the profile runner is not.
+  # We want to switch to profile in release mode so that we can disable asserts and avoid
+  # a mismatch in vm arguments.
+  if (is_debug) {
+    archive = "//prebuilt/third_party/flutter/$target_cpu/debug/aot/flutter_aot_runner-0.far"
+  } else {
+    archive = "//prebuilt/third_party/flutter/$target_cpu/profile/aot/flutter_aot_runner-0.far"
+  }
+}
+
+prebuilt_package("flutter_aot_product_runner") {
+  archive = "//prebuilt/third_party/flutter/$target_cpu/release/aot/flutter_aot_product_runner-0.far"
+}
+
 # Generate targets to package together the runner and its configuration data for
 # each runner type.
 #
@@ -20,26 +44,31 @@ runner_types = [
 all_flutter_runners = []
 foreach(type, runner_types) {
   runner_target = "flutter_$type"
-  config_target = "runner_config_for_" + runner_target
-  all_flutter_runners += [ ":" + runner_target ]
 
+  config_target = "runner_config_for_$runner_target"
   config_data(config_target) {
-    for_pkg = runner_target + "_runner"
+    for_pkg = "${runner_target}_runner"
     sources = [ rebase_path(runner_config_file) ]
     outputs = [ runner_config_file ]
   }
 
   group(runner_target) {
     public_deps = [
-      ":" + config_target,
+      ":$config_target",
+      ":flutter_${type}_runner",
       "//src/lib/icu/tzdata:icu_tzdata_for_flutter_${type}_runner",
-      "//topaz/runtime/flutter_runner:flutter_${type}_runner",
     ]
   }
+  all_flutter_runners += [ ":$runner_target" ]
 }
 
 group("flutter") {
   public_deps = all_flutter_runners
+}
+
+copy("flutter_tester") {
+  sources = [ "//prebuilt/third_party/flutter/${target_cpu}/debug/jit/flutter_binaries/flutter_tester" ]
+  outputs = [ "$target_gen_dir/flutter_tester" ]
 }
 
 group("tests") {

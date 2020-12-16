@@ -105,10 +105,10 @@ group("tests-for-flutter") {
   # runner. This is a workaround to allow the flutter runners to be available
   # during runtime.
   data_deps = [
-    "//topaz/runtime/flutter_runner:flutter_aot_product_runner",
-    "//topaz/runtime/flutter_runner:flutter_aot_runner",
-    "//topaz/runtime/flutter_runner:flutter_jit_product_runner",
-    "//topaz/runtime/flutter_runner:flutter_jit_runner",
+    "//src/flutter:flutter_aot_product_runner",
+    "//src/flutter:flutter_aot_runner",
+    "//src/flutter:flutter_jit_product_runner",
+    "//src/flutter:flutter_jit_runner",
   ]
 }
 
