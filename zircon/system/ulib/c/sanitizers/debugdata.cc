@@ -110,7 +110,7 @@ _fuchsia_debugdata_DebugDataLoadConfig(zx_handle_t channel, const char* config_n
   uint32_t actual_bytes = 0u;
   uint32_t actual_handles = 0u;
   zx_status_t status =
-      zx_channel_call(channel, 0u, ZX_TIME_INFINITE, &args, &actual_bytes, &actual_handles);
+      _zx_channel_call(channel, 0u, ZX_TIME_INFINITE, &args, &actual_bytes, &actual_handles);
   if (!actual_handles)
     *out_config = ZX_HANDLE_INVALID;
   return status;
@@ -150,7 +150,7 @@ void __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
 
   zx_handle_t h = sanitizer_debugdata_connect();
   zx_status_t status = _fuchsia_debugdata_DebugDataPublish(h, sink_name, strlen(sink_name), vmo);
-  zx_handle_close(h);
+  _zx_handle_close(h);
 
   if (status != ZX_OK) {
     constexpr const char kErrorPublish[] = "Failed to publish data";
@@ -167,7 +167,7 @@ zx_status_t __sanitizer_get_configuration(const char* name, zx_handle_t* out_vmo
   zx_handle_t h = sanitizer_debugdata_connect();
 
   zx_status_t status = _fuchsia_debugdata_DebugDataLoadConfig(h, name, strlen(name), out_vmo);
-  zx_handle_close(h);
+  _zx_handle_close(h);
   if (status != ZX_OK) {
     constexpr const char kErrorLoadConfig[] = "Failed to get configuration file";
     __sanitizer_log_write(kErrorLoadConfig, sizeof(kErrorLoadConfig) - 1);
