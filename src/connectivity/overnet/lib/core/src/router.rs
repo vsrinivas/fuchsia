@@ -51,6 +51,7 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
     sync::{Arc, Weak},
     task::{Context, Poll, Waker},
+    time::Duration,
 };
 
 /// Configuration object for creating a router.
@@ -217,6 +218,23 @@ impl ListPeersContext {
     }
 }
 
+/// Factory for local link id's (the next id to be assigned).
+static NEXT_NODE_LINK_ID: AtomicU64 = AtomicU64::new(1);
+
+/// Minted for each call to new_link, a ConnectingLinkToken helps us keep track of how many links
+/// are still being established, and also acts as a capability for calling publish_link.
+pub(crate) struct ConnectingLinkToken {
+    router: Weak<Router>,
+}
+
+impl Drop for ConnectingLinkToken {
+    fn drop(&mut self) {
+        if let Some(router) = Weak::upgrade(&self.router) {
+            router.connecting_links.fetch_sub(1, Ordering::Relaxed);
+        }
+    }
+}
+
 /// Router maintains global state for one node_id.
 /// `LinkData` is a token identifying a link for layers above Router.
 /// `Time` is a representation of time for the Router, to assist injecting different platforms
@@ -224,8 +242,6 @@ impl ListPeersContext {
 pub struct Router {
     /// Our node id
     node_id: NodeId,
-    /// Factory for local link id's (the next id to be assigned).
-    next_node_link_id: AtomicU64,
     security_context: Box<dyn SecurityContext>,
     /// All peers.
     peers: Mutex<PeerMaps>,
@@ -237,6 +253,7 @@ pub struct Router {
     routes: Arc<Routes>,
     current_forwarding_table: Mutex<ForwardingTable>,
     task: Mutex<Option<Task<()>>>,
+    connecting_links: AtomicU64,
 }
 
 struct ProxiedHandle {
@@ -282,7 +299,6 @@ impl Router {
         let routes = Arc::new(Routes::new());
         let router = Arc::new(Router {
             node_id,
-            next_node_link_id: 1.into(),
             security_context,
             link_state_publisher,
             service_map,
@@ -297,6 +313,7 @@ impl Router {
             routes: routes.clone(),
             task: Mutex::new(None),
             current_forwarding_table: Mutex::new(ForwardingTable::empty()),
+            connecting_links: AtomicU64::new(0),
         });
 
         let diagnostics = options.diagnostics;
@@ -326,20 +343,37 @@ impl Router {
     }
 
     /// Create a new link to some node, returning a `LinkId` describing it.
-    pub async fn new_link(
+    pub fn new_link(
         self: &Arc<Self>,
-        peer_node_id: NodeId,
         config: crate::link::ConfigProducer,
-    ) -> Result<(LinkSender, LinkReceiver), Error> {
-        let node_link_id = self.next_node_link_id.fetch_add(1, Ordering::Relaxed).into();
-        let (sender, receiver, routing, observer) =
-            new_link(peer_node_id, node_link_id, &self, config);
-        log::trace!("[{:?} link {:?}] new link to {:?}", self.node_id, node_link_id, peer_node_id);
+    ) -> (LinkSender, LinkReceiver) {
+        self.connecting_links.fetch_add(1, Ordering::Relaxed);
+        new_link(
+            NEXT_NODE_LINK_ID.fetch_add(1, Ordering::Relaxed).into(),
+            self,
+            config,
+            ConnectingLinkToken { router: Arc::downgrade(self) },
+        )
+    }
+
+    pub(crate) fn connecting_link_count(&self) -> u64 {
+        self.connecting_links.load(Ordering::Relaxed)
+    }
+
+    pub(crate) async fn publish_link(
+        self: Arc<Self>,
+        routing: Arc<LinkRouting>,
+        rtt_observer: Observer<Option<Duration>>,
+        connecting_link_token: ConnectingLinkToken,
+    ) -> Result<(), Error> {
+        log::info!("publish link {:?}", routing.debug_id());
         self.links.lock().await.insert(routing.id(), Arc::downgrade(&routing));
-        log::trace!("[{:?} link {:?}] publish link", self.node_id, node_link_id);
-        self.link_state_publisher.clone().send((node_link_id, peer_node_id, observer)).await?;
-        log::trace!("[{:?} link {:?}] return link", self.node_id, node_link_id);
-        Ok((sender, receiver))
+        self.link_state_publisher
+            .clone()
+            .send((routing.id(), routing.peer_node_id(), rtt_observer))
+            .await?;
+        drop(connecting_link_token);
+        Ok(())
     }
 
     pub(crate) async fn get_link(&self, node_link_id: NodeLinkId) -> Option<Arc<LinkRouting>> {
@@ -909,14 +943,10 @@ mod tests {
         );
     }
 
-    async fn forward(sender: LinkSender, mut receiver: LinkReceiver) -> Result<(), Error> {
-        while let Some(packet) = sender.next_send().await {
-            let mut bytes = packet.bytes().to_vec();
-            drop(packet);
-            log::trace!("got frame {} bytes", bytes.len());
-            if let Err(e) = receiver.received_packet(&mut bytes).await {
-                log::warn!("error receiving packet: {:?}", e);
-            }
+    async fn forward(mut sender: LinkSender, mut receiver: LinkReceiver) -> Result<(), Error> {
+        while let Some(mut packet) = sender.next_send().await {
+            packet.drop_inner_locks();
+            receiver.received_frame(packet.bytes_mut()).await;
         }
         Ok(())
     }
@@ -994,10 +1024,8 @@ mod tests {
         let mut node_id_gen = NodeIdGenerator::new(name, run);
         let router1 = node_id_gen.new_router()?;
         let router2 = node_id_gen.new_router()?;
-        let (link1_sender, link1_receiver) =
-            router1.new_link(router2.node_id, Box::new(|| None)).await?;
-        let (link2_sender, link2_receiver) =
-            router2.new_link(router1.node_id, Box::new(|| None)).await?;
+        let (link1_sender, link1_receiver) = router1.new_link(Box::new(|| None));
+        let (link2_sender, link2_receiver) = router2.new_link(Box::new(|| None));
         let _fwd = Task::spawn(async move {
             if let Err(e) = futures::future::try_join(
                 forward(link1_sender, link2_receiver),
@@ -1124,51 +1152,6 @@ mod tests {
         ensure_pending(&mut never_completes);
         lp.list_peers().await.expect_err("Concurrent list peers should fail");
         ensure_pending(&mut never_completes);
-        Ok(())
-    }
-
-    #[fuchsia_async::run(1, test)]
-    async fn initial_greeting_packet(run: usize) -> Result<(), Error> {
-        crate::test_util::init();
-
-        use crate::coding::decode_fidl;
-        use crate::stream_framer::{new_deframer, FrameType, LosslessBinary};
-        use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
-        let mut node_id_gen = NodeIdGenerator::new("initial_greeting_packet", run);
-        let n = node_id_gen.new_router()?;
-        let node_id = n.node_id();
-        let (c, s) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
-        let mut c = fidl::AsyncSocket::from_socket(c)?;
-        let (mut deframer_writer, mut deframer) = new_deframer(LosslessBinary);
-        let _s = Task::spawn(async move {
-            n.run_socket_link(
-                s,
-                fidl_fuchsia_overnet_protocol::SocketLinkOptions {
-                    connection_label: Some("test".to_string()),
-                    bytes_per_second: None,
-                    ..fidl_fuchsia_overnet_protocol::SocketLinkOptions::EMPTY
-                },
-            )
-            .await
-            .unwrap();
-        });
-        let _d = Task::spawn(async move {
-            let mut buf = [0u8; 1024];
-            loop {
-                let n = c.read(&mut buf).await.unwrap();
-                if n == 0 {
-                    log::info!("initial_greeting_packet: socket closed");
-                    return;
-                }
-                deframer_writer.write(&buf[..n]).await.unwrap();
-            }
-        });
-        let (frame_type, mut greeting_bytes) = deframer.read().await?;
-        assert_eq!(frame_type, Some(FrameType::OvernetHello));
-        let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut())?;
-        assert_eq!(greeting.magic_string, Some("OVERNET SOCKET LINK".to_string()));
-        assert_eq!(greeting.node_id, Some(node_id.into()));
-        assert_eq!(greeting.connection_label, Some("test".to_string()));
         Ok(())
     }
 

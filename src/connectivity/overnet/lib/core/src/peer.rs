@@ -11,7 +11,7 @@ use crate::{
     future_help::{Observer, PollMutex},
     labels::{ConnectionId, Endpoint, NodeId, TransferKey},
     link::{LinkRouting, OutputQueue},
-    link_frame_label::{FrameType as LinkFrameType, RoutingTarget},
+    link_frame_label::{RoutingDestination, RoutingTarget},
     router::{FoundTransfer, Router},
     routes::ForwardingTable,
 };
@@ -147,7 +147,7 @@ impl<'a> OneSend<'a> {
     /// We're being polled and we aren't currently acquiring a lock... begin to acquire the
     /// link lock and progress to the next state.
     fn poll_idle(&mut self, ctx: &mut Context<'_>) -> Poll<Result<(), Error>> {
-        self.poll_locking_link(ctx, self.link.new_send_ticket())
+        self.poll_locking_link(ctx, self.link.new_message_send_ticket())
     }
 
     /// We're being polled while trying to acquire the link lock - poll against that
@@ -187,7 +187,7 @@ impl<'a> OneSend<'a> {
                 Poll::Pending
             }
             Poll::Ready(mut mutex_guard) => {
-                let mut send = cutex_guard.send(self.routing_target(), LinkFrameType::Message)?;
+                let mut send = cutex_guard.send(self.routing_target())?;
                 if let Some(n) = ready!(mutex_guard.poll_send(ctx, send.buffer()))? {
                     send.commit(n);
                     Poll::Ready(Ok(()))
@@ -202,7 +202,10 @@ impl<'a> OneSend<'a> {
     }
 
     fn routing_target(&self) -> RoutingTarget {
-        RoutingTarget { dst: self.conn.peer_node_id(), src: self.link.own_node_id() }
+        RoutingTarget {
+            src: self.link.own_node_id(),
+            dst: RoutingDestination::Message(self.conn.peer_node_id()),
+        }
     }
 }
 
@@ -250,11 +253,10 @@ async fn next_link(
         peer: NodeId,
         observer: &mut Observer<ForwardingTable>,
     ) -> Result<Option<Arc<LinkRouting>>, RunnerError> {
-        let get_router = move || Weak::upgrade(&router).ok_or_else(|| RunnerError::RouterGone);
-        if let Some(forwarding_table) = observer.next().await {
-            if let Some(node_link_id) = forwarding_table.route_for(peer) {
-                return Ok(get_router()?.get_link(node_link_id).await);
-            }
+        let get_router = move || Weak::upgrade(&router).ok_or(RunnerError::RouterGone);
+        let forwarding_table = observer.next().await.ok_or(RunnerError::RouterGone)?;
+        if let Some(node_link_id) = forwarding_table.route_for(peer) {
+            return Ok(get_router()?.get_link(node_link_id).await);
         }
         Ok(None)
     }

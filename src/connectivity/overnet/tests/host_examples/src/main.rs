@@ -400,6 +400,8 @@ mod tests {
                 .context("running onet list-peers")?;
             // The following should be running: 2 ascendd's, 2 bridging onet's,
             // the query onet, and the server
+            println!("OUTPUT");
+            println!("{}", output);
             assert_eq!(output.lines().count(), 6);
             assert_eq!(output.matches("Ascendd").count(), 2);
             #[cfg(target_os = "linux")]

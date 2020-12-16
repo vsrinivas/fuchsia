@@ -20,12 +20,7 @@ use std::time::Duration;
 /// Describes a framing format.
 pub trait Format: Send + Sync + 'static {
     /// Write a frame of `frame_type` with payload `bytes` into `outgoing`.
-    fn frame(
-        &self,
-        frame_type: FrameType,
-        bytes: &[u8],
-        outgoing: &mut Vec<u8>,
-    ) -> Result<(), Error>;
+    fn frame(&self, bytes: &[u8], outgoing: &mut Vec<u8>) -> Result<(), Error>;
 
     /// Parse `bytes`.
     /// If the bytes could never lead to a successfully parsed frame ever again, return Err(_).
@@ -41,13 +36,8 @@ pub trait Format: Send + Sync + 'static {
 // often convenient to deal with a Box<dyn Format> instead of a custom thing. Provide this impl
 // so that a Box<dyn Format> is a Format too.
 impl Format for Box<dyn Format> {
-    fn frame(
-        &self,
-        frame_type: FrameType,
-        bytes: &[u8],
-        outgoing: &mut Vec<u8>,
-    ) -> Result<(), Error> {
-        self.as_ref().frame(frame_type, bytes, outgoing)
+    fn frame(&self, bytes: &[u8], outgoing: &mut Vec<u8>) -> Result<(), Error> {
+        self.as_ref().frame(bytes, outgoing)
     }
 
     fn deframe(&self, bytes: &[u8]) -> Result<Deframed, Error> {
@@ -67,16 +57,7 @@ pub struct Deframed {
     /// data. It's required that `unframed_bytes` <= `new_start_pos`.
     pub unframed_bytes: usize,
     /// Optional parsed frame from the buffer.
-    pub frame: Option<(FrameType, Vec<u8>)>,
-}
-
-/// The type of frame.
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum FrameType {
-    /// The first frame of an Overnet conversation.
-    OvernetHello,
-    /// A frame intended for Overnet.
-    Overnet,
+    pub frame: Option<Vec<u8>>,
 }
 
 /// Manages framing of messages into a byte stream.
@@ -153,7 +134,6 @@ impl<Fmt: Format> FramerWriter<Fmt> {
     fn poll_write(
         &self,
         ctx: &mut Context<'_>,
-        frame_type: FrameType,
         bytes: &[u8],
         lock: &mut PollMutex<'_, Outgoing>,
     ) -> Poll<Result<(), Error>> {
@@ -169,7 +149,7 @@ impl<Fmt: Format> FramerWriter<Fmt> {
                     };
                     Poll::Pending
                 } else {
-                    self.framer.fmt.frame(frame_type, bytes, &mut buffer)?;
+                    self.framer.fmt.frame(bytes, &mut buffer)?;
                     waiting_read.take().map(|w| w.wake());
                     *outgoing =
                         Outgoing::Open { buffer: BVec(buffer), waiting_read, waiting_write: None };
@@ -180,9 +160,9 @@ impl<Fmt: Format> FramerWriter<Fmt> {
     }
 
     /// Write a frame into the framer.
-    pub async fn write(&mut self, frame_type: FrameType, bytes: &[u8]) -> Result<(), Error> {
+    pub async fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
         let mut lock = PollMutex::new(&self.framer.outgoing);
-        poll_fn(|ctx| self.poll_write(ctx, frame_type, bytes, &mut lock)).await
+        poll_fn(|ctx| self.poll_write(ctx, bytes, &mut lock)).await
     }
 }
 
@@ -259,7 +239,7 @@ enum Incoming {
     },
     Queuing {
         unframed: Option<BVec>,
-        framed: Option<(FrameType, BVec)>,
+        framed: Option<BVec>,
         unparsed: BVec,
         waiting_write: Option<Waker>,
     },
@@ -328,7 +308,7 @@ fn deframe_step<Fmt: Format>(
     if frame.is_some() || unframed.is_some() {
         waiting_read.take().map(|w| w.wake());
         Ok(Incoming::Queuing {
-            framed: frame.map(|(frame_type, bytes)| (frame_type, BVec(bytes))),
+            framed: frame.map(BVec),
             unframed,
             unparsed: BVec(unparsed),
             waiting_write: None,
@@ -394,12 +374,21 @@ impl<Fmt: Format> Drop for DeframerWriter<Fmt> {
     }
 }
 
+#[derive(Debug, PartialEq)]
+/// Bytes ready by a DeframerReader.
+pub enum ReadBytes {
+    /// A frame to be processed.
+    Framed(Vec<u8>),
+    /// Garbage skipped between frames.
+    Unframed(Vec<u8>),
+}
+
 impl<Fmt: Format> DeframerReader<Fmt> {
     fn poll_read(
         &self,
         ctx: &mut Context<'_>,
         lock: &mut PollMutex<'_, Incoming>,
-    ) -> Poll<Result<(Option<FrameType>, Vec<u8>), Error>> {
+    ) -> Poll<Result<ReadBytes, Error>> {
         let mut incoming = ready!(lock.poll(ctx));
         loop {
             break match std::mem::replace(&mut *incoming, Incoming::Closed) {
@@ -421,17 +410,17 @@ impl<Fmt: Format> DeframerReader<Fmt> {
                         *incoming = deframe_step(unparsed, None, &self.deframer.fmt)?;
                         waiting_write.map(|w| w.wake());
                     }
-                    Poll::Ready(Ok((None, unframed)))
+                    Poll::Ready(Ok(ReadBytes::Unframed(unframed)))
                 }
                 Incoming::Queuing {
                     unframed: None,
-                    framed: Some((frame_type, BVec(bytes))),
+                    framed: Some(BVec(bytes)),
                     unparsed: BVec(unparsed),
                     waiting_write,
                 } => {
                     *incoming = deframe_step(unparsed, None, &self.deframer.fmt)?;
                     waiting_write.map(|w| w.wake());
-                    Poll::Ready(Ok((Some(frame_type), bytes)))
+                    Poll::Ready(Ok(ReadBytes::Framed(bytes)))
                 }
                 Incoming::Queuing { unframed: None, framed: None, .. } => unreachable!(),
                 Incoming::Parsing { unparsed, timeout: None, waiting_read: _ } => {
@@ -473,7 +462,7 @@ impl<Fmt: Format> DeframerReader<Fmt> {
     }
 
     /// Read one frame from the deframer.
-    pub async fn read(&mut self) -> Result<(Option<FrameType>, Vec<u8>), Error> {
+    pub async fn read(&mut self) -> Result<ReadBytes, Error> {
         let mut lock = PollMutex::new(&self.deframer.incoming);
         poll_fn(|ctx| self.poll_read(ctx, &mut lock)).await
     }
@@ -505,21 +494,12 @@ impl LossyBinary {
 }
 
 impl Format for LossyBinary {
-    fn frame(
-        &self,
-        frame_type: FrameType,
-        bytes: &[u8],
-        outgoing: &mut Vec<u8>,
-    ) -> Result<(), Error> {
+    fn frame(&self, bytes: &[u8], outgoing: &mut Vec<u8>) -> Result<(), Error> {
         if bytes.len() > (std::u16::MAX as usize) + 1 {
             return Err(anyhow::format_err!(
                 "Packet length ({}) too long for stream framing",
                 bytes.len()
             ));
-        }
-        match frame_type {
-            FrameType::Overnet => outgoing.write_u8(0u8)?,
-            FrameType::OvernetHello => outgoing.write_u8(255u8)?,
         }
         outgoing.reserve(2 + 4 + bytes.len() + 1);
         outgoing.write_u16::<byteorder::LittleEndian>((bytes.len() - 1) as u16)?;
@@ -533,30 +513,21 @@ impl Format for LossyBinary {
         let mut start = 0;
         loop {
             let buf = &bytes[start..];
-            if buf.len() <= 8 {
+            if buf.len() <= 7 {
                 return Ok(Deframed { frame: None, unframed_bytes: start, new_start_pos: start });
             }
-            let frame_type = match buf[0] {
-                0u8 => FrameType::Overnet,
-                255u8 => FrameType::OvernetHello,
-                _ => {
-                    // Not a start marker: remove and continue
-                    start += 1;
-                    continue;
-                }
-            };
-            let len = 1 + (u16::from_le_bytes([buf[1], buf[2]]) as usize);
-            let crc = u32::from_le_bytes([buf[3], buf[4], buf[5], buf[6]]);
-            if buf.len() < 8 + len {
+            let len = 1 + (u16::from_le_bytes([buf[0], buf[1]]) as usize);
+            let crc = u32::from_le_bytes([buf[2], buf[3], buf[4], buf[5]]);
+            if buf.len() < 7 + len {
                 // Not enough bytes to deframe: done for now
                 return Ok(Deframed { frame: None, unframed_bytes: start, new_start_pos: start });
             }
-            if buf[7 + len] != 10u8 {
+            if buf[6 + len] != 10u8 {
                 // Does not end with an end marker: remove start byte and continue
                 start += 1;
                 continue;
             }
-            let frame = &buf[7..7 + len];
+            let frame = &buf[6..6 + len];
             let crc_actual = crc32::checksum_ieee(frame);
             if crc != crc_actual {
                 // CRC mismatch: skip start marker and continue
@@ -565,9 +536,9 @@ impl Format for LossyBinary {
             }
             // Successfully got a frame! Save it, and continue
             return Ok(Deframed {
-                frame: Some((frame_type, frame.to_vec())),
+                frame: Some(frame.to_vec()),
                 unframed_bytes: start,
-                new_start_pos: start + 8 + len,
+                new_start_pos: start + 7 + len,
             });
         }
     }
@@ -586,21 +557,12 @@ impl Format for LossyBinary {
 pub struct LosslessBinary;
 
 impl Format for LosslessBinary {
-    fn frame(
-        &self,
-        frame_type: FrameType,
-        bytes: &[u8],
-        outgoing: &mut Vec<u8>,
-    ) -> Result<(), Error> {
+    fn frame(&self, bytes: &[u8], outgoing: &mut Vec<u8>) -> Result<(), Error> {
         if bytes.len() > (std::u16::MAX as usize) + 1 {
             return Err(anyhow::format_err!(
                 "Packet length ({}) too long for stream framing",
                 bytes.len()
             ));
-        }
-        match frame_type {
-            FrameType::Overnet => outgoing.write_u8(0u8)?,
-            FrameType::OvernetHello => outgoing.write_u8(255u8)?,
         }
         outgoing.write_u16::<byteorder::LittleEndian>((bytes.len() - 1) as u16)?;
         outgoing.extend_from_slice(bytes);
@@ -608,24 +570,19 @@ impl Format for LosslessBinary {
     }
 
     fn deframe(&self, bytes: &[u8]) -> Result<Deframed, Error> {
-        if bytes.len() <= 4 {
+        if bytes.len() <= 3 {
             return Ok(Deframed { frame: None, unframed_bytes: 0, new_start_pos: 0 });
         }
-        let frame_type = match bytes[0] {
-            0u8 => FrameType::Overnet,
-            255u8 => FrameType::OvernetHello,
-            _ => return Err(format_err!("Bad frame type {:?}", bytes[0])),
-        };
-        let len = 1 + (u16::from_le_bytes([bytes[1], bytes[2]]) as usize);
-        if bytes.len() < 3 + len {
+        let len = 1 + (u16::from_le_bytes([bytes[0], bytes[1]]) as usize);
+        if bytes.len() < 2 + len {
             // Not enough bytes to deframe: done for now.
             return Ok(Deframed { frame: None, unframed_bytes: 0, new_start_pos: 0 });
         }
-        let frame = &bytes[3..3 + len];
+        let frame = &bytes[2..2 + len];
         return Ok(Deframed {
-            frame: Some((frame_type, frame.to_vec())),
+            frame: Some(frame.to_vec()),
             unframed_bytes: 0,
-            new_start_pos: 3 + len,
+            new_start_pos: 2 + len,
         });
     }
 
@@ -647,13 +604,13 @@ mod test {
     #[fuchsia_async::run(1, test)]
     async fn simple_frame() -> Result<(), Error> {
         let (mut framer_writer, mut framer_reader) = new_framer(LosslessBinary, 1024);
-        framer_writer.write(FrameType::Overnet, &[1, 2, 3, 4]).await?;
+        framer_writer.write(&[1, 2, 3, 4]).await?;
         let (mut deframer_writer, mut deframer_reader) = new_deframer(LosslessBinary);
         deframer_writer.write(framer_reader.read().await?.as_slice()).await?;
-        assert_eq!(deframer_reader.read().await?, (Some(FrameType::Overnet), vec![1, 2, 3, 4]));
-        framer_writer.write(FrameType::Overnet, &[5, 6, 7, 8]).await?;
+        assert_eq!(deframer_reader.read().await?, ReadBytes::Framed(vec![1, 2, 3, 4]));
+        framer_writer.write(&[5, 6, 7, 8]).await?;
         deframer_writer.write(framer_reader.read().await?.as_slice()).await?;
-        assert_eq!(deframer_reader.read().await?, (Some(FrameType::Overnet), vec![5, 6, 7, 8]));
+        assert_eq!(deframer_reader.read().await?, ReadBytes::Framed(vec![5, 6, 7, 8]));
         Ok(())
     }
 
@@ -661,14 +618,14 @@ mod test {
     async fn simple_frame_lossy_binary() -> Result<(), Error> {
         let (mut framer_writer, mut framer_reader) =
             new_framer(LossyBinary::new(Duration::from_millis(100)), 1024);
-        framer_writer.write(FrameType::Overnet, &[1, 2, 3, 4]).await?;
+        framer_writer.write(&[1, 2, 3, 4]).await?;
         let (mut deframer_writer, mut deframer_reader) =
             new_deframer(LossyBinary::new(Duration::from_millis(100)));
         deframer_writer.write(framer_reader.read().await?.as_slice()).await?;
-        assert_eq!(deframer_reader.read().await?, (Some(FrameType::Overnet), vec![1, 2, 3, 4]));
-        framer_writer.write(FrameType::Overnet, &[5, 6, 7, 8]).await?;
+        assert_eq!(deframer_reader.read().await?, ReadBytes::Framed(vec![1, 2, 3, 4]));
+        framer_writer.write(&[5, 6, 7, 8]).await?;
         deframer_writer.write(framer_reader.read().await?.as_slice()).await?;
-        assert_eq!(deframer_reader.read().await?, (Some(FrameType::Overnet), vec![5, 6, 7, 8]));
+        assert_eq!(deframer_reader.read().await?, ReadBytes::Framed(vec![5, 6, 7, 8]));
         Ok(())
     }
 
@@ -676,7 +633,7 @@ mod test {
     async fn large_frame() -> Result<(), Error> {
         let big_slice = vec![0u8; 100000];
         let (mut framer_writer, _framer_reader) = new_framer(LosslessBinary, 1024);
-        assert!(framer_writer.write(FrameType::Overnet, &big_slice).await.is_err());
+        assert!(framer_writer.write(&big_slice).await.is_err());
         Ok(())
     }
 
@@ -684,12 +641,12 @@ mod test {
     async fn skip_junk_start_0() -> Result<(), Error> {
         let (mut framer_writer, mut framer_reader) =
             new_framer(LossyBinary::new(Duration::from_millis(100)), 1024);
-        framer_writer.write(FrameType::Overnet, &[1, 2, 3, 4]).await?;
+        framer_writer.write(&[1, 2, 3, 4]).await?;
         let (mut deframer_writer, mut deframer_reader) =
             new_deframer(LossyBinary::new(Duration::from_millis(100)));
         deframer_writer.write(join(vec![0], framer_reader.read().await?).as_slice()).await?;
-        assert_eq!(deframer_reader.read().await?, (None, vec![0]));
-        assert_eq!(deframer_reader.read().await?, (Some(FrameType::Overnet), vec![1, 2, 3, 4]));
+        assert_eq!(deframer_reader.read().await?, ReadBytes::Unframed(vec![0]));
+        assert_eq!(deframer_reader.read().await?, ReadBytes::Framed(vec![1, 2, 3, 4]));
         Ok(())
     }
 
@@ -697,12 +654,12 @@ mod test {
     async fn skip_junk_start_1() -> Result<(), Error> {
         let (mut framer_writer, mut framer_reader) =
             new_framer(LossyBinary::new(Duration::from_millis(100)), 1024);
-        framer_writer.write(FrameType::Overnet, &[1, 2, 3, 4]).await?;
+        framer_writer.write(&[1, 2, 3, 4]).await?;
         let (mut deframer_writer, mut deframer_reader) =
             new_deframer(LossyBinary::new(Duration::from_millis(100)));
         deframer_writer.write(join(vec![1], framer_reader.read().await?).as_slice()).await?;
-        assert_eq!(deframer_reader.read().await?, (None, vec![1]));
-        assert_eq!(deframer_reader.read().await?, (Some(FrameType::Overnet), vec![1, 2, 3, 4]));
+        assert_eq!(deframer_reader.read().await?, ReadBytes::Unframed(vec![1]));
+        assert_eq!(deframer_reader.read().await?, ReadBytes::Framed(vec![1, 2, 3, 4]));
         Ok(())
     }
 }

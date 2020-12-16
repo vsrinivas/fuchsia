@@ -40,6 +40,7 @@ mod test {
     use futures::channel::oneshot;
     use futures::future::{select, try_join, Either};
     use futures::prelude::*;
+    use std::time::Duration;
 
     async fn loop_on_list_peers_until_it_fails(
         service_consumer: &impl fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
@@ -118,22 +119,16 @@ mod test {
         let mut s1b = fidl::AsyncSocket::from_socket(s1b).unwrap();
         drop(s2b);
         let mut buf = [0u8; 10];
-        enum E {
-            Wrapped(std::io::Error),
-            Timeout,
-        }
-        loop {
-            match s1b
-                .read(&mut buf)
-                .map_err(E::Wrapped)
-                .on_timeout(std::time::Duration::from_secs(1), || Err(E::Timeout))
-                .await
-            {
-                Ok(0) => panic!("Should not see s1b closed"),
-                Ok(_) => (),
-                Err(E::Wrapped(e)) => panic!("Should not see an error on s1b: {:?}", e),
-                Err(E::Timeout) => break,
+        async move {
+            loop {
+                match s1b.read(&mut buf).await {
+                    Ok(0) => panic!("Should not see s1b closed"),
+                    Ok(_) => (),
+                    Err(e) => panic!("Should not see an error on s1b: {:?}", e),
+                }
             }
         }
+        .on_timeout(Duration::from_secs(2), || ())
+        .await
     }
 }

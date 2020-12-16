@@ -85,61 +85,70 @@ fn hostname() -> Option<String> {
         .and_then(|s| s.into_string().ok())
 }
 
+fn node_description(
+    implementation: fidl_fuchsia_overnet_protocol::Implementation,
+) -> fidl_fuchsia_overnet_protocol::NodeDescription {
+    fidl_fuchsia_overnet_protocol::NodeDescription {
+        #[cfg(target_os = "fuchsia")]
+        operating_system: Some(fidl_fuchsia_overnet_protocol::OperatingSystem::Fuchsia),
+        #[cfg(target_os = "linux")]
+        operating_system: Some(fidl_fuchsia_overnet_protocol::OperatingSystem::Linux),
+        #[cfg(target_os = "macos")]
+        operating_system: Some(fidl_fuchsia_overnet_protocol::OperatingSystem::Mac),
+        implementation: Some(implementation),
+        binary: std::env::current_exe()
+            .ok()
+            .and_then(|p| p.file_name().map(|s| s.to_owned()))
+            .and_then(|p| p.to_str().map(str::to_string)),
+        hostname: hostname(),
+        ..fidl_fuchsia_overnet_protocol::NodeDescription::EMPTY
+    }
+}
+
 async fn handle_diagnostic_requests(
     router: &Weak<Router>,
     implementation: fidl_fuchsia_overnet_protocol::Implementation,
-    mut stream: DiagnosticRequestStream,
+    stream: DiagnosticRequestStream,
 ) -> Result<(), Error> {
     let get_router = move || Weak::upgrade(router).ok_or_else(|| format_err!("router gone"));
-    while let Some(req) = stream.try_next().await.context("awaiting next diagnostic request")? {
-        match req {
-            DiagnosticRequest::Probe { selector, responder } => {
-                let res = responder.send(ProbeResult {
-                    node_description: if_probe_has_bit(
-                        selector,
-                        ProbeSelector::NodeDescription,
-                        futures::future::ready(fidl_fuchsia_overnet_protocol::NodeDescription {
-                            #[cfg(target_os = "fuchsia")]
-                            operating_system: Some(
-                                fidl_fuchsia_overnet_protocol::OperatingSystem::Fuchsia,
-                            ),
-                            #[cfg(target_os = "linux")]
-                            operating_system: Some(
-                                fidl_fuchsia_overnet_protocol::OperatingSystem::Linux,
-                            ),
-                            #[cfg(target_os = "macos")]
-                            operating_system: Some(
-                                fidl_fuchsia_overnet_protocol::OperatingSystem::Mac,
-                            ),
-                            implementation: Some(implementation),
-                            binary: std::env::current_exe()
-                                .ok()
-                                .and_then(|p| p.file_name().map(|s| s.to_owned()))
-                                .and_then(|p| p.to_str().map(str::to_string)),
-                            hostname: hostname(),
-                            ..fidl_fuchsia_overnet_protocol::NodeDescription::EMPTY
-                        }),
-                    )
-                    .await,
-                    links: if_probe_has_bit(
-                        selector,
-                        ProbeSelector::Links,
-                        get_router()?.link_diagnostics(),
-                    )
-                    .await,
-                    peer_connections: if_probe_has_bit(
-                        selector,
-                        ProbeSelector::PeerConnections,
-                        get_router()?.peer_diagnostics(),
-                    )
-                    .await,
-                    ..ProbeResult::EMPTY
-                });
-                if let Err(e) = res {
-                    log::warn!("Failed handling probe: {:?}", e);
+    stream
+        .map_err(Into::into)
+        .try_for_each_concurrent(None, |req| async move {
+            match req {
+                DiagnosticRequest::Probe { selector, responder } => {
+                    let res = responder.send(ProbeResult {
+                        node_description: if_probe_has_bit(
+                            selector,
+                            ProbeSelector::NodeDescription,
+                            futures::future::ready(node_description(implementation)),
+                        )
+                        .await,
+                        links: if_probe_has_bit(
+                            selector,
+                            ProbeSelector::Links,
+                            get_router()?.link_diagnostics(),
+                        )
+                        .await,
+                        peer_connections: if_probe_has_bit(
+                            selector,
+                            ProbeSelector::PeerConnections,
+                            get_router()?.peer_diagnostics(),
+                        )
+                        .await,
+                        connecting_link_count: if_probe_has_bit(
+                            selector,
+                            ProbeSelector::ConnectingLinkCount,
+                            futures::future::ready(get_router()?.connecting_link_count()),
+                        )
+                        .await,
+                        ..ProbeResult::EMPTY
+                    });
+                    if let Err(e) = res {
+                        log::warn!("Failed handling probe: {:?}", e);
+                    }
                 }
             }
-        }
-    }
-    Ok(())
+            Ok(())
+        })
+        .await
 }

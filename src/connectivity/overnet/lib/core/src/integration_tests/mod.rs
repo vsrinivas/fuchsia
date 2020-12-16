@@ -44,7 +44,7 @@ enum OvernetCommand {
     RegisterService(String, ClientEnd<ServiceProviderMarker>),
     ConnectToService(NodeId, String, fidl::Channel),
     AttachSocketLink(fidl::Socket, fidl_fuchsia_overnet_protocol::SocketLinkOptions),
-    NewLink(NodeId, Box<dyn NewLinkRunner>),
+    NewLink(Box<dyn NewLinkRunner>),
 }
 
 trait NewLinkRunner: Send {
@@ -113,12 +113,8 @@ impl Overnet {
         self.node_id
     }
 
-    fn new_link(
-        &self,
-        peer_node_id: NodeId,
-        runner: impl 'static + NewLinkRunner,
-    ) -> Result<(), fidl::Error> {
-        self.send(OvernetCommand::NewLink(peer_node_id, Box::new(runner)))
+    fn new_link(&self, runner: impl 'static + NewLinkRunner) -> Result<(), fidl::Error> {
+        self.send(OvernetCommand::NewLink(Box::new(runner)))
     }
 }
 
@@ -142,8 +138,8 @@ async fn run_overnet_command(
         OvernetCommand::AttachSocketLink(socket, options) => {
             node.run_socket_link(socket, options).await
         }
-        OvernetCommand::NewLink(peer_node_id, runner) => {
-            let (tx, rx) = node.new_link(peer_node_id, Box::new(|| None)).await?;
+        OvernetCommand::NewLink(runner) => {
+            let (tx, rx) = node.new_link(Box::new(|| None));
             runner.run(tx, rx).await
         }
     }
@@ -321,14 +317,14 @@ impl NewLinkRunner for QuicLinkRunner {
         link_receiver: LinkReceiver,
     ) -> Pin<Box<dyn Send + Future<Output = Result<(), Error>>>> {
         async move {
-            let (tx, rx) = new_quic_link(link_sender, link_receiver, self.endpoint).await?;
+            let (tx, rx, _) = new_quic_link(link_sender, link_receiver, self.endpoint).await?;
             self.tx
                 .send(rx)
                 .map_err(|_| anyhow::format_err!("failed to send quic link to other end"))?;
             let rx = self.rx.await?;
             let mut frame = [0u8; 1400];
             while let Some(n) = tx.next_send(&mut frame).await? {
-                rx.received_packet(&mut frame[..n]).await?;
+                rx.received_frame(&mut frame[..n]).await;
             }
             Ok(())
         }
@@ -340,8 +336,8 @@ impl NewLinkRunner for QuicLinkRunner {
 pub fn connect_with_quic(a: &Arc<Overnet>, b: &Arc<Overnet>) -> Result<(), Error> {
     let (atx, brx) = futures::channel::oneshot::channel();
     let (btx, arx) = futures::channel::oneshot::channel();
-    a.new_link(b.node_id(), QuicLinkRunner { tx: atx, rx: arx, endpoint: Endpoint::Client })?;
-    b.new_link(a.node_id(), QuicLinkRunner { tx: btx, rx: brx, endpoint: Endpoint::Server })?;
+    a.new_link(QuicLinkRunner { tx: atx, rx: arx, endpoint: Endpoint::Client })?;
+    b.new_link(QuicLinkRunner { tx: btx, rx: brx, endpoint: Endpoint::Server })?;
     Ok(())
 }
 
