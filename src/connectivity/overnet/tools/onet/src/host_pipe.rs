@@ -5,8 +5,8 @@
 use {
     anyhow::{Context as _, Error},
     argh::FromArgs,
-    fidl_fuchsia_overnet::MeshControllerProxyInterface,
     futures::{future::try_join, prelude::*},
+    hoist::{hoist, OvernetInstance},
     parking_lot::Mutex,
     std::io::{Read, Write},
     std::sync::Arc,
@@ -75,7 +75,7 @@ pub async fn host_pipe() -> Result<(), Error> {
     let (local_socket, remote_socket) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
     let local_socket = fidl::AsyncSocket::from_socket(local_socket)?;
     let (rx_socket, tx_socket) = futures::AsyncReadExt::split(local_socket);
-    hoist::connect_as_mesh_controller()?.attach_socket_link(remote_socket)?;
+    hoist().connect_as_mesh_controller()?.attach_socket_link(remote_socket)?;
     try_join(copy_socket_to_stdout(rx_socket), copy_stdin_to_socket(tx_socket)).await?;
 
     Ok(())

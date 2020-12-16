@@ -20,12 +20,12 @@ use {
         IdentifyHostError, RemoteControlMarker, RemoteControlProxy,
     },
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address, Subnet},
-    fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::Timer,
     futures::future,
     futures::lock::Mutex,
     futures::prelude::*,
+    hoist::{hoist, OvernetInstance},
     std::cmp::Ordering,
     std::collections::{BTreeSet, HashMap},
     std::default::Default,
@@ -164,7 +164,7 @@ impl RcsConnection {
     }
 
     fn connect_to_service(overnet_id: &mut NodeId, channel: fidl::Channel) -> Result<()> {
-        let svc = hoist::connect_as_service_consumer()?;
+        let svc = hoist().connect_as_service_consumer()?;
         svc.connect_to_service(overnet_id, RemoteControlMarker::NAME, channel)
             .map_err(|e| anyhow!("Error connecting to Rcs: {}", e))
     }

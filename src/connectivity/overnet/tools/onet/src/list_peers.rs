@@ -6,12 +6,12 @@ use {
     crate::generator::Generator,
     crate::probe_node::{probe_node, Selector},
     anyhow::{format_err, Error},
-    fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::{TimeoutExt, Timer},
     futures::future::Either,
     futures::lock::Mutex,
     futures::prelude::*,
+    hoist::{hoist, OvernetInstance},
     std::collections::HashSet,
     std::sync::Arc,
     std::time::Duration,
@@ -28,7 +28,7 @@ pub fn list_peers() -> impl Stream<Item = Result<NodeId, Error>> {
 
     Generator::new(move |mut tx| async move {
         let r: Result<(), Error> = async {
-            let svc = hoist::connect_as_service_consumer()?;
+            let svc = hoist().connect_as_service_consumer()?;
             let seen_peers = Arc::new(Mutex::new(HashSet::new()));
             let more_to_do = {
                 let seen_peers = seen_peers.clone();
@@ -111,7 +111,7 @@ pub fn list_peers() -> impl Stream<Item = Result<NodeId, Error>> {
 
 /// Get this nodes id
 pub async fn own_id() -> Result<NodeId, Error> {
-    for peer in hoist::connect_as_service_consumer()?.list_peers().await?.into_iter() {
+    for peer in hoist().connect_as_service_consumer()?.list_peers().await?.into_iter() {
         if peer.is_self {
             return Ok(peer.id);
         }

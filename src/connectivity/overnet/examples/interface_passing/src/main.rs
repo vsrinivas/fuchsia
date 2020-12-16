@@ -6,12 +6,11 @@ use {
     anyhow::{Context as _, Error},
     clap::{App, Arg, SubCommand},
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd, ServiceMarker},
-    fidl_fuchsia_overnet::{
-        ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
-    },
+    fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_fuchsia_overnet_examples_interfacepassing as interfacepassing,
     fidl_test_placeholders as echo,
     futures::prelude::*,
+    hoist::{hoist, OvernetInstance},
 };
 
 fn app<'a, 'b>() -> App<'a, 'b> {
@@ -29,7 +28,7 @@ fn app<'a, 'b>() -> App<'a, 'b> {
 // Client implementation
 
 async fn exec_client(text: Option<&str>) -> Result<(), Error> {
-    let svc = hoist::connect_as_service_consumer()?;
+    let svc = hoist().connect_as_service_consumer()?;
     loop {
         let peers = svc.list_peers().await?;
         println!("Got peers: {:?}", peers);
@@ -113,7 +112,7 @@ async fn example_server(chan: fidl::AsyncChannel, quiet: bool) -> Result<(), Err
 async fn exec_server(quiet: bool) -> Result<(), Error> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
-    hoist::publish_service(interfacepassing::ExampleMarker::NAME, ClientEnd::new(p))?;
+    hoist().publish_service(interfacepassing::ExampleMarker::NAME, ClientEnd::new(p))?;
     ServiceProviderRequestStream::from_channel(chan)
         .map_err(Into::into)
         .try_for_each_concurrent(

@@ -21,10 +21,10 @@ use {
         DaemonError, DaemonRequest, DaemonRequestStream, FastbootError, TargetAddrInfo,
     },
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
-    fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::{Task, Timer},
     futures::prelude::*,
+    hoist::{hoist, OvernetInstance},
     std::convert::TryInto,
     std::sync::{Arc, Weak},
     std::time::Duration,
@@ -263,7 +263,7 @@ impl Daemon {
     pub fn spawn_onet_discovery(queue: events::Queue<DaemonEvent>) {
         fuchsia_async::Task::spawn(async move {
             loop {
-                let svc = match hoist::connect_as_service_consumer() {
+                let svc = match hoist().connect_as_service_consumer() {
                     Ok(svc) => svc,
                     Err(err) => {
                         log::info!("Overnet setup failed: {}, will retry in 1s", err);

@@ -12,6 +12,7 @@ use {
     fuchsia_component::server::ServiceFs,
     futures::join,
     futures::prelude::*,
+    hoist::{hoist, OvernetInstance},
     remote_control::RemoteControlService,
     std::rc::Rc,
 };
@@ -25,7 +26,7 @@ async fn exec_server() -> Result<(), Error> {
     let chan =
         fidl::AsyncChannel::from_channel(s).context("creating ServiceProvider async channel")?;
     let stream = ServiceProviderRequestStream::from_channel(chan);
-    hoist::publish_service(rcs::RemoteControlMarker::NAME, ClientEnd::new(p))?;
+    hoist().publish_service(rcs::RemoteControlMarker::NAME, ClientEnd::new(p))?;
 
     let service = Rc::new(RemoteControlService::new().unwrap());
 

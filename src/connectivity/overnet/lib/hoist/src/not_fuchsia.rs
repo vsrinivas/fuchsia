@@ -9,8 +9,9 @@ use {
     fidl::endpoints::{create_proxy, create_proxy_and_stream},
     fidl_fuchsia_overnet::{
         HostOvernetMarker, HostOvernetProxy, HostOvernetRequest, HostOvernetRequestStream,
-        MeshControllerMarker, MeshControllerRequest, ServiceConsumerMarker, ServiceConsumerRequest,
-        ServicePublisherMarker, ServicePublisherRequest,
+        MeshControllerMarker, MeshControllerProxy, MeshControllerRequest, ServiceConsumerMarker,
+        ServiceConsumerProxy, ServiceConsumerRequest, ServicePublisherMarker,
+        ServicePublisherProxy, ServicePublisherRequest,
     },
     fuchsia_async::{Task, Timer},
     futures::prelude::*,
@@ -23,28 +24,86 @@ use {
     stream_link::run_stream_link,
 };
 
-pub use fidl_fuchsia_overnet::{
-    MeshControllerProxyInterface, ServiceConsumerProxyInterface, ServicePublisherProxyInterface,
-};
-
-pub const ASCENDD_CLIENT_CONNECTION_STRING: &str = "ASCENDD_CLIENT_CONNECTION_STRING";
-pub const ASCENDD_SERVER_CONNECTION_STRING: &str = "ASCENDD_SERVER_CONNECTION_STRING";
 pub const DEFAULT_ASCENDD_PATH: &str = "/tmp/ascendd";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Overnet <-> API bindings
 
-struct Overnet {
+pub struct HostOvernet {
     proxy: HostOvernetProxy,
     _task: Task<()>,
 }
 
-fn start_overnet() -> Result<Overnet, Error> {
-    let (c, s) = create_proxy_and_stream::<HostOvernetMarker>()?;
-    Ok(Overnet {
-        proxy: c,
-        _task: Task::spawn(log_errors(run_overnet(s), "overnet main loop failed")),
-    })
+impl super::OvernetInstance for HostOvernet {
+    fn connect_as_service_consumer(&self) -> Result<ServiceConsumerProxy, Error> {
+        let (c, s) = create_proxy::<ServiceConsumerMarker>()?;
+        self.proxy.connect_service_consumer(s)?;
+        Ok(c)
+    }
+
+    fn connect_as_service_publisher(&self) -> Result<ServicePublisherProxy, Error> {
+        let (c, s) = create_proxy::<ServicePublisherMarker>()?;
+        self.proxy.connect_service_publisher(s)?;
+        Ok(c)
+    }
+
+    fn connect_as_mesh_controller(&self) -> Result<MeshControllerProxy, Error> {
+        let (c, s) = create_proxy::<MeshControllerMarker>()?;
+        self.proxy.connect_mesh_controller(s)?;
+        Ok(c)
+    }
+}
+
+impl HostOvernet {
+    pub fn new(node: Arc<Router>) -> Result<Self, Error> {
+        let (c, s) = create_proxy_and_stream::<HostOvernetMarker>()?;
+        Ok(Self {
+            proxy: c,
+            _task: Task::spawn(log_errors(run_overnet(node, s), "overnet main loop failed")),
+        })
+    }
+}
+
+pub struct Hoist {
+    host_overnet: HostOvernet,
+    _task: Task<()>,
+}
+
+impl Hoist {
+    pub(crate) fn new() -> Result<Self, Error> {
+        let node_id = overnet_core::generate_node_id();
+        log::trace!("Hoist node id:  {}", node_id.0);
+        let node = Router::new(
+            RouterOptions::new()
+                .export_diagnostics(fidl_fuchsia_overnet_protocol::Implementation::HoistRustCrate)
+                .set_node_id(node_id),
+            Box::new(hard_coded_security_context()),
+        )?;
+
+        Ok(Self {
+            host_overnet: HostOvernet::new(node.clone())?,
+            _task: Task::spawn(async move {
+                retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), || {
+                    run_ascendd_connection(node.clone())
+                })
+                .await
+            }),
+        })
+    }
+}
+
+impl super::OvernetInstance for Hoist {
+    fn connect_as_service_consumer(&self) -> Result<ServiceConsumerProxy, Error> {
+        self.host_overnet.connect_as_service_consumer()
+    }
+
+    fn connect_as_service_publisher(&self) -> Result<ServicePublisherProxy, Error> {
+        self.host_overnet.connect_as_service_publisher()
+    }
+
+    fn connect_as_mesh_controller(&self) -> Result<MeshControllerProxy, Error> {
+        self.host_overnet.connect_as_mesh_controller()
+    }
 }
 
 async fn run_ascendd_connection(node: Arc<Router>) -> Result<(), Error> {
@@ -203,26 +262,7 @@ async fn handle_request(node: Arc<Router>, req: HostOvernetRequest) -> Result<()
     Ok(())
 }
 
-async fn run_overnet(rx: HostOvernetRequestStream) -> Result<(), Error> {
-    let node_id = overnet_core::generate_node_id();
-    log::trace!("Hoist node id:  {}", node_id.0);
-    let node = Router::new(
-        RouterOptions::new()
-            .export_diagnostics(fidl_fuchsia_overnet_protocol::Implementation::HoistRustCrate)
-            .set_node_id(node_id),
-        Box::new(hard_coded_security_context()),
-    )?;
-
-    let _connect = Task::spawn({
-        let node = node.clone();
-        async move {
-            retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), || {
-                run_ascendd_connection(node.clone())
-            })
-            .await
-        }
-    });
-
+async fn run_overnet(node: Arc<Router>, rx: HostOvernetRequestStream) -> Result<(), Error> {
     // Run application loop
     rx.map_err(Into::into)
         .try_for_each_concurrent(None, move |req| {
@@ -235,31 +275,6 @@ async fn run_overnet(rx: HostOvernetRequestStream) -> Result<(), Error> {
             }
         })
         .await
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// ProxyInterface implementations
-
-lazy_static::lazy_static! {
-    static ref OVERNET: Overnet = start_overnet().unwrap();
-}
-
-pub fn connect_as_service_consumer() -> Result<impl ServiceConsumerProxyInterface, Error> {
-    let (c, s) = create_proxy::<ServiceConsumerMarker>()?;
-    OVERNET.proxy.connect_service_consumer(s)?;
-    Ok(c)
-}
-
-pub fn connect_as_service_publisher() -> Result<impl ServicePublisherProxyInterface, Error> {
-    let (c, s) = create_proxy::<ServicePublisherMarker>()?;
-    OVERNET.proxy.connect_service_publisher(s)?;
-    Ok(c)
-}
-
-pub fn connect_as_mesh_controller() -> Result<impl MeshControllerProxyInterface, Error> {
-    let (c, s) = create_proxy::<MeshControllerMarker>()?;
-    OVERNET.proxy.connect_mesh_controller(s)?;
-    Ok(c)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

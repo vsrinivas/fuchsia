@@ -6,11 +6,10 @@ use {
     anyhow::{Context as _, Error},
     argh::FromArgs,
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
-    fidl_fuchsia_overnet::{
-        ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
-    },
+    fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_test_placeholders as echo,
     futures::prelude::*,
+    hoist::{hoist, OvernetInstance},
 };
 
 #[derive(FromArgs)]
@@ -47,7 +46,7 @@ enum Subcommand {
 // Client implementation
 
 async fn exec_client(text: Option<String>) -> Result<(), Error> {
-    let svc = hoist::connect_as_service_consumer()?;
+    let svc = hoist().connect_as_service_consumer()?;
     loop {
         let peers = svc.list_peers().await?;
         log::info!("Got peers: {:?}", peers);
@@ -117,7 +116,7 @@ async fn echo_server(chan: fidl::AsyncChannel, quiet: bool) -> Result<(), Error>
 async fn exec_server(quiet: bool) -> Result<(), Error> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
-    hoist::publish_service(echo::EchoMarker::NAME, ClientEnd::new(p))?;
+    hoist().publish_service(echo::EchoMarker::NAME, ClientEnd::new(p))?;
     ServiceProviderRequestStream::from_channel(chan)
         .map_err(Into::into)
         .try_for_each_concurrent(

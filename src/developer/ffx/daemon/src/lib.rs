@@ -10,12 +10,11 @@ use {
     ffx_lib_args::Ffx,
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy, DaemonRequestStream},
-    fidl_fuchsia_overnet::{
-        ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
-    },
+    fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::Task,
     futures::prelude::*,
+    hoist::{hoist, OvernetInstance},
     libc,
     std::env,
     std::os::unix::process::CommandExt,
@@ -39,7 +38,7 @@ mod util;
 pub mod target;
 
 pub async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy> {
-    let svc = hoist::connect_as_service_consumer()?;
+    let svc = hoist().connect_as_service_consumer()?;
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     svc.connect_to_service(id, DaemonMarker::NAME, s)?;
     let proxy = fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
@@ -48,7 +47,7 @@ pub async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy> {
 
 // Note that this function assumes the daemon has been started separately.
 pub async fn find_and_connect() -> Result<DaemonProxy> {
-    let svc = hoist::connect_as_service_consumer()?;
+    let svc = hoist().connect_as_service_consumer()?;
     // Sometimes list_peers doesn't properly report the published services - retry a few times
     // but don't loop indefinitely.
     let max_retry_count: u64 =
@@ -127,7 +126,7 @@ async fn exec_server(daemon: Daemon) -> Result<()> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
     let mut stream = ServiceProviderRequestStream::from_channel(chan);
-    hoist::publish_service(DaemonMarker::NAME, ClientEnd::new(p))?;
+    hoist().publish_service(DaemonMarker::NAME, ClientEnd::new(p))?;
     while let Some(ServiceProviderRequest::ConnectToService {
         chan,
         info: _,

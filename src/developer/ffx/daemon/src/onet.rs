@@ -9,11 +9,11 @@ use {
     anyhow::{anyhow, Context, Result},
     async_std::io::prelude::BufReadExt,
     async_std::prelude::StreamExt,
-    fidl_fuchsia_overnet::MeshControllerProxyInterface,
     fuchsia_async::{Task, Timer},
     futures::channel::oneshot,
     futures::future::FutureExt,
     futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
+    hoist::{hoist, OvernetInstance},
     std::future::Future,
     std::io,
     std::os::unix::io::{FromRawFd, IntoRawFd},
@@ -202,7 +202,7 @@ pub async fn run_ascendd() -> Result<()> {
 fn overnet_pipe() -> Result<fidl::AsyncSocket> {
     let (local_socket, remote_socket) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
     let local_socket = fidl::AsyncSocket::from_socket(local_socket)?;
-    hoist::connect_as_mesh_controller()?.attach_socket_link(remote_socket)?;
+    hoist().connect_as_mesh_controller()?.attach_socket_link(remote_socket)?;
 
     Ok(local_socket)
 }
