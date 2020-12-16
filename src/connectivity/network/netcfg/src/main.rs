@@ -32,7 +32,7 @@ use fidl_fuchsia_io as fio;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_dhcp as fnet_dhcp;
 use fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6;
-use fidl_fuchsia_net_ext::{self as fnet_ext, IntoExt as _, IpExt as _};
+use fidl_fuchsia_net_ext::{self as fnet_ext, DisplayExt as _, IntoExt as _, IpExt as _};
 use fidl_fuchsia_net_filter as fnet_filter;
 use fidl_fuchsia_net_name as fnet_name;
 use fidl_fuchsia_net_stack as fnet_stack;
@@ -737,7 +737,11 @@ impl<'a> NetCfg<'a> {
                     None => return Ok(()),
                 };
 
-                info!("host interface with id={} removed so stopping DHCPv6 client w/ sockaddr = {:?}", interface_id, sockaddr);
+                info!(
+                    "host interface with id={} removed so stopping DHCPv6 client w/ sockaddr = {}",
+                    interface_id,
+                    sockaddr.display_ext(),
+                );
 
                 let () = dhcpv6::stop_client(
                     &self.lookup_admin,
@@ -807,8 +811,8 @@ impl<'a> NetCfg<'a> {
                     };
 
                     info!(
-                        "host interface {} (id={}) went down so stopping DHCPv6 client w/ sockaddr = {:?}",
-                        name, id, sockaddr,
+                        "host interface {} (id={}) went down so stopping DHCPv6 client w/ sockaddr = {}",
+                        name, id, sockaddr.display_ext(),
                     );
 
                     let () = dhcpv6::stop_client(
@@ -834,8 +838,8 @@ impl<'a> NetCfg<'a> {
                     if !ipv6addrs.iter().any(|x| x.addr == fnet::IpAddress::Ipv6(sockaddr.address))
                     {
                         info!(
-                            "stopping DHCPv6 client on host interface {} (id={}) w/ removed sockaddr = {:?}",
-                            name, id, sockaddr,
+                            "stopping DHCPv6 client on host interface {} (id={}) w/ removed sockaddr = {}",
+                            name, id, sockaddr.display_ext(),
                         );
 
                         let () = dhcpv6::stop_client(
@@ -846,7 +850,10 @@ impl<'a> NetCfg<'a> {
                         )
                             .await
                             .with_context(|| {
-                                format!("error stopping DHCPv6 client on interface {} (id={}) since sockaddr {:?} was removed", name, id, sockaddr)
+                                format!(
+                                    "error stopping DHCPv6 client on interface {} (id={}) since sockaddr {} was removed",
+                                    name, id, sockaddr.display_ext(),
+                                )
                             })?;
                         state.dhcpv6_client_addr = None;
                     }
@@ -881,7 +888,7 @@ impl<'a> NetCfg<'a> {
 
                 info!(
                     "host interface {} (id={}) up with a link-local address so starting DHCPv6 client on {}",
-                    name, id, fnet_ext::SocketAddress::from(fnet::SocketAddress::Ipv6(sockaddr)),
+                    name, id, sockaddr.display_ext(),
                 );
 
                 match dhcpv6::start_client(dhcpv6_client_provider, id, sockaddr, watchers) {
@@ -891,7 +898,7 @@ impl<'a> NetCfg<'a> {
                     Err(errors::Error::NonFatal(e)) => {
                         error!(
                             "failed to start DHCPv6 client on interface {} (id={}) w/ sockaddr {:?}: {}",
-                            name, id, sockaddr, e
+                            name, id, sockaddr.display_ext(), e
                         );
                     }
                     Err(errors::Error::Fatal(e)) => {

@@ -5,11 +5,20 @@
 //! Extensions for types in the `fidl_fuchsia_net` crate.
 
 use std::convert::TryInto as _;
+use std::fmt::Display;
 
 use fidl_fuchsia_net as fidl;
 
 use anyhow;
 use net_types::ip;
+
+/// Extension trait to allow user-friendly formatting.
+pub trait DisplayExt {
+    type Displayable: Display;
+
+    /// Returns a [`Display`]-able variant..
+    fn display_ext(&self) -> Self::Displayable;
+}
 
 /// Extension to IP types.
 pub trait IpExt {
@@ -262,6 +271,20 @@ impl std::fmt::Display for SocketAddress {
     }
 }
 
+impl DisplayExt for fidl::SocketAddress {
+    type Displayable = SocketAddress;
+    fn display_ext(&self) -> SocketAddress {
+        self.clone().into()
+    }
+}
+
+impl<T: IntoExt<fidl::SocketAddress> + Clone> DisplayExt for T {
+    type Displayable = SocketAddress;
+    fn display_ext(&self) -> SocketAddress {
+        IntoExt::into_ext(self.clone()).into()
+    }
+}
+
 impl From<fidl::SocketAddress> for SocketAddress {
     fn from(f: fidl::SocketAddress) -> Self {
         Self(match f {
@@ -494,5 +517,43 @@ mod tests {
 
         assert_eq!(want_ext, got_ext);
         assert_eq!(want_fidl, want_fidl);
+    }
+
+    #[test]
+    fn test_display_ext() {
+        let ipv4_sock_addr =
+            fidl::Ipv4SocketAddress { address: fidl::Ipv4Address { addr: [1, 2, 3, 4] }, port: 5 };
+        assert_eq!(
+            SocketAddress(std::net::SocketAddr::V4(std::net::SocketAddrV4::new(
+                std::net::Ipv4Addr::new(1, 2, 3, 4),
+                5,
+            ))),
+            fidl::SocketAddress::Ipv4(ipv4_sock_addr).display_ext()
+        );
+        assert_eq!(
+            SocketAddress(std::net::SocketAddr::V4(std::net::SocketAddrV4::new(
+                std::net::Ipv4Addr::new(1, 2, 3, 4),
+                5,
+            ))),
+            ipv4_sock_addr.display_ext()
+        );
+        assert_eq!(
+            SocketAddress(std::net::SocketAddr::V6(std::net::SocketAddrV6::new(
+                std::net::Ipv6Addr::new(
+                    0x0102, 0x0304, 0x0506, 0x0708, 0x090A, 0x0B0C, 0x0D0E, 0x0F10
+                ),
+                17,
+                0,
+                18,
+            ))),
+            fidl::Ipv6SocketAddress {
+                address: fidl::Ipv6Address {
+                    addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                },
+                port: 17,
+                zone_index: 18,
+            }
+            .display_ext()
+        );
     }
 }
