@@ -28,6 +28,8 @@ class MockHttpResponse extends Mock implements HttpClientResponse {
   }
 }
 
+class MockHttpHeaders extends Mock implements HttpHeaders {}
+
 class MockIOSink extends Mock implements IOSink {}
 
 class MockSsh extends Mock implements Ssh {}
@@ -385,12 +387,46 @@ void main() {
           MockHttpResponse(Stream.value(utf8.encoder.convert('{}')));
       when(mockHttpClient.postUrl(any))
           .thenAnswer((_) => Future.value(mockRequest));
+      when(mockRequest.headers).thenReturn(MockHttpHeaders());
       when(mockRequest.close()).thenAnswer((_) => Future.value(mockResponse));
 
       Sl4f client = Sl4f.fromUrl(Uri.http('sl4f.com:1234', ''), mockHttpClient);
       await client.request('method');
 
       verify(mockHttpClient.postUrl(any));
+    });
+  });
+
+  group('Sl4f request', () {
+    HttpServer fakeServer;
+    Sl4f sl4fUnderTest;
+    setUp(() async {
+      fakeServer = await HttpServer.bind('127.0.0.1', 0);
+      sl4fUnderTest =
+          Sl4f.fromUrl(Uri.http('127.0.0.1:${fakeServer.port}', '/'));
+    });
+    tearDown(() async {
+      await fakeServer.close();
+    });
+    test('can send request with utf-8 characters', () async {
+      Future<void> handler(HttpRequest request) async {
+        expect(request?.headers?.contentType?.mimeType, 'application/json');
+        expect(request?.headers?.contentType?.charset, 'utf-8');
+        final Map<String, dynamic> content = await request
+            .cast<List<int>>()
+            .transform(utf8.decoder)
+            .transform(json.decoder)
+            .first;
+        expect(content['params']['text'], equals('6′ 1″'));
+        request.response.write('{"result": "Success"}');
+        await request.response.close();
+      }
+
+      fakeServer.listen(handler);
+      // do .request with JSON containing utf-8.
+      final response =
+          await sl4fUnderTest.request('foo.test', {'text': '6′ 1″'});
+      expect(response, 'Success');
     });
   });
 }

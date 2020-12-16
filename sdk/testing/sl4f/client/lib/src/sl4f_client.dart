@@ -277,11 +277,13 @@ class Sl4f {
     // omitted. This is actually required by our SL4F server (although it is
     // not required in JSON RPC:
     // https://www.jsonrpc.org/specification#request_object).
-    final body = jsonEncode({'id': '', 'method': method, 'params': params});
+    final body =
+        utf8.encode(jsonEncode({'id': '', 'method': method, 'params': params}));
     final httpRequest = await _client.postUrl(targetUrl);
     httpRequest
+      ..headers.contentType = ContentType.json
       ..contentLength = body.length
-      ..write(body);
+      ..add(body);
     return await httpRequest.close();
   }
 
