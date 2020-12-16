@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Testing utilities for a `DiagnosticsHierarchy`.
+//!
+//! Pretty much the useful [`assert_data_tree`][assert_data_tree] macro plus some utilities for it.
+
 use {
     crate::{
         ArrayContent, ArrayFormat, Bucket, DiagnosticsHierarchy, ExponentialHistogramParams,
@@ -44,6 +48,7 @@ use {
 ///         opaque_child, // required trailing comma for `TreeAssertion` expressions
 ///     }
 /// );
+/// ```
 ///
 /// Note that `TreeAssertion`s given directly to the macro must always be followed by `,`.
 #[macro_export]
@@ -315,12 +320,12 @@ where
         }
     }
 
-    #[allow(missing_docs)]
+    /// Adds a property assertion to this tree assertion.
     pub fn add_property_assertion(&mut self, key: &str, assertion: Box<dyn PropertyAssertion<K>>) {
         self.properties.push((key.to_owned(), assertion));
     }
 
-    #[allow(missing_docs)]
+    /// Adds a tree assertion as a child of this tree assertion.
     pub fn add_child_assertion(&mut self, mut assertion: TreeAssertion<K>) {
         assertion.path = format!("{}.{}", self.path, assertion.name);
         self.children.push(assertion);
@@ -381,7 +386,7 @@ where
     }
 }
 
-#[allow(missing_docs)]
+/// Trait implemented by types that can act as properies for assertion.
 pub trait PropertyAssertion<K = String> {
     /// Check whether |actual| property satisfies criteria. Return `Ok` if assertion passes and
     /// `Error` if assertion fails.
@@ -499,6 +504,7 @@ impl<K> PropertyAssertion<K> for AnyProperty {
     }
 }
 
+/// An assertion for a histogram property.
 pub struct HistogramAssertion<T> {
     format: ArrayFormat,
     values: Vec<T>,
@@ -507,6 +513,7 @@ pub struct HistogramAssertion<T> {
 impl<T: MulAssign + AddAssign + PartialOrd + Add<Output = T> + Copy + Default + One>
     HistogramAssertion<T>
 {
+    /// Creates a new histogram assertion for a linear histogram with the given parameters.
     pub fn linear(params: LinearHistogramParams<T>) -> Self {
         let mut values = vec![T::default(); params.buckets + LINEAR_HISTOGRAM_EXTRA_SLOTS];
         values[0] = params.floor;
@@ -514,6 +521,7 @@ impl<T: MulAssign + AddAssign + PartialOrd + Add<Output = T> + Copy + Default + 
         Self { format: ArrayFormat::LinearHistogram, values }
     }
 
+    /// Creates a new histogram assertion for an exponential histogram with the given parameters.
     pub fn exponential(params: ExponentialHistogramParams<T>) -> Self {
         let mut values = vec![T::default(); params.buckets + EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS];
         values[0] = params.floor;
@@ -522,6 +530,7 @@ impl<T: MulAssign + AddAssign + PartialOrd + Add<Output = T> + Copy + Default + 
         Self { format: ArrayFormat::ExponentialHistogram, values }
     }
 
+    /// Inserts the list of values to the histogram for asserting them.
     pub fn insert_values(&mut self, values: Vec<T>) {
         match self.format {
             ArrayFormat::ExponentialHistogram => {

@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Diagnostics hierarchy
+//!
+//! This library provides a tree strcture used to store diagnostics data such as inspect and logs,
+//! as well as utilities for reading from it, serializing and deserializing it and testing it.
+
 use {
     crate::trie::*,
     anyhow,
@@ -135,10 +140,13 @@ where
         }
     }
 
+    /// Creates a new empty diagnostics hierarchy with the root node named "root".
     pub fn new_root() -> Self {
         DiagnosticsHierarchy::new("root", vec![], vec![])
     }
 
+    /// Creates a new diagnostics hierarchy with the given `name` for the root and the given
+    /// `properties` and `children` under that root.
     pub fn new(
         name: impl Into<String>,
         properties: Vec<Property<Key>>,
@@ -258,15 +266,18 @@ where
 
 macro_rules! property_type_getters {
     ($([$variant:ident, $fn_name:ident, $type:ty]),*) => {
-        impl<Key> Property<Key> {
-            $(
-                pub fn $fn_name(&self) -> Option<&$type> {
-                    match self {
-                        Property::$variant(_, value) => Some(value),
-                        _ => None,
-                    }
-                }
-            )*
+        paste::item! {
+          impl<Key> Property<Key> {
+              $(
+                  #[doc = "Returns the " $variant " value or `None` if the property isn't of that type"]
+                  pub fn $fn_name(&self) -> Option<&$type> {
+                      match self {
+                          Property::$variant(_, value) => Some(value),
+                          _ => None,
+                      }
+                  }
+              )*
+          }
         }
     }
 }
@@ -307,9 +318,10 @@ struct DiagnosticsHierarchyIterator<'a, Key> {
 }
 
 impl<'a, Key> DiagnosticsHierarchyIterator<'a, Key> {
-    pub fn new(root: &'a DiagnosticsHierarchy<Key>) -> Self {
+    /// Creates a new iterator for the given `hierarchy`.
+    pub fn new(hierarchy: &'a DiagnosticsHierarchy<Key>) -> Self {
         DiagnosticsHierarchyIterator {
-            root,
+            root: hierarchy,
             iterator_initialized: false,
             work_stack: Vec::new(),
             curr_key: Vec::new(),
@@ -388,6 +400,7 @@ impl<'a, Key> TrieIterable<'a, String, Property<Key>> for DiagnosticsHierarchyIt
     }
 }
 
+/// A lazy node in a hierarchy.
 #[derive(Debug, PartialEq, Clone)]
 pub struct LinkValue {
     /// The name of the link.
@@ -439,6 +452,7 @@ pub enum Property<Key = String> {
 }
 
 impl<K> Property<K> {
+    /// Returns the key of a property
     pub fn key(&self) -> &K {
         match self {
             Property::String(k, _) => k,
@@ -453,9 +467,7 @@ impl<K> Property<K> {
             Property::StringList(k, _) => k,
         }
     }
-}
 
-impl<K> Property<K> {
     /// Returns a string indicating which variant of property this is, useful for printing
     /// debug values.
     pub fn discriminant_name(&self) -> &'static str {
@@ -501,6 +513,7 @@ where
     }
 }
 
+/// Errors that can happen in this library.
 #[derive(Debug, Error)]
 pub enum Error {
     #[error(
@@ -529,13 +542,19 @@ impl Error {
     }
 }
 
+/// A bucket of a histogram property.
 #[allow(missing_docs)]
 #[derive(Debug, Deserialize, PartialEq, Clone)]
 pub struct Bucket<T> {
+    /// The floor of the bucket range.
     pub floor: T,
+
+    /// The ceiling of the bucket range.
     // TODO(fxbug.dev/55833): rename to upper in serialization.
     #[serde(rename = "upper_bound")]
     pub upper: T,
+
+    /// The number of items in this bucket.
     pub count: T,
 }
 
@@ -629,7 +648,7 @@ impl<Key> Property<Key>
 where
     Key: AsRef<str>,
 {
-    #[allow(missing_docs)]
+    /// Returns the key of a property.
     pub fn name(&self) -> &str {
         match self {
             Property::String(name, _)
@@ -732,26 +751,26 @@ impl TryFrom<&[Arc<Selector>]> for InspectHierarchyMatcher {
     }
 }
 
-// PropertyEntry is a container of Properties, and their locations in the hierarchy.
-//
-// eg: {property_node_path: "root/a/b/c", property: Property::Int("foo", -4)}
-//     is a PropertyEntry specifying an integer property named Foo
-//     found at node c.
+/// PropertyEntry is a container of Properties, and their locations in the hierarchy.
+///
+/// eg: `{property_node_path: "root/a/b/c", property: Property::Int("foo", -4)}`
+///     is a `PropertyEntry` specifying an integer property named Foo
+///     found at node c.
 #[derive(Debug, PartialEq)]
 pub struct PropertyEntry<Key = String> {
-    // A forward-slash (/) delimited string of node names from the root node of a hierarchy
-    // to the node holding the Property.
-    // eg: "root/a/b/c" is a property_node_path specifying that `property`
-    //     can found at node c, under node b, which is under node a, which is under root.
+    /// A forward-slash (`/`) delimited string of node names from the root node of a hierarchy
+    /// to the node holding the Property.
+    /// eg: `root/a/b/c` is a property_node_path specifying that `property`
+    ///     can found at node c, under node b, which is under node a, which is under root.
     pub property_node_path: String,
 
-    // A clone of the property found in the diagnostics hierarchy at the node specified by
-    // `property_node_path`.
+    /// A clone of the property found in the diagnostics hierarchy at the node specified by
+    /// `property_node_path`.
     pub property: Property<Key>,
 }
 
-// Applies a single selector to a DiagnosticsHierarchy, returning a vector of tuples for every property
-// in the hierarchy matched by the selector.
+/// Applies a single selector to a `DiagnosticsHierarchy`, returning a vector of tuples for every
+/// property in the hierarchy matched by the selector.
 // TODO(fxbug.dev/47015): Benchmark performance issues with full-filters for selection.
 pub fn select_from_hierarchy<Key>(
     root_node: DiagnosticsHierarchy<Key>,
@@ -787,14 +806,14 @@ where
     }
 }
 
-// Filters a diagnostics hierarchy using a set of path selectors and their associated property
-// selectors.
-//
-// - If the return type is Ok(Some()) that implies that the filter encountered no errors AND
-//    a meaningful tree remained at the end.
-// - If the return type is Ok(None) that implies that the filter encountered no errors AND
-//    the tree was filtered to be empty at the end.
-// - If the return type is Error that implies the filter encountered errors.
+/// Filters a diagnostics hierarchy using a set of path selectors and their associated property
+/// selectors.
+///
+/// - If the return type is Ok(Some()) that implies that the filter encountered no errors AND
+///    a meaningful tree remained at the end.
+/// - If the return type is Ok(None) that implies that the filter encountered no errors AND
+///    the tree was filtered to be empty at the end.
+/// - If the return type is Error that implies the filter encountered errors.
 pub fn filter_hierarchy<Key>(
     root_node: DiagnosticsHierarchy<Key>,
     hierarchy_matcher: &InspectHierarchyMatcher,
@@ -885,18 +904,32 @@ where
     }
 }
 
-#[allow(missing_docs)]
+/// The parameters of an exponential histogram.
 pub struct ExponentialHistogramParams<T> {
+    /// The floor of the exponential histogram.
     pub floor: T,
+
+    /// The initial step of the exponential histogram.
     pub initial_step: T,
+
+    /// The step multiplier of the exponential histogram.
     pub step_multiplier: T,
+
+    /// The number of buckets that the exponential histogram can have. This doesn't include the
+    /// overflow and underflow buckets.
     pub buckets: usize,
 }
 
-#[allow(missing_docs)]
+/// The parameters of a linear histogram.
 pub struct LinearHistogramParams<T> {
+    /// The floor of the linear histogram.
     pub floor: T,
+
+    /// The step size of the linear histogram.
     pub step_size: T,
+
+    /// The number of buckets that the linear histogram can have. This doesn't include the overflow
+    /// and underflow buckets.
     pub buckets: usize,
 }
 

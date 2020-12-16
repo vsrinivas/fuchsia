@@ -1,6 +1,9 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+//! A trie data structure used for matching inspect properties.
+
 use {
     core::marker::PhantomData,
     std::collections::HashMap,
@@ -24,6 +27,7 @@ impl<K, V> Trie<K, V>
 where
     K: Hash + Eq,
 {
+    /// Creates a new empty Trie
     pub fn new() -> Self
     where
         K: Hash + Eq,
@@ -132,6 +136,7 @@ where
     }
 }
 
+/// A node of a `Trie`.
 pub struct TrieNode<K, V>
 where
     K: Hash + Eq,
@@ -144,6 +149,7 @@ impl<K, V> TrieNode<K, V>
 where
     K: Hash + Eq,
 {
+    /// Creates a new empty `Node`.
     pub fn new() -> Self
     where
         K: Hash + Eq,
@@ -151,11 +157,13 @@ where
         TrieNode { values: Vec::new(), children: HashMap::new() }
     }
 
+    /// Returns a mutable reference to the values stored in this node.
     pub fn get_values_mut(&mut self) -> &mut Vec<V> {
         return &mut self.values;
     }
 }
 
+/// A trie iteration work event.
 pub struct TrieIterableWorkEvent<'a, K, N> {
     pub key_state: TrieIterableKeyState<'a, K>,
     pub potential_child: Option<&'a N>,
@@ -250,6 +258,7 @@ where
     }
 }
 
+/// An iterator for a `Trie`.
 pub struct TrieIterator<'a, K, V>
 where
     K: Hash + Eq,
@@ -336,11 +345,13 @@ where
     }
 }
 
+/// The key state of a `TrieIterableWorkEvent`
 pub enum TrieIterableKeyState<'a, K> {
     AddKeyFragment(&'a K),
     PopKeyFragment,
 }
 
+/// A type representing wrapping an trie iterator.
 pub struct TrieIterableType<'a, K, V, T: TrieIterable<'a, K, V>>
 where
     K: Hash + Eq,

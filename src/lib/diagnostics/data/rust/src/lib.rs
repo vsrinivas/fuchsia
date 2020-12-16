@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! # Diagnostics data
+//!
+//! This library contians the Diagnostics data schema used for inspect, logs and lifecycle. This is
+//! the data that the Archive returns on `fuchsia.diagnostics.ArchiveAccessor` reads.
+
 use diagnostics_hierarchy::{DiagnosticsHierarchy, Property};
 use fidl_fuchsia_diagnostics::{DataType, Severity as FidlSeverity};
 use serde::{
@@ -21,6 +26,7 @@ pub use diagnostics_hierarchy::{assert_data_tree, tree_assertion};
 
 const SCHEMA_VERSION: u64 = 1;
 
+/// The source of diagnostics data
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub enum DataSource {
     Unknown,
@@ -35,6 +41,7 @@ impl Default for DataSource {
     }
 }
 
+/// The type of a lifecycle event exposed by the `fuchsia.diagnostics.ArchiveAccessor`
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub enum LifecycleType {
     Started,
@@ -43,6 +50,7 @@ pub enum LifecycleType {
     DiagnosticsReady,
 }
 
+/// Metadata contained in a `DiagnosticsData` object.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum Metadata {
@@ -110,7 +118,7 @@ impl DiagnosticsData for Lifecycle {
     }
 }
 
-/// Inspect carries snapshots of metrics trees hosted by components.
+/// Inspect carries snapshots of data trees hosted by components.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct Inspect;
 
@@ -234,6 +242,8 @@ impl DerefMut for Timestamp {
     }
 }
 
+/// The metadata contained in a `DiagnosticsData` object where the data source is
+/// `DataSource::LifecycleEvent`.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct LifecycleEventMetadata {
     /// Optional vector of errors encountered by platform.
@@ -249,6 +259,8 @@ pub struct LifecycleEventMetadata {
     pub timestamp: Timestamp,
 }
 
+/// The metadata contained in a `DiagnosticsData` object where the data source is
+/// `DataSource::Inspect`.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct InspectMetadata {
     /// Optional vector of errors encountered by platform.
@@ -261,6 +273,8 @@ pub struct InspectMetadata {
     pub timestamp: Timestamp,
 }
 
+/// The metadata contained in a `DiagnosticsData` object where the data source is
+/// `DataSource::Logs`.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct LogsMetadata {
     // TODO(fxbug.dev/58369) figure out exact spelling of pid/tid context and severity
@@ -342,11 +356,19 @@ pub struct Data<D: DiagnosticsData> {
     pub version: u64,
 }
 
+/// A diagnostics data object containing inspect data.
 pub type InspectData = Data<Inspect>;
+
+/// A diagnostics data object containing lifecycle event data.
 pub type LifecycleData = Data<Lifecycle>;
+
+/// A diagnostics data object containing logs data.
 pub type LogsData = Data<Logs>;
 
+/// A diagnostics data payload containing logs data.
 pub type LogsHierarchy = DiagnosticsHierarchy<LogsField>;
+
+/// A diagnostics hierarchy property keyed by `LogsField`.
 pub type LogsProperty = Property<LogsField>;
 
 impl Data<Lifecycle> {
@@ -475,6 +497,7 @@ pub const MESSAGE_LABEL: &str = "message";
 pub const VERBOSITY_LABEL: &str = "verbosity";
 
 impl LogsField {
+    /// Whether the logs field is legacy or not.
     pub fn is_legacy(&self) -> bool {
         matches!(
             self,
@@ -527,12 +550,16 @@ impl FromStr for LogsField {
     }
 }
 
+/// Possible errors that can come in a `DiagnosticsData` object where the data source is
+/// `DataSource::Logs`.
 #[derive(Clone, Deserialize, Debug, Eq, PartialEq, Serialize)]
 pub enum LogError {
     DroppedLogs { count: u64 },
     Other(Error),
 }
 
+/// Possible error that can come in a `DiagnosticsData` object where the data source is
+/// `DataSource::LifecycleEvent` or `DataSource::Inspect`.
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct Error {
     pub message: String,
@@ -567,6 +594,7 @@ impl<'de> Deserialize<'de> for Error {
 }
 
 impl Metadata {
+    /// Returns the inspect metadata or None if the metadata contained is not for inspect.
     pub fn inspect(&self) -> Option<&InspectMetadata> {
         match self {
             Metadata::Inspect(m) => Some(m),
@@ -574,6 +602,8 @@ impl Metadata {
         }
     }
 
+    /// Returns the lifecycle event metadata or None if the metadata contained is not for a
+    /// lifecycle event.
     pub fn lifecycle_event(&self) -> Option<&LifecycleEventMetadata> {
         match self {
             Metadata::LifecycleEvent(m) => Some(m),

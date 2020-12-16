@@ -1,6 +1,43 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+//! # Diagnostics testing
+//!
+//! This library provides utilities for starting a nested environment with an archivist and
+//! a useful API for quickly gathering inspect and logs for components in that environment.
+//!
+//! Note that this API is only compatible with components v1.
+//!
+//! ## Exmaple usage
+//!
+//! ```rust
+//! let mut test_realm = EnvWithDiagnostics::new().await;
+//!
+//! // Listen for logs in the nested environment. This returns a stream of logs.
+//! let logs = test_realm.listen_to_logs();
+//!
+//! let (app: _app, reader} = test_realm.launch(/* some component url */);
+//!
+//! // Get the inspect data of the component that was launched above.
+//! let inspect = reader.inspect().await:
+//!
+//! // Get the inspect data of some other component that was launched by the component above.
+//! let nested_inspect = test_realm
+//!     .reader_for("some_other_component_that_was_launched.cmx")
+//!     .inspect().await;
+//!
+//! assert_inspect_tree!(inspect.payload.as_ref().unwrap(), root: {
+//!   ...
+//! });
+//! assert_inspect_tree!(nested_inspect.payload.as_ref().unwrap(), root: {
+//!   ...
+//! });
+//!
+//!  // Assert the first message in the log stream.
+//!  let logs_message = logs.next().await.unwrap();
+//!  assert_eq!(logs_message, ...);
+//! ```
+
 use diagnostics_data::{Data, DiagnosticsData, InspectData};
 use diagnostics_reader::{ArchiveReader, ComponentSelector};
 use fidl::endpoints::ServiceMarker;
@@ -24,6 +61,7 @@ pub use diagnostics_hierarchy::assert_data_tree;
 const ARCHIVIST_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx";
 
+/// A nested environment providing utilities for accessing diagnostics data easily.
 pub struct EnvWithDiagnostics {
     launcher: LauncherProxy,
     archivist: App,
@@ -142,6 +180,8 @@ impl EnvWithDiagnostics {
     }
 }
 
+/// A reference to the component that was launched inside the nested environment providing
+/// utilities for accessing its diagnostics data.
 pub struct Launched {
     pub app: App,
     pub reader: AppReader,
