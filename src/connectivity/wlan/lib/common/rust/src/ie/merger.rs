@@ -4,11 +4,8 @@
 
 use {
     super::{Header, IeSummaryIter, IeType},
-    std::{
-        collections::{btree_map, BTreeMap},
-        mem::size_of,
-        ops::Range,
-    },
+    anyhow::format_err,
+    std::{collections::BTreeMap, mem::size_of, ops::Range},
 };
 
 const IES_MERGER_BUFFER_LIMIT: usize = 10000;
@@ -28,13 +25,46 @@ const IES_MERGER_BUFFER_LIMIT: usize = 10000;
 ///    c. If the number of bytes are the same, IesMerger keeps the later one.
 #[derive(Debug)]
 pub struct IesMerger {
+    ies_updater: IesUpdater,
+}
+
+impl IesMerger {
+    pub fn new(ies: Vec<u8>) -> Self {
+        Self { ies_updater: IesUpdater::new(ies) }
+    }
+
+    pub fn merge(&mut self, ies: &[u8]) {
+        for (ie_type, range) in IeSummaryIter::new(ies) {
+            let add_new = match self.ies_updater.get(&ie_type) {
+                Some(old) => should_add_new(ie_type, old, &ies[range.clone()]),
+                None => true,
+            };
+            let new_addition_len = range.end - range.start;
+            // IesMerger has a buffer limit so an unfriendly AP can't cause us to run out of
+            // memory by repeatedly changing the IEs.
+            if add_new && self.ies_updater.buf_len() + new_addition_len <= IES_MERGER_BUFFER_LIMIT {
+                // Setting IE should not fail because we parsed them from an IE chain in the
+                // first place, so the length of the IE body would not exceed 255 bytes.
+                let _result = self.ies_updater.set(ie_type, &ies[range]);
+            }
+        }
+    }
+
+    /// Build and return merged IEs, sorted by order of IeType.
+    pub fn finalize(&mut self) -> Vec<u8> {
+        self.ies_updater.finalize()
+    }
+}
+
+#[derive(Debug)]
+pub struct IesUpdater {
     // An index of the IEs we are going to keep. Mapping from IeType to the range of the
     // corresponding bytes in the underlying buffer.
     ies_summaries: BTreeMap<IeType, Range<usize>>,
     ies_buf: Vec<u8>,
 }
 
-impl IesMerger {
+impl IesUpdater {
     pub fn new(ies: Vec<u8>) -> Self {
         let mut ies_summaries = BTreeMap::new();
         for (ie_type, range) in IeSummaryIter::new(&ies[..]) {
@@ -43,30 +73,62 @@ impl IesMerger {
         Self { ies_summaries, ies_buf: ies }
     }
 
-    pub fn merge(&mut self, ies: &[u8]) {
-        for (ie_type, range) in IeSummaryIter::new(ies) {
-            let add_new = match self.ies_summaries.entry(ie_type) {
-                btree_map::Entry::Occupied(entry) => {
-                    should_add_new(ie_type, &self.ies_buf[entry.get().clone()], &ies[range.clone()])
-                }
-                btree_map::Entry::Vacant(_) => true,
-            };
-            let new_addition_len = range.end - range.start;
-            // IesMerger has a buffer limit so an unfriendly AP can't cause us to run out of
-            // memory by repeatedly changing the IEs.
-            if add_new && self.ies_buf.len() + new_addition_len <= IES_MERGER_BUFFER_LIMIT {
-                let start_idx = self.ies_buf.len();
-                self.ies_buf.extend_from_slice(&ies[range]);
-                self.ies_summaries.insert(ie_type, start_idx..self.ies_buf.len());
-            }
+    /// Remove any IE with the corresponding `ie_type`.
+    pub fn remove(&mut self, ie_type: &IeType) {
+        self.ies_summaries.remove(ie_type);
+    }
+
+    /// Set an IE with the corresponding `ie_type`, replacing any existing entry with the same type.
+    /// The IE is rejected if it's too large.
+    pub fn set(&mut self, ie_type: IeType, ie_content: &[u8]) -> Result<(), anyhow::Error> {
+        // If length of this IE is too large, ignore it because later on we cannot construct the
+        // IE anyway on `finalize`.
+        if ie_type.extra_len() + ie_content.len() > std::u8::MAX.into() {
+            return Err(format_err!("ie_content too large"));
+        }
+
+        let start_idx = self.ies_buf.len();
+        self.ies_buf.extend_from_slice(ie_content);
+        self.ies_summaries.insert(ie_type, start_idx..self.ies_buf.len());
+        Ok(())
+    }
+
+    /// Set the raw IE (including the IE header).
+    /// The IE is rejected if the IE's length field (denoted by the second byte) is larger than
+    /// the length of the remaining IE bytes, and truncated if it's less than.
+    pub fn set_raw(&mut self, ie: &[u8]) -> Result<(), anyhow::Error> {
+        if ie.is_empty() {
+            return Ok(());
+        }
+        match IeSummaryIter::new(&ie[..]).next() {
+            Some((ie_type, range)) => self.set(ie_type, &ie[range]),
+            None => Err(format_err!("failed parsing `ie`")),
         }
     }
 
-    /// Build and return merged IEs, sorted by order of IE ID.
+    /// Get the IE bytes of the given `ie_type`, if it exists.
+    pub fn get(&self, ie_type: &IeType) -> Option<&[u8]> {
+        self.ies_summaries.get(ie_type).map(|range| &self.ies_buf[range.clone()])
+    }
+
+    fn buf_len(&self) -> usize {
+        self.ies_buf.len()
+    }
+
+    /// Build and return the modified IEs, sorted by order of IeType.
     pub fn finalize(&mut self) -> Vec<u8> {
-        let total_len = self.ies_summaries.values().map(|r| r.end - r.start).sum();
+        let total_len = self
+            .ies_summaries
+            .iter()
+            .map(|(ie_type, r)| size_of::<Header>() + ie_type.extra_len() + (r.end - r.start))
+            .sum();
         let mut ies = Vec::with_capacity(total_len);
-        for range in self.ies_summaries.values() {
+        for (ie_type, range) in self.ies_summaries.iter() {
+            let id = ie_type.basic_id().0;
+            let len = ie_type.extra_len() + (range.end - range.start);
+            // Casting `len` to u8 is safe because in `set`, we reject any IE that is too large
+            ies.extend_from_slice(&[id, len as u8]);
+            ies.extend_from_slice(ie_type.extra_bytes());
             ies.extend_from_slice(&self.ies_buf[range.clone()]);
         }
         ies
@@ -361,7 +423,7 @@ mod tests {
             ies_merger.merge(&ies[..]);
         }
         // Verify we don't use too much memory.
-        assert!(ies_merger.ies_buf.len() <= IES_MERGER_BUFFER_LIMIT);
+        assert!(ies_merger.ies_updater.buf_len() <= IES_MERGER_BUFFER_LIMIT);
 
         // We should still produce a result.
         let result_ies = ies_merger.finalize();
@@ -391,5 +453,179 @@ mod tests {
 
         // The non-hidden SSID IE is kept.
         assert_eq!(&ies[..], BEACON_FRAME_IES);
+    }
+
+    #[test]
+    fn test_ie_updater_get() {
+        let ies = vec![
+            0, 2, 10, 20, // IE with no extension ID
+            0xdd, 0x09, 0x00, 0x03, 0x7f, 0x01, 0x01, 0x00, 0x00, 0xff, 0x7f, // Vendor IE
+            255, 2, 5, 1, // IE with extension ID
+        ];
+        let ies_updater = IesUpdater::new(ies);
+
+        assert_eq!(ies_updater.get(&IeType::SSID), Some(&[10, 20][..]));
+        assert_eq!(
+            ies_updater.get(&IeType::new_vendor([0x00, 0x03, 0x7f, 0x01, 0x01, 0x00])),
+            Some(&[0x00, 0xff, 0x7f][..])
+        );
+        assert_eq!(ies_updater.get(&IeType::new_extended(5)), Some(&[1][..]));
+
+        assert_eq!(ies_updater.get(&IeType::SUPPORTED_RATES), None);
+        assert_eq!(
+            ies_updater.get(&IeType::new_vendor([0x00, 0x03, 0x7f, 0x01, 0x01, 0x01])),
+            None
+        );
+        assert_eq!(ies_updater.get(&IeType::new_extended(6)), None);
+    }
+
+    #[test]
+    fn test_ie_updater_set_replace() {
+        let ies = vec![
+            0, 2, 10, 20, // IE with no extension ID
+            0xdd, 0x09, 0x00, 0x03, 0x7f, 0x01, 0x01, 0x00, 0x00, 0xff, 0x7f, // Vendor IE
+            255, 2, 5, 1, // IE with extension ID
+        ];
+        let mut ies_updater = IesUpdater::new(ies);
+
+        ies_updater.set(IeType::SSID, &[30, 40, 50]).expect("set basic succeeds");
+        ies_updater
+            .set(IeType::new_vendor([0x00, 0x03, 0x7f, 0x01, 0x01, 0x00]), &[1, 3, 3, 7])
+            .expect("set vendor succeeds");
+        ies_updater.set(IeType::new_extended(5), &[4, 2]).expect("set extended succeeds");
+
+        assert_eq!(ies_updater.get(&IeType::SSID), Some(&[30, 40, 50][..]));
+        assert_eq!(
+            ies_updater.get(&IeType::new_vendor([0x00, 0x03, 0x7f, 0x01, 0x01, 0x00])),
+            Some(&[1, 3, 3, 7][..])
+        );
+        assert_eq!(ies_updater.get(&IeType::new_extended(5)), Some(&[4, 2][..]));
+
+        assert_eq!(
+            &ies_updater.finalize()[..],
+            &[
+                0, 3, 30, 40, 50, // IE with no extension ID
+                0xdd, 0x0a, 0x00, 0x03, 0x7f, 0x01, 0x01, 0x00, 1, 3, 3, 7, // Vendor IE
+                255, 3, 5, 4, 2, // IE with extension ID
+            ]
+        );
+    }
+
+    #[test]
+    fn test_ie_updater_set_new() {
+        let ies = vec![
+            0, 2, 10, 20, // IE with no extension ID
+            0xdd, 0x09, 0x00, 0x03, 0x7f, 0x01, 0x01, 0x00, 0x00, 0xff, 0x7f, // Vendor IE
+            255, 2, 5, 1, // IE with extension ID
+        ];
+        let mut ies_updater = IesUpdater::new(ies);
+
+        ies_updater.set(IeType::SUPPORTED_RATES, &[30, 40, 50]).expect("set basic succeeds");
+        ies_updater
+            .set(IeType::new_vendor([0x00, 0x03, 0x7f, 0x01, 0x01, 0x01]), &[1, 3, 3, 7])
+            .expect("set vendor succeeds");
+        ies_updater.set(IeType::new_extended(6), &[4, 2]).expect("set extended succeeds");
+
+        assert_eq!(ies_updater.get(&IeType::SUPPORTED_RATES), Some(&[30, 40, 50][..]));
+        assert_eq!(
+            ies_updater.get(&IeType::new_vendor([0x00, 0x03, 0x7f, 0x01, 0x01, 0x01])),
+            Some(&[1, 3, 3, 7][..])
+        );
+        assert_eq!(ies_updater.get(&IeType::new_extended(6)), Some(&[4, 2][..]));
+
+        assert_eq!(
+            &ies_updater.finalize()[..],
+            &[
+                0, 2, 10, 20, // IE with no extension ID
+                1, 3, 30, 40, 50, // New IE with no extension ID
+                0xdd, 0x09, 0x00, 0x03, 0x7f, 0x01, 0x01, 0x00, 0x00, 0xff, 0x7f, // Vendor IE
+                0xdd, 0x0a, 0x00, 0x03, 0x7f, 0x01, 0x01, 0x01, 1, 3, 3, 7, // New vendor IE
+                255, 2, 5, 1, // IE with extension ID
+                255, 3, 6, 4, 2, // New IE with extension ID
+            ]
+        )
+    }
+
+    #[test]
+    fn test_ie_updater_set_ie_too_large() {
+        let ies = vec![
+            0, 2, 10, 20, // IE with no extension ID
+            0xdd, 0x09, 0x00, 0x03, 0x7f, 0x01, 0x01, 0x00, 0x00, 0xff, 0x7f, // Vendor IE
+            255, 2, 5, 1, // IE with extension ID
+        ];
+        let mut ies_updater = IesUpdater::new(ies);
+        ies_updater.set(IeType::SSID, &[11; 256]).expect_err("set basic fails");
+        ies_updater
+            .set(IeType::new_vendor([0x00, 0x03, 0x7f, 0x01, 0x01, 0x00]), &[11; 250])
+            .expect_err("set vendor fails");
+        ies_updater.set(IeType::new_extended(5), &[11; 255]).expect_err("set extended fails");
+
+        // None of the IEs got replaced because all the IEs set in this test are too large
+        assert_eq!(
+            &ies_updater.finalize()[..],
+            &[
+                0, 2, 10, 20, // IE with no extension ID
+                0xdd, 0x09, 0x00, 0x03, 0x7f, 0x01, 0x01, 0x00, 0x00, 0xff, 0x7f, // Vendor IE
+                255, 2, 5, 1, // IE with extension ID
+            ]
+        );
+    }
+
+    #[test]
+    fn test_ie_updater_set_raw_ie() {
+        let ies = vec![];
+
+        let mut ies_updater = IesUpdater::new(ies.clone());
+        ies_updater.set_raw(&[0, 2, 10, 20]).expect("set right length succeeds");
+        ies_updater.set_raw(&[1, 2, 70]).expect_err("set buffer too small fails");
+        ies_updater.set_raw(&[]).expect("set empty doesn't return error");
+        ies_updater.set_raw(&[2, 2, 30, 40, 50, 60]).expect("set truncated succeeds");
+
+        assert_eq!(&ies_updater.finalize()[..], &[0, 2, 10, 20, 2, 2, 30, 40])
+    }
+
+    #[test]
+    fn test_ie_updater_remove() {
+        let ies = vec![
+            0, 2, 10, 20, // IE with no extension ID
+            0xdd, 0x09, 0x00, 0x03, 0x7f, 0x01, 0x01, 0x00, 0x00, 0xff, 0x7f, // Vendor IE
+            255, 2, 5, 1, // IE with extension ID
+        ];
+
+        let mut ies_updater = IesUpdater::new(ies.clone());
+        ies_updater.remove(&IeType::SSID);
+        assert_eq!(ies_updater.get(&IeType::SSID), None);
+        assert_eq!(
+            ies_updater.finalize(),
+            &[
+                0xdd, 0x09, 0x00, 0x03, 0x7f, 0x01, 0x01, 0x00, 0x00, 0xff, 0x7f, // Vendor IE
+                255, 2, 5, 1, // IE with extension ID
+            ]
+        );
+
+        let mut ies_updater = IesUpdater::new(ies.clone());
+        ies_updater.remove(&IeType::new_vendor([0x00, 0x03, 0x7f, 0x01, 0x01, 0x00]));
+        assert_eq!(
+            ies_updater.get(&IeType::new_vendor([0x00, 0x03, 0x7f, 0x01, 0x01, 0x00])),
+            None
+        );
+        assert_eq!(
+            ies_updater.finalize(),
+            &[
+                0, 2, 10, 20, // IE with no extension ID
+                255, 2, 5, 1, // IE with extension ID
+            ],
+        );
+
+        let mut ies_updater = IesUpdater::new(ies);
+        ies_updater.remove(&IeType::new_extended(5));
+        assert_eq!(ies_updater.get(&IeType::new_extended(5)), None);
+        assert_eq!(
+            ies_updater.finalize(),
+            &[
+                0, 2, 10, 20, // IE with no extension ID
+                0xdd, 0x09, 0x00, 0x03, 0x7f, 0x01, 0x01, 0x00, 0x00, 0xff, 0x7f, // Vendor IE
+            ],
+        );
     }
 }

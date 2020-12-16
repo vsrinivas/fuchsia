@@ -83,6 +83,21 @@ impl IeType {
             Self::Vendor { .. } => Id::VENDOR_SPECIFIC,
         }
     }
+
+    /// Number of bytes consumed from the IE body to construct IeType
+    pub fn extra_len(&self) -> usize {
+        self.extra_bytes().len()
+    }
+
+    /// Return the bytes consumed from the IE body (not IE header) to construct IeType
+    pub fn extra_bytes(&self) -> &[u8] {
+        match self {
+            Self::Ieee { extension, .. } => {
+                extension.as_ref().map(|ext_id| std::slice::from_ref(ext_id)).unwrap_or(&[])
+            }
+            Self::Vendor { vendor_ie_hdr } => &vendor_ie_hdr[..],
+        }
+    }
 }
 
 impl std::cmp::PartialOrd for IeType {
