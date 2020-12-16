@@ -165,7 +165,7 @@ if (is_host) {
   }
 }
 
-fidl("union_migration_test_fidl") {
+cts_fidl("union_migration_test_fidl") {
   name = "fidl.test.unionmigration"
 
   sources = [ "union_migration.test.fidl" ]

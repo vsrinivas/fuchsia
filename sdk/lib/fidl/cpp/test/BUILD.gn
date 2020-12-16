@@ -28,7 +28,7 @@ cts_source_set("test") {
   public_configs = [ "//sdk/config" ]
 }
 
-fidl("frobinator") {
+cts_fidl("frobinator") {
   # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
     "event-names-must-start-with-on",
@@ -40,7 +40,7 @@ fidl("frobinator") {
   sources = [ "frobinator.test.fidl" ]
 }
 
-fidl("fidl_test") {
+cts_fidl("fidl_test") {
   name = "fidl.test.misc"
 
   testonly = true
@@ -48,7 +48,7 @@ fidl("fidl_test") {
   sources = [ "fidl_test.test.fidl" ]
 }
 
-fidl("collision_test") {
+cts_fidl("collision_test") {
   name = "fidl.test.collision"
 
   testonly = true

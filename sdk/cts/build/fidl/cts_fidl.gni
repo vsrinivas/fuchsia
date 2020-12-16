@@ -1,0 +1,36 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//sdk/cts/build/cts_element.gni")
+import("//sdk/cts/build/cts_vars.gni")
+
+# Declares a FIDL Library that can be used in CTS.
+#
+# An equivalent to fidl.gni, but ensures deendencies are allowed in CTS.
+template("cts_fidl") {
+  assert(defined(invoker.sources), "Sources must be defined.")
+  assert(!defined(invoker.deps), "All FIDL dependencies should be public.")
+
+  if (defined(invoker.public_deps) && invoker.public_deps != []) {
+    cts_element("${target_name}_verify_deps") {
+      deps = invoker.public_deps
+      invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
+    }
+  }
+
+  fidl(target_name) {
+    forward_variables_from(invoker, "*")
+    if (defined(public_deps) && public_deps != []) {
+      public_deps += [ ":${target_name}_verify_deps" ]
+    }
+  }
+
+  # Creates a file to enable other CTS targets to depend on this test package.
+  target_build_dir = get_label_info(":$target_name", "dir")
+  target_build_dir = string_replace(target_build_dir, "//", "/")
+  write_file(
+      "${root_build_dir}/cts/${target_build_dir}/${target_name}.${cts_extension}",
+      "true")
+}
