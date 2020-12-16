@@ -253,6 +253,7 @@ class FXL_SCOPED_LOCKABLE scoped_unique_lock : public std::unique_lock<std::mute
 }  // namespace
 
 void CapturePacketQueue::WaitForPendingPacket() {
+  TRACE_DURATION("audio", "CapturePacketQueue::WaitForPendingPacket");
   scoped_unique_lock lock(mutex_);
   while (!shutdown_ && pending_.empty()) {
     pending_signal_.wait(lock);
