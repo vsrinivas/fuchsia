@@ -5,11 +5,17 @@
 //! Typesafe wrappers around the /pkgfs/needs filesystem.
 
 use {
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, DirectoryRequestStream},
+    fidl::endpoints::RequestStream,
+    fidl_fuchsia_io::{
+        DirectoryMarker, DirectoryProxy, DirectoryRequest, DirectoryRequestStream, NodeInfo,
+    },
     fuchsia_hash::{Hash, ParseHashError},
     fuchsia_zircon::Status,
     futures::prelude::*,
-    std::collections::HashSet,
+    std::{
+        collections::{BTreeSet, HashSet},
+        convert::TryInto,
+    },
     thiserror::Error,
 };
 
@@ -149,6 +155,31 @@ pub struct Mock {
 }
 
 impl Mock {
+    /// Consume the next directory request, verifying it is intended to open the directory
+    /// containing the needs for the given package meta far `merkle`.  Returns a `MockNeeds`
+    /// representing the open needs directory.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error or assertion violation (unexpected requests or a mismatched open call)
+    pub async fn expect_enumerate_needs(&mut self, merkle: Hash) -> MockNeeds {
+        match self.stream.next().await {
+            Some(Ok(DirectoryRequest::Open {
+                flags: _,
+                mode: _,
+                path,
+                object,
+                control_handle: _,
+            })) => {
+                assert_eq!(path, format!("packages/{}", merkle));
+
+                let stream = object.into_stream().unwrap().cast_stream();
+                MockNeeds { stream }
+            }
+            other => panic!("unexpected request: {:?}", other),
+        }
+    }
+
     /// Asserts that the request stream closes without any further requests.
     ///
     /// # Panics
@@ -162,11 +193,115 @@ impl Mock {
     }
 }
 
+/// A testing server implementation of an open /pkgfs/needs/packages/<merkle> directory.
+///
+/// MockNeeds does not send the OnOpen event or handle requests until instructed to do so.
+pub struct MockNeeds {
+    stream: DirectoryRequestStream,
+}
+
+impl MockNeeds {
+    fn send_on_open(&mut self, status: Status) {
+        let mut info = NodeInfo::Directory(fidl_fuchsia_io::DirectoryObject);
+        let () =
+            self.stream.control_handle().send_on_open_(status.into_raw(), Some(&mut info)).unwrap();
+    }
+
+    async fn handle_rewind(&mut self) {
+        match self.stream.next().await {
+            Some(Ok(DirectoryRequest::Rewind { responder })) => {
+                responder.send(Status::OK.into_raw()).unwrap();
+            }
+            other => panic!("unexpected request: {:?}", other),
+        }
+    }
+
+    /// Fail the open request with an error indicating there are no needs.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub async fn fail_open_with_not_found(mut self) {
+        self.send_on_open(Status::NOT_FOUND);
+    }
+
+    /// Fail the open request with an unexpected error status.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub async fn fail_open_with_unexpected_error(mut self) {
+        self.send_on_open(Status::INTERNAL);
+    }
+
+    /// Succeeds the open request, then handles incoming read_dirents requests to provide the
+    /// client with the given `needs`.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub async fn enumerate_needs(mut self, needs: BTreeSet<Hash>) {
+        self.send_on_open(Status::OK);
+
+        // files_async starts by resetting the directory channel's readdir position.
+        self.handle_rewind().await;
+
+        #[repr(C, packed)]
+        struct Dirent {
+            ino: u64,
+            size: u8,
+            kind: u8,
+            name: [u8; 64],
+        }
+
+        impl Dirent {
+            fn as_bytes(&self) -> &[u8] {
+                let start = self as *const Self as *const u8;
+                // Safe because the FIDL wire format for directory entries is
+                // defined to be the C packed struct representation used here.
+                unsafe { std::slice::from_raw_parts(start, std::mem::size_of::<Self>()) }
+            }
+        }
+
+        let mut needs_iter = needs.iter().enumerate().map(|(i, hash)| Dirent {
+            ino: i as u64 + 1,
+            size: 64,
+            kind: fidl_fuchsia_io::DIRENT_TYPE_FILE,
+            name: hash.to_string().as_bytes().try_into().unwrap(),
+        });
+
+        while let Some(request) = self.stream.try_next().await.unwrap() {
+            match request {
+                DirectoryRequest::ReadDirents { max_bytes, responder } => {
+                    let max_bytes = max_bytes as usize;
+                    assert!(max_bytes >= std::mem::size_of::<Dirent>());
+
+                    let mut buf = vec![];
+                    while buf.len() + std::mem::size_of::<Dirent>() <= max_bytes {
+                        match needs_iter.next() {
+                            Some(need) => {
+                                buf.extend(need.as_bytes());
+                            }
+                            None => break,
+                        }
+                    }
+
+                    responder.send(Status::OK.into_raw(), &buf).unwrap();
+                }
+                other => panic!("unexpected request: {:?}", other),
+            }
+        }
+
+        assert!(matches!(needs_iter.next(), None));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*,
         crate::install::{BlobCreateError, BlobKind, BlobWriteSuccess},
+        fuchsia_hash::HashRangeFull,
         fuchsia_pkg_testing::PackageBuilder,
         maplit::hashset,
         matches::assert_matches,
@@ -397,5 +532,29 @@ mod tests {
         pkg.verify_contents(&pkg_dir).await.unwrap();
 
         pkgfs.stop().await.unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn mock_yields_expected_needs() {
+        let (client, mut mock) = Client::new_mock();
+
+        let expected = || HashRangeFull::default().take(200);
+
+        let ((), ()) = future::join(
+            async {
+                mock.expect_enumerate_needs([0; 32].into())
+                    .await
+                    .enumerate_needs(expected().collect::<BTreeSet<_>>())
+                    .await;
+            },
+            async {
+                let needs = client.list_needs([0; 32].into());
+                futures::pin_mut!(needs);
+
+                let actual = needs.next().await.unwrap().unwrap();
+                assert_eq!(actual, expected().collect::<HashSet<_>>());
+            },
+        )
+        .await;
     }
 }

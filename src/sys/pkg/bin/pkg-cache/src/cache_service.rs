@@ -15,13 +15,14 @@ use {
         PackageIndexIteratorRequest, PackageIndexIteratorRequestStream, PackageUrl,
     },
     fidl_fuchsia_pkg_ext::{BlobId, BlobInfo, Measurable},
+    fuchsia_async::Task,
     fuchsia_cobalt::CobaltSender,
     fuchsia_hash::Hash,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
     fuchsia_zircon::{sys::ZX_CHANNEL_MAX_MSG_BYTES, Status},
-    futures::prelude::*,
-    std::sync::Arc,
+    futures::{prelude::*, stream::FuturesUnordered},
+    std::{collections::HashSet, sync::Arc},
     system_image::StaticPackages,
 };
 
@@ -203,6 +204,9 @@ enum ServeNeededBlobsError {
         #[source]
         source: ServeWriteBlobError,
     },
+
+    #[error("while listing needs")]
+    ListNeeds(#[source] pkgfs::needs::ListNeedsError),
 }
 
 #[derive(Debug)]
@@ -226,16 +230,30 @@ impl std::fmt::Display for BlobContext {
     }
 }
 
+/// Implements the fuchsia.pkg.NeededBlobs protocol, which represents the transaction for caching a
+/// particular package.
+///
+/// Clients should start by requesting to `OpenMetaBlob()`, and fetch and write the metadata blob
+/// if needed. Once written, `GetMissingBlobs()` should be used to determine which content blobs
+/// need fetched and written using `OpenBlob()`. Violating the expected protocol state will result
+/// in the channel being closed by the package cache with a `ZX_ERR_BAD_STATE` epitaph and aborting
+/// the package cache operation.
+///
+/// Once all needed blobs are written by the client, the package cache will complete the pending
+/// [`PackageCache.Get`] request and close this channel with a `ZX_OK` epitaph.
 #[cfg_attr(not(test), allow(dead_code))]
 async fn serve_needed_blobs(
     mut stream: NeededBlobsRequestStream,
     meta_far_info: BlobInfo,
     pkgfs_install: &pkgfs::install::Client,
-    _pkgfs_needs: &pkgfs::needs::Client,
+    pkgfs_needs: &pkgfs::needs::Client,
 ) -> Result<(), ServeNeededBlobsError> {
+    let tasks = FuturesUnordered::new();
+
     enum State {
         ExpectOpenMetaBlob,
         ExpectGetMissingBlobs,
+        ExpectOpenContentBlob { needs: HashSet<Hash> },
     }
 
     impl State {
@@ -243,6 +261,7 @@ async fn serve_needed_blobs(
             match self {
                 State::ExpectOpenMetaBlob => "open_meta_blob",
                 State::ExpectGetMissingBlobs => "get_missing_blobs",
+                State::ExpectOpenContentBlob { .. } => "open_blob",
             }
         }
     }
@@ -253,6 +272,7 @@ async fn serve_needed_blobs(
         let request = stream.try_next().await.map_err(ServeNeededBlobsError::ReceiveRequest)?;
 
         state = match (state, request) {
+            // Step 1: Open and write the meta.far, or determine it is not needed.
             (
                 state @ State::ExpectOpenMetaBlob,
                 Some(NeededBlobsRequest::OpenMetaBlob { file, responder }),
@@ -320,12 +340,61 @@ async fn serve_needed_blobs(
                 }
             }
 
+            // Step 2: Determine which data blobs are needed and report them to the client.
             (
                 State::ExpectGetMissingBlobs,
                 Some(NeededBlobsRequest::GetMissingBlobs { iterator, control_handle: _ }),
             ) => {
-                // TODO(64620) implement
-                let _ = iterator;
+                let iter_stream =
+                    iterator.into_stream().map_err(ServeNeededBlobsError::ReceiveRequest)?;
+
+                // list_needs produces a stream that produces the full set of currently missing
+                // blobs on-demand as items are read from the stream.  We are only interested in
+                // querying the needs once, so we only need to read 1 item and can then drop the
+                // stream.
+                let needs = pkgfs_needs.list_needs(meta_far_info.blob_id.into());
+                futures::pin_mut!(needs);
+                let needs =
+                    match needs.try_next().await.map_err(ServeNeededBlobsError::ListNeeds)? {
+                        Some(needs) => {
+                            let mut needs = needs
+                                .into_iter()
+                                .map(|hash| BlobInfo { blob_id: hash.into(), length: 0 })
+                                .collect::<Vec<_>>();
+                            // The needs provided by the stream are stored in a HashSet, so needs
+                            // are in an unspecified order here. Provide a deterministic ordering
+                            // to test/callers by sorting on merkle root.
+                            needs.sort_unstable();
+                            needs
+                        }
+                        None => vec![],
+                    };
+
+                // Start serving the iterator in the background and internally move on to the next
+                // state. If this foreground task decides to bail out, tasks will be dropped which
+                // will cancel any incomplete background tasks.
+                let serve_iterator = Task::spawn(serve_blob_info_iterator(
+                    needs
+                        .iter()
+                        .cloned()
+                        .map(Into::into)
+                        .collect::<Vec<fidl_fuchsia_pkg::BlobInfo>>(),
+                    iter_stream,
+                ));
+                tasks.push(serve_iterator);
+
+                State::ExpectOpenContentBlob {
+                    needs: needs.into_iter().map(|need| need.blob_id.into()).collect(),
+                }
+            }
+
+            // Step 3: Open and write all needed data blobs.
+            (
+                State::ExpectOpenContentBlob { needs },
+                Some(NeededBlobsRequest::OpenBlob { blob_id, file, responder }),
+            ) => {
+                // TODO(64622) implement
+                let _ = (needs, blob_id, file, responder);
                 todo!();
             }
 
@@ -861,9 +930,10 @@ mod serve_needed_blobs_tests {
     use {
         super::*,
         fidl_fuchsia_io::FileMarker,
-        fidl_fuchsia_pkg::{BlobInfoIteratorMarker, NeededBlobsProxy},
-        fuchsia_async::Task,
+        fidl_fuchsia_pkg::{BlobInfoIteratorMarker, BlobInfoIteratorProxy, NeededBlobsProxy},
+        fuchsia_hash::HashRangeFull,
         matches::assert_matches,
+        std::collections::BTreeSet,
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1090,6 +1160,243 @@ mod serve_needed_blobs_tests {
             Err(ServeNeededBlobsError::UnexpectedRequest {
                 received: "open_meta_blob",
                 expected: "get_missing_blobs"
+            })
+        );
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+    }
+
+    async fn write_meta_blob(
+        proxy: &NeededBlobsProxy,
+        pkgfs_install: &mut pkgfs::install::Mock,
+        meta_blob_info: BlobInfo,
+    ) {
+        let ((), ()) = future::join(
+            async {
+                pkgfs_install
+                    .expect_create_blob(meta_blob_info.blob_id.into(), BlobKind::Package.into())
+                    .await
+                    .fail_open_with_already_exists();
+            },
+            async {
+                let (_blob, blob_server_end) =
+                    fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+
+                assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(false)));
+            },
+        )
+        .await;
+    }
+
+    async fn collect_blob_info_iterator(proxy: BlobInfoIteratorProxy) -> Vec<BlobInfo> {
+        let mut res = vec![];
+
+        loop {
+            let chunk = proxy.next().await.unwrap();
+
+            if chunk.is_empty() {
+                break;
+            }
+
+            res.extend(chunk.into_iter().map(BlobInfo::from));
+        }
+
+        res
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn discovers_and_reports_missing_blobs() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+
+        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+
+        let expected = HashRangeFull::default().take(2000).collect::<Vec<_>>();
+
+        let ((), ()) = future::join(
+            async {
+                pkgfs_needs
+                    .expect_enumerate_needs([0; 32].into())
+                    .await
+                    .enumerate_needs(
+                        expected.iter().cloned().map(Into::into).collect::<BTreeSet<_>>(),
+                    )
+                    .await;
+            },
+            async {
+                let (missing_blobs_iter, missing_blobs_iter_server_end) =
+                    fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
+
+                assert_matches!(proxy.get_missing_blobs(missing_blobs_iter_server_end), Ok(()));
+
+                let missing_blobs = collect_blob_info_iterator(missing_blobs_iter).await;
+
+                let expected = expected
+                    .iter()
+                    .cloned()
+                    .map(|hash| BlobInfo { blob_id: hash.into(), length: 0 })
+                    .collect::<Vec<_>>();
+                assert_eq!(missing_blobs, expected);
+            },
+        )
+        .await;
+
+        drop(proxy);
+        assert_matches!(task.await, Err(ServeNeededBlobsError::UnexpectedClose));
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn handles_no_missing_blobs() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+
+        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+
+        let ((), ()) = future::join(
+            async {
+                pkgfs_needs
+                    .expect_enumerate_needs([0; 32].into())
+                    .await
+                    .fail_open_with_not_found()
+                    .await;
+            },
+            async {
+                let (missing_blobs_iter, missing_blobs_iter_server_end) =
+                    fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
+
+                assert_matches!(proxy.get_missing_blobs(missing_blobs_iter_server_end), Ok(()));
+
+                let missing_blobs = collect_blob_info_iterator(missing_blobs_iter).await;
+
+                assert_eq!(missing_blobs, vec![]);
+            },
+        )
+        .await;
+
+        // TODO(64622) Verify that the NeededBlobs protocol shuts down at this point (will be
+        // implemented when implementing ExpectOpenContentBlob).
+
+        drop(proxy);
+        assert_matches!(task.await, Err(ServeNeededBlobsError::UnexpectedClose));
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn fails_on_needs_enumeration_error() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+
+        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+
+        let ((), ()) = future::join(
+            async {
+                pkgfs_needs
+                    .expect_enumerate_needs([0; 32].into())
+                    .await
+                    .fail_open_with_unexpected_error()
+                    .await;
+            },
+            async {
+                let (missing_blobs_iter, missing_blobs_iter_server_end) =
+                    fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
+
+                assert_matches!(proxy.get_missing_blobs(missing_blobs_iter_server_end), Ok(()));
+
+                assert_matches!(
+                    missing_blobs_iter.next().await,
+                    Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+                );
+            },
+        )
+        .await;
+
+        drop(proxy);
+        assert_matches!(task.await, Err(ServeNeededBlobsError::ListNeeds(_)));
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn dropping_needed_blobs_stops_missing_blob_iterator() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+
+        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+
+        let ((), ()) = future::join(
+            async {
+                pkgfs_needs
+                    .expect_enumerate_needs([0; 32].into())
+                    .await
+                    .enumerate_needs(HashRangeFull::default().take(10).collect())
+                    .await;
+            },
+            async {
+                let (missing_blobs_iter, missing_blobs_iter_server_end) =
+                    fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
+
+                assert_matches!(proxy.get_missing_blobs(missing_blobs_iter_server_end), Ok(()));
+
+                // Closing the needed blobs request stream terminates any spawned tasks.
+                drop(proxy);
+                assert_matches!(
+                    missing_blobs_iter.next().await,
+                    Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+                );
+            },
+        )
+        .await;
+
+        assert_matches!(task.await, Err(ServeNeededBlobsError::UnexpectedClose));
+        pkgfs_install.expect_done().await;
+        pkgfs_needs.expect_done().await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn expects_get_missing_blobs_once() {
+        let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
+        let (task, proxy, mut pkgfs_install, mut pkgfs_needs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+
+        write_meta_blob(&proxy, &mut pkgfs_install, meta_blob_info).await;
+
+        // Enumerate the needs successfully once.
+        let ((), ()) = future::join(
+            async {
+                pkgfs_needs
+                    .expect_enumerate_needs([0; 32].into())
+                    .await
+                    .enumerate_needs(HashRangeFull::default().take(10).collect())
+                    .await;
+            },
+            async {
+                let (missing_blobs_iter, missing_blobs_iter_server_end) =
+                    fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
+
+                assert_matches!(proxy.get_missing_blobs(missing_blobs_iter_server_end), Ok(()));
+
+                collect_blob_info_iterator(missing_blobs_iter).await;
+            },
+        )
+        .await;
+
+        // Trying to enumerate the missing blobs again is a protocol violation.
+        let (_missing_blobs_iter, missing_blobs_iter_server_end) =
+            fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
+        assert_matches!(proxy.get_missing_blobs(missing_blobs_iter_server_end), Ok(()));
+
+        assert_matches!(
+            task.await,
+            Err(ServeNeededBlobsError::UnexpectedRequest {
+                received: "get_missing_blobs",
+                expected: "open_blob"
             })
         );
         pkgfs_install.expect_done().await;
