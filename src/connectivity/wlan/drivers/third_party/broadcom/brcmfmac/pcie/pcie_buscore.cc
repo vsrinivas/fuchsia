@@ -476,7 +476,7 @@ zx_status_t PcieBuscore::CreateDmaBuffer(uint32_t cache_policy, size_t size,
   if ((status = pci_proto_->GetBti(0, &bti)) != ZX_OK) {
     return status;
   }
-  return DmaBuffer::Create(bti, cache_policy, size, out_dma_buffer);
+  return DmaBuffer::Create(&bti, cache_policy, size, out_dma_buffer);
 }
 
 uint32_t PcieBuscore::ConfigRead(uint16_t offset) {
