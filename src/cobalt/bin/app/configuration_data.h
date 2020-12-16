@@ -55,6 +55,8 @@ class FuchsiaConfigurationData {
 
   bool GetWatchForUserConsent() const;
 
+  bool GetEnableReplacementMetrics() const;
+
   // Returns the cobalt API key. If it cannot be found, return the default API key.
   std::string GetApiKey() const;
 
@@ -69,6 +71,7 @@ class FuchsiaConfigurationData {
   cobalt::ReleaseStage release_stage_;
   cobalt::CobaltServiceInterface::DataCollectionPolicy data_collection_policy_;
   bool watch_for_user_consent_;
+  bool enable_replacement_metrics_;
 };
 
 }  // namespace cobalt

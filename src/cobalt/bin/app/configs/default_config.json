@@ -1,5 +1,6 @@
 {
   "release_stage": "DEBUG",
   "default_data_collection_policy": "COLLECT_AND_UPLOAD",
-  "watch_for_user_consent": false
+  "watch_for_user_consent": false,
+  "enable_replacement_metrics": true
 }

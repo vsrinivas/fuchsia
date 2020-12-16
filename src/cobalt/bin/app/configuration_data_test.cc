@@ -140,6 +140,36 @@ TEST(ConfigTest, WatchForUserConsentFalse) {
   EXPECT_EQ(false, config_data.GetWatchForUserConsent());
 }
 
+TEST(ConfigTest, EnableReplacementMetricsDefault) {
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  EXPECT_TRUE(files::CreateDirectory(kTestDir));
+  EXPECT_TRUE(WriteFile("config.json", "{}"));
+
+  FuchsiaConfigurationData config_data(kTestDir, kTestDir);
+
+  EXPECT_EQ(false, config_data.GetEnableReplacementMetrics());
+}
+
+TEST(ConfigTest, EnableReplacementMetricsTrue) {
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  EXPECT_TRUE(files::CreateDirectory(kTestDir));
+  EXPECT_TRUE(WriteFile("config.json", "{\"enable_replacement_metrics\":true}"));
+
+  FuchsiaConfigurationData config_data(kTestDir, kTestDir);
+
+  EXPECT_EQ(true, config_data.GetEnableReplacementMetrics());
+}
+
+TEST(ConfigTest, EnableReplacementMetricsFalse) {
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  EXPECT_TRUE(files::CreateDirectory(kTestDir));
+  EXPECT_TRUE(WriteFile("config.json", "{\"enable_replacement_metrics\":false}"));
+
+  FuchsiaConfigurationData config_data(kTestDir, kTestDir);
+
+  EXPECT_EQ(false, config_data.GetEnableReplacementMetrics());
+}
+
 TEST(ConfigTest, GetApiKeyNotEmpty) {
   EXPECT_TRUE(files::DeletePath(kTestDir, true));
   EXPECT_TRUE(files::CreateDirectory(kTestDir));

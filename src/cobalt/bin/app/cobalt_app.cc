@@ -108,6 +108,8 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
       .validated_clock = system_clock,
 
       .activity_listener = std::move(listener),
+
+      .enable_replacement_metrics = configuration_data.GetEnableReplacementMetrics(),
   };
   return cfg;
 }

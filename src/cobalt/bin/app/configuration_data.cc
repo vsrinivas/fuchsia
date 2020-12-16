@@ -47,6 +47,9 @@ const cobalt::CobaltServiceInterface::DataCollectionPolicy kDefaultDataCollectio
 constexpr char kWatchForUserConsentKey[] = "watch_for_user_consent";
 const bool kDefaultWatchForUserConsent = true;
 
+constexpr char kEnableReplacementMetricsKey[] = "enable_replacement_metrics";
+const bool kDefaultEnableReplacementMetrics = false;
+
 // This will be found under the config directory.
 constexpr char kApiKeyFile[] = "api_key.hex";
 constexpr char kDefaultApiKey[] = "cobalt-default-api-key";
@@ -208,6 +211,13 @@ bool LookupWatchForUserConsent(const JSONHelper& json_helper) {
   return watch_for_user_consent;
 }
 
+bool LookupEnableReplacementMetrics(const JSONHelper& json_helper) {
+  ASSIGN_OR_RETURN_DEFAULT(auto enable_replacement_metrics, kDefaultEnableReplacementMetrics,
+                           json_helper.GetBool(kEnableReplacementMetricsKey));
+
+  return enable_replacement_metrics;
+}
+
 }  // namespace
 
 FuchsiaConfigurationData::FuchsiaConfigurationData(const std::string& config_dir,
@@ -218,7 +228,8 @@ FuchsiaConfigurationData::FuchsiaConfigurationData(const std::string& config_dir
       json_helper_(files::JoinPath(config_dir, kConfigFile)),
       release_stage_(LookupReleaseStage(json_helper_)),
       data_collection_policy_(LookupDataCollectionPolicy(json_helper_)),
-      watch_for_user_consent_(LookupWatchForUserConsent(json_helper_)) {}
+      watch_for_user_consent_(LookupWatchForUserConsent(json_helper_)),
+      enable_replacement_metrics_(LookupEnableReplacementMetrics(json_helper_)) {}
 
 config::Environment FuchsiaConfigurationData::GetBackendEnvironment() const {
   return backend_environment_;
@@ -260,6 +271,10 @@ FuchsiaConfigurationData::GetDataCollectionPolicy() const {
 }
 
 bool FuchsiaConfigurationData::GetWatchForUserConsent() const { return watch_for_user_consent_; }
+
+bool FuchsiaConfigurationData::GetEnableReplacementMetrics() const {
+  return enable_replacement_metrics_;
+}
 
 std::string FuchsiaConfigurationData::GetApiKey() const { return api_key_; }
 
