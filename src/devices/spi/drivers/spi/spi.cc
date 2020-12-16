@@ -4,9 +4,10 @@
 
 #include "spi.h"
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
+
+#include "src/devices/spi/drivers/spi/spi_bind.h"
 
 namespace spi {
 
@@ -137,5 +138,4 @@ static zx_driver_ops_t driver_ops = []() {
 
 }  // namespace spi
 
-ZIRCON_DRIVER_BEGIN(spi, spi::driver_ops, "zircon", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SPI_IMPL), ZIRCON_DRIVER_END(i2c)
+ZIRCON_DRIVER(spi, spi::driver_ops, "zircon", "0.1");

@@ -2,13 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
+bind_rules("spi_bind") {
+  rules = "spi.bind"
+  output = "spi_bind.h"
+  tests = "tests.json"
+  deps = [ "//src/devices/bind/fuchsia.spi" ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":spi-test-package" ]
+  deps = [
+    ":spi-test-package",
+    ":spi_bind_test",
+  ]
 }
 
 driver_module("spi") {
@@ -22,14 +33,12 @@ driver_module("spi") {
     "spi.cc",
   ]
   deps = [
+    ":spi_bind",
     "//sdk/banjo/ddk.protocol.spi",
     "//sdk/banjo/ddk.protocol.spiimpl",
     "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
@@ -47,15 +56,13 @@ test("spi-test") {
     "spi.cc",
   ]
   deps = [
+    ":spi_bind",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.spi",
     "//sdk/banjo/ddk.protocol.spiimpl",
     "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",

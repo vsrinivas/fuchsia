@@ -231,8 +231,6 @@ zx_library("ddk-deprecated-binding-headers") {
     "//src/devices/shareddma/drivers/syn-dma:*",
     "//src/devices/spi/drivers/aml-spi:*",
     "//src/devices/spi/drivers/mtk-spi:*",
-    "//src/devices/spi/drivers/spi:*",
-    "//src/devices/spi/drivers/spi:spi-test",
     "//src/devices/sysmem/drivers/sysmem:*",
     "//src/devices/tee/drivers/optee:*",
     "//src/devices/temperature/drivers/shtv3:*",
