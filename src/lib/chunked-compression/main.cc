@@ -82,7 +82,7 @@ class ProgressWriter {
 };
 
 void usage(const char* fname) {
-  fprintf(stderr, "Usage: %s [--level #] [--stream] [--checksum] [d | c] source dest\n", fname);
+  fprintf(stderr, "Usage: %s [--level #] [--stream] [--checksum] (d | c) source dest\n", fname);
   fprintf(stderr,
           "\
   c: Compress source, writing to dest.\n\
@@ -141,7 +141,7 @@ int OpenAndMapForReading(const char* file, fbl::unique_fd* out_fd, const uint8_t
                          size_t* out_size) {
   fbl::unique_fd fd(open(file, O_RDONLY));
   if (!fd.is_valid()) {
-    fprintf(stderr, "Failed to open '%s'.\n", file);
+    fprintf(stderr, "Failed to open '%s': %s\n", file, strerror(errno));
     return 1;
   }
   size_t size;
@@ -225,7 +225,7 @@ int CompressStream(fbl::unique_fd src_fd, size_t sz, const char* dst_file, int l
   }
 
   if (compressor.Init(sz, write_buf, output_limit) != chunked_compression::kStatusOk) {
-    fprintf(stderr, "Final failed\n");
+    fprintf(stderr, "Init failed\n");
     return 1;
   }
 
@@ -246,7 +246,7 @@ int CompressStream(fbl::unique_fd src_fd, size_t sz, const char* dst_file, int l
     if (r == 0) {
       int err = ferror(in);
       if (err) {
-        fprintf(stderr, "fread failed: %d\n", err);
+        fprintf(stderr, "fread failed: %s\n", strerror(err));
         return err;
       }
       break;
@@ -279,7 +279,7 @@ int Decompress(const uint8_t* src, size_t sz, const char* dst_file) {
   SeekTable table;
   HeaderReader reader;
   if ((reader.Parse(src, sz, sz, &table)) != chunked_compression::kStatusOk) {
-    fprintf(stderr, "Failed to parse input file\n");
+    fprintf(stderr, "Failed to parse input file; not a chunked archive?\n");
     return 1;
   }
   size_t output_size = ChunkedDecompressor::ComputeOutputSize(table);
@@ -329,7 +329,7 @@ int main(int argc, char* const* argv) {
           return 1;
         } else if (level < CompressionParams::MinCompressionLevel() ||
                    level > CompressionParams::MaxCompressionLevel()) {
-          fprintf(stderr, "Invalid level, should be in range %d <= level <= %d\n",
+          fprintf(stderr, "Invalid level %d, should be in range %d <= level <= %d\n", level,
                   CompressionParams::MinCompressionLevel(),
                   CompressionParams::MaxCompressionLevel());
           return 1;
@@ -385,7 +385,7 @@ int main(int argc, char* const* argv) {
     } else {
       fbl::unique_fd fd(open(input_file, O_RDONLY));
       if (!fd.is_valid()) {
-        fprintf(stderr, "Failed to open '%s'.\n", input_file);
+        fprintf(stderr, "Failed to open '%s': %s\n", input_file, strerror(errno));
         return 1;
       }
       return CompressStream(std::move(fd), GetFileSize(input_file), output_file, level, checksum);
