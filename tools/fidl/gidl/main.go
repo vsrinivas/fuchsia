@@ -16,6 +16,7 @@ import (
 
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
 	gidldart "go.fuchsia.dev/fuchsia/tools/fidl/gidl/dart"
+	gidlcorpus "go.fuchsia.dev/fuchsia/tools/fidl/gidl/fuzzer_corpus"
 	gidlgolang "go.fuchsia.dev/fuchsia/tools/fidl/gidl/golang"
 	gidlhlcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/hlcpp"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
@@ -35,11 +36,12 @@ import (
 type Generator func(gidlir.All, fidl.Root, gidlconfig.GeneratorConfig) ([]byte, error)
 
 var conformanceGenerators = map[string]Generator{
-	"go":    gidlgolang.GenerateConformanceTests,
-	"llcpp": gidlllcpp.GenerateConformanceTests,
-	"hlcpp": gidlhlcpp.GenerateConformanceTests,
-	"dart":  gidldart.GenerateConformanceTests,
-	"rust":  gidlrust.GenerateConformanceTests,
+	"go":            gidlgolang.GenerateConformanceTests,
+	"llcpp":         gidlllcpp.GenerateConformanceTests,
+	"hlcpp":         gidlhlcpp.GenerateConformanceTests,
+	"dart":          gidldart.GenerateConformanceTests,
+	"rust":          gidlrust.GenerateConformanceTests,
+	"fuzzer_corpus": gidlcorpus.GenerateConformanceTests,
 }
 
 var benchmarkGenerators = map[string]Generator{
@@ -95,6 +97,7 @@ type GIDLFlags struct {
 	Out                       *string
 	RustBenchmarksFidlLibrary *string
 	CppBenchmarksFidlLibrary  *string
+	FuzzerCorpusDir           *string
 }
 
 // Valid indicates whether the parsed Flags are valid to be used.
@@ -113,6 +116,8 @@ var flags = GIDLFlags{
 		"name for the fidl library used in the rust benchmarks"),
 	CppBenchmarksFidlLibrary: flag.String("cpp-benchmarks-fidl-library", "",
 		"name for the fidl library used in the cpp benchmarks"),
+	FuzzerCorpusDir: flag.String("fuzzer-corpus-dir", "",
+		"output directory for fuzzer_corpus"),
 }
 
 func parseGidlIr(filename string) gidlir.All {
@@ -157,6 +162,9 @@ func main() {
 	}
 	if *flags.CppBenchmarksFidlLibrary != "" {
 		config.CppBenchmarksFidlLibrary = *flags.CppBenchmarksFidlLibrary
+	}
+	if *flags.FuzzerCorpusDir != "" {
+		config.FuzzerCorpusDir = *flags.FuzzerCorpusDir
 	}
 
 	ir := parseFidlJSONIr(*flags.JSONPath)

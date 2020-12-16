@@ -17,6 +17,7 @@ go_library("gopkg") {
     "dart/benchmarks.go",
     "dart/common.go",
     "dart/conformance.go",
+    "fuzzer_corpus/conformance.go",
     "golang/benchmarks.go",
     "golang/common.go",
     "golang/conformance.go",

@@ -58,11 +58,11 @@ template("gidl") {
   compiled_action(target_name) {
     tool = "//tools/fidl/gidl:gidl"
     args = output_args + [
-             "-type",
+             "--type",
              invoker.type,
-             "-language",
+             "--language",
              invoker.language,
-             "-json",
+             "--json",
              rebase_path(json_file),
            ] + extra_args + rebase_path(invoker.inputs)
     inputs = invoker.inputs

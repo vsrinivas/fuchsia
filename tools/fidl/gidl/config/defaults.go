@@ -14,4 +14,6 @@ type GeneratorConfig struct {
 	RustBenchmarksFidlLibrary string
 	// Name for the fidl library used in cpp benchmarks.
 	CppBenchmarksFidlLibrary string
+	// Directory for generated conformance test fuzzer corpus.
+	FuzzerCorpusDir string
 }
