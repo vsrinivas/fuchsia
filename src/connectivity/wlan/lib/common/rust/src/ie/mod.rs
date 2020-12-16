@@ -21,7 +21,7 @@ use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 pub use {
     constants::*, fake_ies::*, fields::*, id::*, intersect::*, merger::*, parse::*,
-    rates_writer::*, reader::Reader, write::*,
+    rates_writer::*, reader::*, write::*,
 };
 
 #[repr(C, packed)]

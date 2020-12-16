@@ -3,15 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    super::{Header, Id, IeType},
-    crate::buffer_reader::BufferReader,
+    super::{Header, IeSummaryIter, IeType},
     std::{
         collections::{btree_map, BTreeMap},
-        convert::TryInto,
         mem::size_of,
         ops::Range,
     },
-    zerocopy::ByteSlice,
 };
 
 const IES_MERGER_BUFFER_LIMIT: usize = 10000;
@@ -99,59 +96,6 @@ fn should_add_new(ie_type: IeType, old: &[u8], new: &[u8]) -> bool {
     //
     // If they are the same length but different, then prioritize the new one.
     new.len() >= old.len()
-}
-
-struct IeSummaryIter<B>(BufferReader<B>);
-
-impl<B: ByteSlice> IeSummaryIter<B> {
-    pub fn new(bytes: B) -> Self {
-        Self(BufferReader::new(bytes))
-    }
-}
-
-impl<B: ByteSlice> Iterator for IeSummaryIter<B> {
-    type Item = (IeType, Range<usize>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            let start_idx = self.0.bytes_read();
-            let header = self.0.peek::<Header>()?;
-            let body_len = header.body_len as usize;
-
-            // There are not enough bytes left, return None.
-            if self.0.bytes_remaining() < size_of::<Header>() + body_len {
-                return None;
-            }
-
-            // Unwraps are OK because we checked the length above.
-            let header = self.0.read::<Header>().unwrap();
-            let body = self.0.read_bytes(body_len).unwrap();
-            let ie_type = match header.id {
-                Id::VENDOR_SPECIFIC => {
-                    if body.len() >= 6 {
-                        Some(IeType::new_vendor(body[0..6].try_into().unwrap()))
-                    } else {
-                        None
-                    }
-                }
-                Id::EXTENSION => {
-                    if body.len() >= 1 {
-                        Some(IeType::new_extended(body[0]))
-                    } else {
-                        None
-                    }
-                }
-                _ => Some(IeType::new_basic(header.id)),
-            };
-            // If IE type is valid, return the IE block. Otherwise, skip to the next one.
-            match ie_type {
-                Some(ie_type) => {
-                    return Some((ie_type, start_idx..start_idx + size_of::<Header>() + body_len))
-                }
-                None => (),
-            }
-        }
-    }
 }
 
 #[cfg(test)]
