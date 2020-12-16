@@ -24,12 +24,6 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
-  args = []
-
-  if (is_debug) {
-    args += [ "--debug" ]
-  }
-
   environments = [
     {
       dimensions = {
@@ -43,10 +37,5 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
 group("test") {
   testonly = true
 
-  deps = []
-
-  if (is_debug) {
-    # Ermine tests use Flutter Driver, which only works in debug builds.
-    deps += [ ":experiences_ermine_session_shell_e2e_test($host_toolchain)" ]
-  }
+  deps = [ ":experiences_ermine_session_shell_e2e_test($host_toolchain)" ]
 }

@@ -9,8 +9,8 @@ import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
     show KeyboardShortcuts;
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_focus/fidl_async.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
-import 'package:test/test.dart';
 import 'package:mockito/mockito.dart';
 
 // ignore_for_file: implementation_imports
@@ -55,6 +55,7 @@ void main() {
       clustersModel: clustersModel,
       focusChainListenerBinding: focusChainListenerBinding,
     );
+    TestWidgetsFlutterBinding.ensureInitialized();
     await appModel.onStarted();
   });
 

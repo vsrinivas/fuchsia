@@ -11,6 +11,7 @@ import 'package:fidl_fuchsia_ui_focus/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
 import 'package:fuchsia_services/services.dart' show StartupContext;
@@ -58,6 +59,7 @@ class AppModel {
   ValueNotifier<bool> recentsVisibility = ValueNotifier(false);
   Stream<Locale> _localeStream;
   StreamSplitter<input.PointerEvent> _splitter;
+  MethodChannel _flutterDriverHandler;
 
   ClustersModel clustersModel;
   StatusModel statusModel;
@@ -167,6 +169,12 @@ class AppModel {
 
     // Add inspect data when requested.
     inspect.Inspect.onDemand('ermine', _onInspect);
+
+    // Handle commands from Flutter Driver.
+    _flutterDriverHandler = MethodChannel('flutter_driver/handler');
+    _flutterDriverHandler.setMockMethodCallHandler((call) async {
+      actions[call.method]?.call();
+    });
   }
 
   // Map key shortcuts to corresponding actions.

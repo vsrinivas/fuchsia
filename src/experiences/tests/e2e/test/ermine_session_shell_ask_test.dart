@@ -30,6 +30,7 @@ void main() {
   });
 
   test('use ask to resolve spinning_square_view using FlutterDriver', () async {
+    await ermine.gotoOverview();
     await ermine.driver.enterText('spinning');
     await ermine.driver.waitFor(find.text('spinning_square_view'));
     final askResult =

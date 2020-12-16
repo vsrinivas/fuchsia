@@ -34,6 +34,7 @@ class Overview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
+      key: ValueKey('overview'),
       color: ErmineStyle.kBackgroundColor,
       elevation: Elevations.systemOverlayElevation,
       child: Row(
