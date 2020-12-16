@@ -12,6 +12,7 @@ use {
     std::fmt,
     std::io::{stdout, Write},
     termion::color,
+    textwrap,
 };
 
 mod check;
@@ -57,9 +58,10 @@ fn get_operating_system_macos(
 #[ffx_plugin()]
 pub async fn preflight_cmd(_cmd: PreflightCommand) -> Result<()> {
     let config = PreflightConfig { system: get_operating_system()? };
-    let checks: Vec<Box<dyn PreflightCheck>> = vec![Box::new(
-        check::build_prereqs::BuildPrereqs::new(&command_runner::SYSTEM_COMMAND_RUNNER),
-    )];
+    let checks: Vec<Box<dyn PreflightCheck>> = vec![
+        Box::new(check::build_prereqs::BuildPrereqs::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
+        Box::new(check::femu_graphics::FemuGraphics::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
+    ];
 
     run_preflight_checks(&mut stdout(), &checks, &config).await
 }
@@ -79,7 +81,6 @@ async fn run_preflight_checks<W: Write>(
         if matches!(result, PreflightCheckResult::Failure(..)) {
             failures.push(result);
         }
-        writeln!(writer)?;
     }
 
     if !failures.is_empty() {
@@ -106,6 +107,18 @@ async fn run_preflight_checks<W: Write>(
     Ok(())
 }
 
+fn wrap_text(input: &str, indent_all: bool) -> String {
+    let lines = textwrap::wrap(input, 80);
+    let mut indented_lines = vec![];
+    for line in lines {
+        indented_lines.push(textwrap::indent(
+            &line,
+            if indent_all || !indented_lines.is_empty() { "      " } else { "" },
+        ));
+    }
+    indented_lines.join("")
+}
+
 impl fmt::Display for PreflightCheckResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -115,7 +128,14 @@ impl fmt::Display for PreflightCheckResult {
                 color::Fg(color::Green),
                 CHECK_MARK,
                 color::Fg(color::Reset),
-                message
+                wrap_text(message, false)
+            ),
+            PreflightCheckResult::Warning(message) => write!(
+                f,
+                "  {}[!]{} {}",
+                color::Fg(color::Yellow),
+                color::Fg(color::Reset),
+                wrap_text(message, false)
             ),
             PreflightCheckResult::Failure(message, resolution) => {
                 write!(
@@ -124,10 +144,12 @@ impl fmt::Display for PreflightCheckResult {
                     color::Fg(color::Red),
                     BALLOT_X,
                     color::Fg(color::Reset),
-                    message
+                    wrap_text(message, false),
                 )?;
                 match resolution {
-                    Some(resolution_message) => write!(f, "\n\n      {}", resolution_message),
+                    Some(resolution_message) => {
+                        write!(f, "\n\n{}", wrap_text(resolution_message, true))
+                    }
                     None => Ok(()),
                 }
             }

@@ -15,6 +15,10 @@ impl ExitStatus {
     pub fn success(&self) -> bool {
         self.0 == 0
     }
+
+    pub fn code(&self) -> i32 {
+        self.0
+    }
 }
 
 /// Describes a function that runs a command with args and returns:

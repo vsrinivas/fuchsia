@@ -11,8 +11,10 @@ ffx_plugin("ffx_preflight") {
   deps = [
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:termion",
+    "//third_party/rust_crates:textwrap",
     "//third_party/rust_crates:thiserror",
   ]
 
@@ -20,6 +22,7 @@ ffx_plugin("ffx_preflight") {
     "src/args.rs",
     "src/check.rs",
     "src/check/build_prereqs.rs",
+    "src/check/femu_graphics.rs",
     "src/command_runner.rs",
     "src/config.rs",
     "src/lib.rs",

@@ -7,6 +7,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 
 pub mod build_prereqs;
+pub mod femu_graphics;
 
 /// The result of execution of a `PreflightCheck`. In all cases, the first `String` parameter
 /// contains a message for the end user explaining the result.
@@ -14,6 +15,10 @@ pub mod build_prereqs;
 pub enum PreflightCheckResult {
     /// Everything checked out!
     Success(String),
+
+    /// A non-optimal configuration was detected. It will not stop the user from
+    /// building/running Fuchsia, but the experience will be degraded.
+    Warning(String),
 
     /// An unsupported condition or configuration was detected. The optional
     /// second parameter contains instructions for resolving the issue. `None`
