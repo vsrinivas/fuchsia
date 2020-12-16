@@ -6,7 +6,12 @@
 
 import("//build/testing/zircon_zbi_tests.gni")
 import("//src/bringup/lib/mexec/testing/zbi_test.gni")
-import("common_tests.gni")
+import("../common_tests.gni")
+
+# NOTE: The rules below are out of //zircon/kernel/phys/test/BUILD.gn
+# since the latter expects to be parsed in a kernel.phys toolchain
+# environment exclusively (and will assert otherwise), while this file
+# expects to be parsed in the default toolchain instead.
 
 # We create mexec-chainloading variations of all of the phys ZBI tests.
 # Once there is no longer a separate zircon build, we can define these targets
@@ -35,7 +40,7 @@ foreach(test, zircon_zbi_tests) {
   }
 }
 
-group("test") {
+group("mexec") {
   testonly = true
   deps = test_deps
 }

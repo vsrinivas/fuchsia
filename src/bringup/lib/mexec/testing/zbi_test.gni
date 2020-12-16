@@ -22,12 +22,16 @@ import("//build/testing/zbi_test.gni")
 #   * child_zbi
 #     - Required: Label of the ZBI target to boot via mexec.
 #     The label must be that of a ZBI-defining target like `zbi_test`
-#     or `zbi` that is defined within the same file that this template
-#     is instantiated. (It is expected that
-#     `get_target_outputs(child_label)` should return the appropriate
-#     outputs, the path to the ZBI being first among them. The success
-#     string is expected to be printed on boot of the child ZBI.
+#     or `zbi`. If child_zbi_file is not specified, it must be defined
+#     within the same file and toolchain that this template is instantiated.
+#     The success string is expected to be printed on boot of the child ZBI.
 #     - Type: label
+#
+#   * child_zbi_file
+#     - Optional: Path to the input child ZBI file. This is required when
+#     `child_zbi` does not point to a label in the current file and toolchain,
+#     since `get_target_outputs(child_zbi)` is used by default to compute it
+#     when not specified.
 #
 #   * args
 #     - Optional: List of additonal kernel command line arguments
@@ -44,14 +48,20 @@ template("mexec_zbi_test") {
 
   assert(defined(invoker.child_zbi), "`child_zbi` not set")
 
-  # The first output for `zbi_test` and `zbi` targets is documented as being
-  # the path to the associated ZBI.
-  child_outputs = get_target_outputs(invoker.child_zbi)
-  assert(child_outputs != [],
-         "get_target_outputs(${invoker.child_zbi}) returned no outputs")
+  if (defined(invoker.child_zbi_file)) {
+    child_zbi_file = invoker.child_zbi_file
+  } else {
+    # The first output for `zbi_test` and `zbi` targets is documented as being
+    # the path to the associated ZBI.
+    child_outputs = get_target_outputs(invoker.child_zbi)
+    assert(child_outputs != [],
+           "get_target_outputs(${invoker.child_zbi}) returned no outputs")
+    child_zbi_file = child_outputs[0]
+  }
+
   resource(resource_target) {
     testonly = true
-    sources = [ child_outputs[0] ]
+    sources = [ child_zbi_file ]
     outputs = [ "testdata/mexec-child.zbi" ]
     deps = [ invoker.child_zbi ]
   }
