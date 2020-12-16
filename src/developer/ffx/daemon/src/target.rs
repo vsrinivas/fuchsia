@@ -64,45 +64,24 @@ impl SshFormatter for TargetAddr {
 /// A trait for returning a consistent SSH address.
 ///
 /// Based on the structure from which the SSH address is coming, this will
-/// return:
-/// -- The first IPv4 address found, if there are only IPv4 addresses available
-/// -- The first IPv6 address found, if these are available.
+/// return in order of priority:
+/// -- The first local IPv6 address.
+/// -- The last local IPv4 address.
+/// -- Any other address.
 pub trait SshAddrFetcher {
     fn to_ssh_addr(self) -> Option<TargetAddr>;
-}
-
-macro_rules! assign_and_break_if_link_local {
-    ($res:ident, $addr:ident $(,)?) => {
-        $res = Some($addr.clone());
-        if $addr.ip().is_local_addr() {
-            break;
-        }
-    };
 }
 
 impl<'a, T: Copy + IntoIterator<Item = &'a TargetAddr>> SshAddrFetcher for &'a T {
     fn to_ssh_addr(self) -> Option<TargetAddr> {
         let mut res: Option<TargetAddr> = None;
         for addr in self.into_iter() {
-            match res {
-                Some(res_addr) => match SocketAddr::from(addr) {
-                    SocketAddr::V6(_) => match res_addr.ip {
-                        IpAddr::V6(_) => {
-                            // Only overwrite if this is a link-local addr, else
-                            // keep the first one found.
-                            if addr.ip().is_local_addr() {
-                                assign_and_break_if_link_local!(res, addr);
-                            }
-                        }
-                        IpAddr::V4(_) => {
-                            assign_and_break_if_link_local!(res, addr);
-                        }
-                    },
-                    SocketAddr::V4(_) => {}
-                },
-                None => {
-                    assign_and_break_if_link_local!(res, addr);
-                }
+            if res.is_none() || addr.ip().is_local_addr() {
+                res.replace(addr.clone());
+            }
+            if addr.ip().is_local_addr() && addr.ip().is_ipv6() {
+                res.replace(addr.clone());
+                break;
             }
         }
         res
@@ -1636,5 +1615,59 @@ mod test {
         // The order should be: last one inserted should show up first.
         addrs_post.reverse();
         assert_eq!(addrs_post.drain(..).map(|e| e.addr).collect::<Vec<_>>(), t.addrs().await);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_addresses_order() {
+        let t = Target::new("hi-hi-hi");
+        let expected = SocketAddr::V6(SocketAddrV6::new(
+            "fe80::4559:49b2:462d:f46b".parse().unwrap(),
+            0,
+            0,
+            8,
+        ));
+        let addrs_pre = vec![
+            expected.clone(),
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(192, 168, 70, 68), 0)),
+        ];
+        let addrs_post = addrs_pre
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(i, e)| {
+                (TargetAddr::from(e), Utc.ymd(2014 + (i as i32), 10, 31).and_hms(9, 10, 12)).into()
+            })
+            .collect::<Vec<TargetAddrEntry>>();
+        for a in addrs_post.iter().cloned() {
+            t.addrs_insert_entry(a).await;
+        }
+        assert_eq!((&t.addrs().await).to_ssh_addr().unwrap(), TargetAddr::from(expected));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_addresses_prefer_local_vs_v6() {
+        let t = Target::new("hi-hi-hi");
+        let expected = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(192, 168, 70, 68), 0));
+        let addrs_pre = vec![
+            expected.clone(),
+            SocketAddr::V6(SocketAddrV6::new(
+                "9999::4559:49b2:462d:f46b".parse().unwrap(),
+                0,
+                0,
+                0,
+            )),
+        ];
+        let addrs_post = addrs_pre
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(i, e)| {
+                (TargetAddr::from(e), Utc.ymd(2014 + (i as i32), 10, 31).and_hms(9, 10, 12)).into()
+            })
+            .collect::<Vec<TargetAddrEntry>>();
+        for a in addrs_post.iter().cloned() {
+            t.addrs_insert_entry(a).await;
+        }
+        assert_eq!((&t.addrs().await).to_ssh_addr().unwrap(), TargetAddr::from(expected));
     }
 }
