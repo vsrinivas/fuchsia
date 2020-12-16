@@ -33,9 +33,9 @@ test("ftl-volume-wrapper-integration") {
   sources = [ "ftl-volume-wrapper-integration-tests.cc" ]
 
   deps = [
+    "//src/storage/fvm/host",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/ftl-mtd",
-    "//zircon/system/ulib/fvm-host",
     "//zircon/system/ulib/mtd",
   ]
 }

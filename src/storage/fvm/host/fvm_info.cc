@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/fvm/host/fvm_info.h"
+
 #include <zircon/errors.h>
 
 #include <memory>
 
-#include <fvm-host/format.h>
-#include <fvm-host/fvm-info.h>
 #include <safemath/safe_math.h>
 
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm.h"
+#include "src/storage/fvm/host/format.h"
 #include "src/storage/fvm/metadata.h"
 
 zx_status_t FvmInfo::Reset(size_t disk_size, size_t slice_size) {

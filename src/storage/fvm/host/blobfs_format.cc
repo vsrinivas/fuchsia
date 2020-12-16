@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/fvm/host/blobfs_format.h"
+
 #include <inttypes.h>
 #include <lib/zx/status.h>
 
@@ -10,7 +12,7 @@
 
 #include <safemath/checked_math.h>
 
-#include "fvm-host/format.h"
+#include "src/storage/fvm/host/fvm_reservation.h"
 
 namespace {
 

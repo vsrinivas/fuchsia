@@ -15,6 +15,7 @@ executable("fvm") {
   sources = [ "main.cc" ]
   deps = [
     "//src/storage/fvm",
+    "//src/storage/fvm/host",
     "//src/storage/volume_image/ftl:ftl-image",
     "//src/storage/volume_image/ftl:ftl-raw-nand-image-writer",
     "//src/storage/volume_image/ftl:raw-nand-image-utils",
@@ -23,7 +24,6 @@ executable("fvm") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
-    "//zircon/system/ulib/fvm-host",
   ]
 
   if (!is_fuchsia) {

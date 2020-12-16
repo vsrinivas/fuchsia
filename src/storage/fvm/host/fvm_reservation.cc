@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fvm-host/format.h"
+#include "src/storage/fvm/host/fvm_reservation.h"
+
+#include <inttypes.h>
+#include <stdio.h>
 
 bool FvmReservation::Approved() const {
   if (data_.request && (*data_.request > data_.reserved)) {

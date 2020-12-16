@@ -9,9 +9,9 @@
 #include <fbl/algorithm.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <fvm-host/container.h>
 #include <zxtest/zxtest.h>
 
+#include "src/storage/fvm/host/container.h"
 #include "src/storage/fvm/sparse_reader.h"
 #include "src/storage/minfs/host.h"
 

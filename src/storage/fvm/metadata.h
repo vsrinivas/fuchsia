@@ -100,7 +100,7 @@ class Metadata {
   // The metadata is not copied verbatim; for instance, which of the A/B copies is active
   // may change, and old generations may be lost. The only guarantee is that all partition/slice
   // entries in the active tables will be copied over from this instance.
-  // TODO(jfsulliv): Only fvm-host needs this method, and it is not very graceful. Consider removal.
+  // TODO(jfsulliv): Only fvm/host needs this method, and it is not very graceful. Consider removal.
   zx::status<Metadata> CopyWithNewDimensions(const Header& dimensions) const;
 
  private:

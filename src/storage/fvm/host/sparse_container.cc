@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/fvm/host/sparse_container.h"
+
 #include <fcntl.h>
 #include <inttypes.h>
 #include <zircon/errors.h>
@@ -12,13 +14,13 @@
 #include <utility>
 #include <vector>
 
-#include <fvm-host/container.h>
-#include <fvm-host/format.h>
-#include <fvm-host/sparse-paver.h>
 #include <safemath/checked_math.h>
 
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
+#include "src/storage/fvm/host/format.h"
+#include "src/storage/fvm/host/internal_snapshot_meta_format.h"
+#include "src/storage/fvm/host/sparse_paver.h"
 #include "src/storage/minfs/format.h"
 
 constexpr size_t kLz4HeaderSize = 15;

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FTL_MTD_FTL_VOLUME_WRAPPER_H_
-#define FTL_MTD_FTL_VOLUME_WRAPPER_H_
+#ifndef LIB_FTL_MTD_FTL_VOLUME_WRAPPER_H_
+#define LIB_FTL_MTD_FTL_VOLUME_WRAPPER_H_
 
 #include <lib/ftl/volume.h>
 #include <sys/types.h>
 
 #include <memory>
 
-#include <fvm-host/file-wrapper.h>
+#include "src/storage/fvm/host/file_wrapper.h"
 
 namespace ftl_mtd {
 
@@ -53,4 +53,4 @@ class FtlVolumeWrapper : public ftl::FtlInstance, public fvm::host::FileWrapper 
 
 }  // namespace ftl_mtd
 
-#endif  // FTL_MTD_FTL_VOLUME_WRAPPER_H_
+#endif  // LIB_FTL_MTD_FTL_VOLUME_WRAPPER_H_

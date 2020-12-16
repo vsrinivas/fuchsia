@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/fvm/host/fvm_container.h"
+
 #include <errno.h>
 #include <inttypes.h>
 #include <lib/fit/defer.h>
@@ -13,9 +15,9 @@
 
 #include <safemath/checked_math.h>
 
-#include "fvm-host/container.h"
-#include "fvm-host/format.h"
 #include "src/storage/fvm/format.h"
+#include "src/storage/fvm/host/format.h"
+#include "src/storage/fvm/host/internal_snapshot_meta_format.h"
 #include "src/storage/fvm/snapshot_metadata_format.h"
 #include "src/storage/fvm/sparse_reader.h"
 

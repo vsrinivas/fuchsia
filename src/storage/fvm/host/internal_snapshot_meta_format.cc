@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/fvm/host/internal_snapshot_meta_format.h"
+
 #include <inttypes.h>
+#include <zircon/errors.h>
 
 #include <limits>
 #include <utility>
 
 #include <safemath/checked_math.h>
 
-#include "fvm-host/format.h"
-#include "src/storage/fvm/snapshot_metadata_format.h"
-#include "zircon/errors.h"
+#include "src/storage/fvm/host/format.h"
 
 namespace {
 

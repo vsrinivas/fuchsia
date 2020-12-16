@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FVM_HOST_FORMAT_H_
-#define FVM_HOST_FORMAT_H_
+#ifndef SRC_STORAGE_FVM_HOST_FORMAT_H_
+#define SRC_STORAGE_FVM_HOST_FORMAT_H_
 
 #include <fcntl.h>
 #include <lib/zx/status.h>
@@ -22,7 +22,6 @@
 #include "src/storage/blobfs/host.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
-#include "src/storage/fvm/snapshot_metadata.h"
 #include "src/storage/minfs/bcache.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/fsck.h"
@@ -36,6 +35,8 @@
   do {                  \
   } while (0)
 #endif
+
+class FvmReservation;
 
 // File system names
 static constexpr char kMinfsName[] = "minfs";
@@ -74,60 +75,6 @@ struct ExtentInfo {
   uint32_t PslicesNeeded() const { return vslice_count; }
 };
 
-// Reservation is a request that may or may not be approved.
-// Request for reservation may fail the AddPartition or
-// request may be rejected silently. Only way to verify is
-// to check both return value and "reserved" field.
-struct fvm_reserve_t {
-  // How many bytes/inodes needs to be reserved. Serves as input to
-  // AddPartition.
-  std::optional<uint64_t> request;
-
-  // How many bytes/inodes were reserved. Serves as output of
-  // AddPartition.
-  // Depending on filesystems, more than request may be reserved.
-  uint64_t reserved;
-};
-
-class FvmReservation {
- public:
-  FvmReservation() {}
-  FvmReservation(std::optional<uint64_t> inode_count, std::optional<uint64_t> data,
-                 std::optional<uint64_t> total_bytes) {
-    nodes_.request = inode_count;
-    data_.request = data;
-    total_bytes_.request = total_bytes;
-  }
-
-  // Returns true if all parts of the request are approved.
-  bool Approved() const;
-
-  void Dump(FILE* stream) const;
-
-  fvm_reserve_t inodes() const { return nodes_; }
-
-  fvm_reserve_t total_bytes() const { return total_bytes_; }
-
-  fvm_reserve_t data() const { return data_; }
-
-  void set_inodes_reserved(uint64_t reserved) { nodes_.reserved = reserved; }
-
-  void set_data_reserved(uint64_t reserved) { data_.reserved = reserved; }
-
-  void set_total_bytes_reserved(uint64_t reserved) { total_bytes_.reserved = reserved; }
-
- private:
-  // Reserve number of files/directory that can be created.
-  fvm_reserve_t nodes_ = {};
-
-  // Raw bytes for "data" that needs to be reserved.
-  fvm_reserve_t data_ = {};
-
-  // Byte limit on the reservation. Zero value implies limitless. If set,
-  // over-committing will fail. Return value contains total bytes reserved.
-  fvm_reserve_t total_bytes_ = {};
-};
-
 // Format defines an interface for file systems to implement in order to be placed into an FVM or
 // sparse container
 class Format {
@@ -160,6 +107,7 @@ class Format {
                               const fbl::Vector<size_t>& extent_lengths, disk_format_t part,
                               uint64_t* out_size);
   virtual ~Format() {}
+
   // Update the file system's superblock (e.g. set FVM flag), and any other information required
   // for the partition to be placed in FVM.
   virtual zx_status_t MakeFvmReady(size_t slice_size, uint32_t vpart_index,
@@ -220,101 +168,4 @@ class Format {
   virtual const char* Name() const = 0;
 };
 
-class MinfsFormat final : public Format {
- public:
-  MinfsFormat(fbl::unique_fd fd, const char* type);
-  zx_status_t MakeFvmReady(size_t slice_size, uint32_t vpart_index, FvmReservation* reserve) final;
-  zx::status<ExtentInfo> GetExtent(unsigned index) const final;
-  zx_status_t GetSliceCount(uint32_t* slices_out) const final;
-  zx_status_t FillBlock(size_t block_offset) final;
-  zx_status_t EmptyBlock() final;
-  void* Data() final;
-  uint32_t BlockSize() const final;
-  uint32_t BlocksPerSlice() const final;
-  uint8_t datablk[minfs::kMinfsBlockSize];
-
- private:
-  const char* Name() const final;
-
-  std::unique_ptr<minfs::Bcache> bc_;
-
-  // Input superblock
-  union {
-    char blk_[minfs::kMinfsBlockSize];
-    minfs::Superblock info_;
-  };
-
-  // Output superblock
-  union {
-    char fvm_blk_[minfs::kMinfsBlockSize];
-    minfs::Superblock fvm_info_;
-  };
-};
-
-class BlobfsFormat final : public Format {
- public:
-  BlobfsFormat(fbl::unique_fd fd, const char* type);
-  ~BlobfsFormat();
-  zx_status_t MakeFvmReady(size_t slice_size, uint32_t vpart_index, FvmReservation* reserve) final;
-  zx::status<ExtentInfo> GetExtent(unsigned index) const final;
-  zx_status_t GetSliceCount(uint32_t* slices_out) const final;
-  zx_status_t FillBlock(size_t block_offset) final;
-  zx_status_t EmptyBlock() final;
-  void* Data() final;
-  uint32_t BlockSize() const final;
-  uint32_t BlocksPerSlice() const final;
-  uint8_t datablk[blobfs::kBlobfsBlockSize];
-
- private:
-  const char* Name() const final;
-
-  fbl::unique_fd fd_;
-  uint64_t blocks_;
-
-  // Input superblock
-  union {
-    char blk_[blobfs::kBlobfsBlockSize];
-    blobfs::Superblock info_;
-  };
-
-  // Output superblock
-  union {
-    char fvm_blk_[blobfs::kBlobfsBlockSize];
-    blobfs::Superblock fvm_info_;
-  };
-
-  uint32_t BlocksToSlices(uint32_t block_count) const;
-  uint32_t SlicesToBlocks(uint32_t slice_count) const;
-  zx_status_t ComputeSlices(uint64_t inode_count, uint64_t data_blocks,
-                            uint64_t journal_block_count);
-};
-
-class InternalSnapshotMetaFormat final : public Format {
- public:
-  InternalSnapshotMetaFormat(size_t reserved_slices, size_t slice_size,
-                             const std::vector<fvm::PartitionSnapshotState>& partitions,
-                             const std::vector<fvm::SnapshotExtentType>& extents);
-  ~InternalSnapshotMetaFormat() override;
-  zx_status_t MakeFvmReady(size_t slice_size, uint32_t vpart_index, FvmReservation* reserve) final {
-    return ZX_OK;
-  }
-  zx::status<ExtentInfo> GetExtent(unsigned index) const final;
-  zx_status_t GetSliceCount(uint32_t* slices_out) const final;
-  zx_status_t FillBlock(size_t block_offset) final;
-  zx_status_t EmptyBlock() final;
-  void* Data() final;
-  uint32_t BlockSize() const final;
-  uint32_t BlocksPerSlice() const final;
-
- private:
-  const char* Name() const final;
-
-  size_t reserved_slices_ = 0;
-  size_t slice_size_ = 0;
-  // When FillBlock(0) is called, we read from meta_. Otherwise we read from zero_buf_.
-  bool reading_from_meta_ = false;
-  std::unique_ptr<uint8_t[]> zero_buf_;
-  fvm::SnapshotMetadata meta_;
-};
-
-#endif  // FVM_HOST_FORMAT_H_
+#endif  // SRC_STORAGE_FVM_HOST_FORMAT_H_

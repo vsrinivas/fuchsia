@@ -20,7 +20,6 @@ static_library("minfs") {
   visibility = [
     "//src/devices/block/bin/disk-inspect",
     "//src/storage/*",
-    "//zircon/system/ulib/fvm-host",
     "//zircon/system/utest/fvm",
     "//zircon/system/utest/minfs-micro-benchmark",
     "//zircon/tools/minfs",

@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FVM_HOST_FVM_INFO_H_
-#define FVM_HOST_FVM_INFO_H_
+#ifndef SRC_STORAGE_FVM_HOST_FVM_INFO_H_
+#define SRC_STORAGE_FVM_HOST_FVM_INFO_H_
 
 #include <lib/zx/status.h>
 
 #include <memory>
 
 #include <fbl/unique_fd.h>
-#include <fvm-host/file-wrapper.h>
-#include <fvm-host/format.h>
 
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
+#include "src/storage/fvm/host/file_wrapper.h"
+#include "src/storage/fvm/host/format.h"
 #include "src/storage/fvm/metadata.h"
 
 // Wrapper around FVM metadata which attempts to read existing metadata from disk, allows
@@ -88,4 +88,4 @@ class FvmInfo {
   fvm::Metadata metadata_;
 };
 
-#endif  // FVM_HOST_FVM_INFO_H_
+#endif  // SRC_STORAGE_FVM_HOST_FVM_INFO_H_

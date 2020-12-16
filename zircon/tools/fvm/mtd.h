@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <fvm-host/file-wrapper.h>
+#include "src/storage/fvm/host/file_wrapper.h"
 
 zx_status_t CreateFileWrapperFromMtd(const char* path, uint32_t offset, uint32_t max_bad_blocks,
                                      std::unique_ptr<fvm::host::FileWrapper>* wrapper);

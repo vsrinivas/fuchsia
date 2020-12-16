@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fvm-host/container.h"
+#include "src/storage/fvm/host/container.h"
 
 #include <inttypes.h>
 
@@ -10,6 +10,9 @@
 #include <utility>
 
 #include <fbl/unique_fd.h>
+
+#include "src/storage/fvm/host/fvm_container.h"
+#include "src/storage/fvm/host/sparse_container.h"
 
 zx_status_t Container::Create(const char* path, off_t offset, uint32_t flags,
                               std::unique_ptr<Container>* container) {

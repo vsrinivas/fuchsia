@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FVM_HOST_SPARSE_PAVER_H_
-#define FVM_HOST_SPARSE_PAVER_H_
+#ifndef SRC_STORAGE_FVM_HOST_SPARSE_PAVER_H_
+#define SRC_STORAGE_FVM_HOST_SPARSE_PAVER_H_
 
 #include <memory>
 
-#include <fvm-host/file-wrapper.h>
-
-#include "format.h"
-#include "fvm-host/fvm-info.h"
+#include "src/storage/fvm/host/file_wrapper.h"
+#include "src/storage/fvm/host/format.h"
+#include "src/storage/fvm/host/fvm_info.h"
 #include "src/storage/fvm/sparse_reader.h"
 
 struct SparsePartitionInfo {
@@ -58,4 +57,4 @@ class SparsePaver {
   std::unique_ptr<uint8_t[]> data_;  // Buffer to hold data to be written to disk.
 };
 
-#endif  // FVM_HOST_SPARSE_PAVER_H_
+#endif  // SRC_STORAGE_FVM_HOST_SPARSE_PAVER_H_

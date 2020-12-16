@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/minfs/minfs.h"
+#include "src/storage/fvm/host/minfs_format.h"
 
 #include <lib/cksum.h>
 
@@ -11,8 +11,9 @@
 
 #include <safemath/checked_math.h>
 
-#include "fvm-host/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
+#include "src/storage/fvm/host/fvm_reservation.h"
+#include "src/storage/minfs/minfs.h"
 #include "src/storage/minfs/transaction_limits.h"
 
 MinfsFormat::MinfsFormat(fbl::unique_fd fd, const char* type) : Format() {

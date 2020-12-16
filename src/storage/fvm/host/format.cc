@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fvm-host/format.h"
+#include "src/storage/fvm/host/format.h"
 
 #include <memory>
 #include <utility>
+
+#include "src/storage/fvm/host/blobfs_format.h"
+#include "src/storage/fvm/host/minfs_format.h"
 
 Format::Format() : fvm_ready_(false), vpart_index_(0), flags_(0) {}
 

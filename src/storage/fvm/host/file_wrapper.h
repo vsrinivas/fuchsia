@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FVM_HOST_FILE_WRAPPER_H_
-#define FVM_HOST_FILE_WRAPPER_H_
+#ifndef SRC_STORAGE_FVM_HOST_FILE_WRAPPER_H_
+#define SRC_STORAGE_FVM_HOST_FILE_WRAPPER_H_
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -85,4 +85,4 @@ class UniqueFdWrapper : public FileWrapper {
 
 }  // namespace fvm::host
 
-#endif  // FVM_HOST_FILE_WRAPPER_H_
+#endif  // SRC_STORAGE_FVM_HOST_FILE_WRAPPER_H_

@@ -1,0 +1,71 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+static_library("host") {
+  sources = [
+    "blobfs_format.cc",
+    "blobfs_format.h",
+    "container.cc",
+    "container.h",
+    "file_wrapper.cc",
+    "file_wrapper.h",
+    "format.cc",
+    "format.h",
+    "fvm_container.cc",
+    "fvm_container.h",
+    "fvm_info.cc",
+    "fvm_info.h",
+    "fvm_reservation.cc",
+    "fvm_reservation.h",
+    "internal_snapshot_meta_format.cc",
+    "internal_snapshot_meta_format.h",
+    "minfs_format.cc",
+    "minfs_format.h",
+    "sparse_container.cc",
+    "sparse_container.h",
+    "sparse_paver.cc",
+    "sparse_paver.h",
+  ]
+
+  public_deps = [
+    "//src/storage/blobfs",
+    "//src/storage/fvm",
+    "//src/storage/minfs",
+    "//zircon/system/ulib/fs-management",
+  ]
+  deps = [
+    "//src/storage/blobfs",
+    "//src/storage/fvm",
+    "//src/storage/minfs",
+    "//third_party/boringssl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/safemath",
+    "//zircon/system/ulib/digest",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/fs/transaction",
+    "//zircon/third_party/ulib/cksum",
+    "//zircon/third_party/ulib/lz4",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fvm-host-test($host_toolchain)" ]
+}
+
+if (current_toolchain == host_toolchain) {
+  test("fvm-host-test") {
+    sources = [ "fvm_host_test.cc" ]
+
+    deps = [
+      ":host",
+      "//src/storage/fvm",
+      "//zircon/public/lib/fit",
+      "//zircon/public/lib/zxtest",
+    ]
+  }
+}

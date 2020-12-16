@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fvm-host/file-wrapper.h"
+#include "src/storage/fvm/host/file_wrapper.h"
 
 #include <memory>
 

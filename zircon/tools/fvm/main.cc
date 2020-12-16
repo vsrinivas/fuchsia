@@ -14,13 +14,17 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <fvm-host/container.h>
-#include <fvm-host/file-wrapper.h>
-#include <fvm-host/format.h>
 #include <safemath/checked_math.h>
 
 #include "mtd.h"
 #include "range/interval-tree.h"
+#include "src/storage/blobfs/format.h"
+#include "src/storage/fvm/host/container.h"
+#include "src/storage/fvm/host/file_wrapper.h"
+#include "src/storage/fvm/host/format.h"
+#include "src/storage/fvm/host/fvm_container.h"
+#include "src/storage/fvm/host/fvm_reservation.h"
+#include "src/storage/fvm/host/sparse_container.h"
 #include "src/storage/fvm/sparse_reader.h"
 #include "src/storage/volume_image/ftl/ftl_image.h"
 #include "src/storage/volume_image/ftl/ftl_raw_nand_image_writer.h"
