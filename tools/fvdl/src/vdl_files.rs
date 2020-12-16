@@ -31,26 +31,42 @@ pub struct VDLFiles {
 }
 
 impl VDLFiles {
-    pub fn new() -> Result<VDLFiles> {
+    pub fn new(is_sdk: bool) -> Result<VDLFiles> {
         let staging_dir = Builder::new().prefix("vdl_staging_").tempdir()?;
         let staging_dir_path = staging_dir.path().to_owned();
-        let mut vdl_files = VDLFiles {
-            image_files: ImageFiles::from_env()?,
-            host_tools: HostTools::from_env()?,
-            ssh_files: SSHKeys::from_env()?,
-            output_proto: staging_dir_path.join("vdl_proto"),
-            emulator_log: staging_dir_path.join("emu_log"),
-            staging_dir: staging_dir,
-        };
+        if is_sdk {
+            let mut vdl_files = VDLFiles {
+                image_files: ImageFiles::from_sdk_env()?,
+                host_tools: HostTools::from_sdk_env()?,
+                ssh_files: SSHKeys::from_sdk_env()?,
+                output_proto: staging_dir_path.join("vdl_proto"),
+                emulator_log: staging_dir_path.join("emu_log"),
+                staging_dir: staging_dir,
+            };
 
-        vdl_files.image_files.stage_files(&staging_dir_path)?;
-        vdl_files.ssh_files.stage_files(&staging_dir_path)?;
+            vdl_files.image_files.stage_files(&staging_dir_path)?;
+            vdl_files.ssh_files.stage_files(&staging_dir_path)?;
 
-        Ok(vdl_files)
+            Ok(vdl_files)
+        } else {
+            let mut vdl_files = VDLFiles {
+                image_files: ImageFiles::from_tree_env()?,
+                host_tools: HostTools::from_tree_env()?,
+                ssh_files: SSHKeys::from_tree_env()?,
+                output_proto: staging_dir_path.join("vdl_proto"),
+                emulator_log: staging_dir_path.join("emu_log"),
+                staging_dir: staging_dir,
+            };
+
+            vdl_files.image_files.stage_files(&staging_dir_path)?;
+            vdl_files.ssh_files.stage_files(&staging_dir_path)?;
+
+            Ok(vdl_files)
+        }
     }
 
     fn provision_zbi(&self) -> Result<PathBuf> {
-        let zbi_out = self.staging_dir.path().join("qemu_zircona-ed25519");
+        let zbi_out = self.staging_dir.path().join("femu_zircona-ed25519");
         let status = Command::new(&self.host_tools.zbi)
             .arg(format!(
                 "--compressed={}",
@@ -72,18 +88,27 @@ impl VDLFiles {
         }
     }
 
-    fn assemble_system_images(&self) -> Result<String> {
-        return Ok(format!(
-            "{},{},{},{},{},{},{},{}",
-            self.ssh_files.private_key.display(),
-            self.ssh_files.public_key.display(),
-            self.ssh_files.config.display(),
-            self.provision_zbi()?.display(),
-            self.image_files.kernel.display(),
-            self.image_files.fvm.display(),
-            self.image_files.build_args.display(),
-            self.image_files.amber_files.display(),
-        ));
+    fn assemble_system_images(&self, gcs_build_id: &String) -> Result<String> {
+        if gcs_build_id.is_empty() {
+            return Ok(format!(
+                "{},{},{},{},{},{},{},{}",
+                self.ssh_files.private_key.display(),
+                self.ssh_files.public_key.display(),
+                self.ssh_files.config.display(),
+                self.provision_zbi()?.display(),
+                self.image_files.kernel.display(),
+                self.image_files.fvm.display(),
+                self.image_files.build_args.display(),
+                self.image_files.amber_files.display(),
+            ));
+        } else {
+            return Ok(format!(
+                "{},{},{}",
+                self.ssh_files.private_key.display(),
+                self.ssh_files.public_key.display(),
+                self.ssh_files.config.display(),
+            ));
+        }
     }
 
     fn generate_fvd(&self, window_width: &usize, window_height: &usize) -> Result<PathBuf> {
@@ -105,26 +130,55 @@ impl VDLFiles {
     }
 
     /// Launches FEMU, opens an SSH session, and waits for the FEMU instance or SSH session to exit.
-    /// Upon exit, all artifacts stored in <staging_dir> will be deleted.
     pub fn start_emulator(&self, start_command: &StartCommand) -> Result<()> {
+        let vdl_args: VDLArgs = start_command.clone().into();
         let fvd = match &start_command.device_proto {
             Some(proto) => PathBuf::from(proto),
             None => self.generate_fvd(&start_command.window_width, &start_command.window_height)?,
         };
         let aemu = match &start_command.aemu_path {
             Some(aemu_path) => PathBuf::from(aemu_path),
-            None => self.host_tools.aemu.clone(),
+            None => {
+                if self.host_tools.aemu.as_os_str().is_empty() {
+                    self.host_tools
+                        .download_and_extract(
+                            start_command
+                                .aemu_version
+                                .as_ref()
+                                .unwrap_or(&String::from("integration"))
+                                .to_string(),
+                            "aemu".to_string(),
+                        )?
+                        .join("emulator")
+                } else {
+                    self.host_tools.aemu.clone()
+                }
+            }
+        };
+        let grpcwebproxy = match &start_command.grpcwebproxy_path {
+            Some(grpcwebproxy_path) => PathBuf::from(grpcwebproxy_path),
+            None => {
+                if vdl_args.enable_grpcwebproxy && self.host_tools.aemu.as_os_str().is_empty() {
+                    self.host_tools
+                        .download_and_extract(
+                            start_command
+                                .grpcwebproxy_version
+                                .as_ref()
+                                .unwrap_or(&String::from("latest"))
+                                .to_string(),
+                            "grpcwebproxy".to_string(),
+                        )?
+                        .join("emulator")
+                } else {
+                    self.host_tools.grpcwebproxy.clone()
+                }
+            }
         };
         let vdl = match &start_command.vdl_path {
             Some(vdl_path) => PathBuf::from(vdl_path),
             None => self.host_tools.vdl.clone(),
         };
-        let grpcwebproxy = match &start_command.grpcwebproxy_path {
-            Some(grpcwebproxy_path) => PathBuf::from(grpcwebproxy_path),
-            None => self.host_tools.grpcwebproxy.clone(),
-        };
 
-        let vdl_args: VDLArgs = start_command.clone().into();
         let ssh_port = pick_unused_port().unwrap();
 
         // Enable emulator grpc server if running on linux
@@ -145,9 +199,14 @@ impl VDLFiles {
             .arg(&self.host_tools.fvm)
             .arg("--device_finder_tool")
             .arg(&self.host_tools.device_finder)
+            .arg("--zbi_tool")
+            .arg(&self.host_tools.zbi)
             .arg("--grpcwebproxy_tool")
             .arg(&grpcwebproxy)
-            .arg(format!("--system_images={}", self.assemble_system_images()?))
+            .arg(format!(
+                "--system_images={}",
+                self.assemble_system_images(&vdl_args.gcs_build_id)?
+            ))
             .arg(format!("--host_port_map=hostfwd=tcp::{}-:22", ssh_port))
             .arg("--output_launched_device_proto")
             .arg(&self.output_proto)
@@ -165,7 +224,11 @@ impl VDLFiles {
             .arg(format!("--pointing_device={}", vdl_args.pointing_device))
             .arg(format!("--enable_webrtc={}", vdl_args.enable_grpcwebproxy))
             .arg(format!("--grpcwebproxy_port={}", vdl_args.grpcwebproxy_port))
+            .arg(format!("--gcs_bucket={}", vdl_args.gcs_bucket))
+            .arg(format!("--build_id={}", vdl_args.gcs_build_id))
+            .arg(format!("--image_archive={}", vdl_args.gcs_image_archive))
             .arg(format!("--enable_emu_controller={}", enable_emu_controller))
+            .arg(format!("--hidpi_scaling={}", vdl_args.enable_hidpi_scaling))
             .status()?;
         if !status.success() {
             let persistent_emu_log = read_env_path("FUCHSIA_OUT_DIR")

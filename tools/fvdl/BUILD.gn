@@ -14,15 +14,20 @@ if (is_host) {
     test_environments = [ host_env ]
 
     deps = [
+      "//src/lib/fuchsia-async",
+      "//src/lib/fuchsia-hyper:fuchsia-hyper",
       "//third_party/rust_crates:ansi_term-v0_11_0",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:home",
+      "//third_party/rust_crates:hyper",
       "//third_party/rust_crates:tempfile",
-      "//third_party/rust_crates:tracing",
+      "//third_party/rust_crates:zip",
     ]
     source_root = "src/main.rs"
     sources = [
       "src/args.rs",
+      "src/cipd.rs",
       "src/main.rs",
       "src/portpicker.rs",
       "src/types.rs",

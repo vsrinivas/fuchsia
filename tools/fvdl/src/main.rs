@@ -7,22 +7,23 @@ use crate::vdl_files::VDLFiles;
 use anyhow::Result;
 
 mod args;
+mod cipd;
 mod portpicker;
 mod types;
 mod vdl_files;
 
 fn main() -> Result<()> {
-    let Args { command } = argh::from_env();
-    process_command(command)
+    let Args { command, sdk } = argh::from_env();
+    process_command(command, sdk)
 }
 
-fn process_command(command: VDLCommand) -> Result<()> {
+fn process_command(command: VDLCommand, is_sdk: bool) -> Result<()> {
     match command {
         VDLCommand::Start(start_command) => {
-            VDLFiles::new()?.start_emulator(&start_command)?;
+            VDLFiles::new(is_sdk)?.start_emulator(&start_command)?;
         }
         VDLCommand::Kill(stop_command) => {
-            VDLFiles::new()?.stop_vdl(&stop_command)?;
+            VDLFiles::new(is_sdk)?.stop_vdl(&stop_command)?;
         }
     }
     Ok(())
