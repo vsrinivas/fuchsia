@@ -252,106 +252,102 @@ pub fn fake_wpa1_ie(enhanced: bool) -> Vec<u8> {
     ie
 }
 
+fn attach_rsne_header(rsne_body: &[u8]) -> Vec<u8> {
+    let mut ies = vec![48, rsne_body.len() as u8]; // Element Header
+    ies.extend_from_slice(&rsne_body[..]);
+    ies
+}
+
 pub fn fake_wpa2_rsne() -> Vec<u8> {
-    vec![
-        48, 18, // Element header
+    attach_rsne_header(&[
         1, 0, // Version
         0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 2, // 1 AKM: PSK
-    ]
+    ])
 }
 
 pub fn fake_wpa2_legacy_rsne() -> Vec<u8> {
-    vec![
-        48, 18, // Element header
+    attach_rsne_header(&[
         1, 0, // Version
         0x00, 0x0F, 0xAC, 2, // Group Cipher: TKIP
         1, 0, 0x00, 0x0F, 0xAC, 2, // 1 Pairwise Cipher: TKIP
         1, 0, 0x00, 0x0F, 0xAC, 2, // 1 AKM: PSK
-    ]
+    ])
 }
 
 pub fn fake_wpa2_mixed_rsne() -> Vec<u8> {
-    vec![
-        48, 18, // Element header
+    attach_rsne_header(&[
         1, 0, // Version
         0x00, 0x0F, 0xAC, 2, // Group Cipher: TKIP
         2, 0, 0x00, 0x0F, 0xAC, 2, 0x00, 0x0F, 0xAC, 4, // 2 Pairwise Ciphers: TKIP, CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 2, // 1 AKM: PSK
-    ]
+    ])
 }
 
 pub fn fake_wpa2_wpa3_rsne() -> Vec<u8> {
-    vec![
-        48, 18, // Element header
+    attach_rsne_header(&[
         1, 0, // Version
         0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
         2, 0, 0x00, 0x0F, 0xAC, 8, 0x00, 0x0F, 0xAC, 2, // 2 AKM: SAE, PSK
         0x8C, 0x00, // RSN capabilities: MFP capable, 16 PTKSA replay counters
-    ]
+    ])
 }
 
 // Valid except for management frame protection (MFP) required flag being set to true
 pub fn invalid_wpa2_wpa3_rsne() -> Vec<u8> {
-    vec![
-        48, 18, // Element header
+    attach_rsne_header(&[
         1, 0, // Version
         0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
         2, 0, 0x00, 0x0F, 0xAC, 8, 0x00, 0x0F, 0xAC, 2, // 2 AKM: SAE, PSK
         0xCC, 0x00, // RSN capabilities: MFP capable + required, 16 PTKSA replay counters
-    ]
+    ])
 }
 
 pub fn fake_wpa3_rsne() -> Vec<u8> {
-    vec![
-        48, 18, // Element header
+    attach_rsne_header(&[
         1, 0, // Version
         0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 8, // 1 AKM: SAE
         0xCC, 0x00, // RSN capabilities: MFP capable + required, 16 PTKSA replay counters
-    ]
+    ])
 }
 
 pub fn fake_wpa3_transition_rsne() -> Vec<u8> {
-    vec![
-        48, 18, // Element header
+    attach_rsne_header(&[
         1, 0, // Version
         0x00, 0x0F, 0xAC, 2, // Group Cipher: TKIP
         1, 0, 0x00, 0x0F, 0xAC, 4, // Pairwise Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 8, // 1 AKM: SAE
         0xCC, 0x00, // RSN capabilities: MFP capable + required, 16 PTKSA replay counters
-    ]
+    ])
 }
 
 // Valid except for management frame protection (MFP) required flag not being set
 pub fn invalid_wpa3_rsne() -> Vec<u8> {
-    vec![
-        48, 18, // Element header
+    attach_rsne_header(&[
         1, 0, // Version
         0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 8, // 1 AKM: SAE
         0x8C, 0x00, // RSN capabilities: MFP capable, 16 PTKSA replay counters
-    ]
+    ])
 }
 
 pub fn fake_wpa2_enterprise_rsne() -> Vec<u8> {
-    vec![
-        48, 18, // Element header
+    attach_rsne_header(&[
         1, 0, // Version
         0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 1, // 1 AKM: EAP (802.1X)
-    ]
+    ])
 }
 
 pub fn fake_wpa3_enterprise_192_bit_rsne() -> Vec<u8> {
-    vec![
-        48, 18, // Element header
+    attach_rsne_header(&[
         1, 0, // Version
         0x00, 0x0F, 0xAC, 9, // Group Cipher: GCMP-256
         1, 0, 0x00, 0x0F, 0xAC, 9, // 1 Pairwise Cipher: GCMP-256
@@ -359,39 +355,36 @@ pub fn fake_wpa3_enterprise_192_bit_rsne() -> Vec<u8> {
         0xCC, 0x00, // RSN capabilities: MFP capable + required, 16 PTKSA replay counters
         0x00, 0x00, // 0 PMKID
         0x00, 0x0F, 0xAC, 12, // Group Management Cipher: BIP-Gfxbug.dev/12616 (BIP-GCMP-256)
-    ]
+    ])
 }
 
 // Invalid due to group management not being specified (thus defaulting to BIP-CMAC-128, which
 // is not part of WPA3 Enterprise 192-bit)
 pub fn invalid_wpa3_enterprise_192_bit_rsne() -> Vec<u8> {
-    vec![
-        48, 18, // Element header
+    attach_rsne_header(&[
         1, 0, // Version
         0x00, 0x0F, 0xAC, 9, // Group Cipher: GCMP-256
         1, 0, 0x00, 0x0F, 0xAC, 9, // 1 Pairwise Cipher: GCMP-256
         1, 0, 0x00, 0x0F, 0xAC, 12, // 1 AKM: EAP-SUITEB-SHA384 (HMAC-SHA-384)
         0xCC, 0x00, // RSN capabilities: MFP capable + required, 16 PTKSA replay counters
-    ]
+    ])
 }
 
 pub fn fake_eap_rsne() -> Vec<u8> {
-    vec![
-        48, 18, // Element header
+    attach_rsne_header(&[
         1, 0, // Version
         0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 1, // 1 AKM:  802.1X
-    ]
+    ])
 }
 
 // RSNE with AKM that we can't classify into a protection type
 pub fn fake_unknown_rsne() -> Vec<u8> {
-    vec![
-        48, 18, // Element header
+    attach_rsne_header(&[
         1, 0, // Version
         0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
         1, 0, 0x00, 0x0F, 0xAC, 7, // 1 AKM: TDLS
-    ]
+    ])
 }

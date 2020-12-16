@@ -121,7 +121,9 @@ mod tests {
             ie::{
                 self,
                 fake_ies::{fake_ht_cap_bytes, fake_vht_cap_bytes},
+                IeType,
             },
+            test_utils::fake_stas::IesOverrides,
         },
     };
 
@@ -155,21 +157,18 @@ mod tests {
     fn convert_bss() {
         let cfg = ClientConfig::default();
         let bss_desc = fake_bss!(Wpa2,
-                   ssid: vec![],
-                   bssid: [0u8; 6],
-                   rssi_dbm: -30,
-                   snr_db: 0,
-                   chan: fidl_common::WlanChan {
-                       primary: 1,
-                       secondary80: 0,
-                       cbw: fidl_common::Cbw::Cbw20,
-                   },
-                   ht_cap: Some(fidl_internal::HtCapabilities {
-                       bytes: fake_ht_cap_bytes()
-                   }),
-                   vht_cap: Some(fidl_internal::VhtCapabilities {
-                       bytes: fake_vht_cap_bytes()
-                   }),
+            ssid: vec![],
+            bssid: [0u8; 6],
+            rssi_dbm: -30,
+            snr_db: 0,
+            chan: fidl_common::WlanChan {
+                primary: 1,
+                secondary80: 0,
+                cbw: fidl_common::Cbw::Cbw20,
+            },
+            ies_overrides: IesOverrides::new()
+                .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
+                .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
         let bss_info = cfg.convert_bss_description(&bss_desc, None);
 
@@ -195,21 +194,18 @@ mod tests {
         let wmm_param = *ie::parse_wmm_param(&fake_wmm_param().bytes[..])
             .expect("expect WMM param to be parseable");
         let bss_desc = fake_bss!(Wpa2,
-                   ssid: vec![],
-                   bssid: [0u8; 6],
-                   rssi_dbm: -30,
-                   snr_db: 0,
-                   chan: fidl_common::WlanChan {
-                       primary: 1,
-                       secondary80: 0,
-                       cbw: fidl_common::Cbw::Cbw20,
-                   },
-                   ht_cap: Some(fidl_internal::HtCapabilities {
-                       bytes: fake_ht_cap_bytes()
-                   }),
-                   vht_cap: Some(fidl_internal::VhtCapabilities {
-                       bytes: fake_vht_cap_bytes()
-                   }),
+            ssid: vec![],
+            bssid: [0u8; 6],
+            rssi_dbm: -30,
+            snr_db: 0,
+            chan: fidl_common::WlanChan {
+                primary: 1,
+                secondary80: 0,
+                cbw: fidl_common::Cbw::Cbw20,
+            },
+            ies_overrides: IesOverrides::new()
+                .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
+                .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
         let bss_info = cfg.convert_bss_description(&bss_desc, Some(wmm_param));
 
@@ -233,21 +229,18 @@ mod tests {
         );
 
         let bss_desc = fake_bss!(Wep,
-                   ssid: vec![],
-                   bssid: [0u8; 6],
-                   rssi_dbm: -30,
-                   snr_db: 0,
-                   chan: fidl_common::WlanChan {
-                       primary: 1,
-                       secondary80: 0,
-                       cbw: fidl_common::Cbw::Cbw20,
-                   },
-                   ht_cap: Some(fidl_internal::HtCapabilities {
-                       bytes: fake_ht_cap_bytes()
-                   }),
-                   vht_cap: Some(fidl_internal::VhtCapabilities {
-                       bytes: fake_vht_cap_bytes()
-                   }),
+            ssid: vec![],
+            bssid: [0u8; 6],
+            rssi_dbm: -30,
+            snr_db: 0,
+            chan: fidl_common::WlanChan {
+                primary: 1,
+                secondary80: 0,
+                cbw: fidl_common::Cbw::Cbw20,
+            },
+            ies_overrides: IesOverrides::new()
+                .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
+                .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
         let bss_info = cfg.convert_bss_description(&bss_desc, None);
         assert_eq!(
@@ -271,21 +264,18 @@ mod tests {
 
         let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
         let bss_desc = fake_bss!(Wep,
-                   ssid: vec![],
-                   bssid: [0u8; 6],
-                   rssi_dbm: -30,
-                   snr_db: 0,
-                   chan: fidl_common::WlanChan {
-                       primary: 1,
-                       secondary80: 0,
-                       cbw: fidl_common::Cbw::Cbw20,
-                   },
-                   ht_cap: Some(fidl_internal::HtCapabilities {
-                       bytes: fake_ht_cap_bytes()
-                   }),
-                   vht_cap: Some(fidl_internal::VhtCapabilities {
-                       bytes: fake_vht_cap_bytes()
-                   }),
+            ssid: vec![],
+            bssid: [0u8; 6],
+            rssi_dbm: -30,
+            snr_db: 0,
+            chan: fidl_common::WlanChan {
+                primary: 1,
+                secondary80: 0,
+                cbw: fidl_common::Cbw::Cbw20,
+            },
+            ies_overrides: IesOverrides::new()
+                .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
+                .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
         let bss_info = cfg.convert_bss_description(&bss_desc, None);
         assert_eq!(

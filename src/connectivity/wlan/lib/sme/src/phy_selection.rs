@@ -218,7 +218,10 @@ mod tests {
         crate::test_utils::*,
         wlan_common::{
             channel::{Cbw, Channel, Phy},
-            fake_bss, RadioConfig,
+            fake_bss,
+            ie::{fake_ies::fake_vht_op_bytes, IeType},
+            test_utils::fake_stas::IesOverrides,
+            RadioConfig,
         },
     };
 
@@ -344,11 +347,15 @@ mod tests {
         {
             let want = (fidl_common::Phy::Vht, fidl_common::Cbw::Cbw80);
             let got = derive_phy_cbw(
-                &fake_bss!(Open, chan: fidl_common::WlanChan {
-                    primary: 123,
-                    cbw: fidl_common::Cbw::Cbw80P80,
-                    secondary80: 42,
-                }),
+                &fake_bss!(Open,
+                    chan: fidl_common::WlanChan {
+                        primary: 123,
+                        cbw: fidl_common::Cbw::Cbw80P80,
+                        secondary80: 42,
+                    },
+                    ies_overrides: IesOverrides::new()
+                        .set(IeType::VHT_OPERATION, fake_vht_op_bytes().to_vec()),
+                ),
                 &fake_device_info_vht(ChanWidthSet::TWENTY_FORTY),
                 &RadioConfig::default(),
             );
@@ -357,11 +364,15 @@ mod tests {
         {
             let want = (fidl_common::Phy::Ht, fidl_common::Cbw::Cbw40);
             let got = derive_phy_cbw(
-                &fake_bss!(Open, chan: fidl_common::WlanChan {
-                    primary: 123,
-                    cbw: fidl_common::Cbw::Cbw80P80,
-                    secondary80: 42,
-                }),
+                &fake_bss!(Open,
+                    chan: fidl_common::WlanChan {
+                        primary: 123,
+                        cbw: fidl_common::Cbw::Cbw80P80,
+                        secondary80: 42,
+                    },
+                    ies_overrides: IesOverrides::new()
+                        .set(IeType::VHT_OPERATION, fake_vht_op_bytes().to_vec()),
+                ),
                 &fake_device_info_vht(ChanWidthSet::TWENTY_FORTY),
                 &fake_overrider(fidl_common::Phy::Ht, fidl_common::Cbw::Cbw80),
             );
@@ -370,11 +381,15 @@ mod tests {
         {
             let want = (fidl_common::Phy::Ht, fidl_common::Cbw::Cbw20);
             let got = derive_phy_cbw(
-                &fake_bss!(Open, chan: fidl_common::WlanChan {
-                    primary: 123,
-                    cbw: fidl_common::Cbw::Cbw80P80,
-                    secondary80: 42,
-                }),
+                &fake_bss!(Open,
+                    chan: fidl_common::WlanChan {
+                        primary: 123,
+                        cbw: fidl_common::Cbw::Cbw80P80,
+                        secondary80: 42,
+                    },
+                    ies_overrides: IesOverrides::new()
+                        .set(IeType::VHT_OPERATION, fake_vht_op_bytes().to_vec()),
+                ),
                 &fake_device_info_ht(ChanWidthSet::TWENTY_ONLY),
                 &fake_overrider(fidl_common::Phy::Vht, fidl_common::Cbw::Cbw80),
             );

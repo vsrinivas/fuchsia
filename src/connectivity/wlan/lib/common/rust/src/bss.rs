@@ -427,10 +427,16 @@ where
 mod tests {
     use {
         super::*,
-        crate::fake_bss,
-        crate::test_utils::fake_frames::{
-            fake_unknown_rsne, fake_wpa1_ie_body, invalid_wpa2_wpa3_rsne,
-            invalid_wpa3_enterprise_192_bit_rsne, invalid_wpa3_rsne,
+        crate::{
+            fake_bss,
+            ie::IeType,
+            test_utils::{
+                fake_frames::{
+                    fake_unknown_rsne, fake_wpa1_ie_body, invalid_wpa2_wpa3_rsne,
+                    invalid_wpa3_enterprise_192_bit_rsne, invalid_wpa3_rsne,
+                },
+                fake_stas::IesOverrides,
+            },
         },
         fidl_fuchsia_wlan_common as fidl_common,
     };
@@ -491,8 +497,9 @@ mod tests {
     #[test]
     fn test_latest_standard_ac() {
         let bss = fake_bss!(Open,
-                            vht_cap: Some(fidl_internal::VhtCapabilities { bytes: Default::default() }),
-                            vht_op: Some(fidl_internal::VhtOperation { bytes: Default::default() })
+            ies_overrides: IesOverrides::new()
+                .set(IeType::VHT_CAPABILITIES, vec![0; fidl_internal::VHT_CAP_LEN as usize])
+                .set(IeType::VHT_OPERATION, vec![0; fidl_internal::VHT_OP_LEN as usize]),
         );
         assert_eq!(Standard::Dot11Ac, bss.latest_standard());
     }
@@ -500,10 +507,11 @@ mod tests {
     #[test]
     fn test_latest_standard_n() {
         let bss = fake_bss!(Open,
-                            vht_cap: None,
-                            vht_op: None,
-                            ht_cap: Some(fidl_internal::HtCapabilities { bytes: Default::default() }),
-                            ht_op: Some(fidl_internal::HtOperation { bytes: Default::default() }),
+            ies_overrides: IesOverrides::new()
+                .set(IeType::HT_CAPABILITIES, vec![0; fidl_internal::HT_CAP_LEN as usize])
+                .set(IeType::HT_OPERATION, vec![0; fidl_internal::HT_OP_LEN as usize])
+                .remove(IeType::VHT_CAPABILITIES)
+                .remove(IeType::VHT_OPERATION),
         );
         assert_eq!(Standard::Dot11N, bss.latest_standard());
     }
@@ -511,16 +519,17 @@ mod tests {
     #[test]
     fn test_latest_standard_g() {
         let bss = fake_bss!(Open,
-                            vht_cap: None,
-                            vht_op: None,
-                            ht_cap: None,
-                            ht_op: None,
-                            chan: fidl_common::WlanChan {
-                                primary: 1,
-                                secondary80: 0,
-                                cbw: fidl_common::Cbw::Cbw20,
-                            },
-                            rates: vec![12],
+            chan: fidl_common::WlanChan {
+                primary: 1,
+                secondary80: 0,
+                cbw: fidl_common::Cbw::Cbw20,
+            },
+            rates: vec![12],
+            ies_overrides: IesOverrides::new()
+                .remove(IeType::HT_CAPABILITIES)
+                .remove(IeType::HT_OPERATION)
+                .remove(IeType::VHT_CAPABILITIES)
+                .remove(IeType::VHT_OPERATION),
         );
         assert_eq!(Standard::Dot11G, bss.latest_standard());
     }
@@ -528,16 +537,17 @@ mod tests {
     #[test]
     fn test_latest_standard_b() {
         let bss = fake_bss!(Open,
-                            vht_cap: None,
-                            vht_op: None,
-                            ht_cap: None,
-                            ht_op: None,
-                            chan: fidl_common::WlanChan {
-                                primary: 1,
-                                secondary80: 0,
-                                cbw: fidl_common::Cbw::Cbw20,
-                            },
-                            rates: vec![2],
+            chan: fidl_common::WlanChan {
+                primary: 1,
+                secondary80: 0,
+                cbw: fidl_common::Cbw::Cbw20,
+            },
+            rates: vec![2],
+            ies_overrides: IesOverrides::new()
+                .remove(IeType::HT_CAPABILITIES)
+                .remove(IeType::HT_OPERATION)
+                .remove(IeType::VHT_CAPABILITIES)
+                .remove(IeType::VHT_OPERATION),
         );
         assert_eq!(Standard::Dot11B, bss.latest_standard());
     }
@@ -545,16 +555,17 @@ mod tests {
     #[test]
     fn test_latest_standard_b_with_basic() {
         let bss = fake_bss!(Open,
-                            vht_cap: None,
-                            vht_op: None,
-                            ht_cap: None,
-                            ht_op: None,
-                            chan: fidl_common::WlanChan {
-                                primary: 1,
-                                secondary80: 0,
-                                cbw: fidl_common::Cbw::Cbw20,
-                            },
-                            rates: vec![ie::SupportedRate(2).with_basic(true).0],
+            chan: fidl_common::WlanChan {
+                primary: 1,
+                secondary80: 0,
+                cbw: fidl_common::Cbw::Cbw20,
+            },
+            rates: vec![ie::SupportedRate(2).with_basic(true).0],
+            ies_overrides: IesOverrides::new()
+                .remove(IeType::HT_CAPABILITIES)
+                .remove(IeType::HT_OPERATION)
+                .remove(IeType::VHT_CAPABILITIES)
+                .remove(IeType::VHT_OPERATION),
         );
         assert_eq!(Standard::Dot11B, bss.latest_standard());
     }
@@ -562,16 +573,17 @@ mod tests {
     #[test]
     fn test_latest_standard_a() {
         let bss = fake_bss!(Open,
-                            vht_cap: None,
-                            vht_op: None,
-                            ht_cap: None,
-                            ht_op: None,
-                            chan: fidl_common::WlanChan {
-                                primary: 36,
-                                secondary80: 0,
-                                cbw: fidl_common::Cbw::Cbw20,
-                            },
-                            rates: vec![48],
+            chan: fidl_common::WlanChan {
+                primary: 36,
+                secondary80: 0,
+                cbw: fidl_common::Cbw::Cbw20,
+            },
+            rates: vec![48],
+            ies_overrides: IesOverrides::new()
+                .remove(IeType::HT_CAPABILITIES)
+                .remove(IeType::HT_OPERATION)
+                .remove(IeType::VHT_CAPABILITIES)
+                .remove(IeType::VHT_OPERATION),
         );
         assert_eq!(Standard::Dot11A, bss.latest_standard());
     }
