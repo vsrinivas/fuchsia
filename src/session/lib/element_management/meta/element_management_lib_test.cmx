@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/element_management_lib_test"
+        "binary": "bin/element_management_lib_test"
     },
     "sandbox": {
         "services": [
