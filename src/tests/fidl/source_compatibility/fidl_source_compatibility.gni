@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/dart_library.gni")
 import("//build/fidl/fidl.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
@@ -50,6 +51,26 @@ template("_rust_compat") {
     ]
     sources = [ invoker.source ]
     source_root = invoker.source
+  }
+}
+
+# Dart Source Compatibility Test
+template("_dart_compat") {
+  copy_target_name = "${target_name}__copy"
+  dest_dir = get_label_info(":${target_name}", "target_gen_dir") +
+             "/${target_name}_dart_package"
+  dest_file = "${dest_dir}/lib/" + invoker.source
+  copy(copy_target_name) {
+    sources = [ invoker.source ]
+    outputs = [ dest_file ]
+  }
+  dart_library(target_name) {
+    infer_package_name = true
+    package_root = dest_dir
+    sources = [ invoker.source ]
+    deps = [ ":${invoker.fidl}(${dart_toolchain})" ]
+    non_dart_deps = [ ":${copy_target_name}" ]
+    options_file = "//topaz/tools/analysis_options.yaml"
   }
 }
 
@@ -171,6 +192,15 @@ template("source_compatibility_test") {
         template_name = "_rust_compat"
       }
       test_targets += [ ":${target_name}_rust" ]
+    }
+
+    # Dart
+    if (defined(json.dart)) {
+      _source_compat_steps("${target_name}_dart") {
+        steps = json.dart
+        template_name = "_dart_compat"
+      }
+      test_targets += [ ":${target_name}_dart" ]
     }
 
     # Generate documentation
