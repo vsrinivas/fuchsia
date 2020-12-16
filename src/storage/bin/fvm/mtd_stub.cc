@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include "mtd.h"
+#include "src/storage/bin/fvm/mtd.h"
 
 zx_status_t CreateFileWrapperFromMtd(const char* path, uint32_t offset, uint32_t max_bad_blocks,
                                      std::unique_ptr<fvm::host::FileWrapper>* wrapper) {

@@ -11,7 +11,7 @@
 
 #include <fbl/unique_fd.h>
 
-#include "src/storage/blobfs/host.h"
+#include "src/storage/blobfs/format.h"
 #include "src/storage/fvm/host/format.h"
 
 class BlobfsFormat final : public Format {

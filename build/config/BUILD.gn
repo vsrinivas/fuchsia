@@ -850,7 +850,6 @@ config("Wno-conversion") {
     "//zircon/system/utest/msd/*",
     "//zircon/third_party/*",
     "//zircon/tools/blobfs/*",
-    "//zircon/tools/fvm/*",
     "//zircon/tools/ktrace-dump/*",
     "//zircon/tools/lz4/*",
     "//zircon/tools/merkleroot/*",

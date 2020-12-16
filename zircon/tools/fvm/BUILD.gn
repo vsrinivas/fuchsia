@@ -2,51 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxbug.dev/36139.                   #
-##########################################
-
-import("//build/sdk/sdk_host_tool.gni")
-
-executable("fvm") {
-  sources = [ "main.cc" ]
-  deps = [
-    "//src/storage/fvm",
-    "//src/storage/fvm/host",
-    "//src/storage/volume_image/ftl:ftl-image",
-    "//src/storage/volume_image/ftl:ftl-raw-nand-image-writer",
-    "//src/storage/volume_image/ftl:raw-nand-image-utils",
-    "//src/storage/volume_image/fvm:fvm-sparse-image",
-    "//src/storage/volume_image/utils:fd-io",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
-    "//zircon/public/lib/safemath",
-  ]
-
-  if (!is_fuchsia) {
-    deps += [ "//zircon/system/ulib/zx-panic-libc" ]
-  }
-
-  if (current_os == "linux") {
-    sources += [ "mtd.cc" ]
-    deps += [
-      "//zircon/system/ulib/ftl-mtd",
-      "//zircon/system/ulib/mtd",
-    ]
-  } else {
-    sources += [ "mtd-stub.cc" ]
-  }
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
-}
-
-sdk_host_tool("fvm_sdk") {
-  category = "partner"
-  output_name = "fvm"
-  deps = [ ":fvm" ]
+# This target provides a forward for legacy out-of-tree builds that refer to it.
+# TODO(bug 66607): Update users and delete.
+group("fvm") {
+  public_deps = [ "//src/storage/bin/fvm" ]
 }

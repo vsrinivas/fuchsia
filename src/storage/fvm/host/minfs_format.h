@@ -11,6 +11,7 @@
 
 #include "src/storage/blobfs/format.h"
 #include "src/storage/fvm/host/format.h"
+#include "src/storage/minfs/format.h"
 
 class MinfsFormat final : public Format {
  public:

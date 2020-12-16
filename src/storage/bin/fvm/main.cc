@@ -16,8 +16,8 @@
 #include <fbl/auto_call.h>
 #include <safemath/checked_math.h>
 
-#include "mtd.h"
 #include "range/interval-tree.h"
+#include "src/storage/bin/fvm/mtd.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/fvm/host/container.h"
 #include "src/storage/fvm/host/file_wrapper.h"

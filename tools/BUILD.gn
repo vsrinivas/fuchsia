@@ -68,10 +68,10 @@ group("test_infra") {
   # Anything that runs on ARM64 hosts during testing should be here,
   # since in that case the build happens on an X64 host.
   all_host_tools = [
+    "//src/storage/bin/fvm",
     "//tools/bootserver",
     "//tools/botanist",
     "//tools/testing:tools",
-    "//zircon/tools/fvm",
   ]
 
   foreach(tool, linux_x64_only_tools) {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_TOOLS_FVM_MTD_H_
-#define ZIRCON_TOOLS_FVM_MTD_H_
+#ifndef SRC_STORAGE_BIN_FVM_MTD_H_
+#define SRC_STORAGE_BIN_FVM_MTD_H_
 
 #include <memory>
 
@@ -12,4 +12,4 @@
 zx_status_t CreateFileWrapperFromMtd(const char* path, uint32_t offset, uint32_t max_bad_blocks,
                                      std::unique_ptr<fvm::host::FileWrapper>* wrapper);
 
-#endif  // ZIRCON_TOOLS_FVM_MTD_H_
+#endif  // SRC_STORAGE_BIN_FVM_MTD_H_

@@ -1069,8 +1069,8 @@ filesystem_sizes_deps += [
   ":blob.blk",
   ":data.blk",
   ":fvm.sparse.blk",
+  "//src/storage/bin/fvm($host_toolchain)",
   "//zircon/tools/blobfs($host_toolchain)",
-  "//zircon/tools/fvm($host_toolchain)",
   "//zircon/tools/minfs($host_toolchain)",
 ]
 filesystem_sizes_inputs += [
