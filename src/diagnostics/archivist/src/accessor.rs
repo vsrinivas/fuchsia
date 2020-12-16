@@ -10,7 +10,7 @@ use {
         formatter::{new_batcher, FormattedStream, JsonPacketSerializer, JsonString},
         inspect,
         lifecycle::LifecycleServer,
-        repository::Pipeline,
+        pipeline::Pipeline,
     },
     anyhow::format_err,
     diagnostics_data::{Data, DiagnosticsData},

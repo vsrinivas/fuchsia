@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::repository::Pipeline,
+    crate::pipeline::Pipeline,
     diagnostics_data::{Data, LifecycleData},
     futures::prelude::*,
     parking_lot::RwLock,

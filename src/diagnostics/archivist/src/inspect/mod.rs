@@ -7,7 +7,7 @@ use {
         constants,
         container::{ReadSnapshot, SnapshotData},
         diagnostics::ConnectionStats,
-        repository::Pipeline,
+        pipeline::Pipeline,
     },
     anyhow::Error,
     collector::Moniker,

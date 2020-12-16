@@ -15,4 +15,5 @@ pub mod formatter;
 pub mod inspect;
 pub mod lifecycle;
 pub mod logs;
+pub mod pipeline;
 pub mod repository;

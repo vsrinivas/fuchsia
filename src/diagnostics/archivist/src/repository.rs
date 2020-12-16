@@ -7,10 +7,7 @@ use {
         events::types::ComponentIdentifier,
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
         lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
-        logs::{
-            redact::{RedactedItem, Redactor},
-            LogManager, Message,
-        },
+        logs::{LogManager, Message},
     },
     anyhow::{format_err, Error},
     diagnostics_hierarchy::{trie, InspectHierarchyMatcher},
@@ -18,107 +15,13 @@ use {
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fuchsia_zircon as zx,
     futures::prelude::*,
-    io_util,
-    parking_lot::RwLock,
-    selectors,
+    io_util, selectors,
     std::collections::HashMap,
-    std::convert::TryInto,
     std::sync::Arc,
 };
 
-/// Overlay that mediates connections between servers and the central
-/// data repository. The overlay is provided static configurations that
-/// make it unique to a specific pipeline, and uses those static configurations
-/// to offer filtered access to the central repository.
-pub struct Pipeline {
-    static_pipeline_selectors: Option<Vec<Arc<Selector>>>,
-    log_redactor: Arc<Redactor>,
-    moniker_to_static_matcher_map: HashMap<String, InspectHierarchyMatcher>,
-    data_repo: Arc<RwLock<DataRepo>>,
-}
-
-impl Pipeline {
-    pub fn new(
-        static_pipeline_selectors: Option<Vec<Arc<Selector>>>,
-        log_redactor: Redactor,
-        data_repo: Arc<RwLock<DataRepo>>,
-    ) -> Self {
-        Pipeline {
-            moniker_to_static_matcher_map: HashMap::new(),
-            static_pipeline_selectors,
-            log_redactor: Arc::new(log_redactor),
-            data_repo,
-        }
-    }
-
-    #[cfg(test)]
-    pub fn for_test(
-        static_pipeline_selectors: Option<Vec<Arc<Selector>>>,
-        data_repo: Arc<RwLock<DataRepo>>,
-    ) -> Self {
-        Pipeline {
-            moniker_to_static_matcher_map: HashMap::new(),
-            static_pipeline_selectors,
-            log_redactor: Arc::new(Redactor::noop()),
-            data_repo,
-        }
-    }
-
-    pub fn logs(&self, mode: StreamMode) -> impl Stream<Item = RedactedItem<Message>> {
-        let repo = self.data_repo.read();
-        self.log_redactor.clone().redact_stream(repo.log_manager.cursor(mode))
-    }
-
-    pub fn remove(&mut self, component_id: &ComponentIdentifier) {
-        self.moniker_to_static_matcher_map
-            .remove(&component_id.relative_moniker_for_selectors().join("/"));
-    }
-
-    pub fn add_inspect_artifacts(&mut self, identifier: ComponentIdentifier) -> Result<(), Error> {
-        let relative_moniker = identifier.relative_moniker_for_selectors();
-
-        // Update the pipeline wrapper to be aware of the new inspect source if there
-        // are are static selectors for the pipeline, and some of them are applicable to
-        // the inspect source's relative moniker. Otherwise, ignore.
-        if let Some(selectors) = &self.static_pipeline_selectors {
-            let matched_selectors = selectors::match_component_moniker_against_selectors(
-                &relative_moniker,
-                &selectors,
-            )?;
-
-            match &matched_selectors[..] {
-                [] => {}
-                populated_vec => {
-                    let hierarchy_matcher = (populated_vec).try_into()?;
-                    self.moniker_to_static_matcher_map
-                        .insert(relative_moniker.join("/"), hierarchy_matcher);
-                }
-            }
-        }
-        Ok(())
-    }
-
-    pub fn fetch_lifecycle_event_data(&self) -> Vec<LifecycleDataContainer> {
-        self.data_repo.read().fetch_lifecycle_event_data()
-    }
-
-    /// Return all of the DirectoryProxies that contain Inspect hierarchies
-    /// which contain data that should be selected from.
-    pub fn fetch_inspect_data(
-        &self,
-        component_selectors: &Option<Vec<Arc<Selector>>>,
-    ) -> Vec<UnpopulatedInspectDataContainer> {
-        let moniker_to_static_selector_opt =
-            self.static_pipeline_selectors.as_ref().map(|_| &self.moniker_to_static_matcher_map);
-
-        self.data_repo
-            .read()
-            .fetch_inspect_data(component_selectors, moniker_to_static_selector_opt)
-    }
-}
-
-/// DataRepo manages storage of all state needed in order
-/// for the inspect reader to retrieve inspect data when a read is requested.
+/// DataRepo holds all diagnostics data and is a singleton wrapped by multiple
+/// [`pipeline::Pipeline`]s in a given Archivist instance.
 pub struct DataRepo {
     pub data_directories: trie::Trie<String, ComponentDiagnostics>,
     log_manager: LogManager,
@@ -132,6 +35,10 @@ impl DataRepo {
     #[cfg(test)]
     pub fn for_test() -> Self {
         Self::new(LogManager::new())
+    }
+
+    pub fn logs(&self, mode: StreamMode) -> impl Stream<Item = Arc<Message>> {
+        self.log_manager.cursor(mode)
     }
 
     pub fn remove(&mut self, component_id: &ComponentIdentifier) {
@@ -413,6 +320,7 @@ mod tests {
         diagnostics_hierarchy::trie::TrieIterableNode,
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_async as fasync, fuchsia_zircon as zx,
+        parking_lot::RwLock,
     };
 
     const TEST_URL: &'static str = "fuchsia-pkg://test";
