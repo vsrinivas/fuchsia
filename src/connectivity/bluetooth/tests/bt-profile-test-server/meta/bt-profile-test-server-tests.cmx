@@ -11,7 +11,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/bt-profile-test-server-tests"
+        "binary": "bin/bt_profile_test_server_bin_test"
     },
     "sandbox": {
         "services": [
