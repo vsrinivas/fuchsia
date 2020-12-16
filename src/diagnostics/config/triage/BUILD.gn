@@ -31,7 +31,10 @@ triage_files = [
   "timezone.triage",
 ]
 
-detect_files = [ "detect/wlan-detect.triage" ]
+detect_files = [
+  "detect/wlan-detect.triage",
+  "detect/sysmem-detect.triage",
+]
 
 triage_files += detect_files
 
