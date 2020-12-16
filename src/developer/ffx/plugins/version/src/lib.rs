@@ -4,15 +4,18 @@
 
 use {
     anyhow::Result,
+    async_std::future::timeout,
     chrono::{Local, Offset, TimeZone},
     ffx_core::{build_info, ffx_plugin},
     ffx_version_args::VersionCommand,
     fidl_fuchsia_developer_bridge::{self as bridge, VersionInfo},
     std::fmt::Display,
     std::io::Write,
+    std::time::Duration,
 };
 
 const UNKNOWN_BUILD_HASH: &str = "(unknown)";
+const DEFAULT_DAEMON_TIMEOUT_MS: u64 = 1500;
 
 fn format_version_info<O: Offset + Display>(
     header: &str,
@@ -56,13 +59,20 @@ pub async fn version_cmd<W: Write, O: Offset + Display>(
     writeln!(w, "{}", format_version_info("ffx", version_info, cmd.verbose, &tz))?;
 
     if cmd.verbose {
-        let daemon_version_info = match proxy.get_version_info().await {
-            Ok(v) => v,
-            Err(e) => {
-                writeln!(w, "Failed to get daemon version info:\n{}", e)?;
-                return Ok(());
-            }
-        };
+        let daemon_version_info =
+            match timeout(Duration::from_millis(DEFAULT_DAEMON_TIMEOUT_MS), proxy.get_version_info())
+                .await
+            {
+                Ok(Ok(v)) => v,
+                Err(_) => {
+                    writeln!(w, "Timed out trying to get daemon version info")?;
+                    return Ok(());
+                }
+                Ok(Err(e)) => {
+                    writeln!(w, "Failed to get daemon version info:\n{}", e)?;
+                    return Ok(());
+                }
+            };
 
         writeln!(w, "\n{}", format_version_info("daemon", &daemon_version_info, true, &tz))?;
     }
@@ -72,7 +82,15 @@ pub async fn version_cmd<W: Write, O: Offset + Display>(
 #[cfg(test)]
 mod test {
     use {
-        super::*, chrono::Utc, fidl_fuchsia_developer_bridge::DaemonRequest, futures::TryStreamExt,
+        super::*,
+        chrono::Utc,
+        fidl_fuchsia_developer_bridge::DaemonRequest,
+        futures::TryStreamExt,
+        futures::{
+            channel::oneshot::{self, Receiver},
+            future::Shared,
+            FutureExt,
+        },
         std::io::BufWriter,
     };
 
@@ -113,6 +131,27 @@ mod test {
                         } else {
                             return;
                         }
+                    }
+                    _ => assert!(false),
+                }
+                // We should only get one request per stream. We want subsequent calls to fail if more are
+                // made.
+                break;
+            }
+        })
+        .detach();
+
+        proxy
+    }
+
+    fn setup_hanging_daemon_server(waiter: Shared<Receiver<()>>) -> bridge::DaemonProxy {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<bridge::DaemonMarker>().unwrap();
+        fuchsia_async::Task::spawn(async move {
+            while let Ok(Some(req)) = stream.try_next().await {
+                match req {
+                    DaemonRequest::GetVersionInfo { responder: _ } => {
+                        waiter.await.unwrap();
                     }
                     _ => assert!(false),
                 }
@@ -213,6 +252,27 @@ mod test {
                 format!("  commit-time: {}", TIMESTAMP_STR),
                 "Failed to get daemon version info".to_string(),
                 "PEER_CLOSED".to_string(),
+            ],
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_daemon_hangs() -> Result<()> {
+        let (tx, rx) = oneshot::channel::<()>();
+        let proxy = setup_hanging_daemon_server(rx.shared());
+        let output =
+            run_version_test(frontend_info(), proxy, VersionCommand { verbose: true }).await;
+        tx.send(()).unwrap();
+
+        assert_lines(
+            output,
+            vec![
+                "ffx:".to_string(),
+                format!("  build-version: {}", FAKE_FRONTEND_BUILD_VERSION),
+                format!("  commit-hash: {}", FAKE_FRONTEND_HASH),
+                format!("  commit-time: {}", TIMESTAMP_STR),
+                "Timed out".to_string(),
             ],
         );
         Ok(())
