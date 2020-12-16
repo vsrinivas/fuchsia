@@ -95,7 +95,7 @@ pub fn test_security_context() -> Box<dyn SecurityContext> {
     Box::new(overnet_core::SimpleSecurityContext {
         node_cert: "/pkg/data/cert.crt",
         node_private_key: "/pkg/data/cert.key",
-        root_cert: "/pkg/data/root.crt",
+        root_cert: "/pkg/data/rootca.crt",
     })
 }
 

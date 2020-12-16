@@ -24,17 +24,40 @@ pub async fn log_errors(
     }
 }
 
+/// Helper to poll a mutex.
+///
+/// Since Mutex::lock futures keep track of where in queue the lock request is,
+/// this is different to `mutex.lock().poll(ctx)` as that construction will create
+/// a new lock request at each poll.
+/// This can often be useful when we need to poll something that is contained under
+/// this mutex.
+///
+/// Typical usage:
+///   let mut ticket = MutexTicket::new();
+///   poll_fn(|ctx| {
+///     let mutex_guard = ready!(ticket.poll(ctx));
+///     mutex_guard.some_child_future.poll(ctx)
+///   }).await;
+///
+/// What this means:
+///   Attempt to acquire the mutex. If it's not available, wait until it's available.
+///   With the mutex acquired, check some_child_future.
+///   If it's completed, complete the poll_fn.
+///   *If it's not completed* drop the mutex guard (unblock other tasks) and wait for
+///   some_child_future to be awoken.
 #[derive(Debug)]
-pub struct PollMutex<'a, T> {
+pub struct MutexTicket<'a, T> {
     mutex: &'a Mutex<T>,
     lock: Option<MutexLockFuture<'a, T>>,
 }
 
-impl<'a, T> PollMutex<'a, T> {
-    pub fn new(mutex: &'a Mutex<T>) -> PollMutex<'a, T> {
-        PollMutex { mutex, lock: None }
+impl<'a, T> MutexTicket<'a, T> {
+    /// Create a new `MutexTicket`
+    pub fn new(mutex: &'a Mutex<T>) -> MutexTicket<'a, T> {
+        MutexTicket { mutex, lock: None }
     }
 
+    /// Poll once to see if the lock has been acquired.
     pub fn poll(&mut self, ctx: &mut Context<'_>) -> Poll<MutexGuard<'a, T>> {
         let mut lock_fut = match self.lock.take() {
             None => self.mutex.lock(),
@@ -49,6 +72,9 @@ impl<'a, T> PollMutex<'a, T> {
         }
     }
 
+    /// Finish locking. This should be used instead of the Mutex.lock function *if* there
+    /// is a `MutexTicket` constructed already - it may be that said `MutexTicket` has already been
+    /// granted ownership of the Mutex - if this is the case, the Mutex.lock call will never succeed.
     pub async fn lock(&mut self) -> MutexGuard<'a, T> {
         match self.lock.take() {
             None => self.mutex.lock(),
@@ -61,7 +87,7 @@ impl<'a, T> PollMutex<'a, T> {
 #[cfg(test)]
 mod poll_mutex_test {
 
-    use super::PollMutex;
+    use super::MutexTicket;
     use anyhow::{format_err, Error};
     use fuchsia_async::Timer;
     use futures::{
@@ -76,11 +102,11 @@ mod poll_mutex_test {
         time::Duration,
     };
 
-    #[fuchsia_async::run(1, test)]
+    #[fuchsia::test]
     async fn basics(run: usize) {
         let mutex = Mutex::new(run);
         let mut ctx = Context::from_waker(noop_waker_ref());
-        let mut poll_mutex = PollMutex::new(&mutex);
+        let mut poll_mutex = MutexTicket::new(&mutex);
         assert_matches!(poll_mutex.poll(&mut ctx), Poll::Ready(_));
         assert_matches!(poll_mutex.poll(&mut ctx), Poll::Ready(_));
         assert_matches!(poll_mutex.poll(&mut ctx), Poll::Ready(_));
@@ -91,11 +117,11 @@ mod poll_mutex_test {
         assert_matches!(poll_mutex.poll(&mut ctx), Poll::Ready(_));
     }
 
-    #[fuchsia_async::run(1, test)]
+    #[fuchsia::test]
     async fn wakes_up(run: usize) -> Result<(), Error> {
         let mutex = Mutex::new(run);
         let (tx_saw_first_pending, rx_saw_first_pending) = oneshot::channel();
-        let mut poll_mutex = PollMutex::new(&mutex);
+        let mut poll_mutex = MutexTicket::new(&mutex);
         let mutex_guard = mutex.lock().await;
         try_join(
             async move {
@@ -330,7 +356,7 @@ impl<T: Clone + std::fmt::Debug> futures::Stream for Observer<T> {
 mod test {
     use super::*;
 
-    #[fuchsia_async::run(1, test)]
+    #[fuchsia::test]
     async fn observable_basics() {
         let observable = Observable::new(1);
         let mut observer = observable.new_observer();

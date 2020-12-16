@@ -8,7 +8,6 @@
 
 use {
     super::Overnet,
-    crate::{test_util::NodeIdGenerator, NodeId},
     anyhow::{Context as _, Error},
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd, ServiceMarker},
     fidl_fuchsia_overnet::{
@@ -18,15 +17,15 @@ use {
     fidl_fuchsia_overnet_triangletests as triangle, fidl_test_placeholders as echo,
     fuchsia_async::Task,
     futures::prelude::*,
+    overnet_core::{NodeId, NodeIdGenerator},
     std::sync::Arc,
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 // Test scenarios
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn simple_loop(run: usize) -> Result<(), Error> {
-    crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("simple_loop", run);
     // Three nodes, fully connected
     // A creates a channel, passes either end to B, C to do an echo request
@@ -47,9 +46,8 @@ async fn simple_loop(run: usize) -> Result<(), Error> {
     .await
 }
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn simple_flat(run: usize) -> Result<(), Error> {
-    crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("simple_flat", run);
     // Three nodes, connected linearly: C - A - B
     // A creates a channel, passes either end to B, C to do an echo request
@@ -69,9 +67,8 @@ async fn simple_flat(run: usize) -> Result<(), Error> {
     .await
 }
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn full_transfer(run: usize) -> Result<(), Error> {
-    crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("full_transfer", run);
     // Two nodes connected
     // A creates a channel, passes both ends to B to do an echo request
@@ -89,9 +86,8 @@ async fn full_transfer(run: usize) -> Result<(), Error> {
     .await
 }
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn forwarded_twice_to_separate_nodes(run: usize) -> Result<(), Error> {
-    crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("forwarded_twice_to_separate_nodes", run);
     // Five nodes connected in a line: A - B - C - D - E
     // A creates a channel, passes either end to B & C
@@ -124,9 +120,8 @@ async fn forwarded_twice_to_separate_nodes(run: usize) -> Result<(), Error> {
     .await
 }
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn forwarded_twice_full_transfer(run: usize) -> Result<(), Error> {
-    crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("forwarded_twice_full_transfer", run);
     // Four nodes connected in a line: A - B - C - D
     // A creates a channel, passes either end to B & C

@@ -256,6 +256,7 @@ enum SendFrameInner<'a> {
 }
 
 impl<'a> SendFrame<'a> {
+    /// Returns the bytes that should be sent on a link.
     pub fn bytes(&self) -> &[u8] {
         match &self.0 {
             SendFrameInner::FromFrameOutput(g, frame) => {
@@ -267,6 +268,7 @@ impl<'a> SendFrame<'a> {
         }
     }
 
+    /// Returns a mutable reference to the bytes that should be sent on a link.
     pub fn bytes_mut(&mut self) -> &mut [u8] {
         match &mut self.0 {
             SendFrameInner::FromFrameOutput(g, frame) => {
@@ -278,6 +280,7 @@ impl<'a> SendFrame<'a> {
         }
     }
 
+    /// Relinquishes any internally held locks within this object.
     pub fn drop_inner_locks(&mut self) {
         if let SendFrameInner::FromFrameOutput(g, frame) = &self.0 {
             let frame = &g.frames[*frame];

@@ -9,7 +9,6 @@
 
 use {
     super::Overnet,
-    crate::test_util::NodeIdGenerator,
     anyhow::{Context as _, Error},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fuchsia_overnet::{
@@ -19,15 +18,15 @@ use {
     fidl_test_placeholders as echo,
     fuchsia_async::Task,
     futures::prelude::*,
+    overnet_core::NodeIdGenerator,
     std::sync::Arc,
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 // Test scenarios
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn simple(run: usize) -> Result<(), Error> {
-    crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("simple", run);
     let client = Overnet::new(&mut node_id_gen)?;
     let server = Overnet::new(&mut node_id_gen)?;
@@ -35,9 +34,8 @@ async fn simple(run: usize) -> Result<(), Error> {
     run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
 }
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn kilobyte(run: usize) -> Result<(), Error> {
-    crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("kilobyte", run);
     let client = Overnet::new(&mut node_id_gen)?;
     let server = Overnet::new(&mut node_id_gen)?;
@@ -46,9 +44,8 @@ async fn kilobyte(run: usize) -> Result<(), Error> {
         .await
 }
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn quite_large(run: usize) -> Result<(), Error> {
-    crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("quite_large", run);
     let client = Overnet::new(&mut node_id_gen)?;
     let server = Overnet::new(&mut node_id_gen)?;
@@ -57,9 +54,8 @@ async fn quite_large(run: usize) -> Result<(), Error> {
         .await
 }
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn quic(run: usize) -> Result<(), Error> {
-    crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("quic", run);
     let client = Overnet::new(&mut node_id_gen)?;
     let server = Overnet::new(&mut node_id_gen)?;
@@ -67,9 +63,8 @@ async fn quic(run: usize) -> Result<(), Error> {
     run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
 }
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn interspersed_log_messages(run: usize) -> Result<(), Error> {
-    crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("interspersed_log_messages", run);
     let client = Overnet::new(&mut node_id_gen)?;
     let server = Overnet::new(&mut node_id_gen)?;

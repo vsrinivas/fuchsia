@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::future_help::{log_errors, PollMutex};
-use crate::labels::{ConnectionId, Endpoint};
-use crate::link::{LinkReceiver, LinkSender, SendFrame, MAX_FRAME_LENGTH};
-use crate::security_context::quiche_config_from_security_context;
 use anyhow::Error;
 use fuchsia_async::{Task, Timer};
 use futures::future::{poll_fn, Either};
 use futures::lock::Mutex;
 use futures::ready;
+use overnet_core::{
+    log_errors, ConnectionId, Endpoint, LinkReceiver, LinkSender, MutexTicket, SendFrame,
+    MAX_FRAME_LENGTH,
+};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
@@ -100,7 +100,7 @@ async fn poll_quic<R>(
     quic: &Mutex<Quic>,
     mut f: impl FnMut(&mut Quic, &mut Context<'_>) -> Poll<R>,
 ) -> R {
-    let mut lock = PollMutex::new(quic);
+    let mut lock = MutexTicket::new(quic);
     poll_fn(|ctx| {
         let mut guard = ready!(lock.poll(ctx));
         f(&mut *guard, ctx)
@@ -115,8 +115,7 @@ pub async fn new_quic_link(
     endpoint: Endpoint,
 ) -> Result<(QuicSender, QuicReceiver, ConnectionId), Error> {
     let scid = ConnectionId::new();
-    let mut config =
-        quiche_config_from_security_context(sender.router().security_context()).await?;
+    let mut config = sender.router().new_quiche_config().await?;
     config.set_application_protos(b"\x10overnet.link/0.2")?;
     config.set_initial_max_data(0);
     config.set_initial_max_stream_data_bidi_local(0);
@@ -247,7 +246,7 @@ async fn quic_to_link(mut link: LinkReceiver, quic: Arc<Mutex<Quic>>) -> Result<
 }
 
 async fn check_timers(quic: Arc<Mutex<Quic>>) -> Result<(), Error> {
-    let mut poll_mutex = PollMutex::new(&*quic);
+    let mut poll_mutex = MutexTicket::new(&*quic);
     const A_VERY_LONG_TIME: Duration = Duration::from_secs(10000);
     let timer_for_timeout = move |timeout: Option<Instant>| {
         Timer::new(timeout.unwrap_or_else(|| Instant::now() + A_VERY_LONG_TIME))

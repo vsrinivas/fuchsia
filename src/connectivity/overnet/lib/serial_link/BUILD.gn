@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("serial_link") {
   with_unit_tests = true
@@ -48,30 +47,11 @@ rustc_library("serial_link") {
   ]
 }
 
-test_package("overnet-serial-link-tests") {
-  deps = [ ":serial_link_test" ]
-
-  tests = [
-    {
-      name = "serial_link_lib_test"
-      environments = basic_envs
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("//third_party/rust-mirrors/quiche/examples/cert.crt")
-      dest = "cert.crt"
-    },
-    {
-      path = rebase_path("//third_party/rust-mirrors/quiche/examples/cert.key")
-      dest = "cert.key"
-    },
-    {
-      path =
-          rebase_path("//third_party/rust-mirrors/quiche/examples/rootca.crt")
-      dest = "root.crt"
-    },
+fuchsia_unittest_package("overnet-serial-link-tests") {
+  manifest = "meta/serial_link_lib_test.cmx"
+  deps = [
+    ":serial_link_test",
+    "//src/connectivity/overnet/overnetstack:certificates",
   ]
 }
 

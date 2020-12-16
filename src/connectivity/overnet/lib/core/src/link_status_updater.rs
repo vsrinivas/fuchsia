@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    future_help::{Observable, Observer, PollMutex},
+    future_help::{MutexTicket, Observable, Observer},
     labels::{NodeId, NodeLinkId},
     routes::LinkMetrics,
 };
@@ -34,7 +34,7 @@ pub(crate) async fn run_link_status_updater(
     let recv_state = Arc::new(Mutex::new(RecvState { incoming: Vec::new(), waker: None }));
     let publisher_recv_state = recv_state.clone();
     let _publisher = Task::spawn(async move {
-        let mut poll_mutex = PollMutex::new(&publisher_recv_state);
+        let mut poll_mutex = MutexTicket::new(&publisher_recv_state);
         let mut link_status = HashMap::<NodeLinkId, (NodeId, Option<Duration>)>::new();
         loop {
             poll_fn(|ctx| {

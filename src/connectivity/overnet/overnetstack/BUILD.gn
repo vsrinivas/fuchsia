@@ -24,6 +24,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
     "//src/connectivity/overnet/lib/core",
     "//src/connectivity/overnet/lib/serial_link",
+    "//src/connectivity/overnet/lib/udp_link",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
@@ -43,7 +44,6 @@ rustc_binary("bin") {
     "src/main.rs",
     "src/mdns.rs",
     "src/serial.rs",
-    "src/udp.rs",
   ]
 }
 

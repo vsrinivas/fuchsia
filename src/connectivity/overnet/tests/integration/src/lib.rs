@@ -12,16 +12,15 @@ mod echo;
 mod triangle;
 
 use {
-    crate::test_util::NodeIdGenerator,
-    crate::{
-        log_errors, new_quic_link, Endpoint, LinkReceiver, LinkSender, ListPeersContext, NodeId,
-        QuicReceiver, Router,
-    },
     anyhow::Error,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_overnet::{Peer, ServiceProviderMarker},
     fuchsia_async::Task,
     futures::prelude::*,
+    overnet_core::{
+        log_errors, Endpoint, LinkReceiver, LinkSender, ListPeersContext, NodeId, NodeIdGenerator,
+        Router,
+    },
     parking_lot::Mutex,
     std::collections::VecDeque,
     std::pin::Pin,
@@ -29,6 +28,7 @@ use {
         atomic::{AtomicU64, Ordering},
         Arc,
     },
+    udp_link::{new_quic_link, QuicReceiver},
 };
 
 pub use fidl_fuchsia_overnet::MeshControllerProxyInterface;

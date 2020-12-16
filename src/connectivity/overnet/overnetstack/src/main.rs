@@ -8,7 +8,6 @@
 
 mod mdns;
 mod serial;
-mod udp;
 
 use anyhow::Error;
 use argh::FromArgs;
@@ -173,7 +172,7 @@ async fn main(opt: Opts) -> Result<(), Error> {
         maybe_run_subsystem(
             opt.udp,
             "UDP",
-            crate::udp::run_udp(Arc::downgrade(&node), rx_new_conn, tx_addr),
+            udp_link::run_udp(Arc::downgrade(&node), rx_new_conn, tx_addr),
         ),
         // MDNS
         maybe_run_subsystem(

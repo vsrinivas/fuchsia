@@ -7,18 +7,17 @@
 #![cfg(test)]
 
 use super::{connect, Overnet};
-use crate::test_util::NodeIdGenerator;
 use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_overnet::{
     ServiceConsumerProxyInterface, ServiceProviderRequest, ServicePublisherProxyInterface,
 };
 use fuchsia_zircon_status as zx_status;
 use futures::prelude::*;
+use overnet_core::NodeIdGenerator;
 use std::sync::Arc;
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn drop_connection_2node(run: usize) -> Result<(), Error> {
-    crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("drop_connection_2node", run);
     // Two nodes, connected A->B.
     // Create a channel from A->B, then drop A.
@@ -29,9 +28,8 @@ async fn drop_connection_2node(run: usize) -> Result<(), Error> {
     run_drop_test(a, b).await
 }
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn drop_connection_3node(run: usize) -> Result<(), Error> {
-    crate::test_util::init();
     let mut node_id_gen = NodeIdGenerator::new("drop_connection_3node", run);
     // Three nodes, connected A->B->C.
     // Create a channel from A->C, then drop A.

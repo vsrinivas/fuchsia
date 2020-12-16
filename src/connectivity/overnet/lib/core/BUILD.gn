@@ -2,12 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
+import("//src/sys/build/components.gni")
 
 CORE_DEPS = [
   "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
@@ -48,11 +47,9 @@ CORE_SOURCES = [
   "src/async_quic.rs",
   "src/coding.rs",
   "src/diagnostics_service.rs",
-  "src/fidl_tests/mod.rs",
   "src/framed_stream.rs",
   "src/future_help.rs",
   "src/handle_info.rs",
-  "src/integration_tests/mod.rs",
   "src/labels.rs",
   "src/lib.rs",
   "src/link.rs",
@@ -68,7 +65,6 @@ CORE_SOURCES = [
   "src/proxyable_handle.rs",
   "src/proxyable_handle/channel.rs",
   "src/proxyable_handle/socket.rs",
-  "src/quic_link.rs",
   "src/router.rs",
   "src/routes.rs",
   "src/security_context.rs",
@@ -76,13 +72,13 @@ CORE_SOURCES = [
   "src/socket_link.rs",
   "src/stat_counter.rs",
   "src/stream_framer.rs",
+  "src/test_util.rs",
 ]
 
 rustc_library("core") {
   name = "overnet_core"
   edition = "2018"
   deps = CORE_DEPS
-
   sources = CORE_SOURCES
 }
 
@@ -91,26 +87,15 @@ rustc_test("core_test") {
   edition = "2018"
 
   deps = CORE_DEPS + [
-           ":triangle-rustc",
-           "//src/testing/fidl:placeholders-rustc",
-           "//src/lib/fidl/rust/handle_tests:fidl_handle_tests",
            "//third_party/rust_crates:arbitrary",
-           "//third_party/rust_crates:async-trait",
+           "//src/lib/fuchsia",
          ]
 
   if (is_host) {
     deps += [ ":test_certs" ]
     args = [ "--test-threads=1" ]
   }
-  sources = CORE_SOURCES + [
-              "src/fidl_tests/channel.rs",
-              "src/fidl_tests/socket.rs",
-              "src/integration_tests/drop.rs",
-              "src/integration_tests/echo.rs",
-              "src/integration_tests/mod.rs",
-              "src/integration_tests/triangle.rs",
-              "src/test_util.rs",
-            ]
+  sources = CORE_SOURCES
 }
 
 if (is_host) {
@@ -125,31 +110,11 @@ if (is_host) {
   }
 }
 
-unittest_package("overnet-core-tests") {
-  deps = [ ":core_test" ]
-
-  tests = [
-    {
-      name = "overnet_core_test"
-      environments = [ emu_env ]
-    },
-  ]
-
-  # Use quiche example certs for unit tests.
-  resources = [
-    {
-      path = rebase_path("//third_party/rust-mirrors/quiche/examples/cert.crt")
-      dest = "cert.crt"
-    },
-    {
-      path = rebase_path("//third_party/rust-mirrors/quiche/examples/cert.key")
-      dest = "cert.key"
-    },
-    {
-      path =
-          rebase_path("//third_party/rust-mirrors/quiche/examples/rootca.crt")
-      dest = "rootca.crt"
-    },
+fuchsia_unittest_package("overnet-core-tests") {
+  manifest = "meta/overnet_core_lib_test.cmx"
+  deps = [
+    ":core_test",
+    "//src/connectivity/overnet/overnetstack:certificates",
   ]
 }
 
@@ -159,15 +124,4 @@ group("tests") {
     ":core_test($host_toolchain)",
     ":overnet-core-tests",
   ]
-}
-
-fidl("triangle") {
-  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "too-many-nested-libraries" ]
-
-  name = "fuchsia.overnet.triangletests"
-
-  sources = [ "src/integration_tests/triangle.test.fidl" ]
-
-  public_deps = [ "//src/testing/fidl:placeholders" ]
 }

@@ -82,7 +82,8 @@ pub(crate) fn generate_transfer_key() -> TransferKey {
 pub struct ConnectionId([u8; quiche::MAX_CONN_ID_LEN]);
 
 impl ConnectionId {
-    pub(crate) fn new() -> Self {
+    /// Create a new (random) ConnectionId
+    pub fn new() -> Self {
         ConnectionId(rand::thread_rng().gen())
     }
 
@@ -90,7 +91,8 @@ impl ConnectionId {
         Ok(ConnectionId(slice.try_into()?))
     }
 
-    pub(crate) fn to_array(&self) -> [u8; quiche::MAX_CONN_ID_LEN] {
+    /// Convert this ConnectionId into an array of bytes
+    pub fn to_array(&self) -> [u8; quiche::MAX_CONN_ID_LEN] {
         self.0
     }
 }

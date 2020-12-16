@@ -8,7 +8,7 @@ use crate::{
     },
     coding::{decode_fidl, encode_fidl},
     framed_stream::{FrameType, FramedStreamReader, FramedStreamWriter, MessageStats},
-    future_help::{Observer, PollMutex},
+    future_help::{MutexTicket, Observer},
     labels::{ConnectionId, Endpoint, NodeId, TransferKey},
     link::{LinkRouting, OutputQueue},
     link_frame_label::{RoutingDestination, RoutingTarget},
@@ -130,7 +130,7 @@ struct OneSend<'a> {
 enum OneSendState<'a> {
     Idle,
     LockingLink(CutexTicket<'a, 'static, OutputQueue>),
-    LockingConn(CutexGuard<'a, OutputQueue>, PollMutex<'a, ConnState>),
+    LockingConn(CutexGuard<'a, OutputQueue>, MutexTicket<'a, ConnState>),
 }
 
 impl<'a> OneSend<'a> {
@@ -179,7 +179,7 @@ impl<'a> OneSend<'a> {
         &mut self,
         ctx: &mut Context<'_>,
         mut cutex_guard: CutexGuard<'a, OutputQueue>,
-        mut poll_mutex: PollMutex<'a, ConnState>,
+        mut poll_mutex: MutexTicket<'a, ConnState>,
     ) -> Poll<Result<(), Error>> {
         match poll_mutex.poll(ctx) {
             Poll::Pending => {

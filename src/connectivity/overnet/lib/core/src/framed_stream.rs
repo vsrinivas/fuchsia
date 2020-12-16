@@ -269,20 +269,20 @@ mod test {
         assert_eq!(h, FrameHeader::from_bytes(&h.to_bytes().unwrap()).unwrap());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn roundtrips() {
         roundtrip(FrameHeader { frame_type: FrameType::Data, length: 0 });
         roundtrip(FrameHeader { frame_type: FrameType::Data, length: std::u32::MAX as usize });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn too_long() {
         FrameHeader { frame_type: FrameType::Data, length: (std::u32::MAX as usize) + 1 }
             .to_bytes()
             .expect_err("Should fail");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn bad_frame_type() {
         assert!(format!(
             "{}",

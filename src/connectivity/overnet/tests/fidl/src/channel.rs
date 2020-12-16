@@ -5,9 +5,9 @@
 #![cfg(test)]
 
 use super::{Fixture, Target};
-use crate::test_util::NodeIdGenerator;
 use async_trait::async_trait;
 use fidl_handle_tests::{channel, LoggingFixture};
+use overnet_core::NodeIdGenerator;
 
 struct ChanFixture {
     fixture: Fixture,
@@ -43,9 +43,8 @@ impl LoggingFixture for ChanFixture {
     }
 }
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn fidl_channel_tests_no_transfer(run: usize) {
-    crate::test_util::init();
     let node_id_gen = NodeIdGenerator::new("fidl_channel_tests_no_transfer", run);
     let fixture = ChanFixture::new(node_id_gen, |purpose| match purpose {
         channel::CreateHandlePurpose::PrimaryTestChannel => Target::B,
@@ -55,17 +54,15 @@ async fn fidl_channel_tests_no_transfer(run: usize) {
     channel::run(fixture).await
 }
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn fidl_channel_tests_all_to_b(run: usize) {
-    crate::test_util::init();
     let node_id_gen = NodeIdGenerator::new("fidl_channel_tests_all_to_b", run);
     let fixture = ChanFixture::new(node_id_gen, |_| Target::B).await;
     channel::run(fixture).await
 }
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn fidl_channel_tests_b_then_c(run: usize) {
-    crate::test_util::init();
     let node_id_gen = NodeIdGenerator::new("fidl_channel_tests_b_then_c", run);
     let fixture = ChanFixture::new(node_id_gen, |purpose| match purpose {
         channel::CreateHandlePurpose::PrimaryTestChannel => Target::B,

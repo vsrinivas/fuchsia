@@ -2,73 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(test)]
-
 use crate::labels::NodeId;
 use crate::security_context::SecurityContext;
 use anyhow::Error;
 use std::sync::Arc;
-use std::sync::Once;
 
-const LOG_LEVEL: log::Level = log::Level::Info;
-const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
-
-struct Logger;
-
-fn short_log_level(level: &log::Level) -> &'static str {
-    match *level {
-        log::Level::Error => "E",
-        log::Level::Warn => "W",
-        log::Level::Info => "I",
-        log::Level::Debug => "D",
-        log::Level::Trace => "T",
-    }
-}
-
-impl log::Log for Logger {
-    fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
-        metadata.level() <= LOG_LEVEL
-    }
-
-    fn log(&self, record: &log::Record<'_>) {
-        if self.enabled(record.metadata()) {
-            let msg = format!(
-                "{:?} {:?} {} {} [{}]: {}",
-                std::time::Instant::now(),
-                std::thread::current().id(),
-                record.target(),
-                record
-                    .file()
-                    .map(|file| {
-                        if let Some(line) = record.line() {
-                            format!("{}:{}: ", file, line)
-                        } else {
-                            format!("{}: ", file)
-                        }
-                    })
-                    .unwrap_or(String::new()),
-                short_log_level(&record.level()),
-                record.args()
-            );
-            let _ = std::panic::catch_unwind(|| {
-                println!("{}", msg);
-            });
-        }
-    }
-
-    fn flush(&self) {}
-}
-
-static LOGGER: Logger = Logger;
-static START: Once = Once::new();
-
-pub fn init() {
-    START.call_once(|| {
-        log::set_logger(&LOGGER).unwrap();
-        log::set_max_level(MAX_LOG_LEVEL);
-    })
-}
-
+/// Generates node id's for tests in a repeatable fashion.
 pub struct NodeIdGenerator {
     test_id: u64,
     test_name: &'static str,
@@ -89,6 +28,7 @@ impl Iterator for NodeIdGenerator {
 }
 
 impl NodeIdGenerator {
+    /// Create a new generator; uses the test name as salt for the node id's generated.
     pub fn new(test_name: &'static str, run: usize) -> NodeIdGenerator {
         NodeIdGenerator {
             test_id: crc::crc16::checksum_x25(test_name.as_bytes()) as u64,
@@ -98,6 +38,7 @@ impl NodeIdGenerator {
         }
     }
 
+    /// Create a new router with a unique (within this test run) node id.
     pub fn new_router(&mut self) -> Result<Arc<crate::router::Router>, Error> {
         crate::router::Router::new(
             crate::router::RouterOptions::new()
@@ -106,15 +47,29 @@ impl NodeIdGenerator {
         )
     }
 
+    /// Returns a string describing this test (including the base node id so it can be grepped).
     pub fn test_desc(&self) -> String {
         format!("({}) {}", self.node_id(0).0, self.test_name)
     }
 
+    /// Generate the `idx` node id in this set.
     pub fn node_id(&self, idx: u64) -> NodeId {
         (self.test_id * 10000 * 100000 + self.run * 10000 + idx).into()
     }
 }
 
+#[cfg(test)]
+mod test {
+
+    #[fuchsia::test]
+    fn node_id_generator_works() {
+        let n = super::NodeIdGenerator::new("foo", 3);
+        assert_eq!(n.node_id(1), 26676000030001.into());
+        assert_eq!(&n.test_desc(), "(26676000030000) foo");
+    }
+}
+
+/// Create a security context that can be used for testing.
 pub fn test_security_context() -> impl SecurityContext {
     #[cfg(not(target_os = "fuchsia"))]
     let path_for = |name| {

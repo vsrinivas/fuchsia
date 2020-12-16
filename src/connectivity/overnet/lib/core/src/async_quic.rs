@@ -4,7 +4,7 @@
 
 //! Async wrapper around QUIC
 
-use crate::future_help::{LockInner, PollMutex, PollWeakMutex};
+use crate::future_help::{LockInner, MutexTicket, PollWeakMutex};
 use crate::labels::{Endpoint, NodeId};
 use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_overnet_protocol::StreamId;
@@ -210,8 +210,8 @@ impl AsyncConnection {
         io.wake_conn_send();
     }
 
-    pub fn poll_lock_state<'a>(&'a self) -> PollMutex<'a, ConnState> {
-        PollMutex::new(&self.0.io)
+    pub fn poll_lock_state<'a>(&'a self) -> MutexTicket<'a, ConnState> {
+        MutexTicket::new(&self.0.io)
     }
 
     #[allow(dead_code)]
@@ -386,7 +386,7 @@ impl AsyncQuicStreamWriter {
             fin,
             n: 0,
             sent_fin: &mut self.sent_fin,
-            io_lock: PollMutex::new(&self.conn.0.io),
+            io_lock: MutexTicket::new(&self.conn.0.io),
         }
         .await
     }
@@ -423,7 +423,7 @@ pub struct QuicSend<'b> {
     n: usize,
     fin: bool,
     sent_fin: &'b mut bool,
-    io_lock: PollMutex<'b, ConnState>,
+    io_lock: MutexTicket<'b, ConnState>,
 }
 
 impl<'b> QuicSend<'b> {
@@ -492,7 +492,7 @@ impl AsyncQuicStreamReader {
             buffered: &mut self.buffered,
             bytes: bytes.into(),
             bytes_offset: 0,
-            io_lock: PollMutex::new(&self.conn.0.io),
+            io_lock: MutexTicket::new(&self.conn.0.io),
         }
     }
 
@@ -645,7 +645,7 @@ pub struct QuicRead<'b> {
     conn: &'b AsyncConnectionInner,
     bytes: ReadBuf<'b>,
     bytes_offset: usize,
-    io_lock: PollMutex<'b, ConnState>,
+    io_lock: MutexTicket<'b, ConnState>,
 }
 
 impl<'b> QuicRead<'b> {
@@ -794,7 +794,6 @@ pub(crate) mod test_util {
         run: usize,
         f: F,
     ) {
-        crate::test_util::init();
         let mut node_id_gen = NodeIdGenerator::new(name, run);
         let cli_id = node_id_gen.next().unwrap();
         let svr_id = node_id_gen.next().unwrap();
@@ -843,7 +842,7 @@ mod test {
     use super::test_util::run_client_server;
     use super::StreamProperties;
 
-    #[fuchsia_async::run(1, test)]
+    #[fuchsia::test]
     async fn simple_send(run: usize) {
         run_client_server("simple_send", run, |client, server| async move {
             let (mut cli_tx, _cli_rx) = client.alloc_bidi();
@@ -859,7 +858,7 @@ mod test {
         .await
     }
 
-    #[fuchsia_async::run(1, test)]
+    #[fuchsia::test]
     async fn send_fin(run: usize) {
         run_client_server("send_fin", run, |client, server| async move {
             let (mut cli_tx, _cli_rx) = client.alloc_bidi();
@@ -875,7 +874,7 @@ mod test {
         .await
     }
 
-    #[fuchsia_async::run(1, test)]
+    #[fuchsia::test]
     async fn recv_before_send(run: usize) {
         run_client_server("recv_before_send", run, |client, server| async move {
             let (mut cli_tx, _cli_rx) = client.alloc_bidi();

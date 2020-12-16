@@ -190,7 +190,7 @@ impl PingTracker {
 mod test {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn published_mean_updates() {
         let mut pt = PingTracker::new();
         assert!(pt.needs_send());

@@ -4,15 +4,11 @@
 
 #![cfg(test)]
 
-use crate::future_help::log_errors;
-use crate::labels::NodeId;
-use crate::link::{LinkReceiver, LinkSender};
-use crate::router::Router;
-use crate::test_util::NodeIdGenerator;
 use anyhow::Error;
 use fidl::HandleBased;
 use fuchsia_async::Task;
 use futures::prelude::*;
+use overnet_core::{log_errors, LinkReceiver, LinkSender, NodeId, NodeIdGenerator, Router};
 use std::sync::{
     atomic::{AtomicU64, Ordering},
     Arc,
@@ -94,17 +90,20 @@ impl Fixture {
         let (send_handle, mut recv_handle) = futures::channel::mpsc::channel(1);
         log::info!("{} {} register 2", test_name, fixture_id);
         router2
-            .service_map()
-            .register_service(
+            .register_raw_service(
                 service.clone(),
                 Box::new(Service(send_handle.clone(), test_name.clone())),
             )
-            .await;
+            .await
+            .unwrap();
         log::info!("{} {} register 3", test_name, fixture_id);
         router3
-            .service_map()
-            .register_service(service.clone(), Box::new(Service(send_handle, test_name.clone())))
-            .await;
+            .register_raw_service(
+                service.clone(),
+                Box::new(Service(send_handle, test_name.clone())),
+            )
+            .await
+            .unwrap();
         // Wait til we can see both peers in the service map before progressing.
         let lpc = router1.new_list_peers_context();
         loop {

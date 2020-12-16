@@ -4,7 +4,7 @@
 
 //! Handles framing/deframing of stream links
 
-use crate::future_help::PollMutex;
+use crate::future_help::MutexTicket;
 use anyhow::{format_err, Error};
 use byteorder::WriteBytesExt;
 use crc::crc32;
@@ -135,7 +135,7 @@ impl<Fmt: Format> FramerWriter<Fmt> {
         &self,
         ctx: &mut Context<'_>,
         bytes: &[u8],
-        lock: &mut PollMutex<'_, Outgoing>,
+        lock: &mut MutexTicket<'_, Outgoing>,
     ) -> Poll<Result<(), Error>> {
         let mut outgoing = ready!(lock.poll(ctx));
         match std::mem::replace(&mut *outgoing, Outgoing::Closed) {
@@ -161,7 +161,7 @@ impl<Fmt: Format> FramerWriter<Fmt> {
 
     /// Write a frame into the framer.
     pub async fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
-        let mut lock = PollMutex::new(&self.framer.outgoing);
+        let mut lock = MutexTicket::new(&self.framer.outgoing);
         poll_fn(|ctx| self.poll_write(ctx, bytes, &mut lock)).await
     }
 }
@@ -181,7 +181,7 @@ impl<Fmt: Format> FramerReader<Fmt> {
     fn poll_read(
         &self,
         ctx: &mut Context<'_>,
-        lock: &mut PollMutex<'_, Outgoing>,
+        lock: &mut MutexTicket<'_, Outgoing>,
     ) -> Poll<Result<Vec<u8>, Error>> {
         let mut outgoing = ready!(lock.poll(ctx));
         match std::mem::replace(&mut *outgoing, Outgoing::Closed) {
@@ -209,7 +209,7 @@ impl<Fmt: Format> FramerReader<Fmt> {
 
     /// Read framed bytes out of the framer.
     pub async fn read(&mut self) -> Result<Vec<u8>, Error> {
-        let mut lock = PollMutex::new(&self.framer.outgoing);
+        let mut lock = MutexTicket::new(&self.framer.outgoing);
         poll_fn(|ctx| self.poll_read(ctx, &mut lock)).await
     }
 }
@@ -331,7 +331,7 @@ impl<Fmt: Format> DeframerWriter<Fmt> {
         &self,
         ctx: &mut Context<'_>,
         bytes: &[u8],
-        lock: &mut PollMutex<'_, Incoming>,
+        lock: &mut MutexTicket<'_, Incoming>,
     ) -> Poll<Result<(), Error>> {
         let mut incoming = ready!(lock.poll(ctx));
         match std::mem::replace(&mut *incoming, Incoming::Closed) {
@@ -358,7 +358,7 @@ impl<Fmt: Format> DeframerWriter<Fmt> {
         if bytes.is_empty() {
             return Ok(());
         }
-        let mut lock = PollMutex::new(&self.deframer.incoming);
+        let mut lock = MutexTicket::new(&self.deframer.incoming);
         poll_fn(|ctx| self.poll_write(ctx, bytes, &mut lock)).await
     }
 }
@@ -387,7 +387,7 @@ impl<Fmt: Format> DeframerReader<Fmt> {
     fn poll_read(
         &self,
         ctx: &mut Context<'_>,
-        lock: &mut PollMutex<'_, Incoming>,
+        lock: &mut MutexTicket<'_, Incoming>,
     ) -> Poll<Result<ReadBytes, Error>> {
         let mut incoming = ready!(lock.poll(ctx));
         loop {
@@ -463,7 +463,7 @@ impl<Fmt: Format> DeframerReader<Fmt> {
 
     /// Read one frame from the deframer.
     pub async fn read(&mut self) -> Result<ReadBytes, Error> {
-        let mut lock = PollMutex::new(&self.deframer.incoming);
+        let mut lock = MutexTicket::new(&self.deframer.incoming);
         poll_fn(|ctx| self.poll_read(ctx, &mut lock)).await
     }
 }

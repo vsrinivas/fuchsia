@@ -22,7 +22,7 @@ use crate::{
     async_quic::{AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, StreamProperties},
     diagnostics_service::run_diagostic_service_request_handler,
     framed_stream::MessageStats,
-    future_help::{log_errors, Observable, Observer, PollMutex},
+    future_help::{log_errors, MutexTicket, Observable, Observer},
     handle_info::{handle_info, HandleKey, HandleType},
     labels::{ConnectionId, Endpoint, NodeId, NodeLinkId, TransferKey},
     link::{new_link, LinkReceiver, LinkRouting, LinkSender},
@@ -37,7 +37,7 @@ use crate::{
 };
 use anyhow::{bail, format_err, Context as _, Error};
 use fidl::{endpoints::ClientEnd, AsHandleRef, Channel, Handle, HandleBased, Socket, SocketOpts};
-use fidl_fuchsia_overnet::{ConnectionInfo, ServiceProviderMarker};
+use fidl_fuchsia_overnet::{ConnectionInfo, ServiceProviderMarker, ServiceProviderProxyInterface};
 use fidl_fuchsia_overnet_protocol::{
     ChannelHandle, LinkDiagnosticInfo, PeerConnectionDiagnosticInfo, RouteMetrics, SocketHandle,
     SocketType, StreamId, StreamRef, ZirconHandle,
@@ -444,7 +444,16 @@ impl Router {
         service_name: String,
         provider: ClientEnd<ServiceProviderMarker>,
     ) -> Result<(), Error> {
-        self.service_map().register_service(service_name, Box::new(provider.into_proxy()?)).await;
+        self.register_raw_service(service_name, Box::new(provider.into_proxy()?)).await
+    }
+
+    /// Register a service without needing a FIDL channel.
+    pub async fn register_raw_service(
+        &self,
+        service_name: String,
+        provider: Box<dyn ServiceProviderProxyInterface>,
+    ) -> Result<(), Error> {
+        self.service_map().register_service(service_name, provider).await;
         Ok(())
     }
 
@@ -486,10 +495,9 @@ impl Router {
     }
 
     async fn quiche_config(&self) -> Result<quiche::Config, Error> {
-        let mut config =
-            quiche_config_from_security_context(&*self.security_context).await.with_context(
-                || format_err!("applying security context: {:?}", self.security_context),
-            )?;
+        let mut config = self.new_quiche_config().await.with_context(|| {
+            format_err!("applying security context: {:?}", self.security_context)
+        })?;
         // TODO(ctiller): don't hardcode these
         config.set_application_protos(b"\x0bovernet/0.2")?;
         config.set_initial_max_data(10_000_000);
@@ -830,7 +838,7 @@ impl Router {
         &self,
         ctx: &mut Context<'_>,
         transfer_key: TransferKey,
-        lock: &mut PollMutex<'_, PendingTransferMap>,
+        lock: &mut MutexTicket<'_, PendingTransferMap>,
     ) -> Poll<Result<FoundTransfer, Error>> {
         let mut pending_transfers = ready!(lock.poll(ctx));
         if let Some(PendingTransfer::Complete(other_end)) = pending_transfers.remove(&transfer_key)
@@ -847,7 +855,7 @@ impl Router {
         &self,
         transfer_key: TransferKey,
     ) -> Result<FoundTransfer, Error> {
-        let mut lock = PollMutex::new(&self.pending_transfers);
+        let mut lock = MutexTicket::new(&self.pending_transfers);
         poll_fn(|ctx| self.poll_find_transfer(ctx, transfer_key, &mut lock)).await
     }
 
@@ -901,8 +909,9 @@ impl Router {
         }
     }
 
-    pub(crate) fn security_context(&self) -> &dyn SecurityContext {
-        &*self.security_context
+    /// Generate a quiche configuration using this routers certificates
+    pub async fn new_quiche_config(&self) -> Result<quiche::Config, Error> {
+        quiche_config_from_security_context(&*self.security_context).await
     }
 }
 
@@ -928,10 +937,8 @@ mod tests {
     use super::*;
     use crate::test_util::*;
 
-    #[fuchsia_async::run(1, test)]
+    #[fuchsia::test]
     async fn no_op(run: usize) {
-        crate::test_util::init();
-
         let mut node_id_gen = NodeIdGenerator::new("router::no_op", run);
         node_id_gen.new_router().unwrap();
         let id = node_id_gen.next().unwrap();
@@ -1039,17 +1046,13 @@ mod tests {
         f(router1, router2).await
     }
 
-    #[fuchsia_async::run(1, test)]
+    #[fuchsia::test]
     async fn no_op_env(run: usize) -> Result<(), Error> {
-        crate::test_util::init();
-
         run_two_node("router::no_op_env", run, |_router1, _router2| async { Ok(()) }).await
     }
 
-    #[fuchsia_async::run(1, test)]
+    #[fuchsia::test]
     async fn create_stream(run: usize) -> Result<(), Error> {
-        crate::test_util::init();
-
         run_two_node("create_stream", run, |router1, router2| async move {
             let (_, p) = fidl::Channel::create()?;
             println!("create_stream: register service");
@@ -1064,10 +1067,8 @@ mod tests {
         .await
     }
 
-    #[fuchsia_async::run(1, test)]
+    #[fuchsia::test]
     async fn send_datagram_immediately(run: usize) -> Result<(), Error> {
-        crate::test_util::init();
-
         run_two_node("send_datagram_immediately", run, |router1, router2| async move {
             let (c, p) = fidl::Channel::create()?;
             println!("send_datagram_immediately: register service");
@@ -1095,11 +1096,9 @@ mod tests {
         .await
     }
 
-    #[fuchsia_async::run(1, test)]
+    #[fuchsia::test]
     async fn ping_pong(run: usize) -> Result<(), Error> {
         run_two_node("ping_pong", run, |router1, router2| async move {
-            crate::test_util::init();
-
             let (c, p) = fidl::Channel::create()?;
             println!("ping_pong: register service");
             let s = register_test_service(router2.clone(), router1.clone(), "ping_pong").await;
@@ -1137,10 +1136,8 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run(1, test)]
+    #[fuchsia::test]
     async fn concurrent_list_peer_calls_will_error(run: usize) -> Result<(), Error> {
-        crate::test_util::init();
-
         let mut node_id_gen = NodeIdGenerator::new("concurrent_list_peer_calls_will_error", run);
         let n = node_id_gen.new_router().unwrap();
         let lp = n.new_list_peers_context();
@@ -1155,9 +1152,8 @@ mod tests {
         Ok(())
     }
 
-    #[fuchsia_async::run(1, test)]
+    #[fuchsia::test]
     async fn attach_with_zero_bytes_per_second(run: usize) -> Result<(), Error> {
-        crate::test_util::init();
         let mut node_id_gen = NodeIdGenerator::new("attach_with_zero_bytes_per_second", run);
         let n = node_id_gen.new_router()?;
         let (c, s) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;

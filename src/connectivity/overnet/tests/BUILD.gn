@@ -5,7 +5,9 @@
 group("tests") {
   testonly = true
   public_deps = [
+    "fidl:tests",
     "host_examples:tests",
+    "integration:tests",
     "serial:tests",
   ]
 }

@@ -12,11 +12,9 @@ extern crate rental;
 mod async_quic;
 mod coding;
 mod diagnostics_service;
-mod fidl_tests;
 mod framed_stream;
 mod future_help;
 mod handle_info;
-mod integration_tests;
 mod labels;
 mod link;
 mod link_frame_label;
@@ -26,7 +24,6 @@ mod ping_tracker;
 mod proxy;
 mod proxy_stream;
 mod proxyable_handle;
-mod quic_link;
 mod router;
 mod routes;
 mod security_context;
@@ -34,16 +31,21 @@ mod service_map;
 mod socket_link;
 mod stat_counter;
 mod stream_framer;
+mod test_util;
 
 // Export selected types from modules.
 pub use coding::{decode_fidl, encode_fidl};
 pub use future_help::log_errors;
 pub use labels::{ConnectionId, Endpoint, NodeId, NodeLinkId};
-pub use link::{LinkReceiver, LinkSender, MAX_FRAME_LENGTH};
-pub use quic_link::{new_quic_link, QuicReceiver, QuicSender};
+pub use link::{LinkReceiver, LinkSender, SendFrame, MAX_FRAME_LENGTH};
 pub use router::{generate_node_id, ListPeersContext, Router, RouterOptions};
 pub use security_context::{SecurityContext, SimpleSecurityContext};
 pub use stream_framer::*;
+
+pub use test_util::{test_security_context, NodeIdGenerator};
+
+// TODO: move to another library
+pub use future_help::MutexTicket;
 
 #[cfg(not(target_os = "fuchsia"))]
 pub use security_context::MemoryBuffers;
@@ -82,6 +84,3 @@ impl<X: std::fmt::Debug> Trace for X {
         self
     }
 }
-
-#[cfg(test)]
-mod test_util;

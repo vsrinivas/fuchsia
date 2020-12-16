@@ -12,7 +12,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/hoist_lib_test"
+        "binary": "bin/hoist_lib_test"
     },
     "sandbox": {
         "services": [

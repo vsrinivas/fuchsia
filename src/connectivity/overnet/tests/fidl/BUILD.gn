@@ -1,0 +1,54 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//src/sys/build/components.gni")
+
+rustc_test("fidl") {
+  output_name = "fidl_on_overnet_tests"
+  edition = "2018"
+  deps = [
+    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
+    "//src/connectivity/overnet/lib/core",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/handle_tests:fidl_handle_tests",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:parking_lot",
+  ]
+  if (is_host) {
+    deps += [ "//src/connectivity/overnet/lib/core:test_certs" ]
+  }
+
+  sources = [
+    "src/channel.rs",
+    "src/lib.rs",
+    "src/socket.rs",
+  ]
+  inputs = [
+    "//third_party/rust-mirrors/quiche/examples/cert.crt",
+    "//third_party/rust-mirrors/quiche/examples/cert.key",
+    "//third_party/rust-mirrors/quiche/examples/rootca.crt",
+  ]
+}
+
+fuchsia_unittest_package("overnet-fidl-tests") {
+  manifest = "meta/fidl_test.cmx"
+  deps = [
+    ":fidl",
+    "//src/connectivity/overnet/overnetstack:certificates",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fidl($host_toolchain)",
+    ":overnet-fidl-tests",
+  ]
+}

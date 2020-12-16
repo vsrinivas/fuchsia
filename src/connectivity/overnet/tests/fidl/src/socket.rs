@@ -5,9 +5,9 @@
 #![cfg(test)]
 
 use super::{Fixture, Target};
-use crate::test_util::NodeIdGenerator;
 use async_trait::async_trait;
 use fidl_handle_tests::{socket, LoggingFixture};
+use overnet_core::NodeIdGenerator;
 
 struct SockFixture {
     fixture: Fixture,
@@ -33,9 +33,8 @@ impl LoggingFixture for SockFixture {
     }
 }
 
-#[fuchsia_async::run(1, test)]
+#[fuchsia::test]
 async fn fidl_socket_tests(run: usize) {
-    crate::test_util::init();
     let node_id_gen = NodeIdGenerator::new("fidl_socket_tests", run);
     let fixture = SockFixture::new(node_id_gen).await;
     socket::run(fixture).await

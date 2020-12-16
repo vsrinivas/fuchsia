@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::quic_link::{new_quic_link, QuicReceiver};
 use anyhow::{format_err, Error};
 use fuchsia_async::net::UdpSocket;
 use futures::{channel::mpsc, lock::Mutex, prelude::*};
-use overnet_core::{new_quic_link, ConnectionId, Endpoint, QuicReceiver, Router, MAX_FRAME_LENGTH};
+use overnet_core::{ConnectionId, Endpoint, Router, MAX_FRAME_LENGTH};
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::net::{SocketAddr, SocketAddrV6};
@@ -67,7 +68,6 @@ async fn run_link(
         .register_and_run(conn_id, link_receiver, async move {
             let mut frame = [0u8; MAX_FRAME_LENGTH];
             while let Ok(Some(len)) = link_sender.next_send(&mut frame).await {
-                log::info!("LINK {:?} SEND {}b to {:?}", conn_id, len, addr);
                 udp_socket.send_to(&frame[..len], addr.into()).await?;
             }
             Ok(())

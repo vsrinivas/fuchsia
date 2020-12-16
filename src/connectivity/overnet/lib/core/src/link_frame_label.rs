@@ -224,7 +224,7 @@ mod test {
         round_trips_buf(r, link_src, link_dst);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn round_trip_examples() {
         round_trips(
             LinkFrameLabel {

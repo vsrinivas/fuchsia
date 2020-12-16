@@ -1,0 +1,67 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_library.gni")
+import("//src/sys/build/components.gni")
+
+rustc_test("integration") {
+  edition = "2018"
+  output_name = "overnet_integration_tests"
+  deps = [
+    ":triangle-rustc",
+    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
+    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
+    "//src/connectivity/overnet/lib/core",
+    "//src/connectivity/overnet/lib/udp_link",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//src/testing/fidl:placeholders-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:parking_lot",
+  ]
+  if (is_host) {
+    deps += [ "//src/connectivity/overnet/lib/core:test_certs" ]
+  }
+
+  sources = [
+    "src/drop.rs",
+    "src/echo.rs",
+    "src/lib.rs",
+    "src/triangle.rs",
+  ]
+  inputs = [
+    "//third_party/rust-mirrors/quiche/examples/cert.crt",
+    "//third_party/rust-mirrors/quiche/examples/cert.key",
+    "//third_party/rust-mirrors/quiche/examples/rootca.crt",
+  ]
+}
+
+fidl("triangle") {
+  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
+  excluded_checks = [ "too-many-nested-libraries" ]
+  name = "fuchsia.overnet.triangletests"
+  sources = [ "src/triangle.test.fidl" ]
+  public_deps = [ "//src/testing/fidl:placeholders" ]
+}
+
+fuchsia_unittest_package("overnet-integration-tests") {
+  manifest = "meta/integration_test.cmx"
+  deps = [
+    ":integration",
+    "//src/connectivity/overnet/overnetstack:certificates",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":integration($host_toolchain)",
+    ":overnet-integration-tests",
+  ]
+}
