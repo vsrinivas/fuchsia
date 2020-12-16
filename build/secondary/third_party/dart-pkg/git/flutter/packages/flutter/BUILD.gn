@@ -26,6 +26,6 @@ dart_library("flutter") {
   ]
 
   if (is_fuchsia) {
-    deps += [ "//topaz/runtime/sky_engine:sky_engine_dart" ]
+    deps += [ "//src/flutter/sky_engine" ]
   }
 }

@@ -1,0 +1,20 @@
+# Copyright 2020 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(is_fuchsia || is_fuchsia_host)
+
+import("//build/dart/dart_library.gni")
+
+dart_library("sky_engine") {
+  package_name = "sky_engine"
+  package_root = "//prebuilt/third_party/sky_engine"
+
+  # Specify the pubspec so we can infer the language version at build time.
+  pubspec = "//prebuilt/third_party/sky_engine/pubspec.yaml"
+
+  # Can be left empty as analysis is disabled.
+  sources = []
+
+  disable_analysis = true
+}
