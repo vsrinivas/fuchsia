@@ -162,7 +162,13 @@ async fn read_bytes(
         if n == 0 {
             return Ok(());
         }
+        let deframe_time = std::time::Instant::now();
         deframer_writer.write(&buf[..n]).await?;
+        log::trace!(
+            "SERIAL QUEUED BYTES after {:?}: {:?}",
+            std::time::Instant::now() - deframe_time,
+            &buf[..n]
+        );
     }
 }
 
@@ -171,7 +177,7 @@ async fn reset<OutputSink: AsyncWrite + Unpin>(
     mut fragment_reader: StreamSplitter<OutputSink>,
     mut fragment_writer: FragmentWriter,
 ) -> Result<(), Error> {
-    log::info!("RESET SERIAL BEGIN");
+    log::trace!("RESET SERIAL BEGIN");
     let drain_time = match role {
         Role::Client => Duration::from_secs(3),
         Role::Server => Duration::from_secs(3),
@@ -196,7 +202,7 @@ async fn reset<OutputSink: AsyncWrite + Unpin>(
             Err(DrainError::FromRead(e)) => return Err(e),
         }
     }
-    log::info!("RESET SERIAL END");
+    log::trace!("RESET SERIAL END");
     Ok(())
 }
 
@@ -205,7 +211,9 @@ async fn link_to_framer(
     mut fragment_writer: FragmentWriter,
 ) -> Result<(), Error> {
     while let Some(frame) = link_sender.next_send().await {
-        fragment_writer.write(frame.bytes().to_vec()).await?;
+        let send = frame.bytes().to_vec();
+        drop(frame);
+        fragment_writer.write(send).await?;
     }
     Ok(())
 }
@@ -225,6 +233,7 @@ async fn deframer_to_link<OutputSink: AsyncWrite + Unpin>(
         link_receiver.received_frame(frame.as_mut()).await;
         if !know_peer_id {
             if let Some(peer_node_id) = link_receiver.peer_node_id() {
+                // This log line is load bearing to the Overnet serial test.
                 log::info!(
                     "Established {:?} Overnet serial connection to peer {:?}",
                     role,
