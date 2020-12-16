@@ -26,11 +26,12 @@ const IES_MERGER_BUFFER_LIMIT: usize = 10000;
 #[derive(Debug)]
 pub struct IesMerger {
     ies_updater: IesUpdater,
+    buffer_overflow: bool,
 }
 
 impl IesMerger {
     pub fn new(ies: Vec<u8>) -> Self {
-        Self { ies_updater: IesUpdater::new(ies) }
+        Self { ies_updater: IesUpdater::new(ies), buffer_overflow: false }
     }
 
     pub fn merge(&mut self, ies: &[u8]) {
@@ -46,6 +47,8 @@ impl IesMerger {
                 // Setting IE should not fail because we parsed them from an IE chain in the
                 // first place, so the length of the IE body would not exceed 255 bytes.
                 let _result = self.ies_updater.set(ie_type, &ies[range]);
+            } else {
+                self.buffer_overflow = true;
             }
         }
     }
@@ -53,6 +56,12 @@ impl IesMerger {
     /// Build and return merged IEs, sorted by order of IeType.
     pub fn finalize(&mut self) -> Vec<u8> {
         self.ies_updater.finalize()
+    }
+
+    /// Return a bool indicating whether an IE was not merged because it would have exceeded
+    /// IesMerger's buffer.
+    pub fn buffer_overflow(&mut self) -> bool {
+        self.buffer_overflow
     }
 }
 
@@ -424,6 +433,8 @@ mod tests {
         }
         // Verify we don't use too much memory.
         assert!(ies_merger.ies_updater.buf_len() <= IES_MERGER_BUFFER_LIMIT);
+        // Verify buffer overflow flag is set to true.
+        assert!(ies_merger.buffer_overflow());
 
         // We should still produce a result.
         let result_ies = ies_merger.finalize();

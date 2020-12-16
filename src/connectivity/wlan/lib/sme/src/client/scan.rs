@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, ScanRequest, ScanResultCodes},
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect::NumericProperty,
-    log::error,
+    log::{error, warn},
     std::{
         collections::{hash_map, HashMap, HashSet},
         mem,
@@ -171,7 +171,11 @@ impl<D, J> ScanScheduler<D, J> {
     }
 
     // Should be called for every OnScanResult event received from MLME.
-    pub fn on_mlme_scan_result(&mut self, msg: fidl_mlme::ScanResult) {
+    pub fn on_mlme_scan_result(
+        &mut self,
+        msg: fidl_mlme::ScanResult,
+        sme_inspect: &Arc<inspect::SmeTree>,
+    ) {
         if !self.matching_mlme_txn_id(msg.txn_id) {
             error!("rejecting scan result with wrong txn id");
             return;
@@ -179,10 +183,10 @@ impl<D, J> ScanScheduler<D, J> {
         match &mut self.current {
             ScanState::NotScanning | ScanState::StaleJoinScan { .. } => {}
             ScanState::ScanningToJoin { bss_map, .. } => {
-                maybe_insert_bss(bss_map, msg.bss);
+                maybe_insert_bss(bss_map, msg.bss, sme_inspect);
             }
             ScanState::ScanningToDiscover { bss_map, .. } => {
-                maybe_insert_bss(bss_map, msg.bss);
+                maybe_insert_bss(bss_map, msg.bss, sme_inspect);
             }
         }
     }
@@ -288,6 +292,7 @@ impl<D, J> ScanScheduler<D, J> {
 fn maybe_insert_bss(
     bss_map: &mut HashMap<BssId, (fidl_internal::BssDescription, IesMerger)>,
     mut fidl_bss: fidl_internal::BssDescription,
+    sme_inspect: &Arc<inspect::SmeTree>,
 ) {
     let mut ies = vec![];
     std::mem::swap(&mut ies, &mut fidl_bss.ies);
@@ -296,6 +301,12 @@ fn maybe_insert_bss(
         hash_map::Entry::Occupied(mut entry) => {
             let (ref mut existing_bss, ref mut ies_merger) = entry.get_mut();
             ies_merger.merge(&ies[..]);
+            if ies_merger.buffer_overflow() {
+                warn!(
+                    "Not merging some IEs due to running out of buffer. BSSID: {:?}",
+                    sme_inspect.hasher.hash_mac_addr(&fidl_bss.bssid)
+                );
+            }
             *existing_bss = fidl_bss;
         }
         hash_map::Entry::Vacant(entry) => {
@@ -472,27 +483,36 @@ mod tests {
             .enqueue_scan_to_discover(passive_discovery_scan(10))
             .expect("expected a ScanRequest");
         let txn_id = req.txn_id;
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
-            txn_id,
-            bss: fidl_internal::BssDescription {
-                bssid: [1; 6],
-                ..fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec())
+        sched.on_mlme_scan_result(
+            fidl_mlme::ScanResult {
+                txn_id,
+                bss: fidl_internal::BssDescription {
+                    bssid: [1; 6],
+                    ..fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec())
+                },
             },
-        });
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
-            txn_id: txn_id + 100, // mismatching transaction id
-            bss: fidl_internal::BssDescription {
-                bssid: [2; 6],
-                ..fake_fidl_bss(FakeProtectionCfg::Open, b"bar".to_vec())
+            &sme_inspect,
+        );
+        sched.on_mlme_scan_result(
+            fidl_mlme::ScanResult {
+                txn_id: txn_id + 100, // mismatching transaction id
+                bss: fidl_internal::BssDescription {
+                    bssid: [2; 6],
+                    ..fake_fidl_bss(FakeProtectionCfg::Open, b"bar".to_vec())
+                },
             },
-        });
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
-            txn_id,
-            bss: fidl_internal::BssDescription {
-                bssid: [3; 6],
-                ..fake_fidl_bss(FakeProtectionCfg::Open, b"qux".to_vec())
+            &sme_inspect,
+        );
+        sched.on_mlme_scan_result(
+            fidl_mlme::ScanResult {
+                txn_id,
+                bss: fidl_internal::BssDescription {
+                    bssid: [3; 6],
+                    ..fake_fidl_bss(FakeProtectionCfg::Open, b"qux".to_vec())
+                },
             },
-        });
+            &sme_inspect,
+        );
         let (result, req) = sched.on_mlme_scan_end(
             fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
             &sme_inspect,
@@ -520,21 +540,27 @@ mod tests {
             .enqueue_scan_to_discover(passive_discovery_scan(10))
             .expect("expected a ScanRequest");
         let txn_id = req.txn_id;
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
-            txn_id,
-            bss: fidl_internal::BssDescription {
-                bssid: [1; 6],
-                ..fake_fidl_bss(FakeProtectionCfg::Open, b"bar".to_vec())
+        sched.on_mlme_scan_result(
+            fidl_mlme::ScanResult {
+                txn_id,
+                bss: fidl_internal::BssDescription {
+                    bssid: [1; 6],
+                    ..fake_fidl_bss(FakeProtectionCfg::Open, b"bar".to_vec())
+                },
             },
-        });
+            &sme_inspect,
+        );
         // A new scan result with the same BSSID replaces the previous result.
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
-            txn_id,
-            bss: fidl_internal::BssDescription {
-                bssid: [1; 6],
-                ..fake_fidl_bss(FakeProtectionCfg::Open, b"baz".to_vec())
+        sched.on_mlme_scan_result(
+            fidl_mlme::ScanResult {
+                txn_id,
+                bss: fidl_internal::BssDescription {
+                    bssid: [1; 6],
+                    ..fake_fidl_bss(FakeProtectionCfg::Open, b"baz".to_vec())
+                },
             },
-        });
+            &sme_inspect,
+        );
         let (result, req) = sched.on_mlme_scan_end(
             fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
             &sme_inspect,
@@ -567,13 +593,13 @@ mod tests {
         // Add an extra IE so we can distinguish this result.
         let ie_marker1 = &[0xdd, 0x07, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee];
         bss.ies.extend_from_slice(ie_marker1);
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss });
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss }, &sme_inspect);
 
         let mut bss = fake_fidl_bss(FakeProtectionCfg::Open, b"ssid".to_vec());
         // Add an extra IE so we can distinguish this result.
         let ie_marker2 = &[0xdd, 0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
         bss.ies.extend_from_slice(ie_marker2);
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss });
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss }, &sme_inspect);
         let (result, req) = sched.on_mlme_scan_end(
             fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
             &sme_inspect,
@@ -661,26 +687,32 @@ mod tests {
         let txn_id = mlme_req.txn_id;
 
         // Report a scan result
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
-            txn_id,
-            bss: fidl_internal::BssDescription {
-                bssid: [1; 6],
-                ..fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec())
+        sched.on_mlme_scan_result(
+            fidl_mlme::ScanResult {
+                txn_id,
+                bss: fidl_internal::BssDescription {
+                    bssid: [1; 6],
+                    ..fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec())
+                },
             },
-        });
+            &sme_inspect,
+        );
 
         // Post another command. It should not issue another request to the MLME since
         // there is already an on-going one
         assert!(sched.enqueue_scan_to_discover(passive_discovery_scan(20)).is_none());
 
         // Report another scan result and the end of the scan transaction
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
-            txn_id,
-            bss: fidl_internal::BssDescription {
-                bssid: [2; 6],
-                ..fake_fidl_bss(FakeProtectionCfg::Open, b"bar".to_vec())
+        sched.on_mlme_scan_result(
+            fidl_mlme::ScanResult {
+                txn_id,
+                bss: fidl_internal::BssDescription {
+                    bssid: [2; 6],
+                    ..fake_fidl_bss(FakeProtectionCfg::Open, b"bar".to_vec())
+                },
             },
-        });
+            &sme_inspect,
+        );
         let (result, req) = sched.on_mlme_scan_end(
             fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
             &sme_inspect,
@@ -730,13 +762,16 @@ mod tests {
         assert!(sched.enqueue_scan_to_discover(scan_cmd).is_none());
 
         // Report scan result and scan end
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
-            txn_id,
-            bss: fidl_internal::BssDescription {
-                bssid: [1; 6],
-                ..fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec())
+        sched.on_mlme_scan_result(
+            fidl_mlme::ScanResult {
+                txn_id,
+                bss: fidl_internal::BssDescription {
+                    bssid: [1; 6],
+                    ..fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec())
+                },
             },
-        });
+            &sme_inspect,
+        );
         let (result, mlme_req) = sched.on_mlme_scan_end(
             fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
             &sme_inspect,
@@ -752,13 +787,16 @@ mod tests {
         let txn_id = mlme_req.txn_id;
 
         // Report scan result and scan end
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
-            txn_id,
-            bss: fidl_internal::BssDescription {
-                bssid: [2; 6],
-                ..fake_fidl_bss(FakeProtectionCfg::Open, b"bar".to_vec())
+        sched.on_mlme_scan_result(
+            fidl_mlme::ScanResult {
+                txn_id,
+                bss: fidl_internal::BssDescription {
+                    bssid: [2; 6],
+                    ..fake_fidl_bss(FakeProtectionCfg::Open, b"bar".to_vec())
+                },
             },
-        });
+            &sme_inspect,
+        );
         let (result, mlme_req) = sched.on_mlme_scan_end(
             fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },
             &sme_inspect,
@@ -804,28 +842,37 @@ mod tests {
             bssid: [1; 6],
             ..fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec())
         };
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss: clone_bss_desc(&bss1) });
+        sched.on_mlme_scan_result(
+            fidl_mlme::ScanResult { txn_id, bss: clone_bss_desc(&bss1) },
+            &sme_inspect,
+        );
 
         // Mismatching transaction ID
         let bss2 = fidl_internal::BssDescription {
             bssid: [2; 6],
             ..fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec())
         };
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id: txn_id + 100, bss: bss2 });
+        sched.on_mlme_scan_result(
+            fidl_mlme::ScanResult { txn_id: txn_id + 100, bss: bss2 },
+            &sme_inspect,
+        );
 
         // Mismatching SSID
         let bss3 = fidl_internal::BssDescription {
             bssid: [3; 6],
             ..fake_fidl_bss(FakeProtectionCfg::Open, b"bar".to_vec())
         };
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss: bss3 });
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss: bss3 }, &sme_inspect);
 
         // Matching BSS
         let bss4 = fidl_internal::BssDescription {
             bssid: [4; 6],
             ..fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec())
         };
-        sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss: clone_bss_desc(&bss4) });
+        sched.on_mlme_scan_result(
+            fidl_mlme::ScanResult { txn_id, bss: clone_bss_desc(&bss4) },
+            &sme_inspect,
+        );
 
         let (result, req) = sched.on_mlme_scan_end(
             fidl_mlme::ScanEnd { txn_id, code: fidl_mlme::ScanResultCodes::Success },

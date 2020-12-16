@@ -447,7 +447,7 @@ impl super::Station for ClientSme {
     fn on_mlme_event(&mut self, event: MlmeEvent) {
         match event {
             MlmeEvent::OnScanResult { result } => {
-                self.scan_sched.on_mlme_scan_result(result);
+                self.scan_sched.on_mlme_scan_result(result, &self.context.inspect);
             }
             MlmeEvent::OnScanEnd { end } => {
                 let txn_id = end.txn_id;
