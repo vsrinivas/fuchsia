@@ -117,18 +117,16 @@ impl Pipeline {
     }
 }
 
-pub type DiagnosticsDataTrie = trie::Trie<String, ComponentDiagnostics>;
-
 /// DataRepo manages storage of all state needed in order
 /// for the inspect reader to retrieve inspect data when a read is requested.
 pub struct DataRepo {
-    pub data_directories: DiagnosticsDataTrie,
+    pub data_directories: trie::Trie<String, ComponentDiagnostics>,
     log_manager: LogManager,
 }
 
 impl DataRepo {
     pub fn new(log_manager: LogManager) -> Self {
-        DataRepo { log_manager, data_directories: DiagnosticsDataTrie::new() }
+        DataRepo { log_manager, data_directories: trie::Trie::new() }
     }
 
     #[cfg(test)]
