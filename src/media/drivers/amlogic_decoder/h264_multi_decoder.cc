@@ -565,21 +565,15 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
     return status;
 
   if (owner_->is_tee_available()) {
-    // Temporarily, try _Gxm first, in case we're still using the old video_ucode.bin.
-    status = owner_->TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType::kDec_H264_Multi_Gxm,
+    // The video_firmware TA has already filtered down to the codec core firmwares that are for
+    // the current SoC, and video_ucode.bin (newer verions) ID the firmware using the more-generic
+    // ID that's not SoC-specific.
+    status = owner_->TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType::kDec_H264_Multi,
                                              FirmwareBlob::FirmwareVdecLoadMode::kCompatible);
     if (status != ZX_OK) {
-      LOG(WARNING, "owner_->TeeSmcLoadVideoFirmware() failed (first try) - status: %d", status);
-      // If kDec_H264_Multi_Gxm didn't work, then assume we're using the new video_ucode.bin, which
-      // means we should load kDec_H264_Multi, which will be for the correct SoC if found since the
-      // video_firmware TA has already filtered down to the codec core firmwares that are for the
-      // current SoC.
-      status = owner_->TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType::kDec_H264_Multi,
-                                               FirmwareBlob::FirmwareVdecLoadMode::kCompatible);
-      if (status != ZX_OK) {
-        LOG(ERROR, "owner_->TeeSmcLoadVideoFirmware() failed (second try) - status: %d", status);
-        return status;
-      }
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FirmwareLoadError);
+      LOG(ERROR, "owner_->TeeSmcLoadVideoFirmware() failed - status: %d", status);
+      return status;
     }
 
     ResetHardware();

@@ -299,23 +299,9 @@ zx_status_t Vp9Decoder::InitializeHardware() {
     return ZX_ERR_BAD_STATE;
   }
 
-  // TODO(fxbug.dev/43496): Afte we switch to new video_ucode.bin, we'll be able to ask for the
-  // more generic kDec_Vp9_Mmu always.
-  FirmwareBlob::FirmwareType firmware_type =
-      IsDeviceAtLeast(owner_->device_type(), DeviceType::kG12A)
-          ? FirmwareBlob::FirmwareType::kDec_Vp9_G12a
-          : FirmwareBlob::FirmwareType::kDec_Vp9_Mmu;
-
   if (owner_->is_tee_available()) {
-    status =
-        owner_->TeeSmcLoadVideoFirmware(firmware_type, FirmwareBlob::FirmwareVdecLoadMode::kHevc);
-    if (status != ZX_OK && firmware_type == FirmwareBlob::FirmwareType::kDec_Vp9_G12a) {
-      // On second try, ask for the firmware by it's more generic ID, in case we're using the new
-      // video_ucode.bin.
-      firmware_type = FirmwareBlob::FirmwareType::kDec_Vp9_Mmu;
-      status =
-          owner_->TeeSmcLoadVideoFirmware(firmware_type, FirmwareBlob::FirmwareVdecLoadMode::kHevc);
-    }
+    status = owner_->TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType::kDec_Vp9_Mmu,
+                                             FirmwareBlob::FirmwareVdecLoadMode::kHevc);
     if (status != ZX_OK) {
       LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FirmwareLoadError);
       LOG(ERROR, "owner_->TeeSmcLoadVideoFirmware() failed - status: %d", status);
@@ -332,8 +318,8 @@ zx_status_t Vp9Decoder::InitializeHardware() {
     // TODO(fxbug.dev/43496): In "CL3", we'll filter video_ucode.bin firmwares by current device,
     // which will let loading by this more generic ID work, assuming new video_ucode.bin.  For now,
     // if we were to take this path (which we don't), this would likely get the wrong firmware.
-    firmware_type = FirmwareBlob::FirmwareType::kDec_Vp9_Mmu;
-    status = owner_->firmware_blob()->GetFirmwareData(firmware_type, &data, &firmware_size);
+    status = owner_->firmware_blob()->GetFirmwareData(FirmwareBlob::FirmwareType::kDec_Vp9_Mmu,
+                                                      &data, &firmware_size);
     if (status != ZX_OK) {
       LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FirmwareLoadError);
       LOG(ERROR, "GetFirmwareData() failed");
