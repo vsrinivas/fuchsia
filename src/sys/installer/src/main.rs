@@ -9,7 +9,7 @@ use {
     crate::partition::Partition,
     anyhow::{anyhow, Context, Error},
     fdio,
-    fidl::endpoints::{Proxy, ServerEnd},
+    fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_hardware_block::BlockProxy,
     fidl_fuchsia_paver::{DynamicDataSinkProxy, PaverMarker, PaverProxy},
@@ -153,7 +153,7 @@ fn paver_connect(path: &str) -> Result<(PaverProxy, DynamicDataSinkProxy), Error
 
     let paver: PaverProxy =
         client::connect_to_service::<PaverMarker>().context("Could not connect to paver")?;
-    paver.use_block_device(ServerEnd::from(block_device_chan), ServerEnd::from(data_remote))?;
+    paver.use_block_device(ClientEnd::from(block_device_chan), ServerEnd::from(data_remote))?;
 
     let data_sink =
         DynamicDataSinkProxy::from_channel(fidl::AsyncChannel::from_channel(data_sink_chan)?);

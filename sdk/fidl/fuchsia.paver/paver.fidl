@@ -92,7 +92,7 @@ protocol Paver {
     /// It assumes that channel backing `block_device` also implements `fuchsia.io.Node` for now.
     ///
     /// `data_sink` will be closed on error, with an epitaph provided on failure reason.
-    UseBlockDevice(request<fuchsia.hardware.block.Block> block_device,
+    UseBlockDevice(fuchsia.hardware.block.Block block_device,
                    request<DynamicDataSink> data_sink);
 
     /// Attempts to auto-discover the boot manager.
