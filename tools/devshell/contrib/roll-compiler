@@ -87,43 +87,37 @@ before commands are run for any package.
         ]
         return tag
 
-    def ReifyPackage(package):
-        packages = [
-            ResolvePackage("%s/%s" % (package, platform), args.version)
+    all_packages = [
+        ResolvePackage("%s/%s" % (package, platform), args.version)
             for platform in args.platforms
-        ]
+            for package in packages
+    ]
 
-        package_tags = {
-            package["pin"]["package"]: PackageTag(package) for package in packages
-        }
-        tag_set = set(t for t in package_tags.values())
-        if len(tag_set) != 1:
-            sys.stderr.write(
-                f"Not all packages have matching {args.tag} tags at version {args.version}:\n")
-            json.dump(package_tags, sys.stderr, sort_keys=True, indent=4)
-            sys.stderr.write("\n")
-            sys.exit(1)
-        [tag] = tag_set
+    package_tags = {
+        package["pin"]["package"]: PackageTag(package) for package in all_packages
+    }
+    tag_set = set(t for t in package_tags.values())
+    if len(tag_set) != 1:
+        sys.stderr.write(
+            f"Not all packages have matching {args.tag} tags at version {args.version}:\n")
+        json.dump(package_tags, sys.stderr, sort_keys=True, indent=4)
+        sys.stderr.write("\n")
+        sys.exit(1)
+    [tag] = tag_set
 
-        print(f"Resolved {package} ({args.version}) to {tag}")
-        return package, tag
+    print(f"Resolved {args.version} to {tag}")
+
+    cmd = [JIRI, "edit"]
+    for package in packages:
+        cmd += ["-package", "%s/${platform}=%s" % (package, tag)]
+    cmd.append(args.manifest)
 
     def DryRun(args):
         print(args)
 
     run = DryRun if args.dry_run else subprocess.check_call
 
-    for package, tag in map(ReifyPackage, packages):
-        run(
-            [
-                JIRI,
-                "edit",
-                "-package",
-                "%s/${platform}=%s" % (package, tag),
-                args.manifest,
-            ]
-        )
-
+    run(cmd)
     run([os.path.join(FUCHSIA_DIR, "integration", "update-lockfiles.sh")])
 
     return 0
