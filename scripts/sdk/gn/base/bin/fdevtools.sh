@@ -119,15 +119,17 @@ MAC_BINARY="fuchsia_devtools/macos-extracted/Fuchsia DevTools.app"
 
 if is-mac; then
   if [[ ! -d "${FDT_DIR}/${MAC_UNZIP_DIR}" ]]; then
-    if ! unzip -qq "${FDT_DIR}/${MAC_ZIP}" -d "${FDT_DIR}/${MAC_UNZIP_DIR}-temp"; then
-      rm -rf "${FDT_DIR}/${MAC_UNZIP_DIR}-temp"
-      if ! unzip -qq "${FDT_DIR}/${MAC_ZIP_OLD}" -d "${FDT_DIR}/${MAC_UNZIP_DIR}-temp"; then
-        rm -rf "${FDT_DIR}/${MAC_UNZIP_DIR}-temp"
+    temp_dir="${FDT_DIR}/${MAC_UNZIP_DIR}-temp"
+    mkdir -p "${temp_dir}"
+    if ! unzip -qq "${FDT_DIR}/${MAC_ZIP}" -d "${temp_dir}"; then
+      rm -rf "${temp_dir}"
+      if ! unzip -qq "${FDT_DIR}/${MAC_ZIP_OLD}" -d "${temp_dir}"; then
+        rm -rf "${temp_dir}"
         fx-error "Downloaded archive for ${LABEL_DEVTOOLS} failed to extract"
         exit 1
       fi
     fi
-    mv "${FDT_DIR}/${MAC_UNZIP_DIR}-temp" "${FDT_DIR}/${MAC_UNZIP_DIR}"
+    mv "${temp_dir}" "${FDT_DIR}/${MAC_UNZIP_DIR}"
   fi
   open "${FDT_DIR}/${MAC_BINARY}" "--args" "${FDT_ARGS[@]}"
 else

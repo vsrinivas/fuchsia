@@ -47,7 +47,6 @@ BT_SET_UP() {
 # Test that prebuilt is run with no args works with new binary.
 TEST_noargs_uses_prebuilt_new_binary() {
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/macos/macos.zip"
-  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos-extracted-temp"
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/linux/fuchsia_devtools"
 
   BT_EXPECT ${fx} fdt
@@ -60,7 +59,6 @@ TEST_noargs_uses_prebuilt_new_binary() {
 # Test that prebuilt is run with no args works with old binary.
 TEST_noargs_uses_prebuilt_old_binary() {
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos/macos.zip"
-  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos-extracted-temp"
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/linux/fuchsia_devtools"
 
   BT_EXPECT ${fx} fdt
@@ -81,7 +79,6 @@ TEST_prebuilt_unavailable() {
 # Test that CIPD is used to fetch "latest" with the new binary.
 TEST_uses_cipd_for_latest_new_binary() {
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/macos/macos.zip"
-  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos-extracted-temp"
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/linux/fuchsia_devtools"
 
   BT_EXPECT ${fx} fdt latest
@@ -95,7 +92,6 @@ TEST_uses_cipd_for_latest_new_binary() {
 # Test that CIPD is used to fetch "latest" with the old binary.
 TEST_uses_cipd_for_latest_old_binary() {
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos/macos.zip"
-  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos-extracted-temp"
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/linux/fuchsia_devtools"
 
   BT_EXPECT ${fx} fdt latest

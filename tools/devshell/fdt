@@ -48,25 +48,28 @@ fi
 # Use prebuilt version if no arguments are passed.
 if [[ $# == 0 ]]; then
   if [[ $HOST_PLATFORM == "mac-x64" ]]; then
+    temp_dir="${PREBUILT_UNZIP_DIR}-temp"
     # On the mac if we have a prebuilt zip then we are good to go.
     if [[ -e "${PREBUILT_ZIP}" ]]; then
       rm -rf "${PREBUILT_UNZIP_DIR}"
-      if ! unzip -qq "${PREBUILT_ZIP}" -d "${PREBUILT_UNZIP_DIR}-temp"; then
-        rm -rf "${PREBUILT_UNZIP_DIR}-temp"
+      mkdir -p "${temp_dir}"
+      if ! unzip -qq "${PREBUILT_ZIP}" -d "${temp_dir}"; then
+        rm -rf "${temp_dir}"
         echo "Prebuilt archive failed to extract."
         exit 1
       fi
-      mv "${PREBUILT_UNZIP_DIR}-temp" "${PREBUILT_UNZIP_DIR}"
+      mv "${temp_dir}" "${PREBUILT_UNZIP_DIR}"
       open "$PREBUILT"
       exit 0
     elif [[ -e "${PREBUILT_ZIP_OLD}" ]]; then
       rm -rf "${PREBUILT_UNZIP_DIR}"
-      if ! unzip -qq "${PREBUILT_ZIP_OLD}" -d "${PREBUILT_UNZIP_DIR}-temp"; then
-        rm -rf "${PREBUILT_UNZIP_DIR}-temp"
+      mkdir -p "${temp_dir}"
+      if ! unzip -qq "${PREBUILT_ZIP_OLD}" -d "${temp_dir}"; then
+        rm -rf "${temp_dir}"
         echo "Prebuilt archive failed to extract."
         exit 1
       fi
-      mv "${PREBUILT_UNZIP_DIR}-temp" "${PREBUILT_UNZIP_DIR}"
+      mv "${temp_dir}" "${PREBUILT_UNZIP_DIR}"
       open "$PREBUILT"
       exit 0
     fi
@@ -113,21 +116,24 @@ fi
 
 if [[ $HOST_PLATFORM == "mac-x64" ]]; then
   rm -rf "${DOWNLOAD_UNZIP_DIR}"
+  temp_dir="${DOWNLOAD_UNZIP_DIR}-temp"
   if [[ -e "${DOWNLOAD_ZIP}" ]]; then
-    if ! unzip -qq "${DOWNLOAD_ZIP}" -d "${DOWNLOAD_UNZIP_DIR}-temp"; then
-      rm -rf "${DOWNLOAD_UNZIP_DIR}-temp"
+    mkdir -p "${temp_dir}"
+    if ! unzip -qq "${DOWNLOAD_ZIP}" -d "${temp_dir}"; then
+      rm -rf "${temp_dir}"
       echo "Downloaded archive for $version failed to extract."
       exit 1
     fi
-    mv "${DOWNLOAD_UNZIP_DIR}-temp" "${DOWNLOAD_UNZIP_DIR}"
+    mv "${temp_dir}" "${DOWNLOAD_UNZIP_DIR}"
     open "$DOWNLOAD"
   elif [[ -e "${DOWNLOAD_ZIP_OLD}" ]]; then
-    if ! unzip -qq "${DOWNLOAD_ZIP_OLD}" -d "${DOWNLOAD_UNZIP_DIR}-temp"; then
-      rm -rf "${DOWNLOAD_UNZIP_DIR}-temp"
+    mkdir -p "${temp_dir}"
+    if ! unzip -qq "${DOWNLOAD_ZIP_OLD}" -d "${temp_dir}"; then
+      rm -rf "${temp_dir}"
       echo "Downloaded archive for $version failed to extract."
       exit 1
     fi
-    mv "${DOWNLOAD_UNZIP_DIR}-temp" "${DOWNLOAD_UNZIP_DIR}"
+    mv "${temp_dir}" "${DOWNLOAD_UNZIP_DIR}"
     open "$DOWNLOAD"
   fi
 else
