@@ -13,13 +13,14 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 group("tests") {
   testonly = true
   deps = [
     ":fbl($host_toolchain)",
     ":fbl-gmock-test($host_toolchain)",
+    ":fbl-test-pkg",
   ]
 }
 
@@ -101,11 +102,6 @@ test("fbl") {
   }
 }
 
-bootfs_test("fbl-bootfs-test") {
-  name = "fbl-test"
-  deps = [ ":fbl" ]
-}
-
 # Generic main entry point target for GTest executables.
 source_set("gtest_main") {
   testonly = true
@@ -125,4 +121,10 @@ test("fbl-gmock-test") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
   ]
+}
+
+fuchsia_unittest_package("fbl-test-pkg") {
+  package_name = "fbl-test"
+  executable_path = "test/fbl-test"
+  deps = [ ":fbl" ]
 }
