@@ -14,8 +14,6 @@
 
 #include "asan-internal.h"
 
-extern "C" void __asan_register_globals_late();
-
 namespace {
 
 void asan_early_init(unsigned int arg) {
