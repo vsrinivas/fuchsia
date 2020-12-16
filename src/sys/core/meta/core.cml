@@ -225,6 +225,30 @@
             to: [ "#test_manager" ],
         },
         {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#test_manager" ],
+        },
+
+        // These capabilities are offered to test_manager for use by certain non-hermetic tests.
+        {
+            protocol: [
+                "fuchsia.hardware.display.Provider",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#test_manager" ],
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-display-controller",
+            to: [ "#test_manager" ],
+            subdir: "class/display-controller",
+        },
+        {
             protocol: [
                 "fuchsia.net.stack.Stack",
                 "fuchsia.overnet.Overnet",
@@ -263,11 +287,6 @@
             from: "parent",
             to: [ "#sampler" ],
             subdir: "sampler",
-        },
-        {
-            directory: "config-data",
-            from: "parent",
-            to: [ "#test_manager" ],
         },
         {
             protocol: "fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge",

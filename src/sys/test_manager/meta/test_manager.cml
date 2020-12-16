@@ -64,6 +64,18 @@
             from: "parent",
             to: [ "#tests" ],
         },
+
+        // These capabilities are offered for use by certain non-hermetic tests.
+        {
+            protocol: [
+                "fuchsia.hardware.display.Provider",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#tests" ],
+        },
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
@@ -128,6 +140,14 @@
             from: "parent",
             to: [ "#tests" ],
             rights: [ "r*" ],
+        },
+
+        // Some non-hermetic tests require access to the real display controller.
+        {
+            directory: "dev-display-controller",
+            from: "parent",
+            to: [ "#tests" ],
+            rights: [ "rw*" ],
         },
     ],
     expose: [

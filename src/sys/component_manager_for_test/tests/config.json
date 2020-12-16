@@ -14,5 +14,19 @@
                 "fuchsia.process.Launcher",
             ],
         },
+        // For Scenic
+        {
+            protocol: [
+                "fuchsia.hardware.display.Provider",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+        {
+            directory: "dev-display-controller",
+            rights: [ "rw*" ],
+            path: "/dev/class/display-controller",
+        },
     ],
 }

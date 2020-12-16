@@ -11,6 +11,7 @@
     },
     "sandbox": {
         "dev": [
+            "class/display-controller",
             "class/input-report"
         ],
         "features": [
@@ -22,10 +23,14 @@
         ],
         "services": [
             "fuchsia.boot.WriteOnlyLog",
+            "fuchsia.hardware.display.Provider",
             "fuchsia.process.Launcher",
+            "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
-            "fuchsia.sys2.Realm"
+            "fuchsia.sys2.Realm",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }
