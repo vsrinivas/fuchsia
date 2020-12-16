@@ -33,19 +33,19 @@ group("drivers") {
   ]
 }
 
-# Core is the group that is included in the core product.
+# Core is the group that is required for any Bluetooth functionality
+# This group includes all of the non-system components.
+# System package components are defined in "core-system"
 group("core") {
   public_deps = [
     "core/bt-gap",
     "core/bt-init",
-    "profiles/bt-a2dp-sink",
-    "profiles/bt-avrcp",
     "profiles/bt-rfcomm",
     "tools/bt-snoop",
   ]
 }
 
-# This is the part of core which goes into the system package.
+# This is the part of core group which must go into the system package.
 group("core-system") {
   public_deps = [
     "core/bt-host",
