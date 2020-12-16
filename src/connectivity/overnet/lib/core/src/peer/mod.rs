@@ -560,7 +560,9 @@ async fn client_handshake(
     log::trace!("[{:?} clipeer:{:?}] send fidl header", my_node_id, peer_node_id);
     conn_stream_writer
         .send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false)
-        .on_timeout(Duration::from_secs(60), || Err(format_err!("timeout")))
+        .on_timeout(Duration::from_secs(60), || {
+            Err(format_err!("timeout initializing quic connection"))
+        })
         .await?;
     async move {
         log::trace!("[{:?} clipeer:{:?}] send config request", my_node_id, peer_node_id);
@@ -592,7 +594,7 @@ async fn client_handshake(
 
         Ok((conn_stream_writer, conn_stream_reader))
     }
-    .on_timeout(Duration::from_secs(20), || Err(format_err!("timeout")))
+    .on_timeout(Duration::from_secs(20), || Err(format_err!("timeout performing handshake")))
     .await
 }
 

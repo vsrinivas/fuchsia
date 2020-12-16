@@ -630,6 +630,8 @@ impl LinkOutput {
     /// Send a control message to our peer with some payload.
     /// Implements periodic resends until an ack is received.
     async fn send_control_message(&self, payload: LinkControlPayload) -> Result<(), Error> {
+        const DEFAULT_RTT: Duration = Duration::from_millis(50);
+
         let new_resend_delay = |current_resend_delay: Duration, ping_tracker: &PingTracker| {
             let new = std::cmp::max(
                 3 * current_resend_delay / 2,
@@ -652,7 +654,6 @@ impl LinkOutput {
             .send(RoutingTarget { src: self.own_node_id, dst: RoutingDestination::Control })?
             .commit_copy(&message)?;
         output.control_sent_seq = seq;
-        const DEFAULT_RTT: Duration = Duration::from_secs(1);
         let mut resend_delay = new_resend_delay(Duration::from_millis(0), &output.ping_tracker);
         drop(output);
 

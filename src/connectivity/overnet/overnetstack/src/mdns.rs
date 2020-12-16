@@ -137,6 +137,7 @@ pub async fn subscribe(
     ServiceSubscriberRequestStream::from_channel(fasync::Channel::from_channel(server)?)
         .map_err(Into::into)
         .try_for_each(|request| async move {
+            log::info!("{:?}", request);
             match request {
                 ServiceSubscriberRequest::OnInstanceDiscovered { instance, responder } => {
                     if is_compatible_instance(&instance) {

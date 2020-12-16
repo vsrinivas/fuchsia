@@ -130,7 +130,7 @@ async fn maybe_run_subsystem(
 ) -> Result<(), Error> {
     if cond {
         if let Err(e) = run.await {
-            log::warn!("{} subsystem failed and will be restarted: {:?}", name, e);
+            log::warn!("{} subsystem failed: {:?}", name, e);
         } else {
             log::info!("{} subsystem completed successfully", name);
         }
