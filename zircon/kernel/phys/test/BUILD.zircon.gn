@@ -7,12 +7,22 @@
 import("$zx/kernel/phys/phys_executable.gni")
 import("$zx/kernel/phys/qemu.gni")
 import("$zx/kernel/phys/zbi_executable.gni")
-import("$zx/public/gn/resource.gni")
-import("$zx/public/gn/test/zbi_test.gni")
+if (zx == "/") {
+  import("$zx/public/gn/resource.gni")
+  import("$zx/public/gn/test/zbi_test.gni")
+} else {
+  import("//build/dist/generated_resource.gni")
+  import("//src/bringup/lib/mexec/testing/zbi_test.gni")
+}
 import("common_tests.gni")
 
-assert(toolchain.environment == "kernel.phys" ||
-       toolchain.environment_label == qemu_environment)
+if (zx == "/") {
+  assert(toolchain.environment == "kernel.phys" ||
+         toolchain.environment_label == qemu_environment)
+} else {
+  assert(toolchain.environment == "kernel.phys" ||
+         toolchain_variant.base == qemu_environment)
+}
 
 # This provides a PhysMain function appropriate for zbi_test() targets.
 source_set("qemu-test-main") {
@@ -45,6 +55,7 @@ source_set("test-main") {
   public_deps = [
     "$zx/kernel/lib/arch:headers",
     "..:main",
+    "..:phys_executable.headers",
   ]
 }
 
@@ -67,6 +78,7 @@ template("phys_qemu_test") {
                              "output_name",
                              "tags",
                              "testonly",
+                             "target_name",
                            ])
     deps += qemu_deps + [ ":qemu-test-main" ]
   }
@@ -85,6 +97,7 @@ template("phys_qemu_test") {
     }
 
     # The special kernel is all that really matters for this test.
+    device_types = [ "QEMU" ]
     qemu_kernel = ":$executable_target"
 
     # Set a short timeout since the tests don't necessarily shut down QEMU
@@ -92,14 +105,22 @@ template("phys_qemu_test") {
     timeout = qemu_short_timeout
   }
 
-  # The "null redirect" is needed to perform variant selection consistent
-  # with what the phys_executable will do.  That way the $executable_target
-  # label is in the right toolchain to be found in images.json.
-  environment_redirect(main_target) {
-    testonly = true
-    forward_variables_from(invoker, [ "visibility" ])
-    environment_label = qemu_environment
-    deps = [ ":$zbi_target" ]
+  if (zx == "/") {
+    # The "null redirect" is needed to perform variant selection consistent
+    # with what the phys_executable will do.  That way the $executable_target
+    # label is in the right toolchain to be found in images.json.
+    environment_redirect(main_target) {
+      testonly = true
+      forward_variables_from(invoker, [ "visibility" ])
+      environment_label = qemu_environment
+      deps = [ ":$zbi_target" ]
+    }
+  } else {
+    group(main_target) {
+      testonly = true
+      forward_variables_from(invoker, [ "visibility" ])
+      public_deps = [ ":$zbi_target($qemu_environment)" ]
+    }
   }
 }
 
@@ -153,6 +174,7 @@ source_set("hello-world-test") {
   deps = [
     ":test-main",
     "$zx/kernel/lib/libc",
+    "..:phys_executable.headers",
   ]
 }
 
@@ -163,6 +185,7 @@ source_set("backtrace-test") {
     ":test-main",
     "$zx/kernel/lib/arch",
     "$zx/kernel/lib/libc",
+    "..:phys_executable.headers",
   ]
 }
 

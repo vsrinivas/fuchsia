@@ -17,50 +17,78 @@ if (zx == "/") {
 import("$zx/system/ulib/hwreg/hwreg_asm_header.gni")
 
 if (current_toolchain == default_toolchain) {
-  # Default toolchain (current_cpu == "") just defines the phys32 environment.
-  # This largely matches $zx/kernel/phys:kernel.phys and should be kept up to
-  # date with changes.
-  environment("kernel.phys32") {
-    cpu = "x64"
+  if (zx == "/") {
+    # Default toolchain (current_cpu == "") just defines the phys32 environment.
+    # This largely matches $zx/kernel/phys:kernel.phys and should be kept up to
+    # date with changes.
+    environment("kernel.phys32") {
+      cpu = "x64"
 
-    globals = {
-      is_kernel = true
+      globals = {
+        is_kernel = true
+      }
+
+      configs += standard_fuchsia_configs
+      configs += [
+        "$zx/kernel:standalone",
+        "$zx/kernel:warnings",
+        "$zx/kernel/arch/x86:abi",
+        "$zx/kernel/phys:defines",
+
+        # All physmem code is inherently sensitive and in a position for any
+        # bug to be unusually dangerous.  So compile with undefined behavior
+        # checking in all builds, regardless of variant.  This is only the
+        # basic support that requires no runtime code.
+        "$zx/public/gn/config/instrumentation:ubsan-trap",
+
+        # This overrides some of the common settings (like PIE) that aren't
+        # broken out into removable configs, so it must come last.
+        ":x86-32",
+      ]
+
+      # Always enable frame pointers.
+      configs -= [ "$zx_build_config:default_frame_pointers" ]
+      configs += [ "$zx_build_config:frame_pointers" ]
+
+      tags = [
+        "x86-32",
+        "physmem",
+        "standalone",
+      ]
+      exclude_variant_tags = [
+        # There is no possibility of fancy runtimes like ASan for phys.
+        "instrumentation-runtime",
+
+        # TOOD(51994): Remove this when profile is supported.
+        "instrumented",
+      ]
     }
+  } else {
+    zircon_toolchain_suite("kernel.phys32") {
+      cpu = "x64"
+      os = "fuchsia"
+      environment = "kernel.phys32"
+      with_shared = false
 
-    configs += standard_fuchsia_configs
-    configs += [
-      "$zx/kernel:standalone",
-      "$zx/kernel:warnings",
-      "$zx/kernel/arch/x86:abi",
-      "$zx/kernel/phys:defines",
+      toolchain_variant_args = {
+        configs = [ "//zircon/kernel/arch/x86/phys:phys32_config" ]
 
-      # All physmem code is inherently sensitive and in a position for any
-      # bug to be unusually dangerous.  So compile with undefined behavior
-      # checking in all builds, regardless of variant.  This is only the
-      # basic support that requires no runtime code.
-      "$zx/public/gn/config/instrumentation:ubsan-trap",
+        # Always enable frame pointers.
+        # NOTE: This works because frame_pointers is added in the
+        # phys32_config definition below.
+        remove_common_configs = [ "$zx_build_config:default_frame_pointers" ]
 
-      # This overrides some of the common settings (like PIE) that aren't
-      # broken out into removable configs, so it must come last.
-      ":x86-32",
-    ]
+        tags = [ "kernel" ]
+      }
 
-    # Always enable frame pointers.
-    configs -= [ "$zx_build_config:default_frame_pointers" ]
-    configs += [ "$zx_build_config:frame_pointers" ]
+      exclude_variant_tags = [
+        # There is no possibility of fancy runtimes like ASan for phys.
+        "instrumentation-runtime",
 
-    tags = [
-      "x86-32",
-      "physmem",
-      "standalone",
-    ]
-    exclude_variant_tags = [
-      # There is no possibility of fancy runtimes like ASan for phys.
-      "instrumentation-runtime",
-
-      # TOOD(51994): Remove this when profile is supported.
-      "instrumented",
-    ]
+        # TOOD(51994): Remove this when profile is supported.
+        "instrumented",
+      ]
+    }
   }
 } else {
   if (toolchain.environment == "kernel.phys") {
@@ -77,6 +105,34 @@ if (current_toolchain == default_toolchain) {
     }
   } else if (toolchain.environment == "kernel.phys32") {
     # ... or here in the other phys environment.
+
+    if (zx != "/") {
+      config("phys32_config") {
+        configs = [
+          "$zx/kernel:standalone",
+          "$zx/kernel:warnings",
+          "$zx/kernel/arch/x86:abi",
+          "$zx/kernel/phys:defines",
+
+          # All physmem code is inherently sensitive and in a position for any
+          # bug to be unusually dangerous.  So compile with undefined behavior
+          # checking in all builds, regardless of variant.  This is only the
+          # basic support that requires no runtime code.
+          "$zx_build_config/instrumentation:ubsan-trap",
+
+          # This overrides some of the common settings (like PIE) that aren't
+          # broken out into removable configs, so it must come last.
+          ":x86-32",
+        ]
+
+        # NOTE: This works because default_frame_pointers is listed in
+        # remove_common_configs in the zircon_toolchain_suite() call above!
+        configs += [ "$zx_build_config:frame_pointers" ]
+      }
+
+      group("phys32_config_deps") {
+      }
+    }
 
     # phys32 code is 32-bit (i686) and loaded at a fixed address.
     config("x86-32") {
