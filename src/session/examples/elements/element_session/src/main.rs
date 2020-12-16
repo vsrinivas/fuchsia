@@ -4,7 +4,6 @@
 
 use {
     anyhow::{Context as _, Error},
-    element_management::{Element, ElementManager, ElementManagerError, SimpleElementManager},
     fidl_fuchsia_session::{
         AnnotationError, ElementControllerRequest, ElementControllerRequestStream,
         ElementManagerRequest, ElementManagerRequestStream, ProposeElementError,
@@ -13,6 +12,9 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
     futures::{StreamExt, TryStreamExt},
+    legacy_element_management::{
+        Element, ElementManager, ElementManagerError, SimpleElementManager,
+    },
     rand::{distributions::Alphanumeric, thread_rng, Rng},
 };
 
