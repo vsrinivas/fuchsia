@@ -63,7 +63,9 @@ impl TryFrom<Vec<bridge::Target>> for AddressesTargetFormatter {
     fn try_from(mut targets: Vec<bridge::Target>) -> Result<Self> {
         let mut t = Vec::with_capacity(targets.len());
         for target in targets.drain(..) {
-            t.push(AddressesTarget::try_from(target)?)
+            if let Ok(addr_target) = AddressesTarget::try_from(target) {
+                t.push(addr_target)
+            }
         }
         Ok(Self { targets: t })
     }
@@ -87,7 +89,9 @@ impl TryFrom<Vec<bridge::Target>> for SimpleTargetFormatter {
     fn try_from(mut targets: Vec<bridge::Target>) -> Result<Self> {
         let mut t = Vec::with_capacity(targets.len());
         for target in targets.drain(..) {
-            t.push(SimpleTarget::try_from(target)?)
+            if let Ok(simple_target) = SimpleTarget::try_from(target) {
+                t.push(simple_target)
+            }
         }
         Ok(Self { targets: t })
     }

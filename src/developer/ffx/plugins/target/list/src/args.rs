@@ -27,6 +27,9 @@ pub struct ListCommand {
     /// -- "simple" or "s" for simple format.
     /// -- "tabular" or "table" or "tab" or "t" for tabular format.
     /// -- "addresses" or "addrs" or "addr" or "a" for addresses format.
+    ///
+    /// Notes:
+    /// -- "simple" and "addresses" formats skip over fastboot targets for now.
     pub format: Format,
 }
 
