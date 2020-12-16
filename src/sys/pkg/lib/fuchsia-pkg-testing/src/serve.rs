@@ -44,8 +44,6 @@ pub struct ServedRepositoryBuilder {
     repo: Arc<Repository>,
     uri_path_override_handlers: Vec<Arc<dyn UriPathHandler>>,
     use_https: bool,
-    h2_only: bool,
-    h1_only: bool,
 }
 
 /// Override how a `ServedRepository` responds to GET requests on valid URI paths.
@@ -57,13 +55,7 @@ pub trait UriPathHandler: 'static + Send + Sync {
 
 impl ServedRepositoryBuilder {
     pub(crate) fn new(repo: Arc<Repository>) -> Self {
-        ServedRepositoryBuilder {
-            repo,
-            uri_path_override_handlers: vec![],
-            use_https: false,
-            h2_only: false,
-            h1_only: false,
-        }
+        ServedRepositoryBuilder { repo, uri_path_override_handlers: vec![], use_https: false }
     }
 
     /// Override how the `ServedRepositoryBuilder` responds to some URI paths.
@@ -79,18 +71,6 @@ impl ServedRepositoryBuilder {
     /// //third_party/rust_crates/vendor/rustls/test-ca/rsa/ca.cert.
     pub fn use_https(mut self, value: bool) -> Self {
         self.use_https = value;
-        self
-    }
-
-    /// Serve the repository only over HTTP/1.1 only.
-    pub fn h1_only(mut self, value: bool) -> Self {
-        self.h1_only = value;
-        self
-    }
-
-    /// Serve the repository only over HTTP/2 only.
-    pub fn h2_only(mut self, value: bool) -> Self {
-        self.h2_only = value;
         self
     }
 
@@ -115,8 +95,6 @@ impl ServedRepositoryBuilder {
             let certs = parse_cert_chain(&include_bytes!("../certs/server.certchain")[..]);
             let key = parse_private_key(&include_bytes!("../certs/server.rsa")[..]);
             let mut tls_config = rustls::ServerConfig::new(rustls::NoClientAuth::new());
-            // Configure ALPN and prefer H2 over HTTP/1.1.
-            tls_config.set_protocols(&[b"h2".to_vec(), b"http/1.1".to_vec()]);
             tls_config.set_single_cert(certs, key).unwrap();
             let tls_acceptor = tokio_rustls::TlsAcceptor::from(Arc::new(tls_config));
 
@@ -172,8 +150,6 @@ impl ServedRepositoryBuilder {
         let (stop, rx_stop) = futures::channel::oneshot::channel();
 
         let (server, wait_stop) = Server::builder(from_stream(connections))
-            .http1_only(self.h1_only)
-            .http2_only(self.h2_only)
             .executor(fuchsia_hyper::Executor)
             .serve(make_svc)
             .with_graceful_shutdown(

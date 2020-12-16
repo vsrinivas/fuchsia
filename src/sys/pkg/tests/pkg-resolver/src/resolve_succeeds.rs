@@ -807,37 +807,6 @@ async fn https_endpoint() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn h2_endpoint() {
-    let env = TestEnvBuilder::new().build().await;
-
-    let s = "h2_endpoints";
-    let pkg = PackageBuilder::new(s)
-        .add_resource_at(format!("bin/{}", s), &test_package_bin(s)[..])
-        .add_resource_at(format!("meta/{}.cmx", s), &test_package_cmx(s)[..])
-        .build()
-        .await
-        .unwrap();
-    let repo = Arc::new(
-        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-            .add_package(&pkg)
-            .build()
-            .await
-            .unwrap(),
-    );
-    let served_repository = repo.server().use_https(true).h2_only(true).start().unwrap();
-
-    env.register_repo(&served_repository).await;
-
-    let package = env
-        .resolve_package(format!("fuchsia-pkg://test/{}", s).as_str())
-        .await
-        .expect("package to resolve without error");
-    pkg.verify_contents(&package).await.unwrap();
-
-    env.stop().await;
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn verify_concurrent_resolve() {
     let env = TestEnvBuilder::new().build().await;
 

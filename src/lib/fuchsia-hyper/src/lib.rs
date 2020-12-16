@@ -137,10 +137,6 @@ pub fn new_https_client_dangerous(
 pub fn new_https_client_from_tcp_options(tcp_options: TcpOptions) -> HttpsClient {
     let mut tls = rustls::ClientConfig::new();
     configure_cert_store(&mut tls);
-
-    // Set the TLS ALPN flags to match those as set by `hyper-rustls::HttpsConnector::new()`
-    tls.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
-
     new_https_client_dangerous(tls, tcp_options)
 }
 
