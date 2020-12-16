@@ -4,15 +4,13 @@
 
 //! Handles framing/deframing of stream links
 
-use crate::future_help::MutexTicket;
 use anyhow::{format_err, Error};
-use byteorder::WriteBytesExt;
-use crc::crc32;
 use fuchsia_async::{Task, Timer};
 use futures::future::poll_fn;
 use futures::lock::Mutex;
 use futures::prelude::*;
 use futures::ready;
+use overnet_core::MutexTicket;
 use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
 use std::time::Duration;
@@ -479,139 +477,97 @@ impl<Fmt: Format> Drop for DeframerReader<Fmt> {
     }
 }
 
-/// Framing format that assumes an underlying transport that *MAY* lose/duplicate/corrupt some bytes
-/// but usually transports the full 8 bits in a byte (e.g. many serial transports).
-pub struct LossyBinary {
-    duration_per_byte: Duration,
-}
-
-impl LossyBinary {
-    /// Create a new LossyBinary format instance with some timeout waiting for bytes (if this is
-    /// exceeded a byte will be skipped in the input).
-    pub fn new(duration_per_byte: Duration) -> Self {
-        Self { duration_per_byte }
-    }
-}
-
-impl Format for LossyBinary {
-    fn frame(&self, bytes: &[u8], outgoing: &mut Vec<u8>) -> Result<(), Error> {
-        if bytes.len() > (std::u16::MAX as usize) + 1 {
-            return Err(anyhow::format_err!(
-                "Packet length ({}) too long for stream framing",
-                bytes.len()
-            ));
-        }
-        outgoing.reserve(2 + 4 + bytes.len() + 1);
-        outgoing.write_u16::<byteorder::LittleEndian>((bytes.len() - 1) as u16)?;
-        outgoing.write_u32::<byteorder::LittleEndian>(crc32::checksum_ieee(bytes))?;
-        outgoing.extend_from_slice(bytes);
-        outgoing.write_u8(10u8)?; // '\n'
-        Ok(())
-    }
-
-    fn deframe(&self, bytes: &[u8]) -> Result<Deframed, Error> {
-        let mut start = 0;
-        loop {
-            let buf = &bytes[start..];
-            if buf.len() <= 7 {
-                return Ok(Deframed { frame: None, unframed_bytes: start, new_start_pos: start });
-            }
-            let len = 1 + (u16::from_le_bytes([buf[0], buf[1]]) as usize);
-            let crc = u32::from_le_bytes([buf[2], buf[3], buf[4], buf[5]]);
-            if buf.len() < 7 + len {
-                // Not enough bytes to deframe: done for now
-                return Ok(Deframed { frame: None, unframed_bytes: start, new_start_pos: start });
-            }
-            if buf[6 + len] != 10u8 {
-                // Does not end with an end marker: remove start byte and continue
-                start += 1;
-                continue;
-            }
-            let frame = &buf[6..6 + len];
-            let crc_actual = crc32::checksum_ieee(frame);
-            if crc != crc_actual {
-                // CRC mismatch: skip start marker and continue
-                start += 1;
-                continue;
-            }
-            // Successfully got a frame! Save it, and continue
-            return Ok(Deframed {
-                frame: Some(frame.to_vec()),
-                unframed_bytes: start,
-                new_start_pos: start + 7 + len,
-            });
-        }
-    }
-
-    fn deframe_timeout(&self, have_pending_bytes: bool) -> Option<Duration> {
-        if have_pending_bytes {
-            Some(self.duration_per_byte)
-        } else {
-            None
-        }
-    }
-}
-
-/// Framing format that assumes a lossless underlying byte stream that can transport all 8 bits of a
-/// byte.
-pub struct LosslessBinary;
-
-impl Format for LosslessBinary {
-    fn frame(&self, bytes: &[u8], outgoing: &mut Vec<u8>) -> Result<(), Error> {
-        if bytes.len() > (std::u16::MAX as usize) + 1 {
-            return Err(anyhow::format_err!(
-                "Packet length ({}) too long for stream framing",
-                bytes.len()
-            ));
-        }
-        outgoing.write_u16::<byteorder::LittleEndian>((bytes.len() - 1) as u16)?;
-        outgoing.extend_from_slice(bytes);
-        Ok(())
-    }
-
-    fn deframe(&self, bytes: &[u8]) -> Result<Deframed, Error> {
-        if bytes.len() <= 3 {
-            return Ok(Deframed { frame: None, unframed_bytes: 0, new_start_pos: 0 });
-        }
-        let len = 1 + (u16::from_le_bytes([bytes[0], bytes[1]]) as usize);
-        if bytes.len() < 2 + len {
-            // Not enough bytes to deframe: done for now.
-            return Ok(Deframed { frame: None, unframed_bytes: 0, new_start_pos: 0 });
-        }
-        let frame = &bytes[2..2 + len];
-        return Ok(Deframed {
-            frame: Some(frame.to_vec()),
-            unframed_bytes: 0,
-            new_start_pos: 2 + len,
-        });
-    }
-
-    fn deframe_timeout(&self, _have_pending_bytes: bool) -> Option<Duration> {
-        None
-    }
-}
-
 #[cfg(test)]
 mod test {
 
     use super::*;
+    use byteorder::WriteBytesExt;
+    use crc::crc32;
+
+    /// Framing format that assumes an underlying transport that *MAY* lose/duplicate/corrupt some bytes
+    /// but usually transports the full 8 bits in a byte (e.g. many serial transports).
+    pub struct LossyBinary {
+        duration_per_byte: Duration,
+    }
+
+    impl LossyBinary {
+        /// Create a new LossyBinary format instance with some timeout waiting for bytes (if this is
+        /// exceeded a byte will be skipped in the input).
+        pub fn new(duration_per_byte: Duration) -> Self {
+            Self { duration_per_byte }
+        }
+    }
+
+    impl Format for LossyBinary {
+        fn frame(&self, bytes: &[u8], outgoing: &mut Vec<u8>) -> Result<(), Error> {
+            if bytes.len() > (std::u16::MAX as usize) + 1 {
+                return Err(anyhow::format_err!(
+                    "Packet length ({}) too long for stream framing",
+                    bytes.len()
+                ));
+            }
+            outgoing.reserve(2 + 4 + bytes.len() + 1);
+            outgoing.write_u16::<byteorder::LittleEndian>((bytes.len() - 1) as u16)?;
+            outgoing.write_u32::<byteorder::LittleEndian>(crc32::checksum_ieee(bytes))?;
+            outgoing.extend_from_slice(bytes);
+            outgoing.write_u8(10u8)?; // '\n'
+            Ok(())
+        }
+
+        fn deframe(&self, bytes: &[u8]) -> Result<Deframed, Error> {
+            let mut start = 0;
+            loop {
+                let buf = &bytes[start..];
+                if buf.len() <= 7 {
+                    return Ok(Deframed {
+                        frame: None,
+                        unframed_bytes: start,
+                        new_start_pos: start,
+                    });
+                }
+                let len = 1 + (u16::from_le_bytes([buf[0], buf[1]]) as usize);
+                let crc = u32::from_le_bytes([buf[2], buf[3], buf[4], buf[5]]);
+                if buf.len() < 7 + len {
+                    // Not enough bytes to deframe: done for now
+                    return Ok(Deframed {
+                        frame: None,
+                        unframed_bytes: start,
+                        new_start_pos: start,
+                    });
+                }
+                if buf[6 + len] != 10u8 {
+                    // Does not end with an end marker: remove start byte and continue
+                    start += 1;
+                    continue;
+                }
+                let frame = &buf[6..6 + len];
+                let crc_actual = crc32::checksum_ieee(frame);
+                if crc != crc_actual {
+                    // CRC mismatch: skip start marker and continue
+                    start += 1;
+                    continue;
+                }
+                // Successfully got a frame! Save it, and continue
+                return Ok(Deframed {
+                    frame: Some(frame.to_vec()),
+                    unframed_bytes: start,
+                    new_start_pos: start + 7 + len,
+                });
+            }
+        }
+
+        fn deframe_timeout(&self, have_pending_bytes: bool) -> Option<Duration> {
+            if have_pending_bytes {
+                Some(self.duration_per_byte)
+            } else {
+                None
+            }
+        }
+    }
 
     fn join(mut a: Vec<u8>, mut b: Vec<u8>) -> Vec<u8> {
         a.append(&mut b);
         a
-    }
-
-    #[fuchsia_async::run(1, test)]
-    async fn simple_frame() -> Result<(), Error> {
-        let (mut framer_writer, mut framer_reader) = new_framer(LosslessBinary, 1024);
-        framer_writer.write(&[1, 2, 3, 4]).await?;
-        let (mut deframer_writer, mut deframer_reader) = new_deframer(LosslessBinary);
-        deframer_writer.write(framer_reader.read().await?.as_slice()).await?;
-        assert_eq!(deframer_reader.read().await?, ReadBytes::Framed(vec![1, 2, 3, 4]));
-        framer_writer.write(&[5, 6, 7, 8]).await?;
-        deframer_writer.write(framer_reader.read().await?.as_slice()).await?;
-        assert_eq!(deframer_reader.read().await?, ReadBytes::Framed(vec![5, 6, 7, 8]));
-        Ok(())
     }
 
     #[fuchsia_async::run(1, test)]
@@ -626,14 +582,6 @@ mod test {
         framer_writer.write(&[5, 6, 7, 8]).await?;
         deframer_writer.write(framer_reader.read().await?.as_slice()).await?;
         assert_eq!(deframer_reader.read().await?, ReadBytes::Framed(vec![5, 6, 7, 8]));
-        Ok(())
-    }
-
-    #[fuchsia_async::run(1, test)]
-    async fn large_frame() -> Result<(), Error> {
-        let big_slice = vec![0u8; 100000];
-        let (mut framer_writer, _framer_reader) = new_framer(LosslessBinary, 1024);
-        assert!(framer_writer.write(&big_slice).await.is_err());
         Ok(())
     }
 

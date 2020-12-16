@@ -109,17 +109,8 @@ async fn list_links(args: ListLinks) -> Result<(), Error> {
                 );
                 match link.config {
                     None => (),
-                    Some(LinkConfig::Socket(opt)) => {
-                        print!("  external");
-                        if let Some(label) = opt.connection_label {
-                            print!(" label={:?}", label);
-                        }
-                        if let Some(bytes_per_second) = opt.bytes_per_second {
-                            print!(" unreliable with bytes per second={}", bytes_per_second);
-                        } else {
-                            print!(" reliable_transport");
-                        }
-                        println!("");
+                    Some(LinkConfig::Socket(fidl_fuchsia_overnet_protocol::Empty {})) => {
+                        println!("  external");
                     }
                     Some(LinkConfig::Udp(addr)) => {
                         let addr = std::net::SocketAddrV6::new(

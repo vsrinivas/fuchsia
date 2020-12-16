@@ -14,15 +14,13 @@ use {
     },
     fuchsia_async::{Task, Timer},
     futures::prelude::*,
-    overnet_core::{
-        log_errors, new_deframer, new_framer, ListPeersContext, LosslessBinary, ReadBytes, Router,
-        RouterOptions, SecurityContext,
-    },
+    overnet_core::{log_errors, ListPeersContext, Router, RouterOptions, SecurityContext},
     std::{
         sync::atomic::{AtomicU64, Ordering},
         sync::Arc,
         time::Duration,
     },
+    stream_link::run_stream_link,
 };
 
 pub use fidl_fuchsia_overnet::{
@@ -63,11 +61,9 @@ async fn run_ascendd_connection(node: Arc<Router>) -> Result<(), Error> {
 
     log::trace!("Ascendd path: {}", ascendd_path);
     log::trace!("Overnet connection label: {:?}", connection_label);
-    let mut uds = &async_std::os::unix::net::UnixStream::connect(ascendd_path.clone()).await?;
-    let (mut framer, mut outgoing_reader) = new_framer(LosslessBinary, 4096);
-    let (mut incoming_writer, mut deframer) = new_deframer(LosslessBinary);
-
-    let (mut link_sender, mut link_receiver) = node.new_link(Box::new(move || {
+    let uds = &async_std::os::unix::net::UnixStream::connect(ascendd_path.clone()).await?;
+    let (mut rx, mut tx) = uds.split();
+    let config = Box::new(move || {
         Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddClient(
             fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
                 path: Some(ascendd_path.clone()),
@@ -75,49 +71,9 @@ async fn run_ascendd_connection(node: Arc<Router>) -> Result<(), Error> {
                 ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
             },
         ))
-    }));
+    });
 
-    let ((), (), (), ()) = futures::future::try_join4(
-        async move {
-            let mut buf = [0u8; 16384];
-
-            loop {
-                let n = uds.read(&mut buf).await?;
-                if n == 0 {
-                    return Ok(());
-                }
-                incoming_writer.write(&buf[..n]).await?;
-            }
-        },
-        async move {
-            loop {
-                let out = outgoing_reader.read().await?;
-                uds.write_all(&out).await?;
-            }
-        },
-        async move {
-            loop {
-                let mut frame = match deframer.read().await? {
-                    ReadBytes::Framed(frame) => frame,
-                    ReadBytes::Unframed(unframed) => {
-                        panic!(
-                            "Should not see unframed bytes from ascendd, but got {:?}",
-                            unframed
-                        );
-                    }
-                };
-                link_receiver.received_frame(frame.as_mut_slice()).await;
-            }
-        },
-        async move {
-            while let Some(frame) = link_sender.next_send().await {
-                framer.write(frame.bytes()).await?;
-            }
-            Ok::<_, Error>(())
-        },
-    )
-    .await?;
-    Ok(())
+    run_stream_link(node, &mut rx, &mut tx, config).await
 }
 
 /// Retry a future until it succeeds or retries run out.
@@ -176,8 +132,14 @@ async fn handle_controller_request(
     node: Arc<Router>,
     r: MeshControllerRequest,
 ) -> Result<(), Error> {
-    let MeshControllerRequest::AttachSocketLink { socket, options, control_handle: _ } = r;
-    if let Err(e) = node.run_socket_link(socket, options).await {
+    let MeshControllerRequest::AttachSocketLink { socket, control_handle: _ } = r;
+    let (mut rx, mut tx) = fidl::AsyncSocket::from_socket(socket)?.split();
+    let config = Box::new(|| {
+        Some(fidl_fuchsia_overnet_protocol::LinkConfig::Socket(
+            fidl_fuchsia_overnet_protocol::Empty {},
+        ))
+    });
+    if let Err(e) = run_stream_link(node, &mut rx, &mut tx, config).await {
         log::warn!("Socket link failed: {:#?}", e);
     }
     Ok(())

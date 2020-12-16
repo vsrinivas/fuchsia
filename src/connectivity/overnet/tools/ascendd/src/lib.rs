@@ -5,11 +5,12 @@
 mod serial;
 
 use crate::serial::run_serial_link_handlers;
-use anyhow::{bail, format_err, Error};
+use anyhow::{bail, Error};
 use argh::FromArgs;
 use futures::prelude::*;
-use overnet_core::{new_deframer, new_framer, LosslessBinary, ReadBytes, Router, RouterOptions};
+use overnet_core::{Router, RouterOptions};
 use std::sync::Arc;
+use stream_link::run_stream_link;
 
 #[derive(FromArgs, Default)]
 /// daemon to lift a non-Fuchsia device into Overnet.
@@ -32,11 +33,9 @@ async fn run_stream(
     stream: Result<async_std::os::unix::net::UnixStream, std::io::Error>,
     sockpath: &str,
 ) -> Result<(), Error> {
-    let mut stream = &stream?;
-    let (mut framer, mut outgoing_reader) = new_framer(LosslessBinary, 4096);
-    let (mut incoming_writer, mut deframer) = new_deframer(LosslessBinary);
+    let (mut rx, mut tx) = stream?.split();
     let sockpath = sockpath.to_string();
-    let (mut link_sender, mut link_receiver) = node.new_link(Box::new(move || {
+    let config = Box::new(move || {
         Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddServer(
             fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
                 path: Some(sockpath.clone()),
@@ -44,45 +43,9 @@ async fn run_stream(
                 ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
             },
         ))
-    }));
+    });
     log::trace!("Processing new Ascendd socket");
-    let ((), (), (), ()) = futures::future::try_join4(
-        async move {
-            loop {
-                let mut buf = [0u8; 16384];
-                let n = stream.read(&mut buf).await?;
-                if n == 0 {
-                    return Err(format_err!("Incoming socket closed"));
-                }
-                incoming_writer.write(&buf[..n]).await?;
-            }
-        },
-        async move {
-            loop {
-                let out = outgoing_reader.read().await?;
-                stream.write_all(&out).await?;
-            }
-        },
-        async move {
-            while let Some(frame) = link_sender.next_send().await {
-                framer.write(frame.bytes()).await?;
-            }
-            Ok::<_, Error>(())
-        },
-        async move {
-            loop {
-                let mut frame = match deframer.read().await? {
-                    ReadBytes::Framed(framed) => framed,
-                    ReadBytes::Unframed(unframed) => {
-                        panic!("Should not see unframed bytes here, but got {:?}", unframed)
-                    }
-                };
-                link_receiver.received_frame(frame.as_mut()).await;
-            }
-        },
-    )
-    .await?;
-    Ok(())
+    run_stream_link(node, &mut rx, &mut tx, config).await
 }
 
 pub async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin + Send) -> Result<(), Error> {

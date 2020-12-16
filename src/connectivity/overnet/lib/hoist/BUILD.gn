@@ -38,6 +38,7 @@ rustc_library("hoist") {
   } else {
     deps += [
       "//src/connectivity/overnet/lib/core",
+      "//src/connectivity/overnet/lib/stream_link",
       "//src/lib/zircon/rust:fuchsia-zircon-status",
       "//third_party/rust_crates:async-std",
       "//third_party/rust_crates:chrono",

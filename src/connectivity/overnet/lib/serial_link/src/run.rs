@@ -8,12 +8,10 @@ use anyhow::{format_err, Context as _, Error};
 use fuchsia_async::TimeoutExt;
 use future::Either;
 use futures::prelude::*;
-use overnet_core::{
-    new_deframer, new_framer, DeframerWriter, FramerReader, LinkReceiver, LinkSender, ReadBytes,
-    Router,
-};
+use overnet_core::{LinkReceiver, LinkSender, Router};
 use std::sync::{Arc, Weak};
 use std::time::Duration;
+use stream_framer::{new_deframer, new_framer, DeframerWriter, FramerReader, ReadBytes};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Role {

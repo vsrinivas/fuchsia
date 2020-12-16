@@ -33,7 +33,6 @@ use crate::{
     routes::{ForwardingTable, Routes},
     security_context::{quiche_config_from_security_context, SecurityContext},
     service_map::{ListablePeer, ServiceMap},
-    socket_link::run_socket_link,
 };
 use anyhow::{bail, format_err, Context as _, Error};
 use fidl::{endpoints::ClientEnd, AsHandleRef, Channel, Handle, HandleBased, Socket, SocketOpts};
@@ -460,15 +459,6 @@ impl Router {
     /// Create a new list_peers context
     pub fn new_list_peers_context(&self) -> ListPeersContext {
         ListPeersContext(Mutex::new(Some(self.service_map.new_list_peers_observer())))
-    }
-
-    /// Implementation of AttachToSocket fidl method.
-    pub async fn run_socket_link(
-        self: &Arc<Self>,
-        socket: fidl::Socket,
-        options: fidl_fuchsia_overnet_protocol::SocketLinkOptions,
-    ) -> Result<(), Error> {
-        run_socket_link(self.clone(), socket, options).await
     }
 
     /// Diagnostic information for links
@@ -1149,25 +1139,6 @@ mod tests {
         ensure_pending(&mut never_completes);
         lp.list_peers().await.expect_err("Concurrent list peers should fail");
         ensure_pending(&mut never_completes);
-        Ok(())
-    }
-
-    #[fuchsia::test]
-    async fn attach_with_zero_bytes_per_second(run: usize) -> Result<(), Error> {
-        let mut node_id_gen = NodeIdGenerator::new("attach_with_zero_bytes_per_second", run);
-        let n = node_id_gen.new_router()?;
-        let (c, s) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
-        n.run_socket_link(
-            s,
-            fidl_fuchsia_overnet_protocol::SocketLinkOptions {
-                connection_label: Some("test".to_string()),
-                bytes_per_second: Some(0),
-                ..fidl_fuchsia_overnet_protocol::SocketLinkOptions::EMPTY
-            },
-        )
-        .await
-        .expect_err("bytes_per_second == 0 should fail");
-        drop(c);
         Ok(())
     }
 }

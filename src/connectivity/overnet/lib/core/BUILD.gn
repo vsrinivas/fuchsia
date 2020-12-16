@@ -69,9 +69,7 @@ CORE_SOURCES = [
   "src/routes.rs",
   "src/security_context.rs",
   "src/service_map.rs",
-  "src/socket_link.rs",
   "src/stat_counter.rs",
-  "src/stream_framer.rs",
   "src/test_util.rs",
 ]
 

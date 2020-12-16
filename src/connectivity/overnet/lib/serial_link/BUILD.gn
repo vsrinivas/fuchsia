@@ -12,6 +12,7 @@ rustc_library("serial_link") {
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial-rustc",
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
     "//src/connectivity/overnet/lib/core",
+    "//src/connectivity/overnet/lib/stream_framer",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:base64",

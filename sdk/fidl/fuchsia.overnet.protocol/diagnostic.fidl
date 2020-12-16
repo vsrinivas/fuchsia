@@ -78,7 +78,8 @@ table LinkDiagnosticInfo {
 union LinkConfig {
     /// A link configured via fuchsia.overnet.MeshController/AttachSocket - these are links
     /// that are implemented externally to Overnet.
-    1: SocketLinkOptions socket;
+    7: Empty socket;
+    1: reserved;
     /// A link using overnetstack's UDP protocol.
     /// The content of this config is the address of the peer.
     2: fuchsia.net.Ipv6SocketAddress udp;

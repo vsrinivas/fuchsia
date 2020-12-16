@@ -8,6 +8,8 @@ group("lib") {
     "core",
     "hoist",
     "serial_link",
+    "stream_framer",
+    "stream_link",
     "udp_link",
   ]
 }
@@ -18,6 +20,8 @@ group("tests") {
     "core:tests",
     "hoist:tests",
     "serial_link:tests",
+    "stream_framer:tests",
+    "stream_link:tests",
     "udp_link:tests",
   ]
 }

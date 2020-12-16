@@ -11,9 +11,9 @@ use fuchsia_async::TimeoutExt;
 use futures::channel::{mpsc, oneshot};
 use futures::lock::Mutex;
 use futures::prelude::*;
-use overnet_core::{DeframerReader, FramerWriter, ReadBytes};
 use std::collections::HashMap;
 use std::time::Duration;
+use stream_framer::{DeframerReader, FramerWriter, ReadBytes};
 
 // Flag bits for fragment id's
 pub const END_OF_MSG: u8 = 0x80;
@@ -202,9 +202,9 @@ mod test {
     use fuchsia_async::TimeoutExt;
     use futures::future::{try_join, try_join4};
     use futures::prelude::*;
-    use overnet_core::{new_deframer, new_framer, DeframerWriter, FramerReader, ReadBytes};
     use std::collections::HashSet;
     use std::time::Duration;
+    use stream_framer::{new_deframer, new_framer, DeframerWriter, FramerReader, ReadBytes};
 
     async fn framer_write(
         mut framer_reader: FramerReader<LossyText>,

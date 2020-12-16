@@ -14,6 +14,7 @@ rustc_test("integration") {
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
     "//src/connectivity/overnet/lib/core",
+    "//src/connectivity/overnet/lib/stream_link",
     "//src/connectivity/overnet/lib/udp_link",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",

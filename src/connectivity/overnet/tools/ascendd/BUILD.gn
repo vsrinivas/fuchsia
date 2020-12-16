@@ -17,6 +17,7 @@ if (is_host) {
       "//src/connectivity/overnet/lib/core",
       "//src/connectivity/overnet/lib/hoist",
       "//src/connectivity/overnet/lib/serial_link",
+      "//src/connectivity/overnet/lib/stream_link",
       "//src/lib/fidl/rust/fidl",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",

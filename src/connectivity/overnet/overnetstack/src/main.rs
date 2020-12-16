@@ -22,6 +22,7 @@ use futures::lock::Mutex;
 use futures::prelude::*;
 use overnet_core::{Router, RouterOptions, SimpleSecurityContext};
 use std::sync::Arc;
+use stream_link::run_stream_link;
 
 #[derive(FromArgs)]
 /// Overnet.
@@ -102,8 +103,14 @@ async fn run_mesh_controller_server(
             let node = node.clone();
             async move {
                 match request {
-                    MeshControllerRequest::AttachSocketLink { socket, options, .. } => {
-                        if let Err(e) = node.run_socket_link(socket, options).await {
+                    MeshControllerRequest::AttachSocketLink { socket, .. } => {
+                        let (mut rx, mut tx) = fidl::AsyncSocket::from_socket(socket)?.split();
+                        let config = Box::new(|| {
+                            Some(fidl_fuchsia_overnet_protocol::LinkConfig::Socket(
+                                fidl_fuchsia_overnet_protocol::Empty {},
+                            ))
+                        });
+                        if let Err(e) = run_stream_link(node, &mut rx, &mut tx, config).await {
                             log::warn!("Socket link failed: {:?}", e);
                         }
                         Ok(())

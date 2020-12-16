@@ -5,9 +5,9 @@
 use anyhow::{format_err, Error};
 use byteorder::WriteBytesExt;
 use crc::crc32;
-use overnet_core::{Deframed, Format};
 use std::convert::TryInto;
 use std::time::Duration;
+use stream_framer::{Deframed, Format};
 
 /// Framing format that assumes a lossy byte stream that doesn't support more than 7-bit text and is
 /// hostile towards control characters.
@@ -169,7 +169,7 @@ impl Format for LossyText {
 mod test {
     use super::*;
     use futures::prelude::*;
-    use overnet_core::{new_deframer, new_framer, ReadBytes};
+    use stream_framer::{new_deframer, new_framer, ReadBytes};
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn simple_frame_lossy_text() {

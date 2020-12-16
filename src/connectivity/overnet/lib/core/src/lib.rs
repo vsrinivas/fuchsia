@@ -28,19 +28,16 @@ mod router;
 mod routes;
 mod security_context;
 mod service_map;
-mod socket_link;
 mod stat_counter;
-mod stream_framer;
 mod test_util;
 
 // Export selected types from modules.
 pub use coding::{decode_fidl, encode_fidl};
 pub use future_help::log_errors;
 pub use labels::{ConnectionId, Endpoint, NodeId, NodeLinkId};
-pub use link::{LinkReceiver, LinkSender, SendFrame, MAX_FRAME_LENGTH};
+pub use link::{ConfigProducer, LinkReceiver, LinkSender, SendFrame, MAX_FRAME_LENGTH};
 pub use router::{generate_node_id, ListPeersContext, Router, RouterOptions};
 pub use security_context::{SecurityContext, SimpleSecurityContext};
-pub use stream_framer::*;
 
 pub use test_util::{test_security_context, NodeIdGenerator};
 

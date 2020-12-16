@@ -36,8 +36,8 @@ protocol ServicePublisher {
 /// Interfaces applicable to controlling an Overnet mesh
 [Discoverable]
 protocol MeshController {
-    /// Attach a socket as a new link. Bad socket options will result in the channel being closed.
-    AttachSocketLink(zx.handle:SOCKET socket, fuchsia.overnet.protocol.SocketLinkOptions options);
+    /// Attach a socket as a new link.
+    AttachSocketLink(zx.handle:SOCKET socket);
 };
 
 /// A ServiceProvider is a factory for one service.

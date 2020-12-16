@@ -63,23 +63,6 @@ async fn quic(run: usize) -> Result<(), Error> {
     run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
 }
 
-#[fuchsia::test]
-async fn interspersed_log_messages(run: usize) -> Result<(), Error> {
-    let mut node_id_gen = NodeIdGenerator::new("interspersed_log_messages", run);
-    let client = Overnet::new(&mut node_id_gen)?;
-    let server = Overnet::new(&mut node_id_gen)?;
-    let _t = Task::spawn({
-        let client = client.clone();
-        let server = server.clone();
-        async move {
-            if let Err(e) = super::connect_with_interspersed_log_messages(client, server).await {
-                panic!("interspersed_log_messages connection failed: {:?}", e);
-            }
-        }
-    });
-    run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).map_ok(drop).await
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // Client implementation
 
