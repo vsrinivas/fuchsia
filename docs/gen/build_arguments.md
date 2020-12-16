@@ -741,15 +741,15 @@ Non-product JIT
 }
 ```
 
-From //build/dart/config.gni:21
+From //build/dart/config.gni:18
 
 ### dart_force_product
-Forces all Dart and Flutter apps to build in a specific configuration that
-we use to build products.
+Forces all Dart apps to build in product mode which is a
+stripped down version of the VM running in AOT mode.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/5f8c74542b3512690cee771f76c13e113a6365cc/runtime/dart/config.gni#10)
+From //build/dart/config.gni:10
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -1022,7 +1022,7 @@ Non-product AOT
   is_aot = true
   is_product = false
   platform_name = "flutter_runner"
-  runner_dep = "//topaz/runtime/flutter_runner:flutter_aot_runner"
+  runner_dep = "//src/flutter:flutter_aot_runner"
   runtime_meta = "//build/flutter/meta/aot_runtime"
 }
 ```
@@ -2515,6 +2515,12 @@ From //tools/size_checker/cmd/BUILD.gn:52
 **Current value (from the default):** `16`
 
 From //zircon/kernel/params.gni:20
+
+### supress_flutter_runner_patched_sdk
+
+**Current value (from the default):** `true`
+
+From [//topaz/runtime/flutter_runner/kernel/soft_transition.gni:7](https://fuchsia.googlesource.com/topaz/+/1d4e5bcdba2e692b1f09d9cab2600eed82a7ff27/runtime/flutter_runner/kernel/soft_transition.gni#7)
 
 ### sysmgr_golden_warn_override
 Used by config_package().
