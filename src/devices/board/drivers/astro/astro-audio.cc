@@ -134,6 +134,7 @@ static const device_fragment_t codec_fragments[] = {
 
 zx_status_t Astro::AudioInit() {
   zx_status_t status;
+  uint8_t tdm_instance_id = 1;
 
   status = clk_impl_.Disable(g12a_clk::CLK_HIFI_PLL);
   if (status != ZX_OK) {
@@ -235,6 +236,7 @@ zx_status_t Astro::AudioInit() {
 #else
     tdm_dev.name = "astro-pcm-audio-out";
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
+    tdm_dev.instance_id = tdm_instance_id++;
     status = pbus_.CompositeDeviceAdd(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
                                       UINT32_MAX);
 #endif
@@ -331,6 +333,7 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.vid = PDEV_VID_AMLOGIC;
     tdm_dev.pid = PDEV_PID_AMLOGIC_S905D2;
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
+    tdm_dev.instance_id = tdm_instance_id++;
     tdm_dev.mmio_list = audio_mmios;
     tdm_dev.mmio_count = countof(audio_mmios);
     tdm_dev.bti_list = tdm_btis;
@@ -397,6 +400,7 @@ zx_status_t Astro::AudioInit() {
 #else
     tdm_dev.name = "astro-pcm-audio-in";
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
+    tdm_dev.instance_id = tdm_instance_id++;
     status = pbus_.CompositeDeviceAdd(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
                                       UINT32_MAX);
 #endif

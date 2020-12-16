@@ -482,6 +482,8 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "mali/aml-gpu",
       "sys/platform/05:04:13/sherlock-audio-pdm-in",
       "sherlock-i2s-audio-out",
+      "sherlock-pcm-audio-in",
+      "sherlock-pcm-audio-out",
       "ft5726-touch",
       "tee/optee",
       "sys/platform/00:00:f/fallback-rtc",

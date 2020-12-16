@@ -25,6 +25,7 @@
 namespace sherlock {
 
 zx_status_t Sherlock::AudioInit() {
+  uint8_t tdm_instance_id = 1;
   static constexpr pbus_mmio_t audio_mmios[] = {
       {
           .base = T931_EE_AUDIO_BASE,
@@ -480,6 +481,7 @@ zx_status_t Sherlock::AudioInit() {
   tdm_dev.vid = PDEV_VID_AMLOGIC;
   tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
   tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
+  tdm_dev.instance_id = tdm_instance_id++;
   tdm_dev.mmio_list = audio_mmios;
   tdm_dev.mmio_count = countof(audio_mmios);
   tdm_dev.bti_list = tdm_btis;
@@ -545,6 +547,7 @@ zx_status_t Sherlock::AudioInit() {
     tdm_dev.vid = PDEV_VID_AMLOGIC;
     tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
+    tdm_dev.instance_id = tdm_instance_id++;
     tdm_dev.mmio_list = audio_mmios;
     tdm_dev.mmio_count = countof(audio_mmios);
     tdm_dev.bti_list = pcm_out_btis;
@@ -652,6 +655,7 @@ zx_status_t Sherlock::AudioInit() {
     tdm_dev.vid = PDEV_VID_AMLOGIC;
     tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
+    tdm_dev.instance_id = tdm_instance_id++;
     tdm_dev.mmio_list = audio_mmios;
     tdm_dev.mmio_count = countof(audio_mmios);
     tdm_dev.bti_list = pcm_in_btis;
