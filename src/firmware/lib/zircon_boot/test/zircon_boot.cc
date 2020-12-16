@@ -307,4 +307,17 @@ TEST(BootTests, LoadAndBootMismatchedSlotTriggerReboot) {
   ASSERT_NO_FATAL_FAILURES(TestFirmwareAbrRebootIfSlotMismatched(
       kAbrSlotIndexR, kAbrSlotIndexB, kAbrSlotIndexB, kForceRecoveryOff));
 }
+
+// TODO(b/174968242): Update the test to check booted slot, ZBI item from property descriptors
+TEST(BootTests, TestSuccessfulVerifiedBootOsAbr) {
+  std::unique_ptr<MockZirconBootOps> dev;
+  ASSERT_NO_FATAL_FAILURES(CreateMockZirconBootOps(&dev));
+  ZirconBootOps ops = dev->GetZirconBootOpsWithAvb();
+  ops.get_firmware_slot = nullptr;
+  MarkSlotActive(dev.get(), kAbrSlotIndexA);
+  std::vector<uint8_t> buffer(kZirconPartitionSize);
+  ASSERT_EQ(LoadAndBoot(&ops, buffer.data(), buffer.size(), kForceRecoveryOff),
+            kBootResultBootReturn);
+  ASSERT_NO_FATAL_FAILURES(ValidateBootedSlot(dev.get(), kAbrSlotIndexA));
+}
 }  // namespace

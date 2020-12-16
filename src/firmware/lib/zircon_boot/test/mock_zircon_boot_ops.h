@@ -19,6 +19,11 @@
 
 class MockZirconBootOps {
  public:
+  enum class LockStatus {
+    kLocked,
+    kUnlocked,
+  };
+
   MockZirconBootOps() = default;
 
   // Basic ops
@@ -36,14 +41,26 @@ class MockZirconBootOps {
   void SetFirmwareSlot(AbrSlotIndex slot) { firmware_slot_ = slot; }
   void Reboot(bool force_recovery);
 
+  // Verified boot related.
+  void WriteRollbackIndex(size_t location, uint64_t rollback_index);
+  zx::status<uint64_t> ReadRollbackIndex(size_t location) const;
+  LockStatus GetDeviceLockStatus() { return device_locked_status_; }
+  void SetDeviceLockStatus(LockStatus status) { device_locked_status_ = status; }
+  AvbAtxPermanentAttributes GetPermanentAttributes();
+  void SetPermanentAttributes(const AvbAtxPermanentAttributes& permanent_attribute);
   ZirconBootOps GetZirconBootOps();
+  ZirconBootOps GetZirconBootOpsWithAvb();
 
  private:
   std::unordered_map<std::string, std::vector<uint8_t>> partitions_;
+  std::unordered_map<size_t, uint64_t> rollback_index_;
+  std::unordered_map<std::string, std::vector<uint8_t>> persistent_value_;
+  LockStatus device_locked_status_ = LockStatus::kLocked;
   AbrSlotIndex firmware_slot_;
   std::vector<uint8_t> booted_image_;
   std::optional<AbrSlotIndex> booted_slot_;
   std::function<bool(zbi_header_t*, size_t, AbrSlotIndex)> add_zbi_items_;
+  AvbAtxPermanentAttributes permanent_attributes_;
 
   zx::status<fbl::Span<uint8_t>> GetPartitionSpan(const char* name, size_t offset, size_t size);
 
@@ -57,6 +74,16 @@ class MockZirconBootOps {
   static void Boot(ZirconBootOps* ops, zbi_header_t* image, size_t capacity, AbrSlotIndex slot);
   static bool AddDeviceZbiItems(ZirconBootOps* zb_ops, zbi_header_t* image, size_t capacity,
                                 AbrSlotIndex slot);
+
+  // For assigning to ZirconVBootOps
+  static bool GetPartitionSize(ZirconBootOps* ops, const char* part, size_t* out);
+  static bool ReadRollbackIndex(ZirconBootOps* ops, size_t rollback_index_location,
+                                uint64_t* out_rollback_index);
+  static bool WriteRollbackIndex(ZirconBootOps* ops, size_t rollback_index_location,
+                                 uint64_t rollback_index);
+  static bool ReadIsDeivceLocked(ZirconBootOps* ops, bool* out_is_locked);
+  static bool ReadPermanentAttributes(ZirconBootOps* ops, AvbAtxPermanentAttributes* attribute);
+  static bool ReadPermanentAttributesHash(ZirconBootOps* ops, uint8_t hash[AVB_SHA256_DIGEST_SIZE]);
 };
 
 #endif  // SRC_FIRMWARE_LIB_ZIRCON_BOOT_TEST_MOCK_ZIRCON_BOOT_OPS_H_

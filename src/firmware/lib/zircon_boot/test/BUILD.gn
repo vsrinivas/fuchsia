@@ -6,7 +6,13 @@ import("//build/test.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":firmware_zircon_boot_test($host_toolchain)" ]
+
+  # avb library in tree uses <endian.h>, which is not available on mac.
+  # Therefore we disable the test now for mac platform. Once upstream
+  # avb is updated to fix the endian.h header issue, re-enable it.
+  if (host_os != "mac") {
+    deps = [ ":firmware_zircon_boot_test($host_toolchain)" ]
+  }
 }
 
 test("firmware_zircon_boot_test") {
@@ -19,9 +25,11 @@ test("firmware_zircon_boot_test") {
     "//src/firmware/lib/abr:in_tree",
     "//src/firmware/lib/zbi:in_tree",
     "//src/firmware/lib/zircon_boot:in_tree",
+    "//third_party/android/platform/external/avb",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/digest",
     "//zircon/third_party/ulib/cksum",
   ]
 }

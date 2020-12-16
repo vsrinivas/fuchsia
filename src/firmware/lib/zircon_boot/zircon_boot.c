@@ -1,13 +1,21 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#ifdef ZIRCON_BOOT_CUSTOM_SYSDEPS_HEADER
+#include <zircon_boot_sysdeps.h>
+#else
 #include <assert.h>
+#include <stddef.h>
+#include <string.h>
+#endif
+
 #include <lib/zbi/zbi.h>
 #include <lib/zircon_boot/zircon_boot.h>
-#include <string.h>
 #include <zircon/hw/gpt.h>
 
 #include "utils.h"
+#include "zircon_vboot.h"
 
 const char* GetSlotPartitionName(AbrSlotIndex slot) {
   if (slot == kAbrSlotIndexA) {
@@ -20,7 +28,7 @@ const char* GetSlotPartitionName(AbrSlotIndex slot) {
   return NULL;
 }
 
-static bool read_abr_metadata(void* context, size_t size, uint8_t* buffer) {
+static bool ReadAbrMetaData(void* context, size_t size, uint8_t* buffer) {
   ZirconBootOps* ops = (ZirconBootOps*)context;
   size_t read_size;
   return ZIRCON_BOOT_OPS_CALL(ops, read_from_partition, GPT_DURABLE_BOOT_NAME, 0, size, buffer,
@@ -28,7 +36,7 @@ static bool read_abr_metadata(void* context, size_t size, uint8_t* buffer) {
          read_size == size;
 }
 
-static bool write_abr_metadata(void* context, const uint8_t* buffer, size_t size) {
+static bool WriteAbrMetaData(void* context, const uint8_t* buffer, size_t size) {
   ZirconBootOps* ops = (ZirconBootOps*)context;
   size_t write_size;
   return ZIRCON_BOOT_OPS_CALL(ops, write_to_partition, GPT_DURABLE_BOOT_NAME, 0, size, buffer,
@@ -37,10 +45,35 @@ static bool write_abr_metadata(void* context, const uint8_t* buffer, size_t size
 }
 
 AbrOps GetAbrOpsFromZirconBootOps(ZirconBootOps* ops) {
-  AbrOps abr_ops = {.context = ops,
-                    .read_abr_metadata = read_abr_metadata,
-                    .write_abr_metadata = write_abr_metadata};
+  AbrOps abr_ops = {
+      .context = ops, .read_abr_metadata = ReadAbrMetaData, .write_abr_metadata = WriteAbrMetaData};
   return abr_ops;
+}
+
+static bool IsVerifiedBootOpsImplemented(ZirconBootOps* ops) {
+  return ops->verified_boot_get_partition_size && ops->verified_boot_read_rollback_index &&
+         ops->verified_boot_write_rollback_index && ops->verified_boot_read_is_device_locked &&
+         ops->verified_boot_read_permanent_attributes &&
+         ops->verified_boot_read_permanent_attributes_hash;
+}
+
+static ZirconBootResult VerifyKernel(ZirconBootOps* zb_ops, void* load_address,
+                                     size_t load_address_size, AbrSlotIndex slot) {
+  const char* ab_suffix = AbrGetSlotSuffix(slot);
+  AbrOps abr_ops = GetAbrOpsFromZirconBootOps(zb_ops);
+  AbrSlotInfo slot_info;
+  AbrResult res = AbrGetSlotInfo(&abr_ops, slot, &slot_info);
+  if (res != kAbrResultOk) {
+    zircon_boot_dlog("Failed to get slot info %d\n", res);
+    return kBootResultErrorSlotVerification;
+  }
+
+  if (!ZirconVBootSlotVerify(zb_ops, load_address, load_address_size, ab_suffix,
+                             slot_info.is_marked_successful)) {
+    zircon_boot_dlog("Slot verification failed\n");
+    return kBootResultErrorSlotVerification;
+  }
+  return kBootResultOK;
 }
 
 static ZirconBootResult LoadKernel(void* load_address, size_t load_address_size, AbrSlotIndex slot,
@@ -81,8 +114,12 @@ static ZirconBootResult LoadKernel(void* load_address, size_t load_address_size,
     return kBootResultErrorReadImage;
   }
 
-  // TODO(b/174968242): Add slot verification here after verified boot logic is integrated to
-  // this library.
+  if (IsVerifiedBootOpsImplemented(ops)) {
+    ZirconBootResult res = VerifyKernel(ops, load_address, load_address_size, slot);
+    if (res != kBootResultOK) {
+      return res;
+    }
+  }
 
   zircon_boot_dlog("Successfully loaded slot: %s\n", zircon_part);
   return kBootResultOK;

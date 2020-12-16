@@ -18,9 +18,11 @@
 
 // This should point to the abr.h in the abr library in firmware sdk.
 #include <lib/abr/abr.h>
-// This should point to the zbi.h in the zbi library in firmware sdk..
+// This should point to the zbi.h in the zbi library in firmware sdk.
 #include <lib/zbi/zbi.h>
 #include <lib/zircon_boot/zbi_utils.h>
+
+#include <libavb_atx/libavb_atx.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,6 +46,7 @@ typedef enum ZirconBootResult {
   kBootResultErrorImageTooLarge,
 
   kBootResultErrorAppendZbiItems,
+  kBootResultErrorSlotVerification,
 } ZirconBootResult;
 
 struct ZirconBootOps;
@@ -127,6 +130,82 @@ struct ZirconBootOps {
   // Returns true on success.
   bool (*add_zbi_items)(ZirconBootOps* ops, zbi_header_t* image, size_t capacity,
                         AbrSlotIndex slot);
+
+  // Following are operations required to perform zircon verified boot.
+  // Verified boot implemented in this library is based on libavb. The library use the following
+  // provided operations to interact with libavb for kernel verification.
+  // If any of the following function pointers is set to NULL, verified boot is bypassed.
+
+  // Gets the size of a partition with the name in |part|
+  // (NUL-terminated UTF-8 string). Returns the value in
+  // |out|.
+  //
+  // @ops: Pointer to the ZirconBootOps that host this ZirconVBootOps object.
+  // @part: Name of the partition.
+  // @out: Output pointer storing the result.
+  //
+  // Returns true on success.
+  bool (*verified_boot_get_partition_size)(ZirconBootOps* ops, const char* part, size_t* out);
+
+  // Gets the rollback index corresponding to the location given by
+  // |rollback_index_location|. The value is returned in
+  // |out_rollback_index|.
+  //
+  // @ops: Pointer to the ZirconBootOps that host this ZirconVBootOps object.
+  // @rollback_index_location: Location to write rollback index.
+  // @out_rollback_index: Output pointer for storing the index value.
+  //
+  // A device may have a limited amount of rollback index locations (say,
+  // one or four) so may error out if |rollback_index_location| exceeds
+  // this number.
+  //
+  // Returns true on success.
+  bool (*verified_boot_read_rollback_index)(ZirconBootOps* ops, size_t rollback_index_location,
+                                            uint64_t* out_rollback_index);
+
+  // Sets the rollback index corresponding to the location given by
+  // |rollback_index_location| to |rollback_index|.
+  //
+  // @ops: Pointer to the ZirconBootOps that host this ZirconVBootOps object.
+  // @rollback_index_location: Location to rollback index to write.
+  // @rollback_index: Value of the rollback index to write.
+  //
+  // A device may have a limited amount of rollback index locations (say,
+  // one or four) so may error out if |rollback_index_location| exceeds
+  // this number.
+  //
+  // Returns true on success.
+  bool (*verified_boot_write_rollback_index)(ZirconBootOps* ops, size_t rollback_index_location,
+                                             uint64_t rollback_index);
+
+  // Gets whether the device is locked. The value is returned in
+  // |out_is_locked| (true if locked, false otherwise).
+  //
+  // @ops: Pointer to the ZirconBootOps that host this ZirconVBootOps object.
+  // @out_is_locked: Output pointer for storing the status.
+  //
+  // Returns true on success.
+  bool (*verified_boot_read_is_device_locked)(ZirconBootOps* ops, bool* out_is_locked);
+
+  // Reads permanent |attributes| data. There are no restrictions on where this
+  // data is stored.
+  //
+  // @ops: Pointer to the ZirconBootOps that host this ZirconVBootOps object.
+  // @attribute: Output pointer for storing the permanent attribute.
+  //
+  // Returns true on success.
+  bool (*verified_boot_read_permanent_attributes)(ZirconBootOps* ops,
+                                                  AvbAtxPermanentAttributes* attribute);
+
+  // Reads a |hash| of permanent attributes. This hash MUST be retrieved from a
+  // permanently read-only location (e.g. fuses) when a device is LOCKED.
+  //
+  // @ops: Pointer to the ZirconBootOps that host this ZirconVBootOps object.
+  // @hash: Output buffer that stores the hash values. The buffer must be able to hold
+  //        |AVB_SHA256_DIGEST_SIZE| bytes.
+  //
+  // Returns true on success.
+  bool (*verified_boot_read_permanent_attributes_hash)(ZirconBootOps* ops, uint8_t* hash);
 };
 
 typedef enum ForceRecovery {

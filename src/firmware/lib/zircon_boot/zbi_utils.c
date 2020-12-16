@@ -2,9 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifdef ZIRCON_BOOT_CUSTOM_SYSDEPS_HEADER
+#include <zircon_boot_sysdeps.h>
+#else
+#include <string.h>
+#endif
+
 #include <lib/zircon_boot/zbi_utils.h>
 #include <lib/zircon_boot/zircon_boot.h>
-#include <string.h>
 
 #include "utils.h"
 

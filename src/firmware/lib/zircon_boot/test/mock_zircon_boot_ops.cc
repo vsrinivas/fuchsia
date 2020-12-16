@@ -8,6 +8,8 @@
 #include <fcntl.h>
 #include <zircon/hw/gpt.h>
 
+#include <digest/digest.h>
+
 zx::status<fbl::Span<uint8_t>> MockZirconBootOps::GetPartitionSpan(const char* part_name,
                                                                    size_t offset, size_t size) {
   auto part = partitions_.find(part_name);
@@ -90,6 +92,37 @@ void MockZirconBootOps::SetAddDeviceZbiItemsMethod(
   add_zbi_items_ = method;
 }
 
+void MockZirconBootOps::WriteRollbackIndex(size_t location, uint64_t rollback_index) {
+  rollback_index_[location] = rollback_index;
+}
+
+zx::status<uint64_t> MockZirconBootOps::ReadRollbackIndex(size_t location) const {
+  auto iter = rollback_index_.find(location);
+  if (iter == rollback_index_.end()) {
+    return zx::error(ZX_ERR_NOT_FOUND);
+  }
+  return zx::ok(iter->second);
+}
+
+void MockZirconBootOps::SetPermanentAttributes(
+    const AvbAtxPermanentAttributes& permanent_attribute) {
+  permanent_attributes_ = permanent_attribute;
+}
+
+AvbAtxPermanentAttributes MockZirconBootOps::GetPermanentAttributes() {
+  return permanent_attributes_;
+}
+
+bool MockZirconBootOps::GetPartitionSize(ZirconBootOps* ops, const char* part, size_t* out) {
+  MockZirconBootOps* dev = static_cast<MockZirconBootOps*>(ops->context);
+  auto status = dev->GetPartitionSize(part);
+  if (status.is_error()) {
+    return 0;
+  }
+  *out = status.value();
+  return true;
+}
+
 bool MockZirconBootOps::ReadFromPartition(ZirconBootOps* ops, const char* part, size_t offset,
                                           size_t size, void* dst, size_t* read_size) {
   MockZirconBootOps* dev = static_cast<MockZirconBootOps*>(ops->context);
@@ -135,6 +168,48 @@ bool MockZirconBootOps::AddDeviceZbiItems(ZirconBootOps* zb_ops, zbi_header_t* i
   return dev->add_zbi_items_(image, capacity, slot);
 }
 
+// Avb related operation
+bool MockZirconBootOps::ReadRollbackIndex(ZirconBootOps* ops, size_t rollback_index_location,
+                                          uint64_t* out_rollback_index) {
+  MockZirconBootOps* dev = static_cast<MockZirconBootOps*>(ops->context);
+  auto status = dev->ReadRollbackIndex(rollback_index_location);
+  if (status.is_error()) {
+    return false;
+  }
+  *out_rollback_index = status.value();
+  return true;
+}
+
+bool MockZirconBootOps::WriteRollbackIndex(ZirconBootOps* ops, size_t rollback_index_location,
+                                           uint64_t rollback_index) {
+  MockZirconBootOps* dev = static_cast<MockZirconBootOps*>(ops->context);
+  dev->WriteRollbackIndex(rollback_index_location, rollback_index);
+  return true;
+}
+
+bool MockZirconBootOps::ReadIsDeivceLocked(ZirconBootOps* ops, bool* out_is_locked) {
+  MockZirconBootOps* dev = static_cast<MockZirconBootOps*>(ops->context);
+  *out_is_locked = dev->GetDeviceLockStatus() == MockZirconBootOps::LockStatus::kLocked;
+  return true;
+}
+
+bool MockZirconBootOps::ReadPermanentAttributes(ZirconBootOps* ops,
+                                                AvbAtxPermanentAttributes* attribute) {
+  MockZirconBootOps* dev = static_cast<MockZirconBootOps*>(ops->context);
+  *attribute = dev->GetPermanentAttributes();
+  return true;
+}
+
+bool MockZirconBootOps::ReadPermanentAttributesHash(ZirconBootOps* ops,
+                                                    uint8_t hash[AVB_SHA256_DIGEST_SIZE]) {
+  MockZirconBootOps* dev = static_cast<MockZirconBootOps*>(ops->context);
+  auto attributes = dev->GetPermanentAttributes();
+  digest::Digest hasher;
+  const uint8_t* result = hasher.Hash(static_cast<void*>(&attributes), sizeof(attributes));
+  memcpy(hash, result, AVB_SHA256_DIGEST_SIZE);
+  return true;
+}
+
 ZirconBootOps MockZirconBootOps::GetZirconBootOps() {
   ZirconBootOps zircon_boot_ops;
   zircon_boot_ops.context = this;
@@ -144,5 +219,22 @@ ZirconBootOps MockZirconBootOps::GetZirconBootOps() {
   zircon_boot_ops.reboot = Reboot;
   zircon_boot_ops.boot = Boot;
   zircon_boot_ops.add_zbi_items = AddDeviceZbiItems;
+  zircon_boot_ops.verified_boot_get_partition_size = nullptr;
+  zircon_boot_ops.verified_boot_read_rollback_index = nullptr;
+  zircon_boot_ops.verified_boot_write_rollback_index = nullptr;
+  zircon_boot_ops.verified_boot_read_is_device_locked = nullptr;
+  zircon_boot_ops.verified_boot_read_permanent_attributes = nullptr;
+  zircon_boot_ops.verified_boot_read_permanent_attributes_hash = nullptr;
+  return zircon_boot_ops;
+}
+
+ZirconBootOps MockZirconBootOps::GetZirconBootOpsWithAvb() {
+  ZirconBootOps zircon_boot_ops = GetZirconBootOps();
+  zircon_boot_ops.verified_boot_get_partition_size = GetPartitionSize;
+  zircon_boot_ops.verified_boot_read_rollback_index = ReadRollbackIndex;
+  zircon_boot_ops.verified_boot_write_rollback_index = WriteRollbackIndex;
+  zircon_boot_ops.verified_boot_read_is_device_locked = ReadIsDeivceLocked;
+  zircon_boot_ops.verified_boot_read_permanent_attributes = ReadPermanentAttributes;
+  zircon_boot_ops.verified_boot_read_permanent_attributes_hash = ReadPermanentAttributesHash;
   return zircon_boot_ops;
 }
