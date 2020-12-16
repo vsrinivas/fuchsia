@@ -154,14 +154,16 @@ if (_can_redirect_to_zircon) {
   }
 
   # Publish headers to the GN build so that they may be used in host binaries.
-  zx_library("zircon-headers") {
-    sdk = "source"
-    sdk_headers = [
-      "zircon/exception.h",
-      "zircon/status.h",
+  source_set("zircon-headers") {
+    sources = [
+      "include/zircon/exception.h",
+      "include/zircon/status.h",
     ]
-    sdk_migrated = true
-    sources = []
+    public_configs = [ ":zircon-headers.config" ]
+  }
+
+  config("zircon-headers.config") {
+    include_dirs = [ "include" ]
   }
 } else if (_can_build_zircon) {
   zx_library("zircon") {

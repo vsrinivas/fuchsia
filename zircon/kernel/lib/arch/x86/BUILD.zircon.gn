@@ -4,9 +4,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-if ("$zx/" == "//") {  # Zircon build only.
-  import("$zx/system/ulib/hwreg/hwreg_asm_header.gni")
-}
+import("$zx/system/ulib/hwreg/hwreg_asm_header.gni")
 import("$zx_build/public/gn/migrated_targets.gni")
 
 # In the Zircon build, default_toolchain is used for the hwreg_asm_header()
@@ -28,15 +26,12 @@ if ("$zx/" != "//" || current_toolchain != default_toolchain) {
 
     include_dirs = [ "../include" ]
 
-    if ("$zx/" == "//") {
-      public_deps += [ ":gen-cpuid-asm" ]
-
-      if (!is_host) {
-        sources = [
-          "boot-cpuid.S",
-          "boot-cpuid.cc",
-        ]
-      }
+    public_deps += [ ":gen-cpuid-asm" ]
+    if (!is_host) {
+      sources = [
+        "boot-cpuid.S",
+        "boot-cpuid.cc",
+      ]
     }
 
     sdk = "source"
@@ -45,13 +40,8 @@ if ("$zx/" != "//" || current_toolchain != default_toolchain) {
   }
 }
 
-# Only the Zircon build has this build support, so the actual build of the
-# library can only be done in Zircon for now.  The other build only actually
-# compiles the machine-independent parts of the library.
-if ("$zx/" == "//") {
-  hwreg_asm_header("gen-cpuid-asm") {
-    output_name = "lib/arch/x86/cpuid-asm.h"
-    sources = [ "gen-cpuid-asm.cc" ]
-    deps = [ ".." ]
-  }
+hwreg_asm_header("gen-cpuid-asm") {
+  output_name = "lib/arch/x86/cpuid-asm.h"
+  sources = [ "gen-cpuid-asm.cc" ]
+  deps = [ ".." ]
 }

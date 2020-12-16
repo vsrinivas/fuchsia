@@ -44,7 +44,7 @@ bool ParseEfiPayload(ByteView payload, size_t* num_entries, size_t* entry_size) 
   if (payload.size() < sizeof(uint64_t)) {
     return false;
   }
-  *entry_size = *reinterpret_cast<const uint64_t*>(payload.data());
+  *entry_size = static_cast<size_t>(*reinterpret_cast<const uint64_t*>(payload.data()));
   if (*entry_size < sizeof(efi_memory_descriptor)) {
     return false;
   }

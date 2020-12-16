@@ -6,8 +6,14 @@
 
 # TODO(fxbug.dev/54160): Keep in sync with BUILD.gn
 
-import("$zx/public/gn/toolchain/clang.gni")
-import("$zx/public/gn/toolchain/environment.gni")
+if (zx == "/") {
+  import("$zx/public/gn/toolchain/clang.gni")
+  import("$zx/public/gn/toolchain/environment.gni")
+} else {
+  import("//build/toolchain/zircon/clang.gni")
+  import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
+  import("//build/unification/global_variables.gni")
+}
 import("$zx/system/ulib/hwreg/hwreg_asm_header.gni")
 
 if (current_toolchain == default_toolchain) {
@@ -136,12 +142,12 @@ if (current_toolchain == default_toolchain) {
         clang_inputs = [ "${clang_tool_dir}/clang++" ]
         clang_exec = rebase_path(clang_inputs[0], root_build_dir)
       }
+      clang_triple = string_replace(toolchain.target_tuple, "x86_64", "i386")
       libs = rebase_path(exec_script("/usr/bin/env",
                                      [
                                        clang_exec,
                                        "-no-canonical-prefixes",
-                                       "--target=${toolchain.target_tuple}",
-                                       "-m32",
+                                       "--target=${clang_triple}",
                                        "-print-libgcc-file-name",
                                      ],
                                      "trim list lines",

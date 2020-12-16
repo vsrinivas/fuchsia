@@ -16,12 +16,23 @@ set -e
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fvm.sh || exit $?
 
-for arg in "$@"; do
-  if [[ "$arg" = "-h" || "$arg" = "--help" ]]; then
-    fx-command-help
-    "${FUCHSIA_DIR}/zircon/scripts/run-zircon" -h
-    exit 1
-  fi
+ZBI_IMAGE="${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}"
+
+while [[ $# -gt 1 ]]; do
+  case "$1" in
+    -h|--help)
+      fx-command-help
+      "${FUCHSIA_DIR}/zircon/scripts/run-zircon" -h
+      exit 1
+      ;;
+    -z)
+      shift
+      ZBI_IMAGE="$1"
+      ;;
+    *)
+      break
+  esac
+  shift
 done
 
 authkeys_path="$(get-ssh-authkeys)" || {
@@ -50,8 +61,7 @@ trap 'rm -rf "$imgdir"' EXIT
 
 kernelzbi="${imgdir}/fuchsia-ssh.zbi"
 args+=(-z "${kernelzbi}")
-fx-zbi -o "${kernelzbi}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
-  --entry "data/ssh/authorized_keys=${authkeys_path}"
+fx-zbi -o "${kernelzbi}" "${ZBI_IMAGE}" --entry "data/ssh/authorized_keys=${authkeys_path}"
 
 # Not all builds use an FVM so failing to find a source FVM is OK.
 fvm_source=$(fx-fvm-find-raw-source)

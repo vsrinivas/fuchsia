@@ -91,6 +91,7 @@ if (zx == "/" || zircon_toolchain != false) {
 zx_library("zstd") {
   host = true
   static = true
+  kernel = true
 
   # Exported as a static library as the config above cannot be conveyed via the
   # exporting mechanism but is absolutely necessary in order to properly compile
@@ -177,6 +178,7 @@ config("zstd-seekable-public-config") {
 zx_library("zstdseek") {
   host = true
   static = true
+  kernel = true
   sdk = "static"
   sdk_headers = []
   sdk_migrated = true

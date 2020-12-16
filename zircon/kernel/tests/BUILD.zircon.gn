@@ -16,7 +16,8 @@ group("tests") {
 # This is the subset that's compatible with the kernel.phys environment.
 source_set("phys") {
   # TODO: testonly = true
-  testonly = toolchain.environment == "kernel.phys"
+  testonly = toolchain.environment == "kernel.phys" ||
+             toolchain.environment == "kernel.phys32"
 
   cflags = [ "-fno-builtin" ]
   sources = [

@@ -890,3 +890,13 @@ config("standalone") {
 
   configs = [ "//build/config/zircon:no_exceptions" ]
 }
+
+# Statically linked posititon independent executable.
+config("static-pie") {
+  cflags = [ "-fPIE" ]
+  defines = [ "ZX_STATIC_PIE=1" ]
+  ldflags = [
+    "-Wl,-pie",
+    "-Wl,--no-dynamic-linker",
+  ]
+}
