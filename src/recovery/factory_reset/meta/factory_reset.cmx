@@ -13,7 +13,9 @@
         ],
         "services": [
             "fuchsia.hardware.power.statecontrol.Admin",
-            "fuchsia.tee.Device"
+            "fuchsia.tee.Application.808032e0-fd9e-4e6f-8896-544735c98480",
+            "fuchsia.tee.Device",
+            "fuchsia.tee.DeviceInfo"
         ]
     }
 }
