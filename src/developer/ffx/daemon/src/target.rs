@@ -50,11 +50,8 @@ impl SshFormatter for TargetAddr {
         if self.ip.is_ipv6() {
             write!(f, "[")?;
         }
-        write!(f, "{}", self.ip)?;
+        write!(f, "{}", self)?;
         if self.ip.is_ipv6() {
-            if self.scope_id > 0 {
-                write!(f, "%{}", self.scope_id)?;
-            }
             write!(f, "]")?;
         }
         Ok(())
@@ -1499,7 +1496,10 @@ mod test {
             (SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(129, 0, 0, 1), 0)), "129.0.0.1"),
             (SocketAddr::V6(SocketAddrV6::new("f111::3".parse().unwrap(), 0, 0, 0)), "[f111::3]"),
             (SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 0)), "[fe80::1]"),
-            (SocketAddr::V6(SocketAddrV6::new("fe80::2".parse().unwrap(), 0, 0, 2)), "[fe80::2%2]"),
+            (
+                SocketAddr::V6(SocketAddrV6::new("fe80::2".parse().unwrap(), 0, 0, 198)),
+                "[fe80::2%198]",
+            ),
         ];
         let tests = tests_pre
             .iter()
