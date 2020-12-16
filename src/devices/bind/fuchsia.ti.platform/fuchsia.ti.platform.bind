@@ -1,0 +1,29 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ti.platform;
+
+extend uint fuchsia.BIND_PLATFORM_DEV_VID {
+  TI = 16,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  LP8556 = 0x01,
+  LP5018 = 0x02,
+  LP5024 = 0x03,
+  LP5030 = 0x04,
+  LP5036 = 0x05,
+  TMP112 = 0x06,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  BACKLIGHT = 0x01,
+  TAS58xx = 0x02,
+  TAS5782 = 0x03,
+  TAS2770 = 0x04,
+  LED = 0x05,
+  TEMPERATURE = 0x06,
+  TAS5720 = 0x07,
+  INA231 = 0x08,
+};

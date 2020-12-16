@@ -13,7 +13,7 @@ bind_rules("lp50xx_light-bind") {
   tests = "tests.json"
   deps = [
     "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.ti.platform",
   ]
 }
 
@@ -75,10 +75,7 @@ test("lp50xx-light-test") {
 
 unittest_package("lp50xx-light-test-package") {
   package_name = "lp50xx-light-test"
-  deps = [
-    ":lp50xx-light-test",
-    ":lp50xx_light-bind_test",
-  ]
+  deps = [ ":lp50xx-light-test" ]
 
   tests = [
     {
@@ -90,5 +87,8 @@ unittest_package("lp50xx-light-test-package") {
 
 group("tests") {
   testonly = true
-  deps = [ ":lp50xx-light-test-package" ]
+  deps = [
+    ":lp50xx-light-test-package",
+    ":lp50xx_light-bind_test",
+  ]
 }

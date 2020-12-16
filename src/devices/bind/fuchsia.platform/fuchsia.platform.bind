@@ -18,8 +18,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   QEMU = 1,
   DESIGNWARE = 12,
   MEDIATEK = 13,
-  TI = 16,
-  ARM = 18,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 using fuchsia.i2c;
-using fuchsia.platform;
+using fuchsia.ti.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.I2C;
-fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.TI;
-fuchsia.BIND_PLATFORM_DEV_DID == 0x06;  // PDEV_DID_TI_TEMPERATURE
-fuchsia.BIND_PLATFORM_DEV_PID == 0x06;  // PDEV_PID_TI_TMP112
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI;
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.TEMPERATURE;
+fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.ti.platform.BIND_PLATFORM_DEV_PID.TMP112;

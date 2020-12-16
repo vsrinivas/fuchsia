@@ -4,8 +4,8 @@
     "expected": "match",
     "device": {
       "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
-      "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.TI",
-      "fuchsia.BIND_PLATFORM_DEV_DID": "8"
+      "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI",
+      "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.INA231"
     }
   }
 ]
