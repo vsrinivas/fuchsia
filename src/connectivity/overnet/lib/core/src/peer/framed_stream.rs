@@ -4,12 +4,10 @@
 
 //! Framing and deframing datagrams onto QUIC streams
 
-use crate::{
-    async_quic::{
-        AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, ReadExact, StreamProperties,
-    },
-    stat_counter::StatCounter,
+use super::{
+    AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, ReadExact, StreamProperties,
 };
+use crate::stat_counter::StatCounter;
 use anyhow::{format_err, Error};
 use futures::{prelude::*, ready};
 use std::{

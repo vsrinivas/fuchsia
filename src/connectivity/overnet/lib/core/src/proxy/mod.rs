@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod main;
-pub(crate) mod spawn;
-mod xfer;
+mod handle;
+mod run;
+mod stream;
 
-use crate::framed_stream::{FramedStreamWriter, MessageStats};
+use self::handle::{Proxyable, ProxyableHandle};
+use self::stream::StreamWriter;
 use crate::labels::{NodeId, TransferKey};
-use crate::proxy_stream::StreamWriter;
-use crate::proxyable_handle::{Proxyable, ProxyableHandle};
+use crate::peer::{FramedStreamWriter, MessageStats};
 use crate::router::Router;
 use anyhow::{format_err, Error};
 use fidl_fuchsia_overnet_protocol::{StreamId, StreamRef, TransferInitiator, TransferWaiter};
@@ -18,6 +18,10 @@ use futures::prelude::*;
 use std::pin::Pin;
 use std::sync::{Arc, Weak};
 use std::task::{Context, Poll};
+
+pub(crate) use self::handle::IntoProxied;
+pub(crate) use self::run::spawn::recv as spawn_recv;
+pub(crate) use self::run::spawn::send as spawn_send;
 
 #[derive(Debug)]
 pub(crate) enum RemoveFromProxyTable {

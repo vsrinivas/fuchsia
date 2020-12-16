@@ -18,21 +18,29 @@
 // that node (said link may be a third node that will be requested to forward datagrams
 // on our behalf).
 
-use crate::{
-    async_quic::{AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, StreamProperties},
+mod diagnostics_service;
+mod link_status_updater;
+mod routes;
+pub(crate) mod security_context;
+mod service_map;
+
+use self::{
     diagnostics_service::run_diagostic_service_request_handler,
-    framed_stream::MessageStats,
+    link_status_updater::{run_link_status_updater, LinkStatePublisher},
+    routes::Routes,
+    security_context::{quiche_config_from_security_context, SecurityContext},
+    service_map::{ListablePeer, ServiceMap},
+};
+use crate::{
     future_help::{log_errors, MutexTicket, Observable, Observer},
     handle_info::{handle_info, HandleKey, HandleType},
     labels::{ConnectionId, Endpoint, NodeId, NodeLinkId, TransferKey},
     link::{new_link, LinkReceiver, LinkRouting, LinkSender},
-    link_status_updater::{run_link_status_updater, LinkStatePublisher},
-    peer::Peer,
-    proxy::{ProxyTransferInitiationReceiver, RemoveFromProxyTable, StreamRefSender},
-    proxyable_handle::IntoProxied,
-    routes::{ForwardingTable, Routes},
-    security_context::{quiche_config_from_security_context, SecurityContext},
-    service_map::{ListablePeer, ServiceMap},
+    peer::{
+        AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, MessageStats, Peer,
+        StreamProperties,
+    },
+    proxy::{IntoProxied, ProxyTransferInitiationReceiver, RemoveFromProxyTable, StreamRefSender},
 };
 use anyhow::{bail, format_err, Context as _, Error};
 use fidl::{endpoints::ClientEnd, AsHandleRef, Channel, Handle, HandleBased, Socket, SocketOpts};
@@ -52,6 +60,9 @@ use std::{
     task::{Context, Poll, Waker},
     time::Duration,
 };
+
+// Re-export for link, peer.
+pub(crate) use self::routes::ForwardingTable;
 
 /// Configuration object for creating a router.
 pub struct RouterOptions {
@@ -710,7 +721,7 @@ impl Router {
                         info.this_handle_key,
                         info.pair_handle_key,
                         tx,
-                        crate::proxy::spawn::send(
+                        crate::proxy::spawn_send(
                             Channel::from_handle(handle).into_proxied()?,
                             rx,
                             stream_writer.into(),
@@ -727,7 +738,7 @@ impl Router {
                         info.this_handle_key,
                         info.pair_handle_key,
                         tx,
-                        crate::proxy::spawn::send(
+                        crate::proxy::spawn_send(
                             Socket::from_handle(handle).into_proxied()?,
                             rx,
                             stream_writer.into(),
@@ -757,7 +768,7 @@ impl Router {
         }));
         Ok(match handle {
             ZirconHandle::Channel(ChannelHandle { stream_ref, rights }) => {
-                let (h, p) = crate::proxy::spawn::recv(
+                let (h, p) = crate::proxy::spawn_recv(
                     move || Channel::create().map_err(Into::into),
                     rights,
                     rx,
@@ -784,7 +795,7 @@ impl Router {
                     SocketType::Stream => SocketOpts::STREAM,
                     SocketType::Datagram => SocketOpts::DATAGRAM,
                 };
-                let (h, p) = crate::proxy::spawn::recv(
+                let (h, p) = crate::proxy::spawn_recv(
                     move || Socket::create(opts).map_err(Into::into),
                     rights,
                     rx,

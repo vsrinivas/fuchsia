@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{main, Proxy, ProxyTransferInitiationReceiver, StreamRefSender};
-use crate::async_quic::StreamProperties;
-use crate::framed_stream::{FramedStreamReader, FramedStreamWriter};
+use super::super::{
+    handle::{Message, Proxyable, ProxyableHandle},
+    stream::{Frame, StreamReader, StreamWriter, StreamWriterBinder},
+    Proxy, ProxyTransferInitiationReceiver, StreamRefSender,
+};
 use crate::labels::{generate_transfer_key, Endpoint, NodeId, TransferKey};
-use crate::proxy_stream::{Frame, StreamReader, StreamWriter, StreamWriterBinder};
-use crate::proxyable_handle::{Message, Proxyable, ProxyableHandle};
+use crate::peer::{FramedStreamReader, FramedStreamWriter, StreamProperties};
 use crate::router::OpenedTransfer;
 use anyhow::{bail, format_err, Error};
 use fuchsia_zircon_status as zx_status;
@@ -84,7 +85,7 @@ fn make_boxed_main_loop<Hdl: 'static + Proxyable>(
     initial_stream_reader: Option<FramedStreamReader>,
     stream_reader: FramedStreamReader,
 ) -> std::pin::Pin<Box<dyn Send + Future<Output = Result<(), Error>>>> {
-    main::run_main_loop(
+    super::main::run_main_loop(
         proxy,
         initiate_transfer,
         stream_writer,

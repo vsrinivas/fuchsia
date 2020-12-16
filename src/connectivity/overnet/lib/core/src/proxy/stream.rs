@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::async_quic::{AsyncConnection, StreamProperties};
+use super::handle::{Message, Proxyable, ProxyableHandle, RouterHolder, Serializer};
 use crate::coding::{decode_fidl, encode_fidl};
-use crate::framed_stream::{
-    FrameType, FramedStreamReader, FramedStreamWriter, MessageStats, ReadNextFrame,
-};
 use crate::labels::{NodeId, TransferKey};
-use crate::proxyable_handle::{Message, Proxyable, ProxyableHandle, RouterHolder, Serializer};
+use crate::peer::{
+    AsyncConnection, FrameType, FramedStreamReader, FramedStreamWriter, MessageStats,
+    ReadNextFrame, StreamProperties,
+};
 use crate::router::Router;
 use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_overnet_protocol::{BeginTransfer, Empty, StreamControl};

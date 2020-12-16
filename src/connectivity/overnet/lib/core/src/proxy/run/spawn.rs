@@ -4,11 +4,14 @@
 
 //! Factory functions for proxies - one each for sending a handle and receiving a handle.
 
-use super::{main, Proxy, ProxyTransferInitiationReceiver};
-use crate::async_quic::{AsyncConnection, StreamProperties};
-use crate::framed_stream::{FramedStreamReader, FramedStreamWriter, MessageStats};
+use super::super::{
+    handle::{IntoProxied, Proxyable, ProxyableHandle},
+    Proxy, ProxyTransferInitiationReceiver,
+};
 use crate::handle_info::WithRights;
-use crate::proxyable_handle::{IntoProxied, Proxyable, ProxyableHandle};
+use crate::peer::{
+    AsyncConnection, FramedStreamReader, FramedStreamWriter, MessageStats, StreamProperties,
+};
 use crate::router::{FoundTransfer, OpenedTransfer, Router};
 use anyhow::{format_err, Error};
 use fidl_fuchsia_overnet_protocol::{StreamId, StreamRef, TransferInitiator, TransferWaiter};
@@ -31,7 +34,7 @@ pub(crate) async fn send<Hdl: 'static + Proxyable>(
         stream_writer.id()
     );
 
-    main::run_main_loop(
+    super::main::run_main_loop(
         Proxy::new(hdl, router, stats),
         initiate_transfer,
         stream_writer,
@@ -72,7 +75,7 @@ where
             );
             (
                 app_chan.into_handle(),
-                Some(main::run_main_loop(
+                Some(super::main::run_main_loop(
                     Proxy::new(overnet_chan, router, stats),
                     initiate_transfer,
                     stream_writer.into(),
@@ -129,7 +132,7 @@ where
                     );
                     (
                         app_chan.into_handle(),
-                        Some(main::run_main_loop(
+                        Some(super::main::run_main_loop(
                             Proxy::new(Hdl::from_fidl_handle(overnet_chan)?, router, stats),
                             initiate_transfer,
                             stream_writer.into(),
@@ -182,7 +185,7 @@ where
                     );
                     (
                         app_chan.with_rights(rights)?.into_handle(),
-                        Some(main::run_main_loop(
+                        Some(super::main::run_main_loop(
                             Proxy::new(overnet_chan.into_proxied()?, router, stats),
                             initiate_transfer,
                             stream_writer.into(),

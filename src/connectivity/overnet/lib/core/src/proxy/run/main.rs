@@ -5,15 +5,12 @@
 //! Main loops (and associated spawn functions) for proxying... handles moving data from one point
 //! to another, and calling into crate::proxy::xfer once a handle transfer is required.
 
-use super::{
-    xfer, Proxy, ProxyTransferInitiationReceiver, Proxyable, RemoveFromProxyTable, StreamRefSender,
+use super::super::{
+    stream::{Frame, StreamReader, StreamReaderBinder, StreamWriter, StreamWriterBinder},
+    Proxy, ProxyTransferInitiationReceiver, Proxyable, RemoveFromProxyTable, StreamRefSender,
 };
-use crate::async_quic::StreamProperties;
-use crate::framed_stream::{FramedStreamReader, FramedStreamWriter};
 use crate::labels::{NodeId, TransferKey};
-use crate::proxy_stream::{
-    Frame, StreamReader, StreamReaderBinder, StreamWriter, StreamWriterBinder,
-};
+use crate::peer::{FramedStreamReader, FramedStreamWriter, StreamProperties};
 use anyhow::{bail, format_err, Context as _, Error};
 use fuchsia_zircon_status as zx_status;
 use futures::{future::Either, prelude::*};
@@ -207,7 +204,7 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
                 proxy.hdl().hdl(),
                 debug_id
             );
-            xfer::initiate(
+            super::xfer::initiate(
                 proxy,
                 paired_handle,
                 stream,
@@ -230,7 +227,7 @@ async fn handle_to_stream<Hdl: 'static + Proxyable>(
                 transfer_key,
                 new_destination_node
             );
-            xfer::follow(
+            super::xfer::follow(
                 proxy,
                 initiate_transfer,
                 stream,

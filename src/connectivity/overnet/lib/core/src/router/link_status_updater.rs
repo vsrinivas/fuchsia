@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use super::routes::LinkMetrics;
 use crate::{
     future_help::{MutexTicket, Observable, Observer},
     labels::{NodeId, NodeLinkId},
-    routes::LinkMetrics,
 };
 use anyhow::Error;
 use fuchsia_async::Task;

@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use super::{IntoProxied, Message, Proxyable, RouterHolder, Serializer, IO};
-use crate::async_quic::AsyncConnection;
-use crate::framed_stream::MessageStats;
+use crate::peer::{AsyncConnection, MessageStats};
 use anyhow::{format_err, Error};
 use fidl::{AsyncSocket, HandleBased};
 use fuchsia_zircon_status as zx_status;

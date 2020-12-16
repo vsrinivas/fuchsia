@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::labels::NodeId;
-use crate::security_context::SecurityContext;
+use crate::router::security_context::SecurityContext;
 use anyhow::Error;
 use std::sync::Arc;
 
@@ -95,7 +95,7 @@ pub fn test_security_context() -> impl SecurityContext {
     };
     #[cfg(target_os = "fuchsia")]
     let path_for = |name| format!("/pkg/data/{}", name);
-    return crate::security_context::StringSecurityContext {
+    return crate::router::security_context::StringSecurityContext {
         node_cert: path_for("cert.crt"),
         node_private_key: path_for("cert.key"),
         root_cert: path_for("rootca.crt"),

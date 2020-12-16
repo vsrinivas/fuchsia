@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod channel;
-pub mod socket;
+mod channel;
+mod socket;
 
-use crate::async_quic::AsyncConnection;
-use crate::framed_stream::{FramedStreamReader, MessageStats};
-use crate::proxy_stream::{Frame, StreamReaderBinder, StreamWriter};
+use super::stream::{Frame, StreamReaderBinder, StreamWriter};
+use crate::peer::{AsyncConnection, FramedStreamReader, MessageStats};
 use crate::router::Router;
 use anyhow::{bail, format_err, Error};
 use fuchsia_zircon_status as zx_status;

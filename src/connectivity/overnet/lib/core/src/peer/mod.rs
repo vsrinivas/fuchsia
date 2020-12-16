@@ -2,18 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod async_quic;
+mod framed_stream;
+
+use self::async_quic::ConnState;
+pub(crate) use self::async_quic::{
+    AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, ReadExact, StreamProperties,
+};
+pub(crate) use self::framed_stream::{
+    FrameType, FramedStreamReader, FramedStreamWriter, MessageStats, ReadNextFrame,
+};
 use crate::{
-    async_quic::{
-        AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, ConnState, StreamProperties,
-    },
     coding::{decode_fidl, encode_fidl},
-    framed_stream::{FrameType, FramedStreamReader, FramedStreamWriter, MessageStats},
     future_help::{MutexTicket, Observer},
     labels::{ConnectionId, Endpoint, NodeId, TransferKey},
-    link::{LinkRouting, OutputQueue},
-    link_frame_label::{RoutingDestination, RoutingTarget},
-    router::{FoundTransfer, Router},
-    routes::ForwardingTable,
+    link::{LinkRouting, OutputQueue, RoutingDestination, RoutingTarget},
+    router::{ForwardingTable, FoundTransfer, Router},
 };
 use anyhow::{bail, format_err, Context as _, Error};
 use cutex::{CutexGuard, CutexTicket};

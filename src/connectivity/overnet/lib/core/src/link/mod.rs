@@ -4,16 +4,18 @@
 
 //! A `Link` describes an established communications channel between two nodes.
 
+mod frame_label;
+mod ping_tracker;
+
+use self::{
+    frame_label::{LinkFrameLabel, LINK_FRAME_LABEL_MAX_SIZE},
+    ping_tracker::PingTracker,
+};
 use crate::{
     coding::{decode_fidl, encode_fidl},
     future_help::{log_errors, Observable, Observer},
     labels::{NodeId, NodeLinkId},
-    link_frame_label::{
-        LinkFrameLabel, RoutingDestination, RoutingTarget, LINK_FRAME_LABEL_MAX_SIZE,
-    },
-    ping_tracker::PingTracker,
-    router::{ConnectingLinkToken, Router},
-    routes::ForwardingTable,
+    router::{ConnectingLinkToken, ForwardingTable, Router},
 };
 use anyhow::{bail, format_err, Context as _, Error};
 use cutex::{AcquisitionPredicate, Cutex, CutexGuard, CutexTicket};
@@ -32,6 +34,8 @@ use std::{
     sync::{Arc, Weak},
     time::Duration,
 };
+
+pub use self::frame_label::{RoutingDestination, RoutingTarget};
 
 struct LinkStats {
     packets_forwarded: AtomicU64,

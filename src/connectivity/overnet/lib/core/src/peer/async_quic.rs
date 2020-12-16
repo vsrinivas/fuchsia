@@ -739,7 +739,7 @@ impl<'b> Future for QuicRead<'b> {
 pub(crate) mod test_util {
 
     use super::*;
-    use crate::security_context::quiche_config_from_security_context;
+    use crate::router::security_context::quiche_config_from_security_context;
     use crate::test_util::NodeIdGenerator;
     use futures::future::poll_fn;
     use rand::Rng;

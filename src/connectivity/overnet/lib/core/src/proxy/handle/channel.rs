@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use super::{IntoProxied, Message, Proxyable, RouterHolder, Serializer, IO};
-use crate::async_quic::AsyncConnection;
 use crate::coding::{decode_fidl, encode_fidl};
-use crate::framed_stream::MessageStats;
+use crate::peer::{AsyncConnection, MessageStats};
 use anyhow::{Context as _, Error};
 use fidl::{AsHandleRef, AsyncChannel, HandleBased};
 use fidl_fuchsia_overnet_protocol::{ZirconChannelMessage, ZirconHandle};
