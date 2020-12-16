@@ -31,6 +31,12 @@ template("zbi_test") {
   input_target = "${target_name}_input"
   zbi_target = "${target_name}.zbi"
 
+  not_needed(invoker,
+             [
+               "qemu_kernel",
+               "timeout",
+             ])
+
   group_deps = []
 
   entries = []
@@ -50,17 +56,29 @@ template("zbi_test") {
   }
 
   zbi(zbi_target) {
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "args",
-                             "device_types",
-                           ])
     testonly = true
+    data_deps = []
+    forward_variables_from(invoker,
+                           [
+                             "cpu",
+                             "compress",
+                             "data_deps",
+                             "output_dir",
+                             "output_extension",
+                             "output_name",
+                             "tags",
+                             "visibility",
+                           ])
+    if (defined(visibility)) {
+      visibility += [ ":$main_target" ]
+    }
     if (!defined(output_name)) {
       output_name = main_target
     }
-    deps += [ ":$input_target" ]
+    deps = invoker.deps + [ ":$input_target" ]
+    if (defined(invoker.qemu_kernel)) {
+      data_deps += [ invoker.qemu_kernel ]
+    }
   }
 
   group_deps += [ ":$zbi_target" ]
@@ -108,13 +126,21 @@ template("zbi_test") {
       zbi_tests = [
         {
           cpu = current_cpu
-          disabled = false
+          disabled = defined(invoker.tags) && invoker.tags + [ "disabled" ] -
+                                              [ "disabled" ] != invoker.tags
           name = main_target
           label = get_label_info(":$target_name", "label_with_toolchain")
           path = rebase_path(output_file, root_build_dir)
           bootserver_netboot = [ "--boot" ]
           success_string = zbi_test_success_string
           device_types = _device_types
+          if (defined(invoker.qemu_kernel)) {
+            assert(device_types == [ "QEMU" ],
+                   "`qemu_kernel` tests can only run on QEMU")
+            qemu_kernel_label =
+                get_label_info(invoker.qemu_kernel, "label_with_toolchain")
+          }
+          forward_variables_from(invoker, [ "timeout" ])
         },
       ]
     }

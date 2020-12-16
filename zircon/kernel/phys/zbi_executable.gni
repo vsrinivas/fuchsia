@@ -56,7 +56,12 @@ template("zbi_executable") {
     }
 
     metadata = {
-      zbi_input_args = []
+      # NOTE: This metadata key has a different name in the Zircon and Fuchsia builds.
+      if (zx == "/") {
+        zbi_input_args = []
+      } else {
+        migrated_zbi_input_args = []
+      }
 
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
@@ -64,14 +69,25 @@ template("zbi_executable") {
 
       # This metadata makes the kernel act as a zbi_input() target so it can
       # be a dependency of a zbi() target to get into the image.
-      zbi_input_args += [
-        "--type=container",
-        rebase_path(output_file, root_build_dir),
-      ]
+      if (zx == "/") {
+        zbi_input_args += [
+          "--type=container",
+          rebase_path(output_file, root_build_dir),
+        ]
+      } else {
+        migrated_zbi_input_args += [
+          "--type=container",
+          rebase_path(output_file, root_build_dir),
+        ]
+      }
     }
   }
 }
 
 set_defaults("zbi_executable") {
-  configs = phys_default_configs
+  if (zx == "/") {
+    configs = phys_default_configs
+  } else {
+    configs = default_executable_configs
+  }
 }

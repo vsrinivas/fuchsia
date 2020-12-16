@@ -79,21 +79,21 @@ template("zbi") {
     outputs = [ rsp_file ]
   }
 
-  output_file = target_name
+  _output_name = target_name
   if (defined(invoker.output_name)) {
-    output_file = invoker.output_name
+    _output_name = invoker.output_name
   }
   if (defined(invoker.output_extension)) {
     if (invoker.output_extension != "") {
-      output_file += ".${invoker.output_extension}"
+      _output_name += ".${invoker.output_extension}"
     }
   } else {
-    output_file += ".zbi"
+    _output_name += ".zbi"
   }
   if (defined(invoker.output_dir)) {
-    output_file = "${invoker.output_dir}/$output_file"
+    output_file = "${invoker.output_dir}/${_output_name}"
   } else {
-    output_file = "$target_out_dir/$output_file"
+    output_file = "$target_out_dir/${_output_name}"
   }
   json_output_file = "$output_file.json"
 
@@ -109,7 +109,6 @@ template("zbi") {
                              "assert_no_deps",
                              "compress",
                              "data_deps",
-                             "metadata",
                              "testonly",
                              "visibility",
                            ])
@@ -169,6 +168,45 @@ template("zbi") {
       args += [ "--uncompressed" ]
     } else {
       args += [ "--compressed=$compress" ]
+    }
+
+    metadata = {
+      images = []
+      migrated_zbi_input_args = []
+
+      # Another zbi() target that depends on this one will include this ZBI as
+      # input, but not this ZBI's inputs.
+      migrated_zbi_barrier = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      # For the //:images build_api_module().
+      images += [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = _output_name
+          path = rebase_path(output_file, root_build_dir)
+          type = "zbi"
+          cpu = cpu
+          compressed = !defined(invoker.compress) ||
+                       (invoker.compress != false && invoker.compress != "none")
+          if (defined(testonly) && testonly) {
+            testonly = true
+          }
+          forward_variables_from(invoker, [ "tags" ])
+        },
+      ]
+
+      # Provide metadata so that a zbi() target can also act as if it were a
+      # zbi_input() with `type = "zbi"` and $sources of this target's $outputs.
+      # Thus a zbi() target can be a dependency of another zbi() target to
+      # combine them without requiring an intervening zbi_input() target.
+      migrated_zbi_input_args += [
+        "--type=container",
+        rebase_path(output_file, root_build_dir),
+      ]
     }
   }
 }
