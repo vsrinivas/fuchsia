@@ -199,6 +199,9 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, &stringInLogCheck{String: "ASSERT FAILED", Type: syslogType})
 	ret = append(ret, &stringInLogCheck{String: "DEVICE SUSPEND TIMED OUT", Type: syslogType})
 
+	// testrunner logs this when the serial socket goes away unexpectedly.
+	ret = append(ret, &stringInLogCheck{String: ".sock: write: broken pipe", Type: swarmingOutputType})
+
 	// For fxbug.dev/53101.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToStartTargetMsg), Type: swarmingOutputType})
 	// For fxbug.dev/51441.
