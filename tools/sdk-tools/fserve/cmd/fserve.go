@@ -301,7 +301,11 @@ func startServer(sdk sdkProvider, repoPath string, repoPort string) (*exec.Cmd, 
 	}
 	cmd := filepath.Join(toolsDir, "pm")
 
-	args := []string{"serve", "-repo", repoPath, "-l", fmt.Sprintf(":%s", repoPort)}
+	args := []string{"serve"}
+	if level != logger.DebugLevel && level != logger.TraceLevel {
+		args = append(args, "-q")
+	}
+	args = append(args, "-repo", repoPath, "-l", fmt.Sprintf(":%s", repoPort))
 
 	proc := ExecCommand(cmd, args...)
 	proc.Stdout = os.Stdout

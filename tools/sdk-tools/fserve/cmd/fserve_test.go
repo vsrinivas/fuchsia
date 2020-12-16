@@ -165,24 +165,66 @@ func TestStartServer(t *testing.T) {
 	repoPath := "/fake/repo/path"
 	repoPort := "8083"
 	ExecCommand = helperCommandForFServe
-	syscallWait4 = mockWait4NoError
 	defer func() {
 		ExecCommand = exec.Command
 		syscallWait4 = defaultsyscallWait4
 	}()
 
-	if _, err := startServer(testSDK, repoPath, repoPort); err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		syscallWait4  func(pid int, wstatus *syscall.WaitStatus, flags int, usage *syscall.Rusage) (int, error)
+		expectedError string
+		logLevel      logger.LogLevel
+		expectedArgs  []string
+	}{
+
+		{syscallWait4: mockWait4NoError,
+			expectedError: "",
+			logLevel:      logger.WarningLevel,
+			expectedArgs:  []string{"serve", "-q", "-repo", "/fake/repo/path", "-l", ":8083"},
+		},
+
+		{syscallWait4: mockWait4NoError,
+			expectedError: "",
+			logLevel:      logger.DebugLevel,
+			expectedArgs:  []string{"serve", "-repo", "/fake/repo/path", "-l", ":8083"},
+		},
+
+		{syscallWait4: mockWait4WithError,
+			expectedError: "Server started then exited with code 1",
+			logLevel:      logger.WarningLevel,
+		},
 	}
-	syscallWait4 = mockWait4WithError
-	if _, err := startServer(testSDK, repoPath, repoPort); err != nil {
-		expected := "Server started then exited with code 1"
-		actual := fmt.Sprintf("%v", err)
-		if expected != actual {
-			t.Fatalf("[%v], got [%v]", expected, actual)
-		}
-	} else {
-		t.Fatal("Expected error starting server, got no error.")
+
+	for i, test := range tests {
+		t.Run(fmt.Sprintf("TestStartServer case %d", i), func(t *testing.T) {
+			syscallWait4 = test.syscallWait4
+			level = test.logLevel
+			os.Setenv("TEST_LOGLEVEL", level.String())
+			cmd, err := startServer(testSDK, repoPath, repoPort)
+			if err != nil {
+				actual := fmt.Sprintf("%v", err)
+				if test.expectedError != actual {
+					t.Errorf("Actual error [%v] did not match expected [%v]", actual, test.expectedError)
+				}
+			} else if test.expectedError != "" {
+				t.Errorf("Expected error %v, but got no error", test.expectedError)
+			} else {
+				actual := cmd.Args[4:]
+				ok := len(actual) == len(test.expectedArgs)
+				if ok {
+					for i, arg := range test.expectedArgs {
+						if arg != actual[i] {
+							ok = false
+							break
+						}
+					}
+				}
+				if !ok {
+					t.Errorf("pm args %v do not match expected %v", actual, test.expectedArgs)
+				}
+			}
+		})
+		syscallWait4 = defaultsyscallWait4
 	}
 }
 
@@ -441,7 +483,13 @@ func fakeGSUtil(args []string) {
 }
 
 func fakePM(args []string) {
-	expected := []string{"serve", "-repo", "/fake/repo/path", "-l", ":8083"}
+	expected := []string{"serve"}
+	logLevel := os.Getenv("TEST_LOGLEVEL")
+	// only debug and trace have non-quiet mode.
+	if logLevel != "debug" && logLevel != "trace" {
+		expected = append(expected, "-q")
+	}
+	expected = append(expected, "-repo", "/fake/repo/path", "-l", ":8083")
 	ok := len(args) == len(expected)
 	if ok {
 		for i := range args {
@@ -449,7 +497,7 @@ func fakePM(args []string) {
 		}
 	}
 	if !ok {
-		fmt.Fprintf(os.Stderr, "unexpected pm args  %v. Expected %v", args, expected)
+		fmt.Fprintf(os.Stderr, "unexpected pm args  %v. Expected %v\n", args, expected)
 		os.Exit(1)
 	}
 }
