@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_library("cm_fidl_analyzer") {
@@ -9,7 +10,17 @@ rustc_library("cm_fidl_analyzer") {
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/sys/lib/cm_rust",
+    "//src/sys/lib/moniker",
     "//third_party/rust_crates:thiserror",
   ]
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/component_tree.rs",
+    "src/lib.rs",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":cm_fidl_analyzer_test($host_toolchain)" ]
 }

@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_sys2 as fsys, thiserror::Error};
+mod component_tree;
+
+use {cm_rust::ComponentDecl, thiserror::Error};
 
 /// Defines a custom AnalyzerError for a given component manifest.
 #[derive(Error, Debug)]
@@ -17,5 +19,5 @@ pub enum AnalyzerError {}
 pub trait ComponentDeclAnalyzer {
     /// Analyze the component manifest, only returning an Error if a analyze failure
     /// is detected.
-    fn analyze(decl: &fsys::ComponentDecl) -> Result<(), AnalyzerError>;
+    fn analyze(decl: &ComponentDecl) -> Result<(), AnalyzerError>;
 }
