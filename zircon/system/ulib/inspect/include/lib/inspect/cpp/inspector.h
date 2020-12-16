@@ -10,6 +10,7 @@
 #include <lib/inspect/cpp/value_list.h>
 #include <lib/zx/vmo.h>
 
+#include <mutex>
 #include <string>
 
 namespace inspect {
@@ -22,6 +23,7 @@ class State;
 
 // Internal accessor for obtaining fields from an Inspector.
 std::shared_ptr<State> GetState(const Inspector* inspector);
+
 }  // namespace internal
 
 // Settings to configure a specific Inspector.
@@ -93,6 +95,7 @@ class Inspector final {
   // Emplace a value to be owned by this Inspector.
   template <typename T>
   void emplace(T value) {
+    std::lock_guard<std::mutex> guard(*value_mutex_);
     value_list_->emplace(std::move(value));
   }
 
@@ -121,6 +124,9 @@ class Inspector final {
   //
   // Shared pointers are used so Inspector is copyable.
   std::shared_ptr<ValueList> value_list_;
+
+  // Mutex for the value list.
+  std::shared_ptr<std::mutex> value_mutex_;
 };
 
 }  // namespace inspect

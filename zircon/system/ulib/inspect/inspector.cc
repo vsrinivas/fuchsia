@@ -22,7 +22,9 @@ const InspectSettings kDefaultInspectSettings = {.maximum_size = 256 * 1024};
 Inspector::Inspector() : Inspector(kDefaultInspectSettings) {}
 
 Inspector::Inspector(const InspectSettings& settings)
-    : root_(std::make_shared<Node>()), value_list_(std::make_shared<ValueList>()) {
+    : root_(std::make_shared<Node>()),
+      value_list_(std::make_shared<ValueList>()),
+      value_mutex_(std::make_shared<std::mutex>()) {
   if (settings.maximum_size == 0) {
     return;
   }
