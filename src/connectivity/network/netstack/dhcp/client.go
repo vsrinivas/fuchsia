@@ -468,10 +468,7 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 				discOpts,
 				writeTo,
 				xid[:],
-				// DHCPDISCOVER is only performed when the client cannot receive unicast
-				// (i.e. it does not have an allocated IP address), so a broadcast reply
-				// is always requested, and the client's address is never supplied.
-				true,  /* broadcast */
+				false, /* broadcast */
 				false, /* ciaddr */
 			); err != nil {
 				c.stats.SendDiscoverErrors.Increment()
@@ -564,7 +561,7 @@ retransmitRequest:
 			reqOpts,
 			writeTo,
 			xid[:],
-			info.State == initSelecting, /* broadcast */
+			false,                       /* broadcast */
 			info.State != initSelecting, /* ciaddr */
 		); err != nil {
 			c.stats.SendRequestErrors.Increment()
