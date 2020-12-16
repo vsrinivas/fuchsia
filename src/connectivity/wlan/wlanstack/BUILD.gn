@@ -71,7 +71,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:void",
   ]
 
-  test_deps = [ "//src/connectivity/wlan/testing/wlantap-client" ]
+  test_deps = [
+    "//src/connectivity/wlan/testing/wlantap-client",
+    "//third_party/rust_crates:test-case",
+  ]
 
   sources = [
     "src/device.rs",

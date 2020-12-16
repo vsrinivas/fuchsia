@@ -37,6 +37,7 @@ struct BssInfo {
 enum ScanErrorCode {
     NOT_SUPPORTED = 1;
     INTERNAL_ERROR = 2;
+    SHOULD_WAIT = 3;
 };
 
 struct ScanError {

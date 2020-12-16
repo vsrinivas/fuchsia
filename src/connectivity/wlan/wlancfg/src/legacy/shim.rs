@@ -157,6 +157,7 @@ fn convert_scan_err(error: fidl_sme::ScanError) -> legacy::Error {
         code: match error.code {
             fidl_sme::ScanErrorCode::NotSupported => legacy::ErrCode::NotSupported,
             fidl_sme::ScanErrorCode::InternalError => legacy::ErrCode::Internal,
+            fidl_sme::ScanErrorCode::ShouldWait => legacy::ErrCode::Internal,
         },
         description: error.message,
     }

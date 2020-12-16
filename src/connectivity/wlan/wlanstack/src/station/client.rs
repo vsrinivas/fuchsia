@@ -225,6 +225,10 @@ fn send_scan_results(
                     code: fidl_sme::ScanErrorCode::NotSupported,
                     message: "Scanning not supported by device".to_string(),
                 },
+                fidl_mlme::ScanResultCodes::ShouldWait => fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::ShouldWait,
+                    message: "Scanning is temporarily unavailable".to_string(),
+                },
                 _ => fidl_sme::ScanError {
                     code: fidl_sme::ScanErrorCode::InternalError,
                     message: "Internal error occurred".to_string(),
@@ -297,12 +301,56 @@ mod tests {
         pin_utils::pin_mut,
         rand::{prelude::ThreadRng, Rng},
         std::convert::TryInto,
+        test_case::test_case,
         wlan_common::{assert_variant, bss::Protection, channel::Channel},
         wlan_rsn::auth,
         wlan_sme::client::{
             ConnectFailure, ConnectResult, EstablishRsnaFailure, EstablishRsnaFailureReason,
         },
     };
+
+    #[test_case(
+        fidl_mlme::ScanResultCodes::ShouldWait,
+        fidl_sme::ScanErrorCode::ShouldWait,
+        "Scanning is temporarily unavailable"
+    )]
+    #[test_case(
+        fidl_mlme::ScanResultCodes::NotSupported,
+        fidl_sme::ScanErrorCode::NotSupported,
+        "Scanning not supported by device"
+    )]
+    #[test_case(
+        fidl_mlme::ScanResultCodes::InvalidArgs,
+        fidl_sme::ScanErrorCode::InternalError,
+        "Internal error occurred"
+    )]
+    #[test_case(
+        fidl_mlme::ScanResultCodes::InternalError,
+        fidl_sme::ScanErrorCode::InternalError,
+        "Internal error occurred"
+    )]
+    fn test_send_scan_error(
+        scan_code: fidl_mlme::ScanResultCodes,
+        scan_error: fidl_sme::ScanErrorCode,
+        err_msg: &str,
+    ) {
+        let mut exec = fuchsia_async::Executor::new().expect("Failed to create executor");
+        let (proxy, server) =
+            create_proxy::<fidl_sme::ScanTransactionMarker>().expect("failed to create scan proxy");
+        let handle = server.into_stream().expect("Failed to create stream").control_handle();
+        let mut stream = proxy.take_event_stream();
+
+        send_scan_results(handle, Err(scan_code)).expect("Failed to send scan");
+        assert_variant!(exec.run_until_stalled(&mut stream.next()), Poll::Ready(Some(Ok(scan_event))) => {
+            let scan_error = fidl_sme::ScanError{
+                code: scan_error,
+                message: err_msg.to_string(),
+            };
+            assert_variant!(scan_event, fidl_sme::ScanTransactionEvent::OnError{ error } => {
+                assert_eq!(error, scan_error);
+            });
+        });
+    }
 
     #[test]
     fn test_convert_connect_result() {
