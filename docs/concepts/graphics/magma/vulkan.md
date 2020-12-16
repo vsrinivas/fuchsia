@@ -8,8 +8,33 @@ image. The correct driver will be built and loaded based on the
 [board](/docs/concepts/build_system/boards_and_products.md) that is selected
 when building.
 
-A component that will use Vulkan must include these features and services in its
-.cmx file:
+Include the following in your component manifest to enable access to the Vulkan driver:
+
+```json
+{
+   "include": [
+      "src/lib/vulkan/application.shard.cmx"
+   ],
+   ...
+}
+```
+
+A [test component](/docs/concepts/testing/v1_test_component.md) should instead have
+these lines in its .cmx:
+
+```json
+{
+   "include": [
+      "src/lib/vulkan/test-application.shard.cmx"
+   ],
+   ...
+}
+```
+
+### Out of tree runtime dependencies
+An application that is not in the Fuchsia tree or which otherwise can't
+include the file above must include these features and services in its .cmx
+file:
 
 ```json
 {
