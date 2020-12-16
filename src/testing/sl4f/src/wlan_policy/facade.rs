@@ -8,9 +8,12 @@ use {
         wlan_policy::types::{ClientStateSummary, NetworkConfig},
     },
     anyhow::{format_err, Context as _, Error},
+    fidl::endpoints::Proxy as _,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
+    fuchsia_async::{self as fasync, DurationExt as _},
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::macros::*,
+    fuchsia_zircon as zx,
     futures::TryStreamExt,
     parking_lot::RwLock,
     std::{
@@ -56,7 +59,7 @@ impl WlanPolicyFacade {
     /// Client controller needs to be created once per server before the client controller API
     /// can be used. This will get the client conrtoller if has not already been initialized, if it
     /// has been initialize it does nothing.
-    pub fn create_client_controller(&self) -> Result<(), Error> {
+    pub async fn create_client_controller(&self) -> Result<(), Error> {
         let tag = "WlanPolicyFacade::create_client_controller";
         let mut controller_guard = self.controller.write();
         if let Some(controller) = controller_guard.inner.as_ref() {
@@ -64,10 +67,11 @@ impl WlanPolicyFacade {
         } else {
             // Get controller
             fx_log_info!(tag: &with_line!(tag), "Setting new client controller");
-            let (controller, update_stream) = Self::init_client_controller().map_err(|e| {
-                fx_log_info!(tag: &with_line!(tag), "Error getting client controller: {}", e);
-                format_err!("Error getting client,controller: {}", e)
-            })?;
+            let (controller, update_stream) =
+                Self::init_client_controller().await.map_err(|e| {
+                    fx_log_info!(tag: &with_line!(tag), "Error getting client controller: {}", e);
+                    format_err!("Error getting client controller: {}", e)
+                })?;
             controller_guard.inner = Some(controller);
             // Do not set value if it has already been set by getting updates.
             let update_listener = self.update_listener.take();
@@ -82,7 +86,7 @@ impl WlanPolicyFacade {
 
     /// Creates and returns a client controller. This also returns the stream for listener updates
     /// that is created in the process of creating the client controller.
-    fn init_client_controller() -> Result<
+    async fn init_client_controller() -> Result<
         (fidl_policy::ClientControllerProxy, fidl_policy::ClientStateUpdatesRequestStream),
         Error,
     > {
@@ -92,6 +96,18 @@ impl WlanPolicyFacade {
         let (update_sink, update_stream) =
             fidl::endpoints::create_request_stream::<fidl_policy::ClientStateUpdatesMarker>()?;
         provider.get_controller(req, update_sink)?;
+
+        // Sleep very briefly to introduce a yield point (with the await) so that in case the other
+        // end of the channel is closed, its status is correctly propagated by the kernel and we can
+        // accurately check it using `is_closed()`.
+        let sleep_duration = zx::Duration::from_millis(10);
+        fasync::Timer::new(sleep_duration.after_now()).await;
+        if controller.is_closed() {
+            return Err(format_err!(
+                "Policy layer closed channel, client controller is likely already in use."
+            ));
+        }
+
         Ok((controller, update_stream))
     }
 

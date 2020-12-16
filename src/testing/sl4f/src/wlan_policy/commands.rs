@@ -73,7 +73,7 @@ impl Facade for WlanPolicyFacade {
             }
             "create_client_controller" => {
                 fx_log_info!(tag: "WlanPolicyFacade", "initializing client controller");
-                let result = self.create_client_controller()?;
+                let result = self.create_client_controller().await?;
                 to_value(result)
                     .map_err(|e| format_err!("error initializing client controller: {}", e))
             }
