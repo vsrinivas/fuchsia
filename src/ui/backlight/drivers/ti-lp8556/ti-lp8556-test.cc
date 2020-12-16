@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/inspect/cpp/reader.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
 #include <map>
@@ -16,6 +17,8 @@
 #include <fbl/span.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
+
+#include "sdk/lib/inspect/testing/cpp/zxtest/inspect.h"
 
 namespace {
 
@@ -50,7 +53,7 @@ class Bind : fake_ddk::Bind {
   std::map<uint32_t, fbl::Span<const uint8_t>> metadata_;
 };
 
-class Lp8556DeviceTest : public zxtest::Test {
+class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper {
  public:
   Lp8556DeviceTest()
       : mock_regs_(ddk_mock::MockMmioRegRegion(mock_reg_array_, kMmioRegSize, kMmioRegCount)),
@@ -352,6 +355,29 @@ TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
 
   ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
   ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
+}
+
+TEST_F(Lp8556DeviceTest, Inspect) {
+  mock_i2c_.ExpectWrite({kCfg2Reg})
+      .ExpectReadStop({kCfg2Default})
+      .ExpectWrite({kCurrentLsbReg})
+      .ExpectReadStop({0x05, 0x4e});
+  mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
+
+  EXPECT_OK(dev_->Init());
+
+  ReadInspect(dev_->InspectVmo());
+  auto& root_node = hierarchy().GetByPath({"ti-lp8556"})->node();
+  CheckProperty<inspect::DoublePropertyValue>(root_node, "brightness",
+                                              inspect::DoublePropertyValue(1.0));
+
+  EXPECT_FALSE(root_node.get_property<inspect::UintPropertyValue>("persistent_brightness"));
+  CheckProperty<inspect::UintPropertyValue>(root_node, "scale", inspect::UintPropertyValue(3589u));
+  CheckProperty<inspect::UintPropertyValue>(root_node, "calibrated_scale",
+                                            inspect::UintPropertyValue(3589u));
+  CheckProperty<inspect::BoolPropertyValue>(root_node, "power", inspect::BoolPropertyValue(true));
+  EXPECT_FALSE(
+      root_node.get_property<inspect::DoublePropertyValue>("max_absolute_brightness_nits"));
 }
 
 }  // namespace ti

@@ -104,6 +104,8 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
   // update internal values
   power_ = power;
   brightness_ = brightness;
+  power_property_.Set(power_);
+  brightness_property_.Set(brightness_);
   return ZX_OK;
 }
 
@@ -204,6 +206,7 @@ zx_status_t Lp8556Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) 
 }
 
 zx_status_t Lp8556Device::Init() {
+  root_ = inspector_.GetRoot().CreateChild("ti-lp8556");
   double brightness_nits = 0.0;
   size_t actual;
   zx_status_t status = device_get_metadata(parent(), DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS,
@@ -245,6 +248,8 @@ zx_status_t Lp8556Device::Init() {
     } else {
       LOG_INFO("Successfully set persistent brightness value: %f\n", brightness);
     }
+    persistent_brightness_property_ =
+        root_.CreateUint("persistent_brightness", persistent_brightness.brightness());
   }
 
   if ((i2c_.ReadSync(kCfg2Reg, &cfg2_, 1) != ZX_OK) || (cfg2_ == 0)) {
@@ -258,6 +263,12 @@ zx_status_t Lp8556Device::Init() {
   }
   scale_ = static_cast<uint16_t>(buf[0] | (buf[1] << kBrightnessMsbShift)) & kBrightnessRegMask;
   calibrated_scale_ = scale_;
+
+  brightness_property_ = root_.CreateDouble("brightness", brightness_);
+  scale_property_ = root_.CreateUint("scale", scale_);
+  calibrated_scale_property_ = root_.CreateUint("calibrated_scale", calibrated_scale_);
+  power_property_ = root_.CreateBool("power", power_);
+  // max_absolute_brightness_nits will be initialized in SetMaxAbsoluteBrightnessNits.
 
   return ZX_OK;
 }
@@ -288,6 +299,7 @@ zx_status_t Lp8556Device::SetCurrentScale(uint16_t scale) {
   }
 
   scale_ = scale;
+  scale_property_.Set(scale);
   return ZX_OK;
 }
 
@@ -331,7 +343,7 @@ zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  status = dev->DdkAdd("ti-lp8556");
+  status = dev->DdkAdd(ddk::DeviceAddArgs("ti-lp8556").set_inspect_vmo(dev->InspectVmo()));
   if (status != ZX_OK) {
     LOG_ERROR("Could not add device\n");
     return status;

@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/backlight/llcpp/fidl.h>
 #include <lib/device-protocol/i2c-channel.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
 
 #include <optional>
@@ -83,7 +84,15 @@ class Lp8556Device : public DeviceType,
 
   void SetMaxAbsoluteBrightnessNits(double brightness_nits) {
     max_absolute_brightness_nits_ = brightness_nits;
+    if (max_absolute_brightness_nits_property_) {
+      max_absolute_brightness_nits_property_.Set(brightness_nits);
+    } else {
+      max_absolute_brightness_nits_property_ =
+          root_.CreateDouble("max_absolute_brightness_nits", brightness_nits);
+    }
   }
+
+  zx::vmo InspectVmo() { return inspector_.DuplicateVmo(); }
 
   // FIDL calls
   void GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) override;
@@ -107,6 +116,9 @@ class Lp8556Device : public DeviceType,
  private:
   zx_status_t SetCurrentScale(uint16_t scale);
 
+  inspect::Inspector inspector_;
+  inspect::Node root_;
+
   // TODO(rashaeqbal): Switch from I2C to PWM in order to support a larger brightness range.
   // Needs a PWM driver.
   ddk::I2cChannel i2c_;
@@ -122,6 +134,13 @@ class Lp8556Device : public DeviceType,
   std::optional<double> max_absolute_brightness_nits_;
   uint8_t init_registers_[2 * (UINT8_MAX + 1)];  // 256 possible registers, plus values.
   size_t init_registers_size_ = 0;
+
+  inspect::DoubleProperty brightness_property_;
+  inspect::UintProperty persistent_brightness_property_;
+  inspect::UintProperty scale_property_;
+  inspect::UintProperty calibrated_scale_property_;
+  inspect::BoolProperty power_property_;
+  inspect::DoubleProperty max_absolute_brightness_nits_property_;
 };
 
 }  // namespace ti
