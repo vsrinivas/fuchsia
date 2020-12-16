@@ -21,10 +21,10 @@ dart_app("timestamp-server-dart") {
     "//src/testing/fidl:placeholders",
     "//third_party/dart-pkg/pub/intl",
     "//topaz/public/dart/fuchsia_logger",
-    "//topaz/public/dart/fuchsia_services",
-    dart_package_label.fuchsia,
-    dart_package_label.zircon,
     dart_package_label.fidl,
+    dart_package_label.fuchsia,
+    dart_package_label.fuchsia_services,
+    dart_package_label.zircon,
   ]
   resources = [
     {
@@ -52,10 +52,10 @@ flutter_app("timestamp-server-flutter") {
     "//src/testing/fidl:placeholders",
     "//third_party/dart-pkg/pub/intl",
     "//topaz/public/dart/fuchsia_logger",
-    "//topaz/public/dart/fuchsia_services",
-    dart_package_label.fuchsia,
-    dart_package_label.zircon,
     dart_package_label.fidl,
+    dart_package_label.fuchsia,
+    dart_package_label.fuchsia_services,
+    dart_package_label.zircon,
   ]
   resources = [
     {

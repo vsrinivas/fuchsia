@@ -16,8 +16,8 @@ dart_library("lib") {
     "//src/flutter/tests/fidl",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//topaz/public/dart/fuchsia_logger",
-    "//topaz/public/dart/fuchsia_services",
     dart_package_label.fidl,
+    dart_package_label.fuchsia_services,
   ]
 }
 

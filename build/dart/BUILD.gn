@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/fidl_move.gni")
 import("//build/dart/toolchain.gni")
 import("//build/toolchain/basic_toolchain.gni")
 import("//build/toolchain/concurrent_jobs.gni")
@@ -45,7 +46,8 @@ group("deprecated_dart_app_allowlist") {
     "//topaz/public/dart/fuchsia_inspect/test/integration:dart-inspect-vmo-test-writer",
     "//topaz/public/dart/fuchsia_inspect/test/validator_puppet:dart-inspect-validator-puppet",
     "//topaz/public/dart/fuchsia_modular/examples/fibonacci_agent:fibonacci-agent",
-    "//topaz/public/dart/fuchsia_services/test_support:fuchsia-services-foo-test-server",
+    get_label_info(dart_package_label.fuchsia_services, "dir") +
+        "/test_support:fuchsia-services-foo-test-server",
     "//topaz/tests/dart-inspect-benchmarks:dart-inspect-benchmarks",
   ]
 

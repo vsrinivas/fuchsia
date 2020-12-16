@@ -17,7 +17,7 @@ flutter_app("one-flutter") {
   deps = [
     "//src/ui/tests/e2e_input_tests/touch:fuchsia.test.ui",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
-    "//topaz/public/dart/fuchsia_services",
+    dart_package_label.fuchsia_services,
     dart_package_label.zircon,
   ]
 }

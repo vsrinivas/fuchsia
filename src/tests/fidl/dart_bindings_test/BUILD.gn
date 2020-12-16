@@ -20,8 +20,8 @@ dart_library("server_lib") {
   sources = [ "main.dart" ]
   deps = [
     "fidl:bindings_test",
-    "//topaz/public/dart/fuchsia_services",
     dart_package_label.fidl,
+    dart_package_label.fuchsia_services,
   ]
 }
 
@@ -97,9 +97,9 @@ dart_test_component("bindings-test-component") {
     "//third_party/dart-pkg/pub/collection",
     "//third_party/dart-pkg/pub/pedantic",
     "//third_party/dart-pkg/pub/test",
-    "//topaz/public/dart/fuchsia_services",
-    dart_package_label.zircon,
     dart_package_label.fidl,
+    dart_package_label.fuchsia_services,
+    dart_package_label.zircon,
   ]
 }
 

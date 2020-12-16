@@ -20,7 +20,7 @@ dart_app("log-validator-dart-puppet") {
         "//sdk/fidl/fuchsia.mem",
         "//src/diagnostics/lib/streams/dart:fuchsia_diagnostic_streams",
         "//topaz/public/dart/fuchsia_logger",
-        "//topaz/public/dart/fuchsia_services",
+        dart_package_label.fuchsia_services,
         dart_package_label.zircon,
         dart_package_label.fidl,
       ]

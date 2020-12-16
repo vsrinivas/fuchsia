@@ -20,8 +20,8 @@ dart_app("echo-launcher-dart-server") {
     "//examples/fidl/fuchsia.examples",
     "//third_party/dart-pkg/pub/meta",
     "//topaz/public/dart/fuchsia_logger",
-    "//topaz/public/dart/fuchsia_services",
     dart_package_label.fidl,
+    dart_package_label.fuchsia_services,
   ]
 }
 
