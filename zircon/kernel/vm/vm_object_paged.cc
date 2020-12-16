@@ -731,6 +731,14 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
     offset += committed_len;
     len -= committed_len;
 
+    // After we're done waiting on the page request, we loop around with the same |offset| and
+    // |len|, so that we can reprocess the range populated by the page request, with another call to
+    // VmCowPages::CommitRangeLocked(). This is required to make any COW copies of pages that were
+    // just supplied.
+    // - The first call to VmCowPages::CommitRangeLocked() returns early from GetPageLocked()
+    // with ZX_ERR_SHOULD_WAIT after queueing a page request for the absent page.
+    // - The second call to VmCowPages::CommitRangeLocked() calls GetPageLocked() which copies out
+    // the now present page (if required).
     guard.CallUnlocked([&page_request, &status]() mutable { status = page_request.Wait(); });
     if (status != ZX_OK) {
       if (status == ZX_ERR_TIMED_OUT) {

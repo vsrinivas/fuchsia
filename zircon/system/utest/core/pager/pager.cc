@@ -1055,6 +1055,49 @@ TEST(Pager, CloneCommitTest) {
   ASSERT_TRUE(pager.SupplyPages(vmo, 0, kNumPages));
 
   ASSERT_TRUE(t.Wait());
+
+  // Verify that the pages have been copied into the clone. (A commit simulates write faults.)
+  zx_info_vmo_t info;
+  uint64_t a1, a2;
+  ASSERT_EQ(ZX_OK, clone->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
+  EXPECT_EQ(kNumPages * ZX_PAGE_SIZE, info.committed_bytes);
+}
+
+// Tests that commit on the clone of a clone populates things properly.
+TEST(Pager, CloneChainCommitTest) {
+  UserPager pager;
+
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 32;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  auto intermediate = vmo->Clone();
+  ASSERT_NOT_NULL(intermediate);
+
+  auto clone = intermediate->Clone();
+  ASSERT_NOT_NULL(clone);
+
+  TestThread t([clone = clone.get()]() -> bool { return clone->Commit(0, kNumPages); });
+
+  ASSERT_TRUE(t.Start());
+
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, kNumPages));
+
+  ASSERT_TRUE(t.Wait());
+
+  // Verify that the pages have been copied into the clone. (A commit simulates write faults.)
+  zx_info_vmo_t info;
+  uint64_t a1, a2;
+  ASSERT_EQ(ZX_OK, clone->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
+  EXPECT_EQ(kNumPages * ZX_PAGE_SIZE, info.committed_bytes);
+
+  // Verify that the intermediate has no pages committed.
+  ASSERT_EQ(ZX_OK, intermediate->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
+  EXPECT_EQ(0ul, info.committed_bytes);
 }
 
 // Tests that commit on the clone populates things properly if things have already been touched.
@@ -1085,6 +1128,12 @@ TEST(Pager, CloneSplitCommitTest) {
   ASSERT_TRUE(pager.SupplyPages(vmo, kNumPages - 1, 1));
 
   ASSERT_TRUE(t.Wait());
+
+  // Verify that the pages have been copied into the clone. (A commit simulates write faults.)
+  zx_info_vmo_t info;
+  uint64_t a1, a2;
+  ASSERT_EQ(ZX_OK, clone->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
+  EXPECT_EQ(kNumPages * ZX_PAGE_SIZE, info.committed_bytes);
 }
 
 // Resizing a cloned VMO causes a fault.
@@ -2438,6 +2487,171 @@ TEST(Pager, CloneSeesCorrectParentPages) {
   EXPECT_EQ(val, 0u);
   EXPECT_OK(child6->vmo().read(&val, ZX_PAGE_SIZE * 6, sizeof(uint64_t)));
   EXPECT_EQ(val, 0u);
+}
+
+// Tests that a commit on a clone generates a single batch page request when the parent has no
+// populated pages. Also verifies that pages are populated (copied into) the clone as expected.
+TEST(Pager, CloneCommitSingleBatch) {
+  UserPager pager;
+
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 4;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  auto clone = vmo->Clone();
+  ASSERT_NOT_NULL(clone);
+
+  TestThread t([clone = clone.get()]() -> bool { return clone->Commit(0, kNumPages); });
+
+  ASSERT_TRUE(t.Start());
+
+  // Committing the clone should generate a batch request for pages [0, kNumPages).
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, kNumPages, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, kNumPages));
+
+  ASSERT_TRUE(t.Wait());
+
+  // Verify that the clone has all pages committed.
+  zx_info_vmo_t info;
+  uint64_t a1, a2;
+  ASSERT_EQ(ZX_OK, clone->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
+  EXPECT_EQ(kNumPages * ZX_PAGE_SIZE, info.committed_bytes);
+}
+
+// Tests that a commit on a clone generates two batch page requests when the parent has a page
+// populated in the middle. Also verifies that pages are populated (copied into) the clone as
+// expected.
+TEST(Pager, CloneCommitTwoBatches) {
+  UserPager pager;
+
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 5;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  auto clone = vmo->Clone();
+  ASSERT_NOT_NULL(clone);
+
+  TestThread t([clone = clone.get()]() -> bool { return clone->Commit(0, kNumPages); });
+
+  // Populate pages 2 in the parent, so it's already present before committing the clone.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 2, 1));
+
+  ASSERT_TRUE(t.Start());
+
+  // Batch request for pages [0, 2).
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 2, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
+
+  // Batch request for pages [3, kNumPages).
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 3, kNumPages - 3, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 3, kNumPages - 3));
+
+  ASSERT_TRUE(t.Wait());
+
+  // Verify that the clone has all pages committed.
+  zx_info_vmo_t info;
+  uint64_t a1, a2;
+  ASSERT_EQ(ZX_OK, clone->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
+  EXPECT_EQ(kNumPages * ZX_PAGE_SIZE, info.committed_bytes);
+}
+
+// Tests that a commit on a clone generates three batch page requests when the parent has two
+// disjoint populated pages in the middle. Also verifies that pages are populated (copied into) the
+// clone as expected.
+TEST(Pager, CloneCommitMultipleBatches) {
+  UserPager pager;
+
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 8;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  auto clone = vmo->Clone();
+  ASSERT_NOT_NULL(clone);
+
+  TestThread t([clone = clone.get()]() -> bool { return clone->Commit(0, kNumPages); });
+
+  // Populate pages 2 and 5 in the parent, so that the commit gets split up into 3 batch requests.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 2, 1));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 5, 1));
+
+  ASSERT_TRUE(t.Start());
+
+  // Batch request for pages [0, 2).
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 2, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
+
+  // Batch request for pages [3, 5).
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 3, 2, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 3, 2));
+
+  // Batch request for pages [6, kNumPages).
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 6, kNumPages - 6, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 6, kNumPages - 6));
+
+  ASSERT_TRUE(t.Wait());
+
+  // Verify that the clone has all pages committed.
+  zx_info_vmo_t info;
+  uint64_t a1, a2;
+  ASSERT_EQ(ZX_OK, clone->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
+  EXPECT_EQ(kNumPages * ZX_PAGE_SIZE, info.committed_bytes);
+}
+
+// Tests that a commit on a clone populates pages as expected when the parent has some populated
+// pages at random offsets. Also verifies that pages are populated (copied into) the clone as
+// expected.
+TEST(Pager, CloneCommitRandomBatches) {
+  UserPager pager;
+
+  ASSERT_TRUE(pager.Init());
+
+  constexpr uint64_t kNumPages = 100;
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+
+  auto clone = vmo->Clone();
+  ASSERT_NOT_NULL(clone);
+
+  TestThread t([clone = clone.get()]() -> bool { return clone->Commit(0, kNumPages); });
+
+  // Populate around 25% of the parent's pages.
+  std::vector<uint64_t> populated_offsets;
+  for (uint64_t i = 0; i < kNumPages; i++) {
+    if (rand() % 4) {
+      continue;
+    }
+    ASSERT_TRUE(pager.SupplyPages(vmo, i, 1));
+    populated_offsets.push_back(i);
+  }
+
+  ASSERT_TRUE(t.Start());
+
+  uint64_t prev_offset = 0;
+  for (uint64_t offset : populated_offsets) {
+    // Supply pages in the range [prev_offset, offset).
+    if (prev_offset < offset) {
+      pager.SupplyPages(vmo, prev_offset, offset - prev_offset);
+    }
+    prev_offset = offset + 1;
+  }
+  // Supply pages in the last range [prev_offset, kNumPages).
+  if (prev_offset < kNumPages) {
+    pager.SupplyPages(vmo, prev_offset, kNumPages - prev_offset);
+  }
+
+  ASSERT_TRUE(t.Wait());
+
+  // Verify that the clone has all pages committed.
+  zx_info_vmo_t info;
+  uint64_t a1, a2;
+  ASSERT_EQ(ZX_OK, clone->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), &a1, &a2));
+  EXPECT_EQ(kNumPages * ZX_PAGE_SIZE, info.committed_bytes);
 }
 
 }  // namespace pager_tests
