@@ -88,8 +88,8 @@ zx::vmo GenerateMinidump(const zx::exception& exception) {
   zx_status_t status =
       thread.get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), nullptr, nullptr);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Process " << process_name
-                            << ": Could not obtain ZX_INFO_THREAD_EXCEPTION_REPORT.";
+    FX_PLOGS(WARNING, status) << "Process " << process_name
+                              << ": Could not obtain ZX_INFO_THREAD_EXCEPTION_REPORT.";
     return {};
   }
 
@@ -97,7 +97,7 @@ zx::vmo GenerateMinidump(const zx::exception& exception) {
   crashpad::ProcessSnapshotFuchsia process_snapshot;
   if (!process_snapshot.Initialize(process) ||
       !process_snapshot.InitializeException(thread_koid, report)) {
-    FX_LOGS(ERROR) << "Process " << process_name << ": Could not create process snapshot.";
+    FX_LOGS(WARNING) << "Process " << process_name << ": Could not create process snapshot.";
     return {};
   }
 
@@ -107,13 +107,13 @@ zx::vmo GenerateMinidump(const zx::exception& exception) {
   // Represents an in-memory backed file writer interface.
   crashpad::StringFile string_file;
   if (!minidump.WriteEverything(&string_file)) {
-    FX_LOGS(ERROR) << "Process " << process_name << ": Failed to generate minidump.";
+    FX_LOGS(WARNING) << "Process " << process_name << ": Failed to generate minidump.";
     return {};
   }
 
   zx::vmo vmo = GenerateVMOFromStringFile(string_file);
   if (!vmo.is_valid()) {
-    FX_LOGS(ERROR) << "Process " << process_name << ": Could not generate vmo from minidump.";
+    FX_LOGS(WARNING) << "Process " << process_name << ": Could not generate vmo from minidump.";
     return {};
   }
 
