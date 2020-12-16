@@ -13,12 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
-
-group("test") {
-  testonly = true
-  deps = [ ":sysmem-version-bootfs-test" ]
-}
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("sysmem-version-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -31,7 +26,13 @@ test("sysmem-version-test") {
   ]
 }
 
-bootfs_test("sysmem-version-bootfs-test") {
-  name = "sysmem-version-test"
+fuchsia_unittest_package("sysmem-version-test-pkg") {
+  package_name = "sysmem-version-test"
+  executable_path = "test/sysmem-version-test"
   deps = [ ":sysmem-version-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":sysmem-version-test-pkg" ]
 }

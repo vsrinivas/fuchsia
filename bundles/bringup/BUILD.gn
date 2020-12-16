@@ -49,8 +49,6 @@ group("tests") {
     "//zircon/system/ulib/launchpad/test:launchpad-bootfs-test",
     "//zircon/system/ulib/syslog/test:syslog-bootfs-test",
     "//zircon/system/ulib/syslog/test:syslog-static-bootfs-test",
-    "//zircon/system/ulib/sysmem-make-tracking/test:sysmem-make-tracking-bootfs-test",
-    "//zircon/system/ulib/sysmem-version/test:sysmem-version-bootfs-test",
     "//zircon/system/ulib/test-utils/test:test-utils-bootfs-test",
     "//zircon/system/ulib/trace-reader/test:trace-reader-test-bootfs-test",
     "//zircon/system/ulib/zbi-bootfs/test:zbi-bootfs-test-bootfs-test",

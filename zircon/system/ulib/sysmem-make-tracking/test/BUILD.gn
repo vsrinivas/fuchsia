@@ -14,12 +14,7 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
-
-group("test") {
-  testonly = true
-  deps = [ ":sysmem-make-tracking-bootfs-test" ]
-}
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("sysmem-make-tracking-test") {
   sources = [ "make_tracking_test.cc" ]
@@ -32,11 +27,17 @@ test("sysmem-make-tracking-test") {
   ]
 }
 
-bootfs_test("sysmem-make-tracking-bootfs-test") {
-  name = "sysmem-make-tracking-test"
+fidl("fidl.types.test") {
+  sources = [ "types.test.fidl" ]
+}
+
+fuchsia_unittest_package("sysmem-make-tracking-test-pkg") {
+  package_name = "sysmem-make-tracking-test"
+  executable_path = "test/sysmem-make-tracking-test"
   deps = [ ":sysmem-make-tracking-test" ]
 }
 
-fidl("fidl.types.test") {
-  sources = [ "types.test.fidl" ]
+group("tests") {
+  testonly = true
+  deps = [ ":sysmem-make-tracking-test-pkg" ]
 }

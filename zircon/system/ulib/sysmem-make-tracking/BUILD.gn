@@ -20,3 +20,8 @@ zx_library("sysmem-make-tracking") {
   sources = []
   deps = [ "//zircon/public/lib/fidl" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}
