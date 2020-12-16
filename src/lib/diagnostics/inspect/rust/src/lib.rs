@@ -136,7 +136,6 @@ pub mod heap;
 pub mod reader;
 pub mod service;
 mod state;
-pub mod trie;
 mod utils;
 
 pub mod testing {

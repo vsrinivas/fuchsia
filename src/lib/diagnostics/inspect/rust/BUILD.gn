@@ -64,7 +64,6 @@ rustc_library("fuchsia-inspect") {
     "src/reader/tree_reader.rs",
     "src/service.rs",
     "src/state.rs",
-    "src/trie.rs",
     "src/utils.rs",
   ]
 }
