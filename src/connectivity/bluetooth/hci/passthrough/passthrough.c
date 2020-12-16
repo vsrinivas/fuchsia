@@ -10,10 +10,11 @@
 #include <unistd.h>
 #include <zircon/status.h>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/bt/hci.h>
+
+#include "src/connectivity/bluetooth/hci/passthrough/bt_hci_passthrough_bind.h"
 
 typedef struct {
   zx_device_t* dev;
@@ -119,7 +120,4 @@ static zx_driver_ops_t bt_hci_passthrough_driver_ops = {
 };
 
 // This should be the last driver queried, so we match any transport.
-// clang-format off
-ZIRCON_DRIVER_BEGIN(bt_hci_passthrough, bt_hci_passthrough_driver_ops, "fuchsia", "*0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BT_TRANSPORT),
-ZIRCON_DRIVER_END(bt_hci_passthrough)
+ZIRCON_DRIVER(bt_hci_passthrough, bt_hci_passthrough_driver_ops, "fuchsia", "*0.1");

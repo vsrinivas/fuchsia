@@ -2,8 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
+
+bind_rules("bt_hci_passthrough_bind") {
+  rules = "bt_hci_passthrough.bind"
+  output = "bt_hci_passthrough_bind.h"
+  tests = "bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.bluetooth" ]
+}
 
 driver_module("driver") {
   output_name = "bt-hci-passthrough"
@@ -11,13 +19,11 @@ driver_module("driver") {
   sources = [ "passthrough.c" ]
 
   deps = [
+    ":bt_hci_passthrough_bind",
     "//sdk/banjo/ddk.protocol.bt.hci",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
   ]
@@ -33,4 +39,9 @@ driver_package("passthrough") {
       name = "bt-hci-passthrough.so"
     },
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":bt_hci_passthrough_bind_test" ]
 }
