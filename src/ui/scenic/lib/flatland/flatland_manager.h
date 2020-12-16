@@ -32,6 +32,7 @@ class FlatlandManager : public scheduling::SessionUpdater {
       const std::shared_ptr<UberStructSystem>& uber_struct_system,
       const std::shared_ptr<LinkSystem>& link_system,
       const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers);
+  ~FlatlandManager() override;
 
   void CreateFlatland(fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> flatland);
 

@@ -50,6 +50,12 @@ void MockFrameScheduler::SetOnFramePresentedCallbackForSession(
   }
 }
 
+void MockFrameScheduler::RemoveSession(SessionId session_id) {
+  if (remove_session_callback_) {
+    remove_session_callback_(session_id);
+  }
+}
+
 RenderFrameResult MockFrameRenderer::RenderFrame(fxl::WeakPtr<FrameTimings> frame_timings,
                                                  zx::time presentation_time) {
   FX_CHECK(frame_timings);

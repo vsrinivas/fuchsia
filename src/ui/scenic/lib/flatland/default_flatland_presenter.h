@@ -28,6 +28,9 @@ class DefaultFlatlandPresenter final : public FlatlandPresenter {
   void ScheduleUpdateForSession(zx::time requested_presentation_time,
                                 scheduling::SchedulingIdPair id_pair) override;
 
+  // |FlatlandPresenter|
+  void RemoveSession(scheduling::SessionId session_id) override;
+
  private:
   async_dispatcher_t* main_dispatcher_;
   std::weak_ptr<scheduling::FrameScheduler> frame_scheduler_;

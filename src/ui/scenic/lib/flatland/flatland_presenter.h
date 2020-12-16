@@ -22,6 +22,8 @@ class FlatlandPresenter {
   //
   // Registers per-present information with the frame scheduler and returns an incrementing
   // PresentId unique to that session.
+  //
+  // This function should be called from Flatland instance worker threads.
   virtual scheduling::PresentId RegisterPresent(scheduling::SessionId session_id,
                                                 std::vector<zx::event> release_fences) = 0;
 
@@ -32,8 +34,17 @@ class FlatlandPresenter {
   //
   // Flatland should not call this function until it has reached the acquire fences and queued an
   // UberStruct for the associated |id_pair|.
+  //
+  // This function should be called from Flatland instance worker threads.
   virtual void ScheduleUpdateForSession(zx::time requested_presentation_time,
                                         scheduling::SchedulingIdPair id_pair) = 0;
+
+  // From scheduling::FrameScheduler::RemoveSession():
+  //
+  // Removes all references to |session_id|.
+  //
+  // This function should be called from the main render thread.
+  virtual void RemoveSession(scheduling::SessionId session_id) = 0;
 };
 
 }  // namespace flatland

@@ -72,13 +72,16 @@ TEST_F(DefaultFlatlandPresenterTest, NoFrameSchedulerSet) {
   const scheduling::SessionId kSessionId = 1;
   const scheduling::PresentId kPresentId = 2;
 
-  // Neither function should crash, even though there is no FrameScheduler.
+  // No function should crash, even though there is no FrameScheduler.
   scheduling::PresentId present_id = presenter.RegisterPresent(kSessionId, /*release_fences=*/{});
   RunLoopUntilIdle();
 
   EXPECT_EQ(present_id, scheduling::kInvalidPresentId);
 
   presenter.ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId});
+  RunLoopUntilIdle();
+
+  presenter.RemoveSession(kSessionId);
   RunLoopUntilIdle();
 }
 
@@ -93,13 +96,16 @@ TEST_F(DefaultFlatlandPresenterTest, FrameSchedulerExpired) {
   const scheduling::SessionId kSessionId = 1;
   const scheduling::PresentId kPresentId = 2;
 
-  // Neither function should crash, even though the FrameScheduler has expired.
+  // No function should crash, even though the FrameScheduler has expired.
   scheduling::PresentId present_id = presenter.RegisterPresent(kSessionId, /*release_fences=*/{});
   RunLoopUntilIdle();
 
   EXPECT_EQ(present_id, scheduling::kInvalidPresentId);
 
   presenter.ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId});
+  RunLoopUntilIdle();
+
+  presenter.RemoveSession(kSessionId);
   RunLoopUntilIdle();
 }
 
@@ -182,6 +188,26 @@ TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameSche
 
   EXPECT_EQ(last_presentation_time, kPresentationTime);
   EXPECT_EQ(last_id_pair, kIdPair);
+}
+
+TEST_F(DefaultFlatlandPresenterTest, RemoveSessionForwardsToFrameScheduler) {
+  auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
+
+  // Capture the relevant arguments of the ScheduleUpdateForSession() call.
+  scheduling::SessionId last_session_id = scheduling::kInvalidSessionId;
+
+  frame_scheduler->set_remove_session_callback(
+      [&last_session_id](scheduling::SessionId session_id) { last_session_id = session_id; });
+
+  auto presenter = CreateDefaultFlatlandPresenter();
+  presenter.SetFrameScheduler(frame_scheduler);
+
+  const scheduling::SessionId kSessionId = 1;
+
+  presenter.RemoveSession(kSessionId);
+
+  // Since this function runs on the main thread, no RunLoopUntilIdle() is necessary.
+  EXPECT_EQ(last_session_id, kSessionId);
 }
 
 TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {

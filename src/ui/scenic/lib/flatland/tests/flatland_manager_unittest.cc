@@ -104,6 +104,10 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
               queue.push(id_pair.present_id);
             }));
 
+    ON_CALL(*mock_flatland_presenter_, RemoveSession(_))
+        .WillByDefault(::testing::Invoke(
+            [&](scheduling::SessionId session_id) { removed_sessions_.insert(session_id); }));
+
     flatland_presenter_ = std::shared_ptr<FlatlandPresenter>(mock_flatland_presenter_);
 
     manager_ = std::make_unique<FlatlandManager>(
@@ -112,6 +116,15 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
   }
 
   void TearDown() override {
+    // Expect RemoveSession() calls for each Flatland instance that was active. |manager_| may have
+    // been reset during the test.
+    removed_sessions_.clear();
+    size_t session_count = 0;
+    if (manager_) {
+      session_count = manager_->GetSessionCount();
+      EXPECT_CALL(*mock_flatland_presenter_, RemoveSession(_)).Times(session_count);
+    }
+
     // Triggers cleanup of manager resources for Flatland instances that have exited.
     RunLoopUntilIdle();
 
@@ -120,12 +133,19 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
     // the tests.
     if (manager_) {
       EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return manager_->GetSessionCount() == 0; }));
+      EXPECT_EQ(removed_sessions_.size(), session_count);
     }
 
     auto snapshot = uber_struct_system_->Snapshot();
     EXPECT_TRUE(snapshot.empty());
 
     manager_.reset();
+
+    EXPECT_EQ(uber_struct_system_->GetSessionCount(), 0ul);
+
+    pending_presents_.clear();
+    pending_session_updates_.clear();
+    removed_sessions_.clear();
     flatland_presenter_.reset();
 
     gtest::RealLoopFixture::TearDown();
@@ -158,6 +178,7 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
   std::set<scheduling::SchedulingIdPair> pending_presents_;
   std::unordered_map<scheduling::SessionId, std::queue<scheduling::PresentId>>
       pending_session_updates_;
+  std::unordered_set<scheduling::SessionId> removed_sessions_;
 
  private:
   std::shared_ptr<FlatlandPresenter> flatland_presenter_;
@@ -184,17 +205,45 @@ TEST_F(FlatlandManagerTest, CreateFlatlands) {
   EXPECT_EQ(manager_->GetSessionCount(), 2ul);
 }
 
+TEST_F(FlatlandManagerTest, ClientDiesBeforeManager) {
+  scheduling::SessionId id;
+  {
+    fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
+    manager_->CreateFlatland(flatland.NewRequest());
+    id = uber_struct_system_->GetLatestInstanceId();
+
+    RunLoopUntilIdle();
+
+    EXPECT_TRUE(flatland.is_bound());
+
+    // |flatland| falls out of scope, killing the session.
+    EXPECT_CALL(*mock_flatland_presenter_, RemoveSession(id));
+  }
+
+  // The session should show up in the set of removed sessions.
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return manager_->GetSessionCount() == 0; }));
+
+  EXPECT_EQ(removed_sessions_.size(), 1ul);
+  EXPECT_TRUE(removed_sessions_.count(id));
+}
+
 TEST_F(FlatlandManagerTest, ManagerDiesBeforeClients) {
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
   manager_->CreateFlatland(flatland.NewRequest(dispatcher()));
-
+  const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
+  
   RunLoopUntilIdle();
 
   EXPECT_TRUE(flatland.is_bound());
   EXPECT_EQ(manager_->GetSessionCount(), 1ul);
 
   // Explicitly kill the server.
+  EXPECT_CALL(*mock_flatland_presenter_, RemoveSession(id));
   manager_.reset();
+
+  EXPECT_EQ(uber_struct_system_->GetSessionCount(), 0ul);
+  EXPECT_EQ(removed_sessions_.size(), 1ul);
+  EXPECT_TRUE(removed_sessions_.count(id));
 
   RunLoopUntilIdle();
 
@@ -322,6 +371,7 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   EXPECT_TRUE(flatland.is_bound());
 
   // Present one more time and ensure the session is closed.
+  EXPECT_CALL(*mock_flatland_presenter_, RemoveSession(id));
   PRESENT(flatland, id, false);
 
   // The instance will eventually be unbound, but it takes a pair of thread hops to complete since

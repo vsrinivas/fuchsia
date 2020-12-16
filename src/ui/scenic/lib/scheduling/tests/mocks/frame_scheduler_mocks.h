@@ -44,7 +44,7 @@ class MockFrameScheduler : public FrameScheduler {
       SessionId session, OnFramePresentedCallback frame_presented_callback) override;
 
   // |FrameScheduler|
-  void RemoveSession(SessionId session_id) override {}
+  void RemoveSession(SessionId session_id) override;
 
   // Testing only. Used for mock method callbacks.
   using OnSetRenderContinuouslyCallback = std::function<void(bool)>;
@@ -57,6 +57,7 @@ class MockFrameScheduler : public FrameScheduler {
   using RegisterPresentCallback = std::function<void(
       SessionId session_id, std::variant<OnPresentedCallback, Present2Info> present_information,
       std::vector<zx::event> release_fences, PresentId present_id)>;
+  using RemoveSessionCallback = std::function<void(SessionId session_id)>;
 
   // Testing only. Sets mock method callback.
   void set_set_render_continuously_callback(OnSetRenderContinuouslyCallback callback) {
@@ -84,6 +85,11 @@ class MockFrameScheduler : public FrameScheduler {
     register_present_callback_ = callback;
   }
 
+  // Testing only. Sets mock method callback.
+  void set_remove_session_callback(RemoveSessionCallback callback) {
+    remove_session_callback_ = callback;
+  }
+
   void set_next_present_id(PresentId present_id) { next_present_id_ = present_id; }
 
  private:
@@ -94,6 +100,7 @@ class MockFrameScheduler : public FrameScheduler {
   OnSetOnFramePresentedCallbackForSessionCallback
       set_on_frame_presented_callback_for_session_callback_;
   RegisterPresentCallback register_present_callback_;
+  RemoveSessionCallback remove_session_callback_;
 
   PresentId next_present_id_;
 };

@@ -21,7 +21,6 @@ scheduling::PresentId DefaultFlatlandPresenter::RegisterPresent(
     scheduling::SessionId session_id, std::vector<zx::event> release_fences) {
   scheduling::PresentId present_id = scheduling::kInvalidPresentId;
 
-  // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.
   if (auto scheduler = frame_scheduler_.lock()) {
     // Since FrameScheduler::RegisterPresent() will not run immediately, generate a PresentId
     // independently.
@@ -36,6 +35,9 @@ scheduling::PresentId DefaultFlatlandPresenter::RegisterPresent(
           session_id, /*present_information=*/[](auto...) {}, std::move(release_fences),
           present_id);
     });
+  } else {
+    // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.
+    FX_LOGS(WARNING) << "Cannot register present due to missing FrameScheduler.";
   }
 
   return present_id;
@@ -43,7 +45,6 @@ scheduling::PresentId DefaultFlatlandPresenter::RegisterPresent(
 
 void DefaultFlatlandPresenter::ScheduleUpdateForSession(zx::time requested_presentation_time,
                                                         scheduling::SchedulingIdPair id_pair) {
-  // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.
   if (auto scheduler = frame_scheduler_.lock()) {
     // TODO(fxbug.dev/61178): The FrameScheduler is not thread-safe, but a lock is not sufficient
     // since GFX sessions may access the FrameScheduler without passing through this object. Post a
@@ -51,6 +52,18 @@ void DefaultFlatlandPresenter::ScheduleUpdateForSession(zx::time requested_prese
     async::PostTask(main_dispatcher_, [scheduler, requested_presentation_time, id_pair] {
       scheduler->ScheduleUpdateForSession(requested_presentation_time, id_pair);
     });
+  } else {
+    // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.
+    FX_LOGS(WARNING) << "Cannot schedule update for session due to missing FrameScheduler.";
+  }
+}
+
+void DefaultFlatlandPresenter::RemoveSession(scheduling::SessionId session_id) {
+  if (auto scheduler = frame_scheduler_.lock()) {
+    scheduler->RemoveSession(session_id);
+  } else {
+    // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.
+    FX_LOGS(WARNING) << "Cannot remove session due to missing FrameScheduler.";
   }
 }
 

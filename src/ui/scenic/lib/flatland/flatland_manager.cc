@@ -22,6 +22,14 @@ FlatlandManager::FlatlandManager(
       buffer_collection_importers_(buffer_collection_importers),
       executor_(dispatcher) {}
 
+FlatlandManager::~FlatlandManager() {
+  // Clean up externally managed resources.
+  for (const auto& [session_id, instance] : flatland_instances_) {
+    uber_struct_system_->RemoveSession(session_id);
+    flatland_presenter_->RemoveSession(session_id);
+  }
+}
+
 void FlatlandManager::CreateFlatland(
     fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request) {
   const scheduling::SessionId id = uber_struct_system_->GetNextInstanceId();
@@ -131,6 +139,7 @@ void FlatlandManager::RemoveFlatlandInstance(scheduling::SessionId session_id) {
   // Other resource cleanup can safely occur on the main thread.
   flatland_instances_.erase(session_id);
   uber_struct_system_->RemoveSession(session_id);
+  flatland_presenter_->RemoveSession(session_id);
 }
 
 void FlatlandManager::DestroyInstanceFunction(scheduling::SessionId session_id) {
