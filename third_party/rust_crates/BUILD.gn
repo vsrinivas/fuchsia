@@ -666,10 +666,8 @@ group("test-case") {
   deps = [ ":test-case-v1_0_0($host_toolchain)" ]
 }
 
-if (current_os == "fuchsia") {
-  group("textwrap") {
-    deps = [ ":textwrap-v0_11_0" ]
-  }
+group("textwrap") {
+  deps = [ ":textwrap-v0_11_0" ]
 }
 
 group("thiserror") {
