@@ -15,10 +15,11 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
+
+#include "src/devices/serial/drivers/serial-async/serial_bind.h"
 
 namespace serial {
 
@@ -240,7 +241,6 @@ static constexpr zx_driver_ops_t serial_driver_ops = []() {
 
 // The formatter does not play nice with these macros.
 // clang-format off
-ZIRCON_DRIVER_BEGIN(serial, serial::serial_driver_ops, "zircon", "*0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SERIAL_IMPL_ASYNC),
-ZIRCON_DRIVER_END(serial)
-    // clang-format on
+ZIRCON_DRIVER(serial, serial::serial_driver_ops, "zircon", "*0.1");
+
+// clang-format on

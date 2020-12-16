@@ -223,7 +223,6 @@ zx_library("ddk-deprecated-binding-headers") {
     "//src/devices/serial/drivers/aml-uart:*",
     "//src/devices/serial/drivers/ftdi:*",
     "//src/devices/serial/drivers/intel-serialio:*",
-    "//src/devices/serial/drivers/serial-async:common",
     "//src/devices/serial/drivers/uart16550:*",
     "//src/devices/serial/drivers/usb-cdc-acm:*",
     "//src/devices/serial/drivers/usb-cdc-acm:fake-usb-cdc-acm",

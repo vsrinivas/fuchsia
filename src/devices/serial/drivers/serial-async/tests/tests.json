@@ -1,0 +1,16 @@
+[
+    {
+        "name": "Invalid PROTOCOL",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.serial.BIND_PROTOCOL.IMPL"
+        }
+    },
+    {
+        "name": "serial-async",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.serial.BIND_PROTOCOL.IMPL_ASYNC"
+        }
+    }
+]
