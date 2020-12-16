@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 mod input_device;
-mod input_device_registry;
+pub mod input_device_registry;
 mod input_reports_reader;
 
 pub use input_device_registry::InputDeviceRegistry;

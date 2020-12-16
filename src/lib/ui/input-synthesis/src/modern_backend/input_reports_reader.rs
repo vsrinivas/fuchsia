@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(test)] // TODO(fxbug.dev/63985) remove `cfg`
 #![warn(missing_docs)]
 
 use {
