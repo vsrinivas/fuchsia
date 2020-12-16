@@ -1,0 +1,20 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.pci;
+
+fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.AMD;
+accept fuchsia.BIND_PCI_DID {
+  // Kaveri R7
+  0x130f,
+  // Raven
+  0x15dd,
+  // Polaris 22
+  0x694c,
+  // R7 240 340
+  0x6613,
+  // Stoney Ridge
+  0x98e4
+}

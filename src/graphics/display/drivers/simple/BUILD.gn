@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
 source_set("shared") {
@@ -26,7 +27,18 @@ simple_drivers = [
   "vmware",
 ]
 
+tests = []
+
 foreach(driver, simple_drivers) {
+  bind_rules("simple-$driver-bind") {
+    rules = "simple-$driver.bind"
+    output = "simple-$driver-bind.h"
+    tests = "${driver}_bind_tests.json"
+    deps = [ "//src/devices/bind/fuchsia.pci" ]
+  }
+
+  tests += [ ":simple-$driver-bind_test" ]
+
   driver_module("simple.$driver") {
     configs += [
       "//build/config:all_source",
@@ -36,16 +48,18 @@ foreach(driver, simple_drivers) {
     sources = [ "simple-$driver.c" ]
     deps = [
       ":shared",
+      ":simple-$driver-bind",
       "//sdk/banjo/ddk.protocol.display.controller",
       "//sdk/banjo/ddk.protocol.pci",
       "//src/devices/pci/lib/device-protocol-pci",
       "//src/lib/ddk",
-
-      # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-      "//src/lib/ddk:ddk-deprecated-binding-headers",
     ]
 
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     configs += [ "//build/config:Wno-conversion" ]
   }
+}
+group("tests") {
+  testonly = true
+  deps = tests
 }

@@ -6,7 +6,6 @@
 #include <zircon/pixelformat.h>
 #include <zircon/process.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -15,13 +14,11 @@
 #include <hw/pci.h>
 
 #include "simple-display.h"
+#include "src/graphics/display/drivers/simple/simple-bochs-bind.h"
 
 #define DISPLAY_WIDTH 1024
 #define DISPLAY_HEIGHT 768
 #define DISPLAY_FORMAT ZX_PIXEL_FORMAT_RGB_565
-
-#define QEMU_VGA_VID (0x1234)
-#define QEMU_VGA_DID (0x1111)
 
 #define bochs_vbe_dispi_read(base, reg) MmioRead16(base + (0x500 + (reg << 1)))
 #define bochs_vbe_dispi_write(base, reg, val) MmioWrite16(val, base + (0x500 + (reg << 1)))
@@ -108,9 +105,4 @@ static zx_driver_ops_t bochs_vbe_driver_ops = {
     .bind = bochs_vbe_bind,
 };
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(bochs_vbe, bochs_vbe_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, QEMU_VGA_VID),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, QEMU_VGA_DID),
-ZIRCON_DRIVER_END(bochs_vbe)
+ZIRCON_DRIVER(bochs_vbe, bochs_vbe_driver_ops, "zircon", "0.1");

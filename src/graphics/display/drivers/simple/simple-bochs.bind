@@ -1,0 +1,12 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.pci;
+
+fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
+
+// QEMU_GFX_VID
+fuchsia.BIND_PCI_VID == 0x1234;
+// QEMU_VGA_DID
+fuchsia.BIND_PCI_DID == 0x1111;
