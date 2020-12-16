@@ -1070,13 +1070,8 @@ mod tests {
         },
         fidl_fuchsia_wlan_common as fidl_common,
         wlan_common::{
-            assert_variant, ie,
-            stats::SignalStrengthAverage,
-            test_utils::{
-                fake_frames::*,
-                fake_stas::{fake_fidl_bss, FakeProtectionCfg},
-            },
-            TimeUnit,
+            assert_variant, fake_fidl_bss, ie, stats::SignalStrengthAverage,
+            test_utils::fake_frames::*, TimeUnit,
         },
         wlan_statemachine::*,
     };
@@ -1225,7 +1220,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec()),
+            selected_bss: fake_fidl_bss!(Open, ssid: b"foo".to_vec()),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1242,7 +1237,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_fidl_bss(FakeProtectionCfg::Wpa2, b"foo".to_vec()),
+            selected_bss: fake_fidl_bss!(Wpa2, ssid: b"foo".to_vec()),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1260,7 +1255,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_fidl_bss(FakeProtectionCfg::Wpa1, b"foo".to_vec()),
+            selected_bss: fake_fidl_bss!(Wpa1, ssid: b"foo".to_vec()),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
@@ -1278,7 +1273,7 @@ mod tests {
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
         me.on_sme_join(fidl_mlme::JoinRequest {
-            selected_bss: fake_fidl_bss(FakeProtectionCfg::Open, b"foo".to_vec()),
+            selected_bss: fake_fidl_bss!(Open, ssid: b"foo".to_vec()),
             join_failure_timeout: 42,
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
