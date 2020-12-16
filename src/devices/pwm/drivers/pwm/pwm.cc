@@ -4,10 +4,11 @@
 
 #include "pwm.h"
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/devices/pwm/drivers/pwm/pwm-bind.h"
 
 namespace pwm {
 
@@ -106,8 +107,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace pwm
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(pwm, pwm::driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_PWM_IMPL),
-ZIRCON_DRIVER_END(pwm)
-    // clang-format on
+ZIRCON_DRIVER(pwm, pwm::driver_ops, "zircon", "0.1");
