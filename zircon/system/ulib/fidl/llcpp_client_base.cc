@@ -128,21 +128,20 @@ void ChannelRefTracker::Init(zx::channel channel) {
 }
 
 zx::channel ChannelRefTracker::WaitForChannel() {
-  zx::channel channel;
-  sync_completion_t on_delete;
+  std::shared_ptr<ChannelRef> ephemeral_channel_ref = nullptr;
+
   {
     std::scoped_lock lock(lock_);
     // Ensure that only one thread receives the channel.
     if (!channel_)
-      return channel;
-    channel.reset(channel_->ReleaseOnDelete(&on_delete));
-    channel_ = nullptr;  // Allow the ChannelRef to be destroyed.
+      return zx::channel();
+    ephemeral_channel_ref = std::move(channel_);
   }
 
-  // Wait for all ChannelRefs to be released.
-  auto status = sync_completion_wait(&on_delete, ZX_TIME_INFINITE);
-  ZX_ASSERT_MSG(status == ZX_OK, "%s: Error waiting for channel to be released: %u.\n", __func__,
-                status);
+  // Allow the |ChannelRef| to be destroyed, and wait for all |ChannelRef|s to be released.
+  zx::channel channel;
+  DestroyAndExtract(std::move(ephemeral_channel_ref),
+                    [&](zx::channel result) { channel = std::move(result); });
   return channel;
 }
 

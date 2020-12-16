@@ -7,6 +7,7 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/llcpp/async_binding.h>
+#include <lib/fidl/llcpp/extract_resource_on_destruction.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 #include <zircon/listnode.h>
@@ -71,31 +72,25 @@ class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, priva
   zx_txid_t txid_ = 0;             // Zircon txid of outstanding transaction.
 };
 
-// ChannelRef takes ownership of a channel. It can be configured to transfer ownership on
-// destruction. Otherwise, the channel is closed.
+// ChannelRef takes ownership of a channel. It can transfer the channel
+// ownership on destruction with the use of |DestroyAndExtract|.
+// Otherwise, the channel is closed.
 class ChannelRef {
  public:
-  explicit ChannelRef(zx::channel channel) : handle_(channel.release()) {}
-  ~ChannelRef() {
-    if (on_delete_) {
-      sync_completion_signal(on_delete_);
-    } else {
-      // If there is no waiter, the channel will be discarded, so close the handle.
-      zx_handle_close(handle_);
-    }
-  }
-
-  zx_handle_t handle() const { return handle_; }
-
-  zx_handle_t ReleaseOnDelete(sync_completion_t* on_delete) {
-    on_delete_ = on_delete;
-    return handle_;
-  }
+  explicit ChannelRef(zx::channel channel) : channel_(ExtractedOnDestruction(std::move(channel))) {}
+  zx_handle_t handle() const { return channel_.get().get(); }
 
  private:
-  sync_completion_t* on_delete_ = nullptr;
-  const zx_handle_t handle_;
+  template <typename Callback>
+  friend void DestroyAndExtract(std::shared_ptr<ChannelRef>&& object, Callback&& callback);
+
+  ExtractedOnDestruction<zx::channel> channel_;
 };
+
+template <typename Callback>
+void DestroyAndExtract(std::shared_ptr<ChannelRef>&& object, Callback&& callback) {
+  DestroyAndExtract(std::move(object), &ChannelRef::channel_, std::forward<Callback>(callback));
+}
 
 // ChannelRefTracker takes ownership of a channel, wrapping it in a ChannelRef. It is used to create
 // and track one or more strong references to the channel.

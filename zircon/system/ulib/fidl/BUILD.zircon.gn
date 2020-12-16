@@ -90,6 +90,7 @@ if (is_fuchsia) {
       "lib/fidl/llcpp/connect_service.h",
       "lib/fidl/llcpp/envelope.h",
       "lib/fidl/llcpp/errors.h",
+      "lib/fidl/llcpp/extract_resource_on_destruction.h",
       "lib/fidl/llcpp/failover_allocator.h",
       "lib/fidl/llcpp/heap_allocator.h",
       "lib/fidl/llcpp/memory.h",
