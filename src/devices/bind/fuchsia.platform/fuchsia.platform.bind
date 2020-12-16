@@ -17,7 +17,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   GENERIC = 0,
   QEMU = 1,
   DESIGNWARE = 12,
-  MEDIATEK = 13,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {

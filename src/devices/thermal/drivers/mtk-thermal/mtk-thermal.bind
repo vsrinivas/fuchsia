@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 using fuchsia.composite;
-using fuchsia.platform;
+using fuchsia.mediatek.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
-fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.MEDIATEK;
-fuchsia.BIND_PLATFORM_DEV_DID == 0x09;  // PDEV_DID_MEDIATEK_THERMAL
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK;
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.mediatek.platform.BIND_PLATFORM_DEV_DID.THERMAL;

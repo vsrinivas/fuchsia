@@ -1,0 +1,30 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.mediatek.platform;
+
+extend uint fuchsia.BIND_PLATFORM_DEV_VID {
+  MEDIATEK = 13,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  MEDIATEK_8167S_REF = 0x01,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  GPIO = 0x01,
+  MSDC0 = 0x02,
+  MSDC1 = 0x03,
+  MSDC2 = 0x04,
+  DISPLAY = 0x05,
+  I2C = 0x06,
+  GPU = 0x07,
+  CLK = 0x08,
+  THERMAL = 0x09,
+  AUDIO_OUT = 0x0A,
+  AUDIO_IN = 0x0B,
+  DSI = 0x0C,
+  POWER = 0x0D,
+  SPI = 0x0E,
+};
