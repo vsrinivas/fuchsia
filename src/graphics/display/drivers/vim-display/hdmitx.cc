@@ -13,7 +13,6 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>

@@ -10,7 +10,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {
   VIM2 = 0x02,
-  VIM2_MACHINA = 0X3EA,
+  VIM2_MACHINA = 0x3EA,
   VIM3 = 0x03,
 };
 

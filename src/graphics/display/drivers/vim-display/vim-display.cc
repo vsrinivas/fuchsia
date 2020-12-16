@@ -19,7 +19,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -38,6 +37,7 @@
 #include <hw/reg.h>
 
 #include "hdmitx.h"
+#include "src/graphics/display/drivers/vim-display/vim-display-bind.h"
 
 /* Default formats */
 static const uint8_t _ginput_color_format = HDMI_COLOR_FORMAT_444;
@@ -1101,10 +1101,4 @@ static constexpr zx_driver_ops_t vim2_display_driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(vim2_display, vim2_display_driver_ops, "zircon", "0.1", 4)
-  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_KHADAS),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_VIM2),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VIM_DISPLAY),
-ZIRCON_DRIVER_END(vim_2display)
+ZIRCON_DRIVER(vim2_display, vim2_display_driver_ops, "zircon", "0.1");
