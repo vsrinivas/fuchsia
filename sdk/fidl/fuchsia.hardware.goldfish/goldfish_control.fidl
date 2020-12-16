@@ -162,18 +162,8 @@ protocol ControlDevice {
     ///         For buffers with HOST_VISIBLE memory property bits, this
     ///         value is a non-negative integer in [0, 4095]. For
     ///         non-HOST_VISIBLE memory, this value is negative.
-    [Transitional]
     CreateBuffer2(zx.handle:VMO vmo, CreateBuffer2Params create_params)
         -> (int32 hw_address_page_offset) error zx.status;
-
-    /// Create shared data buffer. Buffer is automatically freed when
-    /// all references to `vmo` have been closed. Fails if VMO is not
-    /// associated with goldfish heap memory.
-    ///
-    /// Returns ZX_ERR_ALREADY_EXISTS if a buffer or color buffer has
-    /// already been created for this VMO.
-    [Transitional, Deprecated]
-    CreateBuffer(zx.handle:VMO vmo, uint32 size) -> (zx.status res);
 
     /// Get a buffer handle for VMO and the type of the handle.
     /// Fails if VMO is not associated with neither a color buffer nor a buffer.

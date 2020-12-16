@@ -52,14 +52,6 @@ struct CloseColorBufferCmd {
 constexpr uint32_t kOP_rcCloseColorBuffer = 10014;
 constexpr uint32_t kSize_rcCloseColorBuffer = 12;
 
-struct CreateBufferCmd {
-  uint32_t op;
-  uint32_t size;
-  uint32_t buffer_size;
-};
-constexpr uint32_t kOP_rcCreateBuffer = 10049;
-constexpr uint32_t kSize_rcCreateBuffer = 12;
-
 struct CloseBufferCmd {
   uint32_t op;
   uint32_t size;
@@ -553,41 +545,6 @@ void Control::CreateBuffer2(zx::vmo vmo,
   }
 }
 
-void Control::CreateBuffer(zx::vmo vmo, uint32_t size, CreateBufferCompleter::Sync& completer) {
-  TRACE_DURATION("gfx", "Control::FidlCreateBuffer", "size", size);
-
-  zx_koid_t koid = GetKoidForVmo(vmo);
-  if (koid == ZX_KOID_INVALID) {
-    completer.Close(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-
-  fbl::AutoLock lock(&lock_);
-
-  auto it = buffer_handles_.find(koid);
-  if (it == buffer_handles_.end()) {
-    completer.Reply(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-
-  if (it->second != kInvalidBufferHandle) {
-    completer.Reply(ZX_ERR_ALREADY_EXISTS);
-    return;
-  }
-
-  uint32_t id;
-  zx_status_t status = CreateBufferLocked(size, &id);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to create buffer: %d", kTag, status);
-    completer.Close(status);
-    return;
-  }
-
-  it->second = id;
-  buffer_handle_types_[id] = llcpp::fuchsia::hardware::goldfish::BufferHandleType::BUFFER;
-  completer.Reply(ZX_OK);
-}
-
 void Control::GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Control::FidlGetBufferHandle");
 
@@ -745,17 +702,6 @@ zx_status_t Control::ExecuteCommandLocked(uint32_t cmd_size, uint32_t* result) {
 
   WriteLocked(cmd_size);
   return ReadResultLocked(result);
-}
-
-zx_status_t Control::CreateBufferLocked(uint32_t size, uint32_t* id) {
-  TRACE_DURATION("gfx", "Control::CreateBuffer", "size", size);
-
-  auto cmd = static_cast<CreateBufferCmd*>(io_buffer_.virt());
-  cmd->op = kOP_rcCreateBuffer;
-  cmd->size = kSize_rcCreateBuffer;
-  cmd->buffer_size = size;
-
-  return ExecuteCommandLocked(kSize_rcCreateBuffer, id);
 }
 
 zx_status_t Control::CreateBuffer2Locked(uint64_t size, uint32_t memory_property, uint32_t* id) {

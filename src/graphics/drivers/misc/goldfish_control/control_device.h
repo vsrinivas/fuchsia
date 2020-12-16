@@ -68,9 +68,6 @@ class Control : public ControlType,
                      CreateBuffer2Completer::Sync& completer) override;
 
   // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
-  void CreateBuffer(zx::vmo vmo, uint32_t size, CreateBufferCompleter::Sync& completer) override;
-
-  // |llcpp::fuchsia::hardware::goldfish::ControlDevice::Interface|
   void GetBufferHandle(zx::vmo vmo, GetBufferHandleCompleter::Sync& completer) override;
 
   // Device protocol implementation.
@@ -103,7 +100,6 @@ class Control : public ControlType,
   void WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
   zx_status_t ReadResultLocked(uint32_t* result) TA_REQ(lock_);
   zx_status_t ExecuteCommandLocked(uint32_t cmd_size, uint32_t* result) TA_REQ(lock_);
-  zx_status_t CreateBufferLocked(uint32_t size, uint32_t* id) TA_REQ(lock_);
   zx_status_t CreateBuffer2Locked(uint64_t size, uint32_t memory_property, uint32_t* id)
       TA_REQ(lock_);
   zx_status_t CreateColorBufferLocked(uint32_t width, uint32_t height, uint32_t format,
