@@ -87,8 +87,6 @@ void AudioCoreImpl::CreateAudioCapturer(
 void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage render_usage,
                                        float gain_db) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetRenderUsageGain");
-  FX_LOGS(INFO) << "SetRenderUsageGain(" << StreamUsage::WithRenderUsage(render_usage).ToString()
-                << ", " << gain_db << "db)";
   context_.volume_manager().SetUsageGain(
       fuchsia::media::Usage::WithRenderUsage(std::move(render_usage)), gain_db);
 }
@@ -96,8 +94,6 @@ void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage render_u
 void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage capture_usage,
                                         float gain_db) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetCaptureUsageGain");
-  FX_LOGS(INFO) << "SetCaptureUsageGain(" << StreamUsage::WithCaptureUsage(capture_usage).ToString()
-                << ", " << gain_db << "db)";
   context_.volume_manager().SetUsageGain(
       fuchsia::media::Usage::WithCaptureUsage(std::move(capture_usage)), gain_db);
 }
