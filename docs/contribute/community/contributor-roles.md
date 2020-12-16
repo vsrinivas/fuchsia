@@ -182,18 +182,6 @@ For more information on review label definitions, see [Gerrit Code Review - Revi
 Committers, Owners, and Global Approvers can score code reviews but only a
 Global Approver or repository Owner can provide a **+2**.
 
-#### Testability Review {:#testability-review}
-
-The Fuchsia project wants to ensure that the changes introduced to Fuchsia are
-well-tested. As a result, a **Testability Review +1** label is required for many
-changes.
-
-Committers, Owners, and Global Approvers can provide a Testability Review.
-
-For more information about testing requirements and procedures,
-review the [Fuchsia Testability Rubrics](/docs/concepts/testing/testability_rubric.md).
-Committers, Owners, and Global Approvers can provide a Testability Review.
-
 ### Submit approved changes {:#submit-approved-changes}
 
 You need a **Code Review Label +2** to submit your change. A
@@ -215,8 +203,6 @@ perform.
    <td><strong>Create Change</strong>
    </td>
    <td><strong>Code-Review another Committer’s change</strong>
-   </td>
-   <td><strong>Testability-Review another Committer’s change</strong>
    </td>
    <td><strong>Provide Code-Review +2</strong>
    </td>
@@ -242,13 +228,9 @@ perform.
    </td>
    <td><strong>No</strong>
    </td>
-   <td><strong>No</strong>
-   </td>
   </tr>
   <tr>
    <td>Committer
-   </td>
-   <td>Yes
    </td>
    <td>Yes
    </td>
@@ -265,8 +247,6 @@ perform.
   </tr>
   <tr>
    <td>Owner (outside owned subtree)
-   </td>
-   <td>Yes
    </td>
    <td>Yes
    </td>
@@ -296,13 +276,9 @@ perform.
    </td>
    <td>Yes
    </td>
-   <td>Yes
-   </td>
   </tr>
   <tr>
    <td>Global Approver
-   </td>
-   <td>Yes
    </td>
    <td>Yes
    </td>
@@ -413,10 +389,6 @@ code review:
     “Looks Good To Me” but a +1 alone doesn’t allow for submission.
     Someone else has to approve the change with a +2. For more information on
     review label definitions see, [Gerrit Code Review - Review Labels](https://gerrit-review.googlesource.com/Documentation/config-labels.html){:.external}.
-*   Do I need a **Testability +1** to submit a change?
-    * Yes. All Committers, Owners, and Global Approvers will be able to apply
-      the **Testability-Review+1** label,  which is necessary to move a change
-      to a state where it can be merged. For more information, see [Testability Reviews]     (#testability-review).
 *   Can specific portions of the Fuchsia source code have different requirements?
     * Yes. For example, API changes have special requirements as described in
      the [Fuchsia API Council Charter](/docs/contribute/governance/api_council.md#api_review).

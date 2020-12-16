@@ -20,16 +20,9 @@ The exact contents of the doc may change over time.
 
 ### Your goals as a Testability reviewer
 
-*   **Determine if the change is tested.** Apply Testability-Review+1 if you
+*   **Determine if the change is tested.** Apply Code-Review+2 if you
     agree that it’s tested, and reply with a note for what’s missing if it’s not.
-*   Focus on whether the change is tested, not necessarily on what the change
-    actually does. For instance you may apply Testability+1 if the change is
-    well tested and at the same time Code-Review-1 if you would not like to see
-    the change merged for other reasons.
 *   Apply the standard (this doc) consistently.
-*   For your own changes, it is okay to self Testability-Review+1 provided that
-    the change clearly follows this rubric. If in doubt, seek approval from
-    another testability reviewer.
 *   If the change needs to be amended to meet the standards, provide actionable
     feedback.
 *   Promote Fuchsia testing & testability.
@@ -92,7 +85,7 @@ The exact contents of the doc may change over time.
 ## What does not require testing
 
 Missing testing coverage for the below should not prevent a change from
-receiving Testability+1.
+receiving Code-Review+2.
 
 *   **Logging.** In most cases, it’s probably not worth testing the log output
     of components. The log output is usually treated as opaque data by the rest
