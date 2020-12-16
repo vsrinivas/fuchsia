@@ -11,7 +11,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -23,6 +22,7 @@
 #include "device.h"
 #include "driver.h"
 #include "macros.h"
+#include "src/devices/sysmem/drivers/sysmem/sysmem-bind.h"
 
 namespace sysmem_driver {
 zx_status_t sysmem_init(void** out_driver_ctx) {
@@ -67,11 +67,4 @@ zx_driver_ops_t sysmem_driver_ops = [] {
 
 }  // namespace sysmem_driver
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(sysmem, sysmem_driver::sysmem_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_SYSMEM),
-ZIRCON_DRIVER_END(sysmem)
-    // clang-format on
+ZIRCON_DRIVER(sysmem, sysmem_driver::sysmem_driver_ops, "zircon", "0.1");
