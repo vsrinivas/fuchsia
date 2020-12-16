@@ -26,10 +26,11 @@ template("fidl_dart") {
   generation_target_name = "${target_name}_dart_generate"
 
   library_name = target_name
+  root_dir = "$target_gen_dir/${library_name}_package"
   if (defined(invoker.name)) {
     library_name = invoker.name
+    root_dir = "$target_gen_dir/${target_name}_${library_name}_package"
   }
-  root_dir = "$target_gen_dir/${library_name}_package"
   bindings_dir = "$root_dir/lib"
   async_bindings_file = "$bindings_dir/fidl_async.dart"
   test_bindings_file = "$bindings_dir/fidl_test.dart"
