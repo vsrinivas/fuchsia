@@ -219,6 +219,13 @@
       "licenseLocation": "src/LICENSE.TXT"
     }
   ],
+  "flutterLicenses": [
+    "prebuilt/third_party/flutter/licenses_flutter",
+    "prebuilt/third_party/flutter/licenses_fuchsia",
+    "prebuilt/third_party/flutter/licenses_gpu",
+    "prebuilt/third_party/flutter/licenses_skia",
+    "prebuilt/third_party/flutter/licenses_third_party"
+  ],
   "licensePatternDir": "tools/check-licenses/golden/patterns",
   "baseDir": ".",
   "target": "all",

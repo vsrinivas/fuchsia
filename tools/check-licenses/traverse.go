@@ -66,6 +66,12 @@ func Walk(ctx context.Context, config *Config) error {
 
 	file_tree.propagateProjectLicenses(config)
 
+	r = trace.StartRegion(ctx, "processFlutterLicenses")
+	if err := processFlutterLicenses(licenses, config, metrics, file_tree); err != nil {
+		log.Printf("error processing flutter licenses: %v", err)
+	}
+	r.End()
+
 	r = trace.StartRegion(ctx, "regular file walk")
 	for file := range file_tree.getFileIterator() {
 		file := file

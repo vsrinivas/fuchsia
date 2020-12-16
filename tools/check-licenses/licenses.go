@@ -43,13 +43,10 @@ func NewLicenses(ctx context.Context, root string, prohibitedLicenseTypes []stri
 			return nil, err
 		}
 		regex := string(bytes)
-		// Skip updating white spaces, newlines, etc for files that end
-		// in full.lic since they are larger.
-		if !strings.HasSuffix(n, "full.lic") {
-			// Update regex to ignore multiple white spaces, newlines, comments.
-			regex = strings.ReplaceAll(regex, "\n", `[\s\\#\*\/]*`)
-			regex = strings.ReplaceAll(regex, " ", `[\s\\#\*\/]*`)
-		}
+		// Update regex to ignore multiple white spaces, newlines, comments.
+		regex = strings.ReplaceAll(regex, "\n", `[\s\\#\*\/]*`)
+		regex = strings.ReplaceAll(regex, " ", `[\s\\#\*\/]*`)
+
 		re, err := regexp.Compile(regex)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", n, err)

@@ -38,6 +38,7 @@ type Config struct {
 	StopLicensePropagation       []string               `json:"stopLicensePropagation"`
 	LicensePatternDir            string                 `json:"licensePatternDir"`
 	CustomProjectLicenses        []CustomProjectLicense `json:"customProjectLicenses"`
+	FlutterLicenses              []string               `json:"flutterLicenses"`
 	BaseDir                      string                 `json:"baseDir"`
 	Target                       string                 `json:"target"`
 	LogLevel                     string                 `json:"logLevel"`
