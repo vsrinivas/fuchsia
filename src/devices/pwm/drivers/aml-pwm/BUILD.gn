@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("aml-pwm-bind") {
+  rules = "aml-pwm.bind"
+  output = "aml-pwm-bind.h"
+  tests = "bind-tests.json"
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("aml-pwm") {
   configs += [
@@ -37,15 +48,13 @@ test("aml-pwm-test") {
 
 group("common") {
   public_deps = [
+    ":aml-pwm-bind",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.pwm",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
@@ -67,5 +76,8 @@ unittest_package("aml-pwm-test-package") {
 
 group("tests") {
   testonly = true
-  deps = [ ":aml-pwm-test-package" ]
+  deps = [
+    ":aml-pwm-bind_test",
+    ":aml-pwm-test-package",
+  ]
 }

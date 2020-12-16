@@ -6,12 +6,13 @@
 
 #include <lib/device-protocol/pdev.h>
 
-#include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/protocol/platform/bus.h>
 #include <soc/aml-a113/a113-pwm.h>
 #include <soc/aml-s905d2/s905d2-pwm.h>
 #include <soc/aml-t931/t931-pwm.h>
+
+#include "src/devices/pwm/drivers/aml-pwm/aml-pwm-bind.h"
 
 namespace pwm {
 
@@ -487,15 +488,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace pwm
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(pwm, pwm::driver_ops, "zircon", "0.1", 7)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_PWM),
-    // we support multiple SOC variants
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_A113),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D3),
-ZIRCON_DRIVER_END(pwm)
-    // clang-format on
+ZIRCON_DRIVER(pwm, pwm::driver_ops, "zircon", "0.1");
