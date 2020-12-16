@@ -411,6 +411,8 @@ TEST_F(EngineTest, ImportImageErrorCases) {
 // the proper source and destination frame data. Each source and destination frame pair
 // should be added to its own layer on the display.
 TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
+  const uint64_t kGlobalBufferCollectionId = 1;
+
   // Create a parent and child session.
   auto parent_session = CreateSession();
   auto child_session = CreateSession();
@@ -436,11 +438,14 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
   auto parent_struct = parent_session.CreateUberStructWithCurrentTopology(parent_root_handle);
 
   // Add an image.
-  parent_struct->images[parent_image_handle] = ImageMetadata({
-      .vmo_idx = 1,
+  ImageMetadata parent_image_metadata = ImageMetadata{
+      .collection_id = kGlobalBufferCollectionId,
+      .identifier = 1,
+      .vmo_idx = 0,
       .width = 128,
       .height = 256,
-  });
+  };
+  parent_struct->images[parent_image_handle] = parent_image_metadata;
 
   parent_struct->local_matrices[parent_image_handle] = glm::mat3(1);
   parent_struct->local_matrices[parent_image_handle] =
@@ -454,11 +459,14 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
       child_session.CreateUberStructWithCurrentTopology(child_session.GetLinkOrigin());
 
   // Add an image.
-  child_struct->images[child_image_handle] = ImageMetadata({
-      .vmo_idx = 2,
+  ImageMetadata child_image_metadata = ImageMetadata{
+      .collection_id = kGlobalBufferCollectionId,
+      .identifier = 2,
+      .vmo_idx = 1,
       .width = 512,
       .height = 1024,
-  });
+  };
+  child_struct->images[child_image_handle] = child_image_metadata;
   child_struct->local_matrices[child_image_handle] =
       glm::scale(glm::translate(glm::mat3(1), glm::vec2(5, 7)), glm::vec2(30, 40));
 
@@ -478,20 +486,68 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
       {.x_pos = 5u, .y_pos = 7u, .width = 30, .height = 40u},
       {.x_pos = 9u, .y_pos = 13u, .width = 10u, .height = 20u}};
 
+  // Set the mock display controller functions and wait for messages.
+  auto mock = mock_display_controller_.get();
+  std::thread server([&mock]() mutable {
+    // Since we have 2 rectangles with images with 1 buffer collection, we have to wait
+    // for...:
+    // - 2 calls for importing and setting constraints on the collection
+    // - 2 calls to import the images
+    // - 2 calls to initialize layers
+    // - 1 call to set the layers on the display
+    // - 2 calls to set each layer image
+    // - 2 calls to set the layer primary positions
+    // - 1 call to check the config
+    // - 1 call to apply the config
+    // - 2 calls to cleanup the layers.
+    for (uint32_t i = 0; i < 15; i++) {
+      mock->WaitForMessage();
+    }
+  });
+
+  EXPECT_CALL(*mock, ImportBufferCollection(kGlobalBufferCollectionId, _, _))
+      .WillOnce(testing::Invoke(
+          [](uint64_t, fidl::InterfaceHandle<class ::fuchsia::sysmem::BufferCollectionToken>,
+             MockDisplayController::ImportBufferCollectionCallback callback) { callback(ZX_OK); }));
+  EXPECT_CALL(*mock, SetBufferCollectionConstraints(kGlobalBufferCollectionId, _, _))
+      .WillOnce(testing::Invoke(
+          [](uint64_t collection_id, fuchsia::hardware::display::ImageConfig config,
+             MockDisplayController::SetBufferCollectionConstraintsCallback callback) {
+            callback(ZX_OK);
+          }));
+  engine_->ImportBufferCollection(kGlobalBufferCollectionId, nullptr, CreateToken());
+
+  const uint64_t kParentDisplayImageId = 2;
+  EXPECT_CALL(*mock, ImportImage(_, kGlobalBufferCollectionId, 0, _))
+      .WillOnce(testing::Invoke([](fuchsia::hardware::display::ImageConfig, uint64_t, uint32_t,
+                                   MockDisplayController::ImportImageCallback callback) {
+        callback(ZX_OK, kParentDisplayImageId);
+      }));
+
+  engine_->ImportImage(parent_image_metadata);
+
+  const uint64_t kChildDisplayImageId = 3;
+  EXPECT_CALL(*mock, ImportImage(_, kGlobalBufferCollectionId, 1, _))
+      .WillOnce(testing::Invoke([](fuchsia::hardware::display::ImageConfig, uint64_t, uint32_t,
+                                   MockDisplayController::ImportImageCallback callback) {
+        callback(ZX_OK, kChildDisplayImageId);
+      }));
+  engine_->ImportImage(child_image_metadata);
+
   // Setup the EXPECT_CALLs for gmock.
   uint64_t layer_id = 1;
-  EXPECT_CALL(*mock_display_controller_.get(), CreateLayer(_))
+  EXPECT_CALL(*mock, CreateLayer(_))
       .WillRepeatedly(testing::Invoke([&](MockDisplayController::CreateLayerCallback callback) {
         callback(ZX_OK, layer_id++);
       }));
 
   std::vector<uint64_t> layers = {1u, 2u};
-  EXPECT_CALL(*mock_display_controller_.get(), SetDisplayLayers(display_id, layers)).Times(1);
+  EXPECT_CALL(*mock, SetDisplayLayers(display_id, layers)).Times(1);
 
   // Unfortunately, |fuchsia::hardware::display::Frame| doesn't have an equality operator, so
   // we can't just pass in the values we're expecting into the function as parameters. We can
   // still use fidl::Equals inside the function body, however.
-  EXPECT_CALL(*mock_display_controller_.get(), SetLayerPrimaryPosition(layers[0], _, _, _))
+  EXPECT_CALL(*mock, SetLayerPrimaryPosition(layers[0], _, _, _))
       .WillOnce(
           testing::Invoke([&](uint64_t layer_id, fuchsia::hardware::display::Transform transform,
                               fuchsia::hardware::display::Frame src_frame,
@@ -500,7 +556,7 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
             EXPECT_TRUE(fidl::Equals(dest_frame, destinations[0]));
           }));
 
-  EXPECT_CALL(*mock_display_controller_.get(), SetLayerPrimaryPosition(layers[1], _, _, _))
+  EXPECT_CALL(*mock, SetLayerPrimaryPosition(layers[1], _, _, _))
       .WillOnce(
           testing::Invoke([&](uint64_t layer_id, fuchsia::hardware::display::Transform transform,
                               fuchsia::hardware::display::Frame src_frame,
@@ -509,16 +565,21 @@ TEST_F(EngineTest, HardwareFrameCorrectnessTest) {
             EXPECT_TRUE(fidl::Equals(dest_frame, destinations[1]));
           }));
 
-  // Set the mock display controller functions and wait for messages.
-  auto mock = mock_display_controller_.get();
-  std::thread server([&mock]() mutable {
-    // Since we have 2 rectangles with images, we have to wait for 2 calls to initialize layers,
-    // 1 call to set the layers on the display, and 2 calls to set the layer primary positions.
-    // This all happens when we call engine_->RenderFrame() below.
-    for (uint32_t i = 0; i < 5; i++) {
-      mock->WaitForMessage();
-    }
-  });
+  EXPECT_CALL(*mock, SetLayerImage(layers[0], kChildDisplayImageId, _, _)).Times(1);
+  EXPECT_CALL(*mock, SetLayerImage(layers[1], kParentDisplayImageId, _, _)).Times(1);
+
+  EXPECT_CALL(*mock, CheckConfig(false, _))
+      .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
+        fuchsia::hardware::display::ConfigResult result =
+            fuchsia::hardware::display::ConfigResult::OK;
+        std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+        callback(result, ops);
+      }));
+
+  EXPECT_CALL(*mock, ApplyConfig()).WillOnce(Return());
+
+  EXPECT_CALL(*mock, DestroyLayer(layers[0])).Times(1);
+  EXPECT_CALL(*mock, DestroyLayer(layers[1])).Times(1);
 
   engine_->AddDisplay(display_id, parent_root_handle, resolution);
   engine_->RenderFrame();

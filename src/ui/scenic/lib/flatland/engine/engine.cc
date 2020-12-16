@@ -233,17 +233,16 @@ void Engine::RenderFrame() {
       const auto& image = render_data.images[i];
       const auto& curr_layer_id = layers[i];
 
-#if 0
       auto display_image_id = InternalImageId(image.identifier);
 
       // Set the imported image on the layer.
       // TODO(fxbug.dev/59646): Add wait and signal events.
       {
         std::unique_lock<std::mutex> lock(lock_);
-        (*display_controller_.get())->SetLayerImage(curr_layer_id, display_image_id,
-                                                    /*wait_event*/ 0, /*signal_event*/ 0);
+        (*display_controller_.get())
+            ->SetLayerImage(curr_layer_id, display_image_id,
+                            /*wait_event*/ 0, /*signal_event*/ 0);
       }
-#endif
 
       // Convert rectangle and image data into display controller source and destination frames.
       auto [src_frame, dst_frame] = RectangleDataToDisplayFrames(rectangle, image);
@@ -260,22 +259,27 @@ void Engine::RenderFrame() {
       }
     }
 
-// TODO(fxbug.dev/59646): Add back in when we have tests.
-#if 0
-  //   // Check that the display is capable of compositing all of the images we told it to.
-  //   fuchsia::hardware::display::ConfigResult result;
-  //   std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
-  //   display_controller()->CheckConfig(/*discard=*/false, &result, &ops);
+    // Check that the display is capable of compositing all of the images we told it to.
+    fuchsia::hardware::display::ConfigResult result;
+    std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+    (*display_controller_.get())->CheckConfig(/*discard=*/false, &result, &ops);
 
-  //   // If the results are ok, we can apply the config directly, else we have to composite ourselves.
-  //   if (result == fuchsia::hardware::display::ConfigResult::OK) {
-  //     auto status = display_controller()->ApplyConfig();
-  //     FX_DCHECK(status == ZX_OK);
-  //   } else {
-  //     // TODO(fxbug.dev/59646): Here is where we'd actually have to render using the 2D renderer.
-  //   }
-  // }
-#endif
+    // If the results are ok, we can apply the config directly, else we have to composite ourselves.
+    if (result == fuchsia::hardware::display::ConfigResult::OK) {
+      auto status = (*display_controller_.get())->ApplyConfig();
+      FX_DCHECK(status == ZX_OK);
+    } else {
+      // TODO(fxbug.dev/59646): Here is where we'd actually have to render using the 2D renderer.
+      FX_LOGS(ERROR) << "Engine hit unimplemented software rendering path. This should not happen.";
+    }
+
+    // Cleanup layers.
+    // TODO(fxbug.dev/66499): This needs to wait until the proper signals fire to tell us it is safe
+    // to destroy a layer, which is when the layers are no longer being used by the display. This
+    // cannot be tested properly with mocks and must be done with the real display controller.
+    for (auto layer : layers) {
+      (*display_controller_.get())->DestroyLayer(layer);
+    }
   }
 }
 

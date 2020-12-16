@@ -27,6 +27,8 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
 
   MOCK_METHOD4(SetLayerImage, void(uint64_t, uint64_t, uint64_t, uint64_t));
 
+  MOCK_METHOD0(ApplyConfig, void());
+
   MOCK_METHOD2(CheckConfig, void(bool, CheckConfigCallback));
 
   MOCK_METHOD3(ImportBufferCollection,
