@@ -205,7 +205,7 @@ macro that should be used to match against unknown members instead of the `_`
 pattern. For example, see the use of the `LocationTypeUnknown!()` macro:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="enums_match" adjust_indentation="auto" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="enums_flexible_match" adjust_indentation="auto" %}
 ```
 
 The unknown macro acts the same as a `_` pattern, but it can be configured to
@@ -295,7 +295,7 @@ unknown macro that should be used to match against unknown members instead of
 the `_` pattern. For example, see the use of the `JsonValueUnknown!()` macro:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="unions_match" adjust_indentation="auto" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="unions_flexible_match" adjust_indentation="auto" %}
 ```
 
 The unknown macro acts the same as a `_` pattern, but it can be configured to
