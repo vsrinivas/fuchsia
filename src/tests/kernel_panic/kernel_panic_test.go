@@ -94,7 +94,7 @@ func TestSMAPViolation(t *testing.T) {
 	i.RunCommand("k crash_user_read")
 
 	// See that an SMAP failure was identified and that the kernel panicked.
-	i.WaitForLogMessage("SMAP failure")
+	i.WaitForLogMessageAssertNotSeen("SMAP failure", "cpu does not support smap; will not crash")
 	i.WaitForLogMessage("ZIRCON KERNEL PANIC")
 	i.WaitForLogMessage("{{{bt:0:")
 }
