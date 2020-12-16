@@ -9,7 +9,7 @@ use {
         model::{
             error::ModelError,
             logging::{FmtArgsLogger, LOGGER as MODEL_LOGGER},
-            realm::{Runtime, WeakRealm},
+            realm::{Package, Runtime, WeakRealm},
             rights::Rights,
             routing,
         },
@@ -21,7 +21,7 @@ use {
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy, NodeMarker},
     fidl_fuchsia_logger::{LogSinkMarker, LogSinkProxy},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_syslog::{get_fx_logger_level as fx_log_level, Logger},
     fuchsia_zircon as zx,
     futures::future::{AbortHandle, Abortable, BoxFuture},
@@ -37,7 +37,7 @@ use {
 type Directory = Arc<pfs::Simple>;
 
 pub struct IncomingNamespace {
-    pub package_dir: Option<DirectoryProxy>,
+    pub package_dir: Option<Arc<DirectoryProxy>>,
     dir_abort_handles: Vec<AbortHandle>,
     logger: Option<NamespaceLogger>,
 }
@@ -77,21 +77,8 @@ impl Drop for IncomingNamespace {
 }
 
 impl IncomingNamespace {
-    pub fn new(package: Option<fsys::Package>) -> Result<Self, ModelError> {
-        let package_dir = match package {
-            Some(package) => {
-                if package.package_dir.is_none() {
-                    return Err(ModelError::ComponentInvalid);
-                }
-                let package_dir = package
-                    .package_dir
-                    .unwrap()
-                    .into_proxy()
-                    .expect("could not convert package dir to proxy");
-                Some(package_dir)
-            }
-            None => None,
-        };
+    pub fn new(package: Option<Package>) -> Result<Self, ModelError> {
+        let package_dir = package.map(|p| p.package_dir);
         Ok(Self { package_dir, dir_abort_handles: vec![], logger: None })
     }
 

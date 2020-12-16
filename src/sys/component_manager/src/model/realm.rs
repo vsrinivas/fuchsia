@@ -7,15 +7,16 @@ use {
         capability::NamespaceCapabilities,
         channel,
         model::{
-            actions::{ActionSet, DeleteChildAction, MarkDeletingAction, StopAction},
+            actions::{
+                ActionSet, DeleteChildAction, MarkDeletingAction, ResolveAction, StopAction,
+            },
             binding,
             context::{ModelContext, WeakModelContext},
             environment::Environment,
             error::ModelError,
             exposed_dir::ExposedDir,
-            hooks::{Event, EventError, EventErrorPayload, EventPayload, Hooks},
+            hooks::{Event, EventPayload, Hooks},
             namespace::IncomingNamespace,
-            resolver::Resolver,
             routing::{self, RoutingError},
             runner::{NullRunner, RemoteRunner, Runner},
         },
@@ -35,12 +36,12 @@ use {
     },
     log::warn,
     moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker, InstanceId, PartialMoniker},
-    std::convert::TryInto,
     std::iter::Iterator,
     std::{
         boxed::Box,
         clone::Clone,
         collections::{HashMap, HashSet},
+        convert::{TryFrom, TryInto},
         fmt,
         ops::Drop,
         path::PathBuf,
@@ -97,14 +98,58 @@ impl fmt::Display for BindReason {
         )
     }
 }
-/// A returned type corresponding to a resolved component manifest.
+
+/// Component information returned by the resolver.
+#[derive(Clone, Debug)]
 pub struct Component {
     /// The URL of the resolved component.
     pub resolved_url: String,
     /// The declaration of the resolved manifest.
     pub decl: ComponentDecl,
-    /// The package that this resolved component belongs to.
-    pub package: Option<fsys::Package>,
+    /// The package info, if the component came from a package.
+    pub package: Option<Package>,
+}
+
+/// Package information possibly returned by the resolver.
+#[derive(Clone, Debug)]
+pub struct Package {
+    /// The URL of the package itself.
+    pub package_url: String,
+    /// The package that this resolved component belongs to. Wrapped in Arc so it's cloneable.
+    pub package_dir: Arc<DirectoryProxy>,
+}
+
+impl TryFrom<fsys::Component> for Component {
+    type Error = ModelError;
+
+    fn try_from(component: fsys::Component) -> Result<Self, Self::Error> {
+        let decl = component.decl.as_ref().ok_or(ModelError::ComponentInvalid)?.clone();
+        let decl: cm_rust::ComponentDecl =
+            decl.try_into().map_err(|_| ModelError::ComponentInvalid)?;
+        let package = component.package.map(|p| p.try_into()).transpose()?;
+        Ok(Self {
+            resolved_url: component.resolved_url.ok_or(ModelError::ComponentInvalid)?,
+            decl,
+            package,
+        })
+    }
+}
+
+impl TryFrom<fsys::Package> for Package {
+    type Error = ModelError;
+
+    fn try_from(package: fsys::Package) -> Result<Self, Self::Error> {
+        Ok(Self {
+            package_url: package.package_url.ok_or(ModelError::ComponentInvalid)?,
+            package_dir: Arc::new(
+                package
+                    .package_dir
+                    .ok_or(ModelError::ComponentInvalid)?
+                    .into_proxy()
+                    .expect("could not convert package dir to proxy"),
+            ),
+        })
+    }
 }
 
 pub const DEFAULT_KILL_TIMEOUT: Duration = Duration::from_secs(1);
@@ -151,7 +196,7 @@ pub struct Realm {
     /// The mode of startup (lazy or eager).
     pub startup: fsys::StartupMode,
     /// The parent's realm. Either a (component's) realm or component manager's realm.
-    parent: WeakExtendedRealm,
+    pub parent: WeakExtendedRealm,
     /// The absolute moniker of this realm.
     pub abs_moniker: AbsoluteMoniker,
     /// The hooks scoped to this realm.
@@ -265,7 +310,9 @@ impl Realm {
         self.context.upgrade()
     }
 
-    /// Locks and returns a lazily resolved and populated `RealmState`.
+    /// Locks and returns a lazily resolved and populated `RealmState`. Does not register a
+    /// `Resolve` action unless the resolved state is not already populated, so this function
+    /// can be called re-entrantly from a Resolved hook.
     pub async fn lock_resolved_state<'a>(
         self: &'a Arc<Self>,
     ) -> Result<MappedMutexGuard<'a, Option<RealmState>, RealmState>, ModelError> {
@@ -283,73 +330,7 @@ impl Realm {
     /// Resolves the component declaration and creates a new populated `RealmState` as necessary.
     /// A `Resolved` event is dispatched if a new `RealmState` is created or an error occurs.
     pub async fn resolve(self: &Arc<Self>) -> Result<Component, ModelError> {
-        let component =
-            self.environment.resolve(&self.component_url).await.map_err(|err| err.into());
-        self.populate_decl(component).await
-    }
-
-    /// Populates the component declaration of this realm's Instance using the provided
-    /// `component` if not already populated.
-    async fn populate_decl(
-        self: &Arc<Self>,
-        component: Result<fsys::Component, ModelError>,
-    ) -> Result<Component, ModelError> {
-        let result = async move {
-            let component = component?;
-            let decl = component.decl.ok_or(ModelError::ComponentInvalid)?;
-            let decl = decl
-                .try_into()
-                .map_err(|e| ModelError::manifest_invalid(self.component_url.clone(), e))?;
-
-            let created_new_realm_state = {
-                let mut state = self.lock_state().await;
-                if state.is_none() {
-                    *state = Some(RealmState::new(self, &decl).await?);
-                    true
-                } else {
-                    false
-                }
-            };
-
-            let component = Component {
-                resolved_url: component.resolved_url.ok_or(ModelError::ComponentInvalid)?,
-                decl,
-                package: component.package,
-            };
-            Ok((created_new_realm_state, component))
-        }
-        .await;
-
-        // If a `RealmState` was installed in this call, first dispatch
-        // `Resolved` for the component itself and then dispatch
-        // `Discovered` for every static child that was discovered in the
-        // manifest.
-        match result {
-            Ok((false, component)) => {
-                return Ok(component);
-            }
-            Ok((true, component)) => {
-                if let WeakExtendedRealm::AboveRoot(_) = &self.parent {
-                    let event = Event::new(self, Ok(EventPayload::Discovered));
-                    self.hooks.dispatch(&event).await?;
-                }
-                let event =
-                    Event::new(self, Ok(EventPayload::Resolved { decl: component.decl.clone() }));
-                self.hooks.dispatch(&event).await?;
-                for child in component.decl.children.iter() {
-                    let child_moniker = ChildMoniker::new(child.name.clone(), None, 0);
-                    let child_abs_moniker = self.abs_moniker.child(child_moniker);
-                    let event = Event::child_discovered(child_abs_moniker, child.url.clone());
-                    self.hooks.dispatch(&event).await?;
-                }
-                return Ok(component);
-            }
-            Err(e) => {
-                let event = Event::new(self, Err(EventError::new(&e, EventErrorPayload::Resolved)));
-                self.hooks.dispatch(&event).await?;
-                return Err(e);
-            }
-        }
+        ActionSet::register(self.clone(), ResolveAction::new()).await
     }
 
     /// Resolves a runner for this component.
@@ -530,7 +511,7 @@ impl Realm {
         let decl = {
             let state = self.lock_state().await;
             if let Some(state) = state.as_ref() {
-                state.decl.clone()
+                state.decl().clone()
             } else {
                 // The instance was never resolved and therefore never ran, it can't possibly have
                 // storage to clean up.
@@ -683,7 +664,7 @@ impl ExecutionState {
 
 /// The mutable state of a component.
 pub struct RealmState {
-    /// The component's validated declaration.
+    /// The component's declaration.
     decl: ComponentDecl,
     /// Realms of all child instances, indexed by instanced moniker.
     child_realms: HashMap<ChildMoniker, Arc<Realm>>,
@@ -697,16 +678,15 @@ pub struct RealmState {
 }
 
 impl RealmState {
-    pub async fn new(realm: &Arc<Realm>, decl: &ComponentDecl) -> Result<Self, ModelError> {
+    pub async fn new(realm: &Arc<Realm>, decl: ComponentDecl) -> Result<Self, ModelError> {
         let mut state = Self {
+            decl: decl.clone(),
             child_realms: HashMap::new(),
             live_child_realms: HashMap::new(),
-            decl: decl.clone(),
             next_dynamic_instance_id: 1,
-            environments: Self::instantiate_environments(realm, decl)?,
+            environments: Self::instantiate_environments(realm, &decl)?,
         };
         state.add_static_child_realms(realm, &decl).await?;
-
         Ok(state)
     }
 
@@ -898,9 +878,6 @@ impl RealmState {
 
 /// The execution state for a component instance that has started running.
 pub struct Runtime {
-    /// The resolved component URL returned by the resolver.
-    pub resolved_url: String,
-
     /// Holder for objects related to the component's incoming namespace.
     pub namespace: Option<IncomingNamespace>,
 
@@ -991,7 +968,6 @@ impl std::error::Error for StopComponentError {
 
 impl Runtime {
     pub fn start_from(
-        resolved_url: String,
         namespace: Option<IncomingNamespace>,
         outgoing_dir: Option<DirectoryProxy>,
         runtime_dir: Option<DirectoryProxy>,
@@ -1000,7 +976,6 @@ impl Runtime {
     ) -> Result<Self, ModelError> {
         let timestamp = zx::Time::get_monotonic();
         Ok(Runtime {
-            resolved_url,
             namespace,
             outgoing_dir,
             runtime_dir,
@@ -1181,7 +1156,7 @@ pub mod tests {
             actions::ShutdownAction,
             binding::Binder,
             events::{event::SyncMode, stream::EventStream},
-            hooks::{EventErrorPayload, EventType},
+            hooks::{EventError, EventErrorPayload, EventType},
             rights,
             testing::{
                 mocks::{ControlMessage, ControllerActionResponse, MockController},

@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        actions::{ShutdownAction, ActionSet},
+        actions::{ActionSet, ShutdownAction},
         error::ModelError,
         realm::{Realm, RealmState},
     },

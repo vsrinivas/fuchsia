@@ -317,10 +317,13 @@ pub struct RuntimeInfo {
 }
 
 impl RuntimeInfo {
-    pub fn from_runtime(runtime: &Runtime) -> Self {
+    pub fn from_runtime(runtime: &Runtime, resolved_url: String) -> Self {
         Self {
-            resolved_url: runtime.resolved_url.clone(),
-            package_dir: runtime.namespace.as_ref().and_then(|n| clone_dir(n.package_dir.as_ref())),
+            resolved_url,
+            package_dir: runtime
+                .namespace
+                .as_ref()
+                .and_then(|n| clone_dir(n.package_dir.as_ref().map(|d| d as &DirectoryProxy))),
             outgoing_dir: clone_dir(runtime.outgoing_dir.as_ref()),
             runtime_dir: clone_dir(runtime.runtime_dir.as_ref()),
         }

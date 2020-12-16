@@ -109,6 +109,7 @@ template("component_manager") {
     "src/klog.rs",
     "src/lib.rs",
     "src/model/actions/mod.rs",
+    "src/model/actions/resolve.rs",
     "src/model/actions/shutdown.rs",
     "src/model/actions/start.rs",
     "src/model/actions/stop.rs",

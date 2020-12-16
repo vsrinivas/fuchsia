@@ -51,6 +51,7 @@
 //!   child and marks `DestroyChild` finished, which will notify the client that the action is
 //!   complete.
 
+mod resolve;
 mod shutdown;
 pub mod start;
 mod stop;
@@ -59,7 +60,7 @@ use {
     crate::model::{
         error::ModelError,
         hooks::{Event, EventPayload},
-        realm::{BindReason, Realm},
+        realm::{BindReason, Component, Realm},
     },
     async_trait::async_trait,
     fuchsia_async as fasync,
@@ -68,16 +69,38 @@ use {
         future::{join_all, BoxFuture, FutureExt, Shared},
     },
     moniker::ChildMoniker,
+    std::any::Any,
     std::collections::HashMap,
+    std::fmt::Debug,
     std::hash::Hash,
     std::sync::Arc,
 };
 
 /// A action on a realm that must eventually be fulfilled.
 #[async_trait]
-pub trait Action {
-    async fn handle(&self, realm: &Arc<Realm>) -> Result<(), ModelError>;
+pub trait Action: Send + Sync + 'static {
+    type Output: Send + Sync + Clone + Debug;
+    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output;
     fn key(&self) -> ActionKey;
+}
+
+pub struct ResolveAction {}
+
+impl ResolveAction {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+#[async_trait]
+impl Action for ResolveAction {
+    type Output = Result<Component, ModelError>;
+    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
+        resolve::do_resolve(realm).await
+    }
+    fn key(&self) -> ActionKey {
+        ActionKey::Resolve
+    }
 }
 
 pub struct StartAction {
@@ -92,7 +115,8 @@ impl StartAction {
 
 #[async_trait]
 impl Action for StartAction {
-    async fn handle(&self, realm: &Arc<Realm>) -> Result<(), ModelError> {
+    type Output = Result<(), ModelError>;
+    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
         start::do_start(realm, &self.bind_reason).await
     }
     fn key(&self) -> ActionKey {
@@ -110,7 +134,8 @@ impl StopAction {
 
 #[async_trait]
 impl Action for StopAction {
-    async fn handle(&self, realm: &Arc<Realm>) -> Result<(), ModelError> {
+    type Output = Result<(), ModelError>;
+    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
         stop::do_stop(realm).await
     }
     fn key(&self) -> ActionKey {
@@ -130,7 +155,8 @@ impl MarkDeletingAction {
 
 #[async_trait]
 impl Action for MarkDeletingAction {
-    async fn handle(&self, realm: &Arc<Realm>) -> Result<(), ModelError> {
+    type Output = Result<(), ModelError>;
+    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
         do_mark_deleting(realm, self.moniker.clone()).await
     }
     fn key(&self) -> ActionKey {
@@ -150,7 +176,8 @@ impl DeleteChildAction {
 
 #[async_trait]
 impl Action for DeleteChildAction {
-    async fn handle(&self, realm: &Arc<Realm>) -> Result<(), ModelError> {
+    type Output = Result<(), ModelError>;
+    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
         do_delete_child(realm, self.moniker.clone()).await
     }
     fn key(&self) -> ActionKey {
@@ -168,7 +195,8 @@ impl DestroyAction {
 
 #[async_trait]
 impl Action for DestroyAction {
-    async fn handle(&self, realm: &Arc<Realm>) -> Result<(), ModelError> {
+    type Output = Result<(), ModelError>;
+    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
         do_destroy(realm).await
     }
     fn key(&self) -> ActionKey {
@@ -186,7 +214,8 @@ impl ShutdownAction {
 
 #[async_trait]
 impl Action for ShutdownAction {
-    async fn handle(&self, realm: &Arc<Realm>) -> Result<(), ModelError> {
+    type Output = Result<(), ModelError>;
+    async fn handle(&self, realm: &Arc<Realm>) -> Self::Output {
         shutdown::do_shutdown(realm).await
     }
     fn key(&self) -> ActionKey {
@@ -197,6 +226,8 @@ impl Action for ShutdownAction {
 /// A key that uniquely identifies an action.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ActionKey {
+    /// This single component instance should be resolved.
+    Resolve,
     /// This single component instance should be started.
     Start,
     /// This single component instance should be stopped.
@@ -215,24 +246,25 @@ pub enum ActionKey {
 ///
 /// Each action is mapped to a future that returns when the action is complete.
 pub struct ActionSet {
-    rep: HashMap<ActionKey, ActionNotifier>,
+    rep: HashMap<ActionKey, Box<dyn Any + Send + Sync>>,
 }
 
-/// Type of future that returns when an action is complete. This is separate from the future
-/// that actually runs the action.
-pub type ActionNotifier = Shared<BoxFuture<'static, Result<(), ModelError>>>;
+type ActionNotifier<Output> = Shared<BoxFuture<'static, Output>>;
 
 /// Represents a task that implements an action.
-pub(crate) struct ActionTask {
-    tx: oneshot::Sender<Result<(), ModelError>>,
-    fut: BoxFuture<'static, Result<(), ModelError>>,
+pub(crate) struct ActionTask<A>
+where
+    A: Action,
+{
+    tx: oneshot::Sender<A::Output>,
+    fut: BoxFuture<'static, A::Output>,
 }
 
-impl ActionTask {
-    fn new(
-        tx: oneshot::Sender<Result<(), ModelError>>,
-        fut: BoxFuture<'static, Result<(), ModelError>>,
-    ) -> Self {
+impl<A> ActionTask<A>
+where
+    A: Action,
+{
+    fn new(tx: oneshot::Sender<A::Output>, fut: BoxFuture<'static, A::Output>) -> Self {
         Self { tx, fut }
     }
 
@@ -256,9 +288,9 @@ impl ActionSet {
 
     /// Registers an action in the set, returning when the action is finished (which may represent
     /// a task that's already running for this action).
-    pub async fn register<A>(realm: Arc<Realm>, action: A) -> Result<(), ModelError>
+    pub async fn register<A>(realm: Arc<Realm>, action: A) -> A::Output
     where
-        A: Action + Send + Sync + 'static,
+        A: Action,
     {
         let (task, rx) = {
             let mut actions = realm.lock_actions().await;
@@ -283,21 +315,25 @@ impl ActionSet {
     ///   should call spawn() on it.
     /// - A future to listen on the completion of the action.
     #[must_use]
-    pub(crate) fn register_inner<A>(
-        &mut self,
+    pub(crate) fn register_inner<'a, A>(
+        &'a mut self,
         realm: &Arc<Realm>,
         action: A,
-    ) -> (Option<ActionTask>, ActionNotifier)
+    ) -> (Option<ActionTask<A>>, ActionNotifier<A::Output>)
     where
-        A: Action + Send + Sync + 'static,
+        A: Action,
     {
         let key = action.key();
-        if let Some(rx) = self.rep.get_mut(&key) {
-            (None, rx.clone())
+        if let Some(rx) = self.rep.get(&key) {
+            let rx = rx
+                .downcast_ref::<ActionNotifier<A::Output>>()
+                .expect("action notifier has unexpected type");
+            let rx = rx.clone();
+            (None, rx)
         } else {
             let blocking_action = match key {
-                ActionKey::Shutdown => self.rep.get_mut(&ActionKey::Stop),
-                ActionKey::Stop => self.rep.get_mut(&ActionKey::Shutdown),
+                ActionKey::Shutdown => self.rep.get(&ActionKey::Stop),
+                ActionKey::Stop => self.rep.get(&ActionKey::Shutdown),
                 _ => None,
             };
             let realm = realm.clone();
@@ -307,7 +343,10 @@ impl ActionSet {
                 res
             };
             let fut = if let Some(blocking_action) = blocking_action {
-                let blocking_action = blocking_action.clone();
+                let blocking_action = blocking_action
+                    .downcast_ref::<ActionNotifier<A::Output>>()
+                    .expect("action notifier has unexpected type")
+                    .clone();
                 async move {
                     let _ = blocking_action.await;
                     handle_action.await
@@ -325,7 +364,7 @@ impl ActionSet {
             }
             .boxed()
             .shared();
-            self.rep.insert(key, rx.clone());
+            self.rep.insert(key, Box::new(rx.clone()));
             (Some(task), rx)
         }
     }
@@ -433,10 +472,10 @@ pub mod tests {
     async fn register_action_in_new_task<A>(
         action: A,
         realm: Arc<Realm>,
-        responder: oneshot::Sender<Result<(), ModelError>>,
-        res: Result<(), ModelError>,
+        responder: oneshot::Sender<A::Output>,
+        res: A::Output,
     ) where
-        A: Action + Send + Sync + 'static,
+        A: Action,
     {
         let (starter_tx, starter_rx) = oneshot::channel();
         fasync::Task::spawn(async move {

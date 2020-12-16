@@ -7,7 +7,7 @@ use {
         capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
         model::{
-            actions::{ShutdownAction, ActionSet},
+            actions::{ActionSet, ShutdownAction},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,

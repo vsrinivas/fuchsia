@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        actions::{start, StartAction, ActionSet},
+        actions::{start, ActionSet, StartAction},
         error::ModelError,
         model::Model,
         realm::{BindReason, Realm},
@@ -135,7 +135,7 @@ mod tests {
             builtin_environment::BuiltinEnvironment,
             config::RuntimeConfig,
             model::{
-                actions::{ActionSet},
+                actions::{ActionKey, ActionSet},
                 events::event::SyncMode,
                 hooks::{EventPayload, EventType, HooksRegistration},
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::TestHook},
@@ -518,5 +518,62 @@ mod tests {
         let m: AbsoluteMoniker = vec!["a:0"].into();
         assert!(model.bind(&m, &BindReason::Root).await.is_ok());
         mock_runner.wait_for_urls(&["test:///root_resolved", "test:///b_resolved"]).await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn bind_action_sequence() {
+        // Test that binding registers the expected actions in the expected sequence
+        // (Discovered -> Start -> Resolve).
+
+        let (model, builtin_environment, _mock_runner) = new_model(vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
+            ("system", component_decl_with_test_runner()),
+        ])
+        .await;
+
+        let events = vec![
+            EventType::Discovered.into(),
+            EventType::Resolved.into(),
+            EventType::Started.into(),
+        ];
+        let mut event_source = builtin_environment
+            .event_source_factory
+            .create_for_debug(SyncMode::Sync)
+            .await
+            .expect("create event source");
+
+        let mut event_stream =
+            event_source.subscribe(events.clone()).await.expect("subscribe to event stream");
+        event_source.start_component_tree().await;
+
+        let model_copy = model.clone();
+        let (f, bind_handle) = async move {
+            let m = AbsoluteMoniker::new(vec!["system:0".into()]);
+            model_copy.bind(&m, &BindReason::Root).await
+        }
+        .remote_handle();
+        fasync::Task::spawn(f).detach();
+        let m: AbsoluteMoniker = vec!["system:0"].into();
+
+        let event = event_stream.wait_until(EventType::Discovered, m.clone()).await.unwrap();
+        event.resume();
+        let event = event_stream.wait_until(EventType::Resolved, m.clone()).await.unwrap();
+        // While the Resolved hook is handled, it should be possible to look up the realm
+        // without deadlocking.
+        let realm = model.look_up_realm(&m).await.unwrap();
+        {
+            let actions = realm.lock_actions().await;
+            assert!(actions.contains(&ActionKey::Resolve));
+        }
+        event.resume();
+        let event = event_stream.wait_until(EventType::Started, m.clone()).await.unwrap();
+        {
+            let actions = realm.lock_actions().await;
+            assert!(actions.contains(&ActionKey::Start));
+            assert!(!actions.contains(&ActionKey::Resolve));
+        }
+        event.resume();
+
+        bind_handle.await.unwrap();
     }
 }

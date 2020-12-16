@@ -8,14 +8,14 @@ use {
         exposed_dir::ExposedDir,
         hooks::{Event, EventError, EventErrorPayload, EventPayload, RuntimeInfo},
         namespace::IncomingNamespace,
-        realm::{BindReason, ExecutionState, Realm, Runtime, WeakRealm},
+        realm::{BindReason, ExecutionState, Package, Realm, Runtime, WeakRealm},
         runner::Runner,
     },
     cm_rust::data,
     fidl::endpoints::{self, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     log::*,
     moniker::AbsoluteMoniker,
     std::sync::Arc,
@@ -38,6 +38,7 @@ pub(super) async fn do_start(
 
     struct StartContext {
         component_decl: cm_rust::ComponentDecl,
+        resolved_url: String,
         runner: Arc<dyn Runner>,
         pending_runtime: Runtime,
         start_info: fcrunner::ComponentStartInfo,
@@ -65,6 +66,7 @@ pub(super) async fn do_start(
 
         Ok(StartContext {
             component_decl: component.decl,
+            resolved_url: component.resolved_url.clone(),
             runner,
             pending_runtime,
             start_info,
@@ -79,7 +81,10 @@ pub(super) async fn do_start(
                 realm,
                 Ok(EventPayload::Started {
                     realm: realm.into(),
-                    runtime: RuntimeInfo::from_runtime(&start_context.pending_runtime),
+                    runtime: RuntimeInfo::from_runtime(
+                        &start_context.pending_runtime,
+                        start_context.resolved_url.clone(),
+                    ),
                     component_decl: start_context.component_decl.clone(),
                     bind_reason: bind_reason.clone(),
                 }),
@@ -136,7 +141,7 @@ pub fn should_return_early(
 async fn make_execution_runtime(
     realm: WeakRealm,
     url: String,
-    package: Option<fsys::Package>,
+    package: Option<Package>,
     decl: &cm_rust::ComponentDecl,
 ) -> Result<
     (Runtime, fcrunner::ComponentStartInfo, ServerEnd<fcrunner::ComponentControllerMarker>),
@@ -165,7 +170,6 @@ async fn make_execution_runtime(
         DirectoryProxy::from_channel(fasync::Channel::from_channel(runtime_dir_client).unwrap())
     });
     let runtime = Runtime::start_from(
-        url.clone(),
         Some(namespace),
         outgoing_dir_client,
         runtime_dir_client,

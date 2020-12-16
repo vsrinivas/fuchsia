@@ -6,7 +6,7 @@ use {
     crate::capability::NamespaceCapabilities,
     crate::config::RuntimeConfig,
     crate::model::{
-        actions::{ActionKey},
+        actions::ActionKey,
         binding::Binder,
         context::ModelContext,
         environment::Environment,
