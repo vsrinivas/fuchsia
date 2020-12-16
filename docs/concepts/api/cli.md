@@ -304,8 +304,12 @@ word.
 
 Options must start with either one ('`-`') or two ('`--`') dashes followed by an
 alphanumeric label. In the case of a single dash, the length of the label must
-be 1. If the length of the label is two or more then two dashes must be used.
+be 1. If the length of the label is two or more, then two dashes must be used.
 For example: `-v` or `--help` are correct; `-help` is not valid.
+
+For option names with more than one word (for example, "foo bar"),
+you must use a single dash ('`-`') between words. For example, "foo bar"
+becomes `--foo-bar`.
 
 All choices are required to have a (`--`) option. Providing single character
 shorthand (`-`) is optional. E.g. it's okay to provide just `--output`, or both
