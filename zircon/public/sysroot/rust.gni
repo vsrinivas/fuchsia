@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(60613): Remove the //vendor/... targets that depend on this.
-group("sysroot") {
-  deps = [ "//zircon/public/sysroot:system_libc_deps" ]
-}
+# Rust compilation uses the C++ sysroot directly, see //zircon/public/sysroot/BUILD.gn
+import("cpp.gni")
+rust_sysroot_dir = cpp_sysroot_dir

@@ -638,7 +638,10 @@ template("package") {
       args =
           manifest_args + [ "--entry=meta/package=" +
                             rebase_path(pkg_meta_output, "", target_out_dir) ]
-      deps = pkg.deps + [ ":$pkg_meta_generated" ]
+      deps = pkg.deps + [
+               ":$pkg_meta_generated",
+               "//zircon/public/sysroot:system_libc_deps",
+             ]
       public_deps = pkg.public_deps
     }
     manifest_file = get_target_outputs(":$manifest")

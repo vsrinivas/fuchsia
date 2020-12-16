@@ -2,7 +2,5 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(60613): Remove the //vendor/... targets that depend on this.
-group("sysroot") {
-  deps = [ "//zircon/public/sysroot:system_libc_deps" ]
-}
+cpp_sysroot_label = "//zircon/public/sysroot/cpp"
+cpp_sysroot_dir = get_label_info(cpp_sysroot_label, "target_gen_dir")

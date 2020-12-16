@@ -9,7 +9,6 @@
 #
 # Note however that both files parse the same inputs collected from
 # sysroot_entries.gni files. See below for details.
-import("//build/config/fuchsia/zircon_legacy_vars.gni")
 import("//build/sdk/sdk_atom.gni")
 
 # Collect the metadata for the SDK.
@@ -27,17 +26,31 @@ version_content = {
   debug_libs = []
 }
 
-foreach(entry, zircon_legacy_sysroot) {
+import("//zircon/system/ulib/c/sysroot_entries.gni")
+import("//zircon/system/ulib/zircon/sysroot_entries.gni")
+
+# Turn the information from Zircon into a set of copy() rules for the
+# sysroot while filling in $version_content.
+#
+# sysroot_entries will be a list of GN scopes, whose schema is documented
+# in //zircon/public/sysroot/BUILD.gn.
+#
+sysroot_entries =
+    sysroot_uninstrumented_libc_entries + sysroot_instrumented_libc_entries +
+    sysroot_crt1_entries + sysroot_vdso_entries
+
+sysroot_sdk_deps = []
+foreach(entry, sysroot_entries) {
   if (defined(entry.sdk)) {
     sdk = {
     }
     sdk = entry.sdk
-    if (!defined(sdk.no_export) || !sdk.no_export) {
-      # Ignore entries with 'no_export = true'
-      if (defined(sdk.headers)) {
-        # This has to generate a separate copy() target for each file.
-        dir = rebase_path(sdk.include_dir, "", zircon_root_build_dir)
-        foreach(file, sdk.headers) {
+    if (defined(sdk.headers)) {
+      # This has to generate a separate copy() target for each file.
+      dir = rebase_path(sdk.include_dir, "", root_build_dir)
+      foreach(file, sdk.headers) {
+        no_export = defined(sdk.no_export) && sdk.no_export
+        if (!no_export) {
           version_content.headers += [ "$file_base/include/$file" ]
           sdk_files += [
             {
@@ -46,32 +59,35 @@ foreach(entry, zircon_legacy_sysroot) {
             },
           ]
         }
-      } else if (defined(sdk.debug)) {
-        version_content.debug_libs +=
-            [ rebase_path(sdk.source, "", zircon_root_build_dir) ]
-      } else {
-        # This is just a single copy() target.
-        if (defined(sdk.link)) {
-          version_content.link_libs += [ "$file_base/${sdk.link}" ]
-          sdk_files += [
-            {
-              source = rebase_path(sdk.source, "", zircon_root_build_dir)
-              dest = "$file_base/${sdk.link}"
-            },
-          ]
-        } else if (defined(sdk.dist)) {
-          version_content.dist_libs += [ "$file_base/${sdk.dist}" ]
-          version_content.dist_dir = file_base
-          sdk_files += [
-            {
-              source = rebase_path(sdk.source, "", zircon_root_build_dir)
-              dest = "$file_base/${sdk.dist}"
-            },
-          ]
-        } else {
-          assert(false, "confused by $sdk")
-        }
       }
+    } else if (defined(sdk.debug)) {
+      version_content.debug_libs +=
+          [ rebase_path(sdk.source, "", root_build_dir) ]
+    } else {
+      # This is just a single copy() target.
+      if (defined(sdk.link)) {
+        version_content.link_libs += [ "$file_base/${sdk.link}" ]
+        sdk_files += [
+          {
+            source = rebase_path(sdk.source, "", root_build_dir)
+            dest = "$file_base/${sdk.link}"
+          },
+        ]
+      } else if (defined(sdk.dist)) {
+        version_content.dist_libs += [ "$file_base/${sdk.dist}" ]
+        version_content.dist_dir = file_base
+        sdk_files += [
+          {
+            source = rebase_path(sdk.source, "", root_build_dir)
+            dest = "$file_base/${sdk.dist}"
+          },
+        ]
+      } else {
+        assert(false, "confused by $sdk")
+      }
+    }
+    if (defined(sdk.deps)) {
+      sysroot_sdk_deps += sdk.deps
     }
   }
 }
@@ -111,7 +127,7 @@ action("sysroot-meta") {
     "--manifest=" + rebase_path(outputs[1], root_build_dir),
     "--location=/versions/$target_cpu/debug_libs",
   ]
-  deps = [ ":sysroot-meta-json" ]
+  deps = [ ":sysroot-meta-json" ] + sysroot_sdk_deps
 }
 meta_outputs = get_target_outputs(":sysroot-meta")
 
@@ -119,7 +135,7 @@ sdk_atom("sysroot_sdk") {
   id = "sdk://pkg/sysroot"
   category = "partner"
 
-  non_sdk_deps = [ ":sysroot-meta" ]
+  non_sdk_deps = [ ":sysroot-meta" ] + sysroot_sdk_deps
 
   meta = {
     dest = "pkg/sysroot/meta.json"

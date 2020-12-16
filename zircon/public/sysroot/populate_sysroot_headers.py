@@ -2,7 +2,6 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """
 A script used to populate a sysroot include directory exactly as specified by an input .json file.
 Note that the script will ensure that any stale items in the output directory that are not listed

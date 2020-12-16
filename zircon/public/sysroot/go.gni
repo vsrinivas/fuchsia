@@ -1,0 +1,9 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Define 'go_sysroot_dir' to point to the location of the sysroot directory
+# used for Go binaries in the current toolchain.
+
+go_sysroot_label = "//zircon/public/sysroot/go"
+go_sysroot_dir = get_label_info(go_sysroot_label, "target_gen_dir")

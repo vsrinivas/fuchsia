@@ -8,6 +8,7 @@ import("//build/host.gni")
 import("//build/sdk/sdk_host_tool.gni")
 import("//build/toolchain/breakpad.gni")
 import("//build/toolchain/concurrent_jobs.gni")
+import("//zircon/public/sysroot/go.gni")
 
 declare_args() {
   #   gocache_dir
@@ -158,6 +159,13 @@ template("go_build") {
     godepfile = "//prebuilt/tools/godepfile/${host_platform}/godepfile"
     inputs = [ godepfile ]
 
+    if (is_fuchsia) {
+      # For Fuchsia binaries, use a Go-specific sysroot instead of the
+      # standard one which only contains empty linker stubs (see
+      # comments in //zircon/public/sysroot/BUILD.gn for details).
+      sysroot = go_sysroot_dir
+    }
+
     args = [
       "--godepfile",
       rebase_path(godepfile, "", root_build_dir),
@@ -250,8 +258,6 @@ template("go_build") {
 
     if (is_fuchsia) {
       deps += [
-        # TODO(60613) Remove once sysroot generation moves to the Fuchsia build.
-        "//build/unification/lib/sysroot",
         "//sdk/lib/fdio",
         "//zircon/public/sysroot:go_binary_deps",
       ]

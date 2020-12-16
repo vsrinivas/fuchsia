@@ -4,11 +4,12 @@
 
 import("//build/config/build_id.gni")
 import("//build/config/clang/clang.gni")
-import("//build/config/fuchsia/zircon_legacy_vars.gni")
+import("//build/config/sysroot.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/ccache.gni")
 import(
     "//zircon/public/gn/config/instrumentation/sanitizer_default_options.gni")
+import("//zircon/public/sysroot/rust.gni")
 
 assert(current_os == "fuchsia")
 
@@ -55,9 +56,9 @@ config("compiler") {
 
   rustflags = [
     "-L",
-    rebase_path(sysroot, root_build_dir) + "/lib",
+    rebase_path(rust_sysroot_dir, root_build_dir) + "/lib",
     "-Clinker=" + rebase_path("$clang_prefix/lld", "", root_build_dir),
-    "-Clink-arg=--sysroot=" + rebase_path(sysroot, root_build_dir),
+    "-Clink-arg=--sysroot=" + rebase_path(rust_sysroot_dir, root_build_dir),
     "-Clink-arg=-L" + clang_resource_dir + "/" + rust_target + "/lib",
     "-Clink-arg=--pack-dyn-relocs=relr",
     "-Clink-arg=-dynamic-linker=ld.so.1",
@@ -70,61 +71,9 @@ config("compiler") {
 }
 
 config("compiler_sysroot") {
-  # Rather than using --sysroot and populating a sysroot per se, use
-  # specific compiler switches to find the C library and its headers from
-  # the Zircon build and source tree directly.
-  sysroot_include_dirs = []
-  foreach(entry, zircon_legacy_sysroot) {
-    if (defined(entry.include_dirs)) {
-      sysroot_include_dirs += entry.include_dirs
-    } else if (defined(entry.libc)) {
-      sysroot_libc = entry.libc
-    } else if (defined(entry.crt1)) {
-      sysroot_crt1 = entry.crt1
-    } else if (defined(entry.vdso)) {
-      sysroot_vdso = entry.vdso
-    }
-  }
-
-  # Point the preprocessor at the include directories.  Use -idirafter
-  # so they come in the same place in the search order as the --sysroot
-  # include directory would: after the compiler-supplied headers,
-  # allowing those to override and wrap libc headers via #include_next.
-  cflags = []
-  foreach(dir, sysroot_include_dirs) {
-    cflags += [
-      "-idirafter",
-      rebase_path(dir, root_build_dir, zircon_root_build_dir),
-    ]
-  }
+  cflags = [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
   asmflags = cflags
-
-  # Point the linker at a little directory we populate below.  Plain -L
-  # switches (via lib_dirs) would be sufficient for the implicit -lc and -lm
-  # from the compiler driver.  But Scrt1.o is found only in the sysroot.
-  ldflags = [ "--sysroot=" + rebase_path(target_gen_dir, root_build_dir) ]
-
-  # Use input linker scripts found in the dummy sysroot to redirect to the
-  # actual Zircon binaries.  Because of this indirection (and the linker's
-  # lack of depfile support), the build system doesn't know about these
-  # dependencies.  So list them as inputs of everything to force re-links
-  # when they change.  This forces recompiles too since this config()
-  # applies to all compilation targets and not just linking ones, but this
-  # code only changes when touching core Zircon library sources.
-  libc = rebase_path(sysroot_libc, "", zircon_root_build_dir)
-  crt1 = rebase_path(sysroot_crt1, "", zircon_root_build_dir)
-  vdso = rebase_path(sysroot_vdso, "", zircon_root_build_dir)
-  inputs = [
-    libc,
-    crt1,
-    vdso,
-  ]
-  write_file("$target_gen_dir/lib/Scrt1.o", [ "INPUT(${crt1})" ])
-  write_file("$target_gen_dir/lib/libc.so", [ "INPUT(${libc})" ])
-  write_file("$target_gen_dir/lib/libdl.so", [ "/* dummy */" ])
-  write_file("$target_gen_dir/lib/libm.so", [ "/* dummy */" ])
-  write_file("$target_gen_dir/lib/libpthread.so", [ "/* dummy */" ])
-  write_file("$target_gen_dir/lib/libzircon.so", [ "INPUT(${vdso})" ])
+  ldflags = cflags
 }
 
 config("compiler_target") {
@@ -231,7 +180,8 @@ config("libunwind") {
   libs = [ clang_libunwind ]
 }
 
-# NOTE: This config is also used by //build/config/BUILDCONFIG.gn
+# NOTE: This config's label is hard-coded in //build/config/BUILDCONFIG.gn
+# so don't rename it without updating that file too!
 config("static-pie-config") {
   cflags = [
     "-fno-sanitize=all",

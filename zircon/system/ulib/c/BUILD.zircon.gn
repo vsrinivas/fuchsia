@@ -100,13 +100,14 @@ if (zx != "/" && zircon_toolchain == false) {
     sdk_migrated = true
 
     if (zx == "/") {
+      # Do not export the C library to the Fuchsia build system anymore.
+      install_path = false
+      sdk_migrated = true
+    } else {
       # At link time and in DT_SONAME, musl is known as libc.so.  But the
       # (only) place it needs to be installed at runtime is where the
       # PT_INTERP strings embedded in executables point, which is ld.so.1.
-      install_path = "lib/${toolchain.libprefix}ld.so.1"
-    } else {
-      # TODO(60613): Enable this once the sysroot moves entirely to the Fuchsia build.
-      # install_name = "ld.so.1"
+      install_name = "ld.so.1"
 
       metadata = {
         runtime_deps_manifest_lines =
