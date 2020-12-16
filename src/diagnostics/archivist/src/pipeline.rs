@@ -16,7 +16,6 @@ use {
     diagnostics_hierarchy::InspectHierarchyMatcher,
     fidl_fuchsia_diagnostics::{self, Selector, StreamMode},
     futures::prelude::*,
-    parking_lot::RwLock,
     selectors,
     std::collections::HashMap,
     std::convert::TryInto,
@@ -31,14 +30,14 @@ pub struct Pipeline {
     static_pipeline_selectors: Option<Vec<Arc<Selector>>>,
     log_redactor: Arc<Redactor>,
     moniker_to_static_matcher_map: HashMap<String, InspectHierarchyMatcher>,
-    data_repo: Arc<RwLock<DataRepo>>,
+    data_repo: DataRepo,
 }
 
 impl Pipeline {
     pub fn new(
         static_pipeline_selectors: Option<Vec<Arc<Selector>>>,
         log_redactor: Redactor,
-        data_repo: Arc<RwLock<DataRepo>>,
+        data_repo: DataRepo,
     ) -> Self {
         Pipeline {
             moniker_to_static_matcher_map: HashMap::new(),
@@ -51,7 +50,7 @@ impl Pipeline {
     #[cfg(test)]
     pub fn for_test(
         static_pipeline_selectors: Option<Vec<Arc<Selector>>>,
-        data_repo: Arc<RwLock<DataRepo>>,
+        data_repo: DataRepo,
     ) -> Self {
         Pipeline {
             moniker_to_static_matcher_map: HashMap::new(),

@@ -581,14 +581,14 @@ pub struct ArchivistState {
     log_node: BoundedListNode,
     configuration: configs::Config,
     diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
-    diagnostics_repo: Arc<RwLock<DataRepo>>,
+    diagnostics_repo: DataRepo,
 }
 
 impl ArchivistState {
     pub fn new(
         configuration: configs::Config,
         diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
-        diagnostics_repo: Arc<RwLock<DataRepo>>,
+        diagnostics_repo: DataRepo,
         writer: Option<ArchiveWriter>,
     ) -> Result<Self, Error> {
         let mut log_node = BoundedListNode::new(

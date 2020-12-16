@@ -277,7 +277,7 @@ impl Archivist {
             && feedback_config.has_error())
             || (Path::new("/config/data/legacy_metrics").is_dir() && legacy_config.has_error()));
 
-        let diagnostics_repo = Arc::new(RwLock::new(DataRepo::new(log_manager.clone())));
+        let diagnostics_repo = DataRepo::new(log_manager.clone());
 
         // The Inspect Repository offered to the ALL_ACCESS pipeline. This
         // repository is unique in that it has no statically configured

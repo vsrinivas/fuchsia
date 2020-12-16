@@ -15,28 +15,49 @@ use {
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fuchsia_zircon as zx,
     futures::prelude::*,
-    io_util, selectors,
+    io_util,
+    parking_lot::RwLock,
+    selectors,
     std::collections::HashMap,
     std::sync::Arc,
 };
 
 /// DataRepo holds all diagnostics data and is a singleton wrapped by multiple
 /// [`pipeline::Pipeline`]s in a given Archivist instance.
+#[derive(Clone)]
 pub struct DataRepo {
-    pub data_directories: trie::Trie<String, ComponentDiagnostics>,
-    log_manager: LogManager,
+    inner: Arc<RwLock<DataRepoState>>,
+}
+
+impl std::ops::Deref for DataRepo {
+    type Target = RwLock<DataRepoState>;
+    fn deref(&self) -> &Self::Target {
+        &*self.inner
+    }
 }
 
 impl DataRepo {
     pub fn new(log_manager: LogManager) -> Self {
-        DataRepo { log_manager, data_directories: trie::Trie::new() }
+        DataRepo {
+            inner: Arc::new(RwLock::new(DataRepoState {
+                log_manager,
+                data_directories: trie::Trie::new(),
+            })),
+        }
     }
 
     #[cfg(test)]
     pub fn for_test() -> Self {
         Self::new(LogManager::new())
     }
+}
 
+pub struct DataRepoState {
+    pub data_directories: trie::Trie<String, ComponentDiagnostics>,
+    log_manager: LogManager,
+}
+
+impl DataRepoState {
     pub fn logs(&self, mode: StreamMode) -> impl Stream<Item = Arc<Message>> {
         self.log_manager.cursor(mode)
     }
@@ -320,14 +341,14 @@ mod tests {
         diagnostics_hierarchy::trie::TrieIterableNode,
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_async as fasync, fuchsia_zircon as zx,
-        parking_lot::RwLock,
     };
 
     const TEST_URL: &'static str = "fuchsia-pkg://test";
 
     #[fasync::run_singlethreaded(test)]
     async fn inspect_repo_disallows_duplicated_dirs() {
-        let mut inspect_repo = DataRepo::for_test();
+        let inspect_repo = DataRepo::for_test();
+        let mut inspect_repo = inspect_repo.write();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -356,7 +377,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_updates_existing_entry_to_hold_inspect_data() {
-        let mut data_repo = DataRepo::for_test();
+        let data_repo = DataRepo::for_test();
+        let mut data_repo = data_repo.write();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -386,7 +408,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_tolerates_duplicate_new_component_insertions() {
-        let mut data_repo = DataRepo::for_test();
+        let data_repo = DataRepo::for_test();
+        let mut data_repo = data_repo.write();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -422,7 +445,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn running_components_provide_start_time() {
-        let mut data_repo = DataRepo::for_test();
+        let data_repo = DataRepo::for_test();
+        let mut data_repo = data_repo.write();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -455,7 +479,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_tolerant_of_new_component_calls_if_diagnostics_ready_already_processed() {
-        let mut data_repo = DataRepo::for_test();
+        let data_repo = DataRepo::for_test();
+        let mut data_repo = data_repo.write();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -492,7 +517,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn diagnostics_repo_cant_have_more_than_one_diagnostics_data_container_per_component() {
-        let mut data_repo = DataRepo::for_test();
+        let data_repo = DataRepo::for_test();
+        let mut data_repo = data_repo.write();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -528,7 +554,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_filters_inspect_by_selectors() {
-        let data_repo = Arc::new(RwLock::new(DataRepo::for_test()));
+        let data_repo = DataRepo::for_test();
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
