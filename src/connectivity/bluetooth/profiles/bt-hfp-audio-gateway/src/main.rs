@@ -13,6 +13,7 @@ use {
 use crate::{config::AudioGatewayFeatureSupport, profile::Profile};
 
 mod config;
+mod error;
 mod profile;
 mod service_definitions;
 

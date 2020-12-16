@@ -26,12 +26,14 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:thiserror",
   ]
 
   test_deps = [ "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc" ]
 
   sources = [
     "src/config.rs",
+    "src/error.rs",
     "src/main.rs",
     "src/profile.rs",
     "src/service_definitions.rs",
