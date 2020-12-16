@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
+            }
+        }
+    },
     "include": [
         "sdk/lib/diagnostics/syslog/client.shard.cmx",
         "src/lib/fuchsia-hyper/hyper.shard.cmx",
@@ -9,10 +16,10 @@
     },
     "sandbox": {
         "features": [
-            "hub",
             "isolated-temp"
         ],
         "services": [
+            "fuchsia.diagnostics.ArchiveAccessor",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader"

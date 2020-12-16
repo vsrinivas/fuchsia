@@ -5,10 +5,11 @@
 use {
     anyhow::Error,
     cobalt_client::traits::AsEventCodes,
-    fidl::endpoints::{ClientEnd, DiscoverableService},
+    diagnostics_hierarchy::{testing::TreeAssertion, DiagnosticsHierarchy},
+    diagnostics_reader::{ArchiveReader, ComponentSelector},
+    fidl::endpoints::ClientEnd,
     fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
     fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
-    fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
@@ -28,10 +29,6 @@ use {
     fuchsia_component::{
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
-    },
-    fuchsia_inspect::{
-        reader::{self, DiagnosticsHierarchy},
-        testing::TreeAssertion,
     },
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder, Repository},
@@ -792,29 +789,19 @@ impl<P: PkgFs> TestEnv<P> {
     }
 
     pub async fn pkg_resolver_inspect_hierarchy(&self) -> DiagnosticsHierarchy {
-        let pattern = format!(
-            "/hub/r/{}/*/c/pkg-resolver.cmx/*/out/diagnostics/{}",
-            glob::Pattern::escape(&self.nested_environment_label),
-            TreeMarker::SERVICE_NAME,
-        );
-        let paths = glob::glob_with(
-            &pattern,
-            glob::MatchOptions {
-                case_sensitive: true,
-                require_literal_separator: true,
-                require_literal_leading_dot: false,
-            },
-        )
-        .expect("glob pattern successfully compiles");
-        let mut paths = paths.collect::<Result<Vec<_>, _>>().unwrap();
-        assert_eq!(paths.len(), 1, "found 0 or >1 hub paths : {:?}", paths);
-        let path = paths.pop().unwrap();
-
-        let (tree, server_end) =
-            fidl::endpoints::create_proxy::<TreeMarker>().expect("failed to create Tree proxy");
-        fdio::service_connect(&path.to_string_lossy().to_string(), server_end.into_channel())
-            .expect("failed to connect to Tree service");
-        reader::read_from_tree(&tree).await.expect("failed to get inspect hierarchy")
+        ArchiveReader::new()
+            .add_selector(ComponentSelector::new(vec![
+                self.nested_environment_label.clone(),
+                "pkg-resolver.cmx".to_string(),
+            ]))
+            .get()
+            .await
+            .expect("read inspect hierarchy")
+            .into_iter()
+            .next()
+            .expect("one result")
+            .payload
+            .expect("payload is not none")
     }
 
     /// Wait until pkg-resolver inspect state satisfies `desired_state`.

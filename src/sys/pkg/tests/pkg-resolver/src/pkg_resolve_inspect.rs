@@ -144,9 +144,9 @@ async fn resolving_package_updates_inspect_state() {
                             ),
                             updated_count: 1u64,
                             root_version: 1u64,
-                            timestamp_version: 2i64,
-                            snapshot_version: 2i64,
-                            targets_version: 2i64,
+                            timestamp_version: 2u64,
+                            snapshot_version: 2u64,
+                            targets_version: 2u64,
                         }
                     },
                 },
