@@ -38,6 +38,16 @@ class BaseCapturer : public AudioObject,
  public:
   AudioClock& reference_clock() { return audio_clock_; }
 
+  // TODO(fxbug.dev/43507): This is a temporary flag to ease the transition. This will be exposed as
+  // a command line flag for audio_core. This has no effect in DynamicallyAllocated mode.
+  //
+  // When false (the default), packets are automatically recycled after each call to Push.
+  // This gives equivalent behavior to the "current" code, i.e., before the bug fix.
+  // Otherwise, packets must be explicitly recycle.
+  //
+  // Eventually this flag will be deleted and the behavior will be hardcoded to "true".
+  static void SetMustReleasePackets(bool b) { must_release_packets_ = b; }
+
  protected:
   using RouteGraphRemover = void (RouteGraph::*)(const AudioObject&);
   BaseCapturer(std::optional<Format> format,
@@ -260,6 +270,9 @@ class BaseCapturer : public AudioObject,
   Reporter::Container<Reporter::Capturer, Reporter::kObjectsToCache>::Ptr reporter_;
 
   AudioClock audio_clock_;
+
+  // TODO(fxbug.dev/43507): This is a temporary flag.
+  static bool must_release_packets_;
 };
 
 }  // namespace media::audio

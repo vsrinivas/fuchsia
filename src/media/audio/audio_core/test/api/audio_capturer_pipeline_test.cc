@@ -316,7 +316,56 @@ class AudioCapturerReleaseTest : public HermeticAudioTest {
   AudioCapturerShim<ASF::SIGNED_16>* capturer_;
 };
 
-TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsManuallyReleased) {
+// TODO(fxbug.dev/43507): Remove this test.
+TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsAutoReleased) {
+  zx::time start_pts;
+  size_t count = 0;
+  capturer_->fidl().events().OnPacketProduced = [this, &count,
+                                                 &start_pts](fuchsia::media::StreamPacket p) {
+    SCOPED_TRACE(fxl::StringPrintf("packet %lu", count));
+
+    // Check that we're receiving the expected packets.
+    auto pts = zx::time(p.pts);
+    if (count == 0) {
+      start_pts = zx::time(p.pts);
+    } else {
+      auto got = pts - start_pts;
+      auto want = kPacketDuration * count;
+      EXPECT_LT(std::abs(got.get() - want.get()), zx::usec(100).get())
+          << "\n  expected time: " << want.get() << "\n       got time: " << got.get();
+    }
+
+    EXPECT_EQ(p.payload_buffer_id, 0u);
+    EXPECT_EQ(p.payload_offset, (count % kNumPackets) * kBytesPerPacket);
+    EXPECT_EQ(p.payload_size, kBytesPerPacket);
+    EXPECT_EQ((count == 0), (p.flags & fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY) != 0)
+        << "\nflags: " << std::hex << p.flags;
+    count++;
+  };
+
+  capturer_->fidl()->StartAsyncCapture(kFramesPerPacket);
+
+  // To verify that we're automatically recycling packets, we need to loop
+  // through the payload buffer at least twice.
+  const zx::duration kLoopTimeout = zx::sec(10);
+  RunLoopWithTimeoutOrUntil([this, &count]() { return ErrorOccurred() || count > 2 * kNumPackets; },
+                            kLoopTimeout);
+
+  ASSERT_FALSE(ErrorOccurred());
+  ASSERT_GT(count, 2 * kNumPackets);
+}
+
+// TODO(fxbug.dev/43507): This will become the default behavior.
+class AudioCapturerReleaseNewBehaviorTest : public AudioCapturerReleaseTest {
+ protected:
+  static void SetUpTestSuite() {
+    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
+        .audio_core_arguments = {"--captures-must-release-packets"},
+    });
+  }
+};
+
+TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsManuallyReleased) {
   zx::time start_pts;
   size_t count = 0;
   capturer_->fidl().events().OnPacketProduced = [this, &count,
@@ -358,7 +407,7 @@ TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsManuallyReleased) {
   ExpectNoOverflowsOrUnderflows();
 }
 
-TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsNotManuallyReleased) {
+TEST_F(AudioCapturerReleaseNewBehaviorTest, AsyncCapture_PacketsNotManuallyReleased) {
   std::vector<fuchsia::media::StreamPacket> packets;
 
   // Do NOT manually release any packets.

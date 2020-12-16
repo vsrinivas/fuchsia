@@ -46,6 +46,8 @@ const Format kInitialFormat =
 
 }  // namespace
 
+bool BaseCapturer::must_release_packets_ = false;
+
 BaseCapturer::BaseCapturer(
     std::optional<Format> format,
     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request, Context* context)
@@ -339,8 +341,12 @@ void BaseCapturer::ReleasePacket(fuchsia::media::StreamPacket packet) {
   TRACE_DURATION("audio", "BaseCapturer::ReleasePacket");
   State state = state_.load();
   if (state != State::OperatingAsync) {
-    FX_LOGS(WARNING) << "ReleasePacket called while not operating in async mode "
+    FX_LOGS(WARNING) << "CaptureAt called while not operating in async mode "
                      << "(state = " << static_cast<uint32_t>(state) << ")";
+    return;
+  }
+  // TODO(fxbug.dev/43507): Remove this flag.
+  if (!must_release_packets_) {
     return;
   }
   packet_queue()->Recycle(packet);
@@ -757,6 +763,11 @@ void BaseCapturer::FinishBuffers() {
                                  << " bytes, flags:" << pkt.flags << ", pts:" << pkt.pts;
 
       binding_.events().OnPacketProduced(pkt);
+
+      // TODO(fxbug.dev/43507): Remove this old behavior.
+      if (!must_release_packets_) {
+        pq->Recycle(pkt);
+      }
     }
   }
 }
