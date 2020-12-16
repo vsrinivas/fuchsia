@@ -2,6 +2,47 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Provides utilities on top of regular inspect properties to enable convenient features such as:
+//!
+//! - Directly mutating a value and dumping it to inspect
+//!
+//!   ```rust
+//!   use fuchsia_inspect::component;
+//!   use fuchsia_inspect::contrib::inspectable::InspectableU64;
+//!
+//!   let inspectable = InspectableU64::new(0, component::inspector::root(), "foo");
+//!   *inspectable.get_mut() += 1;
+//!   // The value of the u64 is 1 now and it was updated automatically in the inspect vmo.
+//!   ```
+//!
+//! - Dump lengths automatically
+//!
+//!   ```rust
+//!   use fuchsia_inspect::component;
+//!   use fuchsia_inspect::contrib::inspectable::InspectableLen;
+//!
+//!   let inspectable = InspectableLen::new(vec![0], component::inspector::root(), "foo");
+//!   // The value of the vector is [0] and the value in the inspect vmo under the foo property
+//!   // is 1.
+//!   *inspectable.get_mut().push(3);
+//!   // The value of the vector is [0, 3] and the value in the inspect vmo under the foo property
+//!   // is 2.
+//!   ```
+//!
+//! - Dump debug representations automatically, etc.
+//!
+//!   ```rust
+//!   use fuchsia_inspect::component;
+//!   use fuchsia_inspect::contrib::inspectable::InspectableDebugString;
+//!
+//!   let inspectable = InspectableDebugString::new(vec![0], component::inspector::root(), "foo");
+//!   // The value of the vector is vec![0] and the value in the inspect vmo under the foo property
+//!   // is the debug string of the vector "[0]".
+//!   *inspectable.get_mut().push(3);
+//!   // The value of the vector is vec![0, 3] and the value in the inspect vmo under the foo
+//!   // property is the debug string of the vector "[0, 3]".
+//!   ```
+
 use {
     core::ops::{Deref, DerefMut},
     derivative::Derivative,
@@ -67,12 +108,13 @@ where
     }
 }
 
+/// Used for exporting an `[Inspectable`][Inspectable]'s wrapped value .
 pub trait Watch<V> {
-    /// Used by `Inspectable::new()` to create a `Watch`er that exports via
-    /// Inspect the `Inspectable`'s wrapped `value`.
+    /// Used by [`Inspectable::new()`][Inspectable::new] to create a `Watch`er that exports via
+    /// Inspect the [`Inspectable`][Inspectable]'s wrapped `value`.
     fn new(value: &V, node: &Node, name: impl AsRef<str>) -> Self;
 
-    /// Called by `InspectableGuard` when the guard is dropped, letting the
+    /// Called by [`InspectableGuard`][InspectableGuard] when the guard is dropped, letting the
     /// `Watch`er update its state with the updated `value`.
     fn watch(&mut self, value: &V);
 }
@@ -122,6 +164,8 @@ pub struct InspectableLenWatcher {
     len: fuchsia_inspect::UintProperty,
 }
 
+/// Trait implemented by types that can provide a length. Values used for
+/// [`InspectableLen`][InspectableLen] must implement this.
 pub trait Len {
     fn len(&self) -> usize;
 }
@@ -139,6 +183,7 @@ where
     }
 }
 
+/// Exports via an Inspect `UintProperty` the `len` of the wrapped value `V`.
 pub type InspectableLen<V> = Inspectable<V, InspectableLenWatcher>;
 
 impl<V> Len for Vec<V> {
@@ -173,6 +218,7 @@ where
     }
 }
 
+/// Exports via an Inspect `StringProperty` the `Debug` representation of the wrapped value `V`.
 pub type InspectableDebugString<V> = Inspectable<V, InspectableDebugStringWatcher>;
 
 /// Exports via an Inspect `UintProperty` a `u64`. Useful because the wrapped `u64`
@@ -192,6 +238,8 @@ impl Watch<u64> for InspectableU64Watcher {
     }
 }
 
+/// Exports via an Inspect `UintProperty` a `u64`. Useful because the wrapped `u64`
+/// value can be read.
 pub type InspectableU64 = Inspectable<u64, InspectableU64Watcher>;
 
 #[cfg(test)]

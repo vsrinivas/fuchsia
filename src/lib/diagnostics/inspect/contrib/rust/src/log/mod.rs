@@ -2,6 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Provides conviennce macros for writing to an inspect bounded list (bounded log)
+//!
+//! ## Example
+//!
+//! ```rust
+//! let inspector = Inspector::new();
+//! let list_node = inspector.root().create_child("list_node");
+//! let list_node = BoundedListNode::new(list_node, 10);
+//! inspect_log!(list_node, k1: "1".to_string(), meaning_of_life: 42u64, k3: 3i64, k4: 4f64);
+//! // Inspect now has:
+//! // root: {
+//! //   list_node: {
+//! //     "0": { "@time": <timestamp>, k1: "1", meaning_of_life: 42, k3: 3, k4: 4 }
+//! //   }
+//! // }
+//! ```
+
 mod impls;
 mod wrappers;
 
@@ -9,6 +26,7 @@ pub use wrappers::{InspectBytes, InspectList, InspectListClosure};
 
 use crate::nodes::NodeWriter;
 
+/// Trait for writing to a node in bounded lists.
 pub trait WriteInspect {
     /// Write a *single* value (property or child node) to |node| with the specified |key|.
     /// If multiple properties need to be written, consider creating a single child

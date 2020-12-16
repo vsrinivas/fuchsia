@@ -27,7 +27,7 @@
 //! use fuchsia_inspect::{Inspector, reader};
 //!
 //! let inspector = Inspector::new();
-//! ...
+//! // ...
 //! let hierarchy = reader::read_from_inspector(&inspector)?;
 //! ```
 

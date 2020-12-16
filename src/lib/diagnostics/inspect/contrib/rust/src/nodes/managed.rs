@@ -17,10 +17,12 @@ pub struct ManagedNode {
 }
 
 impl ManagedNode {
+    /// Creates a new `ManagedNode`
     pub fn new(node: Node) -> Self {
         Self { node: Arc::new(node), items: vec![] }
     }
 
+    /// Creates a new writer for this node.
     pub fn writer(&mut self) -> NodeWriter<'_> {
         NodeWriter::new(self.node.clone(), &mut self.items)
     }
@@ -36,6 +38,7 @@ enum NodeValue {
     Double(DoubleProperty),
 }
 
+/// Utility for writing properties to a node and holding them.
 pub struct NodeWriter<'c> {
     node: Arc<Node>,
     items: &'c mut Vec<NodeValue>,
@@ -46,48 +49,56 @@ impl<'c> NodeWriter<'c> {
         Self { node, items }
     }
 
+    /// Creates a new string in this node.
     pub fn create_string(&mut self, key: impl AsRef<str>, value: impl AsRef<str>) -> &mut Self {
         let val = self.node.create_string(key.as_ref(), value.as_ref());
         self.items.push(NodeValue::String(val));
         self
     }
 
+    /// Creates a new int property in this node holding the current monotonic timestamp.
     pub fn create_time(&mut self, key: impl AsRef<str>) -> &mut Self {
         let val = self.node.create_time(key.as_ref());
         self.items.push(NodeValue::Int(val.inner));
         self
     }
 
+    /// Creates a new bool in this node.
     pub fn create_bool(&mut self, key: impl AsRef<str>, value: bool) -> &mut Self {
         let val = self.node.create_bool(key.as_ref(), value);
         self.items.push(NodeValue::Bool(val));
         self
     }
 
+    /// Creates a new bytes property in this node.
     pub fn create_bytes(&mut self, key: impl AsRef<str>, value: impl AsRef<[u8]>) -> &mut Self {
         let val = self.node.create_bytes(key.as_ref(), value.as_ref());
         self.items.push(NodeValue::Bytes(val));
         self
     }
 
+    /// Creates a new uint property in this node.
     pub fn create_uint(&mut self, key: impl AsRef<str>, value: u64) -> &mut Self {
         let val = self.node.create_uint(key.as_ref(), value);
         self.items.push(NodeValue::Uint(val));
         self
     }
 
+    /// Creates a new int property in this node.
     pub fn create_int(&mut self, key: impl AsRef<str>, value: i64) -> &mut Self {
         let val = self.node.create_int(key.as_ref(), value);
         self.items.push(NodeValue::Int(val));
         self
     }
 
+    /// Creates a new double property in this node.
     pub fn create_double(&mut self, key: impl AsRef<str>, value: f64) -> &mut Self {
         let val = self.node.create_double(key.as_ref(), value);
         self.items.push(NodeValue::Double(val));
         self
     }
 
+    /// Creates a new node that is child of this node.
     pub fn create_child(&mut self, key: impl AsRef<str>) -> NodeWriter<'_> {
         let child = Arc::new(self.node.create_child(key.as_ref()));
         self.items.push(NodeValue::Node(child.clone()));

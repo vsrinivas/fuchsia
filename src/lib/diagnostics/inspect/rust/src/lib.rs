@@ -29,6 +29,7 @@
 //!     might become No-Ops. For example, when the VMO becomes full, any further creation of a
 //!     property or a node will result in no changes in the VMO and a silent failure. However,
 //!     mutation of existing properties in the VMO will continue to work.
+//!   - All nodes and properties are thread safe.
 //!
 //! ### Creating vs Recording
 //!
@@ -61,17 +62,12 @@
 //! use fuchsia_inspect::component;
 //! use fuchsia_component::server::ServiceFs;
 //!
-//! fn main() -> Result<(), Error> {
-//!   let mut fs = ServiceFs::new();
-//!   component::inspector().root().serve(&mut fs)?;
+//! let mut fs = ServiceFs::new();
+//! component::inspector().root().serve(&mut fs)?;
 //!
-//!   // Now you can create nodes and properties anywhere!
-//!   let child = component::inspector().root().create_child("foo");
-//!   child.record_uint("bar", 42);
-//!   ...
-//!   fs.take_and_serve_directory_handle()?;
-//!   fs.collect::<()>().map(Ok).await
-//! }
+//! // Now you can create nodes and properties anywhere!
+//! let child = component::inspector().root().create_child("foo");
+//! child.record_uint("bar", 42);
 //! ```
 //!
 //! [inspect]: https://fuchsia.dev/fuchsia-src/development/diagnostics/inspect

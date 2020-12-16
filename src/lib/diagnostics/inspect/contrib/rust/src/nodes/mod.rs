@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Utilities and wrappers providing higher level functionality for Inspect Nodes and properties.
+
 mod list;
 mod managed;
 
@@ -12,8 +14,12 @@ use fuchsia_inspect::Node;
 use fuchsia_inspect::{IntProperty, Property};
 use fuchsia_zircon as zx;
 
+/// Extension trait that allows to manage timestamp properties.
 pub trait NodeExt {
+    /// Creates a new property holding the current monotonic timestamp.
     fn create_time(&self, name: impl AsRef<str>) -> TimeProperty;
+
+    /// Creates a new property holding the given timestamp.
     fn create_time_at(&self, name: impl AsRef<str>, timestamp: zx::Time) -> TimeProperty;
 }
 
@@ -28,16 +34,19 @@ impl NodeExt for Node {
     }
 }
 
+/// Wrapper around an int property that stores a monotonic timestamp.
 pub struct TimeProperty {
     pub(crate) inner: IntProperty,
 }
 
 impl TimeProperty {
+    /// Updates the underlying property with the current monotonic timestamp.
     pub fn update(&self) {
         let now = zx::Time::get_monotonic();
         self.set_at(now);
     }
 
+    /// Updates the underlying property with the given timestamp.
     pub fn set_at(&self, timestamp: zx::Time) {
         Property::set(&self.inner, timestamp.into_nanos());
     }
