@@ -35,18 +35,57 @@ TEST(DmaPoolTest, CreationParameters) {
 
   // Expect that we can create DMA pools up to the VMO buffer size.
   for (size_t i = 1; i <= kVmoSize / kItemSize; ++i) {
-    ASSERT_EQ(ZX_OK, DmaBuffer::Create(bti, ZX_CACHE_POLICY_CACHED, kVmoSize, &dma_buffer));
+    ASSERT_EQ(ZX_OK, DmaBuffer::Create(&bti, ZX_CACHE_POLICY_CACHED, kVmoSize, &dma_buffer));
     EXPECT_EQ(ZX_OK, DmaPool::Create(kItemSize, i, std::move(dma_buffer), &dma_pool));
     EXPECT_EQ(kItemSize, dma_pool->buffer_size());
     EXPECT_EQ(i, static_cast<size_t>(dma_pool->buffer_count()));
   }
 
   // Expect that DMA pools of zero or greater than the VMO buffer size fail.
-  ASSERT_EQ(ZX_OK, DmaBuffer::Create(bti, ZX_CACHE_POLICY_CACHED, kVmoSize, &dma_buffer));
+  ASSERT_EQ(ZX_OK, DmaBuffer::Create(&bti, ZX_CACHE_POLICY_CACHED, kVmoSize, &dma_buffer));
   EXPECT_NE(ZX_OK,
             DmaPool::Create(kItemSize, kVmoSize / kItemSize + 1, std::move(dma_buffer), &dma_pool));
-  ASSERT_EQ(ZX_OK, DmaBuffer::Create(bti, ZX_CACHE_POLICY_CACHED, kVmoSize, &dma_buffer));
+  ASSERT_EQ(ZX_OK, DmaBuffer::Create(&bti, ZX_CACHE_POLICY_CACHED, kVmoSize, &dma_buffer));
   EXPECT_NE(ZX_OK, DmaPool::Create(kItemSize, 0, std::move(dma_buffer), &dma_pool));
+}
+
+// Test that we can pin buffers from DmaPools that are created with device-visible DmaBuffers, and
+// that we cannot if the DmaBuffers are not device-visible.
+TEST(DmaPoolTest, Pin) {
+  constexpr size_t kVmoSize = 4096;
+  constexpr size_t kItemSize = 512;
+  zx::bti bti;
+
+  // A DmaPool created with a device-visible DmaBuffer can pin.
+  {
+    ASSERT_EQ(ZX_OK, fake_bti_create(bti.reset_and_get_address()));
+    std::unique_ptr<DmaBuffer> dma_buffer;
+    std::unique_ptr<DmaPool> dma_pool;
+
+    ASSERT_EQ(ZX_OK, DmaBuffer::Create(&bti, ZX_CACHE_POLICY_CACHED, kVmoSize, &dma_buffer));
+    ASSERT_EQ(ZX_OK,
+              DmaPool::Create(kItemSize, kVmoSize / kItemSize, std::move(dma_buffer), &dma_pool));
+    DmaPool::Buffer buffer;
+    EXPECT_EQ(ZX_OK, dma_pool->Allocate(&buffer));
+    zx_paddr_t dma_address = 0;
+    EXPECT_EQ(ZX_OK, buffer.Pin(&dma_address));
+    EXPECT_NE(0u, dma_address);
+  }
+
+  // A DmaPool created with a device-visible DmaBuffer cannot pin.
+  {
+    ASSERT_EQ(ZX_OK, fake_bti_create(bti.reset_and_get_address()));
+    std::unique_ptr<DmaBuffer> dma_buffer;
+    std::unique_ptr<DmaPool> dma_pool;
+
+    ASSERT_EQ(ZX_OK, DmaBuffer::Create(nullptr, ZX_CACHE_POLICY_CACHED, kVmoSize, &dma_buffer));
+    ASSERT_EQ(ZX_OK,
+              DmaPool::Create(kItemSize, kVmoSize / kItemSize, std::move(dma_buffer), &dma_pool));
+    DmaPool::Buffer buffer;
+    EXPECT_EQ(ZX_OK, dma_pool->Allocate(&buffer));
+    zx_paddr_t dma_address = 0;
+    EXPECT_NE(ZX_OK, buffer.Pin(&dma_address));
+  }
 }
 
 // Test that we can use allocate, free, release, and acquire released Buffer instances.
@@ -58,7 +97,7 @@ TEST(DmaPoolTest, AllocateAcquire) {
   std::unique_ptr<DmaBuffer> dma_buffer;
   std::unique_ptr<DmaPool> dma_pool;
 
-  ASSERT_EQ(ZX_OK, DmaBuffer::Create(bti, ZX_CACHE_POLICY_CACHED, kVmoSize, &dma_buffer));
+  ASSERT_EQ(ZX_OK, DmaBuffer::Create(&bti, ZX_CACHE_POLICY_CACHED, kVmoSize, &dma_buffer));
   ASSERT_EQ(ZX_OK,
             DmaPool::Create(kItemSize, kVmoSize / kItemSize, std::move(dma_buffer), &dma_pool));
 
@@ -138,7 +177,7 @@ TEST(DmaPoolTest, ThreadSafety) {
   std::unique_ptr<DmaBuffer> dma_buffer;
   std::unique_ptr<DmaPool> dma_pool;
 
-  ASSERT_EQ(ZX_OK, DmaBuffer::Create(bti, ZX_CACHE_POLICY_CACHED, kVmoSize, &dma_buffer));
+  ASSERT_EQ(ZX_OK, DmaBuffer::Create(&bti, ZX_CACHE_POLICY_CACHED, kVmoSize, &dma_buffer));
   ASSERT_EQ(ZX_OK,
             DmaPool::Create(kItemSize, kVmoSize / kItemSize, std::move(dma_buffer), &dma_pool));
 

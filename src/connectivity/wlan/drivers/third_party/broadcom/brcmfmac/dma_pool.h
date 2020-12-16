@@ -109,7 +109,9 @@ class DmaPool {
                             std::unique_ptr<DmaBuffer> dma_buffer,
                             std::unique_ptr<DmaPool>* out_dma_pool);
 
+  //
   // State accessors.
+  //
 
   // Size of each buffer provided by this DmaPool, in bytes.
   size_t buffer_size() const;
@@ -117,6 +119,13 @@ class DmaPool {
   // Number of buffers provided by this DmaPool.  The buffers will be indexed on the range
   // [0, buffer_count()).
   int buffer_count() const;
+
+  // Get the backing VMO for all buffers.
+  const zx::vmo& vmo() const;
+
+  // Get the virtual address and offset (from start of VMO) for the given buffer.
+  void* GetBufferData(Buffer* buffer) const;
+  size_t GetBufferOffset(Buffer* buffer) const;
 
   // Allocate a Buffer instance.  It is regarded as empty, so its existing contents are ignored.
   // The lifetime of the DmaPool must exceed the returned Buffer.
@@ -148,12 +157,12 @@ class DmaPool {
 
   DmaPool();
 
-  // Get the appropriate address for the buffer, by index.
-  void* GetAddress(int index) const;
-  zx_paddr_t GetDmaAddress(int index) const;
+  // Get the appropriate user or DMA address for the buffer, by index.
+  void* GetBufferData(int index) const;
+  size_t GetBufferOffset(int index) const;
 
   // Return a buffer by index to the pool, that was returned from Allocate() or Acquire().
-  void Return(int index);
+  void ReturnBuffer(int index);
 
   size_t buffer_size_ = 0;
   int buffer_count_ = 0;

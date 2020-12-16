@@ -15,11 +15,11 @@
 namespace wlan {
 namespace brcmfmac {
 
-// This class holds a page-aligned memory buffer visible to device DMA.  The buffer is always
-// allocated contiguously, with a single DMA address to the start of the buffer; the CPU address can
-// be obtained (and released) by Map() or Unmap() on the buffer.  On destruction, the DmaBuffer
-// instance will automatically unmap any outstanding CPU mapping, and unpin any outstanding DMA
-// mapping.
+// This class holds a page-aligned memory buffer.  If it is created with access to a device BTI,
+// then it is allocated contiguously and has a single DMA address to the start of the buffer.  The
+// CPU address of the buffer can be obtained (and released) by Map() or Unmap() on the buffer.  On
+// destruction, the DmaBuffer instance will automatically unmap any outstanding CPU mapping, and
+// unpin any outstanding DMA mapping.
 class DmaBuffer {
  public:
   DmaBuffer();
@@ -29,8 +29,9 @@ class DmaBuffer {
   friend void swap(DmaBuffer& lhs, DmaBuffer& rhs);
   ~DmaBuffer();
 
-  // Static factory function for DmaBuffer instances.
-  static zx_status_t Create(const zx::bti& bti, uint32_t cache_policy, size_t size,
+  // Static factory function for DmaBuffer instances.  The DmaBufer of size `size` and cache policy
+  // `cache_policy` is device-visible iff `bti` is also provided.
+  static zx_status_t Create(const zx::bti* bti, uint32_t cache_policy, size_t size,
                             std::unique_ptr<DmaBuffer>* out_dma_buffer);
 
   // Map and unmap the DmaBuffer for CPU access.  The address of the mapping can be retrieved with
@@ -48,6 +49,7 @@ class DmaBuffer {
   uint32_t cache_policy() const;
   zx_paddr_t dma_address() const;
   uintptr_t address() const;
+  const zx::vmo& vmo() const;
 
  protected:
   zx::vmo vmo_;

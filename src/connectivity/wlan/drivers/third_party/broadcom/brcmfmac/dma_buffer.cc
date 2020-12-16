@@ -43,31 +43,35 @@ DmaBuffer::~DmaBuffer() {
 }
 
 // static
-zx_status_t DmaBuffer::Create(const zx::bti& bti, uint32_t cache_policy, size_t size,
+zx_status_t DmaBuffer::Create(const zx::bti* bti, uint32_t cache_policy, size_t size,
                               std::unique_ptr<DmaBuffer>* out_dma_buffer) {
   zx_status_t status = ZX_OK;
   auto dma_buffer = std::make_unique<DmaBuffer>();
 
   // Create the VMO.
   uint32_t bti_pin_options = ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE;
-  if (cache_policy == ZX_CACHE_POLICY_CACHED) {
-    // For VMOs with ZX_CACHE_POLICY_CACHED, we can use zx::vmo::create_contiguous(), since
-    // contiguous VMOs are by default cached.
-    if ((status = zx::vmo::create_contiguous(bti, size, 0, &dma_buffer->vmo_)) != ZX_OK) {
+  if (bti != nullptr && cache_policy == ZX_CACHE_POLICY_CACHED) {
+    // Create a device-visible contiguous VMO with zx::vmo::create_contiguous().  We cannot change
+    // the caching policy of this VMO later, but this is fine since contiguous VMOs are, by default,
+    // cached.
+    if ((status = zx::vmo::create_contiguous(*bti, size, 0, &dma_buffer->vmo_)) != ZX_OK) {
       BRCMF_ERR("Failed to create contiguous VMO, size=%zu: %s", size,
                 zx_status_get_string(status));
       return status;
     }
     bti_pin_options |= ZX_BTI_CONTIGUOUS;
   } else {
-    // VMOs created with zx::vmo::create_contiguous() cannot have their cache policy set after
-    // creation, since the creation causes pages to be committed.  So we have to use a "plain" VMO,
-    // and we can only ensure that these are contiguous up to ZX_PAGE_SIZE.
-    if (size > ZX_PAGE_SIZE) {
-      BRCMF_ERR(
-          "Failed to create uncached large VMO, size=%zu (ZX_PAGE_SIZE=%zu), cache_policy=0x%08x",
-          size, static_cast<size_t>(ZX_PAGE_SIZE), cache_policy);
-      return ZX_ERR_NO_MEMORY;
+    if (bti != nullptr) {
+      // VMOs created with zx::vmo::create_contiguous() cannot have their cache policy set after
+      // creation, since the creation causes pages to be committed.  So for device-visible VMOs, we
+      // have to use a "plain" VMO, and we can only ensure that these are contiguous up to
+      // ZX_PAGE_SIZE.
+      if (size > ZX_PAGE_SIZE) {
+        BRCMF_ERR(
+            "Failed to create uncached large VMO, size=%zu (ZX_PAGE_SIZE=%zu), cache_policy=0x%08x",
+            size, static_cast<size_t>(ZX_PAGE_SIZE), cache_policy);
+        return ZX_ERR_NO_MEMORY;
+      }
     }
     if ((status = zx::vmo::create(size, 0, &dma_buffer->vmo_)) != ZX_OK) {
       BRCMF_ERR("Failed to create VMO, size=%zu: %s", size, zx_status_get_string(status));
@@ -101,11 +105,13 @@ zx_status_t DmaBuffer::Create(const zx::bti& bti, uint32_t cache_policy, size_t 
   }
   dma_buffer->size_ = static_cast<size_t>(actual_vmo_size);
 
-  // Pin it.
-  if ((status = bti.pin(bti_pin_options, dma_buffer->vmo_, 0, dma_buffer->size_,
-                        &dma_buffer->dma_address_, 1, &dma_buffer->pmt_)) != ZX_OK) {
-    BRCMF_ERR("Failed to pin VMO: %s", zx_status_get_string(status));
-    return status;
+  // Pin it, if required.
+  if (bti != nullptr) {
+    if ((status = bti->pin(bti_pin_options, dma_buffer->vmo_, 0, dma_buffer->size_,
+                           &dma_buffer->dma_address_, 1, &dma_buffer->pmt_)) != ZX_OK) {
+      BRCMF_ERR("Failed to pin VMO: %s", zx_status_get_string(status));
+      return status;
+    }
   }
 
   *out_dma_buffer = std::move(dma_buffer);
@@ -158,6 +164,8 @@ uint32_t DmaBuffer::cache_policy() const { return cache_policy_; }
 zx_paddr_t DmaBuffer::dma_address() const { return dma_address_; }
 
 uintptr_t DmaBuffer::address() const { return address_; }
+
+const zx::vmo& DmaBuffer::vmo() const { return vmo_; }
 
 }  // namespace brcmfmac
 }  // namespace wlan

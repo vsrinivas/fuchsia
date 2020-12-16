@@ -3,6 +3,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_pool.h"
 
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
@@ -54,7 +55,7 @@ zx_status_t DmaPool::Buffer::MapRead(size_t read_size, const void** out_data) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  const void* const address = parent_->GetAddress(index_);
+  const void* const data = parent_->GetBufferData(index_);
 
   // If this Buffer was returned from the device recently, its data may not yet be coherent in the
   // CPU cache.  We handle this by performing an explicit cache invalidation on the buffer;
@@ -62,7 +63,7 @@ zx_status_t DmaPool::Buffer::MapRead(size_t read_size, const void** out_data) {
   // perform it for portions of the buffers that have already been processed.
   if (read_size > read_size_) {
     if ((status = zx_cache_flush(
-             reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(address) + read_size_),
+             reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(data) + read_size_),
              read_size - read_size_, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE)) != ZX_OK) {
       return status;
     }
@@ -70,7 +71,7 @@ zx_status_t DmaPool::Buffer::MapRead(size_t read_size, const void** out_data) {
     read_size_ = read_size;
   }
 
-  *out_data = address;
+  *out_data = data;
   return ZX_OK;
 }
 
@@ -87,7 +88,7 @@ zx_status_t DmaPool::Buffer::MapWrite(size_t write_size, void** out_data) {
   // mark of our CPU writes; we flush it once we are about to pin it for the DMA device.
   write_size_ = std::max(write_size_, write_size);
 
-  *out_data = parent_->GetAddress(index_);
+  *out_data = parent_->GetBufferData(index_);
   return ZX_OK;
 }
 
@@ -97,8 +98,11 @@ zx_status_t DmaPool::Buffer::Pin(zx_paddr_t* out_dma_address) {
   if (parent_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
+  if (parent_->dma_allocation_->dma_address() == 0) {
+    return ZX_ERR_UNAVAILABLE;
+  }
 
-  const void* const address = parent_->GetAddress(index_);
+  const void* const data = parent_->GetBufferData(index_);
 
   // Once we pin this buffer for device access, the buffer will need to be invalidated for read, to
   // pick up any new data written by the device.
@@ -107,13 +111,14 @@ zx_status_t DmaPool::Buffer::Pin(zx_paddr_t* out_dma_address) {
   // New data written by the CPU for the device now needs to be flushed from the cache.
   if (write_size_ > 0) {
     std::atomic_thread_fence(std::memory_order::memory_order_release);
-    if ((status = zx_cache_flush(address, write_size_, ZX_CACHE_FLUSH_DATA)) != ZX_OK) {
+    if ((status = zx_cache_flush(data, write_size_, ZX_CACHE_FLUSH_DATA)) != ZX_OK) {
       return status;
     }
     write_size_ = 0;
   }
 
-  *out_dma_address = parent_->GetDmaAddress(index_);
+  *out_dma_address = static_cast<zx_paddr_t>(parent_->dma_allocation_->dma_address() +
+                                             parent_->GetBufferOffset(index_));
   return ZX_OK;
 }
 
@@ -126,7 +131,7 @@ void DmaPool::Buffer::Release() {
 
 void DmaPool::Buffer::Reset() {
   if (parent_ != nullptr) {
-    parent_->Return(index_);
+    parent_->ReturnBuffer(index_);
   }
   parent_ = nullptr;
   index_ = kInvalidIndex;
@@ -206,6 +211,20 @@ size_t DmaPool::buffer_size() const { return buffer_size_; }
 
 int DmaPool::buffer_count() const { return buffer_count_; }
 
+const zx::vmo& DmaPool::vmo() const { return dma_allocation_->vmo(); }
+
+void* DmaPool::GetBufferData(DmaPool::Buffer* buffer) const {
+  ZX_DEBUG_ASSERT(buffer->parent_ == this);
+  ZX_DEBUG_ASSERT(buffer->index_ != Buffer::kInvalidIndex);
+  return GetBufferData(buffer->index_);
+}
+
+size_t DmaPool::GetBufferOffset(DmaPool::Buffer* buffer) const {
+  ZX_DEBUG_ASSERT(buffer->parent_ == this);
+  ZX_DEBUG_ASSERT(buffer->index_ != Buffer::kInvalidIndex);
+  return GetBufferOffset(buffer->index_);
+}
+
 zx_status_t DmaPool::Allocate(Buffer* out_buffer) {
   // Find a free buffer on the stack, locklessly.  We avoid the ABA problem using ListHead as a
   // tagged pointer.
@@ -262,15 +281,13 @@ zx_status_t DmaPool::Acquire(int index, Buffer* out_buffer) {
   return ZX_OK;
 }
 
-void* DmaPool::GetAddress(int index) const {
-  return reinterpret_cast<void*>(dma_allocation_->address() + buffer_size_ * index);
+void* DmaPool::GetBufferData(int index) const {
+  return reinterpret_cast<void*>(dma_allocation_->address() + GetBufferOffset(index));
 }
 
-zx_paddr_t DmaPool::GetDmaAddress(int index) const {
-  return static_cast<zx_paddr_t>(dma_allocation_->dma_address() + buffer_size_ * index);
-}
+size_t DmaPool::GetBufferOffset(int index) const { return buffer_size_ * index; }
 
-void DmaPool::Return(int index) {
+void DmaPool::ReturnBuffer(int index) {
   Record* const record = &records_[index];
   record->state.store(Record::State::kFree, std::memory_order::memory_order_release);
   ListHead head = next_free_record_.load(std::memory_order::memory_order_relaxed);

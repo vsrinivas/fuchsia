@@ -179,7 +179,7 @@ zx_status_t FakeMsgbufInterfaces::CreateDmaBuffer(uint32_t cache_policy, size_t 
   zx_status_t status = ZX_OK;
 
   std::unique_ptr<DmaBuffer> dma_buffer;
-  if ((status = DmaBuffer::Create(bti_, cache_policy, size, &dma_buffer)) != ZX_OK) {
+  if ((status = DmaBuffer::Create(&bti_, cache_policy, size, &dma_buffer)) != ZX_OK) {
     return status;
   }
 

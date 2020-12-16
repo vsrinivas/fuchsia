@@ -29,14 +29,22 @@ TEST(DmaBufferTest, CreationParameters) {
   ASSERT_EQ(ZX_OK, fake_bti_create(bti.reset_and_get_address()));
   std::unique_ptr<DmaBuffer> dma_buffer;
 
-  EXPECT_EQ(ZX_OK, DmaBuffer::Create(bti, ZX_CACHE_POLICY_CACHED, kLargeBufferSize, &dma_buffer));
+  EXPECT_EQ(ZX_OK, DmaBuffer::Create(&bti, ZX_CACHE_POLICY_CACHED, kLargeBufferSize, &dma_buffer));
   EXPECT_LE(kLargeBufferSize, dma_buffer->size());
 
-  EXPECT_EQ(ZX_OK, DmaBuffer::Create(bti, ZX_CACHE_POLICY_CACHED, kSmallBufferSize, &dma_buffer));
+  EXPECT_EQ(ZX_OK, DmaBuffer::Create(&bti, ZX_CACHE_POLICY_CACHED, kSmallBufferSize, &dma_buffer));
   EXPECT_LE(kSmallBufferSize, dma_buffer->size());
 
   EXPECT_EQ(ZX_OK,
-            DmaBuffer::Create(bti, ZX_CACHE_POLICY_CACHED, kUnalignedBufferSize, &dma_buffer));
+            DmaBuffer::Create(nullptr, ZX_CACHE_POLICY_UNCACHED, kLargeBufferSize, &dma_buffer));
+  EXPECT_LE(kLargeBufferSize, dma_buffer->size());
+
+  EXPECT_EQ(ZX_OK,
+            DmaBuffer::Create(nullptr, ZX_CACHE_POLICY_UNCACHED, kSmallBufferSize, &dma_buffer));
+  EXPECT_LE(kSmallBufferSize, dma_buffer->size());
+
+  EXPECT_EQ(ZX_OK,
+            DmaBuffer::Create(&bti, ZX_CACHE_POLICY_CACHED, kUnalignedBufferSize, &dma_buffer));
   EXPECT_LE(kUnalignedBufferSize, dma_buffer->size());
 }
 
@@ -48,7 +56,7 @@ TEST(DmaBufferTest, ReadWriteTest) {
   ASSERT_EQ(ZX_OK, fake_bti_create(bti.reset_and_get_address()));
   std::unique_ptr<DmaBuffer> dma_buffer;
 
-  ASSERT_EQ(ZX_OK, DmaBuffer::Create(bti, ZX_CACHE_POLICY_CACHED, kBufferSize, &dma_buffer));
+  ASSERT_EQ(ZX_OK, DmaBuffer::Create(&bti, ZX_CACHE_POLICY_CACHED, kBufferSize, &dma_buffer));
   EXPECT_EQ(0u, dma_buffer->address());
   ASSERT_EQ(ZX_OK, dma_buffer->Map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE));
   ASSERT_NE(0u, dma_buffer->address());
