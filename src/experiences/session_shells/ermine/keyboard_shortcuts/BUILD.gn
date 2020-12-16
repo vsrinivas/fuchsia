@@ -4,8 +4,8 @@
 import("//build/dart/dart_library.gni")
 import("//build/dart/fidl_move.gni")
 import("//build/fidl/fidl.gni")
+import("//build/flutter/test.gni")
 import("//build/package.gni")
-import("//topaz/runtime/dart/flutter_test.gni")
 
 dart_library("keyboard_shortcuts") {
   package_name = "keyboard_shortcuts"
@@ -28,7 +28,7 @@ dart_library("keyboard_shortcuts") {
 }
 
 #fx run-host-tests keyboard_shortcuts_unittests
-flutter_test("keyboard_shortcuts_unittests") {
+flutter_test2("keyboard_shortcuts_unittests") {
   sources = [ "keyboard_shortcuts_test.dart" ]
 
   deps = [

@@ -7,10 +7,10 @@ import("//build/dart/dart_library.gni")
 import("//build/dart/fidl_move.gni")
 import("//build/fidl/fidl.gni")
 import("//build/flutter/flutter_component.gni")
+import("//build/flutter/test.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/flutter_driver.gni")
 import("//src/sys/build/components.gni")
-import("//topaz/runtime/dart/flutter_test.gni")
 
 dart_library("lib") {
   package_name = "simple_browser"
@@ -80,7 +80,7 @@ fuchsia_package("simple-browser") {
 }
 
 # fx run-host-tests simple_browser_unittests
-flutter_test("simple_browser_unittests") {
+flutter_test2("simple_browser_unittests") {
   sources = [
     "browser_shortcuts_test.dart",
     "sanitize_url_test.dart",

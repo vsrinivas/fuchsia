@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/dart/dart_library.gni")
-import("//topaz/runtime/dart/flutter_test.gni")
+import("//build/flutter/test.gni")
 
 dart_library("tiler") {
   package_name = "tiler"
@@ -21,7 +21,7 @@ dart_library("tiler") {
   deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter" ]
 }
 
-flutter_test("tiler_unittests") {
+flutter_test2("tiler_unittests") {
   sources = [ "tiler_test.dart" ]
 
   deps = [

@@ -5,11 +5,11 @@
 import("//build/config.gni")
 import("//build/dart/fidl_move.gni")
 import("//build/fidl/fidl.gni")
+import("//build/flutter/flutter_app.gni")
+import("//build/flutter/test.gni")
 import("//build/package.gni")
 import("//build/testing/flutter_driver.gni")
 import("//src/lib/icu/tools/static_icu_data.gni")
-import("//topaz/runtime/dart/flutter_test.gni")
-import("//build/flutter/flutter_app.gni")
 
 group("shell") {
   public_deps = [
@@ -172,7 +172,7 @@ config_data("ermine_fonts") {
   outputs = [ "fonts/{{source_file_part}}" ]
 }
 
-flutter_test("ermine_unittests") {
+flutter_test2("ermine_unittests") {
   sources = [
     "app_model_test.dart",
     "app_widget_test.dart",

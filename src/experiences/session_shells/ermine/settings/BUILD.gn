@@ -4,7 +4,7 @@
 
 import("//build/dart/dart_library.gni")
 import("//build/dart/fidl_move.gni")
-import("//topaz/runtime/dart/flutter_test.gni")
+import("//build/flutter/test.gni")
 
 dart_library("settings") {
   package_name = "settings"
@@ -38,7 +38,7 @@ dart_library("settings") {
   ]
 }
 
-flutter_test("ermine_settings_unittests") {
+flutter_test2("ermine_settings_unittests") {
   sources = [
     "battery_test.dart",
     "bluetooth_test.dart",

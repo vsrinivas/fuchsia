@@ -4,8 +4,8 @@
 
 import("//build/dart/dart_library.gni")
 import("//build/flutter/flutter_component.gni")
+import("//build/flutter/test.gni")
 import("//src/sys/build/components.gni")
-import("//topaz/runtime/dart/flutter_test.gni")
 
 dart_library("lib") {
   package_name = "localized_flutter_app"
@@ -34,7 +34,7 @@ fuchsia_package("localized-flutter-app") {
   deps = [ ":component" ]
 }
 
-flutter_test("localized_flutter_app_unittests") {
+flutter_test2("localized_flutter_app_unittests") {
   sources = [ "sample_test.dart" ]
 
   deps = [ "//third_party/dart-pkg/pub/test" ]
