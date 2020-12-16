@@ -17,6 +17,7 @@ use {
     },
     fidl_fuchsia_sys2 as fsys, fidl_fuchsia_ui_lifecycle as fui_lifecycle,
     fuchsia_component::server::ServiceFs,
+    fuchsia_syslog::fx_log_warn,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::{StreamExt, TryStreamExt},
@@ -85,6 +86,8 @@ impl SessionManager {
             state.session_exposed_dir_channel =
                 Some(startup::launch_session(&session_url, &state.realm).await?);
             state.session_url = Some(session_url);
+        } else {
+            fx_log_warn!("No startup session specified");
         }
         Ok(())
     }
@@ -127,17 +130,17 @@ impl SessionManager {
                         element_manager_proxy,
                     )
                     .await
-                    .expect("Element Manager request stream got an error.");
+                    .expect("ElementManager request stream got an error.");
                 }
                 ExposedServices::Launcher(request_stream) => {
                     self.handle_launcher_request_stream(request_stream)
                         .await
-                        .expect("Session Launcher request stream got an error.");
+                        .expect("Launcher request stream got an error.");
                 }
                 ExposedServices::Restarter(request_stream) => {
                     self.handle_restarter_request_stream(request_stream)
                         .await
-                        .expect("Session Restarter request stream got an error.");
+                        .expect("Restarter request stream got an error.");
                 }
                 ExposedServices::InputDeviceRegistry(request_stream) => {
                     // Connect to InputDeviceRegistry served by the session.
@@ -161,7 +164,7 @@ impl SessionManager {
                         input_device_registry_proxy,
                     )
                     .await
-                    .expect("Input device registry request stream got an error.");
+                    .expect("InputDeviceRegistry request stream got an error.");
                 }
             }
         }
