@@ -288,7 +288,7 @@ mod tests {
         fidl::fidl_table,
         fuchsia_async as fasync,
         matches::assert_matches,
-        std::path::Path,
+        std::{collections::BTreeMap, path::Path},
         tempfile::TempDir,
     };
 
@@ -491,6 +491,7 @@ mod tests {
         struct DataTable {
             num: Option<i32>,
             string: Option<String>,
+            pub unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
             #[deprecated = "Do not use __non_exhaustive"]
             pub __non_exhaustive: (),
         }
@@ -507,6 +508,7 @@ mod tests {
                     ordinal: 2,
                 },
             ],
+            value_unknown_member: unknown_data,
         }
 
         let tempdir = TempDir::new().unwrap();
@@ -543,6 +545,7 @@ mod tests {
             num: Option<i32>,
             string: Option<String>,
             new_field: Option<String>,
+            pub unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
             #[deprecated = "Do not use __non_exhaustive"]
             pub __non_exhaustive: (),
         }
@@ -563,6 +566,7 @@ mod tests {
                     ordinal: 3,
                 },
             ],
+            value_unknown_member: unknown_data,
         }
 
         let file = open_in_namespace("/pkg/data/fidl_file", OPEN_RIGHT_READABLE).unwrap();

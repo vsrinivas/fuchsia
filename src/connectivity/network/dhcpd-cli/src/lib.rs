@@ -131,6 +131,7 @@ async fn test_get_parameter_lease() {
         max: Some(
             86400,
         ),
+        unknown_data: None,
         __non_exhaustive: (),
     },
 )
@@ -249,6 +250,7 @@ async fn test_list_parameter() {
                     ],
                 },
             ),
+            unknown_data: None,
             __non_exhaustive: (),
         },
     ),
@@ -260,6 +262,7 @@ async fn test_list_parameter() {
             max: Some(
                 86400,
             ),
+            unknown_data: None,
             __non_exhaustive: (),
         },
     ),
@@ -331,6 +334,7 @@ async fn test_reset_parameter() {
         max: Some(
             42,
         ),
+        unknown_data: None,
         __non_exhaustive: (),
     },
 )
@@ -348,6 +352,7 @@ async fn test_reset_parameter() {
         max: Some(
             86400,
         ),
+        unknown_data: None,
         __non_exhaustive: (),
     },
 )

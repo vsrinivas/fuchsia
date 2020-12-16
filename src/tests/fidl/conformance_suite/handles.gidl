@@ -278,9 +278,8 @@ success("ChannelMaxHandles") {
 
 // There should be support for at least 64 handles in unknown fields.
 decode_success("ChannelMaxUnknownHandlesDropped") {
-    // TODO(fxbug.dev/61848): Move Rust to ChannelMaxUnknownHandlesStored.
-    // Then this test will remain for LLCPP which does not store unknowns.
-    bindings_allowlist = [rust,llcpp],
+    // LLCPP is the only binding that does not store unknowns.
+    bindings_allowlist = [llcpp],
     handle_defs = {
         #0 = event(), #1 = event(), #2 = event(), #3 = event(),
         #4 = event(), #5 = event(), #6 = event(), #7 = event(),
@@ -324,8 +323,10 @@ decode_success("ChannelMaxUnknownHandlesDropped") {
 
 // this test is the same as ChannelMaxUnknownHandlesDropped, but expects
 // that the unknown data is stored in the value instead of discarded
-decode_success("ChannelMaxUnknownHandlesStored") {
-    bindings_allowlist = [hlcpp,dart,go],
+success("ChannelMaxUnknownHandlesStored") {
+    // LLCPP is tested in the ChannelMaxUnknownHandlesDropped test
+    // TODO(fxbug.dev/66046): Fix Dart encoding
+    bindings_denylist = [dart,llcpp],
     handle_defs = {
         #0 = event(), #1 = event(), #2 = event(), #3 = event(),
         #4 = event(), #5 = event(), #6 = event(), #7 = event(),

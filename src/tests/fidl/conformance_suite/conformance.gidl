@@ -222,9 +222,8 @@ success("ReverseOrdinalTable") {
 }
 
 decode_success("ValueTableUnknownReservedDropped") {
-    // TODO(fxbug.dev/61848): Move Rust to ValueTableUnknownReservedStored.
-    // Then this test will remain for LLCPP which does not store unknowns.
-    bindings_allowlist = [llcpp,rust],
+    // LLCPP is the only binding that does not store unknowns.
+    bindings_allowlist = [llcpp],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -253,9 +252,8 @@ decode_success("ValueTableUnknownReservedDropped") {
 }
 
 decode_success("ResourceTableUnknownReservedDropped") {
-    // TODO(fxbug.dev/61848): Move Rust to ResourceTableUnknownReservedStored.
-    // Then this test will remain for LLCPP which does not store unknowns.
-    bindings_allowlist = [llcpp,rust],
+    // LLCPP is the only binding that does not store unknowns.
+    bindings_allowlist = [llcpp],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -283,9 +281,10 @@ decode_success("ResourceTableUnknownReservedDropped") {
     },
 }
 
-decode_success("ValueTableUnknownReservedStored") {
-    // TODO(fxbug.dev/61848): Move the rest from ValueTableUnknownReservedDropped.
-    bindings_allowlist = [hlcpp,dart,go],
+success("ValueTableUnknownReservedStored") {
+    // LLCPP is tested in the ValueTableUnknownReservedDropped test
+    // TODO(fxbug.dev/66046): Fix Dart encoding
+    bindings_denylist = [dart,llcpp],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -316,9 +315,10 @@ decode_success("ValueTableUnknownReservedStored") {
     },
 }
 
-decode_success("ResourceTableUnknownReservedStored") {
-    // TODO(fxbug.dev/61788): Move the rest from ResourceTableUnknownReservedDropped.
-    bindings_allowlist = [hlcpp,dart,go],
+success("ResourceTableUnknownReservedStored") {
+    // LLCPP is tested in the ResourceTableUnknownReservedDropped test
+    // TODO(fxbug.dev/66046): Fix Dart encoding
+    bindings_denylist = [dart,llcpp],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -350,9 +350,8 @@ decode_success("ResourceTableUnknownReservedStored") {
 }
 
 decode_success("ValueTableUnknownTrailingDropped") {
-    // TODO(fxbug.dev/61848): Move Rust to ValueTableUnknownTrailingStored.
-    // Then this test will remain for LLCPP which does not store unknowns.
-    bindings_allowlist = [llcpp,rust],
+    // LLCPP is the only binding that does not store unknowns.
+    bindings_allowlist = [llcpp],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -383,9 +382,8 @@ decode_success("ValueTableUnknownTrailingDropped") {
 }
 
 decode_success("ResourceTableUnknownTrailingDropped") {
-    // TODO(fxbug.dev/61848): Move Rust to ResourceTableUnknownTrailingStored.
-    // Then this test will remain for LLCPP which does not store unknowns.
-    bindings_allowlist = [llcpp,rust],
+    // LLCPP is the only binding that does not store unknowns.
+    bindings_allowlist = [llcpp],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -415,9 +413,10 @@ decode_success("ResourceTableUnknownTrailingDropped") {
     },
 }
 
-decode_success("ValueTableUnknownTrailingStored") {
-    // TODO(fxbug.dev/61848): Move the rest from ValueTableUnknownTrailingDropped.
-    bindings_allowlist = [hlcpp,dart,go],
+success("ValueTableUnknownTrailingStored") {
+    // LLCPP is tested in the ValueTableUnknownTrailingDropped test
+    // TODO(fxbug.dev/66046): Fix Dart encoding
+    bindings_denylist = [dart,llcpp],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -450,9 +449,10 @@ decode_success("ValueTableUnknownTrailingStored") {
     },
 }
 
-decode_success("ResourceTableUnknownTrailingStored") {
-    // TODO(fxbug.dev/61848): Move the rest from ResourceTableUnknownTrailingDropped.
-    bindings_allowlist = [hlcpp,dart,go],
+success("ResourceTableUnknownTrailingStored") {
+    // LLCPP is tested in the ResourceTableUnknownTrailingDropped test
+    // TODO(fxbug.dev/66046): Fix Dart encoding
+    bindings_denylist = [dart,llcpp],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -486,8 +486,8 @@ decode_success("ResourceTableUnknownTrailingStored") {
 }
 
 decode_success("ValueTableUnknownTrailingHandlesDropped") {
-    // TODO(fxbug.dev/61848): Move these to ValueTableUnknownTrailingHandlesRejected.
-    bindings_allowlist = [llcpp,rust],
+    // LLCPP is the only binding that does not store unknowns.
+    bindings_allowlist = [llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -520,9 +520,8 @@ decode_success("ValueTableUnknownTrailingHandlesDropped") {
 }
 
 decode_success("ResourceTableUnknownTrailingHandlesDropped") {
-    // TODO(fxbug.dev/61848): Move Rust to ResourceTableUnknownTrailingHandlesStored.
-    // Then this test will remain for LLCPP which does not store unknowns.
-    bindings_allowlist = [llcpp,rust],
+    // LLCPP is the only binding that does not store unknowns.
+    bindings_allowlist = [llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -555,9 +554,9 @@ decode_success("ResourceTableUnknownTrailingHandlesDropped") {
 }
 
 decode_failure("ValueTableUnknownTrailingHandlesRejected") {
-    // TODO(fxbug.dev/61848): Move the rest from ValueTableUnknownTrailingHandlesDropped
-    // and ValueTableUnknownTrailingHandlesIncorrectlyStored.
-    bindings_allowlist = [go,dart,hlcpp],
+    // LLCPP is tested in the ValueTableUnknownTrailingHandlesDropped test
+    // TODO(fxbug.dev/66046): Fix Dart encoding
+    bindings_denylist = [dart,llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -586,9 +585,10 @@ decode_failure("ValueTableUnknownTrailingHandlesRejected") {
     err = NON_RESOURCE_UNKNOWN_HANDLES,
 }
 
-decode_success("ResourceTableUnknownTrailingHandlesStored") {
-    // TODO(fxbug.dev/61848): Move the rest from ResourceTableUnknownTrailingHandlesDropped.
-    bindings_allowlist = [hlcpp,dart,go],
+success("ResourceTableUnknownTrailingHandlesStored") {
+    // LLCPP is tested in the ResourceTableUnknownTrailingHandlesDropped test
+    // TODO(fxbug.dev/66046): Fix Dart encoding
+    bindings_denylist = [dart,llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),

@@ -888,7 +888,8 @@ async fn neigh_unreachability_config() -> Result {
             .context("get_unreachability_config FIDL error")?
             .map_err(fuchsia_zircon::Status::from_raw)
             .context("get_unreachability_config failed")?;
-        let expected = fidl_fuchsia_net_neighbor::UnreachabilityConfig { ..original_config };
+        let expected =
+            fidl_fuchsia_net_neighbor::UnreachabilityConfig { ..original_config.clone() };
 
         // Verify that updating with the current config doesn't change anything
         let () = controller

@@ -27,7 +27,10 @@ use {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EmptyTable {
-    #[deprecated = "Use `..EmptyTable::empty()` to construct and `..` to match."]
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..EmptyTable::EMPTY` to construct and `..` to match."]
     #[doc(hidden)]
     pub __non_exhaustive: (),
 }
@@ -36,13 +39,17 @@ fidl_table! {
   name: EmptyTable,
   members: [
   ],
+  value_unknown_member: unknown_data,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SimpleTable {
     pub x: Option<i64>,
     pub y: Option<i64>,
-    #[deprecated = "Use `..SimpleTable::empty()` to construct and `..` to match."]
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..SimpleTable::EMPTY` to construct and `..` to match."]
     #[doc(hidden)]
     pub __non_exhaustive: (),
 }
@@ -59,12 +66,16 @@ fidl_table! {
       ordinal: 5,
     },
   ],
+  value_unknown_member: unknown_data,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct OlderSimpleTable {
     pub x: Option<i64>,
-    #[deprecated = "Use `..OlderSimpleTable::empty()` to construct and `..` to match."]
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..OlderSimpleTable::EMPTY` to construct and `..` to match."]
     #[doc(hidden)]
     pub __non_exhaustive: (),
 }
@@ -77,6 +88,7 @@ fidl_table! {
       ordinal: 1,
     },
   ],
+  value_unknown_member: unknown_data,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -84,7 +96,10 @@ pub struct NewerSimpleTable {
     pub x: Option<i64>,
     pub y: Option<i64>,
     pub z: Option<i64>,
-    #[deprecated = "Use `..NewerSimpleTable::empty()` to construct and `..` to match."]
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..NewerSimpleTable::EMPTY` to construct and `..` to match."]
     #[doc(hidden)]
     pub __non_exhaustive: (),
 }
@@ -105,6 +120,7 @@ fidl_table! {
       ordinal: 6,
     },
   ],
+  value_unknown_member: unknown_data,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -112,7 +128,10 @@ pub struct ReverseOrdinalTable {
     pub z: Option<i64>,
     pub y: Option<i64>,
     pub x: Option<i64>,
-    #[deprecated = "Use `..ReverseOrdinalTable::empty()` to construct and `..` to match."]
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..ReverseOrdinalTable::EMPTY` to construct and `..` to match."]
     #[doc(hidden)]
     pub __non_exhaustive: (),
 }
@@ -133,4 +152,5 @@ fidl_table! {
       ordinal: 3,
     },
   ],
+  value_unknown_member: unknown_data,
 }

@@ -2724,7 +2724,42 @@ macro_rules! fidl_empty_struct {
     };
 }
 
+/// Encode the provided unknown bytes and handles behind a FIDL "envelope".
+#[doc(hidden)] // only exported for macro use
+pub unsafe fn encode_unknown_data(
+    val: &mut UnknownData,
+    encoder: &mut Encoder<'_, '_>,
+    offset: usize,
+    recursion_depth: usize,
+) -> Result<()> {
+    fidl_unsafe_encode!(&mut (val.bytes.len() as u32), encoder, offset, recursion_depth)?;
+    fidl_unsafe_encode!(&mut (val.handles.len() as u32), encoder, offset + 4, recursion_depth)?;
+    fidl_unsafe_encode!(&mut ALLOC_PRESENT_U64.clone(), encoder, offset + 8, recursion_depth)?;
+    Encoder::check_recursion_depth(recursion_depth + 1)?;
+    encoder.append_out_of_line_bytes(&val.bytes);
+    encoder.set_next_handle_subtype(ObjectType::NONE);
+    encoder.set_next_handle_rights(Rights::SAME_RIGHTS);
+    encoder.append_unknown_handles(&mut val.handles);
+    Ok(())
+}
+
+/// Encode the provided unknown bytes behind a FIDL "envelope".
+#[doc(hidden)] // only exported for macro use
+pub unsafe fn encode_unknown_bytes(
+    val: &[u8],
+    encoder: &mut Encoder<'_, '_>,
+    offset: usize,
+    recursion_depth: usize,
+) -> Result<()> {
+    fidl_unsafe_encode!(&mut (val.len() as u64), encoder, offset, recursion_depth)?;
+    fidl_unsafe_encode!(&mut ALLOC_PRESENT_U64.clone(), encoder, offset + 8, recursion_depth)?;
+    Encoder::check_recursion_depth(recursion_depth + 1)?;
+    encoder.append_out_of_line_bytes(val);
+    Ok(())
+}
+
 /// Encode the provided value behind a FIDL "envelope".
+#[doc(hidden)] // only exported for macro use
 pub unsafe fn encode_in_envelope(
     val: &mut Option<&mut dyn Encodable>,
     encoder: &mut Encoder<'_, '_>,
@@ -2761,10 +2796,11 @@ pub unsafe fn encode_in_envelope(
     Ok(())
 }
 
-/// Decodes an unknown field in a table. If it is non-empty, also skips over the
-/// unknown out-of-line payload.
+/// Decodes the unknown bytes behind a FIDL "envelope", erroring if there are
+/// any handles. The result is None if the envelope is absent.
+#[doc(hidden)] // only exported for macro use
 #[inline]
-pub fn decode_unknown_table_field(decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+pub fn decode_unknown_bytes(decoder: &mut Decoder<'_>, offset: usize) -> Result<Option<Vec<u8>>> {
     let mut num_bytes: u32 = 0;
     num_bytes.decode(decoder, offset)?;
     let mut num_handles: u32 = 0;
@@ -2773,21 +2809,75 @@ pub fn decode_unknown_table_field(decoder: &mut Decoder<'_>, offset: usize) -> R
     present.decode(decoder, offset + 8)?;
 
     match present {
-        ALLOC_PRESENT_U64 => decoder.read_out_of_line(num_bytes as usize, |decoder, _offset| {
-            for _ in 0..num_handles {
-                decoder.drop_next_handle()?;
+        ALLOC_PRESENT_U64 => {
+            if num_handles != 0 {
+                for _ in 0..num_handles {
+                    decoder.drop_next_handle()?;
+                }
+                return Err(Error::CannotStoreUnknownHandles);
             }
-            Ok(())
+            decoder.read_out_of_line(num_bytes as usize, |decoder, offset| {
+                Ok(Some(decoder.buffer()[offset..offset + (num_bytes as usize)].to_vec()))
+            })
+        }
+        ALLOC_ABSENT_U64 => {
+            if num_bytes != 0 {
+                Err(Error::UnexpectedNullRef)
+            } else {
+                Ok(None)
+            }
+        }
+        _ => Err(Error::Invalid),
+    }
+}
+
+/// Decodes the unknown bytes and handles behind a FIDL "envelope". The result
+/// is None if the envelope is absent.
+#[doc(hidden)] // only exported for macro use
+#[inline]
+pub fn decode_unknown_data(
+    decoder: &mut Decoder<'_>,
+    offset: usize,
+) -> Result<Option<UnknownData>> {
+    let mut num_bytes: u32 = 0;
+    num_bytes.decode(decoder, offset)?;
+    let mut num_handles: u32 = 0;
+    num_handles.decode(decoder, offset + 4)?;
+    let mut present: u64 = 0;
+    present.decode(decoder, offset + 8)?;
+
+    match present {
+        ALLOC_PRESENT_U64 => decoder.read_out_of_line(num_bytes as usize, |decoder, offset| {
+            decode_unknown_data_contents(decoder, offset, num_bytes, num_handles).map(Some)
         }),
         ALLOC_ABSENT_U64 => {
             if num_bytes != 0 {
                 Err(Error::UnexpectedNullRef)
             } else {
-                Ok(())
+                Ok(None)
             }
         }
         _ => Err(Error::Invalid),
     }
+}
+
+/// Returns the unknown bytes and handles directly from an envelope's out of line data.
+#[doc(hidden)] // only exported for macro use
+#[inline]
+pub fn decode_unknown_data_contents(
+    decoder: &mut Decoder<'_>,
+    offset: usize,
+    num_bytes: u32,
+    num_handles: u32,
+) -> Result<UnknownData> {
+    let bytes = decoder.buffer()[offset..offset + (num_bytes as usize)].to_vec();
+    let mut handles = Vec::with_capacity(num_handles as usize);
+    decoder.set_next_handle_subtype(ObjectType::NONE);
+    decoder.set_next_handle_rights(Rights::SAME_RIGHTS);
+    for _ in 0..num_handles {
+        handles.push(decoder.take_next_handle()?);
+    }
+    Ok(UnknownData { bytes, handles })
 }
 
 /// Implements the FIDL `Encodable` and `Decodable` traits for a struct
@@ -2811,6 +2901,11 @@ macro_rules! fidl_table {
                 )?
             },
         )*],
+        // The resource_unknown_member and value_unknown_member represent the
+        // name of the unknown variant for resource types and value types
+        // respectively. Exactly one of the two fields must be set.
+        $( resource_unknown_member: $resource_unknown_name:ident, )?
+        $( value_unknown_member: $value_unknown_name:ident, )?
     ) => {
         impl $name {
             // Note: this value is implemented as a constant since this
@@ -2836,17 +2931,45 @@ macro_rules! fidl_table {
                 $(
                     $member_name: None,
                 )*
+                $(
+                    $resource_unknown_name: None,
+                )?
+                $(
+                    $value_unknown_name: None,
+                )?
                 __non_exhaustive: (),
             };
 
             #[inline(always)]
             fn find_max_ordinal(&self) -> u64 {
+                std::cmp::max(self.find_max_known_ordinal(), self.find_max_unknown_ordinal())
+            }
+
+            #[inline(always)]
+            fn find_max_known_ordinal(&self) -> u64 {
                 $crate::fidl_reverse_blocks!{$({
                     if let Some(_) = self.$member_name {
                         return $ordinal;
                     }
                 })*}
                 0
+            }
+
+            #[inline(always)]
+            fn find_max_unknown_ordinal(&self) -> u64 {
+                // unknown data must either be None or Some of a non-empty map (i.e. it cannot
+                // have an additional empty state of Some of an empty map), so we can unwrap the
+                // result of .max()
+                $(
+                    // TODO: When https://github.com/rust-lang/rust/issues/62924 is fixed,
+                    // change this to data.keys().last_key_value().unwrap().0.
+                    self.$value_unknown_name.as_ref().map_or(0, |data| *data.keys().next_back().unwrap())
+                )?
+                $(
+                    // TODO: When https://github.com/rust-lang/rust/issues/62924 is fixed,
+                    // change this to data.keys().last_key_value().unwrap().0.
+                    self.$resource_unknown_name.as_ref().map_or(0, |data| *data.keys().next_back().unwrap())
+                )?
             }
 
             // Implementation of unsafe_encode that isn't an unsafe function to avoid a large unsafe block that may
@@ -2865,8 +2988,37 @@ macro_rules! fidl_table {
                 }
                 let bytes_len = (max_ordinal as usize) * 16;
                 encoder.write_out_of_line(bytes_len, recursion_depth, |_encoder, _offset, _recursion_depth| {
+                    $(
+                        let mut _unknown_fields = self.$value_unknown_name.iter().flatten();
+                        let mut _next_unknown = _unknown_fields.next();
+                        let _unknown_encoder_func = $crate::encoding::encode_unknown_bytes;
+                    )?
+                    $(
+                        let mut _unknown_fields = self.$resource_unknown_name.iter_mut().flatten();
+                        let mut _next_unknown = _unknown_fields.next();
+                        let _unknown_encoder_func = $crate::encoding::encode_unknown_data;
+                    )?
                     let mut _prev_end_offset: usize = 0;
                     $(
+                        // Encode unknown envelopes for gaps in ordinals
+                        while let Some((ordinal, data)) = _next_unknown.as_mut() {
+                            if **ordinal > $ordinal {
+                                break;
+                            }
+                            let cur_offset: usize = (**ordinal as usize - 1) * 16;
+                            // Zero reserved fields.
+                            _encoder.padding(_offset + _prev_end_offset, cur_offset - _prev_end_offset);
+
+                            // # Safety:
+                            // bytes_len is calculated to fit 16*max(member.ordinal).
+                            // Since cur_offset is 16*(member.ordinal - 1) and the envelope takes 16 bytes, there is
+                            // always sufficient room.
+                            unsafe {
+                                _unknown_encoder_func(*data, _encoder, _offset + cur_offset, _recursion_depth)?;
+                            }
+                            _next_unknown = _unknown_fields.next();
+                            _prev_end_offset = cur_offset + 16;
+                        }
                         if $ordinal > max_ordinal {
                             return Ok(());
                         }
@@ -2893,6 +3045,26 @@ macro_rules! fidl_table {
 
                         _prev_end_offset = cur_offset + 16;
                     )*
+
+                    // Encode the remaining unknown envelopes. We use a while loop here instead of
+                    // a for loop on `_unknown_fields`, because there might be a remaining unknown
+                    // field stored in `_next_unknown`.
+                    while let Some((ordinal, data)) = _next_unknown.as_mut() {
+                        let cur_offset: usize = (**ordinal as usize - 1) * 16;
+                        // Zero reserved fields.
+                        _encoder.padding(_offset + _prev_end_offset, cur_offset - _prev_end_offset);
+
+                        // # Safety:
+                        // bytes_len is calculated to fit 16*max(member.ordinal).
+                        // Since cur_offset is 16*(member.ordinal - 1) and the envelope takes 16 bytes, there is
+                        // always sufficient room.
+                        unsafe {
+                            _unknown_encoder_func(data, _encoder, _offset + cur_offset, _recursion_depth)?;
+                        }
+                        _next_unknown = _unknown_fields.next();
+                        _prev_end_offset = cur_offset + 16;
+                    }
+
                     Ok(())
                 })
             }
@@ -2924,6 +3096,16 @@ macro_rules! fidl_table {
                         let mut next_offset = offset;
                         let end_offset = offset + bytes_len;
                         $(
+                            stringify!($value_unknown_name); // placeholder use for expansion
+                            let mut _unknown_data = std::collections::BTreeMap::<u64, Vec<u8>>::new();
+                            let _unknown_decoder_func = $crate::encoding::decode_unknown_bytes;
+                        )?
+                        $(
+                            stringify!($resource_unknown_name); // placeholder use for expansion
+                            let mut _unknown_data = std::collections::BTreeMap::<u64, $crate::encoding::UnknownData>::new();
+                            let _unknown_decoder_func = $crate::encoding::decode_unknown_data;
+                        )?
+                        $(
                             _next_ordinal_to_read += 1;
                             if next_offset >= end_offset {
                                 return Ok(());
@@ -2931,7 +3113,9 @@ macro_rules! fidl_table {
 
                             // Decode unknown envelopes for gaps in ordinals.
                             while _next_ordinal_to_read < $ordinal {
-                                $crate::encoding::decode_unknown_table_field(decoder, next_offset)?;
+                                if let Some(field) = _unknown_decoder_func(decoder, next_offset)? {
+                                    _unknown_data.insert(_next_ordinal_to_read, field);
+                                }
                                 _next_ordinal_to_read += 1;
                                 next_offset += 16;
                             }
@@ -2949,15 +3133,15 @@ macro_rules! fidl_table {
                                     decoder.read_out_of_line(
                                         decoder.inline_size_of::<$member_ty>(),
 
-                                        |d, offset| {
+                                        |decoder, offset| {
                                             $(
-                                                d.set_next_handle_subtype($member_handle_subtype);
-                                                d.set_next_handle_rights($member_handle_rights);
+                                                decoder.set_next_handle_subtype($member_handle_subtype);
+                                                decoder.set_next_handle_rights($member_handle_rights);
                                             )?
                                             let val_ref =
                                                 self.$member_name.get_or_insert_with(
                                                     || $crate::fidl_new_empty!($member_ty));
-                                            $crate::fidl_decode!(val_ref, d, offset)?;
+                                            $crate::fidl_decode!(val_ref, decoder, offset)?;
                                             Ok(())
                                         },
                                     )?;
@@ -2981,10 +3165,21 @@ macro_rules! fidl_table {
 
                         // Decode the remaining unknown envelopes.
                         while next_offset < end_offset {
-                            $crate::encoding::decode_unknown_table_field(decoder, next_offset)?;
+                            _next_ordinal_to_read += 1;
+                            if let Some(field) = _unknown_decoder_func(decoder, next_offset)? {
+                                _unknown_data.insert(_next_ordinal_to_read, field);
+                            }
                             next_offset += 16;
                         }
 
+                        if !_unknown_data.is_empty() {
+                            $(
+                                self.$value_unknown_name = Some(_unknown_data);
+                            )?
+                            $(
+                                self.$resource_unknown_name = Some(_unknown_data);
+                            )?
+                        }
                         Ok(())
                     })
             }
@@ -3234,7 +3429,7 @@ macro_rules! fidl_xunion {
                 #[deprecated = "Strict unions should not use validate()"]
                 #[inline]
                 pub fn validate(self) -> std::result::Result<Self, (u64, $crate::encoding::UnknownData)> {
-                    $strict_resource; // dummy use for expansion
+                    $strict_resource; // placeholder use for expansion
                     Ok(self)
                 }
 
@@ -3250,7 +3445,7 @@ macro_rules! fidl_xunion {
                 #[deprecated = "Strict unions should not use validate()"]
                 #[inline]
                 pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
-                    $strict_value; // dummy use for expansion
+                    $strict_value; // placeholder use for expansion
                     Ok(self)
                 }
 
@@ -3355,21 +3550,11 @@ macro_rules! fidl_xunion {
                         },
                     )*
                     $(
-                        $name::$resource_unknown_name { ordinal: _, data: $crate::encoding::UnknownData { bytes, handles } } => {
+                        $name::$resource_unknown_name { ordinal: _, data } => {
                             // Throw the raw data from the unrecognized variant
                             // back onto the wire. This will allow correct proxies even in
                             // the event that they don't yet recognize this union variant.
-                            $crate::fidl_unsafe_encode!(&mut (bytes.len() as u32), encoder, offset + 8, recursion_depth)?;
-                            $crate::fidl_unsafe_encode!(&mut (handles.len() as u32), encoder, offset + 12, recursion_depth)?;
-                            $crate::fidl_unsafe_encode!(
-                                &mut $crate::encoding::ALLOC_PRESENT_U64.clone(), encoder, offset + 16, recursion_depth
-                            )?;
-                            $crate::encoding::Encoder::check_recursion_depth(recursion_depth + 1)?;
-                            encoder.append_out_of_line_bytes(bytes);
-                            encoder.set_next_handle_subtype($crate::handle::ObjectType::NONE);
-                            encoder.set_next_handle_rights($crate::handle::Rights::SAME_RIGHTS);
-                            encoder.append_unknown_handles(handles);
-                            Ok(())
+                            $crate::encoding::encode_unknown_data(data, encoder, offset + 8, recursion_depth)
                         },
                     )?
                     $(
@@ -3377,13 +3562,7 @@ macro_rules! fidl_xunion {
                             // Throw the raw data from the unrecognized variant
                             // back onto the wire. This will allow correct proxies even in
                             // the event that they don't yet recognize this union variant.
-                            $crate::fidl_unsafe_encode!(&mut (bytes.len() as u64), encoder, offset + 8, recursion_depth)?;
-                            $crate::fidl_unsafe_encode!(
-                                &mut $crate::encoding::ALLOC_PRESENT_U64.clone(), encoder, offset + 16, recursion_depth
-                            )?;
-                            $crate::encoding::Encoder::check_recursion_depth(recursion_depth + 1)?;
-                            encoder.append_out_of_line_bytes(bytes);
-                            Ok(())
+                            $crate::encoding::encode_unknown_bytes(&bytes, encoder, offset + 8, recursion_depth)
                         },
                     )?
                 }
@@ -3418,9 +3597,7 @@ macro_rules! fidl_xunion {
                     )*
                     $(
                         _ => {
-                            // We need the expansion to refer to $resource_unknown_name,
-                            // so just create and discard it as a string.
-                            stringify!($resource_unknown_name);
+                            stringify!($resource_unknown_name); // placeholder use for expansion
                             // Flexible xunion: unknown payloads are considered
                             // a wholly-inline string of bytes.
                             num_bytes as usize
@@ -3435,9 +3612,7 @@ macro_rules! fidl_xunion {
                                 }
                                 return Err($crate::Error::CannotStoreUnknownHandles);
                             }
-                            // We need the expansion to refer to $value_unknown_name,
-                            // so just create and discard it as a string.
-                            stringify!($value_unknown_name);
+                            stringify!($value_unknown_name); // placeholder use for expansion
                             // Flexible xunion: unknown payloads are considered
                             // a wholly-inline string of bytes.
                             num_bytes as usize
@@ -3480,17 +3655,8 @@ macro_rules! fidl_xunion {
                             )*
                             $(
                                 ordinal => {
-                                    let bytes = decoder.buffer()[offset.. offset+(num_bytes as usize)].to_vec();
-                                    let mut handles = Vec::with_capacity(num_handles as usize);
-                                    decoder.set_next_handle_subtype($crate::handle::ObjectType::NONE);
-                                    decoder.set_next_handle_rights($crate::handle::Rights::SAME_RIGHTS);
-                                    for _ in 0..num_handles {
-                                        handles.push(decoder.take_next_handle()?);
-                                    }
-                                    *self = $name::$resource_unknown_name {
-                                        ordinal,
-                                        data: $crate::encoding::UnknownData { bytes, handles },
-                                    };
+                                    let data = $crate::encoding::decode_unknown_data_contents(decoder, offset, num_bytes, num_handles)?;
+                                    *self = $name::$resource_unknown_name { ordinal, data };
                                 }
                             )?
                             $(
@@ -4151,7 +4317,7 @@ mod test {
 
     use super::*;
     use matches::assert_matches;
-    use std::{f32, f64, fmt, i64, u64};
+    use std::{collections::BTreeMap, f32, f64, fmt, i64, u64};
 
     pub const CONTEXTS: &[&Context] = &[&Context {}];
 
@@ -4941,6 +5107,7 @@ mod test {
         pub num_none: Option<i32>,
         pub string: Option<String>,
         pub handle: Option<Handle>,
+        pub unknown_data: Option<BTreeMap<u64, UnknownData>>,
         #[deprecated = "Do not use MyTable"]
         pub __non_exhaustive: (),
     }
@@ -4969,20 +5136,24 @@ mod test {
                 },
             },
         ],
+        resource_unknown_member: unknown_data,
     }
 
     struct EmptyTableCompiles {
+        pub unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
         #[deprecated = "Do not use __non_exhaustive"]
         pub __non_exhaustive: (),
     }
     fidl_table! {
         name: EmptyTableCompiles,
         members: [],
+        value_unknown_member: unknown_data,
     }
 
     struct TablePrefix {
         num: Option<i32>,
         num_none: Option<i32>,
+        pub unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
         #[deprecated = "Do not use __non_exhaustive"]
         pub __non_exhaustive: (),
     }
@@ -4999,6 +5170,7 @@ mod test {
                 ordinal: 2,
             },
         ],
+        value_unknown_member: unknown_data,
     }
 
     #[test]
@@ -5035,7 +5207,7 @@ mod test {
             // "None" fields at the tail of a table shouldn't be encoded at all.
             let mut table_in = MyTable {
                 num: Some(5),
-                // These fields should all be omitted in the encoded repr,
+                // The rest of the fields should all be omitted in the encoded repr,
                 // allowing decoding of the prefix to succeed.
                 num_none: None,
                 string: None,
@@ -5091,6 +5263,7 @@ mod test {
     pub struct SimpleTable {
         x: Option<i64>,
         y: Option<i64>,
+        unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
         #[deprecated = "Do not use __non_exhaustive"]
         pub __non_exhaustive: (),
     }
@@ -5107,6 +5280,7 @@ mod test {
                 ordinal: 5,
             },
         ],
+        value_unknown_member: unknown_data,
     }
 
     #[derive(Debug, PartialEq)]
@@ -5114,6 +5288,7 @@ mod test {
         foo: Option<String>,
         bar: Option<i32>,
         baz: Option<Vec<u8>>,
+        unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
         #[deprecated = "Do not use __non_exhaustive"]
         pub __non_exhaustive: (),
     }
@@ -5134,6 +5309,7 @@ mod test {
                 ordinal: 3,
             },
         ],
+        value_unknown_member: unknown_data,
     }
 
     #[test]
@@ -5230,9 +5406,10 @@ mod test {
     }
 
     #[derive(Debug)]
-    struct TableWithGaps {
+    pub struct TableWithGaps {
         second: Option<i32>,
         fourth: Option<i32>,
+        unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
         #[deprecated = "Do not use __non_exhaustive"]
         pub __non_exhaustive: (),
     }
@@ -5249,6 +5426,7 @@ mod test {
                 ordinal: 4,
             },
         ],
+        value_unknown_member: unknown_data,
     }
 
     #[test]
@@ -5286,6 +5464,7 @@ mod test {
         struct TableWithoutGaps {
             first: Option<i32>,
             second: Option<i32>,
+            pub unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
             #[deprecated = "Do not use __non_exhaustive"]
             pub __non_exhaustive: (),
         }
@@ -5301,6 +5480,7 @@ mod test {
                     ordinal: 2,
                 },
             ],
+            value_unknown_member: unknown_data,
         }
 
         for ctx in CONTEXTS {
@@ -5737,7 +5917,6 @@ mod zx_test {
             let raw_handle = handle.raw_handle();
             let mut starting_table = MyTable {
                 num: Some(5),
-                num_none: None,
                 string: Some("foo".to_string()),
                 handle: Some(handle.into_handle()),
                 ..MyTable::EMPTY

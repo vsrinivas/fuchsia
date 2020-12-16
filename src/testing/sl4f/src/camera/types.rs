@@ -7,6 +7,7 @@ use fidl_fuchsia_images::{AlphaFormat, ColorSpace, ImageInfo, PixelFormat, Tilin
 use fidl_fuchsia_mem::Buffer;
 use fuchsia_zircon::Vmo;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::collections::BTreeMap;
 use thiserror::Error;
 
 // FIDL request/response definitions.
@@ -85,8 +86,10 @@ struct DeviceInfoDef {
     #[serde(default, with = "device_type_wrapper")]
     type_: Option<DeviceType>,
 
-    // This field is needed to match the FIDL-generated struct exactly. It
+    // These fields are needed to match the FIDL-generated struct exactly. They
     // should be removed once we are no longer using Serde remote.
+    #[serde(skip)]
+    unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
     #[serde(skip)]
     __non_exhaustive: (),
 }

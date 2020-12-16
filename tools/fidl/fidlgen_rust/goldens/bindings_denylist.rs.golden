@@ -29,7 +29,10 @@ pub const ALL_BINDINGS: u32 = 0;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct OnlyRust {
-    #[deprecated = "Use `..OnlyRust::empty()` to construct and `..` to match."]
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..OnlyRust::EMPTY` to construct and `..` to match."]
     #[doc(hidden)]
     pub __non_exhaustive: (),
 }
@@ -38,4 +41,5 @@ fidl_table! {
   name: OnlyRust,
   members: [
   ],
+  value_unknown_member: unknown_data,
 }

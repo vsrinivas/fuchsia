@@ -66,6 +66,16 @@ func buildHandleValues(handles []gidlir.Handle) string {
 	return builder.String()
 }
 
+func buildUnknownData(data gidlir.UnknownData, isResource bool) string {
+	if !isResource {
+		return fmt.Sprintf("vec!%s", buildBytes(data.Bytes))
+	}
+	return fmt.Sprintf(
+		"UnknownData { bytes: vec!%s, handles: %s }",
+		buildBytes(data.Bytes),
+		buildHandleValues(data.Handles))
+}
+
 func escapeStr(value string) string {
 	var (
 		buf    bytes.Buffer
@@ -254,9 +264,13 @@ func onStruct(value gidlir.Record, decl *gidlmixer.StructDecl) string {
 
 func onTable(value gidlir.Record, decl *gidlmixer.TableDecl) string {
 	var tableFields []string
+	var unknownTuples []string
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {
-			panic("unknown field not supported")
+			unknownTuples = append(unknownTuples, fmt.Sprintf("(%d, %s)",
+				field.Key.UnknownOrdinal,
+				buildUnknownData(field.Value.(gidlir.UnknownData), decl.IsResourceType())))
+			continue
 		}
 		fieldName := fidl.ToSnakeCase(field.Key.Name)
 		fieldDecl, ok := decl.Field(field.Key.Name)
@@ -265,6 +279,15 @@ func onTable(value gidlir.Record, decl *gidlmixer.TableDecl) string {
 		}
 		fieldValueStr := visit(field.Value, fieldDecl)
 		tableFields = append(tableFields, fmt.Sprintf("%s: Some(%s)", fieldName, fieldValueStr))
+	}
+	if len(unknownTuples) > 0 {
+		// When https://github.com/rust-lang/rust/issues/25725 is fixed,
+		// using into_iter() on the vec! can be changed to use [T;N]::into_iter instead.
+		tableFields = append(tableFields,
+			fmt.Sprintf("unknown_data: Some(vec![%s].into_iter().collect())",
+				strings.Join(unknownTuples, "\n")))
+	} else {
+		tableFields = append(tableFields, "unknown_data: None")
 	}
 	tableName := declName(decl)
 	tableFields = append(tableFields, fmt.Sprintf("..%s::EMPTY", tableName))
@@ -280,20 +303,12 @@ func onUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) string {
 	var valueStr string
 	if field.Key.IsUnknown() {
 		unknownData := field.Value.(gidlir.UnknownData)
-		if decl.IsResourceType() {
-			valueStr = fmt.Sprintf(
-				"%s::unknown(%d, UnknownData { bytes: vec!%s, handles: %s })",
-				declName(decl),
-				field.Key.UnknownOrdinal,
-				buildBytes(unknownData.Bytes),
-				buildHandleValues(unknownData.Handles))
-		} else {
-			valueStr = fmt.Sprintf(
-				"%s::unknown(%d, vec!%s)",
-				declName(decl),
-				field.Key.UnknownOrdinal,
-				buildBytes(unknownData.Bytes))
-		}
+		valueStr = fmt.Sprintf(
+			"%s::unknown(%d, %s)",
+			declName(decl),
+			field.Key.UnknownOrdinal,
+			buildUnknownData(unknownData, decl.IsResourceType()),
+		)
 	} else {
 		fieldName := fidl.ToUpperCamelCase(field.Key.Name)
 		fieldDecl, ok := decl.Field(field.Key.Name)

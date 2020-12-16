@@ -100,7 +100,10 @@ fidl_struct_copy! {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TableSmallArray {
     pub a: Option<[u32; 2]>,
-    #[deprecated = "Use `..TableSmallArray::empty()` to construct and `..` to match."]
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..TableSmallArray::EMPTY` to construct and `..` to match."]
     #[doc(hidden)]
     pub __non_exhaustive: (),
 }
@@ -113,12 +116,16 @@ fidl_table! {
       ordinal: 1,
     },
   ],
+  value_unknown_member: unknown_data,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TableLargeArray {
     pub a: Option<[u32; 100]>,
-    #[deprecated = "Use `..TableLargeArray::empty()` to construct and `..` to match."]
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..TableLargeArray::EMPTY` to construct and `..` to match."]
     #[doc(hidden)]
     pub __non_exhaustive: (),
 }
@@ -131,4 +138,5 @@ fidl_table! {
       ordinal: 1,
     },
   ],
+  value_unknown_member: unknown_data,
 }

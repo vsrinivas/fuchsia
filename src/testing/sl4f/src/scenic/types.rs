@@ -10,6 +10,7 @@ use fidl_fuchsia_mem::Buffer;
 use fidl_fuchsia_ui_app::ViewConfig;
 use fidl_fuchsia_ui_scenic::ScreenshotData;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::collections::BTreeMap;
 
 /// Enum for supported FIDL commands.
 pub enum ScenicMethod {
@@ -199,8 +200,10 @@ pub struct ProfileDef {
     pub time_zones: Option<Vec<TimeZoneId>>,
     #[serde(default, deserialize_with = "TemperatureUnitDef::deserialize_option")]
     pub temperature_unit: Option<TemperatureUnit>,
-    // This field is needed to match the FIDL-generated struct exactly. It
+    // These fields are needed to match the FIDL-generated struct exactly. They
     // should be removed once we are no longer using Serde remote.
+    #[serde(skip)]
+    unknown_data: Option<BTreeMap<u64, Vec<u8>>>,
     #[serde(skip)]
     __non_exhaustive: (),
 }
