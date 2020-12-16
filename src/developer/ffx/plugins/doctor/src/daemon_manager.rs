@@ -4,8 +4,9 @@
 
 use {
     anyhow::Result,
+    async_std::fs::remove_file,
     async_trait::async_trait,
-    ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
+    ffx_daemon::{find_and_connect, get_socket, is_daemon_running, spawn_daemon},
     fidl_fuchsia_developer_bridge::DaemonProxy,
     fuchsia_async::Timer,
     std::process::Command,
@@ -45,6 +46,19 @@ impl DaemonManager for DefaultDaemonManager {
             }
             break;
         }
+
+        // TODO(fxbug.dev/66666): Re-evaluate the need for this.
+        let sock = get_socket().await;
+        match remove_file(&sock).await {
+            Ok(_) => log::info!("removed ascendd socket at {}", sock),
+            Err(ref e) if e.kind() == async_std::io::ErrorKind::NotFound => {
+                log::info!("no existing ascendd socket at {}", sock);
+            }
+            Err(e) => {
+                log::info!("failed to remove ascendd socket at {}: '{}'", sock, e);
+            }
+        };
+
         return Ok(status.success());
     }
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{get_socket, DAEMON, DEFAULT_MAX_RETRY_COUNT, OVERNET_MAX_RETRY_COUNT},
+    crate::constants::{DAEMON, DEFAULT_MAX_RETRY_COUNT, OVERNET_MAX_RETRY_COUNT},
     crate::daemon::Daemon,
     anyhow::{bail, Context, Result},
     ffx_config::get,
@@ -36,6 +36,7 @@ mod task;
 mod util;
 
 pub mod target;
+pub use constants::get_socket;
 
 pub async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy> {
     let svc = hoist().connect_as_service_consumer()?;

@@ -30,11 +30,11 @@ pub(crate) const OVERNET_MAX_RETRY_COUNT: &str = "overnet.max_retry_count";
 pub(crate) const OVERNET_SOCKET: &str = "overnet.socket";
 
 #[cfg(not(test))]
-pub(crate) async fn get_socket() -> String {
+pub async fn get_socket() -> String {
     ffx_config::get(OVERNET_SOCKET).await.unwrap_or(DEFAULT_SOCKET.to_string())
 }
 
 #[cfg(test)]
-pub(crate) async fn get_socket() -> String {
+pub async fn get_socket() -> String {
     DEFAULT_SOCKET.to_string()
 }
