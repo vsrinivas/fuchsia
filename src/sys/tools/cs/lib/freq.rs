@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_inspect_contrib::reader::{ArchiveReader, DiagnosticsHierarchy, Inspect},
+    diagnostics_reader::{ArchiveReader, DiagnosticsHierarchy, Inspect},
     std::fmt::{Display, Formatter, Result},
 };
 

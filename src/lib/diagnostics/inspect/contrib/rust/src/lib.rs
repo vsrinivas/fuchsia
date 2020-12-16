@@ -5,8 +5,4 @@
 pub mod inspectable;
 #[macro_use]
 pub mod log;
-pub mod reader {
-    // TODO delete after internal CL 238572 lands
-    pub use diagnostics_reader::*;
-}
 pub mod nodes;

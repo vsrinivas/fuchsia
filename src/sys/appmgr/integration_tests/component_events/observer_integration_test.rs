@@ -3,6 +3,7 @@
 
 use {
     anyhow::{Context, Error},
+    diagnostics_reader::{ArchiveReader, ComponentSelector},
     fidl_fuchsia_sys::{
         EnvironmentControllerEvent, EnvironmentControllerProxy, EnvironmentMarker,
         EnvironmentOptions, EnvironmentProxy, LauncherProxy,
@@ -10,7 +11,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::{connect_to_service, launch},
     fuchsia_inspect::assert_inspect_tree,
-    fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector},
     fuchsia_zircon::Duration,
     futures::stream::StreamExt,
     lazy_static::lazy_static,

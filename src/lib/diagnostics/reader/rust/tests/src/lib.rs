@@ -4,9 +4,9 @@
 
 use {
     anyhow::Error,
+    diagnostics_reader::{ArchiveReader, Inspect},
     fuchsia_async as fasync,
     fuchsia_inspect::testing::assert_inspect_tree,
-    fuchsia_inspect_contrib::reader::{ArchiveReader, Inspect},
 };
 
 #[fasync::run_singlethreaded(test)]

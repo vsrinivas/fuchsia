@@ -4,6 +4,7 @@
 
 use crate::{Result, SessionId};
 use anyhow::Context as _;
+use diagnostics_reader::{ArchiveReader, ComponentSelector};
 use fidl::encoding::Decodable;
 use fidl::endpoints::{create_endpoints, create_proxy, create_request_stream};
 use fidl_fuchsia_diagnostics::*;
@@ -14,7 +15,6 @@ use fuchsia_async as fasync;
 use fuchsia_component as comp;
 use fuchsia_component::server::*;
 use fuchsia_inspect as inspect;
-use fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector};
 use futures::{
     self,
     channel::mpsc,

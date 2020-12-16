@@ -24,7 +24,7 @@ rustc_library("lib") {
     "//src/diagnostics/control:controller-rustc",
     "//src/diagnostics/lib/triage",
     "//src/diagnostics/lib/util/injectable-time",
-    "//src/lib/diagnostics/inspect/contrib/rust",
+    "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

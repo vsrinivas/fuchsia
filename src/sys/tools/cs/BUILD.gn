@@ -19,7 +19,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/lib/diagnostics/inspect/contrib/rust",
+    "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

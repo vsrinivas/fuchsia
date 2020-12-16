@@ -13,7 +13,7 @@ rustc_test("bin") {
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/cstr",
-    "//src/lib/diagnostics/inspect/contrib/rust",
+    "//src/lib/diagnostics/reader//rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

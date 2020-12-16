@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 use {
     anyhow::{bail, Error},
+    diagnostics_reader::ArchiveReader,
     fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, DataType},
     fidl_fuchsia_sys::ComponentControllerEvent,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_component::client::{launch, launcher},
     fuchsia_component::client::{App, AppBuilder},
-    fuchsia_inspect_contrib::reader::ArchiveReader,
     fuchsia_zircon::DurationNum,
     futures::StreamExt,
     lazy_static::lazy_static,

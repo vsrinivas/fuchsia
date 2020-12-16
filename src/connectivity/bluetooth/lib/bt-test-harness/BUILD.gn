@@ -24,7 +24,7 @@ rustc_library("bt-test-harness") {
     "//src/connectivity/bluetooth/fidl:host-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/lib/test-harness",
-    "//src/lib/diagnostics/inspect/contrib/rust",
+    "//src/lib/diagnostics/reader/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

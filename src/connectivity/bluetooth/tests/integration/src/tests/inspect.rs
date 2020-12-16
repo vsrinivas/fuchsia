@@ -5,8 +5,8 @@
 use {
     anyhow::Error,
     bt_test_harness::{access::AccessHarness, inspect::InspectHarness},
+    diagnostics_reader::DiagnosticsHierarchy,
     fuchsia_bluetooth::{expect_eq, expectation::asynchronous::ExpectableExt},
-    fuchsia_inspect_contrib::reader::DiagnosticsHierarchy,
     test_harness::run_suite,
 };
 

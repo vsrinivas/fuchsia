@@ -190,10 +190,10 @@ pub async fn get_inspect_data<'a>(
         .connect_to_service::<fidl_fuchsia_diagnostics::ArchiveAccessorMarker>()
         .context("failed to connect to archive accessor")?;
 
-    fuchsia_inspect_contrib::reader::ArchiveReader::new()
+    diagnostics_reader::ArchiveReader::new()
         .with_archive(archive)
         .add_selector(
-            fuchsia_inspect_contrib::reader::ComponentSelector::new(vec![component.into()])
+            diagnostics_reader::ComponentSelector::new(vec![component.into()])
                 .with_tree_selector(tree_selector.into()),
         )
         // Enable `retry_if_empty` to prevent races in test environment bringup

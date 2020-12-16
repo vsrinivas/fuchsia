@@ -4,10 +4,10 @@
 
 use {
     anyhow::Error,
+    diagnostics_reader::{ArchiveReader, Inspect},
     fuchsia_async::{self as fasync},
     fuchsia_component::client::{launcher, AppBuilder},
     fuchsia_inspect::testing::assert_inspect_tree,
-    fuchsia_inspect_contrib::reader::{ArchiveReader, Inspect},
 };
 
 const STASH_URL: &str = "fuchsia-pkg://fuchsia.com/stash-integration-tests#meta/stash.cmx";

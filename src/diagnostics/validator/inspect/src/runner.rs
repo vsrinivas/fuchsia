@@ -10,8 +10,8 @@ use {
         validate,
     },
     anyhow::{bail, Error},
+    diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
     fidl_test_inspect_validate::TestResult,
-    fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector, Inspect},
 };
 
 pub async fn run_all_trials(url: &str, results: &mut results::Results) {

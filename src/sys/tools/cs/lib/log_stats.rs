@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fuchsia_inspect_contrib::reader::{ArchiveReader, DiagnosticsHierarchy, Inspect, Property},
+    diagnostics_reader::{ArchiveReader, DiagnosticsHierarchy, Inspect, Property},
     fuchsia_zircon as zx,
     std::{cmp::Reverse, collections::HashMap, fmt, str::FromStr},
 };

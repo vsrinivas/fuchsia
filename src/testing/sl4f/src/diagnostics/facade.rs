@@ -4,9 +4,9 @@
 
 use crate::diagnostics::types::SnapshotInspectArgs;
 use anyhow::Error;
+use diagnostics_reader::{ArchiveReader, DataType};
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fuchsia_component::client;
-use fuchsia_inspect_contrib::reader::{ArchiveReader, DataType};
 use serde_json::Value;
 
 // Give components 5 minutes to respond with their Inspect data in case the system is under heavy

@@ -5,10 +5,10 @@
 use {
     anyhow::{format_err, Error},
     diagnostics_hierarchy::{self, DiagnosticsHierarchy, Property, PropertyEntry},
+    diagnostics_reader::{ArchiveReader, ComponentSelector},
     fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{self as wlantap, WlantapPhyProxy},
     fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
-    fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector},
     fuchsia_zircon::DurationNum,
     pin_utils::pin_mut,
     selectors,

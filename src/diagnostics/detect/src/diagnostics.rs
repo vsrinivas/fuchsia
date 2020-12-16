@@ -6,7 +6,7 @@
 
 use {
     anyhow::{bail, Error},
-    fuchsia_inspect_contrib::reader::{ArchiveReader, DataType},
+    diagnostics_reader::{ArchiveReader, DataType},
     log::error,
     triage::DiagnosticData,
     triage::Source,

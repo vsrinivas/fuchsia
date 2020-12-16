@@ -4,6 +4,7 @@
 
 use {
     anyhow::{Context, Error},
+    diagnostics_reader::{ArchiveReader, ComponentSelector, DiagnosticsHierarchy, Inspect},
     fidl_fuchsia_bluetooth_control::{ControlMarker, ControlProxy},
     fuchsia_async::DurationExt,
     fuchsia_bluetooth::{
@@ -16,9 +17,6 @@ use {
             Predicate,
         },
         hci_emulator::Emulator,
-    },
-    fuchsia_inspect_contrib::reader::{
-        ArchiveReader, ComponentSelector, DiagnosticsHierarchy, Inspect,
     },
     fuchsia_zircon::DurationNum,
     futures::{future::BoxFuture, FutureExt},

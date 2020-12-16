@@ -96,7 +96,7 @@ rustc_library("lib") {
     "//src/connectivity/lowpan/tools/lowpanctl",
     "//src/connectivity/wlan/testing/wlan-service-util",
     "//src/lib/async-utils",
-    "//src/lib/diagnostics/inspect/contrib/rust",
+    "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

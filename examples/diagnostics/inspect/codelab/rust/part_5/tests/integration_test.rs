@@ -16,8 +16,8 @@ use {
 // [START include_test_stuff]
 use {
     anyhow::format_err,
+    diagnostics_reader::{ArchiveReader, ComponentSelector, DiagnosticsHierarchy},
     fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
-    fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector, DiagnosticsHierarchy},
 };
 // [END include_test_stuff]
 
