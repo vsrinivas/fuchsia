@@ -1,3 +1,5 @@
+# Command select
+
 The Remote Control Service offers an API for querying and connecting
 to arbitrary FIDL services on the target.
 
