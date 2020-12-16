@@ -15,7 +15,9 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/inspect/cpp/inspector.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/inspect/cpp/component.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
 #include <limits>
@@ -27,6 +29,7 @@
 #include "src/lib/ui/input/input_device_impl.h"
 #include "src/ui/bin/root_presenter/color_transform_handler.h"
 #include "src/ui/bin/root_presenter/factory_reset_manager.h"
+#include "src/ui/bin/root_presenter/inspect.h"
 #include "src/ui/bin/root_presenter/media_buttons_handler.h"
 #include "src/ui/bin/root_presenter/presentation.h"
 #include "src/ui/bin/root_presenter/safe_presenter.h"
@@ -78,6 +81,9 @@ class App : public fuchsia::ui::policy::Presenter,
     return presentation_ && presentation_->is_initialized();
   }
 
+  // For testing.
+  const inspect::Inspector* inspector() { return inspector_.inspector(); }
+
  private:
   // |DeviceListenerRegistry|
   void RegisterMediaButtonsListener(
@@ -98,6 +104,8 @@ class App : public fuchsia::ui::policy::Presenter,
   void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) override;
 
   sys::ComponentContext* const component_context_;
+  sys::ComponentInspector inspector_;
+  InputReportInspector input_report_inspector_;
   fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
   fidl::BindingSet<fuchsia::ui::policy::DeviceListenerRegistry> device_listener_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_receiver_bindings_;

@@ -8,6 +8,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -25,6 +26,8 @@ namespace root_presenter {
 
 App::App(sys::ComponentContext* component_context, async_dispatcher_t* dispatcher)
     : component_context_(component_context),
+      inspector_(component_context_),
+      input_report_inspector_(inspector_.root().CreateChild("input_reports")),
       input_reader_(this),
       fdr_manager_(std::make_unique<FactoryResetManager>(*component_context_,
                                                          std::make_shared<MediaRetriever>())),
@@ -71,6 +74,7 @@ void App::PresentView(
   }
 
   auto presentation = std::make_unique<Presentation>(
+      inspector_.root().CreateChild(inspector_.root().UniqueName("presentation-")),
       component_context_, scenic_.get(), session_.get(), compositor_->id(),
       std::move(view_holder_token), std::move(presentation_request), safe_presenter_.get(),
       display_startup_rotation_adjustment,
@@ -151,6 +155,7 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
   TRACE_FLOW_END("input", "report_to_presenter", report.trace_id);
 
   FX_VLOGS(3) << "OnReport from " << input_device->id() << " " << report;
+  input_report_inspector_.OnInputReport(report);
 
   if (devices_by_id_.count(input_device->id()) == 0) {
     return;

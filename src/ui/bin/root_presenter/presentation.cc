@@ -11,6 +11,7 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
 
+#include "src/ui/bin/root_presenter/inspect.h"
 #include "src/ui/bin/root_presenter/safe_presenter.h"
 
 // clang-format off
@@ -31,13 +32,16 @@ constexpr float kDefaultRootViewDepth = 1000;
 }  // namespace
 
 Presentation::Presentation(
-    sys::ComponentContext* component_context, fuchsia::ui::scenic::Scenic* scenic,
-    scenic::Session* session, scenic::ResourceId compositor_id,
+    inspect::Node inspect_node, sys::ComponentContext* component_context,
+    fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session, scenic::ResourceId compositor_id,
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
     SafePresenter* safe_presenter, int32_t display_startup_rotation_adjustment,
     std::function<void()> on_client_death)
-    : scenic_(scenic),
+    : inspect_node_(std::move(inspect_node)),
+      input_report_inspector_(inspect_node_.CreateChild("input_reports")),
+      input_event_inspector_(inspect_node_.CreateChild("input_events")),
+      scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
       layer_(session_),
@@ -398,6 +402,8 @@ void Presentation::OnReport(uint32_t device_id, fuchsia::ui::input::InputReport 
   FX_VLOGS(2) << "OnReport device=" << device_id
               << ", count=" << device_states_by_id_.count(device_id) << ", report=" << input_report;
 
+  input_report_inspector_.OnInputReport(input_report);
+
   if (device_states_by_id_.count(device_id) == 0) {
     FX_VLOGS(1) << "OnReport: Unknown device " << device_id;
     return;
@@ -436,7 +442,7 @@ void Presentation::ResetClipSpaceTransform() {
 void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
   TRACE_DURATION("input", "presentation_on_event");
   FX_VLOGS(1) << "OnEvent " << event;
-
+  input_event_inspector_.OnInputEvent(event);
   injector_->OnEvent(event);
 }
 

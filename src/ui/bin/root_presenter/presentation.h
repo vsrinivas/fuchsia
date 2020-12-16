@@ -12,6 +12,7 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/ui/scenic/cpp/id.h>
 #include <lib/ui/scenic/cpp/resources.h>
 
@@ -22,7 +23,7 @@
 #include "src/ui/bin/root_presenter/displays/display_metrics.h"
 #include "src/ui/bin/root_presenter/displays/display_model.h"
 #include "src/ui/bin/root_presenter/injector.h"
-#include "src/ui/bin/root_presenter/presentation.h"
+#include "src/ui/bin/root_presenter/inspect.h"
 #include "src/ui/bin/root_presenter/safe_presenter.h"
 
 namespace root_presenter {
@@ -42,8 +43,9 @@ namespace root_presenter {
 class Presentation : fuchsia::ui::policy::Presentation,
                      fuchsia::accessibility::MagnificationHandler {
  public:
-  Presentation(sys::ComponentContext* component_context, fuchsia::ui::scenic::Scenic* scenic,
-               scenic::Session* session, scenic::ResourceId compositor_id,
+  Presentation(inspect::Node inspect_node, sys::ComponentContext* component_context,
+               fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
+               scenic::ResourceId compositor_id,
                fuchsia::ui::views::ViewHolderToken view_holder_token,
                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
                SafePresenter* safe_presenter, int32_t display_startup_rotation_adjustment,
@@ -91,6 +93,10 @@ class Presentation : fuchsia::ui::policy::Presentation,
 
   // Passes the display rotation in degrees down to the scenic compositor.
   void SetScenicDisplayRotation();
+
+  inspect::Node inspect_node_;
+  InputReportInspector input_report_inspector_;
+  InputEventInspector input_event_inspector_;
 
   fuchsia::ui::scenic::Scenic* const scenic_;
   scenic::Session* const session_;
