@@ -7,6 +7,7 @@ use {
     crate::ssh::build_ssh_command,
     crate::target::{ConnectionState, TargetAddr, WeakTarget},
     anyhow::{anyhow, Context, Result},
+    ascendd_lib::Ascendd,
     async_std::io::prelude::BufReadExt,
     async_std::prelude::StreamExt,
     fuchsia_async::{Task, Timer},
@@ -187,16 +188,14 @@ impl HostPipeConnection {
     }
 }
 
-pub async fn run_ascendd() -> Result<()> {
+pub async fn create_ascendd() -> Ascendd {
     log::info!("Starting ascendd");
-    ascendd_lib::run_ascendd(
+    Ascendd::new(
         ascendd_lib::Opt { sockpath: Some(get_socket().await), ..Default::default() },
         // TODO: this just prints serial output to stdout - ffx probably wants to take a more
         // nuanced approach here.
         Box::new(async_std::io::stdout()),
     )
-    .await
-    .map_err(|e| e.context("running ascendd"))
 }
 
 fn overnet_pipe() -> Result<fidl::AsyncSocket> {

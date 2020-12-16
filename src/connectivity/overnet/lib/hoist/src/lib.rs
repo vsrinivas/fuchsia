@@ -68,23 +68,19 @@ mod test {
     }
 
     #[cfg(not(target_os = "fuchsia"))]
-    fn init_ascendd() -> Task<()> {
+    fn init_ascendd() -> ascendd_lib::Ascendd {
         let n: u128 = rand::random();
         let ascendd_path = format!("/tmp/ascendd-for-hoist-test.{}.sock", n);
         std::env::set_var("ASCENDD", &ascendd_path);
-        Task::spawn(async move {
-            ascendd_lib::run_ascendd(
-                ascendd_lib::Opt { sockpath: Some(ascendd_path), ..Default::default() },
-                Box::new(async_std::io::stdout()),
-            )
-            .await
-            .unwrap();
-        })
+        ascendd_lib::Ascendd::new(
+            ascendd_lib::Opt { sockpath: Some(ascendd_path), ..Default::default() },
+            Box::new(async_std::io::stdout()),
+        )
     }
 
     #[cfg(not(target_os = "fuchsia"))]
     lazy_static::lazy_static! {
-        static ref ASCENDD: Task<()> = init_ascendd();
+        static ref ASCENDD: ascendd_lib::Ascendd = init_ascendd();
     }
 
     fn init() {

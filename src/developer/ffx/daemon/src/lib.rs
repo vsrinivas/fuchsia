@@ -188,7 +188,7 @@ pub async fn is_daemon_running() -> bool {
 }
 
 pub async fn start() -> Result<()> {
-    future::try_join(onet::run_ascendd(), exec_server(Daemon::new().await?)).await?;
+    exec_server(Daemon::new().await?).await?;
     Ok(())
 }
 

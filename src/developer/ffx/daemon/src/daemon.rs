@@ -8,11 +8,13 @@ use {
     crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
     crate::fastboot::{client::Fastboot, spawn_fastboot_discovery},
     crate::mdns::MdnsTargetFinder,
+    crate::onet::create_ascendd,
     crate::target::{
         ConnectionState, RcsConnection, SshAddrFetcher, Target, TargetCollection, TargetEvent,
         ToFidlTarget,
     },
     anyhow::{anyhow, Context, Result},
+    ascendd_lib::Ascendd,
     async_trait::async_trait,
     chrono::Utc,
     ffx_core::{build_info, TryStreamUtilExt},
@@ -36,6 +38,7 @@ pub struct Daemon {
     pub event_queue: events::Queue<DaemonEvent>,
 
     target_collection: Arc<TargetCollection>,
+    ascendd: Arc<Ascendd>,
 }
 
 // This is just for mocking config values for unit testing.
@@ -214,7 +217,11 @@ impl Daemon {
         };
         let mut mdns = MdnsTargetFinder::new(&config)?;
         mdns.start(queue.clone())?;
-        Ok(Daemon { target_collection: target_collection.clone(), event_queue: queue })
+        Ok(Daemon {
+            target_collection: target_collection.clone(),
+            event_queue: queue,
+            ascendd: Arc::new(create_ascendd().await),
+        })
     }
 
     pub async fn get_default_target(&self, n: Option<String>) -> Result<Target> {
@@ -250,7 +257,7 @@ impl Daemon {
         let target_collection = Arc::new(TargetCollection::new());
         let event_queue = events::Queue::new(&target_collection);
         target_collection.set_event_queue(event_queue.clone()).await;
-        Daemon { target_collection, event_queue }
+        Daemon { target_collection, event_queue, ascendd: Arc::new(create_ascendd().await) }
     }
 
     pub async fn handle_requests_from_stream(&self, stream: DaemonRequestStream) -> Result<()> {

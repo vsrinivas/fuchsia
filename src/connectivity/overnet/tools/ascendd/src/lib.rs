@@ -7,9 +7,12 @@ mod serial;
 use crate::serial::run_serial_link_handlers;
 use anyhow::{bail, Error};
 use argh::FromArgs;
+use fuchsia_async::Task;
 use futures::prelude::*;
 use overnet_core::{Router, RouterOptions};
+use std::pin::Pin;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 use stream_link::run_stream_link;
 
 #[derive(FromArgs, Default)]
@@ -26,6 +29,24 @@ pub struct Opt {
     /// communicate with them, or a path to a serial device to communicate over *that* device.
     /// If not provided, this will default to 'none'.
     pub serial: Option<String>,
+}
+
+pub struct Ascendd {
+    task: Task<Result<(), Error>>,
+}
+
+impl Ascendd {
+    pub fn new(opt: Opt, stdout: impl AsyncWrite + Unpin + Send + 'static) -> Self {
+        Self { task: Task::spawn(run_ascendd(opt, stdout)) }
+    }
+}
+
+impl Future for Ascendd {
+    type Output = Result<(), Error>;
+
+    fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Result<(), Error>> {
+        self.task.poll_unpin(ctx)
+    }
 }
 
 async fn run_stream(
@@ -48,7 +69,7 @@ async fn run_stream(
     run_stream_link(node, &mut rx, &mut tx, config).await
 }
 
-pub async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin + Send) -> Result<(), Error> {
+async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin + Send) -> Result<(), Error> {
     let Opt { sockpath, serial } = opt;
 
     let sockpath = &sockpath.unwrap_or(hoist::DEFAULT_ASCENDD_PATH.to_string());
