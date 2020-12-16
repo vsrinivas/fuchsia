@@ -37,12 +37,19 @@ impl From<config::Protocol> for netconfig::Protocol {
 impl TryFrom<&config::IpFilter> for netconfig::FilterRule {
     type Error = error::NetworkManager;
 
-    fn try_from(ipfilter: &config::IpFilter) -> error::Result<Self> {
+    fn try_from(
+        config::IpFilter {
+            src_address,
+            dst_address,
+            src_ports,
+            dst_ports,
+            protocol,
+        }: &config::IpFilter,
+    ) -> error::Result<Self> {
         // Packet filter rules have various optional fields that can not be provided and the overall
         // filter rule is still valid. For example, missing a source IP address is not an error. We
         // have to distinguish between empty fields and invalid values.
-        let src_address = ipfilter
-            .src_address
+        let src_address = src_address
             .as_ref()
             .map(|s| {
                 s.try_into().map_err(|e| {
@@ -53,8 +60,7 @@ impl TryFrom<&config::IpFilter> for netconfig::FilterRule {
             })
             .transpose()?;
 
-        let dst_address = ipfilter
-            .dst_address
+        let dst_address = dst_address
             .as_ref()
             .map(|s| {
                 Some(s.try_into().map_err(|e| {
@@ -66,17 +72,9 @@ impl TryFrom<&config::IpFilter> for netconfig::FilterRule {
             .flatten()
             .transpose()?;
 
-        let mut src_ports = None;
-        if let Some(range) = ipfilter.src_ports.as_ref() {
-            // TODO(fxbug.dev/45891): Multiple port ranges are not supported yet.
-            src_ports = Some(vec![range.into()]);
-        }
-
-        let mut dst_ports = None;
-        if let Some(range) = ipfilter.dst_ports.as_ref() {
-            // TODO(fxbug.dev/45891): Multiple port ranges are not supported yet.
-            dst_ports = Some(vec![range.into()]);
-        }
+        // TODO(fxbug.dev/45891): Multiple port ranges are not supported yet.
+        let src_ports = src_ports.as_ref().map(|range| vec![range.into()]);
+        let dst_ports = dst_ports.as_ref().map(|range| vec![range.into()]);
 
         Ok(netconfig::FilterRule {
             element: netconfig::Id { uuid: [0; 16], version: 0 },
@@ -88,7 +86,7 @@ impl TryFrom<&config::IpFilter> for netconfig::FilterRule {
                 src_ports,
                 dst_address,
                 dst_ports,
-                protocol: ipfilter.protocol.clone().map(|proto| proto.into()),
+                protocol: protocol.clone().map(|proto| proto.into()),
                 ..netconfig::FlowSelector::EMPTY
             },
         })
@@ -101,20 +99,35 @@ pub struct PacketFilter {
 }
 
 /// Parses a [`netfilter::Rule`] into a [`netconfig::FilterRule`].
-fn to_filter_rule(rule: netfilter::Rule) -> error::Result<netconfig::FilterRule> {
-    // TODO(cgibson): This is a good candidate to refactor to use TryInto/TryFrom.
-    Ok(netconfig::FilterRule {
+fn to_filter_rule(
+    netfilter::Rule {
+        action,
+        direction: _,
+        quick: _,
+        proto,
+        src_subnet,
+        src_subnet_invert_match: _,
+        src_port_range,
+        dst_subnet,
+        dst_subnet_invert_match: _,
+        dst_port_range,
+        nic: _,
+        log: _,
+        keep_state: _,
+    }: netfilter::Rule,
+) -> netconfig::FilterRule {
+    netconfig::FilterRule {
         element: netconfig::Id { uuid: [0; 16], version: 0 },
-        action: to_filter_action(rule.action),
+        action: to_filter_action(action),
         selector: netconfig::FlowSelector {
-            src_address: to_cidr_address(rule.src_subnet),
-            dst_address: to_cidr_address(rule.dst_subnet),
-            src_ports: to_port_range(rule.src_port_range),
-            dst_ports: to_port_range(rule.dst_port_range),
-            protocol: to_protocol(rule.proto),
+            src_address: to_cidr_address(src_subnet),
+            dst_address: to_cidr_address(dst_subnet),
+            src_ports: to_port_range(src_port_range),
+            dst_ports: to_port_range(dst_port_range),
+            protocol: to_protocol(proto),
             ..netconfig::FlowSelector::EMPTY
         },
-    })
+    }
 }
 
 /// Parses a [`netfilter::Action`] and turns it into a [`netconfig::FilterAction`].
@@ -143,8 +156,10 @@ fn to_cidr_address(
 }
 
 /// Parses a [`netfilter::PortRange`] and turns it into a vector of [`netconfig::PortRange`]'s.
-fn to_port_range(i: netfilter::PortRange) -> Option<Vec<netconfig::PortRange>> {
-    Some(vec![netconfig::PortRange { from: i.start, to: i.end }])
+fn to_port_range(
+    netfilter::PortRange { start, end }: netfilter::PortRange,
+) -> Option<Vec<netconfig::PortRange>> {
+    Some(vec![netconfig::PortRange { from: start, to: end }])
 }
 
 /// Parses a [`netfilter::SocketProtocol`] to a [`netconfig::Protocol`].
@@ -188,22 +203,63 @@ fn from_filter_rule(
 }
 
 /// Takes a [`netconfig::FilterRule`] and converts it into a [`netfilter::Rule`].
-fn gen_netfilter_rule(rule: &netconfig::FilterRule, nicid: u32) -> error::Result<netfilter::Rule> {
-    // This is a good candidate to refactor to use TryInto/TryFrom.
-    let src_port_range = from_port_range(&rule.selector.src_ports)
-        .unwrap_or_else(|| netfilter::PortRange { start: 0, end: 0 });
-    let dst_port_range = from_port_range(&rule.selector.dst_ports)
-        .unwrap_or_else(|| netfilter::PortRange { start: 0, end: 0 });
+fn gen_netfilter_rule(
+    netconfig::FilterRule {
+        element: _,
+        action,
+        selector:
+            netconfig::FlowSelector {
+                src_address, src_ports, dst_address, dst_ports, protocol: _, ..
+            },
+    }: &netconfig::FilterRule,
+    nicid: u32,
+) -> error::Result<netfilter::Rule> {
+    fn convert_port_ranges(
+        port_ranges: &Option<Vec<netconfig::PortRange>>,
+    ) -> error::Result<netfilter::PortRange> {
+        if let Some(port_ranges) = port_ranges {
+            match port_ranges.len() {
+                0 => Ok(netfilter::PortRange { start: 0, end: 0 }),
+                1 => Ok(from_port_range(port_ranges[0])),
+                _ => Err(error::Service::from(error::PacketFilterParse::TooManyPortRanges(
+                    port_ranges.clone(),
+                ))
+                .into()),
+            }
+        } else {
+            Ok(netfilter::PortRange { start: 0, end: 0 })
+        }
+    }
+    let src_port_range = convert_port_ranges(src_ports)?;
+    let dst_port_range = convert_port_ranges(dst_ports)?;
+
+    // TODO(fxbug.dev/66318) Replace CidrAddress with Subnet so that this conversion is no longer
+    // necessary.
+    fn from_cidr_address(
+        netconfig::CidrAddress { address, prefix_length, .. }: netconfig::CidrAddress,
+    ) -> error::Result<fidl_fuchsia_net::Subnet> {
+        Ok(fidl_fuchsia_net::Subnet {
+            addr: address
+                .ok_or_else(|| error::Service::from(error::PacketFilterParse::MissingAddress))?,
+            prefix_len: prefix_length.ok_or_else(|| {
+                error::Service::from(error::PacketFilterParse::MissingPrefixLength)
+            })?,
+        })
+    }
+    let dst_subnet =
+        dst_address.as_ref().cloned().map(|a| from_cidr_address(a).map(Box::new)).transpose()?;
+    let src_subnet =
+        src_address.as_ref().cloned().map(|a| from_cidr_address(a).map(Box::new)).transpose()?;
     Ok(netfilter::Rule {
-        action: from_filter_action(rule.action),
+        action: from_filter_action(*action),
         // TODO(cgibson): We need a way to specify the direction of traffic.
         direction: Direction::Incoming,
-        dst_subnet: from_cidr_address(&rule.selector.dst_address)?,
+        dst_subnet,
         dst_subnet_invert_match: false,
         keep_state: true,
         log: false,
         quick: false,
-        src_subnet: from_cidr_address(&rule.selector.src_address)?,
+        src_subnet,
         src_subnet_invert_match: false,
         src_port_range,
         dst_port_range,
@@ -240,55 +296,17 @@ fn from_filter_action(action: netconfig::FilterAction) -> netfilter::Action {
 }
 
 /// Parses a [`netconfig::PortRange`] and turns it into a [`netfilter::PortRange`].
-fn from_port_range(range: &Option<Vec<netconfig::PortRange>>) -> Option<netfilter::PortRange> {
-    match range {
-        Some(ranges) => ranges
-            .iter()
-            .find(|_| true)
-            .map(|range| netfilter::PortRange { start: range.from, end: range.to }),
-        None => None,
-    }
-}
-
-/// Parses a [`netconfig::CidrAddress`] and turns it into a [`fidl_fuchsia_net::Subnet`].
-fn from_cidr_address(
-    cidr_address: &Option<netconfig::CidrAddress>,
-) -> error::Result<Option<Box<fidl_fuchsia_net::Subnet>>> {
-    let (addr, prefix_len) = match cidr_address {
-        Some(cidr_addr) => {
-            let ip = match cidr_addr.address {
-                Some(a) => a,
-                None => {
-                    return Err(error::NetworkManager::Service(
-                        error::Service::ErrorParsingPacketFilterRule {
-                            msg: "CidrAddress is missing an IP address".to_string(),
-                        },
-                    ))
-                }
-            };
-            let prefix = match cidr_addr.prefix_length {
-                Some(p) => p,
-                None => {
-                    return Err(error::NetworkManager::Service(
-                        error::Service::ErrorParsingPacketFilterRule {
-                            msg: "CidrAddress is missing the prefix length".to_string(),
-                        },
-                    ))
-                }
-            };
-            (ip, prefix)
-        }
-        // A filter rule does not need a `CidrAddress`, it can be empty in the config for example.
-        None => return Ok(None),
-    };
-    Ok(Some(Box::new(fidl_fuchsia_net::Subnet { addr, prefix_len })))
+fn from_port_range(
+    netconfig::PortRange { from, to }: netconfig::PortRange,
+) -> netfilter::PortRange {
+    netfilter::PortRange { start: from, end: to }
 }
 
 /// Parses a [`servicemgr::NatConfig`] and extracts the required fields.
 fn from_nat_config(
-    nat_config: &NatConfig,
+    NatConfig { enable: _, local_subnet, global_ip, pid }: &NatConfig,
 ) -> error::Result<(fidl_fuchsia_net::Subnet, fidl_fuchsia_net::IpAddress, u32)> {
-    let src_subnet = match &nat_config.local_subnet {
+    let src_subnet = match local_subnet {
         Some(subnet) => fidl_fuchsia_net::Subnet::from(subnet),
         None => {
             return Err(error::NetworkManager::Service(error::Service::NatConfigError {
@@ -296,7 +314,7 @@ fn from_nat_config(
             }))
         }
     };
-    let wan_ip = match nat_config.global_ip {
+    let wan_ip = match global_ip {
         Some(lif) => match lif.address {
             IpAddr::V4(a) => fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
                 addr: a.octets(),
@@ -313,7 +331,7 @@ fn from_nat_config(
             }))
         }
     };
-    let nicid = match nat_config.pid {
+    let nicid = match pid {
         Some(pid) => pid.to_u32(),
         None => {
             return Err(error::NetworkManager::Service(error::Service::NatConfigError {
@@ -328,12 +346,14 @@ fn from_nat_config(
 ///
 /// A single `AclEntry` can break out a into multiple `FilterRule`'s for a variety of different
 /// reasons, but mainly due to IPv4 and IPv6 packet filtering rules needing two separate entries.
-fn parse_aclentry(entry: &AclEntry) -> error::Result<Vec<netconfig::FilterRule>> {
+fn parse_aclentry(
+    AclEntry { config, ipv4, ipv6: _ }: &AclEntry,
+) -> error::Result<Vec<netconfig::FilterRule>> {
     let mut filter_rules = Vec::new();
-    if let Some(ipv4) = entry.ipv4.as_ref() {
+    if let Some(ipv4) = ipv4.as_ref() {
         let rule = ipv4.try_into()?;
         filter_rules.push(netconfig::FilterRule {
-            action: netconfig::FilterAction::from(entry.config.forwarding_action.clone()),
+            action: netconfig::FilterAction::from(config.forwarding_action.clone()),
             ..rule
         });
     }
@@ -349,7 +369,10 @@ fn parse_aclentry(entry: &AclEntry) -> error::Result<Vec<netconfig::FilterRule>>
 impl PacketFilter {
     /// Starts a new instance of a PacketFilter.
     pub fn start() -> error::Result<Self> {
-        let filter_svc = connect_to_service::<FilterMarker>()?;
+        let filter_svc = connect_to_service::<FilterMarker>().map_err(|e| {
+            warn!("failed to connect to fuchsia.net.filter/Filter service: {}", e);
+            error::Service::PacketFilterServiceConnect
+        })?;
         info!("Connected to filter service");
         Ok(PacketFilter { filter_svc })
     }
@@ -369,28 +392,20 @@ impl PacketFilter {
         let netfilter_rules: Vec<netfilter::Rule> = match self.filter_svc.get_rules().await {
             Ok((rules, _, Status::Ok)) => rules,
             Ok((_, _, status)) => {
-                return Err(error::NetworkManager::Service(error::Service::FidlError {
-                    msg: format!("Failed to get filters: Status was: {:?}", status),
-                }))
+                return Err(error::Service::ErrorGettingPacketFilterRules(
+                    error::PacketFilterFidl::Status(status),
+                )
+                .into());
             }
             Err(e) => {
-                return Err(error::NetworkManager::Service(error::Service::FidlError {
-                    msg: format!("Request to packet filter FIDL service failed: {}", e),
-                }))
+                return Err(error::Service::ErrorGettingPacketFilterRules(
+                    error::PacketFilterFidl::Fidl(e),
+                )
+                .into());
             }
         };
 
-        netfilter_rules
-            .into_iter()
-            .map(|rule| match to_filter_rule(rule) {
-                Ok(f) => Ok(f),
-                Err(e) => Err(error::NetworkManager::Service(
-                    error::Service::ErrorParsingPacketFilterRule {
-                        msg: format!("Failed to parse filter rule: {:?}", e),
-                    },
-                )),
-            })
-            .collect::<error::Result<Vec<netconfig::FilterRule>>>()
+        Ok(netfilter_rules.into_iter().map(to_filter_rule).collect::<Vec<netconfig::FilterRule>>())
     }
 
     /// Installs a new packet filter rule.
@@ -416,14 +431,16 @@ impl PacketFilter {
         let (mut existing_rules, generation) = match self.filter_svc.get_rules().await {
             Ok((rules, generation, Status::Ok)) => (rules, generation),
             Ok((_, _, status)) => {
-                return Err(error::NetworkManager::Service(error::Service::FidlError {
-                    msg: format!("Failed to get filters: Status was: {:?}", status),
-                }))
+                return Err(error::Service::ErrorGettingPacketFilterRules(
+                    error::PacketFilterFidl::Status(status),
+                )
+                .into());
             }
             Err(e) => {
-                return Err(error::NetworkManager::Service(error::Service::FidlError {
-                    msg: format!("Request to packet filter FIDL service failed: {}", e),
-                }))
+                return Err(error::Service::ErrorGettingPacketFilterRules(
+                    error::PacketFilterFidl::Fidl(e),
+                )
+                .into());
             }
         };
 
@@ -436,14 +453,14 @@ impl PacketFilter {
         // We don't update the generation number here, this is to avoid potential race conditions.
         match self.filter_svc.update_rules(&mut existing_rules.iter_mut(), generation).await {
             Ok(Status::Ok) => Ok(()),
-            Ok(status) => {
-                Err(error::NetworkManager::Service(error::Service::ErrorParsingPacketFilterRule {
-                    msg: format!("Failed to add new packet filter: {:?}", status),
-                }))
-            }
-            Err(e) => Err(error::NetworkManager::Service(error::Service::FidlError {
-                msg: format!("Request to packet filter FIDL service failed: {:?}", e),
-            })),
+            Ok(status) => Err(error::Service::ErrorUpdatingPacketFilterRules(
+                error::PacketFilterFidl::Status(status),
+            )
+            .into()),
+            Err(e) => Err(error::Service::ErrorUpdatingPacketFilterRules(
+                error::PacketFilterFidl::Fidl(e),
+            )
+            .into()),
         }
     }
 
@@ -714,7 +731,7 @@ mod tests {
             },
         };
         let actual = to_filter_rule(test_netfilter_rule);
-        assert_eq!(expected, actual.unwrap());
+        assert_eq!(expected, actual);
     }
 
     #[test]

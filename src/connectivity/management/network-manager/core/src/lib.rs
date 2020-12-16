@@ -760,7 +760,7 @@ impl DeviceState {
     pub async fn get_filters(&self) -> error::Result<Vec<netconfig::FilterRule>> {
         self.packet_filter.get_filters().await.map_err(|e| {
             warn!("Failed to get filter rules: {:?}", e);
-            error::NetworkManager::Service(error::Service::ErrorGettingPacketFilterRules)
+            e
         })
     }
 

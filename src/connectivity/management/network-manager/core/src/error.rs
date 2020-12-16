@@ -4,83 +4,36 @@
 
 //! Custom error types for the network manager.
 
-use anyhow::Error;
+use std::path::PathBuf;
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, NetworkManager>;
 
 /// Top-level error type the network manager.
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum NetworkManager {
     /// Errors related to LIF and LIFManager
-    #[error("{}", _0)]
-    Lif(Lif),
+    #[error("{0}")]
+    Lif(#[from] Lif),
     /// Errors related to Port and PortManager
-    #[error("{}", _0)]
-    Port(Port),
+    #[error("{0}")]
+    Port(#[from] Port),
     /// Errors related to Services.
-    #[error("{}", _0)]
-    Service(Service),
+    #[error("{0}")]
+    Service(#[from] Service),
     /// Errors related to Configuration.
-    #[error("{}", _0)]
-    Config(Config),
+    #[error("{0}")]
+    Config(#[from] Config),
     /// Errors related to HAL layer.
-    #[error("{}", _0)]
-    Hal(Hal),
+    #[error("{0}")]
+    Hal(#[from] Hal),
     /// Errors related to OIR.
-    #[error("{}", _0)]
-    Oir(Oir),
+    #[error("{0}")]
+    Oir(#[from] Oir),
     /// Internal errors with an attached context.
     #[error("An error occurred.")]
     Internal,
     // Add error types here.
-}
-
-impl From<Config> for NetworkManager {
-    fn from(e: Config) -> Self {
-        NetworkManager::Config(e)
-    }
-}
-impl From<Hal> for NetworkManager {
-    fn from(e: Hal) -> Self {
-        NetworkManager::Hal(e)
-    }
-}
-impl From<Lif> for NetworkManager {
-    fn from(e: Lif) -> Self {
-        NetworkManager::Lif(e)
-    }
-}
-impl From<Oir> for NetworkManager {
-    fn from(e: Oir) -> Self {
-        NetworkManager::Oir(e)
-    }
-}
-impl From<Port> for NetworkManager {
-    fn from(e: Port) -> Self {
-        NetworkManager::Port(e)
-    }
-}
-impl From<Service> for NetworkManager {
-    fn from(e: Service) -> Self {
-        NetworkManager::Service(e)
-    }
-}
-impl From<std::io::Error> for NetworkManager {
-    fn from(_: std::io::Error) -> Self {
-        NetworkManager::Internal
-    }
-}
-// TODO(bwb): fix error types
-impl From<Error> for NetworkManager {
-    fn from(_: anyhow::Error) -> Self {
-        NetworkManager::Internal
-    }
-}
-impl From<serde_json::error::Error> for NetworkManager {
-    fn from(_: serde_json::error::Error) -> Self {
-        NetworkManager::Internal
-    }
 }
 
 /// Error type for packet LIFManager.
@@ -115,21 +68,45 @@ pub enum Port {
     NotSupported,
 }
 
-/// Error type for Services.
+/// Error type for fuchsia.net.filter FIDL.
+#[derive(Error, Debug)]
+pub enum PacketFilterFidl {
+    #[error("Non-Ok status: {0:?}")]
+    Status(fidl_fuchsia_net_filter::Status),
+    #[error("FIDL error: {0}")]
+    Fidl(fidl::Error),
+}
+
+/// Error type for packet filter rule parsing.
 #[derive(Error, Debug, PartialEq)]
+pub enum PacketFilterParse {
+    #[error("CidrAddress missing address field")]
+    MissingAddress,
+    #[error("CidrAddress missing prefix_length field")]
+    MissingPrefixLength,
+    #[error("More than one port range specified: {0:?}")]
+    TooManyPortRanges(Vec<fidl_fuchsia_router_config::PortRange>),
+}
+
+/// Error type for Services.
+#[derive(Error, Debug)]
 pub enum Service {
     #[error("Could not enable service")]
     NotEnabled,
     #[error("Could not disable service")]
     NotDisabled,
+    #[error("Could not connect to fuchsia.net.filter/Filter service")]
+    PacketFilterServiceConnect,
     #[error("Failed to add new packet filter rules")]
     ErrorAddingPacketFilterRules,
     #[error("Failed to clear packet filter rules")]
     ErrorClearingPacketFilterRules,
-    #[error("Failed to get packet filter rules")]
-    ErrorGettingPacketFilterRules,
-    #[error("Error while parsing packet filter rule: {}", msg)]
-    ErrorParsingPacketFilterRule { msg: String },
+    #[error("Failed to get packet filter rules: {0}")]
+    ErrorGettingPacketFilterRules(PacketFilterFidl),
+    #[error("Failed to parse packet filter rule")]
+    ErrorParsingPacketFilterRule(#[from] PacketFilterParse),
+    #[error("Failed to update packet filter rule: {0}")]
+    ErrorUpdatingPacketFilterRules(PacketFilterFidl),
     #[error("Failed to enable IP forwarding")]
     ErrorEnableIpForwardingFailed,
     #[error("Failed to disable IP forwarding")]
@@ -140,49 +117,45 @@ pub enum Service {
     UpdateNatPendingConfig,
     #[error("NAT is not enabled")]
     NatNotEnabled,
-    #[error("Error while configuring NAT: {}", msg)]
+    #[error("Error while configuring NAT: {msg}")]
     NatConfigError { msg: String },
     #[error("Service is not supported")]
     NotSupported,
-    #[error("FIDL service error: {}", msg)]
-    FidlError { msg: String },
 }
 
 /// Error type for packet HAL.
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Hal {
     #[error("Could not create bridge")]
     BridgeNotCreated,
     #[error("Could not find bridge")]
     BridgeNotFound,
+    #[error("FIDL error: {context}")]
+    Fidl { context: String, source: fidl::Error },
     #[error("Operation failed")]
     OperationFailed,
 }
 
 /// Error type for config persistence.
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 pub enum Config {
     #[error("No config has been loaded yet")]
     NoConfigLoaded,
     #[error("Device config paths have not been set up yet")]
     ConfigPathsNotSet,
-    #[error("The requested config file was not found: {}", path)]
-    ConfigNotFound { path: String },
-    #[error("Could not load the requested config: {}, because: {}", path, error)]
-    ConfigNotLoaded { path: String, error: String },
-    #[error("Could not load the device schema: {}", path)]
-    SchemaNotLoaded { path: String },
-    #[error("Failed to deserialize config: {}, because: {}", path, error)]
-    FailedToDeserializeConfig { path: String, error: String },
-    #[error("Failed to load device schema: {}, because {}", path, error)]
-    FailedToLoadDeviceSchema { path: String, error: String },
-    #[error("Failed to validate device config: {}, because: {}", path, error)]
+    #[error("The requested config file was not found: {path}")]
+    ConfigNotFound { path: PathBuf },
+    #[error("Could not load the requested config: {path}")]
+    ConfigNotLoaded { path: PathBuf, source: std::io::Error },
+    #[error("Failed to deserialize config: {path}")]
+    FailedToDeserializeConfig { path: PathBuf, source: serde_json::Error },
+    #[error("Failed to validate device config: {path}, because: {error}")]
     FailedToValidateConfig { path: String, error: String },
-    #[error("The requested config section does not exist: {}", msg)]
+    #[error("The requested config section does not exist: {msg}")]
     NotFound { msg: String },
-    #[error("Config is malformed: {}", msg)]
+    #[error("Config is malformed: {msg}")]
     Malformed { msg: String },
-    #[error("Operation not supported: {}", msg)]
+    #[error("Operation not supported: {msg}")]
     NotSupported { msg: String },
     #[error("Failed to get ACL entries")]
     FailedToGetAclEntries,

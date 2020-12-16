@@ -41,7 +41,10 @@ rustc_library("lib") {
     "//third_party/rust_crates:valico",
   ]
 
-  test_deps = [ "//src/lib/fidl/rust/fidl" ]
+  test_deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:matches",
+  ]
 
   sources = [
     "src/address.rs",

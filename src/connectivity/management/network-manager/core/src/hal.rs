@@ -310,11 +310,16 @@ impl NetCfg {
         let (dns_server_watcher, dns_server_watcher_req) = fidl::endpoints::create_proxy::<
             DnsServerWatcherMarker,
         >()
-        .map_err(|e| error::Service::FidlError {
-            msg: format!("error creating dns server watcher: {}", e),
+        .map_err(|e| error::Hal::Fidl {
+            context: "failed to create fuchsia.net.name/DnsServerWatcher proxy".to_string(),
+            source: e,
         })?;
         let () = self.stack.get_dns_server_watcher(dns_server_watcher_req).map_err(|e| {
-            error::Service::FidlError { msg: format!("error getting dns server watcher: {}", e) }
+            error::Hal::Fidl {
+                context: "failed to call fuchsia.net.stack/Stack.get_dns_server_watcher"
+                    .to_string(),
+                source: e,
+            }
         })?;
         Ok(dns_server_watcher)
     }
@@ -448,20 +453,50 @@ impl NetCfg {
     /// `enable` controls whether the given `PortId` has a DHCP client started or stopped.
     pub async fn set_dhcp_client_state(&mut self, pid: PortId, enable: bool) -> error::Result<()> {
         let (dhcp_client, server_end) = fidl::endpoints::create_proxy::<fnetdhcp::ClientMarker>()
-            .context("dhcp client: failed to create fidl endpoints")?;
-        if let Err(e) = self.netstack.get_dhcp_client(pid.to_u32(), server_end).await {
-            warn!("failed to create fidl endpoint for dhch client: {:?}", e);
-            return Err(error::NetworkManager::Hal(error::Hal::OperationFailed));
-        }
-        let r = if enable {
-            dhcp_client.start().await.context("failed to start DHCP client")?
+            .map_err(|e| error::Hal::Fidl {
+            context: "failed to create DHCP client endpoints".to_string(),
+            source: e,
+        })?;
+        let () = self
+            .netstack
+            .get_dhcp_client(pid.to_u32(), server_end)
+            .await
+            .map_err(|e| error::Hal::Fidl {
+                context: "failed to call fuchsia.netstack/Netstack.get_dhcp_client".to_string(),
+                source: e,
+            })?
+            .map_err(|status| {
+                warn!(
+                    "fuchsia.netstack/Netstack.get_dhcp_client returned non-OK status: {:?}",
+                    status
+                );
+                error::Hal::OperationFailed
+            })?;
+        if enable {
+            let () = dhcp_client
+                .start()
+                .await
+                .map_err(|e| error::Hal::Fidl {
+                    context: "failed to start DHCP client".to_string(),
+                    source: e,
+                })?
+                .map_err(|e| {
+                    warn!("failed to start DHCP client: {:?}", e);
+                    error::Hal::OperationFailed
+                })?;
         } else {
-            dhcp_client.stop().await.context("failed to stop DHCP client")?
+            let () = dhcp_client
+                .stop()
+                .await
+                .map_err(|e| error::Hal::Fidl {
+                    context: "failed to stop DHCP client".to_string(),
+                    source: e,
+                })?
+                .map_err(|e| {
+                    warn!("failed to stop DHCP client: {:?}", e);
+                    error::Hal::OperationFailed
+                })?;
         };
-        if let Err(e) = r {
-            warn!("failed to start DHCP client: {:?}", e);
-            return Err(error::NetworkManager::Hal(error::Hal::OperationFailed));
-        }
         info!("DHCP client on nicid: {}, enabled: {}", pid.to_u32(), enable);
         Ok(())
     }
@@ -1072,6 +1107,7 @@ mod tests {
         super::*,
         crate::{address::LifIpAddr, lifmgr::DnsSearch, ElementId},
         futures::join,
+        matches::assert_matches,
         std::net::Ipv4Addr,
     };
 
@@ -1671,7 +1707,7 @@ mod tests {
         assert!(netcfg.dhcp_server.is_some());
 
         netcfg.get_dhcp_server(PortId(1)).expect("failed to get DHCP server in test");
-        assert_eq!(
+        assert_matches!(
             netcfg.get_dhcp_server(PortId(2)).expect_err("get DHCP server with wrong id succeeded"),
             error::NetworkManager::Hal(error::Hal::OperationFailed)
         );
@@ -1679,7 +1715,7 @@ mod tests {
         netcfg.dhcp_server = None; // Manually disable the server so no FIDL calls are made.
         netcfg.get_dhcp_server(PortId(2)).expect("failed to get DHCP server in test");
         assert!(netcfg.dhcp_server.is_some());
-        assert_eq!(
+        assert_matches!(
             netcfg.get_dhcp_server(PortId(1)).expect_err("get DHCP server with wrong id succeeded"),
             error::NetworkManager::Hal(error::Hal::OperationFailed)
         );
@@ -2096,7 +2132,7 @@ mod tests {
             // Drop the channel to stop mock server.
             drop(netcfg);
 
-            assert_eq!(res, Err(error::NetworkManager::Hal(error::Hal::OperationFailed)));
+            assert_matches!(res, Err(error::NetworkManager::Hal(error::Hal::OperationFailed)));
         };
 
         let mut mock_server = MockDhcpServer::new();
@@ -2128,7 +2164,7 @@ mod tests {
                     }),
                 )
                 .await;
-            assert_eq!(res, Err(error::NetworkManager::Hal(error::Hal::OperationFailed)));
+            assert_matches!(res, Err(error::NetworkManager::Hal(error::Hal::OperationFailed)));
             // Drop the channel to stop mock server.
             drop(netcfg);
         };

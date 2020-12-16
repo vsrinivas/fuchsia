@@ -119,7 +119,9 @@ impl EventLoop {
         let netstack_stream = netstack_stream.map(|r| r.context("Netstack event stream")).fuse();
         let netstack_dns_stream = dns_server_watcher::new_dns_server_stream(
             DnsServersUpdateSource::Netstack,
-            self.device.get_netstack_dns_server_watcher()?,
+            self.device
+                .get_netstack_dns_server_watcher()
+                .context("failed to get DNS server watcher")?,
         )
         .fuse();
         let oir_stream = crate::oir_worker::new_stream()

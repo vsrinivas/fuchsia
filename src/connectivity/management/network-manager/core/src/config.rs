@@ -691,8 +691,8 @@ impl Config {
             Ok(_) => {
                 self.device_config = Some(serde_json::from_value(loaded_config).map_err(|e| {
                     error::NetworkManager::Config(error::Config::FailedToDeserializeConfig {
-                        path: String::from(loaded_path.to_string_lossy()),
-                        error: e.to_string(),
+                        path: loaded_path.to_path_buf(),
+                        source: e,
                     })
                 })?);
                 self.startup_path = Some(loaded_path);
@@ -720,14 +720,14 @@ impl Config {
             let mut contents = String::new();
             let mut f = File::open(config_path).map_err(|e| {
                 error::NetworkManager::Config(error::Config::ConfigNotLoaded {
-                    path: String::from(config_path.to_string_lossy()),
-                    error: e.to_string(),
+                    path: config_path.to_path_buf(),
+                    source: e,
                 })
             })?;
             f.read_to_string(&mut contents).map_err(|e| {
                 error::NetworkManager::Config(error::Config::ConfigNotLoaded {
-                    path: String::from(config_path.to_string_lossy()),
-                    error: e.to_string(),
+                    path: config_path.to_path_buf(),
+                    source: e,
                 })
             })?;
             // Note that counter to intuition it is faster to read the full configuration file
@@ -735,14 +735,14 @@ impl Config {
             // serde_json::from_reader(), see: https://github.com/serde-rs/json/issues/160.
             let json: Value = serde_json::from_str(&contents).map_err(|e| {
                 error::NetworkManager::Config(error::Config::FailedToDeserializeConfig {
-                    path: String::from(config_path.to_string_lossy()),
-                    error: e.to_string(),
+                    path: config_path.to_path_buf(),
+                    source: e,
                 })
             })?;
             return Ok(json);
         }
         Err(error::NetworkManager::Config(error::Config::ConfigNotFound {
-            path: String::from(config_path.to_string_lossy()),
+            path: config_path.to_path_buf(),
         }))
     }
 
@@ -1528,6 +1528,7 @@ impl Config {
 mod tests {
     use super::*;
     use fuchsia_async as fasync;
+    use matches::assert_matches;
     use std::fs;
 
     fn create_test_config_no_paths() -> Config {
@@ -1961,34 +1962,30 @@ mod tests {
         let test_config = create_test_config_no_paths();
 
         // Missing config should raise an `error::Config::ConfigNotFound`.
-        assert_eq!(
-            test_config.try_load_config(Path::new("/doesntexist")).await,
-            Err(error::NetworkManager::Config(error::Config::ConfigNotFound {
-                path: "/doesntexist".to_string()
-            }))
+        let nonexistent = Path::new("/doesntexist");
+        assert_matches!(
+            test_config.try_load_config(nonexistent).await,
+            Err(error::NetworkManager::Config(error::Config::ConfigNotFound { path }))
+                if path == nonexistent
         );
 
         // An invalid config should fail to deserialize.
-        let invalid_empty = String::from("/pkg/data/invalid_factory_configs/invalid_empty.json");
-        assert_eq!(
-            test_config.try_load_config(Path::new(&invalid_empty)).await,
-            Err(error::NetworkManager::Config(error::Config::FailedToDeserializeConfig {
-                path: "/pkg/data/invalid_factory_configs/invalid_empty.json".to_string(),
-                error: "EOF while parsing an object at line 2 column 0".to_string(),
-            }))
+        let invalid_empty = Path::new("/pkg/data/invalid_factory_configs/invalid_empty.json");
+        assert_matches!(
+            test_config.try_load_config(invalid_empty).await,
+            Err(error::NetworkManager::Config(error::Config::FailedToDeserializeConfig { path, source }))
+                if path == invalid_empty && source.is_eof()
         );
 
         // A valid config should deserialize successfully.
-        let valid_empty = String::from("/pkg/data/valid_factory_configs/valid_empty.json");
-        let contents = fs::read_to_string(&valid_empty)
-            .expect(format!("Failed to open testdata file: {}", valid_empty).as_str());
+        let valid_empty = Path::new("/pkg/data/valid_factory_configs/valid_empty.json");
+        let contents = fs::read_to_string(valid_empty)
+            .expect(format!("Failed to open testdata file: {}", valid_empty.display()).as_str());
 
         // The expected configuration should deserialize successfully.
-        let expected_config: Value = serde_json::from_str(&contents).unwrap();
-        assert_eq!(
-            test_config.try_load_config(Path::new(&valid_empty)).await.unwrap(),
-            expected_config
-        );
+        let expected_config: Value =
+            serde_json::from_str(&contents).expect("failed to serialize config");
+        assert_matches!(test_config.try_load_config(valid_empty).await, Ok(config) if config == expected_config);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -2405,7 +2402,7 @@ mod tests {
         let mut test_config =
             create_test_config("/user", "/factory", "/pkg/data/device_schema.json");
 
-        for (test_name, config, want) in &[
+        for (test_name, config, want_error) in &[
             (
                 "valid_config",
                 r#"{
@@ -2476,7 +2473,7 @@ mod tests {
             ]
           }
         }"#,
-                Ok(()),
+                None,
             ),
             (
                 "invalid config",
@@ -2531,10 +2528,7 @@ mod tests {
             ]
           }
         }"#,
-                Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
-                    path: "".to_string(),
-                    error: "Interface must be exactly one of either: \'subinterfaces\', \'routed_vlan\', or \'switched_vlan\'".to_string(),
-                })),
+                Some("Interface must be exactly one of either: \'subinterfaces\', \'routed_vlan\', or \'switched_vlan\'"),
             ),
             (
                 "bad dhcp pool",
@@ -2578,10 +2572,7 @@ mod tests {
             ]
           }
         }"#,
-                Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
-                    path: "".to_string(),
-                    error: "DhcpPool is not related to any IP address".to_string()
-                })),
+                Some("DhcpPool is not related to any IP address"),
             ),
             (
                 "bad dhcp allocation ip address",
@@ -2632,10 +2623,7 @@ mod tests {
             ]
           }
         }"#,
-                Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
-                    path: "".to_string(),
-                    error: "DhcpPool is not related to any IP address".to_string()
-                })),
+                Some("DhcpPool is not related to any IP address"),
             ),
             (
                 "bad dhcp allocation mac address",
@@ -2679,10 +2667,7 @@ mod tests {
             ]
           }
         }"#,
-                Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
-                    path: "".to_string(),
-                    error: "not a valid MAC address".to_string()
-                })),
+                Some("not a valid MAC address"),
             ),
         ] {
             match serde_json::from_str(&config) {
@@ -2690,7 +2675,19 @@ mod tests {
                 Err(e) => panic!("{} Got unexpected error result: {}", test_name, e),
             }
             let got = test_config.final_validation().await;
-            assert_eq!(&got, want, "{}: got {:?} want: {:?}", test_name, got, want);
+            if let Some(want_error) = want_error {
+                assert_matches!(
+                    &got,
+                    Err(
+                        error::NetworkManager::Config(
+                            error::Config::FailedToValidateConfig { path, error }
+                        )
+                    )
+                    if path.is_empty() && error == want_error
+                );
+            } else {
+                let () = got.expect("unexpected final validation failure");
+            }
         }
     }
 
@@ -3001,11 +2998,10 @@ mod tests {
             },
         });
 
-        assert_eq!(
+        assert_matches!(
             test_config.get_interface_name("empty"),
-            Err(error::NetworkManager::Config(error::Config::NotFound {
-                msg: "Getting interface name for empty failed.".to_string()
-            }))
+            Err(error::NetworkManager::Config(error::Config::NotFound { msg }))
+                if msg == "Getting interface name for empty failed."
         );
 
         // Make sure that the interface name is returned as expected.
@@ -3140,15 +3136,13 @@ mod tests {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = new_config;
         // Should fail because VLAN ID 4000 does not match the routed_vlan configuration.
-        assert_eq!(
+        assert_matches!(
             test_config.resolve_to_routed_vlans(&new_sv),
-            Err(error::NetworkManager::Config(error::Config::NotFound {
-                msg: concat!(
+            Err(error::NetworkManager::Config(error::Config::NotFound { msg }))
+                if msg == concat!(
                     "Switched VLAN port does not resolve to a routed VLAN: SwitchedVlan {",
                     " interface_mode: Access, access_vlan: Some(4000), trunk_vlans: None }"
                 )
-                .to_string()
-            }))
         );
     }
 
@@ -3274,12 +3268,12 @@ mod tests {
                     ip_address: "192.168.0.1".parse().unwrap(),
                     mac_address: MacAddress::parse_str("00:01:02:03:04:05").unwrap(),
                 },
-                Ok(lifmgr::DhcpReservation {
+                lifmgr::DhcpReservation {
                     id: ElementId::default(),
                     name: Some("name1".to_string()),
                     address: "192.168.0.1".parse().unwrap(),
                     mac: MacAddress::parse_str("00:01:02:03:04:05").unwrap(),
-                }),
+                },
             ),
             (
                 "good, no name",
@@ -3288,49 +3282,43 @@ mod tests {
                     ip_address: "192.168.0.1".parse().unwrap(),
                     mac_address: MacAddress::parse_str("00:01:02:03:04:05").unwrap(),
                 },
-                Ok(lifmgr::DhcpReservation {
+                lifmgr::DhcpReservation {
                     id: ElementId::default(),
                     name: None,
                     address: "192.168.0.1".parse().unwrap(),
                     mac: MacAddress::parse_str("00:01:02:03:04:05").unwrap(),
-                }),
-            ),
-            (
-                "bad mac",
-                StaticIpAllocations {
-                    device_name: "name1".to_string(),
-                    ip_address: "192.168.0.1".parse().unwrap(),
-                    mac_address: MacAddress::parse_str("00:00:00:00:00:00").unwrap(),
                 },
-                Err(error::NetworkManager::Config(error::Config::NotSupported {
-                    msg: "Invalid mac address".to_string(),
-                })),
-            ),
-            (
-                "broadcast mac",
-                StaticIpAllocations {
-                    device_name: "name1".to_string(),
-                    ip_address: "192.168.0.1".parse().unwrap(),
-                    mac_address: MacAddress::parse_str("ff:ff:ff:ff:ff:ff").unwrap(),
-                },
-                Err(error::NetworkManager::Config(error::Config::NotSupported {
-                    msg: "Invalid mac address".to_string(),
-                })),
-            ),
-            (
-                "mcast mac",
-                StaticIpAllocations {
-                    device_name: "name1".to_string(),
-                    ip_address: "192.168.0.1".parse().unwrap(),
-                    mac_address: MacAddress::parse_str("01:01:02:03:04:05").unwrap(),
-                },
-                Err(error::NetworkManager::Config(error::Config::NotSupported {
-                    msg: "Invalid mac address".to_string(),
-                })),
             ),
         ] {
-            let got = allocation.try_into();
+            let got = lifmgr::DhcpReservation::try_from(allocation)
+                .expect("failed to convert static IP allocation to DHCP reservation");
             assert_eq!(&got, want, "{}: got {:?} want {:?}", testcase, got, want);
+        }
+        for allocation in &[
+            // Bad mac.
+            StaticIpAllocations {
+                device_name: "name1".to_string(),
+                ip_address: "192.168.0.1".parse().unwrap(),
+                mac_address: MacAddress::parse_str("00:00:00:00:00:00").unwrap(),
+            },
+            // Broadcast mac.
+            StaticIpAllocations {
+                device_name: "name1".to_string(),
+                ip_address: "192.168.0.1".parse().unwrap(),
+                mac_address: MacAddress::parse_str("ff:ff:ff:ff:ff:ff").unwrap(),
+            },
+            // Multicast mac.
+            StaticIpAllocations {
+                device_name: "name1".to_string(),
+                ip_address: "192.168.0.1".parse().unwrap(),
+                mac_address: MacAddress::parse_str("01:01:02:03:04:05").unwrap(),
+            },
+        ] {
+            assert_matches!(
+                lifmgr::DhcpReservation::try_from(allocation),
+                Err(error::NetworkManager::Config(error::Config::NotSupported { msg }))
+                    if msg == "Invalid mac address"
+            );
         }
     }
 
