@@ -4,271 +4,303 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("$zx/kernel/phys/phys_executable.gni")
-import("$zx/kernel/phys/qemu.gni")
-import("$zx/kernel/phys/zbi_executable.gni")
-if (zx == "/") {
-  import("$zx/public/gn/resource.gni")
-  import("$zx/public/gn/test/zbi_test.gni")
-} else {
-  import("//build/dist/generated_resource.gni")
-  import("//src/bringup/lib/mexec/testing/zbi_test.gni")
-}
-import("common_tests.gni")
+# The common phys tests, built as QEMU executables and ZBI tests.
+common_tests = [
+  "hello-world-test",
+  "backtrace-test",
+  "phys-unittests",
+  "phys-memory-test",
+]
 
-if (zx == "/") {
-  assert(toolchain.environment == "kernel.phys" ||
-         toolchain.environment_label == qemu_environment)
-} else {
-  assert(toolchain.environment == "kernel.phys" ||
-         toolchain_variant.base == qemu_environment)
-}
-
-# This provides a PhysMain function appropriate for zbi_test() targets.
-source_set("qemu-test-main") {
-  testonly = true
-  sources = [ "qemu-test-main.cc" ]
-  defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
-  deps = [
-    "$zx/kernel/lib/arch",
-    "$zx/kernel/lib/libc",
-    "$zx/system/ulib/uart",
-  ]
-  public_deps = [
-    # This is public to propagate its public_deps so dependents
-    # of qemu-test-main can use #include "test-main.h".
-    ":test-main",
-  ]
-}
-
-source_set("zbi-test-main") {
-  testonly = true
-  sources = [ "zbi-test-main.cc" ]
-  defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
-  public_deps = [ ":test-main" ]
-  deps = [ "$zx/kernel/lib/libc" ]
-}
-
-source_set("test-main") {
-  testonly = true
-  sources = [ "test-main.h" ]
-  public_deps = [
-    "$zx/kernel/lib/arch:headers",
-    "..:main",
-    "..:phys_executable.headers",
-  ]
-}
-
-# Build a test that runs directly as a QEMU kernel.  This is wired up as a
-# zbi_test() for infrastructure purposes though there is nothing in the ZBI.
-template("phys_qemu_test") {
-  main_target = target_name
-  executable_target = "_qemu_phys_test.$target_name.executable"
-  zbi_target = "_qemu_phys_test.$target_name.zbi_test"
-
-  phys_executable(executable_target) {
-    testonly = true
-    visibility = [ ":*" ]
-    deps = []
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "output_dir",
-                             "output_extension",
-                             "output_name",
-                             "tags",
-                             "testonly",
-                             "target_name",
-                           ])
-    deps += qemu_deps + [ ":qemu-test-main" ]
-  }
-
-  zbi_test(zbi_target) {
-    visibility = [ ":*" ]
-
-    # The ZBI is empty other than the boilerplate cmdline, and does not
-    # contain a ZBI-bootable kernel.
-    args = []
-    cpu = ""
-    deps = []
-    tags = [ "incomplete" ]
-    if (defined(invoker.tags)) {
-      tags += invoker.tags
-    }
-
-    # The special kernel is all that really matters for this test.
-    device_types = [ "QEMU" ]
-    qemu_kernel = ":$executable_target"
-
-    # Set a short timeout since the tests don't necessarily shut down QEMU
-    # after printing the success string.
-    timeout = qemu_short_timeout
+if (current_toolchain != default_toolchain) {
+  import("$zx/kernel/phys/phys_executable.gni")
+  import("$zx/kernel/phys/qemu.gni")
+  import("$zx/kernel/phys/zbi_executable.gni")
+  if (zx == "/") {
+    import("$zx/public/gn/resource.gni")
+    import("$zx/public/gn/test/zbi_test.gni")
+  } else {
+    import("//build/dist/generated_resource.gni")
+    import("//src/bringup/lib/mexec/testing/zbi_test.gni")
   }
 
   if (zx == "/") {
-    # The "null redirect" is needed to perform variant selection consistent
-    # with what the phys_executable will do.  That way the $executable_target
-    # label is in the right toolchain to be found in images.json.
-    environment_redirect(main_target) {
-      testonly = true
-      forward_variables_from(invoker, [ "visibility" ])
-      environment_label = qemu_environment
-      deps = [ ":$zbi_target" ]
-    }
+    assert(toolchain.environment == "kernel.phys" ||
+           toolchain.environment_label == qemu_environment)
   } else {
-    group(main_target) {
-      testonly = true
-      forward_variables_from(invoker, [ "visibility" ])
-      public_deps = [ ":$zbi_target($qemu_environment)" ]
-    }
-  }
-}
-
-# TODO(fxbug.dev/57245): We provide a dummy resource to contrive 'completeness'
-# in the following ZBI tests, which is a requirement for bootability under the
-# current policy of zedboot, gigaboot, and the boot-shims using the old
-# `zbi_check`. Once that is no longer a requirement, remove this target.
-generated_resource("dummy.txt") {
-  testonly = true
-  visibility = [ ":*" ]
-  contents = "This space is intentionally left blank."
-  outputs = [ "$target_gen_dir/dummy.txt" ]
-}
-
-# Build tests in both phys_qemu_test() and zbi_executable()/zbi_test()
-# incarnations.
-foreach(test, common_tests) {
-  phys_qemu_test("qemu-$test") {
-    deps = [ ":$test" ]
+    assert(toolchain.environment == "kernel.phys" ||
+           toolchain_variant.base == qemu_environment)
   }
 
-  zbi_executable("zbi-$test.executable") {
+  # This provides a PhysMain function appropriate for zbi_test() targets.
+  source_set("qemu-test-main") {
     testonly = true
+    sources = [ "qemu-test-main.cc" ]
+    defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
     deps = [
-      ":$test",
-      ":zbi-test-main",
+      "$zx/kernel/lib/arch",
+      "$zx/kernel/lib/libc",
+      "$zx/system/ulib/uart",
+    ]
+    public_deps = [
+      # This is public to propagate its public_deps so dependents
+      # of qemu-test-main can use #include "test-main.h".
+      ":test-main",
     ]
   }
 
-  zbi_test("zbi-$test") {
-    args = []
+  source_set("zbi-test-main") {
+    testonly = true
+    sources = [ "zbi-test-main.cc" ]
+    defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
+    public_deps = [ ":test-main" ]
+    deps = [ "$zx/kernel/lib/libc" ]
+  }
+
+  source_set("test-main") {
+    testonly = true
+    sources = [ "test-main.h" ]
+    public_deps = [
+      "$zx/kernel/lib/arch:headers",
+      "..:main",
+      "..:phys_executable.headers",
+    ]
+  }
+
+  # Build a test that runs directly as a QEMU kernel.  This is wired up as a
+  # zbi_test() for infrastructure purposes though there is nothing in the ZBI.
+  template("phys_qemu_test") {
+    main_target = target_name
+    executable_target = "_qemu_phys_test.$target_name.executable"
+    zbi_target = "_qemu_phys_test.$target_name.zbi_test"
+
+    phys_executable(executable_target) {
+      testonly = true
+      visibility = [ ":*" ]
+      deps = []
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "output_dir",
+                               "output_extension",
+                               "output_name",
+                               "tags",
+                               "testonly",
+                               "target_name",
+                             ])
+      deps += qemu_deps + [ ":qemu-test-main" ]
+    }
+
+    zbi_test(zbi_target) {
+      visibility = [ ":*" ]
+
+      # The ZBI is empty other than the boilerplate cmdline, and does not
+      # contain a ZBI-bootable kernel.
+      args = []
+      cpu = ""
+      deps = []
+      tags = [ "incomplete" ]
+      if (defined(invoker.tags)) {
+        tags += invoker.tags
+      }
+
+      # The special kernel is all that really matters for this test.
+      device_types = [ "QEMU" ]
+      qemu_kernel = ":$executable_target"
+
+      # Set a short timeout since the tests don't necessarily shut down QEMU
+      # after printing the success string.
+      timeout = qemu_short_timeout
+    }
+
+    if (zx == "/") {
+      # The "null redirect" is needed to perform variant selection consistent
+      # with what the phys_executable will do.  That way the $executable_target
+      # label is in the right toolchain to be found in images.json.
+      environment_redirect(main_target) {
+        testonly = true
+        forward_variables_from(invoker, [ "visibility" ])
+        environment_label = qemu_environment
+        deps = [ ":$zbi_target" ]
+      }
+    } else {
+      group(main_target) {
+        testonly = true
+        forward_variables_from(invoker, [ "visibility" ])
+        public_deps = [ ":$zbi_target($qemu_environment)" ]
+      }
+    }
+  }
+
+  # TODO(fxbug.dev/57245): We provide a dummy resource to contrive 'completeness'
+  # in the following ZBI tests, which is a requirement for bootability under the
+  # current policy of zedboot, gigaboot, and the boot-shims using the old
+  # `zbi_check`. Once that is no longer a requirement, remove this target.
+  generated_resource("dummy.txt") {
+    testonly = true
+    visibility = [ ":*" ]
+    contents = "This space is intentionally left blank."
+    outputs = [ "$target_gen_dir/dummy.txt" ]
+  }
+
+  # Build tests in both phys_qemu_test() and zbi_executable()/zbi_test()
+  # incarnations.
+  foreach(test, common_tests) {
+    phys_qemu_test("qemu-$test") {
+      deps = [ ":$test" ]
+    }
+
+    zbi_executable("zbi-$test.executable") {
+      testonly = true
+      deps = [
+        ":$test",
+        ":zbi-test-main",
+      ]
+    }
+
+    zbi_test("zbi-$test") {
+      args = []
+      deps = [
+        ":dummy.txt",
+        ":zbi-$test.executable",
+      ]
+
+      # TODO(mcgrathr): enable on hardware too
+      device_types = [
+        "AEMU",
+        "QEMU",
+      ]
+
+      # Set a short timeout since the tests don't reliably reboot the machine.
+      timeout = qemu_short_timeout
+    }
+  }
+
+  source_set("hello-world-test") {
+    testonly = true
+    sources = [ "hello-world-test.cc" ]
     deps = [
+      ":test-main",
+      "$zx/kernel/lib/libc",
+      "..:phys_executable.headers",
+    ]
+  }
+
+  source_set("backtrace-test") {
+    testonly = true
+    sources = [ "backtrace-test.cc" ]
+    deps = [
+      ":test-main",
+      "$zx/kernel/lib/arch",
+      "$zx/kernel/lib/libc",
+      "..:phys_executable.headers",
+    ]
+  }
+
+  # Ideally we'd test all four combinations on arm64 and both combinations on
+  # x86.  But the common library code is always compiled with shadow-call-stack
+  # on arm64 so we can't disable the ABI support for it and with safe-stack on
+  # x86 so we can't disable the ABI support for it there.  The start.S code only
+  # enables extra stack support conditionally so as not to waste space, so there
+  # isn't a good way to test non-default configurations.
+  source_set("phys-unittests") {
+    testonly = true
+    sources = [
+      "phys-unittests.cc",
+      "stack-tests.cc",
+    ]
+    deps = [
+      ":test-main",
+      "$zx/kernel/lib/libc",
+      "$zx/kernel/lib/unittest",
+      "$zx/kernel/tests",
+    ]
+  }
+
+  source_set("phys-memory-test") {
+    testonly = true
+    sources = [ "phys-memory-test.cc" ]
+    deps = [
+      ":test-main",
+      "$zx/kernel/lib/ktl",
+      "$zx/kernel/lib/libc",
+      "$zx/system/ulib/zbitl",
+    ]
+  }
+
+  zbi_executable("decompress-test") {
+    testonly = true
+    sources = [ "decompress-test.cc" ]
+    deps = [
+      ":zbi-test-main",
+      "$zx/kernel/lib/ktl",
+      "$zx/kernel/lib/libc",
+      "$zx/system/ulib/zbitl",
+      "$zx/system/ulib/zxc",
+    ]
+    data_deps = [ ":decompress-test-data" ]
+  }
+
+  zbi_input("decompress-test-data") {
+    testonly = true
+    type = "ramdisk"
+    args = [
+      "--compressed=zstd.max",
+      "--entry=abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz",
+    ]
+  }
+
+  zbi_test("phys-zbi-decompress-test") {
+    args = []
+
+    deps = [
+      ":decompress-test",
       ":dummy.txt",
-      ":zbi-$test.executable",
     ]
 
     # TODO(mcgrathr): enable on hardware too
     device_types = [
-      "AEMU",
       "QEMU",
+      "AEMU",
     ]
 
     # Set a short timeout since the tests don't reliably reboot the machine.
     timeout = qemu_short_timeout
   }
-}
 
-source_set("hello-world-test") {
-  testonly = true
-  sources = [ "hello-world-test.cc" ]
-  deps = [
-    ":test-main",
-    "$zx/kernel/lib/libc",
-    "..:phys_executable.headers",
-  ]
-}
+  group("test") {
+    testonly = true
 
-source_set("backtrace-test") {
-  testonly = true
-  sources = [ "backtrace-test.cc" ]
-  deps = [
-    ":test-main",
-    "$zx/kernel/lib/arch",
-    "$zx/kernel/lib/libc",
-    "..:phys_executable.headers",
-  ]
-}
+    deps = [ ":phys-zbi-decompress-test" ]
 
-# Ideally we'd test all four combinations on arm64 and both combinations on
-# x86.  But the common library code is always compiled with shadow-call-stack
-# on arm64 so we can't disable the ABI support for it and with safe-stack on
-# x86 so we can't disable the ABI support for it there.  The start.S code only
-# enables extra stack support conditionally so as not to waste space, so there
-# isn't a good way to test non-default configurations.
-source_set("phys-unittests") {
-  testonly = true
-  sources = [
-    "phys-unittests.cc",
-    "stack-tests.cc",
-  ]
-  deps = [
-    ":test-main",
-    "$zx/kernel/lib/libc",
-    "$zx/kernel/lib/unittest",
-    "$zx/kernel/tests",
-  ]
-}
+    foreach(test, common_tests) {
+      deps += [
+        ":qemu-$test",
+        ":zbi-$test",
+      ]
+    }
+  }
+} else {  # current_toolchain == default_toolchain
+  import("//src/bringup/lib/mexec/testing/zbi_test.gni")
 
-source_set("phys-memory-test") {
-  testonly = true
-  sources = [ "phys-memory-test.cc" ]
-  deps = [
-    ":test-main",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/libc",
-    "$zx/system/ulib/zbitl",
-  ]
-}
-
-zbi_executable("decompress-test") {
-  testonly = true
-  sources = [ "decompress-test.cc" ]
-  deps = [
-    ":zbi-test-main",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/libc",
-    "$zx/system/ulib/zbitl",
-    "$zx/system/ulib/zxc",
-  ]
-  data_deps = [ ":decompress-test-data" ]
-}
-
-zbi_input("decompress-test-data") {
-  testonly = true
-  type = "ramdisk"
-  args = [
-    "--compressed=zstd.max",
-    "--entry=abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz",
-  ]
-}
-
-zbi_test("phys-zbi-decompress-test") {
-  args = []
-
-  deps = [
-    ":decompress-test",
-    ":dummy.txt",
-  ]
-
-  # TODO(mcgrathr): enable on hardware too
-  device_types = [
-    "QEMU",
-    "AEMU",
-  ]
-
-  # Set a short timeout since the tests don't reliably reboot the machine.
-  timeout = qemu_short_timeout
-}
-
-group("test") {
-  testonly = true
-
-  deps = [ ":phys-zbi-decompress-test" ]
-
+  # We create mexec-chainloading variations of all of the phys ZBI tests.
+  # Once there is no longer a separate zircon build, we can define these targets
+  # directly, instead of sifting through zircon's zbi_tests.json to synthesize
+  # targets in this build.
+  test_deps = []
   foreach(test, common_tests) {
-    deps += [
-      ":qemu-$test",
-      ":zbi-$test",
-    ]
+    mexec_zbi_test("mexec-$test") {
+      child_zbi = ":zbi-$test(//zircon/kernel/phys:kernel.phys_$current_cpu)"
+      child_zbi_file =
+          get_label_info(child_zbi, "target_out_dir") + "/zbi-$test.zbi"
+    }
+
+    test_deps += [ ":mexec-$test" ]
+  }
+
+  group("test") {
+    testonly = true
+    deps =
+        [ ":test(//zircon/kernel/phys:kernel.phys_$current_cpu)" ] + test_deps
   }
 }

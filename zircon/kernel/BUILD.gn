@@ -164,8 +164,8 @@ if (is_kernel) {
       "lib/boot-options/tests",
       "lib/devicetree/tests",
       "lib/heap/cmpctmalloc/tests($host_toolchain)",
+      "phys:tests",
       "phys/lib:tests",
-      "phys/test/mexec",
     ]
   }
 }
