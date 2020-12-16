@@ -2397,6 +2397,62 @@ TEST(NetStreamTest, GetTcpInfo) {
   ASSERT_EQ(0, close(connfd.release()));
 }
 
+TEST(NetStreamTest, GetSocketAcceptConn) {
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+
+  int got = -1;
+  socklen_t got_len = sizeof(got);
+  ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ACCEPTCONN, &got, &got_len), 0) << strerror(errno);
+  EXPECT_EQ(got_len, sizeof(got));
+  EXPECT_EQ(got, 0);
+
+  struct sockaddr_in addr = {
+      .sin_family = AF_INET,
+      .sin_addr.s_addr = htonl(INADDR_ANY),
+  };
+  ASSERT_EQ(bind(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+  got = -1;
+  got_len = sizeof(got);
+  ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ACCEPTCONN, &got, &got_len), 0) << strerror(errno);
+  EXPECT_EQ(got_len, sizeof(got));
+  EXPECT_EQ(got, 0);
+
+  ASSERT_EQ(listen(fd.get(), 0), 0) << strerror(errno);
+  got = -1;
+  got_len = sizeof(got);
+  ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ACCEPTCONN, &got, &got_len), 0) << strerror(errno);
+  EXPECT_EQ(got_len, sizeof(got));
+  EXPECT_EQ(got, 1);
+
+  // TODO(fxbug.dev/61714): fix shutdown and remove the guard.
+#if defined(__Fuchsia__)
+  EXPECT_EQ(shutdown(fd.get(), SHUT_WR), -1);
+  EXPECT_EQ(errno, EPIPE);
+#else
+  ASSERT_EQ(shutdown(fd.get(), SHUT_WR), 0) << strerror(errno);
+  got = -1;
+  got_len = sizeof(got);
+  ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ACCEPTCONN, &got, &got_len), 0) << strerror(errno);
+  EXPECT_EQ(got_len, sizeof(got));
+  EXPECT_EQ(got, 1);
+#endif
+
+  // TODO(fxbug.dev/61714): fix shutdown and remove the guard.
+#if defined(__Fuchsia__)
+  EXPECT_EQ(shutdown(fd.get(), SHUT_RD), -1);
+  EXPECT_EQ(errno, EPIPE);
+#else
+  ASSERT_EQ(shutdown(fd.get(), SHUT_RD), 0) << strerror(errno);
+  got = -1;
+  got_len = sizeof(got);
+  ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ACCEPTCONN, &got, &got_len), 0) << strerror(errno);
+  EXPECT_EQ(got_len, sizeof(got));
+  EXPECT_EQ(got, 0);
+#endif
+}
+
 // Test socket reads on disconnected stream sockets.
 TEST(NetStreamTest, DisconnectedRead) {
   fbl::unique_fd socketfd;

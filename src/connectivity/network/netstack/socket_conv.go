@@ -233,6 +233,19 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		v := ep.SocketOptions().GetNoChecksum()
 		return boolToInt32(v), nil
 
+	case C.SO_ACCEPTCONN:
+		var v bool
+		// From `man socket.7`, SO_ACCEPTCONN:
+		//
+		//   Returns a value indicating whether or not this socket has been marked
+		//   to accept connections with listen(2).
+		//
+		// And among the options here, `listen` only makes sense on TCP sockets.
+		if transProto == tcp.ProtocolNumber {
+			v = tcp.EndpointState(ep.State()) == tcp.StateListen
+		}
+		return boolToInt32(v), nil
+
 	default:
 		syslog.Infof("unimplemented getsockopt: SOL_SOCKET name=%d", name)
 
