@@ -38,11 +38,9 @@ void SetRamDevice(monitor::Monitor* app) {
   }
   FX_LOGS(INFO) << "CANNOT collect memory bandwidth measurements.";
 }
-bool NotifyCrashReporter() {
-  // TODO(fxbug.dev/65472): Return true if "/config/data/send_critical_pressure_crash_reports"
-  // exists. We can only do this once we are including the config in the products we still want
-  // reporting in.
-  return true;
+const char kNotfiyCrashReporterPath[] = "/config/data/send_critical_pressure_crash_reports";
+bool SendCriticalMemoryPressureCrashReports() {
+  return std::filesystem::exists(kNotfiyCrashReporterPath);
 }
 }  // namespace
 
@@ -73,7 +71,7 @@ int main(int argc, const char** argv) {
 
   monitor::Monitor app(std::move(startup_context), command_line, loop.dispatcher(),
                        true /* send_metrics */, true /* watch_memory_pressure */,
-                       NotifyCrashReporter());
+                       SendCriticalMemoryPressureCrashReports());
   SetRamDevice(&app);
   loop.Run();
 

@@ -10,6 +10,7 @@
             "class/aml-ram"
         ],
         "features": [
+            "config-data",
             "isolated-cache-storage"
         ],
         "services": [
