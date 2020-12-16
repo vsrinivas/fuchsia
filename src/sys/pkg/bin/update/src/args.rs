@@ -25,6 +25,8 @@ pub enum Command {
 
     // fuchsia.update CommitStatusProvider protocol:
     WaitForCommit(WaitForCommit),
+
+    Revert(Revert),
 }
 
 #[derive(Debug, Eq, FromArgs, PartialEq)]
@@ -106,6 +108,11 @@ pub struct ForceInstall {
 #[argh(subcommand, name = "wait-for-commit")]
 /// Wait for the update to be committed.
 pub struct WaitForCommit {}
+
+#[derive(Debug, Eq, FromArgs, PartialEq)]
+#[argh(subcommand, name = "revert")]
+/// Revert the update.
+pub struct Revert {}
 
 #[cfg(test)]
 mod tests {
@@ -255,5 +262,11 @@ mod tests {
     fn test_wait_for_commit() {
         let update = Update::from_args(&["update"], &["wait-for-commit"]).unwrap();
         assert_eq!(update, Update { cmd: Command::WaitForCommit(WaitForCommit {}) });
+    }
+
+    #[test]
+    fn test_revert() {
+        let update = Update::from_args(&["update"], &["revert"]).unwrap();
+        assert_eq!(update, Update { cmd: Command::Revert(Revert {}) });
     }
 }

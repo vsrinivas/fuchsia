@@ -13,6 +13,8 @@ rustc_library("lib") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -41,6 +43,7 @@ rustc_library("lib") {
     "src/commit.rs",
     "src/install.rs",
     "src/main.rs",
+    "src/revert.rs",
   ]
 
   visibility = [

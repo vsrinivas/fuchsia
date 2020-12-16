@@ -4,6 +4,7 @@
 
 #![cfg(test)]
 use {
+    fidl_fuchsia_paver::Configuration,
     fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
     fidl_fuchsia_update as fidl_update,
     fidl_fuchsia_update_ext::{
@@ -22,6 +23,8 @@ use {
     mock_installer::{
         CapturedRebootControllerRequest, CapturedUpdateInstallerRequest, MockUpdateInstallerService,
     },
+    mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
+    mock_reboot::{MockRebootService, RebootReason},
     parking_lot::Mutex,
     pretty_assertions::assert_eq,
     std::sync::Arc,
@@ -43,6 +46,8 @@ struct TestEnvBuilder {
     manager_states: Vec<State>,
     installer_states: Vec<installer::State>,
     commit_status_provider_response: Option<EventPair>,
+    paver_service: Option<MockPaverService>,
+    reboot_service: Option<MockRebootService>,
 }
 
 impl TestEnvBuilder {
@@ -56,6 +61,14 @@ impl TestEnvBuilder {
 
     fn commit_status_provider_response(self, response: EventPair) -> Self {
         Self { commit_status_provider_response: Some(response), ..self }
+    }
+
+    fn paver_service(self, paver_service: MockPaverService) -> Self {
+        Self { paver_service: Some(paver_service), ..self }
+    }
+
+    fn reboot_service(self, reboot_service: MockRebootService) -> Self {
+        Self { reboot_service: Some(reboot_service), ..self }
     }
 
     fn build(self) -> TestEnv {
@@ -81,6 +94,30 @@ impl TestEnvBuilder {
                     stream,
                     Arc::clone(&response),
                 ))
+                .detach()
+            });
+        }
+
+        if let Some(paver_service) = self.paver_service {
+            let paver_service = Arc::new(paver_service);
+            fs.add_fidl_service(move |stream| {
+                fasync::Task::spawn(
+                    Arc::clone(&paver_service)
+                        .run_paver_service(stream)
+                        .unwrap_or_else(|e| panic!("error running paver service: {:?}", e)),
+                )
+                .detach()
+            });
+        }
+
+        if let Some(reboot_service) = self.reboot_service {
+            let reboot_service = Arc::new(reboot_service);
+            fs.add_fidl_service(move |stream| {
+                fasync::Task::spawn(
+                    Arc::clone(&reboot_service)
+                        .run_reboot_service(stream)
+                        .unwrap_or_else(|e| panic!("error running reboot service: {:?}", e)),
+                )
                 .detach()
             });
         }
@@ -563,5 +600,47 @@ async fn wait_for_commit_success() {
          Committed!\n",
         "",
         0,
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn revert_success() {
+    #[derive(Debug, PartialEq)]
+    enum Interaction {
+        Paver(PaverEvent),
+        Reboot(RebootReason),
+    }
+    let interactions = Arc::new(Mutex::new(vec![]));
+    let env = TestEnv::builder()
+        .paver_service({
+            let interactions = Arc::clone(&interactions);
+            MockPaverServiceBuilder::new()
+                .event_hook(move |event| {
+                    interactions.lock().push(Interaction::Paver(event.clone()));
+                })
+                .build()
+        })
+        .reboot_service({
+            let interactions = Arc::clone(&interactions);
+            MockRebootService::new(Box::new(move |reason| {
+                interactions.lock().push(Interaction::Reboot(reason));
+                Ok(())
+            }))
+        })
+        .build();
+
+    let output = env.run_update(vec!["revert"]).await;
+
+    assert_output(&output, "Reverting the update.\n", "", 0);
+    assert_eq!(
+        interactions.lock().as_slice(),
+        &[
+            Interaction::Paver(PaverEvent::QueryCurrentConfiguration),
+            Interaction::Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: Configuration::A
+            }),
+            Interaction::Paver(PaverEvent::BootManagerFlush),
+            Interaction::Reboot(RebootReason::UserRequest)
+        ]
     );
 }

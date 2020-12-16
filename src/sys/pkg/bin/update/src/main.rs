@@ -9,6 +9,7 @@ mod channel;
 mod check;
 mod commit;
 mod install;
+mod revert;
 
 async fn handle_cmd(cmd: args::Command) -> Result<(), Error> {
     match cmd {
@@ -28,6 +29,9 @@ async fn handle_cmd(cmd: args::Command) -> Result<(), Error> {
         }
         args::Command::WaitForCommit(_) => {
             crate::commit::handle_wait_for_commit().await?;
+        }
+        args::Command::Revert(_) => {
+            crate::revert::handle_revert().await?;
         }
     }
     Ok(())

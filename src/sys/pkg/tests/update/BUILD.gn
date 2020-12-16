@@ -12,6 +12,7 @@ rustc_test("driver") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//src/lib/fuchsia-async",
@@ -21,6 +22,8 @@ rustc_test("driver") {
     "//src/sys/pkg/lib/fidl-fuchsia-update-ext",
     "//src/sys/pkg/lib/fidl-fuchsia-update-installer-ext",
     "//src/sys/pkg/testing/mock-installer",
+    "//src/sys/pkg/testing/mock-paver",
+    "//src/sys/pkg/testing/mock-reboot",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",

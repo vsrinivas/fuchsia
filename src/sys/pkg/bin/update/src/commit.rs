@@ -40,8 +40,10 @@ impl CommitObserver for Printer {
     fn on_event(&self, event: CommitEvent) {
         let text = match event {
             CommitEvent::Begin => "Waiting for commit.",
-            // TODO(fxbug.dev/64590) update warning message to be more helpful.
-            CommitEvent::Warning => "It's been 30 seconds. Something is probably wrong.",
+            CommitEvent::Warning => {
+                "It's been 30 seconds. Something is probably wrong. Consider \
+                running `update revert` to fall back to the previous slot."
+            }
             CommitEvent::End => "Committed!",
         };
         println!("{}", text);
