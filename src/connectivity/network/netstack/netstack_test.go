@@ -454,10 +454,10 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 		wq.EventRegister(&waitEntry, waiter.EventHUp)
 		defer wq.EventUnregister(&waitEntry)
 
-		v := tcpip.LingerOption{Enabled: true, Timeout: 0}
-		if err := client.SetSockOpt(&v); err != nil {
-			t.Fatalf("SetSockOpt(%v) = %s", v, err)
-		}
+		client.SocketOptions().SetLinger(tcpip.LingerOption{
+			Enabled: true,
+			Timeout: 0,
+		})
 		client.Close()
 		<-notifyCh
 

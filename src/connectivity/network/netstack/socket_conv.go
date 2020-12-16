@@ -209,10 +209,7 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		return boolToInt32(v), nil
 
 	case C.SO_LINGER:
-		var v tcpip.LingerOption
-		if err := ep.GetSockOpt(&v); err != nil {
-			return nil, err
-		}
+		v := ep.SocketOptions().GetLinger()
 		linger := C.struct_linger{
 			l_linger: C.int(v.Timeout.Seconds()),
 		}
@@ -229,12 +226,8 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		return nil, tcpip.ErrNotSupported
 
 	case C.SO_OOBINLINE:
-		var v tcpip.OutOfBandInlineOption
-		if err := ep.GetSockOpt(&v); err != nil {
-			return nil, err
-		}
-
-		return int32(v), nil
+		v := ep.SocketOptions().GetOutOfBandInline()
+		return boolToInt32(v), nil
 
 	case C.SO_NO_CHECK:
 		v := ep.SocketOptions().GetNoChecksum()
@@ -586,10 +579,11 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 		if err := linger.Unmarshal(optVal); err != nil {
 			return tcpip.ErrInvalidOptionValue
 		}
-		return ep.SetSockOpt(&tcpip.LingerOption{
+		ep.SocketOptions().SetLinger(tcpip.LingerOption{
 			Enabled: linger.l_onoff != 0,
 			Timeout: time.Second * time.Duration(linger.l_linger),
 		})
+		return nil
 
 	case C.SO_SNDTIMEO:
 		return tcpip.ErrNotSupported
@@ -602,8 +596,9 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 			return tcpip.ErrInvalidOptionValue
 		}
 
-		opt := tcpip.OutOfBandInlineOption(binary.LittleEndian.Uint32(optVal))
-		return ep.SetSockOpt(&opt)
+		v := binary.LittleEndian.Uint32(optVal)
+		ep.SocketOptions().SetOutOfBandInline(v != 0)
+		return nil
 
 	case C.SO_NO_CHECK:
 		if len(optVal) < sizeOfInt32 {

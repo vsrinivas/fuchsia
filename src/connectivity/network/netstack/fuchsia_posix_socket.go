@@ -1159,10 +1159,7 @@ func newStreamSocket(eps *endpointWithSocket) (socket.StreamSocketWithCtxInterfa
 
 func (s *streamSocketImpl) close() {
 	if s.endpoint.decRef() {
-		var linger tcpip.LingerOption
-		if err := s.ep.GetSockOpt(&linger); err != nil {
-			panic(fmt.Sprintf("GetSockOpt(%T): %s", linger, err))
-		}
+		linger := s.ep.SocketOptions().GetLinger()
 
 		doClose := func() {
 			s.endpointWithSocket.close()
