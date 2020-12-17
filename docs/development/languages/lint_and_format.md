@@ -24,6 +24,7 @@ developer has already run fx build; if not, many of the linters will produce err
 missing files that are created by the build.
 
 The list of files can be specified in one of three ways:
+
  - The list of files changed since the second-to-last Git commit, including committed, modified,
  and cached files (this is the default behavior)
  - A list of files passed in a comma-separated list to the --files flag

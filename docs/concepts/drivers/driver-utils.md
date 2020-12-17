@@ -87,6 +87,7 @@ class SpiChild : public SpiChildType,
 To implement the Fuchsia application that would communicate with the device,
 call into the FIDL API. For this utilize the FIDL bindings for your language of
 choice, for C++:
+
 * [LLCPP](/docs/reference/fidl/bindings/llcpp-bindings.md).
 * [HLCPP](/docs/reference/fidl/bindings/hlcpp-bindings.md).
 

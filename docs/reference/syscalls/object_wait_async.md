@@ -29,6 +29,7 @@ specified [signals] asserted. Use [`zx_port_wait()`] to retrieve the packets.
 *handle* points to the object that is to be watched for changes and must be a waitable object.
 
 The *options* argument can be 0 or it can be one or more of
+
   * ZX_WAIT_ASYNC_TIMESTAMP which causes the system to capture a timestamp when
     the wait triggered.
   * ZX_WAIT_ASYNC_EDGE causes the port to not enqueue a packet for signals active

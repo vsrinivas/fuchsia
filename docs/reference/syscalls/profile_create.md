@@ -73,6 +73,7 @@ event of failure, a negative error value is returned.
 right, or *root_job* is not a handle to the root job.
 
 **ZX_ERR_INVALID_ARGS**  One or more of the arguments provided were invalid:
+
   * *profile* or *out* was an invalid pointer
   * *flags* contains an unknown option
   * *options* was not zero

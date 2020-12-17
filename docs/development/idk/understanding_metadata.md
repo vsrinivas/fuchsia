@@ -26,6 +26,7 @@ Property         |   Description
 
 
 ## Element types
+
 * [banjo_library](/build/sdk/meta/banjo_library.json)
 * [cc_prebuilt_library](/build/sdk/meta/cc_prebuilt_library.json)
 * [cc_source_library](/build/sdk/meta/cc_source_library.json)

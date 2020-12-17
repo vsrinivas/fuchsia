@@ -42,6 +42,7 @@ macro:
 ```
 ZIRCON_DRIVER(Driver, Ops, VendorName, Version);
 ```
+
  - `Driver` is the name of the driver.
  - `Ops` is a `zx_driver_ops`, which are the driver operation hooks
  - `VendorName` is a string representing the name of the driver vendor.
