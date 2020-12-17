@@ -6,7 +6,7 @@ package codegen
 
 const fragmentSendEventCallerAllocateTmpl = `
 {{- define "SendEventCallerAllocateMethodSignature" -}}
-Send{{ .Name }}Event(
+_UnsafeSend{{ .Name }}Event(
     ::zx::unowned_channel _channel, ::fidl::BufferSpan _buffer, {{ template "Params" .Response }})
 {{- end }}
 

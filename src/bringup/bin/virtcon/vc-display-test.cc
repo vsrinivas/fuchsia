@@ -12,7 +12,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
-#include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/coding.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/zx/channel.h>
@@ -339,27 +338,30 @@ class VcDisplayTest : public zxtest::Test {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     loop_->StartThread();
 
-    server_end_ = zx::unowned_channel(server_end);
-    ASSERT_OK(fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(server_end),
-                                           controller_.get()));
+    auto result = fidl::BindServer(loop_->dispatcher(), std::move(server_end), controller_.get());
+    ASSERT_TRUE(result.is_ok());
+
+    server_binding_ = result.take_value();
   }
   void SendAddDisplay(fhd::Info* display) {
-    fhd::Controller::SendOnDisplaysChangedEvent(zx::unowned_channel(server_end_),
-                                                fidl::VectorView(fidl::unowned_ptr(display), 1),
-                                                fidl::VectorView<uint64_t>());
+    server_binding_.value()->OnDisplaysChanged(fidl::VectorView(fidl::unowned_ptr(display), 1),
+                                               fidl::VectorView<uint64_t>());
   }
   void SendRemoveDisplay(uint64_t id) {
-    fhd::Controller::SendOnDisplaysChangedEvent(
-        zx::unowned_channel(server_end_), fidl::VectorView<fhd::Info>(),
-        fidl::VectorView<uint64_t>(fidl::unowned_ptr(&id), 1));
+    server_binding_.value()->OnDisplaysChanged(
+        fidl::VectorView<fhd::Info>(), fidl::VectorView<uint64_t>(fidl::unowned_ptr(&id), 1));
   }
 
   void ProcessEvent() { ASSERT_OK(dc_callback_handler(ZX_CHANNEL_READABLE)); }
+
   std::unique_ptr<StubDisplayController> controller_;
+
   // Loop needs to be torn down before controller, because that causes the
   // binding to close.
   std::unique_ptr<async::Loop> loop_;
-  zx::unowned_channel server_end_;
+
+  // Server binding reference used to send events.
+  fit::optional<fidl::ServerBindingRef<fhd::Controller>> server_binding_;
 };
 
 TEST_F(VcDisplayTest, EmptyRebind) { ASSERT_EQ(rebind_display(true), ZX_ERR_NO_RESOURCES); }

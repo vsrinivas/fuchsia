@@ -26,7 +26,7 @@ class {{ .Name }}::EventSender {
 {{ "" }}
   {{- range .Events }}
   zx_status_t {{ .Name }}({{ template "Params" .Response }}) const {
-    return Send{{ .Name }}Event(
+    return _UnsafeSend{{ .Name }}Event(
         ::zx::unowned_channel(server_end_) {{- if .Response }}, {{ end -}}
         {{ template "SyncClientMoveParams" .Response }});
   }
@@ -35,7 +35,7 @@ class {{ .Name }}::EventSender {
 {{ "" }}
   zx_status_t {{ .Name }}(::fidl::BufferSpan _buffer,
                           {{ template "Params" .Response }}) const {
-    return Send{{ .Name }}Event(
+    return _UnsafeSend{{ .Name }}Event(
         ::zx::unowned_channel(server_end_), std::move(_buffer),
         {{ template "SyncClientMoveParams" .Response }});
   }

@@ -286,20 +286,21 @@ class StubDisplayController : public fhd::Controller::Interface {
 
 }  // namespace
 
-void SendInitialDisplay(const zx::channel& server_channel, fhd::Mode* mode, uint32_t pixel_format) {
+void SendInitialDisplay(const fhd::Controller::EventSender& event_sender, fhd::Mode* mode,
+                        uint32_t pixel_format) {
   fhd::Info info;
   info.pixel_format = fidl::VectorView(fidl::unowned_ptr(&pixel_format), 1);
   info.modes = fidl::VectorView(fidl::unowned_ptr(mode), 1);
   fidl::VectorView<fhd::Info> added(fidl::unowned_ptr(&info), 1);
   fidl::VectorView<uint64_t> removed;
 
-  ASSERT_OK(fhd::Controller::SendOnDisplaysChangedEvent(zx::unowned_channel(server_channel),
-                                                        std::move(added), std::move(removed)));
+  ASSERT_OK(event_sender.OnDisplaysChanged(std::move(added), std::move(removed)));
 }
 
 void TestDisplayStride(bool ram_domain) {
   zx::channel server_channel, client_channel;
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
+  fhd::Controller::EventSender event_sender(std::move(server_channel));
 
   StubDisplayController controller(ram_domain);
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -307,12 +308,12 @@ void TestDisplayStride(bool ram_domain) {
   mode.horizontal_resolution = 301;
   mode.vertical_resolution = 250;
   constexpr uint32_t kPixelFormat = ZX_PIXEL_FORMAT_ARGB_8888;
-  SendInitialDisplay(server_channel, &mode, kPixelFormat);
+  SendInitialDisplay(event_sender, &mode, kPixelFormat);
 
   loop.StartThread();
 
-  ASSERT_OK(
-      fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &controller));
+  ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(event_sender.channel()),
+                                         &controller));
 
   const char* error;
   zx_status_t status = fb_bind_with_channel(true, &error, std::move(client_channel));

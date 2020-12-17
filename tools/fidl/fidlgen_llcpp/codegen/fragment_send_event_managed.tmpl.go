@@ -6,7 +6,8 @@ package codegen
 
 const fragmentSendEventManagedTmpl = `
 {{- define "SendEventManagedMethodSignature" -}}
-Send{{ .Name }}Event(::zx::unowned_channel _channel {{- if .Response }}, {{ end }}{{ template "Params" .Response }})
+_UnsafeSend{{ .Name }}Event(
+    ::zx::unowned_channel _channel {{- if .Response }}, {{ end }}{{ template "Params" .Response }})
 {{- end }}
 
 {{- define "SendEventManagedMethodDefinition" }}

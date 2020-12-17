@@ -1686,11 +1686,13 @@ class Transitional final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  static zx_status_t SendEventEvent(::zx::unowned_channel _channel, int64_t x);
+  static zx_status_t _UnsafeSendEventEvent(::zx::unowned_channel _channel,
+                                           int64_t x);
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendEventEvent(::zx::unowned_channel _channel,
-                                    ::fidl::BufferSpan _buffer, int64_t x);
+  static zx_status_t _UnsafeSendEventEvent(::zx::unowned_channel _channel,
+                                           ::fidl::BufferSpan _buffer,
+                                           int64_t x);
 
   class EventSender;
   class WeakEventSender;
@@ -3437,13 +3439,13 @@ class ChannelProtocol final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  static zx_status_t SendEventAEvent(::zx::unowned_channel _channel, int64_t a,
-                                     int64_t b);
+  static zx_status_t _UnsafeSendEventAEvent(::zx::unowned_channel _channel,
+                                            int64_t a, int64_t b);
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendEventAEvent(::zx::unowned_channel _channel,
-                                     ::fidl::BufferSpan _buffer, int64_t a,
-                                     int64_t b);
+  static zx_status_t _UnsafeSendEventAEvent(::zx::unowned_channel _channel,
+                                            ::fidl::BufferSpan _buffer,
+                                            int64_t a, int64_t b);
 
   class EventSender;
   class WeakEventSender;
@@ -5971,15 +5973,16 @@ class WithAndWithoutRequestResponse final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  static zx_status_t SendOnEmptyResponseEvent(::zx::unowned_channel _channel);
+  static zx_status_t _UnsafeSendOnEmptyResponseEvent(
+      ::zx::unowned_channel _channel);
 
-  static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _channel,
-                                             ::fidl::StringView ret);
+  static zx_status_t _UnsafeSendOnWithResponseEvent(
+      ::zx::unowned_channel _channel, ::fidl::StringView ret);
 
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendOnWithResponseEvent(::zx::unowned_channel _channel,
-                                             ::fidl::BufferSpan _buffer,
-                                             ::fidl::StringView ret);
+  static zx_status_t _UnsafeSendOnWithResponseEvent(
+      ::zx::unowned_channel _channel, ::fidl::BufferSpan _buffer,
+      ::fidl::StringView ret);
 
   class EventSender;
   class WeakEventSender;
@@ -8025,12 +8028,13 @@ class Transitional::EventSender {
   bool is_valid() const { return server_end_.is_valid(); }
 
   zx_status_t Event(int64_t x) const {
-    return SendEventEvent(::zx::unowned_channel(server_end_), std::move(x));
+    return _UnsafeSendEventEvent(::zx::unowned_channel(server_end_),
+                                 std::move(x));
   }
 
   zx_status_t Event(::fidl::BufferSpan _buffer, int64_t x) const {
-    return SendEventEvent(::zx::unowned_channel(server_end_),
-                          std::move(_buffer), std::move(x));
+    return _UnsafeSendEventEvent(::zx::unowned_channel(server_end_),
+                                 std::move(_buffer), std::move(x));
   }
 
  private:
@@ -8204,13 +8208,14 @@ class ChannelProtocol::EventSender {
   bool is_valid() const { return server_end_.is_valid(); }
 
   zx_status_t EventA(int64_t a, int64_t b) const {
-    return SendEventAEvent(::zx::unowned_channel(server_end_), std::move(a),
-                           std::move(b));
+    return _UnsafeSendEventAEvent(::zx::unowned_channel(server_end_),
+                                  std::move(a), std::move(b));
   }
 
   zx_status_t EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const {
-    return SendEventAEvent(::zx::unowned_channel(server_end_),
-                           std::move(_buffer), std::move(a), std::move(b));
+    return _UnsafeSendEventAEvent(::zx::unowned_channel(server_end_),
+                                  std::move(_buffer), std::move(a),
+                                  std::move(b));
   }
 
  private:
@@ -8444,18 +8449,18 @@ class WithAndWithoutRequestResponse::EventSender {
   bool is_valid() const { return server_end_.is_valid(); }
 
   zx_status_t OnEmptyResponse() const {
-    return SendOnEmptyResponseEvent(::zx::unowned_channel(server_end_));
+    return _UnsafeSendOnEmptyResponseEvent(::zx::unowned_channel(server_end_));
   }
 
   zx_status_t OnWithResponse(::fidl::StringView ret) const {
-    return SendOnWithResponseEvent(::zx::unowned_channel(server_end_),
-                                   std::move(ret));
+    return _UnsafeSendOnWithResponseEvent(::zx::unowned_channel(server_end_),
+                                          std::move(ret));
   }
 
   zx_status_t OnWithResponse(::fidl::BufferSpan _buffer,
                              ::fidl::StringView ret) const {
-    return SendOnWithResponseEvent(::zx::unowned_channel(server_end_),
-                                   std::move(_buffer), std::move(ret));
+    return _UnsafeSendOnWithResponseEvent(::zx::unowned_channel(server_end_),
+                                          std::move(_buffer), std::move(ret));
   }
 
  private:

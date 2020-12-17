@@ -607,8 +607,8 @@ TEST(DirentServerTest, CFlavorSendOnDirents) {
     name[i] = 'A';
   }
   auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
-  auto status = gen::DirEntTestInterface::SendOnDirentsEvent(zx::unowned_channel(server_chan),
-                                                             fidl::unowned_vec(dirents));
+  gen::DirEntTestInterface::EventSender event_sender(std::move(server_chan));
+  auto status = event_sender.OnDirents(fidl::unowned_vec(dirents));
   ASSERT_OK(status);
   ASSERT_NO_FATAL_FAILURES(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
 }
@@ -624,8 +624,8 @@ TEST(DirentServerTest, CallerAllocateSendOnDirents) {
   }
   auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
   auto buffer = std::make_unique<fidl::Buffer<gen::DirEntTestInterface::OnDirentsResponse>>();
-  auto status = gen::DirEntTestInterface::SendOnDirentsEvent(
-      zx::unowned_channel(server_chan), buffer->view(), fidl::unowned_vec(dirents));
+  gen::DirEntTestInterface::EventSender event_sender(std::move(server_chan));
+  auto status = event_sender.OnDirents(buffer->view(), fidl::unowned_vec(dirents));
   ASSERT_OK(status);
   ASSERT_NO_FATAL_FAILURES(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
 }

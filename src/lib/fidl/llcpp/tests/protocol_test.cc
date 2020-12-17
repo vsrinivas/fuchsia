@@ -153,7 +153,8 @@ TEST(MagicNumberTest, EventWrite) {
   zx::channel h1, h2;
   ASSERT_EQ(zx::channel::create(0, &h1, &h2), ZX_OK);
   std::string s = "hi";
-  test::Frobinator::SendHrobEvent(zx::unowned_channel(h1), fidl::unowned_str(s));
+  test::Frobinator::EventSender event_sender(std::move(h1));
+  event_sender.Hrob(fidl::unowned_str(s));
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
 

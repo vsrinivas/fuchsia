@@ -351,16 +351,16 @@ namespace entries {
   return Transitional::Dispatch(this, msg, txn);
 }
 
-zx_status_t Transitional::SendEventEvent(::zx::unowned_channel _channel,
-                                         int64_t x) {
+zx_status_t Transitional::_UnsafeSendEventEvent(::zx::unowned_channel _channel,
+                                                int64_t x) {
   EventResponse::OwnedEncodedMessage _response{x};
   _response.Write(_channel->get());
   return _response.status();
 }
 
-zx_status_t Transitional::SendEventEvent(::zx::unowned_channel _channel,
-                                         ::fidl::BufferSpan _buffer,
-                                         int64_t x) {
+zx_status_t Transitional::_UnsafeSendEventEvent(::zx::unowned_channel _channel,
+                                                ::fidl::BufferSpan _buffer,
+                                                int64_t x) {
   EventResponse::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
                                                  x);
   _response.Write(_channel->get());
@@ -949,16 +949,16 @@ namespace entries {
   return ChannelProtocol::Dispatch(this, msg, txn);
 }
 
-zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _channel,
-                                             int64_t a, int64_t b) {
+zx_status_t ChannelProtocol::_UnsafeSendEventAEvent(
+    ::zx::unowned_channel _channel, int64_t a, int64_t b) {
   EventAResponse::OwnedEncodedMessage _response{a, b};
   _response.Write(_channel->get());
   return _response.status();
 }
 
-zx_status_t ChannelProtocol::SendEventAEvent(::zx::unowned_channel _channel,
-                                             ::fidl::BufferSpan _buffer,
-                                             int64_t a, int64_t b) {
+zx_status_t ChannelProtocol::_UnsafeSendEventAEvent(
+    ::zx::unowned_channel _channel, ::fidl::BufferSpan _buffer, int64_t a,
+    int64_t b) {
   EventAResponse::UnownedEncodedMessage _response(_buffer.data,
                                                   _buffer.capacity, a, b);
   _response.Write(_channel->get());
@@ -1809,21 +1809,21 @@ WithAndWithoutRequestResponse::Interface::dispatch_message(
   return WithAndWithoutRequestResponse::Dispatch(this, msg, txn);
 }
 
-zx_status_t WithAndWithoutRequestResponse::SendOnEmptyResponseEvent(
+zx_status_t WithAndWithoutRequestResponse::_UnsafeSendOnEmptyResponseEvent(
     ::zx::unowned_channel _channel) {
   OnEmptyResponseResponse::OwnedEncodedMessage _response{};
   _response.Write(_channel->get());
   return _response.status();
 }
 
-zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
+zx_status_t WithAndWithoutRequestResponse::_UnsafeSendOnWithResponseEvent(
     ::zx::unowned_channel _channel, ::fidl::StringView ret) {
   OnWithResponseResponse::OwnedEncodedMessage _response{ret};
   _response.Write(_channel->get());
   return _response.status();
 }
 
-zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(
+zx_status_t WithAndWithoutRequestResponse::_UnsafeSendOnWithResponseEvent(
     ::zx::unowned_channel _channel, ::fidl::BufferSpan _buffer,
     ::fidl::StringView ret) {
   OnWithResponseResponse::UnownedEncodedMessage _response(

@@ -8,7 +8,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/status.h>
@@ -140,7 +139,7 @@ class EchoClientApp {
 
 class EchoConnection final : public Echo::Interface {
  public:
-  explicit EchoConnection(zx::unowned_channel channel) : channel_(channel) {}
+  EchoConnection() = default;
 
   void EchoStruct(Struct value, ::fidl::StringView forward_to_server,
                   EchoStructCompleter::Sync& completer) override {
@@ -174,7 +173,7 @@ class EchoConnection final : public Echo::Interface {
   void EchoStructNoRetVal(Struct value, ::fidl::StringView forward_to_server,
                           EchoStructNoRetValCompleter::Sync&) override {
     if (forward_to_server.empty()) {
-      auto status = Echo::SendEchoEventEvent(zx::unowned_channel(channel_), std::move(value));
+      auto status = server_binding_.value()->EchoEvent(std::move(value));
       ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed: %s",
                     zx_status_get_string(status));
     } else {
@@ -185,8 +184,7 @@ class EchoConnection final : public Echo::Interface {
         zx_status_t status() const { return status_; }
 
         void EchoEvent(Echo::EchoEventResponse* event) override {
-          status_ = Echo::SendEchoEventEvent(zx::unowned_channel(connection_->channel_),
-                                             std::move(event->value));
+          status_ = connection_->server_binding_.value()->EchoEvent(std::move(event->value));
         }
 
         zx_status_t Unknown() override {
@@ -348,8 +346,12 @@ class EchoConnection final : public Echo::Interface {
     }
   }
 
+  void set_server_binding(::fidl::ServerBindingRef<Echo> binding) {
+    server_binding_.emplace(binding);
+  }
+
  private:
-  zx::unowned_channel channel_;
+  fit::optional<::fidl::ServerBindingRef<Echo>> server_binding_;
 };
 
 }  // namespace compatibility
@@ -366,10 +368,10 @@ int main(int argc, const char** argv) {
 
   context->outgoing()->AddPublicService(
       std::make_unique<vfs::Service>([&](zx::channel request, async_dispatcher_t* dispatcher) {
-        auto conn = std::make_unique<llcpp::fidl::test::compatibility::EchoConnection>(
-            zx::unowned_channel(request));
-        ZX_ASSERT(::fidl::BindSingleInFlightOnly(dispatcher, std::move(request), conn.get()) ==
-                  ZX_OK);
+        auto conn = std::make_unique<llcpp::fidl::test::compatibility::EchoConnection>();
+        auto result = ::fidl::BindServer(dispatcher, std::move(request), conn.get());
+        ZX_ASSERT(result.is_ok());
+        conn->set_server_binding(result.take_value());
         connections.push_back(std::move(conn));
       }),
       kEchoInterfaceName);

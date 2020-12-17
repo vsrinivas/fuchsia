@@ -26,8 +26,8 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   state->DeclareStep("SendEvent/WallTime");
   state->DeclareStep("Teardown/WallTime");
 
-  zx::channel sender, receiver;
-  zx_status_t status = zx::channel::create(0, &sender, &receiver);
+  zx::channel sender_channel, receiver_channel;
+  zx_status_t status = zx::channel::create(0, &sender_channel, &receiver_channel);
   ZX_ASSERT(status == ZX_OK);
 
   class EventHandler : public ProtocolType::EventHandler {
@@ -58,18 +58,19 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   std::mutex mu;
   std::condition_variable cond;
 
-  std::thread receiver_thread([channel = std::move(receiver), state, &ready, &mu, &cond]() {
+  std::thread receiver_thread([channel = std::move(receiver_channel), state, &ready, &mu, &cond]() {
     EventHandler event_handler(state, ready, mu, cond);
     while (event_handler.HandleOneEvent(channel.borrow()).ok()) {
     }
   });
 
+  typename ProtocolType::EventSender sender(std::move(sender_channel));
   while (state->KeepRunning()) {
     fidl::aligned<FidlType> aligned_value = builder();
 
     state->NextStep();  // End: Setup. Begin: SendEvent.
 
-    ProtocolType::SendSendEvent(sender.borrow(), std::move(aligned_value.value));
+    sender.Send(std::move(aligned_value.value));
 
     {
       std::unique_lock<std::mutex> lock(mu);
@@ -81,7 +82,7 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   }
 
   // close the channel
-  sender.reset();
+  sender.channel().reset();
   receiver_thread.join();
 
   return true;

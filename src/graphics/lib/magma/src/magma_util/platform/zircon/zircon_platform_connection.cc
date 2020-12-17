@@ -11,7 +11,7 @@ namespace magma {
 class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
  public:
   ZirconPlatformPerfCountPool(uint64_t id, zx::channel channel)
-      : pool_id_(id), channel_(std::move(channel)) {}
+      : pool_id_(id), event_sender_(std::move(channel)) {}
 
   uint64_t pool_id() override { return pool_id_; }
 
@@ -19,10 +19,9 @@ class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
   magma::Status SendPerformanceCounterCompletion(uint32_t trigger_id, uint64_t buffer_id,
                                                  uint32_t buffer_offset, uint64_t time,
                                                  uint32_t result_flags) override {
-    zx_status_t status = llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::
-        SendOnPerformanceCounterReadCompletedEvent(
-            zx::unowned_channel(channel_), trigger_id, buffer_id, buffer_offset, time,
-            llcpp::fuchsia::gpu::magma::ResultFlags::TruncatingUnknown(result_flags));
+    zx_status_t status = event_sender_.OnPerformanceCounterReadCompleted(
+        trigger_id, buffer_id, buffer_offset, time,
+        llcpp::fuchsia::gpu::magma::ResultFlags::TruncatingUnknown(result_flags));
     switch (status) {
       case ZX_OK:
         return MAGMA_STATUS_OK;
@@ -37,7 +36,7 @@ class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
 
  private:
   uint64_t pool_id_;
-  zx::channel channel_;
+  llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::EventSender event_sender_;
 };
 
 bool ZirconPlatformConnection::Bind(zx::channel server_endpoint) {

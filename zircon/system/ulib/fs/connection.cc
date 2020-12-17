@@ -293,7 +293,7 @@ void Connection::NodeClone(uint32_t clone_flags, zx::channel channel) {
   auto write_error = [describe = clone_options.flags.describe](zx::channel channel,
                                                                zx_status_t error) {
     if (describe) {
-      fio::Node::SendOnOpenEvent(zx::unowned_channel(channel), error, fio::NodeInfo());
+      fio::Node::EventSender(std::move(channel)).OnOpen(error, fio::NodeInfo());
     }
   };
   if (!PrevalidateFlags(clone_flags)) {
