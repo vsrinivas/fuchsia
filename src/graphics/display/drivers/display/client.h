@@ -13,6 +13,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/builder.h>
+#include <lib/fidl/llcpp/array.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/fit/function.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
@@ -28,6 +30,7 @@
 #include <cstring>
 #include <map>
 #include <memory>
+#include <variant>
 #include <vector>
 
 #include <ddktl/device.h>
@@ -43,9 +46,6 @@
 #include "id-map.h"
 #include "image.h"
 #include "layer.h"
-#include "lib/fidl-async/cpp/bind.h"
-#include "lib/fidl/llcpp/array.h"
-#include "lib/fidl/llcpp/server.h"
 
 namespace display {
 
@@ -107,6 +107,63 @@ class DisplayConfig : public IdMappable<std::unique_ptr<DisplayConfig>> {
   friend ClientProxy;
 };
 
+// Helper class for sending events using the same API, regardless if |Client|
+// is bound to a FIDL connection. This object either holds a binding reference
+// or an |EventSender| that owns the channel, both of which allows sending
+// events without unsafe channel borrowing.
+class DisplayControllerBindingState {
+  using Protocol = llcpp::fuchsia::hardware::display::Controller;
+
+ public:
+  // Constructs an invalid binding state. The user must populate it with an
+  // active binding reference or event sender before events could be sent.
+  DisplayControllerBindingState() = default;
+
+  explicit DisplayControllerBindingState(Protocol::EventSender&& event_sender)
+      : binding_state_(std::move(event_sender)) {}
+
+  // Invokes |fn| with an polymorphic object that may be used to send events
+  // in |Protocol|.
+  //
+  // |fn| must be a templated lambda that can receive both
+  // |fidl::ServerBindingRef<Protocol>| and |Protocol::EventSender|,
+  // and returns a |zx_status_t|.
+  template <typename EventSenderConsumer>
+  zx_status_t SendEvents(EventSenderConsumer&& fn) {
+    return std::visit(
+        [&](auto&& arg) -> zx_status_t {
+          using T = std::decay_t<decltype(arg)>;
+          if constexpr (std::is_same_v<T, fidl::ServerBindingRef<Protocol>>) {
+            return fn(*arg);
+          }
+          if constexpr (std::is_same_v<T, Protocol::EventSender>) {
+            return fn(arg);
+          }
+          ZX_PANIC("Invalid display controller binding state");
+        },
+        binding_state_);
+  }
+
+  // Sets this object into the bound state, i.e. the server is handling FIDL
+  // messages, and the connect may be managed through |binding|.
+  void SetBound(fidl::ServerBindingRef<Protocol> binding) { binding_state_ = std::move(binding); }
+
+  // If the object is in the bound state, schedules it to be unbound.
+  void Unbind() {
+    if (auto ref = std::get_if<fidl::ServerBindingRef<Protocol>>(&binding_state_)) {
+      // Note that |binding_state_| will remain in the
+      // |fidl::ServerBindingRef<Protocol>| variant, and future attempts to
+      // send events will fail at runtime. This should be okay since the client
+      // is shutting down when unbinding happens.
+      ref->Unbind();
+    }
+  }
+
+ private:
+  std::variant<std::monostate, fidl::ServerBindingRef<Protocol>, Protocol::EventSender>
+      binding_state_;
+};
+
 // The Client class manages all state associated with an open display client
 // connection. Other than initialization, all methods of this class execute on
 // on the controller's looper, so no synchronization is necessary.
@@ -120,7 +177,9 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
          zx::channel server_channel);
 
   ~Client();
-  zx_status_t Init(zx::channel server_channel);
+
+  fit::result<fidl::ServerBindingRef<llcpp::fuchsia::hardware::display::Controller>, zx_status_t>
+  Init(zx::channel server_channel);
 
   void OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
                          const uint64_t* displays_removed, size_t removed_count);
@@ -142,12 +201,9 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
   // Test helpers
   size_t TEST_imported_images_count() const { return images_.size(); }
 
-  void CancelFidlBind() {
-    if (fidl_binding_.has_value()) {
-      fidl_binding_->Unbind();
-      fidl_binding_.reset();
-    }
-  }
+  void CancelFidlBind() { binding_state_.Unbind(); }
+
+  DisplayControllerBindingState& binding_state() { return binding_state_; }
 
   // Used for testing
   sync_completion_t* fidl_unbound() { return &fidl_unbound_; }
@@ -238,7 +294,6 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
   uint64_t console_fb_display_id_ = -1;
   const uint32_t id_;
   uint32_t single_buffer_framebuffer_stride_ = 0;
-  zx::channel server_channel_;  // used for unit-testing
   zx_handle_t server_handle_;
   uint64_t next_image_id_ = 1;         // Only INVALID_ID == 0 is invalid
   uint64_t next_capture_image_id = 1;  // Only INVALID_ID == 0 is invalid
@@ -281,10 +336,10 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface {
 
   uint64_t GetActiveCaptureImage() { return current_capture_image_; }
 
-  fit::optional<fidl::ServerBindingRef<llcpp::fuchsia::hardware::display::Controller>>
-      fidl_binding_;
-  // This is the channel returned by fidl bind during unbound
-  zx::channel fidl_channel_;
+  // The state of the FIDL binding. See comments on
+  // |DisplayControllerBindingState|.
+  DisplayControllerBindingState binding_state_;
+
   // Capture related book keeping
   uint64_t capture_fence_id_ = INVALID_ID;
   uint64_t current_capture_image_ = INVALID_ID;
@@ -370,9 +425,7 @@ class ClientProxy : public ClientParent {
   mtx_t mtx_;
   Controller* controller_;
   bool is_vc_;
-  // server_channel_ will be passed to handler_ which will in turn pass it to
-  // fidl::BindSingleInFlightOnly who will own the channel.
-  zx::unowned_channel server_channel_;
+
   Client handler_;
   bool enable_vsync_ __TA_GUARDED(&mtx_) = false;
   bool enable_capture_ __TA_GUARDED(&mtx_) = false;
