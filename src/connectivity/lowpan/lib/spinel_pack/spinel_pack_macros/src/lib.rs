@@ -78,12 +78,7 @@ fn get_next_format_type_info(
             }
             SPINEL_DATATYPE_DATA_WLEN_C => quote! { crate::spinel_pack::SpinelDataWlen },
             SPINEL_DATATYPE_DATA_C => {
-                if format_iter.as_str().is_empty() {
-                    quote! { [u8] }
-                } else {
-                    let msg = format!("Invalid spinel packing format string: 'D' must be proceeded by either ')' or the end of the format, found {:?}", format_iter.as_str());
-                    syn::Error::new(span.clone(), msg).to_compile_error()
-                }
+                quote! { [u8] }
             }
             SPINEL_DATATYPE_UTF8_C => quote! { str },
             SPINEL_DATATYPE_UINT_PACKED_C => {
