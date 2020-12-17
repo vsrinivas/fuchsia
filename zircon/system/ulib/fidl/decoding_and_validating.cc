@@ -218,7 +218,7 @@ class FidlDecoder final : public BaseVisitor<Byte> {
     AssignInDecode<mode>(handle, received_handle);
     handle_idx_++;
     return Status::kSuccess;
-#endif //  #ifndef __clang_analyzer__
+#endif  //  #ifndef __clang_analyzer__
   }
 
   Status VisitHandle(Position handle_position, HandlePointer handle,
@@ -490,6 +490,16 @@ zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
                         const char** out_error_msg) {
   return fidl_decode_impl<zx_handle_t, Mode::Decode>(type, bytes, num_bytes, handles, num_handles,
                                                      out_error_msg, close_handles_op, false);
+}
+
+zx_status_t fidl_decode_etc_skip_unknown_handles(const fidl_type_t* type, void* bytes,
+                                                 uint32_t num_bytes,
+                                                 const zx_handle_info_t* handle_infos,
+                                                 uint32_t num_handle_infos,
+                                                 const char** out_error_msg) {
+  return fidl_decode_impl<zx_handle_info_t, Mode::Decode>(type, bytes, num_bytes, handle_infos,
+                                                          num_handle_infos, out_error_msg,
+                                                          close_handle_infos_op, true);
 }
 
 zx_status_t fidl_decode_etc(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
