@@ -312,8 +312,7 @@ class GnTester(object):
             print "The GN SDK does not support building on macOS."
         else:
             self._run_build_tests()
-            # TODO(fxbug.dev/66741): Reenable this test.
-            # self._run_devtool_e2e_tests()
+            self._run_devtool_e2e_tests()
         return self._test_failed
 
 
