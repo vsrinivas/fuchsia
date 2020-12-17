@@ -91,7 +91,8 @@ group("goldens") {
 group("tests") {
   testonly = true
   deps = [
-    ":fidlgen_rust_golden_tests($host_toolchain)",
+    # TODO(fxbug.dev/66347): Re-enable after toolchain roll
+    # ":fidlgen_rust_golden_tests($host_toolchain)",
     ":fidlgen_rust_lib_tests($host_toolchain)",
     ":goldens",
     ":goldens($host_toolchain)",
