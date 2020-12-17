@@ -228,8 +228,8 @@ rebase the local branches in repo X onto HEAD of origin/master. But other
 petals' repos will be synced to specific revisions that may be behind HEAD of
 their origin/master.
 
-Our continuous integration system (specifically rollers) makes a new revision of
-a petal available to other petals only after testing that the new revision
+Fuchsia's continuous integration system (specifically rollers) makes a new revision
+of a petal available to other petals only after testing that the new revision
 doesn't break other petals. `jiri update` will always leave other petals synced
 to these successfully-tested revisions. But a git rebase to origin/master for a
 petal may advance that repo beyond the tested revision, which has the potential
@@ -421,3 +421,11 @@ A: To bisect history, perform the following steps:
     repositories have likely been changed in concert and you will need to
     traverse their history in concert. Consider studying the history of the
     repositories to understand why they were published together.
+
+### Q: Can I search the Fuchsia source code without cloning the repo?
+
+A: Sure! The [base repository](https://fuchsia.googlesource.com/fuchsia)
+provides a [Gitiles](https://gerrit.googlesource.com/gitiles/) UI for
+navigation. You may also use the Google
+[Open Source Code Search](https://cs.opensource.google/fuchsia/fuchsia) tool
+to browse and search the Fuchsia codebase online.
