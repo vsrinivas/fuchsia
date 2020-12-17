@@ -97,7 +97,6 @@ work together seamlessly.
 
 Almost all software that runs on Fuchsia is a component, including:
 
--   Command-line tools
 -   Device drivers
 -   End-user applications
 -   Filesystems
