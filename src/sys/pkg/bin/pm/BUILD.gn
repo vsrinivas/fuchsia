@@ -50,6 +50,7 @@ go_library("pm_lib") {
     "cmd/pm/publish/publish.go",
     "cmd/pm/publish/publish_test.go",
     "cmd/pm/seal/seal.go",
+    "cmd/pm/serve/incremental.go",
     "cmd/pm/serve/monitor.go",
     "cmd/pm/serve/monitor_test.go",
     "cmd/pm/serve/serve.go",

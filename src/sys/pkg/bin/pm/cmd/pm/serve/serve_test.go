@@ -112,6 +112,18 @@ func TestServer(t *testing.T) {
 	addr := <-addrChan
 	baseURL := fmt.Sprintf("http://%s", addr)
 
+	// after building, we need to wait for publication to complete, so start a client for that
+	cli := newTestAutoClient(t, baseURL)
+	defer cli.close()
+
+	cli.verifyNoPendingEvents()
+
+	// the first event happens as the initial version of the package is published
+	event := cli.readEvent()
+	if got, want := event.Event, "timestamp.json"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+
 	t.Run("serves static index", func(t *testing.T) {
 		res, err := http.Get(baseURL + "/")
 		if err != nil {
@@ -218,6 +230,7 @@ func TestServer(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		for _, blob := range m.Blobs {
 			res, err := http.Get(baseURL + "/blobs/" + blob.Merkle.String())
 			if err != nil {
@@ -235,16 +248,11 @@ func TestServer(t *testing.T) {
 			t.Fatalf("prematurely found target package")
 		}
 
-		// after building, we need to wait for publication to complete, so start a client for that
-		cli := newTestAutoClient(t, baseURL)
-		defer cli.close()
-
-		cli.verifyNoPendingEvents()
-
 		cfg.PkgVersion = "1"
 		build.BuildTestPackage(cfg)
 
-		event := cli.readEvent()
+		// expect an event when the package is updated
+		event = cli.readEvent()
 		if got, want := event.Event, "timestamp.json"; got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}

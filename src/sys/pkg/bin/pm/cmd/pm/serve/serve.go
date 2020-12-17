@@ -5,7 +5,6 @@
 package serve
 
 import (
-	"bufio"
 	"compress/gzip"
 	"flag"
 	"fmt"
@@ -93,81 +92,11 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 	if *auto {
 		as := pmhttp.NewAutoServer()
 
-		var missingManifests = struct {
-			sync.RWMutex
-			m map[string]bool
-		}{m: make(map[string]bool)}
-
 		w, err := fswatch.NewWatcher()
 		if err != nil {
 			return fmt.Errorf("failed to initialize fsnotify: %s", err)
 		}
 		defer w.Close()
-
-		publishManifests := func(pkgManifestPaths []string) {
-			validManifests := make([]string, 0, len(pkgManifestPaths))
-			for i, m := range pkgManifestPaths {
-				if _, err := os.Stat(m); err != nil {
-					// manifest does not exist, just add to missingManifests
-					missingManifests.Lock()
-					missingManifests.m[m] = true
-					missingManifests.Unlock()
-				} else {
-					// manifest exists, remove from missingManifests
-					validManifests = append(validManifests, pkgManifestPaths[i])
-					missingManifests.RLock()
-					_, found := missingManifests.m[m]
-					missingManifests.RUnlock()
-					if found {
-						missingManifests.Lock()
-						delete(missingManifests.m, m)
-						missingManifests.Unlock()
-					}
-				}
-			}
-			if len(validManifests) == 0 {
-				return
-			}
-			_, err = repo.PublishManifests(validManifests)
-			if err != nil {
-				log.Printf("[pm auto] unable to publish manifests: %s", err)
-				return
-			}
-			for _, m := range validManifests {
-				if err := w.Add(m); err != nil {
-					log.Printf("[pm auto] unable to watch %q", m)
-				}
-			}
-			if err := repo.CommitUpdates(config.TimeVersioned); err != nil {
-				log.Printf("[pm auto] committing repo: %s", err)
-			}
-			log.Printf("[pm auto] published %d packages", len(validManifests))
-		}
-
-		publishManifestList := func() {
-			f, err := os.Open(*publishList)
-			if err != nil {
-				log.Printf("reading package list %q: %s", *publishList, err)
-				return
-			}
-			defer f.Close()
-
-			missingManifests.Lock()
-			missingManifests.m = make(map[string]bool)
-			missingManifests.Unlock()
-
-			var pkgManifestPaths []string
-			s := bufio.NewScanner(f)
-			for s.Scan() {
-				m := s.Text()
-				pkgManifestPaths = append(pkgManifestPaths, m)
-			}
-			if err := s.Err(); err != nil {
-				log.Printf("unable to read manifests from %q", *publishList)
-				return
-			}
-			publishManifests(pkgManifestPaths)
-		}
 
 		timestampPath := filepath.Join(*repoServeDir, "timestamp.json")
 		timestampMonitor := NewMetadataMonitor(timestampPath, w)
@@ -180,32 +109,7 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 				as.Broadcast("timestamp.json", fmt.Sprintf("%v", metadata.Version))
 			}
 		}()
-		if *publishList != "" {
-			if err := w.Add(*publishList); err != nil {
-				return fmt.Errorf("failed to watch %s: %s", *publishList, err)
-			}
-			go func() {
-				// monitor non-existent manifests via polling every second
-				// TODO: evaluate if there's a way to watch non-existent files that
-				// doesn't involve polling. Watching the build output root directory
-				// is quite expensive since hundreds of thousands of files are created
-				// during a full build.
-				ticker := time.NewTicker(time.Second)
-				defer ticker.Stop()
-				for {
-					select {
-					case <-ticker.C:
-						var pkgManifestPaths []string
-						missingManifests.RLock()
-						for m := range missingManifests.m {
-							pkgManifestPaths = append(pkgManifestPaths, m)
-						}
-						missingManifests.RUnlock()
-						publishManifests(pkgManifestPaths)
-					}
-				}
-			}()
-		}
+
 		go func() {
 			// Drain any watch errors encountered, or the first error will block the filesystem watcher
 			// forever.
@@ -219,34 +123,32 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 				switch event.Name {
 				case timestampPath:
 					timestampMonitor.HandleEvent(event)
-				case *publishList:
-					if !*quiet {
-						log.Printf("[pm auto] list of manifests modified (%s), attempting to republish all: %q", event.Op, event.Name)
-					}
-					publishManifestList()
-				default:
-					if event.Op == fswatch.Remove {
-						if !*quiet {
-							log.Printf("[pm auto] manifest %q removed, adding to polling watcher", event.Name)
-						}
-						missingManifests.Lock()
-						missingManifests.m[event.Name] = true
-						missingManifests.Unlock()
-					} else {
-						if _, err := repo.PublishManifest(event.Name); err != nil {
-							log.Printf("publishing %q: %s", event.Name, err)
-							continue
-						} else if err := repo.CommitUpdates(config.TimeVersioned); err != nil {
-							log.Printf("committing repo update %q: %s", event.Name, err)
-						}
-					}
 				}
 			}
 		}()
 
 		mux.Handle("/auto", as)
+
 		if *publishList != "" {
-			publishManifestList()
+			mw, err := NewManifestWatcher(publishList, quiet)
+			if err != nil {
+				return fmt.Errorf("[pm auto] unable to create incremental manifest watcher: %s", err)
+			}
+			defer mw.stop()
+			go func() {
+				for manifests := range mw.PublishEvents {
+					_, err = repo.PublishManifests(manifests)
+					if err != nil {
+						log.Fatalf("[pm auto] unable to publish manifests %v: %s", manifests, err)
+					}
+					if err := repo.CommitUpdates(config.TimeVersioned); err != nil {
+						log.Fatalf("[pm auto] committing repo: %s", err)
+					}
+				}
+			}()
+			if err := mw.start(); err != nil {
+				return fmt.Errorf("[pm auto] failed to start incremental manifest watcher: %s", err)
+			}
 		}
 	}
 
