@@ -440,7 +440,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this defaults to the CIPD instance ID of the
 prebuilt.
 
-**Current value for `target_cpu = `:** `"qvyOtIUsHc70X6qL5yNk0tBLrkCnDLBqYQaX3ot8jmUC"`
+**Current value for `target_cpu = `:** `"gH0XPhgIPun0tFV5pRc_8iKk8PBwmxqyKIq5oq6ktUUC"`
 
 From /b/s/w/ir/x/w/out/not-default.zircon/args.gn:18
 

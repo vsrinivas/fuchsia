@@ -539,7 +539,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:43
+From //products/bringup.gni:44
 
 **Overridden from the default:** `[]`
 
@@ -547,7 +547,7 @@ From //BUILD.gn:41
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:43
+From //products/bringup.gni:44
 
 **Overridden from the default:** `[]`
 
@@ -656,7 +656,7 @@ errors we explicitly reduce the number of jobs.
 
 **Current value (from the default):** `32`
 
-From //build/dart/BUILD.gn:15
+From //build/dart/BUILD.gn:16
 
 ### config_have_heap
 Tells openweave to include files that require heap access.
@@ -676,13 +676,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/8bf3cdd977a0d6542963c704cadc85e03bbe4e94/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/cce6b30149d3e0cd77911ecfffe2671cf6252f85/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/8bf3cdd977a0d6542963c704cadc85e03bbe4e94/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/cce6b30149d3e0cd77911ecfffe2671cf6252f85/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -1292,7 +1292,7 @@ is produced by the build.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/devshell:fx"]`
 
-From //products/bringup.gni:47
+From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
@@ -1300,7 +1300,7 @@ From //BUILD.gn:60
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx"]`
 
-From //products/bringup.gni:47
+From //products/bringup.gni:48
 
 **Overridden from the default:** `[]`
 
@@ -1466,19 +1466,7 @@ List of kernel command line arguments to bake into the boot image.
 See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
 [`devmgr_config`](#devmgr_config).
 
-**Current value for `target_cpu = "arm64"`:** `["blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "kernel.oom.behavior=jobkill", "netsvc.all-features=true", "netsvc.disable=false"]`
-
-From //products/bringup.gni:7
-
-**Overridden from the default:** `[]`
-
-From //build/images/args.gni:26
-
-**Current value for `target_cpu = "x64"`:** `["blobfs.cache-eviction-policy=NEVER_EVICT", "console.shell=true", "devmgr.log-to-debuglog=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "kernel.oom.behavior=jobkill", "netsvc.all-features=true", "netsvc.disable=false"]`
-
-From //products/bringup.gni:7
-
-**Overridden from the default:** `[]`
+**Current value (from the default):** `[]`
 
 From //build/images/args.gni:26
 
@@ -1879,7 +1867,7 @@ A list of labels for meta packages to be included in the monolith.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:39
+From //products/bringup.gni:40
 
 **Overridden from the default:** `[]`
 
@@ -1887,7 +1875,7 @@ From //build/images/args.gni:69
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:39
+From //products/bringup.gni:40
 
 **Overridden from the default:** `[]`
 
@@ -2076,17 +2064,17 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:32
 ### product_bootfs_labels
 A list of binary labels to include in ZBIs built for this product.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:devmgr.log-to-debuglog--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/bringup.gni:36
+From //products/bringup.gni:37
 
 **Overridden from the default:** `[]`
 
 From //build/product.gni:7
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:devmgr.log-to-debuglog--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/bringup.gni:36
+From //products/bringup.gni:37
 
 **Overridden from the default:** `[]`
 
@@ -2236,7 +2224,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"qvyOtIUsHc70X6qL5yNk0tBLrkCnDLBqYQaX3ot8jmUC"`
+**Current value (from the default):** `"gH0XPhgIPun0tFV5pRc_8iKk8PBwmxqyKIq5oq6ktUUC"`
 
 From //build/rust/config.gni:33
 
@@ -2518,9 +2506,9 @@ From //zircon/kernel/params.gni:20
 
 ### supress_flutter_runner_patched_sdk
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
-From [//topaz/runtime/flutter_runner/kernel/soft_transition.gni:7](https://fuchsia.googlesource.com/topaz/+/1d4e5bcdba2e692b1f09d9cab2600eed82a7ff27/runtime/flutter_runner/kernel/soft_transition.gni#7)
+From [//topaz/runtime/flutter_runner/kernel/soft_transition.gni:7](https://fuchsia.googlesource.com/topaz/+/e3aa5b68ee0acdc7ef3dcbec2f12c251e1fcce97/runtime/flutter_runner/kernel/soft_transition.gni#7)
 
 ### sysmgr_golden_warn_override
 Used by config_package().
@@ -2713,7 +2701,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host"]`
 
-From //products/bringup.gni:45
+From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
@@ -2721,7 +2709,7 @@ From //BUILD.gn:55
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host"]`
 
-From //products/bringup.gni:45
+From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
@@ -3084,7 +3072,7 @@ silently clobber the default value shown here.
   experimental_cxx_version = 17
   goma_dir = "/b/s/w/ir/x/w/prebuilt/third_party/goma/linux-x64"
   output_gsym = false
-  rustc_version_string = "qvyOtIUsHc70X6qL5yNk0tBLrkCnDLBqYQaX3ot8jmUC"
+  rustc_version_string = "gH0XPhgIPun0tFV5pRc_8iKk8PBwmxqyKIq5oq6ktUUC"
   use_ccache = false
   use_goma = false
   variants = []
