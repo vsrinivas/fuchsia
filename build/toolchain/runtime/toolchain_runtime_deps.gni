@@ -114,6 +114,49 @@ foreach(entry, _clang_runtime) {
   ]
 }
 
+# Do the same for the 'libclang_rt.ubsan_standalone.so' which also depends
+# on libc++abi.so.
+_clang_runtime = []
+_clang_runtime = _new_clang_runtime
+
+_ubsan_runtimes_map = []
+foreach(entry, _clang_runtime) {
+  if (entry.cflags == [ "-fsanitize=undefined" ] && entry.ldflags == []) {
+    _targets = []
+    _targets = entry.target
+    _target = _targets[0]
+    if (string_replace(_target, "-fuchsia", "") != _target) {
+      _ubsan_runtimes_map += [
+        {
+          target = _target
+          runtime = entry.runtime
+        },
+      ]
+    }
+  }
+}
+
+_new_clang_runtime = []
+foreach(entry, _clang_runtime) {
+  _new_clang_runtime += [
+    {
+      forward_variables_from(entry, "*")
+      if (cflags == [ "-fsanitize=undefined" ] &&
+          ldflags == [ "-static-libstdc++" ]) {
+        _target = target[0]
+        if (string_replace(_target, "-fuchsia", "") != _target) {
+          foreach(_ubsan_entry, _ubsan_runtimes_map) {
+            if (_ubsan_entry.target == _target) {
+              runtime = []
+              runtime = _ubsan_entry.runtime
+            }
+          }
+        }
+      }
+    },
+  ]
+}
+
 _clang_runtime = []
 _clang_runtime = _new_clang_runtime
 
