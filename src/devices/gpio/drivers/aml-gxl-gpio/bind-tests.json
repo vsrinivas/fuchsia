@@ -1,0 +1,52 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.GPIO",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.S912",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "match",
+        "name": "Success"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.GPIO",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.S912",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.BUS"
+        },
+        "expected": "abort",
+        "name": "WrongProtocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.GPIO",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.S912",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.GENERIC",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "WrongVid"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.GPIO",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.S905D3",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "WrongPid"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.DISPLAY",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.S912",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "WrongDid"
+    }
+]
