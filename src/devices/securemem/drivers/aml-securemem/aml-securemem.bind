@@ -1,0 +1,14 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using amlogic.platform;
+using fuchsia.composite;
+
+fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PLATFORM_DEV_VID == amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+fuchsia.BIND_PLATFORM_DEV_DID == amlogic.platform.BIND_PLATFORM_DEV_DID.SECURE_MEM;
+accept fuchsia.BIND_PLATFORM_DEV_PID {
+  amlogic.platform.BIND_PLATFORM_DEV_PID.S905D2,
+  amlogic.platform.BIND_PLATFORM_DEV_PID.T931,
+}
