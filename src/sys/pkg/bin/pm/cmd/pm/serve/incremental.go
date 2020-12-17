@@ -15,6 +15,9 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/fswatch"
 )
 
+// Delay to wait for more fswatch events before requesting a repo publish/commit
+const BatchProcessingDelay = 30 * time.Millisecond
+
 // Polling time between checks for non-existent manifests
 const NonExistentPollingTime = 1 * time.Second
 
@@ -24,9 +27,16 @@ type ManifestWatcher struct {
 	ticker          *time.Ticker
 	tickerDone      chan bool
 	missing         MissingManifests
+	batch           *ManifestBatch
 	publishList     *string
 	quiet           *bool
 	runningRoutines sync.WaitGroup
+}
+
+type ManifestBatch struct {
+	m  map[string]bool
+	t  *time.Timer
+	mu sync.Mutex
 }
 
 type MissingManifests struct {
@@ -43,6 +53,7 @@ func NewManifestWatcher(publishList *string, quiet *bool) (*ManifestWatcher, err
 		watcher:     watcher,
 		publishList: publishList,
 		quiet:       quiet,
+		batch:       &ManifestBatch{m: make(map[string]bool)},
 	}
 	mw.PublishEvents = make(chan []string)
 	mw.missing.m = make(map[string]bool)
@@ -110,6 +121,42 @@ func (mw *ManifestWatcher) publishManifestList() error {
 	return nil
 }
 
+func (mw *ManifestWatcher) processQueue() {
+	mw.batch.mu.Lock()
+	mw.batch.t.Stop()
+	mw.batch.t = nil
+	if len(mw.batch.m) == 0 {
+		mw.batch.mu.Unlock()
+		return
+	}
+	filenames := make([]string, 0, len(mw.batch.m))
+	for k := range mw.batch.m {
+		filenames = append(filenames, k)
+	}
+	mw.batch.m = make(map[string]bool)
+	mw.batch.mu.Unlock()
+	mw.publishManifests(filenames)
+}
+
+func (mw *ManifestWatcher) enqueue(ms ...string) {
+	mw.batch.mu.Lock()
+	defer mw.batch.mu.Unlock()
+	for _, m := range ms {
+		mw.batch.m[m] = true
+		mw.logV("[pm incremental] manifest created or changed, enqueuing: %s", m)
+	}
+	if mw.batch.t != nil {
+		mw.batch.t.Stop()
+		mw.batch.t.Reset(BatchProcessingDelay)
+	} else {
+		mw.batch.t = time.AfterFunc(BatchProcessingDelay, func() {
+			mw.runningRoutines.Add(1)
+			defer mw.runningRoutines.Done()
+			mw.processQueue()
+		})
+	}
+}
+
 func (mw *ManifestWatcher) startMissingFilesPolling() {
 	// monitor non-existent manifests via polling every second
 	// TODO: evaluate if there's a way to watch non-existent files that
@@ -140,8 +187,7 @@ func (mw *ManifestWatcher) startMissingFilesPolling() {
 				}
 				mw.missing.Unlock()
 				if len(ms) > 0 {
-					mw.logV("[fs polling] will call enqueue for: %d", len(ms))
-					mw.publishManifests(ms)
+					mw.enqueue(ms...)
 				}
 			}
 		}
@@ -170,7 +216,9 @@ func (mw *ManifestWatcher) start() error {
 					continue
 				}
 				mw.logV("[pm incremental] list of manifests modified (%s), attempting to republish all from %q", event.Op, event.Name)
-				mw.publishManifestList()
+				if err := mw.publishManifestList(); err != nil {
+					log.Printf("[pm incremental] WARNING: error while publishing list of manifests: %s", err)
+				}
 			default:
 				if event.Op == fswatch.Remove {
 					mw.logV("[pm incremental] manifest %q removed, adding to polling watcher", event.Name)
@@ -179,7 +227,7 @@ func (mw *ManifestWatcher) start() error {
 					mw.missing.Unlock()
 				} else {
 					mw.logV("[pm incremental] manifest %s, event %s", event.Name, event.Op)
-					mw.PublishEvents <- []string{event.Name}
+					mw.enqueue(event.Name)
 				}
 			}
 		}
@@ -195,6 +243,13 @@ func (mw *ManifestWatcher) logV(format string, v ...interface{}) {
 
 func (mw *ManifestWatcher) stop() {
 	mw.logV("Debug: ManifestWatcher stopping")
+	if mw.batch != nil {
+		if mw.batch.t != nil {
+			mw.batch.t.Stop()
+			mw.batch.t = nil
+		}
+		mw.batch = nil
+	}
 	if mw.ticker != nil {
 		mw.ticker.Stop()
 		mw.tickerDone <- true
