@@ -129,7 +129,18 @@ zx_status_t VnodeFile::CreateBackingStoreIfNeeded() {
   if (vmo_.is_valid()) {
     return ZX_OK;
   }
-  return zx::vmo::create(kMemfsMaxFileSize, 0, &vmo_);
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(kMemfsMaxFileSize, 0, &vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+  uint64_t content_size = 0;
+  status = vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
+  if (status != ZX_OK) {
+    return status;
+  }
+  vmo_ = std::move(vmo);
+  return ZX_OK;
 }
 
 size_t VnodeFile::GetContentSize() const {
