@@ -20,7 +20,7 @@ use [system calls] only through the Zircon [vDSO](/docs/concepts/kernel/vdso.md)
 provided by the kernel in ELF format and uses the C/C++ calling conventions
 common to ELF-based systems.
 
-Userspace code (given the appropriate capabilities) can use [system calls] to 
+Userspace code (given the appropriate capabilities) can use [system calls] to
 directly create processes and load programs without
 using ELF, but Zircon's standard ABI for machine code uses ELF as described here.
 

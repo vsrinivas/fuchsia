@@ -130,7 +130,7 @@ Hello, World!
 ```
 
 If `fx serve` is not running, the command prints an error message from
-the device or emulator. 
+the device or emulator.
 
 If `fx serve` is running, but the package is not found,
 then [try going through these steps again](#include-the-example-package-in-your-fuchsia-image),

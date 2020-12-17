@@ -1,6 +1,6 @@
 # Installing Fuchsia on a device
 
-This guide will help you understand the device installation process for Fuchsia. 
+This guide will help you understand the device installation process for Fuchsia.
 The Fuchsia install process, called 'paving', requires two machines, the machine
 on which you build Fuchsia ("host") and the device on which you want to run
 Fuchsia ("target"). The host and target must be able to communicate over a local
@@ -22,10 +22,10 @@ following the instructions in these two documents:
 
 If you have `fx` mapped into your command path you can follow these instructions. If you
 don't have fx in your path, it can be found at `//scripts/fx` and you'll need
-to use the appropriate relative path in the supplied commands. 
+to use the appropriate relative path in the supplied commands.
 
 Many `fx` commands are wrappers around build actions in [GN](/docs/concepts/build_system/intro.md)
-coupled with tool invocations. 
+coupled with tool invocations.
 
 Assuming that the target system is x86-based and that you want to build a
 complete Fuchsia system, you can set Fuchsia with the following command:
@@ -36,7 +36,7 @@ fx set {product_name}.x64`
 
 Note: For more information on supported products, see [product and board](/docs/concepts/build_system/boards_and_products.md).
 
-Then build Fuchsia: 
+Then build Fuchsia:
 
 ```
 fx build

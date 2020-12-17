@@ -12,7 +12,7 @@ documentation and feature discovery.
 
 Help documentation must include a usage section written in
 [Usage](#usage) format, followed by a brief descriptions about
-the command, and the following sections (as needed): 
+the command, and the following sections (as needed):
 
 * Options
 * Commands

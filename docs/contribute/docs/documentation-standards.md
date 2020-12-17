@@ -100,7 +100,7 @@ contains a command with an underscore, then you can include the underscore.
 - **Write in present tense.** Always document the system as it is, not as it will be. Words such
   as "will" are very ambiguous. For example "you will see" leads to questions like "when will I see
   this?". In 1 minute or in 20 minutes? In addition, do not refer to future product features unless
-  necessary.  Mentioning future plans that might not happen becomes a maintenence burden.
+  necessary.  Mentioning future plans that might not happen becomes a maintenance burden.
 
 - **Keep sentences short and concrete.** Using punctuation allows your reader to follow
   instructions or and understand concepts. Also, short sentences are much easier

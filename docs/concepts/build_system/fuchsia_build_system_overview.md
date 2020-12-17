@@ -105,7 +105,7 @@ This is what gets run under the hood by `fx build`.
 
 ## Rebuilding
 
-In order to rebuild the tree after modifying some sources, just rerun 
+In order to rebuild the tree after modifying some sources, just rerun
 **Build step**. This holds true even if you modify `BUILD.gn` files as GN adds
 Ninja targets to update Ninja targets if build files are changed! The same
 holds true for other files used to configure the build. Any change of source

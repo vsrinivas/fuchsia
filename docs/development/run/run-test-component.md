@@ -25,7 +25,7 @@ The steps to run a test component are:
 
 ## Prerequisites
 
-Before you can run this test component, you must: 
+Before you can run this test component, you must:
 
 *   [Set up the Fuchsia development environment](/docs/get-started/get_fuchsia_source.md)
 

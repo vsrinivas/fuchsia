@@ -1,6 +1,6 @@
 # Code sample style guidelines {:#overview}
 
-This document describes how to incorportate code samples in documentation, 
+This document describes how to incorportate code samples in documentation,
 and specific style guidelines for code samples. This includes:
 
   *  [Code sample best practices](#code-sample-best-practices)
@@ -16,7 +16,7 @@ For specific guidance on word choice, style, and structure, see the
 ## Code sample best practices {:#code-sample-best-practices}
 
 When creating a code sample for a part of Fuchsia that you are deeply familiar with,
-consider how a new user would read the sample and try to anticipate their needs. 
+consider how a new user would read the sample and try to anticipate their needs.
 Think about the process from end-to-end and include prerequisite steps to completing the process
 and specify what success looks like.
 
