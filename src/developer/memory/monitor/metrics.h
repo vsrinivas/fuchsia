@@ -46,9 +46,9 @@ class Metrics {
  private:
   void CollectMetrics();
   void WriteDigestToInspect(const memory::Digest& digest);
-  void AddKmemEvents(const zx_info_kmem_stats_t& kmem,
+  void AddKmemEvents(const zx_info_kmem_stats_extended_t& kmem,
                      std::vector<fuchsia::cobalt::CobaltEvent>* events);
-  void AddKmemEventsWithUptime(const zx_info_kmem_stats_t& kmem, zx_time_t capture_time,
+  void AddKmemEventsWithUptime(const zx_info_kmem_stats_extended_t& kmem, zx_time_t capture_time,
                                std::vector<fuchsia::cobalt::CobaltEvent>* events);
   cobalt_registry::MemoryLeakMetricDimensionTimeSinceBoot GetUpTimeEventCode(
       const zx_time_t current);

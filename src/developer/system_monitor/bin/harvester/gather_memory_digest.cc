@@ -57,6 +57,11 @@ const std::map<std::string, std::string>& GetBucketMap() {
       {"Kernel", "memory_digest:kernel"},
       {"Free", "memory_digest:free"},
       {"Undigested", "memory_digest:undigested"},
+      {"PagerTotal", "memory_digest:pager_total"},
+      {"PagerNewest", "memory_digest:pager_newest"},
+      {"PagerOldest", "memory_digest:pager_oldest"},
+      {"DiscardableLocked", "memory_digest:discardable_locked"},
+      {"DiscardableUnlocked", "memory_digest:discardable_unlocked"},
   };
   return name_to_path;
 }

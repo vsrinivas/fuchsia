@@ -77,6 +77,11 @@ Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
           {"ContiguousPool", MemoryMetricDimensionBucket::ContiguousPool},
           {"ProtectedPool", MemoryMetricDimensionBucket::ProtectedPool},
           {"FlutterApps", MemoryMetricDimensionBucket::FlutterApps},
+          {"PagerTotal", MemoryMetricDimensionBucket::PagerTotal},
+          {"PagerNewest", MemoryMetricDimensionBucket::PagerNewest},
+          {"PagerOldest", MemoryMetricDimensionBucket::PagerOldest},
+          {"DiscardableLocked", MemoryMetricDimensionBucket::DiscardableLocked},
+          {"DiscardableUnlocked", MemoryMetricDimensionBucket::DiscardableUnlocked},
       }),
       inspector_(inspector),
       platform_metric_node_(inspector_->root().CreateChild(kInspectPlatformNodeName)),
@@ -93,8 +98,8 @@ Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
       metric_memory_node_(platform_metric_node_.CreateChild(kMemoryNodeName)),
       inspect_memory_timestamp_(metric_memory_node_.CreateInt(kReadingMemoryTimestamp, 0)),
       metric_memory_bandwidth_node_(platform_metric_node_.CreateChild(kMemoryBandwidthNodeName)),
-      inspect_memory_bandwidth_(metric_memory_bandwidth_node_.
-          CreateUintArray(kReadings, kMemoryBandwidthArraySize)),
+      inspect_memory_bandwidth_(
+          metric_memory_bandwidth_node_.CreateUintArray(kReadings, kMemoryBandwidthArraySize)),
       inspect_memory_bandwidth_timestamp_(
           metric_memory_bandwidth_node_.CreateInt(kReadingMemoryTimestamp, 0)) {
   for (auto& element : bucket_name_to_code_) {
@@ -162,7 +167,7 @@ void Metrics::WriteDigestToInspect(const memory::Digest& digest) {
   }
 }
 
-void Metrics::AddKmemEvents(const zx_info_kmem_stats_t& kmem,
+void Metrics::AddKmemEvents(const zx_info_kmem_stats_extended_t& kmem,
                             std::vector<fuchsia::cobalt::CobaltEvent>* events) {
   TRACE_DURATION("memory_monitor", "Metrics::AddKmemEvents");
   auto builder = cobalt::CobaltEventBuilder(cobalt_registry::kMemoryGeneralBreakdownMetricId);
@@ -195,7 +200,7 @@ void Metrics::AddKmemEvents(const zx_info_kmem_stats_t& kmem,
 
 // TODO(fxbug.dev/3778): Refactor this when dedup enum is availble in generated
 // cobalt config source code.
-void Metrics::AddKmemEventsWithUptime(const zx_info_kmem_stats_t& kmem,
+void Metrics::AddKmemEventsWithUptime(const zx_info_kmem_stats_extended_t& kmem,
                                       const zx_time_t capture_time,
                                       std::vector<fuchsia::cobalt::CobaltEvent>* events) {
   TRACE_DURATION("memory_monitor", "Metrics::AddKmemEventsWithUptime");

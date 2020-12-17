@@ -30,7 +30,7 @@ class ProcessSummary {
  public:
   static const zx_koid_t kKernelKoid;
   ProcessSummary(zx_koid_t koid, const std::string& name) : koid_(koid), name_(name) {}
-  ProcessSummary(const zx_info_kmem_stats_t& kmem, uint64_t vmo_bytes);
+  ProcessSummary(const zx_info_kmem_stats_extended_t& kmem, uint64_t vmo_bytes);
 
   zx_koid_t koid() const { return koid_; }
   const std::string& name() const { return name_; }
@@ -80,14 +80,14 @@ class Summary {
 
   void SortProcessSummaries();
   zx_time_t time() const { return time_; }
-  const zx_info_kmem_stats_t& kstats() const { return kstats_; }
+  const zx_info_kmem_stats_extended_t& kstats() const { return kstats_; }
   const std::vector<ProcessSummary>& process_summaries() const { return process_summaries_; }
 
  private:
   void Init(const Capture& capture, Namer* namer,
             const std::unordered_set<zx_koid_t>& undigested_vmos);
   zx_time_t time_;
-  zx_info_kmem_stats_t kstats_;
+  zx_info_kmem_stats_extended_t kstats_;
   std::vector<ProcessSummary> process_summaries_;
 };
 

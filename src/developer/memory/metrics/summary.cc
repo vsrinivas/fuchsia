@@ -118,7 +118,7 @@ void Summary::Init(const Capture& capture, Namer* namer,
 
 const zx_koid_t ProcessSummary::kKernelKoid = 1;
 
-ProcessSummary::ProcessSummary(const zx_info_kmem_stats_t& kmem, uint64_t vmo_bytes)
+ProcessSummary::ProcessSummary(const zx_info_kmem_stats_extended_t& kmem, uint64_t vmo_bytes)
     : koid_(kKernelKoid), name_("kernel") {
   auto kmem_vmo_bytes = kmem.vmo_bytes < vmo_bytes ? 0 : kmem.vmo_bytes - vmo_bytes;
   name_to_sizes_.emplace("heap", kmem.total_heap_bytes);

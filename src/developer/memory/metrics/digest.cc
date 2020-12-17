@@ -134,6 +134,18 @@ void Digester::Digest(const Capture& capture, class Digest* digest) {
     if (vmo_size < kmem.vmo_bytes) {
       digest->buckets_.emplace_back("Orphaned", kmem.vmo_bytes - vmo_size);
     }
+
+    if (kmem.vmo_pager_total_bytes > 0) {
+      digest->buckets_.emplace_back("PagerTotal", kmem.vmo_pager_total_bytes);
+      digest->buckets_.emplace_back("PagerNewest", kmem.vmo_pager_newest_bytes);
+      digest->buckets_.emplace_back("PagerOldest", kmem.vmo_pager_oldest_bytes);
+    }
+
+    if (kmem.vmo_discardable_locked_bytes > 0 || kmem.vmo_discardable_unlocked_bytes > 0) {
+      digest->buckets_.emplace_back("DiscardableLocked", kmem.vmo_discardable_locked_bytes);
+      digest->buckets_.emplace_back("DiscardableUnlocked", kmem.vmo_discardable_unlocked_bytes);
+    }
+
     digest->buckets_.emplace_back("Kernel", kmem.wired_bytes + kmem.total_heap_bytes +
                                                 kmem.mmu_overhead_bytes + kmem.ipc_bytes +
                                                 kmem.other_bytes);

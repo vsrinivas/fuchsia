@@ -83,12 +83,12 @@ class OSImpl : public OS, public TaskEnumerator {
   }
 
   zx_status_t GetKernelMemoryStats(llcpp::fuchsia::kernel::Stats::SyncClient* stats_client,
-                                   zx_info_kmem_stats_t* kmem) override {
+                                   zx_info_kmem_stats_extended_t* kmem) override {
     TRACE_DURATION("memory_metrics", "Capture::GetKernelMemoryStats");
     if (stats_client == nullptr) {
       return ZX_ERR_BAD_STATE;
     }
-    auto result = stats_client->GetMemoryStats();
+    auto result = stats_client->GetMemoryStatsExtended();
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -99,6 +99,11 @@ class OSImpl : public OS, public TaskEnumerator {
     kmem->total_heap_bytes = stats.total_heap_bytes();
     kmem->free_heap_bytes = stats.free_heap_bytes();
     kmem->vmo_bytes = stats.vmo_bytes();
+    kmem->vmo_pager_total_bytes = stats.vmo_pager_total_bytes();
+    kmem->vmo_pager_newest_bytes = stats.vmo_pager_newest_bytes();
+    kmem->vmo_pager_oldest_bytes = stats.vmo_pager_oldest_bytes();
+    kmem->vmo_discardable_locked_bytes = stats.vmo_discardable_locked_bytes();
+    kmem->vmo_discardable_unlocked_bytes = stats.vmo_discardable_unlocked_bytes();
     kmem->mmu_overhead_bytes = stats.mmu_overhead_bytes();
     kmem->ipc_bytes = stats.ipc_bytes();
     kmem->other_bytes = stats.other_bytes();

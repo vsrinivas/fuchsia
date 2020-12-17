@@ -58,6 +58,11 @@ void Printer::PrintCapture(const Capture& capture) {
       .AddMember("total_heap", k.total_heap_bytes, a)
       .AddMember("free_heap", k.free_heap_bytes, a)
       .AddMember("vmo", k.vmo_bytes, a)
+      .AddMember("vmo_pager_total", k.vmo_pager_total_bytes, a)
+      .AddMember("vmo_pager_newest", k.vmo_pager_newest_bytes, a)
+      .AddMember("vmo_pager_oldest", k.vmo_pager_oldest_bytes, a)
+      .AddMember("vmo_discardable_locked", k.vmo_discardable_locked_bytes, a)
+      .AddMember("vmo_discardable_unlocked", k.vmo_discardable_unlocked_bytes, a)
       .AddMember("mmu", k.mmu_overhead_bytes, a)
       .AddMember("ipc", k.ipc_bytes, a)
       .AddMember("other", k.other_bytes, a);

@@ -60,7 +60,7 @@ class Monitor : public fuchsia::memory::Monitor {
   // Destroys a watcher proxy (called upon a connection error).
   void ReleaseWatcher(fuchsia::memory::Watcher* watcher);
   // Alerts all watchers when an update has occurred.
-  void NotifyWatchers(const zx_info_kmem_stats_t& stats);
+  void NotifyWatchers(const zx_info_kmem_stats_extended_t& stats);
 
   memory::CaptureState capture_state_;
   HighWater high_water_;

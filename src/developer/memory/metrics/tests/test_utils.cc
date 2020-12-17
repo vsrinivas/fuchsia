@@ -75,7 +75,7 @@ class MockOS : public OS {
   }
 
   zx_status_t GetKernelMemoryStats(llcpp::fuchsia::kernel::Stats::SyncClient* stats_client,
-                                   zx_info_kmem_stats_t* kmem) override {
+                                   zx_info_kmem_stats_extended_t* kmem) override {
     const auto& r = responses_.get_info.at(i_get_info_++);
     memcpy(kmem, r.values, r.value_size);
     return r.ret;

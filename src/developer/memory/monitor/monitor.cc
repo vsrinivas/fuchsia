@@ -231,7 +231,7 @@ void Monitor::ReleaseWatcher(fuchsia::memory::Watcher* watcher) {
   watchers_.erase(std::remove_if(watchers_.begin(), watchers_.end(), predicate));
 }
 
-void Monitor::NotifyWatchers(const zx_info_kmem_stats_t& kmem_stats) {
+void Monitor::NotifyWatchers(const zx_info_kmem_stats_extended_t& kmem_stats) {
   fuchsia::memory::Stats stats{
       .total_bytes = kmem_stats.total_bytes,
       .free_bytes = kmem_stats.free_bytes,

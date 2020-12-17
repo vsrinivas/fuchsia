@@ -41,6 +41,11 @@ TEST_F(PrinterUnitTest, PrintCapture) {
                                            .total_heap_bytes = 20,
                                            .free_heap_bytes = 30,
                                            .vmo_bytes = 40,
+                                           .vmo_pager_total_bytes = 15,
+                                           .vmo_pager_newest_bytes = 4,
+                                           .vmo_pager_oldest_bytes = 8,
+                                           .vmo_discardable_locked_bytes = 3,
+                                           .vmo_discardable_unlocked_bytes = 7,
                                            .mmu_overhead_bytes = 50,
                                            .ipc_bytes = 60,
                                            .other_bytes = 70,
@@ -79,6 +84,11 @@ TEST_F(PrinterUnitTest, PrintCapture) {
   EXPECT_EQ(20U, kernel["total_heap"].GetUint64());
   EXPECT_EQ(30U, kernel["free_heap"].GetUint64());
   EXPECT_EQ(40U, kernel["vmo"].GetUint64());
+  EXPECT_EQ(15U, kernel["vmo_pager_total"].GetUint64());
+  EXPECT_EQ(4U, kernel["vmo_pager_newest"].GetUint64());
+  EXPECT_EQ(8U, kernel["vmo_pager_oldest"].GetUint64());
+  EXPECT_EQ(3U, kernel["vmo_discardable_locked"].GetUint64());
+  EXPECT_EQ(7U, kernel["vmo_discardable_unlocked"].GetUint64());
   EXPECT_EQ(50U, kernel["mmu"].GetUint64());
   EXPECT_EQ(60U, kernel["ipc"].GetUint64());
   EXPECT_EQ(70U, kernel["other"].GetUint64());
@@ -445,6 +455,11 @@ TEST_F(PrinterUnitTest, OutputDigest) {
                                            .wired_bytes = 10,
                                            .free_bytes = 100,
                                            .vmo_bytes = 700,
+                                           .vmo_pager_total_bytes = 300,
+                                           .vmo_pager_newest_bytes = 50,
+                                           .vmo_pager_oldest_bytes = 150,
+                                           .vmo_discardable_locked_bytes = 60,
+                                           .vmo_discardable_unlocked_bytes = 40,
                                        },
                                    .vmos =
                                        {
@@ -464,7 +479,9 @@ TEST_F(PrinterUnitTest, OutputDigest) {
   Printer p(oss);
   p.OutputDigest(d);
   ConfirmLines(oss, {"1234,B,200", "1234,A,100", "1234,Undigested,300", "1234,Orphaned,100",
-                     "1234,Kernel,10", "1234,Free,100"});
+                     "1234,PagerTotal,300", "1234,PagerNewest,50", "1234,PagerOldest,150",
+                     "1234,DiscardableLocked,60", "1234,DiscardableUnlocked,40", "1234,Kernel,10",
+                     "1234,Free,100"});
 }
 
 TEST_F(PrinterUnitTest, FormatSize) {

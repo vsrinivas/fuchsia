@@ -63,7 +63,7 @@ class OS {
   virtual zx_status_t GetInfo(zx_handle_t handle, uint32_t topic, void* buffer, size_t buffer_size,
                               size_t* actual, size_t* avail) = 0;
   virtual zx_status_t GetKernelMemoryStats(llcpp::fuchsia::kernel::Stats::SyncClient* stats_client,
-                                           zx_info_kmem_stats_t* kmem) = 0;
+                                           zx_info_kmem_stats_extended_t* kmem) = 0;
 };
 
 class Capture {
@@ -86,7 +86,7 @@ class Capture {
       const std::vector<std::string>& rooted_vmo_names = kDefaultRootedVmoNames);
 
   zx_time_t time() const { return time_; };
-  const zx_info_kmem_stats_t& kmem() const { return kmem_; };
+  const zx_info_kmem_stats_extended_t& kmem() const { return kmem_; };
 
   const std::unordered_map<zx_koid_t, Process>& koid_to_process() const { return koid_to_process_; }
 
@@ -104,7 +104,7 @@ class Capture {
   void ReallocateDescendents(zx_koid_t parent_koid);
 
   zx_time_t time_;
-  zx_info_kmem_stats_t kmem_;
+  zx_info_kmem_stats_extended_t kmem_;
   std::unordered_map<zx_koid_t, Process> koid_to_process_;
   std::unordered_map<zx_koid_t, Vmo> koid_to_vmo_;
 

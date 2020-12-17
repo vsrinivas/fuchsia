@@ -15,17 +15,22 @@ namespace test {
 
 using CaptureUnitTest = testing::Test;
 
-const static zx_info_kmem_stats _kmem = {.total_bytes = 300,
-                                         .free_bytes = 100,
-                                         .wired_bytes = 10,
-                                         .total_heap_bytes = 20,
-                                         .free_heap_bytes = 30,
-                                         .vmo_bytes = 40,
-                                         .mmu_overhead_bytes = 50,
-                                         .ipc_bytes = 60,
-                                         .other_bytes = 70};
+const static zx_info_kmem_stats_extended_t _kmem = {.total_bytes = 300,
+                                                    .free_bytes = 100,
+                                                    .wired_bytes = 10,
+                                                    .total_heap_bytes = 20,
+                                                    .free_heap_bytes = 30,
+                                                    .vmo_bytes = 40,
+                                                    .vmo_pager_total_bytes = 15,
+                                                    .vmo_pager_newest_bytes = 4,
+                                                    .vmo_pager_oldest_bytes = 8,
+                                                    .vmo_discardable_locked_bytes = 3,
+                                                    .vmo_discardable_unlocked_bytes = 7,
+                                                    .mmu_overhead_bytes = 50,
+                                                    .ipc_bytes = 60,
+                                                    .other_bytes = 70};
 const static GetInfoResponse kmem_info = {
-    TestUtils::kRootHandle, ZX_INFO_KMEM_STATS, &_kmem, sizeof(_kmem), 1, ZX_OK};
+    TestUtils::kRootHandle, ZX_INFO_KMEM_STATS_EXTENDED, &_kmem, sizeof(_kmem), 1, ZX_OK};
 
 const static zx_info_handle_basic_t _self = {.koid = TestUtils::kSelfKoid};
 const static GetInfoResponse self_info = {
