@@ -339,9 +339,80 @@ build_api_module("args") {
   contents = read_file("$root_build_dir/args.gn", "scope")
 }
 
-# See //zircon:binaries for a description and schema definition.
-# in file: "$root_build_dir/binaries.json"
+# This describes all the binaries linked by the build.
 #
+# This enumerates each linked binary (executable, shared library, or
+# loadable/"plug-in" module) used by the build, or produced by the build.
+#
+# This includes host tools, kernels, boot loaders, drivers, as well as
+# normal executables. This also includes prebuilt toolchain runtime
+# libraries that end up in image files. It does not yet include any
+# non-native binary formats.
+#
+# For non-prebuilts, this is meant to reach the entire dependency graph
+# of all binaries that the build would ever produce.  Not every binary
+# described is necessarily actually produced by any given Ninja run.  Either
+# the $debug or the $dist file for any individual binary can be passed to
+# Ninja as a specific target argument to ensure it's built and
+# up to date before making use of that binary.  Like all build_api_module()
+# targets, the top-level "binaries" target serves as a Ninja target to
+# request that every binary described be built.
+#
+# Note that in certain cases, the paths in `debug` and `dist` will
+# point out of the build tree, and thus cannot be used as Ninja targets.
+# This happens for prebuilts or binaries produced by the Zircon build.
+#
+# Type: list(scope)
+#
+#   cpu
+#     Required: CPU architecture the binary is for, e.g. "arm64" or "x64".
+#     Type: string
+#
+#   os
+#     Required: OS the binary is for, e.g. "fuchsia", "linux", or "mac".
+#     Type: string
+#
+#   environment
+#     Required: The ${toolchain.environment} name of what specific
+#     execution this was built for, e.g. "user", "host", "guest".  The
+#     tuple of ($cpu, $os, $environment) should indicate what hardware and
+#     software environment this binary is compatible with.
+#     Type: string
+#
+#   label
+#     Required: The GN label of the binary target.
+#     Type: label_with_toolchain
+#
+#   type
+#     Required: The type of binary.
+#     Type: "executable" or "shared_library" or "loadable_module"
+#
+#   debug
+#     Required: Path to where the unstripped or separate debug file is
+#     found, relative to $root_build_dir.  If $dist is omitted, this
+#     is also the file that is used at runtime.
+#     Type: path relative to $root_build_dir
+#
+#   dist
+#     Optional: Path to where the stripped binary for deployment/execution is
+#     found, relative to $root_build_dir.  This binary may be required for
+#     some debugging tasks if $debug is a separate debug file rather than
+#     an unstripped file.  It should exactly match the binary that will be
+#     seen on devices or run directly on hosts.
+#     Type: path relative to $root_build_dir
+#
+#   elf_build_id
+#     Optional: Path to a file containing the lowercase ASCII hexadecimal
+#     representation of the ELF build ID in this binary.  This is omitted
+#     for OS environments that don't use ELF.  For an ELF binary that
+#     doesn't have a build ID note, this key will be present but point to
+#     an empty file.
+#     Type: path relative to $root_build_dir
+#
+#   breakpad
+#     Optional: Path to the breakpad symbol file for the debug binary.  This
+#     will only be present if $output_breakpad_syms was set.
+#     Type: path relative to $root_build_dir
 build_api_module("binaries") {
   testonly = true
   data_keys = [ "binaries" ]
@@ -460,8 +531,13 @@ group("checkout_artifacts.metadata") {
   }
 }
 
-# See //zircon:generated_sources for a description and schema definition.
-# in file: "$root_build_dir/generated_sources.json"
+# This describes all the generated source files in the build.
+#
+# The intent is that telling Ninja to build all these individual files
+# will be the minimal work sufficient for source code analysis of all
+# the files described in the compilation database to be viable.
+#
+# Type: list(path relative to $root_build_dir)
 #
 build_api_module("generated_sources") {
   testonly = true
@@ -681,8 +757,41 @@ build_api_module("prebuilt_binaries") {
   ]
 }
 
-# See //zircon:tests for a description and schema definition.
-# in file: "$root_build_dir/tests.json"
+# Tests in the build.
+#
+#  Below, the "testing root" refers to $root_build_dir on host, and the full
+#  filesystem path from the root on device.
+#
+# Type: list(scope)
+#
+#   * name
+#     - Required: Name of test.
+#     - Type: string
+#
+#   * label
+#     - Required: GN label associated with the test
+#     - Type: label_with_toolchain
+#
+#   * path
+#     - Required: Path to the test's executable.
+#     - Type: path relative to the testing root.
+#
+#   * cpu, os
+#     - Required: $current_cpu and $current_os values, respectively, for
+#       which this test is intended.
+#     - Type: string
+#
+#   * disabled
+#     - Optional: a free-form string indicating a reason for the test being
+#       disabled.
+#     - Type: string
+#
+#   * runtime_deps
+#     - Optional: a JSON file containing a list of root_build_dir-relative
+#       paths defining ascribed runtime dependencies of the test. These
+#       dependencies are aggregated via the metadata graph of the associated
+#       test target under a data key of "test_runtime_deps.
+#     - Type: path relative to root_build_dir
 #
 build_api_module("tests") {
   testonly = true

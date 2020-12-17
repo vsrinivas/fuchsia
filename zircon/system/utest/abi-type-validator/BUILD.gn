@@ -2,10 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("bad-kernel-access") {
-  sources = [ "bad-kernel-access.c" ]
-  deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-  ]
+shared_library("abi-type-validator") {
+  testonly = true
+  sources = [ "abi_type_validator.cc" ]
+  deps = [ "//zircon/kernel/lib/abi_type_validator" ]
 }

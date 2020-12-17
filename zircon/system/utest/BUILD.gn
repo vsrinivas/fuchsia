@@ -10,6 +10,7 @@
 group("tests") {
   testonly = true
   deps = [
+    "abi-type-validator",
     "cleanup:tests",
     "cmdline:tests",
     "cmdline($host_toolchain)",

@@ -1,9 +1,0 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-library("abi-type-validator") {
-  testonly = true
-  sources = [ "abi_type_validator.cc" ]
-  deps = [ "$zx/kernel/lib/abi_type_validator:headers" ]
-}

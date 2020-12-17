@@ -4,9 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-library("abi_type_validator") {
+import("$zx_build/public/gn/migrated_targets.gni")
+
+zx_library("abi_type_validator") {
   kernel = true
   static = true
+  sdk = "source"
+  sdk_headers = []
   visibility = [
     "$zx/kernel/*",
     "$zx/system/utest/abi-type-validator/*",
