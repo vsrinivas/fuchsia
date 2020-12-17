@@ -2,9 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(fxb/66565): To allow for soft transition.
-import("//topaz/runtime/flutter_runner/kernel/soft_transition.gni")
-
 # TODO(fxb/58062): Delete after all packages are migrated away from dart_app
 # and flutter_app.
 group("deprecated_flutter_app_allowlist") {
@@ -50,20 +47,11 @@ group("deprecated_flutter_app_allowlist") {
 }
 
 # Copies the patched SDK files for the flutter runner
-# TODO(fxb/66565): To allow for soft transition.
-if (supress_flutter_runner_patched_sdk) {
-  group("platform_files") {
-    public_deps =
-        [ "//topaz/runtime/flutter_runner/kernel:kernel_platform_files" ]
-  }
-} else {
-  copy("platform_files") {
-    sources = [
-      "//prebuilt/third_party/flutter/$target_cpu/release/aot/flutter_runner_patched_sdk/platform_strong.dill",
-      "//prebuilt/third_party/flutter/$target_cpu/release/aot/flutter_runner_patched_sdk/platform_strong.dill.d",
-      "//prebuilt/third_party/flutter/$target_cpu/release/aot/flutter_runner_patched_sdk/vm_outline_strong.dill",
-    ]
-    outputs =
-        [ "$root_out_dir/flutter_runner_patched_sdk/{{source_file_part}}" ]
-  }
+copy("platform_files") {
+  sources = [
+    "//prebuilt/third_party/flutter/$target_cpu/release/aot/flutter_runner_patched_sdk/platform_strong.dill",
+    "//prebuilt/third_party/flutter/$target_cpu/release/aot/flutter_runner_patched_sdk/platform_strong.dill.d",
+    "//prebuilt/third_party/flutter/$target_cpu/release/aot/flutter_runner_patched_sdk/vm_outline_strong.dill",
+  ]
+  outputs = [ "$root_out_dir/flutter_runner_patched_sdk/{{source_file_part}}" ]
 }
