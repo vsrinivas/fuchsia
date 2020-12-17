@@ -241,7 +241,7 @@ VK_TEST_F(DisplaySwapchainTest, InitializesFramebuffers) {
   auto swapchain = CreateSwapchain(display());
 
   BufferPool* buffer_pool = Framebuffers(swapchain.get());
-  EXPECT_EQ(3u, buffer_pool->size());
+  EXPECT_EQ(2u, buffer_pool->size());
   zx::vmo vmo = ExportMemoryAsVmo(escher(), buffer_pool->GetUnused()->device_memory);
   EXPECT_EQ(0u, fsl::GetObjectName(vmo.get()).find("Display"));
 }
@@ -254,7 +254,7 @@ VK_TEST_F(DisplaySwapchainTest, InitializesProtectedFramebuffers) {
   swapchain->SetUseProtectedMemory(true);
 
   BufferPool* buffer_pool = Framebuffers(swapchain.get());
-  EXPECT_EQ(3u, buffer_pool->size());
+  EXPECT_EQ(2u, buffer_pool->size());
   zx::vmo vmo = ExportMemoryAsVmo(escher(), buffer_pool->GetUnused()->device_memory);
   EXPECT_EQ(0u, fsl::GetObjectName(vmo.get()).find("Display-Protected"));
 }
