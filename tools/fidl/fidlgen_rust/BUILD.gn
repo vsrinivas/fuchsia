@@ -6,6 +6,7 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
+import("//build/rust/fidl_rust.gni")
 import("//build/rust/toolchain.gni")
 import("//build/testing/golden_test.gni")
 import("//zircon/tools/fidl/testdata/info.gni")
@@ -32,11 +33,25 @@ go_library("gopkg") {
   ]
 }
 
+# Invocations of fidlgen_rust in //build/rust/fidl_rust.gni pass the prebuilt
+# rustfmt and rustfmt.toml. To avoid bloating ninja files, we artificially place
+# dependencies on fidlgen_rust instead of the actions that use fidlgen_rust.
+action("rustfmt") {
+  script = "//build/fidl/run_and_gen_stamp.sh"
+  stamp_file = "$target_gen_dir/rustfmt.stamp"
+  args = [ rebase_path(stamp_file, root_build_dir) ]
+  outputs = [ stamp_file ]
+  inputs = [
+    "$fidl_rust_tools_dir/.versions/rust_tools.cipd_version",
+    "//rustfmt.toml",
+  ]
+}
+
 go_binary("fidlgen_rust") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust"
-
   sdk_category = "partner"
   deps = [ ":gopkg" ]
+  non_go_deps = [ ":rustfmt" ]
 }
 
 install_host_tools("host") {

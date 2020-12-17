@@ -6,6 +6,8 @@ import("//build/compiled_action.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/rust/toolchain.gni")
 
+fidl_rust_tools_dir = "//prebuilt/third_party/rust_tools/$host_platform"
+
 # Generates some Rust bindings for a FIDL library.
 #
 # The parameters for this template are defined in //build/fidl/fidl.gni. The
@@ -43,6 +45,8 @@ template("fidl_rust") {
 
     tool = "//tools/fidl/fidlgen_rust"
 
+    # This action depends on rustfmt and rustfmt.toml, but instead of listing
+    # them here we do so in //tools/fidl/fidlgen_rust/BUILD.gn.
     inputs = [ json_representation ]
 
     outputs = [ filename ]
@@ -53,8 +57,9 @@ template("fidl_rust") {
       "--output-filename",
       rebase_path(filename, root_build_dir),
       "--rustfmt",
-      rebase_path(
-          "//prebuilt/third_party/rust_tools/$host_platform/bin/rustfmt"),
+      rebase_path("$fidl_rust_tools_dir/bin/rustfmt", root_build_dir),
+      "--rustfmt-config",
+      rebase_path("//rustfmt.toml", root_build_dir),
     ]
 
     deps = [ ":$main_target_name($fidl_toolchain)" ]
