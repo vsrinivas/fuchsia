@@ -581,7 +581,7 @@ pub struct ArchivistState {
     log_node: BoundedListNode,
     configuration: configs::Config,
     diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
-    diagnostics_repo: DataRepo,
+    pub diagnostics_repo: DataRepo,
 }
 
 impl ArchivistState {

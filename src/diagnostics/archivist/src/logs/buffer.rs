@@ -19,7 +19,7 @@ pub trait Accounted {
 
 /// A Memory bounded buffer. Sizes are calculated by items' implementation of `Accounted`.
 #[derive(Inspect)]
-pub(super) struct MemoryBoundedBuffer<T> {
+pub struct MemoryBoundedBuffer<T> {
     #[inspect(skip)]
     buffer: ArcList<T>,
     #[inspect(skip)]

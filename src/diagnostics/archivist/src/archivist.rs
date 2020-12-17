@@ -7,7 +7,6 @@ use {
         accessor::ArchiveAccessor,
         archive, configs, constants, diagnostics,
         events::{stream::EventStream, types::EventSource},
-        logs,
         logs::redact::Redactor,
         pipeline::Pipeline,
         repository::DataRepo,
@@ -21,7 +20,6 @@ use {
     fuchsia_async::{self as fasync, Task},
     fuchsia_component::server::{ServiceFs, ServiceObj, ServiceObjTrait},
     fuchsia_inspect::{component, health::Reporter},
-    fuchsia_inspect_derive::WithInspect,
     fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
     fuchsia_zircon as zx,
     futures::{
@@ -79,10 +77,7 @@ fn maybe_create_archive<ServiceObjTy: ServiceObjTrait>(
 ///  * Run and Process Log Listener connections by spawning them.
 ///  * Optionally collect component events.
 pub struct Archivist {
-    /// Instance of log manager which services all the logs.
-    log_manager: logs::LogManager,
-
-    /// Archive state.
+    /// Archive state, including the diagnostics repo which currently stores all logs.
     state: archive::ArchivistState,
 
     /// True if pipeline exists.
@@ -186,9 +181,9 @@ impl Archivist {
     /// # Arguments:
     /// * `log_connector` - If provided, install log connector.
     pub fn install_logger_services(&mut self) -> &mut Self {
-        let log_manager_1 = self.log_manager.clone();
-        let log_manager_2 = self.log_manager.clone();
-        let log_manager_3 = self.log_manager.clone();
+        let data_repo_1 = self.data_repo().clone();
+        let data_repo_2 = self.data_repo().clone();
+        let data_repo_3 = self.data_repo().clone();
         let log_sender = self.log_sender.clone();
         let log_sender2 = self.log_sender.clone();
         let listen_sender = self.listen_sender.clone();
@@ -197,12 +192,12 @@ impl Archivist {
             .dir("svc")
             .add_fidl_service(move |stream| {
                 debug!("fuchsia.logger.Log connection");
-                log_manager_1.clone().handle_log(stream, listen_sender.clone());
+                data_repo_1.clone().handle_log(stream, listen_sender.clone());
             })
             .add_fidl_service(move |stream| {
                 debug!("fuchsia.logger.LogSink connection");
                 let source = Arc::new(SourceIdentity::EMPTY);
-                fasync::Task::spawn(log_manager_2.clone().handle_log_sink(
+                fasync::Task::spawn(data_repo_2.clone().handle_log_sink(
                     stream,
                     source,
                     log_sender.clone(),
@@ -212,7 +207,7 @@ impl Archivist {
             .add_fidl_service(move |stream| {
                 debug!("fuchsia.sys.EventStream connection");
                 fasync::Task::spawn(
-                    log_manager_3.clone().handle_event_stream(stream, log_sender2.clone()),
+                    data_repo_3.clone().handle_event_stream(stream, log_sender2.clone()),
                 )
                 .detach()
             });
@@ -238,7 +233,6 @@ impl Archivist {
     pub fn new(archivist_configuration: configs::Config) -> Result<Self, Error> {
         let (log_sender, log_receiver) = mpsc::unbounded();
         let (listen_sender, listen_receiver) = mpsc::unbounded();
-        let log_manager = logs::LogManager::new().with_inspect(diagnostics::root(), "log_stats")?;
 
         let mut fs = ServiceFs::new();
         diagnostics::serve(&mut fs)?;
@@ -277,7 +271,7 @@ impl Archivist {
             && feedback_config.has_error())
             || (Path::new("/config/data/legacy_metrics").is_dir() && legacy_config.has_error()));
 
-        let diagnostics_repo = DataRepo::new(log_manager.clone());
+        let diagnostics_repo = DataRepo::with_logs_inspect(diagnostics::root(), "log_stats");
 
         // The Inspect Repository offered to the ALL_ACCESS pipeline. This
         // repository is unique in that it has no statically configured
@@ -387,15 +381,13 @@ impl Archivist {
             pipeline_exists,
             _pipeline_nodes: vec![pipelines_node, feedback_pipeline_node, legacy_pipeline_node],
             _pipeline_configs: vec![feedback_config, legacy_config],
-            log_manager,
             event_stream: EventStream::new(events_node),
             stop_recv: None,
         })
     }
 
-    /// Returns reference to LogManager.
-    pub fn log_manager(&self) -> &logs::LogManager {
-        &self.log_manager
+    pub fn data_repo(&self) -> &DataRepo {
+        &self.state.diagnostics_repo
     }
 
     pub fn log_sender(&self) -> &mpsc::UnboundedSender<Task<()>> {
@@ -408,6 +400,7 @@ impl Archivist {
     pub async fn run(mut self, outgoing_channel: zx::Channel) -> Result<(), Error> {
         debug!("Running Archivist.");
 
+        let data_repo = { self.data_repo().clone() };
         self.fs.serve_connection(outgoing_channel)?;
         // Start servcing all outgoing services.
         let run_outgoing = self.fs.collect::<()>();
@@ -416,13 +409,12 @@ impl Archivist {
             Self::collect_component_events(self.event_stream, self.state, self.pipeline_exists);
 
         // Process messages from log sink.
-        let log_manager = self.log_manager;
         let log_receiver = self.log_receiver;
         let listen_receiver = self.listen_receiver;
         let all_msg = async {
             log_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
             debug!("Log ingestion stopped.");
-            log_manager.terminate();
+            data_repo.terminate_logs();
             debug!("Flushing to listeners.");
             listen_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
             debug!("Log listeners stopped.");

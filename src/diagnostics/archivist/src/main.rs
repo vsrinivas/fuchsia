@@ -114,13 +114,13 @@ fn main() -> Result<(), Error> {
     }
     if let Some(log_server) = log_server {
         fasync::Task::spawn(
-            archivist.log_manager().clone().drain_internal_log_sink(log_server, log_name),
+            archivist.data_repo().clone().drain_internal_log_sink(log_server, log_name),
         )
         .detach();
     }
 
     if opt.forward_logs {
-        archivist.log_manager().clone().forward_logs();
+        archivist.data_repo().clone().forward_logs();
     }
 
     assert!(
@@ -139,17 +139,15 @@ fn main() -> Result<(), Error> {
     if !opt.disable_log_connector {
         let connector = connect_to_service::<LogConnectorMarker>()?;
         let sender = archivist.log_sender().clone();
-        fasync::Task::spawn(
-            archivist.log_manager().clone().handle_log_connector(connector, sender),
-        )
-        .detach();
+        fasync::Task::spawn(archivist.data_repo().clone().handle_log_connector(connector, sender))
+            .detach();
     }
 
     if !opt.disable_klog {
         let debuglog = executor
             .run_singlethreaded(logs::KernelDebugLog::new())
             .context("Failed to read kernel logs")?;
-        fasync::Task::spawn(archivist.log_manager().clone().drain_debuglog(debuglog)).detach();
+        fasync::Task::spawn(archivist.data_repo().clone().drain_debuglog(debuglog)).detach();
     }
 
     let _detect;

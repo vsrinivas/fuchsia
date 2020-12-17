@@ -2,424 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use buffer::LazyItem;
-use fidl::endpoints::{ServerEnd, ServiceMarker};
-use fidl_fuchsia_diagnostics::{Interest, StreamMode};
-use fidl_fuchsia_logger::LogSinkMarker;
-use fidl_fuchsia_logger::{
-    LogMarker, LogRequest, LogRequestStream, LogSinkControlHandle, LogSinkRequest,
-    LogSinkRequestStream,
-};
-use fidl_fuchsia_sys2 as fsys;
-use fidl_fuchsia_sys_internal::{
-    LogConnection, LogConnectionListenerRequest, LogConnectorProxy, SourceIdentity,
-};
-use fuchsia_async::Task;
-use fuchsia_inspect as inspect;
-use fuchsia_inspect_derive::Inspect;
-use fuchsia_zircon as zx;
-use futures::{channel::mpsc, prelude::*};
-use parking_lot::Mutex;
-use std::sync::Arc;
-use tracing::{debug, error, trace, warn};
-
-mod buffer;
+pub mod buffer;
 pub mod debuglog;
-mod error;
-mod interest;
-mod listener;
+pub mod error;
+pub mod interest;
+pub mod listener;
 pub mod message;
 pub mod redact;
-mod socket;
+pub mod socket;
 pub mod stats;
 #[cfg(test)]
 pub mod testing;
 
 pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
-use error::{EventError, ForwardError, LogsError};
-use listener::ListenerError;
 pub use message::Message;
 
-use interest::InterestDispatcher;
-use listener::{pretend_scary_listener_is_safe, Listener};
-use socket::{Encoding, Forwarder, LegacyEncoding, LogMessageSocket, StructuredEncoding};
-use stats::LogSource;
+use crate::logs::error::{EventError, LogsError};
 
-/// Store 4 MB of log messages and delete on FIFO basis.
-const OLD_MSGS_BUF_SIZE: usize = 4 * 1024 * 1024;
-
-/// The `LogManager` is responsible for brokering all logging in the archivist.
-#[derive(Clone, Inspect)]
-pub struct LogManager {
-    #[inspect(forward)]
-    inner: Arc<Mutex<ManagerInner>>,
-}
-
-#[derive(Inspect)]
-struct ManagerInner {
-    #[inspect(skip)]
-    interest_dispatcher: InterestDispatcher,
-    #[inspect(skip)]
-    legacy_forwarder: Forwarder<LegacyEncoding>,
-    #[inspect(skip)]
-    structured_forwarder: Forwarder<StructuredEncoding>,
-    #[inspect(rename = "buffer_stats")]
-    log_msg_buffer: buffer::MemoryBoundedBuffer<Message>,
-    stats: stats::LogManagerStats,
-    inspect_node: inspect::Node,
-}
-
-impl LogManager {
-    pub fn new() -> Self {
-        Self {
-            inner: Arc::new(Mutex::new(ManagerInner {
-                interest_dispatcher: InterestDispatcher::default(),
-                log_msg_buffer: buffer::MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
-                stats: stats::LogManagerStats::new_detached(),
-                inspect_node: inspect::Node::default(),
-                legacy_forwarder: Forwarder::new(),
-                structured_forwarder: Forwarder::new(),
-            })),
-        }
-    }
-
-    /// Drain the kernel's debug log. The returned future completes once
-    /// existing messages have been ingested.
-    pub async fn drain_debuglog<K>(self, klog_reader: K)
-    where
-        K: debuglog::DebugLog + Send + Sync + 'static,
-    {
-        debug!("Draining debuglog.");
-        let component_log_stats =
-            { self.inner.lock().stats.get_component_log_stats("fuchsia-boot://klog") };
-        let mut kernel_logger = debuglog::DebugLogBridge::create(klog_reader);
-        let mut messages = match kernel_logger.existing_logs().await {
-            Ok(messages) => messages,
-            Err(e) => {
-                error!(%e, "failed to read from kernel log, important logs may be missing");
-                return;
-            }
-        };
-        messages.sort_by_key(|m| m.metadata.timestamp);
-        for message in messages {
-            component_log_stats.record_log(&message);
-            self.ingest_message(message, LogSource::Kernel);
-        }
-
-        let res = kernel_logger
-            .listen()
-            .try_for_each(|message| async {
-                component_log_stats.clone().record_log(&message);
-                self.ingest_message(message, LogSource::Kernel);
-                Ok(())
-            })
-            .await;
-        if let Err(e) = res {
-            error!(%e, "failed to drain kernel log, important logs may be missing");
-        }
-    }
-
-    /// Drain log sink for messages sent by the archivist itself.
-    pub async fn drain_internal_log_sink(self, socket: zx::Socket, name: &str) {
-        let forwarder = self.inner.lock().legacy_forwarder.clone();
-        // TODO(fxbug.dev/50105): Figure out how to properly populate SourceIdentity
-        let mut source = SourceIdentity::EMPTY;
-        source.component_name = Some(name.to_owned());
-        let source = Arc::new(source);
-        let log_stream = LogMessageSocket::new(socket, source, forwarder)
-            .expect("failed to create internal LogMessageSocket");
-        self.drain_messages(log_stream).await;
-        unreachable!();
-    }
-
-    /// Handle `LogConnectionListener` for the parent realm, eventually passing
-    /// `LogSink` connections into the manager.
-    pub async fn handle_log_connector(
-        self,
-        connector: LogConnectorProxy,
-        sender: mpsc::UnboundedSender<Task<()>>,
-    ) {
-        debug!("Handling LogSink connections from appmgr.");
-        match connector.take_log_connection_listener().await {
-            Ok(Some(listener)) => {
-                let mut connections =
-                    listener.into_stream().expect("getting request stream from server end");
-                while let Ok(Some(connection)) = connections.try_next().await {
-                    match connection {
-                        LogConnectionListenerRequest::OnNewConnection {
-                            connection: LogConnection { log_request, source_identity },
-                            control_handle: _,
-                        } => {
-                            let stream = log_request
-                                .into_stream()
-                                .expect("getting LogSinkRequestStream from serverend");
-                            let source = Arc::new(source_identity);
-                            sender
-                                .unbounded_send(Task::spawn(self.clone().handle_log_sink(
-                                    stream,
-                                    source,
-                                    sender.clone(),
-                                )))
-                                .expect("channel is held by archivist, lasts for whole program");
-                        }
-                    };
-                }
-            }
-            Ok(None) => warn!("local realm already gave out LogConnectionListener, skipping logs"),
-            Err(e) => error!(%e, "error retrieving LogConnectionListener from LogConnector"),
-        }
-    }
-
-    /// Handle `LogSink` protocol on `stream`. The future returned by this
-    /// function will not complete before all messages on this connection are
-    /// processed.
-    pub async fn handle_log_sink(
-        self,
-        mut stream: LogSinkRequestStream,
-        source: Arc<SourceIdentity>,
-        sender: mpsc::UnboundedSender<Task<()>>,
-    ) {
-        if source.component_name.is_none() {
-            self.inner.lock().stats.record_unattributed();
-        }
-
-        while let Some(next) = stream.next().await {
-            match next {
-                Ok(LogSinkRequest::Connect { socket, control_handle }) => {
-                    let forwarder = { self.inner.lock().legacy_forwarder.clone() };
-                    match LogMessageSocket::new(socket, source.clone(), forwarder) {
-                        Ok(log_stream) => {
-                            self.try_add_interest_listener(&source, control_handle);
-                            let task = Task::spawn(self.clone().drain_messages(log_stream));
-                            sender.unbounded_send(task).expect("channel alive for whole program");
-                        }
-                        Err(e) => {
-                            control_handle.shutdown();
-                            warn!(?source, %e, "error creating socket")
-                        }
-                    };
-                }
-                Ok(LogSinkRequest::ConnectStructured { socket, control_handle }) => {
-                    let forwarder = { self.inner.lock().structured_forwarder.clone() };
-                    match LogMessageSocket::new_structured(socket, source.clone(), forwarder) {
-                        Ok(log_stream) => {
-                            self.try_add_interest_listener(&source, control_handle);
-                            let task = Task::spawn(self.clone().drain_messages(log_stream));
-                            sender.unbounded_send(task).expect("channel alive for whole program");
-                        }
-                        Err(e) => {
-                            control_handle.shutdown();
-                            warn!(?source, %e, "error creating socket")
-                        }
-                    };
-                }
-                Err(e) => error!(?source, %e, "error handling log sink"),
-            }
-        }
-    }
-
-    /// Drain a `LogMessageSocket` which wraps a socket from a component
-    /// generating logs.
-    async fn drain_messages<E>(self, mut log_stream: LogMessageSocket<E>)
-    where
-        E: Encoding + Unpin,
-    {
-        let component_log_stats =
-            { self.inner.lock().stats.get_component_log_stats(log_stream.source_url()) };
-        loop {
-            match log_stream.next().await {
-                Ok(message) => {
-                    component_log_stats.record_log(&message);
-                    self.ingest_message(message, stats::LogSource::LogSink);
-                }
-                Err(error::StreamError::Closed) => return,
-                Err(e) => {
-                    self.inner.lock().stats.record_closed_stream();
-                    warn!(source = ?log_stream.source_url(), %e, "closing socket");
-                    return;
-                }
-            }
-        }
-    }
-
-    /// Add 'Interest' listener to connect the interest dispatcher to the
-    /// LogSinkControlHandle (weak reference) associated with the given source.
-    /// Interest listeners are only supported for log connections where the
-    /// SourceIdentity includes an attributed component name. If no component
-    /// name is present, this function will exit without adding any listener.
-    fn try_add_interest_listener(
-        &self,
-        source: &Arc<SourceIdentity>,
-        control_handle: LogSinkControlHandle,
-    ) {
-        if source.component_name.is_none() {
-            return;
-        }
-
-        let control_handle = Arc::new(control_handle);
-        let event_listener = control_handle.clone();
-        self.inner
-            .lock()
-            .interest_dispatcher
-            .add_interest_listener(source, Arc::downgrade(&event_listener));
-
-        // ack successful connections with 'empty' interest
-        // for async clients
-        let _ = control_handle.send_on_register_interest(Interest::EMPTY);
-    }
-
-    /// Handle the components v2 EventStream for attributed logs of v2
-    /// components.
-    pub async fn handle_event_stream(
-        self,
-        mut stream: fsys::EventStreamRequestStream,
-        sender: mpsc::UnboundedSender<Task<()>>,
-    ) {
-        while let Ok(Some(request)) = stream.try_next().await {
-            match request {
-                fsys::EventStreamRequest::OnEvent { event, .. } => {
-                    if let Err(e) = self.handle_event(event, sender.clone()) {
-                        error!(%e, "Unable to process event");
-                    }
-                }
-            }
-        }
-    }
-
-    /// Handle the components v2 CapabilityRequested event for attributed logs of
-    /// v2 components.
-    fn handle_event(
-        &self,
-        event: fsys::Event,
-        sender: mpsc::UnboundedSender<Task<()>>,
-    ) -> Result<(), LogsError> {
-        let identity = source_identity_from_event(&event)?;
-        let stream = log_sink_request_stream_from_event(event)?;
-        let task = Task::spawn(self.clone().handle_log_sink(stream, identity, sender.clone()));
-        sender.unbounded_send(task).expect("channel is alive for whole program");
-        Ok(())
-    }
-
-    /// Spawn a task to handle requests from components reading the shared log.
-    pub fn handle_log(self, stream: LogRequestStream, sender: mpsc::UnboundedSender<Task<()>>) {
-        if let Err(e) = sender.clone().unbounded_send(Task::spawn(async move {
-            if let Err(e) = self.handle_log_requests(stream, sender).await {
-                warn!("error handling Log requests: {}", e);
-            }
-        })) {
-            warn!("Couldn't queue listener task: {:?}", e);
-        }
-    }
-
-    /// Handle requests to `fuchsia.logger.Log`. All request types read the
-    /// whole backlog from memory, `DumpLogs(Safe)` stops listening after that.
-    async fn handle_log_requests(
-        self,
-        mut stream: LogRequestStream,
-        mut sender: mpsc::UnboundedSender<Task<()>>,
-    ) -> Result<(), LogsError> {
-        while let Some(request) = stream.next().await {
-            let request = request.map_err(|source| LogsError::HandlingRequests {
-                protocol: LogMarker::NAME,
-                source,
-            })?;
-
-            let (listener, options, dump_logs, selectors) = match request {
-                LogRequest::ListenSafe { log_listener, options, .. } => {
-                    (log_listener, options, false, None)
-                }
-                LogRequest::DumpLogsSafe { log_listener, options, .. } => {
-                    (log_listener, options, true, None)
-                }
-
-                LogRequest::ListenSafeWithSelectors {
-                    log_listener, options, selectors, ..
-                } => (log_listener, options, false, Some(selectors)),
-
-                // TODO(fxbug.dev/48758) delete these methods!
-                LogRequest::Listen { log_listener, options, .. } => {
-                    warn!("Use of fuchsia.logger.Log.Listen. Use ListenSafe.");
-                    let listener = pretend_scary_listener_is_safe(log_listener)
-                        .map_err(|source| ListenerError::AsbestosIo { source })?;
-                    (listener, options, false, None)
-                }
-                LogRequest::DumpLogs { log_listener, options, .. } => {
-                    warn!("Use of fuchsia.logger.Log.DumpLogs. Use DumpLogsSafe.");
-                    let listener = pretend_scary_listener_is_safe(log_listener)
-                        .map_err(|source| ListenerError::AsbestosIo { source })?;
-                    (listener, options, true, None)
-                }
-            };
-
-            let listener = Listener::new(listener, options)?;
-            let mode =
-                if dump_logs { StreamMode::Snapshot } else { StreamMode::SnapshotThenSubscribe };
-            let logs = self.cursor(mode);
-            if let Some(s) = selectors {
-                self.inner.lock().interest_dispatcher.update_selectors(s);
-            }
-
-            sender.send(listener.spawn(logs, dump_logs)).await.ok();
-        }
-        Ok(())
-    }
-
-    pub fn cursor(&self, mode: StreamMode) -> impl Stream<Item = Arc<Message>> {
-        self.inner.lock().log_msg_buffer.cursor(mode).map(|item| match item {
-            LazyItem::Next(m) => m,
-            LazyItem::ItemsDropped(n) => Arc::new(Message::for_dropped(n)),
-        })
-    }
-
-    /// Ingest an individual log message.
-    fn ingest_message(&self, log_msg: Message, source: stats::LogSource) {
-        let mut inner = self.inner.lock();
-        trace!("Ingesting {:?}", log_msg.id);
-
-        // We always record the log before pushing onto the buffer and waking listeners because
-        // we want to be able to see that stats are updated as soon as we receive messages in tests.
-        inner.stats.record_log(&log_msg, source);
-        inner.log_msg_buffer.push(log_msg);
-    }
-
-    /// Stop accepting new messages, ensuring that pending Cursors return Poll::Ready(None) after
-    /// consuming any messages received before this call.
-    pub fn terminate(&self) {
-        self.inner.lock().log_msg_buffer.terminate();
-    }
-
-    /// Initializes internal log forwarders.
-    pub fn forward_logs(self) {
-        if let Err(e) = self.init_forwarders() {
-            error!(%e, "couldn't forward logs");
-        } else {
-            debug!("Log forwarding initialized.");
-        }
-    }
-
-    fn init_forwarders(self) -> Result<(), LogsError> {
-        let sink =
-            fuchsia_component::client::connect_to_service::<LogSinkMarker>().map_err(|source| {
-                LogsError::ConnectingToService { protocol: LogSinkMarker::NAME, source }
-            })?;
-        let mut inner = self.inner.lock();
-
-        let (send, recv) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
-            .map_err(|source| ForwardError::Create { source })?;
-        sink.connect(recv).map_err(|source| ForwardError::Connect { source })?;
-        inner.legacy_forwarder.init(send);
-
-        let (send, recv) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
-            .map_err(|source| ForwardError::Create { source })?;
-        sink.connect_structured(recv).map_err(|source| ForwardError::Connect { source })?;
-        inner.structured_forwarder.init(send);
-
-        Ok(())
-    }
-}
+use fidl::endpoints::{ServerEnd, ServiceMarker};
+use fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequestStream};
+use fidl_fuchsia_sys2 as fsys;
+use fidl_fuchsia_sys_internal::SourceIdentity;
+use std::sync::Arc;
 
 /// Extract the SourceIdentity from a components v2 event.
-fn source_identity_from_event(event: &fsys::Event) -> Result<Arc<SourceIdentity>, LogsError> {
+pub fn source_identity_from_event(event: &fsys::Event) -> Result<Arc<SourceIdentity>, LogsError> {
     let target_moniker = event
         .header
         .as_ref()
@@ -439,7 +46,7 @@ fn source_identity_from_event(event: &fsys::Event) -> Result<Arc<SourceIdentity>
 }
 
 /// Extract the LogSinkRequestStream from a CapabilityRequested v2 event.
-fn log_sink_request_stream_from_event(
+pub fn log_sink_request_stream_from_event(
     event: fsys::Event,
 ) -> Result<LogSinkRequestStream, LogsError> {
     let payload =
@@ -478,10 +85,12 @@ mod tests {
     use diagnostics_data::{DROPPED_LABEL, MESSAGE_LABEL, PID_LABEL, TAG_LABEL, TID_LABEL};
     use diagnostics_stream::{Argument, Record, Severity as StreamSeverity, Value};
     use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage, LogSinkMarker};
+    use fidl_fuchsia_sys_internal::SourceIdentity;
     use fuchsia_async as fasync;
     use fuchsia_inspect::assert_inspect_tree;
     use fuchsia_zircon as zx;
     use matches::assert_matches;
+    use std::sync::Arc;
 
     #[fasync::run_singlethreaded(test)]
     async fn test_log_manager_simple() {

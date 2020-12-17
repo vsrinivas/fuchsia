@@ -2,22 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::*;
-use crate::logs::message::{fx_log_packet_t, MAX_DATAGRAM_LEN};
+use crate::{
+    logs::message::{fx_log_packet_t, MAX_DATAGRAM_LEN},
+    repository::DataRepo,
+};
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
 use diagnostics_stream::{encode::Encoder, Record};
-use fidl_fuchsia_io as fio;
+use fidl::endpoints::ServiceMarker;
+use fidl_fuchsia_io::DirectoryProxy;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogProxy, LogSinkMarker, LogSinkProxy,
 };
 use fidl_fuchsia_sys2 as fsys;
-use fio::DirectoryProxy;
+use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_async as fasync;
+use fuchsia_async::Task;
 use fuchsia_component::client::connect_to_protocol_at_dir_svc;
-use fuchsia_inspect_derive::WithInspect;
+use fuchsia_inspect::Inspector;
 use fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor};
 use fuchsia_zircon as zx;
+use futures::channel::mpsc;
+use futures::prelude::*;
 use std::{
     collections::VecDeque,
     io::Cursor,
@@ -27,8 +33,8 @@ use std::{
 use validating_log_listener::{validate_log_dump, validate_log_stream};
 
 pub struct TestHarness {
-    inspector: inspect::Inspector,
-    log_manager: LogManager,
+    inspector: Inspector,
+    log_manager: DataRepo,
     log_proxy: LogProxy,
     /// weak pointers to "pending" TestStreams which haven't dropped yet
     pending_streams: Vec<Weak<()>>,
@@ -72,8 +78,8 @@ impl TestHarness {
     }
 
     fn make(hold_sinks: bool) -> Self {
-        let inspector = inspect::Inspector::new();
-        let log_manager = LogManager::new().with_inspect(inspector.root(), "log_stats").unwrap();
+        let inspector = Inspector::new();
+        let log_manager = DataRepo::with_logs_inspect(inspector.root(), "log_stats");
 
         let (listen_sender, listen_receiver) = mpsc::unbounded();
         let (log_proxy, log_stream) =
@@ -122,7 +128,7 @@ impl TestHarness {
         mut self,
         expected: impl IntoIterator<Item = LogMessage>,
         filter_options: Option<LogFilterOptions>,
-    ) -> inspect::Inspector {
+    ) -> Inspector {
         self.check_pending_streams();
         validate_log_stream(expected, self.log_proxy, filter_options).await;
         self.inspector
@@ -260,12 +266,12 @@ pub trait LogReader {
 
 // A LogReader that exercises the handle_log_sink code path.
 pub struct DefaultLogReader {
-    log_manager: LogManager,
+    log_manager: DataRepo,
     identity: Arc<SourceIdentity>,
 }
 
 impl DefaultLogReader {
-    fn new(log_manager: LogManager, identity: Arc<SourceIdentity>) -> Arc<dyn LogReader> {
+    fn new(log_manager: DataRepo, identity: Arc<SourceIdentity>) -> Arc<dyn LogReader> {
         Arc::new(Self { log_manager, identity })
     }
 }
@@ -287,14 +293,14 @@ impl LogReader for DefaultLogReader {
 // A LogReader that exercises the components v2 EventStream and CapabilityRequested event
 // code path for log attribution.
 pub struct EventStreamLogReader {
-    log_manager: LogManager,
+    log_manager: DataRepo,
     target_moniker: String,
     target_url: String,
 }
 
 impl EventStreamLogReader {
     fn new(
-        log_manager: LogManager,
+        log_manager: DataRepo,
         target_moniker: impl Into<String>,
         target_url: impl Into<String>,
     ) -> Arc<dyn LogReader> {
@@ -353,13 +359,13 @@ where
 pub async fn debuglog_test(
     expected: impl IntoIterator<Item = LogMessage>,
     debug_log: TestDebugLog,
-) -> inspect::Inspector {
+) -> Inspector {
     let (log_sender, log_receiver) = mpsc::unbounded();
     fasync::Task::spawn(log_receiver.for_each_concurrent(None, |rx| async move { rx.await }))
         .detach();
 
-    let inspector = inspect::Inspector::new();
-    let lm = LogManager::new().with_inspect(inspector.root(), "log_stats").unwrap();
+    let inspector = Inspector::new();
+    let lm = DataRepo::with_logs_inspect(inspector.root(), "log_stats");
     let (log_proxy, log_stream) = fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
     lm.clone().handle_log(log_stream, log_sender);
     fasync::Task::spawn(lm.drain_debuglog(debug_log)).detach();

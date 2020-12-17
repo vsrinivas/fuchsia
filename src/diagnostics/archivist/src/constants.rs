@@ -30,3 +30,6 @@ pub const MAXIMUM_SIMULTANEOUS_SNAPSHOTS_PER_READER: usize = 4;
 
 /// The maximum number of bytes in a formatted content VMO.
 pub const FORMATTED_CONTENT_CHUNK_SIZE_TARGET: usize = 1 << 20; // 1 MiB
+
+/// Store 4 MB of log messages and delete on FIFO basis.
+pub const MAXIMUM_CACHED_LOGS_BYTES: usize = 4 * 1024 * 1024;
