@@ -20,6 +20,25 @@ table MemoryStats {
     9: uint64 other_bytes;
 };
 
+// Similarly, this table mirrors zx_info_kmem_stats_extended_t.
+// See zircon/system/public/zircon/syscalls/object.h for more details.
+table MemoryStatsExtended {
+    1: uint64 total_bytes;
+    2: uint64 free_bytes;
+    3: uint64 wired_bytes;
+    4: uint64 total_heap_bytes;
+    5: uint64 free_heap_bytes;
+    6: uint64 vmo_bytes;
+    7: uint64 vmo_pager_total_bytes;
+    8: uint64 vmo_pager_newest_bytes;
+    9: uint64 vmo_pager_oldest_bytes;
+    10: uint64 vmo_discardable_locked_bytes;
+    11: uint64 vmo_discardable_unlocked_bytes;
+    12: uint64 mmu_overhead_bytes;
+    13: uint64 ipc_bytes;
+    14: uint64 other_bytes;
+};
+
 // Similarly, this table mirrors zx_info_cpu_stats_t.
 // See zircon/system/public/zircon/syscalls/object.h for more details.
 table PerCpuStats {
@@ -49,13 +68,16 @@ struct CpuStats {
 };
 
 /// Protocol for providing kernel stats. This is roughly a wrapper around zx_object_get_info for
-/// the ZX_INFO_KMEM_STATS and ZX_INFO_CPU_STATS topics, which today require the very powerful
-/// 'Root Resource' capability to obtain. Instead of vending out that capability, programs that
-/// just want stats should use this service instead. If for some reason the protocol fails to
-/// retrieve stats, which will be an un-recoverable error, it will close the channel.
+/// the ZX_INFO_KMEM_STATS, ZX_INFO_KMEM_STATS_EXTENDED and ZX_INFO_CPU_STATS topics, which today
+/// require the very powerful 'Root Resource' capability to obtain. Instead of vending out that
+/// capability, programs that just want stats should use this service instead. If for some reason
+/// the protocol fails to retrieve stats, which will be an un-recoverable error, it will close the
+/// channel.
 [Discoverable]
 protocol Stats {
     GetMemoryStats() -> (MemoryStats stats);
+
+    GetMemoryStatsExtended() -> (MemoryStatsExtended stats);
 
     GetCpuStats() -> (CpuStats stats);
 };

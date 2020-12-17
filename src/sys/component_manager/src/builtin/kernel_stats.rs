@@ -54,6 +54,31 @@ impl BuiltinCapability for KernelStats {
                     };
                     responder.send(stats)?;
                 }
+                fkernel::StatsRequest::GetMemoryStatsExtended { responder } => {
+                    let mem_stats_extended = &self.resource.mem_stats_extended()?;
+                    let stats = fkernel::MemoryStatsExtended {
+                        total_bytes: Some(mem_stats_extended.total_bytes),
+                        free_bytes: Some(mem_stats_extended.free_bytes),
+                        wired_bytes: Some(mem_stats_extended.wired_bytes),
+                        total_heap_bytes: Some(mem_stats_extended.total_heap_bytes),
+                        free_heap_bytes: Some(mem_stats_extended.free_heap_bytes),
+                        vmo_bytes: Some(mem_stats_extended.vmo_bytes),
+                        vmo_pager_total_bytes: Some(mem_stats_extended.vmo_pager_total_bytes),
+                        vmo_pager_newest_bytes: Some(mem_stats_extended.vmo_pager_newest_bytes),
+                        vmo_pager_oldest_bytes: Some(mem_stats_extended.vmo_pager_oldest_bytes),
+                        vmo_discardable_locked_bytes: Some(
+                            mem_stats_extended.vmo_discardable_locked_bytes,
+                        ),
+                        vmo_discardable_unlocked_bytes: Some(
+                            mem_stats_extended.vmo_discardable_unlocked_bytes,
+                        ),
+                        mmu_overhead_bytes: Some(mem_stats_extended.mmu_overhead_bytes),
+                        ipc_bytes: Some(mem_stats_extended.ipc_bytes),
+                        other_bytes: Some(mem_stats_extended.other_bytes),
+                        ..fkernel::MemoryStatsExtended::EMPTY
+                    };
+                    responder.send(stats)?;
+                }
                 fkernel::StatsRequest::GetCpuStats { responder } => {
                     let cpu_stats = &self.resource.cpu_stats()?;
                     let mut per_cpu_stats: Vec<fkernel::PerCpuStats> =
@@ -140,6 +165,21 @@ mod tests {
 
         assert!(mem_stats.total_bytes.unwrap() > 0);
         assert!(mem_stats.total_heap_bytes.unwrap() > 0);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn get_mem_stats_extended() -> Result<(), Error> {
+        if !root_resource_available() {
+            return Ok(());
+        }
+
+        let kernel_stats_provider = serve_kernel_stats().await?;
+        let mem_stats_extended = kernel_stats_provider.get_memory_stats_extended().await?;
+
+        assert!(mem_stats_extended.total_bytes.unwrap() > 0);
+        assert!(mem_stats_extended.total_heap_bytes.unwrap() > 0);
 
         Ok(())
     }

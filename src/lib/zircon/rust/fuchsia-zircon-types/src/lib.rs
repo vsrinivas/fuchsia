@@ -730,6 +730,13 @@ multiconst!(zx_object_info_topic_t, [
     ZX_INFO_SOCKET                     = 22; // zx_info_socket_t[1]
     ZX_INFO_VMO                        = info_topic(23, 1); // zx_info_vmo_t[1]
     ZX_INFO_JOB                        = 24; // zx_info_job_t[1]
+    ZX_INFO_TIMER                      = 25; // zx_info_timer_t[1]
+    ZX_INFO_STREAM                     = 26; // zx_info_stream_t[1]
+    ZX_INFO_HANDLE_TABLE               = 27; // zx_info_handle_extended_t[n]
+    ZX_INFO_MSI                        = 28; // zx_info_msi_t[1]
+    ZX_INFO_GUEST_STATS                = 29; // zx_info_guest_stats_t[1]
+    ZX_INFO_TASK_RUNTIME               = 30; // zx_info_task_runtime_t[1]
+    ZX_INFO_KMEM_STATS_EXTENDED        = 31; // zx_info_kmem_stats_extended_t[1]
 ]);
 
 // This macro takes struct-like syntax and creates another macro that can be used to create
@@ -915,6 +922,29 @@ struct_decl_macro! {
 }
 
 zx_info_kmem_stats_t!(zx_info_kmem_stats_t);
+
+struct_decl_macro! {
+    #[repr(C)]
+    #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct <zx_info_kmem_stats_extended_t> {
+        pub total_bytes: u64,
+        pub free_bytes: u64,
+        pub wired_bytes: u64,
+        pub total_heap_bytes: u64,
+        pub free_heap_bytes: u64,
+        pub vmo_bytes: u64,
+        pub vmo_pager_total_bytes: u64,
+        pub vmo_pager_newest_bytes: u64,
+        pub vmo_pager_oldest_bytes: u64,
+        pub vmo_discardable_locked_bytes: u64,
+        pub vmo_discardable_unlocked_bytes: u64,
+        pub mmu_overhead_bytes: u64,
+        pub ipc_bytes: u64,
+        pub other_bytes: u64,
+    }
+}
+
+zx_info_kmem_stats_extended_t!(zx_info_kmem_stats_extended_t);
 
 struct_decl_macro! {
     #[repr(C)]

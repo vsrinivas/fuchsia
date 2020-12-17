@@ -19,6 +19,7 @@ pub struct Resource(Handle);
 impl_handle_based!(Resource);
 
 sys::zx_info_kmem_stats_t!(MemStats);
+sys::zx_info_kmem_stats_extended_t!(MemStatsExtended);
 sys::zx_info_cpu_stats_t!(PerCpuStats);
 sys::zx_info_resource_t!(ResourceInfo);
 
@@ -42,6 +43,43 @@ impl From<sys::zx_info_kmem_stats_t> for MemStats {
             total_heap_bytes,
             free_heap_bytes,
             vmo_bytes,
+            mmu_overhead_bytes,
+            ipc_bytes,
+            other_bytes,
+        }
+    }
+}
+
+impl From<sys::zx_info_kmem_stats_extended_t> for MemStatsExtended {
+    fn from(info: sys::zx_info_kmem_stats_extended_t) -> MemStatsExtended {
+        let sys::zx_info_kmem_stats_extended_t {
+            total_bytes,
+            free_bytes,
+            wired_bytes,
+            total_heap_bytes,
+            free_heap_bytes,
+            vmo_bytes,
+            vmo_pager_total_bytes,
+            vmo_pager_newest_bytes,
+            vmo_pager_oldest_bytes,
+            vmo_discardable_locked_bytes,
+            vmo_discardable_unlocked_bytes,
+            mmu_overhead_bytes,
+            ipc_bytes,
+            other_bytes,
+        } = info;
+        MemStatsExtended {
+            total_bytes,
+            free_bytes,
+            wired_bytes,
+            total_heap_bytes,
+            free_heap_bytes,
+            vmo_bytes,
+            vmo_pager_total_bytes,
+            vmo_pager_newest_bytes,
+            vmo_pager_oldest_bytes,
+            vmo_discardable_locked_bytes,
+            vmo_discardable_unlocked_bytes,
             mmu_overhead_bytes,
             ipc_bytes,
             other_bytes,
@@ -100,6 +138,11 @@ impl From<sys::zx_info_resource_t> for ResourceInfo {
 unsafe impl ObjectQuery for MemStats {
     const TOPIC: Topic = Topic::KMEM_STATS;
     type InfoTy = MemStats;
+}
+
+unsafe impl ObjectQuery for MemStatsExtended {
+    const TOPIC: Topic = Topic::KMEM_STATS_EXTENDED;
+    type InfoTy = MemStatsExtended;
 }
 
 unsafe impl ObjectQuery for PerCpuStats {
@@ -196,6 +239,15 @@ impl Resource {
         object_get_info::<MemStats>(self.as_handle_ref(), std::slice::from_mut(&mut info))
             .map(|_| info)
     }
+
+    /// Wraps the
+    /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_KMEM_STATS_EXTENDED topic.
+    pub fn mem_stats_extended(&self) -> Result<MemStatsExtended, Status> {
+        let mut info = MemStatsExtended::default();
+        object_get_info::<MemStatsExtended>(self.as_handle_ref(), std::slice::from_mut(&mut info))
+            .map(|_| info)
+    }
 }
 
 #[cfg(test)]
@@ -221,5 +273,11 @@ mod tests {
     fn mem_stats() {
         let invalid_resource = Resource::from(Handle::invalid());
         assert_eq!(invalid_resource.mem_stats(), Err(Status::BAD_HANDLE));
+    }
+
+    #[test]
+    fn mem_stats_extended() {
+        let invalid_resource = Resource::from(Handle::invalid());
+        assert_eq!(invalid_resource.mem_stats_extended(), Err(Status::BAD_HANDLE));
     }
 }
