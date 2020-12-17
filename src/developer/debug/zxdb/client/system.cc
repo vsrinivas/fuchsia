@@ -201,35 +201,39 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 // notifying the system.
 class Download {
  public:
-  explicit Download(const std::string& build_id, DebugSymbolFileType file_type,
-                    SymbolServer::FetchCallback result_cb)
+  Download(const std::string& build_id, DebugSymbolFileType file_type,
+           SymbolServer::FetchCallback result_cb)
       : build_id_(build_id), file_type_(file_type), result_cb_(std::move(result_cb)) {}
 
   ~Download() { Finish(); }
 
   bool active() { return !!result_cb_; }
 
-  // Notify this download object that we have gotten the symbols if we're going to get them.
-  void Finish();
-
-  // Notify this Download object that one of the servers has the symbols available.
-  void Found(std::shared_ptr<Download> self, fit::callback<void(SymbolServer::FetchCallback)>);
-
-  // Notify this Download object that a transaction failed.
-  void Error(std::shared_ptr<Download> self, const Err& err);
-
   // Add a symbol server to this download.
   void AddServer(std::shared_ptr<Download> self, SymbolServer* server);
 
  private:
-  void RunCB(std::shared_ptr<Download> self, fit::callback<void(SymbolServer::FetchCallback)>& cb);
+  // FetchFunction is a function that downloads the symbol file from one server.
+  // Multiple fetches are queued in server_fetches_ and tried in sequence.
+  using FetchFunction = fit::callback<void(SymbolServer::FetchCallback)>;
+
+  // Notify this download object that we have gotten the symbols if we're going to get them.
+  void Finish();
+
+  // Notify this Download object that one of the servers has the symbols available.
+  void Found(std::shared_ptr<Download> self, FetchFunction fetch);
+
+  // Notify this Download object that a transaction failed.
+  void Error(std::shared_ptr<Download> self, const Err& err);
+
+  void RunFetch(std::shared_ptr<Download> self, FetchFunction& fetch);
 
   std::string build_id_;
   DebugSymbolFileType file_type_;
   Err err_;
   std::string path_;
   SymbolServer::FetchCallback result_cb_;
-  std::vector<fit::callback<void(SymbolServer::FetchCallback)>> server_cbs_;
+  std::vector<FetchFunction> server_fetches_;
   bool trying_ = false;
 };
 
@@ -250,28 +254,26 @@ void Download::AddServer(std::shared_ptr<Download> self, SymbolServer* server) {
   if (!result_cb_)
     return;
 
-  server->CheckFetch(build_id_, file_type_,
-                     [self](const Err& err, fit::callback<void(SymbolServer::FetchCallback)> cb) {
-                       if (!cb)
-                         self->Error(self, err);
-                       else
-                         self->Found(self, std::move(cb));
-                     });
+  server->CheckFetch(build_id_, file_type_, [self](const Err& err, FetchFunction fetch) {
+    if (!fetch)
+      self->Error(self, err);
+    else
+      self->Found(self, std::move(fetch));
+  });
 }
 
-void Download::Found(std::shared_ptr<Download> self,
-                     fit::callback<void(SymbolServer::FetchCallback)> cb) {
+void Download::Found(std::shared_ptr<Download> self, FetchFunction fetch) {
   FX_DCHECK(self.get() == this);
 
   if (!result_cb_)
     return;
 
   if (trying_) {
-    server_cbs_.push_back(std::move(cb));
+    server_fetches_.push_back(std::move(fetch));
     return;
   }
 
-  RunCB(self, cb);
+  RunFetch(self, fetch);
 }
 
 void Download::Error(std::shared_ptr<Download> self, const Err& err) {
@@ -286,18 +288,17 @@ void Download::Error(std::shared_ptr<Download> self, const Err& err) {
     err_ = Err("Multiple servers could not be reached.");
   }
 
-  if (!trying_ && !server_cbs_.empty()) {
-    RunCB(self, server_cbs_.back());
-    server_cbs_.pop_back();
+  if (!trying_ && !server_fetches_.empty()) {
+    RunFetch(self, server_fetches_.back());
+    server_fetches_.pop_back();
   }
 }
 
-void Download::RunCB(std::shared_ptr<Download> self,
-                     fit::callback<void(SymbolServer::FetchCallback)>& cb) {
+void Download::RunFetch(std::shared_ptr<Download> self, FetchFunction& fetch) {
   FX_DCHECK(!trying_);
   trying_ = true;
 
-  cb([self](const Err& err, const std::string& path) {
+  fetch([self](const Err& err, const std::string& path) {
     self->trying_ = false;
 
     if (path.empty()) {
@@ -846,7 +847,7 @@ void System::OnSettingChanged(const SettingStore& store, const std::string& sett
     if (!symbol_cache.empty()) {
       std::error_code ec;
       std::filesystem::create_directories(std::filesystem::path(symbol_cache), ec);
-      build_id_index.AddBuildIdDir(symbol_cache);
+      build_id_index.SetCacheDir(symbol_cache);
     }
   } else if (setting_name == ClientSettings::System::kSymbolServers) {
     // TODO(dangyi): We don't support the removal of an existing symbol server yet.

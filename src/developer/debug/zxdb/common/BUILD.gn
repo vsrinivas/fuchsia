@@ -27,6 +27,7 @@ static_library("common") {
     "adapters.h",
     "address_range.h",
     "address_ranges.h",
+    "cache_dir.h",
     "completion_callback.h",
     "data_extractor.h",
     "err.h",
@@ -41,6 +42,7 @@ static_library("common") {
 
   sources = [
     "address_ranges.cc",
+    "cache_dir.cc",
     "err.cc",
     "file_util.cc",
     "host_util.cc",
@@ -78,6 +80,7 @@ source_set("tests") {
   sources = [
     "adapters_unittest.cc",
     "address_ranges_unittest.cc",
+    "cache_dir_unittest.cc",
     "completion_callback_unittest.cc",
     "data_extractor_unittest.cc",
     "err_or_unittest.cc",
@@ -88,6 +91,7 @@ source_set("tests") {
 
   deps = [
     ":common",
+    "//src/lib/files",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
   ]

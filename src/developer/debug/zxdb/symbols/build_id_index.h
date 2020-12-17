@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "lib/fit/function.h"
+#include "src/developer/debug/zxdb/common/cache_dir.h"
 
 namespace zxdb {
 
@@ -83,6 +84,10 @@ class BuildIDIndex {
   // supplemented to help look up the source code.
   void AddBuildIdDir(const std::string& dir, const std::string& build_dir = "");
 
+  // cache_dir saves the downloaded symbol files. Its layout is the same as a build_id_dir but it
+  // also features garbage collection.
+  void SetCacheDir(const std::string& cache_dir);
+
   // Populates build_id_dirs_ and ids_txts_ with the content of symbol-index file.
   void AddSymbolIndexFile(const std::string& symbol_index);
 
@@ -144,6 +149,9 @@ class BuildIDIndex {
 
   // "ids.txt" is a text file describing the mapping from the Build ID to the ELF file.
   std::vector<std::pair<std::string, std::string>> ids_txts_;
+
+  // Cache directory. nullptr means no cache directory.
+  std::unique_ptr<CacheDir> cache_dir_;
 
   // "symbol-index" files are used to populate the build_id_dirs_ and ids_txts_ above.
   std::vector<std::string> symbol_index_files_;

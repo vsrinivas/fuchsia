@@ -89,6 +89,11 @@ void BuildIDIndex::AddBuildIdDir(const std::string& dir, const std::string& buil
   ClearCache();
 }
 
+void BuildIDIndex::SetCacheDir(const std::string& cache_dir) {
+  AddBuildIdDir(cache_dir);
+  cache_dir_ = std::make_unique<CacheDir>(cache_dir);
+}
+
 void BuildIDIndex::AddSymbolIndexFile(const std::string& path) {
   if (std::find(symbol_index_files_.begin(), symbol_index_files_.end(), path) !=
       symbol_index_files_.end())
@@ -279,6 +284,9 @@ bool BuildIDIndex::IndexSourceFile(const std::string& file_path, const std::stri
   std::string build_id = elf->GetGNUBuildID();
   if (build_id.empty())
     return false;
+
+  if (cache_dir_)
+    cache_dir_->NotifyFileAccess(file_path);
 
   auto ret = false;
   if (elf->ProbeHasDebugInfo() && build_id_to_files_[build_id].debug_info.empty()) {
