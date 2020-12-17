@@ -2504,12 +2504,6 @@ From //tools/size_checker/cmd/BUILD.gn:52
 
 From //zircon/kernel/params.gni:20
 
-### supress_flutter_runner_patched_sdk
-
-**Current value (from the default):** `false`
-
-From [//topaz/runtime/flutter_runner/kernel/soft_transition.gni:7](https://fuchsia.googlesource.com/topaz/+/e3aa5b68ee0acdc7ef3dcbec2f12c251e1fcce97/runtime/flutter_runner/kernel/soft_transition.gni#7)
-
 ### sysmgr_golden_warn_override
 Used by config_package().
 If true, then overrides the value of the sysmgr_golden_warn template
