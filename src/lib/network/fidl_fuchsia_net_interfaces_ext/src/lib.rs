@@ -16,12 +16,12 @@ use std::collections::hash_map::{self, HashMap};
 use std::convert::TryFrom as _;
 use thiserror::Error;
 
-use fidl_fuchsia_net_interfaces as fidl_interfaces;
+use fidl_fuchsia_net_interfaces as fnet_interfaces;
 
 // TODO(fxbug.dev/66175) Prevent this type from becoming stale.
 /// Properties of a network interface.
 #[derive(Clone, Debug, Eq, PartialEq, ValidFidlTable)]
-#[fidl_table_src(fidl_interfaces::Properties)]
+#[fidl_table_src(fnet_interfaces::Properties)]
 pub struct Properties {
     /// An opaque identifier for the interface. Its value will not be reused
     /// even if the device is removed and subsequently re-added. Immutable.
@@ -29,7 +29,7 @@ pub struct Properties {
     /// The name of the interface. Immutable.
     pub name: String,
     /// The device class of the interface. Immutable.
-    pub device_class: fidl_interfaces::DeviceClass,
+    pub device_class: fnet_interfaces::DeviceClass,
     /// The device is enabled and its physical state is online.
     pub online: bool,
     /// The addresses currently assigned to the interface.
@@ -43,7 +43,7 @@ pub struct Properties {
 // TODO(fxbug.dev/66175) Prevent this type from becoming stale.
 /// An address and its properties.
 #[derive(Clone, Debug, Eq, PartialEq, ValidFidlTable)]
-#[fidl_table_src(fidl_interfaces::Address)]
+#[fidl_table_src(fnet_interfaces::Address)]
 pub struct Address {
     /// The address and prefix length.
     pub addr: fidl_fuchsia_net::Subnet,
@@ -54,10 +54,10 @@ pub struct Address {
 pub enum UpdateError {
     /// The update attempted to add an already-known added interface into local state.
     #[error("duplicate added event {0:?}")]
-    DuplicateAdded(fidl_interfaces::Properties),
+    DuplicateAdded(fnet_interfaces::Properties),
     /// The update attempted to add an already-known existing interface into local state.
     #[error("duplicate existing event {0:?}")]
-    DuplicateExisting(fidl_interfaces::Properties),
+    DuplicateExisting(fnet_interfaces::Properties),
     /// The event contained one or more invalid properties.
     #[error("failed to validate Properties FIDL table: {0}")]
     InvalidProperties(#[from] PropertiesValidationError),
@@ -66,16 +66,16 @@ pub enum UpdateError {
     InvalidAddress(#[from] AddressValidationError),
     /// The event was required to have contained an ID, but did not.
     #[error("changed event with missing ID {0:?}")]
-    MissingId(fidl_interfaces::Properties),
+    MissingId(fnet_interfaces::Properties),
     /// The event did not contain any changes.
     #[error("changed event contains no changed fields {0:?}")]
-    EmptyChange(fidl_interfaces::Properties),
+    EmptyChange(fnet_interfaces::Properties),
     /// The update removed the only interface in the local state.
     #[error("interface has been removed")]
     Removed,
     /// The event contained changes for an interface that did not exist in local state.
     #[error("unknown interface changed {0:?}")]
-    UnknownChanged(fidl_interfaces::Properties),
+    UnknownChanged(fnet_interfaces::Properties),
     /// The event removed an interface that did not exist in local state.
     #[error("unknown interface with id {0} deleted")]
     UnknownRemoved(u64),
@@ -101,25 +101,25 @@ pub trait Update {
     /// Update state with the interface change event.
     ///
     /// Returns a bool indicating whether the update caused any changes.
-    fn update(&mut self, event: fidl_interfaces::Event) -> Result<UpdateResult<'_>, UpdateError>;
+    fn update(&mut self, event: fnet_interfaces::Event) -> Result<UpdateResult<'_>, UpdateError>;
 }
 
 impl Update for Properties {
-    fn update(&mut self, event: fidl_interfaces::Event) -> Result<UpdateResult<'_>, UpdateError> {
+    fn update(&mut self, event: fnet_interfaces::Event) -> Result<UpdateResult<'_>, UpdateError> {
         match event {
-            fidl_interfaces::Event::Existing(existing) => {
+            fnet_interfaces::Event::Existing(existing) => {
                 let existing = Properties::try_from(existing)?;
                 if existing.id == self.id {
                     return Err(UpdateError::DuplicateExisting(existing.into()));
                 }
             }
-            fidl_interfaces::Event::Added(added) => {
+            fnet_interfaces::Event::Added(added) => {
                 let added = Properties::try_from(added)?;
                 if added.id == self.id {
                     return Err(UpdateError::DuplicateAdded(added.into()));
                 }
             }
-            fidl_interfaces::Event::Changed(change) => {
+            fnet_interfaces::Event::Changed(change) => {
                 if let Some(id) = change.id {
                     if self.id == id {
                         let mut changed = false;
@@ -149,19 +149,19 @@ impl Update for Properties {
                     return Err(UpdateError::MissingId(change));
                 }
             }
-            fidl_interfaces::Event::Removed(removed_id) => {
+            fnet_interfaces::Event::Removed(removed_id) => {
                 if self.id == removed_id {
                     return Err(UpdateError::Removed);
                 }
             }
-            fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}) => {}
+            fnet_interfaces::Event::Idle(fnet_interfaces::Empty {}) => {}
         }
         Ok(UpdateResult::NoChange)
     }
 }
 
 impl Update for InterfaceState {
-    fn update(&mut self, event: fidl_interfaces::Event) -> Result<UpdateResult<'_>, UpdateError> {
+    fn update(&mut self, event: fnet_interfaces::Event) -> Result<UpdateResult<'_>, UpdateError> {
         fn get_properties(state: &InterfaceState) -> &Properties {
             match state {
                 InterfaceState::Known(properties) => properties,
@@ -173,21 +173,21 @@ impl Update for InterfaceState {
         }
         match self {
             InterfaceState::Unknown(id) => match event {
-                fidl_interfaces::Event::Existing(existing) => {
+                fnet_interfaces::Event::Existing(existing) => {
                     let existing = Properties::try_from(existing)?;
                     if existing.id == *id {
                         *self = InterfaceState::Known(existing);
                         return Ok(UpdateResult::Existing(get_properties(self)));
                     }
                 }
-                fidl_interfaces::Event::Added(added) => {
+                fnet_interfaces::Event::Added(added) => {
                     let added = Properties::try_from(added)?;
                     if added.id == *id {
                         *self = InterfaceState::Known(added);
                         return Ok(UpdateResult::Added(get_properties(self)));
                     }
                 }
-                fidl_interfaces::Event::Changed(change) => {
+                fnet_interfaces::Event::Changed(change) => {
                     if let Some(change_id) = change.id {
                         if change_id == *id {
                             return Err(UpdateError::UnknownChanged(change));
@@ -196,12 +196,12 @@ impl Update for InterfaceState {
                         return Err(UpdateError::MissingId(change));
                     }
                 }
-                fidl_interfaces::Event::Removed(removed_id) => {
+                fnet_interfaces::Event::Removed(removed_id) => {
                     if removed_id == *id {
                         return Err(UpdateError::UnknownRemoved(removed_id));
                     }
                 }
-                fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}) => {}
+                fnet_interfaces::Event::Idle(fnet_interfaces::Empty {}) => {}
             },
             InterfaceState::Known(properties) => return properties.update(event),
         }
@@ -210,9 +210,9 @@ impl Update for InterfaceState {
 }
 
 impl Update for HashMap<u64, Properties> {
-    fn update(&mut self, event: fidl_interfaces::Event) -> Result<UpdateResult<'_>, UpdateError> {
+    fn update(&mut self, event: fnet_interfaces::Event) -> Result<UpdateResult<'_>, UpdateError> {
         match event {
-            fidl_interfaces::Event::Existing(existing) => {
+            fnet_interfaces::Event::Existing(existing) => {
                 let existing = Properties::try_from(existing)?;
                 match self.entry(existing.id) {
                     hash_map::Entry::Occupied(_) => {
@@ -223,32 +223,32 @@ impl Update for HashMap<u64, Properties> {
                     }
                 }
             }
-            fidl_interfaces::Event::Added(added) => {
+            fnet_interfaces::Event::Added(added) => {
                 let added = Properties::try_from(added)?;
                 match self.entry(added.id) {
                     hash_map::Entry::Occupied(_) => Err(UpdateError::DuplicateAdded(added.into())),
                     hash_map::Entry::Vacant(entry) => Ok(UpdateResult::Added(entry.insert(added))),
                 }
             }
-            fidl_interfaces::Event::Changed(change) => {
+            fnet_interfaces::Event::Changed(change) => {
                 let id = if let Some(id) = change.id {
                     id
                 } else {
                     return Err(UpdateError::MissingId(change));
                 };
                 if let Some(properties) = self.get_mut(&id) {
-                    properties.update(fidl_interfaces::Event::Changed(change))
+                    properties.update(fnet_interfaces::Event::Changed(change))
                 } else {
                     Err(UpdateError::UnknownChanged(change))
                 }
             }
-            fidl_interfaces::Event::Removed(removed_id) => {
+            fnet_interfaces::Event::Removed(removed_id) => {
                 if self.remove(&removed_id).is_none() {
                     return Err(UpdateError::UnknownRemoved(removed_id));
                 }
                 Ok(UpdateResult::Removed(removed_id))
             }
-            fidl_interfaces::Event::Idle(fidl_interfaces::Empty {}) => Ok(UpdateResult::NoChange),
+            fnet_interfaces::Event::Idle(fnet_interfaces::Empty {}) => Ok(UpdateResult::NoChange),
         }
     }
 }
@@ -296,7 +296,7 @@ pub async fn wait_interface<B, S, F, T>(
 ) -> Result<T, WatcherOperationError<B>>
 where
     B: Update + Clone + std::fmt::Debug,
-    S: Stream<Item = Result<fidl_interfaces::Event, fidl::Error>>,
+    S: Stream<Item = Result<fnet_interfaces::Event, fidl::Error>>,
     F: FnMut(&B) -> Option<T>,
 {
     async_utils::fold::try_fold_while(
@@ -351,7 +351,7 @@ pub async fn wait_interface_with_id<S, F, T>(
     mut predicate: F,
 ) -> Result<T, WatcherOperationError<InterfaceState>>
 where
-    S: Stream<Item = Result<fidl_interfaces::Event, fidl::Error>>,
+    S: Stream<Item = Result<fnet_interfaces::Event, fidl::Error>>,
     F: FnMut(&Properties) -> Option<T>,
 {
     wait_interface(stream, init, |state| {
@@ -367,8 +367,8 @@ where
 
 /// Returns a stream of interface change events obtained by repeatedly calling watch on `watcher`.
 pub fn event_stream(
-    watcher: fidl_interfaces::WatcherProxy,
-) -> impl Stream<Item = Result<fidl_interfaces::Event, fidl::Error>> {
+    watcher: fnet_interfaces::WatcherProxy,
+) -> impl Stream<Item = Result<fnet_interfaces::Event, fidl::Error>> {
     futures::stream::try_unfold(watcher, |watcher| async {
         Ok(Some((watcher.watch().await?, watcher)))
     })
@@ -376,12 +376,12 @@ pub fn event_stream(
 
 /// Initialize a watcher and return its events as a stream.
 pub fn event_stream_from_state(
-    interface_state: &fidl_interfaces::StateProxy,
-) -> Result<impl Stream<Item = Result<fidl_interfaces::Event, fidl::Error>>, WatcherCreationError> {
-    let (watcher, server) = ::fidl::endpoints::create_proxy::<fidl_interfaces::WatcherMarker>()
+    interface_state: &fnet_interfaces::StateProxy,
+) -> Result<impl Stream<Item = Result<fnet_interfaces::Event, fidl::Error>>, WatcherCreationError> {
+    let (watcher, server) = ::fidl::endpoints::create_proxy::<fnet_interfaces::WatcherMarker>()
         .map_err(WatcherCreationError::CreateProxy)?;
     let () = interface_state
-        .get_watcher(fidl_interfaces::WatcherOptions::EMPTY, server)
+        .get_watcher(fnet_interfaces::WatcherOptions::EMPTY, server)
         .map_err(WatcherCreationError::GetWatcher)?;
     Ok(event_stream(watcher))
 }
@@ -396,16 +396,16 @@ mod tests {
 
     type Result<T = ()> = std::result::Result<T, anyhow::Error>;
 
-    fn fidl_properties(id: u64) -> fidl_interfaces::Properties {
-        fidl_interfaces::Properties {
+    fn fidl_properties(id: u64) -> fnet_interfaces::Properties {
+        fnet_interfaces::Properties {
             id: Some(id),
             name: Some("test1".to_string()),
-            device_class: Some(fidl_interfaces::DeviceClass::Loopback(fidl_interfaces::Empty {})),
+            device_class: Some(fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {})),
             online: Some(false),
             has_default_ipv4_route: Some(false),
             has_default_ipv6_route: Some(false),
             addresses: Some(vec![]),
-            ..fidl_interfaces::Properties::EMPTY
+            ..fnet_interfaces::Properties::EMPTY
         }
     }
 
@@ -418,13 +418,13 @@ mod tests {
     #[test]
     fn test_duplicate_added_error() {
         assert_matches!(
-            properties(ID).update(fidl_interfaces::Event::Added(fidl_properties(ID))),
+            properties(ID).update(fnet_interfaces::Event::Added(fidl_properties(ID))),
             Err(UpdateError::DuplicateAdded(added)) if added == fidl_properties(ID)
         );
         assert_matches!(
             std::iter::once((ID, properties(ID)))
                 .collect::<HashMap<_, _>>()
-                .update(fidl_interfaces::Event::Added(fidl_properties(ID))),
+                .update(fnet_interfaces::Event::Added(fidl_properties(ID))),
             Err(UpdateError::DuplicateAdded(added)) if added == fidl_properties(ID)
         );
     }
@@ -432,30 +432,30 @@ mod tests {
     #[test]
     fn test_duplicate_existing_error() {
         assert_matches!(
-            properties(ID).update(fidl_interfaces::Event::Existing(fidl_properties(ID))),
+            properties(ID).update(fnet_interfaces::Event::Existing(fidl_properties(ID))),
             Err(UpdateError::DuplicateExisting(existing)) if existing == fidl_properties(ID)
         );
         assert_matches!(
             std::iter::once((ID, properties(ID)))
                 .collect::<HashMap<_, _>>()
-                .update(fidl_interfaces::Event::Existing(fidl_properties(ID))),
+                .update(fnet_interfaces::Event::Existing(fidl_properties(ID))),
             Err(UpdateError::DuplicateExisting(existing)) if existing == fidl_properties(ID)
         );
     }
 
     #[test]
     fn test_unknown_changed_error() {
-        let unknown_changed = || fidl_interfaces::Properties {
+        let unknown_changed = || fnet_interfaces::Properties {
             id: Some(ID),
             online: Some(true),
-            ..fidl_interfaces::Properties::EMPTY
+            ..fnet_interfaces::Properties::EMPTY
         };
         assert_matches!(
-            InterfaceState::Unknown(ID).update(fidl_interfaces::Event::Changed(unknown_changed())),
+            InterfaceState::Unknown(ID).update(fnet_interfaces::Event::Changed(unknown_changed())),
             Err(UpdateError::UnknownChanged(changed)) if changed == unknown_changed()
         );
         assert_matches!(
-            HashMap::new().update(fidl_interfaces::Event::Changed(unknown_changed())),
+            HashMap::new().update(fnet_interfaces::Event::Changed(unknown_changed())),
             Err(UpdateError::UnknownChanged(changed)) if changed == unknown_changed()
         );
     }
@@ -463,11 +463,11 @@ mod tests {
     #[test]
     fn test_unknown_removed_error() {
         assert_matches!(
-            InterfaceState::Unknown(ID).update(fidl_interfaces::Event::Removed(ID)),
+            InterfaceState::Unknown(ID).update(fnet_interfaces::Event::Removed(ID)),
             Err(UpdateError::UnknownRemoved(id)) if id == ID
         );
         assert_matches!(
-            HashMap::new().update(fidl_interfaces::Event::Removed(ID)),
+            HashMap::new().update(fnet_interfaces::Event::Removed(ID)),
             Err(UpdateError::UnknownRemoved(id)) if id == ID
         );
     }
@@ -475,27 +475,27 @@ mod tests {
     #[test]
     fn test_removed_error() {
         assert_matches!(
-            properties(ID).update(fidl_interfaces::Event::Removed(ID)),
+            properties(ID).update(fnet_interfaces::Event::Removed(ID)),
             Err(UpdateError::Removed)
         );
     }
 
     #[test]
     fn test_missing_id_error() {
-        let missing_id = || fidl_interfaces::Properties {
+        let missing_id = || fnet_interfaces::Properties {
             online: Some(true),
-            ..fidl_interfaces::Properties::EMPTY
+            ..fnet_interfaces::Properties::EMPTY
         };
         assert_matches!(
-            HashMap::new().update(fidl_interfaces::Event::Changed(missing_id())),
+            HashMap::new().update(fnet_interfaces::Event::Changed(missing_id())),
             Err(UpdateError::MissingId(properties)) if properties == missing_id()
         );
         assert_matches!(
-            properties(ID).update(fidl_interfaces::Event::Changed(missing_id())),
+            properties(ID).update(fnet_interfaces::Event::Changed(missing_id())),
             Err(UpdateError::MissingId(properties)) if properties == missing_id()
         );
         assert_matches!(
-            InterfaceState::Unknown(ID).update(fidl_interfaces::Event::Changed(missing_id())),
+            InterfaceState::Unknown(ID).update(fnet_interfaces::Event::Changed(missing_id())),
             Err(UpdateError::MissingId(properties)) if properties == missing_id()
         );
     }
@@ -503,9 +503,9 @@ mod tests {
     #[test]
     fn test_empty_change_error() {
         let empty_change =
-            || fidl_interfaces::Properties { id: Some(ID), ..fidl_interfaces::Properties::EMPTY };
+            || fnet_interfaces::Properties { id: Some(ID), ..fnet_interfaces::Properties::EMPTY };
         assert_matches!(
-            properties(ID).update(fidl_interfaces::Event::Changed(empty_change())),
+            properties(ID).update(fnet_interfaces::Event::Changed(empty_change())),
             Err(UpdateError::EmptyChange(properties)) if properties == empty_change()
         );
     }
@@ -515,32 +515,32 @@ mod tests {
         let mut state = InterfaceState::Unknown(ID);
         let addr = fidl_fuchsia_net::Subnet { addr: fidl_ip!(192.168.0.1), prefix_len: 16 };
         for (event, want) in vec![
-            (fidl_interfaces::Event::Existing(fidl_properties(ID)), properties(ID)),
+            (fnet_interfaces::Event::Existing(fidl_properties(ID)), properties(ID)),
             (
-                fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
                     id: Some(ID),
                     online: Some(true),
-                    ..fidl_interfaces::Properties::EMPTY
+                    ..fnet_interfaces::Properties::EMPTY
                 }),
-                Properties::try_from(fidl_interfaces::Properties {
+                Properties::try_from(fnet_interfaces::Properties {
                     online: Some(true),
                     ..fidl_properties(ID)
                 })?,
             ),
             (
-                fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
                     id: Some(ID),
-                    addresses: Some(vec![fidl_interfaces::Address {
+                    addresses: Some(vec![fnet_interfaces::Address {
                         addr: Some(addr),
-                        ..fidl_interfaces::Address::EMPTY
+                        ..fnet_interfaces::Address::EMPTY
                     }]),
-                    ..fidl_interfaces::Properties::EMPTY
+                    ..fnet_interfaces::Properties::EMPTY
                 }),
-                Properties::try_from(fidl_interfaces::Properties {
+                Properties::try_from(fnet_interfaces::Properties {
                     online: Some(true),
-                    addresses: Some(vec![fidl_interfaces::Address {
+                    addresses: Some(vec![fnet_interfaces::Address {
                         addr: Some(addr),
-                        ..fidl_interfaces::Address::EMPTY
+                        ..fnet_interfaces::Address::EMPTY
                     }]),
                     ..fidl_properties(ID)
                 })?,
@@ -566,23 +566,23 @@ mod tests {
         let mut properties_map = HashMap::new();
         for (event, want) in vec![
             (
-                fidl_interfaces::Event::Existing(fidl_properties(ID)),
+                fnet_interfaces::Event::Existing(fidl_properties(ID)),
                 vec![(ID, properties(ID))].into_iter().collect(),
             ),
             (
-                fidl_interfaces::Event::Added(fidl_properties(ID2)),
+                fnet_interfaces::Event::Added(fidl_properties(ID2)),
                 vec![(ID, properties(ID)), (ID2, properties(ID2))].into_iter().collect(),
             ),
             (
-                fidl_interfaces::Event::Changed(fidl_interfaces::Properties {
+                fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
                     id: Some(ID),
                     online: Some(true),
-                    ..fidl_interfaces::Properties::EMPTY
+                    ..fnet_interfaces::Properties::EMPTY
                 }),
                 vec![
                     (
                         ID,
-                        fidl_interfaces::Properties { online: Some(true), ..fidl_properties(ID) }
+                        fnet_interfaces::Properties { online: Some(true), ..fidl_properties(ID) }
                             .try_into()?,
                     ),
                     (ID2, properties(ID2)),
@@ -591,7 +591,7 @@ mod tests {
                 .collect(),
             ),
             (
-                fidl_interfaces::Event::Removed(ID),
+                fnet_interfaces::Event::Removed(ID),
                 vec![(ID2, properties(ID2))].into_iter().collect(),
             ),
         ] {
