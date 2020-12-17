@@ -66,4 +66,11 @@ protocol Isp {
                       ddk.protocol.camera.FrameRate max_frame_rate)
                         -> (zx.status s);
 
+    /// Changes the vendor-defined test pattern mode and sets any associated data.
+    ///     |mode|  The test pattern to use. A value of 0 disables it.
+    ///     |data|  Data associated with the mode, if applicable.
+    /// Returns ZX_OK if the mode was successfully applied.
+    /// Returns ZX_ERR_INVALID_ARGS if |mode| is invalid
+    ///         or if |data| is invalid for the given |mode|.
+    SetTestPattern(uint8 mode, vector<uint8> data) -> (zx.status s);
 };
