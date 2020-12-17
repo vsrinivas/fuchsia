@@ -14,8 +14,6 @@ use futures::TryFutureExt;
 use lowpan_driver_common::{FutureExt as _, ZxResult};
 use spinel_pack::TryOwnedUnpack;
 
-const STD_IPV6_NET_PREFIX_LEN: u8 = 64;
-
 /// Miscellaneous private methods
 impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     /// This method is called whenever it is observed that the
@@ -271,12 +269,26 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                             addr: driver_state.link_local_addr,
                             prefix_len: STD_IPV6_NET_PREFIX_LEN,
                         };
-                        self.net_if.remove_address(&subnet)?;
+                        if let Err(err) = self.net_if.remove_address(&subnet) {
+                            fx_log_err!(
+                                "Unable to remove address `{}` from interface: {:?}",
+                                subnet.addr,
+                                err
+                            );
+                        }
                     }
 
                     if !value.is_unspecified() {
                         let subnet = Subnet { addr: value, prefix_len: STD_IPV6_NET_PREFIX_LEN };
-                        self.net_if.add_address(&subnet)?;
+                        if let Err(err) = self.net_if.add_address(&subnet) {
+                            fx_log_err!(
+                                "Unable to add address `{}` to interface: {:?}",
+                                subnet.addr,
+                                err
+                            );
+                        } else {
+                            driver_state.address_table.insert(AddressTableEntry { subnet });
+                        }
                     }
                 }
 
@@ -300,12 +312,26 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                             addr: driver_state.mesh_local_addr,
                             prefix_len: STD_IPV6_NET_PREFIX_LEN,
                         };
-                        self.net_if.remove_address(&subnet)?;
+                        if let Err(err) = self.net_if.remove_address(&subnet) {
+                            fx_log_err!(
+                                "Unable to remove address `{}` from interface: {:?}",
+                                subnet.addr,
+                                err
+                            );
+                        }
                     }
 
                     if !value.is_unspecified() {
                         let subnet = Subnet { addr: value, prefix_len: STD_IPV6_NET_PREFIX_LEN };
-                        self.net_if.add_address(&subnet)?;
+                        if let Err(err) = self.net_if.add_address(&subnet) {
+                            fx_log_err!(
+                                "Unable to add address `{}` to interface: {:?}",
+                                subnet.addr,
+                                err
+                            );
+                        } else {
+                            driver_state.address_table.insert(AddressTableEntry { subnet });
+                        }
                     }
                 }
 
@@ -324,12 +350,26 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                         for changed_address in
                             driver_state.address_table.symmetric_difference(&value)
                         {
-                            if value.contains(changed_address) {
-                                fx_log_info!("--- Address Added: {:?}", changed_address);
-                                self.net_if.add_address(&changed_address.subnet)?;
+                            if value.contains(changed_address)
+                                && !driver_state.addr_is_mesh_local(&changed_address.subnet.addr)
+                            {
+                                if let Err(err) = self.net_if.add_address(&changed_address.subnet) {
+                                    fx_log_err!(
+                                        "Unable to add address `{}` to interface: {:?}",
+                                        changed_address.subnet.addr,
+                                        err
+                                    );
+                                }
                             } else {
-                                fx_log_info!("--- Address Removed: {:?}", changed_address);
-                                self.net_if.remove_address(&changed_address.subnet)?;
+                                if let Err(err) =
+                                    self.net_if.remove_address(&changed_address.subnet)
+                                {
+                                    fx_log_err!(
+                                        "Unable to remove address `{}` from interface: {:?}",
+                                        changed_address.subnet.addr,
+                                        err
+                                    );
+                                }
                             }
                         }
                     }

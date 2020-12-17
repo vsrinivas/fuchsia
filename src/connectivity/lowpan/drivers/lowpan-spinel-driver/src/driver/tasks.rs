@@ -131,6 +131,15 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                     .await?;
 
                 fx_log_info!("main_task: online_task terminated");
+
+                self.online_task_cleanup()
+                    .boxed()
+                    .map(|x| match x {
+                        Err(err) if err.is::<Canceled>() => Ok(()),
+                        other => other,
+                    })
+                    .map_err(|x| x.context("online_task_cleanup"))
+                    .await?;
             }
 
             InitState::Initialized => {
@@ -225,6 +234,45 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
             .await
     }
 
+    async fn sync_addresses(&self) -> Result<(), Error> {
+        let driver_state = self.driver_state.lock();
+
+        // Add the link-local address first, so that it is at the top of the list.
+        if let Err(err) = self.net_if.add_address(&Subnet {
+            addr: driver_state.link_local_addr.clone(),
+            prefix_len: STD_IPV6_NET_PREFIX_LEN,
+        }) {
+            fx_log_err!("Unable to add address `{}`: {:?}", driver_state.link_local_addr, err);
+        }
+
+        // Add the mesh-local address second, so that it is the next address in the list.
+        if let Err(err) = self.net_if.add_address(&Subnet {
+            addr: driver_state.mesh_local_addr.clone(),
+            prefix_len: STD_IPV6_NET_PREFIX_LEN,
+        }) {
+            fx_log_err!("Unable to add address `{}`: {:?}", driver_state.mesh_local_addr, err);
+        }
+
+        // Add the rest of the addresses
+        for entry in driver_state.address_table.iter() {
+            // Skip re-adding the link local address.
+            if entry.subnet.addr == driver_state.link_local_addr {
+                continue;
+            }
+
+            // Skip any addresses that have a mesh-local prefix.
+            if driver_state.addr_is_mesh_local(&entry.subnet.addr) {
+                continue;
+            }
+
+            if let Err(err) = self.net_if.add_address(&entry.subnet) {
+                fx_log_err!("Unable to add address `{}`: {:?}", entry.subnet.addr, err);
+            }
+        }
+
+        Ok(())
+    }
+
     /// Online loop task that is executed while we are both "ready" and "active".
     ///
     /// This task will bring the device into a state where it
@@ -260,12 +308,8 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         if connectivity_state.is_online() {
             // Mark the network interface as online.
             self.net_if.set_online(true).await.context("Marking network interface as online")?;
-            let driver_state = self.driver_state.lock();
-            for entry in driver_state.address_table.iter() {
-                if let Err(err) = self.net_if.add_address(&entry.subnet) {
-                    fx_log_err!("Unable to add address: {:?}", err);
-                }
-            }
+
+            self.sync_addresses().await?;
         } else {
             Err(format_err!("Unexpected connectivity state: {:?}", connectivity_state))?
         }
@@ -279,6 +323,23 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
             .try_collect::<()>()
             .await
             .context("outbound_packet_pump")
+    }
+
+    /// Cleanup method that is called after the online task has finished.
+    async fn online_task_cleanup(&self) -> Result<(), Error> {
+        self.net_if
+            .set_online(false)
+            .await
+            .context("Unable to mark network interface as offline")?;
+
+        let driver_state = self.driver_state.lock();
+        for entry in driver_state.address_table.iter() {
+            if let Err(err) = self.net_if.remove_address(&entry.subnet) {
+                fx_log_err!("Unable to remove address: {:?}", err);
+            }
+        }
+
+        Ok(())
     }
 
     /// Offline loop task that is executed while we are either "not ready" or "inactive".

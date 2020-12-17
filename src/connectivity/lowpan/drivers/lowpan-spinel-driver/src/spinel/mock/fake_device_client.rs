@@ -40,6 +40,7 @@ impl Default for FakeSpinelDevice {
         properties.insert(Prop::Mac(PropMac::Panid), vec![0, 0]);
         properties.insert(Prop::Phy(PropPhy::Chan), vec![11]);
         properties.insert(Prop::Phy(PropPhy::TxPower), vec![0]);
+        properties.insert(Prop::Phy(PropPhy::Enabled), vec![0]);
         properties.insert(Prop::Mac(PropMac::ScanMask), vec![11, 12, 13]);
         properties.insert(Prop::Mac(PropMac::ScanPeriod), vec![100]);
         properties.insert(Prop::Mac(PropMac::ScanState), vec![0]);
@@ -67,6 +68,7 @@ impl FakeSpinelDevice {
         properties.insert(Prop::Mac(PropMac::Panid), vec![0, 0]);
         properties.insert(Prop::Phy(PropPhy::Chan), vec![11]);
         properties.insert(Prop::Phy(PropPhy::TxPower), vec![0]);
+        properties.insert(Prop::Phy(PropPhy::Enabled), vec![0]);
         properties.insert(Prop::Mac(PropMac::ScanMask), vec![11, 12, 13]);
         properties.insert(Prop::Mac(PropMac::ScanPeriod), vec![100]);
         properties.insert(Prop::Mac(PropMac::ScanState), vec![0]);

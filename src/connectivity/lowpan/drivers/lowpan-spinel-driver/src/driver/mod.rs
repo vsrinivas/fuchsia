@@ -32,6 +32,8 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_seconds(90);
 
 const MAX_NCP_DEBUG_LINE_LEN: usize = 240;
 
+const STD_IPV6_NET_PREFIX_LEN: u8 = 64;
+
 /// Convenience macro for handling timeouts.
 #[macro_export]
 macro_rules! ncp_cmd_timeout (

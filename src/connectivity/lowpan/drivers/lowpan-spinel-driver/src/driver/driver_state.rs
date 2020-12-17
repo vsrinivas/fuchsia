@@ -143,6 +143,10 @@ impl DriverState {
 
         None
     }
+
+    pub fn addr_is_mesh_local(&self, addr: &std::net::Ipv6Addr) -> bool {
+        &addr.segments()[0..3] == &self.mesh_local_addr.segments()[0..3]
+    }
 }
 
 /// Extension trait for adding some helper methods to

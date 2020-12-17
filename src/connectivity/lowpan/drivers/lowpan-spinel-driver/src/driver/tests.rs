@@ -91,7 +91,7 @@ async fn test_spinel_lowpan_driver() {
             assert_eq!(driver.reset().await, Ok(()));
             traceln!("app_task: Did reset!");
 
-            traceln!("app_task: Checking device state...  (Should be Inactive)");
+            traceln!("app_task: Checking device state... (Should be Inactive) (1)");
             assert_eq!(
                 driver
                     .watch_device_state()
@@ -155,7 +155,7 @@ async fn test_spinel_lowpan_driver() {
             assert_eq!(driver.set_active(true).await, Ok(()));
             traceln!("app_task: Did enable!");
 
-            traceln!("app_task: Checking device state...");
+            traceln!("app_task: Checking device state... (Should be Offline)");
             assert_eq!(
                 device_state_stream.try_next().await.unwrap().unwrap().connectivity_state.unwrap(),
                 ConnectivityState::Offline
@@ -182,7 +182,7 @@ async fn test_spinel_lowpan_driver() {
             assert_eq!(driver.set_active(false).await, Ok(()));
             traceln!("app_task: Did disable!");
 
-            traceln!("app_task: Checking device state...");
+            traceln!("app_task: Checking device state... (Should be Inactive) (2)");
             assert_eq!(
                 device_state_stream.try_next().await.unwrap().unwrap().connectivity_state.unwrap(),
                 ConnectivityState::Inactive

@@ -63,7 +63,6 @@ impl TunNetworkInterface {
                         ]),
                         ..ftun::BaseConfig::EMPTY
                     }),
-                    online: Some(true),
                     blocking: Some(true),
                     ..ftun::DeviceConfig::EMPTY
                 },
@@ -90,6 +89,12 @@ impl TunNetworkInterface {
             .await
             .squash_result()
             .context("Unable to add TUN interface to netstack")?;
+
+        stack
+            .enable_interface(id)
+            .await
+            .squash_result()
+            .context("Unable to enable TUN interface")?;
 
         let (client, server) = zx::Channel::create()?;
         connect_channel_to_service::<fnetstack::StackMarker>(server)?;
@@ -130,22 +135,21 @@ impl NetworkInterface for TunNetworkInterface {
 
     async fn set_online(&self, online: bool) -> Result<(), Error> {
         fx_log_info!("Interface online: {:?}", online);
+
         if online {
+            self.tun_dev.set_online(true).await?;
             self.stack.enable_interface(self.id).await.squash_result()?;
+        } else {
+            self.tun_dev.set_online(false).await?;
+        }
 
-            // Get a list of all of the addresses that were automatically
-            // added to the interface (like the link local address).
-            let fnetstack::InterfaceInfo {
-                properties: fnetstack::InterfaceProperties { addresses, .. },
-                ..
-            } = self.stack.get_interface_info(self.id).await.squash_result()?;
+        Ok(())
+    }
 
-            // Now we remove all of those addresses so that the NCP has a
-            // clean slate to start from.
-            for mut subnet in addresses {
-                fx_log_info!("Removing automatically added address: {:?}", &subnet);
-                self.stack.del_interface_address(self.id, &mut subnet).await.squash_result()?;
-            }
+    async fn set_enabled(&self, enabled: bool) -> Result<(), Error> {
+        fx_log_info!("Interface enabled: {:?}", enabled);
+        if enabled {
+            self.stack.enable_interface(self.id).await.squash_result()?;
         } else {
             self.stack.disable_interface(self.id).await.squash_result()?;
         }

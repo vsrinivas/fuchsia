@@ -258,20 +258,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         // Wait until we are initialized, if we aren't already.
         self.wait_for_state(DriverState::is_initialized).await;
 
-        let mut driver_state = self.driver_state.lock();
-
-        let new_state = if enabled {
-            driver_state.connectivity_state.activated()
-        } else {
-            driver_state.connectivity_state.deactivated()
-        };
-
-        if new_state != driver_state.connectivity_state {
-            let old_state = driver_state.connectivity_state;
-            driver_state.connectivity_state = new_state;
-            std::mem::drop(driver_state);
-            self.on_connectivity_state_change(new_state, old_state);
-        }
+        self.apply_standard_combinators(self.net_if.set_enabled(enabled).boxed()).await?;
 
         Ok(())
     }

@@ -28,7 +28,13 @@ pub trait NetworkInterface: Send + Sync {
 
     /// Changes the online status of the network interface. If an interface is
     /// enabled, the stack won't start handling packets until it is marked as online.
+    /// This is controlled by the driver.
     async fn set_online(&self, online: bool) -> Result<(), Error>;
+
+    /// Changes the enabled state of the network interface. An interface must
+    /// be both online and enabled in order for packets to be handled.
+    /// This is generally controlled by the administrator.
+    async fn set_enabled(&self, enabled: bool) -> Result<(), Error>;
 
     /// Adds the given address to this interface.
     // TODO(fxbug.dev/64704): Consider making this method async. This method is
@@ -60,8 +66,29 @@ pub trait NetworkInterface: Send + Sync {
     fn take_event_stream(&self) -> BoxStream<'_, Result<NetworkInterfaceEvent, Error>>;
 }
 
-#[derive(Debug, Default)]
-pub struct DummyNetworkInterface;
+use futures::channel::mpsc;
+use parking_lot::Mutex;
+
+pub struct DummyNetworkInterface {
+    event_receiver: Mutex<Option<mpsc::Receiver<Result<NetworkInterfaceEvent, Error>>>>,
+    event_sender: Mutex<mpsc::Sender<Result<NetworkInterfaceEvent, Error>>>,
+}
+
+impl std::fmt::Debug for DummyNetworkInterface {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.write_str("DummyNetworkInterface")
+    }
+}
+
+impl Default for DummyNetworkInterface {
+    fn default() -> Self {
+        let (event_sender, event_receiver) = mpsc::channel(10);
+        DummyNetworkInterface {
+            event_receiver: Mutex::new(Some(event_receiver)),
+            event_sender: Mutex::new(event_sender),
+        }
+    }
+}
 
 #[async_trait]
 impl NetworkInterface for DummyNetworkInterface {
@@ -76,6 +103,14 @@ impl NetworkInterface for DummyNetworkInterface {
 
     async fn set_online(&self, online: bool) -> Result<(), Error> {
         fx_log_info!("Interface online: {:?}", online);
+        Ok(())
+    }
+
+    async fn set_enabled(&self, enabled: bool) -> Result<(), Error> {
+        fx_log_info!("Interface enabled: {:?}", enabled);
+        self.event_sender
+            .lock()
+            .try_send(Ok(NetworkInterfaceEvent::InterfaceEnabledChanged(enabled)))?;
         Ok(())
     }
 
@@ -100,6 +135,6 @@ impl NetworkInterface for DummyNetworkInterface {
     }
 
     fn take_event_stream(&self) -> BoxStream<'_, Result<NetworkInterfaceEvent, Error>> {
-        futures::stream::pending().boxed()
+        self.event_receiver.lock().take().expect("take_event_stream called twice").boxed()
     }
 }
