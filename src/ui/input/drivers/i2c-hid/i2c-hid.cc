@@ -15,13 +15,14 @@
 
 #include <vector>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+
+#include "src/ui/input/drivers/i2c-hid/i2c_hid_bind.h"
 
 namespace i2c_hid {
 
@@ -577,8 +578,6 @@ static zx_driver_ops_t i2c_hid_driver_ops = []() {
 }  // namespace i2c_hid
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(i2c_hid, i2c_hid::i2c_hid_driver_ops, "zircon", "0.1", 2)
-  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-  BI_MATCH_IF(EQ, BIND_I2C_CLASS, I2C_CLASS_HID),
-ZIRCON_DRIVER_END(i2c_hid)
-    // clang-format on
+ZIRCON_DRIVER(i2c_hid, i2c_hid::i2c_hid_driver_ops, "zircon", "0.1");
+
+// clang-format on
