@@ -72,4 +72,7 @@ protocol Daemon {
 
     // Retrieves version information about this daemon instance.
     GetVersionInfo() -> (VersionInfo info);
+
+    /// Manually add a target that cannot be discovered via MDNS.
+    AddTarget(TargetAddrInfo ip) -> () error DaemonError;
 };

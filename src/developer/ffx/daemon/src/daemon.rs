@@ -27,7 +27,9 @@ use {
     fuchsia_async::{Task, Timer},
     futures::prelude::*,
     hoist::{hoist, OvernetInstance},
+    std::collections::BTreeSet,
     std::convert::TryInto,
+    std::iter::FromIterator,
     std::sync::{Arc, Weak},
     std::time::Duration,
 };
@@ -77,17 +79,23 @@ impl DaemonEventHandler {
         tc.merge_insert(t.into())
             .then(|target| {
                 async move {
-                    let nodename = target.nodename();
+                    let nodename = target.nodename().await;
 
                     let t_clone = target.clone();
                     let autoconnect_fut = async move {
                         if let Some(cr) = cr.upgrade() {
                             let n = cr.get("target.default").await.ok();
                             if let Some(n) = n {
-                                if n.as_str().map(|n| n == nodename).unwrap_or(false) {
+                                if n.as_str()
+                                    .and_then(|n| nodename.as_ref().map(|x| x == n))
+                                    .unwrap_or(false)
+                                {
                                     log::trace!(
                                         "Doing autoconnect for default target: {}",
                                         nodename
+                                            .as_ref()
+                                            .map(|x| x.as_str())
+                                            .unwrap_or("<unknown>")
                                     );
                                     t_clone.run_host_pipe().await;
                                 }
@@ -135,7 +143,7 @@ impl DaemonEventHandler {
             }
         };
 
-        log::trace!("Found new target via overnet: {}", target.nodename());
+        log::trace!("Found new target via overnet: {}", target.nodename_str().await);
         tc.merge_insert(target).then(|target| async move { target.run_logger().await }).await;
     }
 
@@ -231,7 +239,7 @@ impl Daemon {
         // responsibility to determine their respective timeout(s).
         self.event_queue
             .wait_for(None, move |e| {
-                if let DaemonEvent::NewTarget(n) = e {
+                if let DaemonEvent::NewTarget(Some(n)) = e {
                     // Gets either a target with the correct name if matching,
                     // or returns true if there is ANY target at all.
                     n_clone.as_ref().map(|s| n.contains(s)).unwrap_or(true)
@@ -470,6 +478,27 @@ impl Daemon {
             DaemonRequest::GetVersionInfo { responder } => {
                 return responder.send(build_info()).context("sending GetVersionInfo response");
             }
+            DaemonRequest::AddTarget { ip, responder } => {
+                self.target_collection
+                    .merge_insert(Target::new_with_addrs(
+                        None,
+                        BTreeSet::from_iter(Some(ip.into()).into_iter()),
+                    ))
+                    .then(|target| async move {
+                        target
+                            .update_connection_state(|s| match s {
+                                ConnectionState::Disconnected => ConnectionState::Manual,
+                                _ => {
+                                    log::warn!("New manual target in unexpected state {:?}", s);
+                                    s
+                                }
+                            })
+                            .await;
+                        target.run_host_pipe().await
+                    })
+                    .await;
+                responder.send(&mut Ok(())).context("error sending response")?;
+            }
         }
         Ok(())
     }
@@ -506,22 +535,24 @@ mod test {
 
     impl TargetControl {
         pub async fn send_mdns_discovery_event(&mut self, t: Target) {
+            let nodename =
+                t.nodename().await.expect("Should not send mDns discovery for unnamed node.");
+            let nodename_clone = nodename.clone();
             self.event_queue
                 .push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(events::TargetInfo {
-                    nodename: t.nodename(),
+                    nodename: nodename.clone(),
                     addresses: t.addrs().await.iter().cloned().collect(),
                     ..Default::default()
                 })))
                 .await
                 .unwrap();
 
-            let nodename = t.nodename();
             self.event_queue
-                .wait_for(None, move |e| e == DaemonEvent::NewTarget(nodename.clone()))
+                .wait_for(None, move |e| e == DaemonEvent::NewTarget(Some(nodename_clone.clone())))
                 .await
                 .unwrap();
             self.tc
-                .get(t.nodename().into())
+                .get(nodename.into())
                 .await
                 .unwrap()
                 .events
@@ -542,7 +573,7 @@ mod test {
                 DaemonEvent::WireTraffic(WireTrafficType::Mdns(t)) => {
                     tc.merge_insert(t.into()).await;
                 }
-                DaemonEvent::NewTarget(n) => {
+                DaemonEvent::NewTarget(Some(n)) => {
                     let rcs = RcsConnection::new_with_proxy(
                         setup_fake_target_service(n),
                         &NodeId { id: 0u64 },
@@ -598,7 +629,7 @@ mod test {
                 match req {
                     rcs::RemoteControlRequest::IdentifyHost { responder } => {
                         let result: Vec<Subnet> = vec![Subnet {
-                            addr: IpAddress::Ipv4(Ipv4Address { addr: [192, 168, 0, 1] }),
+                            addr: IpAddress::Ipv4(Ipv4Address { addr: [254, 254, 0, 1] }),
                             prefix_len: 24,
                         }];
                         let nodename =
@@ -726,7 +757,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_ssh_address() -> Result<()> {
         let (daemon_proxy, stream) = fidl::endpoints::create_proxy_and_stream::<DaemonMarker>()?;
-        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        let _ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
         let timeout = std::i64::MAX;
         let r = daemon_proxy.get_ssh_address(Some("foobar"), timeout).await?;
 
@@ -741,14 +772,6 @@ mod test {
 
         let r = daemon_proxy.get_ssh_address(Some("toothpaste"), 10000).await?;
         assert_eq!(r, Err(DaemonError::Timeout));
-
-        // Target with empty addresses should timeout.
-        ctrl.send_mdns_discovery_event(Target::new("baz")).await;
-        let r = daemon_proxy.get_ssh_address(Some("baz"), 10000).await?;
-        assert_eq!(r, Err(DaemonError::Timeout));
-
-        let r = daemon_proxy.get_ssh_address(Some("foobar"), timeout).await?;
-        assert_eq!(r, want);
 
         Ok(())
     }
@@ -782,7 +805,7 @@ mod test {
         };
         assert!(!handler
             .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(events::TargetInfo {
-                nodename: t.nodename(),
+                nodename: t.nodename().await.expect("mdns target should always have a name."),
                 ..Default::default()
             })))
             .await
@@ -816,7 +839,7 @@ mod test {
         };
         assert!(!handler
             .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(events::TargetInfo {
-                nodename: t.nodename(),
+                nodename: t.nodename().await.expect("Handling Mdns traffic for unnamed node"),
                 ..Default::default()
             })))
             .await
@@ -828,5 +851,27 @@ mod test {
         );
 
         // TODO(awdavies): RCS, Fastboot, etc. events.
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add_target() {
+        let (daemon_proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+        let _ctrl = spawn_daemon_server_with_target_ctrl(stream).await;
+
+        let mut info = bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+            ip: fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address {
+                addr: [254, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            }),
+            scope_id: 0,
+        });
+        daemon_proxy.add_target(&mut info).await.unwrap().unwrap();
+
+        let mut got = daemon_proxy.list_targets("").await.unwrap().into_iter();
+        let target = got.next().expect("Got no targets after adding a target.");
+        assert!(got.next().is_none());
+        assert!(target.nodename.is_none());
+        assert_eq!(target.addresses.as_ref().unwrap().len(), 1);
+        assert_eq!(target.addresses.unwrap()[0], info);
     }
 }

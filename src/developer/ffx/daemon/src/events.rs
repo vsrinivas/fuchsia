@@ -89,7 +89,7 @@ pub enum WireTrafficType {
 pub enum DaemonEvent {
     WireTraffic(WireTrafficType),
     OvernetPeer(u64),
-    NewTarget(String),
+    NewTarget(Option<String>),
     // TODO(awdavies): Stale target event, target shutdown event, etc.
 }
 

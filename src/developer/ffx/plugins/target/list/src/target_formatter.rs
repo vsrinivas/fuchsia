@@ -107,7 +107,7 @@ impl TryFrom<bridge::Target> for SimpleTarget {
     type Error = Error;
 
     fn try_from(t: bridge::Target) -> Result<Self> {
-        let nodename = t.nodename.ok_or(anyhow!("must contain nodename"))?;
+        let nodename = t.nodename.unwrap_or("".to_string());
         let addrs = t.addresses.ok_or(anyhow!("must contain an address"))?;
         let addrs = addrs.iter().map(|a| TargetAddr::from(a)).collect::<Vec<_>>();
 
@@ -179,7 +179,6 @@ make_structs_and_support_functions!(nodename, rcs_state, target_type, target_sta
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum StringifyError {
-    MissingNodename,
     MissingAddresses,
     MissingAge,
     MissingRcsState,
@@ -240,7 +239,7 @@ impl TryFrom<bridge::Target> for StringifiedTarget {
 
     fn try_from(target: bridge::Target) -> Result<Self, Self::Error> {
         Ok(Self {
-            nodename: target.nodename.ok_or(StringifyError::MissingNodename)?,
+            nodename: target.nodename.unwrap_or("<unknown>".to_string()),
             addresses: StringifiedTarget::from_addresses(
                 target.addresses.ok_or(StringifyError::MissingAddresses)?,
             ),
@@ -380,6 +379,82 @@ mod test {
         assert_eq!(&lines[2], "lorberding      Unknown    Unknown    [fe80::101:101:101:101%137]                        2m0s    N");
     }
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_formatter_empty_nodename() {
+        let formatter = TabularTargetFormatter::try_from(vec![
+            make_valid_target(),
+            bridge::Target {
+                nodename: None,
+                addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                    ip: IpAddress::Ipv6(Ipv6Address {
+                        addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+                    }),
+                    scope_id: 137,
+                })]),
+                age_ms: Some(120345), // 2m3s
+                rcs_state: Some(bridge::RemoteControlState::Unknown),
+                target_type: Some(bridge::TargetType::Unknown),
+                target_state: Some(bridge::TargetState::Unknown),
+                ..bridge::Target::EMPTY
+            },
+        ])
+        .unwrap();
+        let lines = formatter.lines(Some("fooberdoober"));
+        assert_eq!(lines.len(), 3);
+
+        // TODO(awdavies): This can probably function better via golden files.
+        assert_eq!(&lines[0],
+                   "NAME            TYPE       STATE      ADDRS/IP                                           AGE     RCS");
+        assert_eq!(
+            &lines[1],
+            "fooberdoober*   Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N"
+        );
+        assert_eq!(&lines[2], "<unknown>       Unknown    Unknown    [fe80::101:101:101:101%137]                        2m0s    N");
+
+        let lines = formatter.lines(None);
+        assert_eq!(lines.len(), 3);
+        assert_eq!(&lines[0],
+                   "NAME            TYPE       STATE      ADDRS/IP                                           AGE     RCS");
+        assert_eq!(
+            &lines[1],
+            "fooberdoober    Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N"
+        );
+        assert_eq!(&lines[2], "<unknown>       Unknown    Unknown    [fe80::101:101:101:101%137]                        2m0s    N");
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_simple_formatter() {
+        let formatter = SimpleTargetFormatter::try_from(vec![
+            make_valid_target(),
+            bridge::Target {
+                nodename: None,
+                addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                    ip: IpAddress::Ipv6(Ipv6Address {
+                        addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+                    }),
+                    scope_id: 137,
+                })]),
+                age_ms: Some(120345), // 2m3s
+                rcs_state: Some(bridge::RemoteControlState::Unknown),
+                target_type: Some(bridge::TargetType::Unknown),
+                target_state: Some(bridge::TargetState::Unknown),
+                ..bridge::Target::EMPTY
+            },
+        ])
+        .unwrap();
+        let lines = formatter.lines(Some("fooberdoober"));
+        assert_eq!(lines.len(), 2);
+
+        // TODO(awdavies): This can probably function better via golden files.
+        assert_eq!(&lines[0], "101:101:101:101:101:101:101:101 fooberdoober");
+        assert_eq!(&lines[1], "fe80::101:101:101:101%137 ");
+
+        let lines = formatter.lines(None);
+        assert_eq!(lines.len(), 2);
+        assert_eq!(&lines[0], "101:101:101:101:101:101:101:101 fooberdoober");
+        assert_eq!(&lines[1], "fe80::101:101:101:101%137 ");
+    }
+
     #[test]
     fn test_stringified_target_missing_state() {
         let mut t = make_valid_target();
@@ -419,7 +494,7 @@ mod test {
     fn test_stringified_target_missing_nodename() {
         let mut t = make_valid_target();
         t.nodename = None;
-        assert_eq!(StringifiedTarget::try_from(t), Err(StringifyError::MissingNodename));
+        assert!(StringifiedTarget::try_from(t).is_ok());
     }
 
     #[test]

@@ -34,6 +34,7 @@ use {
     std::hash::{Hash, Hasher},
     std::io::Write,
     std::net::{IpAddr, SocketAddr, SocketAddrV4, SocketAddrV6},
+    std::net::{Ipv4Addr, Ipv6Addr},
     std::sync::{Arc, Weak},
     std::time::Duration,
     usb_bulk::Interface,
@@ -180,6 +181,9 @@ pub enum ConnectionState {
     Mdns(DateTime<Utc>),
     /// Contains an actual connection to RCS.
     Rcs(RcsConnection),
+    /// Target was manually added. Same as `Disconnected` but indicates that the target's name is
+    /// wrong as well.
+    Manual,
     // TODO(awdavies): Have fastboot in here.
     Fastboot,
 }
@@ -263,7 +267,7 @@ pub struct TargetState {
 }
 
 struct TargetInner {
-    nodename: String,
+    nodename: Mutex<Option<String>>,
     state: Mutex<TargetState>,
     last_response: RwLock<DateTime<Utc>>,
     addrs: RwLock<BTreeSet<TargetAddrEntry>>,
@@ -289,20 +293,20 @@ impl Default for TargetInner {
 
 impl TargetInner {
     fn new(nodename: &str) -> Self {
-        Self { nodename: nodename.to_string(), ..Default::default() }
+        Self { nodename: Mutex::new(Some(nodename.to_string())), ..Default::default() }
     }
 
     pub fn new_with_boot_timestamp(nodename: &str, boot_timestamp_nanos: u64) -> Self {
         Self {
-            nodename: nodename.to_string(),
+            nodename: Mutex::new(Some(nodename.to_string())),
             boot_timestamp_nanos: RwLock::new(Some(boot_timestamp_nanos)),
             ..Default::default()
         }
     }
 
-    pub fn new_with_addrs(nodename: &str, addrs: BTreeSet<TargetAddr>) -> Self {
+    pub fn new_with_addrs(nodename: Option<&str>, addrs: BTreeSet<TargetAddr>) -> Self {
         Self {
-            nodename: nodename.to_string(),
+            nodename: Mutex::new(nodename.map(|x| x.to_owned())),
             addrs: RwLock::new(addrs.iter().map(|e| (*e, Utc::now()).into()).collect()),
             ..Default::default()
         }
@@ -310,7 +314,7 @@ impl TargetInner {
 
     pub fn new_with_serial(nodename: &str, serial: &str) -> Self {
         Self {
-            nodename: nodename.to_string(),
+            nodename: Mutex::new(Some(nodename.to_string())),
             serial: RwLock::new(Some(serial.to_string())),
             ..Default::default()
         }
@@ -321,10 +325,14 @@ impl TargetInner {
     #[cfg(test)]
     pub fn new_with_time(nodename: &str, time: DateTime<Utc>) -> Self {
         Self {
-            nodename: nodename.to_string(),
+            nodename: Mutex::new(Some(nodename.to_string())),
             last_response: RwLock::new(time),
             ..Default::default()
         }
+    }
+
+    pub async fn nodename_str(&self) -> String {
+        self.nodename.lock().await.clone().unwrap_or("<unknown>".to_owned())
     }
 }
 
@@ -375,7 +383,7 @@ impl Target {
         let limit = chrono::Duration::from_std(limit).map_err(|e| format!("{:?}", e))?;
         loop {
             if let Some(t) = weak_target.upgrade() {
-                let nodename = t.nodename();
+                let nodename = t.nodename_str().await;
                 t.update_connection_state(|s| match s {
                     ConnectionState::Mdns(ref time) => {
                         let now = Utc::now();
@@ -438,7 +446,7 @@ impl Target {
         Self::from_inner(inner)
     }
 
-    pub fn new_with_addrs(nodename: &str, addrs: BTreeSet<TargetAddr>) -> Self {
+    pub fn new_with_addrs(nodename: Option<&str>, addrs: BTreeSet<TargetAddr>) -> Self {
         let inner = Arc::new(TargetInner::new_with_addrs(nodename, addrs));
         Self::from_inner(inner)
     }
@@ -467,8 +475,12 @@ impl Target {
         }
     }
 
-    pub fn nodename(&self) -> String {
-        self.inner.nodename.clone()
+    pub async fn nodename(&self) -> Option<String> {
+        self.inner.nodename.lock().await.clone()
+    }
+
+    pub async fn nodename_str(&self) -> String {
+        self.inner.nodename_str().await
     }
 
     pub async fn boot_timestamp_nanos(&self) -> Option<u64> {
@@ -570,7 +582,16 @@ impl Target {
         // replacing each item. This is to ensure that the timestamps are
         // updated as they are seen.
         iter.into_iter().for_each(move |e| {
-            let _ = addrs.replace((e, now.clone()).into());
+            // Subtle: If there's an IP match on a target entry, grab the original IP we had, which
+            // likely comes from a manual add or mdns, as that one will be scoped. If RCS is merging
+            // into us, the addresses that come from it are never scoped, and as such are not
+            // actually routable.
+
+            let mut entry = e;
+            if let Some(orig) = addrs.get(&(entry, now.clone()).into()) {
+                entry = orig.addr.clone();
+            }
+            addrs.replace((entry, now.clone()).into());
         });
     }
 
@@ -620,6 +641,22 @@ impl Target {
             let mut target_state = target.inner.state.lock().await;
             target_state.connection_state = ConnectionState::Rcs(r);
         }
+        {
+            let mut target_addrs = target.inner.addrs.write().await;
+            let localhost_v4 = IpAddr::V4(Ipv4Addr::LOCALHOST);
+            let localhost_v6 = IpAddr::V6(Ipv6Addr::LOCALHOST);
+            for addr in fidl_target.addresses {
+                for subnet in addr {
+                    // Note: This does not have a valid scope!
+                    let ta: TargetAddr = subnet.clone().into();
+                    // Do not add localhost addresses to the daemon from RCS, as every node has them.
+                    if ta.ip() == localhost_v4 || ta.ip() == localhost_v6 {
+                        continue;
+                    }
+                    target_addrs.replace(ta.into());
+                }
+            }
+        }
 
         Ok(target)
     }
@@ -640,7 +677,7 @@ impl Target {
 #[async_trait]
 impl EventSynthesizer<DaemonEvent> for Target {
     async fn synthesize_events(&self) -> Vec<DaemonEvent> {
-        vec![DaemonEvent::NewTarget(self.nodename())]
+        vec![DaemonEvent::NewTarget(self.nodename().await)]
     }
 }
 
@@ -651,14 +688,14 @@ impl ToFidlTarget for Target {
             futures::join!(self.addrs(), self.last_response(), self.rcs_state());
 
         bridge::Target {
-            nodename: Some(self.nodename()),
+            nodename: self.nodename().await,
             addresses: Some(addrs.iter().map(|a| a.into()).collect()),
             age_ms: Some(
                 match Utc::now().signed_duration_since(last_response).num_milliseconds() {
                     dur if dur < 0 => {
                         log::trace!(
                             "negative duration encountered on target '{}': {}",
-                            self.inner.nodename,
+                            self.inner.nodename_str().await,
                             dur
                         );
                         0
@@ -679,9 +716,9 @@ impl ToFidlTarget for Target {
 impl From<events::TargetInfo> for Target {
     fn from(mut t: events::TargetInfo) -> Self {
         if let Some(s) = t.serial {
-            Self::new_with_serial(t.nodename.as_ref(), &s)
+            Self::new_with_serial(t.nodename.as_str(), &s)
         } else {
-            Self::new_with_addrs(t.nodename.as_ref(), t.addresses.drain(..).collect())
+            Self::new_with_addrs(Some(t.nodename.as_str()), t.addresses.drain(..).collect())
         }
     }
 }
@@ -848,7 +885,9 @@ pub enum TargetQuery {
 impl TargetQuery {
     pub async fn matches(&self, t: &Target) -> bool {
         match self {
-            Self::Nodename(nodename) => *nodename == t.inner.nodename,
+            Self::Nodename(nodename) => {
+                t.inner.nodename.lock().await.as_ref().map(|x| *nodename == *x).unwrap_or(false)
+            }
             Self::Addr(addr) => {
                 let addrs = t.addrs().await;
                 // Try to do the lookup if either the scope_id is non-zero (and
@@ -904,8 +943,13 @@ impl From<u64> for TargetQuery {
     }
 }
 
+struct TargetCollectionInner {
+    named: HashMap<String, Target>,
+    unnamed: Vec<Target>,
+}
+
 pub struct TargetCollection {
-    inner: RwLock<HashMap<String, Target>>,
+    inner: RwLock<TargetCollectionInner>,
     events: RwLock<Option<events::Queue<DaemonEvent>>>,
 }
 
@@ -915,8 +959,11 @@ impl EventSynthesizer<DaemonEvent> for TargetCollection {
         let collection = self.inner.read().await;
         // TODO(awdavies): This won't be accurate once a target is able to create
         // more than one event at a time.
-        let mut res = Vec::with_capacity(collection.len());
-        for target in collection.values() {
+        let mut res = Vec::with_capacity(collection.named.len());
+        for target in collection.named.values() {
+            res.extend(target.synthesize_events().await);
+        }
+        for target in collection.unnamed.iter() {
             res.extend(target.synthesize_events().await);
         }
         res
@@ -925,7 +972,13 @@ impl EventSynthesizer<DaemonEvent> for TargetCollection {
 
 impl TargetCollection {
     pub fn new() -> Self {
-        Self { inner: RwLock::new(HashMap::new()), events: RwLock::new(None) }
+        Self {
+            inner: RwLock::new(TargetCollectionInner {
+                named: HashMap::new(),
+                unnamed: Vec::new(),
+            }),
+            events: RwLock::new(None),
+        }
     }
 
     pub async fn set_event_queue(&self, q: events::Queue<DaemonEvent>) {
@@ -940,15 +993,48 @@ impl TargetCollection {
     }
 
     pub async fn targets(&self) -> Vec<Target> {
-        self.inner.read().await.values().map(|t| t.clone()).collect()
+        let inner = self.inner.read().await;
+        inner.named.values().chain(inner.unnamed.iter()).cloned().collect()
     }
 
     pub async fn merge_insert(&self, t: Target) -> Target {
         let mut inner = self.inner.write().await;
+
+        let mut unnamed_match = None;
+
+        'outer: for (i, to_update) in inner.unnamed.iter().enumerate() {
+            for addr in to_update.addrs().await.into_iter() {
+                for other in t.addrs().await.into_iter() {
+                    if addr.ip == other.ip {
+                        unnamed_match = Some(i);
+                        break 'outer;
+                    }
+                }
+            }
+        }
+
+        let to_update = if let Some(unnamed_match) = unnamed_match {
+            if let Some(name) = t.inner.nodename.lock().await.clone() {
+                let mergeable = inner.unnamed.remove(unnamed_match);
+                *mergeable.inner.nodename.lock().await = Some(name.clone());
+                inner.named.insert(name, mergeable);
+                None
+            } else {
+                Some(&inner.unnamed[unnamed_match])
+            }
+        } else {
+            None
+        };
+
+        let nodename = t.inner.nodename.lock().await;
+
         // TODO(awdavies): better merging (using more indices for matching).
-        match inner.get(&t.inner.nodename) {
+        match to_update.or_else(|| nodename.as_ref().and_then(|name| inner.named.get(name))) {
             Some(to_update) => {
-                log::trace!("attempting to merge info into target: {}", t.inner.nodename);
+                log::trace!(
+                    "attempting to merge info into target: {}",
+                    t.inner.nodename_str().await
+                );
                 futures::join!(
                     to_update.update_last_response(t.last_response().await),
                     to_update.addrs_extend(t.addrs().await),
@@ -966,13 +1052,28 @@ impl TargetCollection {
                 to_update.clone()
             }
             None => {
-                let t: Target = t.into();
-                inner.insert(t.nodename(), t.clone());
-                log::info!("New target: {}", t.nodename());
-                if let Some(e) = self.events.read().await.as_ref() {
-                    e.push(DaemonEvent::NewTarget(t.nodename()))
-                        .await
-                        .unwrap_or_else(|e| log::warn!("unable to push new target event: {}", e));
+                std::mem::drop(nodename);
+                if let Some(name) = t.nodename().await.as_ref() {
+                    inner.named.insert(name.to_owned(), t.clone());
+                    log::info!("New target: {}", name);
+                    if let Some(e) = self.events.read().await.as_ref() {
+                        e.push(DaemonEvent::NewTarget(t.nodename().await)).await.unwrap_or_else(
+                            |e| log::warn!("unable to push new target event: {}", e),
+                        );
+                    }
+                } else {
+                    for to_return in inner.named.values() {
+                        for addr in to_return.addrs().await.into_iter() {
+                            for other in t.addrs().await.into_iter() {
+                                if addr.ip == other.ip {
+                                    to_return.update_last_response(t.last_response().await).await;
+                                    return to_return.clone();
+                                }
+                            }
+                        }
+                    }
+
+                    inner.unnamed.push(t.clone());
                 }
 
                 t
@@ -984,17 +1085,18 @@ impl TargetCollection {
     /// there is no target available (this doesn't await a new target).
     pub async fn get_default(&self, n: Option<String>) -> Result<Target> {
         let targets = self.inner.read().await;
-        match (targets.len(), n) {
+        match (targets.named.len(), n) {
             (0, None) => Err(anyhow!("no targets connected - is your device plugged in?")),
             (1, None) => {
                 let res = targets
+                    .named
                     .values()
                     .next()
                     .ok_or(anyhow!("no targets in cache"))
                     .map(|t| t.clone())?;
                 log::debug!(
                     "No default target selected, returning only target - {:?}",
-                    res.nodename(),
+                    res.nodename().await,
                 );
                 Ok(res)
             }
@@ -1005,6 +1107,7 @@ impl TargetCollection {
             (_, Some(nodename)) => {
                 // TODO(fxb/66152) Use target query instead.
                 targets
+                    .named
                     .iter()
                     .find_map(|(target_nodename, target)| {
                         if target_nodename.contains(&nodename) {
@@ -1019,7 +1122,8 @@ impl TargetCollection {
     }
 
     pub async fn get(&self, t: TargetQuery) -> Option<Target> {
-        for target in self.inner.read().await.values() {
+        let inner = self.inner.read().await;
+        for target in inner.named.values().chain(inner.unnamed.iter()) {
             if t.matches(target).await {
                 return Some(target.clone());
             }
@@ -1047,7 +1151,7 @@ mod test {
     impl Clone for TargetInner {
         fn clone(&self) -> Self {
             Self {
-                nodename: self.nodename.clone(),
+                nodename: Mutex::new(block_on(self.nodename.lock()).clone()),
                 last_response: RwLock::new(block_on(self.last_response.read()).clone()),
                 state: Mutex::new(block_on(self.state.lock()).clone()),
                 addrs: RwLock::new(block_on(self.addrs.read()).clone()),
@@ -1070,7 +1174,7 @@ mod test {
 
     impl PartialEq for Target {
         fn eq(&self, o: &Target) -> bool {
-            self.nodename() == o.nodename()
+            block_on(self.nodename()) == block_on(o.nodename())
                 && *block_on(self.inner.last_response.read())
                     == *block_on(o.inner.last_response.read())
                 && block_on(self.addrs()) == block_on(o.addrs())
@@ -1202,11 +1306,9 @@ mod test {
         );
         match Target::from_rcs_connection(conn).await {
             Ok(t) => {
-                assert_eq!(t.nodename(), "foo".to_string());
+                assert_eq!(t.nodename().await.unwrap(), "foo".to_string());
                 assert_eq!(t.rcs().await.unwrap().overnet_id.id, 1234u64);
-                // For now there shouldn't be any addresses put in here, as
-                // there's not a consistent way to convert them yet.
-                assert_eq!(t.addrs().await.len(), 0);
+                assert_eq!(t.addrs().await.len(), 1);
             }
             Err(_) => assert!(false),
         }
@@ -1332,7 +1434,7 @@ mod test {
         t.addrs_insert((a2, 1).into()).await;
 
         let t_conv = t.clone().to_fidl_target().await;
-        assert_eq!(t.nodename(), t_conv.nodename.unwrap().to_string());
+        assert_eq!(t.nodename().await.unwrap(), t_conv.nodename.unwrap().to_string());
         let addrs = t.addrs().await;
         let conv_addrs = t_conv.addresses.unwrap();
         assert_eq!(addrs.len(), conv_addrs.len());
@@ -1349,7 +1451,7 @@ mod test {
         let t = Target::new("clopperdoop");
         let vec = t.synthesize_events().await;
         assert_eq!(vec.len(), 1);
-        assert_eq!(&vec[0], &DaemonEvent::NewTarget("clopperdoop".to_string()));
+        assert_eq!(&vec[0], &DaemonEvent::NewTarget(Some("clopperdoop".to_string())));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1367,18 +1469,15 @@ mod test {
 
         let events = tc.synthesize_events().await;
         assert_eq!(events.len(), 3);
+        assert!(events.iter().any(
+            |e| e == &events::DaemonEvent::NewTarget(Some("clam-chowder-is-tasty".to_string()))
+        ));
         assert!(events
             .iter()
-            .any(|e| e == &events::DaemonEvent::NewTarget("clam-chowder-is-tasty".to_string())));
-        assert!(
-            events
-                .iter()
-                .any(|e| e
-                    == &events::DaemonEvent::NewTarget("this-is-a-crunchy-falafel".to_string()))
-        );
-        assert!(events.iter().any(
-            |e| e == &events::DaemonEvent::NewTarget("i-should-probably-eat-lunch".to_string())
-        ));
+            .any(|e| e
+                == &events::DaemonEvent::NewTarget(Some("this-is-a-crunchy-falafel".to_string()))));
+        assert!(events.iter().any(|e| e
+            == &events::DaemonEvent::NewTarget(Some("i-should-probably-eat-lunch".to_string()))));
     }
 
     struct EventPusher {
@@ -1395,7 +1494,7 @@ mod test {
     #[async_trait]
     impl events::EventHandler<DaemonEvent> for EventPusher {
         async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
-            if let DaemonEvent::NewTarget(s) = event {
+            if let DaemonEvent::NewTarget(Some(s)) = event {
                 self.got.unbounded_send(s).unwrap();
                 Ok(false)
             } else {
@@ -1432,11 +1531,9 @@ mod test {
         );
         let t = match Target::from_rcs_connection(conn).await {
             Ok(t) => {
-                assert_eq!(t.nodename(), "foo".to_string());
+                assert_eq!(t.nodename().await.unwrap(), "foo".to_string());
                 assert_eq!(t.rcs().await.unwrap().overnet_id.id, 1234u64);
-                // For now there shouldn't be any addresses put in here, as
-                // there's not a consistent way to convert them yet.
-                assert_eq!(t.addrs().await.len(), 0);
+                assert_eq!(t.addrs().await.len(), 1);
                 t
             }
             Err(_) => unimplemented!("this branch should never happen"),
@@ -1669,5 +1766,27 @@ mod test {
             t.addrs_insert_entry(a).await;
         }
         assert_eq!((&t.addrs().await).to_ssh_addr().unwrap(), TargetAddr::from(expected));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_merge_no_name() {
+        let ip = "f111::3".parse().unwrap();
+        let mut addr_set = BTreeSet::new();
+        addr_set.replace(TargetAddr { ip, scope_id: 0xbadf00d });
+        let t1 = Target::new_with_addrs(None, addr_set);
+        let t2 = Target::new("this-is-a-crunchy-falafel");
+        let tc = TargetCollection::new();
+        t2.inner.addrs.write().await.replace(TargetAddr { ip, scope_id: 0 }.into());
+        tc.merge_insert(t1).await;
+        tc.merge_insert(t2).await;
+        let mut targets = tc.targets().await.into_iter();
+        let target = targets.next().expect("Merging resulted in no targets.");
+        assert!(targets.next().is_none());
+        assert_eq!(target.nodename_str().await, "this-is-a-crunchy-falafel");
+        let mut addrs = target.addrs().await.into_iter();
+        let addr = addrs.next().expect("Merged target has no address.");
+        assert!(addrs.next().is_none());
+        assert_eq!(addr.ip, ip);
+        assert_eq!(addr.scope_id, 0xbadf00d);
     }
 }

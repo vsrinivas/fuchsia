@@ -150,7 +150,7 @@ impl Logger {
     async fn run_logger(&self) -> Result<()> {
         let target = self.target.upgrade().context("lost parent Arc")?;
 
-        log::info!("starting logger for {}", target.nodename());
+        log::info!("starting logger for {}", target.nodename_str().await);
         let remote_proxy = target.rcs().await.context("failed to get RCS")?.proxy;
 
         let (log_proxy, log_server_end) = create_proxy::<RemoteDiagnosticsBridgeMarker>()?;
@@ -161,7 +161,7 @@ impl Logger {
             Err(e) => {
                 log::info!(
                     "attempt to connect to logger for {} failed. {:?}",
-                    target.nodename(),
+                    target.nodename_str().await,
                     e
                 );
                 bail!("{:?}", e);
@@ -177,8 +177,8 @@ impl Logger {
         let boot_timestamp = target
             .boot_timestamp_nanos()
             .await
-            .ok_or(anyhow!("no boot timestamp for target {:?}", target.nodename()))?;
-        streamer.setup_stream(target.nodename(), boot_timestamp).await?;
+            .ok_or(anyhow!("no boot timestamp for target {:?}", target.nodename_str().await))?;
+        streamer.setup_stream(target.nodename_str().await, boot_timestamp).await?;
 
         let (listener_client, listener_fut) = write_logs_to_file(streamer.clone())?;
         let params = BridgeStreamParameters {
