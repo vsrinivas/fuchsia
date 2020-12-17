@@ -18,7 +18,6 @@ class Example;
 using ExampleHandle = ::fidl::InterfaceHandle<Example>;
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 class Example_foo_Response final {
  public:
   static const fidl_type_t* FidlType;
@@ -49,9 +48,7 @@ inline zx_status_t Clone(
 }
 
 using Example_foo_ResponsePtr = ::std::unique_ptr<Example_foo_Response>;
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 class Example_foo_Result final {
  public:
   static const fidl_type_t* FidlType;
@@ -155,8 +152,6 @@ inline zx_status_t Clone(const ::fidl::test::error::Example_foo_Result& value,
 }
 
 using Example_foo_ResultPtr = ::std::unique_ptr<Example_foo_Result>;
-#endif  // __Fuchsia__
-
 #ifdef __Fuchsia__
 
 namespace _internal {
@@ -207,7 +202,6 @@ class Example_ResponseEncoder {
 }  // namespace fidl
 namespace fidl {
 
-#ifdef __Fuchsia__
 template <>
 struct CodingTraits<::fidl::test::error::Example_foo_Response>
     : public EncodableCodingTraits<::fidl::test::error::Example_foo_Response,
@@ -234,9 +228,6 @@ struct Equality<::fidl::test::error::Example_foo_Response> {
     return true;
   }
 };
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 template <>
 struct IsFidlXUnion<::fidl::test::error::Example_foo_Result>
     : public std::true_type {};
@@ -304,7 +295,6 @@ struct Equality<::fidl::test::error::Example_foo_Result> {
     }
   }
 };
-#endif  // __Fuchsia__
 }  // namespace fidl
 
 //

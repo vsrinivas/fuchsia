@@ -10,11 +10,11 @@
         },
         "bottom/SomeLongAnonymousPrefix0": {
           "kind": "struct",
-          "resource": true
+          "resource": false
         },
         "bottom/SomeLongAnonymousPrefix1": {
           "kind": "struct",
-          "resource": true
+          "resource": false
         },
         "bottom/Foo": {
           "kind": "struct",
@@ -134,7 +134,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 8,
         "alignment": 8,

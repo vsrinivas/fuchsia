@@ -287,7 +287,7 @@ struct Struct final : public TypeDecl {
   using Member = StructMember;
 
   Struct(std::unique_ptr<raw::AttributeList> attributes, Name name,
-         std::vector<Member> unparented_members, types::Resourceness resourceness,
+         std::vector<Member> unparented_members, std::optional<types::Resourceness> resourceness,
          bool is_request_or_response = false)
       : TypeDecl(Kind::kStruct, std::move(attributes), std::move(name)),
         members(std::move(unparented_members)),
@@ -299,7 +299,11 @@ struct Struct final : public TypeDecl {
   }
 
   std::vector<Member> members;
-  const types::Resourceness resourceness;
+
+  // For user-defined structs, this is set during construction. For synthesized
+  // structs (requests/responses, error result success payload) it is set during
+  // compilation based on the struct's members.
+  std::optional<types::Resourceness> resourceness;
 
   // This is true iff this struct is a method request/response in a transaction header.
   const bool is_request_or_response;
@@ -416,7 +420,7 @@ struct Union final : public TypeDecl {
 
   Union(std::unique_ptr<raw::AttributeList> attributes, Name name,
         std::vector<Member> unparented_members, types::Strictness strictness,
-        types::Resourceness resourceness)
+        std::optional<types::Resourceness> resourceness)
       : TypeDecl(Kind::kUnion, std::move(attributes), std::move(name)),
         members(std::move(unparented_members)),
         strictness(strictness),
@@ -430,7 +434,11 @@ struct Union final : public TypeDecl {
 
   std::vector<Member> members;
   const types::Strictness strictness;
-  const types::Resourceness resourceness;
+
+  // For user-defined unions, this is set on construction. For synthesized
+  // unions (in error result responses) it is set during compilation based on
+  // the unions's members.
+  std::optional<types::Resourceness> resourceness;
 
   std::vector<std::reference_wrapper<const Member>> MembersSortedByXUnionOrdinal() const;
 

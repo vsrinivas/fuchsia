@@ -245,7 +245,7 @@ const $fidl.UnionType<WithErrorSyntaxResponseAsStructResult>
   },
   ctor: WithErrorSyntaxResponseAsStructResult._ctor,
   flexible: false,
-  resource: true,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -258,7 +258,7 @@ const $fidl.NullableUnionType<WithErrorSyntaxResponseAsStructResult>
   },
   ctor: WithErrorSyntaxResponseAsStructResult._ctor,
   flexible: false,
-  resource: true,
+  resource: false,
 );
 
 enum WithErrorSyntaxErrorAsPrimitiveResultTag {
@@ -354,7 +354,7 @@ const $fidl.UnionType<WithErrorSyntaxErrorAsPrimitiveResult>
   },
   ctor: WithErrorSyntaxErrorAsPrimitiveResult._ctor,
   flexible: false,
-  resource: true,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -367,7 +367,7 @@ const $fidl.NullableUnionType<WithErrorSyntaxErrorAsPrimitiveResult>
   },
   ctor: WithErrorSyntaxErrorAsPrimitiveResult._ctor,
   flexible: false,
-  resource: true,
+  resource: false,
 );
 
 enum WithErrorSyntaxErrorAsEnumResultTag {
@@ -461,7 +461,7 @@ const $fidl.UnionType<WithErrorSyntaxErrorAsEnumResult>
   },
   ctor: WithErrorSyntaxErrorAsEnumResult._ctor,
   flexible: false,
-  resource: true,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -474,7 +474,7 @@ const $fidl.NullableUnionType<WithErrorSyntaxErrorAsEnumResult>
   },
   ctor: WithErrorSyntaxErrorAsEnumResult._ctor,
   flexible: false,
-  resource: true,
+  resource: false,
 );
 
 class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {

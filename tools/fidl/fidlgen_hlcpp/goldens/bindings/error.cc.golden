@@ -11,7 +11,6 @@ namespace fidl {
 namespace test {
 namespace error {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_error_Example_foo_ResponseTable;
 const fidl_type_t* Example_foo_Response::FidlType =
     &fidl_test_error_Example_foo_ResponseTable;
@@ -41,9 +40,6 @@ zx_status_t Example_foo_Response::Clone(Example_foo_Response* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_error_Example_foo_ResultTable;
 const fidl_type_t* Example_foo_Result::FidlType =
     &fidl_test_error_Example_foo_ResultTable;
@@ -223,8 +219,6 @@ void Example_foo_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-#endif  // __Fuchsia__
-
 }  // namespace error
 }  // namespace test
 }  // namespace fidl

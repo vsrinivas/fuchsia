@@ -19,11 +19,11 @@
         },
         "middle/SomeLongAnonymousPrefix0": {
           "kind": "struct",
-          "resource": true
+          "resource": false
         },
         "middle/SomeLongAnonymousPrefix1": {
           "kind": "struct",
-          "resource": true
+          "resource": false
         }
       }
     }
@@ -131,7 +131,7 @@
           }
         }
       ],
-      "resource": true,
+      "resource": false,
       "type_shape_v1": {
         "inline_size": 8,
         "alignment": 8,

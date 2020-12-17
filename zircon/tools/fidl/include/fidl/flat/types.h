@@ -34,6 +34,10 @@ struct Type : public Object {
   const Kind kind;
   const types::Nullability nullability;
 
+  // Returns the nominal resourceness of the type per the FTP-057 definition.
+  // For IdentifierType, can only be called after the Decl has been compiled.
+  types::Resourceness Resourceness() const;
+
   // Comparison helper object.
   class Comparison {
    public:

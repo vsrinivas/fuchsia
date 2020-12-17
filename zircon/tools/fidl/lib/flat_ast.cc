@@ -94,6 +94,36 @@ struct MethodScope {
   Scope<const Protocol*> protocols;
 };
 
+// A helper class to derive the resourceness of synthesized decls based on their
+// members. If the given std::optional<types::Resourceness> is already set
+// (meaning the decl is user-defined, not synthesized), this does nothing.
+//
+// Types added via AddType must already be compiled. In other words, there must
+// not be cycles among the synthesized decls.
+class DeriveResourceness {
+ public:
+  explicit DeriveResourceness(std::optional<types::Resourceness>* target)
+      : target_(target), derive_(!target->has_value()), result_(types::Resourceness::kValue) {}
+
+  ~DeriveResourceness() {
+    if (derive_) {
+      *target_ = result_;
+    }
+  }
+
+  void AddType(const Type* type) {
+    if (derive_ && result_ == types::Resourceness::kValue &&
+        type->Resourceness() == types::Resourceness::kResource) {
+      result_ = types::Resourceness::kResource;
+    }
+  }
+
+ private:
+  std::optional<types::Resourceness>* const target_;
+  const bool derive_;
+  types::Resourceness result_;
+};
+
 // A helper class to track when a Decl is compiling and compiled.
 class Compiling {
  public:
@@ -1645,12 +1675,9 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
   result_attributes.emplace_back(*method, "Result", "");
   auto result_attributelist =
       std::make_unique<raw::AttributeList>(*method, std::move(result_attributes));
-  // There is no syntax for indicating the resourceness of a method result type,
-  // so we conservatively assume all such types are resources.
-  const auto resourceness = types::Resourceness::kResource;
-  auto union_decl =
-      std::make_unique<Union>(std::move(result_attributelist), std::move(result_name),
-                              std::move(result_members), types::Strictness::kStrict, resourceness);
+  auto union_decl = std::make_unique<Union>(std::move(result_attributelist), std::move(result_name),
+                                            std::move(result_members), types::Strictness::kStrict,
+                                            std::nullopt /* resourceness */);
   auto result_decl = union_decl.get();
   if (!RegisterDecl(std::move(union_decl)))
     return false;
@@ -1664,7 +1691,8 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
 
   auto struct_decl = std::make_unique<Struct>(
       nullptr /* attributes */, Name::CreateDerived(this, response_span, NextAnonymousName()),
-      std::move(response_members), resourceness, true /* is_request_or_response */);
+      std::move(response_members), std::nullopt /* resourceness */,
+      true /* is_request_or_response */);
   auto struct_decl_ptr = struct_decl.get();
   if (!RegisterDecl(std::move(struct_decl)))
     return false;
@@ -1790,11 +1818,8 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
                          std::move(parameter->attributes));
   }
 
-  // There is no syntax for indicating the resourceness of a parameter list, so
-  // we conservatively assume all parameter-list structs are resources.
-  const auto resourceness = types::Resourceness::kResource;
   if (!RegisterDecl(std::make_unique<Struct>(nullptr /* attributes */, std::move(name),
-                                             std::move(members), resourceness,
+                                             std::move(members), std::nullopt /* resourceness */,
                                              is_request_or_response)))
     return false;
   *out_struct_decl = struct_declarations_.back().get();
@@ -3011,6 +3036,47 @@ void VerifyResourcenessStep::ForDecl(const Decl* decl) {
   }
 }
 
+types::Resourceness Type::Resourceness() const {
+  switch (this->kind) {
+    case Type::Kind::kPrimitive:
+    case Type::Kind::kString:
+      return types::Resourceness::kValue;
+    case Type::Kind::kHandle:
+    case Type::Kind::kRequestHandle:
+      return types::Resourceness::kResource;
+    case Type::Kind::kArray:
+      return static_cast<const ArrayType*>(this)->element_type->Resourceness();
+    case Type::Kind::kVector:
+      return static_cast<const VectorType*>(this)->element_type->Resourceness();
+    case Type::Kind::kIdentifier:
+      break;
+  }
+
+  auto decl = static_cast<const IdentifierType*>(this)->type_decl;
+  switch (decl->kind) {
+    case Decl::Kind::kBits:
+    case Decl::Kind::kEnum:
+      return types::Resourceness::kValue;
+    case Decl::Kind::kProtocol:
+      return types::Resourceness::kResource;
+    case Decl::Kind::kStruct:
+      assert(decl->compiled && "Compiler bug: accessing resourceness of not-yet-compiled struct");
+      return static_cast<const Struct*>(decl)->resourceness.value();
+    case Decl::Kind::kTable:
+      return static_cast<const Table*>(decl)->resourceness;
+    case Decl::Kind::kUnion:
+      assert(decl->compiled && "Compiler bug: accessing resourceness of not-yet-compiled union");
+      return static_cast<const Union*>(decl)->resourceness.value();
+    case Decl::Kind::kConst:
+    case Decl::Kind::kResource:
+    case Decl::Kind::kService:
+    case Decl::Kind::kTypeAlias:
+      assert(false && "Compiler bug: unexpected kind");
+  }
+
+  __builtin_unreachable();
+}
+
 types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* type) {
   switch (type->kind) {
     case Type::Kind::kPrimitive:
@@ -3035,7 +3101,8 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
     case Decl::Kind::kProtocol:
       return types::Resourceness::kResource;
     case Decl::Kind::kStruct:
-      if (static_cast<const Struct*>(decl)->resourceness == types::Resourceness::kResource) {
+      if (static_cast<const Struct*>(decl)->resourceness.value() ==
+          types::Resourceness::kResource) {
         return types::Resourceness::kResource;
       }
       break;
@@ -3045,7 +3112,7 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
       }
       break;
     case Decl::Kind::kUnion:
-      if (static_cast<const Union*>(decl)->resourceness == types::Resourceness::kResource) {
+      if (static_cast<const Union*>(decl)->resourceness.value() == types::Resourceness::kResource) {
         return types::Resourceness::kResource;
       }
       break;
@@ -3384,6 +3451,7 @@ bool Library::CompileService(Service* service_decl) {
 
 bool Library::CompileStruct(Struct* struct_declaration) {
   Scope<std::string> scope;
+  DeriveResourceness derive_resourceness(&struct_declaration->resourceness);
   for (const auto& member : struct_declaration->members) {
     const auto original_name = member.name.data();
     const auto canonical_name = utils::canonicalize(original_name);
@@ -3415,6 +3483,7 @@ bool Library::CompileStruct(Struct* struct_declaration) {
         return false;
       }
     }
+    derive_resourceness.AddType(member.type_ctor->type);
   }
 
   return true;
@@ -3460,6 +3529,7 @@ bool Library::CompileTable(Table* table_declaration) {
 bool Library::CompileUnion(Union* union_declaration) {
   Scope<std::string> scope;
   Ordinal64Scope ordinal_scope;
+  DeriveResourceness derive_resourceness(&union_declaration->resourceness);
 
   for (const auto& member : union_declaration->members) {
     const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
@@ -3484,6 +3554,7 @@ bool Library::CompileUnion(Union* union_declaration) {
       if (!CompileTypeConstructor(member_used.type_ctor.get())) {
         return false;
       }
+      derive_resourceness.AddType(member_used.type_ctor->type);
     }
   }
 

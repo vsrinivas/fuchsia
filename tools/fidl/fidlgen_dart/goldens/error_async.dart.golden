@@ -123,7 +123,7 @@ const $fidl.UnionType<ExampleFooResult> kExample_foo_Result_Type =
   },
   ctor: ExampleFooResult._ctor,
   flexible: false,
-  resource: true,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -135,7 +135,7 @@ const $fidl.NullableUnionType<ExampleFooResult> kExample_foo_Result_OptType =
   },
   ctor: ExampleFooResult._ctor,
   flexible: false,
-  resource: true,
+  resource: false,
 );
 
 class ExampleFooResponse extends $fidl.Struct {
