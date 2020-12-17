@@ -8,17 +8,12 @@ use {crate::core::util::jsons::*, serde::Serialize, std::collections::HashMap};
 
 pub type ServiceMapping = HashMap<String, String>;
 
-///  Packages can either be builtin (infered) or from a FAR package.
-pub enum PackageType {
-    Package,
-}
-
 /// Defines the interior properties of a package that we care about for
 /// constructing the model.
 pub struct PackageDefinition {
     pub url: String,
     pub merkle: String,
-    pub typ: PackageType,
+    pub meta: HashMap<String, String>,
     pub contents: HashMap<String, String>,
     pub cms: HashMap<String, ComponentManifest>,
 }

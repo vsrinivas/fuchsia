@@ -45,6 +45,7 @@ if (is_host) {
       "src/core/controller/mod.rs",
       "src/core/controller/package.rs",
       "src/core/controller/route.rs",
+      "src/core/controller/sysmgr.rs",
       "src/core/controller/utils.rs",
       "src/core/controller/zbi.rs",
       "src/core/mod.rs",

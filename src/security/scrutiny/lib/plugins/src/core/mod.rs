@@ -9,7 +9,7 @@ mod util;
 
 use {
     crate::core::{
-        controller::{blob::*, component::*, package::*, route::*, zbi::*},
+        controller::{blob::*, component::*, package::*, route::*, sysmgr::*, zbi::*},
         package::collector::*,
     },
     scrutiny::prelude::*,
@@ -31,6 +31,7 @@ plugin!(
             "/packages" => PackagesGraphController::default(),
             "/routes" => RoutesGraphController::default(),
             "/blob" => BlobController::new(),
+            "/sysmgr/services" => SysmgrServicesController::default(),
             "/zbi/sections" => ZbiSectionsController::default(),
             "/zbi/bootfs" => BootfsPathsController::default(),
             "/zbi/cmdline" => ZbiCmdlineController::default(),

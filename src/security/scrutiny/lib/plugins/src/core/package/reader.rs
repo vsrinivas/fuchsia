@@ -27,8 +27,8 @@ pub trait PackageReader: Send + Sync {
     ///
     /// Currently only CFv1 is supported, CFv2 support is tracked here (fxbug.dev/53347).
     fn read_package_definition(&self, pkg_name: &str, merkle: &str) -> Result<PackageDefinition>;
-    /// Reads the service package defined by the merkle hash.
-    fn read_service_package_definition(&self, merkle: &str) -> Result<ServicePackageDefinition>;
+    /// Reads the service package from the provided data.
+    fn read_service_package_definition(&self, data: String) -> Result<ServicePackageDefinition>;
 }
 
 pub struct PackageServerReader {
@@ -61,8 +61,8 @@ impl PackageReader for PackageServerReader {
 
         let mut pkg_def = PackageDefinition {
             url: util::to_package_url(pkg_name)?,
-            typ: PackageType::Package,
             merkle: String::from(merkle), // FIXME: Do we need to copy? Or maybe we can just move it here?
+            meta: HashMap::new(),
             contents: HashMap::new(), // How do I do this better? Maybe I need to change PackageDefinition into a builder pattern
             cms: HashMap::new(),
         };
@@ -85,6 +85,15 @@ impl PackageReader for PackageServerReader {
                 if item.starts_with("meta/") && item.ends_with(CF_V2_EXT) {
                     cf_v2_files.push(String::from(item));
                 }
+            }
+        }
+
+        // Meta files exist directly in the FAR and aren't represented by blobs.
+        let meta_files: Vec<String> = far.list().map(String::from).collect();
+        for meta_item in meta_files {
+            let meta_bytes = far.read_file(&meta_item)?;
+            if let Ok(meta_contents) = str::from_utf8(&meta_bytes) {
+                pkg_def.meta.insert(String::from(meta_item), meta_contents.to_string());
             }
         }
 
@@ -111,11 +120,8 @@ impl PackageReader for PackageServerReader {
         Ok(pkg_def)
     }
 
-    fn read_service_package_definition(&self, merkle: &str) -> Result<ServicePackageDefinition> {
-        let cfg_pkg_b = self.read_blob_raw(&merkle)?;
-        let mut cfg_pkg_str = str::from_utf8(&cfg_pkg_b)?;
-
-        Ok(serde_json::from_str(&mut cfg_pkg_str)?)
+    fn read_service_package_definition(&self, data: String) -> Result<ServicePackageDefinition> {
+        Ok(serde_json::from_str(&data)?)
     }
 }
 

@@ -6,7 +6,7 @@ use {
     crate::core::{
         collection::{
             Capability, Component, Components, Manifest, ManifestData, Manifests, Package,
-            Packages, ProtocolCapability, Route, Routes, Zbi,
+            Packages, ProtocolCapability, Route, Routes, Sysmgr, Zbi,
         },
         package::{artifact::ArtifactGetter, getter::PackageGetter, reader::*},
         util::types::*,
@@ -97,10 +97,11 @@ impl PackageDataCollector {
         // Find and add all services as defined in config-data
         for pkg_def in served {
             if pkg_def.url == CONFIG_DATA_PKG_URL {
-                for (name, merkle) in &pkg_def.contents {
+                for (name, data) in &pkg_def.meta {
                     if SERVICE_CONFIG_RE.is_match(&name) {
-                        let service_pkg =
-                            self.package_reader.read_service_package_definition(merkle)?;
+                        let service_pkg = self
+                            .package_reader
+                            .read_service_package_definition(data.to_string())?;
 
                         if let Some(services) = service_pkg.services {
                             for (service_name, service_url_or_array) in services {
@@ -139,7 +140,7 @@ impl PackageDataCollector {
                                 combined.insert(service_name, service_url);
                             }
                         } else {
-                            debug!("Expected service with merkle {} to exist. Optimistically continuing.", merkle);
+                            debug!("Expected service with name {} to exist. Optimistically continuing.", name);
                         }
                     }
                 }
@@ -499,15 +500,15 @@ impl DataCollector for PackageDataCollector {
     fn collect(&self, model: Arc<DataModel>) -> Result<()> {
         let served_packages = self.get_packages()?;
 
-        let services = self.merge_services(&served_packages)?;
+        let sysmgr_services = self.merge_services(&served_packages)?;
 
         info!(
             "Done collecting. Found {} services, {} served packages.",
-            services.keys().len(),
+            sysmgr_services.keys().len(),
             served_packages.len(),
         );
 
-        let response = PackageDataCollector::build_model(served_packages, services)?;
+        let response = PackageDataCollector::build_model(served_packages, sysmgr_services.clone())?;
 
         let mut model_comps = vec![];
         for (_, val) in response.components.into_iter() {
@@ -517,6 +518,7 @@ impl DataCollector for PackageDataCollector {
         model.set(Packages::new(response.packages))?;
         model.set(Manifests::new(response.manifests))?;
         model.set(Routes::new(response.routes))?;
+        model.set(Sysmgr::new(sysmgr_services))?;
         if let Some(zbi) = response.zbi {
             model.set(zbi)?;
         } else {
@@ -593,7 +595,7 @@ mod tests {
 
         fn read_service_package_definition(
             &self,
-            _merkle: &str,
+            _data: String,
         ) -> Result<ServicePackageDefinition> {
             let mut borrow = self.service_package_defs.write().unwrap();
             {
@@ -636,7 +638,7 @@ mod tests {
         PackageDefinition {
             url: url,
             merkle: String::from("0"),
-            typ: PackageType::Package,
+            meta: HashMap::new(),
             contents: HashMap::new(),
             cms: cms,
         }
@@ -649,8 +651,21 @@ mod tests {
         PackageDefinition {
             url: url,
             merkle: String::from("0"),
-            typ: PackageType::Package,
+            meta: HashMap::new(),
             contents: contents,
+            cms: HashMap::new(),
+        }
+    }
+
+    fn create_test_package_with_meta(
+        url: String,
+        meta: HashMap<String, String>,
+    ) -> PackageDefinition {
+        PackageDefinition {
+            url: url,
+            merkle: String::from("0"),
+            meta,
+            contents: HashMap::new(),
             cms: HashMap::new(),
         }
     }
@@ -737,10 +752,10 @@ mod tests {
 
         let collector = PackageDataCollector { package_reader: Box::new(mock_reader) };
 
-        let mut contents = HashMap::new();
-        contents.insert(String::from("data/sysmgr/foo.config"), String::from("test_merkle"));
-        contents.insert(String::from("data/sysmgr/bar.config"), String::from("test_merkle_2"));
-        let pkg = create_test_package_with_contents(String::from(CONFIG_DATA_PKG_URL), contents);
+        let mut meta = HashMap::new();
+        meta.insert(String::from("data/sysmgr/foo.config"), String::from("test_merkle"));
+        meta.insert(String::from("data/sysmgr/bar.config"), String::from("test_merkle_2"));
+        let pkg = create_test_package_with_meta(String::from(CONFIG_DATA_PKG_URL), meta);
         let served = vec![pkg];
 
         let result = collector.merge_services(&served).unwrap();
@@ -767,10 +782,10 @@ mod tests {
 
         let collector = PackageDataCollector { package_reader: Box::new(mock_reader) };
 
-        let mut contents = HashMap::new();
-        contents.insert(String::from("data/sysmgr/service1.config"), String::from("test_merkle"));
-        contents.insert(String::from("data/sysmgr/service2.config"), String::from("test_merkle_2"));
-        let pkg = create_test_package_with_contents(String::from(CONFIG_DATA_PKG_URL), contents);
+        let mut meta = HashMap::new();
+        meta.insert(String::from("data/sysmgr/service1.config"), String::from("test_merkle"));
+        meta.insert(String::from("data/sysmgr/service2.config"), String::from("test_merkle_2"));
+        let pkg = create_test_package_with_meta(String::from(CONFIG_DATA_PKG_URL), meta);
         let served = vec![pkg];
 
         let result = collector.merge_services(&served).unwrap();
@@ -796,10 +811,10 @@ mod tests {
 
         let collector = PackageDataCollector { package_reader: Box::new(mock_reader) };
 
-        let mut contents = HashMap::new();
-        contents.insert(String::from("data/sysmgr/service1.config"), String::from("test_merkle"));
-        contents.insert(String::from("data/sysmgr/service2.config"), String::from("test_merkle_2"));
-        let pkg = create_test_package_with_contents(String::from(CONFIG_DATA_PKG_URL), contents);
+        let mut meta = HashMap::new();
+        meta.insert(String::from("data/sysmgr/service1.config"), String::from("test_merkle"));
+        meta.insert(String::from("data/sysmgr/service2.config"), String::from("test_merkle_2"));
+        let pkg = create_test_package_with_meta(String::from(CONFIG_DATA_PKG_URL), meta);
         let served = vec![pkg];
 
         let result = collector.merge_services(&served).unwrap();

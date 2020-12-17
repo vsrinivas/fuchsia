@@ -377,3 +377,26 @@ impl DataCollection for Zbi {
         Uuid::parse_str("df9ec25f-63b7-4d88-8e79-5ff9deb0afa8").unwrap()
     }
 }
+
+/// Defines all the services exposed by sysmgr.
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+pub struct Sysmgr {
+    // Mapping from service-name -> url.
+    pub services: HashMap<String, String>,
+}
+
+impl Sysmgr {
+    pub fn new(services: HashMap<String, String>) -> Self {
+        Self { services }
+    }
+
+    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, String, String> {
+        self.services.iter()
+    }
+}
+
+impl DataCollection for Sysmgr {
+    fn uuid() -> Uuid {
+        Uuid::parse_str("422bcffa-395d-4ed6-a9ad-960bb11f79c2").unwrap()
+    }
+}
