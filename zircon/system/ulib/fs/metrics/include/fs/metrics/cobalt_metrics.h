@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <unordered_map>
 #include <utility>
 
@@ -15,6 +16,8 @@
 #include <cobalt-client/cpp/histogram.h>
 #include <fbl/string.h>
 #include <fs/metrics/events.h>
+
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 
 namespace fs_metrics {
 
@@ -26,7 +29,7 @@ struct FsCommonMetrics {
   // Number of buckets used for the these metrics.
   static constexpr uint32_t kHistogramBuckets = 10;
 
-  FsCommonMetrics(cobalt_client::Collector* collector, const fbl::String& fs_name);
+  FsCommonMetrics(cobalt_client::Collector* collector, Component component);
 
   struct VnodeMetrics {
     cobalt_client::Histogram<kHistogramBuckets> close;
@@ -94,7 +97,7 @@ struct CompressionFormatMetrics {
 class Metrics {
  public:
   Metrics() = delete;
-  Metrics(std::unique_ptr<cobalt_client::Collector> collector, const fbl::String& fs_name,
+  Metrics(std::unique_ptr<cobalt_client::Collector> collector, Component component,
           fs_metrics::CompressionSource source = fs_metrics::CompressionSource::kUnknown);
   Metrics(const Metrics&) = delete;
   Metrics(Metrics&&) = delete;
@@ -108,11 +111,8 @@ class Metrics {
   // Returns true if the Logger is collecting.
   bool IsEnabled() const;
 
-  // Returns the collector.
-  const cobalt_client::Collector& collector() const { return *collector_; }
-
-  // Returns the collector.
-  cobalt_client::Collector* mutable_collector() { return collector_.get(); }
+  // Flushes all metrics.  Returns true if successful.
+  bool Flush();
 
   const FsCommonMetrics& fs_common_metrics() const;
   FsCommonMetrics* mutable_fs_common_metrics();
@@ -120,15 +120,46 @@ class Metrics {
   const CompressionFormatMetrics& compression_format_metrics() const;
   CompressionFormatMetrics* mutable_compression_format_metrics();
 
+  void RecordOldestVersionMounted(std::string_view version);
+
  private:
-  std::unique_ptr<cobalt_client::Collector> collector_;
+  struct CompareCounters {
+    using is_transparent = cobalt_client::MetricOptions;
+
+    bool operator()(const std::unique_ptr<cobalt_client::Counter>& left,
+                    const std::unique_ptr<cobalt_client::Counter>& right) const {
+      return cobalt_client::MetricOptions::LessThan()(left->GetOptions(), right->GetOptions());
+    }
+
+    bool operator()(const std::unique_ptr<cobalt_client::Counter>& left,
+                    const cobalt_client::MetricOptions& right) const {
+      return cobalt_client::MetricOptions::LessThan()(left->GetOptions(), right);
+    }
+
+    bool operator()(const cobalt_client::MetricOptions& left,
+                    const std::unique_ptr<cobalt_client::Counter>& right) const {
+      return cobalt_client::MetricOptions::LessThan()(left, right->GetOptions());
+    }
+  };
+
+  std::mutex mutex_;
+  Component component_;
+  std::unique_ptr<cobalt_client::Collector> collector_ FXL_GUARDED_BY(mutex_);
 
   FsCommonMetrics fs_common_metrics_;
 
   CompressionFormatMetrics compression_format_metrics_;
 
+  // Low frequency counters created on the fly with dynamic metric options.  Currently used
+  // just for recording the oldest versions and discarded after flushing.
+  std::set<std::unique_ptr<cobalt_client::Counter>, CompareCounters> temporary_counters_
+      FXL_GUARDED_BY(mutex_);
+
   bool is_enabled_ = false;
 };
+
+// Returns the component name for the given component.
+std::string_view ComponentName(Component component);
 
 }  // namespace fs_metrics
 

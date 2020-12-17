@@ -47,11 +47,21 @@ enum class Event : uint32_t {
   kJournalWriterSync = 26,
   kJournalWriterWriteInfoBlock = 27,
 
+  // Oldest version
+  kVersion = 28,
+
   // This is an event used to identify last or invalid event.
-  kInvalidEvent = 28,
+  kInvalidEvent = 29,
 };
 
-enum class CorruptionSource { kUnknown = 0, kFvm = 1, kBlobfs = 2, kMinfs = 3 };
+enum class Component {
+  kUnknown = 0,
+  kFvm = 1,
+  kBlobfs = 2,
+  kMinfs = 3,
+};
+
+using CorruptionSource = Component;
 
 enum class CorruptionType { kUnknown = 0, kMetadata = 1, kData = 2 };
 

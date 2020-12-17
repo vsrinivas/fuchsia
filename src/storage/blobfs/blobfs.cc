@@ -344,6 +344,11 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     FX_LOGS(ERROR) << "Failed to initialize corruption notifier: " << zx_status_get_string(status);
   }
 
+  // Here we deliberately use a '/' separator rather than '.' to avoid looking like a conventional
+  // version number, since they are not --- format version and revision can increment independently.
+  fs->Metrics()->cobalt_metrics().RecordOldestVersionMounted(
+      std::to_string(fs->Info().format_version) + "/" + std::to_string(fs->Info().oldest_revision));
+
   *out = std::move(fs);
   return ZX_OK;
 }

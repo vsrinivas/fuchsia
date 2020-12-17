@@ -44,6 +44,14 @@ constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
 // The revision is used to updated the oldest_revision field in the header.
 //
 // See //src/storage/docs/versioning.md for more.
+
+// *************************************************************************************************
+// * IMPORTANT: When changing either kBlobfsCurrentFormatVersion or kBlobfsCurrentRevision, be     *
+// * sure to make an appropriate change to                                                         *
+// * //third_party/cobalt_config/fuchsia/local_storage/versions.txt (submission order does not     *
+// * matter).                                                                                      *
+// *************************************************************************************************
+
 constexpr uint32_t kBlobfsCurrentFormatVersion = 0x00000009;
 
 // Revision 2: introduced a backup superblock.

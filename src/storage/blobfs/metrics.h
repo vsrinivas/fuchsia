@@ -73,7 +73,6 @@ class BlobfsMetrics : public fs::MetricsTrait {
     return LatencyEvent(event, &histograms_, cobalt_metrics_.mutable_fs_common_metrics());
   }
 
-  cobalt_client::Collector* GetCollector() override { return mutable_collector(); }
   inspect::Node* GetInspectRoot() override { return &journal_stats_; }
 
   // Increments Cobalt metrics tracking compression formats. Extracts the compression format from
@@ -104,8 +103,7 @@ class BlobfsMetrics : public fs::MetricsTrait {
   // Accessor for BlobFS Inspector. This Inspector serves the BlobFS inspect tree.
   inspect::Inspector* inspector() { return &inspector_; }
 
-  // Returns the underlying collector of cobalt metrics.
-  cobalt_client::Collector* mutable_collector() { return cobalt_metrics_.mutable_collector(); }
+  fs_metrics::Metrics& cobalt_metrics() { return cobalt_metrics_; }
 
  private:
   // Flushes the metrics to the cobalt client and schedules itself to flush again.
@@ -192,8 +190,8 @@ class BlobfsMetrics : public fs::MetricsTrait {
   static constexpr uint32_t kCobaltProjectId = 3676913920;
   // Cobalt metrics.
   fs_metrics::Metrics cobalt_metrics_ =
-      fs_metrics::Metrics(std::make_unique<cobalt_client::Collector>(kCobaltProjectId), "blobfs",
-                          fs_metrics::CompressionSource::kBlobfs);
+      fs_metrics::Metrics(std::make_unique<cobalt_client::Collector>(kCobaltProjectId),
+                          fs_metrics::Component::kBlobfs, fs_metrics::CompressionSource::kBlobfs);
 
   // Loop for flushing the collector periodically.
   async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);

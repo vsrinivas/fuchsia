@@ -22,8 +22,6 @@ namespace {
 
 using internal::SelectHistogram;
 
-constexpr std::string_view kComponentName = "test-metrics-fs";
-
 class CompositeLatencyEventTest : public zxtest::Test {
  public:
   CompositeLatencyEventTest() : inspector_() {
@@ -31,7 +29,8 @@ class CompositeLatencyEventTest : public zxtest::Test {
         std::make_unique<cobalt_client::InMemoryLogger>();
     logger_ = logger.get();
     collector_ = std::make_unique<cobalt_client::Collector>(std::move(logger));
-    metrics_ = std::make_unique<fs_metrics::FsCommonMetrics>(collector_.get(), kComponentName);
+    metrics_ = std::make_unique<fs_metrics::FsCommonMetrics>(collector_.get(),
+                                                             fs_metrics::Component::kUnknown);
     histograms_ = std::make_unique<Histograms>(&inspector_.GetRoot());
   }
 
@@ -94,7 +93,7 @@ TEST_F(CompositeLatencyEventTest, SelectAppropiateHistogram) {
   for (auto event : kVnodeEvents) {
     cobalt_client::MetricOptions options = {};
     options.metric_id = static_cast<uint32_t>(event);
-    options.component = kComponentName;
+    options.component = ComponentName(Component::kUnknown);
     auto entry = logger_->histograms().find(options);
     EXPECT_NE(logger_->histograms().end(), entry);
     // There should be one event per bucket, since we made a one to one mapping for each event.

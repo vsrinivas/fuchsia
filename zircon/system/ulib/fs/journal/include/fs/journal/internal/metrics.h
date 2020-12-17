@@ -21,7 +21,6 @@ class MetricsTrait {
  public:
   virtual ~MetricsTrait() = default;
   virtual inspect::Node* GetInspectRoot() = 0;
-  virtual cobalt_client::Collector* GetCollector() = 0;
   virtual fs_metrics::CompositeLatencyEvent NewLatencyEvent(fs_metrics::Event event) = 0;
 };
 
@@ -67,7 +66,7 @@ class JournalMetrics {
   }
 
   LatencyEvent NewLatencyEvent(fs_metrics::Event event) {
-    if (!Enabled()) {
+    if (!root_) {
       return LatencyEvent(std::nullopt);
     }
     return LatencyEvent(root_->NewLatencyEvent(event));
@@ -78,20 +77,8 @@ class JournalMetrics {
     return root_ == nullptr ? nullptr : root_->GetInspectRoot();
   }
 
-  cobalt_client::Collector* GetCollector() const {
-    if (root_ == nullptr)
-      return nullptr;
-    return root_ == nullptr ? nullptr : root_->GetCollector();
-  }
-
-  // Returns true if both(cobalt and inspect) metrics are enabled.
-  bool Enabled() const { return IsCobaltEnabled() && IsInspectEnabled(); }
-
   // Returns true if inspect metrics are enabled.
   bool IsInspectEnabled() const { return GetInspectRoot() != nullptr; }
-
-  // Returns true if cobalt metrics are enabled.
-  bool IsCobaltEnabled() const { return GetCollector() != nullptr; }
 
   // Filesystem's metrics.
   std::shared_ptr<MetricsTrait> root_ = nullptr;

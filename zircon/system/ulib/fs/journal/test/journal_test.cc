@@ -2946,18 +2946,17 @@ TEST_F(JournalTest, WriteMetadataWithBadBlockCountFails) {
 class FakeFsMetrics : public fs::MetricsTrait {
  public:
   using Histograms = fs_metrics::Histograms;
-  static constexpr std::string_view kComponentName = "fakefs";
   FakeFsMetrics() : inspector_() {
     std::unique_ptr<cobalt_client::InMemoryLogger> logger =
         std::make_unique<cobalt_client::InMemoryLogger>();
     logger_ = logger.get();
     collector_ = std::make_unique<cobalt_client::Collector>(std::move(logger));
-    metrics_ = std::make_unique<fs_metrics::FsCommonMetrics>(collector_.get(), kComponentName);
+    metrics_ = std::make_unique<fs_metrics::FsCommonMetrics>(collector_.get(),
+                                                             fs_metrics::Component::kUnknown);
     histograms_ = std::make_unique<Histograms>(&inspector_.GetRoot());
   }
 
   inspect::Node* GetInspectRoot() override { return &inspector_.GetRoot(); }
-  cobalt_client::Collector* GetCollector() override { return collector_.get(); }
   fs_metrics::CompositeLatencyEvent NewLatencyEvent(fs_metrics::Event event) override {
     fs_metrics::CompositeLatencyEvent latency_event(event, histograms_.get(), metrics_.get());
     return latency_event;
@@ -2967,7 +2966,7 @@ class FakeFsMetrics : public fs::MetricsTrait {
   uint32_t GetObservations(fs_metrics::Event event) const {
     cobalt_client::MetricOptions options = {};
     options.metric_id = static_cast<uint32_t>(event);
-    options.component = FakeFsMetrics::kComponentName;
+    options.component = fs_metrics::ComponentName(fs_metrics::Component::kUnknown);
     options.event_codes = {};
     auto entry = logger_->histograms().find(options);
     if (logger_->histograms().end() == entry) {

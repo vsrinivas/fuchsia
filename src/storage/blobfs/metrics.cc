@@ -154,7 +154,7 @@ void BlobfsMetrics::ScheduleMetricFlush() {
   async::PostDelayedTask(
       flush_loop_.dispatcher(),
       [this]() {
-        mutable_collector()->Flush();
+        cobalt_metrics_.Flush();
         ScheduleMetricFlush();
       },
       kCobaltFlushTimer);
