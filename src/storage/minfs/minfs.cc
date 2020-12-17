@@ -36,6 +36,7 @@
 #include <fs/journal/header_view.h>
 #include <fs/journal/journal.h>
 #include <fs/journal/replay.h>
+#include <fs/metrics/events.h>
 #include <fs/pseudo_dir.h>
 #include <storage/buffer/owned_vmoid.h>
 
@@ -1234,6 +1235,25 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
       .use_journal = true,
       .dirty_cache_enabled = Minfs::DirtyCacheEnabled(),
   };
+
+  // Report the oldest version mounted.  For now these are our only Cobalt metrics.  When more are
+  // added, this will have to change a bit.
+  auto cobalt_client =
+      options.collector_factory
+          ? options.collector_factory()
+          : std::make_unique<cobalt_client::Collector>(fs_metrics::kCobaltProjectId);
+  auto metrics = std::make_unique<fs_metrics::Metrics>(std::move(cobalt_client),
+                                                       fs_metrics::Component::kMinfs);
+  metrics->RecordOldestVersionMounted(std::to_string(fs->Info().format_version) + "/" +
+                                      std::to_string(fs->Info().oldest_revision));
+  std::thread metric_flusher([metrics = std::move(metrics)] {
+    // Keep trying to flush until we succeed.
+    while (!metrics->Flush()) {
+      sleep(30);
+    }
+  });
+  metric_flusher.detach();
+
 #endif  // defined(__Fuchsia__)
 
   *out = std::move(fs);

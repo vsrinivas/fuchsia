@@ -7,6 +7,7 @@
 
 #include <inttypes.h>
 
+#include <functional>
 #include <memory>
 
 #include <fbl/algorithm.h>
@@ -18,6 +19,8 @@
 
 #ifdef __Fuchsia__
 #include <lib/async/dispatcher.h>
+
+#include <fs/metrics/cobalt_metrics.h>
 #endif
 
 #include <utility>
@@ -85,6 +88,11 @@ struct MountOptions {
 
   // If true, don't log messages except for errors.
   bool quiet = false;
+
+#ifdef __Fuchsia__
+  // A function that generates a Cobalt collector.  If not provided, a default collector is used.
+  std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory;
+#endif
 };
 
 uint32_t CalculateVsliceCount(const Superblock& superblock);

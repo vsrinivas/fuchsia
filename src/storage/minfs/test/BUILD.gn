@@ -48,6 +48,7 @@ test("minfs_unit") {
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/disk_inspector",
     "//zircon/system/ulib/fs-management",
     "//zircon/third_party/ulib/cksum",

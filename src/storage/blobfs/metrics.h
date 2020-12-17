@@ -186,11 +186,9 @@ class BlobfsMetrics : public fs::MetricsTrait {
 
   fs_metrics::Histograms histograms_ = fs_metrics::Histograms(&root_);
 
-  // local_storage project ID as defined in cobalt-analytics projects.yaml.
-  static constexpr uint32_t kCobaltProjectId = 3676913920;
   // Cobalt metrics.
   fs_metrics::Metrics cobalt_metrics_ =
-      fs_metrics::Metrics(std::make_unique<cobalt_client::Collector>(kCobaltProjectId),
+      fs_metrics::Metrics(std::make_unique<cobalt_client::Collector>(fs_metrics::kCobaltProjectId),
                           fs_metrics::Component::kBlobfs, fs_metrics::CompressionSource::kBlobfs);
 
   // Loop for flushing the collector periodically.

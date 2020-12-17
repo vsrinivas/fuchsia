@@ -166,6 +166,7 @@ static_library("minfs") {
       "//zircon/system/ulib/async-loop:async-loop-default",
       "//zircon/system/ulib/fdio-caller",
       "//zircon/system/ulib/fidl-utils",
+      "//zircon/system/ulib/fs/metrics:metrics-cobalt",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/storage-metrics",
       "//zircon/system/ulib/trace",

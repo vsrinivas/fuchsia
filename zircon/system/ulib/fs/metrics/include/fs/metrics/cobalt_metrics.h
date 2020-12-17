@@ -21,6 +21,9 @@
 
 namespace fs_metrics {
 
+// local_storage project ID as defined in cobalt-analytics projects.yaml.
+static constexpr uint32_t kCobaltProjectId = 3676913920;
+
 using CompressionFormatCounter =
     std::unordered_map<fs_metrics::CompressionFormat, std::unique_ptr<cobalt_client::Counter>>;
 

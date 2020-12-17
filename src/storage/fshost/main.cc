@@ -32,6 +32,7 @@
 
 #include <cobalt-client/cpp/collector.h>
 #include <fbl/unique_fd.h>
+#include <fs/metrics/cobalt_metrics.h>
 #include <fs/remote_dir.h>
 #include <fs/service.h>
 #include <ramdevice-client/ramdisk.h>
@@ -47,12 +48,9 @@ namespace fio = ::llcpp::fuchsia::io;
 namespace devmgr {
 namespace {
 
-// local_storage project ID as defined in cobalt-analytics projects.yaml.
-constexpr uint32_t kCobaltProjectId = 3676913920;
-
 std::unique_ptr<FsHostMetrics> MakeMetrics() {
   return std::make_unique<FsHostMetrics>(
-      std::make_unique<cobalt_client::Collector>(kCobaltProjectId));
+      std::make_unique<cobalt_client::Collector>(fs_metrics::kCobaltProjectId));
 }
 
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
