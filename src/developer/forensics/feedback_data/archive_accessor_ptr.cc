@@ -32,7 +32,11 @@ ArchiveAccessor::ArchiveAccessor(async_dispatcher_t* dispatcher,
   stream_parameters_.set_client_selector_configuration(
       fuchsia::diagnostics::ClientSelectorConfiguration::WithSelectAll(true));
 
-  // TODO(fxbug.dev/65226) Connect data_budget to diagnostics after fxbug.dev/66085.
+  if (data_budget) {
+    fuchsia::diagnostics::PerformanceConfiguration performance;
+    performance.set_max_aggregate_content_size_bytes(data_budget.value());
+    stream_parameters_.set_performance_configuration(std::move(performance));
+  }
 
   // We set up the connection and all the error handlers.
   snapshot_iterator_.set_error_handler([this](zx_status_t status) {

@@ -33,6 +33,24 @@ class DiagnosticsArchive : public DiagnosticsArchiveBase {
   std::unique_ptr<::fidl::Binding<fuchsia::diagnostics::BatchIterator>> batch_iterator_binding_;
 };
 
+class DiagnosticsArchiveCaptureParameters : public DiagnosticsArchiveBase {
+ public:
+  DiagnosticsArchiveCaptureParameters() = default;
+  explicit DiagnosticsArchiveCaptureParameters(fuchsia::diagnostics::StreamParameters* parameters)
+      : parameters_(parameters) {}
+
+  // |fuchsia::diagnostics::Archive|
+  void StreamDiagnostics(
+      fuchsia::diagnostics::StreamParameters stream_parameters,
+      ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request) override {
+    *parameters_ = std::move(stream_parameters);
+  }
+
+ private:
+  // Not owned
+  fuchsia::diagnostics::StreamParameters* parameters_;
+};
+
 class DiagnosticsArchiveClosesArchiveConnection : public DiagnosticsArchiveBase {
  public:
   // |fuchsia::diagnostics::ArchiveAccessor|
