@@ -11,7 +11,6 @@
 
 #include <algorithm>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -22,6 +21,7 @@
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
 
+#include "src/devices/usb/drivers/mt-musb-host/mt_musb_host_bind.h"
 #include "trace.h"
 #include "usb-device.h"
 #include "usb-root-hub.h"
@@ -406,10 +406,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace mt_usb_hci
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(mt_usb_hci, mt_usb_hci::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MUSB_HOST),
-ZIRCON_DRIVER_END(mt_usb_hci)
-    // clang-format on
+ZIRCON_DRIVER(mt_usb_hci, mt_usb_hci::driver_ops, "zircon", "0.1");
