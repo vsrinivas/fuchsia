@@ -4,17 +4,6 @@
 
 bootfs_only = true
 
-kernel_cmdline_args = [
-  "blobfs.cache-eviction-policy=NEVER_EVICT",
-  "console.shell=true",
-  "devmgr.log-to-debuglog=true",
-  "kernel.enable-debugging-syscalls=true",
-  "kernel.enable-serial-syscalls=true",
-  "kernel.oom.behavior=jobkill",
-  "netsvc.all-features=true",
-  "netsvc.disable=false",
-]
-
 product_bootfs_labels = [
   "//build/info:bootfs",
   "//bundles:bootstrap",
@@ -26,6 +15,18 @@ product_bootfs_labels = [
   "//bundles/drivers:usb-host-stack",
   "//bundles/drivers:usb-peripheral-stack",
   "//bundles/drivers:utils",
+]
+
+# Add kernel command line arguments.
+product_bootfs_labels += [
+  "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT",
+  "//products/kernel_cmdline:console.shell--true",
+  "//products/kernel_cmdline:devmgr.log-to-debuglog--true",
+  "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true",
+  "//products/kernel_cmdline:kernel.enable-serial-syscalls--true",
+  "//products/kernel_cmdline:kernel.oom.behavior--jobkill",
+  "//products/kernel_cmdline:netsvc.all-features--true",
+  "//products/kernel_cmdline:netsvc.disable--false",
 ]
 
 # TODO(fxbug.dev/56988): We shouldn't need runtests, but right now it's used by profile

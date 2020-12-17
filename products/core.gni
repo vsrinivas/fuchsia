@@ -6,11 +6,13 @@ import("//products/bringup.gni")
 
 bootfs_only = false
 
-kernel_cmdline_args -= [
-  "devmgr.log-to-debuglog=true",
-  "kernel.oom.behavior=jobkill",
+# Kernel command line arguments.
+product_bootfs_labels -= [
+  "//products/kernel_cmdline:devmgr.log-to-debuglog--true",
+  "//products/kernel_cmdline:kernel.oom.behavior--jobkill",
 ]
-kernel_cmdline_args += [ "kernel.oom.behavior=reboot" ]
+product_bootfs_labels +=
+    [ "//products/kernel_cmdline:kernel.oom.behavior--reboot" ]
 
 meta_package_labels += [
   "//build/images:config-data",

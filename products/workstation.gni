@@ -49,9 +49,9 @@ universe_package_labels += [
 
 universe_package_labels -= [ "//src/tests/end_to_end/perf:test" ]
 
-kernel_cmdline_args += [
+product_bootfs_labels += [
   # hide the virtual console on boot
-  "virtcon.hide-on-boot",
+  "//products/kernel_cmdline:virtcon.hide-on-boot",
 ]
 
 # End to end (E2E) product test runtime dependencies. Must be added to cache,

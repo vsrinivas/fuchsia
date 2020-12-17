@@ -1,0 +1,77 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/zbi/kernel_cmdline.gni")
+
+kernel_cmdline("blobfs.cache-eviction-policy--NEVER_EVICT") {
+  args = [ "blobfs.cache-eviction-policy=NEVER_EVICT" ]
+}
+
+kernel_cmdline("console.shell--true") {
+  args = [ "console.shell=true" ]
+}
+
+kernel_cmdline("console.shell--false") {
+  args = [ "console.shell=false" ]
+}
+
+kernel_cmdline("devmgr.log-to-debuglog--true") {
+  args = [ "devmgr.log-to-debuglog=true" ]
+}
+
+kernel_cmdline("kernel.enable-debugging-syscalls--true") {
+  args = [ "kernel.enable-debugging-syscalls=true" ]
+}
+
+kernel_cmdline("kernel.enable-debugging-syscalls--false") {
+  args = [ "kernel.enable-debugging-syscalls=false" ]
+}
+
+kernel_cmdline("kernel.enable-serial-syscalls--true") {
+  args = [ "kernel.enable-serial-syscalls=true" ]
+}
+
+kernel_cmdline("kernel.enable-serial-syscalls--false") {
+  args = [ "kernel.enable-serial-syscalls=false" ]
+}
+
+kernel_cmdline("kernel.enable-serial-syscalls--output-only") {
+  args = [ "kernel.enable-serial-syscalls=output-only" ]
+}
+
+kernel_cmdline("kernel.oom.behavior--jobkill") {
+  args = [ "kernel.oom.behavior=jobkill" ]
+}
+
+kernel_cmdline("kernel.oom.behavior--reboot") {
+  args = [ "kernel.oom.behavior=reboot" ]
+}
+
+kernel_cmdline("kernel.serial--none") {
+  args = [ "kernel.serial=none" ]
+}
+
+kernel_cmdline("netsvc.all-features--true") {
+  args = [ "netsvc.all-features=true" ]
+}
+
+kernel_cmdline("netsvc.disable--false") {
+  args = [ "netsvc.disable=false" ]
+}
+
+kernel_cmdline("netsvc.disable--true") {
+  args = [ "netsvc.disable=true" ]
+}
+
+kernel_cmdline("virtcon.hide-on-boot") {
+  args = [ "virtcon.hide-on-boot" ]
+}
+
+kernel_cmdline("virtcon.disable--true") {
+  args = [ "virtcon.disable=true" ]
+}
+
+kernel_cmdline("virtcon.keep-log-visible--true") {
+  args = [ "virtcon.keep-log-visible=true" ]
+}
