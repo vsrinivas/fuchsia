@@ -18,8 +18,6 @@
             "fuchsia.accessibility.Magnifier",
             "fuchsia.media.sounds.Player",
             "fuchsia.recovery.FactoryReset",
-            "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.pointerinjector.Registry",
             "fuchsia.ui.policy.accessibility.PointerEventRegistry",
