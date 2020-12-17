@@ -208,6 +208,96 @@ impl NetworkInterface for TunNetworkInterface {
             }
         });
 
-        enabled_stream.boxed()
+        use fidl_fuchsia_net_interfaces::*;
+        use std::convert::TryInto;
+
+        struct EventState {
+            prev_prop: Properties,
+            watcher: Option<WatcherProxy>,
+            next_events: Vec<NetworkInterfaceEvent>,
+        };
+        let init_state =
+            EventState { prev_prop: Properties::EMPTY, watcher: None, next_events: Vec::default() };
+
+        let if_event_stream =
+            futures::stream::try_unfold(init_state, move |mut state| async move {
+                if state.watcher.is_none() {
+                    let fnif_state = connect_to_service::<StateMarker>()?;
+                    let (watcher, req) = create_proxy::<WatcherMarker>()?;
+                    fnif_state.get_watcher(WatcherOptions::EMPTY, req)?;
+                    state.watcher = Some(watcher);
+                }
+
+                loop {
+                    // Flush out any pending events
+                    if let Some(event) = state.next_events.pop() {
+                        return Ok(Some((event, state)));
+                    }
+
+                    match state.watcher.as_ref().unwrap().watch().await? {
+                        Event::Existing(prop) if prop.id == Some(self.id) => {
+                            assert!(
+                                state.prev_prop.id == None,
+                                "Got Event::Existing twice for same interface"
+                            );
+                            state.prev_prop = prop;
+                            continue;
+                        }
+                        Event::Idle(_) => {
+                            if state.prev_prop.id == None {
+                                return Err(format_err!("Interface no longer exists"));
+                            }
+                        }
+                        Event::Removed(id) if id == self.id => return Ok(None),
+
+                        Event::Changed(prop) if prop.id == Some(self.id) => {
+                            assert!(state.prev_prop.id.is_some());
+
+                            traceln!("TunNetworkInterface: Got Event::Changed({:#?})", prop);
+
+                            if let Some(addrs) = prop.addresses.as_ref() {
+                                let empty_addrs = vec![];
+                                let prev_addrs =
+                                    state.prev_prop.addresses.as_ref().unwrap_or(&empty_addrs);
+                                state.next_events.extend(
+                                    addrs.iter().filter(|x| !prev_addrs.contains(x)).filter_map(
+                                        |x| {
+                                            x.clone()
+                                                .addr
+                                                .unwrap()
+                                                .try_into()
+                                                .ok()
+                                                .map(NetworkInterfaceEvent::AddressWasAdded)
+                                        },
+                                    ),
+                                );
+                                state.next_events.extend(
+                                    prev_addrs.iter().filter(|x| !addrs.contains(x)).filter_map(
+                                        |x| {
+                                            x.clone()
+                                                .addr
+                                                .unwrap()
+                                                .try_into()
+                                                .ok()
+                                                .map(NetworkInterfaceEvent::AddressWasRemoved)
+                                        },
+                                    ),
+                                );
+                            }
+
+                            traceln!(
+                                "TunNetworkInterface: Queued events: {:#?}",
+                                state.next_events
+                            );
+
+                            state.prev_prop = prop;
+                        }
+
+                        _ => continue,
+                    }
+                }
+            });
+
+        futures::stream::select(enabled_stream, if_event_stream).boxed()
     }
 }

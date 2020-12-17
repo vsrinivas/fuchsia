@@ -36,7 +36,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     async fn handle_netstack_added_address(&self, subnet: Subnet) -> Result<(), Error> {
         fx_log_info!("Netstack added address: {:?}", subnet);
 
-        let addr_entry = AddressTableEntry { subnet };
+        let addr_entry = AddressTableEntry { subnet, ..AddressTableEntry::default() };
 
         // Wait for our turn.
         let _lock = self.wait_for_api_task_lock("handle_netstack_added_address").await?;
@@ -47,12 +47,18 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         };
 
         if !is_existing_address {
+            let addr_entry = &addr_entry;
             self.frame_handler
                 .send_request(CmdPropValueInsert(PropIpv6::AddressTable.into(), addr_entry.clone()))
+                .and_then(move |_| async move {
+                    let mut driver_state = self.driver_state.lock();
+                    driver_state.address_table.insert(addr_entry.clone());
+                    Ok(())
+                })
                 .or_else(move |err| async move {
                     fx_log_warn!(
                         "NCP refused to insert {:?} into PropIpv6::AddressTable, will remove. {:?}",
-                        &addr_entry,
+                        addr_entry,
                         err
                     );
                     self.net_if.remove_address(&addr_entry.subnet)
@@ -67,7 +73,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     async fn handle_netstack_removed_address(&self, subnet: Subnet) -> Result<(), Error> {
         fx_log_info!("Netstack removed address: {:?}", subnet);
 
-        let addr_entry = AddressTableEntry { subnet };
+        let addr_entry = AddressTableEntry { subnet, ..AddressTableEntry::default() };
 
         // Wait for our turn.
         let _lock = self.wait_for_api_task_lock("handle_netstack_removed_address").await?;
@@ -79,7 +85,12 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
 
         if is_existing_address {
             self.frame_handler
-                .send_request(CmdPropValueRemove(PropIpv6::AddressTable.into(), addr_entry))
+                .send_request(CmdPropValueRemove(PropIpv6::AddressTable.into(), addr_entry.clone()))
+                .then(move |ret| async move {
+                    let mut driver_state = self.driver_state.lock();
+                    driver_state.address_table.remove(&addr_entry);
+                    ret
+                })
                 .await
                 .context("handle_netstack_removed_address")?;
         }

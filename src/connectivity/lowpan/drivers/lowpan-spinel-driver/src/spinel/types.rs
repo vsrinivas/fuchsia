@@ -183,22 +183,69 @@ impl std::fmt::Display for Subnet {
     }
 }
 
+impl TryFrom<fidl_fuchsia_net::Subnet> for Subnet {
+    type Error = anyhow::Error;
+    fn try_from(x: fidl_fuchsia_net::Subnet) -> Result<Self, Self::Error> {
+        match x {
+            fidl_fuchsia_net::Subnet {
+                addr: fidl_fuchsia_net::IpAddress::Ipv6(addr),
+                prefix_len,
+            } => Ok(Subnet { addr: addr.addr.into(), prefix_len }),
+            _ => Err(format_err!("Cannot convert IPv4 subnet into IPv6 subnet")),
+        }
+    }
+}
+
 /// A spinel address table entry from SPINEL_PROP_IPV6_ADDRESS_TABLE
-#[spinel_packed("D")]
-#[derive(Clone, Eq, Hash, PartialEq)]
+#[spinel_packed("DLL")]
+#[derive(Clone, Eq)]
 pub struct AddressTableEntry {
     pub subnet: Subnet,
+    pub preferred_lifetime: u32,
+    pub valid_lifetime: u32,
 }
 
 impl std::fmt::Debug for AddressTableEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.subnet)
+        write!(f, "{}", self.subnet)?;
+        match (self.preferred_lifetime != 0, self.valid_lifetime != 0) {
+            (true, true) => Ok(()),
+            (false, true) => write!(f, " DEPRECATED"),
+            (_, false) => write!(f, " INVALID"),
+        }
     }
 }
 
 impl std::fmt::Display for AddressTableEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.subnet)
+        write!(f, "{}", self.subnet)?;
+        match (self.preferred_lifetime != 0, self.valid_lifetime != 0) {
+            (true, true) => Ok(()),
+            (false, true) => write!(f, " DEPRECATED"),
+            (_, false) => write!(f, " INVALID"),
+        }
+    }
+}
+
+impl Default for AddressTableEntry {
+    fn default() -> Self {
+        AddressTableEntry {
+            subnet: Subnet { addr: std::net::Ipv6Addr::UNSPECIFIED, prefix_len: 0 },
+            preferred_lifetime: std::u32::MAX,
+            valid_lifetime: std::u32::MAX,
+        }
+    }
+}
+
+impl PartialEq for AddressTableEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.subnet == other.subnet
+    }
+}
+
+impl std::hash::Hash for AddressTableEntry {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.subnet.hash(state);
     }
 }
 

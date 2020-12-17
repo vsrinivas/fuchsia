@@ -20,6 +20,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
     "//sdk/fidl/fuchsia.lowpan.test:fuchsia.lowpan.test-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun-rustc",
     "//src/connectivity/lib/net-declare",

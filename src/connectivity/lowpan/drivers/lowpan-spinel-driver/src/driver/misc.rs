@@ -287,7 +287,9 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                                 err
                             );
                         } else {
-                            driver_state.address_table.insert(AddressTableEntry { subnet });
+                            driver_state
+                                .address_table
+                                .insert(AddressTableEntry { subnet, ..Default::default() });
                         }
                     }
                 }
@@ -330,7 +332,9 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                                 err
                             );
                         } else {
-                            driver_state.address_table.insert(AddressTableEntry { subnet });
+                            driver_state
+                                .address_table
+                                .insert(AddressTableEntry { subnet, ..Default::default() });
                         }
                     }
                 }
