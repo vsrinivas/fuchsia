@@ -8,6 +8,7 @@ ffx_plugin("ffx_target") {
   version = "0.1.0"
   edition = "2018"
   plugin_deps = [
+    "add:ffx_target_add",
     "default:ffx_target_default",
     "flash:ffx_flash",
     "get-ssh-address:ffx_get_ssh_address",
