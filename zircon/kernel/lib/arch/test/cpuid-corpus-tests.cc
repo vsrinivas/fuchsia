@@ -144,6 +144,7 @@ TEST(CpuidTests, Core2_6300) {
     auto features = cpuid.Read<arch::CpuidExtendedFeatureFlagsB>();
 
     // Not present:
+    EXPECT_FALSE(features.intel_pt());
     EXPECT_FALSE(features.smap());
     EXPECT_FALSE(features.rdseed());
     EXPECT_FALSE(features.fsgsbase());
@@ -188,6 +189,7 @@ TEST(CpuidTests, Nehalem_Xeon_E5520) {
     auto features = cpuid.Read<arch::CpuidExtendedFeatureFlagsB>();
 
     // Not present:
+    EXPECT_FALSE(features.intel_pt());
     EXPECT_FALSE(features.smap());
     EXPECT_FALSE(features.rdseed());
     EXPECT_FALSE(features.fsgsbase());
@@ -232,6 +234,7 @@ TEST(CpuidTests, SandyBridge_i7_2600K) {
     auto features = cpuid.Read<arch::CpuidExtendedFeatureFlagsB>();
 
     // Not present:
+    EXPECT_FALSE(features.intel_pt());
     EXPECT_FALSE(features.smap());
     EXPECT_FALSE(features.rdseed());
     EXPECT_FALSE(features.fsgsbase());
@@ -279,6 +282,7 @@ TEST(CpuidTests, IvyBridge_i3_3240) {
     EXPECT_TRUE(features.fsgsbase());
 
     // Not present:
+    EXPECT_FALSE(features.intel_pt());
     EXPECT_FALSE(features.smap());
     EXPECT_FALSE(features.rdseed());
   }
@@ -325,6 +329,7 @@ TEST(CpuidTests, Haswell_Xeon_E5_2690v3) {
     EXPECT_TRUE(features.fsgsbase());
 
     // Not present:
+    EXPECT_FALSE(features.intel_pt());
     EXPECT_FALSE(features.smap());
     EXPECT_FALSE(features.rdseed());
   }
@@ -368,6 +373,7 @@ TEST(CpuidTests, Skylake_i3_6100) {
     auto features = cpuid.Read<arch::CpuidExtendedFeatureFlagsB>();
 
     // Present:
+    EXPECT_TRUE(features.intel_pt());
     EXPECT_TRUE(features.smap());
     EXPECT_TRUE(features.rdseed());
     EXPECT_TRUE(features.fsgsbase());
@@ -412,6 +418,7 @@ TEST(CpuidTests, AtomD510) {
     auto features = cpuid.Read<arch::CpuidExtendedFeatureFlagsB>();
 
     // Not present:
+    EXPECT_FALSE(features.intel_pt());
     EXPECT_FALSE(features.smap());
     EXPECT_FALSE(features.rdseed());
     EXPECT_FALSE(features.fsgsbase());
@@ -459,6 +466,9 @@ TEST(CpuidTests, Ryzen2700X) {
     EXPECT_TRUE(features.smap());
     EXPECT_TRUE(features.rdseed());
     EXPECT_TRUE(features.fsgsbase());
+
+    // Not present:
+    EXPECT_FALSE(features.intel_pt());
   }
 }
 
@@ -503,6 +513,9 @@ TEST(CpuidTests, Ryzen3950X) {
     EXPECT_TRUE(features.smap());
     EXPECT_TRUE(features.rdseed());
     EXPECT_TRUE(features.fsgsbase());
+
+    // Not present:
+    EXPECT_FALSE(features.intel_pt());
   }
 }
 
@@ -549,6 +562,7 @@ TEST(CpuidTests, Ryzen3950X_VirtualBox_Hyperv) {
     EXPECT_TRUE(features.fsgsbase());
 
     // Not present:
+    EXPECT_FALSE(features.intel_pt());
     EXPECT_FALSE(features.smap());
     EXPECT_FALSE(features.rdseed());
   }
@@ -597,6 +611,7 @@ TEST(CpuidTests, Ryzen3950X_VirtualBox_Kvm) {
     EXPECT_TRUE(features.fsgsbase());
 
     // Not present:
+    EXPECT_FALSE(features.intel_pt());
     EXPECT_FALSE(features.smap());
     EXPECT_FALSE(features.rdseed());
   }
@@ -642,6 +657,7 @@ TEST(CpuidTests, Ryzen3950X_VMware) {
     auto features = cpuid.Read<arch::CpuidExtendedFeatureFlagsB>();
 
     // Present:
+    EXPECT_FALSE(features.intel_pt());
     EXPECT_TRUE(features.rdseed());
     EXPECT_TRUE(features.smap());
     EXPECT_TRUE(features.fsgsbase());
@@ -691,6 +707,9 @@ TEST(CpuidTests, Ryzen3950X_WSL2) {
     EXPECT_TRUE(features.rdseed());
     EXPECT_TRUE(features.smap());
     EXPECT_TRUE(features.fsgsbase());
+
+    // Not present:
+    EXPECT_FALSE(features.intel_pt());
   }
 }
 
@@ -735,6 +754,9 @@ TEST(CpuidTests, Threadripper1950X) {
     EXPECT_TRUE(features.smap());
     EXPECT_TRUE(features.rdseed());
     EXPECT_TRUE(features.fsgsbase());
+
+    // Not present:
+    EXPECT_FALSE(features.intel_pt());
   }
 }
 

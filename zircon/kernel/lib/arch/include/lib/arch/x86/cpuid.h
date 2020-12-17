@@ -310,6 +310,68 @@ struct CpuidExtendedFeatureFlagsB
 };
 
 //---------------------------------------------------------------------------//
+// Leaf/Function 0xa.
+//
+// [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
+//---------------------------------------------------------------------------//
+
+struct CpuidPerformanceMonitoringA
+    : public CpuidValueBase<CpuidPerformanceMonitoringA, 0xa, 0x0, CpuidIo::kEax> {
+  DEF_FIELD(31, 24, ebx_vector_length);
+  DEF_FIELD(23, 16, general_counter_width);
+  DEF_FIELD(15, 8, num_general_counters);
+  DEF_FIELD(7, 0, version);
+};
+
+struct CpuidPerformanceMonitoringB
+    : public CpuidValueBase<CpuidPerformanceMonitoringB, 0xa, 0x0, CpuidIo::kEbx> {
+  DEF_RSVDZ_FIELD(31, 7);
+  DEF_BIT(6, branch_mispredict_retired_event_unavailable);
+  DEF_BIT(5, branch_instruction_retired_event_unavailable);
+  DEF_BIT(4, last_level_cache_miss_event_unavailable);
+  DEF_BIT(3, last_level_cache_reference_event_unavailable);
+  DEF_BIT(2, reference_cycle_event_unavailable);
+  DEF_BIT(1, instruction_retired_event_unavailable);
+  DEF_BIT(0, core_cycle_event_unavailable);
+};
+
+struct CpuidPerformanceMonitoringD
+    : public CpuidValueBase<CpuidPerformanceMonitoringD, 0xa, 0x0, CpuidIo::kEdx> {
+  DEF_RSVDZ_FIELD(31, 16);
+  DEF_BIT(15, anythread_deprecation);
+  DEF_RSVDZ_FIELD(14, 13);
+  DEF_FIELD(12, 5, fixed_counter_width);
+  DEF_FIELD(4, 0, num_fixed_counters);
+};
+
+//---------------------------------------------------------------------------//
+// Leaf/Function 0x14.
+//
+// [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
+//---------------------------------------------------------------------------//
+
+struct CpuidProcessorTraceMainB
+    : public CpuidValueBase<CpuidProcessorTraceMainB, 0x14, 0x0, CpuidIo::kEbx> {
+  DEF_RSVDZ_FIELD(31, 6);
+  DEF_BIT(5, power_event_trace);
+  DEF_BIT(4, ptwrite);
+  DEF_BIT(3, mtc);
+  DEF_BIT(2, ip_filtering);
+  DEF_BIT(1, psb);
+  DEF_BIT(0, crc3_filtering);
+};
+
+struct CpuidProcessorTraceMainC
+    : public CpuidValueBase<CpuidProcessorTraceMainC, 0x14, 0x0, CpuidIo::kEcx> {
+  DEF_BIT(31, lip);
+  DEF_RSVDZ_FIELD(30, 4);
+  DEF_BIT(3, trace_transport);
+  DEF_BIT(2, single_range_output);
+  DEF_BIT(1, topa_multi);
+  DEF_BIT(0, topa);
+};
+
+//---------------------------------------------------------------------------//
 // Leaves/Functions 0x4000'0000 - 0x4fff'ffff.
 //
 // [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.

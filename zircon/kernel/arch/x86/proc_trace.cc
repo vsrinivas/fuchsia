@@ -27,6 +27,7 @@
 // the user to reboot. fxbug.dev/30840
 #include "arch/x86/proc_trace.h"
 
+#include <lib/arch/x86/boot-cpuid.h>
 #include <lib/ktrace.h>
 #include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <lib/zircon-internal/ktrace.h>
@@ -110,29 +111,27 @@ static zx_insntrace_trace_mode_t trace_mode TA_GUARDED(IptLock::Get()) = IPT_MOD
 static uint32_t ipt_num_traces TA_GUARDED(IptLock::Get());
 
 void x86_processor_trace_init(void) {
-  if (!x86_feature_test(X86_FEATURE_PT)) {
+  if (!arch::BootCpuid<arch::CpuidExtendedFeatureFlagsB>().intel_pt()) {
     return;
   }
 
-  struct cpuid_leaf leaf;
-  if (!x86_get_cpuid_subleaf(X86_CPUID_PT, 0, &leaf)) {
-    return;
-  }
+  auto pt_b = arch::BootCpuid<arch::CpuidProcessorTraceMainB>();
+  auto pt_c = arch::BootCpuid<arch::CpuidProcessorTraceMainC>();
 
   supports_pt = true;
 
   // Keep our own copy of these flags, mostly for potential sanity checks.
-  supports_cr3_filtering = !!(leaf.b & (1 << 0));
-  supports_psb = !!(leaf.b & (1 << 1));
-  supports_ip_filtering = !!(leaf.b & (1 << 2));
-  supports_mtc = !!(leaf.b & (1 << 3));
-  supports_ptwrite = !!(leaf.b & (1 << 4));
-  supports_power_events = !!(leaf.b & (1 << 5));
+  supports_cr3_filtering = pt_b.crc3_filtering();
+  supports_psb = pt_b.psb();
+  supports_ip_filtering = pt_b.ip_filtering();
+  supports_mtc = pt_b.mtc();
+  supports_ptwrite = pt_b.ptwrite();
+  supports_power_events = pt_b.power_event_trace();
 
-  supports_output_topa = !!(leaf.c & (1 << 0));
-  supports_output_topa_multi = !!(leaf.c & (1 << 1));
-  supports_output_single = !!(leaf.c & (1 << 2));
-  supports_output_transport = !!(leaf.c & (1 << 3));
+  supports_output_topa = pt_c.topa();
+  supports_output_topa_multi = pt_c.topa_multi();
+  supports_output_single = pt_c.single_range_output();
+  supports_output_transport = pt_c.trace_transport();
 }
 
 // Intel Processor Trace support needs to be able to map cr3 values that

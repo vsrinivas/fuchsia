@@ -25,6 +25,7 @@
 #include "arch/x86/perf_mon.h"
 
 #include <assert.h>
+#include <lib/arch/x86/boot-cpuid.h>
 #include <lib/ktrace.h>
 #include <lib/pci/pio.h>
 #include <lib/perfmon.h>
@@ -419,20 +420,24 @@ static void x86_perfmon_init_lbr(uint32_t lbr_stack_size) {
 }
 
 static void x86_perfmon_init_once(uint level) {
-  struct cpuid_leaf leaf;
-  if (!x86_get_cpuid_subleaf(X86_CPUID_PERFORMANCE_MONITORING, 0, &leaf)) {
+  if (arch::BootCpuid<arch::CpuidMaximumLeaf>().reg_value() <
+      arch::CpuidPerformanceMonitoringA::kLeaf) {
     return;
   }
 
-  perfmon_version = leaf.a & 0xff;
+  auto perfmon_a = arch::BootCpuid<arch::CpuidPerformanceMonitoringA>();
+  auto perfmon_b = arch::BootCpuid<arch::CpuidPerformanceMonitoringB>();
+  auto perfmon_d = arch::BootCpuid<arch::CpuidPerformanceMonitoringD>();
 
-  perfmon_num_programmable_counters = (leaf.a >> 8) & 0xff;
+  perfmon_version = perfmon_a.version();
+
+  perfmon_num_programmable_counters = perfmon_a.num_general_counters();
   if (perfmon_num_programmable_counters > IPM_MAX_PROGRAMMABLE_COUNTERS) {
     TRACEF("perfmon: unexpected num programmable counters %u in cpuid.0AH\n",
            perfmon_num_programmable_counters);
     return;
   }
-  perfmon_programmable_counter_width = (leaf.a >> 16) & 0xff;
+  perfmon_programmable_counter_width = perfmon_a.general_counter_width();
   // The <16 test is just something simple to ensure it's usable.
   if (perfmon_programmable_counter_width < 16 || perfmon_programmable_counter_width > 64) {
     TRACEF("perfmon: unexpected programmable counter width %u in cpuid.0AH\n",
@@ -444,19 +449,19 @@ static void x86_perfmon_init_once(uint level) {
     perfmon_max_programmable_counter_value = (1ul << perfmon_programmable_counter_width) - 1;
   }
 
-  unsigned ebx_length = (leaf.a >> 24) & 0xff;
+  unsigned ebx_length = perfmon_a.ebx_vector_length();
   if (ebx_length > 7) {
     TRACEF("perfmon: unexpected value %u in cpuid.0AH.EAH[31..24]\n", ebx_length);
     return;
   }
-  perfmon_unsupported_events = leaf.b & ((1u << ebx_length) - 1);
+  perfmon_unsupported_events = perfmon_b.reg_value() & ((1u << ebx_length) - 1);
 
-  perfmon_num_fixed_counters = leaf.d & 0x1f;
+  perfmon_num_fixed_counters = perfmon_d.num_fixed_counters();
   if (perfmon_num_fixed_counters > IPM_MAX_FIXED_COUNTERS) {
     TRACEF("perfmon: unexpected num fixed counters %u in cpuid.0AH\n", perfmon_num_fixed_counters);
     return;
   }
-  perfmon_fixed_counter_width = (leaf.d >> 5) & 0xff;
+  perfmon_fixed_counter_width = perfmon_d.fixed_counter_width();
   // The <16 test is just something simple to ensure it's usable.
   if (perfmon_fixed_counter_width < 16 || perfmon_fixed_counter_width > 64) {
     TRACEF("perfmon: unexpected fixed counter width %u in cpuid.0AH\n",
@@ -470,7 +475,7 @@ static void x86_perfmon_init_once(uint level) {
 
   perfmon_supported = perfmon_version >= MINIMUM_INTEL_PERFMON_VERSION;
 
-  if (x86_feature_test(X86_FEATURE_PDCM)) {
+  if (arch::BootCpuid<arch::CpuidFeatureFlagsC>().pdcm()) {
     perfmon_capabilities = static_cast<uint32_t>(read_msr(IA32_PERF_CAPABILITIES));
   }
 
