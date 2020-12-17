@@ -205,6 +205,7 @@ impl<T: Read + Write + Send> FastbootImpl<T> {
 mod test {
     use {
         super::*,
+        crate::onet::create_ascendd,
         anyhow::anyhow,
         fastboot::reply::Reply,
         fidl::endpoints::{create_endpoints, create_proxy_and_stream},
@@ -213,6 +214,7 @@ mod test {
             RebootListenerRequest,
         },
         std::io::BufWriter,
+        std::sync::Arc,
         tempfile::NamedTempFile,
     };
 
@@ -272,8 +274,9 @@ mod test {
         }
     }
 
-    fn setup(replies: Vec<Reply>) -> (Target, FastbootProxy) {
-        let target = Target::new("scooby-dooby-doo");
+    async fn setup(replies: Vec<Reply>) -> (Target, FastbootProxy) {
+        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let target = Target::new(ascendd, "scooby-dooby-doo");
         let mut fb =
             FastbootImpl::<TestTransport>::new(target.clone(), Box::new(TestFactory::new(replies)));
         let (proxy, stream) = create_proxy_and_stream::<FastbootMarker>().unwrap();
@@ -297,7 +300,8 @@ mod test {
             Reply::Data(4),
             Reply::Okay("".to_string()), //Download Reply
             Reply::Okay("".to_string()), //Flash Reply
-        ]);
+        ])
+        .await;
         let filepath = file.path().to_str().ok_or(anyhow!("error getting tempfile path"))?;
         proxy.flash("test", filepath).await?.map_err(|e| anyhow!("error flashing: {:?}", e))
     }
@@ -308,7 +312,7 @@ mod test {
         let mut buffer = BufWriter::new(&file);
         buffer.write_all(b"Test")?;
         buffer.flush()?;
-        let (_, proxy) = setup(vec![Reply::Data(6)]);
+        let (_, proxy) = setup(vec![Reply::Data(6)]).await;
         let filepath = file.path().to_str().ok_or(anyhow!("error getting tempfile path"))?;
         let res = proxy.flash("test", filepath).await?;
         assert_eq!(res.err(), Some(FastbootError::ProtocolError));
@@ -317,13 +321,13 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_erase() -> Result<()> {
-        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]);
+        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]).await;
         proxy.erase("test").await?.map_err(|e| anyhow!("error erase: {:?}", e))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_erase_sends_protocol_error_after_unexpected_reply() -> Result<()> {
-        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]);
+        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]).await;
         let res = proxy.erase("test").await?;
         assert_eq!(res.err(), Some(FastbootError::ProtocolError));
         Ok(())
@@ -331,13 +335,13 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_reboot() -> Result<()> {
-        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]);
+        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]).await;
         proxy.reboot().await?.map_err(|e| anyhow!("error reboot: {:?}", e))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_reboot_sends_protocol_error_after_unexpected_reply() -> Result<()> {
-        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]);
+        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]).await;
         let res = proxy.reboot().await?;
         assert_eq!(res.err(), Some(FastbootError::ProtocolError));
         Ok(())
@@ -347,7 +351,7 @@ mod test {
     async fn test_reboot_bootloader() -> Result<()> {
         let (reboot_client, reboot_server) = create_endpoints::<RebootListenerMarker>()?;
         let mut stream = reboot_server.into_stream()?;
-        let (target, proxy) = setup(vec![Reply::Okay("".to_string())]);
+        let (target, proxy) = setup(vec![Reply::Okay("".to_string())]).await;
         try_join!(
             async move {
                 // Should only need to wait for the first request.
@@ -370,7 +374,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_reboot_bootloader_sends_protocol_error_after_unexpected_reply() -> Result<()> {
         let (reboot_client, _) = create_endpoints::<RebootListenerMarker>()?;
-        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]);
+        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]).await;
         let res = proxy.reboot_bootloader(reboot_client).await?;
         assert_eq!(res.err(), Some(FastbootError::ProtocolError));
         Ok(())
@@ -380,7 +384,7 @@ mod test {
     async fn test_reboot_bootloader_sends_communication_error_if_reboot_listener_dropped(
     ) -> Result<()> {
         let (reboot_client, _) = create_endpoints::<RebootListenerMarker>()?;
-        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]);
+        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]).await;
         let res = proxy.reboot_bootloader(reboot_client).await?;
         assert_eq!(res.err(), Some(FastbootError::CommunicationError));
         Ok(())
@@ -390,7 +394,7 @@ mod test {
     async fn test_reboot_bootloader_sends_rediscovered_error_if_not_rediscovered() -> Result<()> {
         let (reboot_client, reboot_server) = create_endpoints::<RebootListenerMarker>()?;
         let mut stream = reboot_server.into_stream()?;
-        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]);
+        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]).await;
         try_join!(
             async move {
                 // Should only need to wait for the first request.
@@ -414,13 +418,13 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_continue_boot() -> Result<()> {
-        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]);
+        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]).await;
         proxy.continue_boot().await?.map_err(|e| anyhow!("error continue boot: {:?}", e))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_continue_boot_sends_protocol_error_after_unexpected_reply() -> Result<()> {
-        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]);
+        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]).await;
         let res = proxy.continue_boot().await?;
         assert_eq!(res.err(), Some(FastbootError::ProtocolError));
         Ok(())
@@ -428,13 +432,13 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_set_active() -> Result<()> {
-        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]);
+        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]).await;
         proxy.set_active("a").await?.map_err(|e| anyhow!("error set active: {:?}", e))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_set_active_sends_protocol_error_after_unexpected_reply() -> Result<()> {
-        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]);
+        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]).await;
         let res = proxy.set_active("a").await?;
         assert_eq!(res.err(), Some(FastbootError::ProtocolError));
         Ok(())
@@ -449,7 +453,8 @@ mod test {
         let (_, proxy) = setup(vec![
             Reply::Data(4),
             Reply::Okay("".to_string()), //Download Reply
-        ]);
+        ])
+        .await;
         let filepath = file.path().to_str().ok_or(anyhow!("error getting tempfile path"))?;
         proxy.stage(filepath).await?.map_err(|e| anyhow!("error staging: {:?}", e))
     }
@@ -460,7 +465,7 @@ mod test {
         let mut buffer = BufWriter::new(&file);
         buffer.write_all(b"Test")?;
         buffer.flush()?;
-        let (_, proxy) = setup(vec![Reply::Data(6)]);
+        let (_, proxy) = setup(vec![Reply::Data(6)]).await;
         let filepath = file.path().to_str().ok_or(anyhow!("error getting tempfile path"))?;
         let res = proxy.stage(filepath).await?;
         assert_eq!(res.err(), Some(FastbootError::ProtocolError));
@@ -469,13 +474,13 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_oem() -> Result<()> {
-        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]);
+        let (_, proxy) = setup(vec![Reply::Okay("".to_string())]).await;
         proxy.oem("a").await?.map_err(|e| anyhow!("error oem: {:?}", e))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_oem_sends_protocol_error_after_unexpected_reply() -> Result<()> {
-        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]);
+        let (_, proxy) = setup(vec![Reply::Fail("".to_string())]).await;
         let res = proxy.oem("a").await?;
         assert_eq!(res.err(), Some(FastbootError::ProtocolError));
         Ok(())

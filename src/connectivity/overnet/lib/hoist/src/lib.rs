@@ -24,7 +24,7 @@ pub mod logger {
     }
 }
 
-pub trait OvernetInstance {
+pub trait OvernetInstance: Sync + Send {
     fn connect_as_service_consumer(&self) -> Result<ServiceConsumerProxy, Error>;
     fn connect_as_service_publisher(&self) -> Result<ServicePublisherProxy, Error>;
     fn connect_as_mesh_controller(&self) -> Result<MeshControllerProxy, Error>;

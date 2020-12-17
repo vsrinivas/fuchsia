@@ -50,7 +50,7 @@ async fn get_daemon_proxy() -> Result<DaemonProxy> {
             spawn_daemon().await?;
         }
     }
-    find_and_connect().await
+    find_and_connect(hoist::hoist()).await
 }
 
 async fn proxy_timeout() -> Result<Duration> {

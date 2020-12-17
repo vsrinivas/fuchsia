@@ -456,7 +456,9 @@ mod test {
     }
 
     async fn make_default_target(expected_logs: Vec<FakeArchiveIteratorResponse>) -> Target {
+        let ascendd = Arc::new(crate::onet::create_ascendd().await.unwrap());
         let conn = RcsConnection::new_with_proxy(
+            ascendd,
             setup_fake_remote_control_service(Arc::new(expected_logs)),
             &NodeId { id: 1234 },
         );

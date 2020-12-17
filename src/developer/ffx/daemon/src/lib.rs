@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::Task,
     futures::prelude::*,
-    hoist::{hoist, OvernetInstance},
+    hoist::OvernetInstance,
     libc,
     std::env,
     std::os::unix::process::CommandExt,
@@ -38,8 +38,11 @@ mod util;
 pub mod target;
 pub use constants::get_socket;
 
-pub async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy> {
-    let svc = hoist().connect_as_service_consumer()?;
+async fn create_daemon_proxy(
+    overnet_instance: &dyn OvernetInstance,
+    id: &mut NodeId,
+) -> Result<DaemonProxy> {
+    let svc = overnet_instance.connect_as_service_consumer()?;
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     svc.connect_to_service(id, DaemonMarker::NAME, s)?;
     let proxy = fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
@@ -47,8 +50,8 @@ pub async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy> {
 }
 
 // Note that this function assumes the daemon has been started separately.
-pub async fn find_and_connect() -> Result<DaemonProxy> {
-    let svc = hoist().connect_as_service_consumer()?;
+pub async fn find_and_connect(overnet_instance: &dyn OvernetInstance) -> Result<DaemonProxy> {
+    let svc = overnet_instance.connect_as_service_consumer()?;
     // Sometimes list_peers doesn't properly report the published services - retry a few times
     // but don't loop indefinitely.
     let max_retry_count: u64 =
@@ -69,7 +72,7 @@ pub async fn find_and_connect() -> Result<DaemonProxy> {
             {
                 continue;
             }
-            return create_daemon_proxy(&mut peer.id).await;
+            return create_daemon_proxy(overnet_instance, &mut peer.id).await;
         }
     }
 
@@ -127,7 +130,7 @@ async fn exec_server(daemon: Daemon) -> Result<()> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
     let mut stream = ServiceProviderRequestStream::from_channel(chan);
-    hoist().publish_service(DaemonMarker::NAME, ClientEnd::new(p))?;
+    daemon.publish_service(DaemonMarker::NAME, ClientEnd::new(p))?;
     while let Some(ServiceProviderRequest::ConnectToService {
         chan,
         info: _,

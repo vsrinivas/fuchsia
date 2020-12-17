@@ -29,6 +29,7 @@ pub const DEFAULT_ASCENDD_PATH: &str = "/tmp/ascendd";
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Overnet <-> API bindings
 
+#[derive(Debug)]
 pub struct HostOvernet {
     proxy: HostOvernetProxy,
     _task: Task<()>,

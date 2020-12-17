@@ -33,6 +33,7 @@ pub struct Opt {
     pub serial: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct Ascendd {
     host_overnet: HostOvernet,
     task: Task<Result<(), Error>>,
