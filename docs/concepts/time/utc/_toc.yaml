@@ -10,7 +10,7 @@ toc:
   path: /docs/concepts/time/utc/overview.md
 - title: "Architecture"
   path: /docs/concepts/time/utc/architecture.md
-- title: "Timekeeper Design & Algorithms"
-  path: /docs/concepts/time/utc/timekeeper.md
+- title: "Algorithms"
+  path: /docs/concepts/time/utc/algorithms.md
 - title: "Behavior"
   path: /docs/concepts/time/utc/behavior.md

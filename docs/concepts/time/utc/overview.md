@@ -13,8 +13,8 @@ these time sources could be configured separately for each product, but
 currently all products source UTC from google.com using
 [HTTPSdate](/src/sys/time/httpsdate_time_source/README.md).
 
-[Timekeeper Design & Algorithms](timekeeper.md) covers the design of the central
-component in the time synchronization system,
+[Algorithms](algorithms.md) covers the time synchronization algorithms
+implemented by the central component in the time synchronization system,
 [Timekeeper](/src/sys/time/timekeeper).
 
 UTC is distributed to components using a
