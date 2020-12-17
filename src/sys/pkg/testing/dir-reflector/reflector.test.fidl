@@ -8,5 +8,5 @@ using fuchsia.io;
 
 [Discoverable]
 protocol Reflector {
-    Reflect(fuchsia.io.Directory pkgfs) -> ();
+    Reflect(fuchsia.io.Directory dir) -> ();
 };

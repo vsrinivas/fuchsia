@@ -14,7 +14,7 @@ fidl("test.pkg.reflector") {
 
 rustc_binary("bin") {
   testonly = true
-  name = "pkgfs_reflector"
+  name = "dir_reflector"
   edition = "2018"
 
   deps = [
@@ -30,12 +30,6 @@ rustc_binary("bin") {
   ]
 
   sources = [ "src/main.rs" ]
-}
-
-fuchsia_component("pkgfs-reflector") {
-  testonly = true
-  manifest = "meta/pkgfs-reflector.cml"
-  deps = [ ":bin" ]
 }
 
 group("tests") {

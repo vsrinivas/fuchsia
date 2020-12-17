@@ -4,14 +4,14 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
-        binary: "bin/pkgfs_reflector",
+        binary: "bin/dir_reflector",
     },
     capabilities: [
         { protocol: "test.pkg.reflector.Reflector" },
         {
-            directory: "pkgfs",
+            directory: "reflected",
             rights: [ "rw*" ],
-            path: "/pkgfs",
+            path: "/reflected",
         },
     ],
     use: [
@@ -23,8 +23,9 @@
             from: "self",
         },
         {
-            directory: "pkgfs",
+            directory: "reflected",
             from: "self",
+            as: "pkgfs",
         },
     ],
 }

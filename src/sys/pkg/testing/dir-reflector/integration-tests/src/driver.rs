@@ -20,11 +20,12 @@ use {
 };
 
 const TEST_CASE_REALM: &str =
-    "fuchsia-pkg://fuchsia.com/pkgfs-reflector-integration-test#meta/test-case-realm.cm";
+    "fuchsia-pkg://fuchsia.com/dir-reflector-integration-test#meta/test-case-realm.cm";
 
 #[fasync::run_singlethreaded(test)]
 async fn test() {
-    fuchsia_syslog::init_with_tags(&["reflector", "driver"]).expect("syslog init should not fail");
+    fuchsia_syslog::init_with_tags(&["dir-reflector", "driver"])
+        .expect("syslog init should not fail");
     test_inner().await;
 }
 

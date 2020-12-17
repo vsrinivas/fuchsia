@@ -14,23 +14,26 @@ use {
     futures::prelude::*,
 };
 
-#[fuchsia::component]
+#[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    main_inner().await.map_err(|e| {
+    fuchsia_syslog::init_with_tags(&["dir-reflector"]).expect("can't init logger");
+    let x = main_inner().await.map_err(|e| {
         fx_log_err!("error running reflector: {:#}", e);
         e
-    })
+    });
+    fx_log_err!("shutting down!!");
+    x
 }
 
 async fn main_inner() -> Result<(), Error> {
-    fx_log_info!("starting pkgfs reflector service");
+    fx_log_info!("starting reflector service");
 
     let mut fs = ServiceFs::new_local();
 
     let (dir_proxy, dir_server_end) =
-        fidl::endpoints::create_proxy::<DirectoryMarker>().context("creating pkgfs channel")?;
+        fidl::endpoints::create_proxy::<DirectoryMarker>().context("creating dir channel")?;
 
-    fs.add_remote("pkgfs", dir_proxy);
+    fs.add_remote("reflected", dir_proxy);
 
     let mut dir_server_end = Some(ServerEnd::new(dir_server_end.into_channel()));
 
@@ -55,14 +58,16 @@ async fn serve_reflector(
 ) -> Result<(), Error> {
     while let Some(request) = stream.try_next().await.context("getting request from stream")? {
         match request {
-            ReflectorRequest::Reflect { pkgfs, responder } => {
-                fx_log_info!("registering fake pkgfs");
+            ReflectorRequest::Reflect { dir, responder } => {
+                fx_log_info!("registering directory");
                 let dir_server_end = dir_server_end.take().expect("server end to not be taken");
 
-                let pkgfs = ClientEnd::<NodeMarker>::new(pkgfs.into_channel())
+                let dir_client_end = ClientEnd::<NodeMarker>::new(dir.into_channel())
                     .into_proxy()
                     .expect("converting client end to proxy");
-                pkgfs.clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, dir_server_end).unwrap();
+                dir_client_end
+                    .clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, dir_server_end)
+                    .unwrap();
 
                 responder.send().context("sending reflect result")?;
             }

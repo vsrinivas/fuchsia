@@ -27,7 +27,7 @@ rustc_test("driver-bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/syslog/rust:syslog",
-    "//src/sys/pkg/testing/pkgfs-reflector:test.pkg.reflector-rustc",
+    "//src/sys/pkg/testing/dir-reflector:test.pkg.reflector-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
@@ -54,6 +54,12 @@ rustc_binary("thinger-bin") {
   ]
 }
 
+fuchsia_component("pkgfs-reflector") {
+  testonly = true
+  manifest = "meta/pkgfs-reflector.cml"
+  deps = [ "//src/sys/pkg/testing/dir-reflector:bin" ]
+}
+
 fuchsia_component("test-driver") {
   testonly = true
   manifest = "meta/test-driver.cml"
@@ -71,16 +77,16 @@ fuchsia_component("test-case-thinger") {
   deps = [ ":thinger-bin" ]
 }
 
-fuchsia_test_package("pkgfs-reflector-integration-test") {
+fuchsia_test_package("dir-reflector-integration-test") {
   test_components = [ ":test-driver" ]
   deps = [
+    ":pkgfs-reflector",
     ":test-case-realm",
     ":test-case-thinger",
-    "//src/sys/pkg/testing/pkgfs-reflector:pkgfs-reflector",
   ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [ ":pkgfs-reflector-integration-test" ]
+  public_deps = [ ":dir-reflector-integration-test" ]
 }

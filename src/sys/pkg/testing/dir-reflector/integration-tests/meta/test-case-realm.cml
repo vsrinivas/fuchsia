@@ -5,11 +5,11 @@
     children: [
         {
             name: "pkgfs_reflector",
-            url: "fuchsia-pkg://fuchsia.com/pkgfs-reflector-integration-test#meta/pkgfs-reflector.cm",
+            url: "fuchsia-pkg://fuchsia.com/dir-reflector-integration-test#meta/pkgfs-reflector.cm",
         },
         {
             name: "thinger",
-            url: "fuchsia-pkg://fuchsia.com/pkgfs-reflector-integration-test#meta/test-case-thinger.cm",
+            url: "fuchsia-pkg://fuchsia.com/dir-reflector-integration-test#meta/test-case-thinger.cm",
         },
     ],
     offer: [
@@ -24,6 +24,7 @@
         {
             directory: "pkgfs",
             from: "#pkgfs_reflector",
+            as: "pkgfs",
             to: [ "#thinger" ],
         },
     ],

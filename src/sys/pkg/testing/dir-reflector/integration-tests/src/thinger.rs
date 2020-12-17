@@ -14,7 +14,8 @@ use {
 
 #[fasync::run_singlethreaded]
 async fn main() {
-    fuchsia_syslog::init_with_tags(&["reflector", "thinger"]).expect("syslog init should not fail");
+    fuchsia_syslog::init_with_tags(&["dir-reflector", "thinger"])
+        .expect("syslog init should not fail");
     main_inner().await.unwrap_or_else(|e| fx_log_err!("error running thinger: {:#}", e));
 }
 
