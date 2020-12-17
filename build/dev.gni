@@ -17,4 +17,7 @@ declare_args() {
   # this golden file would be compared against fuchsia.zbi kernel cmdline during
   # build time.
   dev_fuchsia_zbi_kernel_cmdline_golden = ""
+
+  # List of labels for objects to include in the ZBI.
+  dev_bootfs_labels = []
 }

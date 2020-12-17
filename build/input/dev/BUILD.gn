@@ -4,6 +4,11 @@
 
 import("//build/dev.gni")
 
+group("bootfs_labels") {
+  testonly = true
+  deps = dev_bootfs_labels
+}
+
 group("build_only_deps") {
   testonly = true
   deps = dev_build_only_deps
