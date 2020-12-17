@@ -5,14 +5,13 @@
                 "fuchsia.hardware.display.Provider": "fuchsia-pkg://fuchsia.com/hardware-display-controller-provider#meta/hdcp.cmx"
             },
             "system-services": [
-                "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.vulkan.loader.Loader"
+                "fuchsia.scheduler.ProfileProvider"
             ]
         }
     },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application-container.shard.cmx"
     ],
     "program": {
         "binary": "test/flutter-embedder-test"
@@ -21,9 +20,7 @@
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sys.Loader",
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.sys.Loader"
         ]
     }
 }
