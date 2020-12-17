@@ -336,26 +336,26 @@ function fx-target-finder-resolve {
     fx-error "Invalid arguments to fx-target-finder-resolve: [$@]"
     return 1
   fi
-  if is_feature_enabled "legacy_discovery"; then
-    fx-command-run host-tool --check-firewall device-finder resolve -ipv4="$FX_ENABLE_IPV4" "$1"
-  else
+  if is_feature_enabled "ffx_discovery"; then
     fx-command-run host-tool --check-firewall ffx target list --format a "$1"
+  else
+    fx-command-run host-tool --check-firewall device-finder resolve -ipv4="$FX_ENABLE_IPV4" "$1"
   fi
 }
 
 function fx-target-finder-list {
-  if is_feature_enabled "legacy_discovery"; then
-    fx-command-run host-tool --check-firewall device-finder list -ipv4="$FX_ENABLE_IPV4"
-  else
+  if is_feature_enabled "ffx_discovery"; then
     fx-command-run host-tool --check-firewall ffx target list --format a
+  else
+    fx-command-run host-tool --check-firewall device-finder list -ipv4="$FX_ENABLE_IPV4"
   fi
 }
 
 function fx-target-finder-info {
-  if is_feature_enabled "legacy_discovery"; then
-    fx-command-run host-tool --check-firewall device-finder list -ipv4="$FX_ENABLE_IPV4" --full
-  else
+  if is_feature_enabled "ffx_discovery"; then
     fx-command-run host-tool --check-firewall ffx target list --format s
+  else
+    fx-command-run host-tool --check-firewall device-finder list -ipv4="$FX_ENABLE_IPV4" --full
   fi
 }
 

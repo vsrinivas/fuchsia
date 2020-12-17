@@ -21,12 +21,12 @@ BT_MOCKED_TOOLS=(
   "tools/devshell/ssh"
 )
 
-declare fx devfinder ssh
+declare fx ffx ssh
 
 BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
-  devfinder="$(btf::make_installed_hosttools_mock device-finder)"
+  ffx="$(btf::make_installed_hosttools_mock ffx)"
   ssh="${BT_TEMP_DIR}/tools/devshell/ssh"
 }
 
@@ -67,19 +67,19 @@ TEST_ssh_addr() {
   BT_EXPECT btf::does-mock-args-not-contain "${ssh}.mock_state" "-p"
 }
 
-# ensure that "fx shell" calls ssh with address returned by devfinder and the proper port number
+# ensure that "fx shell" calls ssh with address returned by ffx and the proper port number
 TEST_ssh_resolve_addr_port() {
   local ipv6="fe80::4607:bff:fea0:44f%enx44070ba0044e"
-  echo "${ipv6}" > "${devfinder}.mock_stdout"
+  echo "${ipv6}" > "${ffx}.mock_stdout"
   BT_EXPECT ${fx} shell
   BT_EXPECT btf::does-mock-args-contain "${ssh}.mock_state" "${ipv6}"
   BT_EXPECT btf::does-mock-args-not-contain "${ssh}.mock_state" "-p"
 }
 
-# ensure that "fx -d :port shell" calls ssh with address returned by devfinder and the proper port number
+# ensure that "fx -d :port shell" calls ssh with address returned by ffx and the proper port number
 TEST_ssh_only_port() {
   local ipv6="fe80::4607:bff:fea0:44f%enx44070ba0044e"
-  echo "${ipv6}" > "${devfinder}.mock_stdout"
+  echo "${ipv6}" > "${ffx}.mock_stdout"
   BT_EXPECT ${fx} -d :8123 shell
   BT_EXPECT btf::does-mock-args-contain "${ssh}.mock_state" "-p" "8123" "${ipv6}"
 }
@@ -91,11 +91,11 @@ TEST_ssh_only_port() {
 # "fx set-device" was executed before.
 TEST_ssh_only_port_and_setdevice() {
   local addr_from_setdevice="fe80::4607:bff:fea0:44f%enx44070ba0044e"
-  local addr_from_devfinder="127.0.0.1"
-  echo "${addr_from_devfinder}" > "${devfinder}.mock_stdout"
+  local addr_from_ffx="127.0.0.1"
+  echo "${addr_from_ffx}" > "${ffx}.mock_stdout"
   BT_EXPECT ${fx} set-device "[${addr_from_setdevice}]" >/dev/null
   BT_EXPECT ${fx} -d :8123 shell
-  BT_EXPECT btf::does-mock-args-contain "${ssh}.mock_state" "-p" "8123" "${addr_from_devfinder}"
+  BT_EXPECT btf::does-mock-args-contain "${ssh}.mock_state" "-p" "8123" "${addr_from_ffx}"
 }
 
 BT_RUN_TESTS "$@"
