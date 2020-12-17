@@ -64,7 +64,7 @@ constexpr float SLOPE_SCALE = 100.0f / static_cast<float>(SLOPE_LIMIT);
 constexpr SampleValue NORMALIZATION_RANGE = 1000000ULL;
 
 // For compatibility check with the Harvester.
-constexpr uint32_t DOCKYARD_VERSION = 2;
+constexpr uint32_t DOCKYARD_VERSION = 3;
 
 enum KoidType : SampleValue {
   JOB = 100ULL,

@@ -23,10 +23,13 @@
         ],
         "services": [
             "fuchsia.boot.RootResource",
+            "fuchsia.diagnostics.ArchiveAccessor",
             "fuchsia.kernel.RootJob",
             "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats",
-            "fuchsia.sysinfo.SysInfo"
+            "fuchsia.sysinfo.SysInfo",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment"
         ]
     }
 }

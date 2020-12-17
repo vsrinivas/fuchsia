@@ -58,7 +58,7 @@ class DockyardProxyFake : public DockyardProxy {
                        std::string* string) const;
   bool CheckStringPrefixSent(const std::string& dockyard_path_prefix,
                              std::string* string) const;
-  // Returns true if the substring appears the message body of any recieved
+  // Returns true if the substring appears the message body of any received
   // logs.
   bool CheckLogSubstringSent(const std::string& log_message) const;
 

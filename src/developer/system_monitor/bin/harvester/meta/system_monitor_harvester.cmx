@@ -12,6 +12,7 @@
         ],
         "services": [
             "fuchsia.boot.RootResource",
+            "fuchsia.diagnostics.ArchiveAccessor",
             "fuchsia.kernel.RootJob",
             "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats",

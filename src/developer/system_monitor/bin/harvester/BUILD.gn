@@ -49,6 +49,8 @@ source_set("lib") {
     "gather_vmos.h",
     "harvester.cc",
     "harvester.h",
+    "log_listener.cc",
+    "log_listener.h",
     "os.h",
     "root_resource.cc",
     "root_resource.h",
@@ -61,9 +63,11 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/memory/metrics",
     "//src/developer/system_monitor/lib/dockyard:lib",
@@ -119,6 +123,8 @@ executable("system_monitor_harvester_test") {
   testonly = true
 
   sources = [
+    "archive_accessor_stub.cc",
+    "archive_accessor_stub.h",
     "build_info_test.cc",
     "dockyard_proxy_fake.cc",
     "dockyard_proxy_fake.h",
@@ -147,6 +153,7 @@ executable("system_monitor_harvester_test") {
     ":lib",
     "//garnet/public/lib/gtest",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",

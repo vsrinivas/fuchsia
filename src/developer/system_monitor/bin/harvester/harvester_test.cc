@@ -8,6 +8,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async-testing/dispatcher_stub.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
 
 #include <gtest/gtest.h>
 
@@ -78,4 +79,33 @@ TEST_F(SystemMonitorHarvesterTest, CreateHarvester) {
   // EXPECT_EQ(zx::sec(3), GetGatherInspectablePeriod());
   // EXPECT_EQ(zx::sec(10), GetGatherIntrospectionPeriod());
   EXPECT_EQ(zx::sec(2), GetGatherProcessesAndMemoryPeriod());
+}
+
+class SystemMonitorHarvesterIntegrationTest
+    : public sys::testing::TestWithEnvironment {
+ public:
+  void SetUp() override {
+    // Create a test harvester.
+    std::unique_ptr<harvester::DockyardProxyFake> dockyard_proxy_ptr =
+        std::make_unique<harvester::DockyardProxyFake>();
+    dockyard_proxy = dockyard_proxy_ptr.get();
+    std::unique_ptr<harvester::OS> os = std::make_unique<harvester::OSImpl>();
+
+    EXPECT_EQ(harvester::GetRootResource(&root_resource), ZX_OK);
+    test_harvester = std::make_unique<harvester::Harvester>(
+        root_resource, std::move(dockyard_proxy_ptr), std::move(os));
+  }
+
+  std::unique_ptr<harvester::Harvester> test_harvester;
+  zx_handle_t root_resource;
+  harvester::DockyardProxyFake* dockyard_proxy;
+};
+
+TEST_F(SystemMonitorHarvesterIntegrationTest, GatherLogs) {
+  auto message = "test-harvester-log-message";
+  FX_LOGS(INFO) << message;
+
+  test_harvester->GatherLogs();
+
+  RunLoopUntil([&] { return dockyard_proxy->CheckLogSubstringSent(message); });
 }

@@ -17,6 +17,7 @@
 #include "gather_tasks.h"
 #include "gather_threads_and_cpu.h"
 #include "gather_vmos.h"
+#include "log_listener.h"
 #include "os.h"
 #include "src/developer/system_monitor/lib/dockyard/dockyard.h"
 
@@ -35,6 +36,9 @@ class Harvester {
   // Gather one-time data that doesn't vary over time. E.g. total RAM.
   void GatherDeviceProperties();
 
+  // Gather structured logs from ArchiveAccessor
+  void GatherLogs();
+
   // Gather a snapshot of data that may vary over time. E.g. used RAM.
   void GatherFastData(async_dispatcher_t* dispatcher);
   void GatherSlowData(async_dispatcher_t* dispatcher);
@@ -43,6 +47,7 @@ class Harvester {
   zx_handle_t root_resource_;
   std::unique_ptr<harvester::DockyardProxy> dockyard_proxy_;
   std::unique_ptr<harvester::OS> os_;
+  LogListener log_listener_;
 
   GatherChannels gather_channels_{root_resource_, dockyard_proxy_.get()};
   GatherCpu gather_cpu_{root_resource_, dockyard_proxy_.get()};

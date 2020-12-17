@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/dispatcher.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
@@ -30,7 +31,8 @@ Harvester::Harvester(zx_handle_t root_resource,
                      std::unique_ptr<OS> os)
     : root_resource_(root_resource),
       dockyard_proxy_(std::move(dockyard_proxy)),
-      os_(std::move(os)) {}
+      os_(std::move(os)),
+      log_listener_(sys::ServiceDirectory::CreateFromNamespace()) {}
 
 void Harvester::GatherDeviceProperties() {
   FX_VLOGS(1) << "Harvester::GatherDeviceProperties";
@@ -46,6 +48,12 @@ void Harvester::GatherDeviceProperties() {
   gather_tasks_.GatherDeviceProperties();
 
   gather_vmos_.GatherDeviceProperties();
+}
+
+void Harvester::GatherLogs() {
+  log_listener_.Listen([this](std::vector<const std::string> batch) {
+    dockyard_proxy_->SendLogs(batch);
+  });
 }
 
 void Harvester::GatherFastData(async_dispatcher_t* dispatcher) {
