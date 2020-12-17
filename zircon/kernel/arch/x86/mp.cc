@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <debug.h>
+#include <lib/arch/x86/boot-cpuid.h>
 #include <lib/console.h>
 #include <lib/ktrace.h>
 #include <platform.h>
@@ -112,10 +113,13 @@ zx_status_t x86_allocate_ap_structures(uint32_t* apic_ids, uint8_t cpu_count) {
     }
     memset(ap_percpus, 0, len);
 
-    use_monitor = x86_feature_test(X86_FEATURE_MON) &&
+    use_monitor = arch::BootCpuid<arch::CpuidFeatureFlagsC>().monitor() &&
+                  (arch::BootCpuid<arch::CpuidMaximumLeaf>().reg_value() >=
+                   arch::CpuidMonitorMwaitB::kLeaf) &&
                   !x86_get_microarch_config()->idle_prefer_hlt;
     if (use_monitor) {
-      uint16_t monitor_size = x86_get_cpuid_leaf(X86_CPUID_MON)->b & 0xffff;
+      uint16_t monitor_size =
+          arch::BootCpuid<arch::CpuidMonitorMwaitB>().largest_monitor_line_size();
       if (monitor_size < MAX_CACHE_LINE) {
         monitor_size = MAX_CACHE_LINE;
       }
@@ -405,8 +409,8 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
       }
       // If the halt_interlock flag was changed, another CPU must have done it; avoid HLT and
       // switch to a new runnable thread.
-      bool no_fast_wakeup = percpu->halt_interlock.compare_exchange_strong(halt_interlock_spinning,
-                                                                           2);
+      bool no_fast_wakeup =
+          percpu->halt_interlock.compare_exchange_strong(halt_interlock_spinning, 2);
       if (no_fast_wakeup) {
         x86_idle();
       } else {

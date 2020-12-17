@@ -130,6 +130,7 @@ TEST(CpuidTests, Core2_6300) {
     // Present:
     EXPECT_TRUE(features.pdcm());
     EXPECT_TRUE(features.cmpxchg16b());
+    EXPECT_TRUE(features.monitor());
 
     // Not present:
     EXPECT_FALSE(features.hypervisor());
@@ -175,6 +176,7 @@ TEST(CpuidTests, Nehalem_Xeon_E5520) {
     // Present:
     EXPECT_TRUE(features.pdcm());
     EXPECT_TRUE(features.cmpxchg16b());
+    EXPECT_TRUE(features.monitor());
 
     // Not present:
     EXPECT_FALSE(features.hypervisor());
@@ -223,6 +225,7 @@ TEST(CpuidTests, SandyBridge_i7_2600K) {
     EXPECT_TRUE(features.xsave());
     EXPECT_TRUE(features.pdcm());
     EXPECT_TRUE(features.cmpxchg16b());
+    EXPECT_TRUE(features.monitor());
 
     // Not present:
     EXPECT_FALSE(features.hypervisor());
@@ -268,6 +271,7 @@ TEST(CpuidTests, IvyBridge_i3_3240) {
     EXPECT_TRUE(features.xsave());
     EXPECT_TRUE(features.pdcm());
     EXPECT_TRUE(features.cmpxchg16b());
+    EXPECT_TRUE(features.monitor());
 
     // Not present:
     EXPECT_FALSE(features.hypervisor());
@@ -317,6 +321,7 @@ TEST(CpuidTests, Haswell_Xeon_E5_2690v3) {
     EXPECT_TRUE(features.x2apic());
     EXPECT_TRUE(features.pdcm());
     EXPECT_TRUE(features.cmpxchg16b());
+    EXPECT_TRUE(features.monitor());
 
     // Not present.
     EXPECT_FALSE(features.hypervisor());
@@ -364,6 +369,7 @@ TEST(CpuidTests, Skylake_i3_6100) {
     EXPECT_TRUE(features.x2apic());
     EXPECT_TRUE(features.pdcm());
     EXPECT_TRUE(features.cmpxchg16b());
+    EXPECT_TRUE(features.monitor());
 
     // Not present:
     EXPECT_FALSE(features.hypervisor());
@@ -412,6 +418,7 @@ TEST(CpuidTests, AtomD510) {
     EXPECT_FALSE(features.osxsave());
     EXPECT_FALSE(features.xsave());
     EXPECT_FALSE(features.x2apic());
+    EXPECT_TRUE(features.monitor());
   }
 
   {
@@ -452,6 +459,7 @@ TEST(CpuidTests, Ryzen2700X) {
     EXPECT_TRUE(features.osxsave());
     EXPECT_TRUE(features.xsave());
     EXPECT_TRUE(features.cmpxchg16b());
+    EXPECT_TRUE(features.monitor());
 
     // Not present:
     EXPECT_FALSE(features.hypervisor());
@@ -499,6 +507,7 @@ TEST(CpuidTests, Ryzen3950X) {
     EXPECT_TRUE(features.osxsave());
     EXPECT_TRUE(features.xsave());
     EXPECT_TRUE(features.cmpxchg16b());
+    EXPECT_TRUE(features.monitor());
 
     // Not present:
     EXPECT_FALSE(features.hypervisor());
@@ -553,6 +562,7 @@ TEST(CpuidTests, Ryzen3950X_VirtualBox_Hyperv) {
     EXPECT_FALSE(features.cmpxchg16b());
     EXPECT_FALSE(features.x2apic());
     EXPECT_FALSE(features.pdcm());
+    EXPECT_FALSE(features.monitor());
   }
 
   {
@@ -602,6 +612,7 @@ TEST(CpuidTests, Ryzen3950X_VirtualBox_Kvm) {
     EXPECT_FALSE(features.cmpxchg16b());
     EXPECT_FALSE(features.x2apic());
     EXPECT_FALSE(features.pdcm());
+    EXPECT_FALSE(features.monitor());
   }
 
   {
@@ -651,6 +662,7 @@ TEST(CpuidTests, Ryzen3950X_VMware) {
 
     // Not present:
     EXPECT_FALSE(features.pdcm());
+    EXPECT_FALSE(features.monitor());
   }
 
   {
@@ -698,6 +710,7 @@ TEST(CpuidTests, Ryzen3950X_WSL2) {
     // Not present:
     EXPECT_FALSE(features.x2apic());
     EXPECT_FALSE(features.pdcm());
+    EXPECT_FALSE(features.monitor());
   }
 
   {
@@ -740,6 +753,7 @@ TEST(CpuidTests, Threadripper1950X) {
     EXPECT_TRUE(features.osxsave());
     EXPECT_TRUE(features.xsave());
     EXPECT_TRUE(features.cmpxchg16b());
+    EXPECT_TRUE(features.monitor());
 
     // Not present:
     EXPECT_FALSE(features.hypervisor());

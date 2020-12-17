@@ -266,6 +266,40 @@ struct CpuidFeatureFlagsD : public CpuidValueBase<CpuidFeatureFlagsD, 0x1, 0x0, 
 };
 
 //---------------------------------------------------------------------------//
+// Leaf/Function 0x5.
+//
+// [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
+// [amd/vol3]: E.3.4  Function 5h—Monitor and MWait Features.
+//---------------------------------------------------------------------------//
+
+struct CpuidMonitorMwaitA : public CpuidValueBase<CpuidMonitorMwaitA, 0x5, 0x0, CpuidIo::kEax> {
+  DEF_RSVDZ_FIELD(31, 16);
+  DEF_FIELD(15, 0, smallest_monitor_line_size);
+};
+
+struct CpuidMonitorMwaitB : public CpuidValueBase<CpuidMonitorMwaitB, 0x5, 0x0, CpuidIo::kEbx> {
+  DEF_RSVDZ_FIELD(31, 16);
+  DEF_FIELD(15, 0, largest_monitor_line_size);
+};
+
+struct CpuidMonitorMwaitC : public CpuidValueBase<CpuidMonitorMwaitC, 0x5, 0x0, CpuidIo::kEcx> {
+  // Bits [31: 2] are reserved.
+  DEF_BIT(1, ibe);
+  DEF_BIT(0, emx);
+};
+
+struct CpuidMonitorMwaitD : public CpuidValueBase<CpuidMonitorMwaitD, 0x5, 0x0, CpuidIo::kEdx> {
+  DEF_FIELD(31, 28, c7_sub_c_states);
+  DEF_FIELD(27, 24, c6_sub_c_states);
+  DEF_FIELD(23, 20, c5_sub_c_states);
+  DEF_FIELD(19, 16, c4_sub_c_states);
+  DEF_FIELD(15, 12, c3_sub_c_states);
+  DEF_FIELD(11, 8, c2_sub_c_states);
+  DEF_FIELD(7, 4, c1_sub_c_states);
+  DEF_FIELD(3, 0, c0_sub_c_states);
+};
+
+//---------------------------------------------------------------------------//
 // Leaf/Function 0x7.
 //
 // [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
