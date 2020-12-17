@@ -20,6 +20,7 @@
 #include <cstring>
 #include <optional>
 #include <string_view>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -162,12 +163,53 @@ class ParameterSet {
   std::optional<std::vector<Parameter>> parameters_;
 };
 
-// Most clients should use this.
-constexpr std::string_view kTeeServicePath("/svc/fuchsia.tee.Device");
+struct UuidEqualityComparator {
+  bool operator()(const fuchsia_tee::Uuid& lhs, const fuchsia_tee::Uuid& rhs) const {
+    if (lhs.time_low != rhs.time_low) {
+      return false;
+    }
+    if (lhs.time_mid != rhs.time_mid) {
+      return false;
+    }
+    if (lhs.time_hi_and_version != rhs.time_hi_and_version) {
+      return false;
+    }
+
+    if (!std::equal(lhs.clock_seq_and_node.begin(), lhs.clock_seq_and_node.end(),
+                    rhs.clock_seq_and_node.begin(), rhs.clock_seq_and_node.end())) {
+      return false;
+    }
+
+    return true;
+  }
+};
+
+using UuidToChannelContainer = std::vector<std::pair<fuchsia_tee::Uuid, zx::channel>>;
+
+constexpr std::string_view kServiceDirectoryPath("/svc/");
+constexpr std::string_view kDeviceInfoServicePath("/svc/fuchsia.tee.DeviceInfo");
 
 // Presently only used by clients that need to connect before the service is available / don't need
 // the TEE to be able to use file services.
 constexpr std::string_view kTeeDevClass("/dev/class/tee/");
+
+std::string GetApplicationServicePath(const fuchsia_tee::Uuid& app_uuid) {
+  constexpr std::string_view kApplicationServicePathPrefix = "/svc/fuchsia.tee.Application.";
+  constexpr size_t kUuidNameLength = 36;
+  constexpr const char* kPathFormat = "%s%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x";
+  constexpr size_t kPathLength = kApplicationServicePathPrefix.size() + kUuidNameLength;
+
+  // Reserve an extra spot for the null-terminating character.
+  char path_buf[kPathLength + 1];
+  snprintf(path_buf, kPathLength + 1, kPathFormat, kApplicationServicePathPrefix.data(),
+           app_uuid.time_low, app_uuid.time_mid, app_uuid.time_hi_and_version,
+           app_uuid.clock_seq_and_node[0], app_uuid.clock_seq_and_node[1],
+           app_uuid.clock_seq_and_node[2], app_uuid.clock_seq_and_node[3],
+           app_uuid.clock_seq_and_node[4], app_uuid.clock_seq_and_node[5],
+           app_uuid.clock_seq_and_node[6], app_uuid.clock_seq_and_node[7]);
+
+  return std::string(path_buf, kPathLength);
+}
 
 constexpr uint32_t GetParamTypeForIndex(uint32_t param_types, size_t index) {
   constexpr uint32_t kBitsPerParamType = 4;
@@ -189,13 +231,37 @@ constexpr bool IsDirectionOutput(fuchsia_tee::Direction direction) {
           (direction == fuchsia_tee::Direction::INOUT));
 }
 
-bool IsGlobalPlatformCompliant(zx::unowned_channel tee_channel) {
-  auto result = fuchsia_tee::Device::Call::GetOsInfo(std::move(tee_channel));
-  if (!result.ok() || !result->info.has_is_global_platform_compliant()) {
-    return false;
+TEEC_Result CheckGlobalPlatformCompliance(zx::unowned_channel device_connector_channel) {
+  zx::channel device_info_client_end;
+  zx::channel device_info_server_end;
+  if (zx_status_t status =
+          zx::channel::create(0 /* flags */, &device_info_client_end, &device_info_server_end);
+      status != ZX_OK) {
+    return TEEC_ERROR_COMMUNICATION;
   }
 
-  return result->info.is_global_platform_compliant();
+  if (device_connector_channel->is_valid()) {
+    auto result = fuchsia_hardware_tee::DeviceConnector::Call::ConnectToDeviceInfo(
+        std::move(device_connector_channel), std::move(device_info_server_end));
+    if (!result.ok()) {
+      return TEEC_ERROR_NOT_SUPPORTED;
+    }
+  } else {
+    if (zx_status_t status =
+            fdio_service_connect(kDeviceInfoServicePath.data(), device_info_server_end.release());
+        status != ZX_OK) {
+      return TEEC_ERROR_NOT_SUPPORTED;
+    }
+  }
+
+  auto result =
+      fuchsia_tee::DeviceInfo::Call::GetOsInfo(zx::unowned_channel(device_info_client_end));
+  if (!result.ok() || !result->info.has_is_global_platform_compliant() ||
+      !result->info.is_global_platform_compliant()) {
+    return TEEC_ERROR_NOT_SUPPORTED;
+  }
+
+  return TEEC_SUCCESS;
 }
 
 void ConvertTeecUuidToZxUuid(const TEEC_UUID& teec_uuid, fuchsia_tee::Uuid* out_uuid) {
@@ -711,65 +777,134 @@ TEEC_Result PostprocessOperation(const fidl::VectorView<fuchsia_tee::Parameter>&
   return rc;
 }
 
-zx_status_t ConnectToService(zx::channel* tee_channel) {
-  ZX_DEBUG_ASSERT(tee_channel);
-
-  zx::channel client_channel;
-  zx::channel server_channel;
-  zx_status_t status = zx::channel::create(0, &client_channel, &server_channel);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  status = fdio_service_connect(kTeeServicePath.data(), server_channel.release());
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *tee_channel = std::move(client_channel);
-  return ZX_OK;
+UuidToChannelContainer* GetUuidToChannelContainerFromContext(TEEC_Context* context) {
+  ZX_DEBUG_ASSERT(context);
+  return reinterpret_cast<UuidToChannelContainer*>(context->imp.uuid_to_channel);
 }
 
-// Connects the client directly to the TEE Driver.
+UuidToChannelContainer::iterator FindInUuidToChannelContainer(UuidToChannelContainer* container,
+                                                              const fuchsia_tee::Uuid& uuid) {
+  ZX_DEBUG_ASSERT(container);
+
+  return std::find_if(container->begin(), container->end(), [&](const auto& uuid_channel_pair) {
+    return UuidEqualityComparator{}(uuid_channel_pair.first, uuid);
+  });
+}
+
+constexpr bool ShouldUseDeviceConnectorChannel(const TEEC_Context* context) {
+  return context->imp.device_connector_channel != ZX_HANDLE_INVALID;
+}
+
+// Connects the client directly to the TEE Driver's DeviceConnector interface.
 //
 // This is a temporary measure to allow clients that come up before component services to still
 // access the TEE. This requires that the client has access to the TEE device class. Additionally,
-// the client's entire context will not have any filesystem support, so if the client sends a
-// command to a trusted application that then needs persistent storage to complete, the persistent
-// storage request will be rejected by the driver.
-zx_status_t ConnectToDriver(const char* tee_device, zx::channel* tee_channel) {
+// the client's entire context will not have any filesystem support, so if the client opens a
+// session and sends a command to a trusted application that then needs persistent storage to
+// complete, the persistent storage request will be rejected by the driver.
+zx_status_t ConnectToDeviceConnector(const char* tee_device, zx::channel* connector_channel) {
   ZX_DEBUG_ASSERT(tee_device);
-  ZX_DEBUG_ASSERT(tee_channel);
+  ZX_DEBUG_ASSERT(connector_channel);
 
   int fd = open(tee_device, O_RDWR);
   if (fd < 0) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  zx::channel connector_channel;
-  zx_status_t status = fdio_get_service_handle(fd, connector_channel.reset_and_get_address());
+  zx::channel temp_channel;
+  zx_status_t status = fdio_get_service_handle(fd, temp_channel.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }
 
-  zx::channel client_channel;
-  zx::channel server_channel;
-  status = zx::channel::create(0, &client_channel, &server_channel);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Connect to the device interface with no supporting service provider
-  fuchsia_hardware_tee::DeviceConnector::SyncClient client(std::move(connector_channel));
-  auto result = client.ConnectTee(zx::channel(ZX_HANDLE_INVALID), std::move(server_channel));
-  status = result.status();
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *tee_channel = std::move(client_channel);
+  *connector_channel = std::move(temp_channel);
   return ZX_OK;
 }
+
+// Opens a connection to a `fuchsia.tee.Application` via a device connector.
+TEEC_Result ConnectApplicationViaDeviceConnector(const fuchsia_tee::Uuid& app_uuid,
+                                                 zx::unowned_channel device_connector_channel,
+                                                 zx::channel* out_app_channel) {
+  ZX_DEBUG_ASSERT(device_connector_channel->is_valid());
+  ZX_DEBUG_ASSERT(out_app_channel);
+
+  zx::channel app_client_end;
+  zx::channel app_server_end;
+  if (zx_status_t status = zx::channel::create(0 /* flags */, &app_client_end, &app_server_end);
+      status != ZX_OK) {
+    return TEEC_ERROR_COMMUNICATION;
+  }
+
+  auto result = fuchsia_hardware_tee::DeviceConnector::Call::ConnectToApplication(
+      std::move(device_connector_channel), app_uuid,
+      zx::channel(ZX_HANDLE_INVALID) /* service_provider */, std::move(app_server_end));
+  if (!result.ok()) {
+    return TEEC_ERROR_COMMUNICATION;
+  }
+
+  *out_app_channel = std::move(app_client_end);
+  return TEEC_SUCCESS;
+}
+
+// Opens a connection to a `fuchsia.tee.Application` via the service.
+TEEC_Result ConnectApplicationViaService(const fuchsia_tee::Uuid& app_uuid,
+                                         zx::channel* out_app_channel) {
+  ZX_DEBUG_ASSERT(out_app_channel);
+
+  zx::channel app_client_end;
+  zx::channel app_server_end;
+  if (zx_status_t status = zx::channel::create(0 /* flags */, &app_client_end, &app_server_end);
+      status != ZX_OK) {
+    return TEEC_ERROR_COMMUNICATION;
+  }
+
+  std::string service_path = GetApplicationServicePath(app_uuid);
+  if (zx_status_t status = fdio_service_connect(service_path.c_str(), app_server_end.release());
+      status != ZX_OK) {
+    return TEEC_ERROR_COMMUNICATION;
+  }
+
+  *out_app_channel = std::move(app_client_end);
+  return TEEC_SUCCESS;
+}
+
+TEEC_Result ConnectApplication(const fuchsia_tee::Uuid& app_uuid, TEEC_Context* context,
+                               zx::unowned_channel* out_app_channel) {
+  ZX_DEBUG_ASSERT(context);
+  ZX_DEBUG_ASSERT(out_app_channel);
+
+  UuidToChannelContainer* uuid_to_channel = GetUuidToChannelContainerFromContext(context);
+  if (uuid_to_channel == nullptr) {
+    return TEEC_ERROR_BAD_PARAMETERS;
+  }
+
+  if (auto iter = FindInUuidToChannelContainer(uuid_to_channel, app_uuid);
+      iter != uuid_to_channel->end()) {
+    // A connection to this application already exists, so just reuse the channel.
+    *out_app_channel = zx::unowned_channel(iter->second);
+    return TEEC_SUCCESS;
+  }
+
+  // This is a new connection to this application, so a new connection must be made.
+  zx::channel app_channel_owned;
+  TEEC_Result result =
+      ShouldUseDeviceConnectorChannel(context)
+          ? ConnectApplicationViaDeviceConnector(
+                app_uuid, zx::unowned_channel(context->imp.device_connector_channel),
+                &app_channel_owned)
+          : ConnectApplicationViaService(app_uuid, &app_channel_owned);
+  if (result != TEEC_SUCCESS) {
+    return result;
+  }
+
+  *out_app_channel = zx::unowned_channel(app_channel_owned);
+
+  // Stash the channel into the `uuid_to_channel` for ownership and future use.
+  uuid_to_channel->emplace_back(app_uuid, std::move(app_channel_owned));
+
+  return TEEC_SUCCESS;
+}
+
 }  // namespace
 
 __EXPORT
@@ -778,37 +913,30 @@ TEEC_Result TEEC_InitializeContext(const char* name, TEEC_Context* context) {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
-  zx_status_t status;
-  zx::channel tee_channel;
-  std::string_view name_view(name != nullptr ? name : "");
+  auto name_view = std::string_view(name != nullptr ? name : "");
+  zx::channel device_connector_channel;
 
-  if (name == nullptr || kTeeServicePath == name_view) {
-    status = ConnectToService(&tee_channel);
-    if (status != ZX_OK) {
-      return TEEC_ERROR_COMMUNICATION;
-    }
+  // TODO: use `std::string_view::starts_with()` when C++20 is available.
+  if (name == nullptr ||
+      name_view.compare(0, kServiceDirectoryPath.size(), kServiceDirectoryPath) == 0) {
+    device_connector_channel = zx::channel(ZX_HANDLE_INVALID);
   } else if (name_view.compare(0, kTeeDevClass.size(), kTeeDevClass) == 0) {
-    // TODO: use `std::string_view::starts_with()` when C++20 is available.
-
-    // The client has specified a direct connection to some TEE device
-    // See comments on `ConnectToDriver()` for details.
-    status = ConnectToDriver(name, &tee_channel);
-    if (status != ZX_OK) {
-      if (status == ZX_ERR_NOT_FOUND) {
-        return TEEC_ERROR_ITEM_NOT_FOUND;
-      } else {
-        return TEEC_ERROR_COMMUNICATION;
-      }
+    if (zx_status_t status = ConnectToDeviceConnector(name, &device_connector_channel);
+        status != ZX_OK) {
+      return TEEC_ERROR_COMMUNICATION;
     }
   } else {
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
-  if (!IsGlobalPlatformCompliant(zx::unowned_channel(tee_channel))) {
-    // This API is only designed to support TEEs that are Global Platform compliant.
-    return TEEC_ERROR_NOT_SUPPORTED;
+  if (TEEC_Result result =
+          CheckGlobalPlatformCompliance(zx::unowned_channel(device_connector_channel));
+      result != TEEC_SUCCESS) {
+    return result;
   }
-  context->imp.tee_channel = tee_channel.release();
+
+  context->imp.device_connector_channel = device_connector_channel.release();
+  context->imp.uuid_to_channel = new UuidToChannelContainer();
 
   return TEEC_SUCCESS;
 }
@@ -816,8 +944,11 @@ TEEC_Result TEEC_InitializeContext(const char* name, TEEC_Context* context) {
 __EXPORT
 void TEEC_FinalizeContext(TEEC_Context* context) {
   if (context) {
-    zx_handle_close(context->imp.tee_channel);
-    context->imp.tee_channel = ZX_HANDLE_INVALID;
+    zx_handle_close(context->imp.device_connector_channel);
+    context->imp.device_connector_channel = ZX_HANDLE_INVALID;
+
+    delete GetUuidToChannelContainerFromContext(context);
+    context->imp.uuid_to_channel = nullptr;
   }
 }
 
@@ -896,8 +1027,8 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
     return TEEC_ERROR_NOT_IMPLEMENTED;
   }
 
-  fuchsia_tee::Uuid trusted_app;
-  ConvertTeecUuidToZxUuid(*destination, &trusted_app);
+  fuchsia_tee::Uuid app_uuid_fidl;
+  ConvertTeecUuidToZxUuid(*destination, &app_uuid_fidl);
 
   ParameterSet parameter_set;
   TEEC_Result processing_rc = PreprocessOperation(operation, &parameter_set);
@@ -908,14 +1039,30 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
     return processing_rc;
   }
 
-  auto result = fuchsia_tee::Device::Call::OpenSession(
-      zx::unowned_channel(context->imp.tee_channel), trusted_app, parameter_set.to_llcpp());
+  zx::unowned_channel app_channel;
+  if (TEEC_Result result = ConnectApplication(app_uuid_fidl, context, &app_channel);
+      result != TEEC_SUCCESS) {
+    return result;
+  }
+
+  auto result = fuchsia_tee::Application::Call::OpenSession2(zx::unowned_channel(app_channel),
+                                                             parameter_set.to_llcpp());
   zx_status_t status = result.status();
 
   if (status != ZX_OK) {
     if (returnOrigin) {
       *returnOrigin = TEEC_ORIGIN_COMMS;
     }
+
+    if (status == ZX_ERR_PEER_CLOSED) {
+      // If the channel has closed, drop the entry from the map, closing the channel end.
+      UuidToChannelContainer* uuid_to_channel = GetUuidToChannelContainerFromContext(context);
+      if (auto iter = FindInUuidToChannelContainer(uuid_to_channel, app_uuid_fidl);
+          iter != uuid_to_channel->end()) {
+        uuid_to_channel->erase(iter);
+      }
+    }
+
     return ConvertStatusToResult(status);
   }
 
@@ -951,27 +1098,27 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
   }
 
   session->imp.session_id = out_session_id;
-  session->imp.context_imp = &context->imp;
+  session->imp.application_channel = app_channel->get();
 
   return static_cast<uint32_t>(out_result.return_code());
 }
 
 __EXPORT
 void TEEC_CloseSession(TEEC_Session* session) {
-  if (!session || !session->imp.context_imp) {
+  if (!session || session->imp.application_channel == ZX_HANDLE_INVALID) {
     return;
   }
 
   // TEEC_CloseSession simply swallows errors, so no need to check here.
-  fuchsia_tee::Device::Call::CloseSession(
-      zx::unowned_channel(session->imp.context_imp->tee_channel), session->imp.session_id);
-  session->imp.context_imp = NULL;
+  fuchsia_tee::Application::Call::CloseSession(
+      zx::unowned_channel(session->imp.application_channel), session->imp.session_id);
+  session->imp.application_channel = ZX_HANDLE_INVALID;
 }
 
 __EXPORT
 TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_Operation* operation,
                                uint32_t* returnOrigin) {
-  if (!session || !session->imp.context_imp) {
+  if (!session || session->imp.application_channel == ZX_HANDLE_INVALID) {
     if (returnOrigin) {
       *returnOrigin = TEEC_ORIGIN_API;
     }
@@ -987,9 +1134,9 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
     return processing_rc;
   }
 
-  auto result = fuchsia_tee::Device::Call::InvokeCommand(
-      zx::unowned_channel(session->imp.context_imp->tee_channel), session->imp.session_id,
-      commandID, parameter_set.to_llcpp());
+  auto result = fuchsia_tee::Application::Call::InvokeCommand(
+      zx::unowned_channel(session->imp.application_channel), session->imp.session_id, commandID,
+      parameter_set.to_llcpp());
   zx_status_t status = result.status();
   if (status != ZX_OK) {
     if (returnOrigin) {

@@ -12,21 +12,28 @@
  *
  * This file provides the Implementation specific structures necessary to complete the TEE
  * Client API.
+ *
+ * Clients of the library should not rely on or modify the internal values of these structures.
  */
 
 /* Maximum number of parameters that can be specified in an TEEC_Operation. */
 #define TEEC_NUM_PARAMS_MAX 4
 
 typedef struct teec_context_impl {
-  // TODO(fxbug.dev/36236): Currently, some driver code is directly setting tee_channel
-  // instead of using TEEC_InitializeContext() (since that doesn't work in
-  // driver code).
-  zx_handle_t tee_channel;
+  // This channel is usually invalid, when client is connecting via a service. This channel will
+  // be set when connecting directly to the driver.
+  zx_handle_t device_connector_channel;
+
+  // The UUID-keyed associative container that owns all of the open `fuchsia.tee.Application`
+  // channels.
+  void* uuid_to_channel;
 } teec_context_impl_t;
 
 typedef struct teec_session_impl {
   uint32_t session_id;
-  teec_context_impl_t* context_imp;
+
+  // An unowned copy of the channel to `fuchsia.tee.Application` this session is attached to.
+  zx_handle_t application_channel;
 } teec_session_impl_t;
 
 typedef struct teec_shared_memory_impl {
