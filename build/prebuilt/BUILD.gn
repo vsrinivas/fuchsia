@@ -7,6 +7,8 @@ import("//build/prebuilt_binaries.gni")
 # The //prebuilt directory contains only the binary artifacts managed by
 # jiri.  So this directory represents it in the build.
 
+# We assume that if jiri is tracking at least one CIPD package with attribute "debug-symbols"
+# then //prebuilt/.build-id exists.
 attributes = read_file("//.jiri_root/attributes.json", "json")
 debug_symbols = false
 foreach(attribute, attributes) {
@@ -15,13 +17,37 @@ foreach(attribute, attributes) {
   }
 }
 
-if (debug_symbols) {
-  prebuilt_binaries("prebuilt") {
-    testonly = true
-    build_id_dir = "//prebuilt/.build-id"
+_script = "//build/prebuilt/dir_exists.py"
+stable_prebuilt_build_id_dir_exists =
+    exec_script(python_exe_src,
+                [
+                  "-S",
+                  rebase_path(_script),
+                  rebase_path("//prebuilt/stable/.build-id"),
+                ],
+                "trim string",
+                [ _script ])
+
+group("prebuilt") {
+  testonly = true
+
+  deps = []
+
+  if (debug_symbols) {
+    deps += [ ":latest_or_generic" ]
   }
-} else {
-  group("prebuilt") {
-    testonly = true
+
+  if (stable_prebuilt_build_id_dir_exists == "True") {
+    deps += [ ":stable" ]
   }
+}
+
+prebuilt_binaries("latest_or_generic") {
+  testonly = true
+  build_id_dir = "//prebuilt/.build-id"
+}
+
+prebuilt_binaries("stable") {
+  testonly = true
+  build_id_dir = "//prebuilt/stable/.build-id"
 }

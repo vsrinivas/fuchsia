@@ -44,6 +44,7 @@ exec_script_whitelist = [
   "//build/config/clang/clang.gni",
   "//build/config/mac/mac_sdk.gni",
   "//build/config/sanitizers/BUILD.gn",
+  "//build/prebuilt/BUILD.gn",
   "//build/toolchain/concurrent_jobs.gni",
   "//build/toolchain/zircon/zircon_toolchain.gni",
   "//src/graphics/lib/compute/spinel-rs-sys/BUILD.gn",
