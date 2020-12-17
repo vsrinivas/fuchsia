@@ -26,6 +26,7 @@ _select_host = false
 _select_testonly = false
 _select_target_type = [ "shared_library" ]
 _select_output_name = [ "libzircon.so" ]
+_select_label = [ "//zircon/system/ulib/zircon" ]
 _select_name = [ "zircon" ]
 _select_dir = [ "//zircon/system/ulib/zircon" ]
 _select_exclude_toolchain_tags = [
@@ -74,6 +75,11 @@ if (select_variant_canonical != []) {
       if (_selected && _selector.output_name != []) {
         _selected = _selector.output_name + _select_output_name -
                     _select_output_name != _selector.output_name
+      }
+
+      if (_selected && _selector.label != []) {
+        _selected =
+            _selector.label + _select_label - _select_label != _selector.label
       }
 
       if (_selected && _selector.name != []) {
