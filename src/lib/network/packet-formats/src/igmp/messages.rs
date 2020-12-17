@@ -453,7 +453,8 @@ impl_igmp_simple_message_type!(IgmpLeaveGroup, LeaveGroup, Ipv4Addr);
 /// knowing the message type ahead of time while still getting the benefits of a
 /// statically-typed packet struct after parsing is complete.
 #[allow(missing_docs)]
-pub enum IgmpPacket<B> {
+#[derive(Debug)]
+pub enum IgmpPacket<B: ByteSlice> {
     MembershipQueryV2(IgmpMessage<B, IgmpMembershipQueryV2>),
     MembershipQueryV3(IgmpMessage<B, IgmpMembershipQueryV3>),
     MembershipReportV1(IgmpMessage<B, IgmpMembershipReportV1>),

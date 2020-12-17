@@ -407,6 +407,7 @@ async fn test_ip_endpoint_packets() -> Result {
             IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode, Icmpv4Packet, Icmpv6Packet,
             MessageBody,
         },
+        igmp::messages::IgmpPacket,
         ipv4::{Ipv4Packet, Ipv4PacketBuilder},
         ipv6::{Ipv6Packet, Ipv6PacketBuilder},
     };
@@ -423,21 +424,48 @@ async fn test_ip_endpoint_packets() -> Result {
     .try_filter_map(|frame| async move {
         let frame_type = frame.frame_type.context("missing frame type in frame")?;
         let frame_data = frame.data.context("missing data in frame")?;
-        if frame_type == fidl_fuchsia_hardware_network::FrameType::Ipv6 {
-            // Ignore all NDP IPv6 frames.
-            let mut bv = &frame_data[..];
-            let ipv6 = Ipv6Packet::parse(&mut bv, ())
-                .with_context(|| format!("failed to parse IPv6 packet {:?}", frame_data))?;
-            if ipv6.proto() == packet_formats::ip::IpProto::Icmpv6 {
-                let parse_args =
-                    packet_formats::icmp::IcmpParseArgs::new(ipv6.src_ip(), ipv6.dst_ip());
-                if let Icmpv6Packet::Ndp(p) = Icmpv6Packet::parse(&mut bv, parse_args)
-                    .context("failed to parse ICMP packet")?
-                {
-                    println!("ignoring NDP packet {:?}", p);
+        match frame_type {
+            fidl_fuchsia_hardware_network::FrameType::Ipv6 => {
+                // Ignore all NDP and MLD IPv6 frames.
+                let mut bv = &frame_data[..];
+                let ipv6 = Ipv6Packet::parse(&mut bv, ())
+                    .with_context(|| format!("failed to parse IPv6 packet {:?}", frame_data))?;
+                if ipv6.proto() == packet_formats::ip::IpProto::Icmpv6 {
+                    let parse_args =
+                        packet_formats::icmp::IcmpParseArgs::new(ipv6.src_ip(), ipv6.dst_ip());
+                    match Icmpv6Packet::parse(&mut bv, parse_args)
+                        .context("failed to parse ICMP packet")?
+                    {
+                        Icmpv6Packet::Ndp(p) => {
+                            println!("ignoring NDP packet {:?}", p);
+                            return Ok(None);
+                        }
+                        Icmpv6Packet::Mld(p) => {
+                            println!("ignoring MLD packet {:?}", p);
+                            return Ok(None);
+                        }
+                        Icmpv6Packet::DestUnreachable(_)
+                        | Icmpv6Packet::PacketTooBig(_)
+                        | Icmpv6Packet::TimeExceeded(_)
+                        | Icmpv6Packet::ParameterProblem(_)
+                        | Icmpv6Packet::EchoRequest(_)
+                        | Icmpv6Packet::EchoReply(_) => {}
+                    }
+                }
+            }
+            fidl_fuchsia_hardware_network::FrameType::Ipv4 => {
+                // Ignore all IGMP frames.
+                let mut bv = &frame_data[..];
+                let ipv4 = Ipv4Packet::parse(&mut bv, ())
+                    .with_context(|| format!("failed to parse IPv4 packet {:?}", frame_data))?;
+                if ipv4.proto() == packet_formats::ip::IpProto::Igmp {
+                    let p =
+                        IgmpPacket::parse(&mut bv, ()).context("failed to parse IGMP packet")?;
+                    println!("ignoring IGMP packet {:?}", p);
                     return Ok(None);
                 }
             }
+            fidl_fuchsia_hardware_network::FrameType::Ethernet => {}
         }
         Ok(Some((frame_type, frame_data)))
     });

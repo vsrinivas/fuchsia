@@ -15,7 +15,9 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/header/parse"
 	"gvisor.dev/gvisor/pkg/tcpip/ports"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 const chatty = false
@@ -88,16 +90,24 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 			return Pass
 		}
 	case header.IPv6ProtocolNumber:
-		ipv6 := header.IPv6(hdr)
-		if !ipv6.IsValid(len(hdr) + payload.Size()) {
+		pkt := stack.PacketBuffer{Data: hdr.ToVectorisedView()}
+		proto, _, _, _, ok := parse.IPv6(&pkt)
+		if !ok {
+			syslog.VLogTf(syslog.TraceVerbosity, tag, "failed to parse IPv6 packet")
+			return Drop
+		}
+
+		ipv6 := header.IPv6(pkt.NetworkHeader().View())
+		if !ipv6.IsValid(pkt.Size() + payload.Size()) {
 			syslog.VLogTf(syslog.TraceVerbosity, tag, "ipv6 packet is not valid")
 			return Drop
 		}
-		transProto = ipv6.TransportProtocol()
 		srcAddr = ipv6.SourceAddress()
 		dstAddr = ipv6.DestinationAddress()
-		payloadLength = ipv6.PayloadLength()
-		transportHeader = ipv6[header.IPv6MinimumSize:]
+
+		transProto = proto
+		payloadLength = ipv6.PayloadLength() - uint16(len(ipv6))
+		transportHeader = pkt.Data.ToView()
 	case header.ARPProtocolNumber:
 		// TODO: Anything?
 		return Pass
@@ -110,6 +120,8 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 	defer f.states.mut.Unlock()
 
 	switch transProto {
+	case header.IGMPProtocolNumber:
+		return Pass
 	case header.ICMPv4ProtocolNumber:
 		return f.runForICMPv4(dir, srcAddr, dstAddr, payloadLength, hdr, transportHeader, payload)
 	case header.ICMPv6ProtocolNumber:

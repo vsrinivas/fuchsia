@@ -7,7 +7,6 @@
 use std::mem::size_of;
 
 use fidl_fuchsia_net as net;
-use fidl_fuchsia_netemul_environment::LaunchService;
 use fidl_fuchsia_netstack as netstack;
 use fidl_fuchsia_netstack_ext::RouteTable;
 use fidl_fuchsia_sys as sys;
@@ -16,25 +15,32 @@ use fuchsia_component::client::AppBuilder;
 use fuchsia_zircon as zx;
 
 use anyhow::{self, Context};
-use futures::{future, Future, FutureExt as _, TryFutureExt as _, TryStreamExt as _};
+use futures::{
+    future, Future, FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _,
+};
 use net_types::ethernet::Mac;
 use net_types::ip::{self as net_types_ip, Ip};
-use net_types::{SpecifiedAddress, Witness};
-use netstack_testing_common::constants::{eth as eth_consts, ipv6 as ipv6_consts};
-use netstack_testing_common::environments::{
-    KnownServices, Netstack, Netstack2, TestSandboxExt as _,
+use net_types::{
+    LinkLocalAddress as _, MulticastAddress as _, SpecifiedAddress as _, Witness as _,
 };
+use netstack_testing_common::constants::{eth as eth_consts, ipv6 as ipv6_consts};
+use netstack_testing_common::environments::{KnownServices, Netstack, Netstack2};
 use netstack_testing_common::{
-    send_ra_with_router_lifetime, sleep, write_ndp_message, EthertapName, Result,
-    ASYNC_EVENT_CHECK_INTERVAL, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
+    send_ra_with_router_lifetime, setup_network, setup_network_with, sleep, write_ndp_message,
+    EthertapName, Result, ASYNC_EVENT_CHECK_INTERVAL, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
     ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, NDP_MESSAGE_TTL,
 };
 use netstack_testing_macros::variants_test;
+use packet::ParsablePacket as _;
+use packet_formats::ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck};
+use packet_formats::icmp::mld::MldPacket;
 use packet_formats::icmp::ndp::{
     options::{NdpOption, PrefixInformation},
     NeighborAdvertisement, NeighborSolicitation, RouterAdvertisement, RouterSolicitation,
 };
-use packet_formats::testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame;
+use packet_formats::icmp::{IcmpParseArgs, Icmpv6Packet};
+use packet_formats::ip::IpProto;
+use packet_formats::testutil::{parse_icmp_packet_in_ip_packet_in_ethernet_frame, parse_ip_packet};
 
 /// The expected number of Router Solicitations sent by the netstack when an
 /// interface is brought up as a host.
@@ -57,71 +63,6 @@ const EXPECTED_DAD_RETRANSMIT_TIMER: zx::Duration = zx::Duration::from_seconds(1
 ///
 /// [RFC 7217]: https://tools.ietf.org/html/rfc7217#section-6
 const DAD_IDGEN_DELAY: zx::Duration = zx::Duration::from_seconds(1);
-
-/// Sets up an environment with a network with no required services.
-async fn setup_network<E, S>(
-    sandbox: &netemul::TestSandbox,
-    name: S,
-) -> Result<(
-    netemul::TestNetwork<'_>,
-    netemul::TestEnvironment<'_>,
-    netstack::NetstackProxy,
-    netemul::TestInterface<'_>,
-    netemul::TestFakeEndpoint<'_>,
-)>
-where
-    E: netemul::Endpoint,
-    S: Copy + Into<String> + EthertapName,
-{
-    setup_network_with::<E, S, _>(sandbox, name, &[]).await
-}
-
-/// Sets up an environment with required services and a network used for tests
-/// requiring manual packet inspection and transmission.
-///
-/// Returns the network, environment, netstack client, interface (added to the
-/// netstack) and a fake endpoint used to read and write raw ethernet packets.
-/// The interface will be up when `setup_network` returns successfully.
-async fn setup_network_with<E, S, I>(
-    sandbox: &netemul::TestSandbox,
-    name: S,
-    services: I,
-) -> Result<(
-    netemul::TestNetwork<'_>,
-    netemul::TestEnvironment<'_>,
-    netstack::NetstackProxy,
-    netemul::TestInterface<'_>,
-    netemul::TestFakeEndpoint<'_>,
-)>
-where
-    E: netemul::Endpoint,
-    S: Copy + Into<String> + EthertapName,
-    I: IntoIterator,
-    I::Item: Into<LaunchService>,
-{
-    let network = sandbox.create_network(name).await.context("failed to create network")?;
-    let environment = sandbox
-        .create_netstack_environment_with::<Netstack2, _, _>(name, services)
-        .context("failed to create netstack environment")?;
-    // It is important that we create the fake endpoint before we join the
-    // network so no frames transmitted by Netstack are lost.
-    let fake_ep = network.create_fake_endpoint()?;
-
-    let iface = environment
-        .join_network::<E, _>(
-            &network,
-            name.ethertap_compatible_name(),
-            &netemul::InterfaceConfig::None,
-        )
-        .await
-        .context("failed to configure networking")?;
-
-    let netstack = environment
-        .connect_to_service::<netstack::NetstackMarker>()
-        .context("failed to connect to netstack service")?;
-
-    return Ok((network, environment, netstack, iface, fake_ep));
-}
 
 /// Launches a new netstack with the endpoint and returns the IPv6 addresses
 /// initially assigned to it.
@@ -884,5 +825,108 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
     )
     .await
     .context("failed to wait for SLAAC addresses")?;
+    Ok(())
+}
+
+#[variants_test]
+async fn sends_mld_reports<E: netemul::Endpoint>(name: &str) -> Result {
+    let sandbox = netemul::TestSandbox::new().context("error creating sandbox")?;
+    let (_network, _environment, _netstack, iface, fake_ep) =
+        setup_network::<E, _>(&sandbox, name).await.context("error setting up networking")?;
+
+    // Add an address so we join the address's solicited node multicast group.
+    let () = iface
+        .add_ip_addr(net::Subnet {
+            addr: net::IpAddress::Ipv6(net::Ipv6Address {
+                addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
+            }),
+            prefix_len: 64,
+        })
+        .await
+        .context("error adding IP address")?;
+    let snmc = ipv6_consts::LINK_LOCAL_ADDR.to_solicited_node_address();
+
+    let stream = fake_ep
+        .frame_stream()
+        .map(|r| r.context("error getting OnData event"))
+        .try_filter_map(|(data, dropped)| {
+            async move {
+                assert_eq!(dropped, 0);
+                let mut data = &data[..];
+
+                let eth = EthernetFrame::parse(&mut data, EthernetFrameLengthCheck::Check)
+                    .context("error parsing ethernet frame")?;
+
+                if eth.ethertype() != Some(EtherType::Ipv6) {
+                    // Ignore non-IPv6 packets.
+                    return Ok(None);
+                }
+
+                let (mut payload, src_ip, dst_ip, proto, ttl) =
+                    parse_ip_packet::<net_types_ip::Ipv6>(&data)
+                        .context("error parsing IPv6 packet")?;
+
+                if proto != IpProto::Icmpv6 {
+                    // Ignore non-ICMPv6 packets.
+                    return Ok(None);
+                }
+
+                let icmp = Icmpv6Packet::parse(&mut payload, IcmpParseArgs::new(src_ip, dst_ip))
+                    .context("error parsing ICMPv6 packet")?;
+
+                let mld = if let Icmpv6Packet::Mld(mld) = icmp {
+                    mld
+                } else {
+                    // Ignore non-MLD packets.
+                    return Ok(None);
+                };
+
+                // As per RFC 3590 section 4,
+                //
+                //   MLD Report and Done messages are sent with a link-local address as
+                //   the IPv6 source address, if a valid address is available on the
+                //   interface. If a valid link-local address is not available (e.g., one
+                //   has not been configured), the message is sent with the unspecified
+                //   address (::) as the IPv6 source address.
+                assert!(!src_ip.is_specified() || src_ip.is_linklocal(), "MLD messages must be sent from the unspecified or link local address; src_ip = {}", src_ip);
+
+                assert!(dst_ip.is_multicast(), "all MLD messages must be sent to a multicast address; dst_ip = {}", dst_ip);
+
+                // As per RFC 2710 section 3,
+                //
+                //   All MLD messages described in this document are sent with a
+                //   link-local IPv6 Source Address, an IPv6 Hop Limit of 1, ...
+                assert_eq!(ttl, 1, "MLD messages must have a hop limit of 1");
+
+                let report = if let MldPacket::MulticastListenerReport(report) = mld {
+                    report
+                } else {
+                    // Ignore non-report messages.
+                    return Ok(None);
+                };
+
+                let group_addr = report.body().group_addr;
+                assert!(group_addr.is_multicast(),  "MLD reports must only be sent for multicast addresses; group_addr = {}", group_addr);
+
+                if group_addr != *snmc {
+                    // We are only interested in the report for the solicited node
+                    // multicast group we joined.
+                    return Ok(None);
+                }
+
+                assert_eq!(dst_ip, group_addr, "the destination of an MLD report should be the multicast group the report is for");
+
+                Ok(Some(()))
+            }
+        });
+    futures::pin_mut!(stream);
+    let () = stream
+        .try_next()
+        .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
+            return Err(anyhow::anyhow!("timed out waiting for the MLD report"));
+        })
+        .await?
+        .context("error getting our expected MLD report")?;
+
     Ok(())
 }

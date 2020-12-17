@@ -16,6 +16,8 @@ use std::fmt::Debug;
 
 use fidl_fuchsia_hardware_ethertap as ethertap;
 use fidl_fuchsia_net_interfaces as net_interfaces;
+use fidl_fuchsia_netemul_environment as netemul_environment;
+use fidl_fuchsia_netstack as netstack;
 use fuchsia_async::{self as fasync, DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
@@ -33,6 +35,8 @@ use packet_formats::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
 use packet_formats::ip::IpProto;
 use packet_formats::ipv6::Ipv6PacketBuilder;
 use zerocopy::ByteSlice;
+
+use crate::environments::TestSandboxExt as _;
 
 /// An alias for `Result<T, anyhow::Error>`.
 pub type Result<T = ()> = std::result::Result<T, anyhow::Error>;
@@ -252,4 +256,74 @@ pub async fn send_ra_with_router_lifetime<'a>(
         fake_ep,
     )
     .await
+}
+
+/// Sets up an environment with a network with no required services.
+pub async fn setup_network<E, S>(
+    sandbox: &netemul::TestSandbox,
+    name: S,
+) -> Result<(
+    netemul::TestNetwork<'_>,
+    netemul::TestEnvironment<'_>,
+    netstack::NetstackProxy,
+    netemul::TestInterface<'_>,
+    netemul::TestFakeEndpoint<'_>,
+)>
+where
+    E: netemul::Endpoint,
+    S: Copy + Into<String> + EthertapName,
+{
+    setup_network_with::<E, S, _>(
+        sandbox,
+        name,
+        std::iter::empty::<netemul_environment::LaunchService>(),
+    )
+    .await
+}
+
+/// Sets up an environment with required services and a network used for tests
+/// requiring manual packet inspection and transmission.
+///
+/// Returns the network, environment, netstack client, interface (added to the
+/// netstack and up) and a fake endpoint used to read and write raw ethernet
+/// packets.
+pub async fn setup_network_with<E, S, I>(
+    sandbox: &netemul::TestSandbox,
+    name: S,
+    services: I,
+) -> Result<(
+    netemul::TestNetwork<'_>,
+    netemul::TestEnvironment<'_>,
+    netstack::NetstackProxy,
+    netemul::TestInterface<'_>,
+    netemul::TestFakeEndpoint<'_>,
+)>
+where
+    E: netemul::Endpoint,
+    S: Copy + Into<String> + EthertapName,
+    I: IntoIterator,
+    I::Item: Into<netemul_environment::LaunchService>,
+{
+    let network = sandbox.create_network(name).await.context("failed to create network")?;
+    let environment = sandbox
+        .create_netstack_environment_with::<environments::Netstack2, _, _>(name, services)
+        .context("failed to create netstack environment")?;
+    // It is important that we create the fake endpoint before we join the
+    // network so no frames transmitted by Netstack are lost.
+    let fake_ep = network.create_fake_endpoint()?;
+
+    let iface = environment
+        .join_network::<E, _>(
+            &network,
+            name.ethertap_compatible_name(),
+            &netemul::InterfaceConfig::None,
+        )
+        .await
+        .context("failed to configure networking")?;
+
+    let netstack = environment
+        .connect_to_service::<netstack::NetstackMarker>()
+        .context("failed to connect to netstack service")?;
+
+    Ok((network, environment, netstack, iface, fake_ep))
 }

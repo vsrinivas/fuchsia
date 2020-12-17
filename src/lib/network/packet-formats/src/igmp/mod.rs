@@ -236,7 +236,8 @@ impl HeaderPrefix {
 /// An `IgmpMessage` is a struct representing an IGMP message in memory;
 /// it holds the 3 IGMP message parts and is characterized by the
 /// `MessageType` trait.
-pub struct IgmpMessage<B, M: MessageType<B>> {
+#[derive(Debug)]
+pub struct IgmpMessage<B: ByteSlice, M: MessageType<B>> {
     prefix: LayoutVerified<B, HeaderPrefix>,
     header: LayoutVerified<B, M::FixedHeader>,
     body: M::VariableBody,
@@ -269,7 +270,7 @@ fn compute_checksum_fragmented<BB: packet::Fragment>(
     c.checksum()
 }
 
-impl<B, M: MessageType<B>> IgmpMessage<B, M> {
+impl<B: ByteSlice, M: MessageType<B>> IgmpMessage<B, M> {
     fn compute_checksum(header_prefix: &HeaderPrefix, header: &[u8], body: &[u8]) -> [u8; 2] {
         let mut body = [body];
         compute_checksum_fragmented(header_prefix, header, &body.as_fragmented_byte_slice())

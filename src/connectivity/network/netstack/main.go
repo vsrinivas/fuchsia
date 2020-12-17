@@ -223,7 +223,11 @@ func Main() {
 	stk := tcpipstack.New(tcpipstack.Options{
 		NetworkProtocols: []tcpipstack.NetworkProtocolFactory{
 			arp.NewProtocol,
-			ipv4.NewProtocol,
+			ipv4.NewProtocolWithOptions(ipv4.Options{
+				IGMP: ipv4.IGMPOptions{
+					Enabled: true,
+				},
+			}),
 			ipv6.NewProtocolWithOptions(ipv6.Options{
 				NDPConfigs: ipv6.NDPConfigurations{
 					DupAddrDetectTransmits:        dadTransmits,
@@ -256,6 +260,9 @@ func Main() {
 					SecretKey: secretKeyForOpaqueIID,
 				},
 				TempIIDSeed: tempIIDSeed,
+				MLD: ipv6.MLDOptions{
+					Enabled: true,
+				},
 			}),
 		},
 		TransportProtocols: []tcpipstack.TransportProtocolFactory{

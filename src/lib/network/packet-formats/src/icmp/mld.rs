@@ -24,6 +24,7 @@ use crate::U16;
 
 /// An ICMPv6 packet with an MLD message.
 #[allow(missing_docs)]
+#[derive(Debug)]
 pub enum MldPacket<B: ByteSlice> {
     MulticastListenerQuery(IcmpPacket<Ipv6, B, MulticastListenerQuery>),
     MulticastListenerReport(IcmpPacket<Ipv6, B, MulticastListenerReport>),

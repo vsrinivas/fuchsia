@@ -1,0 +1,21 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.netemul.sandbox.Sandbox": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netemul-sandbox.cmx"
+            }
+        }
+    },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/netstack_ipv4_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.netemul.sandbox.Sandbox",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

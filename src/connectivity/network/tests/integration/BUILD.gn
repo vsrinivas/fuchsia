@@ -19,6 +19,7 @@ tests = [
   "dns",
   "fidl",
   "inspect",
+  "ipv4",
   "ipv6",
   "management",
   "neighbor",
