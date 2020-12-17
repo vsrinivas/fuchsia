@@ -443,7 +443,10 @@ ImagePtr ImagePipe2::CreateImage(Session* session, ResourceId image_id,
       escher::image_utils::GetDefaultImageConstraints(pixel_format);
   image_create_info.setPNext(&collection_image_info);
   image_create_info.extent = vk::Extent3D{image_format.coded_width, image_format.coded_height, 1};
-  if (info.buffer_collection_info.settings.buffer_settings.is_secure) {
+
+  auto memory_properties = session->resource_context().vk_physical_device.getMemoryProperties();
+  if (memory_properties.memoryTypes[memory_type_index].propertyFlags &
+      vk::MemoryPropertyFlagBits::eProtected) {
     image_create_info.flags = vk::ImageCreateFlagBits::eProtected;
   }
 
