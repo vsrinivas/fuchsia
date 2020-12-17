@@ -1,4 +1,6 @@
-teisenbe@google.com
 alexlegg@google.com
+spqchan@google.com
+
+include /src/devices/OWNERS
 
 # COMPONENT: Zircon>FDF
