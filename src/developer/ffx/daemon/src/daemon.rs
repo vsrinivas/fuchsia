@@ -350,7 +350,7 @@ impl Daemon {
                                     .boxed()
                                 })
                                 .collect(),
-                            _ => match self.target_collection.get(value.into()).await {
+                            _ => match self.target_collection.get_connected(value.into()).await {
                                 Some(t) => {
                                     vec![async move { Some(t.to_fidl_target().await) }.boxed()]
                                 }

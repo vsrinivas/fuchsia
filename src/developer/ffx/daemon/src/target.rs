@@ -677,7 +677,11 @@ impl Target {
 #[async_trait]
 impl EventSynthesizer<DaemonEvent> for Target {
     async fn synthesize_events(&self) -> Vec<DaemonEvent> {
-        vec![DaemonEvent::NewTarget(self.nodename().await)]
+        if self.inner.state.lock().await.connection_state.is_connected() {
+            vec![DaemonEvent::NewTarget(self.nodename().await)]
+        } else {
+            vec![]
+        }
     }
 }
 
@@ -1083,17 +1087,41 @@ impl TargetCollection {
 
     /// Attempts to get a target based off of the default. Returns an error if
     /// there is no target available (this doesn't await a new target).
+    ///
+    /// Ignores any targets that do not have the state of "connected" at the
+    /// time the command is invoked, so can cause some raciness.
     pub async fn get_default(&self, n: Option<String>) -> Result<Target> {
-        let targets = self.inner.read().await;
-        match (targets.named.len(), n) {
+        // The "get the mapped targets for filtering connected ones" step has
+        // to be separate from the actual `filter_map()` statement on account of
+        // the compiler claiming a temporary value is borrowed whilst still in
+        // use. It is unclear why this needs to be done in two statements, but
+        // without it the compiler will complain.
+        let targets = &self.inner.read().await.named;
+        let targets = futures::future::join_all(
+            targets
+                .iter()
+                .map(|(nodename, t)| async move {
+                    (
+                        nodename,
+                        t.clone(),
+                        t.inner.state.lock().await.connection_state.is_connected(),
+                    )
+                })
+                .collect::<Vec<_>>(),
+        )
+        .await;
+        let targets = targets
+            .iter()
+            .filter_map(|(n, t, connected)| if *connected { Some((n, t)) } else { None })
+            .collect::<Vec<_>>();
+        match (targets.len(), n) {
             (0, None) => Err(anyhow!("no targets connected - is your device plugged in?")),
             (1, None) => {
                 let res = targets
-                    .named
-                    .values()
+                    .iter()
                     .next()
                     .ok_or(anyhow!("no targets in cache"))
-                    .map(|t| t.clone())?;
+                    .map(|(_, t)| (*t).clone())?;
                 log::debug!(
                     "No default target selected, returning only target - {:?}",
                     res.nodename().await,
@@ -1107,11 +1135,10 @@ impl TargetCollection {
             (_, Some(nodename)) => {
                 // TODO(fxb/66152) Use target query instead.
                 targets
-                    .named
                     .iter()
                     .find_map(|(target_nodename, target)| {
                         if target_nodename.contains(&nodename) {
-                            Some(target.clone())
+                            Some((*target).clone())
                         } else {
                             None
                         }
@@ -1119,6 +1146,19 @@ impl TargetCollection {
                     .ok_or(anyhow!("no targets found"))
             }
         }
+    }
+
+    pub async fn get_connected(&self, t: TargetQuery) -> Option<Target> {
+        let inner = self.inner.read().await;
+        for target in inner.named.values().chain(inner.unnamed.iter()) {
+            if target.inner.state.lock().await.connection_state.is_connected() {
+                if t.matches(target).await {
+                    return Some(target.clone());
+                }
+            }
+        }
+
+        None
     }
 
     pub async fn get(&self, t: TargetQuery) -> Option<Target> {
@@ -1181,6 +1221,32 @@ mod test {
                 && *block_on(self.inner.state.lock()) == *block_on(o.inner.state.lock())
         }
     }
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_collection_insert_new_not_connected() {
+        let tc = TargetCollection::new();
+        let nodename = String::from("what");
+        let t = Target::new_with_time(&nodename, fake_now());
+        tc.merge_insert(clone_target(&t).await).await;
+        let other_target = &tc.get(nodename.clone().into()).await.unwrap();
+        assert_eq!(other_target, &t);
+        match tc.get_connected(nodename.clone().into()).await {
+            Some(_) => panic!("string lookup should return None"),
+            _ => (),
+        }
+        let now = Utc::now();
+        other_target
+            .update_connection_state(|s| {
+                assert_eq!(s, ConnectionState::Disconnected);
+                ConnectionState::Mdns(now)
+            })
+            .await;
+        t.update_connection_state(|s| {
+            assert_eq!(s, ConnectionState::Disconnected);
+            ConnectionState::Mdns(now)
+        })
+        .await;
+        assert_eq!(&tc.get_connected(nodename.clone().into()).await.unwrap(), &t);
+    }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_collection_insert_new() {
@@ -1190,7 +1256,7 @@ mod test {
         tc.merge_insert(clone_target(&t).await).await;
         assert_eq!(&tc.get(nodename.clone().into()).await.unwrap(), &t);
         match tc.get("oihaoih".into()).await {
-            Some(_) => panic!("string lookup should return Nobne"),
+            Some(_) => panic!("string lookup should return None"),
             _ => (),
         }
     }
@@ -1450,16 +1516,47 @@ mod test {
     async fn test_target_event_synthesis() {
         let t = Target::new("clopperdoop");
         let vec = t.synthesize_events().await;
+        assert_eq!(vec.len(), 0);
+        t.update_connection_state(|s| {
+            assert_eq!(s, ConnectionState::Disconnected);
+            ConnectionState::Mdns(Utc::now())
+        })
+        .await;
+        let vec = t.synthesize_events().await;
         assert_eq!(vec.len(), 1);
-        assert_eq!(&vec[0], &DaemonEvent::NewTarget(Some("clopperdoop".to_string())));
+        assert_eq!(
+            vec.iter().next().expect("events empty"),
+            &DaemonEvent::NewTarget(Some("clopperdoop".to_string()))
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_collection_event_synthesis() {
+    async fn test_target_collection_event_synthesis_all_connected() {
+        let now = Utc::now();
         let t = Target::new("clam-chowder-is-tasty");
+        t.update_connection_state(|s| {
+            assert_eq!(s, ConnectionState::Disconnected);
+            ConnectionState::Mdns(now)
+        })
+        .await;
         let t2 = Target::new("this-is-a-crunchy-falafel");
+        t2.update_connection_state(|s| {
+            assert_eq!(s, ConnectionState::Disconnected);
+            ConnectionState::Mdns(now)
+        })
+        .await;
         let t3 = Target::new("i-should-probably-eat-lunch");
+        t3.update_connection_state(|s| {
+            assert_eq!(s, ConnectionState::Disconnected);
+            ConnectionState::Mdns(now)
+        })
+        .await;
         let t4 = Target::new("i-should-probably-eat-lunch");
+        t4.update_connection_state(|s| {
+            assert_eq!(s, ConnectionState::Disconnected);
+            ConnectionState::Mdns(now)
+        })
+        .await;
 
         let tc = TargetCollection::new();
         tc.merge_insert(t).await;
@@ -1478,6 +1575,23 @@ mod test {
                 == &events::DaemonEvent::NewTarget(Some("this-is-a-crunchy-falafel".to_string()))));
         assert!(events.iter().any(|e| e
             == &events::DaemonEvent::NewTarget(Some("i-should-probably-eat-lunch".to_string()))));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_collection_event_synthesis_none_connected() {
+        let t = Target::new("clam-chowder-is-tasty");
+        let t2 = Target::new("this-is-a-crunchy-falafel");
+        let t3 = Target::new("i-should-probably-eat-lunch");
+        let t4 = Target::new("i-should-probably-eat-lunch");
+
+        let tc = TargetCollection::new();
+        tc.merge_insert(t).await;
+        tc.merge_insert(t2).await;
+        tc.merge_insert(t3).await;
+        tc.merge_insert(t4).await;
+
+        let events = tc.synthesize_events().await;
+        assert_eq!(events.len(), 0);
     }
 
     struct EventPusher {
@@ -1613,7 +1727,17 @@ mod test {
     async fn test_target_get_default() {
         let default = "clam-chowder-is-tasty";
         let t = Target::new(default);
+        t.update_connection_state(|s| {
+            assert_eq!(s, ConnectionState::Disconnected);
+            ConnectionState::Mdns(Utc::now())
+        })
+        .await;
         let t2 = Target::new("this-is-a-crunchy-falafel");
+        t2.update_connection_state(|s| {
+            assert_eq!(s, ConnectionState::Disconnected);
+            ConnectionState::Mdns(Utc::now())
+        })
+        .await;
         let tc = TargetCollection::new();
         assert!(tc.get_default(None).await.is_err());
         tc.merge_insert(clone_target(&t).await).await;
@@ -1629,7 +1753,17 @@ mod test {
     async fn test_target_get_default_matches_contains() {
         let default = "clam-chowder-is-tasty";
         let t = Target::new(default);
+        t.update_connection_state(|s| {
+            assert_eq!(s, ConnectionState::Disconnected);
+            ConnectionState::Mdns(Utc::now())
+        })
+        .await;
         let t2 = Target::new("this-is-a-crunchy-falafel");
+        t2.update_connection_state(|s| {
+            assert_eq!(s, ConnectionState::Disconnected);
+            ConnectionState::Mdns(Utc::now())
+        })
+        .await;
         let tc = TargetCollection::new();
         assert!(tc.get_default(None).await.is_err());
         tc.merge_insert(clone_target(&t).await).await;
