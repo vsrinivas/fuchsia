@@ -139,7 +139,7 @@ void vprintl(const zx::debuglog& log, const char* fmt, va_list ap) {
         break;
       default:
       bad_format:
-        printl(log, "printl: invalid fmt char 0x%x", *fmt);
+        printl(log, "printl: invalid fmt char %x", *fmt);
         zx_process_exit(-1);
     }
     fmt++;
