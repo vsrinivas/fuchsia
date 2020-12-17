@@ -46,49 +46,27 @@ pub async fn publish(port: u16, node_id: NodeId) -> Result<(), Error> {
 
     let publisher = fuchsia_component::client::connect_to_service::<PublisherMarker>()?;
 
-    connect_to_proxy(node_id, publisher, port, proxy).await?;
+    futures::future::try_join(
+        connect_to_proxy(node_id, publisher, port, proxy),
+        PublicationResponder_RequestStream::from_channel(server).map_err(Into::into).try_for_each(
+            |PublicationResponder_Request::OnPublication { responder, .. }| async move {
+                responder
+                    .send(Some(&mut Publication {
+                        port,
+                        text: vec![],
+                        srv_priority: fidl_fuchsia_net_mdns::DEFAULT_SRV_PRIORITY,
+                        srv_weight: fidl_fuchsia_net_mdns::DEFAULT_SRV_WEIGHT,
+                        ptr_ttl: fidl_fuchsia_net_mdns::DEFAULT_PTR_TTL,
+                        srv_ttl: fidl_fuchsia_net_mdns::DEFAULT_SRV_TTL,
+                        txt_ttl: fidl_fuchsia_net_mdns::DEFAULT_TXT_TTL,
+                    }))
+                    .map_err(Into::into)
+            },
+        ),
+    )
+    .await?;
 
-    PublicationResponder_RequestStream::from_channel(server)
-        .map_err(Into::into)
-        .try_for_each(|request| async move {
-            log::info!("mdns publish gets {:?}", request);
-
-            let mut ok_publication = Publication {
-                port,
-                text: vec![],
-                srv_priority: fidl_fuchsia_net_mdns::DEFAULT_SRV_PRIORITY,
-                srv_weight: fidl_fuchsia_net_mdns::DEFAULT_SRV_WEIGHT,
-                ptr_ttl: fidl_fuchsia_net_mdns::DEFAULT_PTR_TTL,
-                srv_ttl: fidl_fuchsia_net_mdns::DEFAULT_SRV_TTL,
-                txt_ttl: fidl_fuchsia_net_mdns::DEFAULT_TXT_TTL,
-            };
-            let ok_response = &mut ok_publication;
-            let response = |ok| {
-                if ok {
-                    Some(ok_response)
-                } else {
-                    None
-                }
-            };
-
-            match request {
-                PublicationResponder_Request::OnPublication {
-                    responder, subtype: None, ..
-                } => {
-                    responder.send(response(true))?;
-                }
-                PublicationResponder_Request::OnPublication {
-                    responder, subtype: Some(s), ..
-                } => {
-                    responder.send(response(s == ""))?;
-                }
-            }
-
-            Ok::<_, Error>(())
-        })
-        .await?;
-
-    Err::<(), Error>(format_err!("End of publication request stream reached"))
+    Ok(())
 }
 
 fn convert_ipv6_buffer(in_arr: [u8; 16]) -> [u16; 8] {
