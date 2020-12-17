@@ -348,8 +348,6 @@ type endpointWithSocket struct {
 	// Used to unblock waiting to write when SO_LINGER is enabled.
 	linger chan struct{}
 
-	onHUpOnce sync.Once
-
 	// onHUp is used to register callback for closing events.
 	onHUp waiter.Entry
 }
@@ -399,27 +397,15 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 		// close() blocks on completions of `loop*` routines.
 		go eps.close()
 	} else {
-		// Add the endpoint before registering for an EventHUp callback and starting
-		// the loop{read,Write} go-routines. We remove the endpoint from the map on
-		// EventHUp which can be trigerred soon-after the callback registration or
-		// starting of the loop{Read,Write}.
-		ns.onAddEndpoint(&eps.endpoint)
-
 		// Register a callback for error and closing events from gVisor to
 		// trigger a close of the endpoint.
 		eps.onHUp.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
-			eps.onHUpOnce.Do(func() {
-				eps.endpoint.ns.onRemoveEndpoint(eps.endpoint.key)
-				// Run this in a separate goroutine to avoid deadlock.
-				//
-				// The waiter.Queue lock is held by the caller of this callback.
-				// close() blocks on completions of `loop*`, which
-				// depend on acquiring waiter.Queue lock to unregister events.
-				go func() {
-					eps.wq.EventUnregister(&eps.onHUp)
-					eps.close()
-				}()
-			})
+			// Run this in a separate goroutine to avoid deadlock.
+			//
+			// The waiter.Queue lock is held by the caller of this callback.
+			// close() blocks on completions of `loop*`, which
+			// depend on acquiring waiter.Queue lock to unregister events.
+			go eps.close()
 		})
 		eps.wq.EventRegister(&eps.onHUp, waiter.EventHUp)
 	}
@@ -471,6 +457,8 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 	}
 
 	go eps.loopWrite()
+
+	ns.onAddEndpoint(&eps.endpoint)
 
 	return eps, nil
 }
@@ -564,6 +552,10 @@ func (eps *endpointWithSocket) close() {
 		if err := eps.local.Close(); err != nil {
 			panic(err)
 		}
+
+		eps.wq.EventUnregister(&eps.onHUp)
+
+		eps.endpoint.ns.onRemoveEndpoint(eps.key)
 
 		eps.ep.Close()
 

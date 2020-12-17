@@ -14,7 +14,6 @@ import (
 	"math"
 	"net"
 	"os"
-	"runtime"
 	"sort"
 	"syscall/zx"
 	"testing"
@@ -493,121 +492,6 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 
 	if _, ok := ns.endpoints.Load(eps.key); ok {
 		t.Fatalf("got endpoints.Load(%d) = (_, true)", eps.key)
-	}
-}
-
-// TestTCPEndpointMapClosing validates the endpoint in a closing state like
-// FIN_WAIT2 to be present in the endpoints map and is deleted when the
-// endpoint transitions to CLOSED state.
-func TestTCPEndpointMapClosing(t *testing.T) {
-	ns := newNetstack(t)
-	if err := ns.addLoopback(); err != nil {
-		t.Fatalf("ns.addLoopback() = %s", err)
-	}
-	createEP := func() *endpointWithSocket {
-		wq := &waiter.Queue{}
-		// Avoid polluting everything with err of type *tcpip.Error.
-		ep := func() tcpip.Endpoint {
-			ep, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, wq)
-			if err != nil {
-				t.Fatalf("NewEndpoint() = %s", err)
-			}
-			return ep
-		}()
-		t.Cleanup(ep.Close)
-		eps, err := newEndpointWithSocket(ep, wq, tcp.ProtocolNumber, ipv4.ProtocolNumber, ns)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Cleanup(eps.close)
-		return eps
-	}
-	listener := createEP()
-
-	if err := listener.ep.Bind(tcpip.FullAddress{}); err != nil {
-		t.Fatalf("ep.Bind({}) = %s", err)
-	}
-	if err := listener.ep.Listen(1); err != nil {
-		t.Fatalf("ep.Listen(1) = %s", err)
-	}
-	connectAddr, err := listener.ep.GetLocalAddress()
-	if err != nil {
-		t.Fatalf("ep.GetLocalAddress() = %s", err)
-	}
-	client := createEP()
-
-	waitEntry, inCh := waiter.NewChannelEntry(nil)
-	listener.wq.EventRegister(&waitEntry, waiter.EventIn)
-	defer listener.wq.EventUnregister(&waitEntry)
-
-	if err := client.ep.Connect(connectAddr); err != tcpip.ErrConnectStarted {
-		t.Fatalf("ep.Connect(%#v) = %s", connectAddr, err)
-	}
-	// Wait for the newly established connection to show up as acceptable by
-	// the peer.
-	<-inCh
-
-	server, _, err := listener.ep.Accept(nil)
-	if err != nil {
-		t.Fatalf("ep.Accept(nil) = %s", err)
-	}
-
-	// Ensure that the client endpoint is present in our internal map.
-	if _, ok := ns.endpoints.Load(client.endpoint.key); !ok {
-		t.Fatalf("got endpoints.Load(%d) = (_,false)", client.endpoint.key)
-	}
-
-	// Trigger an active close from the client.
-	client.close()
-
-	// The client endpoint should not be removed from endpoints map even after
-	// an endpoint close.
-	if _, ok := ns.endpoints.Load(client.endpoint.key); !ok {
-		t.Fatalf("got endpoints.Load(%d) = (_,false)", client.endpoint.key)
-	}
-
-	ticker := time.NewTicker(10 * time.Millisecond)
-	defer ticker.Stop()
-	// Wait and check for the client active close to reach FIN_WAIT2 state.
-	for {
-		select {
-		case <-ticker.C:
-			state := tcp.EndpointState(client.ep.State())
-			if state != tcp.StateFinWait2 {
-				runtime.Gosched()
-				continue
-			}
-		}
-		break
-	}
-
-	// Lookup for the client once more in the endpoints map, it should still not
-	// be removed.
-	if _, ok := ns.endpoints.Load(client.endpoint.key); !ok {
-		t.Fatalf("got endpoints.Load(%d) = (_,false)", client.endpoint.key)
-	}
-
-	timeWaitOpt := tcpip.TCPTimeWaitTimeoutOption(time.Duration(0))
-	if err := ns.stack.SetTransportProtocolOption(tcp.ProtocolNumber, &timeWaitOpt); err != nil {
-		t.Fatalf("SetTransportProtocolOption(%d, &%T(%d)) = %s", tcp.ProtocolNumber, timeWaitOpt, timeWaitOpt, err)
-	}
-
-	// Trigger server close, so that client enters TIME_WAIT.
-	server.Close()
-
-	// gVisor stack notifies EventHUp on entering TIME_WAIT. Wait for some time
-	// for the EventHUp to be processed by netstack.
-	for {
-		select {
-		case <-ticker.C:
-			// The client endpoint would be removed from the endpoints map as a result
-			// of processing EventHUp.
-			if _, ok := ns.endpoints.Load(client.endpoint.key); ok {
-				runtime.Gosched()
-				continue
-			}
-		}
-		break
 	}
 }
 
