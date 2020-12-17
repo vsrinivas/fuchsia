@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Protocol",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+    }
+  },
+
+  {
+    "name": "Hid device",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.BUS"
+    }
+  }
+]

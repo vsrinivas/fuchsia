@@ -13,7 +13,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -24,6 +23,7 @@
 #include <hid/boot.h>
 
 #include "src/lib/listnode/listnode.h"
+#include "src/ui/input/drivers/hid/hid_bind.h"
 
 namespace hid_driver {
 
@@ -466,7 +466,6 @@ static zx_driver_ops_t hid_driver_ops = []() {
 }  // namespace hid_driver
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(hid, hid_driver::hid_driver_ops, "zircon", "0.1", 1)
-  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_HIDBUS),
-ZIRCON_DRIVER_END(hid)
-    // clang-format on
+ZIRCON_DRIVER(hid, hid_driver::hid_driver_ops, "zircon", "0.1");
+
+// clang-format on
