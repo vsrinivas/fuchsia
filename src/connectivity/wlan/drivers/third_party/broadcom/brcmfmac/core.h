@@ -245,7 +245,8 @@ struct net_device {
   bool initialized_for_ap;
   bool multicast_promisc;
   bool is_up;
-  uint64_t scan_txn_id;
+  uint64_t scan_txn_id; // The txn_id provided by SME to identify the scan
+  uint16_t scan_sync_id; // The sync_id in the FW request to identify the scan
   uint32_t scan_num_results;
   std::shared_mutex if_proto_lock;  // Used as RW-lock for if_proto.
   wlanif_impl_ifc_protocol_t if_proto;

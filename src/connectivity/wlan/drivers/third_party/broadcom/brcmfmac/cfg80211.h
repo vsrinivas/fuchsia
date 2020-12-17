@@ -297,8 +297,10 @@ struct escan_info {
   uint32_t escan_state;
   uint8_t* escan_buf;
   struct brcmf_if* ifp;
-  zx_status_t (*run)(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
-                     const wlanif_scan_req_t* request);
+  zx_status_t (*run)(struct brcmf_cfg80211_info* cfg,
+                     struct brcmf_if* ifp,
+                     const wlanif_scan_req_t* request,
+                     uint16_t* sync_id_out);
 };
 
 /**
@@ -383,6 +385,7 @@ enum brcmf_disconnect_mode {
  * @signal_report_work: Work structure for signal report timer.
  * @ap_start_timer: Timer used to wait for ap start confirmation.
  * @ap_start_timeout_work: Work structure for ap start timer
+ * @next_sync_id: Counter for sync_ids used in firmware scan requests.
  */
 struct brcmf_cfg80211_info {
   struct brcmf_cfg80211_conf* conf;
@@ -424,6 +427,7 @@ struct brcmf_cfg80211_info {
   WorkItem signal_report_work;
   Timer* ap_start_timer;
   WorkItem ap_start_timeout_work;
+  std::atomic<uint16_t> next_sync_id;
 };
 
 /**
@@ -509,7 +513,7 @@ zx_status_t brcmf_cfg80211_wait_vif_event(struct brcmf_cfg80211_info* cfg, zx_du
 zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
                                         bool aborted, bool fw_abort);
 void brcmf_enable_mpc(struct brcmf_if* ndev, int mpc);
-void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg);
+
 void brcmf_free_net_device_vif(struct net_device* ndev);
 
 // Is an AP Start operation in progress? Exposed for state inspection in tests.
