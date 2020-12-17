@@ -71,7 +71,7 @@ Refer to the [Bindings tests](#bindings-tests) section for details.
 
 Source compatibility tests are used to test FIDL's
 [source compatibility guarantees][abi-api-compat]. They are found in
-[/src/tests/fidl/source_compatibility] and [/topaz/tests/fidl-changes].
+[/src/tests/fidl/source_compatibility].
 
 ##### Compatibility
 
@@ -731,7 +731,6 @@ fidl fmt --library my_library.fidl -i
 [/src/tests/benchmarks/fidl]: /src/tests/benchmarks/fidl
 
 [/src/tests/fidl/source_compatibility]: /src/tests/fidl/source_compatibility
-[/topaz/tests/fidl-changes]: /topaz/tests/fidl-changes
 
 [/src/tests/fidl/compatibility/]: /src/tests/fidl/compatibility/
 [/src/tests/fidl/dangerous_identifiers]: /src/tests/fidl/dangerous_identifiers
