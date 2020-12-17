@@ -122,8 +122,8 @@ flutter_app("ermine") {
     "//topaz/public/dart/fuchsia_internationalization_flutter",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_scenic_flutter",
-    "//topaz/public/dart/fuchsia_services",
     dart_package_label.fidl,
+    dart_package_label.fuchsia_services,
     dart_package_label.zircon,
   ]
 
