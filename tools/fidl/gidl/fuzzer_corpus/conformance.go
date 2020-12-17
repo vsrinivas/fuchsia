@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path"
 
@@ -56,7 +57,7 @@ func convertEncodeSuccesses(gtcs []gidlir.EncodeSuccess) []testCase {
 		}
 
 		tcs = append(tcs, testCase{
-			name:        gtc.Name,
+			name:        fmt.Sprintf("EncodeSuccess_%s", gtc.Name),
 			objectTypes: getHandleObjectTypes(encoding.Handles, gtc.HandleDefs),
 			bytes:       encoding.Bytes,
 		})
@@ -73,7 +74,7 @@ func convertDecodeSuccesses(gtcs []gidlir.DecodeSuccess) (tcs []testCase) {
 		}
 
 		tcs = append(tcs, testCase{
-			name:        gtc.Name,
+			name:        fmt.Sprintf("DecodeSuccess_%s", gtc.Name),
 			objectTypes: getHandleObjectTypes(encoding.Handles, gtc.HandleDefs),
 			bytes:       encoding.Bytes,
 		})
@@ -90,7 +91,7 @@ func convertDecodeFailures(gtcs []gidlir.DecodeFailure) (tcs []testCase) {
 		}
 
 		tcs = append(tcs, testCase{
-			name:        gtc.Name,
+			name:        fmt.Sprintf("DecodeFailure_%s", gtc.Name),
 			objectTypes: getHandleObjectTypes(encoding.Handles, gtc.HandleDefs),
 			bytes:       encoding.Bytes,
 		})
