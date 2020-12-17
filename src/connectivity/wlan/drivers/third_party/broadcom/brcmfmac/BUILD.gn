@@ -310,6 +310,20 @@ brcmfmac_driver("brcmfmac-luis-mfg") {
   clm_present = true
 }
 
+brcmfmac_driver("brcmfmac-nelson") {
+  board = "nelson"
+  bus = "sdio"
+  chip = "brcmfmac43455"
+  clm_present = true
+}
+
+brcmfmac_driver("brcmfmac-nelson-mfg") {
+  board = "nelson-mfg"
+  bus = "sdio"
+  chip = "brcmfmac43455"
+  clm_present = true
+}
+
 #brcmfmac_driver("brcmfmac-x64") {
 #  board = "x64"
 #  bus = "pcie"
