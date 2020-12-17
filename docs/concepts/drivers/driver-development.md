@@ -60,8 +60,8 @@ At a minimum, a driver should contain the driver declaration and implement the
 `bind()` driver op.
 
 Drivers are loaded and bound to a device when the Device Coordinator
-successfully finds a matching driver for a device. A driver declares the devices
-it is compatible with through bind rules, which are should be placed in a
+successfully finds a matching driver for a device. A driver declares the
+devices it is compatible with through bind rules, which should be placed in a
 `.bind` file alongside the driver. The bind compiler compiles those rules and
 creates a driver declaration macro containing those rules in a C header file.
 The following bind program declares the
