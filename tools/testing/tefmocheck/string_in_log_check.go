@@ -149,8 +149,10 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s: signal: segmentation fault", botanistconstants.QEMUInvocationErrorMsg), Type: swarmingOutputType})
 	// For fxbug.dev/61452.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToResolveIPErrorMsg), Type: swarmingOutputType})
-	// For fxbug.dev/62670.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedDueToEOF), Type: swarmingOutputType})
+	// For fxbug.dev/65073.
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.PackageRepoSetupErrorMsg), Type: swarmingOutputType})
+	// For fxbug.dev/65073.
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.SerialReadErrorMsg), Type: swarmingOutputType})
 	// For fxbug.dev/53854.
 	ret = append(ret, driverHostCrash("composite-device", ""))
 	ret = append(ret, driverHostCrash("pci", ""))

@@ -9,7 +9,8 @@ const (
 	QEMUInvocationErrorMsg    = "QEMU invocation error"
 	ReadConfigFileErrorMsg    = "could not open config file"
 	FailedToResolveIPErrorMsg = "could not resolve target IP address"
-	FailedDueToEOF            = "failed due to EOF"
+	PackageRepoSetupErrorMsg  = "failed to set up a package repository"
+	SerialReadErrorMsg        = "error reading serial log line"
 
 	NodenameEnvKey     = "FUCHSIA_NODENAME"
 	SSHKeyEnvKey       = "FUCHSIA_SSH_KEY"

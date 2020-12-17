@@ -10,7 +10,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -169,7 +168,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 				line, err := b.ReadString('\n')
 				if err != nil {
 					if !serial.IsErrNetClosing(err) {
-						return fmt.Errorf("error reading serial log line: %w", err)
+						return fmt.Errorf("%s: %w", constants.SerialReadErrorMsg, err)
 					}
 					return nil
 				}
@@ -359,7 +358,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 
 		if r.repoURL != "" {
 			if err := botanist.AddPackageRepository(ctx, client, r.repoURL, r.blobURL); err != nil {
-				return fmt.Errorf("failed to set up a package repository: %w", err)
+				return fmt.Errorf("%s: %w", constants.PackageRepoSetupErrorMsg, err)
 			}
 		}
 
@@ -445,11 +444,6 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 	r.blobURL = os.ExpandEnv(r.blobURL)
 	r.repoURL = os.ExpandEnv(r.repoURL)
 	if err := r.execute(ctx, expandedArgs); err != nil {
-		if errors.Is(err, io.EOF) {
-			// TODO(fxbug.dev/62670): Remove this log once we figure out the
-			// source of mysterious EOFs.
-			logger.Errorf(ctx, "%s: %s", constants.FailedDueToEOF, err)
-		}
 		logger.Errorf(ctx, "%s", err)
 		return subcommands.ExitFailure
 	}
