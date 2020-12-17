@@ -53,10 +53,12 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
   // hardware fault, mark it as such
   flags |= VMM_PF_FLAG_HW_FAULT;
 
-#if TRACE_PAGE_FAULT || LOCAL_TRACE
-  Thread* current_thread = Thread::Current::Get();
-  TRACEF("thread %s va %#" PRIxPTR ", flags 0x%x\n", current_thread->name, addr, flags);
-#endif
+  if (TRACE_PAGE_FAULT || LOCAL_TRACE) {
+    Thread* current_thread = Thread::Current::Get();
+    char flagstr[5];
+    vmm_pf_flags_to_string(flags, flagstr);
+    TRACEF("thread %s va %#" PRIxPTR ", flags 0x%x (%s)\n", current_thread->name(), addr, flags, flagstr);
+  }
 
   // get the address space object this pointer is in
   VmAspace* aspace = VmAspace::vaddr_to_aspace(addr);
