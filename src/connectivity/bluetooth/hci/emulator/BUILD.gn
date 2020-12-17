@@ -2,8 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
+
+bind_rules("bt-hci-emulator-bind") {
+  rules = "bt-hci-emulator.bind"
+  disable_autobind = true
+  output = "bt-hci-emulator-bind.h"
+  tests = "bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
 
 driver_module("driver") {
   output_name = "bt-hci-emulator"
@@ -19,6 +28,7 @@ driver_module("driver") {
   ]
 
   deps = [
+    ":bt-hci-emulator-bind",
     "//sdk/banjo/ddk.protocol.test",
     "//sdk/fidl/fuchsia.bluetooth.test",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c_client",
@@ -29,9 +39,6 @@ driver_module("driver") {
     "//src/connectivity/bluetooth/lib/fidl",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
@@ -50,4 +57,9 @@ driver_package("emulator") {
       name = "bt-hci-emulator.so"
     },
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":bt-hci-emulator-bind_test" ]
 }

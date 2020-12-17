@@ -1,0 +1,16 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.test.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "match",
+        "name": "Match"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Bad protocol"
+    }
+]

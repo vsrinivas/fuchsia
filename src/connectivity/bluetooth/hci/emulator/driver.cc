@@ -2,13 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "device.h"
-
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/protocol/test.h>
-
 #include <zircon/status.h>
 
 #include <cstdio>
@@ -16,6 +9,12 @@
 #include <memory>
 #include <thread>
 
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/protocol/test.h>
+
+#include "device.h"
+#include "src/connectivity/bluetooth/hci/emulator/bt-hci-emulator-bind.h"
 #include "src/connectivity/bluetooth/hci/emulator/log.h"
 
 namespace {
@@ -41,8 +40,4 @@ static constexpr zx_driver_ops_t bt_hci_emulator_driver_ops = {
 
 }  // namespace
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(bt_hci_emulator, bt_hci_emulator_driver_ops, "zircon", "0.1", 2)
-  BI_ABORT_IF_AUTOBIND,
-  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST),
-ZIRCON_DRIVER_END(bt_hci_emulator)
+ZIRCON_DRIVER(bt_hci_emulator, bt_hci_emulator_driver_ops, "zircon", "0.1");
