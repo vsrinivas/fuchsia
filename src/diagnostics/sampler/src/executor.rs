@@ -143,10 +143,17 @@ impl ProjectSampler {
                 for data_packet in snapshot_data {
                     let moniker = data_packet.moniker;
                     match data_packet.payload {
-                        None => warn!(
-                            "Encountered errors snapshotting for {:?}: {:?}",
-                            moniker, data_packet.metadata.errors
-                        ),
+                        None => {
+                            // TODO(66756): Shouldn't need to check for presence of errors is a payload
+                            // is None. We need to do this because empty root nodes are considered null
+                            // payloads.
+                            if data_packet.metadata.errors.is_some() {
+                                warn!(
+                                    "Encountered errors snapshotting for {:?}: {:?}",
+                                    moniker, data_packet.metadata.errors
+                                );
+                            }
+                        }
                         Some(payload) => {
                             for (hierarchy_path, property) in payload.property_iter() {
                                 // The property iterator will visit empty nodes once,
