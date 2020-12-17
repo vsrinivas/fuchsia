@@ -270,26 +270,25 @@ func eventCount(period int64, count uint64) cobalt.EventPayload {
 	return cobalt.EventPayloadWithEventCount(cobalt.CountEvent{PeriodDurationMicros: period, Count: int64(count)})
 }
 
-// endpointsMap is a map from a monotonically increasing uint64 value to tcpip.Endpoint.
+// endpointsMap is a map from zx.Handle to tcpip.Endpoint.
 //
 // It is a typesafe wrapper around sync.Map.
 type endpointsMap struct {
-	nextKey uint64
-	inner   sync.Map
+	inner sync.Map
 }
 
-func (m *endpointsMap) Load(key uint64) (tcpip.Endpoint, bool) {
+func (m *endpointsMap) Load(key zx.Handle) (tcpip.Endpoint, bool) {
 	if value, ok := m.inner.Load(key); ok {
 		return value.(tcpip.Endpoint), true
 	}
 	return nil, false
 }
 
-func (m *endpointsMap) Store(key uint64, value tcpip.Endpoint) {
+func (m *endpointsMap) Store(key zx.Handle, value tcpip.Endpoint) {
 	m.inner.Store(key, value)
 }
 
-func (m *endpointsMap) LoadOrStore(key uint64, value tcpip.Endpoint) (tcpip.Endpoint, bool) {
+func (m *endpointsMap) LoadOrStore(key zx.Handle, value tcpip.Endpoint) (tcpip.Endpoint, bool) {
 	// Create a scope to allow `value` to be shadowed below.
 	{
 		value, ok := m.inner.LoadOrStore(key, value)
@@ -297,20 +296,13 @@ func (m *endpointsMap) LoadOrStore(key uint64, value tcpip.Endpoint) (tcpip.Endp
 	}
 }
 
-func (m *endpointsMap) LoadAndDelete(key uint64) (tcpip.Endpoint, bool) {
-	if value, ok := m.inner.LoadAndDelete(key); ok {
-		return value.(tcpip.Endpoint), ok
-	}
-	return nil, false
-}
-
-func (m *endpointsMap) Delete(key uint64) {
+func (m *endpointsMap) Delete(key zx.Handle) {
 	m.inner.Delete(key)
 }
 
-func (m *endpointsMap) Range(f func(key uint64, value tcpip.Endpoint) bool) {
+func (m *endpointsMap) Range(f func(key zx.Handle, value tcpip.Endpoint) bool) {
 	m.inner.Range(func(key, value interface{}) bool {
-		return f(key.(uint64), value.(tcpip.Endpoint))
+		return f(key.(zx.Handle), value.(tcpip.Endpoint))
 	})
 }
 
