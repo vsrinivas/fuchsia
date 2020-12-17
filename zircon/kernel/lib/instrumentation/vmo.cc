@@ -85,8 +85,9 @@ zx_status_t InstrumentationData::Create() {
 zx_status_t InstrumentationData::GetVmo(Handle** handle) {
   zx_rights_t rights;
   KernelHandle<VmObjectDispatcher> new_handle;
-  zx_status_t status = VmObjectDispatcher::Create(vmo_, kKinds[which()].content_size(), &new_handle, &rights);
+  zx_status_t status = VmObjectDispatcher::Create(vmo_, &new_handle, &rights);
   if (status == ZX_OK) {
+    new_handle.dispatcher()->SetContentSize(kKinds[which()].content_size());
     *handle = Handle::Make(ktl::move(new_handle), rights & ~ZX_RIGHT_WRITE).release();
   }
   return status;

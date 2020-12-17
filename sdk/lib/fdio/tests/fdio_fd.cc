@@ -30,6 +30,7 @@ TEST(FileDescriptorTest, CreateVMO) {
   const size_t kSize = 4096;
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(kSize, 0, &vmo));
+  ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &kSize, sizeof(kSize)));
 
   const char* message = "hello, vmo.";
   ASSERT_OK(vmo.write(message, 0, strlen(message)));

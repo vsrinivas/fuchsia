@@ -23,12 +23,12 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
  public:
   static zx_status_t parse_create_syscall_flags(uint32_t flags, uint32_t* out_flags);
 
-  static zx_status_t Create(fbl::RefPtr<VmObject> vmo, uint64_t content_size,
-                            KernelHandle<VmObjectDispatcher>* handle, zx_rights_t* rights) {
-    return Create(ktl::move(vmo), content_size, ZX_KOID_INVALID, handle, rights);
+  static zx_status_t Create(fbl::RefPtr<VmObject> vmo, KernelHandle<VmObjectDispatcher>* handle,
+                            zx_rights_t* rights) {
+    return Create(ktl::move(vmo), ZX_KOID_INVALID, handle, rights);
   }
 
-  static zx_status_t Create(fbl::RefPtr<VmObject> vmo, uint64_t content_size, zx_koid_t pager_koid,
+  static zx_status_t Create(fbl::RefPtr<VmObject> vmo, zx_koid_t pager_koid,
                             KernelHandle<VmObjectDispatcher>* handle, zx_rights_t* rights);
   ~VmObjectDispatcher() final;
 
@@ -75,7 +75,7 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
   zx_koid_t pager_koid() const { return pager_koid_; }
 
  private:
-  explicit VmObjectDispatcher(fbl::RefPtr<VmObject> vmo, uint64_t size, zx_koid_t pager_koid);
+  explicit VmObjectDispatcher(fbl::RefPtr<VmObject> vmo, zx_koid_t pager_koid);
   // The 'const' here is load bearing; we give a raw pointer to
   // ourselves to |vmo_| so we have to ensure we don't reset vmo_
   // except during destruction.

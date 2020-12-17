@@ -27,7 +27,7 @@ EmbeddedVmo::EmbeddedVmo(const char* name, const void* image, size_t size,
   ASSERT(status == ZX_OK);
 
   // build and point a dispatcher at it
-  status = VmObjectDispatcher::Create(ktl::move(vmo), size, vmo_kernel_handle, &vmo_rights_);
+  status = VmObjectDispatcher::Create(ktl::move(vmo), vmo_kernel_handle, &vmo_rights_);
   ASSERT(status == ZX_OK);
 
   status = vmo_kernel_handle->dispatcher()->set_name(name, strlen(name));

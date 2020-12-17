@@ -42,13 +42,11 @@ zx_status_t VmObjectDispatcher::parse_create_syscall_flags(uint32_t flags, uint3
   return ZX_OK;
 }
 
-zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo, uint64_t content_size,
-                                       zx_koid_t pager_koid,
+zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo, zx_koid_t pager_koid,
                                        KernelHandle<VmObjectDispatcher>* handle,
                                        zx_rights_t* rights) {
   fbl::AllocChecker ac;
-  KernelHandle new_handle(
-      fbl::AdoptRef(new (&ac) VmObjectDispatcher(ktl::move(vmo), content_size, pager_koid)));
+  KernelHandle new_handle(fbl::AdoptRef(new (&ac) VmObjectDispatcher(ktl::move(vmo), pager_koid)));
   if (!ac.check())
     return ZX_ERR_NO_MEMORY;
 
@@ -58,12 +56,8 @@ zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo, uint64_t conte
   return ZX_OK;
 }
 
-VmObjectDispatcher::VmObjectDispatcher(fbl::RefPtr<VmObject> vmo, uint64_t content_size,
-                                       zx_koid_t pager_koid)
-    : SoloDispatcher(ZX_VMO_ZERO_CHILDREN),
-      vmo_(vmo),
-      content_size_(content_size),
-      pager_koid_(pager_koid) {
+VmObjectDispatcher::VmObjectDispatcher(fbl::RefPtr<VmObject> vmo, zx_koid_t pager_koid)
+    : SoloDispatcher(ZX_VMO_ZERO_CHILDREN), vmo_(vmo), pager_koid_(pager_koid) {
   kcounter_add(dispatcher_vmo_create_count, 1);
   vmo_->SetChildObserver(this);
 }
@@ -125,20 +119,8 @@ zx_status_t VmObjectDispatcher::Write(VmAspace* current_aspace, user_in_ptr<cons
 
 zx_status_t VmObjectDispatcher::SetSize(uint64_t size) {
   canary_.Assert();
-  Guard<Mutex> guard{get_lock()};
 
-  zx_status_t status = vmo_->Resize(size);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  uint64_t remaining = ROUNDUP(size, PAGE_SIZE) - size;
-  if (remaining > 0) {
-    vmo_->ZeroRange(size, remaining);
-  }
-
-  content_size_ = size;
-  return ZX_OK;
+  return vmo_->Resize(size);
 }
 
 zx_status_t VmObjectDispatcher::GetSize(uint64_t* size) {

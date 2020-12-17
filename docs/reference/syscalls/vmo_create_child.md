@@ -77,12 +77,6 @@ Both offset and size may start or extend beyond the original VMO's size.
 
 The size of the VMO will be rounded up to the next page size boundary.
 
-The content size of the VMO will be initialized to the given (unrounded) size.
-Use [`zx_object_get_property()`] with **ZX_PROP_VMO_CONTENT_SIZE** to read the
-content size of the VMO. Use [`zx_object_set_property()`] with
-**ZX_PROP_VMO_CONTENT_SIZE** to set the content size of the VMO without
-actually resizing the VMO.
-
 By default the rights of the child handled will be the same as the
 original with a few exceptions. See [`zx_vmo_create()`] for a
 discussion of the details of each right.
@@ -150,8 +144,6 @@ pinned pages.
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
-[`zx_object_get_property()`]: object_get_property.md
-[`zx_object_set_property()`]: object_set_property.md
 [`zx_pager_create_vmo()`]: pager_create_vmo.md
 [`zx_vmar_map()`]: vmar_map.md
 [`zx_vmo_create()`]: vmo_create.md

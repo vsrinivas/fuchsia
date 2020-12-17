@@ -24,12 +24,6 @@ zx_status_t zx_vmo_create_physical(zx_handle_t resource,
 `zx_vmo_create_physical()` creates a new virtual memory object (VMO), which represents the
 *size* bytes of physical memory beginning at physical address *paddr*.
 
-The content size of the VMO will be initialized to the given (unrounded) size.
-Use [`zx_object_get_property()`] with **ZX_PROP_VMO_CONTENT_SIZE** to read the
-content size of the VMO. Use [`zx_object_set_property()`] with
-**ZX_PROP_VMO_CONTENT_SIZE** to set the content size of the VMO without
-actually resizing the VMO.
-
 One handle is returned on success, representing an object with the requested
 size.
 

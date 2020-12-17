@@ -54,6 +54,7 @@ TEST(FDIOTest, CreateVMO) {
   const size_t kSize = ZX_PAGE_SIZE;
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(kSize, 0, &vmo));
+  ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &kSize, sizeof(kSize)));
 
   fdio_t* io = nullptr;
   ASSERT_OK(fdio_create(vmo.release(), &io));
