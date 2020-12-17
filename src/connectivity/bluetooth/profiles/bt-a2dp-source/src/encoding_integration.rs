@@ -133,9 +133,8 @@ fn source_media_stream_stats() {
 
     let _ = exec.run_singlethreaded(remote.next()).expect("some packet");
 
-    let hierarchy = exec
-        .run_singlethreaded(inspect::reader::read_from_inspector(&inspector))
-        .expect("got hierarchy");
+    let hierarchy =
+        exec.run_singlethreaded(inspect::reader::read(inspector)).expect("got hierarchy");
 
     // We don't know exactly how many were sent at this point, but make sure we got at
     // least some recorded.

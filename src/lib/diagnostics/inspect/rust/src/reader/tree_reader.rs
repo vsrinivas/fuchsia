@@ -183,7 +183,7 @@ mod tests {
             }
             .boxed()
         });
-        let hierarchy = reader::read_from_inspector(&inspector).await?;
+        let hierarchy = reader::read(&inspector).await?;
         assert_eq!(hierarchy.missing.len(), 1);
         assert_eq!(hierarchy.missing[0].reason, MissingValueReason::LinkParseFailure);
         assert_inspect_tree!(hierarchy, root: {});
@@ -197,7 +197,7 @@ mod tests {
             let mut state = state.try_lock().expect("lock state");
             state.allocate_link("missing", "missing-404", LinkNodeDisposition::Child, 0).unwrap();
         });
-        let hierarchy = reader::read_from_inspector(&inspector).await?;
+        let hierarchy = reader::read(&inspector).await?;
         assert_eq!(hierarchy.missing.len(), 1);
         assert_eq!(hierarchy.missing[0].reason, MissingValueReason::LinkNotFound);
         assert_eq!(hierarchy.missing[0].name, "missing");

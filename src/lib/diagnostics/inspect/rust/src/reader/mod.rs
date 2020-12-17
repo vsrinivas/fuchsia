@@ -28,7 +28,7 @@
 //!
 //! let inspector = Inspector::new();
 //! // ...
-//! let hierarchy = reader::read_from_inspector(&inspector)?;
+//! let hierarchy = reader::read(&inspector)?;
 //! ```
 
 use {
@@ -38,17 +38,16 @@ use {
             error::ReaderError,
             snapshot::{ScannedBlock, Snapshot},
         },
-        utils, Inspector,
+        utils,
     },
     diagnostics_hierarchy::{testing::DiagnosticsHierarchyGetter, *},
-    fidl_fuchsia_inspect::TreeProxy,
     fuchsia_zircon::Vmo,
     maplit::btreemap,
     std::{borrow::Cow, cmp::min, collections::BTreeMap, convert::TryFrom},
 };
 
 pub use {
-    crate::reader::readable_tree::ReadableTree,
+    crate::reader::{readable_tree::ReadableTree, tree_reader::read},
     diagnostics_hierarchy::{
         ArrayContent, ArrayFormat, Bucket, DiagnosticsHierarchy, LinkNodeDisposition, LinkValue,
         Property,
@@ -59,18 +58,6 @@ mod error;
 mod readable_tree;
 pub mod snapshot;
 mod tree_reader;
-
-/// Read a DiagnosticsHierarchy from an |Inspector| object.
-pub async fn read_from_inspector(
-    inspector: &Inspector,
-) -> Result<DiagnosticsHierarchy, ReaderError> {
-    tree_reader::read(inspector).await
-}
-
-/// Read a DiagnosticsHierarchy from a |Tree| connection.
-pub async fn read_from_tree(tree: &TreeProxy) -> Result<DiagnosticsHierarchy, ReaderError> {
-    tree_reader::read(tree).await
-}
 
 /// A partial node hierarchy represents a node in an inspect tree without
 /// the linked (lazy) nodes expanded.
@@ -158,7 +145,7 @@ impl TryFrom<Snapshot> for PartialNodeHierarchy {
     type Error = ReaderError;
 
     fn try_from(snapshot: Snapshot) -> Result<Self, Self::Error> {
-        read(&snapshot)
+        read_snapshot(&snapshot)
     }
 }
 
@@ -167,7 +154,7 @@ impl TryFrom<&Vmo> for PartialNodeHierarchy {
 
     fn try_from(vmo: &Vmo) -> Result<Self, Self::Error> {
         let snapshot = Snapshot::try_from(vmo)?;
-        read(&snapshot)
+        read_snapshot(&snapshot)
     }
 }
 
@@ -176,12 +163,12 @@ impl TryFrom<Vec<u8>> for PartialNodeHierarchy {
 
     fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
         let snapshot = Snapshot::try_from(&bytes[..])?;
-        read(&snapshot)
+        read_snapshot(&snapshot)
     }
 }
 
 /// Read the blocks in the snapshot as a node hierarchy.
-fn read(snapshot: &Snapshot) -> Result<PartialNodeHierarchy, ReaderError> {
+fn read_snapshot(snapshot: &Snapshot) -> Result<PartialNodeHierarchy, ReaderError> {
     let result = scan_blocks(snapshot)?;
     result.reduce()
 }
@@ -513,7 +500,8 @@ mod tests {
         crate::{
             assert_inspect_tree,
             format::{bitfields::Payload, constants},
-            ArrayProperty, ExponentialHistogramParams, HistogramProperty, LinearHistogramParams,
+            ArrayProperty, ExponentialHistogramParams, HistogramProperty, Inspector,
+            LinearHistogramParams,
         },
         anyhow::Error,
         fuchsia_async as fasync,
@@ -570,7 +558,7 @@ mod tests {
             child3_uint_array.insert(*x);
         }
 
-        let result = read_from_inspector(&inspector).await.unwrap();
+        let result = read(&inspector).await.unwrap();
 
         assert_inspect_tree!(result, root: {
             "int-root": 3i64,
@@ -826,7 +814,7 @@ mod tests {
             .boxed()
         });
 
-        let hierarchy = read_from_inspector(&inspector).await?;
+        let hierarchy = read(&inspector).await?;
         assert_inspect_tree!(hierarchy, root: {
             int: 3i64,
             child: {

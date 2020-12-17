@@ -170,7 +170,7 @@ impl InspectObject {
         let path = self.location.absolute_path()?;
         let (tree, server) = fidl::endpoints::create_proxy::<TreeMarker>()?;
         fdio::service_connect(&path, server.into_channel())?;
-        self.hierarchy = Some(reader::read_from_tree(&tree).await?);
+        self.hierarchy = Some(reader::read(&tree).await?);
         Ok(())
     }
 

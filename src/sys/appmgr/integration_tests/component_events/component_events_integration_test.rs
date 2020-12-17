@@ -238,7 +238,7 @@ async fn test_with_diagnostics() -> Result<(), Error> {
             server_end.into_channel(),
         )
         .expect("Connect to Tree service");
-        let hierarchy = reader::read_from_tree(&tree).await.context("Get inspect hierarchy")?;
+        let hierarchy = reader::read(&tree).await.context("Get inspect hierarchy")?;
         assert_inspect_tree!(hierarchy, root: {
             "fuchsia.inspect.Health": contains {
                 status: "OK",

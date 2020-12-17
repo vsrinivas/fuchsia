@@ -484,9 +484,8 @@ mod tests {
                 match extra.unwrap() {
                     InspectData::Tree(tree, vmo) => {
                         // Assert we can read the tree proxy and get the data we expected.
-                        let hierarchy = reader::read_from_tree(&tree)
-                            .await
-                            .expect("failed to read hierarchy from tree");
+                        let hierarchy =
+                            reader::read(tree).await.expect("failed to read hierarchy from tree");
                         assert_inspect_tree!(hierarchy, root: {
                             a: 1i64,
                             lazy: {

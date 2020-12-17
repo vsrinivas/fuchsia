@@ -167,9 +167,8 @@ pub struct Inspector {
 
 impl DiagnosticsHierarchyGetter<String> for Inspector {
     fn get_diagnostics_hierarchy(&self) -> Cow<'_, DiagnosticsHierarchy> {
-        let hierarchy =
-            futures::executor::block_on(async move { reader::read_from_inspector(self).await })
-                .expect("failed to get hierarchy");
+        let hierarchy = futures::executor::block_on(async move { reader::read(self).await })
+            .expect("failed to get hierarchy");
         Cow::Owned(hierarchy)
     }
 }
@@ -2053,7 +2052,7 @@ mod tests {
                 )
                 .expect("failed to connect to service");
 
-                let hierarchy = reader::read_from_tree(&tree).await?;
+                let hierarchy = reader::read(&tree).await?;
                 assert_inspect_tree!(hierarchy, root: {
                     int: 3i64,
                     "lazy-node": {
