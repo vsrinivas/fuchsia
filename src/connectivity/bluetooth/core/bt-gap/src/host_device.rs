@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::format_err,
+    anyhow::{format_err, Context},
     fidl_fuchsia_bluetooth::{self as fbt, DeviceClass},
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fidl_fuchsia_bluetooth_sys as sys, fuchsia_async as fasync,
@@ -251,7 +251,7 @@ impl HostDevice {
     /// Monitors updates from a bt-host device and notifies `listener`. The returned Future represents
     /// a task that never ends in successful operation and only returns in case of a failure to
     /// communicate with the bt-host device.
-    pub async fn watch_events<H: HostListener + Clone>(self, listener: H) -> types::Result<()> {
+    pub async fn watch_events<H: HostListener + Clone>(self, listener: H) -> anyhow::Result<()> {
         let handle_fidl = self.clone().handle_fidl_events(listener.clone());
         let watch_peers = self.clone().watch_peers(listener.clone());
         let watch_state = self.watch_state(listener);
@@ -259,9 +259,9 @@ impl HostDevice {
         pin_mut!(watch_peers);
         pin_mut!(watch_state);
         futures::select! {
-            res1 = handle_fidl.fuse() => res1,
-            res2 = watch_peers.fuse() => res2,
-            res3 = watch_state.fuse() => res3,
+            res1 = handle_fidl.fuse() => res1.context("failed to handle fuchsia.bluetooth.Host event"),
+            res2 = watch_peers.fuse() => res2.context("failed to relay peer watcher from Host"),
+            res3 = watch_state.fuse() => res3.context("failed to watch Host for HostInfo"),
         }
     }
 

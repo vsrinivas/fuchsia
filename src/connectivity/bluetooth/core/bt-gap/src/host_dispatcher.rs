@@ -801,39 +801,44 @@ impl HostDispatcher {
     /// watcher
     pub async fn add_adapter(&self, host_path: &Path) -> Result<(), Error> {
         let node = self.state.read().inspect.hosts().create_child(unique_name("device_"));
-        let host_dev = bt::util::open_rdwr(host_path)?;
+        let host_dev = bt::util::open_rdwr(host_path)
+            .context(format!("failed to open {:?} device file", host_path))?;
         let device_topo = fdio::device_get_topo_path(&host_dev)?;
         info!("Adding Adapter: {:?} (topology: {:?})", host_path, device_topo);
         let host_device = init_host(host_path, node).await?;
+        let dbg_ids = host_device.debug_identifiers();
 
-        // TODO(armansito): Make sure that the bt-host device is left in a well-known state if any
-        // of these operations fails.
-
-        // TODO(fxbug.dev/22017): The following code applies a number of configurations to the bt-host by
-        // default. We should tie these to a package configuration (once it is possible), as some of these
-        // are undesirable in certain situations, e.g when running PTS tests.
-        //
-        // Currently applied settings:
-        //   - LE Privacy with IRK
-        //   - LE background scan for auto-connection
-        //   - BR/EDR connectable mode
+        // TODO(fxbug.dev/66615): Make sure that the bt-host device is left in a well-known state if
+        // any of these operations fails.
 
         let config = self.state.read().config_settings.clone();
-        host_device.apply_config(config).await?;
+        host_device
+            .apply_config(config)
+            .await
+            .context(format!("{:?}: failed to configure bt-host device", dbg_ids))?;
 
         let address = host_device.address();
-        assign_host_data(host_device.clone(), self.clone(), &address).await?;
+        assign_host_data(host_device.clone(), self.clone(), &address)
+            .await
+            .context(format!("{:?}: failed to assign identity to bt-host", dbg_ids))?;
         try_restore_bonds(host_device.clone(), self.clone(), &address)
             .await
             .map_err(|e| e.as_failure())?;
 
         // Assign the name that is currently assigned to the HostDispatcher as the local name.
         let fut = host_device.set_name(self.state.read().name.clone());
-        fut.await.map_err(|e| e.as_failure())?;
+        fut.await
+            .map_err(|e| e.as_failure())
+            .context(format!("{:?}: failed to set name of bt-host", dbg_ids))?;
 
         let (gatt_server_proxy, remote_gatt_server) = fidl::endpoints::create_proxy()?;
-        host_device.proxy().request_gatt_server_(remote_gatt_server)?;
-        self.spawn_gas_proxy(gatt_server_proxy).await?;
+        host_device
+            .proxy()
+            .request_gatt_server_(remote_gatt_server)
+            .context(format!("{:?}: failed to open gatt server for bt-host", dbg_ids))?;
+        self.spawn_gas_proxy(gatt_server_proxy)
+            .await
+            .context(format!("{:?}: failed to spawn generic access service", dbg_ids))?;
 
         // Ensure the current active pairing delegate (if it exists) handles this host
         self.handle_pairing_requests(host_device.clone());
