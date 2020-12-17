@@ -21,6 +21,7 @@ const uint32 MAX_PROGRAM_NAME_LENGTH = 1024;
 const uint32 MAX_NUM_ANNOTATIONS_PER_CRASH_REPORT = 32;
 const uint32 MAX_NUM_ATTACHMENTS_PER_CRASH_REPORT = 16;
 const uint32 MAX_EVENT_ID_LENGTH = 128;
+const uint32 MAX_CRASH_SIGNATURE_LENGTH = 128;
 
 /// Represents a crash report.
 resource table CrashReport {
@@ -31,6 +32,9 @@ resource table CrashReport {
     6: zx.duration program_uptime;
 
     /// The specific report that depends on the type of crashes.
+    ///
+    /// This field should be set if additional information about the crashing program needs to be
+    /// sent, e.g., a minidump.
     2: SpecificCrashReport specific_report;
 
     /// A vector of key-value string pairs representing arbitrary data that should be attached to a
@@ -54,6 +58,18 @@ resource table CrashReport {
     /// crashes, but can be considered as belonging to the same event, e.g., a crash in a low-level
     /// server causing a crash in a high-level UI widget.
     5: string:MAX_EVENT_ID_LENGTH event_id;
+
+    /// A text signature that the crash server can use to track the same crash over time, e.g.,
+    /// "kernel-panic" or "oom". This signature will take precedence over any automated signature
+    /// derived from the rest of the data.
+    ///
+    /// Unlike the event ID, crash reports sharing the same signature correspond to the same crash,
+    /// but happening over multiple events, e.g., a null pointer exception in a server whenever
+    /// asked the same request.
+    ///
+    /// Must match [a-z][a-z\-]* i.e. only lowercase letters and hyphens or this will result in a
+    /// ZX_ERR_INVALID_ARGS epitaph.
+    7: string:MAX_CRASH_SIGNATURE_LENGTH crash_signature;
 };
 
 /// Represents a specific crash report.
@@ -71,8 +87,6 @@ flexible resource union SpecificCrashReport {
     3: RuntimeCrashReport dart;
 };
 
-const uint32 MAX_CRASH_SIGNATURE_LENGTH = 128;
-
 /// Represents a generic crash report.
 table GenericCrashReport {
     /// A text signature that the crash server can use to track the same crash over time, e.g.,
@@ -84,6 +98,7 @@ table GenericCrashReport {
     ///
     /// Must match [a-z\-]+, i.e. only lowercase letters and hyphens or this will result in a
     /// ZX_ERR_INVALID_ARGS epitaph.
+    [Deprecated = "use `crash_signature` in CrashReport instead"]
     1: string:MAX_CRASH_SIGNATURE_LENGTH crash_signature;
 };
 
