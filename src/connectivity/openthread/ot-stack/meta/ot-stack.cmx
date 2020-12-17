@@ -15,6 +15,7 @@
             "class/ot-radio"
         ],
         "features": [
+            "config-data",
             "isolated-persistent-storage"
         ],
         "services": [

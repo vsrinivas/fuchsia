@@ -365,7 +365,21 @@ zx_status_t OtStackApp::Init(const std::string& path, bool is_test_env) {
   ot::Ncp::otNcpInit(static_cast<otInstance*>(ot_instance_ptr_.value()));
   ot::Ncp::otNcpGetInstance()->Init(lowpan_spinel_ptr_.get());
 
-  return SetupFidlService();
+  auto status = SetupFidlService();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Init bootstrap fidl:
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  bootstrap_impl_ = std::make_unique<ot::Fuchsia::BootstrapImpl>(context.get());
+  status = bootstrap_impl_->Init();
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "BootstrapImpl Init() failed with status = " << zx_status_get_string(status);
+    return status;
+  }
+
+  return ZX_OK;
 }
 
 void OtStackApp::AlarmTask() {

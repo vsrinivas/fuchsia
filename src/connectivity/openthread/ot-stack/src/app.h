@@ -20,6 +20,7 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
 
+#include "bootstrap_fidl_impl.h"
 #include "ncp_fidl.h"
 
 namespace otstack {
@@ -119,6 +120,8 @@ class OtStackApp : public fidl_spinel::Device::EventHandler {
    private:
     OtStackApp& app_;
   };
+
+  std::unique_ptr<ot::Fuchsia::BootstrapImpl> bootstrap_impl_;
 
   zx::port port_;
   std::thread event_thread_;

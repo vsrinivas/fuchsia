@@ -45,7 +45,7 @@ void otPlatSettingsInit(otInstance *instance) {}
 
 void otPlatSettingsDeinit(otInstance *instance) {}
 
-static ThreadConfigManager config_manager("/data/thread-config.json");
+static ThreadConfigManager config_manager(kThreadSettingsPath);
 
 static otError get_ot_error(ThreadConfigMgrError error) {
   switch (error) {

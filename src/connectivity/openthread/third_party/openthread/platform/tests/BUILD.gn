@@ -12,11 +12,28 @@ group("tests") {
 }
 
 test_package("threadstack-unittests") {
-  deps = [ ":unittests" ]
+  deps = [
+    ":bootstrap-unittests",
+    ":unittests",
+  ]
 
   tests = [
     {
       name = "threadstack-unittests"
+      environments = basic_envs
+    },
+
+    # Create separate test for threadstack-bootstrap-unittests
+    # since one of the test case tests for edge case which
+    # generates output to 'FX_LOGS(ERROR)'. To prevent that from
+    # being flagged as a failing test, we add max_severity = "ERROR".
+    # We need to create separate testcase as we don't want to affect
+    # max_severity for other tests.
+    {
+      log_settings = {
+        max_severity = "ERROR"
+      }
+      name = "threadstack-bootstrap-unittests"
       environments = basic_envs
     },
   ]
@@ -36,6 +53,8 @@ executable("unittests") {
   deps = []
 
   public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
     "//src/connectivity/openthread/third_party/openthread/platform",
     "//src/lib/fxl/test:gtest_main",
@@ -47,6 +66,39 @@ executable("unittests") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 
-  include_dirs = [ "//third_party/openthread/include" ]
+  include_dirs = [
+    "//third_party/openthread/include",
+    "//src/connectivity/openthread/third_party/openthread/platform",
+  ]
+
+  configs += [ "//build/config:Wno-conversion" ]
+}
+
+executable("bootstrap-unittests") {
+  output_name = "threadstack-bootstrap-unittests"
+
+  testonly = true
+
+  sources = [ "bootstrap_fidl_impl_tests.cc" ]
+
+  deps = []
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/syslog/cpp",
+    "//src/connectivity/openthread/third_party/openthread/platform",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+
+  include_dirs =
+      [ "//src/connectivity/openthread/third_party/openthread/platform" ]
+
   configs += [ "//build/config:Wno-conversion" ]
 }

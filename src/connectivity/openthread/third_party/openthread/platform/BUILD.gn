@@ -6,6 +6,8 @@ source_set("platform") {
   sources = [
     "alarm.cc",
     "alarm.h",
+    "bootstrap_fidl_impl.cc",
+    "bootstrap_fidl_impl.h",
     "entropy.cc",
     "fuchsia_platform_alarm.cc",
     "logging.cc",
@@ -45,7 +47,11 @@ source_set("platform") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.thread",
+    "//sdk/lib/sys/cpp",
     "//src/connectivity/openthread/lib/ot-stack:ot-stack-callback",
+    "//src/lib/files",
+    "//src/lib/fsl",
     "//src/lib/json_parser",
     "//third_party/modp_b64",
     "//third_party/openthread:lib-ot-core",

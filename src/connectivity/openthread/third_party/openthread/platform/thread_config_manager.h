@@ -18,6 +18,8 @@ enum ThreadConfigMgrError {
   kThreadConfigMgrErrorConflictingTypes = -4,
 };
 
+constexpr char kThreadSettingsPath[] = "/data/thread-settings.json";
+
 // Abstract class that defines the reader interface for the config store.
 class ThreadConfigReader {
  public:
