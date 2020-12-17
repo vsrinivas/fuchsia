@@ -9,9 +9,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+
+#include "examples/drivers/fifo/demo-fifo-bind.h"
 
 // fifo must be a power of 2 for the math to work
 #define FIFOSIZE 32768
@@ -149,7 +150,6 @@ static zx_driver_ops_t fifo_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(demo_fifo, fifo_driver_ops, "zircon", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
-ZIRCON_DRIVER_END(demo_fifo)
+ZIRCON_DRIVER(demo_fifo, fifo_driver_ops, "zircon", "0.1");
+
 // clang-format on

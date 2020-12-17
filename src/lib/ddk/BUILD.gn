@@ -88,7 +88,6 @@ zx_library("ddk-deprecated-binding-headers") {
   sources = []
   public_deps = [ ":ddk" ]
   visibility = [
-    "//examples/drivers/fifo:*",
     "//src/connectivity/bluetooth/core/bt-host:*",
     "//src/connectivity/bluetooth/core/bt-host:driver",
     "//src/connectivity/bluetooth/hci/emulator:*",

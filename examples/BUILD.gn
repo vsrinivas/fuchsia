@@ -30,6 +30,7 @@ group("tests") {
   testonly = true
   data_deps = [
     "diagnostics:tests",
+    "drivers/fifo:tests",
     "fidl:tests",
     "fuzzers:tests",
     "hello_world:tests",

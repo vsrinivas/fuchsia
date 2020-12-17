@@ -1,0 +1,16 @@
+[
+    {
+        "name": "Invalid PROTOCOL",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+        }
+    },
+    {
+        "name": "demo-fifo",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.misc.BIND_PROTOCOL.PARENT"
+        }
+    }
+]
