@@ -141,6 +141,7 @@ __NO_RETURN static void exception_die(iframe_t* iframe, uint32_t esr, uint64_t f
 
   /* fatal exception, die here */
   printf("ESR %#x: ec %#x, il %#x, iss %#x\n", esr, ec, il, iss);
+  printf("FAR %#" PRIx64 "\n", far);
   dump_iframe(iframe);
   crashlog.iframe = iframe;
   crashlog.esr = esr;
