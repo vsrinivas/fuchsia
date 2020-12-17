@@ -188,7 +188,7 @@ impl HostPipeConnection {
     }
 }
 
-pub async fn create_ascendd() -> Ascendd {
+pub async fn create_ascendd() -> Result<Ascendd> {
     log::info!("Starting ascendd");
     Ascendd::new(
         ascendd_lib::Opt { sockpath: Some(get_socket().await), ..Default::default() },

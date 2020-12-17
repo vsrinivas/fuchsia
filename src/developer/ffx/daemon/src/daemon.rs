@@ -228,7 +228,7 @@ impl Daemon {
         Ok(Daemon {
             target_collection: target_collection.clone(),
             event_queue: queue,
-            ascendd: Arc::new(create_ascendd().await),
+            ascendd: Arc::new(create_ascendd().await?),
         })
     }
 
@@ -265,7 +265,11 @@ impl Daemon {
         let target_collection = Arc::new(TargetCollection::new());
         let event_queue = events::Queue::new(&target_collection);
         target_collection.set_event_queue(event_queue.clone()).await;
-        Daemon { target_collection, event_queue, ascendd: Arc::new(create_ascendd().await) }
+        Daemon {
+            target_collection,
+            event_queue,
+            ascendd: Arc::new(create_ascendd().await.unwrap()),
+        }
     }
 
     pub async fn handle_requests_from_stream(&self, stream: DaemonRequestStream) -> Result<()> {

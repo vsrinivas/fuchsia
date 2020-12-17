@@ -13,6 +13,7 @@ if (is_host) {
     edition = "2018"
 
     deps = [
+      "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
       "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
       "//src/connectivity/overnet/lib/core",
       "//src/connectivity/overnet/lib/hoist",

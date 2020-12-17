@@ -5,7 +5,7 @@
 #[cfg(not(target_os = "fuchsia"))]
 mod not_fuchsia;
 #[cfg(not(target_os = "fuchsia"))]
-pub use not_fuchsia::{hard_coded_security_context, Hoist, DEFAULT_ASCENDD_PATH};
+pub use not_fuchsia::{hard_coded_security_context, Hoist, HostOvernet, DEFAULT_ASCENDD_PATH};
 
 #[cfg(target_os = "fuchsia")]
 mod fuchsia;
@@ -76,6 +76,7 @@ mod test {
             ascendd_lib::Opt { sockpath: Some(ascendd_path), ..Default::default() },
             Box::new(async_std::io::stdout()),
         )
+        .unwrap()
     }
 
     #[cfg(not(target_os = "fuchsia"))]

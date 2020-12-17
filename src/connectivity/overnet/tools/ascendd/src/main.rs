@@ -6,5 +6,5 @@ use {anyhow::Error, ascendd_lib::Ascendd};
 
 #[fuchsia::component]
 async fn main() -> Result<(), Error> {
-    Ascendd::new(argh::from_env(), Box::new(async_std::io::stderr())).await
+    Ascendd::new(argh::from_env(), Box::new(async_std::io::stderr()))?.await
 }
