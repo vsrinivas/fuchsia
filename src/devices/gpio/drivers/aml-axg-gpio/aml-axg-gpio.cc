@@ -9,13 +9,13 @@
 #include <cstdint>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 
 #include "a113-blocks.h"
 #include "s905d2-blocks.h"
+#include "src/devices/gpio/drivers/aml-axg-gpio/aml-axg-gpio-bind.h"
 
 namespace {
 
@@ -527,14 +527,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace gpio
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(aml_gpio, gpio::driver_ops, "zircon", "0.1", 7)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GPIO),
-    // we support multiple SOC variants
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_A113),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_A311D),
-ZIRCON_DRIVER_END(aml_gpio)
+ZIRCON_DRIVER(aml_gpio, gpio::driver_ops, "zircon", "0.1");
