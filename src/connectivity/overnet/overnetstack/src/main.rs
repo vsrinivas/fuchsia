@@ -20,7 +20,7 @@ use fuchsia_component::server::ServiceFs;
 use futures::channel::mpsc;
 use futures::lock::Mutex;
 use futures::prelude::*;
-use overnet_core::{Router, RouterOptions, SimpleSecurityContext};
+use overnet_core::{log_errors, Router, RouterOptions, SimpleSecurityContext};
 use std::sync::Arc;
 use stream_link::run_stream_link;
 
@@ -145,6 +145,13 @@ enum IncomingService {
     // ... more services here
 }
 
+struct Precious<T>(Option<T>);
+impl<T> Drop for Precious<T> {
+    fn drop(&mut self) {
+        assert!(self.0.is_none());
+    }
+}
+
 #[fuchsia::component]
 async fn main(opt: Opts) -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
@@ -167,7 +174,8 @@ async fn main(opt: Opts) -> Result<(), Error> {
 
     let (tx_new_conn, rx_new_conn) = mpsc::channel(1);
     let (tx_addr, rx_addr) = mpsc::channel(1);
-    let mdns_publisher = &Mutex::new(None);
+    let mdns_publisher = &Mutex::new(Precious(None));
+    let node_id = node.node_id();
     futures::future::try_join5(
         // Serial comms
         maybe_run_subsystem(
@@ -186,7 +194,11 @@ async fn main(opt: Opts) -> Result<(), Error> {
             opt.mdns_publish,
             "MDNS-publish",
             rx_addr.map(|a| a.port()).map(Ok).try_for_each(|p| async move {
-                *mdns_publisher.lock().await = Some(Task::spawn(crate::mdns::publish(p)));
+                log::info!("GOT NEW PORT: {}", p);
+                *mdns_publisher.lock().await = Precious(Some(Task::spawn(log_errors(
+                    crate::mdns::publish(p, node_id),
+                    format!("mdns publisher for port {} failed", p),
+                ))));
                 Ok(())
             }),
         ),
@@ -215,6 +227,6 @@ async fn main(opt: Opts) -> Result<(), Error> {
         })
         .map(Ok),
     )
-    .await
-    .map(drop)
+    .await?;
+    Ok(())
 }
