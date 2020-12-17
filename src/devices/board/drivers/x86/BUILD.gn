@@ -6,6 +6,7 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 import("//src/devices/bus/drivers/pci/pci.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
 
 assert(current_cpu == "x64")
 
@@ -191,11 +192,6 @@ test("x86-battery-test") {
     "//zircon/system/ulib/region-alloc",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
-}
-
-bootfs_test("x86-battery-bootfs-test") {
-  name = "x86-battery-test"
-  deps = [ ":x86-battery-test" ]
 }
 
 test("x86-lid-test") {
@@ -391,7 +387,24 @@ test("x86-cros-ec-test") {
   ]
 }
 
-bootfs_test("x86-cros-ec-bootfs-test") {
-  name = "x86-cros-ec-test"
+fuchsia_unittest_package("x86-battery-test-pkg") {
+  package_name = "x86-battery-test"
+  executable_path = "test/x86-battery-test"
+  deps = [ ":x86-battery-test" ]
+}
+
+group("tests") {
+  testonly = true
+  if (target_cpu == "x64") {
+    deps = [
+      ":x86-battery-test-pkg",
+      ":x86-cros-ec-test-pkg",
+    ]
+  }
+}
+
+fuchsia_unittest_package("x86-cros-ec-test-pkg") {
+  package_name = "x86-cros-ec-test"
+  executable_path = "test/x86-cros-ec-test"
   deps = [ ":x86-cros-ec-test" ]
 }

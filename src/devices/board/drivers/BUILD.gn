@@ -9,4 +9,8 @@ group("tests") {
     "mt8167s_ref:tests",
     "vs680-evk:tests",
   ]
+
+  if (target_cpu == "x64") {
+    deps += [ "x86:tests" ]
+  }
 }
