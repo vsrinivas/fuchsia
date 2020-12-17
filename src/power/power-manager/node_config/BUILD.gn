@@ -12,6 +12,11 @@ template("node_config") {
     outputs = [ "node_config.json" ]
   }
 
+  resource("${target_name}_resource") {
+    sources = [ "${invoker.source}" ]
+    outputs = [ "config/power_manager/node_config.json" ]
+  }
+
   validate_json("${target_name}_validate_json") {
     data = "${invoker.source}"
     schema = "node_config.schema.json"
@@ -20,6 +25,7 @@ template("node_config") {
   group(target_name) {
     deps = [
       ":${target_name}_config_data",
+      ":${target_name}_resource",
       ":${target_name}_validate_json",
     ]
   }
