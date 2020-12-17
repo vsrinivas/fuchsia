@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_IMAGE_H_
 
 #include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/vmo.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
@@ -30,8 +31,9 @@ typedef struct image_node {
 
 class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image>> {
  public:
-  Image(Controller* controller, const image_t& info, zx::vmo vmo, uint32_t stride_px);
-  Image(Controller* controller, const image_t& info);
+  Image(Controller* controller, const image_t& info, zx::vmo vmo, uint32_t stride_px,
+        inspect::Node* parent_node);
+  Image(Controller* controller, const image_t& info, inspect::Node* parent_node);
   ~Image();
 
   image_t& info() { return info_; }
@@ -52,7 +54,8 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   // Called on vsync after StartRetire has been called.
   void OnRetire() __TA_REQUIRES(mtx());
 
-  // Called on all waiting images when any fence fires. Returns true if the image is ready to present.
+  // Called on all waiting images when any fence fires. Returns true if the image is ready to
+  // present.
   bool OnFenceReady(FenceReference* fence);
 
   // Called to reset fences when client releases the image. Releasing fences
@@ -87,6 +90,7 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
  private:
   // Retires the image and signals |fence|.
   void RetireWithFence(fbl::RefPtr<FenceReference>&& fence);
+  void InitializeInspect(inspect::Node* parent_node);
 
   image_t info_;
   uint32_t stride_px_;
@@ -115,6 +119,11 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   const bool capture_image_ = false;
 
   const zx::vmo vmo_;
+
+  inspect::Node node_;
+  inspect::ValueList properties_;
+  inspect::BoolProperty presenting_property_;
+  inspect::BoolProperty retiring_property_;
 };
 
 }  // namespace display

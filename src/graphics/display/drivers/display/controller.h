@@ -12,6 +12,7 @@
 #include <lib/edid/edid.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 
@@ -43,6 +44,9 @@ class IntegrationTest;
 class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
                     public fbl::RefCounted<DisplayInfo> {
  public:
+  // Should be called after init_done is set to true.
+  void InitializeInspect(inspect::Node* parent_node);
+
   bool has_edid;
   edid::Edid edid;
   fbl::Vector<edid::timing_params_t> edid_timings;
@@ -73,6 +77,9 @@ class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
 
   // True when we're in the process of switching between display clients.
   bool switching_client = false;
+
+  inspect::Node node;
+  inspect::ValueList properties;
 };
 
 using ControllerParent = ddk::Device<Controller, ddk::Unbindable, ddk::Openable, ddk::Messageable>;
@@ -169,6 +176,10 @@ class Controller : public ControllerParent,
   void OpenController(zx::channel device, zx::channel controller,
                       OpenControllerCompleter::Sync& _completer) override;
 
+  inspect::Inspector inspector_;
+  // Currently located at bootstrap/driver_manager:root/display.
+  inspect::Node root_;
+
   // mtx_ is a global lock on state shared among clients.
   mutable mtx_t mtx_;
   bool unbinding_ __TA_GUARDED(mtx()) = false;
@@ -193,6 +204,10 @@ class Controller : public ControllerParent,
   ddk::DisplayCaptureImplProtocolClient dc_capture_;
   ddk::DisplayClampRgbImplProtocolClient dc_clamp_rgb_;
   ddk::I2cImplProtocolClient i2c_;
+  zx_time_t last_vsync_timestamp_{};
+
+  inspect::UintProperty last_vsync_ns_property_;
+  inspect::UintProperty last_vsync_interval_ns_property_;
 };
 
 }  // namespace display

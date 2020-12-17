@@ -33,6 +33,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/string_printf.h>
 
 #include "lib/fidl/llcpp/server.h"
 #include "lib/zx/clock.h"
@@ -59,6 +60,14 @@ static constexpr uint64_t kMaxLayers = 65536;
 
 namespace display {
 
+void DisplayConfig::InitializeInspect(inspect::Node* parent) {
+  static std::atomic_uint64_t inspect_count;
+  node_ = parent->CreateChild(fbl::StringPrintf("display-config-%ld", inspect_count++).c_str());
+  pending_layer_change_property_ = node_.CreateBool("pending_layer_change", pending_layer_change_);
+  pending_apply_layer_change_property_ =
+      node_.CreateBool("pending_apply_layer_change", pending_apply_layer_change_);
+}
+
 void Client::ImportVmoImage(fhd::ImageConfig image_config, ::zx::vmo vmo, int32_t offset,
                             ImportVmoImageCompleter::Sync& _completer) {
   if (!single_buffer_framebuffer_stride_) {
@@ -84,8 +93,8 @@ void Client::ImportVmoImage(fhd::ImageConfig image_config, ::zx::vmo vmo, int32_
   }
   if (status == ZX_OK) {
     fbl::AllocChecker ac;
-    auto image = fbl::AdoptRef(
-        new (&ac) Image(controller_, dc_image, std::move(vmo), single_buffer_framebuffer_stride_));
+    auto image = fbl::AdoptRef(new (&ac) Image(controller_, dc_image, std::move(vmo),
+                                               single_buffer_framebuffer_stride_, &proxy_->node()));
     if (!ac.check()) {
       controller_->dc()->ReleaseImage(&dc_image);
       _completer.Reply(ZX_ERR_NO_MEMORY, 0);
@@ -154,7 +163,8 @@ void Client::ImportImage(fhd::ImageConfig image_config, uint64_t collection_id, 
   }
 
   fbl::AllocChecker ac;
-  auto image = fbl::AdoptRef(new (&ac) Image(controller_, dc_image, std::move(vmo), stride));
+  auto image = fbl::AdoptRef(
+      new (&ac) Image(controller_, dc_image, std::move(vmo), stride, &proxy_->node()));
   if (!ac.check()) {
     zxlogf(DEBUG, "Alloc checker failed while constructing Image.\n");
     _completer.Reply(ZX_ERR_NO_MEMORY, 0);
@@ -452,6 +462,7 @@ void Client::SetDisplayLayers(uint64_t display_id, ::fidl::VectorView<uint64_t> 
   }
 
   config->pending_layer_change_ = true;
+  config->pending_layer_change_property_.Set(true);
   config->pending_layers_.clear();
   for (uint64_t i = layer_ids.count() - 1; i != UINT64_MAX; i--) {
     auto layer = layers_.find(layer_ids[i]);
@@ -656,6 +667,7 @@ void Client::CheckConfig(bool discard, CheckConfigCompleter::Sync& _completer) {
         config.pending_layers_.push_front(layer);
       }
       config.pending_layer_change_ = false;
+      config.pending_layer_change_property_.Set(false);
 
       config.pending_ = config.current_;
       config.display_config_change_ = false;
@@ -732,7 +744,9 @@ void Client::ApplyConfig(ApplyConfigCompleter::Sync& /*_completer*/) {
         display_config.current_layers_.push_front(layer);
       }
       display_config.pending_layer_change_ = false;
+      display_config.pending_layer_change_property_.Set(false);
       display_config.pending_apply_layer_change_ = true;
+      display_config.pending_apply_layer_change_property_.Set(true);
     }
 
     // Apply any pending configuration changes to active layers.
@@ -822,7 +836,7 @@ void Client::ImportImageForCapture(fhd::ImageConfig image_config, uint64_t colle
     });
 
     fbl::AllocChecker ac;
-    auto image = fbl::AdoptRef(new (&ac) Image(controller_, capture_image));
+    auto image = fbl::AdoptRef(new (&ac) Image(controller_, capture_image, &proxy_->node()));
     if (!ac.check()) {
       _completer.ReplyError(ZX_ERR_NO_MEMORY);
       return;
@@ -1114,6 +1128,7 @@ void Client::ApplyConfig() {
       const bool activated = layer->ActivateLatestReadyImage();
       if (activated && layer->current_image()) {
         display_config.pending_apply_layer_change_ = true;
+        display_config.pending_apply_layer_change_property_.Set(true);
       }
 
       if (is_vc_) {
@@ -1236,6 +1251,8 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
     config->current_.cc_flags = 0;
 
     config->pending_ = config->current_;
+
+    config->InitializeInspect(&proxy_->node());
 
     configs_.insert(std::move(config));
   }
@@ -1540,6 +1557,7 @@ void ClientProxy::SetOwnership(bool is_owner) {
   task->set_handler([this, client_handler = &handler_, is_owner](
                         async_dispatcher_t* /*dispatcher*/, async::Task* task, zx_status_t status) {
     if (status == ZX_OK && client_handler->IsValid()) {
+      is_owner_property_.Set(is_owner);
       client_handler->SetOwnership(is_owner);
     }
     // update client_scheduled_tasks_
@@ -1801,7 +1819,10 @@ void ClientProxy::DdkRelease() {
   ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
-zx_status_t ClientProxy::Init(zx::channel server_channel) {
+zx_status_t ClientProxy::Init(inspect::Node* parent_node, zx::channel server_channel) {
+  node_ = parent_node->CreateChild(
+      fbl::StringPrintf("%s-%d", is_vc_ ? "vc" : "primary", handler_.id()).c_str());
+  is_owner_property_ = node_.CreateBool("is_owner", false);
   mtx_init(&task_mtx_, mtx_plain);
   auto seed = static_cast<uint32_t>(zx::clock::get_monotonic().get());
   initial_cookie_ = rand_r(&seed);

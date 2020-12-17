@@ -64,6 +64,7 @@ source_set("shared") {
     "//zircon/system/ulib/edid",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/image-format:image-format-llcpp",
+    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace:trace-driver",
   ]
 

@@ -16,6 +16,7 @@
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
@@ -75,9 +76,12 @@ class GammaTables : public fbl::RefCounted<GammaTables> {
 // Almost-POD used by Client to manage display configuration. Public state is used by Controller.
 class DisplayConfig : public IdMappable<std::unique_ptr<DisplayConfig>> {
  public:
+  void InitializeInspect(inspect::Node* parent);
+
   bool apply_layer_change() {
     bool ret = pending_apply_layer_change_;
     pending_apply_layer_change_ = false;
+    pending_apply_layer_change_property_.Set(false);
     return ret;
   }
 
@@ -105,6 +109,10 @@ class DisplayConfig : public IdMappable<std::unique_ptr<DisplayConfig>> {
 
   friend Client;
   friend ClientProxy;
+
+  inspect::Node node_;
+  inspect::BoolProperty pending_layer_change_property_;
+  inspect::BoolProperty pending_apply_layer_change_property_;
 };
 
 // Helper class for sending events using the same API, regardless if |Client|
@@ -363,7 +371,7 @@ class ClientProxy : public ClientParent {
   ClientProxy(Controller* controller, bool is_vc, uint32_t client_id, zx::channel server_channel);
 
   ~ClientProxy();
-  zx_status_t Init(zx::channel server_channel);
+  zx_status_t Init(inspect::Node* parent_node, zx::channel server_channel);
 
   zx_status_t DdkClose(uint32_t flags);
   void DdkUnbind(ddk::UnbindTxn txn);
@@ -395,6 +403,8 @@ class ClientProxy : public ClientParent {
   void ReapplySpecialConfigs();
 
   uint32_t id() const { return handler_.id(); }
+
+  inspect::Node& node() { return node_; }
 
   // This is used for testing
   void CloseTest();
@@ -454,6 +464,10 @@ class ClientProxy : public ClientParent {
   bool acknowledge_request_sent_ = false;
 
   fit::function<void()> on_client_dead_;
+
+ private:
+  inspect::Node node_;
+  inspect::BoolProperty is_owner_property_;
 };
 
 }  // namespace display

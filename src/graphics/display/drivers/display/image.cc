@@ -11,19 +11,25 @@
 
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
+#include <fbl/string_printf.h>
 
 #include "controller.h"
 
 namespace display {
 
-Image::Image(Controller* controller, const image_t& info, zx::vmo handle, uint32_t stride_px)
+Image::Image(Controller* controller, const image_t& info, zx::vmo handle, uint32_t stride_px,
+             inspect::Node* parent_node)
     : info_(info),
       stride_px_(stride_px),
       controller_(controller),
       capture_image_(false),
-      vmo_(std::move(handle)) {}
-Image::Image(Controller* controller, const image_t& info)
-    : info_(info), controller_(controller), capture_image_(true) {}
+      vmo_(std::move(handle)) {
+  InitializeInspect(parent_node);
+}
+Image::Image(Controller* controller, const image_t& info, inspect::Node* parent_node)
+    : info_(info), controller_(controller), capture_image_(true) {
+  InitializeInspect(parent_node);
+}
 
 Image::~Image() {
   if (!capture_image_) {
@@ -33,6 +39,19 @@ Image::~Image() {
   } else {
     controller_->ReleaseCaptureImage(this);
   }
+}
+
+void Image::InitializeInspect(inspect::Node* parent_node) {
+  if (!parent_node)
+    return;
+  node_ = parent_node->CreateChild(fbl::StringPrintf("image-%p", this).c_str());
+  node_.CreateBool("capture_image", capture_image_, &properties_);
+  node_.CreateUint("width", info_.width, &properties_);
+  node_.CreateUint("height", info_.height, &properties_);
+  node_.CreateUint("pixel_format", info_.pixel_format, &properties_);
+  node_.CreateUint("type", info_.type, &properties_);
+  presenting_property_ = node_.CreateBool("presenting", false);
+  retiring_property_ = node_.CreateBool("retiring", false);
 }
 
 mtx_t* Image::mtx() { return controller_->mtx(); }
@@ -66,6 +85,7 @@ void Image::StartPresent() {
   TRACE_FLOW_BEGIN("gfx", "present_image", id);
 
   presenting_ = true;
+  presenting_property_.Set(true);
 }
 
 void Image::EarlyRetire() {
@@ -99,6 +119,7 @@ void Image::StartRetire() {
     RetireWithFence(std::move(signal_fence_));
   } else {
     retiring_ = true;
+    retiring_property_.Set(true);
     armed_signal_fence_ = std::move(signal_fence_);
   }
 }
@@ -107,10 +128,12 @@ void Image::OnRetire() {
   ZX_DEBUG_ASSERT(mtx_trylock(mtx()) == thrd_busy);
 
   presenting_ = false;
+  presenting_property_.Set(false);
 
   if (retiring_) {
     RetireWithFence(std::move(armed_signal_fence_));
     retiring_ = false;
+    retiring_property_.Set(false);
   }
 }
 

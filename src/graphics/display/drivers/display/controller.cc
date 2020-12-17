@@ -27,6 +27,7 @@
 #include <ddktl/protocol/display/clamprgb.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
+#include <fbl/string_printf.h>
 
 #include "client.h"
 #include "src/graphics/display/drivers/display/display-bind.h"
@@ -56,6 +57,13 @@ edid::ddc_i2c_transact ddc_tx = [](void* ctx, edid::ddc_i2c_msg_t* msgs, uint32_
 }  // namespace
 
 namespace display {
+
+void DisplayInfo::InitializeInspect(inspect::Node* parent_node) {
+  ZX_DEBUG_ASSERT(init_done);
+  node = parent_node->CreateChild(fbl::StringPrintf("display-%lu", id).c_str());
+  node.CreateUint("width", params.width, &properties);
+  node.CreateUint("height", params.height, &properties);
+}
 
 void Controller::PopulateDisplayMode(const edid::timing_params_t& params, display_mode_t* mode) {
   mode->pixel_clock_10khz = params.pixel_freq_10khz;
@@ -405,6 +413,7 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
         if (!added_ptr[i]->has_edid || !added_ptr[i]->edid_timings.is_empty()) {
           added_ids[final_added_success_count++] = added_ptr[i]->id;
           added_ptr[i]->init_done = true;
+          added_ptr[i]->InitializeInspect(&root_);
         } else {
           zxlogf(WARNING, "Ignoring display with no compatible edid timings");
         }
@@ -457,6 +466,9 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   // that Trace Viewer looks for in its "Highlight VSync" feature.
   TRACE_INSTANT("gfx", "VSYNC", TRACE_SCOPE_THREAD, "display_id", display_id);
   TRACE_DURATION("gfx", "Display::Controller::OnDisplayVsync", "display_id", display_id);
+  last_vsync_ns_property_.Set(timestamp);
+  last_vsync_interval_ns_property_.Set(timestamp - last_vsync_timestamp_);
+  last_vsync_timestamp_ = timestamp;
   fbl::AutoLock lock(mtx());
   size_t found_handles = 0;
   DisplayInfo* info = nullptr;
@@ -888,7 +900,7 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_status_t status = client->Init(std::move(client_channel));
+  zx_status_t status = client->Init(&root_, std::move(client_channel));
   if (status != ZX_OK) {
     zxlogf(DEBUG, "Failed to init client %d", status);
     return status;
@@ -992,7 +1004,9 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
     return status;
   }
 
-  if ((status = DdkAdd("display-controller")) != ZX_OK) {
+  if ((status = DdkAdd(
+           ddk::DeviceAddArgs("display-controller").set_inspect_vmo(inspector_.DuplicateVmo()))) !=
+      ZX_OK) {
     zxlogf(ERROR, "Failed to add display core device %d", status);
     return status;
   }
@@ -1048,6 +1062,9 @@ void Controller::DdkRelease() {
 Controller::Controller(zx_device_t* parent)
     : ControllerParent(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   mtx_init(&mtx_, mtx_plain);
+  root_ = inspector_.GetRoot().CreateChild("display");
+  last_vsync_ns_property_ = root_.CreateUint("last_vsync_timestamp_ns", 0);
+  last_vsync_interval_ns_property_ = root_.CreateUint("last_vsync_interval_ns", 0);
 }
 
 Controller::~Controller() { zxlogf(INFO, "Controller::~Controller"); }
