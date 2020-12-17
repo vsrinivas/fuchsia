@@ -9,7 +9,7 @@ use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
-use crate::switchboard::base::{PrivacyInfo, SettingRequest, SettingResponse};
+use crate::switchboard::base::{PrivacyInfo, SettingRequest};
 use async_trait::async_trait;
 
 impl DeviceStorageCompatible for PrivacyInfo {
@@ -49,9 +49,7 @@ impl controller::Handle for PrivacyController {
                 current.user_data_sharing_consent = user_data_sharing_consent;
                 Some(write(&self.client, current, false).await.into_handler_result())
             }
-            SettingRequest::Get => {
-                Some(Ok(Some(SettingResponse::Privacy(self.client.read().await))))
-            }
+            SettingRequest::Get => Some(Ok(Some(SettingInfo::Privacy(self.client.read().await)))),
             _ => None,
         }
     }

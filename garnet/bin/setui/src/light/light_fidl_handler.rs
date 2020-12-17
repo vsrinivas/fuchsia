@@ -12,12 +12,13 @@ use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon::Status;
 
+use crate::base::SettingInfo;
 use crate::fidl_process_full;
 use crate::fidl_processor::settings::RequestContext;
 use crate::light::light_controller::ARG_NAME;
 use crate::shutdown_responder_with_error;
 use crate::switchboard::base::{FidlResponseErrorLogger, SwitchboardError};
-use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
+use crate::switchboard::base::{SettingRequest, SettingType};
 use crate::switchboard::hanging_get_handler::Sender;
 
 impl Sender<Vec<LightGroup>> for LightWatchLightGroupsResponder {
@@ -62,9 +63,9 @@ impl Sender<Vec<LightGroup>> for IndividualLightGroupResponder {
     }
 }
 
-impl From<SettingResponse> for Vec<LightGroup> {
-    fn from(response: SettingResponse) -> Self {
-        if let SettingResponse::Light(info) = response {
+impl From<SettingInfo> for Vec<LightGroup> {
+    fn from(response: SettingInfo) -> Self {
+        if let SettingInfo::Light(info) = response {
             // Internally we store the data in a HashMap, need to flatten it out into a vector.
             return info.light_groups.values().cloned().map(LightGroup::from).collect::<Vec<_>>();
         }
@@ -176,7 +177,7 @@ async fn validate_light_group_name(
     let result = context.request(SettingType::Light, SettingRequest::Get).await;
 
     match result {
-        Ok(Some(SettingResponse::Light(info))) => info.contains_light_group_name(name),
+        Ok(Some(SettingInfo::Light(info))) => info.contains_light_group_name(name),
         _ => false,
     }
 }
@@ -185,7 +186,7 @@ async fn validate_light_group_name(
 mod tests {
     use std::collections::HashMap;
 
-    use crate::switchboard::base::SettingResponse;
+    use crate::base::SettingInfo;
     use crate::switchboard::light_types::{
         LightGroup, LightInfo, LightState, LightType, LightValue,
     };
@@ -193,9 +194,7 @@ mod tests {
     #[test]
     fn test_response_to_vector_empty() {
         let response: Vec<fidl_fuchsia_settings::LightGroup> =
-            SettingResponse::into(SettingResponse::Light(LightInfo {
-                light_groups: Default::default(),
-            }));
+            SettingInfo::into(SettingInfo::Light(LightInfo { light_groups: Default::default() }));
 
         assert_eq!(response, vec![]);
     }
@@ -225,7 +224,7 @@ mod tests {
         light_groups.insert("test2".to_string(), light_group_2.clone());
 
         let mut response: Vec<fidl_fuchsia_settings::LightGroup> =
-            SettingResponse::into(SettingResponse::Light(LightInfo { light_groups }));
+            SettingInfo::into(SettingInfo::Light(LightInfo { light_groups }));
 
         // Sort so light groups are in a predictable order.
         response.sort_by_key(|l| l.name.clone());

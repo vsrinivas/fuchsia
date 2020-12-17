@@ -14,26 +14,27 @@ use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use futures::StreamExt;
 
+use crate::base::SettingInfo;
 use crate::clock;
 use crate::handler::base::{Command, Event};
 use crate::internal::handler::message::{Client, Factory, Messenger, Signature};
 use crate::internal::handler::Payload;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
-use crate::switchboard::base::{SettingRequest, SettingResponse};
+use crate::switchboard::base::SettingRequest;
 
 /// A broker that listens in on messages between the proxy and setting handlers to record the
 /// values of all settings to inspect.
 pub struct InspectBroker {
     messenger_client: Messenger,
     inspect_node: Arc<inspect::Node>,
-    setting_values: HashMap<&'static str, SettingInfo>,
+    setting_values: HashMap<&'static str, SettingInspectInfo>,
 }
 
 /// Information about a setting to be written to inspect.
 ///
 /// Inspect nodes and properties are not used, but need to be held as they're deleted from inspect
 /// once they go out of scope.
-struct SettingInfo {
+struct SettingInspectInfo {
     /// Node of this info.
     _node: inspect::Node,
 
@@ -122,7 +123,7 @@ impl InspectBroker {
     }
 
     /// Requests the setting value from a given signature for a setting handler.
-    async fn request_value(&mut self, signature: Signature) -> Result<SettingResponse, Error> {
+    async fn request_value(&mut self, signature: Signature) -> Result<SettingInfo, Error> {
         let mut send_receptor = self
             .messenger_client
             .message(
@@ -141,7 +142,7 @@ impl InspectBroker {
     }
 
     /// Writes a setting value to inspect.
-    async fn write_setting_to_inspect(&mut self, setting: SettingResponse) {
+    async fn write_setting_to_inspect(&mut self, setting: SettingInfo) {
         let (key, value) = setting.for_inspect();
 
         let timestamp = clock::now()
@@ -162,7 +163,11 @@ impl InspectBroker {
                 let timestamp_prop = node.create_string("timestamp", timestamp.to_string());
                 self.setting_values.insert(
                     key,
-                    SettingInfo { _node: node, value: value_prop, timestamp: timestamp_prop },
+                    SettingInspectInfo {
+                        _node: node,
+                        value: value_prop,
+                        timestamp: timestamp_prop,
+                    },
                 );
             }
         }
@@ -173,10 +178,9 @@ impl InspectBroker {
 mod tests {
     use fuchsia_inspect::assert_inspect_tree;
 
-    use crate::base::SettingInfo as BaseSettingInfo;
+    use crate::base::SettingInfo;
     use crate::internal::handler::message::{create_hub, Receptor};
     use crate::internal::handler::Address;
-    use crate::switchboard::base::SettingResponse;
     use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
 
     use super::*;
@@ -234,7 +238,7 @@ mod tests {
         )
         .await;
         inspect_broker_client
-            .reply(Payload::Result(Ok(Some(SettingResponse::Intl(IntlInfo {
+            .reply(Payload::Result(Ok(Some(SettingInfo::Intl(IntlInfo {
                 locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
                 temperature_unit: Some(TemperatureUnit::Celsius),
                 time_zone_id: Some("UTC".to_string()),
@@ -289,7 +293,7 @@ mod tests {
         // TODO(fxb/66294): Remove get call from inspect broker.
         setting_handler
             .message(
-                Payload::Event(Event::Changed(BaseSettingInfo::Unknown)),
+                Payload::Event(Event::Changed(SettingInfo::Unknown)),
                 Audience::Messenger(proxy_signature),
             )
             .send();
@@ -301,7 +305,7 @@ mod tests {
         )
         .await;
         inspect_broker_client
-            .reply(Payload::Result(Ok(Some(SettingResponse::Intl(IntlInfo {
+            .reply(Payload::Result(Ok(Some(SettingInfo::Intl(IntlInfo {
                 locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
                 temperature_unit: Some(TemperatureUnit::Celsius),
                 time_zone_id: Some("UTC".to_string()),

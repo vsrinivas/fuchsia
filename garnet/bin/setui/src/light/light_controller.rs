@@ -16,9 +16,7 @@ use crate::handler::setting_handler::{controller, ControllerError};
 use crate::input::ButtonType;
 use crate::light::light_hardware_configuration::DisableConditions;
 use crate::service_context::ExternalServiceProxy;
-use crate::switchboard::base::{
-    ControllerStateResult, SettingRequest, SettingResponse, SettingType,
-};
+use crate::switchboard::base::{ControllerStateResult, SettingRequest, SettingType};
 use crate::switchboard::light_types::{LightGroup, LightInfo, LightState, LightType, LightValue};
 use crate::{call_async, LightHardwareConfiguration};
 use std::collections::hash_map::Entry;
@@ -86,7 +84,7 @@ impl controller::Handle for LightController {
                 // value to ensure we have the latest light state.
                 // TODO(fxbug.dev/56319): remove once all clients are migrated.
                 self.restore().await.ok();
-                Some(Ok(Some(SettingResponse::Light(self.client.read().await))))
+                Some(Ok(Some(SettingInfo::Light(self.client.read().await))))
             }
             _ => None,
         }

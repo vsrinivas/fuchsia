@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::audio::policy::{PolicyId, Request, Response};
+use crate::base::SettingInfo;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::internal::core;
@@ -15,8 +16,7 @@ use crate::policy::policy_handler::{PolicyHandler, Transform};
 use crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl;
 use crate::policy::policy_proxy::PolicyProxy;
 use crate::switchboard::base::{
-    PrivacyInfo, SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingResponse,
-    SettingType,
+    PrivacyInfo, SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType,
 };
 use crate::tests::message_utils::verify_payload;
 use async_trait::async_trait;
@@ -39,7 +39,7 @@ static SETTING_REQUEST_PAYLOAD_2: core::Payload = core::Payload::Action(SettingA
 });
 static SETTING_RESPONSE_PAYLOAD: core::Payload = core::Payload::Event(SettingEvent::Response(
     REQUEST_ID,
-    Ok(Some(SettingResponse::Privacy(PrivacyInfo { user_data_sharing_consent: Some(true) }))),
+    Ok(Some(SettingInfo::Privacy(PrivacyInfo { user_data_sharing_consent: Some(true) }))),
 ));
 static SETTING_RESULT_NO_RESPONSE: SettingHandlerResult = Ok(None);
 

@@ -11,7 +11,7 @@ use crate::handler::setting_handler::persist::{controller, ClientProxy};
 use crate::handler::setting_handler::ControllerError;
 use crate::service_context::ExternalServiceProxy;
 use crate::switchboard::base::{
-    ControllerStateResult, FactoryResetInfo, SettingRequest, SettingResponse, SettingType,
+    ControllerStateResult, FactoryResetInfo, SettingRequest, SettingType,
 };
 use async_trait::async_trait;
 use fidl_fuchsia_recovery_policy::{DeviceMarker, DeviceProxy};
@@ -102,7 +102,7 @@ impl FactoryResetManager {
     }
 
     fn get(&self) -> SettingHandlerResult {
-        Ok(Some(SettingResponse::FactoryReset(FactoryResetInfo::new(self.is_local_reset_allowed))))
+        Ok(Some(SettingInfo::FactoryReset(FactoryResetInfo::new(self.is_local_reset_allowed))))
     }
 
     async fn set_local_reset_allowed(

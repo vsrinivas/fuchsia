@@ -8,6 +8,7 @@ use fidl_fuchsia_settings::{
 };
 use fuchsia_async as fasync;
 
+use crate::base::SettingInfo;
 use crate::fidl_hanging_get_responder;
 use crate::fidl_process;
 use crate::fidl_processor::settings::RequestContext;
@@ -15,7 +16,7 @@ use crate::request_respond;
 use crate::switchboard::accessibility_types::{
     AccessibilityInfo, CaptionsSettings, ColorBlindnessType,
 };
-use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
+use crate::switchboard::base::{SettingRequest, SettingType};
 
 fidl_hanging_get_responder!(
     AccessibilityMarker,
@@ -25,9 +26,9 @@ fidl_hanging_get_responder!(
     AccessibilityWatch2Responder,
 );
 
-impl From<SettingResponse> for AccessibilitySettings {
-    fn from(response: SettingResponse) -> Self {
-        if let SettingResponse::Accessibility(info) = response {
+impl From<SettingInfo> for AccessibilitySettings {
+    fn from(response: SettingInfo) -> Self {
+        if let SettingInfo::Accessibility(info) = response {
             let mut accessibility_settings = AccessibilitySettings::EMPTY;
 
             accessibility_settings.audio_description = info.audio_description;

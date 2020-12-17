@@ -9,7 +9,7 @@ use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
-use crate::switchboard::base::{DoNotDisturbInfo, SettingRequest, SettingResponse};
+use crate::switchboard::base::{DoNotDisturbInfo, SettingRequest};
 use async_trait::async_trait;
 
 impl DeviceStorageCompatible for DoNotDisturbInfo {
@@ -53,7 +53,7 @@ impl controller::Handle for DoNotDisturbController {
                 Some(write(&self.client, stored_value, false).await.into_handler_result())
             }
             SettingRequest::Get => {
-                Some(Ok(Some(SettingResponse::DoNotDisturb(self.client.read().await))))
+                Some(Ok(Some(SettingInfo::DoNotDisturb(self.client.read().await))))
             }
             _ => None,
         }

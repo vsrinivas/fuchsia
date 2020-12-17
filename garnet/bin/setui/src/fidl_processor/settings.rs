@@ -8,11 +8,12 @@ use fidl::endpoints::{Request, ServiceMarker};
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
 
+use crate::base::SettingInfo;
 use crate::fidl_processor::processor::{ProcessingUnit, RequestResultCreator};
 use crate::internal::switchboard::{self, Action, Address, Payload};
 use crate::message::base::{self, Audience};
 use crate::switchboard::base::{
-    SettingRequest, SettingResponse, SettingResponseResult, SettingType, SwitchboardError,
+    SettingRequest, SettingResponseResult, SettingType, SwitchboardError,
 };
 use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 use crate::ExitSender;
@@ -57,7 +58,7 @@ type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
 /// lifetime.
 pub struct RequestContext<T, ST, K = String, P = Payload, A = Address>
 where
-    T: From<SettingResponse> + Send + Sync + 'static,
+    T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
     P: base::Payload + 'static,
@@ -70,7 +71,7 @@ where
 
 impl<T, ST, K> RequestContext<T, ST, K, Payload, Address>
 where
-    T: From<SettingResponse> + Send + Sync + 'static,
+    T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
 {
@@ -122,7 +123,7 @@ where
 
 impl<T, ST, K, P, A> Clone for RequestContext<T, ST, K, P, A>
 where
-    T: From<SettingResponse> + Send + Sync + 'static,
+    T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
     P: base::Payload + 'static,
@@ -146,7 +147,7 @@ where
 pub struct SettingProcessingUnit<S, T, ST, K, P = Payload, A = Address>
 where
     S: ServiceMarker,
-    T: From<SettingResponse> + Send + Sync + 'static,
+    T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
     P: base::Payload + 'static,
@@ -159,7 +160,7 @@ where
 impl<S, T, ST, K> SettingProcessingUnit<S, T, ST, K, Payload, Address>
 where
     S: ServiceMarker,
-    T: From<SettingResponse> + Send + Sync + 'static,
+    T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
 {
@@ -182,7 +183,7 @@ where
 impl<S, T, ST, K, P, A> Drop for SettingProcessingUnit<S, T, ST, K, P, A>
 where
     S: ServiceMarker,
-    T: From<SettingResponse> + Send + Sync + 'static,
+    T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
     P: base::Payload + 'static,
@@ -200,7 +201,7 @@ where
 impl<S, T, ST, K, P, A> ProcessingUnit<S, P, A> for SettingProcessingUnit<S, T, ST, K, P, A>
 where
     S: ServiceMarker,
-    T: From<SettingResponse> + Send + Sync + 'static,
+    T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
     P: base::Payload + 'static,

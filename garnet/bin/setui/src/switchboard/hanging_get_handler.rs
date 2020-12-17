@@ -7,7 +7,7 @@ use {
     crate::internal::switchboard,
     crate::message::base::Audience,
     crate::message::receptor::extract_payload,
-    crate::switchboard::base::{SettingRequest, SettingResponse, SettingType, SwitchboardError},
+    crate::switchboard::base::{SettingRequest, SettingType, SwitchboardError},
     anyhow::Error,
     fuchsia_async as fasync,
     futures::channel::mpsc::UnboundedSender,
@@ -27,7 +27,7 @@ type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
 /// the client via the sender ST.
 struct HangingGetController<T, ST>
 where
-    T: From<SettingResponse> + Send + Sync + 'static,
+    T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
 {
     /// The last value that was sent to the client
@@ -44,7 +44,7 @@ where
 
 impl<T, ST> HangingGetController<T, ST>
 where
-    T: From<SettingResponse> + Send + Sync + 'static,
+    T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
 {
     fn new(change_function: ChangeFunction<T>) -> HangingGetController<T, ST> {
@@ -97,7 +97,7 @@ where
     }
 
     /// Called when receiving a notification that value has changed.
-    async fn send_if_needed(&mut self, response: SettingResponse) {
+    async fn send_if_needed(&mut self, response: SettingInfo) {
         if !self.pending_responders.is_empty() {
             while let Some((responder, _)) = self.pending_responders.pop() {
                 responder.send_response(T::from(response.clone()));
@@ -116,12 +116,12 @@ where
 /// Handler for hanging gets within the switchboard.
 /// We never use the data type T directly, but it is used to constrain ST as the sender
 /// for that type.
-/// To use, one should implement a sender, as well as a way to convert SettingResponse into
+/// To use, one should implement a sender, as well as a way to convert SettingInfo into
 /// something that sender can use.
 /// K is the type of the key for the change_function.
 pub struct HangingGetHandler<T, ST, K>
 where
-    T: From<SettingResponse> + Send + Sync + 'static,
+    T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
 {
@@ -158,7 +158,7 @@ macro_rules! switchboard_action_response {
 
 impl<T, ST, K> Drop for HangingGetHandler<T, ST, K>
 where
-    T: From<SettingResponse> + Send + Sync + 'static,
+    T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
 {
@@ -169,7 +169,7 @@ where
 
 impl<T, ST, K> HangingGetHandler<T, ST, K>
 where
-    T: From<SettingResponse> + Send + Sync + 'static,
+    T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
 {
@@ -312,7 +312,7 @@ where
 
     /// Called when receiving a notification that value has changed.
     async fn on_change(&mut self, setting_info: SettingInfo) {
-        let response: SettingResponse = setting_info.into();
+        let response: SettingInfo = setting_info.into();
         for controller in self.controllers_by_key.values_mut() {
             if controller.on_change(&T::from(response.clone())) {
                 controller.send_if_needed(response.clone()).await;
@@ -334,7 +334,7 @@ where
         }
     }
 
-    async fn get_response(&self) -> Result<SettingResponse, Error> {
+    async fn get_response(&self) -> Result<SettingInfo, Error> {
         let mut receptor = self
             .switchboard_messenger
             .message(
@@ -513,7 +513,7 @@ mod tests {
             if self.always_fail {
                 response = Some(Err(SwitchboardError::from(SET_ERROR)));
             } else if let Some(value) = self.id_to_send {
-                response = Some(Ok(Some(SettingResponse::Brightness(DisplayInfo::new(
+                response = Some(Ok(Some(SettingInfo::Brightness(DisplayInfo::new(
                     false,
                     value,
                     true,
@@ -544,21 +544,12 @@ mod tests {
         }
     }
 
-    impl From<SettingResponse> for TestStruct {
-        fn from(response: SettingResponse) -> Self {
-            if let SettingResponse::Brightness(info) = response {
-                return TestStruct { id: info.manual_brightness_value };
-            }
-            panic!("bad response:{:?}", response);
-        }
-    }
-
     impl From<SettingInfo> for TestStruct {
         fn from(response: SettingInfo) -> Self {
             if let SettingInfo::Brightness(info) = response {
                 return TestStruct { id: info.manual_brightness_value };
             }
-            panic!("bad response");
+            panic!("bad response:{:?}", response);
         }
     }
 

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
+    crate::base::SettingInfo,
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
     crate::request_respond,
     crate::switchboard::base::{
-        FidlResponseErrorLogger, LowLightMode, SettingRequest, SettingResponse, SettingType, Theme,
-        ThemeMode, ThemeType,
+        FidlResponseErrorLogger, LowLightMode, SettingRequest, SettingType, Theme, ThemeMode,
+        ThemeType,
     },
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
@@ -32,9 +33,9 @@ fidl_hanging_get_responder!(
     DisplayWatchLightSensorResponder,
 );
 
-impl From<SettingResponse> for LightSensorData {
-    fn from(response: SettingResponse) -> Self {
-        if let SettingResponse::LightSensor(data) = response {
+impl From<SettingInfo> for LightSensorData {
+    fn from(response: SettingInfo) -> Self {
+        if let SettingInfo::LightSensor(data) = response {
             let mut sensor_data = fidl_fuchsia_settings::LightSensorData::EMPTY;
             sensor_data.illuminance_lux = Some(data.illuminance);
             sensor_data.color = Some(data.color);
@@ -68,9 +69,9 @@ impl From<FidlThemeType> for ThemeType {
     }
 }
 
-impl From<SettingResponse> for DisplaySettings {
-    fn from(response: SettingResponse) -> Self {
-        if let SettingResponse::Brightness(info) = response {
+impl From<SettingInfo> for DisplaySettings {
+    fn from(response: SettingInfo) -> Self {
+        if let SettingInfo::Brightness(info) = response {
             let mut display_settings = fidl_fuchsia_settings::DisplaySettings::EMPTY;
 
             display_settings.auto_brightness = Some(info.auto_brightness);

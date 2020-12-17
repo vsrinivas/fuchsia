@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::base::SettingInfo,
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
@@ -12,9 +13,9 @@ use {
 
 fidl_hanging_get_responder!(DeviceMarker, DeviceSettings, DeviceWatchResponder);
 
-impl From<SettingResponse> for DeviceSettings {
-    fn from(response: SettingResponse) -> Self {
-        if let SettingResponse::Device(info) = response {
+impl From<SettingInfo> for DeviceSettings {
+    fn from(response: SettingInfo) -> Self {
+        if let SettingInfo::Device(info) = response {
             let mut device_settings = fidl_fuchsia_settings::DeviceSettings::EMPTY;
             device_settings.build_tag = Some(info.build_tag);
             device_settings

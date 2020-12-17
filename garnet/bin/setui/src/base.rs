@@ -16,7 +16,7 @@
 use crate::switchboard::accessibility_types::AccessibilityInfo;
 use crate::switchboard::base::{
     AudioInfo, DeviceInfo, DisplayInfo, DoNotDisturbInfo, FactoryResetInfo, InputInfo, LightData,
-    NightModeInfo, PrivacyInfo, SettingResponse, SetupInfo,
+    NightModeInfo, PrivacyInfo, SetupInfo,
 };
 use crate::switchboard::intl_types::IntlInfo;
 use crate::switchboard::light_types::LightInfo;
@@ -41,24 +41,26 @@ pub enum SettingInfo {
     Setup(SetupInfo),
 }
 
-/// Temporary mapping to make value compatible for hanging get
-impl Into<SettingResponse> for SettingInfo {
-    fn into(self) -> SettingResponse {
+impl SettingInfo {
+    /// Returns the name of the enum and its value, debug-formatted, for writing to inspect.
+    // TODO(fxbug.dev/56718): simplify this with a macro.
+    // TODO(fxbug.dev/66690): move this into InspectBroker
+    pub fn for_inspect(self) -> (&'static str, String) {
         match self {
-            SettingInfo::Unknown => SettingResponse::Unknown,
-            SettingInfo::Accessibility(info) => SettingResponse::Accessibility(info),
-            SettingInfo::Audio(info) => SettingResponse::Audio(info),
-            SettingInfo::Brightness(info) => SettingResponse::Brightness(info),
-            SettingInfo::Device(info) => SettingResponse::Device(info),
-            SettingInfo::FactoryReset(info) => SettingResponse::FactoryReset(info),
-            SettingInfo::Light(info) => SettingResponse::Light(info),
-            SettingInfo::LightSensor(data) => SettingResponse::LightSensor(data),
-            SettingInfo::DoNotDisturb(info) => SettingResponse::DoNotDisturb(info),
-            SettingInfo::Input(info) => SettingResponse::Input(info),
-            SettingInfo::Intl(info) => SettingResponse::Intl(info),
-            SettingInfo::NightMode(info) => SettingResponse::NightMode(info),
-            SettingInfo::Privacy(info) => SettingResponse::Privacy(info),
-            SettingInfo::Setup(info) => SettingResponse::Setup(info),
+            SettingInfo::Unknown => ("Unknown", "".to_string()),
+            SettingInfo::Accessibility(info) => ("Accessibility", format!("{:?}", info)),
+            SettingInfo::Audio(info) => ("Audio", format!("{:?}", info)),
+            SettingInfo::Brightness(info) => ("Brightness", format!("{:?}", info)),
+            SettingInfo::Device(info) => ("Device", format!("{:?}", info)),
+            SettingInfo::FactoryReset(info) => ("FactoryReset", format!("{:?}", info)),
+            SettingInfo::Light(info) => ("Light", format!("{:?}", info)),
+            SettingInfo::LightSensor(info) => ("LightSensor", format!("{:?}", info)),
+            SettingInfo::DoNotDisturb(info) => ("DoNotDisturb", format!("{:?}", info)),
+            SettingInfo::Input(info) => ("Input", format!("{:?}", info)),
+            SettingInfo::Intl(info) => ("Intl", format!("{:?}", info)),
+            SettingInfo::NightMode(info) => ("NightMode", format!("{:?}", info)),
+            SettingInfo::Privacy(info) => ("Privacy", format!("{:?}", info)),
+            SettingInfo::Setup(info) => ("Setup", format!("{:?}", info)),
         }
     }
 }

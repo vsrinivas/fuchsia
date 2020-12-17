@@ -5,9 +5,10 @@
 use crate::fidl_hanging_get_responder;
 use crate::fidl_process;
 
+use crate::base::SettingInfo;
 use crate::fidl_processor::settings::RequestContext;
 use crate::switchboard::base::{
-    ConfigurationInterfaceFlags, SettingRequest, SettingResponse, SettingType, SetupInfo,
+    ConfigurationInterfaceFlags, SettingRequest, SettingType, SetupInfo,
 };
 use fidl_fuchsia_settings::{Error, SetupMarker, SetupRequest, SetupSettings, SetupWatchResponder};
 use std::convert::TryFrom;
@@ -27,9 +28,9 @@ impl TryFrom<SetupSettings> for SettingRequest {
     }
 }
 
-impl From<SettingResponse> for SetupSettings {
-    fn from(response: SettingResponse) -> Self {
-        if let SettingResponse::Setup(info) = response {
+impl From<SettingInfo> for SetupSettings {
+    fn from(response: SettingInfo) -> Self {
+        if let SettingInfo::Setup(info) = response {
             return SetupSettings::from(info);
         }
         panic!("incorrect value sent");

@@ -9,10 +9,11 @@ use fidl_fuchsia_settings::{
 };
 use fuchsia_async as fasync;
 
+use crate::base::SettingInfo;
 use crate::fidl_hanging_get_responder;
 use crate::fidl_processor::settings::RequestContext;
 use crate::request_respond;
-use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
+use crate::switchboard::base::{SettingRequest, SettingType};
 
 fidl_hanging_get_responder!(
     PrivacyMarker,
@@ -22,9 +23,9 @@ fidl_hanging_get_responder!(
     PrivacyWatch2Responder,
 );
 
-impl From<SettingResponse> for PrivacySettings {
-    fn from(response: SettingResponse) -> Self {
-        if let SettingResponse::Privacy(info) = response {
+impl From<SettingInfo> for PrivacySettings {
+    fn from(response: SettingInfo) -> Self {
+        if let SettingInfo::Privacy(info) = response {
             return PrivacySettings {
                 user_data_sharing_consent: info.user_data_sharing_consent,
                 ..PrivacySettings::EMPTY

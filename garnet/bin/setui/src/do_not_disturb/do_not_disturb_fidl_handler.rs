@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::base::SettingInfo,
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
@@ -18,9 +19,9 @@ use {
 
 fidl_hanging_get_responder!(DoNotDisturbMarker, DoNotDisturbSettings, DoNotDisturbWatchResponder,);
 
-impl From<SettingResponse> for DoNotDisturbSettings {
-    fn from(response: SettingResponse) -> Self {
-        if let SettingResponse::DoNotDisturb(info) = response {
+impl From<SettingInfo> for DoNotDisturbSettings {
+    fn from(response: SettingInfo) -> Self {
+        if let SettingInfo::DoNotDisturb(info) = response {
             let mut dnd_settings = fidl_fuchsia_settings::DoNotDisturbSettings::EMPTY;
             dnd_settings.user_initiated_do_not_disturb = info.user_dnd;
             dnd_settings.night_mode_initiated_do_not_disturb = info.night_mode_dnd;

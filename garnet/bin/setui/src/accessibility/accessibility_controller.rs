@@ -9,7 +9,7 @@ use crate::handler::setting_handler::persist::{
 };
 use crate::handler::setting_handler::{controller, ControllerError};
 use crate::switchboard::accessibility_types::AccessibilityInfo;
-use crate::switchboard::base::{Merge, SettingRequest, SettingResponse};
+use crate::switchboard::base::{Merge, SettingRequest};
 
 use async_trait::async_trait;
 
@@ -51,7 +51,7 @@ impl controller::Handle for AccessibilityController {
     async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         match request {
             SettingRequest::Get => {
-                Some(Ok(Some(SettingResponse::Accessibility(self.client.read().await))))
+                Some(Ok(Some(SettingInfo::Accessibility(self.client.read().await))))
             }
             SettingRequest::SetAccessibilityInfo(info) => Some(
                 write(&self.client, info.merge(self.client.read().await), false)

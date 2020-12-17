@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::base::SettingInfo;
 use crate::handler::base::SettingHandlerResult;
 use crate::handler::setting_handler::{controller, ClientProxy, ControllerError};
-use crate::switchboard::base::{DeviceInfo, SettingRequest, SettingResponse};
+use crate::switchboard::base::{DeviceInfo, SettingRequest};
 use async_trait::async_trait;
 use std::fs;
 
@@ -29,7 +30,7 @@ impl controller::Handle for DeviceController {
                     fs::read_to_string(BUILD_TAG_FILE_PATH).expect("Could not read build tag file");
                 let device_info = DeviceInfo { build_tag: contents.trim().to_string() };
 
-                Some(Ok(Some(SettingResponse::Device(device_info))))
+                Some(Ok(Some(SettingInfo::Device(device_info))))
             }
             _ => None,
         }

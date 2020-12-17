@@ -14,7 +14,6 @@ use crate::input::input_device_configuration::InputConfiguration;
 use crate::input::ButtonType;
 use crate::switchboard::base::{
     Camera, ControllerStateResult, InputInfo, InputInfoSources, Microphone, SettingRequest,
-    SettingResponse,
 };
 use async_trait::async_trait;
 use futures::lock::Mutex;
@@ -155,12 +154,7 @@ impl controller::Handle for InputController {
                 Some(self.inner.lock().await.set_sw_mic_mute(muted).await)
             }
             SettingRequest::Get => Some(
-                self.inner
-                    .lock()
-                    .await
-                    .get_info()
-                    .await
-                    .map(|info| Some(SettingResponse::Input(info))),
+                self.inner.lock().await.get_info().await.map(|info| Some(SettingInfo::Input(info))),
             ),
             SettingRequest::OnButton(ButtonType::MicrophoneMute(state)) => {
                 Some(self.inner.lock().await.set_hw_mic_mute(state).await)

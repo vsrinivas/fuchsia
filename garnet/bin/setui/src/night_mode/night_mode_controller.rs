@@ -9,7 +9,7 @@ use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
-use crate::switchboard::base::{NightModeInfo, SettingRequest, SettingResponse};
+use crate::switchboard::base::{NightModeInfo, SettingRequest};
 use async_trait::async_trait;
 
 impl DeviceStorageCompatible for NightModeInfo {
@@ -49,9 +49,7 @@ impl controller::Handle for NightModeController {
                 current.night_mode_enabled = night_mode_info.night_mode_enabled;
                 Some(write(&self.client, current, false).await.into_handler_result())
             }
-            SettingRequest::Get => {
-                Some(Ok(Some(SettingResponse::NightMode(self.client.read().await))))
-            }
+            SettingRequest::Get => Some(Ok(Some(SettingInfo::NightMode(self.client.read().await)))),
             _ => None,
         }
     }

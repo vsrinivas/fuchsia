@@ -10,7 +10,7 @@ use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
-use crate::switchboard::base::{Merge, SettingRequest, SettingResponse, SettingType};
+use crate::switchboard::base::{Merge, SettingRequest, SettingType};
 use crate::switchboard::intl_types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
 use async_trait::async_trait;
 use std::collections::HashSet;
@@ -58,7 +58,7 @@ impl controller::Handle for IntlController {
     async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         match request {
             SettingRequest::SetIntlInfo(info) => Some(self.set(info).await),
-            SettingRequest::Get => Some(Ok(Some(SettingResponse::Intl(self.client.read().await)))),
+            SettingRequest::Get => Some(Ok(Some(SettingInfo::Intl(self.client.read().await)))),
             _ => None,
         }
     }

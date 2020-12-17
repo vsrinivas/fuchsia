@@ -4,6 +4,7 @@
 use crate::audio::{
     create_default_modified_counters, default_audio_info, ModifiedCounters, StreamVolumeControl,
 };
+use crate::base::SettingInfo;
 use crate::handler::base::{Event, SettingHandlerResult, State};
 use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
@@ -220,7 +221,7 @@ impl controller::Handle for AudioController {
                     .await
                     .get_info()
                     .await
-                    .map(|info| Some(SettingResponse::Audio(info))),
+                    .map(|info| Some(SettingInfo::Audio(info))),
             ),
             SettingRequest::OnButton(ButtonType::MicrophoneMute(state)) => {
                 Some(self.volume.lock().await.set_mic_mute_state(state).await)

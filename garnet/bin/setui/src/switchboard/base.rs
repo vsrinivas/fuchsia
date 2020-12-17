@@ -15,13 +15,13 @@ use crate::handler::setting_handler::ControllerError;
 use crate::input::{ButtonType, VolumeGain};
 use crate::switchboard::accessibility_types::AccessibilityInfo;
 use crate::switchboard::intl_types::IntlInfo;
-use crate::switchboard::light_types::{LightInfo, LightState};
+use crate::switchboard::light_types::LightState;
 use bitflags::bitflags;
 use std::borrow::Cow;
 
 /// Return type from a controller after handling a state change.
 pub type ControllerStateResult = Result<(), ControllerError>;
-pub type SettingResponseResult = Result<Option<SettingResponse>, SwitchboardError>;
+pub type SettingResponseResult = Result<Option<SettingInfo>, SwitchboardError>;
 
 /// A trait for structs where all fields are options. Recursively performs
 /// [Option::or](std::option::Option::or) on each field in the struct and substructs.
@@ -522,50 +522,6 @@ pub struct LightData {
 impl Into<SettingInfo> for LightData {
     fn into(self) -> SettingInfo {
         SettingInfo::LightSensor(self)
-    }
-}
-
-/// The possible responses to a SettingRequest.
-/// TODO(fxb/66338): Replace usage with SettingInfo.
-#[derive(PartialEq, Debug, Clone)]
-pub enum SettingResponse {
-    Unknown,
-    Accessibility(AccessibilityInfo),
-    Audio(AudioInfo),
-    /// Response to a request to get current brightness state.AccessibilityEncoder
-    Brightness(DisplayInfo),
-    Device(DeviceInfo),
-    FactoryReset(FactoryResetInfo),
-    Light(LightInfo),
-    LightSensor(LightData),
-    DoNotDisturb(DoNotDisturbInfo),
-    Input(InputInfo),
-    Intl(IntlInfo),
-    NightMode(NightModeInfo),
-    Privacy(PrivacyInfo),
-    Setup(SetupInfo),
-}
-
-impl SettingResponse {
-    /// Returns the name of the enum and its value, debug-formatted, for writing to inspect.
-    /// TODO(fxbug.dev/56718): simplify this with a macro.
-    pub fn for_inspect(self) -> (&'static str, String) {
-        match self {
-            SettingResponse::Unknown => ("Unknown", "".to_string()),
-            SettingResponse::Accessibility(info) => ("Accessibility", format!("{:?}", info)),
-            SettingResponse::Audio(info) => ("Audio", format!("{:?}", info)),
-            SettingResponse::Brightness(info) => ("Brightness", format!("{:?}", info)),
-            SettingResponse::Device(info) => ("Device", format!("{:?}", info)),
-            SettingResponse::FactoryReset(info) => ("FactoryReset", format!("{:?}", info)),
-            SettingResponse::Light(info) => ("Light", format!("{:?}", info)),
-            SettingResponse::LightSensor(info) => ("LightSensor", format!("{:?}", info)),
-            SettingResponse::DoNotDisturb(info) => ("DoNotDisturb", format!("{:?}", info)),
-            SettingResponse::Input(info) => ("Input", format!("{:?}", info)),
-            SettingResponse::Intl(info) => ("Intl", format!("{:?}", info)),
-            SettingResponse::NightMode(info) => ("NightMode", format!("{:?}", info)),
-            SettingResponse::Privacy(info) => ("Privacy", format!("{:?}", info)),
-            SettingResponse::Setup(info) => ("Setup", format!("{:?}", info)),
-        }
     }
 }
 

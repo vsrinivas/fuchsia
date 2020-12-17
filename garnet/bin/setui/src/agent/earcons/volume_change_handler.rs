@@ -12,7 +12,7 @@ use crate::internal::switchboard;
 use crate::message::base::Audience;
 use crate::message::receptor::extract_payload;
 use crate::switchboard::base::{
-    AudioInfo, AudioStream, AudioStreamType, SettingRequest, SettingResponse, SettingType,
+    AudioInfo, AudioStream, AudioStreamType, SettingRequest, SettingType,
 };
 
 use anyhow::Error;
@@ -57,7 +57,7 @@ impl VolumeChangeHandler {
         // Get initial user media volume level.
         let last_user_volumes = if let Ok((
             switchboard::Payload::Action(switchboard::Action::Response(Ok(Some(
-                SettingResponse::Audio(info),
+                SettingInfo::Audio(info),
             )))),
             _,
         )) = receptor.next_payload().await

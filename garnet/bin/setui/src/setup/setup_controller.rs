@@ -9,9 +9,7 @@ use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
-use crate::switchboard::base::{
-    ConfigurationInterfaceFlags, SettingRequest, SettingResponse, SetupInfo,
-};
+use crate::switchboard::base::{ConfigurationInterfaceFlags, SettingRequest, SetupInfo};
 use async_trait::async_trait;
 
 impl DeviceStorageCompatible for SetupInfo {
@@ -51,7 +49,7 @@ impl controller::Handle for SetupController {
                 return Some(write(&self.client, info, true).await.into_handler_result());
             }
             SettingRequest::Get => {
-                return Some(Ok(Some(SettingResponse::Setup(self.client.read().await))));
+                return Some(Ok(Some(SettingInfo::Setup(self.client.read().await))));
             }
             _ => None,
         }

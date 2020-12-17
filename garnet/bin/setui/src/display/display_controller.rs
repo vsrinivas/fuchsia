@@ -14,8 +14,8 @@ use crate::handler::setting_handler::persist::{
 use crate::handler::setting_handler::{controller, ControllerError};
 use crate::service_context::ExternalServiceProxy;
 use crate::switchboard::base::{
-    DisplayInfo, LowLightMode, SettingRequest, SettingResponse, SettingType, Theme, ThemeBuilder,
-    ThemeMode, ThemeType,
+    DisplayInfo, LowLightMode, SettingRequest, SettingType, Theme, ThemeBuilder, ThemeMode,
+    ThemeType,
 };
 use async_trait::async_trait;
 use fidl_fuchsia_ui_brightness::{
@@ -235,7 +235,7 @@ where
                 Some(write(&self.client, display_info, false).await.into_handler_result())
             }
             SettingRequest::Get => {
-                Some(Ok(Some(SettingResponse::Brightness(self.client.read().await))))
+                Some(Ok(Some(SettingInfo::Brightness(self.client.read().await))))
             }
             _ => None,
         }

@@ -1,14 +1,14 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 use {
+    crate::base::SettingInfo,
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
     crate::request_respond,
-    crate::switchboard::base::{
-        FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingType,
-    },
+    crate::switchboard::base::{FidlResponseErrorLogger, SettingRequest, SettingType},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
         Error, InputDeviceSettings, InputMarker, InputRequest, InputWatchResponder, Microphone,
@@ -18,9 +18,9 @@ use {
 
 fidl_hanging_get_responder!(InputMarker, InputDeviceSettings, InputWatchResponder);
 
-impl From<SettingResponse> for InputDeviceSettings {
-    fn from(response: SettingResponse) -> Self {
-        if let SettingResponse::Input(info) = response {
+impl From<SettingInfo> for InputDeviceSettings {
+    fn from(response: SettingInfo) -> Self {
+        if let SettingInfo::Input(info) = response {
             let mut input_settings = InputDeviceSettings::EMPTY;
 
             let microphone = Microphone { muted: Some(info.microphone.muted), ..Microphone::EMPTY };

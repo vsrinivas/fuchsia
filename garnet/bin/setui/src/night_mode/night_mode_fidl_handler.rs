@@ -7,17 +7,18 @@ use fidl_fuchsia_settings::{
 };
 use fuchsia_async as fasync;
 
+use crate::base::SettingInfo;
 use crate::fidl_hanging_get_responder;
 use crate::fidl_process;
 use crate::fidl_processor::settings::RequestContext;
 use crate::request_respond;
-use crate::switchboard::base::{NightModeInfo, SettingRequest, SettingResponse, SettingType};
+use crate::switchboard::base::{NightModeInfo, SettingRequest, SettingType};
 
 fidl_hanging_get_responder!(NightModeMarker, NightModeSettings, NightModeWatchResponder,);
 
-impl From<SettingResponse> for NightModeSettings {
-    fn from(response: SettingResponse) -> Self {
-        if let SettingResponse::NightMode(info) = response {
+impl From<SettingInfo> for NightModeSettings {
+    fn from(response: SettingInfo) -> Self {
+        if let SettingInfo::NightMode(info) = response {
             let mut night_mode_settings = NightModeSettings::EMPTY;
             night_mode_settings.night_mode_enabled = info.night_mode_enabled;
             return night_mode_settings;

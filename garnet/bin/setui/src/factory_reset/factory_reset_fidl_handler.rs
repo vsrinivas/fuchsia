@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::base::SettingInfo;
 use crate::fidl_processor::settings::RequestContext;
-use crate::switchboard::base::{
-    FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingType,
-};
+use crate::switchboard::base::{FidlResponseErrorLogger, SettingRequest, SettingType};
 use crate::{fidl_hanging_get_responder, fidl_process, request_respond};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings::{
@@ -16,9 +15,9 @@ use fuchsia_async as fasync;
 
 fidl_hanging_get_responder!(FactoryResetMarker, FactoryResetSettings, FactoryResetWatchResponder,);
 
-impl From<SettingResponse> for FactoryResetSettings {
-    fn from(response: SettingResponse) -> Self {
-        if let SettingResponse::FactoryReset(info) = response {
+impl From<SettingInfo> for FactoryResetSettings {
+    fn from(response: SettingInfo) -> Self {
+        if let SettingInfo::FactoryReset(info) = response {
             let mut factory_reset_settings = FactoryResetSettings::EMPTY;
             factory_reset_settings.is_local_reset_allowed = Some(info.is_local_reset_allowed);
             factory_reset_settings

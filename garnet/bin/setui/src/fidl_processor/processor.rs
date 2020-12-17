@@ -7,6 +7,7 @@ use fidl::endpoints::{Request, ServiceMarker};
 use futures::future::LocalBoxFuture;
 use futures::{FutureExt, StreamExt, TryStreamExt};
 
+use crate::base::SettingInfo;
 use crate::fidl_processor::policy::{
     PolicyProcessingUnit, RequestCallback as PolicyRequestCallback,
 };
@@ -17,7 +18,7 @@ use crate::internal::policy;
 use crate::internal::switchboard;
 use crate::message::base::{Address, Payload};
 use crate::message::messenger::MessengerClient;
-use crate::switchboard::base::{SettingResponse, SettingType};
+use crate::switchboard::base::SettingType;
 use crate::switchboard::hanging_get_handler::Sender;
 use crate::ExitSender;
 use std::hash::Hash;
@@ -149,7 +150,7 @@ where
         setting_type: SettingType,
         callback: SettingsRequestCallback<S, V, SV, K, switchboard::Payload, switchboard::Address>,
     ) where
-        V: From<SettingResponse> + Send + Sync + 'static,
+        V: From<SettingInfo> + Send + Sync + 'static,
         SV: Sender<V> + Send + Sync + 'static,
         K: Eq + Hash + Clone + Send + Sync + 'static,
     {

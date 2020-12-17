@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use {
+    crate::base::SettingInfo,
     crate::fidl_hanging_get_responder,
     crate::fidl_process,
     crate::fidl_processor::settings::RequestContext,
     crate::request_respond,
     crate::switchboard::base::{
         AudioSettingSource, AudioStream, AudioStreamType, FidlResponseErrorLogger, SettingRequest,
-        SettingResponse, SettingType,
+        SettingType,
     },
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_media::AudioRenderUsage,
@@ -28,9 +29,9 @@ fidl_hanging_get_responder!(
     AudioWatch2Responder,
 );
 
-impl From<SettingResponse> for AudioSettings {
-    fn from(response: SettingResponse) -> Self {
-        if let SettingResponse::Audio(info) = response {
+impl From<SettingInfo> for AudioSettings {
+    fn from(response: SettingInfo) -> Self {
+        if let SettingInfo::Audio(info) = response {
             let mut streams = Vec::new();
             for stream in info.streams.iter() {
                 streams.push(AudioStreamSettings::from(stream.clone()));
