@@ -13,6 +13,7 @@
 
 #include "helper/test_device_helper.h"
 #include "magma.h"
+#include "magma_common_defs.h"
 #include "magma_util/macros.h"
 
 namespace {
@@ -30,6 +31,10 @@ class TestBase : public magma::TestDeviceBase {
 #endif
 };
 
+bool ErrorIsExpected(int32_t result) {
+  return (result == MAGMA_STATUS_CONNECTION_LOST || result == MAGMA_STATUS_INTERNAL_ERROR);
+}
+
 class TestConnection : public TestBase {
  public:
   TestConnection() { magma_create_connection2(device(), &connection_); }
@@ -43,6 +48,8 @@ class TestConnection : public TestBase {
     DASSERT(connection_);
 
     int32_t result = magma_get_error(connection_);
+    if (ErrorIsExpected(result))
+      return result;
     return DRET(result);
   }
 
@@ -62,8 +69,7 @@ static void looper_thread_entry() {
     if (result == 0) {
       complete_count++;
     } else {
-      // Wait rendering can't pass back a proper error yet
-      EXPECT_TRUE(result == MAGMA_STATUS_CONNECTION_LOST || result == MAGMA_STATUS_INTERNAL_ERROR);
+      EXPECT_TRUE(ErrorIsExpected(result));
       test.reset(new TestConnection());
     }
     std::this_thread::yield();
