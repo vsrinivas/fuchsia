@@ -83,7 +83,6 @@ base_package_labels += [
   "//src/sys/pkg:system-update-checker",
   "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration",
   "//src/sys/stash:pkg",
-  "//src/sys/time/network_time_service:network-time-service",
   "//src/sys/time/httpsdate_time_source:httpsdate-time-source",
   "//src/sys/time/timekeeper",
   "//src/sys/universe-resolver",

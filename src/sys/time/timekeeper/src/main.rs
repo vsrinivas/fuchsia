@@ -53,7 +53,7 @@ struct TimeSourceUrls {
 /// belong in a config file.
 const DEFAULT_SOURCES: TimeSourceUrls = TimeSourceUrls {
     primary: "fuchsia-pkg://fuchsia.com/httpsdate-time-source#meta/httpsdate_time_source.cmx",
-    monitor: Some("fuchsia-pkg://fuchsia.com/network-time-service#meta/network_time_service.cmx"),
+    monitor: None,
 };
 
 /// The time sources to install when the dev_time_sources flag is set. In the future, these values
