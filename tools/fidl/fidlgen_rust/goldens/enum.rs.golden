@@ -52,7 +52,9 @@ pub enum MyFlexibleEnum {
 /// Pattern that matches an unknown MyFlexibleEnum member.
 #[macro_export]
 macro_rules! MyFlexibleEnumUnknown {
-	() => { _ };
+    () => {
+        _
+    };
 }
 fidl_flexible_enum! {
     name: MyFlexibleEnum,
@@ -78,7 +80,9 @@ pub enum MyFlexibleEnumWithCustomUnknown {
 /// Pattern that matches an unknown MyFlexibleEnumWithCustomUnknown member.
 #[macro_export]
 macro_rules! MyFlexibleEnumWithCustomUnknownUnknown {
-	() => { _ };
+    () => {
+        _
+    };
 }
 fidl_flexible_enum! {
     name: MyFlexibleEnumWithCustomUnknown,

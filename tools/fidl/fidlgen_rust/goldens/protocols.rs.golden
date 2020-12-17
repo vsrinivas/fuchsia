@@ -136,15 +136,17 @@ pub trait WithAndWithoutRequestResponseProxyInterface: Send + Sync {
     type NoRequestEmptyResponseResponseFut: std::future::Future<Output = Result<(), fidl::Error>>
         + Send;
     fn no_request_empty_response(&self) -> Self::NoRequestEmptyResponseResponseFut;
-    type NoRequestWithResponseResponseFut: std::future::Future<Output = Result<(String), fidl::Error>>
-        + Send;
+    type NoRequestWithResponseResponseFut: std::future::Future<
+        Output = Result<(String), fidl::Error>,
+    > + Send;
     fn no_request_with_response(&self) -> Self::NoRequestWithResponseResponseFut;
     fn with_request_no_response(&self, arg: &str) -> Result<(), fidl::Error>;
     type WithRequestEmptyResponseResponseFut: std::future::Future<Output = Result<(), fidl::Error>>
         + Send;
     fn with_request_empty_response(&self, arg: &str) -> Self::WithRequestEmptyResponseResponseFut;
-    type WithRequestWithResponseResponseFut: std::future::Future<Output = Result<(String), fidl::Error>>
-        + Send;
+    type WithRequestWithResponseResponseFut: std::future::Future<
+        Output = Result<(String), fidl::Error>,
+    > + Send;
     fn with_request_with_response(&self, arg: &str) -> Self::WithRequestWithResponseResponseFut;
     type OnEmptyResponseResponseFut: std::future::Future<Output = Result<(), fidl::Error>> + Send;
     type OnWithResponseResponseFut: std::future::Future<Output = Result<(String), fidl::Error>>
@@ -1468,14 +1470,17 @@ impl fidl::endpoints::ServiceMarker for WithErrorSyntaxMarker {
 }
 
 pub trait WithErrorSyntaxProxyInterface: Send + Sync {
-    type ResponseAsStructResponseFut: std::future::Future<Output = Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error>>
-        + Send;
+    type ResponseAsStructResponseFut: std::future::Future<
+        Output = Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error>,
+    > + Send;
     fn response_as_struct(&self) -> Self::ResponseAsStructResponseFut;
-    type ErrorAsPrimitiveResponseFut: std::future::Future<Output = Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error>>
-        + Send;
+    type ErrorAsPrimitiveResponseFut: std::future::Future<
+        Output = Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error>,
+    > + Send;
     fn error_as_primitive(&self) -> Self::ErrorAsPrimitiveResponseFut;
-    type ErrorAsEnumResponseFut: std::future::Future<Output = Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error>>
-        + Send;
+    type ErrorAsEnumResponseFut: std::future::Future<
+        Output = Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error>,
+    > + Send;
     fn error_as_enum(&self) -> Self::ErrorAsEnumResponseFut;
 }
 

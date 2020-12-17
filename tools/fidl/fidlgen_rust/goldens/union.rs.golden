@@ -81,7 +81,9 @@ pub enum FlexiblePizzaOrPasta {
 /// Pattern that matches an unknown FlexiblePizzaOrPasta member.
 #[macro_export]
 macro_rules! FlexiblePizzaOrPastaUnknown {
-	() => { _ };
+    () => {
+        _
+    };
 }
 fidl_xunion! {
     name: FlexiblePizzaOrPasta,
@@ -158,7 +160,9 @@ pub enum FlexibleUnion {
 /// Pattern that matches an unknown FlexibleUnion member.
 #[macro_export]
 macro_rules! FlexibleUnionUnknown {
-	() => { _ };
+    () => {
+        _
+    };
 }
 fidl_xunion! {
     name: FlexibleUnion,
@@ -273,7 +277,9 @@ pub enum FlexibleFoo {
 /// Pattern that matches an unknown FlexibleFoo member.
 #[macro_export]
 macro_rules! FlexibleFooUnknown {
-	() => { _ };
+    () => {
+        _
+    };
 }
 fidl_xunion! {
     name: FlexibleFoo,
@@ -324,7 +330,9 @@ pub enum ExplicitFoo {
 /// Pattern that matches an unknown ExplicitFoo member.
 #[macro_export]
 macro_rules! ExplicitFooUnknown {
-	() => { _ };
+    () => {
+        _
+    };
 }
 fidl_xunion! {
     name: ExplicitFoo,
@@ -375,7 +383,9 @@ pub enum OlderSimpleUnion {
 /// Pattern that matches an unknown OlderSimpleUnion member.
 #[macro_export]
 macro_rules! OlderSimpleUnionUnknown {
-	() => { _ };
+    () => {
+        _
+    };
 }
 fidl_xunion! {
     name: OlderSimpleUnion,
@@ -407,7 +417,9 @@ pub enum NewerSimpleUnion {
 /// Pattern that matches an unknown NewerSimpleUnion member.
 #[macro_export]
 macro_rules! NewerSimpleUnionUnknown {
-	() => { _ };
+    () => {
+        _
+    };
 }
 fidl_xunion! {
     name: NewerSimpleUnion,
@@ -466,7 +478,9 @@ pub enum XUnionContainingEmptyStruct {
 /// Pattern that matches an unknown XUnionContainingEmptyStruct member.
 #[macro_export]
 macro_rules! XUnionContainingEmptyStructUnknown {
-	() => { _ };
+    () => {
+        _
+    };
 }
 fidl_xunion! {
     name: XUnionContainingEmptyStruct,
@@ -508,7 +522,9 @@ pub enum ExplicitXUnion {
 /// Pattern that matches an unknown ExplicitXUnion member.
 #[macro_export]
 macro_rules! ExplicitXUnionUnknown {
-	() => { _ };
+    () => {
+        _
+    };
 }
 fidl_xunion! {
     name: ExplicitXUnion,
@@ -612,13 +628,15 @@ impl fidl::endpoints::ServiceMarker for TestProtocolMarker {
 }
 
 pub trait TestProtocolProxyInterface: Send + Sync {
-    type StrictXUnionHenceResponseMayBeStackAllocatedResponseFut: std::future::Future<Output = Result<(StrictBoundedXUnion), fidl::Error>>
-        + Send;
+    type StrictXUnionHenceResponseMayBeStackAllocatedResponseFut: std::future::Future<
+        Output = Result<(StrictBoundedXUnion), fidl::Error>,
+    > + Send;
     fn strict_x_union_hence_response_may_be_stack_allocated(
         &self,
     ) -> Self::StrictXUnionHenceResponseMayBeStackAllocatedResponseFut;
-    type FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseFut: std::future::Future<Output = Result<(OlderSimpleUnion), fidl::Error>>
-        + Send;
+    type FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseFut: std::future::Future<
+        Output = Result<(OlderSimpleUnion), fidl::Error>,
+    > + Send;
     fn flexible_x_union_hence_response_must_be_heap_allocated(
         &self,
     ) -> Self::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseFut;

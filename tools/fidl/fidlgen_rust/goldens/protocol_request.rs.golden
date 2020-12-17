@@ -311,11 +311,13 @@ impl fidl::endpoints::ServiceMarker for ParentMarker {
 }
 
 pub trait ParentProxyInterface: Send + Sync {
-    type GetChildResponseFut: std::future::Future<Output = Result<(fidl::endpoints::ClientEnd<ChildMarker>), fidl::Error>>
-        + Send;
+    type GetChildResponseFut: std::future::Future<
+        Output = Result<(fidl::endpoints::ClientEnd<ChildMarker>), fidl::Error>,
+    > + Send;
     fn get_child(&self) -> Self::GetChildResponseFut;
-    type GetChildRequestResponseFut: std::future::Future<Output = Result<(fidl::endpoints::ServerEnd<ChildMarker>), fidl::Error>>
-        + Send;
+    type GetChildRequestResponseFut: std::future::Future<
+        Output = Result<(fidl::endpoints::ServerEnd<ChildMarker>), fidl::Error>,
+    > + Send;
     fn get_child_request(&self) -> Self::GetChildRequestResponseFut;
     fn take_child(&self, c: fidl::endpoints::ClientEnd<ChildMarker>) -> Result<(), fidl::Error>;
     fn take_child_request(

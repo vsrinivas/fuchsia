@@ -79,7 +79,9 @@ pub enum ExampleXUnion {
 /// Pattern that matches an unknown ExampleXUnion member.
 #[macro_export]
 macro_rules! ExampleXUnionUnknown {
-	() => { _ };
+    () => {
+        _
+    };
 }
 fidl_xunion! {
     name: ExampleXUnion,

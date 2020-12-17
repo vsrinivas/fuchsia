@@ -53,7 +53,9 @@ pub enum UnionWithHandle {
 /// Pattern that matches an unknown UnionWithHandle member.
 #[macro_export]
 macro_rules! UnionWithHandleUnknown {
-	() => { _ };
+    () => {
+        _
+    };
 }
 fidl_xunion! {
     name: UnionWithHandle,
