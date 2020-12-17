@@ -157,7 +157,7 @@ impl NetworkInterface for TunNetworkInterface {
     }
 
     fn add_address(&self, addr: &Subnet) -> Result<(), Error> {
-        fx_log_info!("Address Added: {:?}", addr);
+        fx_log_info!("TunNetworkInterface: Adding Address: {:?}", addr);
         let mut addr = fnet::Subnet {
             addr: fnetext::IpAddress(addr.addr.into()).into(),
             prefix_len: addr.prefix_len,
@@ -166,11 +166,12 @@ impl NetworkInterface for TunNetworkInterface {
             .lock()
             .add_interface_address(self.id, &mut addr, zx::Time::INFINITE)
             .squash_result()?;
+        fx_log_info!("TunNetworkInterface: Successfully added address {:?}", addr);
         Ok(())
     }
 
     fn remove_address(&self, addr: &Subnet) -> Result<(), Error> {
-        fx_log_info!("Address Removed: {:?}", addr);
+        fx_log_info!("TunNetworkInterface: Removing Address: {:?}", addr);
         let mut addr = fnet::Subnet {
             addr: fnetext::IpAddress(addr.addr.into()).into(),
             prefix_len: addr.prefix_len,
@@ -179,16 +180,17 @@ impl NetworkInterface for TunNetworkInterface {
             .lock()
             .del_interface_address(self.id, &mut addr, zx::Time::INFINITE)
             .squash_result()?;
+        fx_log_info!("TunNetworkInterface: Successfully removed address {:?}", addr);
         Ok(())
     }
 
     fn add_on_link_route(&self, addr: &Subnet) -> Result<(), Error> {
-        fx_log_info!("On Mesh Route Added: {:?} (IGNORED)", addr);
+        fx_log_info!("TunNetworkInterface: Adding on-link route: {:?} (CURRENTLY IGNORED)", addr);
         Ok(())
     }
 
     fn remove_on_link_route(&self, addr: &Subnet) -> Result<(), Error> {
-        fx_log_info!("On Mesh Route Removed: {:?} (IGNORED)", addr);
+        fx_log_info!("TunNetworkInterface: Removing on-link route: {:?} (CURRENTLY IGNORED)", addr);
         Ok(())
     }
 

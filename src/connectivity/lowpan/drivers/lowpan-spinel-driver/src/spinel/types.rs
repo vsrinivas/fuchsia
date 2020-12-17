@@ -165,17 +165,41 @@ pub struct EnergyScanResult {
 
 /// A spinel IPv6 subnet
 #[spinel_packed("6C")]
-#[derive(Debug, Hash, Clone, Eq, PartialEq)]
+#[derive(Hash, Clone, Eq, PartialEq)]
 pub struct Subnet {
     pub addr: std::net::Ipv6Addr,
     pub prefix_len: u8,
 }
 
+impl std::fmt::Debug for Subnet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}/{}", self.addr, self.prefix_len)
+    }
+}
+
+impl std::fmt::Display for Subnet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}/{}", self.addr, self.prefix_len)
+    }
+}
+
 /// A spinel address table entry from SPINEL_PROP_IPV6_ADDRESS_TABLE
 #[spinel_packed("D")]
-#[derive(Debug, Hash, Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, Hash, PartialEq)]
 pub struct AddressTableEntry {
     pub subnet: Subnet,
+}
+
+impl std::fmt::Debug for AddressTableEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.subnet)
+    }
+}
+
+impl std::fmt::Display for AddressTableEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.subnet)
+    }
 }
 
 /// A spinel network packet

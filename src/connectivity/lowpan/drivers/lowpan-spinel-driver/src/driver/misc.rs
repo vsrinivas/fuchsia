@@ -83,7 +83,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     /// Handler for keeping track of property value changes
     /// so that local state stays in sync with the device.
     pub(super) fn on_prop_value_is(&self, prop: Prop, mut value: &[u8]) -> Result<(), Error> {
-        fx_log_info!("on_prop_value_is: {:?} {:x?}", prop, value);
+        fx_log_info!("on_prop_value_is: {:?} {:02x?}", prop, value);
         match prop {
             Prop::Stream(PropStream::Debug) => {
                 let mut ncp_debug_buffer = self.ncp_debug_buffer.lock();
@@ -345,6 +345,8 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
 
                 let mut driver_state = self.driver_state.lock();
 
+                fx_log_info!("New address table: {:#?}", value);
+
                 if value != driver_state.address_table {
                     if driver_state.connectivity_state.is_online() {
                         for changed_address in
@@ -355,8 +357,8 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                             {
                                 if let Err(err) = self.net_if.add_address(&changed_address.subnet) {
                                     fx_log_err!(
-                                        "Unable to add address `{}` to interface: {:?}",
-                                        changed_address.subnet.addr,
+                                        "Unable to add address `{:?}` to interface: {:?}",
+                                        changed_address.subnet,
                                         err
                                     );
                                 }
@@ -365,8 +367,8 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                                     self.net_if.remove_address(&changed_address.subnet)
                                 {
                                     fx_log_err!(
-                                        "Unable to remove address `{}` from interface: {:?}",
-                                        changed_address.subnet.addr,
+                                        "Unable to remove address `{:?}` from interface: {:?}",
+                                        changed_address.subnet,
                                         err
                                     );
                                 }
@@ -387,14 +389,14 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     /// Handler for keeping track of property value insertions
     /// so that local state stays in sync with the device.
     pub(super) fn on_prop_value_inserted(&self, prop: Prop, value: &[u8]) -> Result<(), Error> {
-        fx_log_info!("on_prop_value_inserted: {:?} {:?}", prop, value);
+        fx_log_info!("on_prop_value_inserted: {:?} {:02X?}", prop, value);
         Ok(())
     }
 
     /// Handler for keeping track of property value removals
     /// so that local state stays in sync with the device.
     pub(super) fn on_prop_value_removed(&self, prop: Prop, value: &[u8]) -> Result<(), Error> {
-        fx_log_info!("on_prop_value_removed: {:?} {:?}", prop, value);
+        fx_log_info!("on_prop_value_removed: {:?} {:02X?}", prop, value);
         Ok(())
     }
 }

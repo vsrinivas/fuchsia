@@ -194,14 +194,14 @@ where
         match self.send_window.poll_dec(cx, 1) {
             Poll::Ready(()) => Poll::Ready(Ok(())),
             Poll::Pending => {
-                traceln!("SPINEL_WAITING_TO_SEND: {:?}", self.send_window);
+                traceln!("SPINEL_WAITING_TO_SEND: {:02x?}", self.send_window);
                 Poll::Pending
             }
         }
     }
 
     fn start_send(self: Pin<&mut Self>, frame: &'b [u8]) -> Result<(), Self::Error> {
-        traceln!("SPINEL_SEND: {:x?}", frame);
+        traceln!("SPINEL_SEND: {:02x?}", frame);
         Ok(self.device_proxy.send_frame(frame)?)
     }
 
@@ -251,7 +251,7 @@ where
                     // Continue the loop. Since `poll_next(..) == Ready(..)`, no wakeup is scheduled
                 }
                 Poll::Ready(Some(Ok(SpinelDeviceEvent::OnReceiveFrame { data }))) => {
-                    traceln!("SPINEL_RECV: {:x?}", data);
+                    traceln!("SPINEL_RECV: {:02x?}", data);
                     self_mut.device_proxy.ready_to_receive_frames(1)?;
                     return Poll::Ready(Some(Ok(data)));
                 }

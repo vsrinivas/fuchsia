@@ -34,7 +34,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     }
 
     async fn handle_netstack_added_address(&self, subnet: Subnet) -> Result<(), Error> {
-        fx_log_info!("Netstack added address: {:?} (ignored)", subnet);
+        fx_log_info!("Netstack added address: {:?}", subnet);
 
         let addr_entry = AddressTableEntry { subnet };
 
@@ -65,7 +65,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     }
 
     async fn handle_netstack_removed_address(&self, subnet: Subnet) -> Result<(), Error> {
-        fx_log_info!("Netstack removed address: {:?} (ignored)", subnet);
+        fx_log_info!("Netstack removed address: {:?}", subnet);
 
         let addr_entry = AddressTableEntry { subnet };
 
