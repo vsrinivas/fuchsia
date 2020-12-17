@@ -271,9 +271,9 @@ impl TestEnvBuilder {
                     .connect_to_service::<CommitStatusProviderMarker>()
                     .expect("connect to commit status provider"),
             },
-            _omaha_client: omaha_client,
+            omaha_client,
             _system_updater: system_updater,
-            _system_update_committer: system_update_committer,
+            system_update_committer,
             nested_environment_label,
             reboot_called,
         }
@@ -296,9 +296,9 @@ struct TestEnv {
     _env: NestedEnvironment,
     _mounts: Mounts,
     proxies: Proxies,
-    _omaha_client: App,
+    omaha_client: App,
     _system_updater: SystemUpdater,
-    _system_update_committer: App,
+    system_update_committer: App,
     nested_environment_label: String,
     reboot_called: oneshot::Receiver<()>,
 }
@@ -687,6 +687,24 @@ async fn test_omaha_client_installation_deferred() {
         ),
     )
     .await;
+}
+
+// When the system-update-committer crashes, OMCL should crash as well.
+// TODO(fxbug.dev/66760): remove this since we won't crash OMCL -- otherwise this test will hang.
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_crashes_on_commit_status_provider_error() {
+    // Block the paver with a throttle to ensure it never responds to the system-update-committer.
+    // Otherwise, the paver may try to respond (and panic) when the system-update-committer is dead.
+    let (throttle_hook, _throttler) = mphooks::throttle();
+    let mut env = TestEnvBuilder::new()
+        .paver(MockPaverServiceBuilder::new().insert_hook(throttle_hook).build())
+        .response(OmahaResponse::Update)
+        .build();
+    env.system_update_committer.kill().unwrap();
+
+    env.check_now().await;
+
+    assert!(env.omaha_client.wait().await.unwrap().exited());
 }
 
 #[fasync::run_singlethreaded(test)]
