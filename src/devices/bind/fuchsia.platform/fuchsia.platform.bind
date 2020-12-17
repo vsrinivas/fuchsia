@@ -22,6 +22,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   RTC_PL031 = 0x06,
   ETH_MAC = 0x10,
+  HID_BUTTONS = 0x13,
   FAKE_DISPLAY = 0x16,
 };
 

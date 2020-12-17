@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("hid-buttons-bind") {
+  rules = "hid-buttons.bind"
+  output = "hid-buttons-bind.h"
+  tests = "bind-tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("hid-buttons") {
   configs += [
@@ -24,15 +35,13 @@ source_set("common") {
   sources = [ "hid-buttons.cc" ]
 
   public_deps = [
+    ":hid-buttons-bind",
     "//sdk/banjo/ddk.protocol.buttons",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.hidbus",
     "//sdk/fidl/fuchsia.buttons:fuchsia.buttons_llcpp",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -75,5 +84,8 @@ unittest_package("hid-buttons-test-package") {
 }
 group("tests") {
   testonly = true
-  deps = [ ":hid-buttons-test-package" ]
+  deps = [
+    ":hid-buttons-bind_test",
+    ":hid-buttons-test-package",
+  ]
 }

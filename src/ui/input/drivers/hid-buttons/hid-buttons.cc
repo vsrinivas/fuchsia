@@ -15,7 +15,6 @@
 #include <cstdint>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -27,6 +26,8 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <hid/descriptor.h>
+
+#include "src/ui/input/drivers/hid-buttons/hid-buttons-bind.h"
 
 namespace buttons {
 
@@ -616,11 +617,4 @@ static constexpr zx_driver_ops_t hid_buttons_driver_ops = []() {
 
 }  // namespace buttons
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(hid_buttons, buttons::hid_buttons_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_HID_BUTTONS),
-ZIRCON_DRIVER_END(hid_buttons)
-    // clang-format on
+ZIRCON_DRIVER(hid_buttons, buttons::hid_buttons_driver_ops, "zircon", "0.1");
