@@ -232,8 +232,6 @@ class TestServerChannel final : public TestServerBase {
  public:
   TestServerChannel() {
     ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &store_));
-    const size_t kZero = 0u;
-    ASSERT_OK(store_.set_property(ZX_PROP_VMO_CONTENT_SIZE, &kZero, sizeof(kZero)));
     ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
   }
 
@@ -338,8 +336,6 @@ class TestServerStream final : public TestServerBase {
  public:
   TestServerStream() {
     ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &store_));
-    const size_t kZero = 0u;
-    ASSERT_OK(store_.set_property(ZX_PROP_VMO_CONTENT_SIZE, &kZero, sizeof(kZero)));
     ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
   }
 

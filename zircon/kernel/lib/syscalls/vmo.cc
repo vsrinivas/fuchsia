@@ -58,7 +58,7 @@ zx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_out_handle* out
   // create a Vm Object dispatcher
   KernelHandle<VmObjectDispatcher> kernel_handle;
   zx_rights_t rights;
-  zx_status_t result = VmObjectDispatcher::Create(ktl::move(vmo), size, &kernel_handle, &rights);
+  zx_status_t result = VmObjectDispatcher::Create(ktl::move(vmo), &kernel_handle, &rights);
   if (result != ZX_OK)
     return result;
 
@@ -221,7 +221,7 @@ zx_status_t sys_vmo_create_child(zx_handle_t handle, uint32_t options, uint64_t 
   KernelHandle<VmObjectDispatcher> kernel_handle;
   zx_rights_t default_rights;
   zx_status_t result =
-      VmObjectDispatcher::Create(ktl::move(child_vmo), size, &kernel_handle, &default_rights);
+      VmObjectDispatcher::Create(ktl::move(child_vmo), &kernel_handle, &default_rights);
   if (result != ZX_OK)
     return result;
 

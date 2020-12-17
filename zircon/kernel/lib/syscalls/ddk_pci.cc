@@ -663,7 +663,7 @@ zx_status_t sys_pci_get_bar(zx_handle_t dev_handle, uint32_t bar_num,
 
     // Now that the vmo has been created for the bar, create a handle to
     // the appropriate dispatcher for the caller
-    status = VmObjectDispatcher::Create(vmo, info->size, &kernel_handle, &rights);
+    status = VmObjectDispatcher::Create(vmo, &kernel_handle, &rights);
     if (status != ZX_OK) {
       return status;
     }

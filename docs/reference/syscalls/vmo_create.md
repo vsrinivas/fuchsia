@@ -25,12 +25,6 @@ operating system.
 The size of the VMO will be rounded up to the next page size boundary.
 Use [`zx_vmo_get_size()`] to return the current size of the VMO.
 
-The content size of the VMO will be initialized to the given (unrounded) size.
-Use [`zx_object_get_property()`] with **ZX_PROP_VMO_CONTENT_SIZE** to read the
-content size of the VMO. Use [`zx_object_set_property()`] with
-**ZX_PROP_VMO_CONTENT_SIZE** to set the content size of the VMO without
-actually resizing the VMO.
-
 One handle is returned on success, representing an object with the requested
 size.
 
