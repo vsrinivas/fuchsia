@@ -14,6 +14,7 @@
 #include <zxtest/zxtest.h>
 
 #include "mock_zircon_boot_ops.h"
+#include "test_data/test_images.h"
 
 uint32_t AbrCrc32(const void* buf, size_t buf_size) {
   return crc32(0, reinterpret_cast<const uint8_t*>(buf), buf_size);
@@ -23,7 +24,6 @@ namespace {
 
 constexpr size_t kZirconPartitionSize = 128 * 1024;
 constexpr size_t kVbmetaPartitionSize = 64 * 1024;
-constexpr size_t kImageSize = 1024;
 
 const char kTestCmdline[] = "foo=bar";
 
@@ -33,43 +33,26 @@ void CreateMockZirconBootOps(std::unique_ptr<MockZirconBootOps>* out) {
   // durable boot
   device->AddPartition(GPT_DURABLE_BOOT_NAME, sizeof(AbrData));
 
-  // TODO(b/174968242): For now we just initialize images to zeros. Once verified
-  // boot logic is integrated into this library. The initial data for each slot will be
-  // replaced with different test zircon images for testing slot verification logic.
-  struct Image {
-    zbi_header_t hdr;
-    zbi_header_t kernel;
-    uint8_t payload[ZBI_ALIGN(kImageSize)];
-  } image;
-  std::vector<uint8_t> zero_zircon_image(kImageSize, 0);
-  ASSERT_EQ(zbi_init(&image, sizeof(image)), ZBI_RESULT_OK);
-  auto res = zbi_create_entry_with_payload(&image, sizeof(image), ZBI_TYPE_KERNEL_ARM64, 0, 0,
-                                           zero_zircon_image.data(),
-                                           static_cast<uint32_t>(zero_zircon_image.size()));
-  ASSERT_EQ(res, ZBI_RESULT_OK);
   // zircon partitions
   struct PartitionAndData {
     const char* name;
     const void* data;
     size_t data_len;
   } zircon_partitions[] = {
-      {GPT_ZIRCON_A_NAME, &image, sizeof(image)},
-      {GPT_ZIRCON_B_NAME, &image, sizeof(image)},
-      {GPT_ZIRCON_R_NAME, &image, sizeof(image)},
+      {GPT_ZIRCON_A_NAME, kTestZirconAImage, sizeof(kTestZirconAImage)},
+      {GPT_ZIRCON_B_NAME, kTestZirconBImage, sizeof(kTestZirconBImage)},
+      {GPT_ZIRCON_R_NAME, kTestZirconRImage, sizeof(kTestZirconRImage)},
   };
   for (auto& ele : zircon_partitions) {
     device->AddPartition(ele.name, kZirconPartitionSize);
     ASSERT_OK(device->WriteToPartition(ele.name, 0, ele.data_len, ele.data));
   }
 
-  // TODO(b/174968242): Once verified boot logic is integrated into this library, the initial data
-  // will be replaced with actual test vbmeta images for the corresponding slot images..
-  std::vector<uint8_t> zero_vbmeta_image(kVbmetaPartitionSize, 0);
   // vbmeta partitions
   PartitionAndData vbmeta_partitions[] = {
-      {GPT_VBMETA_A_NAME, zero_vbmeta_image.data(), zero_vbmeta_image.size()},
-      {GPT_VBMETA_B_NAME, zero_vbmeta_image.data(), zero_vbmeta_image.size()},
-      {GPT_VBMETA_R_NAME, zero_vbmeta_image.data(), zero_vbmeta_image.size()},
+      {GPT_VBMETA_A_NAME, kTestVbmetaAImage, sizeof(kTestVbmetaAImage)},
+      {GPT_VBMETA_B_NAME, kTestVbmetaBImage, sizeof(kTestVbmetaBImage)},
+      {GPT_VBMETA_R_NAME, kTestVbmetaRImage, sizeof(kTestVbmetaRImage)},
   };
   for (auto& ele : vbmeta_partitions) {
     device->AddPartition(ele.name, kVbmetaPartitionSize);
@@ -87,6 +70,16 @@ void CreateMockZirconBootOps(std::unique_ptr<MockZirconBootOps>* out) {
     }
     return true;
   });
+
+  AvbAtxPermanentAttributes permanent_attributes;
+  memcpy(&permanent_attributes, kPermanentAttributes, sizeof(permanent_attributes));
+  device->SetPermanentAttributes(permanent_attributes);
+
+  for (size_t i = 0; i < AVB_MAX_NUMBER_OF_ROLLBACK_INDEX_LOCATIONS; i++) {
+    device->WriteRollbackIndex(i, 0);
+  }
+  device->WriteRollbackIndex(AVB_ATX_PIK_VERSION_LOCATION, 0);
+  device->WriteRollbackIndex(AVB_ATX_PSK_VERSION_LOCATION, 0);
 
   *out = std::move(device);
 }
@@ -236,7 +229,8 @@ TEST(BootTests, LoadAndBootImageTooLarge) {
   ZirconBootOps zircon_boot_ops = dev->GetZirconBootOps();
   zircon_boot_ops.get_firmware_slot = nullptr;
   std::vector<uint8_t> buffer(kZirconPartitionSize);
-  ASSERT_EQ(LoadAndBoot(&zircon_boot_ops, buffer.data(), kImageSize - 1, kForceRecoveryOff),
+  ASSERT_EQ(LoadAndBoot(&zircon_boot_ops, buffer.data(), sizeof(kTestZirconAImage) - 1,
+                        kForceRecoveryOff),
             kBootResultErrorNoValidSlot);
 }
 

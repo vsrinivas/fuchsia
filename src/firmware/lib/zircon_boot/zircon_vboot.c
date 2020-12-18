@@ -223,10 +223,9 @@ bool ZirconVBootSlotVerify(ZirconBootOps* zb_ops, zbi_header_t* image, size_t ca
   };
   CreateAvbAndAvbAtxOps(zb_ops, &context, &avb_ops, &atx_ops);
   const char* const requested_partitions[] = {"zircon", NULL};
-  AvbSlotVerifyData* verify_data = NULL;
   // TODO(b/174968242): Enable slot verification, rollback index update, property descriptor append.
-  AvbSlotVerifyResult result = avb_slot_verify(&avb_ops, requested_partitions, ab_suffix,
-                                               AVB_SLOT_VERIFY_FLAGS_ALLOW_VERIFICATION_ERROR,
-                                               AVB_HASHTREE_ERROR_MODE_EIO, &verify_data);
-  return result != AVB_SLOT_VERIFY_RESULT_ERROR_IO;
+  AvbSlotVerifyResult result =
+      avb_slot_verify(&avb_ops, requested_partitions, ab_suffix, AVB_SLOT_VERIFY_FLAGS_NONE,
+                      AVB_HASHTREE_ERROR_MODE_EIO, NULL);
+  return result == AVB_SLOT_VERIFY_RESULT_OK;
 }
