@@ -22,6 +22,7 @@ ffx_plugin("ffx_preflight") {
     "src/args.rs",
     "src/check.rs",
     "src/check/build_prereqs.rs",
+    "src/check/emu_networking.rs",
     "src/check/femu_graphics.rs",
     "src/command_runner.rs",
     "src/config.rs",

@@ -61,6 +61,7 @@ pub async fn preflight_cmd(_cmd: PreflightCommand) -> Result<()> {
     let checks: Vec<Box<dyn PreflightCheck>> = vec![
         Box::new(check::build_prereqs::BuildPrereqs::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
         Box::new(check::femu_graphics::FemuGraphics::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
+        Box::new(check::emu_networking::EmuNetworking::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
     ];
 
     run_preflight_checks(&mut stdout(), &checks, &config).await

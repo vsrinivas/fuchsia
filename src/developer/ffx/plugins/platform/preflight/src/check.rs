@@ -7,6 +7,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 
 pub mod build_prereqs;
+pub mod emu_networking;
 pub mod femu_graphics;
 
 /// The result of execution of a `PreflightCheck`. In all cases, the first `String` parameter
