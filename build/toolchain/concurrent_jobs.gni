@@ -11,17 +11,23 @@ _args = [
   rebase_path(_script, root_build_dir),
   "--reserve-memory=1GB",
 ]
-if (use_thinlto) {
-  _args += [
-    "--memory-per-job",
-    "local=2GB",
-  ]
-} else if (use_lto) {
-  _args += [
-    "--memory-per-job",
-    "local=4GB",
-  ]
+
+if (use_lto) {
+  # As per logic in //build/config/lto/config.gni, only use thinlto
+  # if lto is set
+  if (use_thinlto) {
+    _args += [
+      "--memory-per-job",
+      "local=2GB",
+    ]
+  } else {
+    _args += [
+      "--memory-per-job",
+      "local=4GB",
+    ]
+  }
 } else {
+  # No lto
   _args += [
     "--memory-per-job",
     "local=1GB",
