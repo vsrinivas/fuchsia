@@ -781,6 +781,13 @@ From //src/virtualization/packages/debian_guest/BUILD.gn:9
 
 From //build/config/compiler.gni:53
 
+### dev_bootfs_labels
+List of labels for objects to include in the ZBI.
+
+**Current value (from the default):** `[]`
+
+From //build/dev.gni:22
+
 ### dev_build_only_deps
 List of labels for targets that should be built but not included in any
 build outputs that are part of the build API (e.g. zbi's, package servers).
