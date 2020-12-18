@@ -86,6 +86,7 @@ if (is_fuchsia) {
       "lib/fidl/llcpp/buffer_then_heap_allocator.h",
       "lib/fidl/llcpp/client_base.h",
       "lib/fidl/llcpp/client.h",
+      "lib/fidl/llcpp/client_end.h",
       "lib/fidl/llcpp/coding.h",
       "lib/fidl/llcpp/connect_service.h",
       "lib/fidl/llcpp/envelope.h",
