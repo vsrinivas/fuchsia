@@ -141,7 +141,7 @@ group("all") {
     "//src/ui/lib/escher/test:escher_unittests($host_toolchain)",
     "//src/ui/testing/text:text_test_suite",
     "//src/ui/testing/text:text_test_suite_tests",
-    "//src/ui/tests/e2e_input_tests",
+    "//src/ui/tests/integration_input_tests",
     "//src/ui/tools/tiles:tiles_tests",
     "//src/virtualization/bin/guest_manager:guest_manager_tests",
     "//src/virtualization/bin/vmm:vmm_tests",

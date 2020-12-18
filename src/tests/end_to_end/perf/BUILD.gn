@@ -183,7 +183,7 @@ group("touch_input_test") {
   deps = [
     ":touch_input_latency_benchmarks_test($host_toolchain)",
     "//src/testing/sl4f",
-    "//src/ui/tests/e2e_input_tests/touch:tests",
+    "//src/ui/tests/integration_input_tests/touch:tests",
   ]
 }
 

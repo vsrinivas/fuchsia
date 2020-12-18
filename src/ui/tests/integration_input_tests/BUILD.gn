@@ -2,12 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
+group("integration_input_tests") {
   testonly = true
 
   deps = [
-    "integration_flutter_tests",
-    "integration_input_tests",
-    "scenic-stress-tests:tests",
+    "keyboard:tests",
+    "scenic:tests",
+    "shortcut:tests",
+    "touch:tests",
   ]
 }

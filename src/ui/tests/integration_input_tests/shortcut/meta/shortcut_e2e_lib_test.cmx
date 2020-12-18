@@ -1,0 +1,30 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.ui.input.ImeService": "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx",
+                "fuchsia.ui.input.InputDeviceRegistry": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
+                "fuchsia.ui.policy.Presenter": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
+                "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
+                "fuchsia.ui.shortcut.Manager": "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx",
+                "fuchsia.ui.shortcut.Registry": "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx"
+            }
+        }
+    },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/shortcut_integration_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.ui.input.InputDeviceRegistry",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.shortcut.Manager",
+            "fuchsia.ui.shortcut.Registry"
+        ]
+    }
+}
