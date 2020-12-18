@@ -6,6 +6,8 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "Overview"
+  path: /docs/development/tools/ffx/overview.md
 - title: "Using ffx"
   path: /docs/development/tools/ffx/getting-started.md
 - title: "Developing for ffx"

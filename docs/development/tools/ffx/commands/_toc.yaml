@@ -8,5 +8,5 @@
 toc:
 - title: "Config"
   path: /docs/development/tools/ffx/commands/config.md
-- title: "Component Select"
+- title: "Selecting components"
   path: /docs/development/tools/ffx/commands/component-select.md

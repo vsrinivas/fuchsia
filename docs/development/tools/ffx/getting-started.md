@@ -1,13 +1,13 @@
-# Getting Started with ffx
+# Getting started with ffx
 
 This doc will guide you through some of the features of `ffx`. For an overview
-of the design and components of `ffx`, see [this doc](/docs/development/tools/ffx/architecture/ffx.md).
+of the design and components of `ffx`, see [the ffx overview](/docs/development/tools/ffx/overview.md).
 
 Warning: **`ffx` is currently in alpha. Its APIs, command-line surface, and
 documentation are subject to change.**
 
 
-## Contacting us
+## Contacting the ffx team
 
 If you discover possible bugs or have questions or suggestions,
 [file a bug](https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=ffx+User+Bug).
@@ -113,7 +113,7 @@ fx ffx component list
 ```
 
 NOTE: if the default target has been set, and you are unable to run that command
-against the target, [reach out](#contacting_us) to the `ffx` team.
+against the target, [reach out](#contacting_the_ffx_team) to the `ffx` team.
 
 Then the next time you list targets you should see that an `RCS` connection
 isn't active.
@@ -135,7 +135,7 @@ the logs:
 
 NOTE: if the `RCS` column remains `N` for an extended amount of time and you have
 already set this target's nodename to `target.default` _before_ initially starting
-ffx, [reach out](#contacting_us) to the `ffx` team.
+ffx, [reach out](#contacting_the_ffx_team) to the `ffx` team.
 
 #### On Default Targets
 
@@ -162,62 +162,14 @@ reboot a device, respectively.
 
 ## Configuration
 
-TODO
+See documentation for the [config command](/docs/development/tools/ffx/commands/config.md).
 
 ## Interacting with Components
 
-### Selector Syntax
+### Selectors
 
-Many `ffx` commands that interact with components or services take component
-selectors as a parameter. Component selectors in `ffx` use the same syntax as
-the component selectors in the
-[diagnostics library](https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#Selector).
-
-Here are some example selectors, all of which select the Remote Control Service:
-
-```
-core/remote-control:out:fuchsia.developer.remotecontrol.RemoteControl
-core/*:out:fuchsia.developer.remotecontrol.RemoteControl
-core/*:expose:fuchsia.developer.remotecontrol.RemoteControl
-core/remote-control:out:*
-core/*:expose:fuchsia.developer.remotecontrol.R*
-```
-
-
-#### Selector segments
-
-There are 3 constituent segments of a selector:
-`<component moniker>:<node selector>:<property selector>`. Each is discussed
-below. The wildcard (`*`) is valid in each segment of a selector.
-
-Consider this example:
-  `core/remote-control:out:fuchsia.developer.remotecontrol.RemoteControl`
-
-- `core/remote-control` is the
-  [component moniker](/docs/concepts/components/v2/monikers.md).
-  This uniquely specifies a path in the
-  [component topology](/docs/concepts/components/v2/topology.md).
-
-  Note: You can use `*` to wildcard a particular level in the topology, but *`*`
-  is not recursive*. That is, `a/*/c` will match `a/b/c` but would not match
-  `a/b/b2/c`.
-
-- `out` is the node selector. In `ffx`, this must be one of the following
-  values, which correspond to the routing terminology used in the component
-  manifest and defined
-  [here](/docs/concepts/components/v2/component_manifests.md#routing-terminology).
-  - `out`: services offered by the component. Corresponds to `offer` in the
-    component manifest.
-  - `expose`: services exposed by the component. Corresponds to `expose` in the
-    component manifest.
-  - `in`: services depended upon by the component. Corresponds to `use` in the
-    component manifest.
-- `fuchsia.developer.remotecontrol.RemoteControl` is the property selector and
-  is matched against fully-qualified FIDL service names in the routing
-  directory/directories matched by the node selector.
-
-You may optionally omit the property selector: `core/remote-control:out` is
-equivalent to `core/remote-control:out:*`.
+Many `ffx` commands that use components take selectors as a parameter. You can read more about selectors and their syntax
+in [component selector documentation](/docs/development/tools/ffx/commands/component-select.md).
 
 ### Inspecting the component topology
 
@@ -366,5 +318,5 @@ above and 2) device syslog if available.Bug link: ...
 
 ## Next steps
 
-- Please provide feedback on this doc by [reaching out to us](#contacting-us)!
+- Please provide feedback on this doc by [reaching out to the ffx team](#contacting_the_ffx_team)!
 - Learn how to [extend `ffx`](/docs/development/tools/ffx/development/plugins.md).

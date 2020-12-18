@@ -6,7 +6,5 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Overview"
-  path: /docs/development/tools/ffx/architecture/ffx.md
 - title: "CLI"
   path: /docs/development/tools/ffx/architecture/cli.md
