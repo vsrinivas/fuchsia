@@ -1,0 +1,10 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.platform;
+using fuchsia.mediatek.platform;
+
+fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.mediatek.platform.BIND_PLATFORM_DEV_VID.MEDIATEK;
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.mediatek.platform.BIND_PLATFORM_DEV_DID.POWER;

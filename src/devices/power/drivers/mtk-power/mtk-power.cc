@@ -6,13 +6,14 @@
 
 #include <lib/device-protocol/pdev.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <soc/mt8167/mt8167-power-regs.h>
 #include <soc/mt8167/mt8167-power.h>
+
+#include "src/devices/power/drivers/mtk-power/mtk-power-bind.h"
 
 namespace power {
 
@@ -590,7 +591,4 @@ static constexpr zx_driver_ops_t mtk_power_driver_ops = []() {
 
 }  // namespace power
 
-ZIRCON_DRIVER_BEGIN(mtk_power, power::mtk_power_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_POWER), ZIRCON_DRIVER_END(mtk_power)
+ZIRCON_DRIVER(mtk_power, power::mtk_power_driver_ops, "zircon", "0.1");
