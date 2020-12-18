@@ -20,7 +20,7 @@ Analytics are not sent on this very first run. To disable reporting, type
 
 To display the current setting and what is collected, type
 
-    ffx config analytics 
+    ffx config analytics
 
 If you opt out of analytics, an opt-out event will be sent, and then no further
 information will be sent by the core developer tools to Google.
@@ -77,6 +77,7 @@ pub fn show_analytics_notice<W: Write>(mut writer: W) {
         opt_in_status(&true); // TODO do we log on the first run? If so, don't set this until the second run
         print_long_notice(&mut writer);
     } else if !has_opened_ffx_previously() {
+        set_has_opened_ffx();
         print_short_notice(&mut writer);
     }
 }
