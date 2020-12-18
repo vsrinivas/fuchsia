@@ -63,7 +63,8 @@ class DebugAdapterServerTest : public TestWithLoop, public DebugAdapterServerObs
 
 TEST_F(DebugAdapterServerTest, InitTest) { server().Init(); }
 
-TEST_F(DebugAdapterServerTest, ConnectionTest) {
+// TODO(bug 66771): Re-enable when the port issue is fixed.
+TEST_F(DebugAdapterServerTest, DISABLED_ConnectionTest) {
   auto err = server().Init();
   EXPECT_FALSE(err.has_error());
   TestClient client;
