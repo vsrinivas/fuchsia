@@ -17,10 +17,6 @@ void ::llcpp::fidl::test::union_::Union::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void Union::_CloseHandles() {}
-
-void StructWithNullableXUnion::_CloseHandles() {}
-
 void ::llcpp::fidl::test::union_::StrictUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(StrictUnion, ordinal_) ==
@@ -28,8 +24,6 @@ void ::llcpp::fidl::test::union_::StrictUnion::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(StrictUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void StrictUnion::_CloseHandles() {}
 
 void ::llcpp::fidl::test::union_::StrictSimpleXUnion::
     SizeAndOffsetAssertionHelper() {
@@ -40,16 +34,12 @@ void ::llcpp::fidl::test::union_::StrictSimpleXUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void StrictSimpleXUnion::_CloseHandles() {}
-
 void ::llcpp::fidl::test::union_::StrictFoo::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictFoo) == sizeof(fidl_xunion_t));
   static_assert(offsetof(StrictFoo, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(StrictFoo, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void StrictFoo::_CloseHandles() {}
 
 void ::llcpp::fidl::test::union_::StrictBoundedXUnion::
     SizeAndOffsetAssertionHelper() {
@@ -60,8 +50,6 @@ void ::llcpp::fidl::test::union_::StrictBoundedXUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void StrictBoundedXUnion::_CloseHandles() {}
-
 void ::llcpp::fidl::test::union_::ReverseOrdinalUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ReverseOrdinalUnion) == sizeof(fidl_xunion_t));
@@ -70,12 +58,6 @@ void ::llcpp::fidl::test::union_::ReverseOrdinalUnion::
   static_assert(offsetof(ReverseOrdinalUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void ReverseOrdinalUnion::_CloseHandles() {}
-
-void Pizza::_CloseHandles() {}
-
-void Pasta::_CloseHandles() {}
 
 void ::llcpp::fidl::test::union_::StrictPizzaOrPasta::
     SizeAndOffsetAssertionHelper() {
@@ -86,8 +68,6 @@ void ::llcpp::fidl::test::union_::StrictPizzaOrPasta::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void StrictPizzaOrPasta::_CloseHandles() {}
-
 void ::llcpp::fidl::test::union_::PizzaOrPasta::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(PizzaOrPasta) == sizeof(fidl_xunion_t));
   static_assert(offsetof(PizzaOrPasta, ordinal_) ==
@@ -95,8 +75,6 @@ void ::llcpp::fidl::test::union_::PizzaOrPasta::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(PizzaOrPasta, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void PizzaOrPasta::_CloseHandles() {}
 auto ::llcpp::fidl::test::union_::FlexiblePizzaOrPasta::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -117,8 +95,6 @@ void ::llcpp::fidl::test::union_::FlexiblePizzaOrPasta::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void FlexiblePizzaOrPasta::_CloseHandles() {}
-
 void ::llcpp::fidl::test::union_::ExplicitPizzaOrPasta::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExplicitPizzaOrPasta) == sizeof(fidl_xunion_t));
@@ -127,8 +103,6 @@ void ::llcpp::fidl::test::union_::ExplicitPizzaOrPasta::
   static_assert(offsetof(ExplicitPizzaOrPasta, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void ExplicitPizzaOrPasta::_CloseHandles() {}
 auto ::llcpp::fidl::test::union_::OlderSimpleUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -148,8 +122,6 @@ void ::llcpp::fidl::test::union_::OlderSimpleUnion::
   static_assert(offsetof(OlderSimpleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void OlderSimpleUnion::_CloseHandles() {}
 
 namespace {
 
@@ -556,7 +528,6 @@ void TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::
       kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
 }
 
-void NullableUnionStruct::_CloseHandles() {}
 auto ::llcpp::fidl::test::union_::NewerSimpleUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -577,8 +548,6 @@ void ::llcpp::fidl::test::union_::NewerSimpleUnion::
   static_assert(offsetof(NewerSimpleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void NewerSimpleUnion::_CloseHandles() {}
 auto ::llcpp::fidl::test::union_::FlexibleUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -599,8 +568,6 @@ void ::llcpp::fidl::test::union_::FlexibleUnion::
   static_assert(offsetof(FlexibleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void FlexibleUnion::_CloseHandles() {}
 auto ::llcpp::fidl::test::union_::FlexibleFoo::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -620,8 +587,6 @@ void ::llcpp::fidl::test::union_::FlexibleFoo::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void FlexibleFoo::_CloseHandles() {}
-
 void ::llcpp::fidl::test::union_::FieldCollision::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(FieldCollision) == sizeof(fidl_xunion_t));
@@ -630,8 +595,6 @@ void ::llcpp::fidl::test::union_::FieldCollision::
   static_assert(offsetof(FieldCollision, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void FieldCollision::_CloseHandles() {}
 auto ::llcpp::fidl::test::union_::ExplicitXUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -652,8 +615,6 @@ void ::llcpp::fidl::test::union_::ExplicitXUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ExplicitXUnion::_CloseHandles() {}
-
 void ::llcpp::fidl::test::union_::ExplicitUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExplicitUnion) == sizeof(fidl_xunion_t));
@@ -663,8 +624,6 @@ void ::llcpp::fidl::test::union_::ExplicitUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ExplicitUnion::_CloseHandles() {}
-
 void ::llcpp::fidl::test::union_::ExplicitStrictFoo::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExplicitStrictFoo) == sizeof(fidl_xunion_t));
@@ -673,8 +632,6 @@ void ::llcpp::fidl::test::union_::ExplicitStrictFoo::
   static_assert(offsetof(ExplicitStrictFoo, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void ExplicitStrictFoo::_CloseHandles() {}
 auto ::llcpp::fidl::test::union_::ExplicitFoo::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
@@ -694,9 +651,6 @@ void ::llcpp::fidl::test::union_::ExplicitFoo::SizeAndOffsetAssertionHelper() {
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ExplicitFoo::_CloseHandles() {}
-
-void Empty::_CloseHandles() {}
 auto ::llcpp::fidl::test::union_::XUnionContainingEmptyStruct::which() const
     -> Tag {
   ZX_ASSERT(!has_invalid_tag());
@@ -716,8 +670,6 @@ void ::llcpp::fidl::test::union_::XUnionContainingEmptyStruct::
   static_assert(offsetof(XUnionContainingEmptyStruct, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void XUnionContainingEmptyStruct::_CloseHandles() {}
 
 }  // namespace union_
 }  // namespace test

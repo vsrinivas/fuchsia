@@ -49,7 +49,6 @@ struct ByteAndBytes {
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
 
   uint8_t single_byte = {};
 
@@ -58,7 +57,6 @@ struct ByteAndBytes {
   ::fidl::VectorView<uint8_t> only_one_k_bytes = {};
 
   ::fidl::VectorView<uint8_t> opt_only_one_k_bytes = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:

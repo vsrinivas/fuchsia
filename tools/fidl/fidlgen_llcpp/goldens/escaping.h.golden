@@ -50,10 +50,8 @@ struct DocCommentWithQuotes {
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint8_t __reserved = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:

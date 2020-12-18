@@ -12,10 +12,6 @@ struct {{ .Name }};
 {{- define "StructMemberCloseHandles" }}
   {{- if .Type.IsResource }}
     {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.LLPointer false false }}
-  {{- else if .Type.ExternalDeclaration }}
-  if constexpr ({{ .Type.LLClass }}::IsResource) {
-    {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.LLPointer false false }}
-  }
   {{- end }}
 {{- end }}
 
@@ -30,7 +26,7 @@ struct {{ .Name }};
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "StructDeclaration" }}
-{{ if .IsResource }}
+{{ if .IsResourceType }}
 #ifdef __Fuchsia__
 {{- end }}
 extern "C" const fidl_type_t {{ .TableType }};
@@ -44,7 +40,6 @@ struct {{ .Name }} {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
   static constexpr bool HasPointer = {{ .HasPointer }};
-  static constexpr bool IsResource = {{ .IsResource }};
 
   {{- range .Members }}
 {{ "" }}
@@ -53,7 +48,11 @@ struct {{ .Name }} {
   {{- end }}
   {{ .Type.LLDecl }} {{ .Name }} = {};
   {{- end }}
+
+  {{- if .IsResourceType }}
+
   void _CloseHandles();
+  {{- end }}
 
   class UnownedEncodedMessage final {
    public:
@@ -136,7 +135,7 @@ struct {{ .Name }} {
     DecodedMessage(DecodedMessage&&) = delete;
     DecodedMessage* operator=(const DecodedMessage&) = delete;
     DecodedMessage* operator=(DecodedMessage&&) = delete;
-    {{- if .IsResource }}
+    {{- if .IsResourceType }}
     ~DecodedMessage() {
       if (ok() && (PrimaryObject() != nullptr)) {
         PrimaryObject()->_CloseHandles();
@@ -178,7 +177,7 @@ struct {{ .Name }} {
     }
   };
 };
-{{- if .IsResource }}
+{{- if .IsResourceType }}
 #endif  // __Fuchsia__
 {{- end }}
 {{- end }}
@@ -186,15 +185,13 @@ struct {{ .Name }} {
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "StructDefinition" }}
-{{ if .IsResource }}
+{{ if .IsResourceType }}
 #ifdef __Fuchsia__
-{{- end }}
 void {{ .Name }}::_CloseHandles() {
   {{- range .Members }}
     {{- template "StructMemberCloseHandles" . }}
   {{- end }}
 }
-{{- if .IsResource }}
 #endif  // __Fuchsia__
 {{- end }}
 {{- end }}
@@ -202,7 +199,7 @@ void {{ .Name }}::_CloseHandles() {
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "StructTraits" }}
-{{ if .IsResource }}
+{{ if .IsResourceType }}
 #ifdef __Fuchsia__
 {{- end }}
 template <>
@@ -215,7 +212,7 @@ static_assert(std::is_standard_layout_v<{{ .Namespace }}::{{ .Name }}>);
 static_assert(offsetof({{ $struct.Namespace }}::{{ $struct.Name }}, {{ .Name }}) == {{ .Offset }});
 {{- end }}
 static_assert(sizeof({{ .Namespace }}::{{ .Name }}) == {{ .Namespace }}::{{ .Name }}::PrimarySize);
-{{- if .IsResource }}
+{{- if .IsResourceType }}
 #endif  // __Fuchsia__
 {{- end }}
 {{- end }}

@@ -8,13 +8,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace struct_ {
-
-void Simple::_CloseHandles() {}
-
-void BasicStruct::_CloseHandles() {}
-
-}  // namespace struct_
+namespace struct_ {}  // namespace struct_
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

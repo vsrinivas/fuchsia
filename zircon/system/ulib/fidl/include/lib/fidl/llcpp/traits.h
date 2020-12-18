@@ -26,8 +26,6 @@
 //                    It is std::numeric_limits<uint32_t>::max() if |T| is unbounded.
 // |T::HasPointer|    is a boolean specifying if the structure contains pointer indirections, hence
 //                    requires linearization when sending.
-// |T::IsResource|    is a boolean specifying if the structure is a resource type. See FTP-057:
-//                    Default No Handles.
 // |T::Type|          is a fidl_type_t* pointing to the corresponding coding table, if any.
 //                    If the encoding/decoding of |T| can be elided, |T::Type| is NULL.
 //

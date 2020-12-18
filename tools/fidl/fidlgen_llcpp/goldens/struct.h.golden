@@ -49,12 +49,10 @@ struct Simple {
   static constexpr uint32_t PrimarySize = 2;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint8_t f1 = {};
 
   bool f2 = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -164,12 +162,10 @@ struct BasicStruct {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
 
   uint32_t x = {};
 
   ::fidl::StringView y = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:

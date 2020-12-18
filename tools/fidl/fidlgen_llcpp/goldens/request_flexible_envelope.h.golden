@@ -115,9 +115,6 @@ class StrictFoo {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -222,9 +219,6 @@ class FlexibleFoo {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -290,7 +284,6 @@ class Protocol final {
     static constexpr uint32_t MaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
-    static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
@@ -450,7 +443,6 @@ class Protocol final {
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = RequestStrictResponseFlexibleResponse;
@@ -607,7 +599,6 @@ class Protocol final {
     static constexpr uint32_t MaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
@@ -767,7 +758,6 @@ class Protocol final {
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
-    static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = RequestFlexibleResponseStrictResponse;

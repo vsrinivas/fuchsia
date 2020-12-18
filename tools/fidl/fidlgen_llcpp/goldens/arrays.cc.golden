@@ -19,8 +19,6 @@ void ::llcpp::fidl::test::arrays::UnionSmallArray::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void UnionSmallArray::_CloseHandles() {}
-
 void ::llcpp::fidl::test::arrays::UnionLargeArray::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(UnionLargeArray) == sizeof(fidl_xunion_t));
@@ -29,16 +27,6 @@ void ::llcpp::fidl::test::arrays::UnionLargeArray::
   static_assert(offsetof(UnionLargeArray, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void UnionLargeArray::_CloseHandles() {}
-
-void TableSmallArray::_CloseHandles() {}
-
-void TableLargeArray::_CloseHandles() {}
-
-void StructSmallArray::_CloseHandles() {}
-
-void StructLargeArray::_CloseHandles() {}
 
 }  // namespace arrays
 }  // namespace test

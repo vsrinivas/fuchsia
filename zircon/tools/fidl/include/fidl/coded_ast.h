@@ -256,7 +256,8 @@ struct TableType : public Type {
 
 struct XUnionType : public Type {
   XUnionType(std::string name, std::vector<XUnionField> fields, std::string qname,
-             types::Nullability nullability, types::Strictness strictness, types::Resourceness resourceness)
+             types::Nullability nullability, types::Strictness strictness,
+             types::Resourceness resourceness)
       : Type(Kind::kXUnion, std::move(name), 24u, true, false),
         fields(std::move(fields)),
         qname(std::move(qname)),

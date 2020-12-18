@@ -172,9 +172,6 @@ class Union {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -323,9 +320,6 @@ class StrictUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -464,9 +458,6 @@ class StrictSimpleXUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -578,9 +569,6 @@ class StrictFoo {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -665,9 +653,6 @@ class StrictBoundedXUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 32;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -767,9 +752,6 @@ class ReverseOrdinalUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -884,9 +866,6 @@ class StrictPizzaOrPasta {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1002,9 +981,6 @@ class PizzaOrPasta {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1119,9 +1095,6 @@ class FlexiblePizzaOrPasta {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1238,9 +1211,6 @@ class ExplicitPizzaOrPasta {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1347,9 +1317,6 @@ class OlderSimpleUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1481,9 +1448,6 @@ class NewerSimpleUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1631,9 +1595,6 @@ class FlexibleUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1745,9 +1706,6 @@ class FlexibleFoo {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1834,9 +1792,6 @@ class FieldCollision {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -1934,9 +1889,6 @@ class ExplicitXUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -2046,9 +1998,6 @@ class ExplicitUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -2156,9 +2105,6 @@ class ExplicitStrictFoo {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -2262,9 +2208,6 @@ class ExplicitFoo {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -2351,9 +2294,6 @@ class XUnionContainingEmptyStruct {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -2391,10 +2331,8 @@ struct StructWithNullableXUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
 
   ::llcpp::fidl::test::union_::OlderSimpleUnion x1 = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -2506,10 +2444,8 @@ struct Pizza {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
 
   ::fidl::VectorView<::fidl::StringView> toppings = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -2621,10 +2557,8 @@ struct Pasta {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 16;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
 
   ::fidl::StringView sauce = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -2757,7 +2691,6 @@ class TestProtocol final {
     static constexpr uint32_t MaxOutOfLine = 32;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
@@ -2912,7 +2845,6 @@ class TestProtocol final {
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = StrictXUnionHenceResponseMayBeStackAllocatedResponse;
@@ -3068,7 +3000,6 @@ class TestProtocol final {
     static constexpr uint32_t MaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = true;
     static constexpr bool HasPointer = true;
-    static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
@@ -3222,7 +3153,6 @@ class TestProtocol final {
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
@@ -3835,10 +3765,8 @@ struct NullableUnionStruct {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
 
   ::llcpp::fidl::test::union_::Union the_union = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -3952,10 +3880,8 @@ struct Empty {
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint8_t __reserved = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:

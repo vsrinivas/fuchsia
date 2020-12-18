@@ -57,12 +57,12 @@ struct NonInlineStructTestStruct {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = true;
 
   ::fidl::tracking_ptr<::llcpp::fidl::test::encapsulatedstructs::Int16Int8>
       element = {};
 
   ::zx::handle h = {};
+
   void _CloseHandles();
 
   class UnownedEncodedMessage final {
@@ -188,12 +188,10 @@ struct Int8Int32 {
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   int8_t a = {};
 
   int32_t b = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -304,12 +302,10 @@ struct Int16Int8 {
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   int16_t a = {};
 
   int8_t b = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -420,11 +416,9 @@ struct ArrayInt16Int8 {
   static constexpr uint32_t PrimarySize = 12;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   ::fidl::Array<::llcpp::fidl::test::encapsulatedstructs::Int16Int8, 3> arr =
       {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -537,14 +531,12 @@ struct StructPaddingTestStruct {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   ::llcpp::fidl::test::encapsulatedstructs::Int16Int8 trailing = {};
 
   ::llcpp::fidl::test::encapsulatedstructs::Int8Int32 inner = {};
 
   ::llcpp::fidl::test::encapsulatedstructs::ArrayInt16Int8 array = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -658,11 +650,11 @@ struct TopLevelStruct {
   static constexpr uint32_t PrimarySize = 40;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = true;
 
   ::llcpp::fidl::test::encapsulatedstructs::StructPaddingTestStruct a = {};
 
   ::llcpp::fidl::test::encapsulatedstructs::NonInlineStructTestStruct b = {};
+
   void _CloseHandles();
 
   class UnownedEncodedMessage final {

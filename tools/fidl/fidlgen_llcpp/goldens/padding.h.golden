@@ -64,12 +64,10 @@ struct Padding7ByteMiddle {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint8_t a = {};
 
   uint64_t b = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -182,12 +180,10 @@ struct Padding7ByteEnd {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint64_t a = {};
 
   uint8_t b = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -299,12 +295,10 @@ struct Padding6ByteMiddle {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint16_t a = {};
 
   uint64_t b = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -417,12 +411,10 @@ struct Padding6ByteEnd {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint64_t a = {};
 
   uint16_t b = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -534,14 +526,12 @@ struct Padding5ByteMiddle {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint16_t a = {};
 
   uint8_t b = {};
 
   uint64_t c = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -654,14 +644,12 @@ struct Padding5ByteEnd {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint64_t a = {};
 
   uint16_t b = {};
 
   uint8_t c = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -773,12 +761,10 @@ struct Padding4ByteMiddle {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint32_t a = {};
 
   uint64_t b = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -891,12 +877,10 @@ struct Padding4ByteEnd {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint64_t a = {};
 
   uint32_t b = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -1009,7 +993,6 @@ struct Padding4ByteAlignmentLength12 {
   static constexpr uint32_t PrimarySize = 12;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint32_t a = {};
 
@@ -1018,7 +1001,6 @@ struct Padding4ByteAlignmentLength12 {
   uint16_t c = {};
 
   uint16_t d = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -1131,12 +1113,10 @@ struct Padding3ByteMiddle {
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint8_t a = {};
 
   uint32_t b = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -1249,12 +1229,10 @@ struct Padding3ByteEnd {
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint32_t a = {};
 
   uint8_t b = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -1366,12 +1344,10 @@ struct Padding2ByteMiddle {
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint16_t a = {};
 
   uint32_t b = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -1484,12 +1460,10 @@ struct Padding2ByteEnd {
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint32_t a = {};
 
   uint16_t b = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -1602,14 +1576,12 @@ struct Padding2ByteAlignmentLength6 {
   static constexpr uint32_t PrimarySize = 6;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint8_t a = {};
 
   uint16_t b = {};
 
   uint8_t c = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -1722,12 +1694,10 @@ struct Padding1ByteMiddle {
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint8_t a = {};
 
   uint16_t b = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -1840,12 +1810,10 @@ struct Padding1ByteEnd {
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint16_t a = {};
 
   uint8_t b = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:

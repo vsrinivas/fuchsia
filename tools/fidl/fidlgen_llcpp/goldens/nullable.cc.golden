@@ -10,14 +10,6 @@ namespace fidl {
 namespace test {
 namespace nullable {
 
-void StructWithNullableVector::_CloseHandles() {}
-
-void StructWithNullableUnion::_CloseHandles() {}
-
-void StructWithNullableStruct::_CloseHandles() {}
-
-void StructWithNullableString::_CloseHandles() {}
-
 #ifdef __Fuchsia__
 void StructWithNullableRequest::_CloseHandles() { val.reset(); }
 #endif  // __Fuchsia__
@@ -223,10 +215,6 @@ void ::llcpp::fidl::test::nullable::SimpleUnion::
   static_assert(offsetof(SimpleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void SimpleUnion::_CloseHandles() {}
-
-void Int32Wrapper::_CloseHandles() {}
 
 }  // namespace nullable
 }  // namespace test

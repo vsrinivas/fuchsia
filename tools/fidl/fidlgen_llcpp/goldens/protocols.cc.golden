@@ -10,8 +10,6 @@ namespace fidl {
 namespace test {
 namespace protocols {
 
-void WithErrorSyntax_ResponseAsStruct_Response::_CloseHandles() {}
-
 void ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntax_ResponseAsStruct_Result) ==
@@ -22,10 +20,6 @@ void ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void WithErrorSyntax_ResponseAsStruct_Result::_CloseHandles() {}
-
-void WithErrorSyntax_ErrorAsPrimitive_Response::_CloseHandles() {}
-
 void ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntax_ErrorAsPrimitive_Result) ==
@@ -35,10 +29,6 @@ void ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
   static_assert(offsetof(WithErrorSyntax_ErrorAsPrimitive_Result, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void WithErrorSyntax_ErrorAsPrimitive_Result::_CloseHandles() {}
-
-void WithErrorSyntax_ErrorAsEnum_Response::_CloseHandles() {}
 
 namespace {
 
@@ -1952,8 +1942,6 @@ void ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::
   static_assert(offsetof(WithErrorSyntax_ErrorAsEnum_Result, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void WithErrorSyntax_ErrorAsEnum_Result::_CloseHandles() {}
 
 namespace {
 

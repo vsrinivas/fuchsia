@@ -12,17 +12,6 @@ namespace typealiases {
 
 #ifdef __Fuchsia__
 void ExampleOfUseOfAliases::_CloseHandles() {
-  if constexpr (::llcpp::someotherlibrary::ReferenceMe::IsResource) {
-    {
-      ::llcpp::someotherlibrary::ReferenceMe*
-          field_of_vec_of_ref_me_at_most_5_element =
-              field_of_vec_of_ref_me_at_most_5.mutable_data();
-      for (uint64_t i = 0; i < field_of_vec_of_ref_me_at_most_5.count();
-           ++i, ++field_of_vec_of_ref_me_at_most_5_element) {
-        field_of_vec_of_ref_me_at_most_5_element->_CloseHandles();
-      }
-    }
-  }
   field_of_channel.reset();
   field_of_client_end.reset();
   field_of_nullable_client_end.reset();

@@ -474,7 +474,6 @@ void JSONGenerator::Generate(const TypeShape& type_shape) {
     GenerateObjectMember("max_out_of_line", type_shape.max_out_of_line);
     GenerateObjectMember("has_padding", type_shape.has_padding);
     GenerateObjectMember("has_flexible_envelope", type_shape.has_flexible_envelope);
-    GenerateObjectMember("is_resource", type_shape.is_resource);
   });
 }
 

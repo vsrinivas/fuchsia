@@ -70,7 +70,6 @@ class Parent final {
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     void _CloseHandles();
@@ -381,7 +380,6 @@ class Child final {
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     void _CloseHandles();
@@ -536,7 +534,6 @@ class Child final {
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool IsResource = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     void _CloseHandles();

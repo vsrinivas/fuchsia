@@ -10,8 +10,6 @@ namespace fidl {
 namespace test {
 namespace structdefaultvalueenumlibraryreference {
 
-void Foo::_CloseHandles() {}
-
 }  // namespace structdefaultvalueenumlibraryreference
 }  // namespace test
 }  // namespace fidl

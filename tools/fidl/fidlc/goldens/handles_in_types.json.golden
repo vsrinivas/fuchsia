@@ -238,8 +238,7 @@
         "max_handles": 4294967295,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": true,
-        "is_resource": true
+        "has_flexible_envelope": true
       }
     }
   ],
@@ -280,8 +279,7 @@
         "max_handles": 1,
         "max_out_of_line": 24,
         "has_padding": true,
-        "has_flexible_envelope": true,
-        "is_resource": true
+        "has_flexible_envelope": true
       }
     }
   ],
@@ -322,8 +320,7 @@
         "max_handles": 1,
         "max_out_of_line": 8,
         "has_padding": true,
-        "has_flexible_envelope": true,
-        "is_resource": true
+        "has_flexible_envelope": true
       }
     }
   ],

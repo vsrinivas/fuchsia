@@ -49,12 +49,10 @@ struct ExampleUseOfVectors {
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
 
   ::fidl::VectorView<uint8_t> vector_of_uint8 = {};
 
   ::fidl::VectorView<::fidl::VectorView<bool>> vector_of_vector_of_bool = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:

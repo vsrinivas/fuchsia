@@ -57,24 +57,8 @@ struct TypeShape {
 
   bool has_flexible_envelope;
 
-  // |is_resource| is true if this type is a resource type.
-  //
-  // A FIDL type is either a value type or a resource type. Resource types include:
-  // * handle and handle<H> where H is a handle subtype
-  // * P and request<P> where P is the name of a protocol
-  // * a struct, table, or union declared with the resource modifier
-  // * a type alias that refers to a resource type
-  // * a newtype (FTP-052) that wraps a resource type
-  // * T? where T is a non-nullable resource type
-  // * array<T> and vector<T> where T is a resource type
-  //
-  // All other types are value types.
-  //
-  // For further details, see FTP-057: Default No Handles.
-  bool is_resource;
-
-  // TODO(fxbug.dev/36337): These accessors are for backward compatibility with current code, and could be
-  // removed in the future.
+  // TODO(fxbug.dev/36337): These accessors are for backward compatibility with current code, and
+  // could be removed in the future.
   uint32_t InlineSize() const { return inline_size; }
   uint32_t Alignment() const { return alignment; }
   uint32_t Depth() const { return depth; }
@@ -86,8 +70,9 @@ struct TypeShape {
 
 // |FieldShape| describes the offset and padding information for members that are contained within
 // an aggregate type (e.g. struct/union).
-// TODO(fxbug.dev/36337): We can update |FieldShape| to be a simple offset+padding struct, and remove the
-// getter/setter methods since they're purely for backward-compatibility with existing code.
+// TODO(fxbug.dev/36337): We can update |FieldShape| to be a simple offset+padding struct, and
+// remove the getter/setter methods since they're purely for backward-compatibility with existing
+// code.
 struct FieldShape {
   explicit FieldShape(const flat::StructMember&, const WireFormat wire_format);
   explicit FieldShape(const flat::TableMemberUsed&, const WireFormat wire_format);

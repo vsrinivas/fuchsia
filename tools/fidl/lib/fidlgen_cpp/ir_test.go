@@ -12,21 +12,21 @@ import (
 
 var mockProtocol = protocolInner{
 	Methods: []Method{
-		{
+		methodInner{
 			Name:        "OneWay",
 			HasRequest:  true,
 			HasResponse: false,
-		},
-		{
+		}.build(),
+		methodInner{
 			Name:        "TwoWay",
 			HasRequest:  true,
 			HasResponse: true,
-		},
-		{
+		}.build(),
+		methodInner{
 			Name:        "Event",
 			HasRequest:  false,
 			HasResponse: true,
-		},
+		}.build(),
 	},
 }.build()
 

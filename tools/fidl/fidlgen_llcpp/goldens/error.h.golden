@@ -121,9 +121,6 @@ class Example_foo_Result {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -168,10 +165,8 @@ struct Example_foo_Response {
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   int64_t y = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -299,7 +294,6 @@ class Example final {
     static constexpr uint32_t MaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
@@ -442,7 +436,6 @@ class Example final {
     static constexpr uint32_t AltMaxOutOfLine = 4294967295;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = true;
-    static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = fooResponse;

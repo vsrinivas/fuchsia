@@ -1533,6 +1533,7 @@ TEST(UnknownEnvelope, NumUnknownHandlesOverflows) {
 }
 #endif
 
+#ifdef __Fuchsia__
 TEST(UnknownEnvelope, NumUnknownHandlesExceedsUnknownArraySize) {
   uint8_t bytes[] = {
       2,   0,   0,   0,   0,   0,   0,   0,    // max ordinal
@@ -1552,9 +1553,9 @@ TEST(UnknownEnvelope, NumUnknownHandlesExceedsUnknownArraySize) {
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_STR_EQ(error, "number of unknown handles exceeds unknown handle array size");
 }
+#endif
 
 #ifdef __Fuchsia__
-
 TEST(UnknownEnvelope, DecodeUnknownHandle) {
   uint8_t bytes[] = {
       2,   0,   0,   0,   0,   0,   0,   0,    // max ordinal

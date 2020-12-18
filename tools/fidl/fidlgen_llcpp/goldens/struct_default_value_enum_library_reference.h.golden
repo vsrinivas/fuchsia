@@ -51,10 +51,8 @@ struct Foo {
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   ::llcpp::dependent::MyEnum field = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:

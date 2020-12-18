@@ -8,11 +8,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace byteandbytes {
-
-void ByteAndBytes::_CloseHandles() {}
-
-}  // namespace byteandbytes
+namespace byteandbytes {}  // namespace byteandbytes
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

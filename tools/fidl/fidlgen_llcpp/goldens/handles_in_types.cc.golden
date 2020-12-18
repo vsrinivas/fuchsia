@@ -29,7 +29,6 @@ void ::llcpp::fidl::test::handlesintypes::UnionWithHandle::
   static_assert(offsetof(UnionWithHandle, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
 void UnionWithHandle::_CloseHandles() {
   switch (ordinal_) {
     case Ordinal::kH: {

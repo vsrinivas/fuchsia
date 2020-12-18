@@ -140,7 +140,6 @@ struct Handles {
   static constexpr uint32_t PrimarySize = 132;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = true;
 
   ::zx::handle plain_handle = {};
 
@@ -207,6 +206,7 @@ struct Handles {
   ::zx::channel some_protocol = {};
 
   ::zx::channel request_some_protocol = {};
+
   void _CloseHandles();
 
   class UnownedEncodedMessage final {

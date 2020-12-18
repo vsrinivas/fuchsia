@@ -8,11 +8,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace escaping {
-
-void DocCommentWithQuotes::_CloseHandles() {}
-
-}  // namespace escaping
+namespace escaping {}  // namespace escaping
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

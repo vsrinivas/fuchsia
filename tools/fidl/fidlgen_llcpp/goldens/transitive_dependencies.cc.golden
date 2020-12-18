@@ -8,15 +8,7 @@ namespace llcpp {
 
 namespace fidl {
 namespace test {
-namespace transitivedependencies {
-
-void Baz::_CloseHandles() {
-  if constexpr (::llcpp::middle::Bar::IsResource) {
-    g._CloseHandles();
-  }
-}
-
-}  // namespace transitivedependencies
+namespace transitivedependencies {}  // namespace transitivedependencies
 }  // namespace test
 }  // namespace fidl
 }  // namespace llcpp

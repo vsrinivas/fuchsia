@@ -41,7 +41,6 @@ struct Expected {
   uint32_t depth = 0;
   bool has_padding = false;
   bool has_flexible_envelope = false;
-  bool is_resource = false;
 };
 
 void CheckTypeShape(const fidl::TypeShape& actual, Expected expected) {
@@ -52,7 +51,6 @@ void CheckTypeShape(const fidl::TypeShape& actual, Expected expected) {
   EXPECT_EQ(actual.Depth(), expected.depth);
   EXPECT_EQ(actual.HasPadding(), expected.has_padding);
   EXPECT_EQ(actual.HasFlexibleEnvelope(), expected.has_flexible_envelope);
-  EXPECT_EQ(actual.is_resource, expected.is_resource);
 }
 
 void CheckTypeShape(const fidl::flat::Object* actual, Expected expected_old,
@@ -290,7 +288,6 @@ resource struct ThreeHandlesOneOptional {
                                                     .inline_size = 4,
                                                     .alignment = 4,
                                                     .max_handles = 1,
-                                                    .is_resource = true,
                                                 }));
   ASSERT_EQ(one_handle->members.size(), 1);
   ASSERT_NO_FAILURES(CheckFieldShape(one_handle->members[0], ExpectedField{}));
@@ -301,7 +298,6 @@ resource struct ThreeHandlesOneOptional {
                                                      .inline_size = 8,
                                                      .alignment = 4,
                                                      .max_handles = 2,
-                                                     .is_resource = true,
                                                  }));
   ASSERT_EQ(two_handles->members.size(), 2);
   ASSERT_NO_FAILURES(CheckFieldShape(two_handles->members[0], ExpectedField{}));
@@ -315,7 +311,6 @@ resource struct ThreeHandlesOneOptional {
                                                                     .inline_size = 12,
                                                                     .alignment = 4,
                                                                     .max_handles = 3,
-                                                                    .is_resource = true,
                                                                 }));
   ASSERT_EQ(three_handles_one_optional->members.size(), 3);
   ASSERT_NO_FAILURES(CheckFieldShape(three_handles_one_optional->members[0], ExpectedField{}));
@@ -553,7 +548,6 @@ resource table TableWithOneHandle {
                                                     .depth = 2,
                                                     .has_padding = true,
                                                     .has_flexible_envelope = true,
-                                                    .is_resource = true,
                                                 }));
 }
 
@@ -964,7 +958,6 @@ resource union ManyHandleUnion {
                                         .alignment = 4,
                                         .max_handles = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     },
                                     Expected{
                                         .inline_size = 24,
@@ -973,7 +966,6 @@ resource union ManyHandleUnion {
                                         .max_handles = 1,
                                         .depth = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     }));
   ASSERT_EQ(one_handle_union->members.size(), 3);
   ASSERT_NOT_NULL(one_handle_union->members[0].maybe_used);
@@ -1017,7 +1009,6 @@ resource union ManyHandleUnion {
                                         .max_handles = 8,
                                         .depth = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     },
                                     Expected{
                                         .inline_size = 24,
@@ -1026,7 +1017,6 @@ resource union ManyHandleUnion {
                                         .max_handles = 8,
                                         .depth = 2,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     }));
   ASSERT_EQ(many_handle_union->members.size(), 3);
   ASSERT_NOT_NULL(many_handle_union->members[1].maybe_used);
@@ -1228,7 +1218,6 @@ resource table TableWithHandleStructVector {
                                                        .max_handles = 8,
                                                        .depth = 1,
                                                        .has_padding = true,
-                                                       .is_resource = true,
                                                    }));
 
   auto handle_nullable_vector = test_library.LookupStruct("HandleNullableVector");
@@ -1240,7 +1229,6 @@ resource table TableWithHandleStructVector {
                                                                 .max_handles = 8,
                                                                 .depth = 1,
                                                                 .has_padding = true,
-                                                                .is_resource = true,
                                                             }));
 
   auto unbounded_handle_vector = test_library.LookupStruct("UnboundedHandleVector");
@@ -1253,7 +1241,6 @@ resource table TableWithHandleStructVector {
                                         .max_handles = std::numeric_limits<uint32_t>::max(),
                                         .depth = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     }));
 
   auto table_with_unbounded_handle_vector =
@@ -1268,7 +1255,6 @@ resource table TableWithHandleStructVector {
                                         .depth = 3,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
-                                        .is_resource = true,
                                     }));
 
   auto handle_struct_vector = test_library.LookupStruct("HandleStructVector");
@@ -1280,7 +1266,6 @@ resource table TableWithHandleStructVector {
                                                               .max_handles = 8,
                                                               .depth = 1,
                                                               .has_padding = true,
-                                                              .is_resource = true,
                                                           }));
 
   auto handle_table_vector = test_library.LookupStruct("HandleTableVector");
@@ -1293,7 +1278,6 @@ resource table TableWithHandleStructVector {
                                                              .depth = 3,
                                                              .has_padding = true,
                                                              .has_flexible_envelope = true,
-                                                             .is_resource = true,
                                                          }));
 
   auto table_with_handle_struct_vector = test_library.LookupTable("TableWithHandleStructVector");
@@ -1307,7 +1291,6 @@ resource table TableWithHandleStructVector {
                                                           .depth = 3,
                                                           .has_padding = true,
                                                           .has_flexible_envelope = true,
-                                                          .is_resource = true,
                                                       }));
 }
 
@@ -1478,7 +1461,6 @@ resource table TableWithNullableHandleArray {
                                                       .inline_size = 32,
                                                       .alignment = 4,
                                                       .max_handles = 8,
-                                                      .is_resource = true,
                                                   }));
 
   auto table_with_handle_array = test_library.LookupTable("TableWithHandleArray");
@@ -1491,7 +1473,6 @@ resource table TableWithNullableHandleArray {
                                                                  .depth = 2,
                                                                  .has_padding = false,
                                                                  .has_flexible_envelope = true,
-                                                                 .is_resource = true,
                                                              }));
 
   auto nullable_handle_array = test_library.LookupStruct("NullableHandleArray");
@@ -1500,7 +1481,6 @@ resource table TableWithNullableHandleArray {
                                                                .inline_size = 32,
                                                                .alignment = 4,
                                                                .max_handles = 8,
-                                                               .is_resource = true,
                                                            }));
 
   auto table_with_nullable_handle_array = test_library.LookupTable("TableWithNullableHandleArray");
@@ -1514,7 +1494,6 @@ resource table TableWithNullableHandleArray {
                                                            .depth = 2,
                                                            .has_padding = false,
                                                            .has_flexible_envelope = true,
-                                                           .is_resource = true,
                                                        }));
 }
 
@@ -1910,7 +1889,6 @@ resource struct UsingOptRequestSomeProtocol {
                                                              .inline_size = 4,
                                                              .alignment = 4,
                                                              .max_handles = 1,
-                                                             .is_resource = true,
                                                          }));
 
   auto using_opt_some_protocol = test_library.LookupStruct("UsingOptSomeProtocol");
@@ -1919,7 +1897,6 @@ resource struct UsingOptRequestSomeProtocol {
                                                                  .inline_size = 4,
                                                                  .alignment = 4,
                                                                  .max_handles = 1,
-                                                                 .is_resource = true,
                                                              }));
 
   auto using_request_some_protocol = test_library.LookupStruct("UsingRequestSomeProtocol");
@@ -1928,7 +1905,6 @@ resource struct UsingOptRequestSomeProtocol {
                                                                      .inline_size = 4,
                                                                      .alignment = 4,
                                                                      .max_handles = 1,
-                                                                     .is_resource = true,
                                                                  }));
 
   auto using_opt_request_some_protocol = test_library.LookupStruct("UsingOptRequestSomeProtocol");
@@ -1937,7 +1913,6 @@ resource struct UsingOptRequestSomeProtocol {
                                                                          .inline_size = 4,
                                                                          .alignment = 4,
                                                                          .max_handles = 1,
-                                                                         .is_resource = true,
                                                                      }));
 }
 
@@ -2005,7 +1980,6 @@ struct ExternalSimpleStruct {
                                                         .max_handles = 32,
                                                         .depth = 1,
                                                         .has_padding = true,
-                                                        .is_resource = true,
                                                     }));
 }
 
@@ -2029,7 +2003,6 @@ protocol MessagePort {
                                                      .inline_size = 4,
                                                      .alignment = 4,
                                                      .max_handles = 1,
-                                                     .is_resource = true,
                                                  }));
   ASSERT_EQ(web_message->members.size(), 1);
   ASSERT_NO_FAILURES(CheckFieldShape(web_message->members[0], ExpectedField{}));
@@ -2046,21 +2019,18 @@ protocol MessagePort {
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     },
                                     Expected{
                                         .inline_size = 24,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     },
                                     Expected{
                                         .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     }));
   ASSERT_EQ(post_message_request->members.size(), 1);
   ASSERT_NO_FAILURES(
@@ -2087,7 +2057,6 @@ protocol MessagePort {
                                                      .inline_size = 4,
                                                      .alignment = 4,
                                                      .max_handles = 1,
-                                                     .is_resource = true,
                                                  }));
 
   auto message_port = library.LookupProtocol("MessagePort");
@@ -2102,21 +2071,18 @@ protocol MessagePort {
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     },
                                     Expected{
                                         .inline_size = 24,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     },
                                     Expected{
                                         .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     }));
 }
 
@@ -2140,7 +2106,6 @@ protocol MessagePort {
                                                      .inline_size = 4,
                                                      .alignment = 4,
                                                      .max_handles = 1,
-                                                     .is_resource = true,
                                                  }));
 
   auto message_port = library.LookupProtocol("MessagePort");
@@ -2155,21 +2120,18 @@ protocol MessagePort {
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     },
                                     Expected{
                                         .inline_size = 24,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     },
                                     Expected{
                                         .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     }));
 }
 
@@ -2193,7 +2155,6 @@ protocol MessagePort {
                                                      .inline_size = 4,
                                                      .alignment = 4,
                                                      .max_handles = 1,
-                                                     .is_resource = true,
                                                  }));
 
   auto message_port = library.LookupProtocol("MessagePort");
@@ -2208,21 +2169,18 @@ protocol MessagePort {
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     },
                                     Expected{
                                         .inline_size = 24,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     },
                                     Expected{
                                         .inline_size = 8,
                                         .alignment = 8,
                                         .max_handles = 1,
                                         .has_padding = true,
-                                        .is_resource = true,
                                     }));
 }
 
@@ -2269,7 +2227,6 @@ resource struct TheStruct {
                                      .max_handles = std::numeric_limits<uint32_t>::max(),
                                      .depth = std::numeric_limits<uint32_t>::max(),
                                      .has_padding = true,
-                                     .is_resource = true,
                                  }));
   ASSERT_EQ(the_struct->members.size(), 2);
   ASSERT_NO_FAILURES(CheckFieldShape(the_struct->members[0], ExpectedField{
@@ -2343,7 +2300,6 @@ resource struct B {
                                    .max_handles = std::numeric_limits<uint32_t>::max(),
                                    .depth = std::numeric_limits<uint32_t>::max(),
                                    .has_padding = true,
-                                   .is_resource = true,
                                }));
 
   auto struct_b = library.LookupStruct("B");
@@ -2356,7 +2312,6 @@ resource struct B {
                                    .max_handles = std::numeric_limits<uint32_t>::max(),
                                    .depth = std::numeric_limits<uint32_t>::max(),
                                    .has_padding = true,
-                                   .is_resource = true,
                                }));
 }
 
@@ -2431,7 +2386,6 @@ enum Priority {
                                                 .alignment = 8,
                                                 .max_handles = 1,
                                                 .has_padding = true,
-                                                .is_resource = true,
                                             }));
 
   auto value = library.LookupStruct("Value");
@@ -2444,7 +2398,6 @@ enum Priority {
                  .max_handles = 1,
                  .depth = 1,
                  .has_padding = true,  // because the size of |Priority| defaults to uint32
-                 .is_resource = true,
              }));
 
   auto diff_entry = library.LookupStruct("DiffEntry");
@@ -2457,7 +2410,6 @@ enum Priority {
                                      .max_handles = 3,
                                      .depth = 2,
                                      .has_padding = true,  // because |Value| has padding
-                                     .is_resource = true,
                                  }));
 }
 
@@ -2787,7 +2739,6 @@ resource struct A {
                                                   .max_handles = 0,
                                                   .depth = 1,
                                                   .has_padding = true,
-                                                  .is_resource = true,
                                               }));
 }
 

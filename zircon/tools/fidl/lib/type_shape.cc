@@ -79,8 +79,6 @@ bool HasPadding(const flat::Object& object, const WireFormat wire_format);
 [[maybe_unused]] bool HasPadding(const flat::Object* object, const WireFormat wire_format);
 bool HasFlexibleEnvelope(const flat::Object& object, const WireFormat wire_format);
 [[maybe_unused]] bool HasFlexibleEnvelope(const flat::Object* object, const WireFormat wire_format);
-bool IsResource(const flat::Object& object, const WireFormat wire_format);
-bool IsResource(const flat::Object* object, const WireFormat wire_format);
 
 DataSize AlignedSize(const flat::Object& object, const WireFormat wire_format) {
   return AlignTo(UnalignedSize(object, wire_format), Alignment(object, wire_format));
@@ -997,98 +995,6 @@ class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
   std::any Visit(const flat::Protocol& object) override { return false; }
 };
 
-// TODO(fxbug.dev/7989): Instead of traversing the types to determine if they
-// transitively contain handles, we should rely on the `resource` FIDL keyword.
-class IsResourceVisitor final : public TypeShapeVisitor<bool> {
- public:
-  using TypeShapeVisitor<bool>::TypeShapeVisitor;
-
-  std::any Visit(const flat::ArrayType& object) override {
-    return IsResource(object.element_type, wire_format());
-  }
-
-  std::any Visit(const flat::VectorType& object) override {
-    return IsResource(object.element_type, wire_format());
-  }
-
-  std::any Visit(const flat::StringType& object) override { return false; }
-
-  std::any Visit(const flat::HandleType& object) override { return true; }
-
-  std::any Visit(const flat::PrimitiveType& object) override { return false; }
-
-  std::any Visit(const flat::IdentifierType& object) override {
-    thread_local RecursionDetector recursion_detector;
-
-    auto guard = recursion_detector.Enter(&object);
-    if (!guard) {
-      return false;
-    }
-
-    return IsResource(object.type_decl, wire_format());
-  }
-
-  std::any Visit(const flat::RequestHandleType& object) override { return true; }
-
-  std::any Visit(const flat::Enum& object) override { return false; }
-
-  std::any Visit(const flat::Bits& object) override { return false; }
-
-  std::any Visit(const flat::Service& object) override { return true; }
-
-  std::any Visit(const flat::Struct& object) override {
-    for (const auto& member : object.members) {
-      if (IsResource(member, wire_format())) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  std::any Visit(const flat::Struct::Member& object) override {
-    return IsResource(object.type_ctor->type, wire_format());
-  }
-
-  std::any Visit(const flat::Table& object) override {
-    for (const auto& member : object.members) {
-      if (IsResource(member, wire_format())) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  std::any Visit(const flat::Table::Member& object) override {
-    return object.maybe_used ? IsResource(*object.maybe_used, wire_format()) : false;
-  }
-
-  std::any Visit(const flat::Table::Member::Used& object) override {
-    return IsResource(object.type_ctor->type, wire_format());
-  }
-
-  std::any Visit(const flat::Union& object) override {
-    for (const auto& member : object.members) {
-      if (IsResource(member, wire_format())) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  std::any Visit(const flat::Union::Member& object) override {
-    return object.maybe_used ? IsResource(*object.maybe_used, wire_format()) : false;
-  }
-
-  std::any Visit(const flat::Union::Member::Used& object) override {
-    return IsResource(object.type_ctor->type, wire_format());
-  }
-
-  std::any Visit(const flat::Protocol& object) override { return true; }
-};
-
 DataSize UnalignedSize(const flat::Object& object, const WireFormat wire_format) {
   UnalignedSizeVisitor v(wire_format);
   return object.Accept(&v);
@@ -1151,15 +1057,6 @@ bool HasFlexibleEnvelope(const flat::Object& object, const WireFormat wire_forma
   return HasFlexibleEnvelope(*object, wire_format);
 }
 
-bool IsResource(const flat::Object& object, const WireFormat wire_format) {
-  IsResourceVisitor v(wire_format);
-  return object.Accept(&v);
-}
-
-bool IsResource(const flat::Object* object, const WireFormat wire_format) {
-  return IsResource(*object, wire_format);
-}
-
 }  // namespace
 
 namespace fidl {
@@ -1178,8 +1075,7 @@ TypeShape::TypeShape(const flat::Object& object, WireFormat wire_format)
       max_handles(::MaxHandles(object)),
       max_out_of_line(::MaxOutOfLine(object, wire_format)),
       has_padding(::HasPadding(object, wire_format)),
-      has_flexible_envelope(::HasFlexibleEnvelope(object, wire_format)),
-      is_resource(::IsResource(object, wire_format)) {}
+      has_flexible_envelope(::HasFlexibleEnvelope(object, wire_format)) {}
 
 TypeShape::TypeShape(const flat::Object* object, WireFormat wire_format)
     : TypeShape(*object, wire_format) {}

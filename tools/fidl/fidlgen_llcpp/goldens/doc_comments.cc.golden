@@ -10,10 +10,6 @@ namespace fidl {
 namespace test {
 namespace doccomments {
 
-void Table::_CloseHandles() {}
-
-void Struct::_CloseHandles() {}
-
 void ::llcpp::fidl::test::doccomments::StrictUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictUnion) == sizeof(fidl_xunion_t));
@@ -22,8 +18,6 @@ void ::llcpp::fidl::test::doccomments::StrictUnion::
   static_assert(offsetof(StrictUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void StrictUnion::_CloseHandles() {}
 
 namespace {
 
@@ -232,8 +226,6 @@ void ::llcpp::fidl::test::doccomments::FlexibleUnion::
   static_assert(offsetof(FlexibleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void FlexibleUnion::_CloseHandles() {}
 
 }  // namespace doccomments
 }  // namespace test

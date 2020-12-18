@@ -29,8 +29,6 @@ void ::llcpp::fidl::test::placementofattributes::ExampleXUnion::
                 offsetof(fidl_xunion_t, envelope));
 }
 
-void ExampleXUnion::_CloseHandles() {}
-
 void ::llcpp::fidl::test::placementofattributes::ExampleUnion::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(ExampleUnion) == sizeof(fidl_xunion_t));
@@ -39,12 +37,6 @@ void ::llcpp::fidl::test::placementofattributes::ExampleUnion::
   static_assert(offsetof(ExampleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-void ExampleUnion::_CloseHandles() {}
-
-void ExampleTable::_CloseHandles() {}
-
-void ExampleStruct::_CloseHandles() {}
 
 namespace {
 

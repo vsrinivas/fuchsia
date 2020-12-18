@@ -130,8 +130,7 @@
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": false,
-            "has_flexible_envelope": false,
-            "is_resource": false
+            "has_flexible_envelope": false
           },
           "has_response": true,
           "maybe_response": [
@@ -161,8 +160,7 @@
             "max_handles": 0,
             "max_out_of_line": 0,
             "has_padding": true,
-            "has_flexible_envelope": false,
-            "is_resource": false
+            "has_flexible_envelope": false
           },
           "is_composed": false
         }
@@ -224,8 +222,7 @@
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false,
-        "is_resource": false
+        "has_flexible_envelope": false
       }
     },
     {
@@ -264,8 +261,7 @@
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": true,
-        "has_flexible_envelope": false,
-        "is_resource": false
+        "has_flexible_envelope": false
       }
     },
     {
@@ -304,8 +300,7 @@
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false,
-        "is_resource": false
+        "has_flexible_envelope": false
       }
     },
     {
@@ -348,8 +343,7 @@
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": false,
-        "is_resource": false
+        "has_flexible_envelope": false
       }
     },
     {
@@ -390,8 +384,7 @@
         "max_handles": 1,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false,
-        "is_resource": true
+        "has_flexible_envelope": false
       }
     },
     {
@@ -431,8 +424,7 @@
         "max_handles": 1,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false,
-        "is_resource": true
+        "has_flexible_envelope": false
       }
     },
     {
@@ -472,8 +464,7 @@
         "max_handles": 1,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false,
-        "is_resource": true
+        "has_flexible_envelope": false
       }
     },
     {
@@ -512,8 +503,7 @@
         "max_handles": 0,
         "max_out_of_line": 0,
         "has_padding": false,
-        "has_flexible_envelope": false,
-        "is_resource": false
+        "has_flexible_envelope": false
       }
     },
     {
@@ -553,8 +543,7 @@
         "max_handles": 0,
         "max_out_of_line": 8,
         "has_padding": true,
-        "has_flexible_envelope": false,
-        "is_resource": false
+        "has_flexible_envelope": false
       }
     },
     {
@@ -594,8 +583,7 @@
         "max_handles": 0,
         "max_out_of_line": 8,
         "has_padding": true,
-        "has_flexible_envelope": false,
-        "is_resource": false
+        "has_flexible_envelope": false
       }
     }
   ],
@@ -650,8 +638,7 @@
         "max_handles": 0,
         "max_out_of_line": 8,
         "has_padding": true,
-        "has_flexible_envelope": false,
-        "is_resource": false
+        "has_flexible_envelope": false
       }
     }
   ],

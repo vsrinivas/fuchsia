@@ -361,9 +361,6 @@ class Table final {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -646,9 +643,6 @@ class StrictUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -732,9 +726,6 @@ class FlexibleUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -773,13 +764,11 @@ struct Struct {
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   // struct member comment #1
   //
   // struct member comment #3
   int32_t Field = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -907,7 +896,6 @@ class Interface final {
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
 
@@ -1042,7 +1030,6 @@ class Interface final {
     static constexpr uint32_t MaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 

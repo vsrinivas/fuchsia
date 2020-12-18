@@ -15,19 +15,13 @@ class {{ .Name }};
       {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.LLPointer false true }}
       break;
     }
-  {{- else if .Type.ExternalDeclaration }}
-    case Ordinal::{{ .TagName }}:
-      if constexpr ({{ .Type.LLClass }}::IsResource) {
-        {{- template "TypeCloseHandles" NewTypedArgument .Name .Type .Type.LLPointer false true }}
-      }
-      break;
   {{- end }}
 {{- end }}
 
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "UnionDeclaration" }}
-{{ if .IsResource }}
+{{ if .IsResourceType }}
 #ifdef __Fuchsia__
 {{- end }}
 extern "C" const fidl_type_t {{ .TableType }};
@@ -102,9 +96,11 @@ class {{ .Name }} {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
   static constexpr bool HasPointer = {{ .HasPointer }};
-  static constexpr bool IsResource = {{ .IsResource }};
+
+  {{- if .IsResourceType }}
 
   void _CloseHandles();
+  {{- end }}
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -136,7 +132,7 @@ class {{ .Name }} {
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };
-{{- if .IsResource }}
+{{- if .IsResourceType }}
 #endif  // __Fuchsia__
 {{- end }}
 {{- end }}
@@ -144,7 +140,7 @@ class {{ .Name }} {
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "UnionDefinition" }}
-{{- if .IsResource }}
+{{- if .IsResourceType }}
 #ifdef __Fuchsia__
 {{- end }}
 {{- if .IsFlexible }}
@@ -167,8 +163,8 @@ void {{ .Namespace }}::{{ .Name }}::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof({{ .Name }}, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
+{{- if .IsResourceType }}
 void {{ .Name }}::_CloseHandles() {
-  {{- if .IsResource }}
   switch (ordinal_) {
   {{- range .Members }}
     {{- template "UnionMemberCloseHandles" . }}
@@ -176,9 +172,10 @@ void {{ .Name }}::_CloseHandles() {
   default:
     break;
   }
-  {{- end }}
 }
-{{- if .IsResource }}
+{{- end }}
+
+{{- if .IsResourceType }}
 #endif  // __Fuchsia__
 {{- end }}
 {{- end }}
@@ -186,7 +183,7 @@ void {{ .Name }}::_CloseHandles() {
 {{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
      emulated handles for C++. */}}
 {{- define "UnionTraits" }}
-{{ if .IsResource }}
+{{ if .IsResourceType }}
 #ifdef __Fuchsia__
 {{- end }}
 template <>
@@ -194,7 +191,7 @@ struct IsFidlType<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
 template <>
 struct IsUnion<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
 static_assert(std::is_standard_layout_v<{{ .Namespace }}::{{ .Name }}>);
-{{- if .IsResource }}
+{{- if .IsResourceType }}
 #endif  // __Fuchsia__
 {{- end }}
 {{- end }}

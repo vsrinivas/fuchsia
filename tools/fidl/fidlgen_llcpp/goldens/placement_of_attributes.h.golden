@@ -202,9 +202,6 @@ class ExampleXUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -281,9 +278,6 @@ class ExampleUnion {
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
  private:
   enum class Ordinal : fidl_xunion_tag_t {
@@ -341,9 +335,6 @@ class ExampleTable final {
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
-  static constexpr bool IsResource = false;
-
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -577,10 +568,8 @@ struct ExampleStruct {
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
 
   uint32_t member = {};
-  void _CloseHandles();
 
   class UnownedEncodedMessage final {
    public:
@@ -713,7 +702,6 @@ class ExampleProtocol final {
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool HasPointer = false;
-    static constexpr bool IsResource = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
 

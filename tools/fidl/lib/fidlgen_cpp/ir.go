@@ -37,10 +37,8 @@ var Kinds = struct {
 	Union    unionKind
 }{}
 
-type Decl interface {
-	isResource() bool
-	compileProperties(c compiler)
-}
+// A Decl is any type with a .Kind field.
+type Decl interface{}
 
 type familyKind namespacedEnumMember
 
@@ -107,8 +105,7 @@ type Type struct {
 
 	Kind typeKind
 
-	IsResource          bool
-	ExternalDeclaration bool
+	IsResource bool
 
 	DeclarationName fidl.EncodedCompoundIdentifier
 
@@ -118,37 +115,8 @@ type Type struct {
 	ElementCount int
 }
 
-func (t Type) IsPrimitiveType() bool {
+func (t *Type) IsPrimitiveType() bool {
 	return t.Kind == TypeKinds.Primitive || t.Kind == TypeKinds.Bits || t.Kind == TypeKinds.Enum
-}
-
-func (t *Type) compileProperties(c compiler) {
-	if t.DeclarationName != "" {
-		declaration, ok := c.declarations[t.DeclarationName]
-		if !ok {
-			// The declaration comes from another library.
-			t.ExternalDeclaration = true
-		} else {
-			t.IsResource = declaration.isResource()
-		}
-	} else {
-		switch t.Kind {
-		case TypeKinds.Array:
-			fallthrough
-		case TypeKinds.Vector:
-			t.ElementType.compileProperties(c)
-			t.IsResource = t.ElementType.IsResource
-			t.ExternalDeclaration = t.ElementType.ExternalDeclaration
-			t.LLClass = t.ElementType.LLClass
-			t.LLPointer = t.ElementType.LLPointer
-		case TypeKinds.Handle:
-			fallthrough
-		case TypeKinds.Request:
-			fallthrough
-		case TypeKinds.Protocol:
-			t.IsResource = true
-		}
-	}
 }
 
 type Const struct {
@@ -163,13 +131,6 @@ type Const struct {
 	Kind constKind
 }
 
-func (c Const) isResource() bool {
-	return false
-}
-
-func (co *Const) compileProperties(c compiler) {
-}
-
 type Bits struct {
 	fidl.Bits
 	Namespace string
@@ -181,13 +142,6 @@ type Bits struct {
 
 	// Kind should be default initialized.
 	Kind bitsKind
-}
-
-func (b Bits) isResource() bool {
-	return false
-}
-
-func (b *Bits) compileProperties(c compiler) {
 }
 
 type BitsMember struct {
@@ -207,13 +161,6 @@ type Enum struct {
 	Kind enumKind
 }
 
-func (e Enum) isResource() bool {
-	return false
-}
-
-func (e *Enum) compileProperties(c compiler) {
-}
-
 type EnumMember struct {
 	fidl.EnumMember
 	Name  string
@@ -231,20 +178,9 @@ type Union struct {
 	MaxOutOfLine int
 	Result       *Result
 	HasPointer   bool
-	IsResource   bool
 
 	// Kind should be default initialized.
 	Kind unionKind
-}
-
-func (u Union) isResource() bool {
-	return u.IsResource
-}
-
-func (u *Union) compileProperties(c compiler) {
-	for i := 0; i < len(u.Members); i++ {
-		u.Members[i].Type.compileProperties(c)
-	}
 }
 
 type UnionMember struct {
@@ -278,22 +214,11 @@ type Table struct {
 	MaxOutOfLine   int
 	MaxSentSize    int
 	HasPointer     bool
-	IsResource     bool
 	// Types of the members in ordinal order, "void" for reserved.
 	FrameItems []TableFrameItem
 
 	// Kind should be default initialized.
 	Kind tableKind
-}
-
-func (t Table) isResource() bool {
-	return t.IsResource
-}
-
-func (t *Table) compileProperties(c compiler) {
-	for i := 0; i < len(t.Members); i++ {
-		t.Members[i].Type.compileProperties(c)
-	}
 }
 
 type TableMember struct {
@@ -324,7 +249,6 @@ type Struct struct {
 	HasPadding    bool
 	IsResultValue bool
 	HasPointer    bool
-	IsResource    bool
 	Result        *Result
 	// Full decls needed to check if a type is memcpy compatible.
 	// Only set if it may be possible for a type to be memcpy compatible,
@@ -334,16 +258,6 @@ type Struct struct {
 
 	// Kind should be default initialized.
 	Kind structKind
-}
-
-func (s Struct) isResource() bool {
-	return s.IsResource
-}
-
-func (s *Struct) compileProperties(c compiler) {
-	for i := 0; i < len(s.Members); i++ {
-		s.Members[i].Type.compileProperties(c)
-	}
 }
 
 type StructMember struct {
@@ -424,16 +338,6 @@ func (inner protocolInner) build() *Protocol {
 	}
 }
 
-func (p *Protocol) isResource() bool {
-	return false
-}
-
-func (p *Protocol) compileProperties(c compiler) {
-	for i := 0; i < len(p.Methods); i++ {
-		p.Methods[i].compileProperties(c)
-	}
-}
-
 type Service struct {
 	fidl.Attributes
 	Namespace   string
@@ -445,13 +349,6 @@ type Service struct {
 	Kind serviceKind
 }
 
-func (s Service) isResource() bool {
-	return false
-}
-
-func (s *Service) compileProperties(c compiler) {
-}
-
 type ServiceMember struct {
 	fidl.Attributes
 	ProtocolType string
@@ -459,18 +356,35 @@ type ServiceMember struct {
 	MethodName   string
 }
 
-// TODO: There are common fields between Request and Response; consider factoring them out.
-type Method struct {
+// methodInner contains information about a Method that should be filled out by
+// the compiler.
+type methodInner struct {
+	// Private fields used to construct Method.
+	protocolName      string
+	requestTypeShape  fidl.TypeShape
+	responseTypeShape fidl.TypeShape
+	// Public fields.
 	fidl.Attributes
-	Name                 string
+	Name             string
+	Ordinal          uint64
+	HasRequest       bool
+	Request          []Parameter
+	RequestTypeName  string
+	HasResponse      bool
+	Response         []Parameter
+	ResponseTypeName string
+	Transitional     bool
+	Result           *Result
+}
+
+// Method should be created using methodInner.build().
+// TODO: Consider factoring out common fields between Request and Response.
+type Method struct {
+	methodInner
 	NameInLowerSnakeCase string
-	Ordinal              uint64
 	// The name of a constant that defines the ordinal value.
 	OrdinalName             string
-	HasRequest              bool
-	Request                 []Parameter
 	RequestSize             int
-	RequestTypeName         string
 	RequestMaxHandles       int
 	RequestMaxOutOfLine     int
 	RequestSentMaxSize      int
@@ -478,10 +392,7 @@ type Method struct {
 	RequestFlexible         bool
 	RequestHasPointer       bool
 	RequestIsResource       bool
-	HasResponse             bool
-	Response                []Parameter
 	ResponseSize            int
-	ResponseTypeName        string
 	ResponseMaxHandles      int
 	ResponseMaxOutOfLine    int
 	ResponseSentMaxSize     int
@@ -493,18 +404,70 @@ type Method struct {
 	CallbackType            string
 	ResponseHandlerType     string
 	ResponderType           string
-	Transitional            bool
-	Result                  *Result
 	LLProps                 LLProps
 }
 
-func (m *Method) compileProperties(c compiler) {
-	for i := 0; i < len(m.Request); i++ {
-		m.Request[i].Type.compileProperties(c)
+func (inner methodInner) build() Method {
+	requestIsResource := false
+	for _, p := range inner.Request {
+		if p.Type.IsResource {
+			requestIsResource = true
+			break
+		}
 	}
-	for i := 0; i < len(m.Response); i++ {
-		m.Response[i].Type.compileProperties(c)
+	responseIsResource := false
+	for _, p := range inner.Response {
+		if p.Type.IsResource {
+			responseIsResource = true
+			break
+		}
 	}
+
+	callbackType := ""
+	if inner.HasResponse {
+		callbackType = changeIfReserved(fidl.Identifier(inner.Name), "Callback")
+	}
+
+	var computedResponseReceivedMaxSize int
+	if inner.responseTypeShape.HasFlexibleEnvelope {
+		computedResponseReceivedMaxSize = (1 << 32) - 1
+	} else {
+		computedResponseReceivedMaxSize = inner.responseTypeShape.InlineSize + inner.responseTypeShape.MaxOutOfLine
+	}
+
+	m := Method{
+		methodInner:             inner,
+		NameInLowerSnakeCase:    fidl.ToSnakeCase(inner.Name),
+		OrdinalName:             fmt.Sprintf("k%s_%s_Ordinal", inner.protocolName, inner.Name),
+		RequestSize:             inner.requestTypeShape.InlineSize,
+		RequestMaxHandles:       inner.requestTypeShape.MaxHandles,
+		RequestMaxOutOfLine:     inner.requestTypeShape.MaxOutOfLine,
+		RequestSentMaxSize:      inner.requestTypeShape.InlineSize + inner.requestTypeShape.MaxOutOfLine,
+		RequestPadding:          inner.requestTypeShape.HasPadding,
+		RequestFlexible:         inner.requestTypeShape.HasFlexibleEnvelope,
+		RequestHasPointer:       inner.requestTypeShape.Depth > 0,
+		RequestIsResource:       requestIsResource,
+		ResponseSize:            inner.responseTypeShape.InlineSize,
+		ResponseMaxHandles:      inner.responseTypeShape.MaxHandles,
+		ResponseMaxOutOfLine:    inner.responseTypeShape.MaxOutOfLine,
+		ResponseSentMaxSize:     inner.responseTypeShape.InlineSize + inner.responseTypeShape.MaxOutOfLine,
+		ResponseReceivedMaxSize: computedResponseReceivedMaxSize,
+		ResponsePadding:         inner.responseTypeShape.HasPadding,
+		ResponseFlexible:        inner.responseTypeShape.HasFlexibleEnvelope,
+		ResponseHasPointer:      inner.responseTypeShape.Depth > 0,
+		ResponseIsResource:      responseIsResource,
+		CallbackType:            callbackType,
+		ResponseHandlerType:     fmt.Sprintf("%s_%s_ResponseHandler", inner.protocolName, inner.Name),
+		ResponderType:           fmt.Sprintf("%s_%s_Responder", inner.protocolName, inner.Name),
+	}
+	m.LLProps = LLProps{
+		ProtocolName:      inner.protocolName,
+		LinearizeRequest:  len(inner.Request) > 0 && inner.requestTypeShape.Depth > 0,
+		LinearizeResponse: len(inner.Response) > 0 && inner.responseTypeShape.Depth > 0,
+		ClientContext:     m.buildLLContextProps(clientContext),
+		ServerContext:     m.buildLLContextProps(serverContext),
+	}
+	return m
 }
 
 type methodKind int
@@ -919,7 +882,6 @@ type compiler struct {
 	namespace          string
 	symbolPrefix       string
 	decls              fidl.DeclInfoMap
-	declarations       map[fidl.EncodedCompoundIdentifier]Decl
 	library            fidl.LibraryIdentifier
 	handleTypes        map[fidl.HandleSubtype]struct{}
 	namespaceFormatter func(fidl.LibraryIdentifier, string) string
@@ -1027,9 +989,12 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		r.Decl = fmt.Sprintf("::std::array<%s, %v>", t.Decl, *val.ElementCount)
 		r.FullDecl = fmt.Sprintf("::std::array<%s, %v>", t.FullDecl, *val.ElementCount)
 		r.LLDecl = fmt.Sprintf("::fidl::Array<%s, %v>", t.LLDecl, *val.ElementCount)
+		r.LLPointer = t.LLPointer
+		r.LLClass = t.LLClass
 		r.LLFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Array
+		r.IsResource = t.IsResource
 		r.ElementType = &t
 		r.ElementCount = *val.ElementCount
 	case fidl.VectorType:
@@ -1043,8 +1008,11 @@ func (c *compiler) compileType(val fidl.Type) Type {
 			r.Decl = fmt.Sprintf("::std::vector<%s>", t.Decl)
 			r.FullDecl = fmt.Sprintf("::std::vector<%s>", t.FullDecl)
 		}
+		r.LLPointer = t.LLPointer
+		r.LLClass = t.LLClass
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Vector
+		r.IsResource = t.IsResource
 		r.ElementType = &t
 	case fidl.StringType:
 		r.LLDecl = "::fidl::StringView"
@@ -1065,6 +1033,7 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		r.LLFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Handle
+		r.IsResource = true
 	case fidl.RequestType:
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
 			c.compileCompoundIdentifier(val.RequestSubtype, "", "", false))
@@ -1074,6 +1043,7 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		r.LLFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Request
+		r.IsResource = true
 	case fidl.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.FullDecl = r.Decl
@@ -1095,6 +1065,7 @@ func (c *compiler) compileType(val fidl.Type) Type {
 			r.LLFamily = FamilyKinds.Reference
 			r.NeedsDtor = true
 			r.Kind = TypeKinds.Protocol
+			r.IsResource = true
 		} else {
 			switch declType {
 			case fidl.BitsDeclType:
@@ -1112,17 +1083,20 @@ func (c *compiler) compileType(val fidl.Type) Type {
 				r.LLFamily = FamilyKinds.Reference
 				r.LLClass = ft
 				r.LLPointer = val.Nullable
+				r.IsResource = declInfo.IsResourceType()
 			case fidl.TableDeclType:
 				r.Kind = TypeKinds.Table
 				r.DeclarationName = val.Identifier
 				r.LLFamily = FamilyKinds.Reference
 				r.LLClass = ft
 				r.LLPointer = val.Nullable
+				r.IsResource = declInfo.IsResourceType()
 			case fidl.UnionDeclType:
 				r.Kind = TypeKinds.Union
 				r.DeclarationName = val.Identifier
 				r.LLFamily = FamilyKinds.Reference
 				r.LLClass = ft
+				r.IsResource = declInfo.IsResourceType()
 			default:
 				panic(fmt.Sprintf("unknown declaration type: %v", declType))
 			}
@@ -1237,7 +1211,7 @@ const (
 	serverContext LLContext = iota
 )
 
-func (m Method) NewLLContextProps(context LLContext) LLContextProps {
+func (m Method) buildLLContextProps(context LLContext) LLContextProps {
 	stackAllocRequest := false
 	stackAllocResponse := false
 	if context == clientContext {
@@ -1264,80 +1238,39 @@ func (m Method) NewLLContextProps(context LLContext) LLContextProps {
 	}
 }
 
-func (m Method) NewLLProps(protocolName string, reqTypeShape fidl.TypeShape, respTypeShape fidl.TypeShape) LLProps {
-	return LLProps{
-		ProtocolName:      protocolName,
-		LinearizeRequest:  len(m.Request) > 0 && reqTypeShape.Depth > 0,
-		LinearizeResponse: len(m.Response) > 0 && respTypeShape.Depth > 0,
-		ClientContext:     m.NewLLContextProps(clientContext),
-		ServerContext:     m.NewLLContextProps(serverContext),
-	}
-}
-
 func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 	protocolName := c.compileCompoundIdentifier(val.Name, "", "", false)
 	methods := []Method{}
 	for _, v := range val.Methods {
 		name := changeIfReserved(v.Name, "")
-		callbackType := ""
-		if v.HasResponse {
-			callbackType = changeIfReserved(v.Name, "Callback")
-		}
 		responseTypeNameSuffix := "ResponseTable"
 		if !v.HasRequest {
 			responseTypeNameSuffix = "EventTable"
 		}
 
 		var result *Result
-		if v.HasResponse && len(v.Response) == 1 && v.Response[0].Name == "result" {
+		if v.HasResponse && len(v.Response) == 1 {
+			// If the method uses the error syntax, Response[0] will be a union
+			// that was placed in c.resultForUnion. Otherwise, this will be nil.
 			result = c.resultForUnion[v.Response[0].Type.Identifier]
 		}
 
-		var computedResponseReceivedMaxSize int
-		if v.ResponseTypeShapeV1.HasFlexibleEnvelope {
-			computedResponseReceivedMaxSize = (1 << 32) - 1
-		} else {
-			computedResponseReceivedMaxSize = v.ResponseTypeShapeV1.InlineSize + v.ResponseTypeShapeV1.MaxOutOfLine
-		}
-
-		m := Method{
-			Attributes:              v.Attributes,
-			Name:                    name,
-			NameInLowerSnakeCase:    fidl.ToSnakeCase(name),
-			Ordinal:                 v.Ordinal,
-			OrdinalName:             fmt.Sprintf("k%s_%s_Ordinal", protocolName, v.Name),
-			HasRequest:              v.HasRequest,
-			Request:                 c.compileParameterArray(v.Request),
-			RequestSize:             v.RequestTypeShapeV1.InlineSize,
-			RequestTypeName:         fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, protocolName, v.Name),
-			RequestMaxHandles:       v.RequestTypeShapeV1.MaxHandles,
-			RequestMaxOutOfLine:     v.RequestTypeShapeV1.MaxOutOfLine,
-			RequestSentMaxSize:      v.RequestTypeShapeV1.InlineSize + v.RequestTypeShapeV1.MaxOutOfLine,
-			RequestPadding:          v.RequestTypeShapeV1.HasPadding,
-			RequestFlexible:         v.RequestTypeShapeV1.HasFlexibleEnvelope,
-			RequestHasPointer:       v.RequestTypeShapeV1.Depth > 0,
-			RequestIsResource:       v.RequestTypeShapeV1.IsResource,
-			HasResponse:             v.HasResponse,
-			Response:                c.compileParameterArray(v.Response),
-			ResponseSize:            v.ResponseTypeShapeV1.InlineSize,
-			ResponseTypeName:        fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, protocolName, v.Name, responseTypeNameSuffix),
-			ResponseMaxHandles:      v.ResponseTypeShapeV1.MaxHandles,
-			ResponseMaxOutOfLine:    v.ResponseTypeShapeV1.MaxOutOfLine,
-			ResponseSentMaxSize:     v.ResponseTypeShapeV1.InlineSize + v.ResponseTypeShapeV1.MaxOutOfLine,
-			ResponseReceivedMaxSize: computedResponseReceivedMaxSize,
-			ResponsePadding:         v.ResponseTypeShapeV1.HasPadding,
-			ResponseFlexible:        v.ResponseTypeShapeV1.HasFlexibleEnvelope,
-			ResponseHasPointer:      v.ResponseTypeShapeV1.Depth > 0,
-			ResponseIsResource:      v.ResponseTypeShapeV1.IsResource,
-			CallbackType:            callbackType,
-			ResponseHandlerType:     fmt.Sprintf("%s_%s_ResponseHandler", protocolName, v.Name),
-			ResponderType:           fmt.Sprintf("%s_%s_Responder", protocolName, v.Name),
-			Transitional:            v.IsTransitional(),
-			Result:                  result,
-		}
-
-		m.LLProps = m.NewLLProps(protocolName, v.RequestTypeShapeV1, v.ResponseTypeShapeV1)
-		methods = append(methods, m)
+		methods = append(methods, methodInner{
+			protocolName:      protocolName,
+			requestTypeShape:  v.RequestTypeShapeV1,
+			responseTypeShape: v.ResponseTypeShapeV1,
+			Attributes:        v.Attributes,
+			Name:              name,
+			Ordinal:           v.Ordinal,
+			HasRequest:        v.HasRequest,
+			Request:           c.compileParameterArray(v.Request),
+			RequestTypeName:   fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, protocolName, v.Name),
+			HasResponse:       v.HasResponse,
+			Response:          c.compileParameterArray(v.Response),
+			ResponseTypeName:  fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, protocolName, v.Name, responseTypeNameSuffix),
+			Transitional:      v.IsTransitional(),
+			Result:            result,
+		}.build())
 	}
 
 	r := protocolInner{
@@ -1415,7 +1348,6 @@ func (c *compiler) compileStruct(val fidl.Struct, appendNamespace string) Struct
 		MaxSentSize:  val.TypeShapeV1.InlineSize + val.TypeShapeV1.MaxOutOfLine,
 		HasPadding:   val.TypeShapeV1.HasPadding,
 		HasPointer:   val.TypeShapeV1.Depth > 0,
-		IsResource:   val.TypeShapeV1.IsResource,
 	}
 
 	for _, v := range val.Members {
@@ -1424,20 +1356,19 @@ func (c *compiler) compileStruct(val fidl.Struct, appendNamespace string) Struct
 
 	result := c.resultForStruct[val.Name]
 	if result != nil {
-		(*result).ValueMembers = r.Members
+		result.ValueMembers = r.Members
 		memberTypeDecls := []string{}
 		for _, m := range r.Members {
 			memberTypeDecls = append(memberTypeDecls, m.Type.Decl)
 		}
-		(*result).ValueTupleDecl = fmt.Sprintf("std::tuple<%s>", strings.Join(memberTypeDecls, ", "))
+		result.ValueTupleDecl = fmt.Sprintf("std::tuple<%s>", strings.Join(memberTypeDecls, ", "))
 
 		if len(r.Members) == 0 {
-			(*result).ValueDecl = "void"
+			result.ValueDecl = "void"
 		} else if len(r.Members) == 1 {
-			(*result).ValueDecl = r.Members[0].Type.Decl
+			result.ValueDecl = r.Members[0].Type.Decl
 		} else {
-
-			(*result).ValueDecl = (*result).ValueTupleDecl
+			result.ValueDecl = result.ValueTupleDecl
 		}
 
 		r.IsResultValue = true
@@ -1510,7 +1441,6 @@ func (c *compiler) compileTable(val fidl.Table, appendNamespace string) Table {
 		MaxOutOfLine:   val.TypeShapeV1.MaxOutOfLine,
 		MaxSentSize:    val.TypeShapeV1.InlineSize + val.TypeShapeV1.MaxOutOfLine,
 		HasPointer:     val.TypeShapeV1.Depth > 0,
-		IsResource:     val.TypeShapeV1.IsResource,
 	}
 
 	for i, v := range val.SortedMembersNoReserved() {
@@ -1563,7 +1493,6 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 		MaxHandles:   val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine: val.TypeShapeV1.MaxOutOfLine,
 		HasPointer:   val.TypeShapeV1.Depth > 0,
-		IsResource:   val.TypeShapeV1.IsResource,
 	}
 
 	for _, v := range val.Members {
@@ -1603,17 +1532,16 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 func compile(r fidl.Root, namespaceFormatter func(fidl.LibraryIdentifier, string) string) Root {
 	root := Root{}
 	library := make(fidl.LibraryIdentifier, 0)
-	raw_library := make(fidl.LibraryIdentifier, 0)
+	rawLibrary := make(fidl.LibraryIdentifier, 0)
 	for _, identifier := range fidl.ParseLibraryName(r.Name) {
-		safe_name := changeIfReserved(identifier, "")
-		library = append(library, fidl.Identifier(safe_name))
-		raw_library = append(raw_library, identifier)
+		safeName := changeIfReserved(identifier, "")
+		library = append(library, fidl.Identifier(safeName))
+		rawLibrary = append(rawLibrary, identifier)
 	}
 	c := compiler{
 		namespaceFormatter(library, ""),
-		formatLibraryPrefix(raw_library),
+		formatLibraryPrefix(rawLibrary),
 		r.DeclsWithDependencies(),
-		map[fidl.EncodedCompoundIdentifier]Decl{},
 		fidl.ParseLibraryName(r.Name),
 		make(map[fidl.HandleSubtype]struct{}),
 		namespaceFormatter,
@@ -1631,25 +1559,27 @@ func compile(r fidl.Root, namespaceFormatter func(fidl.LibraryIdentifier, string
 	}
 	root.LibraryReversed = libraryReversed
 
+	decls := make(map[fidl.EncodedCompoundIdentifier]Decl)
+
 	for _, v := range r.Bits {
 		d := c.compileBits(v, "")
-		c.declarations[v.Name] = &d
+		decls[v.Name] = &d
 	}
 
 	for _, v := range r.Consts {
 		d := c.compileConst(v, "")
-		c.declarations[v.Name] = &d
+		decls[v.Name] = &d
 	}
 
 	for _, v := range r.Enums {
 		d := c.compileEnum(v, "")
-		c.declarations[v.Name] = &d
+		decls[v.Name] = &d
 	}
 
 	// Note: for Result calculation unions must be compiled before structs.
 	for _, v := range r.Unions {
 		d := c.compileUnion(v)
-		c.declarations[v.Name] = &d
+		decls[v.Name] = &d
 	}
 
 	for _, v := range r.Structs {
@@ -1658,32 +1588,28 @@ func compile(r fidl.Root, namespaceFormatter func(fidl.LibraryIdentifier, string
 			continue
 		}
 		d := c.compileStruct(v, "")
-		c.declarations[v.Name] = &d
+		decls[v.Name] = &d
 	}
 
 	for _, v := range r.Tables {
 		d := c.compileTable(v, "")
-		c.declarations[v.Name] = &d
+		decls[v.Name] = &d
 	}
 
 	for _, v := range r.Protocols {
 		d := c.compileProtocol(v)
-		c.declarations[v.Name] = d
+		decls[v.Name] = d
 	}
 
 	for _, v := range r.Services {
 		d := c.compileService(v)
-		c.declarations[v.Name] = &d
-	}
-
-	for _, v := range c.declarations {
-		v.compileProperties(c)
+		decls[v.Name] = &d
 	}
 
 	for _, v := range r.DeclOrder {
 		// We process only a subset of declarations mentioned in the declaration
 		// order, ignore those we do not support.
-		if d, known := c.declarations[v]; known {
+		if d, known := decls[v]; known {
 			root.Decls = append(root.Decls, d)
 		}
 	}

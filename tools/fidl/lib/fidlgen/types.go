@@ -513,7 +513,6 @@ type TypeShape struct {
 	MaxOutOfLine        int  `json:"max_out_of_line"`
 	HasPadding          bool `json:"has_padding"`
 	HasFlexibleEnvelope bool `json:"has_flexible_envelope"`
-	IsResource          bool `json:"is_resource"`
 }
 
 // FieldShape represents the shape of the field on the wire.
