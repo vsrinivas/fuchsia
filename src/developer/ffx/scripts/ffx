@@ -19,7 +19,7 @@ if [[ -z "${fuchsia_dir}" ]]; then
   done
 fi
 
-build_dir="$(<"${fuchsia_dir}"/.fx-build-dir)" || exit $?
+build_dir="${fuchsia_dir}/$(<"${fuchsia_dir}"/.fx-build-dir)" || exit $?
 
 if ! [[ -x "${build_dir}/host-tools/ffx" ]]; then
   echo >&2 "ffx is missing! Building ffx!"
