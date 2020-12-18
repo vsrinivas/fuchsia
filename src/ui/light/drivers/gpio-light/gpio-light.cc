@@ -17,13 +17,14 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/ui/light/drivers/gpio-light/gpio-light-bind.h"
 
 namespace gpio_light {
 
@@ -204,8 +205,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace gpio_light
 
-ZIRCON_DRIVER_BEGIN(gpio_light, gpio_light::driver_ops, "zircon", "0.1", 4)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_GPIO_LIGHT), ZIRCON_DRIVER_END(gpio_light)
+ZIRCON_DRIVER(gpio_light, gpio_light::driver_ops, "zircon", "0.1");
