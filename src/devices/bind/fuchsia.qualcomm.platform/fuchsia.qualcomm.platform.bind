@@ -10,4 +10,5 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   SDC1 = 0x03,
+  POWER = 0x05,
 };

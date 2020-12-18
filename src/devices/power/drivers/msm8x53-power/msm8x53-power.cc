@@ -6,7 +6,6 @@
 
 #include <lib/device-protocol/pdev.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
@@ -14,6 +13,8 @@
 #include <fbl/algorithm.h>
 #include <soc/msm8x53/msm8x53-power-regs.h>
 #include <soc/msm8x53/msm8x53-power.h>
+
+#include "src/devices/power/drivers/msm8x53-power/msm8x53-power-bind.h"
 
 namespace power {
 
@@ -333,8 +334,4 @@ static constexpr zx_driver_ops_t msm8x53_power_driver_ops = []() {
 
 }  // namespace power
 
-ZIRCON_DRIVER_BEGIN(msm8x53_power, power::msm8x53_power_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_QUALCOMM),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_QUALCOMM_POWER),
-    ZIRCON_DRIVER_END(msm8x53_power)
+ZIRCON_DRIVER(msm8x53_power, power::msm8x53_power_driver_ops, "zircon", "0.1");
