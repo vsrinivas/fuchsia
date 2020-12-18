@@ -228,7 +228,7 @@ func initializeDevice(
 		if upToDate {
 			logger.Infof(ctx, "device already up to date")
 		} else {
-			if err := pave.PaveDevice(ctx, device, build, c.otaToRecovery); err != nil {
+			if err := pave.PaveDevice(ctx, device, build); err != nil {
 				return nil, fmt.Errorf("failed to pave device during initialization: %w", err)
 			}
 		}

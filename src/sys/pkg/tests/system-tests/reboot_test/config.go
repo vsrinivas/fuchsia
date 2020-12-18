@@ -20,7 +20,6 @@ type config struct {
 	archiveConfig    *systemTestConfig.ArchiveConfig
 	installerConfig  *systemTestConfig.InstallerConfig
 	deviceConfig     *systemTestConfig.DeviceConfig
-	otaToRecovery    bool
 	packagesPath     string
 	builderName      string
 	buildID          string
@@ -49,7 +48,6 @@ func newConfig(fs *flag.FlagSet) (*config, error) {
 	fs.StringVar(&c.buildID, "build-id", os.Getenv("BUILDBUCKET_ID"), "Pave to this specific build id")
 	fs.StringVar(&c.fuchsiaBuildDir, "fuchsia-build-dir", "", "Pave to the build in this directory")
 	fs.IntVar(&c.cycleCount, "cycle-count", 1, "How many cycles to run the test before completing (default is 1)")
-	fs.BoolVar(&c.otaToRecovery, "ota-to-recovery", false, "downgrade with an OTA instead of rebooting to recovery")
 	fs.DurationVar(&c.paveTimeout, "pave-timeout", 5*time.Minute, "Err if a pave takes longer than this time (default 5 minutes)")
 	fs.DurationVar(&c.cycleTimeout, "cycle-timeout", 5*time.Minute, "Err if a test cycle takes longer than this time (default is 5 minutes)")
 	fs.StringVar(&c.beforeInitScript, "before-init-script", "", "Run this script before initializing device for testing")

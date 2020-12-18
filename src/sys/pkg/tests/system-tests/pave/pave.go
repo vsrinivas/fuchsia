@@ -18,17 +18,11 @@ func PaveDevice(
 	ctx context.Context,
 	d *device.Client,
 	build artifacts.Build,
-	otaToRecovery bool,
 ) error {
 	logger.Infof(ctx, "Starting to pave device")
 	startTime := time.Now()
 
-	mode := device.RebootToRecovery
-	if otaToRecovery {
-		mode = device.OTAToRecovery
-	}
-
-	if err := d.Pave(ctx, build, mode); err != nil {
+	if err := d.Pave(ctx, build); err != nil {
 		return fmt.Errorf("device failed to pave: %w", err)
 	}
 

@@ -212,7 +212,7 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 		return nil, fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
 
-	if err := pave.PaveDevice(ctx, device, downgradeBuild, c.otaToRecovery); err != nil {
+	if err := pave.PaveDevice(ctx, device, downgradeBuild); err != nil {
 		return nil, fmt.Errorf("failed to pave device during initialization: %w", err)
 	}
 
