@@ -61,10 +61,20 @@ go_library("lib") {
   ]
 
   deps = [
+    ":noticetxt",
     ":templates",
     "//third_party/golibs:golang.org/x/sync",
     "//tools/lib/logger",
   ]
+}
+
+go_library("noticetxt") {
+  source_dir = "noticetxt"
+  sources = [
+    "noticetxt.go",
+    "noticetxt_test.go",
+  ]
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }
 
 go_library("golden") {
@@ -83,6 +93,7 @@ group("tests") {
     ":check-licenses_golden_tests($host_toolchain)",
     ":check-licenses_lib_tests($host_toolchain)",
     ":check-licenses_main_tests($host_toolchain)",
+    ":check-licenses_noticetxt_tests($host_toolchain)",
   ]
 }
 
@@ -108,6 +119,11 @@ if (is_host) {
   }
 
   _testdata_path = "$target_gen_dir/golden"
+
+  go_test("check-licenses_noticetxt_tests") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/noticetxt" ]
+    deps = [ ":noticetxt" ]
+  }
 
   go_test("check-licenses_golden_tests") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/golden" ]

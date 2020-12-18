@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	noticetxt "go.fuchsia.dev/fuchsia/tools/check-licenses/noticetxt"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -69,6 +70,12 @@ func Walk(ctx context.Context, config *Config) error {
 	r = trace.StartRegion(ctx, "processFlutterLicenses")
 	if err := processFlutterLicenses(licenses, config, metrics, file_tree); err != nil {
 		log.Printf("error processing flutter licenses: %v", err)
+	}
+	r.End()
+
+	r = trace.StartRegion(ctx, "processNoticeTxtFiles")
+	if err := processNoticeTxtFiles(licenses, config, metrics, file_tree); err != nil {
+		log.Printf("error processing NOTICE.txt files: %v", err)
 	}
 	r.End()
 
@@ -204,4 +211,17 @@ func readFile(path string, d []byte) (int, error) {
 		err = nil
 	}
 	return n, err
+}
+
+func processNoticeTxtFiles(licenses *Licenses, config *Config, metrics *Metrics, file_tree *FileTree) error {
+	for _, path := range config.NoticeTxtFiles {
+		data, err := noticetxt.ParseNoticeTxtFile(path)
+		if err != nil {
+			return nil
+		}
+		for _, d := range data {
+			licenses.MatchSingleLicenseFile(d, path, metrics, file_tree)
+		}
+	}
+	return nil
 }

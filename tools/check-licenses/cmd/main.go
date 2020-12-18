@@ -36,6 +36,7 @@ var (
 	prohibitedLicenseTypes       = flag.String("prohibited_license_types", "", "Comma separated list of license types that are prohibited. This arg is added to the list of prohibitedLicenseTypes in the config file.")
 	pproffile                    = flag.String("pprof", "", "generate file that can be parsed by go tool pprof")
 	tracefile                    = flag.String("trace", "", "generate file that can be parsed by go tool trace")
+	noticeTxtFiles               = flag.String("notice_txt", "", "Comma separated list of NOTICE.txt files to parse, in addition to those listed in config.json.")
 )
 
 func mainImpl() error {
@@ -102,6 +103,15 @@ func mainImpl() error {
 		for _, s := range split {
 			if s != "" {
 				config.ProhibitedLicenseTypes = append(config.ProhibitedLicenseTypes, s)
+			}
+		}
+	}
+
+	if *noticeTxtFiles != "" {
+		split := strings.Split(*noticeTxtFiles, ",")
+		for _, s := range split {
+			if s != "" {
+				config.NoticeTxtFiles = append(config.NoticeTxtFiles, s)
 			}
 		}
 	}

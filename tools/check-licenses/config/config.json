@@ -226,6 +226,7 @@
     "prebuilt/third_party/flutter/licenses_skia",
     "prebuilt/third_party/flutter/licenses_third_party"
   ],
+  "noticeTxtFiles": [],
   "licensePatternDir": "tools/check-licenses/golden/patterns",
   "baseDir": ".",
   "target": "all",
