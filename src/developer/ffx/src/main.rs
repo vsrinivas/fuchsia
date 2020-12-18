@@ -131,8 +131,8 @@ async fn run() -> Result<((), ())> {
         std::env::set_var("ASCENDD", sockpath);
     });
 
-    let writer = Box::new(std::io::stdout());
-    show_analytics_notice(writer);
+    let notice_writer = Box::new(std::io::stderr());
+    show_analytics_notice(notice_writer);
     let args: Vec<String> = std::env::args().collect();
 
     // drop arg[0]: executable with hard path
