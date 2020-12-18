@@ -13,6 +13,7 @@
 #include "fuchsia/wlan/stats/cpp/fidl.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
@@ -803,7 +804,7 @@ TEST_F(AssocTest, ApRejectedRequest) {
   uint32_t max_assoc_retries;
   zx_status_t status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &max_assoc_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
-  ASSERT_NE(max_assoc_retries, 0U);
+  ASSERT_EQ(max_assoc_retries, kMaxAssocRetries);
   // We should have gotten a rejection from the fake AP
   EXPECT_EQ(auth_resp_status_list_.size(), max_assoc_retries + 1);
   EXPECT_EQ(auth_resp_status_list_.front(), WLAN_STATUS_CODE_REFUSED);
