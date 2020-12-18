@@ -137,6 +137,8 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 // connecting through FIDL.
 class DataProviderTest : public UnitTestFixture {
  public:
+  DataProviderTest() : inspect_data_budget_("non-existent_path") {}
+
   void SetUp() override {
     // |cobalt_| owns the test clock through a unique_ptr so we need to allocate |clock_| on the
     // heap and then give |cobalt_| ownership of it. This allows us to control the time perceived by
@@ -150,12 +152,12 @@ class DataProviderTest : public UnitTestFixture {
  protected:
   void SetUpDataProvider(const AnnotationKeys& annotation_allowlist = kDefaultAnnotations,
                          const AttachmentKeys& attachment_allowlist = kDefaultAttachments) {
-    datastore_ =
-        std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), annotation_allowlist,
-                                    attachment_allowlist, /*is_first_instance=*/true);
+    datastore_ = std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(),
+                                             annotation_allowlist, attachment_allowlist,
+                                             /*is_first_instance=*/true, &inspect_data_budget_);
     data_provider_ = std::make_unique<DataProvider>(
         dispatcher(), services(), clock_, /*is_first_instance=*/true, annotation_allowlist,
-        attachment_allowlist, cobalt_.get(), datastore_.get());
+        attachment_allowlist, cobalt_.get(), datastore_.get(), &inspect_data_budget_);
   }
 
   void SetUpScenicServer(std::unique_ptr<stubs::ScenicBase> server) {
@@ -213,6 +215,7 @@ class DataProviderTest : public UnitTestFixture {
 
  private:
   std::unique_ptr<stubs::ScenicBase> scenic_server_;
+  InspectDataBudget inspect_data_budget_;
 };
 
 TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {

@@ -87,7 +87,7 @@ const std::vector<std::string> kCurrentLogFilePaths = {
 
 class DatastoreTest : public UnitTestFixture {
  public:
-  DatastoreTest() : executor_(dispatcher()) {}
+  DatastoreTest() : executor_(dispatcher()), inspect_data_budget_("non-existent_path") {}
 
   void SetUp() override {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
@@ -103,7 +103,7 @@ class DatastoreTest : public UnitTestFixture {
                       const bool is_first_instance = true) {
     datastore_ =
         std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), annotation_allowlist,
-                                    attachment_allowlist, is_first_instance);
+                                    attachment_allowlist, is_first_instance, &inspect_data_budget_);
   }
 
   void SetUpBoardProviderServer(std::unique_ptr<stubs::BoardInfoProviderBase> server) {
@@ -192,6 +192,7 @@ class DatastoreTest : public UnitTestFixture {
   async::Executor executor_;
   std::unique_ptr<cobalt::Logger> cobalt_;
   std::unique_ptr<Datastore> datastore_;
+  InspectDataBudget inspect_data_budget_;
 
   // Stubs servers.
   std::unique_ptr<stubs::BoardInfoProviderBase> board_provider_server_;

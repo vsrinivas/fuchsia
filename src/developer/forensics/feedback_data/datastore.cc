@@ -23,16 +23,12 @@
 
 namespace forensics {
 namespace feedback_data {
-namespace {
-
-const char kUserBuildFlagPath[] = "/config/data/feedback_data/limit_inspect_data";
-
-}  // namespace
 
 Datastore::Datastore(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt,
                      const AnnotationKeys& annotation_allowlist,
-                     const AttachmentKeys& attachment_allowlist, const bool is_first_instance)
+                     const AttachmentKeys& attachment_allowlist, const bool is_first_instance,
+                     InspectDataBudget* inspect_data_budget)
     : dispatcher_(dispatcher),
       services_(services),
       cobalt_(cobalt),
@@ -42,7 +38,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       static_attachments_(
           feedback_data::GetStaticAttachments(attachment_allowlist_, cobalt, is_first_instance)),
       reusable_annotation_providers_(GetReusableProviders(dispatcher_, services_, cobalt_)),
-      inspect_data_budget_(kUserBuildFlagPath) {
+      inspect_data_budget_(inspect_data_budget) {
   FX_CHECK(annotation_allowlist_.size() <= kMaxNumPlatformAnnotations)
       << "Requesting more platform annotations than the maximum number of platform annotations "
          "allowed";
@@ -69,8 +65,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       attachment_allowlist_({}),
       static_annotations_({}),
       static_attachments_({}),
-      reusable_annotation_providers_(GetReusableProviders(dispatcher_, services_, cobalt_)),
-      inspect_data_budget_(limit_data_flag_path) {}
+      reusable_annotation_providers_(GetReusableProviders(dispatcher_, services_, cobalt_)) {}
 
 ::fit::promise<Annotations> Datastore::GetAnnotations(const zx::duration timeout) {
   if (annotation_allowlist_.empty() && non_platform_annotations_.empty()) {
@@ -185,7 +180,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
   } else if (key == kAttachmentInspect) {
     return CollectInspectData(dispatcher_, services_,
                               MakeCobaltTimeout(cobalt::TimedOutData::kInspect, timeout),
-                              inspect_data_budget_.SizeInBytes());
+                              inspect_data_budget_->SizeInBytes());
   }
   // There are static attachments in the allowlist that we just skip here.
   return ::fit::make_result_promise<AttachmentValue>(::fit::error());

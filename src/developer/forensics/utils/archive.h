@@ -12,8 +12,15 @@
 
 namespace forensics {
 
+struct ArchiveFileStats {
+  size_t raw_bytes;
+  size_t compressed_bytes;
+};
+
 // Bundles a map of filenames to string content into a single ZIP archive with DEFLATE compression.
-bool Archive(const std::map<std::string, std::string>& files, fuchsia::mem::Buffer* archive);
+// Also returns a map of the same filenames to size stats.
+bool Archive(const std::map<std::string, std::string>& files, fuchsia::mem::Buffer* archive,
+             std::map<std::string, ArchiveFileStats>* file_to_size_stats = nullptr);
 
 // Unpack a ZIP archive into a map of filenames to string content.
 bool Unpack(const fuchsia::mem::Buffer& archive, std::map<std::string, std::string>* files);

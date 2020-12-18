@@ -52,13 +52,14 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
                            timekeeper::Clock* clock, const bool is_first_instance,
                            const AnnotationKeys& annotation_allowlist,
                            const AttachmentKeys& attachment_allowlist, cobalt::Logger* cobalt,
-                           Datastore* datastore)
+                           Datastore* datastore, InspectDataBudget* inspect_data_budget)
     : dispatcher_(dispatcher),
       services_(services),
       metadata_(dispatcher_, clock, is_first_instance, annotation_allowlist, attachment_allowlist),
       cobalt_(cobalt),
       datastore_(datastore),
-      executor_(dispatcher_) {}
+      executor_(dispatcher_),
+      inspect_data_budget_(inspect_data_budget) {}
 
 void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                                GetSnapshotCallback callback) {
@@ -110,7 +111,9 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
             if (!attachments.empty()) {
               fuchsia::feedback::Attachment bundle;
               bundle.key = kSnapshotFilename;
-              if (Archive(attachments, &(bundle.value))) {
+              std::map<std::string, ArchiveFileStats> file_size_stats;
+              if (Archive(attachments, &(bundle.value), &file_size_stats)) {
+                inspect_data_budget_->UpdateBudget(file_size_stats);
                 cobalt_->LogCount(SnapshotVersion::kCobalt, (uint64_t)bundle.value.size);
                 snapshot.set_archive(std::move(bundle));
               }

@@ -12,6 +12,7 @@
 
 #include <memory>
 
+#include "src/developer/forensics/feedback_data/attachments/inspect_data_budget.h"
 #include "src/developer/forensics/feedback_data/config.h"
 #include "src/developer/forensics/feedback_data/data_provider.h"
 #include "src/developer/forensics/feedback_data/data_register.h"
@@ -58,6 +59,7 @@ class MainService {
   InspectManager inspect_manager_;
   cobalt::Logger cobalt_;
   timekeeper::SystemClock clock_;
+  InspectDataBudget inspect_data_budget_;
 
   DeviceIdManager device_id_manager_;
 

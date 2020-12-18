@@ -207,6 +207,7 @@ source_set("main_service") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//zircon/public/lib/zx",
   ]
 }

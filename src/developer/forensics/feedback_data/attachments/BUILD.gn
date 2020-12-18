@@ -31,6 +31,7 @@ source_set("attachment_providers") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback_data:archive_accessor",
+    "//src/developer/forensics/utils:archive",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fidl:oneshot_ptr",
     "//zircon/public/lib/async",

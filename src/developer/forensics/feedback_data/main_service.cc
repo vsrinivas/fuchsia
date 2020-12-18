@@ -19,6 +19,7 @@ namespace {
 
 const char kConfigPath[] = "/pkg/data/feedback_data/config.json";
 const char kDataRegisterPath[] = "/tmp/data_register.json";
+const char kUserBuildFlagPath[] = "/config/data/feedback_data/limit_inspect_data";
 
 }  // namespace
 
@@ -45,11 +46,12 @@ MainService::MainService(async_dispatcher_t* dispatcher,
       inspect_manager_(root_node),
       cobalt_(dispatcher_, services),
       clock_(),
+      inspect_data_budget_(kUserBuildFlagPath),
       device_id_manager_(dispatcher_, kDeviceIdPath),
       datastore_(dispatcher_, services, &cobalt_, config.annotation_allowlist,
-                 config.attachment_allowlist, is_first_instance),
+                 config.attachment_allowlist, is_first_instance, &inspect_data_budget_),
       data_provider_(dispatcher_, services, &clock_, is_first_instance, config.annotation_allowlist,
-                     config.attachment_allowlist, &cobalt_, &datastore_),
+                     config.attachment_allowlist, &cobalt_, &datastore_, &inspect_data_budget_),
       data_register_(&datastore_, kDataRegisterPath) {}
 
 void MainService::SpawnSystemLogRecorder() {

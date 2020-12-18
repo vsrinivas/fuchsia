@@ -20,7 +20,11 @@ namespace {
 
 using fuchsia::mem::Buffer;
 
-bool Archive(const std::map<std::string, std::string>& files, Buffer* archive, zipFile* zf) {
+bool Archive(const std::map<std::string, std::string>& files, const std::string& archive_filename,
+             zipFile* zf, std::map<std::string, ArchiveFileStats>* file_to_size_stats) {
+  uint64_t old_zip_size = 0;
+  uint64_t new_zip_size = 0;
+
   for (const auto& [filename, content] : files) {
     zip_fileinfo zf_info = {};
     if (const int status =
@@ -43,6 +47,14 @@ bool Archive(const std::map<std::string, std::string>& files, Buffer* archive, z
       FX_LOGS(WARNING) << fxl::Substitute("cannot close $0 in output zip archive: ", filename)
                        << status;
     }
+
+    if (file_to_size_stats != nullptr) {
+      files::GetFileSize(archive_filename.c_str(), &new_zip_size);
+      (*file_to_size_stats)[filename] = {.raw_bytes = content.size(),
+                                         .compressed_bytes = new_zip_size - old_zip_size};
+    }
+
+    old_zip_size = new_zip_size;
   }
 
   return true;
@@ -50,7 +62,8 @@ bool Archive(const std::map<std::string, std::string>& files, Buffer* archive, z
 
 }  // namespace
 
-bool Archive(const std::map<std::string, std::string>& files, Buffer* archive) {
+bool Archive(const std::map<std::string, std::string>& files, Buffer* archive,
+             std::map<std::string, ArchiveFileStats>* file_to_size_stats) {
   // We write the archive to a temporary file because in-memory archiving in minizip is complicated.
   files::ScopedTempDir tmp_dir;
   std::string archive_filename;
@@ -62,7 +75,7 @@ bool Archive(const std::map<std::string, std::string>& files, Buffer* archive) {
     return false;
   }
 
-  const bool success = Archive(files, archive, &zf);
+  const bool success = Archive(files, archive_filename, &zf, file_to_size_stats);
 
   // We always close the archive regardless of the success status.
   if (const int status = zipClose(zf, nullptr); status != ZIP_OK) {
@@ -78,6 +91,7 @@ bool Archive(const std::map<std::string, std::string>& files, Buffer* archive) {
     FX_LOGS(ERROR) << "error loading output zip archive into VMO";
     return false;
   }
+
   *archive = std::move(vmo).ToTransport();
 
   return true;

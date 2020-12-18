@@ -12,6 +12,7 @@
 
 #include <memory>
 
+#include "src/developer/forensics/feedback_data/attachments/inspect_data_budget.h"
 #include "src/developer/forensics/feedback_data/datastore.h"
 #include "src/developer/forensics/feedback_data/metadata.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
@@ -28,7 +29,7 @@ class DataProvider : public fuchsia::feedback::DataProvider {
                timekeeper::Clock* clock, bool is_first_instance,
                const AnnotationKeys& annotation_allowlist,
                const AttachmentKeys& attachment_allowlist, cobalt::Logger* cobalt,
-               Datastore* datastore);
+               Datastore* datastore, InspectDataBudget* inspect_data_budget);
 
   // |fuchsia::feedback::DataProvider|
   void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
@@ -43,6 +44,7 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   cobalt::Logger* cobalt_;
   Datastore* datastore_;
   async::Executor executor_;
+  InspectDataBudget* inspect_data_budget_;
 };
 
 }  // namespace feedback_data
