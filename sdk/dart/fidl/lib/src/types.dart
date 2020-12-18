@@ -483,7 +483,16 @@ void _encodeHandle(Encoder encoder, Handle? value, int offset, bool nullable) {
   }
   encoder.encodeUint32(present ? kHandlePresent : kHandleAbsent, offset);
   if (present) {
-    encoder.addHandle(value!);
+    // After https://github.com/dart-lang/language/issues/1274 is implemented,
+    // `value` will be promoted to non-nullable so we won't need to null check
+    // it (and it will cause a build failure to try to do so).  Until then, we
+    // need to null check it in a way that won't cause a build failure once the
+    // feature is implemented.  We can do that using an explicit "if" test.
+    // TODO(paulberry): remove this check once the feature is implemented.
+    if (value == null) { // ignore: dead_code
+      throw FidlError('Unreachable');
+    }
+    encoder.addHandle(value);
   }
 }
 
