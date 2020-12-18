@@ -8,7 +8,6 @@
 
 #include <algorithm>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/device.h>
@@ -16,6 +15,8 @@
 #include <ddktl/protocol/pwm.h>
 #include <fbl/alloc_checker.h>
 #include <soc/aml-common/aml-pwm-regs.h>
+
+#include "src/devices/power/drivers/aml-meson-power/aml-meson-power-bind.h"
 
 namespace power {
 
@@ -192,7 +193,8 @@ zx_status_t AmlPower::PowerImplGetSupportedVoltageRange(uint32_t index, uint32_t
     *min_voltage = params.min_uv;
     *max_voltage = params.min_uv + params.num_steps * params.step_size_uv;
 
-    zxlogf(DEBUG, "%s: Getting Big Cluster VReg Range max = %u, min = %u", __func__, *max_voltage, *min_voltage);
+    zxlogf(DEBUG, "%s: Getting Big Cluster VReg Range max = %u, min = %u", __func__, *max_voltage,
+           *min_voltage);
 
     return ZX_OK;
   }
@@ -291,7 +293,8 @@ zx_status_t AmlPower::SetBigClusterVoltage(uint32_t voltage, uint32_t* actual_vo
     const uint32_t max_voltage_uv = params.min_uv + (params.step_size_uv * params.num_steps);
     // Find the step value that achieves the requested voltage.
     if (voltage < min_voltage_uv || voltage > max_voltage_uv) {
-      zxlogf(ERROR, "%s: Voltage must be between %u and %u microvolts", __func__, min_voltage_uv, max_voltage_uv);
+      zxlogf(ERROR, "%s: Voltage must be between %u and %u microvolts", __func__, min_voltage_uv,
+             max_voltage_uv);
       return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -427,8 +430,8 @@ zx_status_t AmlPower::Create(void* ctx, zx_device_t* parent) {
 
   switch (device_info.pid) {
     case PDEV_PID_ASTRO:
-      power_impl_device.reset(new AmlPower(parent, std::move(first_cluster_pwm),
-                                           std::move(voltage_table), pwm_period));
+      power_impl_device.reset(
+          new AmlPower(parent, std::move(first_cluster_pwm), std::move(voltage_table), pwm_period));
       break;
     case PDEV_PID_LUIS:
       power_impl_device.reset(new AmlPower(parent, std::move(*second_cluster_vreg),
@@ -466,15 +469,4 @@ static constexpr zx_driver_ops_t aml_power_driver_ops = []() {
 
 }  // namespace power
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(aml_power, power::aml_power_driver_ops, "zircon", "0.1", 5)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_POWER),
-
-    // The following are supported SoCs
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_ASTRO),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_LUIS),
-    // BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_SHERLOCK),
-ZIRCON_DRIVER_END(aml_power)
-//clang-format on
+ZIRCON_DRIVER(aml_power, power::aml_power_driver_ops, "zircon", "0.1");
