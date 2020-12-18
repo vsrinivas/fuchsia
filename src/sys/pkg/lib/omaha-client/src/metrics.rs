@@ -36,6 +36,8 @@ pub enum Metrics {
     RequestsPerCheck { count: u64, successful: bool },
     /// Number of update check attempts to get an update check to succeed.
     AttemptsToSuccessfulCheck(u64),
+    /// Number of install attempts to get an update to succeed.
+    AttemptsToSuccessfulInstall { count: u64, successful: bool },
     /// Elapsed time from having finished applying the update to when finally
     /// running that software, it is sent after the reboot (and includes the
     /// rebooting time).

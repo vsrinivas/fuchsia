@@ -499,9 +499,6 @@ pub struct ProtocolState {
     /// interval is.
     pub server_dictated_poll_interval: Option<std::time::Duration>,
 
-    /// The number of consecutive failed update attempts.
-    pub consecutive_failed_update_attempts: u32,
-
     /// The number of consecutive failed update checks.  Used to perform backoffs.
     pub consecutive_failed_update_checks: u32,
 

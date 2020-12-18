@@ -52,6 +52,7 @@ const UPDATE_FIRST_SEEN_TIME: &str = "update_first_seen_time";
 const UPDATE_FINISH_TIME: &str = "update_finish_time";
 const TARGET_VERSION: &str = "target_version";
 const CONSECUTIVE_FAILED_UPDATE_CHECKS: &str = "consecutive_failed_update_checks";
+const CONSECUTIVE_FAILED_INSTALL_ATTEMPTS: &str = "consecutive_failed_install_attempts";
 // How long do we wait after not allowed to reboot to check again.
 const CHECK_REBOOT_ALLOWED_INTERVAL: Duration = Duration::from_secs(30 * 60);
 // This header contains the number of seconds client must not contact server again.
@@ -578,17 +579,14 @@ where
                 // Update check succeeded, update |last_update_time|.
                 self.context.schedule.last_update_time = Some(self.time_source.now().into());
 
-                // Increment |consecutive_failed_update_attempts| if any app failed to install,
-                // otherwise reset it to 0.
-                if result
-                    .app_responses
-                    .iter()
-                    .any(|app| app.result == update_check::Action::InstallPlanExecutionError)
-                {
-                    self.context.state.consecutive_failed_update_attempts += 1;
-                } else {
-                    self.context.state.consecutive_failed_update_attempts = 0;
-                }
+                // Determine if any app failed to install, or we had a successful upadte.
+                let install_result = result.app_responses.iter().fold(None, |result, app| {
+                    match (result, &app.result) {
+                        (_, update_check::Action::InstallPlanExecutionError) => Some(false),
+                        (None, update_check::Action::Updated) => Some(true),
+                        (result, _) => result,
+                    }
+                });
 
                 // Update check succeeded, reset |consecutive_failed_update_checks| to 0.
                 self.context.state.consecutive_failed_update_checks = 0;
@@ -596,6 +594,12 @@ where
                 self.app_set.update_from_omaha(&result.app_responses).await;
 
                 self.report_attempts_to_successful_check(true).await;
+
+                // Only report |attempts_to_successful_install| if we get an error trying to
+                // install, or we succeed to install an update without error.
+                if let Some(success) = install_result {
+                    self.report_attempts_to_successful_install(success).await;
+                }
 
                 // TODO: update consecutive_proxied_requests
             }
@@ -646,6 +650,27 @@ where
         } else {
             if let Err(e) = storage.set_int(CONSECUTIVE_FAILED_UPDATE_CHECKS, attempts).await {
                 error!("Unable to persist {}: {}", CONSECUTIVE_FAILED_UPDATE_CHECKS, e);
+            }
+        }
+    }
+
+    /// Update `CONSECUTIVE_FAILED_INSTALL_ATTEMPTS` in storage and report the metrics if
+    /// `success`. Does not commit the change to storage.
+    async fn report_attempts_to_successful_install(&mut self, success: bool) {
+        let storage_ref = self.storage_ref.clone();
+        let mut storage = storage_ref.lock().await;
+        let attempts = storage.get_int(CONSECUTIVE_FAILED_INSTALL_ATTEMPTS).await.unwrap_or(0) + 1;
+
+        self.report_metrics(Metrics::AttemptsToSuccessfulInstall {
+            count: attempts as u64,
+            successful: success,
+        });
+
+        if success {
+            storage.remove_or_log(CONSECUTIVE_FAILED_INSTALL_ATTEMPTS).await;
+        } else {
+            if let Err(e) = storage.set_int(CONSECUTIVE_FAILED_INSTALL_ATTEMPTS, attempts).await {
+                error!("Unable to persist {}: {}", CONSECUTIVE_FAILED_INSTALL_ATTEMPTS, e);
             }
         }
     }
@@ -1292,7 +1317,6 @@ mod tests {
             MockTimeSource, PartialComplexTime,
         },
     };
-    use anyhow::anyhow;
     use futures::executor::{block_on, LocalPool};
     use futures::future::BoxFuture;
     use futures::task::LocalSpawnExt;
@@ -2397,27 +2421,27 @@ mod tests {
     #[derive(Debug)]
     pub struct TestInstaller {
         reboot_called: Rc<RefCell<bool>>,
-        should_fail: bool,
+        install_fails: usize,
         mock_time: MockTimeSource,
     }
     struct TestInstallerBuilder {
-        should_fail: Option<bool>,
+        install_fails: usize,
         mock_time: MockTimeSource,
     }
     impl TestInstaller {
         fn builder(mock_time: MockTimeSource) -> TestInstallerBuilder {
-            TestInstallerBuilder { should_fail: None, mock_time }
+            TestInstallerBuilder { install_fails: 0, mock_time }
         }
     }
     impl TestInstallerBuilder {
-        fn should_fail(mut self, should_fail: bool) -> Self {
-            self.should_fail = Some(should_fail);
+        fn add_install_fail(mut self) -> Self {
+            self.install_fails += 1;
             self
         }
         fn build(self) -> TestInstaller {
             TestInstaller {
                 reboot_called: Rc::new(RefCell::new(false)),
-                should_fail: self.should_fail.unwrap_or(false),
+                install_fails: self.install_fails,
                 mock_time: self.mock_time,
             }
         }
@@ -2432,7 +2456,8 @@ mod tests {
             _install_plan: &StubPlan,
             observer: Option<&'a dyn ProgressObserver>,
         ) -> BoxFuture<'a, Result<(), Self::Error>> {
-            if self.should_fail {
+            if self.install_fails > 0 {
+                self.install_fails -= 1;
                 future::ready(Err(StubInstallErrors::Failed)).boxed()
             } else {
                 self.mock_time.advance(INSTALL_DURATION);
@@ -2451,11 +2476,7 @@ mod tests {
 
         fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>> {
             self.reboot_called.replace(true);
-            if self.should_fail {
-                future::ready(Err(anyhow!("reboot failed"))).boxed()
-            } else {
-                future::ready(Ok(())).boxed()
-            }
+            future::ready(Ok(())).boxed()
         }
     }
 
@@ -2507,26 +2528,20 @@ mod tests {
 
             state_machine.run_once().await;
 
-            let reported_metrics = state_machine.metrics_reporter.metrics;
-            assert_eq!(
-                reported_metrics
-                    .iter()
-                    .filter(|m| match m {
-                        Metrics::SuccessfulUpdateDuration(_) => true,
-                        _ => false,
-                    })
-                    .collect::<Vec<_>>(),
-                vec![&Metrics::SuccessfulUpdateDuration(expected_update_duration)]
-            );
-            assert_eq!(
-                reported_metrics
-                    .iter()
-                    .filter(|m| match m {
-                        Metrics::SuccessfulUpdateFromFirstSeen(_) => true,
-                        _ => false,
-                    })
-                    .collect::<Vec<_>>(),
-                vec![&Metrics::SuccessfulUpdateFromFirstSeen(expected_duration_since_first_seen)]
+            #[rustfmt::skip]
+            assert_matches!(
+                state_machine.metrics_reporter.metrics.as_slice(),
+                [
+                    Metrics::UpdateCheckResponseTime { response_time: _, successful: true },
+                    Metrics::RequestsPerCheck { count: 1, successful: true },
+                    Metrics::SuccessfulUpdateDuration(install_duration),
+                    Metrics::SuccessfulUpdateFromFirstSeen(duration_since_first_seen),
+                    Metrics::AttemptsToSuccessfulCheck(1),
+                    Metrics::AttemptsToSuccessfulInstall { count: 1, successful: true },
+                ]
+                if
+                    *install_duration == expected_update_duration &&
+                    *duration_since_first_seen == expected_duration_since_first_seen
             );
         });
     }
@@ -2654,6 +2669,167 @@ mod tests {
     }
 
     #[test]
+    fn test_report_attempts_to_successful_install() {
+        block_on(async {
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "ok"
+                }
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let http = MockHttpRequest::new(HttpResponse::new(response.clone()));
+            let storage = Rc::new(Mutex::new(MemStorage::new()));
+
+            let mock_time = MockTimeSource::new_from_now();
+
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .http(http)
+                .installer(TestInstaller::builder(mock_time.clone()).build())
+                .policy_engine(StubPolicyEngine::new(mock_time.clone()))
+                .metrics_reporter(MockMetricsReporter::new())
+                .storage(Rc::clone(&storage))
+                .build()
+                .await;
+
+            state_machine.run_once().await;
+
+            // FIXME(https://github.com/rust-lang/rustfmt/issues/4530) rustfmt doesn't wrap slice
+            // patterns yet.
+            #[rustfmt::skip]
+            assert_matches!(
+                state_machine.metrics_reporter.metrics.as_slice(),
+                [
+                    Metrics::UpdateCheckResponseTime { response_time: _, successful: true },
+                    Metrics::RequestsPerCheck { count: 1, successful: true },
+                    Metrics::SuccessfulUpdateDuration(_),
+                    Metrics::SuccessfulUpdateFromFirstSeen(_),
+                    Metrics::AttemptsToSuccessfulCheck(1),
+                    Metrics::AttemptsToSuccessfulInstall { count: 1, successful: true },
+                ]
+            );
+        });
+    }
+
+    #[test]
+    fn test_report_attempts_to_successful_install_fails_then_succeeds() {
+        block_on(async {
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "ok"
+                }
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let mut http = MockHttpRequest::new(HttpResponse::new(response.clone()));
+            // Responses to events. This first batch corresponds to the install failure, so these
+            // should be the update download started, and another for a failed install.
+            // `Event::error(EventErrorCode::Installation)`.
+            http.add_response(HttpResponse::new(response.clone()));
+            http.add_response(HttpResponse::new(response.clone()));
+
+            // Respond to the next request.
+            http.add_response(HttpResponse::new(response.clone()));
+            // Responses to events. This cooresponds to the update download started, and the other
+            // for a successful install.
+            http.add_response(HttpResponse::new(response.clone()));
+            http.add_response(HttpResponse::new(response.clone()));
+
+            let storage = Rc::new(Mutex::new(MemStorage::new()));
+            let mock_time = MockTimeSource::new_from_now();
+
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .http(http)
+                .installer(TestInstaller::builder(mock_time.clone()).add_install_fail().build())
+                .policy_engine(StubPolicyEngine::new(mock_time.clone()))
+                .metrics_reporter(MockMetricsReporter::new())
+                .storage(Rc::clone(&storage))
+                .build()
+                .await;
+
+            state_machine.run_once().await;
+            state_machine.run_once().await;
+
+            // FIXME(https://github.com/rust-lang/rustfmt/issues/4530) rustfmt doesn't wrap slice
+            // patterns yet.
+            #[rustfmt::skip]
+            assert_matches!(
+                state_machine.metrics_reporter.metrics.as_slice(),
+                [
+                    Metrics::UpdateCheckResponseTime { response_time: _, successful: true },
+                    Metrics::RequestsPerCheck { count: 1, successful: true },
+                    Metrics::FailedUpdateDuration(_),
+                    Metrics::AttemptsToSuccessfulCheck(1),
+                    Metrics::AttemptsToSuccessfulInstall { count: 1, successful: false },
+                    Metrics::UpdateCheckInterval { .. },
+                    Metrics::UpdateCheckResponseTime { response_time: _, successful: true },
+                    Metrics::RequestsPerCheck { count: 1, successful: true },
+                    Metrics::SuccessfulUpdateDuration(_),
+                    Metrics::SuccessfulUpdateFromFirstSeen(_),
+                    Metrics::AttemptsToSuccessfulCheck(1),
+                    Metrics::AttemptsToSuccessfulInstall { count: 2, successful: true }
+                ]
+            );
+        });
+    }
+
+    #[test]
+    fn test_report_attempts_to_successful_install_does_not_report_for_no_update() {
+        block_on(async {
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "noupdate",
+                  "info": "no update for you"
+                }
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let http = MockHttpRequest::new(HttpResponse::new(response.clone()));
+
+            let storage = Rc::new(Mutex::new(MemStorage::new()));
+            let mock_time = MockTimeSource::new_from_now();
+
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .http(http)
+                .installer(TestInstaller::builder(mock_time.clone()).build())
+                .policy_engine(StubPolicyEngine::new(mock_time.clone()))
+                .metrics_reporter(MockMetricsReporter::new())
+                .storage(Rc::clone(&storage))
+                .build()
+                .await;
+
+            state_machine.run_once().await;
+
+            // FIXME(https://github.com/rust-lang/rustfmt/issues/4530) rustfmt doesn't wrap slice
+            // patterns yet.
+            #[rustfmt::skip]
+            assert_matches!(
+                state_machine.metrics_reporter.metrics.as_slice(),
+                [
+                    Metrics::UpdateCheckResponseTime { response_time: _, successful: true },
+                    Metrics::RequestsPerCheck { count: 1, successful: true },
+                    Metrics::AttemptsToSuccessfulCheck(1),
+                ]
+            );
+        });
+    }
+
+    #[test]
     fn test_successful_update_triggers_reboot() {
         let mut pool = LocalPool::new();
         let spawner = pool.spawner();
@@ -2718,7 +2894,7 @@ mod tests {
         let next_update_time = mock_time.now();
         let (timer, mut timers) = BlockingTimer::new();
 
-        let installer = TestInstaller::builder(mock_time.clone()).should_fail(true).build();
+        let installer = TestInstaller::builder(mock_time.clone()).add_install_fail().build();
         let reboot_called = Rc::clone(&installer.reboot_called);
         let (_ctl, state_machine) = pool.run_until(
             StateMachineBuilder::new_stub()

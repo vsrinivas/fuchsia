@@ -163,6 +163,29 @@ impl MetricsReporter for CobaltMetricsReporter {
                     count as i64,
                 );
             }
+            Metrics::AttemptsToSuccessfulInstall { count, successful } => {
+                self.cobalt_sender.log_event_count(
+                    mos_metrics_registry::ATTEMPTS_PER_DEVICE_DAY_METRIC_ID,
+                    if successful {
+                        mos_metrics_registry::AttemptsPerDeviceDayMetricDimensionResult::Success
+                    } else {
+                        mos_metrics_registry::AttemptsPerDeviceDayMetricDimensionResult::Failed
+                    },
+                    0,
+                    1,
+                );
+
+                self.cobalt_sender.log_event_count(
+                    mos_metrics_registry::ATTEMPTS_TO_REACH_SUCCESS_METRIC_ID,
+                    if successful {
+                        mos_metrics_registry::AttemptsToReachSuccessMetricDimensionResult::Success
+                    } else {
+                        mos_metrics_registry::AttemptsToReachSuccessMetricDimensionResult::Failed
+                    },
+                    0,
+                    count as i64,
+                );
+            }
             Metrics::WaitedForRebootDuration(duration) => {
                 if let Some(duration) =
                     duration_to_cobalt_micros(duration, "Metrics::WaitedForRebootDuration")
@@ -192,23 +215,30 @@ mod tests {
     use super::*;
     use cobalt_client::traits::AsEventCodes;
     use fidl_fuchsia_cobalt::{CountEvent, EventPayload};
+    use fuchsia_async as fasync;
+    use futures::stream::StreamExt;
     use omaha_client::metrics::UpdateCheckFailureReason;
     use std::time::Duration;
 
-    fn assert_metric(metrics: Metrics, event: CobaltEvent) {
-        let (mut reporter, mut receiver) = CobaltMetricsReporter::new_mock();
-        reporter.report_metrics(metrics).unwrap();
-        assert_eq!(receiver.try_next().unwrap().unwrap(), event);
+    async fn assert_metrics(metrics: Metrics, expected_events: &[CobaltEvent]) {
+        let receiver = {
+            let (mut reporter, receiver) = CobaltMetricsReporter::new_mock();
+            reporter.report_metrics(metrics).unwrap();
+            receiver
+        };
+        let actual_events = receiver.collect::<Vec<_>>().await;
+
+        assert_eq!(actual_events, expected_events,);
     }
 
-    #[test]
-    fn test_report_update_check_response_time() {
-        assert_metric(
+    #[fasync::run_singlethreaded(test)]
+    async fn test_report_update_check_response_time() {
+        assert_metrics(
             Metrics::UpdateCheckResponseTime {
                 response_time: Duration::from_millis(10),
                 successful: true,
             },
-            CobaltEvent {
+            &[CobaltEvent {
                 metric_id: mos_metrics_registry::UPDATE_CHECK_RESPONSE_TIME_METRIC_ID,
                 event_codes: vec![
                     mos_metrics_registry::UpdateCheckResponseTimeMetricDimensionResult::Success,
@@ -216,15 +246,16 @@ mod tests {
                 .as_event_codes(),
                 component: None,
                 payload: EventPayload::ElapsedMicros(10 * 1000),
-            },
-        );
+            }],
+        )
+        .await;
 
-        assert_metric(
+        assert_metrics(
             Metrics::UpdateCheckResponseTime {
                 response_time: Duration::from_millis(10),
                 successful: false,
             },
-            CobaltEvent {
+            &[CobaltEvent {
                 metric_id: mos_metrics_registry::UPDATE_CHECK_RESPONSE_TIME_METRIC_ID,
                 event_codes: vec![
                     mos_metrics_registry::UpdateCheckResponseTimeMetricDimensionResult::Failed,
@@ -232,19 +263,20 @@ mod tests {
                 .as_event_codes(),
                 component: None,
                 payload: EventPayload::ElapsedMicros(10 * 1000),
-            },
-        );
+            }],
+        )
+        .await;
     }
 
-    #[test]
-    fn test_report_update_check_interval() {
-        assert_metric(
+    #[fasync::run_singlethreaded(test)]
+    async fn test_report_update_check_interval() {
+        assert_metrics(
             Metrics::UpdateCheckInterval {
                 interval: Duration::from_millis(10),
                 clock: ClockType::Monotonic,
                 install_source: InstallSource::OnDemand,
             },
-            CobaltEvent {
+            &[CobaltEvent {
                 metric_id: mos_metrics_registry::UPDATE_CHECK_INTERVAL_METRIC_ID,
                 event_codes: (
                     mos_metrics_registry::UpdateCheckIntervalMetricDimensionResult::Success,
@@ -254,15 +286,17 @@ mod tests {
                     .as_event_codes(),
                 component: None,
                 payload: EventPayload::ElapsedMicros(10 * 1000),
-            },
-        );
-        assert_metric(
+            }],
+        )
+        .await;
+
+        assert_metrics(
             Metrics::UpdateCheckInterval {
                 interval: Duration::from_millis(20),
                 clock: ClockType::Wall,
                 install_source: InstallSource::ScheduledTask,
             },
-            CobaltEvent {
+            &[CobaltEvent {
                 metric_id: mos_metrics_registry::UPDATE_CHECK_INTERVAL_METRIC_ID,
                 event_codes: (
                     mos_metrics_registry::UpdateCheckIntervalMetricDimensionResult::Success,
@@ -272,83 +306,142 @@ mod tests {
                     .as_event_codes(),
                 component: None,
                 payload: EventPayload::ElapsedMicros(20 * 1000),
-            },
-        );
+            }],
+        ).await;
     }
 
-    #[test]
-    fn test_report_update_check_failure_reason() {
-        let (mut reporter, mut receiver) = CobaltMetricsReporter::new_mock();
-        reporter
-            .report_metrics(Metrics::UpdateCheckFailureReason(
-                UpdateCheckFailureReason::Configuration,
-            ))
-            .unwrap();
-        assert_eq!(
-            receiver.try_next().unwrap().unwrap(),
-            CobaltEvent {
-                metric_id: mos_metrics_registry::UPDATE_CHECK_FAILURE_METRIC_ID,
-                event_codes: vec![
+    #[fasync::run_singlethreaded(test)]
+    async fn test_report_update_check_failure_reason() {
+        assert_metrics(
+            Metrics::UpdateCheckFailureReason(UpdateCheckFailureReason::Configuration),
+            &[
+                CobaltEvent {
+                    metric_id: mos_metrics_registry::UPDATE_CHECK_FAILURE_METRIC_ID,
+                    event_codes: (
                     mos_metrics_registry::UpdateCheckFailureMetricDimensionReason::Configuration
-                ]
-                .as_event_codes(),
-                component: None,
-                payload: EventPayload::Event(fidl_fuchsia_cobalt::Event),
-            }
-        );
-        assert_eq!(
-            receiver.try_next().unwrap().unwrap(),
-            CobaltEvent {
-                metric_id: mos_metrics_registry::UPDATE_CHECK_FAILURE_COUNT_METRIC_ID,
-                event_codes: vec![
-                    mos_metrics_registry::UpdateCheckFailureMetricDimensionReason::Configuration
-                        as u32
-                ],
-                component: None,
-                payload: EventPayload::EventCount(CountEvent {
-                    period_duration_micros: 0,
-                    count: 1
-                }),
-            }
-        );
+                )
+                    .as_event_codes(),
+                    component: None,
+                    payload: EventPayload::Event(fidl_fuchsia_cobalt::Event),
+                },
+                CobaltEvent {
+                    metric_id: mos_metrics_registry::UPDATE_CHECK_FAILURE_COUNT_METRIC_ID,
+                    event_codes: (
+                        mos_metrics_registry::UpdateCheckFailureMetricDimensionReason::Configuration
+                    ).as_event_codes(),
+                    component: None,
+                    payload: EventPayload::EventCount(CountEvent {
+                        period_duration_micros: 0,
+                        count: 1,
+                    }),
+                },
+            ],
+        )
+        .await;
     }
 
-    #[test]
-    fn test_report_requests_per_check() {
-        assert_metric(
+    #[fasync::run_singlethreaded(test)]
+    async fn test_report_requests_per_check() {
+        assert_metrics(
             Metrics::RequestsPerCheck { count: 3, successful: true },
-            CobaltEvent {
+            &[CobaltEvent {
                 metric_id: mos_metrics_registry::REQUESTS_PER_CHECK_METRIC_ID,
-                event_codes: vec![
-                    mos_metrics_registry::RequestsPerCheckMetricDimensionResult::Success,
-                ]
-                .as_event_codes(),
+                event_codes:
+                    (mos_metrics_registry::RequestsPerCheckMetricDimensionResult::Success,)
+                        .as_event_codes(),
                 component: None,
                 payload: EventPayload::EventCount(CountEvent {
                     period_duration_micros: 0,
                     count: 3,
                 }),
-            },
-        );
+            }],
+        )
+        .await;
     }
 
-    #[test]
-    fn test_report_attempts_to_successful_check() {
-        assert_metric(
+    #[fasync::run_singlethreaded(test)]
+    async fn test_report_attempts_to_successful_check() {
+        assert_metrics(
             Metrics::AttemptsToSuccessfulCheck(3),
-            CobaltEvent {
+            &[CobaltEvent {
                 metric_id: mos_metrics_registry::ATTEMPTS_TO_SUCCESSFUL_CHECK_METRIC_ID,
-                event_codes: vec![
+                event_codes: (
                     mos_metrics_registry::AttemptsToSuccessfulCheckMetricDimensionResult::Success,
-                ]
-                .as_event_codes(),
+                )
+                    .as_event_codes(),
                 component: None,
                 payload: EventPayload::EventCount(CountEvent {
                     period_duration_micros: 0,
                     count: 3,
                 }),
-            },
-        );
+            }],
+        )
+        .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_report_attempts_to_successful_install() {
+        assert_metrics(
+            Metrics::AttemptsToSuccessfulInstall { count: 3, successful: true },
+            &[
+                CobaltEvent {
+                    metric_id: mos_metrics_registry::ATTEMPTS_PER_DEVICE_DAY_METRIC_ID,
+                    event_codes: (
+                        mos_metrics_registry::AttemptsPerDeviceDayMetricDimensionResult::Success,
+                    )
+                        .as_event_codes(),
+                    component: None,
+                    payload: EventPayload::EventCount(CountEvent {
+                        period_duration_micros: 0,
+                        count: 1,
+                    }),
+                },
+                CobaltEvent {
+                    metric_id: mos_metrics_registry::ATTEMPTS_TO_REACH_SUCCESS_METRIC_ID,
+                    event_codes: (
+                        mos_metrics_registry::AttemptsToReachSuccessMetricDimensionResult::Success,
+                    )
+                        .as_event_codes(),
+                    component: None,
+                    payload: EventPayload::EventCount(CountEvent {
+                        period_duration_micros: 0,
+                        count: 3,
+                    }),
+                },
+            ],
+        )
+        .await;
+
+        assert_metrics(
+            Metrics::AttemptsToSuccessfulInstall { count: 3, successful: false },
+            &[
+                CobaltEvent {
+                    metric_id: mos_metrics_registry::ATTEMPTS_PER_DEVICE_DAY_METRIC_ID,
+                    event_codes: (
+                        mos_metrics_registry::AttemptsPerDeviceDayMetricDimensionResult::Failed,
+                    )
+                        .as_event_codes(),
+                    component: None,
+                    payload: EventPayload::EventCount(CountEvent {
+                        period_duration_micros: 0,
+                        count: 1,
+                    }),
+                },
+                CobaltEvent {
+                    metric_id: mos_metrics_registry::ATTEMPTS_TO_REACH_SUCCESS_METRIC_ID,
+                    event_codes: (
+                        mos_metrics_registry::AttemptsToReachSuccessMetricDimensionResult::Failed,
+                    )
+                        .as_event_codes(),
+                    component: None,
+                    payload: EventPayload::EventCount(CountEvent {
+                        period_duration_micros: 0,
+                        count: 3,
+                    }),
+                },
+            ],
+        )
+        .await;
     }
 
     #[test]
