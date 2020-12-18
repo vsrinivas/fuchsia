@@ -3,17 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        config::{CapabilityAllowlistKey, CapabilityAllowlistSource},
-        model::{
-            rights,
-            testing::{routing_test_helpers::*, test_helpers::*},
-        },
+    crate::model::{
+        rights,
+        testing::{routing_test_helpers::*, test_helpers::*},
     },
     cm_rust::*,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
-    moniker::{AbsoluteMoniker, ExtendedMoniker, RelativeMoniker},
-    std::{collections::HashSet, convert::TryInto, fs, path::PathBuf},
+    moniker::RelativeMoniker,
+    std::{convert::TryInto, fs, path::PathBuf},
 };
 
 ///   component manager's namespace
@@ -1421,80 +1418,6 @@ async fn dir_offered_from_nonexecutable() {
             storage_relation: None,
             from_cm_namespace: false,
             storage_subdir: None,
-            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
-        },
-    )
-    .await;
-}
-
-///   component manager's namespace
-///    |
-///    a
-///    |
-///    b
-///
-/// a: has storage decl with name "mystorage" with a source of parent at path /data
-/// a: offers cache storage to b from "mystorage"
-/// b: uses cache storage as /storage.
-/// Policy prevents b from using storage.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn storage_dir_from_cm_namespace_prevented_by_policy() {
-    let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .offer(OfferDecl::Storage(OfferStorageDecl {
-                    source_name: "cache".into(),
-                    target_name: "cache".into(),
-                    source: OfferStorageSource::Self_,
-                    target: OfferTarget::Child("b".to_string()),
-                }))
-                .add_lazy_child("b")
-                .storage(StorageDecl {
-                    name: "cache".into(),
-                    backing_dir: "tmp".try_into().unwrap(),
-                    source: StorageDirectorySource::Parent,
-                    subdir: Some(PathBuf::from("cache")),
-                })
-                .build(),
-        ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .use_(UseDecl::Storage(UseStorageDecl {
-                    source_name: "cache".into(),
-                    target_path: "/storage".try_into().unwrap(),
-                }))
-                .build(),
-        ),
-    ];
-    let namespace_capabilities = vec![CapabilityDecl::Directory(
-        DirectoryDeclBuilder::new("tmp")
-            .path("/tmp")
-            .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
-            .build(),
-    )];
-    let test = RoutingTestBuilder::new("a", components)
-        .set_namespace_capabilities(namespace_capabilities)
-        .add_capability_policy(
-            CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::root()),
-                source_name: CapabilityName::from("cache"),
-                source: CapabilityAllowlistSource::Self_,
-                capability: CapabilityTypeName::Storage,
-            },
-            HashSet::new(),
-        )
-        .build()
-        .await;
-
-    test.check_use(
-        vec!["b:0"].into(),
-        CheckUse::Storage {
-            path: "/storage".try_into().unwrap(),
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
-            from_cm_namespace: true,
-            storage_subdir: Some("cache".to_string()),
             expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
     )

@@ -8,8 +8,6 @@ use {
         config::{CapabilityAllowlistKey, CapabilityAllowlistSource, RuntimeConfig},
         model::error::ModelError,
     },
-    fuchsia_zircon as zx,
-    log::{error, warn},
     moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker},
     std::sync::{Arc, Weak},
     thiserror::Error,
@@ -50,11 +48,6 @@ impl PolicyError {
             target_moniker: target_moniker.clone(),
         }
     }
-
-    /// Convert this error into its approximate `zx::Status` equivalent.
-    pub fn as_zx_status(&self) -> zx::Status {
-        zx::Status::UNAVAILABLE
-    }
 }
 
 /// Evaluates security policy globally across the entire Model and all realms.
@@ -89,10 +82,15 @@ impl GlobalPolicyChecker {
         AbsoluteMoniker::new(normalized_children)
     }
 
-    fn get_policy_key<'a>(
+    /// Returns Ok(()) if the provided capability source can be routed to the
+    /// given target_moniker, else a descriptive PolicyError.
+    pub fn can_route_capability<'a>(
+        &self,
         capability_source: &'a CapabilitySource,
-    ) -> Result<CapabilityAllowlistKey, ModelError> {
-        Ok(match &capability_source {
+        target_moniker: &'a AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
+        let target_moniker = Self::strip_moniker_instance_id(&target_moniker);
+        let policy_key = match &capability_source {
             CapabilitySource::Namespace { capability } => CapabilityAllowlistKey {
                 source_moniker: ExtendedMoniker::ComponentManager,
                 source_name: capability
@@ -136,38 +134,18 @@ impl GlobalPolicyChecker {
                 source: CapabilityAllowlistSource::Capability,
                 capability: source_capability.type_name(),
             },
-        })
-    }
-
-    /// Returns Ok(()) if the provided capability source can be routed to the
-    /// given target_moniker, else a descriptive PolicyError.
-    pub fn can_route_capability<'a>(
-        &self,
-        capability_source: &'a CapabilitySource,
-        target_moniker: &'a AbsoluteMoniker,
-    ) -> Result<(), ModelError> {
-        let target_moniker = Self::strip_moniker_instance_id(&target_moniker);
-        let policy_key = Self::get_policy_key(capability_source).map_err(|e| {
-            error!("Security policy could not generate a policy key for `{}`", capability_source);
-            e
-        })?;
+        };
 
         match self.config.security_policy.capability_policy.get(&policy_key) {
             Some(allowed_monikers) => match allowed_monikers.get(&target_moniker) {
                 Some(_) => Ok(()),
-                None => {
-                    warn!(
-                        "Security policy prevented `{}` from `{}` being routed to `{}`.",
-                        policy_key.source_name, policy_key.source_moniker, target_moniker
-                    );
-                    Err(ModelError::PolicyError {
-                        err: PolicyError::capability_use_disallowed(
-                            policy_key.source_name.str(),
-                            &policy_key.source_moniker,
-                            &target_moniker,
-                        ),
-                    })
-                }
+                None => Err(ModelError::PolicyError {
+                    err: PolicyError::capability_use_disallowed(
+                        policy_key.source_name.str(),
+                        &policy_key.source_moniker,
+                        &target_moniker,
+                    ),
+                }),
             },
             None => Ok(()),
         }
@@ -426,10 +404,11 @@ mod tests {
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
 
         let protocol_capability = CapabilitySource::Namespace {
-            capability: ComponentCapability::Protocol(ProtocolDecl {
-                name: "fuchsia.kernel.RootResource".into(),
-                source_path: "/svc/fuchsia.kernel.RootResource".parse().unwrap(),
-            }),
+            capability: ComponentCapability::Use(UseDecl::Protocol(UseProtocolDecl {
+                source: UseSource::Parent,
+                source_name: "fuchsia.kernel.RootResource".into(),
+                target_path: "/svc/fuchsia.kernel.RootResource".parse().unwrap(),
+            })),
         };
         let valid_path_0 = AbsoluteMoniker::from(vec!["root:0"]);
         let valid_path_1 = AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]);
@@ -493,10 +472,11 @@ mod tests {
         let weak_realm = realm.as_weak();
 
         let protocol_capability = CapabilitySource::Component {
-            capability: ComponentCapability::Protocol(ProtocolDecl {
-                name: "fuchsia.foo.FooBar".into(),
-                source_path: "/svc/fuchsia.foo.FooBar".parse().unwrap(),
-            }),
+            capability: ComponentCapability::Use(UseDecl::Protocol(UseProtocolDecl {
+                source: UseSource::Parent,
+                source_name: "fuchsia.foo.FooBar".into(),
+                target_path: "/svc/fuchsia.foo.FooBar".parse().unwrap(),
+            })),
             realm: weak_realm,
         };
         let valid_path_0 = AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]);
@@ -530,9 +510,9 @@ mod tests {
                 source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
                     "foo:0",
                 ])),
-                source_name: CapabilityName::from("cache"),
+                source_name: CapabilityName::from("fuchsia.foo.FooBar"),
                 source: CapabilityAllowlistSource::Capability,
-                capability: CapabilityTypeName::Storage,
+                capability: CapabilityTypeName::Protocol,
             },
             vec![
                 AbsoluteMoniker::from(vec!["foo:0"]),
@@ -556,12 +536,11 @@ mod tests {
         let weak_realm = realm.as_weak();
 
         let protocol_capability = CapabilitySource::Capability {
-            source_capability: ComponentCapability::Storage(StorageDecl {
-                backing_dir: "/cache".into(),
-                name: "cache".into(),
-                source: StorageDirectorySource::Parent,
-                subdir: None,
-            }),
+            source_capability: ComponentCapability::Use(UseDecl::Protocol(UseProtocolDecl {
+                source: UseSource::Parent,
+                source_name: "fuchsia.foo.FooBar".into(),
+                target_path: "/svc/fuchsia.foo.FooBar".parse().unwrap(),
+            })),
             realm: weak_realm,
         };
         let valid_path_0 = AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]);
