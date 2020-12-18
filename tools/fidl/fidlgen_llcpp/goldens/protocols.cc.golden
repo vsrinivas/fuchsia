@@ -351,22 +351,6 @@ namespace entries {
   return Transitional::Dispatch(this, msg, txn);
 }
 
-zx_status_t Transitional::_UnsafeSendEventEvent(::zx::unowned_channel _channel,
-                                                int64_t x) {
-  EventResponse::OwnedEncodedMessage _response{x};
-  _response.Write(_channel->get());
-  return _response.status();
-}
-
-zx_status_t Transitional::_UnsafeSendEventEvent(::zx::unowned_channel _channel,
-                                                ::fidl::BufferSpan _buffer,
-                                                int64_t x) {
-  EventResponse::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
-                                                 x);
-  _response.Write(_channel->get());
-  return _response.status();
-}
-
 ::fidl::Result Transitional::Interface::RequestCompleterBase::Reply(int64_t y) {
   RequestResponse::OwnedEncodedMessage _response{y};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -393,6 +377,20 @@ void Transitional::OneWayRequest::_InitHeader(zx_txid_t _txid) {
 
 void Transitional::EventResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kTransitional_Event_Ordinal);
+}
+
+zx_status_t Transitional::EventSender::Event(int64_t x) const {
+  EventResponse::OwnedEncodedMessage _response{x};
+  _response.Write(server_end_.get());
+  return _response.status();
+}
+
+zx_status_t Transitional::EventSender::Event(::fidl::BufferSpan _buffer,
+                                             int64_t x) const {
+  EventResponse::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
+                                                 x);
+  _response.Write(server_end_.get());
+  return _response.status();
 }
 
 namespace {
@@ -949,22 +947,6 @@ namespace entries {
   return ChannelProtocol::Dispatch(this, msg, txn);
 }
 
-zx_status_t ChannelProtocol::_UnsafeSendEventAEvent(
-    ::zx::unowned_channel _channel, int64_t a, int64_t b) {
-  EventAResponse::OwnedEncodedMessage _response{a, b};
-  _response.Write(_channel->get());
-  return _response.status();
-}
-
-zx_status_t ChannelProtocol::_UnsafeSendEventAEvent(
-    ::zx::unowned_channel _channel, ::fidl::BufferSpan _buffer, int64_t a,
-    int64_t b) {
-  EventAResponse::UnownedEncodedMessage _response(_buffer.data,
-                                                  _buffer.capacity, a, b);
-  _response.Write(_channel->get());
-  return _response.status();
-}
-
 ::fidl::Result ChannelProtocol::Interface::MethodBCompleterBase::Reply(
     int64_t result) {
   MethodBResponse::OwnedEncodedMessage _response{result};
@@ -1033,6 +1015,20 @@ void ChannelProtocol::MutateSocketResponse::_InitHeader() {
 }
 
 void ChannelProtocol::MutateSocketResponse::_CloseHandles() { b.reset(); }
+
+zx_status_t ChannelProtocol::EventSender::EventA(int64_t a, int64_t b) const {
+  EventAResponse::OwnedEncodedMessage _response{a, b};
+  _response.Write(server_end_.get());
+  return _response.status();
+}
+
+zx_status_t ChannelProtocol::EventSender::EventA(::fidl::BufferSpan _buffer,
+                                                 int64_t a, int64_t b) const {
+  EventAResponse::UnownedEncodedMessage _response(_buffer.data,
+                                                  _buffer.capacity, a, b);
+  _response.Write(server_end_.get());
+  return _response.status();
+}
 
 namespace {
 
@@ -1809,29 +1805,6 @@ WithAndWithoutRequestResponse::Interface::dispatch_message(
   return WithAndWithoutRequestResponse::Dispatch(this, msg, txn);
 }
 
-zx_status_t WithAndWithoutRequestResponse::_UnsafeSendOnEmptyResponseEvent(
-    ::zx::unowned_channel _channel) {
-  OnEmptyResponseResponse::OwnedEncodedMessage _response{};
-  _response.Write(_channel->get());
-  return _response.status();
-}
-
-zx_status_t WithAndWithoutRequestResponse::_UnsafeSendOnWithResponseEvent(
-    ::zx::unowned_channel _channel, ::fidl::StringView ret) {
-  OnWithResponseResponse::OwnedEncodedMessage _response{ret};
-  _response.Write(_channel->get());
-  return _response.status();
-}
-
-zx_status_t WithAndWithoutRequestResponse::_UnsafeSendOnWithResponseEvent(
-    ::zx::unowned_channel _channel, ::fidl::BufferSpan _buffer,
-    ::fidl::StringView ret) {
-  OnWithResponseResponse::UnownedEncodedMessage _response(
-      _buffer.data, _buffer.capacity, ret);
-  _response.Write(_channel->get());
-  return _response.status();
-}
-
 ::fidl::Result WithAndWithoutRequestResponse::Interface::
     NoRequestEmptyResponseCompleterBase::Reply() {
   NoRequestEmptyResponseResponse::OwnedEncodedMessage _response{};
@@ -1946,6 +1919,28 @@ void WithAndWithoutRequestResponse::OnEmptyResponseResponse::_InitHeader() {
 void WithAndWithoutRequestResponse::OnWithResponseResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0,
                        kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
+}
+
+zx_status_t WithAndWithoutRequestResponse::EventSender::OnEmptyResponse()
+    const {
+  OnEmptyResponseResponse::OwnedEncodedMessage _response{};
+  _response.Write(server_end_.get());
+  return _response.status();
+}
+
+zx_status_t WithAndWithoutRequestResponse::EventSender::OnWithResponse(
+    ::fidl::StringView ret) const {
+  OnWithResponseResponse::OwnedEncodedMessage _response{ret};
+  _response.Write(server_end_.get());
+  return _response.status();
+}
+
+zx_status_t WithAndWithoutRequestResponse::EventSender::OnWithResponse(
+    ::fidl::BufferSpan _buffer, ::fidl::StringView ret) const {
+  OnWithResponseResponse::UnownedEncodedMessage _response(
+      _buffer.data, _buffer.capacity, ret);
+  _response.Write(server_end_.get());
+  return _response.status();
 }
 
 void ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::

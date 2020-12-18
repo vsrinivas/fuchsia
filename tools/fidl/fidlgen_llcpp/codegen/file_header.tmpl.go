@@ -106,6 +106,7 @@ namespace llcpp {
 namespace {{ . }} {
 {{- end }}
 {{ "" }}
+
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Protocol }}
 {{ template "ClientDeclaration" . }}
@@ -115,6 +116,7 @@ namespace {{ . }} {
 {{- end }}
 {{- end }}
 {{ "" }}
+
 {{- range .LibraryReversed }}
 }  // namespace {{ . }}
 {{- end }}

@@ -28,8 +28,6 @@ go_library("gopkg") {
     "codegen/fragment_protocol.tmpl.go",
     "codegen/fragment_reply_caller_allocate.tmpl.go",
     "codegen/fragment_reply_managed.tmpl.go",
-    "codegen/fragment_send_event_caller_allocate.tmpl.go",
-    "codegen/fragment_send_event_managed.tmpl.go",
     "codegen/fragment_service.tmpl.go",
     "codegen/fragment_struct.tmpl.go",
     "codegen/fragment_sync_event_handler.tmpl.go",

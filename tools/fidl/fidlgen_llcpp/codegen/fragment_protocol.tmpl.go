@@ -872,34 +872,6 @@ class {{ .Name }} final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  {{- /* Events */}}
-  {{- if .Methods }}
-{{ "" }}
-    {{- /* Events have no "request" part of the call; they are unsolicited. */}}
-    {{- range .Events -}}
-{{ "" }}
-      {{- range .DocComments }}
-  //{{ . }}
-      {{- end }}
-  static zx_status_t {{ template "SendEventManagedMethodSignature" . }};
-      {{- if .Response }}
-{{ "" }}
-        {{- range .DocComments }}
-  //{{ . }}
-        {{- end }}
-  // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t {{ template "SendEventCallerAllocateMethodSignature" . }};
-      {{- end }}
-      {{- if .Response }}
-{{ "" }}
-        {{- range .DocComments }}
-  //{{ . }}
-        {{- end }}
-      {{- end }}
-{{ "" }}
-    {{- end }}
-  {{- end }}
-
   class EventSender;
   class WeakEventSender;
 };
@@ -992,15 +964,6 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 
 {{- if .Methods }}
 {{ "" }}
-  {{- range .Events -}}
-{{ "" }}
-      {{- template "SendEventManagedMethodDefinition" . }}
-      {{- if .Response }}
-{{ "" }}
-        {{- template "SendEventCallerAllocateMethodDefinition" . }}
-      {{- end }}
-{{ "" }}
-  {{- end }}
   {{- range .TwoWayMethods -}}
 {{ "" }}
     {{- template "ReplyManagedMethodDefinition" . }}

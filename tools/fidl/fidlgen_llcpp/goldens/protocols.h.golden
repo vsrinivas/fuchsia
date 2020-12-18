@@ -1686,14 +1686,6 @@ class Transitional final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  static zx_status_t _UnsafeSendEventEvent(::zx::unowned_channel _channel,
-                                           int64_t x);
-
-  // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t _UnsafeSendEventEvent(::zx::unowned_channel _channel,
-                                           ::fidl::BufferSpan _buffer,
-                                           int64_t x);
-
   class EventSender;
   class WeakEventSender;
 };
@@ -3438,14 +3430,6 @@ class ChannelProtocol final {
                                                    ::fidl::Transaction* txn) {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
-
-  static zx_status_t _UnsafeSendEventAEvent(::zx::unowned_channel _channel,
-                                            int64_t a, int64_t b);
-
-  // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t _UnsafeSendEventAEvent(::zx::unowned_channel _channel,
-                                            ::fidl::BufferSpan _buffer,
-                                            int64_t a, int64_t b);
 
   class EventSender;
   class WeakEventSender;
@@ -5973,17 +5957,6 @@ class WithAndWithoutRequestResponse final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  static zx_status_t _UnsafeSendOnEmptyResponseEvent(
-      ::zx::unowned_channel _channel);
-
-  static zx_status_t _UnsafeSendOnWithResponseEvent(
-      ::zx::unowned_channel _channel, ::fidl::StringView ret);
-
-  // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t _UnsafeSendOnWithResponseEvent(
-      ::zx::unowned_channel _channel, ::fidl::BufferSpan _buffer,
-      ::fidl::StringView ret);
-
   class EventSender;
   class WeakEventSender;
 };
@@ -8027,15 +8000,10 @@ class Transitional::EventSender {
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
 
-  zx_status_t Event(int64_t x) const {
-    return _UnsafeSendEventEvent(::zx::unowned_channel(server_end_),
-                                 std::move(x));
-  }
+  zx_status_t Event(int64_t x) const;
 
-  zx_status_t Event(::fidl::BufferSpan _buffer, int64_t x) const {
-    return _UnsafeSendEventEvent(::zx::unowned_channel(server_end_),
-                                 std::move(_buffer), std::move(x));
-  }
+  // Caller provides the backing storage for FIDL message via response buffers.
+  zx_status_t Event(::fidl::BufferSpan _buffer, int64_t x) const;
 
  private:
   ::zx::channel server_end_;
@@ -8050,6 +8018,7 @@ class Transitional::WeakEventSender {
     return ZX_ERR_CANCELED;
   }
 
+  // Caller provides the backing storage for FIDL message via response buffers.
   zx_status_t Event(::fidl::BufferSpan _buffer, int64_t x) const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().Event(std::move(_buffer), std::move(x));
@@ -8207,16 +8176,10 @@ class ChannelProtocol::EventSender {
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
 
-  zx_status_t EventA(int64_t a, int64_t b) const {
-    return _UnsafeSendEventAEvent(::zx::unowned_channel(server_end_),
-                                  std::move(a), std::move(b));
-  }
+  zx_status_t EventA(int64_t a, int64_t b) const;
 
-  zx_status_t EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const {
-    return _UnsafeSendEventAEvent(::zx::unowned_channel(server_end_),
-                                  std::move(_buffer), std::move(a),
-                                  std::move(b));
-  }
+  // Caller provides the backing storage for FIDL message via response buffers.
+  zx_status_t EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const;
 
  private:
   ::zx::channel server_end_;
@@ -8231,6 +8194,7 @@ class ChannelProtocol::WeakEventSender {
     return ZX_ERR_CANCELED;
   }
 
+  // Caller provides the backing storage for FIDL message via response buffers.
   zx_status_t EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().EventA(std::move(_buffer), std::move(a),
@@ -8448,20 +8412,13 @@ class WithAndWithoutRequestResponse::EventSender {
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
 
-  zx_status_t OnEmptyResponse() const {
-    return _UnsafeSendOnEmptyResponseEvent(::zx::unowned_channel(server_end_));
-  }
+  zx_status_t OnEmptyResponse() const;
 
-  zx_status_t OnWithResponse(::fidl::StringView ret) const {
-    return _UnsafeSendOnWithResponseEvent(::zx::unowned_channel(server_end_),
-                                          std::move(ret));
-  }
+  zx_status_t OnWithResponse(::fidl::StringView ret) const;
 
+  // Caller provides the backing storage for FIDL message via response buffers.
   zx_status_t OnWithResponse(::fidl::BufferSpan _buffer,
-                             ::fidl::StringView ret) const {
-    return _UnsafeSendOnWithResponseEvent(::zx::unowned_channel(server_end_),
-                                          std::move(_buffer), std::move(ret));
-  }
+                             ::fidl::StringView ret) const;
 
  private:
   ::zx::channel server_end_;
@@ -8483,6 +8440,7 @@ class WithAndWithoutRequestResponse::WeakEventSender {
     return ZX_ERR_CANCELED;
   }
 
+  // Caller provides the backing storage for FIDL message via response buffers.
   zx_status_t OnWithResponse(::fidl::BufferSpan _buffer,
                              ::fidl::StringView ret) const {
     if (auto _binding = binding_.lock()) {

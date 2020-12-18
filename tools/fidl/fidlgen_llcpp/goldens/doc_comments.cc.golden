@@ -200,12 +200,6 @@ namespace entries {
   return Interface::Dispatch(this, msg, txn);
 }
 
-zx_status_t Interface::_UnsafeSendOnEventEvent(::zx::unowned_channel _channel) {
-  OnEventResponse::OwnedEncodedMessage _response{};
-  _response.Write(_channel->get());
-  return _response.status();
-}
-
 void Interface::MethodRequest::_InitHeader(zx_txid_t _txid) {
   fidl_init_txn_header(&_hdr, _txid, kInterface_Method_Ordinal);
 }
@@ -213,6 +207,13 @@ void Interface::MethodRequest::_InitHeader(zx_txid_t _txid) {
 void Interface::OnEventResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kInterface_OnEvent_Ordinal);
 }
+
+zx_status_t Interface::EventSender::OnEvent() const {
+  OnEventResponse::OwnedEncodedMessage _response{};
+  _response.Write(server_end_.get());
+  return _response.status();
+}
+
 auto ::llcpp::fidl::test::doccomments::FlexibleUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {

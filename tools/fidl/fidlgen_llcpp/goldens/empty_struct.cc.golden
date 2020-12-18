@@ -341,22 +341,6 @@ namespace entries {
   return EmptyProtocol::Dispatch(this, msg, txn);
 }
 
-zx_status_t EmptyProtocol::_UnsafeSendReceiveEvent(
-    ::zx::unowned_channel _channel, ::llcpp::fidl::test::emptystruct::Empty e) {
-  ReceiveResponse::OwnedEncodedMessage _response{e};
-  _response.Write(_channel->get());
-  return _response.status();
-}
-
-zx_status_t EmptyProtocol::_UnsafeSendReceiveEvent(
-    ::zx::unowned_channel _channel, ::fidl::BufferSpan _buffer,
-    ::llcpp::fidl::test::emptystruct::Empty e) {
-  ReceiveResponse::UnownedEncodedMessage _response(_buffer.data,
-                                                   _buffer.capacity, e);
-  _response.Write(_channel->get());
-  return _response.status();
-}
-
 ::fidl::Result EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
     ::llcpp::fidl::test::emptystruct::Empty e) {
   SendAndReceiveResponse::OwnedEncodedMessage _response{e};
@@ -384,6 +368,22 @@ void EmptyProtocol::SendAndReceiveRequest::_InitHeader(zx_txid_t _txid) {
 
 void EmptyProtocol::SendAndReceiveResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kEmptyProtocol_SendAndReceive_Ordinal);
+}
+
+zx_status_t EmptyProtocol::EventSender::Receive(
+    ::llcpp::fidl::test::emptystruct::Empty e) const {
+  ReceiveResponse::OwnedEncodedMessage _response{e};
+  _response.Write(server_end_.get());
+  return _response.status();
+}
+
+zx_status_t EmptyProtocol::EventSender::Receive(
+    ::fidl::BufferSpan _buffer,
+    ::llcpp::fidl::test::emptystruct::Empty e) const {
+  ReceiveResponse::UnownedEncodedMessage _response(_buffer.data,
+                                                   _buffer.capacity, e);
+  _response.Write(server_end_.get());
+  return _response.status();
 }
 
 }  // namespace emptystruct

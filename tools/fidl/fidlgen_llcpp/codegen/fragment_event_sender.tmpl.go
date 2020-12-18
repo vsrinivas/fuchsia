@@ -5,6 +5,14 @@
 package codegen
 
 const fragmentEventSenderTmpl = `
+{{- define "SendEventManagedMethodSignature" -}}
+{{ .Name }}({{ template "Params" .Response }}) const
+{{- end }}
+
+{{- define "SendEventCallerAllocateMethodSignature" -}}
+{{ .Name }}(::fidl::BufferSpan _buffer, {{ template "Params" .Response }}) const
+{{- end }}
+
 {{- define "EventSenderDeclaration" }}
 // |EventSender| owns a server endpoint of a channel speaking
 // the {{ .Name }} protocol, and can send events in that protocol.
@@ -24,21 +32,20 @@ class {{ .Name }}::EventSender {
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
 {{ "" }}
+  {{- /* Events have no "request" part of the call; they are unsolicited. */}}
   {{- range .Events }}
-  zx_status_t {{ .Name }}({{ template "Params" .Response }}) const {
-    return _UnsafeSend{{ .Name }}Event(
-        ::zx::unowned_channel(server_end_) {{- if .Response }}, {{ end -}}
-        {{ template "SyncClientMoveParams" .Response }});
-  }
+    {{- range .DocComments }}
+  //{{ . }}
+    {{- end }}
+  zx_status_t {{ template "SendEventManagedMethodSignature" . }};
 
     {{- if .Response }}
 {{ "" }}
-  zx_status_t {{ .Name }}(::fidl::BufferSpan _buffer,
-                          {{ template "Params" .Response }}) const {
-    return _UnsafeSend{{ .Name }}Event(
-        ::zx::unowned_channel(server_end_), std::move(_buffer),
-        {{ template "SyncClientMoveParams" .Response }});
-  }
+    {{- range .DocComments }}
+  //{{ . }}
+    {{- end }}
+  // Caller provides the backing storage for FIDL message via response buffers.
+  zx_status_t {{ template "SendEventCallerAllocateMethodSignature" . }};
     {{- end }}
 {{ "" }}
   {{- end }}
@@ -50,7 +57,10 @@ class {{ .Name }}::WeakEventSender {
 {{- $protocol := . }}
  public:
   {{- range .Events }}
-  zx_status_t {{ .Name }}({{ template "Params" .Response }}) const {
+    {{- range .DocComments }}
+  //{{ . }}
+    {{- end }}
+  zx_status_t {{ template "SendEventManagedMethodSignature" . }} {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().{{ .Name }}(
           {{ template "SyncClientMoveParams" .Response }});
@@ -60,8 +70,11 @@ class {{ .Name }}::WeakEventSender {
 
     {{- if .Response }}
 {{ "" }}
-  zx_status_t {{ .Name }}(::fidl::BufferSpan _buffer,
-                          {{ template "Params" .Response }}) const {
+    {{- range .DocComments }}
+  //{{ . }}
+    {{- end }}
+  // Caller provides the backing storage for FIDL message via response buffers.
+  zx_status_t {{ template "SendEventCallerAllocateMethodSignature" . }} {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().{{ .Name }}(
           std::move(_buffer), {{ template "SyncClientMoveParams" .Response }});
@@ -79,5 +92,32 @@ class {{ .Name }}::WeakEventSender {
 
   std::weak_ptr<::fidl::internal::AsyncServerBinding<{{ .Name }}>> binding_;
 };
+{{- end }}
+
+{{- define "EventSenderDefinition" }}
+  {{- range .Events }}
+    {{- /* Managed */}}
+zx_status_t {{ .LLProps.ProtocolName }}::EventSender::
+{{- template "SendEventManagedMethodSignature" . }} {
+  {{ .Name }}Response::OwnedEncodedMessage _response{
+      {{- template "PassthroughMessageParams" .Response -}}
+  };
+  _response.Write(server_end_.get());
+  return _response.status();
+}
+    {{- /* Caller-allocated */}}
+    {{- if .Response }}
+{{ "" }}
+zx_status_t {{ .LLProps.ProtocolName }}::EventSender::
+{{- template "SendEventCallerAllocateMethodSignature" . }} {
+  {{ .Name }}Response::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity
+      {{- template "CommaPassthroughMessageParams" .Response -}}
+  );
+  _response.Write(server_end_.get());
+  return _response.status();
+}
+    {{- end }}
+{{ "" }}
+  {{- end }}
 {{- end }}
 `

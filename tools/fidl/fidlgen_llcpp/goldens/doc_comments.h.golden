@@ -1317,11 +1317,6 @@ class Interface final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  // event comment #1
-  //
-  // event comment #3
-  static zx_status_t _UnsafeSendOnEventEvent(::zx::unowned_channel _channel);
-
   class EventSender;
   class WeakEventSender;
 };
@@ -1554,9 +1549,10 @@ class Interface::EventSender {
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
 
-  zx_status_t OnEvent() const {
-    return _UnsafeSendOnEventEvent(::zx::unowned_channel(server_end_));
-  }
+  // event comment #1
+  //
+  // event comment #3
+  zx_status_t OnEvent() const;
 
  private:
   ::zx::channel server_end_;
@@ -1564,6 +1560,9 @@ class Interface::EventSender {
 
 class Interface::WeakEventSender {
  public:
+  // event comment #1
+  //
+  // event comment #3
   zx_status_t OnEvent() const {
     if (auto _binding = binding_.lock()) {
       return _binding->event_sender().OnEvent();
