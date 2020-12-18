@@ -5,17 +5,10 @@
 #include "no_hardware.h"
 
 #include <fuchsia/gpu/magma/llcpp/fidl.h>
-#include <lib/fidl-utils/bind.h>
 
 #include <memory>
 #include <mutex>
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/platform-defs.h>
-#include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <hw/reg.h>
 
@@ -24,6 +17,7 @@
 #include "no_hardware_testing.h"
 #include "platform_buffer.h"
 #include "platform_logger.h"
+#include "src/graphics/drivers/msd-img-rgx/no_hardware/msd_img_rgx_no_hardware-bind.h"
 #include "sys_driver/magma_driver.h"
 
 using FidlStatus = llcpp::fuchsia::gpu::magma::Status;
@@ -206,7 +200,4 @@ static constexpr zx_driver_ops_t no_hardware_gpu_driver_ops = []() {
 }();
 }  // namespace
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(no_hardware_gpu, no_hardware_gpu_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
-ZIRCON_DRIVER_END(no_hardware_gpu)
+ZIRCON_DRIVER(no_hardware_gpu, no_hardware_gpu_driver_ops, "zircon", "0.1");
