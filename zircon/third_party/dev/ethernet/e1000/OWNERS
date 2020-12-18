@@ -1,0 +1,3 @@
+include /src/connectivity/ethernet/drivers/OWNERS
+
+# COMPONENT: NetworkStack>drivers
