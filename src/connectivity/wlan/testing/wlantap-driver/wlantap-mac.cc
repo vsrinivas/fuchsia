@@ -47,6 +47,7 @@ struct WlantapMacImpl : WlantapMac {
 
     ConvertPhyInfo(ifc_info, self.phy_config_->phy_info);
     ifc_info->mac_role = ConvertMacRole(self.role_);
+    std::copy_n(self.phy_config_->iface_mac_addr.begin(), ETH_MAC_SIZE, ifc_info->mac_addr);
     return ZX_OK;
   }
 

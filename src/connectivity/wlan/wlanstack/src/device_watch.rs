@@ -126,6 +126,7 @@ mod tests {
 
     fn create_wlantap_config() -> fidl_wlantap::WlantapPhyConfig {
         fidl_wlantap::WlantapPhyConfig {
+            iface_mac_addr: [1; 6],
             phy_info: fidl_wlan_dev::PhyInfo {
                 // TODO(fxbug.dev/64309): The id and dev_path fields are ignored.
                 id: 0,
