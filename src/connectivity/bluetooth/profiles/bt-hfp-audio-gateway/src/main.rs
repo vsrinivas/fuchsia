@@ -23,7 +23,7 @@ async fn main() -> Result<(), Error> {
 
     let feature_support = AudioGatewayFeatureSupport::load()?;
 
-    let _profile = Profile::register_audio_gateway(feature_support).await?;
+    let _profile = Profile::register_audio_gateway(feature_support)?;
 
     let mut fs = ServiceFs::new();
 

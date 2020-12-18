@@ -29,7 +29,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc" ]
+  test_deps = [
+    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
+    "//third_party/rust_crates:matches",
+  ]
 
   sources = [
     "src/config.rs",

@@ -29,6 +29,12 @@ impl From<bt::Error> for Error {
     }
 }
 
+impl From<bt::ErrorCode> for Error {
+    fn from(err: bt::ErrorCode) -> Error {
+        Error { message: format!("Bluetooth Error Code {:?}", err) }
+    }
+}
+
 impl From<fidl::Error> for Error {
     fn from(err: fidl::Error) -> Error {
         Error { message: format!("FIDL error: {}", err) }
