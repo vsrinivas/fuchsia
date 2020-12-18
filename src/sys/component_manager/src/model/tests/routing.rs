@@ -6,6 +6,7 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
+        config::{CapabilityAllowlistKey, CapabilityAllowlistSource},
         framework::REALM_SERVICE,
         model::{
             error::ModelError,
@@ -32,8 +33,9 @@ use {
     log::*,
     maplit::hashmap,
     matches::assert_matches,
-    moniker::AbsoluteMoniker,
+    moniker::{AbsoluteMoniker, ExtendedMoniker},
     std::{
+        collections::HashSet,
         convert::{TryFrom, TryInto},
         path::{Path, PathBuf},
         sync::{Arc, Weak},
@@ -3475,4 +3477,446 @@ async fn resolver_component_decl_is_validated() {
             }
         }
     );
+}
+
+///   a
+///    \
+///     b
+///
+/// b: uses service /svc/hippo as /svc/hippo.
+/// a: provides b with the service but policy prevents it.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_protocol_denied_by_capability_policy() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("hippo_svc").build())
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Self_,
+                    source_name: "hippo_svc".into(),
+                    target_name: "hippo_svc".into(),
+                    target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Parent,
+                    source_name: "hippo_svc".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTestBuilder::new("a", components)
+        .add_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::root()),
+                source_name: CapabilityName::from("hippo_svc"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+            },
+            HashSet::new(),
+        )
+        .build()
+        .await;
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+        },
+    )
+    .await;
+}
+
+///   a
+///    \
+///     b
+///
+/// b: uses directory /data/foo as /data/bar.
+/// a: provides b with the directory but policy prevents it.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_directory_with_alias_denied_by_capability_policy() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
+                .offer(OfferDecl::Directory(OfferDirectoryDecl {
+                    source: OfferDirectorySource::Self_,
+                    source_name: "foo_data".into(),
+                    target_name: "bar_data".into(),
+                    target: OfferTarget::Child("b".to_string()),
+                    rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Directory(UseDirectoryDecl {
+                    source: UseSource::Parent,
+                    source_name: "bar_data".into(),
+                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    rights: *rights::READ_RIGHTS,
+                    subdir: None,
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTestBuilder::new("a", components)
+        .add_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::root()),
+                source_name: CapabilityName::from("foo_data"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Directory,
+            },
+            HashSet::new(),
+        )
+        .build()
+        .await;
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+    )
+    .await;
+}
+
+///   a
+///    \
+///     b
+///      \
+///       c
+/// c: uses service /svc/hippo as /svc/hippo.
+/// b: uses service /svc/hippo as /svc/hippo.
+/// a: provides b with the service policy allows it.
+/// b: provides c with the service policy does not allow it.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_protocol_partial_chain_allowed_by_capability_policy() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("hippo_svc").build())
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Self_,
+                    source_name: "hippo_svc".into(),
+                    target_name: "hippo_svc".into(),
+                    target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Parent,
+                    source_name: "hippo_svc".into(),
+                    target_name: "hippo_svc".into(),
+                    target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Parent,
+                    source_name: "hippo_svc".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .add_lazy_child("c")
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Parent,
+                    source_name: "hippo_svc".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+
+    let mut allowlist = HashSet::new();
+    allowlist.insert(AbsoluteMoniker::from(vec!["b:0"]));
+
+    let test = RoutingTestBuilder::new("a", components)
+        .add_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::root()),
+                source_name: CapabilityName::from("hippo_svc"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+            },
+            allowlist,
+        )
+        .build()
+        .await;
+
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+    )
+    .await;
+
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+        },
+    )
+    .await;
+}
+
+///   a
+///    \
+///     b
+///    /  \
+///   c    d
+/// b: provides d with the service policy allows denies it.
+/// b: provides c with the service policy allows it.
+/// c: uses service /svc/hippo as /svc/hippo.
+/// Tests component provided caps in the middle of a path
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_protocol_component_provided_capability_policy() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("hippo_svc").build())
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Self_,
+                    source_name: "hippo_svc".into(),
+                    target_name: "hippo_svc".into(),
+                    target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Parent,
+                    source_name: "hippo_svc".into(),
+                    target_name: "hippo_svc".into(),
+                    target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("c")
+                .add_lazy_child("d")
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Parent,
+                    source_name: "hippo_svc".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+        (
+            "d",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Parent,
+                    source_name: "hippo_svc".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+
+    let mut allowlist = HashSet::new();
+    allowlist.insert(AbsoluteMoniker::from(vec!["b:0"]));
+    allowlist.insert(AbsoluteMoniker::from(vec!["b:0", "c:0"]));
+
+    let test = RoutingTestBuilder::new("a", components)
+        .add_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::root()),
+                source_name: CapabilityName::from("hippo_svc"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+            },
+            allowlist,
+        )
+        .build()
+        .await;
+
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+    )
+    .await;
+
+    test.check_use(
+        vec!["b:0", "d:0"].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+        },
+    )
+    .await;
+}
+
+///   a
+///    \
+///     b
+///
+/// b: uses framework events "started", and "capability_requested".
+/// Capability policy denies the route from being allowed for started but
+/// not for capability_requested.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_event_from_framework_denied_by_capabiilty_policy() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Parent,
+                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Parent,
+                    source_name: "fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                    target_path: "/svc/fuchsia.sys2.BlockingEventSource".try_into().unwrap(),
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
+                    source_name: "capability_requested".into(),
+                    target_name: "capability_requested".into(),
+                    filter: None,
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
+                    source_name: "started".into(),
+                    target_name: "started".into(),
+                    filter: None,
+                }))
+                .use_(UseDecl::Event(UseEventDecl {
+                    source: UseSource::Framework,
+                    source_name: "resolved".into(),
+                    target_name: "resolved".into(),
+                    filter: None,
+                }))
+                .build(),
+        ),
+    ];
+
+    let mut allowlist = HashSet::new();
+    allowlist.insert(AbsoluteMoniker::from(vec!["b:0"]));
+
+    let test = RoutingTestBuilder::new("a", components)
+        .add_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
+                    "b:0",
+                ])),
+                source_name: CapabilityName::from("started"),
+                source: CapabilityAllowlistSource::Framework,
+                capability: CapabilityTypeName::Event,
+            },
+            HashSet::new(),
+        )
+        .add_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
+                    "b:0",
+                ])),
+                source_name: CapabilityName::from("capability_requested"),
+                source: CapabilityAllowlistSource::Framework,
+                capability: CapabilityTypeName::Event,
+            },
+            allowlist,
+        )
+        .build()
+        .await;
+
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::Event {
+            names: vec!["capability_requested".into()],
+            expected_res: ExpectedResult::Ok,
+        },
+    )
+    .await;
+
+    test.check_use(
+        vec!["b:0"].into(),
+        CheckUse::Event {
+            names: vec!["started".into()],
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+        },
+    )
+    .await
+}
+
+///  component manager's namespace
+///   |
+///   a
+///
+/// a: uses service /use_from_cm_namespace/svc/foo as foo_svc
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_from_component_manager_namespace_denied_by_policy() {
+    let components = vec![(
+        "a",
+        ComponentDeclBuilder::new()
+            .use_(UseDecl::Protocol(UseProtocolDecl {
+                source: UseSource::Parent,
+                source_name: "foo_svc".into(),
+                target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+            }))
+            .build(),
+    )];
+    let namespace_capabilities = vec![CapabilityDecl::Protocol(
+        ProtocolDeclBuilder::new("foo_svc").path("/use_from_cm_namespace/svc/foo").build(),
+    )];
+    let test = RoutingTestBuilder::new("a", components)
+        .set_namespace_capabilities(namespace_capabilities)
+        .add_capability_policy(
+            CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentManager,
+                source_name: CapabilityName::from("foo_svc"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+            },
+            HashSet::new(),
+        )
+        .build()
+        .await;
+
+    let _ns_dir = ScopedNamespaceDir::new(&test, "/use_from_cm_namespace");
+    test.check_use(
+        vec![].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+        },
+    )
+    .await;
 }

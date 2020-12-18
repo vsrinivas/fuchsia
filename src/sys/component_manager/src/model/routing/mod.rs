@@ -116,6 +116,10 @@ pub(super) async fn route_use_event_capability<'a>(
     target_realm: &'a Arc<Realm>,
 ) -> Result<CapabilitySource, ModelError> {
     let (source, _cap_state) = find_used_capability_source(use_decl, target_realm).await?;
+    target_realm
+        .try_get_context()?
+        .policy()
+        .can_route_capability(&source, &target_realm.abs_moniker)?;
     Ok(source)
 }
 
@@ -274,6 +278,10 @@ pub async fn open_capability_at_source(
     target_realm: &Arc<Realm>,
     server_chan: &mut zx::Channel,
 ) -> Result<(), ModelError> {
+    target_realm
+        .try_get_context()?
+        .policy()
+        .can_route_capability(&source, &target_realm.abs_moniker)?;
     let capability_provider =
         Arc::new(Mutex::new(get_default_provider(target_realm.as_weak(), &source)));
 
@@ -439,14 +447,26 @@ async fn route_storage_capability<'a>(
     let source = walk_offer_chain(&mut pos).await?;
 
     let (storage_decl, source_realm) = match source {
-        Some(CapabilitySource::Component {
-            capability: ComponentCapability::Storage(decl),
-            realm,
-        }) => (decl, realm.upgrade()?),
+        Some(capability_source) => {
+            target_realm
+                .try_get_context()?
+                .policy()
+                .can_route_capability(&capability_source, &target_realm.abs_moniker)?;
+            match capability_source {
+                CapabilitySource::Component {
+                    capability: ComponentCapability::Storage(decl),
+                    realm,
+                } => (decl, realm.upgrade()?),
+                _ => {
+                    unreachable!("Storage capability must come from a storage declaration.");
+                }
+            }
+        }
         _ => {
             unreachable!("Storage capability must come from a storage declaration.");
         }
     };
+
     let relative_moniker =
         RelativeMoniker::from_absolute(&source_realm.abs_moniker, &target_realm.abs_moniker);
 
@@ -1601,6 +1621,7 @@ fn routing_epitaph(err: &ModelError) -> zx::Status {
     match err {
         ModelError::RoutingError { err } => err.as_zx_status(),
         ModelError::RightsError { err } => err.as_zx_status(),
+        ModelError::PolicyError { err } => err.as_zx_status(),
         ModelError::Unsupported { .. } => zx::Status::NOT_SUPPORTED,
         // Any other type of error is not expected.
         _ => zx::Status::INTERNAL,
