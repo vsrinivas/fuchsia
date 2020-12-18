@@ -91,6 +91,7 @@ test_package("tests") {
 
   deps = [
     ":fuchsia-bluetooth_test",
+    "//third_party/rust_crates:matches",
 
     # TODO(armansito): The bt-hci-emulator driver is a runtime dependency of the test utilities
     # contained within the crate. We should separate them out into a testing library have that

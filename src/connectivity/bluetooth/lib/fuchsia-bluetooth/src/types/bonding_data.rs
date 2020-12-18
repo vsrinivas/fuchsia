@@ -395,6 +395,19 @@ impl TryFrom<sys::LeData> for LeBondData {
     }
 }
 
+impl From<sys::LeBondData> for LeBondData {
+    fn from(src: sys::LeBondData) -> Self {
+        Self {
+            connection_parameters: src.connection_parameters,
+            services: src.services.unwrap_or(vec![]).iter().map(Into::into).collect(),
+            peer_ltk: src.peer_ltk,
+            local_ltk: src.local_ltk,
+            irk: src.irk,
+            csrk: src.csrk,
+        }
+    }
+}
+
 impl TryFrom<control::BredrData> for BredrBondData {
     type Error = anyhow::Error;
     fn try_from(src: control::BredrData) -> Result<Self, Self::Error> {
@@ -419,36 +432,37 @@ impl TryFrom<sys::BredrData> for BredrBondData {
     }
 }
 
-impl From<LeBondData> for sys::LeData {
-    fn from(src: LeBondData) -> sys::LeData {
-        sys::LeData {
-            address: None,
-            connection_parameters: src.connection_parameters,
-            services: Some(src.services.into_iter().map(|uuid| uuid.into()).collect()),
-            // The LTK field is deprecated and is not necessary for internal conversions to sys
-            // types.
-            //
-            // Note: when converting in the opposite direction (from sys::LeData to LeBondData) the
-            // `ltk` field will be mapped to both `peer_ltk` and `local_ltk`. This means that
-            // converting from a sys::LeData to LeBondData and back is no longer idempotent.
-            ltk: None,
-            peer_ltk: src.peer_ltk,
-            local_ltk: src.local_ltk,
-            irk: src.irk,
-            csrk: src.csrk,
-            ..sys::LeData::EMPTY
+impl From<sys::BredrBondData> for BredrBondData {
+    fn from(src: sys::BredrBondData) -> Self {
+        Self {
+            role_preference: src.role_preference,
+            services: src.services.unwrap_or(vec![]).iter().map(Into::into).collect(),
+            link_key: src.link_key,
         }
     }
 }
 
-impl From<BredrBondData> for sys::BredrData {
-    fn from(src: BredrBondData) -> sys::BredrData {
-        sys::BredrData {
-            address: None,
+impl From<LeBondData> for sys::LeBondData {
+    fn from(src: LeBondData) -> Self {
+        sys::LeBondData {
+            connection_parameters: src.connection_parameters,
+            services: Some(src.services.into_iter().map(|uuid| uuid.into()).collect()),
+            peer_ltk: src.peer_ltk,
+            local_ltk: src.local_ltk,
+            irk: src.irk,
+            csrk: src.csrk,
+            ..sys::LeBondData::EMPTY
+        }
+    }
+}
+
+impl From<BredrBondData> for sys::BredrBondData {
+    fn from(src: BredrBondData) -> Self {
+        sys::BredrBondData {
             role_preference: src.role_preference,
             services: Some(src.services.into_iter().map(|uuid| uuid.into()).collect()),
             link_key: src.link_key,
-            ..sys::BredrData::EMPTY
+            ..sys::BredrBondData::EMPTY
         }
     }
 }
@@ -540,34 +554,43 @@ impl From<BondingData> for control::BondingData {
 impl TryFrom<sys::BondingData> for BondingData {
     type Error = anyhow::Error;
     fn try_from(fidl: sys::BondingData) -> Result<BondingData, Self::Error> {
-        let (data, transport_address) = match (fidl.le, fidl.bredr) {
-            (Some(le), Some(bredr)) => {
+        let fidl_clone = fidl.clone();
+        let data =
+            match (fidl_clone.le, fidl_clone.bredr, fidl_clone.le_bond, fidl_clone.bredr_bond) {
+                (Some(le), Some(bredr), None, None) => {
+                    OneOrBoth::Both(le.try_into()?, bredr.try_into()?)
+                }
+                (Some(le), None, None, None) => OneOrBoth::Left(le.try_into()?),
+                (None, Some(bredr), None, None) => OneOrBoth::Right(bredr.try_into()?),
+                (None, None, Some(le_bond), Some(bredr_bond)) => {
+                    OneOrBoth::Both(le_bond.into(), bredr_bond.into())
+                }
+                (None, None, Some(le_bond), None) => OneOrBoth::Left(le_bond.into()),
+                (None, None, None, Some(bredr_bond)) => OneOrBoth::Right(bredr_bond.into()),
+                // All other combinations of bonding data are invalid: they are either completely
+                // empty, or mix the old (Le|Bredr)Data types with the new (Le|Bredr)BondData types.
+                _ => {
+                    return Err(format_err!("transport-specific data invalid: {:?}", fidl));
+                }
+            };
+
+        // If |fidl| contains a non-transport specific address then we always use that. Otherwise,
+        // we fallback to the per-transport address for backwards compatibility with older clients.
+        let address = match (fidl.address, fidl.le, fidl.bredr) {
+            (Some(address), _, _) => address,
+            (None, Some(sys::LeData { address: Some(addr), .. }), None) => addr,
+            (None, None, Some(sys::BredrData { address: Some(addr), .. })) => addr,
+            (None, Some(le), Some(bredr)) => {
                 // If bonding data for both transports is present, then their transport-specific
                 // addresses must be identical and present for this to be a valid dual-mode peer.
                 if le.address != bredr.address {
                     return Err(format_err!("LE and BR/EDR addresses do not match"));
                 }
-                let addr = le.address.clone();
-                (OneOrBoth::Both(le.try_into()?, bredr.try_into()?), addr)
+                le.address.ok_or(format_err!(
+                    "address missing from both top-level and transport-specific data"
+                ))?
             }
-            (Some(le), None) => {
-                let addr = le.address.clone();
-                (OneOrBoth::Left(le.try_into()?), addr)
-            }
-            (None, Some(bredr)) => {
-                let addr = bredr.address.clone();
-                (OneOrBoth::Right(bredr.try_into()?), addr)
-            }
-            (None, None) => {
-                return Err(format_err!("transport-specific data missing"));
-            }
-        };
-
-        // If |fidl| contains a non-transport specific address then we always use that. Otherwise,
-        // we fallback to the per-transport address for backwards compatibility with older clients.
-        let address = match fidl.address {
-            Some(address) => address,
-            None => transport_address.ok_or(format_err!("address missing"))?,
+            _ => return Err(format_err!("address missing")),
         };
 
         Ok(BondingData {
@@ -598,15 +621,15 @@ impl TryFrom<(sys::BondingData, PeerId)> for BondingData {
 
 impl From<BondingData> for sys::BondingData {
     fn from(bd: BondingData) -> sys::BondingData {
-        let le = bd.le().map(|le| le.clone().into());
-        let bredr = bd.bredr().map(|bredr| bredr.clone().into());
+        let le_bond = bd.le().map(|le| le.clone().into());
+        let bredr_bond = bd.bredr().map(|bredr| bredr.clone().into());
         sys::BondingData {
             identifier: Some(bd.identifier.into()),
             address: Some(bd.address.into()),
             local_address: Some(bd.local_address.into()),
             name: bd.name,
-            le,
-            bredr,
+            le_bond,
+            bredr_bond,
             ..sys::BondingData::EMPTY
         }
     }
@@ -842,7 +865,7 @@ pub mod example {
 pub mod tests {
     use {
         super::compat::*, super::*, fidl_fuchsia_bluetooth_control as control,
-        fidl_fuchsia_bluetooth_sys as sys,
+        fidl_fuchsia_bluetooth_sys as sys, matches::assert_matches,
     };
 
     fn control_ltk() -> control::Ltk {
@@ -918,6 +941,31 @@ pub mod tests {
             }
         }
 
+        fn test_sys_bond(
+            le: &Option<sys::LeData>,
+            bredr: &Option<sys::BredrData>,
+            le_bond: &Option<sys::LeBondData>,
+            bredr_bond: &Option<sys::BredrBondData>,
+        ) -> sys::BondingData {
+            sys::BondingData {
+                identifier: Some(bt::PeerId { value: 42 }),
+                address: Some(bt::Address {
+                    type_: bt::AddressType::Public,
+                    bytes: [0, 0, 0, 0, 0, 0],
+                }),
+                local_address: Some(bt::Address {
+                    type_: bt::AddressType::Public,
+                    bytes: [0, 0, 0, 0, 0, 0],
+                }),
+                name: Some("name".into()),
+                le: le.clone(),
+                bredr: bredr.clone(),
+                le_bond: le_bond.clone(),
+                bredr_bond: bredr_bond.clone(),
+                ..sys::BondingData::EMPTY
+            }
+        }
+
         #[test]
         fn id_missing() {
             let src = sys::BondingData {
@@ -944,7 +992,18 @@ pub mod tests {
                 ..empty_data()
             };
             let result = BondingData::try_from(src);
-            assert_eq!(Err("address missing".to_string()), result.map_err(|e| format!("{:?}", e)));
+            assert_matches!(result.map_err(|e| format!("{:?}", e)), Err(e) if e.contains("address missing"));
+        }
+
+        #[test]
+        fn address_missing_le_bond() {
+            let src = sys::BondingData {
+                identifier: Some(bt::PeerId { value: 1 }),
+                le_bond: Some(sys::LeBondData::EMPTY),
+                ..empty_data()
+            };
+            let result = BondingData::try_from(src);
+            assert_matches!(result.map_err(|e| format!("{:?}", e)), Err(e) if e.contains("address missing"));
         }
 
         #[test]
@@ -955,7 +1014,18 @@ pub mod tests {
                 ..empty_data()
             };
             let result = BondingData::try_from(src);
-            assert_eq!(Err("address missing".to_string()), result.map_err(|e| format!("{:?}", e)));
+            assert_matches!(result.map_err(|e| format!("{:?}", e)), Err(e) if e.contains("address missing"));
+        }
+
+        #[test]
+        fn address_missing_bredr_bond() {
+            let src = sys::BondingData {
+                identifier: Some(bt::PeerId { value: 1 }),
+                bredr_bond: Some(sys::BredrBondData::EMPTY),
+                ..empty_data()
+            };
+            let result = BondingData::try_from(src);
+            assert_matches!(result.map_err(|e| format!("{:?}", e)), Err(e) if e.contains("address missing"));
         }
 
         #[test]
@@ -967,7 +1037,19 @@ pub mod tests {
                 ..empty_data()
             };
             let result = BondingData::try_from(src);
-            assert_eq!(Err("address missing".to_string()), result.map_err(|e| format!("{:?}", e)));
+            assert_matches!(result.map_err(|e| format!("{:?}", e)), Err(e) if e.contains("address missing"));
+        }
+
+        #[test]
+        fn address_missing_dual_mode_bond() {
+            let src = sys::BondingData {
+                identifier: Some(bt::PeerId { value: 1 }),
+                le_bond: Some(sys::LeBondData::EMPTY),
+                bredr_bond: Some(sys::BredrBondData::EMPTY),
+                ..empty_data()
+            };
+            let result = BondingData::try_from(src);
+            assert_matches!(result.map_err(|e| format!("{:?}", e)), Err(e) if e.contains("address missing"));
         }
 
         #[test]
@@ -1146,6 +1228,45 @@ pub mod tests {
             let result_le = result.le().expect("expected LE data");
             assert_eq!(result_le.peer_ltk, Some(ltk2));
             assert_eq!(result_le.local_ltk, None);
+        }
+
+        #[test]
+        fn disallow_mixing_old_new_transport_specific() {
+            let le = Some(sys::LeData::EMPTY);
+            let bredr = Some(sys::BredrData::EMPTY);
+            let le_bond = Some(sys::LeBondData::EMPTY);
+            let bredr_bond = Some(sys::BredrBondData::EMPTY);
+
+            // Valid combinations of bonding data
+            assert!(BondingData::try_from(test_sys_bond(&le, &None, &None, &None)).is_ok());
+            assert!(BondingData::try_from(test_sys_bond(&None, &bredr, &None, &None)).is_ok());
+            assert!(BondingData::try_from(test_sys_bond(&le, &bredr, &None, &None)).is_ok());
+            assert!(BondingData::try_from(test_sys_bond(&None, &None, &le_bond, &None)).is_ok());
+            assert!(BondingData::try_from(test_sys_bond(&None, &None, &None, &bredr_bond)).is_ok());
+            assert!(
+                BondingData::try_from(test_sys_bond(&None, &None, &le_bond, &bredr_bond)).is_ok()
+            );
+
+            // Invalid combinations of bonding data - mixing *Data and *BondData types
+            assert!(BondingData::try_from(test_sys_bond(&le, &None, &le_bond, &None)).is_err());
+            assert!(BondingData::try_from(test_sys_bond(&le, &None, &None, &bredr_bond)).is_err());
+            assert!(
+                BondingData::try_from(test_sys_bond(&le, &None, &le_bond, &bredr_bond)).is_err()
+            );
+            assert!(BondingData::try_from(test_sys_bond(&None, &bredr, &le_bond, &None)).is_err());
+            assert!(
+                BondingData::try_from(test_sys_bond(&None, &bredr, &None, &bredr_bond)).is_err()
+            );
+            assert!(
+                BondingData::try_from(test_sys_bond(&None, &bredr, &le_bond, &bredr_bond)).is_err()
+            );
+            assert!(BondingData::try_from(test_sys_bond(&le, &bredr, &le_bond, &None)).is_err());
+            assert!(BondingData::try_from(test_sys_bond(&le, &bredr, &None, &bredr_bond)).is_err());
+            assert!(
+                BondingData::try_from(test_sys_bond(&le, &bredr, &le_bond, &bredr_bond)).is_err()
+            );
+            // Not providing transport-specific data is invalid as well
+            assert!(BondingData::try_from(test_sys_bond(&None, &None, &None, &None)).is_err());
         }
     }
 
@@ -1371,8 +1492,8 @@ pub mod tests {
         proptest! {
             #[test]
             fn bredr_data_sys_roundtrip(data in any_bredr_data()) {
-                let sys_bredr_data: sys::BredrData = data.clone().into();
-                assert_eq!(Ok(data), sys_bredr_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
+                let sys_bredr_data: sys::BredrBondData = data.clone().into();
+                assert_eq!(data, sys_bredr_data.into());
             }
             #[test]
             fn bredr_data_control_roundtrip((address, data) in (any_public_address(), any_bredr_data())) {
@@ -1383,8 +1504,8 @@ pub mod tests {
 
             #[test]
             fn le_data_sys_roundtrip(data in any_le_data()) {
-                let sys_le_data: sys::LeData = data.clone().into();
-                assert_eq!(Ok(data), sys_le_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
+                let sys_le_data: sys::LeBondData = data.clone().into();
+                assert_eq!(data, sys_le_data.into());
             }
             #[test]
             fn le_data_control_roundtrip((address, mut data) in (any_public_address(), any_le_data_for_control_test())) {
