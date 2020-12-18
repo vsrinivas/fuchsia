@@ -57,6 +57,7 @@ use fidl_fuchsia_lowpan_spinel::{
 };
 use fuchsia_component::client::{connect_to_service, connect_to_service_at};
 use fuchsia_component::client::{launch, launcher, App};
+use futures::future::LocalBoxFuture;
 use lowpan_driver_common::{register_and_serve_driver, register_and_serve_driver_factory};
 
 /// This struct contains the arguments decoded from the command
@@ -73,6 +74,14 @@ struct DriverArgs {
 
     #[argh(switch, long = "otstack", description = "launch and connect to ot-stack")]
     pub use_ot_stack: bool,
+
+    #[argh(
+        option,
+        long = "max-auto-restarts",
+        description = "maximum number of automatic restarts",
+        default = "10"
+    )]
+    pub max_auto_restarts: u32,
 
     #[argh(switch, long = "integration", description = "enable integration test mode")]
     pub is_integration_test: bool,
@@ -182,7 +191,6 @@ async fn connect_to_spinel_device_proxy_hack() -> Result<(Option<App>, SpinelDev
     Ok((None, client_side.into_proxy()?))
 }
 
-#[allow(unused)]
 fn connect_to_spinel_device_proxy() -> Result<(Option<App>, SpinelDeviceProxy), Error> {
     let server_url = "fuchsia-pkg://fuchsia.com/ot-stack#meta/ot-stack.cmx".to_string();
     let arg = Some(vec!["/dev/class/ot-radio/000".to_string()]);
@@ -194,19 +202,16 @@ fn connect_to_spinel_device_proxy() -> Result<(Option<App>, SpinelDeviceProxy), 
     Ok((Some(app), ot_stack_proxy))
 }
 
-#[allow(unused)]
 fn connect_to_spinel_device_proxy_test() -> Result<(Option<App>, SpinelDeviceProxy), Error> {
     let ot_stack_proxy =
         connect_to_service::<SpinelDeviceMarker>().expect("Failed to connect to ot-stack service");
     Ok((None, ot_stack_proxy))
 }
 
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
-    let args: DriverArgs = argh::from_env();
-
-    fuchsia_syslog::init_with_tags(&["lowpan-spinel-driver"]).context("initialize logging")?;
-
+#[allow(unused)]
+async fn prepare_to_run(
+    args: &DriverArgs,
+) -> Result<(Option<App>, LocalBoxFuture<'_, Result<(), Error>>), Error> {
     let (app, spinel_device) = if args.is_integration_test {
         connect_to_spinel_device_proxy_test().context("connect_to_spinel_device_proxy_test")?
     } else if args.use_ot_stack {
@@ -222,7 +227,7 @@ async fn main() -> Result<(), Error> {
         .context("Unable to start TUN driver")?;
 
     let driver_future = run_driver(
-        args.name,
+        args.name.clone(),
         connect_to_service_at::<RegisterMarker>(args.service_prefix.as_str())
             .context("Failed to connect to Lowpan Registry service")?,
         connect_to_service_at::<FactoryRegisterMarker>(args.service_prefix.as_str()).ok(),
@@ -230,21 +235,64 @@ async fn main() -> Result<(), Error> {
         network_device_interface,
     );
 
-    if let Some(app) = app {
-        futures::select! {
-        ret = driver_future.fuse()
-            => {
-            fx_log_err!("run_driver stopped: {:?}", ret);
-            ret
-            },
-        ret = app.wait_with_output().fuse()
-            => {
-            let ret = ret.map(|out|out.ok());
-            fx_log_err!("ot-stack stopped: {:?}", ret);
-            ret.map(|_|())
-            },
+    Ok((app, driver_future.boxed_local()))
+}
+
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["lowpan-spinel-driver"]).context("initialize logging")?;
+
+    let args: DriverArgs = argh::from_env();
+    let mut attempt_count = 0;
+
+    loop {
+        let (app, driver_future) = prepare_to_run(&args).await?;
+
+        let start_timestamp = fasync::Time::now();
+
+        let ret = if let Some(app) = app {
+            futures::select! {
+                ret = driver_future.fuse() => {
+                    fx_log_err!("run_driver stopped: {:?}", ret);
+                    ret
+                },
+                ret = app.wait_with_output().fuse() => {
+                    let ret = ret.map(|out|out.ok());
+                    fx_log_err!("ot-stack stopped: {:?}", ret);
+                    ret.map(|_|())
+                }
+            }
+        } else {
+            driver_future.await
+        };
+
+        if (fasync::Time::now() - start_timestamp).into_minutes() >= 5 {
+            // If the past run has been running for 5 minutes or longer,
+            // then we go ahead and reset the attempt count.
+            attempt_count = 0;
         }
-    } else {
-        driver_future.await
+
+        if args.max_auto_restarts <= attempt_count {
+            break ret;
+        }
+
+        // Implement an exponential backoff for restarts.
+        let delay = if attempt_count < 6 { 1 << attempt_count } else { 60 };
+
+        fx_log_err!(
+            "lowpan-spinel-driver unexpectedly shutdown. Will attempt to restart in {} seconds.",
+            delay
+        );
+
+        fasync::Timer::new(fasync::Time::after(fuchsia_zircon::Duration::from_seconds(delay)))
+            .await;
+
+        attempt_count += 1;
+
+        fx_log_info!(
+            "lowpan-spinel-driver restart attempt {} ({} max)",
+            attempt_count,
+            args.max_auto_restarts
+        );
     }
 }
