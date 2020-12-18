@@ -12,7 +12,22 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_library("fuchsia.intel.e1000") {
+  source = "fuchsia.intel.e1000.bind"
+}
+
+bind_rules("e1000_bind") {
+  rules = "e1000.bind"
+  output = "e1000_bind.h"
+  tests = "bind-tests.json"
+  deps = [
+    ":fuchsia.intel.e1000",
+    "//src/devices/bind/fuchsia.pci",
+  ]
+}
 
 driver_module("e1000") {
   configs += [
@@ -41,6 +56,7 @@ driver_module("e1000") {
     "fuchsia.c",
   ]
   deps = [
+    ":e1000_bind",
     "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/banjo/ddk.protocol.pci",
     "//src/devices/lib/driver",
@@ -52,4 +68,9 @@ driver_module("e1000") {
     "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":e1000_bind_test" ]
 }

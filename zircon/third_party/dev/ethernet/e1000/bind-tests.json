@@ -1,0 +1,45 @@
+[
+    {
+        "name": "QEMU",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_VID": "0x8086",
+            "fuchsia.BIND_PCI_DID": "0x100e"
+        }
+    },
+    {
+        "name": "NUC",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_VID": "0x8086",
+            "fuchsia.BIND_PCI_DID": "0x156f"
+        }
+    },
+    {
+        "name": "WrongProtocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.INTERFACE"
+        }
+    },
+    {
+        "name": "WrongVendor",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_VID": "0x8087",
+            "fuchsia.BIND_PCI_DID": "0x100e"
+        }
+    },
+    {
+        "name": "UnsupportedDevice",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_VID": "0x8086",
+            "fuchsia.BIND_PCI_DID": "0x24fd"
+        }
+    }
+]

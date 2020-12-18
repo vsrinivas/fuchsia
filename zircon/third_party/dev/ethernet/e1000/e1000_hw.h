@@ -42,6 +42,7 @@
 
 struct e1000_hw;
 
+// TODO(fxbug.dev/66773): replace these with bind library constants
 #define E1000_DEV_ID_82542			0x1000
 #define E1000_DEV_ID_82543GC_FIBER		0x1001
 #define E1000_DEV_ID_82543GC_COPPER		0x1004
