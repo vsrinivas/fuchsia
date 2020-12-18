@@ -19,7 +19,6 @@
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/metadata_schema.h"
-#include "src/developer/forensics/testing/stubs/utc_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/lib/files/file.h"
@@ -128,7 +127,7 @@ class MetadataTest : public UnitTestFixture {
 
   void SetUpMetadata(const AnnotationKeys& annotation_allowlist,
                      const AttachmentKeys& attachment_allowlist) {
-    metadata_ = std::make_unique<Metadata>(services(), &clock_, /*is_first_instance=*/true,
+    metadata_ = std::make_unique<Metadata>(dispatcher(), &clock_, /*is_first_instance=*/true,
                                            annotation_allowlist, attachment_allowlist);
   }
 
@@ -381,13 +380,6 @@ TEST_F(MetadataTest, Check_EmptySnapshot) {
 }
 
 TEST_F(MetadataTest, Check_UtcMonotonicDifference) {
-  stubs::UtcProvider utc_provider_server(
-      dispatcher(),
-      {
-          stubs::UtcProvider::Response(stubs::UtcProvider::Response::Value::kExternal),
-      });
-  InjectServiceProvider(&utc_provider_server);
-
   const AnnotationKeys annotation_allowlist = {
       "annotation 1",
   };

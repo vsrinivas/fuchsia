@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/utils/utc_time_provider.h"
 
+#include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 
 #include <memory>
@@ -12,7 +13,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/testing/stubs/utc_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -21,92 +21,61 @@
 namespace forensics {
 namespace {
 
-using stubs::UtcProvider;
-
 constexpr zx::time_utc kTime((zx::hour(7) + zx::min(14) + zx::sec(52)).get());
 
 class UtcTimeProviderTest : public UnitTestFixture {
  public:
-  UtcTimeProviderTest() : utc_provider_(std::make_unique<UtcTimeProvider>(services(), &clock_)) {
+  UtcTimeProviderTest() {
     clock_.Set(kTime);
+
+    zx_clock_create_args_v1_t clock_args{.backstop_time = 0};
+    FX_CHECK(zx::clock::create(0u, &clock_args, &clock_handle_) == ZX_OK);
+
+    utc_provider_ = std::make_unique<UtcTimeProvider>(
+        dispatcher(), zx::unowned_clock(clock_handle_.get_handle()), &clock_);
   }
 
  protected:
-  void SetUpUtcProviderServer(const std::vector<UtcProvider::Response>& responses) {
-    utc_provider_server_ = std::make_unique<stubs::UtcProvider>(dispatcher(), responses);
-    InjectServiceProvider(utc_provider_server_.get());
+  void StartClock(const zx::time start_time = zx::time(kTime.get())) {
+    if (const zx_status_t status =
+            clock_handle_.update(zx::clock::update_args().set_value(start_time));
+        status != ZX_OK) {
+      FX_PLOGS(FATAL, status) << "Failed to start clock";
+    }
   }
 
  protected:
   timekeeper::TestClock clock_;
-  std::unique_ptr<stubs::UtcProviderBase> utc_provider_server_;
 
  protected:
+  zx::clock clock_handle_;
   std::unique_ptr<UtcTimeProvider> utc_provider_;
 };
 
-TEST_F(UtcTimeProviderTest, Check_ReturnsExternal) {
-  SetUpUtcProviderServer({
-      UtcProvider::Response(UtcProvider::Response::Value::kExternal),
-  });
+TEST_F(UtcTimeProviderTest, Check_ClockStarts) {
+  EXPECT_FALSE(utc_provider_->CurrentTime().has_value());
+
+  StartClock();
   RunLoopUntilIdle();
 
   ASSERT_TRUE(utc_provider_->CurrentTime().has_value());
   EXPECT_EQ(utc_provider_->CurrentTime().value(), kTime);
 }
 
-TEST_F(UtcTimeProviderTest, Check_ReturnsBackstop) {
-  // Upon receiving "backstop", |utc_provider_| will make another call to the stub so we need an
-  // extra response. We use "no_response" so that |utc_provider_| just waits and doesn't make any
-  // more calls.
-  SetUpUtcProviderServer({
-      UtcProvider::Response(UtcProvider::Response::Value::kBackstop),
-      UtcProvider::Response(UtcProvider::Response::Value::kNoResponse),
-  });
-  RunLoopUntilIdle();
-
-  EXPECT_FALSE(utc_provider_->CurrentTime().has_value());
-}
-
-TEST_F(UtcTimeProviderTest, Check_ServerNeverResponds) {
-  SetUpUtcProviderServer({
-      UtcProvider::Response(UtcProvider::Response::Value::kNoResponse),
-  });
-  RunLoopUntilIdle();
-
+TEST_F(UtcTimeProviderTest, Check_ClockNeverStarts) {
   for (size_t i = 0; i < 100; ++i) {
     RunLoopFor(zx::hour(23));
     EXPECT_FALSE(utc_provider_->CurrentTime().has_value());
   }
 }
 
-TEST_F(UtcTimeProviderTest, Check_MultipleCalls) {
-  constexpr zx::duration kDelay = zx::msec(5);
-  SetUpUtcProviderServer({
-      UtcProvider::Response(UtcProvider::Response::Value::kBackstop, kDelay),
-      UtcProvider::Response(UtcProvider::Response::Value::kExternal, kDelay),
-  });
-
-  EXPECT_FALSE(utc_provider_->CurrentTime().has_value());
-
-  RunLoopFor(kDelay);
-  EXPECT_FALSE(utc_provider_->CurrentTime().has_value());
-
-  RunLoopFor(kDelay);
-  ASSERT_TRUE(utc_provider_->CurrentTime().has_value());
-  EXPECT_EQ(utc_provider_->CurrentTime().value(), kTime);
-}
-
 TEST_F(UtcTimeProviderTest, Check_CurrentUtcMonotonicDifference) {
-  SetUpUtcProviderServer({
-      UtcProvider::Response(UtcProvider::Response::Value::kExternal),
-  });
+  clock_.Set(zx::time(0));
+  StartClock(zx::time(0));
   RunLoopUntilIdle();
 
   zx::time monotonic;
   zx::time_utc utc;
-
-  clock_.Set(zx::time(0));
 
   ASSERT_EQ(clock_.Now(&monotonic), ZX_OK);
   ASSERT_EQ(clock_.Now(&utc), ZX_OK);
@@ -121,7 +90,7 @@ TEST_F(UtcTimeProviderTest, Check_ReadsPreviousBootUtcMonotonicDifference) {
 
   // |is_first_instance| is true becuase the previous UTC-monotonic difference should be read.
   utc_provider_ = std::make_unique<UtcTimeProvider>(
-      services(), &clock_,
+      dispatcher(), zx::unowned_clock(clock_handle_.get_handle()), &clock_,
       PreviousBootFile::FromCache(/*is_first_instance=*/true,
                                   "current_utc_monotonic_difference.txt"));
 
@@ -136,15 +105,12 @@ TEST_F(UtcTimeProviderTest, Check_ReadsPreviousBootUtcMonotonicDifference) {
 }
 
 TEST_F(UtcTimeProviderTest, Check_WritesPreviousBootUtcMonotonicDifference) {
-  SetUpUtcProviderServer({
-      UtcProvider::Response(UtcProvider::Response::Value::kExternal),
-      UtcProvider::Response(UtcProvider::Response::Value::kExternal),
-  });
+  StartClock();
   RunLoopUntilIdle();
 
   // |is_first_instance| is true becuase the previous UTC-monotonic difference should be read.
   utc_provider_ = std::make_unique<UtcTimeProvider>(
-      services(), &clock_,
+      dispatcher(), zx::unowned_clock(clock_handle_.get_handle()), &clock_,
       PreviousBootFile::FromCache(/*is_first_instance=*/true,
                                   "current_utc_monotonic_difference.txt"));
   RunLoopUntilIdle();

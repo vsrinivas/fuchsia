@@ -4,7 +4,9 @@
 
 #include "src/developer/forensics/feedback_data/metadata.h"
 
+#include <lib/zx/clock.h>
 #include <lib/zx/time.h>
+#include <zircon/utc.h>
 
 #include <optional>
 #include <set>
@@ -214,12 +216,12 @@ void AddAnnotationsJson(const AnnotationKeys& annotation_allowlist,
 
 }  // namespace
 
-Metadata::Metadata(std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock,
+Metadata::Metadata(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
                    const bool is_first_instance, const AnnotationKeys& annotation_allowlist,
                    const AttachmentKeys& attachment_allowlist)
     : annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
-      utc_provider_(services, clock,
+      utc_provider_(dispatcher, zx::unowned_clock(zx_utc_reference_get()), clock,
                     PreviousBootFile::FromCache(is_first_instance, kUtcMonotonicDifferenceFile)) {}
 
 std::string Metadata::MakeMetadata(const ::fit::result<Annotations>& annotations_result,

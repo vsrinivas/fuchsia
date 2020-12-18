@@ -21,7 +21,6 @@
             "fuchsia.netstack.Netstack",
             "fuchsia.posix.socket.Provider",
             "fuchsia.settings.Privacy",
-            "fuchsia.time.Utc",
             "fuchsia.update.channel.Provider"
         ]
     }

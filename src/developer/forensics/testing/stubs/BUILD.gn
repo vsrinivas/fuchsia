@@ -283,24 +283,3 @@ source_set("scenic") {
     "//zircon/public/lib/zx",
   ]
 }
-
-source_set("utc_provider") {
-  testonly = true
-
-  sources = [
-    "utc_provider.cc",
-    "utc_provider.h",
-  ]
-
-  public_deps = [
-    ":fidl_server",
-    "//sdk/fidl/fuchsia.time",
-    "//zircon/public/lib/zx",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl",
-    "//zircon/public/lib/async-cpp",
-  ]
-}

@@ -5,8 +5,8 @@
 #ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_METADATA_H_
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_METADATA_H_
 
+#include <lib/async/dispatcher.h>
 #include <lib/fit/result.h>
-#include <lib/sys/cpp/service_directory.h>
 
 #include <optional>
 #include <string>
@@ -22,9 +22,8 @@ namespace feedback_data {
 // Constructs metadata describing the rest of the content of the snapshot archive.
 class Metadata {
  public:
-  Metadata(std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock,
-           bool is_first_instance, const AnnotationKeys& annotation_allowlist,
-           const AttachmentKeys& attachment_allowlist);
+  Metadata(async_dispatcher_t* dispatcher, timekeeper::Clock* clock, bool is_first_instance,
+           const AnnotationKeys& annotation_allowlist, const AttachmentKeys& attachment_allowlist);
 
   // Return a JSON metadata string.
   //

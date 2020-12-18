@@ -108,9 +108,11 @@ source_set("utc_time_provider") {
 
   public_deps = [
     ":previous_boot_file",
-    "//sdk/fidl/fuchsia.time",
     "//sdk/lib/sys/cpp",
     "//src/lib/timekeeper:system",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async:async-cpp",
   ]
 
   deps = [

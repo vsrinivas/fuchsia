@@ -55,7 +55,7 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
                            Datastore* datastore)
     : dispatcher_(dispatcher),
       services_(services),
-      metadata_(services, clock, is_first_instance, annotation_allowlist, attachment_allowlist),
+      metadata_(dispatcher_, clock, is_first_instance, annotation_allowlist, attachment_allowlist),
       cobalt_(cobalt),
       datastore_(datastore),
       executor_(dispatcher_) {}

@@ -14,28 +14,26 @@
 
 namespace forensics {
 
-UtcTimeProvider::UtcTimeProvider(std::shared_ptr<sys::ServiceDirectory> services,
+UtcTimeProvider::UtcTimeProvider(async_dispatcher_t* dispatcher, zx::unowned_clock clock_handle,
                                  timekeeper::Clock* clock)
-    : UtcTimeProvider(services, clock, std::nullopt) {}
+    : UtcTimeProvider(dispatcher, std::move(clock_handle), clock, std::nullopt) {}
 
-UtcTimeProvider::UtcTimeProvider(std::shared_ptr<sys::ServiceDirectory> services,
+UtcTimeProvider::UtcTimeProvider(async_dispatcher_t* dispatcher, zx::unowned_clock clock_handle,
                                  timekeeper::Clock* clock,
                                  PreviousBootFile utc_monotonic_difference_file)
-    : UtcTimeProvider(services, clock, std::optional(utc_monotonic_difference_file)) {}
+    : UtcTimeProvider(dispatcher, std::move(clock_handle), clock,
+                      std::optional(utc_monotonic_difference_file)) {}
 
-UtcTimeProvider::UtcTimeProvider(std::shared_ptr<sys::ServiceDirectory> services,
+UtcTimeProvider::UtcTimeProvider(async_dispatcher_t* dispatcher, zx::unowned_clock clock_handle,
                                  timekeeper::Clock* clock,
                                  std::optional<PreviousBootFile> utc_monotonic_difference_file)
-    : services_(services),
-      clock_(clock),
-      utc_(services_->Connect<fuchsia::time::Utc>()),
+    : clock_(clock),
       utc_monotonic_difference_file_(std::move(utc_monotonic_difference_file)),
-      previous_boot_utc_monotonic_difference_(std::nullopt) {
-  utc_.set_error_handler([](const zx_status_t status) {
-    FX_PLOGS(WARNING, status) << "Lost connection with fuchsia.time.Utc";
-  });
-
-  WatchForAccurateUtcTime();
+      previous_boot_utc_monotonic_difference_(std::nullopt),
+      wait_for_clock_start_(this, clock_handle->get_handle(), ZX_CLOCK_STARTED, /*options=*/0) {
+  if (const zx_status_t status = wait_for_clock_start_.Begin(dispatcher); status != ZX_OK) {
+    FX_PLOGS(FATAL, status) << "Failed to wait for clock start";
+  }
 
   if (!utc_monotonic_difference_file_.has_value()) {
     return;
@@ -82,32 +80,26 @@ std::optional<zx::duration> UtcTimeProvider::PreviousBootUtcMonotonicDifference(
   return previous_boot_utc_monotonic_difference_;
 }
 
-void UtcTimeProvider::WatchForAccurateUtcTime() {
-  utc_->WatchState([this](const fuchsia::time::UtcState& state) {
-    switch (state.source()) {
-      case fuchsia::time::UtcSource::UNVERIFIED:
-      case fuchsia::time::UtcSource::EXTERNAL:
-        is_utc_time_accurate_ = true;
-        utc_.Unbind();
+void UtcTimeProvider::OnClockStart(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                   zx_status_t status, const zx_packet_signal_t* signal) {
+  if (status != ZX_OK) {
+    FX_PLOGS(WARNING, status) << "Wait for clock start completed with error, trying again";
+    
+    // Attempt to wait for the clock to start again.
+    wait->Begin(dispatcher);
+    return;
+  }
 
-        // Write the current difference between the UTC and monotonic clocks.
-        if (const std::optional<zx::time_utc> current_utc_time = CurrentUtcTimeRaw(clock_);
-            current_utc_time.has_value() && utc_monotonic_difference_file_.has_value()) {
-          const zx::duration utc_monotonic_difference(current_utc_time.value().get() -
-                                                      clock_->Now().get());
-          files::WriteFile(utc_monotonic_difference_file_.value().CurrentBootPath(),
-                           std::to_string(utc_monotonic_difference.get()));
-        }
+  is_utc_time_accurate_ = true;
 
-        break;
-      case fuchsia::time::UtcSource::BACKSTOP:
-        // fuchsia.time.Utc does not currently distinguish between devices that have an internal
-        // clock and those that do not. So, if a device has an internal clock, it's possbile that
-        // the device's UTC time is be accurate despite |BACKSTOP| being returned,
-        WatchForAccurateUtcTime();
-        break;
-    }
-  });
+  // Write the current difference between the UTC and monotonic clocks.
+  if (const std::optional<zx::time_utc> current_utc_time = CurrentUtcTimeRaw(clock_);
+      current_utc_time.has_value() && utc_monotonic_difference_file_.has_value()) {
+    const zx::duration utc_monotonic_difference(current_utc_time.value().get() -
+                                                clock_->Now().get());
+    files::WriteFile(utc_monotonic_difference_file_.value().CurrentBootPath(),
+                     std::to_string(utc_monotonic_difference.get()));
+  }
 }
 
 }  // namespace forensics

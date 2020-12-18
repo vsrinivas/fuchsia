@@ -19,7 +19,6 @@
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/stubs/device_id_provider.h"
 #include "src/developer/forensics/testing/stubs/network_reachability_provider.h"
-#include "src/developer/forensics/testing/stubs/utc_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/timekeeper/test_clock.h"
 
@@ -47,7 +46,6 @@ class MainServiceTest : public UnitTestFixture {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     SetUpDeviceIdProviderServer();
     SetUpNetworkReachabilityProviderServer();
-    SetUpUtcProviderServer();
 
     main_service_ =
         MainService::TryCreate(dispatcher(), services(), &clock_, info_context_,
@@ -72,13 +70,6 @@ class MainServiceTest : public UnitTestFixture {
     InjectServiceProvider(network_reachability_provider_server_.get());
   }
 
-  void SetUpUtcProviderServer() {
-    utc_provider_server_ = std::make_unique<stubs::UtcProvider>(
-        dispatcher(), std::vector<stubs::UtcProvider::Response>({stubs::UtcProvider::Response(
-                          stubs::UtcProvider::Response::Value::kExternal, zx::nsec(0))}));
-    InjectServiceProvider(utc_provider_server_.get());
-  }
-
  protected:
   timekeeper::TestClock clock_;
   std::shared_ptr<InfoContext> info_context_;
@@ -86,7 +77,6 @@ class MainServiceTest : public UnitTestFixture {
   // Stubs servers.
   std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
   std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_server_;
-  std::unique_ptr<stubs::UtcProviderBase> utc_provider_server_;
 
  protected:
   std::unique_ptr<MainService> main_service_;

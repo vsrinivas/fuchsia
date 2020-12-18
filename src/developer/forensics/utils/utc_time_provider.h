@@ -5,29 +5,32 @@
 #ifndef SRC_DEVELOPER_FORENSICS_UTILS_UTC_TIME_PROVIDER_H_
 #define SRC_DEVELOPER_FORENSICS_UTILS_UTC_TIME_PROVIDER_H_
 
-#include <fuchsia/time/cpp/fidl.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/async/dispatcher.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/zx/clock.h>
 
 #include <memory>
 #include <optional>
 #include <string>
 
+#include "lib/zx/object.h"
 #include "src/developer/forensics/utils/previous_boot_file.h"
 #include "src/lib/timekeeper/clock.h"
 #include "src/lib/timekeeper/system_clock.h"
 
 namespace forensics {
 
-// Provides the UTC time only if the device's system clock is accurate.
+// Provides the UTC time only if the device's UTC clock has started.
 //
 // Can be configured to record the UTC-monotonic difference from the previous boot by providing a
 // non-nullopt |utc_monotonic_difference_path|.
 class UtcTimeProvider {
  public:
-  // fuchsia.time.Utc is expected to be in |services|.
-  UtcTimeProvider(std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock);
-  UtcTimeProvider(std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock,
-                  PreviousBootFile utc_monotonic_difference_file);
+  UtcTimeProvider(async_dispatcher_t* dispatcher, zx::unowned_clock clock_handle,
+                  timekeeper::Clock* clock);
+  UtcTimeProvider(async_dispatcher_t* dispatcher, zx::unowned_clock clock_handle,
+                  timekeeper::Clock* clock, PreviousBootFile utc_monotonic_difference_file);
 
   // Returns the current UTC time if the device's UTC time is accurate, std::nullopt otherwise.
   std::optional<zx::time_utc> CurrentTime() const;
@@ -40,16 +43,15 @@ class UtcTimeProvider {
   std::optional<zx::duration> PreviousBootUtcMonotonicDifference() const;
 
  private:
-  UtcTimeProvider(std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock,
+  UtcTimeProvider(async_dispatcher_t* dispatcher, zx::unowned_clock clock_handle,
+                  timekeeper::Clock* clock,
                   std::optional<PreviousBootFile> utc_monotonic_difference_file);
 
-  // Keeps making asynchronous calls until the UTC time is accurate.
-  void WatchForAccurateUtcTime();
+  // Keep waiting on the clock handle until the clock has started.
+  void OnClockStart(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                    const zx_packet_signal_t* signal);
 
-  std::shared_ptr<sys::ServiceDirectory> services_;
   timekeeper::Clock* clock_;
-
-  fuchsia::time::UtcPtr utc_;
 
   std::optional<PreviousBootFile> utc_monotonic_difference_file_;
 
@@ -57,6 +59,7 @@ class UtcTimeProvider {
   std::optional<zx::duration> previous_boot_utc_monotonic_difference_;
 
   bool is_utc_time_accurate_ = false;
+  async::WaitMethod<UtcTimeProvider, &UtcTimeProvider::OnClockStart> wait_for_clock_start_;
 };
 
 }  // namespace forensics

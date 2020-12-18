@@ -9,9 +9,11 @@
 #include <lib/fit/promise.h>
 #include <lib/fit/result.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+#include <zircon/utc.h>
 
 #include <map>
 #include <memory>
@@ -117,7 +119,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       tags_(std::move(tags)),
       build_version_(build_version),
       crash_register_(crash_register),
-      utc_provider_(services_, clock),
+      utc_provider_(dispatcher_, zx::unowned_clock(zx_utc_reference_get()), clock),
       snapshot_manager_(std::move(snapshot_manager)),
       crash_server_(std::move(crash_server)),
       queue_(dispatcher_, services_, info_context, tags_.get(), crash_server_.get(),
