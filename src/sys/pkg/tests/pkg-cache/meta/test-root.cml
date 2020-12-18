@@ -1,0 +1,91 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "isolated_devmgr",
+            url: "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/isolated-devmgr.cm",
+            startup: "eager",
+        },
+        {
+            name: "archivist",
+            url: "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/archivist-for-embedding.cm",
+        },
+        {
+            name: "pkg_cache_integration_test",
+            url: "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache-integration-test.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#archivist",
+                "#isolated_devmgr",
+                "#pkg_cache_integration_test",
+            ],
+        },
+        {
+            protocol: "fuchsia.sys2.EventSource",
+            from: "parent",
+            to: [ "#archivist" ],
+        },
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: [ "#isolated_devmgr" ],
+        },
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: [ "#pkg_cache_integration_test" ],
+        },
+        {
+            storage: "temp",
+            from: "parent",
+            to: [ "#pkg_cache_integration_test" ],
+        },
+        {
+            directory: "dev",
+            from: "#isolated_devmgr",
+            to: [ "#pkg_cache_integration_test" ],
+        },
+
+        // These events are not needed for the test to pass, but including them
+        // reduces log noise.
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "framework",
+            to: [ "#archivist" ],
+        },
+        {
+            event: "capability_ready",
+            from: "framework",
+            to: [ "#archivist" ],
+            filter: { name: "diagnostics" },
+        },
+        {
+            protocol: "fuchsia.diagnostics.ArchiveAccessor",
+            from: "#archivist",
+            to: [ "#pkg_cache_integration_test" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#pkg_cache_integration_test",
+        },
+    ],
+}

@@ -1,0 +1,70 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "pkg_cache",
+            url: "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache.cm",
+        },
+        {
+            name: "service_reflector",
+            url: "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/service-reflector.cm",
+        },
+        {
+            name: "system_update_committer",
+            url: "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/system-update-committer.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#pkg_cache",
+                "#service_reflector",
+                "#system_update_committer",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "#service_reflector",
+            to: [ "#pkg_cache" ],
+        },
+        {
+            protocol: "fuchsia.paver.Paver",
+            from: "#service_reflector",
+            to: [ "#system_update_committer" ],
+        },
+        {
+            directory: "pkgfs",
+            from: "#service_reflector",
+            to: [ "#pkg_cache" ],
+        },
+        {
+            protocol: "fuchsia.update.CommitStatusProvider",
+            from: "#system_update_committer",
+            to: [ "#pkg_cache" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "test.pkg.reflector.Reflector",
+            from: "#service_reflector",
+        },
+        {
+            protocol: [
+                "fuchsia.pkg.PackageCache",
+                "fuchsia.space.Manager",
+            ],
+            from: "#pkg_cache",
+        },
+        {
+            protocol: "fuchsia.update.CommitStatusProvider",
+            from: "#system_update_committer",
+        },
+    ],
+}

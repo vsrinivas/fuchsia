@@ -55,7 +55,7 @@ impl PkgFs for TempDirPkgFs {
 
 #[fasync::run_singlethreaded(test)]
 async fn gc_garbage_file_deleted() {
-    let env = TestEnv::builder().pkgfs(TempDirPkgFs::new()).build();
+    let env = TestEnv::builder().pkgfs(TempDirPkgFs::new()).build().await;
     env.pkgfs.create_garbage();
 
     let res = env.proxies.space_manager.gc().await;
@@ -66,7 +66,7 @@ async fn gc_garbage_file_deleted() {
 
 #[fasync::run_singlethreaded(test)]
 async fn gc_twice_same_client() {
-    let env = TestEnv::builder().pkgfs(TempDirPkgFs::new()).build();
+    let env = TestEnv::builder().pkgfs(TempDirPkgFs::new()).build().await;
     env.pkgfs.create_garbage();
 
     let res = env.proxies.space_manager.gc().await;
@@ -84,7 +84,7 @@ async fn gc_twice_same_client() {
 
 #[fasync::run_singlethreaded(test)]
 async fn gc_twice_different_clients() {
-    let env = TestEnv::builder().pkgfs(TempDirPkgFs::new()).build();
+    let env = TestEnv::builder().pkgfs(TempDirPkgFs::new()).build().await;
     env.pkgfs.create_garbage();
 
     let res = env.proxies.space_manager.gc().await;
@@ -93,8 +93,11 @@ async fn gc_twice_different_clients() {
     assert!(!env.pkgfs.garbage_exists());
 
     env.pkgfs.create_garbage();
-    let second_connection =
-        env.apps.pkg_cache.connect_to_service::<ManagerMarker>().expect("connect to space manager");
+    let second_connection = env
+        .apps
+        .pkg_cache
+        .connect_to_protocol_at_exposed_dir::<ManagerMarker>()
+        .expect("connect to space manager");
     let res = second_connection.gc().await;
 
     assert_matches!(res, Ok(Ok(())));
@@ -103,7 +106,7 @@ async fn gc_twice_different_clients() {
 
 #[fasync::run_singlethreaded(test)]
 async fn gc_error_missing_garbage_file() {
-    let env = TestEnv::builder().pkgfs(TempDirPkgFs::new()).build();
+    let env = TestEnv::builder().pkgfs(TempDirPkgFs::new()).build().await;
 
     let res = env.proxies.space_manager.gc().await;
 
@@ -121,7 +124,8 @@ async fn gc_error_pending_commit() {
                 .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Pending)))
                 .insert_hook(throttle_hook),
         )
-        .build();
+        .build()
+        .await;
     env.pkgfs.create_garbage();
 
     // Allow the paver to emit enough events to unblock the CommitStatusProvider FIDL server, but

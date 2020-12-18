@@ -35,7 +35,7 @@ async fn assert_base_blob_count(
         .start()
         .unwrap();
 
-    let env = TestEnv::builder().pkgfs(pkgfs).build();
+    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
     env.block_until_started().await;
 
     let hierarchy = env.inspect_hierarchy().await;
@@ -104,7 +104,7 @@ async fn base_blob_count_ignores_cache_packages() {
 #[fasync::run_singlethreaded(test)]
 async fn assume_all_blobs_in_base_on_error() {
     // no system_image in pkgfs, so BlobLocation will use fallback.
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
     env.block_until_started().await;
 
     let hierarchy = env.inspect_hierarchy().await;
@@ -138,7 +138,7 @@ async fn assert_pkgfs_executability_restrictions_enabled(
     pkgfs: PkgfsRamdisk,
     expected_state: String,
 ) {
-    let env = TestEnv::builder().pkgfs(pkgfs).build();
+    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
     env.block_until_started().await;
 
     let hierarchy = env.inspect_hierarchy().await;

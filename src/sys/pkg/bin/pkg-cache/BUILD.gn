@@ -80,8 +80,9 @@ package("pkg-cache") {
   ]
 }
 
-fuchsia_component("pkg-cache-v2") {
+fuchsia_component("component") {
   testonly = true
+  component_name = "pkg-cache"
   manifest = "meta/pkg-cache.cml"
   deps = [ ":bin" ]
 }

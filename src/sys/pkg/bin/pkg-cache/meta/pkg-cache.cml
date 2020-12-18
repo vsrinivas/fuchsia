@@ -10,6 +10,11 @@
                 "fuchsia.space.Manager",
             ],
         },
+        {
+            directory: "diagnostics",
+            rights: [ "connect" ],
+            path: "/diagnostics",
+        },
     ],
     use: [
         { runner: "elf" },
@@ -24,6 +29,7 @@
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.update.CommitStatusProvider",
             ],
+            from: "parent",
         },
     ],
     expose: [
@@ -33,6 +39,12 @@
                 "fuchsia.space.Manager",
             ],
             from: "self",
+        },
+        {
+            directory: "diagnostics",
+            from: "self",
+            to: "framework",
+            rights: [ "connect" ],
         },
     ],
 }

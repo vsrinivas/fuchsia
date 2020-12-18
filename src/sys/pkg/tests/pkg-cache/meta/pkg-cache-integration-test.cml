@@ -1,0 +1,63 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        binary: "bin/pkg_cache_integration_test",
+    },
+    collections: [
+        {
+            name: "pkg_cache_test_realm",
+            durability: "transient",
+        },
+    ],
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    use: [
+        { runner: "rust_test_runner" },
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sys.Loader",
+            ],
+            from: "parent",
+        },
+        {
+            storage: "temp",
+            rights: [ "rw*" ],
+            path: "/tmp",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Environment",
+            ],
+            from: "parent",
+            to: [ "#pkg_cache_test_realm" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

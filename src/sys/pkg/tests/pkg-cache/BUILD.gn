@@ -6,6 +6,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("driver") {
   name = "pkg_cache_integration_test"
@@ -35,6 +36,7 @@ rustc_test("driver") {
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/lib/system-image",
     "//src/sys/pkg/testing/blobfs-ramdisk",
+    "//src/sys/pkg/testing/dir-reflector:test.pkg.reflector-rustc",
     "//src/sys/pkg/testing/mock-paver",
     "//src/sys/pkg/testing/pkgfs-ramdisk",
     "//third_party/cobalt/src/lib/client/rust:cobalt-client",
@@ -57,63 +59,57 @@ rustc_test("driver") {
   ]
 }
 
-test_package("pkg-cache-integration-tests") {
+resource("pkgsvr") {
+  deps = [ "//garnet/go/src/grand_unified_binary" ]
+  sources = [ "$root_out_dir/grand_unified_binary" ]
+  outputs = [ "bin/pkgsvr" ]
+  visibility = [
+    ":*",
+    "//src/sys/pkg/tests/pkg-cache/*",
+  ]
+}
+
+fuchsia_component("test-case-realm") {
+  testonly = true
+  manifest = "meta/test-case-realm.cml"
+}
+
+fuchsia_component("pkg-cache-integration-test") {
+  testonly = true
+  manifest = "meta/pkg-cache-integration-test.cml"
   deps = [
     ":driver",
-    "//garnet/go/src/grand_unified_binary",
+    ":pkgsvr",
     "//src/storage/bin/blobfs",
-    "//src/sys/pkg/bin/grand-swd-binary",
-    "//src/sys/pkg/bin/pkg-cache:bin",
     "//src/sys/pkg/bin/pm:pm_bin",
   ]
+}
 
-  binaries = [
-    {
-      name = "blobfs"
-    },
-    {
-      name = "pkg_cache"
-      dest = "pkg-cache"
-    },
-    {
-      name = "pkgsvr"
-      source = "grand_unified_binary"
-    },
-    {
-      name = "pm"
-    },
-    {
-      name = "grand_swd_binary"
-      dest = "system-update-committer"
-    },
-  ]
+fuchsia_component("test-root") {
+  testonly = true
+  manifest = "meta/test-root.cml"
+}
 
-  meta = [
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-without-pkgfs.cmx")
-      dest = "pkg-cache-without-pkgfs.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/sys/pkg/tests/system-update-committer/meta/system-update-committer.cmx")
-      dest = "system-update-committer.cmx"
-    },
-  ]
+fuchsia_component("service-reflector") {
+  testonly = true
+  manifest = "meta/service-reflector.cml"
+  deps = [ "//src/sys/pkg/testing/dir-reflector:bin" ]
+}
 
-  tests = [
-    {
-      name = "pkg_cache_integration_test"
-      dest = "pkg-cache-integration-test"
-      environments = basic_envs
-    },
+fuchsia_test_package("pkg-cache-integration-tests") {
+  test_components = [ ":test-root" ]
+  deps = [
+    ":pkg-cache-integration-test",
+    ":service-reflector",
+    ":test-case-realm",
+    "//src/diagnostics/archivist:archivist-for-embedding-v2",
+    "//src/lib/isolated_devmgr/v2_component:isolated-devmgr-component",
+    "//src/sys/pkg/bin/pkg-cache:component",
+    "//src/sys/pkg/bin/system-update-committer:component",
   ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":pkg-cache-integration-tests",
-    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
-  ]
+  public_deps = [ ":pkg-cache-integration-tests" ]
 }

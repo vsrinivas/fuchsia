@@ -12,11 +12,9 @@ use {
     fidl_fuchsia_pkg_ext::BlobId,
     fidl_fuchsia_space::{ManagerMarker as SpaceManagerMarker, ManagerProxy as SpaceManagerProxy},
     fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy},
+    fidl_test_pkg_reflector::ReflectorMarker,
     fuchsia_async as fasync,
-    fuchsia_component::{
-        client::{App, AppBuilder},
-        server::{NestedEnvironment, ServiceFs},
-    },
+    fuchsia_component::{client::ScopedInstance, server::ServiceFs},
     fuchsia_inspect::reader::DiagnosticsHierarchy,
     fuchsia_pkg_testing::get_inspect_hierarchy,
     fuchsia_zircon as zx,
@@ -33,10 +31,9 @@ mod inspect;
 mod space;
 mod sync;
 
-const PKG_CACHE_CMX: &str =
-    "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache-without-pkgfs.cmx";
-const SYSTEM_UPDATE_COMMITTER_CMX: &str =
-    "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/system-update-committer.cmx";
+const TEST_CASE_COLLECTION: &str = "pkg_cache_test_realm";
+const TEST_CASE_REALM: &str =
+    "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/test-case-realm.cm";
 
 trait PkgFs {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
@@ -85,23 +82,11 @@ where
         }
     }
 
-    fn make_nested_environment_label() -> String {
-        let mut salt = [0; 4];
-        zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
-        format!("pkg-cache-env_{}", hex::encode(&salt))
-    }
-
-    fn build(self) -> TestEnv<P> {
-        let pkgfs = (self.pkgfs)();
-
-        let mut system_update_committer = AppBuilder::new(SYSTEM_UPDATE_COMMITTER_CMX.to_owned());
-
+    async fn build(self) -> TestEnv<P> {
         let mut fs = ServiceFs::new();
-        fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
-            .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>()
-            .add_proxy_service_to::<CommitStatusProviderMarker, _>(
-                system_update_committer.directory_request().unwrap().clone(),
-            );
+
+        let pkgfs = (self.pkgfs)();
+        fs.add_remote("pkgfs", pkgfs.root_dir_handle().unwrap().into_proxy().unwrap());
 
         let logger_factory = Arc::new(MockLoggerFactory::new());
         let logger_factory_clone = Arc::clone(&logger_factory);
@@ -123,37 +108,41 @@ where
             .detach()
         });
 
-        let pkg_cache = AppBuilder::new(PKG_CACHE_CMX.to_string())
-            .add_handle_to_namespace("/pkgfs".to_owned(), pkgfs.root_dir_handle().unwrap().into());
+        let (reflected_dir_client_end, reflected_dir_server_end) =
+            fidl::endpoints::create_endpoints::<DirectoryMarker>()
+                .expect("creating reflected channel");
 
-        let nested_environment_label = Self::make_nested_environment_label();
-        let env = fs
-            .create_nested_environment(&nested_environment_label)
-            .expect("nested environment to create successfully");
+        fs.serve_connection(reflected_dir_server_end.into_channel()).unwrap();
 
         fasync::Task::spawn(fs.collect()).detach();
 
-        let pkg_cache = pkg_cache.spawn(env.launcher()).expect("pkg_cache to launch");
-        let system_update_committer = system_update_committer
-            .spawn(env.launcher())
-            .expect("system-update-committer to launch");
+        let pkg_cache_realm =
+            ScopedInstance::new(TEST_CASE_COLLECTION.to_string(), TEST_CASE_REALM.to_string())
+                .await
+                .expect("scoped instance to create successfully");
+
+        let reflector = pkg_cache_realm
+            .connect_to_protocol_at_exposed_dir::<ReflectorMarker>()
+            .expect("connecting to reflector");
+
+        reflector.reflect(reflected_dir_client_end).await.expect("reflect to work");
 
         let proxies = Proxies {
-            commit_status_provider: system_update_committer
-                .connect_to_service::<CommitStatusProviderMarker>()
-                .unwrap(),
-            space_manager: pkg_cache
-                .connect_to_service::<SpaceManagerMarker>()
+            commit_status_provider: pkg_cache_realm
+                .connect_to_protocol_at_exposed_dir::<CommitStatusProviderMarker>()
+                .expect("connect to commit status provider"),
+            space_manager: pkg_cache_realm
+                .connect_to_protocol_at_exposed_dir::<SpaceManagerMarker>()
                 .expect("connect to space manager"),
-            package_cache: pkg_cache.connect_to_service::<PackageCacheMarker>().unwrap(),
+            package_cache: pkg_cache_realm
+                .connect_to_protocol_at_exposed_dir::<PackageCacheMarker>()
+                .expect("connect to package cache"),
         };
 
         TestEnv {
-            apps: Apps { pkg_cache, _system_update_committer: system_update_committer },
-            _env: env,
+            apps: Apps { pkg_cache: pkg_cache_realm },
             pkgfs,
             proxies,
-            nested_environment_label,
             mocks: Mocks { logger_factory, _paver_service: paver_service },
         }
     }
@@ -171,16 +160,13 @@ pub struct Mocks {
 }
 
 struct Apps {
-    pkg_cache: App,
-    _system_update_committer: App,
+    pkg_cache: ScopedInstance,
 }
 
 struct TestEnv<P = PkgfsRamdisk> {
     apps: Apps,
-    _env: NestedEnvironment,
     pkgfs: P,
     proxies: Proxies,
-    nested_environment_label: String,
     pub mocks: Mocks,
 }
 
@@ -190,7 +176,6 @@ impl TestEnv<PkgfsRamdisk> {
         // Tear down the environment in reverse order, ending with the storage.
         drop(self.proxies);
         drop(self.apps);
-        drop(self._env);
         self.pkgfs.stop().await.unwrap();
     }
 }
@@ -282,7 +267,12 @@ impl TestEnv<PkgfsRamdisk> {
 
 impl<P: PkgFs> TestEnv<P> {
     async fn inspect_hierarchy(&self) -> DiagnosticsHierarchy {
-        get_inspect_hierarchy(&self.nested_environment_label, "pkg-cache-without-pkgfs.cmx").await
+        let nested_environment_label = format!(
+            "pkg_cache_integration_test/pkg_cache_test_realm\\:{}",
+            self.apps.pkg_cache.child_name()
+        );
+
+        get_inspect_hierarchy(&nested_environment_label, "pkg_cache").await
     }
 
     pub async fn open_package(&self, merkle: &str) -> Result<DirectoryProxy, zx::Status> {

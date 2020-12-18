@@ -1,0 +1,47 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        binary: "bin/dir_reflector",
+    },
+    capabilities: [
+        { protocol: "test.pkg.reflector.Reflector" },
+        {
+            directory: "pkgfs",
+            rights: [ "rw*" ],
+            path: "/reflected/pkgfs",
+        },
+        {
+            protocol: "fuchsia.paver.Paver",
+            path: "/reflected/fuchsia.paver.Paver",
+        },
+        {
+            protocol: "fuchsia.cobalt.LoggerFactory",
+            path: "/reflected/fuchsia.cobalt.LoggerFactory",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            path: "/reflected/fuchsia.tracing.provider.Registry",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.paver.Paver",
+                "fuchsia.tracing.provider.Registry",
+                "test.pkg.reflector.Reflector",
+            ],
+            from: "self",
+        },
+        {
+            directory: "pkgfs",
+            from: "self",
+        },
+    ],
+}

@@ -6,7 +6,7 @@ use {crate::TestEnv, fuchsia_async as fasync};
 
 #[fasync::run_singlethreaded(test)]
 async fn sync_success() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     let res = env.proxies.package_cache.sync().await;
 

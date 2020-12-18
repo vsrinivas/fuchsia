@@ -29,7 +29,7 @@ async fn setup_test_env(static_packages: &[&Package]) -> TestEnv {
         .start()
         .unwrap();
 
-    let env = TestEnv::builder().pkgfs(pkgfs).build();
+    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
     env.block_until_started().await;
     env
 }
@@ -143,7 +143,7 @@ async fn base_pkg_index_verify_multiple_chunks() {
         .start()
         .unwrap();
 
-    let env = TestEnv::builder().pkgfs(pkgfs).build();
+    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
 
     let pkg_iterator = get_pkg_iterator(&env).await;
     verify_base_packages_iterator(pkg_iterator, expected_entries.into_iter()).await;

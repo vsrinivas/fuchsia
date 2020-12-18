@@ -53,7 +53,7 @@ async fn assert_count_events(
 
 #[fasync::run_singlethreaded(test)]
 async fn pkg_cache_open_failure() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     assert_eq!(
         env.open_package("0000000000000000000000000000000000000000000000000000000000000000")
@@ -81,7 +81,7 @@ async fn pkg_cache_open_success() {
         .start()
         .unwrap();
 
-    let env = TestEnv::builder().pkgfs(pkgfs).build();
+    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
     assert_eq!(
         env.open_package(&system_image_package.meta_far_merkle_root().clone().to_string())
             .await
