@@ -7,3 +7,7 @@ library fuchsia.silergy.platform;
 extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   SILERGY = 25,
 };
+
+extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  SYBUCK = 0x01,
+};

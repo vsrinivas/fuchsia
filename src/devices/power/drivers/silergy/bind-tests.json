@@ -1,0 +1,38 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.silergy.platform.BIND_PLATFORM_DEV_PID.SYBUCK",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.silergy.platform.BIND_PLATFORM_DEV_VID.SILERGY",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "match",
+        "name": "Success"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.silergy.platform.BIND_PLATFORM_DEV_PID.SYBUCK",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.silergy.platform.BIND_PLATFORM_DEV_VID.SILERGY",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.BUS"
+        },
+        "expected": "abort",
+        "name": "WrongProtocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.silergy.platform.BIND_PLATFORM_DEV_PID.SYBUCK",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "WrongVid"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.A311D",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.silergy.platform.BIND_PLATFORM_DEV_VID.SILERGY",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "WrongPid"
+    }
+]

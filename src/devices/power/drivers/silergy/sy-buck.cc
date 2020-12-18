@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
@@ -14,6 +13,7 @@
 #include <ddktl/protocol/composite.h>
 #include <hwreg/i2c.h>
 
+#include "src/devices/power/drivers/silergy/sy-buck-bind.h"
 #include "sy-buck-regs.h"
 
 namespace silergy {
@@ -153,9 +153,4 @@ static constexpr zx_driver_ops_t sy_buck_driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(sybuck, sy_buck_driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SILERGY),
-BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_SILERGY_SYBUCK),
-ZIRCON_DRIVER_END(sybuck)
+ZIRCON_DRIVER(sybuck, sy_buck_driver_ops, "zircon", "0.1");
