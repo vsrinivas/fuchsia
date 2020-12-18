@@ -365,9 +365,9 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_zircon::DurationNum,
         futures::{channel::oneshot, stream::StreamExt},
-        io_util, pin_utils,
+        io_util,
         proptest::prelude::*,
-        std::{path::Path, task::Poll},
+        std::path::Path,
         tempfile::TempDir,
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -519,62 +519,17 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_dir_contains_with_timeout_err() {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
-        executor.set_fake_time(fasync::Time::from_nanos(0));
-
-        let fut = async move {
-            let tempdir = TempDir::new().expect("failed to create tmp dir");
-            let dir = create_nested_dir(&tempdir).await;
-            dir_contains_with_timeout(&dir, "notin", 0.nanos()).await
-        };
-
-        pin_utils::pin_mut!(fut);
-        let mut i = 1;
-        let result = loop {
-            executor.wake_main_future();
-            match executor.run_one_step(&mut fut) {
-                Some(Poll::Ready(x)) => break x,
-                None => panic!("Executor stalled"),
-                Some(Poll::Pending) => {
-                    executor.set_fake_time(fasync::Time::from_nanos(10 * i));
-                    i += 1;
-                }
-            }
-        };
-
-        matches::assert_matches!(result, Err(Error::Timeout));
-    }
-
-    #[test]
-    fn test_dir_contains_with_timeout_ok() {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
-        executor.set_fake_time(fasync::Time::from_nanos(0));
-
-        let fut = async move {
-            let tempdir = TempDir::new().expect("failed to create tmp dir");
-            let dir = create_nested_dir(&tempdir).await;
-            let first = dir_contains_with_timeout(&dir, "notin", 1.nanos())
-                .await
-                .context("error checking dir contains notin");
-            let second = dir_contains_with_timeout(&dir, "a", 1.nanos())
-                .await
-                .context("error checking dir contains a");
-            (first, second)
-        };
-
-        pin_utils::pin_mut!(fut);
-        let result = loop {
-            executor.wake_main_future();
-            match executor.run_one_step(&mut fut) {
-                Some(Poll::Ready(x)) => break x,
-                None => panic!("Executor stalled"),
-                Some(Poll::Pending) => {}
-            }
-        };
-
-        matches::assert_matches!(result, (Ok(false), Ok(true)));
+    #[fasync::run_singlethreaded(test)]
+    async fn test_dir_contains_with_timeout() {
+        let tempdir = TempDir::new().expect("failed to create tmp dir");
+        let dir = create_nested_dir(&tempdir).await;
+        let first = dir_contains_with_timeout(&dir, "notin", 1.seconds())
+            .await
+            .context("error checking dir contains notin");
+        let second = dir_contains_with_timeout(&dir, "a", 1.seconds())
+            .await
+            .context("error checking dir contains a");
+        matches::assert_matches!((first, second), (Ok(false), Ok(true)));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -611,35 +566,15 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_readdir_recursive_timeout() {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
-        executor.set_fake_time(fasync::Time::from_nanos(0));
-
-        let fut = async move {
-            let tempdir = TempDir::new().expect("failed to create tmp dir");
-            let dir = create_nested_dir(&tempdir).await;
-            readdir_recursive(&dir, Some(0.nanos()))
-                .collect::<Vec<Result<DirEntry, Error>>>()
-                .await
-                .into_iter()
-                .collect::<Result<Vec<_>, _>>()
-        };
-
-        pin_utils::pin_mut!(fut);
-        let mut i = 1;
-        let result = loop {
-            executor.wake_main_future();
-            match executor.run_one_step(&mut fut) {
-                Some(Poll::Ready(x)) => break x,
-                None => panic!("Executor stalled"),
-                Some(Poll::Pending) => {
-                    executor.set_fake_time(fasync::Time::from_nanos(10 * i));
-                    i += 1;
-                }
-            }
-        };
-
+    #[fasync::run_singlethreaded(test)]
+    async fn test_readdir_recursive_timeout() {
+        let tempdir = TempDir::new().expect("failed to create tmp dir");
+        let dir = create_nested_dir(&tempdir).await;
+        let result = readdir_recursive(&dir, Some(0.nanos()))
+            .collect::<Vec<Result<DirEntry, Error>>>()
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>();
         assert!(result.is_err());
     }
 
