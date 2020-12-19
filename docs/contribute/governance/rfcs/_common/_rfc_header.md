@@ -22,9 +22,9 @@
 {% endset %}
 
 {% if rfcid %}
-    {% for rfc in rfcs %}
-        {% if rfc.name == rfcid %}
-            <h1>{{ rfc.name }} - {{ rfc.title }}</h1>
+    {% for _rfc in rfcs %}
+        {% if _rfc.name == rfcid %}
+            {% set rfc=_rfc %}
             {% include "docs/contribute/governance/rfcs/_common/_rfc_metadata.md" %}
             {% set found=true %}
         {% endif %}
