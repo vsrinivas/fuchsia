@@ -470,6 +470,27 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 	}
 	defer eps.close()
 
+	channels := []struct {
+		ch   <-chan struct{}
+		name string
+	}{
+		{ch: eps.closing, name: "closing"},
+		{ch: eps.loopReadDone, name: "loopReadDone"},
+		{ch: eps.loopWriteDone, name: "loopWriteDone"},
+		{ch: eps.loopPollDone, name: "loopPollDone"},
+	}
+
+	// Give a generous timeout for the closed channel to be detected.
+	timeout := make(chan struct{})
+	time.AfterFunc(5*time.Second, func() { close(timeout) })
+	for _, ch := range channels {
+		select {
+		case <-ch.ch:
+		case <-timeout:
+			t.Errorf("%s not cleaned up", ch.name)
+		}
+	}
+
 	if _, ok := ns.endpoints.Load(eps.key); ok {
 		t.Fatalf("got endpoints.Load(%d) = (_, true)", eps.key)
 	}
