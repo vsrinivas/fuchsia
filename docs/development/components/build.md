@@ -682,6 +682,26 @@ full URL `fx test fuchsia-pkg://fuchsia.com/rot13-tests#meta/rot13-decoder-test.
    }
    ```
 
+## Test-driven development
+
+The `fx smoke-test` command automatically detects all tests that are known to
+the build system as affected by changes in your checkout. Try the following:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx -i smoke-test --verbose</code>
+</pre>
+
+In the command above, `--verbose` will print which tests `fx smoke-test` thinks
+are affected by your change, and `-i` will automatically repeat this command
+every time you save your changes. For test-driven development, try launching
+this command in a separate shell and watching your code rebuild and retest as
+you're working on it.
+
+`fx smoke-test` works best with hermetic test packages. A test package is
+hermetic if the package contains all the dependencies of any tests in it.
+That is to say, any code changes that affect the outcome of this test should
+require rebuilding that test's package as well.
+
 ## Additional packaged resources {#additional-packaged-resources}
 
 In the examples above we've demonstrated that a `deps` path from a package to a
