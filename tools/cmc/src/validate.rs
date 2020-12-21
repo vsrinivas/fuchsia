@@ -274,7 +274,7 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Ensure we don't have a component with a "program" block which fails
-        // to specify a runner.
+        // to specify exactly one runner.
         self.validate_runner_specified(
             self.document.program.as_ref(),
             self.document.r#use.as_ref(),
@@ -965,7 +965,7 @@ impl<'a> ValidationContext<'a> {
     }
 
     /// Ensure we don't have a component with a "program" block which fails
-    /// to specify a runner.
+    /// to specify exactly one runner.
     fn validate_runner_specified(
         &self,
         program: Option<&serde_json::map::Map<String, serde_json::value::Value>>,
@@ -977,19 +977,21 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Otherwise, ensure a runner is being used.
-        let mut found_runner = false;
+        let mut runners_used = 0;
         if let Some(use_) = use_ {
-            found_runner = use_.iter().any(|u| u.runner.is_some())
+            runners_used = use_.iter().filter(|u| u.runner.is_some()).count();
         }
-        if !found_runner {
-            return Err(Error::validate(concat!(
+        match runners_used {
+            0 => Err(Error::validate(concat!(
                 "Component has a 'program' block defined, but doesn't 'use' ",
                 "a runner capability. Components need to 'use' a runner ",
                 "to actually execute code."
-            )));
+            ))),
+            1 => Ok(()),
+            _ => {
+                Err(Error::validate("Component `use`s multiple runners! Must specify exactly one."))
+            }
         }
-
-        Ok(())
     }
 
     fn validate_environment(
@@ -4086,6 +4088,16 @@ mod tests {
         test_cml_program_no_runner(
             json!({"program": { "binary": "bin/app" }}),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "Component has a \'program\' block defined, but doesn\'t \'use\' a runner capability. Components need to \'use\' a runner to actually execute code."
+        ),
+        test_cml_program_two_runners(
+            json!({
+                "program": { "binary": "bin/app" },
+                "use": [
+                { "runner": "elf" },
+                { "runner": "elf2" },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Component `use`s multiple runners! Must specify exactly one."
         ),
 
         // deny unknown fields
