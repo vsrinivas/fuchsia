@@ -16,6 +16,7 @@ test("test") {
   sources = [ "main.cc" ]
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest_main",
   ]
 }

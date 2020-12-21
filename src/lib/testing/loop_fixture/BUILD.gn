@@ -31,7 +31,6 @@ source_set("gtest") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

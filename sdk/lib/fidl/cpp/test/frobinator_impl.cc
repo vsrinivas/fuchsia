@@ -8,8 +8,6 @@
 
 #include <utility>
 
-#include <zxtest/zxtest.h>
-
 #include "lib/fit/result.h"
 
 namespace fidl {

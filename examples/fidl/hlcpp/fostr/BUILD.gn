@@ -12,6 +12,7 @@ executable("bin") {
   deps = [
     "//examples/fidl/fuchsia.examples",
     "//garnet/public/lib/fostr/fidl/fuchsia.examples",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest_main",
   ]
 }
