@@ -14,7 +14,6 @@
 
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -22,6 +21,8 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <hw/reg.h>
+
+#include "src/devices/thermal/drivers/aml-thermal-s905d2g/aml-thermal-s905d2g-bind.h"
 
 namespace thermal {
 
@@ -153,21 +154,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace thermal
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(aml_thermal, thermal::driver_ops, "aml-thermal", "0.1", 9)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-
-    // Check for supported board
-    BI_GOTO_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2, 0),
-    BI_GOTO_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931, 1),
-    BI_ABORT(),
-
-    // Check for supported device. AMLOGIC_S905D2 uses this driver on both the PLL and DDR sensors.
-    // AMLOGIC_T931 only uses it on the DDR sensor.
-    BI_LABEL(0),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_THERMAL_PLL),
-
-    BI_LABEL(1),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_THERMAL_DDR),
-ZIRCON_DRIVER_END(aml_thermal)
+ZIRCON_DRIVER(aml_thermal, thermal::driver_ops, "aml-thermal", "0.1");

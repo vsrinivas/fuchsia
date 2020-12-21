@@ -1,0 +1,20 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using amlogic.platform;
+using fuchsia.platform;
+
+fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PLATFORM_DEV_VID == amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+if fuchsia.BIND_PLATFORM_DEV_PID == amlogic.platform.BIND_PLATFORM_DEV_PID.S905D2 {
+  accept fuchsia.BIND_PLATFORM_DEV_DID {
+    amlogic.platform.BIND_PLATFORM_DEV_DID.THERMAL_PLL,
+    amlogic.platform.BIND_PLATFORM_DEV_DID.THERMAL_DDR,
+  }
+} else if fuchsia.BIND_PLATFORM_DEV_PID == amlogic.platform.BIND_PLATFORM_DEV_PID.T931 {
+  fuchsia.BIND_PLATFORM_DEV_DID == amlogic.platform.BIND_PLATFORM_DEV_DID.THERMAL_DDR;
+} else {
+  abort;
+}
+
