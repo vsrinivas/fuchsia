@@ -9,6 +9,8 @@
 #include <limits>
 #include <vector>
 
+#include <fbl/string_printf.h>
+
 #include "address_space.h"
 #include "gpu_mapping.h"
 #include "magma_arm_mali_types.h"
@@ -188,6 +190,12 @@ std::shared_ptr<MsdArmConnection> MsdArmConnection::Create(msd_client_id_t clien
   if (!connection->Init())
     return DRETP(nullptr, "Couldn't create connection");
   return connection;
+}
+
+void MsdArmConnection::InitializeInspectNode(inspect::Node* parent) {
+  static std::atomic_uint64_t counter;
+  node_ = parent->CreateChild(fbl::StringPrintf("connection-%ld", counter++).c_str());
+  client_id_property_ = node_.CreateUint("client_id", client_id_);
 }
 
 bool MsdArmConnection::Init() {

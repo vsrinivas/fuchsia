@@ -113,8 +113,12 @@ class MsdArmDevice::TaskRequest : public DeviceRequest {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::unique_ptr<MsdArmDevice> MsdArmDevice::Create(void* device_handle, bool start_device_thread) {
+std::unique_ptr<MsdArmDevice> MsdArmDevice::Create(void* device_handle, bool start_device_thread,
+                                                   inspect::Node* parent_node) {
   auto device = std::make_unique<MsdArmDevice>();
+  if (parent_node) {
+    device->set_inspect(parent_node->CreateChild("device"));
+  }
 
   if (!device->Init(device_handle))
     return DRETP(nullptr, "Failed to initialize MsdArmDevice");
@@ -176,8 +180,7 @@ bool MsdArmDevice::Init(void* device_handle) {
   auto platform_device = magma::PlatformDevice::Create(device_handle);
   if (!platform_device)
     return DRETF(false, "Failed to initialize device");
-  auto bus_mapper =
-      magma::PlatformBusMapper::Create(platform_device->GetBusTransactionInitiator());
+  auto bus_mapper = magma::PlatformBusMapper::Create(platform_device->GetBusTransactionInitiator());
   if (!bus_mapper)
     return DRETF(false, "Failed to create bus mapper");
   return Init(std::move(platform_device), std::move(bus_mapper));
@@ -188,6 +191,7 @@ bool MsdArmDevice::Init(std::unique_ptr<magma::PlatformDevice> platform_device,
   DLOG("Init platform_device");
   platform_device_ = std::move(platform_device);
   bus_mapper_ = std::move(bus_mapper);
+  InitInspect();
 
   std::unique_ptr<magma::PlatformMmio> mmio = platform_device_->CpuMapMmio(
       kMmioIndexRegisters, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE);
@@ -230,6 +234,11 @@ bool MsdArmDevice::Init(std::unique_ptr<magma::PlatformDevice> platform_device,
   return InitializeHardware();
 }
 
+void MsdArmDevice::InitInspect() {
+  hang_timeout_count_ = inspect_.CreateUint("hang_timeout", 0);
+  last_hang_timeout_ns_ = inspect_.CreateUint("last_hang_timeout_ns", 0);
+}
+
 bool MsdArmDevice::InitializeHardware() {
   cycle_counter_refcount_ = 0;
   DASSERT(registers::GpuStatus::Get().ReadFrom(register_io_.get()).cycle_count_active().get() == 0);
@@ -248,6 +257,7 @@ bool MsdArmDevice::InitializeHardware() {
 std::shared_ptr<MsdArmConnection> MsdArmDevice::Open(msd_client_id_t client_id) {
   auto connection = MsdArmConnection::Create(client_id, this);
   if (connection) {
+    connection->InitializeInspectNode(&inspect_);
     std::lock_guard<std::mutex> lock(connection_list_mutex_);
     connection_list_.push_back(connection);
   }
@@ -264,6 +274,8 @@ void MsdArmDevice::DeregisterConnection() {
 void MsdArmDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
 
 void MsdArmDevice::OutputHangMessage() {
+  hang_timeout_count_.Add(1);
+  last_hang_timeout_ns_.Set(magma::get_monotonic_ns());
   MAGMA_LOG(WARNING, "Possible GPU hang");
   ProcessDumpStatusToLog();
 }

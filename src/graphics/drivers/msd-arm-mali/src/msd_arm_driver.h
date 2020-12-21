@@ -5,10 +5,13 @@
 #ifndef MSD_ARM_DRIVER_H
 #define MSD_ARM_DRIVER_H
 
+#include <lib/inspect/cpp/inspect.h>
+
 #include <memory>
 
 #include "magma_util/macros.h"
 #include "msd.h"
+#include "msd_arm_device.h"
 
 class MsdArmDriver : public msd_driver_t {
  public:
@@ -27,12 +30,26 @@ class MsdArmDriver : public msd_driver_t {
 
   uint32_t configure_flags() { return configure_flags_; }
 
+  uint32_t DuplicateInspectHandle();
+
+  inspect::Node& root_node() { return root_node_; }
+
+  std::unique_ptr<MsdArmDevice> CreateDevice(void* device_handle);
+
+  std::unique_ptr<MsdArmDevice> CreateDeviceForTesting(
+      std::unique_ptr<magma::PlatformDevice> platform_device,
+      std::unique_ptr<magma::PlatformBusMapper> bus_mapper);
+
  private:
   MsdArmDriver();
 
   static const uint32_t kMagic = 0x64726976;  //"driv"
 
   uint32_t configure_flags_ = 0;
+  inspect::Inspector inspector_;
+  // Available under the bootstrap/driver_manager:root/msd-arm-mali selector or
+  // in /dev/diagnotics/class/gpu/000.inspect
+  inspect::Node root_node_;
 };
 
 #endif  // MSD_ARM_DRIVER_H

@@ -5,6 +5,7 @@
 #ifndef MSD_ARM_DEVICE_H
 #define MSD_ARM_DEVICE_H
 
+#include <lib/inspect/cpp/inspect.h>
 #include <zircon/compiler.h>
 
 #include <deque>
@@ -37,7 +38,8 @@ class MsdArmDevice : public msd_device_t,
   // Creates a device for the given |device_handle| and returns ownership.
   // If |start_device_thread| is false, then StartDeviceThread should be called
   // to enable device request processing.
-  static std::unique_ptr<MsdArmDevice> Create(void* device_handle, bool start_device_thread);
+  static std::unique_ptr<MsdArmDevice> Create(void* device_handle, bool start_device_thread,
+                                              inspect::Node* parent_node = nullptr);
 
   MsdArmDevice();
 
@@ -48,6 +50,8 @@ class MsdArmDevice : public msd_device_t,
     DASSERT(dev->magic_ == kMagic);
     return static_cast<MsdArmDevice*>(dev);
   }
+
+  void set_inspect(inspect::Node node) { inspect_ = std::move(node); }
 
   bool Init(void* device_handle);
   bool Init(std::unique_ptr<magma::PlatformDevice> platform_device,
@@ -180,6 +184,7 @@ class MsdArmDevice : public msd_device_t,
   bool PowerDownL2();
   bool PowerDownShaders();
   bool ResetDevice();
+  void InitInspect();
 
   magma::Status ProcessDumpStatusToLog();
   magma::Status ProcessPerfCounterSampleCompleted();
@@ -204,6 +209,11 @@ class MsdArmDevice : public msd_device_t,
   void OutputHangMessage() override;
 
   static const uint32_t kMagic = 0x64657669;  //"devi"
+
+  inspect::Node inspect_;
+
+  inspect::UintProperty hang_timeout_count_;
+  inspect::UintProperty last_hang_timeout_ns_;
 
   std::thread device_thread_;
   std::unique_ptr<magma::PlatformThreadId> device_thread_id_;

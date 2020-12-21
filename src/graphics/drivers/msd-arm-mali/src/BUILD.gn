@@ -93,4 +93,6 @@ source_set("src") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
   ]
+
+  public_deps = [ "//zircon/system/ulib/inspect" ]
 }

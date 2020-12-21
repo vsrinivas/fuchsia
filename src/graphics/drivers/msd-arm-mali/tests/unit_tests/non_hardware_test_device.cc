@@ -4,6 +4,7 @@
 
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/inspect/cpp/reader.h>
 
 #include <condition_variable>
 #include <mutex>
@@ -13,6 +14,7 @@
 #include "mock/mock_bus_mapper.h"
 #include "mock/mock_mmio.h"
 #include "msd_arm_device.h"
+#include "msd_arm_driver.h"
 #include "registers.h"
 
 namespace {
@@ -347,6 +349,33 @@ class TestNonHardwareMsdArmDevice {
     MsdArmDevice::InitializeHardwareQuirks(&features, reg_io.get());
     EXPECT_EQ(0u, reg_io->Read32(0xf04));
   }
+
+  void Inspect() {
+    auto driver = MsdArmDriver::Create();
+    auto device = driver->CreateDeviceForTesting(std::make_unique<FakePlatformDevice>(),
+                                                 std::make_unique<MockBusMapper>());
+    ASSERT_TRUE(device);
+
+    constexpr uint64_t kClientId = 123456;
+    auto connection = device->Open(kClientId);
+    ASSERT_TRUE(connection);
+    auto hierarchy = inspect::ReadFromVmo(zx::vmo(driver->DuplicateInspectHandle()));
+    auto* dev_node = hierarchy.value().GetByPath({"msd-arm-mali", "device"});
+    ASSERT_TRUE(dev_node);
+    const auto& children = dev_node->children();
+    ASSERT_LE(1u, children.size());
+    bool found_child = false;
+    for (auto& child : children) {
+      if (child.name().find("connection-") != std::string::npos) {
+        auto client_id_prop = child.node().get_property<inspect::UintPropertyValue>("client_id");
+        ASSERT_TRUE(client_id_prop);
+        EXPECT_EQ(kClientId, client_id_prop->value());
+        found_child = true;
+        break;
+      }
+    }
+    EXPECT_TRUE(found_child);
+  }
 };
 
 TEST(NonHardwareMsdArmDevice, MockDump) {
@@ -372,4 +401,9 @@ TEST(NonHardwareMsdArmDevice, MockExecuteAtom) {
 TEST(NonHardwareMsdArmDevice, MockInitializeQuirks) {
   TestNonHardwareMsdArmDevice test;
   test.MockInitializeQuirks();
+}
+
+TEST(NonHardwareMsdArmDevice, Inspect) {
+  TestNonHardwareMsdArmDevice test;
+  test.Inspect();
 }

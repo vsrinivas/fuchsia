@@ -6,6 +6,7 @@
 #define MSD_ARM_CONNECTION_H
 
 #include <lib/fit/function.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <zircon/compiler.h>
 
 #include <deque>
@@ -63,6 +64,8 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
   virtual ~MsdArmConnection();
 
   msd_client_id_t client_id() { return client_id_; }
+
+  void InitializeInspectNode(inspect::Node* parent);
 
   AddressSpace* address_space_for_testing() __TA_NO_THREAD_SAFETY_ANALYSIS {
     return address_space_.get();
@@ -139,6 +142,10 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
   magma::PlatformBusMapper* GetBusMapper() override { return owner_->GetBusMapper(); }
 
   msd_client_id_t client_id_;
+
+  inspect::Node node_;
+  inspect::UintProperty client_id_property_;
+
   std::mutex address_lock_;
   __THREAD_ANNOTATION(__pt_guarded_by__(address_lock_))
   std::unique_ptr<AddressSpace> address_space_;

@@ -267,7 +267,8 @@ zx_status_t GpuDevice::Init() {
   if (status != ZX_OK)
     return status;
 
-  status = DdkAdd("magma_gpu");
+  status = DdkAdd(ddk::DeviceAddArgs("magma_gpu")
+                      .set_inspect_vmo(zx::vmo(magma_driver_->DuplicateInspectVmo())));
   if (status != ZX_OK)
     return DRET_MSG(status, "device_add failed");
   return ZX_OK;

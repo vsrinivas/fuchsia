@@ -6,6 +6,10 @@
 
 // These entrypoints are used when the driver doesn't implement an extension to the interface yet.
 
+uint32_t __attribute__((weak)) msd_driver_duplicate_inspect_handle(msd_driver_t* driver) {
+  return 0;
+}
+
 magma_status_t __attribute__((weak))
 msd_connection_enable_performance_counters(msd_connection_t* abi_connection,
                                            const uint64_t* counters, uint64_t counter_count) {

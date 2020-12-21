@@ -20,6 +20,10 @@ void msd_driver_configure(struct msd_driver_t* drv, uint32_t flags);
 // Destroys a driver instance.
 void msd_driver_destroy(struct msd_driver_t* drv);
 
+// Returns a buffer handle that contains inspect data for the driver. Caller
+// takes ownership of the handle. Returns 0 if driver doesn't support inspect.
+uint32_t msd_driver_duplicate_inspect_handle(struct msd_driver_t* drv);
+
 // Creates a device at system startup. |device| is a pointer to a platform-specific device object
 // which is guaranteed to outlive the returned msd_device_t.
 struct msd_device_t* msd_driver_create_device(struct msd_driver_t* drv, void* device);
