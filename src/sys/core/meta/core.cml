@@ -57,8 +57,8 @@
             url: "fuchsia-pkg://fuchsia.com/temperature-logger#meta/temperature-logger.cm",
         },
         {
-            name: "ephemeral-resolver",
-            url: "fuchsia-pkg://fuchsia.com/ephemeral-resolver#meta/ephemeral-resolver.cm",
+            name: "universe-resolver",
+            url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm",
         },
     ],
     capabilities: [
@@ -124,7 +124,7 @@
         {
             protocol: "fuchsia.pkg.PackageResolver",
             from: "#appmgr",
-            to: [ "#ephemeral-resolver" ],
+            to: [ "#universe-resolver" ],
         },
 
         // Passing from root realm to appmgr
@@ -201,7 +201,6 @@
                 "#activity",
                 "#debug_serial",
                 "#detect",
-                "#ephemeral-resolver",
                 "#font_provider",
                 "#log-stats",
                 "#remote-control",
@@ -209,6 +208,7 @@
                 "#system-update-committer",
                 "#temperature-logger",
                 "#test_manager",
+                "#universe-resolver",
             ],
         },
         {
@@ -477,9 +477,9 @@
             extends: "realm",
             resolvers: [
                 {
-                    resolver: "ephemeral-resolver",
+                    resolver: "universe-resolver",
                     scheme: "fuchsia-pkg",
-                    from: "#ephemeral-resolver",
+                    from: "#universe-resolver",
                 },
             ],
         },
